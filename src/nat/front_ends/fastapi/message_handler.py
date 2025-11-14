@@ -226,8 +226,8 @@ class WebSocketMessageHandler:
 
             content: BaseModel = await self._message_validator.convert_data_to_message_content(data_model)
 
-            # Extract weave_call_id from source data_model if available
-            weave_call_id = getattr(data_model, 'weave_call_id', None)
+            # Extract observability_trace_id from source data_model if available
+            observability_trace_id = getattr(data_model, 'observability_trace_id', None)
 
             if issubclass(message_schema, WebSocketSystemResponseTokenMessage):
                 message = await self._message_validator.create_system_response_token_message(
@@ -236,7 +236,7 @@ class WebSocketMessageHandler:
                     conversation_id=self._conversation_id,
                     content=content,
                     status=status,
-                    weave_call_id=weave_call_id)
+                    observability_trace_id=observability_trace_id)
 
             elif issubclass(message_schema, WebSocketSystemIntermediateStepMessage):
                 message = await self._message_validator.create_system_intermediate_step_message(
@@ -245,7 +245,7 @@ class WebSocketMessageHandler:
                     conversation_id=self._conversation_id,
                     content=content,
                     status=status,
-                    weave_call_id=weave_call_id)
+                    observability_trace_id=observability_trace_id)
 
             elif issubclass(message_schema, WebSocketSystemInteractionMessage):
                 message = await self._message_validator.create_system_interaction_message(
@@ -254,7 +254,7 @@ class WebSocketMessageHandler:
                     conversation_id=self._conversation_id,
                     content=content,
                     status=status,
-                    weave_call_id=weave_call_id)
+                    observability_trace_id=observability_trace_id)
 
             elif isinstance(content, Error):
                 raise ValidationError(f"Invalid input data creating websocket message. {data_model.model_dump_json()}")

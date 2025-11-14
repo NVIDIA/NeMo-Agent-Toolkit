@@ -39,10 +39,10 @@ class StepAdaptor:
         self._history: list[IntermediateStep] = []
         self.config = config
 
-    def _get_weave_call_id(self) -> str | None:
-        """Retrieve weave_call_id from context."""
+    def _get_observability_trace_id(self) -> str | None:
+        """Retrieve observability_trace_id from context."""
         from nat.builder.context import Context
-        return Context.get().weave_call_id
+        return Context.get().observability_trace_id
 
     def _step_matches_filter(self, step: IntermediateStep, config: StepAdaptorConfig) -> bool:
         """
@@ -122,7 +122,7 @@ class StepAdaptor:
                                          name=step.name or "",
                                          payload=payload,
                                          parent_id=ancestry.function_id,
-                                         weave_call_id=self._get_weave_call_id())
+                                         observability_trace_id=self._get_observability_trace_id())
 
         return event
 
@@ -178,7 +178,7 @@ class StepAdaptor:
                                          name=f"Tool: {step.name}",
                                          payload=payload,
                                          parent_id=ancestry.function_id,
-                                         weave_call_id=self._get_weave_call_id())
+                                         observability_trace_id=self._get_observability_trace_id())
 
         return event
 
@@ -214,7 +214,7 @@ class StepAdaptor:
                                              name=f"Function Start: {step.name}",
                                              payload=payload_str,
                                              parent_id=ancestry.parent_id,
-                                             weave_call_id=self._get_weave_call_id())
+                                             observability_trace_id=self._get_observability_trace_id())
             return event
 
         if step.event_type == IntermediateStepType.FUNCTION_END:
@@ -268,7 +268,7 @@ class StepAdaptor:
                                              name=f"Function Complete: {step.name}",
                                              payload=payload_str,
                                              parent_id=ancestry.parent_id,
-                                             weave_call_id=self._get_weave_call_id())
+                                             observability_trace_id=self._get_observability_trace_id())
             return event
 
         return None
@@ -295,7 +295,7 @@ class StepAdaptor:
                                          name=f"{payload.event_type}",
                                          payload=payload_str,
                                          parent_id=ancestry.function_id,
-                                         weave_call_id=self._get_weave_call_id())
+                                         observability_trace_id=self._get_observability_trace_id())
 
         return event
 

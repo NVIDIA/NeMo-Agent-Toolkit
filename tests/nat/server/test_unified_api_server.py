@@ -364,13 +364,13 @@ async def test_chat_stream_endpoint(client: httpx.AsyncClient, config: Config):
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
-async def test_chat_endpoint_weave_call_id_integration(client: httpx.AsyncClient, config: Config):
-    """Tests that chat endpoint includes weave_call_id when available in context."""
+async def test_chat_endpoint_observability_trace_id_integration(client: httpx.AsyncClient, config: Config):
+    """Tests that chat endpoint includes observability_trace_id when available in context."""
     input_message = {"messages": [{"role": "user", "content": f"{config.app.input}"}], "use_knowledge_base": True}
 
-    # Mock the context to provide a weave_call_id
+    # Mock the context to provide a observability_trace_id
     with patch('nat.builder.context.Context.get') as mock_context:
-        mock_context.return_value.weave_call_id = "integration-test-weave-id"
+        mock_context.return_value.observability_trace_id = "integration-test-observability-id"
 
         response = await client.post(f"{config.endpoint.chat}", json=input_message)
         assert response.status_code == 200
@@ -378,19 +378,19 @@ async def test_chat_endpoint_weave_call_id_integration(client: httpx.AsyncClient
         validated_response = ChatResponse(**response.json())
         assert isinstance(validated_response, ChatResponse)
 
-        # Verify that the weave_call_id matches the mocked value
-        assert validated_response.weave_call_id == "integration-test-weave-id"
+        # Verify that the observability_trace_id matches the mocked value
+        assert validated_response.observability_trace_id == "integration-test-observability-id"
 
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
-async def test_chat_stream_endpoint_weave_call_id_integration(client: httpx.AsyncClient, config: Config):
-    """Tests that chat stream endpoint includes weave_call_id when available in context."""
+async def test_chat_stream_endpoint_observability_trace_id_integration(client: httpx.AsyncClient, config: Config):
+    """Tests that chat stream endpoint includes observability_trace_id when available in context."""
     input_message = {"messages": [{"role": "user", "content": f"{config.app.input}"}], "use_knowledge_base": True}
 
-    # Mock the context to provide a weave_call_id
+    # Mock the context to provide a observability_trace_id
     with patch('nat.builder.context.Context.get') as mock_context:
-        mock_context.return_value.weave_call_id = "integration-stream-weave-id"
+        mock_context.return_value.observability_trace_id = "integration-stream-observability-id"
 
         response = await client.post(f"{config.endpoint.chat_stream}", json=input_message)
         assert response.status_code == 200
@@ -402,8 +402,8 @@ async def test_chat_stream_endpoint_weave_call_id_integration(client: httpx.Asyn
         validated_response = ChatResponseChunk(**data_match_dict)
         assert isinstance(validated_response, ChatResponseChunk)
 
-        # Verify that the weave_call_id matches the mocked value
-        assert validated_response.weave_call_id == "integration-stream-weave-id"
+        # Verify that the observability_trace_id matches the mocked value
+        assert validated_response.observability_trace_id == "integration-stream-observability-id"
 
 
 @pytest.mark.integration
@@ -520,21 +520,21 @@ nat_chat_response_chunk_test = ChatResponseChunk(id="default",
                                                  created=datetime.datetime.now(datetime.UTC))
 nat_response_intermediate_step_test = ResponseIntermediateStep(id="default", name="default", payload="default")
 
-nat_chat_response_with_weave_test = ChatResponse(id="default",
-                                                 object="default",
-                                                 created=datetime.datetime.now(datetime.UTC),
-                                                 choices=[ChatResponseChoice(message=ChoiceMessage(), index=0)],
-                                                 usage=Usage(prompt_tokens=0, completion_tokens=0, total_tokens=0),
-                                                 weave_call_id="test-weave-call-id")
-nat_chat_response_chunk_with_weave_test = ChatResponseChunk(
+nat_chat_response_with_observability_test = ChatResponse(id="default",
+                                                         object="default",
+                                                         created=datetime.datetime.now(datetime.UTC),
+                                                         choices=[ChatResponseChoice(message=ChoiceMessage(), index=0)],
+                                                         usage=Usage(prompt_tokens=0,
+                                                                     completion_tokens=0,
+                                                                     total_tokens=0),
+                                                         observability_trace_id="test-observability-trace-id")
+nat_chat_response_chunk_with_observability_test = ChatResponseChunk(
     id="default",
     choices=[ChatResponseChunkChoice(delta=ChoiceDelta(), index=0)],
     created=datetime.datetime.now(datetime.UTC),
-    weave_call_id="test-weave-call-id")
-nat_response_intermediate_step_with_weave_test = ResponseIntermediateStep(id="default",
-                                                                          name="default",
-                                                                          payload="default",
-                                                                          weave_call_id="test-weave-call-id")
+    observability_trace_id="test-observability-trace-id")
+nat_response_intermediate_step_with_observability_test = ResponseIntermediateStep(
+    id="default", name="default", payload="default", observability_trace_id="test-observability-trace-id")
 
 validated_response_data_models = [
     nat_response_payload_output_test, nat_chat_response_test, nat_chat_response_chunk_test
@@ -668,55 +668,57 @@ async def test_text_prompt_to_websocket_message_to_text_response():
     assert isinstance(human_text_response_content, HumanResponseText)
 
 
-async def test_chat_response_weave_call_id_propagation():
-    """Test that weave_call_id is properly set in ChatResponse from context"""
+async def test_chat_response_observability_trace_id_propagation():
+    """Test that observability_trace_id is properly set in ChatResponse from context"""
     with patch('nat.builder.context.Context.get') as mock_context:
-        mock_context.return_value.weave_call_id = "test-weave-id"
+        mock_context.return_value.observability_trace_id = "test-observability-id"
 
         usage = Usage(prompt_tokens=1, completion_tokens=1, total_tokens=2)
         response = ChatResponse.from_string("test response", usage=usage)
 
-        assert response.weave_call_id == "test-weave-id"
+        assert response.observability_trace_id == "test-observability-id"
         assert response.choices[0].message.content == "test response"
 
 
-async def test_chat_response_explicit_weave_call_id():
-    """Test that explicitly provided weave_call_id takes precedence over context"""
+async def test_chat_response_explicit_observability_trace_id():
+    """Test that explicitly provided observability_trace_id takes precedence over context"""
     with patch('nat.builder.context.Context.get') as mock_context:
-        mock_context.return_value.weave_call_id = "context-weave-id"
+        mock_context.return_value.observability_trace_id = "context-observability-id"
 
         usage = Usage(prompt_tokens=1, completion_tokens=1, total_tokens=2)
-        response = ChatResponse.from_string("test response", usage=usage, weave_call_id="explicit-weave-id")
+        response = ChatResponse.from_string("test response",
+                                            usage=usage,
+                                            observability_trace_id="explicit-observability-id")
 
-        assert response.weave_call_id == "explicit-weave-id"
+        assert response.observability_trace_id == "explicit-observability-id"
 
 
-async def test_chat_response_chunk_weave_call_id_propagation():
-    """Test that weave_call_id is properly set in ChatResponseChunk from context"""
+async def test_chat_response_chunk_observability_trace_id_propagation():
+    """Test that observability_trace_id is properly set in ChatResponseChunk from context"""
     with patch('nat.builder.context.Context.get') as mock_context:
-        mock_context.return_value.weave_call_id = "chunk-weave-id"
+        mock_context.return_value.observability_trace_id = "chunk-observability-id"
 
         chunk = ChatResponseChunk.from_string("test chunk")
 
-        assert chunk.weave_call_id == "chunk-weave-id"
+        assert chunk.observability_trace_id == "chunk-observability-id"
 
 
-async def test_chat_response_chunk_streaming_weave_call_id():
-    """Test that weave_call_id is properly set in streaming chunks"""
+async def test_chat_response_chunk_streaming_observability_trace_id():
+    """Test that observability_trace_id is properly set in streaming chunks"""
     with patch('nat.builder.context.Context.get') as mock_context:
-        mock_context.return_value.weave_call_id = "streaming-weave-id"
+        mock_context.return_value.observability_trace_id = "streaming-observability-id"
 
         chunk = ChatResponseChunk.create_streaming_chunk(content="streaming content",
                                                          role=UserMessageContentRoleType.ASSISTANT)
 
-        assert chunk.weave_call_id == "streaming-weave-id"
+        assert chunk.observability_trace_id == "streaming-observability-id"
         assert chunk.choices[0].delta.content == "streaming content"
 
 
-async def test_websocket_message_weave_call_id_propagation():
-    """Test that weave_call_id is properly set in WebSocket messages from context"""
+async def test_websocket_message_observability_trace_id_propagation():
+    """Test that observability_trace_id is properly set in WebSocket messages from context"""
     with patch('nat.builder.context.Context.get') as mock_context:
-        mock_context.return_value.weave_call_id = "websocket-weave-id"
+        mock_context.return_value.observability_trace_id = "websocket-observability-id"
 
         message_validator = MessageValidator()
 
@@ -724,13 +726,13 @@ async def test_websocket_message_weave_call_id_propagation():
             content=SystemResponseContent(text="test response"), status=WebSocketMessageStatus.IN_PROGRESS)
 
         assert message is not None
-        assert message.weave_call_id == "websocket-weave-id"
+        assert message.observability_trace_id == "websocket-observability-id"
 
 
-async def test_intermediate_step_message_weave_call_id():
-    """Test that weave_call_id is properly set in intermediate step messages"""
+async def test_intermediate_step_message_observability_trace_id():
+    """Test that observability_trace_id is properly set in intermediate step messages"""
     with patch('nat.builder.context.Context.get') as mock_context:
-        mock_context.return_value.weave_call_id = "intermediate-weave-id"
+        mock_context.return_value.observability_trace_id = "intermediate-observability-id"
 
         message_validator = MessageValidator()
 
@@ -739,42 +741,45 @@ async def test_intermediate_step_message_weave_call_id():
             status=WebSocketMessageStatus.IN_PROGRESS)
 
         assert message is not None
-        assert message.weave_call_id == "intermediate-weave-id"
+        assert message.observability_trace_id == "intermediate-observability-id"
 
 
-async def test_weave_call_id_fallback_behavior():
-    """Test that components handle missing weave context gracefully"""
-    with patch('nat.builder.context.Context.get', side_effect=Exception("No context available")):
+async def test_observability_trace_id_fallback_behavior():
+    """Test that components handle missing observability context gracefully"""
+    with patch('nat.builder.context.Context.get') as mock_context:
+        # Configure mock so that accessing observability_trace_id raises AttributeError
+        del mock_context.return_value.observability_trace_id
+
         # Test ChatResponse fallback
         usage = Usage(prompt_tokens=1, completion_tokens=1, total_tokens=2)
         response = ChatResponse.from_string("test response", usage=usage)
-        assert response.weave_call_id is None
+        assert response.observability_trace_id is None
 
         # Test ChatResponseChunk fallback
         chunk = ChatResponseChunk.from_string("test chunk")
-        assert chunk.weave_call_id is None
+        assert chunk.observability_trace_id is None
 
         # Test WebSocket message fallback
         message_validator = MessageValidator()
         message = await message_validator.create_system_response_token_message(
             content=SystemResponseContent(text="test response"), status=WebSocketMessageStatus.IN_PROGRESS)
         assert message is not None
-        assert message.weave_call_id is None
+        assert message.observability_trace_id is None
 
 
-async def test_weave_call_id_data_model_serialization():
-    """Test that weave_call_id is properly included in serialized data models"""
-    # Test ChatResponse with weave_call_id
-    response_dict = nat_chat_response_with_weave_test.model_dump()
-    assert response_dict["weave_call_id"] == "test-weave-call-id"
+async def test_observability_trace_id_data_model_serialization():
+    """Test that observability_trace_id is properly included in serialized data models"""
+    # Test ChatResponse with observability_trace_id
+    response_dict = nat_chat_response_with_observability_test.model_dump()
+    assert response_dict["observability_trace_id"] == "test-observability-trace-id"
 
-    # Test ChatResponseChunk with weave_call_id
-    chunk_dict = nat_chat_response_chunk_with_weave_test.model_dump()
-    assert chunk_dict["weave_call_id"] == "test-weave-call-id"
+    # Test ChatResponseChunk with observability_trace_id
+    chunk_dict = nat_chat_response_chunk_with_observability_test.model_dump()
+    assert chunk_dict["observability_trace_id"] == "test-observability-trace-id"
 
-    # Test ResponseIntermediateStep with weave_call_id
-    step_dict = nat_response_intermediate_step_with_weave_test.model_dump()
-    assert step_dict["weave_call_id"] == "test-weave-call-id"
+    # Test ResponseIntermediateStep with observability_trace_id
+    step_dict = nat_response_intermediate_step_with_observability_test.model_dump()
+    assert step_dict["observability_trace_id"] == "test-observability-trace-id"
 
 
 async def test_binary_choice_prompt_to_websocket_message_to_binary_choice_response():
