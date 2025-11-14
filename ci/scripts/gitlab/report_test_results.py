@@ -98,7 +98,7 @@ def text_to_block(text: str) -> dict:
 def add_text(text: str, blocks: list[dict], plain_text: list[str]) -> None:
     if len(text) > MAX_TEXT_LENGTH:
         text = text[:(MAX_TEXT_LENGTH - 3)] + "..."
-    assert len(text) <= MAX_TEXT_LENGTH
+
     blocks.append(text_to_block(text))
     plain_text.append(text)
 
