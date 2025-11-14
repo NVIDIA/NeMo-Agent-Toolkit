@@ -16,6 +16,6 @@ limitations under the License.
 -->
 
 # About ReAct Agent
-This is a ReAct (Reasoning and Acting) agent, based on the [ReAct paper](https://react-lm.github.io/). The ReAct agent's prompt is directly inspired by the prompt examples in the appendix of the paper. The agent uses NVIDIA NeMo Agent toolkit's core library agents and tools to perform ReAct reasoning between tool calls. In your YAML config files, you can customize prompts for your specific needs. 
+This is a ReAct (Reasoning and Acting) agent, based on the [ReAct paper](https://react-lm.github.io/). The ReAct agent's prompt is directly inspired by the prompt examples in the appendix of the paper. The agent uses the NVIDIA NeMo Agent toolkit core library agents and tools to perform ReAct reasoning between tool calls. In your YAML config files, you can customize prompts for your specific needs. 
 
 To configure your ReAct agent, refer to [Configure the ReAct Agent](./react-agent.md).

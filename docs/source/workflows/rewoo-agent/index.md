@@ -18,7 +18,7 @@ limitations under the License.
 # About ReWOO Agent
 The ReWOO (Reasoning WithOut Observation) agent is an advanced agent paradigm that improves efficiency in augmented language models. The ReWOO agent's implementation follows the [ReWOO paper](https://arxiv.org/abs/2305.18323) methodology of decoupling reasoning from observations, separating the planning and execution phases, which leads to more efficient tool usage and better token efficiency for reasoning tasks. 
 
-The agent uses NVIDIA NeMo Agent toolkit's core library agents and tools to simplify your development experience and deployment. Additionally, you can customize prompts in your YAML config files for your specific needs. 
+The agent uses the NVIDIA NeMo Agent toolkit core library agents and tools to simplify your development experience and deployment. Additionally, you can customize prompts in your YAML config files for your specific needs. 
 
 # Understanding the ReWOO Agent Phases
 The ReWOO agent implementation is broken down into three phases:

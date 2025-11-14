@@ -19,7 +19,7 @@ limitations under the License.
 
 The router agent is a control flow component that analyzes incoming requests and directs them to the most appropriate branch based on the request configuration. The agent pairs single-pass architecture with intelligent request routing to analyze prompts and selects one branch that best handles the request. The agent is ideal for scenarios where different types of requests need specialized handling.
 
-The agent uses NVIDIA NeMo Agent toolkit's core library agents and tools to simplify your development experience and deployment. Additionally, you can customize prompts in your YAML config files for your specific needs.
+The agent uses the NVIDIA NeMo Agent toolkit core library agents and tools to simplify your development experience and deployment. Additionally, you can customize prompts in your YAML config files for your specific needs.
 
 ## High-Level Breakdown of the Router Agent
 
