@@ -21,22 +21,6 @@ from pydantic import Field
 from pydantic import create_model
 
 
-def truncate_session_id(session_id: str, max_length: int = 10) -> str:
-    """
-    Truncate a session ID for logging purposes.
-
-    Args:
-        session_id: The session ID to truncate
-        max_length: Maximum length before truncation (default: 10)
-
-    Returns:
-        Truncated session ID with "..." if longer than max_length, otherwise full ID
-    """
-    if len(session_id) > max_length:
-        return session_id[:max_length] + "..."
-    return session_id
-
-
 def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
     """
     Create a pydantic model from the input schema of the MCP tool

@@ -26,6 +26,7 @@ from tqdm import tqdm
 from nat.data_models.evaluate import EvalConfig
 from nat.data_models.evaluate import JobEvictionPolicy
 from nat.data_models.runtime_enum import RuntimeTypeEnum
+from nat.data_models.runtime_enum import RuntimeTypeEnum
 from nat.eval.config import EvaluationRunConfig
 from nat.eval.config import EvaluationRunOutput
 from nat.eval.dataset_handler.dataset_handler import DatasetHandler
@@ -38,7 +39,7 @@ from nat.eval.usage_stats import UsageStatsLLM
 from nat.eval.utils.output_uploader import OutputUploader
 from nat.eval.utils.weave_eval import WeaveEvaluationIntegration
 from nat.profiler.data_models import ProfilerResults
-from nat.runtime.session import SessionManager
+from nat.runtime.session import UserSession
 
 logger = logging.getLogger(__name__)
 
@@ -145,7 +146,7 @@ class EvaluationRun:
                                                                      llm_latency=llm_latency)
         return self.usage_stats.usage_stats_items[item.id]
 
-    async def run_workflow_local(self, session_manager: SessionManager):
+    async def run_workflow_local(self, user_session: UserSession):
         '''
         Launch the workflow with the specified questions and extract the output using the jsonpath
         '''
@@ -162,8 +163,10 @@ class EvaluationRun:
             if stop_event.is_set():
                 return "", []
 
-            async with session_manager.run(item.input_obj, runtime_type=RuntimeTypeEnum.EVALUATE) as runner:
-                if not session_manager.workflow.has_single_output:
+            async with user_session.run(item.input_obj,
+                                        runtime_type=RuntimeTypeEnum.EVALUATE,
+                                        runtime_type=RuntimeTypeEnum.EVALUATE) as runner:
+                if not user_session.workflow.has_single_output:
                     # raise an error if the workflow has multiple outputs
                     raise NotImplementedError("Multiple outputs are not supported")
 
@@ -237,7 +240,7 @@ class EvaluationRun:
 
     async def run_workflow_remote(self):
         from nat.eval.remote_workflow import EvaluationRemoteWorkflowHandler
-        handler = EvaluationRemoteWorkflowHandler(self.config, self.eval_config.general.max_concurrency)
+        handler = EvaluationRemoteWorkflowHandler(self.config, self.eval_config.general.max_concurrency)  # type: ignore
         await handler.run_workflow_remote(self.eval_input)
         for item in self.eval_input.eval_input_items:
             usage_stats_item = self._compute_usage_stats(item)
@@ -413,14 +416,14 @@ class EvaluationRun:
 
         return workflow_type
 
-    async def wait_for_all_export_tasks_local(self, session_manager: SessionManager, timeout: float) -> None:
+    async def wait_for_all_export_tasks_local(self, user_session: UserSession, timeout: float) -> None:
         """Wait for all trace export tasks to complete for local workflows.
 
         This only works for local workflows where we have direct access to the
         SessionManager and its underlying workflow with exporter manager.
         """
         try:
-            workflow = session_manager.workflow
+            workflow = user_session.workflow
             all_exporters = await workflow.get_all_exporters()
             if not all_exporters:
                 logger.debug("No exporters to wait for")
@@ -441,7 +444,7 @@ class EvaluationRun:
             logger.warning("Failed to wait for local export tasks: %s", e)
 
     async def run_and_evaluate(self,
-                               session_manager: SessionManager | None = None,
+                               user_session: UserSession | None = None,
                                job_id: str | None = None) -> EvaluationRunOutput:
         """
         Run the workflow with the specified config file and evaluate the dataset
@@ -522,11 +525,10 @@ class EvaluationRun:
                 if self.config.endpoint:
                     await self.run_workflow_remote()
                 elif not self.config.skip_workflow:
-                    if session_manager is None:
+                    if user_session is None:
                         workflow = await eval_workflow.build()
-                        session_manager = SessionManager(workflow,
-                                                         max_concurrency=self.eval_config.general.max_concurrency)
-                    await self.run_workflow_local(session_manager)
+                        user_session = UserSession(workflow, max_concurrency=self.eval_config.general.max_concurrency)
+                    await self.run_workflow_local(user_session)
 
                 # Pre-evaluation process the workflow output
                 self.eval_input = dataset_handler.pre_eval_process_eval_input(self.eval_input)
@@ -536,8 +538,8 @@ class EvaluationRun:
                 await self.run_evaluators(evaluators)
 
                 # Wait for all trace export tasks to complete (local workflows only)
-                if session_manager and not self.config.endpoint:
-                    await self.wait_for_all_export_tasks_local(session_manager, timeout=self.config.export_timeout)
+                if user_session and not self.config.endpoint:
+                    await self.wait_for_all_export_tasks_local(user_session, timeout=self.config.export_timeout)
 
         # Profile the workflow
         profiler_results = await self.profile_workflow()

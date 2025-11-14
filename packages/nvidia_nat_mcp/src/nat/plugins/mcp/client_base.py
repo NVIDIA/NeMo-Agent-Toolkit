@@ -54,9 +54,8 @@ class AuthAdapter(httpx.Auth):
     Converts AuthProviderBase to httpx.Auth interface for dynamic token management.
     """
 
-    def __init__(self, auth_provider: AuthProviderBase, user_id: str | None = None):
+    def __init__(self, auth_provider: AuthProviderBase):
         self.auth_provider = auth_provider
-        self.user_id = user_id  # Session-specific user ID for cache isolation
         # each adapter instance has its own lock to avoid unnecessary delays for multiple clients
         self._lock = anyio.Lock()
         # Track whether we're currently in an interactive authentication flow
@@ -109,8 +108,8 @@ class AuthAdapter(httpx.Auth):
                                 response: httpx.Response | None = None) -> dict[str, str]:
         """Get authentication headers from the NAT auth provider."""
         try:
-            # Use the user_id passed to this AuthAdapter instance
-            auth_result = await self.auth_provider.authenticate(user_id=self.user_id, response=response)
+            # TODO: Add user_id to the authenticate call
+            auth_result = await self.auth_provider.authenticate(response=response)
 
             # Check if we have BearerTokenCred
             from nat.data_models.authentication import BearerTokenCred
@@ -143,7 +142,6 @@ class MCPBaseClient(ABC):
     def __init__(self,
                  transport: str = 'streamable-http',
                  auth_provider: AuthProviderBase | None = None,
-                 user_id: str | None = None,
                  tool_call_timeout: timedelta = timedelta(seconds=60),
                  auth_flow_timeout: timedelta = timedelta(seconds=300),
                  reconnect_enabled: bool = True,
@@ -162,9 +160,7 @@ class MCPBaseClient(ABC):
 
         # Convert auth provider to AuthAdapter
         self._auth_provider = auth_provider
-        # Use provided user_id or fall back to auth provider's default_user_id
-        effective_user_id = user_id or (auth_provider.config.default_user_id if auth_provider else None)
-        self._httpx_auth = AuthAdapter(auth_provider, effective_user_id) if auth_provider else None
+        self._httpx_auth = AuthAdapter(auth_provider) if auth_provider else None
 
         self._tool_call_timeout = tool_call_timeout
         self._auth_flow_timeout = auth_flow_timeout

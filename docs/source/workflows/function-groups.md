@@ -57,15 +57,15 @@ class DeleteFileConfig(FunctionBaseConfig, name="delete_file"):
 @register_function(config_type=SaveFileConfig)
 async def build_save_file(config: SaveFileConfig, _builder: Builder):
     # Each function creates its own S3 client
-    s3_client = boto3.client('s3', 
+    s3_client = boto3.client('s3',
                              endpoint_url=config.endpoint,
                              aws_access_key_id=config.access_key,
                              aws_secret_access_key=config.secret_key)
-    
+
     async def save_fn(filename: str, content: bytes) -> str:
         s3_client.put_object(Bucket=config.bucket, Key=filename, Body=content)
         return f"Saved {filename}"
-    
+
     yield save_fn
 
 @register_function(config_type=LoadFileConfig)
@@ -75,11 +75,11 @@ async def build_load_file(config: LoadFileConfig, _builder: Builder):
                              endpoint_url=config.endpoint,
                              aws_access_key_id=config.access_key,
                              aws_secret_access_key=config.secret_key)
-    
+
     async def load_fn(filename: str) -> bytes:
         response = s3_client.get_object(Bucket=config.bucket, Key=filename)
         return response['Body'].read()
-    
+
     yield load_fn
 
 @register_function(config_type=DeleteFileConfig)
@@ -89,11 +89,11 @@ async def build_delete_file(config: DeleteFileConfig, _builder: Builder):
                              endpoint_url=config.endpoint,
                              aws_access_key_id=config.access_key,
                              aws_secret_access_key=config.secret_key)
-    
+
     async def delete_fn(filename: str) -> str:
         s3_client.delete_object(Bucket=config.bucket, Key=filename)
         return f"Deleted {filename}"
-    
+
     yield delete_fn
 ```
 
@@ -107,14 +107,14 @@ functions:
     access_key: "${S3_ACCESS_KEY}"
     secret_key: "${S3_SECRET_KEY}"
     bucket: "my-bucket"
-  
+
   load_file:
     _type: load_file
     endpoint: "https://s3.amazonaws.com"  # Duplicated
     access_key: "${S3_ACCESS_KEY}"        # Duplicated
     secret_key: "${S3_SECRET_KEY}"        # Duplicated
     bucket: "my-bucket"                   # Duplicated
-  
+
   delete_file:
     _type: delete_file
     endpoint: "https://s3.amazonaws.com"  # Duplicated
@@ -148,25 +148,25 @@ async def build_object_store(config: ObjectStoreConfig, _builder: Builder):
                              endpoint_url=config.endpoint,
                              aws_access_key_id=config.access_key,
                              aws_secret_access_key=config.secret_key)
-    
+
     group = FunctionGroup(config=config, instance_name="storage")
-    
+
     async def save_fn(filename: str, content: bytes) -> str:
         s3_client.put_object(Bucket=config.bucket, Key=filename, Body=content)
         return f"Saved {filename}"
-    
+
     async def load_fn(filename: str) -> bytes:
         response = s3_client.get_object(Bucket=config.bucket, Key=filename)
         return response['Body'].read()
-    
+
     async def delete_fn(filename: str) -> str:
         s3_client.delete_object(Bucket=config.bucket, Key=filename)
         return f"Deleted {filename}"
-    
+
     group.add_function(name="save", fn=save_fn, description="Save file to storage")
     group.add_function(name="load", fn=load_fn, description="Load file from storage")
     group.add_function(name="delete", fn=delete_fn, description="Delete file from storage")
-    
+
     yield group
 ```
 
@@ -238,7 +238,7 @@ class MathGroupConfig(FunctionGroupBaseConfig, name="math_group"):
 Without function groups, we have a lot of duplication:
 
 ```python
-@register_function_group(config_type=AddConfig)
+@register_function(config_type=AddConfig)
 async def build_add(config: AddConfig, _builder: Builder):
     async def add(a: float) -> float:
         return a + config.rhs
@@ -246,7 +246,7 @@ async def build_add(config: AddConfig, _builder: Builder):
     yield FunctionInfo.from_fn(add, description=f"Adds a number to {config.rhs}")
 
 
-@register_function_group(config_type=MultiplyConfig)
+@register_function(config_type=MultiplyConfig)
 async def build_add(config: MultiplyConfig, _builder: Builder):
     async def multiply(a: float) -> float:
         return a * config.rhs
@@ -254,7 +254,7 @@ async def build_add(config: MultiplyConfig, _builder: Builder):
     yield FunctionInfo.from_fn(multiply, description=f"Multiplies a number by {config.rhs}")
 
 
-@register_function_group(config_type=DivideConfig)
+@register_function(config_type=DivideConfig)
 async def build_add(config: DivideConfig, _builder: Builder):
     async def divide(a: float) -> float:
         return a / config.rhs
@@ -276,7 +276,7 @@ async def build_math_group(config: MathGroupConfig, _builder: Builder):
     # - divide
     async def add(a: float) -> float:
         return a + config.rhs
-    
+
     async def multiply(a: float) -> float:
         return a * config.rhs
 
@@ -532,7 +532,7 @@ function_groups:
   math:
     _type: math_group
     include: [add, multiply, divide]
-  
+
   storage:
     _type: object_store
     endpoint: "https://s3.amazonaws.com"
@@ -557,7 +557,7 @@ from nat.builder.workflow_builder import WorkflowBuilder
 async with WorkflowBuilder() as builder:
     # Add the function group
     await builder.add_function_group("math", MathGroupConfig(rhs=5.0, include=["add", "multiply"]))
-    
+
     # Call an included function by its fully-qualified name
     add = await builder.get_function("math.add")
     result = await add.ainvoke(3.0)  # Returns: 8.0
@@ -570,19 +570,19 @@ Access the function group object to work with all functions, including excluded 
 ```python
 async with WorkflowBuilder() as builder:
     await builder.add_function_group("math", MathGroupConfig(exclude=["divide"]))
-    
+
     # Get the function group object
     math_group = await builder.get_function_group("math")
-    
+
     # Get all accessible functions (respects include/exclude)
     accessible = await math_group.get_accessible_functions()
-    
+
     # Get all functions including excluded ones
     all_funcs = await math_group.get_all_functions()
-    
+
     # Get only included functions
     included = await math_group.get_included_functions()
-    
+
     # Get only excluded functions
     excluded = await math_group.get_excluded_functions()
 ```
@@ -619,15 +619,15 @@ async with WorkflowBuilder() as builder:
     # Define a filter that only allows "add" operations
     def math_filter(function_names):
         return [name for name in function_names if name.startswith("add")]
-    
+
     # Add the function group
     config = MathGroupConfig(include=["add", "multiply"])
     await builder.add_function_group("math", config)
-    
+
     # Apply the filter
     math_group = await builder.get_function_group("math")
     math_group.set_filter_fn(math_filter)
-    
+
     # Now only "add" functions are accessible
     accessible = await math_group.get_accessible_functions()
     # Returns: ["math.add"]
@@ -675,13 +675,13 @@ Group all database operations together to share a connection pool:
 async def build_database_group(config: DatabaseConfig, _builder: Builder):
     async with create_connection_pool(config) as pool:
         group = FunctionGroup(config=config, instance_name="db")
-        
+
         # All functions share the same pool
         group.add_function("query", query_fn)
         group.add_function("insert", insert_fn)
         group.add_function("update", update_fn)
         group.add_function("delete", delete_fn)
-        
+
         yield group
 ```
 
@@ -697,14 +697,14 @@ async def build_api_group(config: APIConfig, _builder: Builder):
         base_url=config.base_url,
         headers={"Authorization": f"Bearer {config.api_key}"}
     )
-    
+
     group = FunctionGroup(config=config, instance_name="api")
-    
+
     # All functions use the same authenticated client
     group.add_function("get_user", get_user_fn)
     group.add_function("list_items", list_items_fn)
     group.add_function("create_item", create_item_fn)
-    
+
     yield group
     await client.aclose()
 ```
@@ -718,7 +718,7 @@ function_groups:
   math:
     _type: math_group
     exclude: [_internal_helper, _validate_input]  # Keep helpers private
-    
+
 workflow:
   _type: react_agent
   tool_names: [math]  # Agents get public functions only
@@ -733,7 +733,7 @@ function_groups:
   experimental:
     _type: ml_models
     include: [stable_model_v1]  # Only expose production-ready models
-    
+
 workflow:
   _type: react_agent
   tool_names: [experimental.stable_model_v1]
@@ -808,11 +808,11 @@ Create resources once and share them across all functions:
 async def build_group(config: Config, _builder: Builder):
     client = expensive_client_setup()
     # All functions use the same client
-    
+
 # Bad - each function creates its own client
 async def fn1():
     client = expensive_client_setup()
-    
+
 async def fn2():
     client = expensive_client_setup()  # Wasteful duplication
 ```
@@ -851,10 +851,10 @@ Use `@register_function` for single functions instead.
 @register_function_group(config_type=Config)
 async def build_group(config: Config, _builder: Builder):
     group = FunctionGroup(config=config, instance_name="db")
-    
+
     async def query_fn():
         conn = create_connection()  # Bad - creates new connection each time
-        
+
     group.add_function("query", query_fn)
     yield group
 ```
@@ -883,7 +883,7 @@ When testing workflows with function groups:
 async with WorkflowBuilder() as builder:
     await builder.add_function_group("math", MathGroupConfig(rhs=5.0))
     math_group = await builder.get_function_group("math")
-    
+
     # Test each function
     all_funcs = await math_group.get_all_functions()
     for func_name, func in all_funcs.items():

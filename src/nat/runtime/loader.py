@@ -111,10 +111,17 @@ async def load_workflow(config_file: StrPath, max_concurrency: int = -1):
     # Load the config object
     config = load_config(config_file)
 
-    # Must yield the workflow function otherwise it cleans up
-    async with WorkflowBuilder.from_config(config=config) as workflow:
+    # # Must yield the workflow function otherwise it cleans up
+    # async with WorkflowBuilder.from_config(config=config) as workflow:
 
-        yield SessionManager(await workflow.build(), max_concurrency=max_concurrency)
+    #     yield SessionManager(await workflow.build(), max_concurrency=max_concurrency)
+
+    session_manager = SessionManager(config=config, require_user_id=False)
+    await session_manager._ensure_shared_builder()
+    try:
+        yield session_manager
+    finally:
+        await session_manager.shutdown()
 
 
 @lru_cache
