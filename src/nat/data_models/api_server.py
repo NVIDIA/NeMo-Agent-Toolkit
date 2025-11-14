@@ -351,7 +351,7 @@ class ChatResponse(ResponseBaseModelOutput):
     usage: Usage
     system_fingerprint: str | None = None
     service_tier: typing.Literal["scale", "default"] | None = None
-    weave_call_id: str | None = None
+    observability_trace_id: str | None = None
 
     @field_serializer('created')
     def serialize_created(self, created: datetime.datetime) -> int:
@@ -366,7 +366,7 @@ class ChatResponse(ResponseBaseModelOutput):
                     model: str | None = None,
                     created: datetime.datetime | None = None,
                     usage: Usage,
-                    weave_call_id: str | None = None) -> "ChatResponse":
+                    observability_trace_id: str | None = None) -> "ChatResponse":
 
         if id_ is None:
             id_ = str(uuid.uuid4())
@@ -376,10 +376,10 @@ class ChatResponse(ResponseBaseModelOutput):
             model = "unknown-model"
         if created is None:
             created = datetime.datetime.now(datetime.UTC)
-        if weave_call_id is None:
+        if observability_trace_id is None:
             try:
                 from nat.builder.context import Context
-                weave_call_id = Context.get().weave_call_id
+                observability_trace_id = Context.get().observability_trace_id
             except Exception:
                 pass
 
@@ -394,7 +394,7 @@ class ChatResponse(ResponseBaseModelOutput):
                                                    finish_reason="stop")
                             ],
                             usage=usage,
-                            weave_call_id=weave_call_id)
+                            observability_trace_id=observability_trace_id)
 
 
 class ChatResponseChunk(ResponseBaseModelOutput):
@@ -414,7 +414,7 @@ class ChatResponseChunk(ResponseBaseModelOutput):
     system_fingerprint: str | None = None
     service_tier: typing.Literal["scale", "default"] | None = None
     usage: Usage | None = None
-    weave_call_id: str | None = None
+    observability_trace_id: str | None = None
 
     @field_serializer('created')
     def serialize_created(self, created: datetime.datetime) -> int:
@@ -428,7 +428,7 @@ class ChatResponseChunk(ResponseBaseModelOutput):
                     created: datetime.datetime | None = None,
                     model: str | None = None,
                     object_: str | None = None,
-                    weave_call_id: str | None = None) -> "ChatResponseChunk":
+                    observability_trace_id: str | None = None) -> "ChatResponseChunk":
 
         if id_ is None:
             id_ = str(uuid.uuid4())
@@ -438,10 +438,10 @@ class ChatResponseChunk(ResponseBaseModelOutput):
             model = "unknown-model"
         if object_ is None:
             object_ = "chat.completion.chunk"
-        if weave_call_id is None:
+        if observability_trace_id is None:
             try:
                 from nat.builder.context import Context
-                weave_call_id = Context.get().weave_call_id
+                observability_trace_id = Context.get().observability_trace_id
             except Exception:
                 pass
 
@@ -456,7 +456,7 @@ class ChatResponseChunk(ResponseBaseModelOutput):
                                  created=created,
                                  model=model,
                                  object=object_,
-                                 weave_call_id=weave_call_id)
+                                 observability_trace_id=observability_trace_id)
 
     @staticmethod
     def create_streaming_chunk(content: str,
@@ -468,7 +468,7 @@ class ChatResponseChunk(ResponseBaseModelOutput):
                                finish_reason: str | None = None,
                                usage: Usage | None = None,
                                system_fingerprint: str | None = None,
-                               weave_call_id: str | None = None) -> "ChatResponseChunk":
+                               observability_trace_id: str | None = None) -> "ChatResponseChunk":
         """Create an OpenAI-compatible streaming chunk"""
         if id_ is None:
             id_ = str(uuid.uuid4())
@@ -476,10 +476,10 @@ class ChatResponseChunk(ResponseBaseModelOutput):
             created = datetime.datetime.now(datetime.UTC)
         if model is None:
             model = "unknown-model"
-        if weave_call_id is None:
+        if observability_trace_id is None:
             try:
                 from nat.builder.context import Context
-                weave_call_id = Context.get().weave_call_id
+                observability_trace_id = Context.get().observability_trace_id
             except Exception:
                 pass
 
@@ -502,7 +502,7 @@ class ChatResponseChunk(ResponseBaseModelOutput):
             object="chat.completion.chunk",
             usage=usage,
             system_fingerprint=system_fingerprint,
-            weave_call_id=weave_call_id)
+            observability_trace_id=observability_trace_id)
 
 
 class ResponseIntermediateStep(ResponseBaseModelIntermediate):
@@ -518,7 +518,7 @@ class ResponseIntermediateStep(ResponseBaseModelIntermediate):
     type: str = "markdown"
     name: str
     payload: str
-    weave_call_id: str | None = None
+    observability_trace_id: str | None = None
 
 
 class ResponsePayloadOutput(BaseModel, ResponseSerializable):
@@ -670,7 +670,7 @@ class WebSocketSystemIntermediateStepMessage(BaseModel):
     content: SystemIntermediateStepContent
     status: WebSocketMessageStatus
     timestamp: str = str(datetime.datetime.now(datetime.UTC))
-    weave_call_id: str | None = None
+    observability_trace_id: str | None = None
 
 
 class SystemResponseContent(BaseModel):
@@ -695,7 +695,7 @@ class WebSocketSystemResponseTokenMessage(BaseModel):
     content: SystemResponseContent | Error | GenerateResponse
     status: WebSocketMessageStatus
     timestamp: str = str(datetime.datetime.now(datetime.UTC))
-    weave_call_id: str | None = None
+    observability_trace_id: str | None = None
 
     @field_validator("content")
     @classmethod
@@ -727,7 +727,7 @@ class WebSocketSystemInteractionMessage(BaseModel):
     content: HumanPrompt
     status: WebSocketMessageStatus
     timestamp: str = str(datetime.datetime.now(datetime.UTC))
-    weave_call_id: str | None = None
+    observability_trace_id: str | None = None
 
 
 # ======== GenerateResponse Converters ========
