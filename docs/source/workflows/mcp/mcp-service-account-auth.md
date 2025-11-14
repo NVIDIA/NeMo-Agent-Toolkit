@@ -90,10 +90,12 @@ Customize the authentication behavior with these optional fields:
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| `token_prefix` | `service_account` | Prefix for the Authorization header token. Use empty string (`""`) for standard Bearer tokens. |
-| `service_token` | None | Service token (service-specific token such as Jira service token or GitLab service token) for dual authentication patterns |
-| `service_token_header` | `Service-Account-Token` | Header name for the service token |
+| `service_token` | None | Nested configuration for service-specific token in dual authentication patterns. Contains: `token` (static token value), `function` (Python function path for dynamic token), and `header` (HTTP header name, default: `X-Service-Account-Token`). Either `token` or `function` must be provided, not both. |
 | `token_cache_buffer_seconds` | `300` | Seconds before token expiry to refresh the token (default: 5 minutes) |
+
+:::{note}
+The OAuth2 service account token automatically includes the `service_account_ssa:` prefix. Token prefix configuration is no longer needed.
+:::
 
 ## Environment Variables
 
@@ -192,10 +194,9 @@ authentication:
     token_url: https://auth.example.com/oauth/token
     scopes:
       - service.scope
-    token_prefix: service_account_ssa
 ```
 
-Produces: `Authorization: Bearer service_account_ssa:<access_token>`
+Produces: `Authorization: Bearer service_account_ssa:<access_token>` (prefix added automatically)
 
 ### Dual Authentication Pattern
 
@@ -214,6 +215,8 @@ sequenceDiagram
     MCP Server-->>Client: Response
 ```
 
+**Option 1: Static Service Token**
+
 ```yaml
 authentication:
   dual_auth:
@@ -223,16 +226,58 @@ authentication:
     token_url: ${TOKEN_URL}
     scopes:
       - service.scope
-    token_prefix: service_account_ssa
-    service_token: ${SERVICE_TOKEN}
-    service_token_header: X-Service-Account-Token
+    service_token:
+      token: ${SERVICE_TOKEN}  # Static token from environment
+      header: X-Service-Account-Token
 ```
 
-Produces:
+**Option 2: Dynamic Service Token (Advanced)**
+
+```yaml
+authentication:
+  dual_auth:
+    _type: mcp_service_account
+    client_id: ${CLIENT_ID}
+    client_secret: ${CLIENT_SECRET}
+    token_url: ${TOKEN_URL}
+    scopes:
+      - service.scope
+    service_token:
+      function: "my_module.get_service_token"  # Python function path
+      header: X-Service-Account-Token
+      kwargs:  # Optional: Pass additional arguments to the function
+        vault_path: "secrets/jira"
+        region: "us-west-2"
+```
+
+Both produce:
 ```text
 Authorization: Bearer service_account_ssa:<access_token>
 X-Service-Account-Token: <service_token>
 ```
+
+:::{tip}
+**Dynamic Function Approach**
+
+The dynamic function approach is useful for enterprise environments where service tokens need to be fetched from secure token vaults or have complex retrieval logic. The function will be called on every request.
+
+Function signature: `async def get_service_token(**kwargs) -> str | tuple[str, str]`
+
+The function can:
+- Return `str` for the token (uses `header` from config)
+- Return `tuple[str, str]` for `(header_name, token)` to override the header
+- Access runtime context via `AIQContext.get()` if needed
+- Receive additional arguments via the `kwargs` field in configuration
+
+Example:
+```python
+async def get_service_token(vault_path: str, **kwargs) -> str:
+    from nat.builder.context import AIQContext
+    context = AIQContext.get()
+    # Fetch token from vault, use context metadata if needed
+    return fetch_from_vault(vault_path)
+```
+:::
 
 ## Security Considerations
 

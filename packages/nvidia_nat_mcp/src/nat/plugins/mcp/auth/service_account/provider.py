@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import importlib
 import logging
 
 from pydantic import SecretStr
@@ -32,7 +33,9 @@ class MCPServiceAccountProvider(AuthProviderBase[MCPServiceAccountProviderConfig
     MCP service account authentication provider using OAuth2 client credentials.
 
     Provides headless authentication for MCP clients using service account credentials.
-    Supports both standard Bearer tokens and custom token prefix formats.
+    Supports two authentication patterns:
+    1. Single authentication: OAuth2 service account token only
+    2. Dual authentication: OAuth2 service account token + service-specific token
 
     Example Configuration:
         authentication:
@@ -44,8 +47,13 @@ class MCPServiceAccountProvider(AuthProviderBase[MCPServiceAccountProviderConfig
             scopes:
               - api.read
               - api.write
-            token_prefix: service_account  # Optional
-            service_token: ${SERVICE_TOKEN}  # Optional
+            service_token:  # Optional, for dual authentication
+              token: ${SERVICE_TOKEN}  # Static token
+              header: "X-Service-Token"
+              # OR
+              # function: "my_module.get_token"  # Dynamic function (can access AIQContext)
+              # kwargs:  # Optional kwargs for the function
+              #   custom_param: "value"
     """
 
     def __init__(self, config: MCPServiceAccountProviderConfig, builder=None):
@@ -60,11 +68,27 @@ class MCPServiceAccountProvider(AuthProviderBase[MCPServiceAccountProviderConfig
             token_cache_buffer_seconds=config.token_cache_buffer_seconds,
         )
 
+        # Load dynamic service token function if configured
+        self._service_token_function = None
+        if config.service_token and config.service_token.function:
+            self._service_token_function = self._load_function(config.service_token.function)
+
         logger.info("Initialized MCP service account auth provider: "
                     "token_url=%s, scopes=%s, has_service_token=%s",
                     config.token_url,
                     config.scopes,
                     config.service_token is not None)
+
+    def _load_function(self, function_path: str):
+        """Load a Python function from a module path string (e.g., 'my_module.get_token')."""
+        try:
+            module_name, func_name = function_path.rsplit(".", 1)
+            module = importlib.import_module(module_name)
+            func = getattr(module, func_name)
+            logger.info("Loaded service token function: %s", function_path)
+            return func
+        except Exception as e:
+            raise ValueError(f"Failed to load service token function '{function_path}': {e}") from e
 
     async def authenticate(self, user_id: str | None = None, **kwargs) -> AuthResult:
         """
@@ -76,22 +100,44 @@ class MCPServiceAccountProvider(AuthProviderBase[MCPServiceAccountProviderConfig
             AuthResult with HeaderCred objects for service account authentication
         """
         # Get OAuth2 access token (cached if still valid)
+        # Note: The token client now hardcodes the "service_account_ssa:" prefix temporarily
         access_token = await self._token_client.get_access_token()
 
-        # Format Authorization header value
-        if self.config.token_prefix:
-            bearer_token = f"{self.config.token_prefix}:{access_token.get_secret_value()}"
-        else:
-            # Standard Bearer token (no custom prefix)
-            bearer_token = access_token.get_secret_value()
-
         # Build credentials list using HeaderCred
-        credentials: list[Credential] = [HeaderCred(name="Authorization", value=SecretStr(f"Bearer {bearer_token}"))]
+        credentials: list[Credential] = [
+            HeaderCred(name="Authorization", value=SecretStr(f"Bearer {access_token.get_secret_value()}"))
+        ]
 
-        # Add service-specific token if provided
+        # Add service-specific token if configured
         if self.config.service_token:
-            service_token = self.config.service_token.get_secret_value()
-            credentials.append(HeaderCred(name=self.config.service_token_header, value=SecretStr(service_token)))
+            service_header = self.config.service_token.header
+            service_token_value = None
+
+            # Get service token from static config or dynamic function
+            if self.config.service_token.token:
+                # Static token from config
+                service_token_value = self.config.service_token.token.get_secret_value()
+
+            elif self._service_token_function:
+                # Dynamic token from function
+                try:
+                    # Pass configured kwargs to the function
+                    # Function can access runtime context via AIQContext.get() if needed
+                    result = await self._service_token_function(**self.config.service_token.kwargs)
+
+                    # Handle function return type: str or tuple[str, str]
+                    if isinstance(result, tuple):
+                        service_header, service_token_value = result
+                    else:
+                        service_token_value = result
+
+                    logger.debug("Retrieved service token via dynamic function")
+
+                except Exception as e:
+                    raise RuntimeError(f"Failed to get service token from function: {e}") from e
+
+            if service_token_value:
+                credentials.append(HeaderCred(name=service_header, value=SecretStr(service_token_value)))
 
         # Return AuthResult with HeaderCred objects
         return AuthResult(

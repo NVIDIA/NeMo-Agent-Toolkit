@@ -88,12 +88,11 @@ export SERVICE_ACCOUNT_TOKEN_URL="https://auth.example.com/service_account/token
 
 # Service account scopes - space-separated (required for both patterns)
 export SERVICE_ACCOUNT_SCOPES="service-account-scope-jama_cache service-account-scope-jira"
-
-# Custom token prefix for Authorization header (optional)
-# Example: "service_account_ssa" produces "Authorization: Bearer service_account_ssa:<token>"
-# Use empty string "" for standard "Authorization: Bearer <token>" format
-export AUTHORIZATION_TOKEN_PREFIX="service_account_ssa"
 ```
+
+:::{note}
+The OAuth2 service account token automatically includes the `service_account_ssa:` prefix. You no longer need to configure a `token_prefix` field.
+:::
 
 #### Pattern 1: Single Authentication (Jama Cache Example)
 
@@ -112,13 +111,31 @@ For enterprise MCP servers that require both OAuth2 service account token and se
 # MCP server URL
 export CORPORATE_MCP_SERVICE_ACCOUNT_JIRA_URL="https://mcp.example.com/jira/mcp"
 
-# Custom header name for service token
-# Example: "X-Service-Account-Token: <your-service_token>"
-export SERVICE_TOKEN_HEADER="X-Service-Account-Token"
-
-# Service-specific token for accessing backend APIs
+# Service-specific token for accessing backend APIs (static token)
 export JIRA_SERVICE_TOKEN="your-jira-service-token"
+
+# Optional: Custom header name for service token (defaults to X-Service-Account-Token)
+export SERVICE_TOKEN_HEADER="X-Service-Account-Token"
 ```
+
+:::{tip}
+**Advanced: Dynamic Service Token**
+
+Instead of providing a static token via environment variable, you can configure a custom Python function to fetch the service token dynamically at runtime.
+
+Function signature: `async def get_service_token(**kwargs) -> str | tuple[str, str]`
+
+The function can access `AIQContext.get()` for runtime context and receive additional arguments via the `kwargs` field in the config. This is useful for enterprise environments with dynamic token management (e.g., fetching from secure vaults).
+
+Example in config:
+```yaml
+service_token:
+  function: "my_module.get_service_token"
+  kwargs:
+    vault_path: "secrets/jira"
+  header: X-Service-Account-Token
+```
+:::
 
 :::{important}
 All environment variables here are for demonstration purposes. You must set the environment variables for your actual service account and MCP server URL.
@@ -139,12 +156,23 @@ nat run --config_file examples/MCP/service_account_auth_mcp/configs/config-mcp-s
     --input "What Jama releases are available?"
 ```
 
-### Dual Authentication Pattern (Jira)
+### Dual Authentication Pattern (Jira - Static Token)
 
 ```bash
 nat run --config_file examples/MCP/service_account_auth_mcp/configs/config-mcp-service-account-jira.yml \
     --input "What is status of jira ticket OCSW-2116?"
 ```
+
+### Dual Authentication Pattern (Jira - Dynamic Function)
+
+This example demonstrates fetching the service token dynamically via a Python function instead of reading from environment variables:
+
+```bash
+nat run --config_file examples/MCP/service_account_auth_mcp/configs/config-mcp-service-account-jira-function.yml \
+    --input "What is status of jira ticket OCSW-2116?"
+```
+
+The function is defined in `scripts/service_tokens.py` and demonstrates how to implement dynamic token retrieval. In production, you would replace this with logic to fetch tokens from secure vaults or token services.
 
 ## Expected Behavior
 

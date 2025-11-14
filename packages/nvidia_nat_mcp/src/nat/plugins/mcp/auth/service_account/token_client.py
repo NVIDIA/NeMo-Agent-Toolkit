@@ -128,8 +128,11 @@ class ServiceAccountTokenClient:
                 if response.status_code == 200:
                     token_data = response.json()
 
-                    # Cache the token
-                    self._cached_token = SecretStr(token_data["access_token"])
+                    # Cache the token with hardcoded prefix
+                    # TODO: Remove this temporary prefix once token API adds it server-side
+                    access_token = token_data["access_token"]
+                    prefixed_token = f"service_account_ssa:{access_token}"
+                    self._cached_token = SecretStr(prefixed_token)
                     expires_in = token_data.get("expires_in", 3600)
                     self._token_expires_at = datetime.now() + timedelta(seconds=expires_in)
 
