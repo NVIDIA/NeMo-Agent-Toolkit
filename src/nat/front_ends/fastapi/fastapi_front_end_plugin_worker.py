@@ -672,9 +672,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         def add_context_headers_to_response(response: Response) -> None:
             """Add context-based headers to response if available."""
-            weave_call_id = Context.get().weave_call_id
-            if weave_call_id:
-                response.headers["Weave-Call-Id"] = weave_call_id
+            observability_trace_id = Context.get().observability_trace_id
+            if observability_trace_id:
+                response.headers["Observability-Trace-Id"] = observability_trace_id
 
         # Skip async generation for custom routes (those with function_name)
         if self._dask_available and not hasattr(endpoint, 'function_name'):
@@ -1228,7 +1228,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         try:
 
             async def add_chat_feedback(request: Request, payload: dict):
-                """Add reaction feedback for an assistant message via Weave call ID."""
+                """Add reaction feedback for an assistant message via observability trace ID."""
                 import weave
 
                 # Get the weave project name from the configuration
@@ -1237,24 +1237,24 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 weave_project = f"{entity}/{project}" if entity else project
 
                 # Extract parameters from payload
-                weave_call_id = payload.get('weave_call_id')
+                observability_trace_id = payload.get('observability_trace_id')
                 reaction_type = payload.get('reaction_type')
 
-                if not weave_call_id or not reaction_type:
-                    raise HTTPException(status_code=400, detail="weave_call_id and reaction_type are required")
+                if not observability_trace_id or not reaction_type:
+                    raise HTTPException(status_code=400, detail="observability_trace_id and reaction_type are required")
 
                 # Add feedback directly
                 client = weave.init(weave_project)
-                call = client.get_call(weave_call_id)
+                call = client.get_call(observability_trace_id)
                 call.feedback.add_reaction(reaction_type)
 
-                return {"message": f"Added reaction '{reaction_type}' to call {weave_call_id}"}
+                return {"message": f"Added reaction '{reaction_type}' to call {observability_trace_id}"}
 
             app.add_api_route(
                 path="/feedback",
                 endpoint=add_chat_feedback,
                 methods=["POST"],
-                description="Set reaction feedback for an assistant message via Weave call ID",
+                description="Set reaction feedback for an assistant message via observability trace ID",
                 responses={
                     500: {
                         "description": "Internal Server Error",

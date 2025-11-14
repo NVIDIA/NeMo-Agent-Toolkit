@@ -71,7 +71,7 @@ class ContextState(metaclass=Singleton):
         self.user_message_id: ContextVar[str | None] = ContextVar("user_message_id", default=None)
         self.workflow_run_id: ContextVar[str | None] = ContextVar("workflow_run_id", default=None)
         self.workflow_trace_id: ContextVar[int | None] = ContextVar("workflow_trace_id", default=None)
-        self.weave_call_id: ContextVar[str | None] = ContextVar("weave_call_id", default=None)
+        self.observability_trace_id: ContextVar[str | None] = ContextVar("observability_trace_id", default=None)
         self.input_message: ContextVar[typing.Any] = ContextVar("input_message", default=None)
         self.user_manager: ContextVar[typing.Any] = ContextVar("user_manager", default=None)
         self.runtime_type: ContextVar[RuntimeTypeEnum] = ContextVar("runtime_type",
@@ -218,11 +218,11 @@ class Context:
         return self._context_state.workflow_trace_id.get()
 
     @property
-    def weave_call_id(self) -> str | None:
+    def observability_trace_id(self) -> str | None:
         """
-        Returns the Weave call identifier for the current run, used for Weave reaction feedback calls.
+        Returns the root observability trace identifier for the current run.
         """
-        return self._context_state.weave_call_id.get()
+        return self._context_state.observability_trace_id.get()
 
     @contextmanager
     def push_active_function(self,

@@ -148,45 +148,45 @@ def test_nat_chat_response_chunk_create_streaming_chunk():
     assert chunk.choices[0].finish_reason == "stop"
 
 
-def test_nat_chat_response_chunk_create_streaming_chunk_with_weave_id():
-    """Test create_streaming_chunk method with weave_call_id"""
-    # Test with explicit weave_call_id
-    chunk = ChatResponseChunk.create_streaming_chunk(content="Hello with weave",
+def test_nat_chat_response_chunk_create_streaming_chunk_with_observability_id():
+    """Test create_streaming_chunk method with observability_trace_id"""
+    # Test with explicit observability_trace_id
+    chunk = ChatResponseChunk.create_streaming_chunk(content="Hello with observability",
                                                      role=UserMessageContentRoleType.ASSISTANT,
-                                                     weave_call_id="explicit-weave-id")
+                                                     observability_trace_id="explicit-observability-id")
 
-    assert chunk.choices[0].delta.content == "Hello with weave"
+    assert chunk.choices[0].delta.content == "Hello with observability"
     assert chunk.choices[0].delta.role == UserMessageContentRoleType.ASSISTANT
-    assert chunk.weave_call_id == "explicit-weave-id"
+    assert chunk.observability_trace_id == "explicit-observability-id"
     assert chunk.object == "chat.completion.chunk"
 
-    # Test with context-based weave_call_id
+    # Test with context-based observability_trace_id
     with patch('nat.builder.context.Context.get') as mock_context:
-        mock_context.return_value.weave_call_id = "context-weave-id"
+        mock_context.return_value.observability_trace_id = "context-observability-id"
 
         chunk = ChatResponseChunk.create_streaming_chunk(content="Hello from context",
                                                          role=UserMessageContentRoleType.ASSISTANT)
 
         assert chunk.choices[0].delta.content == "Hello from context"
-        assert chunk.weave_call_id == "context-weave-id"
+        assert chunk.observability_trace_id == "context-observability-id"
 
 
-def test_nat_chat_response_chunk_from_string_with_weave_id():
-    """Test ChatResponseChunk.from_string method with weave_call_id"""
-    # Test with explicit weave_call_id
-    chunk = ChatResponseChunk.from_string("Hello", weave_call_id="explicit-chunk-weave-id")
+def test_nat_chat_response_chunk_from_string_with_observability_id():
+    """Test ChatResponseChunk.from_string method with observability_trace_id"""
+    # Test with explicit observability_trace_id
+    chunk = ChatResponseChunk.from_string("Hello", observability_trace_id="explicit-chunk-observability-id")
 
-    assert chunk.weave_call_id == "explicit-chunk-weave-id"
+    assert chunk.observability_trace_id == "explicit-chunk-observability-id"
     assert chunk.object == "chat.completion.chunk"
     assert chunk.choices[0].delta.content == "Hello"
 
-    # Test with context-based weave_call_id
+    # Test with context-based observability_trace_id
     with patch('nat.builder.context.Context.get') as mock_context:
-        mock_context.return_value.weave_call_id = "context-chunk-weave-id"
+        mock_context.return_value.observability_trace_id = "context-chunk-observability-id"
 
         chunk = ChatResponseChunk.from_string("Hello from context")
 
-        assert chunk.weave_call_id == "context-chunk-weave-id"
+        assert chunk.observability_trace_id == "context-chunk-observability-id"
         assert chunk.choices[0].delta.content == "Hello from context"
 
 
@@ -212,51 +212,55 @@ def test_nat_chat_response_timestamp_serialization():
     assert chunk_json["created"] == 1704110400
 
 
-def test_nat_chat_response_from_string_with_weave_id():
-    """Test ChatResponse.from_string method with weave_call_id integration"""
-    # Test with explicit weave_call_id
+def test_nat_chat_response_from_string_with_observability_id():
+    """Test ChatResponse.from_string method with observability_trace_id integration"""
+    # Test with explicit observability_trace_id
     usage = Usage(prompt_tokens=1, completion_tokens=1, total_tokens=2)
-    response = ChatResponse.from_string("Hello with weave", usage=usage, weave_call_id="explicit-response-weave-id")
+    response = ChatResponse.from_string("Hello with observability",
+                                        usage=usage,
+                                        observability_trace_id="explicit-response-observability-id")
 
-    assert response.choices[0].message.content == "Hello with weave"
-    assert response.weave_call_id == "explicit-response-weave-id"
+    assert response.choices[0].message.content == "Hello with observability"
+    assert response.observability_trace_id == "explicit-response-observability-id"
     assert response.object == "chat.completion"
 
-    # Test with context-based weave_call_id
+    # Test with context-based observability_trace_id
     with patch('nat.builder.context.Context.get') as mock_context:
-        mock_context.return_value.weave_call_id = "context-response-weave-id"
+        mock_context.return_value.observability_trace_id = "context-response-observability-id"
 
         response = ChatResponse.from_string("Hello from context", usage=usage)
 
         assert response.choices[0].message.content == "Hello from context"
-        assert response.weave_call_id == "context-response-weave-id"
+        assert response.observability_trace_id == "context-response-observability-id"
 
     # Test fallback behavior when context is unavailable
     with patch('nat.builder.context.Context.get', side_effect=Exception("No context")):
         response = ChatResponse.from_string("Hello without context", usage=usage)
 
         assert response.choices[0].message.content == "Hello without context"
-        assert response.weave_call_id is None
+        assert response.observability_trace_id is None
 
 
-def test_nat_openai_compatibility_weave_id_serialization():
-    """Test that weave_call_id is properly serialized in OpenAI-compatible responses"""
-    # Test ChatResponse serialization with weave_call_id
+def test_nat_openai_compatibility_observability_id_serialization():
+    """Test that observability_trace_id is properly serialized in OpenAI-compatible responses"""
+    # Test ChatResponse serialization with observability_trace_id
     usage = Usage(prompt_tokens=1, completion_tokens=1, total_tokens=2)
-    response = ChatResponse.from_string("Test response", usage=usage, weave_call_id="serialization-test-weave-id")
+    response = ChatResponse.from_string("Test response",
+                                        usage=usage,
+                                        observability_trace_id="serialization-test-observability-id")
 
     json_data = response.model_dump()
-    assert json_data["weave_call_id"] == "serialization-test-weave-id"
+    assert json_data["observability_trace_id"] == "serialization-test-observability-id"
     assert "choices" in json_data
     assert "usage" in json_data
 
-    # Test ChatResponseChunk serialization with weave_call_id
+    # Test ChatResponseChunk serialization with observability_trace_id
     chunk = ChatResponseChunk.create_streaming_chunk(content="Test chunk",
                                                      role=UserMessageContentRoleType.ASSISTANT,
-                                                     weave_call_id="chunk-serialization-weave-id")
+                                                     observability_trace_id="chunk-serialization-observability-id")
 
     chunk_json = chunk.model_dump()
-    assert chunk_json["weave_call_id"] == "chunk-serialization-weave-id"
+    assert chunk_json["observability_trace_id"] == "chunk-serialization-observability-id"
     assert chunk_json["object"] == "chat.completion.chunk"
     assert "choices" in chunk_json
 

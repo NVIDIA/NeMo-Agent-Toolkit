@@ -72,19 +72,19 @@ class MessageValidator:
 
         self._message_parent_id: str = "default_id"
 
-    def _get_weave_call_id_from_context(self, weave_call_id: str | None) -> str | None:
+    def _get_observability_trace_id_from_context(self, observability_trace_id: str | None) -> str | None:
         """
-        Retrieves weave_call_id from Context if not already provided
+        Retrieves observability_trace_id from Context if not already provided
 
-        :param weave_call_id: Existing weave_call_id or None.
-        :return: weave_call_id if available, None otherwise.
+        :param observability_trace_id: Existing observability_trace_id or None.
+        :return: observability_trace_id if available, None otherwise.
         """
-        if weave_call_id is not None:
-            return weave_call_id
+        if observability_trace_id is not None:
+            return observability_trace_id
 
         try:
             from nat.builder.context import Context
-            return Context.get().weave_call_id
+            return Context.get().observability_trace_id
         except (ImportError, AttributeError, KeyError):
             return None
 
@@ -259,7 +259,7 @@ class MessageValidator:
             content: SystemResponseContent | Error = SystemResponseContent(),
             status: WebSocketMessageStatus = WebSocketMessageStatus.IN_PROGRESS,
             timestamp: str = str(datetime.datetime.now(datetime.UTC)),
-            weave_call_id: str | None = None) -> WebSocketSystemResponseTokenMessage | None:
+            observability_trace_id: str | None = None) -> WebSocketSystemResponseTokenMessage | None:
         """
         Creates a system response token message with default values.
 
@@ -271,11 +271,11 @@ class MessageValidator:
         :param content: Message content.
         :param status: Status of the message (default: IN_PROGRESS).
         :param timestamp: Timestamp of the message (default: current UTC time).
-        :param weave_call_id: Weave call identifier (default: retrieved from context).
+        :param observability_trace_id: Observability trace identifier (default: retrieved from context).
         :return: A WebSocketSystemResponseTokenMessage instance.
         """
         try:
-            weave_call_id = self._get_weave_call_id_from_context(weave_call_id)
+            observability_trace_id = self._get_observability_trace_id_from_context(observability_trace_id)
 
             return WebSocketSystemResponseTokenMessage(type=message_type,
                                                        id=message_id,
@@ -285,7 +285,7 @@ class MessageValidator:
                                                        content=content,
                                                        status=status,
                                                        timestamp=timestamp,
-                                                       weave_call_id=weave_call_id)
+                                                       observability_trace_id=observability_trace_id)
 
         except Exception as e:
             logger.exception("Error creating system response token message: %s", str(e))
@@ -302,7 +302,7 @@ class MessageValidator:
             content: SystemIntermediateStepContent = SystemIntermediateStepContent(name="default", payload="default"),
             status: WebSocketMessageStatus = WebSocketMessageStatus.IN_PROGRESS,
             timestamp: str = str(datetime.datetime.now(datetime.UTC)),
-            weave_call_id: str | None = None) -> WebSocketSystemIntermediateStepMessage | None:
+            observability_trace_id: str | None = None) -> WebSocketSystemIntermediateStepMessage | None:
         """
         Creates a system intermediate step message with default values.
 
@@ -317,7 +317,7 @@ class MessageValidator:
         :return: A WebSocketSystemIntermediateStepMessage instance.
         """
         try:
-            weave_call_id = self._get_weave_call_id_from_context(weave_call_id)
+            observability_trace_id = self._get_observability_trace_id_from_context(observability_trace_id)
 
             return WebSocketSystemIntermediateStepMessage(type=message_type,
                                                           id=message_id,
@@ -327,7 +327,7 @@ class MessageValidator:
                                                           content=content,
                                                           status=status,
                                                           timestamp=timestamp,
-                                                          weave_call_id=weave_call_id)
+                                                          observability_trace_id=observability_trace_id)
 
         except Exception as e:
             logger.exception("Error creating system intermediate step message: %s", str(e))
@@ -345,7 +345,7 @@ class MessageValidator:
             content: HumanPrompt,
             status: WebSocketMessageStatus = WebSocketMessageStatus.IN_PROGRESS,
             timestamp: str = str(datetime.datetime.now(datetime.UTC)),
-            weave_call_id: str | None = None) -> WebSocketSystemInteractionMessage | None:
+            observability_trace_id: str | None = None) -> WebSocketSystemInteractionMessage | None:
         """
         Creates a system interaction message with default values.
 
@@ -360,7 +360,7 @@ class MessageValidator:
         :return: A WebSocketSystemInteractionMessage instance.
         """
         try:
-            weave_call_id = self._get_weave_call_id_from_context(weave_call_id)
+            observability_trace_id = self._get_observability_trace_id_from_context(observability_trace_id)
 
             return WebSocketSystemInteractionMessage(type=message_type,
                                                      id=message_id,
@@ -370,7 +370,7 @@ class MessageValidator:
                                                      content=content,
                                                      status=status,
                                                      timestamp=timestamp,
-                                                     weave_call_id=weave_call_id)
+                                                     observability_trace_id=observability_trace_id)
 
         except Exception as e:
             logger.exception("Error creating system interaction message: %s", str(e))
