@@ -226,9 +226,11 @@ exclude = ["packages/compat"]
 # Dependency groups are only for developers to aid in managing dependencies local to a dev machine.
 dev = [
   "asgi-lifespan~=2.1",
+  "galileo~=1.27",
   "beautifulsoup4~=4.13",
   "httpx-sse~=0.4",
   "ipython~=8.31",
+  "langsmith", # this is currently a transitive dependency of nat, not specifying a version to avoid conflicts
   "myst-parser~=4.0",
   "nbconvert", # Version determined by jupyter
   "nbsphinx~=0.9",
@@ -260,6 +262,7 @@ nat_authentication = "nat.authentication.register"
 nat_control_flow = "nat.control_flow.register"
 nat_embedders = "nat.embedder.register"
 nat_evaluators = "nat.eval.register"
+nat_middleware = "nat.middleware.register"
 nat_test_time_compute = "nat.experimental.test_time_compute.register"
 nat_llms = "nat.llm.register"
 nat_object_stores = "nat.object_store.register"

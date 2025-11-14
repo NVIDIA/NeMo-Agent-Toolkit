@@ -17,6 +17,7 @@ import logging
 
 from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_function
+from nat.data_models.component_ref import EmbedderRef
 from nat.data_models.function import FunctionBaseConfig
 from nat.llm.nim_llm import NIMModelConfig
 
@@ -45,6 +46,8 @@ class HaystackDeepResearchWorkflowConfig(FunctionBaseConfig, name="haystack_deep
     # Default to "/data" so users can mount a volume or place files at repo_root/data.
     # If it doesn't exist, we fall back to this example's bundled data folder.
     data_dir: str = "/data"
+    embedder_name: EmbedderRef = "nv-embed"
+    embedding_dim: int = 1024
 
 
 @register_function(config_type=HaystackDeepResearchWorkflowConfig)
@@ -70,13 +73,27 @@ async def haystack_deep_research_agent_workflow(config: HaystackDeepResearchWork
     # Create search tool
     search_tool = create_search_tool(top_k=config.search_top_k)
 
+    embedder_config = builder.get_embedder_config(config.embedder_name)
+    embedder_model = getattr(embedder_config, "model", None) or getattr(embedder_config, "model_name", None)
+    if not embedder_model:
+        raise ValueError("Embedder configuration must define a model name.")
+
     # Create document store
-    document_store = OpenSearchDocumentStore(hosts=[config.opensearch_url], index="deep_research_docs")
+    document_store = OpenSearchDocumentStore(
+        hosts=[config.opensearch_url],
+        index="deep_research_docs",
+        embedding_dim=config.embedding_dim,
+    )
     logger.info("Connected to OpenSearch successfully")
 
     # Optionally index local data at startup
     if config.index_on_startup:
-        run_startup_indexing(document_store=document_store, data_dir=config.data_dir, logger=logger)
+        run_startup_indexing(
+            document_store=document_store,
+            data_dir=config.data_dir,
+            logger=logger,
+            embedder_model=str(embedder_model),
+        )
 
     def _nim_to_haystack_generator(cfg: NIMModelConfig) -> NvidiaChatGenerator:
         return NvidiaChatGenerator(model=cfg.model_name)
@@ -95,6 +112,7 @@ async def haystack_deep_research_agent_workflow(config: HaystackDeepResearchWork
         document_store=document_store,
         top_k=config.rag_top_k,
         generator=rag_generator,
+        embedder_model=str(embedder_model),
     )
 
     # Create the agent
