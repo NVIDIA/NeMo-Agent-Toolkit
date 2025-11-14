@@ -307,7 +307,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         await self.add_static_files_route(app, builder)
         await self.add_authorization_route(app)
         await self.add_mcp_client_tool_list_route(app, builder)
-        await self.add_weave_feedback_route(app, builder)
 
         for ep in self.front_end_config.endpoints:
 
@@ -1210,69 +1209,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 endpoint=redirect_uri,
                 methods=["GET"],
                 description="Handles the authorization code and state returned from the Authorization Code Grant Flow.")
-
-    async def add_weave_feedback_route(self, app: FastAPI, builder: WorkflowBuilder):
-        """Add the Weave feedback endpoint automatically if Weave telemetry is configured."""
-
-        # Find Weave telemetry exporter configuration
-        weave_config = None
-        for name, exporter_config in builder._telemetry_exporters.items():
-            if hasattr(exporter_config.config,
-                       'project') and exporter_config.config.__class__.__name__ == 'WeaveTelemetryExporter':
-                weave_config = exporter_config.config
-                break
-
-        if not weave_config:
-            return
-
-        try:
-
-            async def add_chat_feedback(request: Request, payload: dict):
-                """Add reaction feedback for an assistant message via observability trace ID."""
-                import weave
-
-                # Get the weave project name from the configuration
-                entity = getattr(weave_config, 'entity', None)
-                project = getattr(weave_config, 'project')
-                weave_project = f"{entity}/{project}" if entity else project
-
-                # Extract parameters from payload
-                observability_trace_id = payload.get('observability_trace_id')
-                reaction_type = payload.get('reaction_type')
-
-                if not observability_trace_id or not reaction_type:
-                    raise HTTPException(status_code=400, detail="observability_trace_id and reaction_type are required")
-
-                # Add feedback directly
-                client = weave.init(weave_project)
-                call = client.get_call(observability_trace_id)
-                call.feedback.add_reaction(reaction_type)
-
-                return {"message": f"Added reaction '{reaction_type}' to call {observability_trace_id}"}
-
-            app.add_api_route(
-                path="/feedback",
-                endpoint=add_chat_feedback,
-                methods=["POST"],
-                description="Set reaction feedback for an assistant message via observability trace ID",
-                responses={
-                    500: {
-                        "description": "Internal Server Error",
-                        "content": {
-                            "application/json": {
-                                "example": {
-                                    "detail": "Internal server error occurred"
-                                }
-                            }
-                        },
-                    }
-                },
-            )
-
-            logger.info("Automatically registered Weave feedback endpoint at /feedback")
-
-        except Exception as e:
-            logger.warning("Failed to automatically register Weave feedback endpoint: %s", e)
 
     async def add_mcp_client_tool_list_route(self, app: FastAPI, builder: WorkflowBuilder):
         """Add the MCP client tool list endpoint to the FastAPI app."""

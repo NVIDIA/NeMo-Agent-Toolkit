@@ -538,7 +538,7 @@ If you're migrating from OpenAI's API:
 
 ## Feedback Endpoint
 - **Route:** `/feedback`
-- **Description:** Add reaction feedback for an assistant message through observability trace ID. This endpoint is automatically available when Weave telemetry is configured in the workflow.
+- **Description:** Add reaction feedback for an assistant message through observability trace ID. This endpoint is available when using the Weave FastAPI plugin worker. For setup instructions, see the [Weave observability guide](../workflows/observe/observe-workflow-with-weave.md#user-feedback-integration).
 - **HTTP Request Example:**
   ```bash
   curl --request POST \
