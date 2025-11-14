@@ -37,7 +37,7 @@ uv pip install "nvidia-nat[langchain]"
 The tool calling agent may be utilized as a workflow or a function.
 
 ### Example 1: Tool Calling Agent as a Workflow to Configure `config.yml`
-To use the ReAct agent as a workflow, configure the YAML file as follows:
+To use the tool calling agent as a workflow, configure the YAML file as follows:
 ```yaml
 workflow:
   _type: tool_calling_agent
