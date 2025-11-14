@@ -172,7 +172,7 @@ def connect_to_database(
     Args:
         database_type: Type of database (currently only 'databricks' is supported)
         connection_url: Database connection string
-        **kwargs: Additional database-specific parameters
+        kwargs: Additional database-specific parameters
 
     Returns:
         Database connection object
@@ -263,7 +263,7 @@ def setup_vanna_db_connection(
         vn: Vanna instance
         database_type: Type of database (currently only 'databricks' is supported)
         connection_url: Database connection string
-        **kwargs: Additional connection parameters
+        kwargs: Additional connection parameters
 
     Raises:
         ValueError: If database_type is not supported
