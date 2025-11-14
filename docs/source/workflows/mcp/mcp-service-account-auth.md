@@ -316,6 +316,7 @@ The Service Account Authentication Example demonstrates both authentication patt
 
 - **Single Authentication**: `examples/MCP/service_account_auth_mcp/configs/config-mcp-service-account-jama.yml`
 - **Dual Authentication**: `examples/MCP/service_account_auth_mcp/configs/config-mcp-service-account-jira.yml`
+- **Dual Authentication with Dynamic Service Token**: `examples/MCP/service_account_auth_mcp/configs/config-mcp-service-account-jira-function.yml`
 
 See `examples/MCP/service_account_auth_mcp/README.md` for complete instructions on running the example workflows.
 
@@ -344,3 +345,4 @@ Verify all environment variables are set in your CI/CD platform.
 
 - [MCP Authentication](./mcp-auth.md) - OAuth2 interactive authentication for user-facing workflows
 - [MCP Client](./mcp-client.md) - Connecting to MCP servers
+- MCP Service Account Authentication Example: `examples/MCP/service_account_auth_mcp/README.md`
