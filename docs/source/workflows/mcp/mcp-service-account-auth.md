@@ -210,7 +210,7 @@ sequenceDiagram
     MCP Server-->>Client: Response
 ```
 
-**Option 1: Static Service Token**
+#### Option 1: Static Service Token
 
 ```yaml
 authentication:
@@ -226,7 +226,7 @@ authentication:
       header: X-Service-Account-Token
 ```
 
-**Option 2: Dynamic Service Token (Advanced)**
+#### Option 2: Dynamic Service Token (Advanced)
 
 ```yaml
 authentication:

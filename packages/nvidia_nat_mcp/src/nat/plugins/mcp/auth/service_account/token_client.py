@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import base64
 import logging
 from datetime import datetime
@@ -60,11 +61,13 @@ class ServiceAccountTokenClient:
         self._token_expires_at: datetime | None = None
         self._lock = None  # Will be initialized as asyncio.Lock when needed
 
-    async def _get_lock(self):
+    @property
+    def token_expires_at(self) -> datetime | None:
+        return self._token_expires_at
+
+    async def _get_lock(self) -> asyncio.Lock:
         """Lazy initialization of asyncio.Lock."""
         if self._lock is None:
-            import asyncio
-
             self._lock = asyncio.Lock()
         return self._lock
 

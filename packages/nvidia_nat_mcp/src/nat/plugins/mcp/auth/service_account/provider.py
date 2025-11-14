@@ -15,6 +15,7 @@
 
 import importlib
 import logging
+import typing
 
 from pydantic import SecretStr
 
@@ -79,7 +80,7 @@ class MCPServiceAccountProvider(AuthProviderBase[MCPServiceAccountProviderConfig
                     config.scopes,
                     config.service_token is not None)
 
-    def _load_function(self, function_path: str):
+    def _load_function(self, function_path: str) -> typing.Callable:
         """Load a Python function from a module path string (e.g., 'my_module.get_token')."""
         try:
             module_name, func_name = function_path.rsplit(".", 1)
@@ -142,6 +143,6 @@ class MCPServiceAccountProvider(AuthProviderBase[MCPServiceAccountProviderConfig
         # Return AuthResult with HeaderCred objects
         return AuthResult(
             credentials=credentials,
-            token_expires_at=self._token_client._token_expires_at,
+            token_expires_at=self._token_client.token_expires_at,
             raw={},
         )
