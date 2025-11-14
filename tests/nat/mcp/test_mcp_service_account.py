@@ -23,6 +23,7 @@ from nat.data_models.authentication import AuthResult
 from nat.data_models.authentication import HeaderCred
 from nat.plugins.mcp.auth.service_account.provider import MCPServiceAccountProvider
 from nat.plugins.mcp.auth.service_account.provider_config import MCPServiceAccountProviderConfig
+from nat.plugins.mcp.auth.service_account.provider_config import ServiceTokenConfig
 from nat.plugins.mcp.auth.service_account.token_client import ServiceAccountTokenClient
 
 # --------------------------------------------------------------------------- #
@@ -38,8 +39,10 @@ def service_account_config() -> MCPServiceAccountProviderConfig:
         client_secret="test_client_secret",  # type: ignore
         token_url="https://auth.example.com/token",
         scopes="read write",
-        token_prefix="service_account",
-        service_token="test_service_token",  # type: ignore
+        service_token=ServiceTokenConfig(
+            token="test_service_token",  # type: ignore
+            header="X-Service-Account-Token",
+        ),
     )
 
 
@@ -60,6 +63,53 @@ def mock_token_response():
     return {
         "access_token": "mock_access_token_12345", "token_type": "Bearer", "expires_in": 3600, "scope": "read write"
     }
+
+
+# --------------------------------------------------------------------------- #
+# Configuration Tests
+# --------------------------------------------------------------------------- #
+
+
+class TestServiceTokenConfig:
+    """Test ServiceTokenConfig validation."""
+
+    def test_valid_static_token_config(self):
+        """Test valid configuration with static token."""
+        config = ServiceTokenConfig(
+            token="test_token",  # type: ignore
+            header="X-Custom-Header",
+        )
+        assert config.token.get_secret_value() == "test_token"  # type: ignore
+        assert config.header == "X-Custom-Header"
+        assert config.function is None
+
+    def test_valid_dynamic_function_config(self):
+        """Test valid configuration with dynamic function."""
+        config = ServiceTokenConfig(
+            function="module.path.function_name",
+            kwargs={"vault_path": "secrets/test"},
+        )
+        assert config.function == "module.path.function_name"
+        assert config.kwargs == {"vault_path": "secrets/test"}
+        assert config.token is None
+
+    def test_validation_requires_token_or_function(self):
+        """Test that either token or function must be provided."""
+        with pytest.raises(ValueError, match="Either 'token' or 'function' must be provided"):
+            ServiceTokenConfig()
+
+    def test_validation_rejects_both_token_and_function(self):
+        """Test that both token and function cannot be provided together."""
+        with pytest.raises(ValueError, match="Cannot specify both 'token' and 'function'"):
+            ServiceTokenConfig(
+                token="test_token",  # type: ignore
+                function="module.function",
+            )
+
+    def test_default_header_name(self):
+        """Test default header name is X-Service-Account-Token."""
+        config = ServiceTokenConfig(token="test")  # type: ignore
+        assert config.header == "X-Service-Account-Token"
 
 
 # --------------------------------------------------------------------------- #
@@ -89,9 +139,9 @@ class TestServiceAccountTokenClient:
             # Fetch token
             token = await client.get_access_token()
 
-            # Verify token is returned as SecretStr
+            # Verify token is returned as SecretStr with hardcoded prefix
             assert isinstance(token, SecretStr)
-            assert token.get_secret_value() == "mock_access_token_12345"
+            assert token.get_secret_value() == "service_account_ssa:mock_access_token_12345"
 
             # Verify OAuth2 request was made correctly
             mock_http.return_value.__aenter__.return_value.post.assert_called_once()
@@ -180,31 +230,32 @@ class TestServiceAccountTokenClient:
 class TestMCPServiceAccountProvider:
     """Test service account authentication provider."""
 
-    async def test_authenticate_success_with_token_prefix(self, service_account_config):
-        """Test successful authentication with custom token prefix."""
+    async def test_authenticate_success_with_service_token(self, service_account_config):
+        """Test successful authentication with service token (dual authentication pattern)."""
         provider = MCPServiceAccountProvider(service_account_config)
 
-        # Mock the token client
+        # Mock the token client to return OAuth2 access token WITH prefix
+        # (the real token client adds the prefix before returning)
         with patch.object(provider._token_client, "get_access_token") as mock_get_token:
-            mock_get_token.return_value = SecretStr("oauth2_access_token")
+            mock_get_token.return_value = SecretStr("service_account_ssa:oauth2_access_token")
 
             # Authenticate
             result = await provider.authenticate(user_id="test_user")
 
             # Verify AuthResult structure
             assert isinstance(result, AuthResult)
-            assert len(result.credentials) == 2  # Authorization + Service-Account-Token
+            assert len(result.credentials) == 2  # Authorization + X-Service-Account-Token
 
-            # Verify Authorization header
+            # Verify Authorization header (provider adds "Bearer " prefix)
             auth_cred = result.credentials[0]
             assert isinstance(auth_cred, HeaderCred)
             assert auth_cred.name == "Authorization"
-            assert auth_cred.value.get_secret_value() == "Bearer service_account:oauth2_access_token"
+            assert auth_cred.value.get_secret_value() == "Bearer service_account_ssa:oauth2_access_token"
 
-            # Verify Service-Account-Token header
+            # Verify X-Service-Account-Token header
             service_cred = result.credentials[1]
             assert isinstance(service_cred, HeaderCred)
-            assert service_cred.name == "Service-Account-Token"
+            assert service_cred.name == "X-Service-Account-Token"
             assert service_cred.value.get_secret_value() == "test_service_token"
 
     async def test_authenticate_success_without_service_token(self, minimal_config):
@@ -212,32 +263,32 @@ class TestMCPServiceAccountProvider:
         provider = MCPServiceAccountProvider(minimal_config)
 
         with patch.object(provider._token_client, "get_access_token") as mock_get_token:
-            mock_get_token.return_value = SecretStr("oauth2_access_token")
+            mock_get_token.return_value = SecretStr("service_account_ssa:oauth2_access_token")
 
             result = await provider.authenticate(user_id="test_user")
 
             # Should only have Authorization header (no service token)
             assert len(result.credentials) == 1
             assert result.credentials[0].name == "Authorization"
+            assert result.credentials[0].value.get_secret_value() == "Bearer service_account_ssa:oauth2_access_token"
 
-    async def test_authenticate_with_empty_token_prefix(self):
-        """Test standard Bearer token format (no custom prefix)."""
+    async def test_authenticate_single_auth_pattern(self):
+        """Test single authentication pattern (OAuth2 token only, no service token)."""
         config = MCPServiceAccountProviderConfig(
             client_id="test",
             client_secret="secret",  # type: ignore
             token_url="https://token.url",
             scopes="read",
-            token_prefix="",  # Empty = standard Bearer format
         )
         provider = MCPServiceAccountProvider(config)
 
         with patch.object(provider._token_client, "get_access_token") as mock_get_token:
-            mock_get_token.return_value = SecretStr("oauth2_token")
+            mock_get_token.return_value = SecretStr("service_account_ssa:oauth2_token")
 
             result = await provider.authenticate()
 
-            # Should be standard "Bearer <token>" format
-            assert result.credentials[0].value.get_secret_value() == "Bearer oauth2_token"
+            # Should have token with prefix from token client plus Bearer from provider
+            assert result.credentials[0].value.get_secret_value() == "Bearer service_account_ssa:oauth2_token"
 
     async def test_authenticate_propagates_token_client_errors(self, minimal_config):
         """Test that token client errors are propagated correctly."""
@@ -249,6 +300,69 @@ class TestMCPServiceAccountProvider:
             # Error should propagate
             with pytest.raises(RuntimeError, match="Invalid service account credentials"):
                 await provider.authenticate(user_id="test_user")
+
+    async def test_authenticate_with_dynamic_function_returning_tuple(self):
+        """Test service token from dynamic function that returns (header, token) tuple."""
+
+        # Create a mock async function that returns both header and token
+        async def mock_get_service_token(vault_path="test", **kwargs):
+            return ("X-Custom-Header", "dynamic_token_value")
+
+        config = MCPServiceAccountProviderConfig(
+            client_id="test",
+            client_secret="secret",  # type: ignore
+            token_url="https://token.url",
+            scopes="read",
+            service_token=ServiceTokenConfig(
+                function="dummy.function.path",  # Will be mocked, not actually loaded
+                kwargs={"vault_path": "secrets/test"},
+            ),
+        )
+
+        # Mock the function loading to prevent import error
+        with patch.object(MCPServiceAccountProvider, "_load_function", return_value=mock_get_service_token):
+            provider = MCPServiceAccountProvider(config)
+
+        with patch.object(provider._token_client, "get_access_token") as mock_get_token:
+            mock_get_token.return_value = SecretStr("service_account_ssa:oauth2_token")
+
+            result = await provider.authenticate()
+
+            # Verify both headers
+            assert len(result.credentials) == 2
+
+            # Verify custom header from function
+            service_cred = result.credentials[1]
+            assert service_cred.name == "X-Custom-Header"
+            assert service_cred.value.get_secret_value() == "dynamic_token_value"
+
+    async def test_authenticate_with_dynamic_function_error_handling(self):
+        """Test error handling when dynamic function fails."""
+
+        # Create a mock async function that raises an error
+        async def mock_failing_function(**kwargs):
+            raise ValueError("Vault connection failed")
+
+        config = MCPServiceAccountProviderConfig(
+            client_id="test",
+            client_secret="secret",  # type: ignore
+            token_url="https://token.url",
+            scopes="read",
+            service_token=ServiceTokenConfig(
+                function="dummy.function.path",  # Will be mocked, not actually loaded
+            ),
+        )
+
+        # Mock the function loading to prevent import error
+        with patch.object(MCPServiceAccountProvider, "_load_function", return_value=mock_failing_function):
+            provider = MCPServiceAccountProvider(config)
+
+        with patch.object(provider._token_client, "get_access_token") as mock_get_token:
+            mock_get_token.return_value = SecretStr("service_account_ssa:oauth2_token")
+
+            # Should raise RuntimeError with clear message
+            with pytest.raises(RuntimeError, match="Failed to get service token from function"):
+                await provider.authenticate()
 
 
 # --------------------------------------------------------------------------- #
@@ -279,10 +393,10 @@ class TestMCPServiceAccountIntegration:
 
             # Verify both headers are present
             auth_header = next(c for c in result.credentials if c.name == "Authorization")
-            service_header = next(c for c in result.credentials if c.name == "Service-Account-Token")
+            service_header = next(c for c in result.credentials if c.name == "X-Service-Account-Token")
 
-            # Verify Authorization header format with custom prefix
-            assert "service_account:" in auth_header.value.get_secret_value()
+            # Verify Authorization header format with hardcoded service_account_ssa: prefix
+            assert "service_account_ssa:" in auth_header.value.get_secret_value()
             assert "mock_access_token_12345" in auth_header.value.get_secret_value()
 
             # Verify service token header
