@@ -90,10 +90,6 @@ export SERVICE_ACCOUNT_TOKEN_URL="https://auth.example.com/service_account/token
 export SERVICE_ACCOUNT_SCOPES="service-account-scope-jama_cache service-account-scope-jira"
 ```
 
-:::{note}
-The OAuth2 service account token automatically includes the `service_account_ssa:` prefix. You no longer need to configure a `token_prefix` field.
-:::
-
 #### Pattern 1: Single Authentication (Jama Cache Example)
 
 For custom MCP servers that only require OAuth2 service account token validation:

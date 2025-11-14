@@ -40,7 +40,6 @@ The `mcp_service_account` authentication provider implements:
 
 - **OAuth2 Client Credentials Flow**: Standard [RFC 6749 Section 4.4](https://www.rfc-editor.org/rfc/rfc6749#section-4.4) client credentials grant
 - **Token Caching**: Automatic token caching with configurable refresh buffer to minimize token endpoint requests
-- **Custom Token Formats**: Support for non-standard Bearer token prefixes (for example, `Bearer service_account_ssa:token`)
 - **Multi-Header Authentication**: Ability to inject multiple authentication headers for services using backend system delegation patterns
 
 ## Authentication Token Types
@@ -92,10 +91,6 @@ Customize the authentication behavior with these optional fields:
 |-------|---------|-------------|
 | `service_token` | None | Nested configuration for service-specific token in dual authentication patterns. Contains: `token` (static token value), `function` (Python function path for dynamic token), and `header` (HTTP header name, default: `X-Service-Account-Token`). Either `token` or `function` must be provided, not both. |
 | `token_cache_buffer_seconds` | `300` | Seconds before token expiry to refresh the token (default: 5 minutes) |
-
-:::{note}
-The OAuth2 service account token automatically includes the `service_account_ssa:` prefix. Token prefix configuration is no longer needed.
-:::
 
 ## Environment Variables
 
@@ -181,7 +176,7 @@ sequenceDiagram
 
     Client->>Token Endpoint: POST /oauth/token<br/>(client_id, client_secret, scopes)
     Token Endpoint-->>Client: access_token
-    Client->>MCP Server: Request<br/>Authorization: Bearer service_account_ssa:<access_token>
+    Client->>MCP Server: Request<br/>Authorization: Bearer <access_token>
     MCP Server-->>Client: Response
 ```
 
@@ -196,7 +191,7 @@ authentication:
       - service.scope
 ```
 
-Produces: `Authorization: Bearer service_account_ssa:<access_token>` (prefix added automatically)
+Produces: `Authorization: Bearer <access_token>`
 
 ### Dual Authentication Pattern
 
@@ -211,7 +206,7 @@ sequenceDiagram
 
     Client->>Token Endpoint: POST /oauth/token<br/>(client_id, client_secret, scopes)
     Token Endpoint-->>Client: access_token
-    Client->>MCP Server: Request<br/>Authorization: Bearer service_account_ssa:<access_token><br/>X-Service-Account-Token: <service_token>
+    Client->>MCP Server: Request<br/>Authorization: Bearer <access_token><br/>X-Service-Account-Token: <service_token>
     MCP Server-->>Client: Response
 ```
 
@@ -252,7 +247,7 @@ authentication:
 
 Both produce:
 ```text
-Authorization: Bearer service_account_ssa:<access_token>
+Authorization: Bearer <access_token>
 X-Service-Account-Token: <service_token>
 ```
 
