@@ -14,9 +14,7 @@
 # limitations under the License.
 
 import asyncio
-import contextvars
 import logging
-import re
 import uuid
 from collections.abc import AsyncGenerator
 from collections.abc import Awaitable
@@ -43,8 +41,8 @@ from nat.data_models.config import Config
 from nat.data_models.interactive import HumanResponse
 from nat.data_models.interactive import InteractionPrompt
 from nat.data_models.runtime_enum import RuntimeTypeEnum
-from nat.data_models.runtime_enum import RuntimeTypeEnum
 from nat.data_models.user_workflow_data import UserWorkflowData
+from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from nat.runtime.runner import Runner
 
 logger = logging.getLogger(__name__)
@@ -66,21 +64,12 @@ class UserSession:
             The workflow to run
         max_concurrency : int, optional
             The maximum number of simultaneous workflow invocations, by default 8
-        runtime_type : RuntimeTypeEnum, optional
-            The type of runtime the session manager is operating in, by default RuntimeTypeEnum.RUN_OR_SERVE
         """
         if workflow is None:
             raise ValueError("Workflow must be provided to initialize a UserSession")
 
         self._workflow: Workflow = workflow
         self._max_concurrency = max_concurrency
-        self._context_state = ContextState.get()
-        self._context = Context(self._context_state)
-        self._runtime_type = runtime_type
-
-        # We save the context because Uvicorn spawns a new process
-        # for each request, and we need to restore the context vars
-        self._saved_context = contextvars.copy_context()
 
         if max_concurrency > 0:
             self._semaphore = asyncio.Semaphore(max_concurrency)
@@ -110,13 +99,7 @@ class UserSession:
 
 class SessionManager:
 
-    def __init__(self,
-                 config: Config,
-                 max_concurrency: int = 8,
-                 max_users: int = 100,
-                 user_idle_timeout: timedelta = timedelta(minutes=30),
-                 cleanup_check_interval: timedelta = timedelta(minutes=10),
-                 require_user_id: bool = False):
+    def __init__(self, config: Config, max_concurrency: int = 8):
         """
         The SessionManager class is for per-user workflow management.
 
@@ -128,22 +111,23 @@ class SessionManager:
             The configuration for building the workflow
         max_concurrency : int, optional
             The maximum number of simultaneous workflow invocations, by default 8
-        max_users : int, optional
-            The maximum number of users to support, by default 100
-        user_idle_timeout : timedelta, optional
-            The timeout for user inactivity, by default 30 minutes
-        cleanup_check_interval : timedelta, optional
-            The interval for checking for idle users, by default 10 minutes
-        require_user_id : bool, optional
-            Whether to require a user_id in the request, by default False
         """
 
         self._config = config
         self._max_concurrency = max_concurrency
-        self._max_users = max_users
-        self._user_idle_timeout = user_idle_timeout
-        self._cleanup_check_interval = cleanup_check_interval
-        self._require_user_id = require_user_id
+
+        front_end_config = config.general.front_end
+
+        if isinstance(front_end_config, FastApiFrontEndConfig):
+            self._max_users = front_end_config.max_concurrent_users
+            self._user_idle_timeout = front_end_config.user_idle_timeout
+            self._cleanup_check_interval = front_end_config.cleanup_check_interval
+            self._require_user_id = front_end_config.require_user_id
+        else:
+            self._max_users = 100
+            self._user_idle_timeout = timedelta(minutes=30)
+            self._cleanup_check_interval = timedelta(minutes=10)
+            self._require_user_id = False
 
         # Per-user workflow registry
         self._user_workflows: dict[str, UserWorkflowData] = {}
@@ -169,15 +153,6 @@ class SessionManager:
     def context(self) -> Context:
         """Get the context."""
         return self._context
-
-    @property
-    def workflow(self) -> Workflow:
-        """
-        Raises:
-            RuntimeError: Always, since this property has been deprecated
-        """
-
-        raise RuntimeError("SessionManager.workflow has been deprecated.")
 
     @property
     def max_concurrency(self) -> int:
@@ -244,11 +219,9 @@ class SessionManager:
                 shared_builder = SharedWorkflowBuilder(general_config=self._config.general)
 
                 await shared_builder.__aenter__()
-
                 await shared_builder.populate_builder(self._config)
 
                 self._shared_builder = shared_builder
-
                 logger.info("Shared builder initialized")
 
                 return shared_builder
@@ -273,9 +246,7 @@ class SessionManager:
                                                user_id=user_id)
 
             await user_builder.__aenter__()
-
             await user_builder.populate_builder(self._config)
-
             workflow = await user_builder.build()
 
             logger.info(f"Workflow created for user {self._truncate_user_id(user_id)}")
@@ -371,21 +342,23 @@ class SessionManager:
         if not user_id:
             user_id = "default_user"
 
-        user_data = await self._get_or_create_user_workflow(user_id)
+        user_workflow_data = await self._get_or_create_user_workflow(user_id)
 
         # track active requests
-        async with user_data.lock:
-            user_data.ref_count += 1
-            logger.debug(f"User {self._truncate_user_id(user_id)} reference count increased to {user_data.ref_count}")
-        user_session = UserSession(workflow=user_data.workflow, max_concurrency=self._max_concurrency)
+        async with user_workflow_data.lock:
+            user_workflow_data.ref_count += 1
+            logger.debug(
+                f"User {self._truncate_user_id(user_id)} reference count increased to {user_workflow_data.ref_count}")
+        user_session = UserSession(workflow=user_workflow_data.workflow, max_concurrency=self._max_concurrency)
 
         try:
             yield user_session
         finally:
-            async with user_data.lock:
-                user_data.ref_count -= 1
+            async with user_workflow_data.lock:
+                user_workflow_data.ref_count -= 1
                 logger.debug(
-                    f"User {self._truncate_user_id(user_id)} reference count decreased to {user_data.ref_count}")
+                    f"User {self._truncate_user_id(user_id)} reference count decreased to {user_workflow_data.ref_count}"
+                )
 
             if token_user_manager is not None:
                 self._context_state.user_manager.reset(token_user_manager)

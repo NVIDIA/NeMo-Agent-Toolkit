@@ -67,10 +67,6 @@ class FunctionGroupBaseConfig(TypedBaseModel, BaseModelRegistryTag):
         default_factory=list,
         description="List of function middleware names to apply to all functions in this group",
     )
-    middleware: list[str] = Field(
-        default_factory=list,
-        description="List of function middleware names to apply to all functions in this group",
-    )
 
     @field_validator("include", "exclude")
     @classmethod
