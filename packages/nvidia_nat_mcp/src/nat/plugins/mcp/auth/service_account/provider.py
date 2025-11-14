@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import importlib
 import logging
 import typing
@@ -52,7 +53,7 @@ class MCPServiceAccountProvider(AuthProviderBase[MCPServiceAccountProviderConfig
               token: ${SERVICE_TOKEN}  # Static token
               header: "X-Service-Token"
               # OR
-              # function: "my_module.get_token"  # Dynamic function (can access AIQContext)
+              # function: "my_module.get_token"  # Dynamic function (sync or async, can access AIQContext)
               # kwargs:  # Optional kwargs for the function
               #   custom_param: "value"
     """
@@ -123,7 +124,11 @@ class MCPServiceAccountProvider(AuthProviderBase[MCPServiceAccountProviderConfig
                 try:
                     # Pass configured kwargs to the function
                     # Function can access runtime context via AIQContext.get() if needed
-                    result = await self._service_token_function(**self.config.service_token.kwargs)
+                    # Handle both sync and async functions
+                    if asyncio.iscoroutinefunction(self._service_token_function):
+                        result = await self._service_token_function(**self.config.service_token.kwargs)
+                    else:
+                        result = self._service_token_function(**self.config.service_token.kwargs)
 
                     # Handle function return type: str or tuple[str, str]
                     if isinstance(result, tuple):
