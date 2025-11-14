@@ -24,7 +24,16 @@ from .common import TypedBaseModel
 
 
 class FunctionBaseConfig(TypedBaseModel, BaseModelRegistryTag):
-    pass
+    """Base configuration for functions.
+
+    Attributes:
+        middleware: List of function middleware names to apply to this function.
+            These must match names defined in the `middleware` section of the YAML configuration.
+    """
+    middleware: list[str] = Field(
+        default_factory=list,
+        description="List of function middleware names to apply to this function in order",
+    )
 
 
 class FunctionGroupBaseConfig(TypedBaseModel, BaseModelRegistryTag):
@@ -39,6 +48,10 @@ class FunctionGroupBaseConfig(TypedBaseModel, BaseModelRegistryTag):
     exclude: list[str] = Field(
         default_factory=list,
         description="The list of function names which should be excluded from default access to the group",
+    )
+    middleware: list[str] = Field(
+        default_factory=list,
+        description="List of function middleware names to apply to all functions in this group",
     )
 
     @field_validator("include", "exclude")

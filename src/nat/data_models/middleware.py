@@ -13,26 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-llms:
-  rag_llm:
-    _type: nim
-    model: nvidia/llama-3.3-nemotron-super-49b-v1.5
-  agent_llm:
-    _type: nim
-    model: nvidia/llama-3.3-nemotron-super-49b-v1.5
+import typing
 
-embedders:
-  nv-embed:
-    _type: nim
-    model: nvidia/nv-embedqa-e5-v5
+from .common import BaseModelRegistryTag
+from .common import TypedBaseModel
 
-workflow:
-  _type: haystack_deep_research_agent
-  max_agent_steps: 20
-  search_top_k: 10
-  rag_top_k: 15
-  opensearch_url: http://localhost:9200
-  index_on_startup: true
-  data_dir: /data
-  embedder_name: nv-embed
-  embedding_dim: 1024
+
+class MiddlewareBaseConfig(TypedBaseModel, BaseModelRegistryTag):
+    """The base level config object for middleware.
+
+    Middleware provides middleware-style wrapping of calls with
+    preprocessing and postprocessing logic.
+    """
+    pass
+
+
+MiddlewareBaseConfigT = typing.TypeVar("MiddlewareBaseConfigT", bound=MiddlewareBaseConfig)
+
+# Specialized type for function-specific middleware
+FunctionMiddlewareBaseConfig = MiddlewareBaseConfig
+FunctionMiddlewareBaseConfigT = MiddlewareBaseConfigT

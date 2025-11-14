@@ -13,26 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-llms:
-  rag_llm:
-    _type: nim
-    model: nvidia/llama-3.3-nemotron-super-49b-v1.5
-  agent_llm:
-    _type: nim
-    model: nvidia/llama-3.3-nemotron-super-49b-v1.5
+import enum
 
-embedders:
-  nv-embed:
-    _type: nim
-    model: nvidia/nv-embedqa-e5-v5
 
-workflow:
-  _type: haystack_deep_research_agent
-  max_agent_steps: 20
-  search_top_k: 10
-  rag_top_k: 15
-  opensearch_url: http://localhost:9200
-  index_on_startup: true
-  data_dir: /data
-  embedder_name: nv-embed
-  embedding_dim: 1024
+class RuntimeTypeEnum(str, enum.Enum):
+    """
+    Enum representing different runtime types.
+    """
+
+    RUN_OR_SERVE = "run_or_serve"
+    EVALUATE = "evaluate"
+    OTHER = "other"
