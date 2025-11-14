@@ -36,26 +36,10 @@ class MCPServiceAccountProvider(AuthProviderBase[MCPServiceAccountProviderConfig
 
     Provides headless authentication for MCP clients using service account credentials.
     Supports two authentication patterns:
+
     1. Single authentication: OAuth2 service account token only
     2. Dual authentication: OAuth2 service account token + service-specific token
 
-    Example Configuration:
-        authentication:
-          my_service:
-            _type: mcp_service_account
-            client_id: ${SERVICE_ACCOUNT_CLIENT_ID}
-            client_secret: ${SERVICE_ACCOUNT_CLIENT_SECRET}
-            token_url: https://auth.example.com/oauth/token
-            scopes:
-              - api.read
-              - api.write
-            service_token:  # Optional, for dual authentication
-              token: ${SERVICE_TOKEN}  # Static token
-              header: "X-Service-Token"
-              # OR
-              # function: "my_module.get_token"  # Dynamic function (sync or async, can access AIQContext)
-              # kwargs:  # Optional kwargs for the function
-              #   custom_param: "value"
     """
 
     def __init__(self, config: MCPServiceAccountProviderConfig, builder=None):

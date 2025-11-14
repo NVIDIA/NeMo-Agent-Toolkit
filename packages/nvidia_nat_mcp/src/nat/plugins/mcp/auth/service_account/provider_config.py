@@ -30,14 +30,16 @@ class ServiceTokenConfig(BaseModel):
     Configuration for service-specific token in dual authentication patterns.
 
     Supports two modes:
+
     1. Static token: Provide token and header directly
     2. Dynamic function: Provide function path and optional kwargs
 
-    The function will be called on every request and should have signature:
+    The function will be called on every request and should have signature::
+
         async def get_service_token(**kwargs) -> str | tuple[str, str]
 
-    If function returns tuple[str, str], it's interpreted as (header_name, token).
-    If function returns str, it's the token and header field is used for header name.
+    If function returns ``tuple[str, str]``, it's interpreted as (header_name, token).
+    If function returns ``str``, it's the token and header field is used for header name.
 
     The function can access runtime context via AIQContext.get() if needed.
     """
@@ -57,7 +59,7 @@ class ServiceTokenConfig(BaseModel):
     function: str | None = Field(
         default=None,
         description=("Python function path that returns service token dynamically (mutually exclusive with token). "
-                     "Function signature: async def func(**kwargs) -> str | tuple[str, str]. "
+                     "Function signature: async def func(\\**kwargs) -> str | tuple[str, str]. "
                      "Access runtime context via AIQContext.get() if needed."),
     )
 
