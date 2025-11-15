@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from collections.abc import AsyncGenerator
 
 from pydantic import Field
@@ -20,7 +22,10 @@ from pydantic import Field
 from nat.builder.builder import Builder
 from nat.builder.function import FunctionGroup
 from nat.cli.register_workflow import register_function_group
+from nat.cli.register_workflow import register_function_middleware
 from nat.data_models.function import FunctionGroupBaseConfig
+from nat_simple_calculator.calculator_middleware import CalculatorMiddleware
+from nat_simple_calculator.calculator_middleware import CalculatorMiddlewareConfig
 
 
 class CalculatorToolConfig(FunctionGroupBaseConfig, name="calculator"):
@@ -90,3 +95,16 @@ async def calculator(_config: CalculatorToolConfig, _builder: Builder) -> AsyncG
     group.add_function(name="compare", fn=_compare, description=_compare.__doc__)
 
     yield group
+
+@register_function_middleware(config_type=CalculatorMiddlewareConfig)
+async def calculator_middleware(config: CalculatorMiddlewareConfig, builder):
+    """Build a calculator middleware from configuration.
+
+    Args:
+        config: The calculator middleware configuration
+        builder: The workflow builder (unused but required by component pattern)
+
+    Yields:
+        A configured calculator middleware instance
+    """
+    yield CalculatorMiddleware(payload=config.payload)
