@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -14,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Simple example demonstrating /evaluate_item endpoint WITHOUT trajectory processing.
+Simple example demonstrating /evaluate/item endpoint WITHOUT trajectory processing.
 
 This is the simpler, faster version suitable for most evaluators that only need:
 - Input question
@@ -39,7 +38,7 @@ WHAT IT DOES:
 -------------
 - Sends a question to /generate/full endpoint (without intermediate steps)
 - Captures the agent's response
-- Evaluates using /evaluate_item endpoint
+- Evaluates using /evaluate/item endpoint
 - Displays the evaluation score and reasoning
 
 CUSTOMIZE:
@@ -163,7 +162,7 @@ async def run_and_evaluate_simple(base_url: str, input_message: str, expected_ou
         }
 
         try:
-            eval_endpoint = f"{base_url}/evaluate_item"
+            eval_endpoint = f"{base_url}/evaluate/item"
             async with session.post(eval_endpoint, json=eval_payload) as response:
                 if response.status == 404:
                     error_detail = await response.json()

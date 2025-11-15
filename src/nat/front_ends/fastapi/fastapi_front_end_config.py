@@ -257,7 +257,7 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
     evaluate_item: typing.Annotated[EndpointBase,
                                     Field(description="Endpoint for evaluating a single item.")] = EndpointBase(
                                         method="POST",
-                                        path="/evaluate_item",
+                                        path="/evaluate/item",
                                         description="Evaluate a single item with a specified evaluator",
                                     )
 

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -14,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Demonstrate /evaluate_item endpoint WITH trajectory processing (full version).
+Demonstrate /evaluate/item endpoint WITH trajectory processing (full version).
 
 This is the complete version that captures and processes intermediate steps (trajectory).
 Use this when you need trajectory information for your evaluator.
@@ -25,7 +24,7 @@ For simpler evaluations: Use evaluate_single_item_simple.py instead
 This script shows how to evaluate a single workflow execution by:
 1. Running a query via /generate/full endpoint
 2. Parsing the streaming response (output + intermediate steps/trajectory)
-3. Evaluating the result via /evaluate_item endpoint
+3. Evaluating the result via /evaluate/item endpoint
 
 SETUP (REQUIRED):
 -----------------
@@ -198,7 +197,7 @@ async def run_workflow_and_evaluate(base_url: str, input_message: str, expected_
         logger.info(f"  Captured {len(intermediate_steps)} intermediate steps")
 
         # ========================================================================
-        # STEP 2: Evaluate the result via /evaluate_item
+        # STEP 2: Evaluate the result via /evaluate/item
         # ========================================================================
         logger.info("")
         logger.info("=" * 70)
@@ -223,7 +222,7 @@ async def run_workflow_and_evaluate(base_url: str, input_message: str, expected_
         }
 
         try:
-            eval_endpoint = f"{base_url}/evaluate_item"
+            eval_endpoint = f"{base_url}/evaluate/item"
             async with session.post(eval_endpoint, json=eval_payload) as response:
                 if response.status == 404:
                     error_detail = await response.json()
@@ -261,7 +260,7 @@ async def run_workflow_and_evaluate(base_url: str, input_message: str, expected_
         except aiohttp.ClientError as e:
             logger.exception("Evaluation request failed: %s", e)
             logger.error("\n❌ ERROR: Failed to evaluate item")
-            logger.error("Make sure the /evaluate_item endpoint is available in your server")
+            logger.error("Make sure the /evaluate/item endpoint is available in your server")
             return None
 
 
