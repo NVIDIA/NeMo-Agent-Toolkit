@@ -293,6 +293,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         # TODO: we need config control over this as it's not always needed
         await self.initialize_evaluators(self._config)
 
+        # Ensure evaluator resources are cleaned up when the app shuts down
+        app.add_event_handler("shutdown", self.cleanup_evaluators)
+
         await self.add_routes(app, builder)
 
     async def add_routes(self, app: FastAPI, builder: WorkflowBuilder):
