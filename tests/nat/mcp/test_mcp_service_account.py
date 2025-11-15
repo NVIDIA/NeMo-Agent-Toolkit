@@ -139,9 +139,9 @@ class TestServiceAccountTokenClient:
             # Fetch token
             token = await client.get_access_token()
 
-            # Verify token is returned as SecretStr with hardcoded prefix
+            # Verify token is returned as SecretStr
             assert isinstance(token, SecretStr)
-            assert token.get_secret_value() == "service_account_ssa:mock_access_token_12345"
+            assert token.get_secret_value() == "mock_access_token_12345"
 
             # Verify OAuth2 request was made correctly
             mock_http.return_value.__aenter__.return_value.post.assert_called_once()
@@ -234,10 +234,9 @@ class TestMCPServiceAccountProvider:
         """Test successful authentication with service token (dual authentication pattern)."""
         provider = MCPServiceAccountProvider(service_account_config)
 
-        # Mock the token client to return OAuth2 access token WITH prefix
-        # (the real token client adds the prefix before returning)
+        # Mock the token client to return OAuth2 access token
         with patch.object(provider._token_client, "get_access_token") as mock_get_token:
-            mock_get_token.return_value = SecretStr("service_account_ssa:oauth2_access_token")
+            mock_get_token.return_value = SecretStr("oauth2_access_token")
 
             # Authenticate
             result = await provider.authenticate(user_id="test_user")
@@ -250,7 +249,7 @@ class TestMCPServiceAccountProvider:
             auth_cred = result.credentials[0]
             assert isinstance(auth_cred, HeaderCred)
             assert auth_cred.name == "Authorization"
-            assert auth_cred.value.get_secret_value() == "Bearer service_account_ssa:oauth2_access_token"
+            assert auth_cred.value.get_secret_value() == "Bearer oauth2_access_token"
 
             # Verify X-Service-Account-Token header
             service_cred = result.credentials[1]
@@ -263,14 +262,14 @@ class TestMCPServiceAccountProvider:
         provider = MCPServiceAccountProvider(minimal_config)
 
         with patch.object(provider._token_client, "get_access_token") as mock_get_token:
-            mock_get_token.return_value = SecretStr("service_account_ssa:oauth2_access_token")
+            mock_get_token.return_value = SecretStr("oauth2_access_token")
 
             result = await provider.authenticate(user_id="test_user")
 
             # Should only have Authorization header (no service token)
             assert len(result.credentials) == 1
             assert result.credentials[0].name == "Authorization"
-            assert result.credentials[0].value.get_secret_value() == "Bearer service_account_ssa:oauth2_access_token"
+            assert result.credentials[0].value.get_secret_value() == "Bearer oauth2_access_token"
 
     async def test_authenticate_single_auth_pattern(self):
         """Test single authentication pattern (OAuth2 token only, no service token)."""
@@ -283,12 +282,12 @@ class TestMCPServiceAccountProvider:
         provider = MCPServiceAccountProvider(config)
 
         with patch.object(provider._token_client, "get_access_token") as mock_get_token:
-            mock_get_token.return_value = SecretStr("service_account_ssa:oauth2_token")
+            mock_get_token.return_value = SecretStr("oauth2_token")
 
             result = await provider.authenticate()
 
-            # Should have token with prefix from token client plus Bearer from provider
-            assert result.credentials[0].value.get_secret_value() == "Bearer service_account_ssa:oauth2_token"
+            # Should have token with Bearer prefix from provider
+            assert result.credentials[0].value.get_secret_value() == "Bearer oauth2_token"
 
     async def test_authenticate_propagates_token_client_errors(self, minimal_config):
         """Test that token client errors are propagated correctly."""
@@ -324,7 +323,7 @@ class TestMCPServiceAccountProvider:
             provider = MCPServiceAccountProvider(config)
 
         with patch.object(provider._token_client, "get_access_token") as mock_get_token:
-            mock_get_token.return_value = SecretStr("service_account_ssa:oauth2_token")
+            mock_get_token.return_value = SecretStr("oauth2_token")
 
             result = await provider.authenticate()
 
@@ -358,7 +357,7 @@ class TestMCPServiceAccountProvider:
             provider = MCPServiceAccountProvider(config)
 
         with patch.object(provider._token_client, "get_access_token") as mock_get_token:
-            mock_get_token.return_value = SecretStr("service_account_ssa:oauth2_token")
+            mock_get_token.return_value = SecretStr("oauth2_token")
 
             # Should raise RuntimeError with clear message
             with pytest.raises(RuntimeError, match="Failed to get service token from function"):
@@ -395,8 +394,8 @@ class TestMCPServiceAccountIntegration:
             auth_header = next(c for c in result.credentials if c.name == "Authorization")
             service_header = next(c for c in result.credentials if c.name == "X-Service-Account-Token")
 
-            # Verify Authorization header format with hardcoded service_account_ssa: prefix
-            assert "service_account_ssa:" in auth_header.value.get_secret_value()
+            # Verify Authorization header format
+            assert "Bearer " in auth_header.value.get_secret_value()
             assert "mock_access_token_12345" in auth_header.value.get_secret_value()
 
             # Verify service token header
