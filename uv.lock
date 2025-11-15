@@ -1785,7 +1785,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/30/17/43350d1b147510b3e
 
 [[package]]
 name = "fastapi"
-version = "0.120.1"
+version = "0.120.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "annotated-doc" },
@@ -1793,9 +1793,9 @@ dependencies = [
     { name = "starlette" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/40/cc/28aff6e246ee85bd571b26e4a793b84d42700e3bdc3008c3d747eda7b06d/fastapi-0.120.1.tar.gz", hash = "sha256:b5c6217e9ddca6dfcf54c97986180d4a1955e10c693d74943fc5327700178bff", size = 337616, upload-time = "2025-10-27T17:53:42.954Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3f/3a/0bf90d5189d7f62dc2bd0523899629ca59b58ff4290d631cd3bb5c8889d4/fastapi-0.120.4.tar.gz", hash = "sha256:2d856bc847893ca4d77896d4504ffdec0fb04312b705065fca9104428eca3868", size = 339716, upload-time = "2025-10-31T18:37:28.81Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7e/bb/1a74dbe87e9a595bf63052c886dfef965dc5b91d149456a8301eb3d41ce2/fastapi-0.120.1-py3-none-any.whl", hash = "sha256:0e8a2c328e96c117272d8c794d3a97d205f753cc2e69dd7ee387b7488a75601f", size = 108254, upload-time = "2025-10-27T17:53:40.076Z" },
+    { url = "https://files.pythonhosted.org/packages/ed/47/14a76b926edc3957c8a8258423db789d3fa925d2fed800102fce58959413/fastapi-0.120.4-py3-none-any.whl", hash = "sha256:9bdf192308676480d3593e10fd05094e56d6fdc7d9283db26053d8104d5f82a0", size = 108235, upload-time = "2025-10-31T18:37:27.038Z" },
 ]
 
 [[package]]
@@ -2009,6 +2009,41 @@ wheels = [
 [package.optional-dependencies]
 http = [
     { name = "aiohttp" },
+]
+
+[[package]]
+name = "galileo"
+version = "1.27.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "attrs" },
+    { name = "backoff" },
+    { name = "galileo-core" },
+    { name = "pydantic" },
+    { name = "pyjwt" },
+    { name = "python-dateutil" },
+    { name = "wrapt" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f8/d8/a9976c054c475142c5f45555324373f977b142d48a0789d16bb4c84395ec/galileo-1.27.2.tar.gz", hash = "sha256:ede434123a8812427bd450fb42712c00142958c95f2a3e5dd4b72fd2e9c82a4a", size = 459581, upload-time = "2025-10-20T20:58:25.207Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d8/a2/0bbd5f84d9bfa327ba638d8de89d2354f1b24b19caf56e20a4b2abc90455/galileo-1.27.2-py3-none-any.whl", hash = "sha256:a26a329eefb95cc0d27486a22bf1b052a2dcb1343defaad4f74fb2449ce8cacd", size = 1144926, upload-time = "2025-10-20T20:58:23.316Z" },
+]
+
+[[package]]
+name = "galileo-core"
+version = "3.67.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "pyjwt" },
+    { name = "typing-extensions" },
+    { name = "uvloop", marker = "sys_platform != 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2b/52/3f60cd1dda1f39393ca5e141ff6d85e4dedbced5b7d855404bcef32895bd/galileo_core-3.67.1.tar.gz", hash = "sha256:216f3bdd9b3383469c89bd26a9ef5ca2230fab83c4af7a294a0f22cbe6db8f98", size = 55983, upload-time = "2025-10-16T15:57:17.562Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/41/7c/283efc104377bad200b3b4befdcb8bf01e4eafaa33a5a99f9d953574ad0a/galileo_core-3.67.1-py3-none-any.whl", hash = "sha256:87989b42ef988cf28a5884aec6554d756b89023809498a0ac19e0724be9fe170", size = 97271, upload-time = "2025-10-16T15:57:16.082Z" },
 ]
 
 [[package]]
@@ -5777,8 +5812,10 @@ zep-cloud = [
 dev = [
     { name = "asgi-lifespan" },
     { name = "beautifulsoup4" },
+    { name = "galileo" },
     { name = "httpx-sse" },
     { name = "ipython" },
+    { name = "langsmith" },
     { name = "myst-parser" },
     { name = "nbconvert" },
     { name = "nbsphinx" },
@@ -5904,8 +5941,10 @@ provides-extras = ["all", "adk", "agno", "crewai", "data-flywheel", "ingestion",
 dev = [
     { name = "asgi-lifespan", specifier = "~=2.1" },
     { name = "beautifulsoup4", specifier = "~=4.13" },
+    { name = "galileo", specifier = "~=1.27" },
     { name = "httpx-sse", specifier = "~=0.4" },
     { name = "ipython", specifier = "~=8.31" },
+    { name = "langsmith" },
     { name = "myst-parser", specifier = "~=4.0" },
     { name = "nbconvert" },
     { name = "nbsphinx", specifier = "~=0.9" },
@@ -10739,7 +10778,7 @@ wheels = [
 
 [[package]]
 name = "zep-cloud"
-version = "3.8.0"
+version = "3.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
@@ -10749,9 +10788,9 @@ dependencies = [
     { name = "python-dateutil" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/59/58/b27a036a8853cb946121331cc8dd46f4e019d86636b1edb7b207fa345c98/zep_cloud-3.8.0.tar.gz", hash = "sha256:0c444ca66b7b90e2e27514af242cfa83c35a6a06c9440096e8651872d3346e7b", size = 57797, upload-time = "2025-10-22T04:06:57.894Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/6d/5a/7b9f889d782b41d5dbefcf1b1660c7d3d186ecc63cfcb96dc723a2f0dc6e/zep_cloud-3.9.0.tar.gz", hash = "sha256:8f45c3595d16687e3ffd3233e2d5b1dd50d97407dd588cf2d54b8081b42566de", size = 57911, upload-time = "2025-10-30T20:32:59.177Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/22/3f/36a49dab93b94d7a1a63954067bad02ed8f90ad50afc7c45432d4ad69c3a/zep_cloud-3.8.0-py3-none-any.whl", hash = "sha256:731701d358bfa8ab297f1f9fc5b4b74171fb20e17070635111a751f8f88950bf", size = 98951, upload-time = "2025-10-22T04:06:56.601Z" },
+    { url = "https://files.pythonhosted.org/packages/76/37/5790d049997cca23c2a87f014ed22b4072800e45aade60f063e8eb732436/zep_cloud-3.9.0-py3-none-any.whl", hash = "sha256:f0a28638d8865394c1cb54dd63b073a57a8649144b19b6fe22fefb974cee1b9c", size = 99173, upload-time = "2025-10-30T20:32:57.249Z" },
 ]
 
 [[package]]

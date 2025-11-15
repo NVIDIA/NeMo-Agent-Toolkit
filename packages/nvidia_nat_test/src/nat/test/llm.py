@@ -96,6 +96,14 @@ async def test_llm_langchain(config: TestLLMConfig, builder: Builder):
             await chooser.async_sleep()
             yield chooser.next_response()
 
+        def bind_tools(self, tools: Any, **_kwargs: Any) -> "LangChainTestLLM":
+            """Bind tools to the LLM. Returns self to maintain fluent interface."""
+            return self
+
+        def bind(self, **_kwargs: Any) -> "LangChainTestLLM":
+            """Bind additional parameters to the LLM. Returns self to maintain fluent interface."""
+            return self
+
     yield LangChainTestLLM()
 
 
