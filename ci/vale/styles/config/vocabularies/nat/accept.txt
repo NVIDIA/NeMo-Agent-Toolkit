@@ -75,6 +75,7 @@ impactful
 [Ii]nferencing
 [Ii]nterquartile
 isort
+Jama
 Jira
 jsonlines
 Langfuse

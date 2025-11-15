@@ -27,7 +27,7 @@
 # uv pip install mcp-server-time
 
 # Sample usage:
-# nat run --config_file config-mcp-auth-jira.yml --input "What is jira ticket AIQ-1935 about"
+# nat run --config_file config-mcp-auth-jira.yml --input "What is status of jira ticket OCSW-2116?"
 
 function_groups:
   mcp_jira:
