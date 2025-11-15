@@ -130,9 +130,9 @@ async def run_and_evaluate_simple(base_url: str, input_message: str, expected_ou
             logger.exception("Request failed: %s", e)
             logger.error("\n❌ ERROR: Could not connect to server at %s", base_url)
             logger.error("Make sure the server is running with:")
-            logger.error(
-                "  nat serve --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml"
-            )
+            logger.error("  nat serve \
+                    --config_file \
+                        examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml")
             return None
 
         logger.info("")

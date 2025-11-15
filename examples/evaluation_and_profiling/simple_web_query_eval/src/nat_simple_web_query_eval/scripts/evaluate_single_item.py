@@ -186,9 +186,9 @@ async def run_workflow_and_evaluate(base_url: str, input_message: str, expected_
             logger.exception("Request failed: %s", e)
             logger.error("\n❌ ERROR: Could not connect to server at %s", base_url)
             logger.error("Make sure the server is running with:")
-            logger.error(
-                "  nat serve --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml"
-            )
+            logger.error("  nat serve \
+                    --config_file \
+                    examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml")
             return None
 
         logger.info("")
@@ -247,7 +247,7 @@ async def run_workflow_and_evaluate(base_url: str, input_message: str, expected_
                 if result['success']:
                     eval_result = result['result']
                     logger.info(f"Score: {eval_result['score']}")
-                    logger.info(f"\nReasoning:")
+                    logger.info("\nReasoning:")
                     logger.info(json.dumps(eval_result['reasoning'], indent=2))
                     logger.info("=" * 70)
                     logger.info("\n✓ Evaluation completed successfully!")
