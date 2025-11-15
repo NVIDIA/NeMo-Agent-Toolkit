@@ -56,7 +56,6 @@ import sys
 
 import aiohttp
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # ============================================================================
@@ -80,7 +79,8 @@ EXPECTED_OUTPUT = "LangSmith is a platform for building production-grade LLM app
 """The expected/reference answer for evaluation."""
 
 
-async def run_and_evaluate_simple(base_url: str, input_message: str, expected_output: str, evaluator_name: str):
+async def run_and_evaluate_simple(base_url: str, input_message: str, expected_output: str,
+                                  evaluator_name: str) -> dict | None:
     """
     Simple workflow evaluation without trajectory processing.
 
@@ -89,6 +89,9 @@ async def run_and_evaluate_simple(base_url: str, input_message: str, expected_ou
         input_message: Question to ask
         expected_output: Expected answer
         evaluator_name: Name of evaluator to use
+
+    Returns:
+        dict: Evaluation result containing success status, score, and reasoning, or None on error
     """
 
     async with aiohttp.ClientSession() as session:
@@ -202,7 +205,7 @@ async def run_and_evaluate_simple(base_url: str, input_message: str, expected_ou
             return None
 
 
-async def main():
+async def main() -> int:
     """Main entry point."""
     print("\n" + "=" * 70)
     print("EVALUATE SINGLE ITEM - Simple Mode (No Trajectory)")
@@ -218,7 +221,7 @@ async def main():
                                            expected_output=EXPECTED_OUTPUT,
                                            evaluator_name=EVALUATOR_NAME)
 
-    if result:
+    if result and result.get("success"):
         return 0
     else:
         print("\n❌ Failed to complete evaluation")
@@ -231,5 +234,6 @@ async def main():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     exit_code = asyncio.run(main())
     sys.exit(exit_code)

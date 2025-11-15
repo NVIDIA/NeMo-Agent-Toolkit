@@ -75,7 +75,6 @@ except ImportError as e:
     print("\nTo install: pip install nvidia-nat")
     sys.exit(1)
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # ============================================================================
@@ -112,7 +111,8 @@ INTERMEDIATE_DATA_PREFIX = "intermediate_data: "
 # ============================================================================
 # Main Implementation
 # ============================================================================
-async def run_workflow_and_evaluate(base_url: str, input_message: str, expected_output: str, evaluator_name: str):
+async def run_workflow_and_evaluate(base_url: str, input_message: str, expected_output: str,
+                                    evaluator_name: str) -> dict | None:
     """
     Run a workflow query and evaluate the result.
 
@@ -264,7 +264,7 @@ async def run_workflow_and_evaluate(base_url: str, input_message: str, expected_
             return None
 
 
-async def main():
+async def main() -> int:
     """Main entry point."""
     print("\n" + "=" * 70)
     print("EVALUATE SINGLE ITEM - Demonstration Script")
@@ -280,7 +280,7 @@ async def main():
                                              expected_output=EXPECTED_OUTPUT,
                                              evaluator_name=EVALUATOR_NAME)
 
-    if result:
+    if result and result.get("success"):
         return 0
     else:
         print("\n❌ Failed to complete evaluation")
@@ -295,5 +295,6 @@ async def main():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     exit_code = asyncio.run(main())
     sys.exit(exit_code)
