@@ -23,6 +23,8 @@ from datetime import date
 
 from slack_sdk import WebClient
 
+MAX_TEXT_LENGTH = 3000  # Slack message text limit
+
 
 class ReportMessages(typing.NamedTuple):
     plain_text: list[str]
@@ -94,6 +96,9 @@ def text_to_block(text: str) -> dict:
 
 
 def add_text(text: str, blocks: list[dict], plain_text: list[str]) -> None:
+    if len(text) > MAX_TEXT_LENGTH:
+        text = text[:(MAX_TEXT_LENGTH - 3)] + "..."
+
     blocks.append(text_to_block(text))
     plain_text.append(text)
 
