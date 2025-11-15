@@ -20,11 +20,11 @@ dependencies = [
   # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
   # Keep sorted!!!
-  "nvidia-nat~=1.4",
-  "nvidia-nat-langchain~=1.4",
   "databricks-sql-connector~=4.1.4",
   "databricks-sqlalchemy~=2.0.8",
-  "langchain-core", # determined from nvidia-nat-langchain
+  "langchain-core~=0.3.76",
+  "nvidia-nat~=1.4",
+  "nvidia-nat-langchain~=1.4",
   "pandas~=2.0",
   "pymilvus[model]~=2.5.11",
   "sqlglot~=26.33.0",

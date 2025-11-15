@@ -207,8 +207,8 @@ class TestSetupVannaDbConnection:
         mock_connection = MagicMock()
         mock_connect.return_value = mock_connection
         mock_vanna = MagicMock()
-        # Ensure db_engine doesn't exist initially so connect_to_database gets called
-        del mock_vanna.db_engine
+        # Ensure db_engine is treated as uninitialized so connect_to_database gets called
+        mock_vanna.db_engine = None
 
         setup_vanna_db_connection(mock_vanna, SupportedDatabase.DATABRICKS, "databricks://token@host/db")
 
