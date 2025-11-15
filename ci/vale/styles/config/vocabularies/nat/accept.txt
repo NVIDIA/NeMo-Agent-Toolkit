@@ -157,6 +157,7 @@ triages
 [Uu]ploader
 [Uu]psert
 uv
+Vanna
 VectorDB
 [Ww]alkthrough
 [Ww]eb[Ss]ocket
