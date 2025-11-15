@@ -133,6 +133,28 @@ See the [Microsoft Presidio documentation](https://microsoft.github.io/presidio/
 
 Additionally, the `redact_keys` parameter allows you to specify custom keys that should be redacted beyond the default sensitive keys (`api_key`, `auth_headers`, `authorization`).
 
+## User Feedback Integration
+
+When using Weave telemetry with the FastAPI front end, you can enable a `/feedback` endpoint that allows users to provide thumbs-up and thumbs-down feedback on agent responses. This feedback is linked to specific traces in your Weave project for analysis.
+
+### Enabling the Feedback Endpoint
+
+To enable the feedback endpoint, configure your workflow to use the `WeaveFastAPIPluginWorker`:
+
+```yaml
+general:
+  front_end:
+    _type: fastapi
+    runner_class: nat.plugins.weave.fastapi_plugin_worker.WeaveFastAPIPluginWorker
+  telemetry:
+    tracing:
+      weave:
+        _type: weave
+        project: "nat-demo"
+```
+
+The `WeaveFastAPIPluginWorker` registers the `/feedback` endpoint when Weave telemetry is configured. For more details on the feedback API, see the [API Server Endpoints](../../reference/api-server-endpoints.md#feedback-endpoint) documentation.
+
 ## Resources
 
 - Learn more about tracing [here](https://weave-docs.wandb.ai/guides/tracking/tracing).

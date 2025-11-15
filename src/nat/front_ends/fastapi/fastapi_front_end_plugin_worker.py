@@ -39,6 +39,7 @@ from pydantic import BaseModel
 from pydantic import Field
 from starlette.websockets import WebSocket
 
+from nat.builder.context import Context
 from nat.builder.function import Function
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.api_server import ChatRequest
@@ -544,6 +545,12 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         GenerateStreamResponseType = workflow.streaming_output_schema
         GenerateSingleResponseType = workflow.single_output_schema
 
+        def add_context_headers_to_response(response: Response) -> None:
+            """Add context-based headers to response if available."""
+            observability_trace_id = Context.get().observability_trace_id
+            if observability_trace_id:
+                response.headers["Observability-Trace-Id"] = observability_trace_id
+
         # Skip async generation for custom routes (those with function_name)
         if self._dask_available and not hasattr(endpoint, 'function_name'):
             # Append job_id and expiry_seconds to the input schema, this effectively makes these reserved keywords
@@ -594,7 +601,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 async with session_manager.session(http_connection=request,
                                                    user_authentication_callback=self._http_flow_handler.authenticate):
 
-                    return await generate_single_response(None, session_manager, result_type=result_type)
+                    result = await generate_single_response(None, session_manager, result_type=result_type)
+                    add_context_headers_to_response(response)
+                    return result
 
             return get_single
 
@@ -640,7 +649,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 async with session_manager.session(http_connection=request,
                                                    user_authentication_callback=self._http_flow_handler.authenticate):
 
-                    return await generate_single_response(payload, session_manager, result_type=result_type)
+                    result = await generate_single_response(payload, session_manager, result_type=result_type)
+                    add_context_headers_to_response(response)
+                    return result
 
             return post_single
 
@@ -711,7 +722,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                      result_type=ChatResponseChunk,
                                                      output_type=ChatResponseChunk))
 
-                    return await generate_single_response(payload, session_manager, result_type=ChatResponse)
+                    result = await generate_single_response(payload, session_manager, result_type=ChatResponse)
+                    add_context_headers_to_response(response)
+                    return result
 
             return post_openai_api_compatible
 

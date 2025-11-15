@@ -72,6 +72,22 @@ class MessageValidator:
 
         self._message_parent_id: str = "default_id"
 
+    def _get_observability_trace_id_from_context(self, observability_trace_id: str | None) -> str | None:
+        """
+        Retrieves observability_trace_id from Context if not already provided
+
+        :param observability_trace_id: Existing observability_trace_id or None.
+        :return: observability_trace_id if available, None otherwise.
+        """
+        if observability_trace_id is not None:
+            return observability_trace_id
+
+        try:
+            from nat.builder.context import Context
+            return Context.get().observability_trace_id
+        except (ImportError, AttributeError, KeyError):
+            return None
+
     async def validate_message(self, message: dict[str, Any]) -> BaseModel:
         """
         Validates an incoming WebSocket message against its expected schema.
@@ -233,17 +249,17 @@ class MessageValidator:
         return data_model.parent_id or "root"
 
     async def create_system_response_token_message(
-        self,
-        message_type: Literal[WebSocketMessageType.RESPONSE_MESSAGE,
-                              WebSocketMessageType.ERROR_MESSAGE] = WebSocketMessageType.RESPONSE_MESSAGE,
-        message_id: str | None = str(uuid.uuid4()),
-        thread_id: str = "default",
-        parent_id: str = "default",
-        conversation_id: str | None = None,
-        content: SystemResponseContent | Error = SystemResponseContent(),
-        status: WebSocketMessageStatus = WebSocketMessageStatus.IN_PROGRESS,
-        timestamp: str = str(datetime.datetime.now(datetime.UTC))
-    ) -> WebSocketSystemResponseTokenMessage | None:
+            self,
+            message_type: Literal[WebSocketMessageType.RESPONSE_MESSAGE,
+                                  WebSocketMessageType.ERROR_MESSAGE] = WebSocketMessageType.RESPONSE_MESSAGE,
+            message_id: str | None = str(uuid.uuid4()),
+            thread_id: str = "default",
+            parent_id: str = "default",
+            conversation_id: str | None = None,
+            content: SystemResponseContent | Error = SystemResponseContent(),
+            status: WebSocketMessageStatus = WebSocketMessageStatus.IN_PROGRESS,
+            timestamp: str = str(datetime.datetime.now(datetime.UTC)),
+            observability_trace_id: str | None = None) -> WebSocketSystemResponseTokenMessage | None:
         """
         Creates a system response token message with default values.
 
@@ -255,9 +271,12 @@ class MessageValidator:
         :param content: Message content.
         :param status: Status of the message (default: IN_PROGRESS).
         :param timestamp: Timestamp of the message (default: current UTC time).
+        :param observability_trace_id: Observability trace identifier (default: retrieved from context).
         :return: A WebSocketSystemResponseTokenMessage instance.
         """
         try:
+            observability_trace_id = self._get_observability_trace_id_from_context(observability_trace_id)
+
             return WebSocketSystemResponseTokenMessage(type=message_type,
                                                        id=message_id,
                                                        thread_id=thread_id,
@@ -265,24 +284,25 @@ class MessageValidator:
                                                        conversation_id=conversation_id,
                                                        content=content,
                                                        status=status,
-                                                       timestamp=timestamp)
+                                                       timestamp=timestamp,
+                                                       observability_trace_id=observability_trace_id)
 
         except Exception as e:
             logger.exception("Error creating system response token message: %s", str(e))
             return None
 
     async def create_system_intermediate_step_message(
-        self,
-        message_type: Literal[WebSocketMessageType.INTERMEDIATE_STEP_MESSAGE] = (
-            WebSocketMessageType.INTERMEDIATE_STEP_MESSAGE),
-        message_id: str = str(uuid.uuid4()),
-        thread_id: str = "default",
-        parent_id: str = "default",
-        conversation_id: str | None = None,
-        content: SystemIntermediateStepContent = SystemIntermediateStepContent(name="default", payload="default"),
-        status: WebSocketMessageStatus = WebSocketMessageStatus.IN_PROGRESS,
-        timestamp: str = str(datetime.datetime.now(datetime.UTC))
-    ) -> WebSocketSystemIntermediateStepMessage | None:
+            self,
+            message_type: Literal[WebSocketMessageType.INTERMEDIATE_STEP_MESSAGE] = (
+                WebSocketMessageType.INTERMEDIATE_STEP_MESSAGE),
+            message_id: str = str(uuid.uuid4()),
+            thread_id: str = "default",
+            parent_id: str = "default",
+            conversation_id: str | None = None,
+            content: SystemIntermediateStepContent = SystemIntermediateStepContent(name="default", payload="default"),
+            status: WebSocketMessageStatus = WebSocketMessageStatus.IN_PROGRESS,
+            timestamp: str = str(datetime.datetime.now(datetime.UTC)),
+            observability_trace_id: str | None = None) -> WebSocketSystemIntermediateStepMessage | None:
         """
         Creates a system intermediate step message with default values.
 
@@ -297,6 +317,8 @@ class MessageValidator:
         :return: A WebSocketSystemIntermediateStepMessage instance.
         """
         try:
+            observability_trace_id = self._get_observability_trace_id_from_context(observability_trace_id)
+
             return WebSocketSystemIntermediateStepMessage(type=message_type,
                                                           id=message_id,
                                                           thread_id=thread_id,
@@ -304,25 +326,26 @@ class MessageValidator:
                                                           conversation_id=conversation_id,
                                                           content=content,
                                                           status=status,
-                                                          timestamp=timestamp)
+                                                          timestamp=timestamp,
+                                                          observability_trace_id=observability_trace_id)
 
         except Exception as e:
             logger.exception("Error creating system intermediate step message: %s", str(e))
             return None
 
     async def create_system_interaction_message(
-        self,
-        *,
-        message_type: Literal[WebSocketMessageType.SYSTEM_INTERACTION_MESSAGE] = (
-            WebSocketMessageType.SYSTEM_INTERACTION_MESSAGE),
-        message_id: str | None = str(uuid.uuid4()),
-        thread_id: str = "default",
-        parent_id: str = "default",
-        conversation_id: str | None = None,
-        content: HumanPrompt,
-        status: WebSocketMessageStatus = WebSocketMessageStatus.IN_PROGRESS,
-        timestamp: str = str(datetime.datetime.now(datetime.UTC))
-    ) -> WebSocketSystemInteractionMessage | None:
+            self,
+            *,
+            message_type: Literal[WebSocketMessageType.SYSTEM_INTERACTION_MESSAGE] = (
+                WebSocketMessageType.SYSTEM_INTERACTION_MESSAGE),
+            message_id: str | None = str(uuid.uuid4()),
+            thread_id: str = "default",
+            parent_id: str = "default",
+            conversation_id: str | None = None,
+            content: HumanPrompt,
+            status: WebSocketMessageStatus = WebSocketMessageStatus.IN_PROGRESS,
+            timestamp: str = str(datetime.datetime.now(datetime.UTC)),
+            observability_trace_id: str | None = None) -> WebSocketSystemInteractionMessage | None:
         """
         Creates a system interaction message with default values.
 
@@ -337,6 +360,8 @@ class MessageValidator:
         :return: A WebSocketSystemInteractionMessage instance.
         """
         try:
+            observability_trace_id = self._get_observability_trace_id_from_context(observability_trace_id)
+
             return WebSocketSystemInteractionMessage(type=message_type,
                                                      id=message_id,
                                                      thread_id=thread_id,
@@ -344,7 +369,8 @@ class MessageValidator:
                                                      conversation_id=conversation_id,
                                                      content=content,
                                                      status=status,
-                                                     timestamp=timestamp)
+                                                     timestamp=timestamp,
+                                                     observability_trace_id=observability_trace_id)
 
         except Exception as e:
             logger.exception("Error creating system interaction message: %s", str(e))
