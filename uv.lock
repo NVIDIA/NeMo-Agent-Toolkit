@@ -6516,7 +6516,7 @@ dependencies = [
 requires-dist = [
     { name = "databricks-sql-connector", specifier = "~=4.1.4" },
     { name = "databricks-sqlalchemy", specifier = "~=2.0.8" },
-    { name = "langchain-core" },
+    { name = "langchain-core", specifier = "~=0.3.76" },
     { name = "nvidia-nat", editable = "." },
     { name = "nvidia-nat-langchain", editable = "packages/nvidia_nat_langchain" },
     { name = "pandas", specifier = "~=2.0" },
