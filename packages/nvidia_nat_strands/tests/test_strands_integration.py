@@ -120,7 +120,7 @@ class TestStrandsAgentE2EOpenAI:
         """Test agent with multiple tool calls."""
         from strands.agent import Agent
 
-        llm_config = OpenAIModelConfig(model_name="gpt-3.5-turbo", temperature=0.0, max_tokens=96)
+        llm_config = OpenAIModelConfig(model_name="gpt-4o", temperature=0.0, max_tokens=96)
 
         strands_tool = strands_tool_wrapper("calculator", calculator_function, builder)
 
@@ -145,7 +145,7 @@ class TestStrandsAgentE2EOpenAI:
         """Test that agent handles tool errors gracefully."""
         from strands.agent import Agent
 
-        llm_config = OpenAIModelConfig(model_name="gpt-3.5-turbo", temperature=0.0, max_tokens=64)
+        llm_config = OpenAIModelConfig(model_name="gpt-4o", temperature=0.0, max_tokens=64)
 
         strands_tool = strands_tool_wrapper("calculator", calculator_function, builder)
 
@@ -169,7 +169,7 @@ class TestStrandsAgentE2EOpenAI:
 
         # Enable thinking mixin with chain-of-thought prompt
         llm_config = OpenAIModelConfig(
-            model_name="gpt-3.5-turbo",
+            model_name="gpt-4o",
             temperature=0.0,
             max_tokens=96,
             thinking_system_prompt="Think step by step before answering."
@@ -199,7 +199,7 @@ class TestStrandsAgentE2EOpenAI:
 
         # Enable thinking mixin with streaming
         llm_config = OpenAIModelConfig(
-            model_name="gpt-3.5-turbo",
+            model_name="gpt-4o",
             temperature=0.0,
             max_tokens=96,
             thinking_system_prompt="Analyze each step briefly before responding."
@@ -510,7 +510,7 @@ class TestStrandsProfilerIntegration:
 
         from nat.plugins.strands.strands_callback_handler import StrandsProfilerHandler
 
-        llm_config = OpenAIModelConfig(model_name="gpt-3.5-turbo", temperature=0.0, max_tokens=64)
+        llm_config = OpenAIModelConfig(model_name="gpt-4o", temperature=0.0, max_tokens=64)
 
         strands_tool = strands_tool_wrapper("doubler", simple_function, builder)
 
@@ -543,7 +543,7 @@ class TestStrandsProfilerIntegration:
 
         from nat.plugins.strands.strands_callback_handler import StrandsProfilerHandler
 
-        llm_config = OpenAIModelConfig(model_name="gpt-3.5-turbo", temperature=0.0, max_tokens=64)
+        llm_config = OpenAIModelConfig(model_name="gpt-4o", temperature=0.0, max_tokens=64)
 
         strands_tool = strands_tool_wrapper("doubler", simple_function, builder)
 
