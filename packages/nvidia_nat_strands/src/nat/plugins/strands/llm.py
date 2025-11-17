@@ -13,6 +13,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""LLM provider wrappers for AWS Strands integration with NVIDIA NeMo Agent toolkit.
+
+This module provides Strands-compatible LLM client wrappers for the following providers:
+
+Supported Providers
+-------------------
+- **OpenAI**: Direct OpenAI API integration through ``OpenAIModelConfig``
+- **NVIDIA NIM**: OpenAI-compatible endpoints for NVIDIA models through ``NIMModelConfig``
+- **AWS Bedrock**: Amazon Bedrock models (such as Claude) through ``AWSBedrockModelConfig``
+
+Each wrapper:
+- Validates that Responses API features are disabled (Strands manages tool execution)
+- Patches clients with NeMo Agent toolkit retry logic from ``RetryMixin``
+- Injects chain-of-thought prompts when ``ThinkingMixin`` is configured
+- Removes NeMo Agent toolkit-specific config keys before instantiating Strands clients
+
+Future Provider Support
+-----------------------
+The following providers are not yet supported but could be contributed:
+
+- **Azure OpenAI**: Would require a Strands Azure OpenAI client wrapper similar to the
+  existing OpenAI integration. Contributors should follow the pattern established in
+  ``openai_strands`` and ensure Azure-specific authentication (endpoint, API version,
+  deployment name) is properly handled.
+
+- **LiteLLM**: The wrapper  would need to handle LiteLLM's unified interface across
+  multiple providers while preserving Strands' tool execution semantics.
+
+See the Strands documentation at https://strandsagents.com for model provider details.
+"""
+
 import os
 from collections.abc import AsyncGenerator
 from typing import Any
