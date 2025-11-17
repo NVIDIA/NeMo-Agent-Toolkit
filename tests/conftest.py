@@ -29,7 +29,6 @@ import os
 import sys
 import typing
 import uuid
-import warnings
 from collections.abc import AsyncGenerator
 from collections.abc import Callable
 from collections.abc import Sequence
@@ -49,7 +48,6 @@ from langchain_core.outputs import ChatGeneration
 from langchain_core.outputs import ChatResult
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel
-from pydantic.warnings import PydanticDeprecatedSince20
 
 TESTS_DIR = os.path.dirname(__file__)
 PROJECT_DIR = os.path.dirname(TESTS_DIR)
