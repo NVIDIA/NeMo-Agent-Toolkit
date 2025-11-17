@@ -22,7 +22,7 @@ response = client.create_agent_runtime(
     agentRuntimeArtifact={
         'containerConfiguration': {
             'containerUri': '<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/strands-demo:latest'
-            #                                                   '<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/nat-test-repo:latest'
+            # '<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/nat-test-repo:latest'
         }
     },
     networkConfiguration={"networkMode": "PUBLIC"},

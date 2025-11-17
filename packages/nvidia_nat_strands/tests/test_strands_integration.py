@@ -159,6 +159,7 @@ class TestStrandsAgentE2EOpenAI:
             assert response is not None
             # Agent should handle the error and provide a meaningful response
 
+
 class TestStrandsAgentE2ENIM:
     """End-to-end integration tests for Strands Agent with NVIDIA NIM."""
 
@@ -201,9 +202,10 @@ class TestStrandsAgentE2ENIM:
 
         # Create Strands agent with NIM LLM
         async with nim_strands(llm_config, builder) as llm_client:
-            agent = Agent(model=llm_client,
-                          tools=[strands_tool],
-                          system_prompt="You are a helpful assistant that can echo messages. Use the echo tool exactly once.")
+            agent = Agent(
+                model=llm_client,
+                tools=[strands_tool],
+                system_prompt="You are a helpful assistant that can echo messages. Use the echo tool exactly once.")
 
             # Test agent execution
             response = agent("Use the echo tool to echo 'Hello World'")
@@ -214,7 +216,8 @@ class TestStrandsAgentE2ENIM:
             response_text = str(response.message)
             # Check that the echo tool was used - the model may not reproduce the exact text
             # but should indicate the tool was called
-            assert "echo" in response_text.lower() or "Hello World" in response_text or "hello world" in response_text.lower()
+            assert "echo" in response_text.lower(
+            ) or "Hello World" in response_text or "hello world" in response_text.lower()
 
     @pytest.mark.integration
     @pytest.mark.usefixtures("nvidia_api_key")
@@ -286,7 +289,9 @@ class TestStrandsAgentE2ENIM:
         strands_tool = strands_tool_wrapper("echo", echo_function, builder)
 
         async with nim_strands(llm_config, builder) as llm_client:
-            agent = Agent(model=llm_client, tools=[strands_tool], system_prompt="You are a helpful assistant that can use tools.")
+            agent = Agent(model=llm_client,
+                          tools=[strands_tool],
+                          system_prompt="You are a helpful assistant that can use tools.")
 
             # Test with streaming response and thinking enabled
             # Note: Strands agent.stream_async() returns an async generator

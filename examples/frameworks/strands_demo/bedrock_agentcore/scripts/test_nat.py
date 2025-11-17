@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import json
+
 import boto3
 
 client = boto3.client('bedrock-agentcore', region_name='<AWS_REGION>')
