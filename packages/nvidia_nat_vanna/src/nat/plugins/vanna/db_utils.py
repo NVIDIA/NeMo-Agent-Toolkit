@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
+import json
 import logging
 import re
 import typing
@@ -84,7 +86,6 @@ def extract_sql_from_message(sql_query: str | Any) -> str:
     Returns:
         Clean SQL query string
     """
-    from pydantic import BaseModel
 
     # Handle BaseModel objects (e.g., Text2SQLOutput)
     if isinstance(sql_query, BaseModel):
@@ -122,7 +123,6 @@ def extract_sql_from_message(sql_query: str | Any) -> str:
 
     # Try to parse as JSON if it looks like JSON
     if isinstance(sql_query, str) and sql_query.strip().startswith("{"):
-        import json
         try:
             parsed = json.loads(sql_query)
             if isinstance(parsed, dict) and "sql" in parsed:
@@ -236,7 +236,6 @@ async def async_execute_query(connection: Any, query: str) -> QueryResult:
     Returns:
         QueryResult object containing results and column names
     """
-    import asyncio
 
     # Run synchronous query in executor
     loop = asyncio.get_event_loop()
@@ -268,7 +267,6 @@ def setup_vanna_db_connection(
     Raises:
         ValueError: If database_type is not supported
     """
-    import pandas as pd
 
     # Reuse existing engine if already connected to same URL
     if hasattr(vn, "db_engine") and vn.db_engine is not None:
@@ -282,7 +280,7 @@ def setup_vanna_db_connection(
         logger.info(f"Created and stored database engine in Vanna instance for {database_type}")
 
     # Define async run_sql function for Vanna
-    async def run_sql(sql_query: str) -> pd.DataFrame:
+    async def run_sql(sql_query: str) -> Any:
         """Execute SQL asynchronously and return DataFrame."""
         try:
             query_result = await async_execute_query(engine, sql_query)

@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import asyncio
+import json
 import logging
 import uuid
 
@@ -40,8 +41,6 @@ def extract_json_from_string(content: str) -> dict:
     Raises:
         ValueError: If no valid JSON found
     """
-    import json
-
     try:
         return json.loads(content)
     except json.JSONDecodeError:

@@ -30,28 +30,24 @@ The NVIDIA NeMo Agent toolkit provides text-to-SQL capabilities through the `tex
 
 ## Installation
 
-The text-to-SQL plugin is distributed as a separate package that can be installed alongside the NeMo Agent toolkit.
+The text-to-SQL plugin is distributed as a separate package that can be installed alongside the NeMo Agent toolkit. If you have not yet installed the NeMo Agent toolkit, refer to the [Installing](../../quick-start/installing.md) guide.
+
+If you have performed a source code checkout, you can install this with the following command:
 
 ```bash
-uv venv --python 3.12
-uv pip install -e packages/nvidia_nat_vanna
-source .venv/bin/activate
+uv pip install -e '.[vanna]'
 ```
 
-### Required Dependencies
-
-The Databricks SQL connector is automatically installed with the package:
+If you have installed the NeMo Agent toolkit from a package, you can install this with the following command:
 
 ```bash
-# Already included in nvidia-nat-vanna dependencies
-# databricks-sql-connector~=4.0.5
+uv pip install "nvidia-nat[vanna]"
 ```
 
 ## Quick Start
 
 ### Prerequisites
 
-- Python 3.11+
 - NVIDIA API Key (refer to [Obtaining API Keys](../../quick-start/installing.md#obtaining-api-keys))
 - Milvus vector database (local or cloud)
 - Databricks workspace with SQL warehouse or compute cluster access

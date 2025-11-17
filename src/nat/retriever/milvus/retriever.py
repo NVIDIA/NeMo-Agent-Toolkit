@@ -16,10 +16,14 @@
 import inspect
 import logging
 from functools import partial
-from typing import Any
+from typing import TYPE_CHECKING
 
 from langchain_core.embeddings import Embeddings
 from pymilvus.client.abstract import Hit
+
+if TYPE_CHECKING:
+    from pymilvus import AsyncMilvusClient
+    from pymilvus import MilvusClient
 
 from nat.retriever.interface import Retriever
 from nat.retriever.models import Document
@@ -40,7 +44,7 @@ class MilvusRetriever(Retriever):
 
     def __init__(
         self,
-        client: Any,  # MilvusClient or AsyncMilvusClient
+        client: "MilvusClient | AsyncMilvusClient",
         embedder: Embeddings,
         content_field: str = "text",
         use_iterator: bool = False,
@@ -50,7 +54,7 @@ class MilvusRetriever(Retriever):
 
         Args:
         """
-        self._client: Any = client
+        self._client: MilvusClient | AsyncMilvusClient = client
         self._embedder = embedder
 
         # Detect if client is async by inspecting method capabilities

@@ -120,13 +120,6 @@ Executes SQL queries and returns formatted results:
 - **Conversational Analytics**: Multi-turn Q&A about your data
 - **SQL Assistance**: Help analysts write complex queries
 
-## Requirements
-
-- Python 3.11+
-- NVIDIA NeMo Agent toolkit
-- Milvus (for vector storage)
-- Databricks SQL connector (included with package)
-
 ## Documentation
 
 Full documentation: <https://docs.nvidia.com/nemo/agent-toolkit/latest/>
