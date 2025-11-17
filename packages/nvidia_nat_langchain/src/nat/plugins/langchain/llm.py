@@ -136,7 +136,7 @@ async def azure_openai_langchain(llm_config: AzureOpenAIModelConfig, _builder: B
     validate_no_responses_api(llm_config, LLMFrameworkEnum.LANGCHAIN)
 
     client = AzureChatOpenAI(
-        **llm_config.model_dump(exclude={"type", "thinking", "api_type"},
+        **llm_config.model_dump(exclude={"type", "thinking", "api_type", "api_version"},
                                 by_alias=True,
                                 exclude_none=True,
                                 exclude_unset=True),

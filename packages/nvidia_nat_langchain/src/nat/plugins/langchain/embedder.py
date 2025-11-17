@@ -29,7 +29,10 @@ async def azure_openai_langchain(embedder_config: AzureOpenAIEmbedderModelConfig
     from langchain_openai import AzureOpenAIEmbeddings
 
     client = AzureOpenAIEmbeddings(
-        **embedder_config.model_dump(exclude={"type"}, by_alias=True, exclude_none=True, exclude_unset=True),
+        **embedder_config.model_dump(exclude={"type", "api_version"},
+                                     by_alias=True,
+                                     exclude_none=True,
+                                     exclude_unset=True),
         api_version=embedder_config.api_version,
     )
 
