@@ -213,7 +213,7 @@ Override `add_root_level_routes()` when you need to add routes to the wrapper Fa
 
 ```python
 async def add_root_level_routes(self, wrapper_app: FastAPI, mcp: FastMCP):
-    """Add routes to the wrapper app (called when base_path is configured)."""
+    """Add routes to the wrapper app (called when base path is configured)."""
 
     # Add OAuth discovery endpoint at root level
     @wrapper_app.get("/.well-known/oauth-protected-resource")
@@ -241,7 +241,7 @@ async def add_root_level_routes(self, wrapper_app: FastAPI, mcp: FastMCP):
 - Routes added here exist outside the MCP server's path
 - Default implementation does nothing, making this an optional extension point
 
-**Example with base_path**:
+**Example with base path**:
 ```yaml
 general:
   front_end:
