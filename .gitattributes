@@ -1,3 +1,5 @@
 docs/source/_static/*.png filter=lfs diff=lfs merge=lfs -text
 docs/source/_static/cursor_rules_demo/*.gif filter=lfs diff=lfs merge=lfs -text
 examples/**/data/** filter=lfs diff=lfs merge=lfs -text
+examples/red_teaming/redteaming_simple_calculator/data/calculator_test_dataset.json filter=lfs diff=lfs merge=lfs -text
+examples/red_teaming/redteaming_simple_calculator/data/red_team_scenarios.json filter=lfs diff=lfs merge=lfs -text
