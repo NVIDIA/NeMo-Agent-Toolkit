@@ -215,13 +215,6 @@ class MCPFrontEndPluginWorkerBase(ABC):
         Args:
             wrapper_app: The FastAPI wrapper application that mounts the MCP server
             mcp: The FastMCP server instance (already mounted at base_path)
-
-        Example:
-            class CustomWorker(MCPFrontEndPluginWorker):
-                async def add_root_level_routes(self, wrapper_app, mcp):
-                    @wrapper_app.get("/.well-known/oauth-protected-resource")
-                    async def oauth_discovery():
-                        return {"authorization_servers": [...]}
         """
         pass  # Default: no additional root-level routes
 
