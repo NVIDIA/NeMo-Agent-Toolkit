@@ -29,13 +29,13 @@ from nat.middleware.cache_middleware import CacheMiddleware
 from nat.middleware.middleware import FunctionMiddlewareContext
 
 
-class TestInput(BaseModel):
+class _TestInput(BaseModel):
     """Test input model."""
     value: str
     number: int
 
 
-class TestOutput(BaseModel):
+class _TestOutput(BaseModel):
     """Test output model."""
     result: str
 
@@ -46,8 +46,8 @@ def middleware_context():
     return FunctionMiddlewareContext(name="test_function",
                                      config=MagicMock(),
                                      description="Test function",
-                                     input_schema=TestInput,
-                                     single_output_schema=TestOutput,
+                                     input_schema=_TestInput,
+                                     single_output_schema=_TestOutput,
                                      stream_output_schema=None)
 
 
@@ -83,7 +83,7 @@ class TestCacheMiddlewareCaching:
         async def mock_next_call(_val):
             nonlocal call_count
             call_count += 1
-            return TestOutput(result=f"Result for {_val['value']}")
+            return _TestOutput(result=f"Result for {_val['value']}")
 
         # First call - should call the function
         input1 = {"value": "test", "number": 42}
@@ -111,7 +111,7 @@ class TestCacheMiddlewareCaching:
         async def mock_next_call(_val):
             nonlocal call_count
             call_count += 1
-            return TestOutput(result=f"Result {call_count}")
+            return _TestOutput(result=f"Result {call_count}")
 
         # First call
         input1 = {"value": "hello world", "number": 42}
@@ -140,7 +140,7 @@ class TestCacheMiddlewareCaching:
         async def mock_next_call(_val):
             nonlocal call_count
             call_count += 1
-            return TestOutput(result=f"Result {call_count}")
+            return _TestOutput(result=f"Result {call_count}")
 
         # Mock ContextState to control is_evaluating
         mock_ctx_cls = 'nat.middleware.cache_middleware.ContextState'
@@ -179,7 +179,7 @@ class TestCacheMiddlewareCaching:
         async def mock_next_call(_val):
             nonlocal call_count
             call_count += 1
-            return TestOutput(result="Result")
+            return _TestOutput(result="Result")
 
         # Create an object that can't be serialized
         class UnserializableObject:
@@ -241,7 +241,7 @@ class TestCacheMiddlewareEdgeCases:
         async def mock_next_call(_val):
             nonlocal call_count
             call_count += 1
-            return TestOutput(result="Result")
+            return _TestOutput(result="Result")
 
         # Mock ContextState.get to raise an exception
         mock_ctx_cls = 'nat.middleware.cache_middleware.ContextState.get'
@@ -281,11 +281,11 @@ class TestCacheMiddlewareEdgeCases:
             {
                 "value": "test input 2", "number": 42
             })
-        middleware._cache[key1] = TestOutput(result="Result 1")  # noqa
-        middleware._cache[key2] = TestOutput(result="Result 2")  # noqa
+        middleware._cache[key1] = _TestOutput(result="Result 1")  # noqa
+        middleware._cache[key2] = _TestOutput(result="Result 2")  # noqa
 
         async def mock_next_call(_val):
-            return TestOutput(result="New Result")
+            return _TestOutput(result="New Result")
 
         # Query with something similar to all
         input_str = {"value": "test input X", "number": 42}
