@@ -164,7 +164,7 @@ class TestStrandsAgentE2ENIM:
     """End-to-end integration tests for Strands Agent with NVIDIA NIM."""
 
     @pytest.fixture
-    async def echo_function(self):
+    async def echo_function(self) -> LambdaFunction:
         """Create a simple echo function for testing."""
 
         class EchoInput(BaseModel):
@@ -183,7 +183,7 @@ class TestStrandsAgentE2ENIM:
         return LambdaFunction.from_info(config=EmptyFunctionConfig(), info=info, instance_name="echo")
 
     @pytest.fixture
-    def builder(self):
+    def builder(self) -> MagicMock:
         """Create a mock Builder instance for tests."""
         return MagicMock()
 
@@ -328,7 +328,7 @@ class TestStrandsAgentE2EBedrock:
         return LambdaFunction.from_info(config=EmptyFunctionConfig(), info=info, instance_name="greeting")
 
     @pytest.fixture
-    def builder(self):
+    def builder(self) -> MagicMock:
         """Create a mock Builder instance for tests."""
         return MagicMock()
 
@@ -393,7 +393,7 @@ class TestStrandsProfilerIntegration:
     """Integration tests for Strands profiler with real LLM calls."""
 
     @pytest.fixture
-    def builder(self):
+    def builder(self) -> MagicMock:
         """Create a mock Builder instance for tests."""
         return MagicMock()
 
