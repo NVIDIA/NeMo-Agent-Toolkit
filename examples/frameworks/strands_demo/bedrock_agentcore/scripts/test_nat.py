@@ -28,4 +28,3 @@ response = client.invoke_agent_runtime(
 response_body = response['response'].read()
 response_data = json.loads(response_body)
 print("Agent Response:", response_data)
-print("Agent Response:", response_data)
