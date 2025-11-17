@@ -103,7 +103,7 @@ class CustomMilvusClient:
         if output_fields:
             assert isinstance(output_fields, list)
             assert len(output_fields) > 0
-        if timeout:
+        if timeout is not None:
             assert isinstance(timeout, float | int)
         assert isinstance(search_params, dict)
         assert isinstance(anns_field, str)
@@ -249,7 +249,7 @@ class CustomAsyncMilvusClient:
         if output_fields:
             assert isinstance(output_fields, list)
             assert len(output_fields) > 0
-        if timeout:
+        if timeout is not None:
             assert isinstance(timeout, float | int)
         assert isinstance(search_params, dict)
         assert isinstance(anns_field, str)

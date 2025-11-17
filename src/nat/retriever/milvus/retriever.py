@@ -223,7 +223,7 @@ class MilvusRetriever(Retriever):
         else:
             collection_schema = self._client.describe_collection(collection_name)
 
-        available_fields = [v.get("name") for v in collection_schema.get("fields", {})]
+        available_fields = [v.get("name") for v in collection_schema.get("fields", [])]
 
         if self.content_field not in available_fields:
             raise ValueError(f"The specified content field: {self.content_field} is not part of the schema.")
