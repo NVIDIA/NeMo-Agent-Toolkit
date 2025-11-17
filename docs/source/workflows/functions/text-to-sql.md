@@ -166,7 +166,7 @@ The following examples show how to use the text-to-SQL workflow with the NeMo Ag
 ```bash
 # Using NeMo Agent toolkit CLI
 # If auto_training is set to true, training takes approximately 7 minutes depending on endpoints and network conditions.
-uv run nat run --config_file packages/nvidia_nat_vanna/text2sql_training_config.yml --input "Retrieve the total number of customers."
+nat run --config_file packages/nvidia_nat_vanna/text2sql_training_config.yml --input "Retrieve the total number of customers."
 
 # Once training is complete, use the inference configuration for faster generation.
 uv run nat run --config_file packages/nvidia_nat_vanna/text2sql_config.yml --input "What is the total profit?"
