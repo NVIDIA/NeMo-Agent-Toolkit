@@ -39,17 +39,6 @@ SingleCallableT = Callable[P, Coroutine[None, None, typing.Any]]
 StreamCallableT = Callable[P, AsyncGenerator[typing.Any]]
 
 
-def _get_annotated_type(annotated_type: type) -> type:
-    origin = typing.get_origin(annotated_type)
-    args = typing.get_args(annotated_type)
-
-    # If its annotated, the first arg is the type
-    if (origin == typing.Annotated):
-        return args[0]
-
-    return annotated_type
-
-
 def _validate_single_fn(single_fn: SingleCallableT | None) -> tuple[type, type]:
 
     if single_fn is None:
