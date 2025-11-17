@@ -374,22 +374,6 @@ def mock_tool():
     return _create_mock_tool
 
 
-@pytest.fixture(scope="function", autouse=True)
-def patched_async_memory_client(monkeypatch):
-    # Suppress Pydantic's class-based Config deprecation only during mem0 import
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore",
-            category=PydanticDeprecatedSince20,
-            module=r"^pydantic\._internal\._config$",
-        )
-        from mem0.client.main import MemoryClient
-
-    mock_method = mock.MagicMock(return_value=None)
-    monkeypatch.setattr(MemoryClient, "_validate_api_key", mock_method)
-    return MemoryClient
-
-
 @pytest.fixture(name="rag_user_inputs")
 def rag_user_inputs_fixture() -> list[str]:
     """Fixture providing multiple user inputs."""
