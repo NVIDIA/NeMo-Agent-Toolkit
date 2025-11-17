@@ -46,9 +46,9 @@ async def register_red_teaming_evaluator(config: RedTeamingEvaluatorConfig, buil
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     evaluator = RedTeamingEvaluator(llm,
                                     config.judge_llm_prompt,
+                                    config.filter_conditions,
                                     config.llm_retry_control_params,
                                     builder.get_max_concurrency(),
-                                    config.filter_conditions,
                                     ReductionStrategy(config.reduction_strategy),
                                     config.scenario_specific_instructions)
 
