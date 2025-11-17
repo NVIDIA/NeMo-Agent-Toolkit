@@ -51,7 +51,7 @@ class TestStrandsAgentE2EOpenAI:
     """End-to-end integration tests for Strands Agent with OpenAI."""
 
     @pytest.fixture
-    async def calculator_function(self):
+    async def calculator_function(self) -> LambdaFunction:
         """Create a simple calculator NAT function for testing."""
 
         async def calculator_impl(input_data: CalculatorInput) -> CalculatorOutput:
@@ -79,7 +79,7 @@ class TestStrandsAgentE2EOpenAI:
         return LambdaFunction.from_info(config=EmptyFunctionConfig(), info=info, instance_name="calculator")
 
     @pytest.fixture
-    def builder(self):
+    def builder(self) -> MagicMock:
         """Create a mock Builder instance for tests."""
         return MagicMock()
 
