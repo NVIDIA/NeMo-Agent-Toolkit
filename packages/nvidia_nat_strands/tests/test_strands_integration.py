@@ -471,6 +471,78 @@ class TestStrandsAgentE2EBedrock:
             response_text = str(response.message)
             assert "Bob" in response_text
 
+    @pytest.mark.integration
+    @pytest.mark.usefixtures("aws_keys")
+    @pytest.mark.asyncio
+    async def test_strands_agent_with_bedrock_thinking_mixin_non_streaming(self, greeting_function, builder):
+        """Test Bedrock with NAT's ThinkingMixin for chain-of-thought reasoning (non-streaming)."""
+        from strands.agent import Agent
+
+        # Enable thinking mixin with chain-of-thought prompt
+        llm_config = AWSBedrockModelConfig(
+            model_name="anthropic.claude-3-sonnet-20240229-v1:0",
+            region_name="us-east-1",
+            temperature=0.0,
+            max_tokens=128,
+            thinking_system_prompt="Think step by step before using the tool."
+        )
+
+        strands_tool = strands_tool_wrapper("greeting", greeting_function, builder)
+
+        async with bedrock_strands(llm_config, builder) as llm_client:
+            agent = Agent(model=llm_client,
+                          tools=[strands_tool],
+                          system_prompt="You are a helpful assistant that greets people.")
+
+            # Test with a task that benefits from chain-of-thought
+            response = agent("Greet Charlie warmly in a single sentence.")
+
+            assert response is not None
+            assert response.message is not None
+            response_text = str(response.message)
+            assert "Charlie" in response_text
+
+    @pytest.mark.integration
+    @pytest.mark.usefixtures("aws_keys")
+    @pytest.mark.asyncio
+    async def test_strands_agent_with_bedrock_thinking_mixin_streaming(self, greeting_function, builder):
+        """Test Bedrock with NAT's ThinkingMixin using streaming mode."""
+        from strands.agent import Agent
+
+        # Enable thinking mixin with streaming
+        llm_config = AWSBedrockModelConfig(
+            model_name="anthropic.claude-3-haiku-20240307-v1:0",
+            region_name="us-east-1",
+            temperature=0.0,
+            max_tokens=128,
+            thinking_system_prompt="Analyze each step briefly before responding."
+        )
+
+        strands_tool = strands_tool_wrapper("greeting", greeting_function, builder)
+
+        async with bedrock_strands(llm_config, builder) as llm_client:
+            agent = Agent(model=llm_client,
+                          tools=[strands_tool],
+                          system_prompt="You are a friendly assistant.")
+
+            # Test with streaming response
+            collected_responses = []
+            async for event in agent.stream_async("Greet Diana in one friendly sentence."):
+                collected_responses.append(event)
+
+            # Verify we got streaming events
+            assert len(collected_responses) > 0
+
+            # The final response should contain our name
+            final_text = ""
+            for event in collected_responses:
+                if hasattr(event, 'data'):
+                    final_text += str(event.data)
+                else:
+                    final_text += str(event)
+
+            assert "Diana" in final_text or "diana" in final_text.lower()
+
 
 class TestStrandsProfilerIntegration:
     """Integration tests for Strands profiler with real LLM calls."""

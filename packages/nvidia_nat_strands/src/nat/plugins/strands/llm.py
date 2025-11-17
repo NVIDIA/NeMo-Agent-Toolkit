@@ -106,7 +106,23 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
 
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.STRANDS)
 async def openai_strands(llm_config: OpenAIModelConfig, _builder: Builder) -> AsyncGenerator[Any, None]:
-    """Build a Strands OpenAIModel from NAT OpenAIModelConfig and yield it."""
+    """Build a Strands OpenAI client from an NVIDIA NeMo Agent toolkit configuration.
+
+    The wrapper requires the ``nvidia-nat[strands]`` extra and a valid OpenAI-compatible
+    API key. When ``llm_config.api_key`` is empty, the integration falls back to the
+    ``OPENAI_API_KEY`` environment variable. Responses API features are disabled through
+    ``validate_no_responses_api`` because Strands handles tool execution inside the
+    framework runtime. The yielded client is patched with NeMo Agent toolkit retry and
+    thinking hooks so that framework-level policies remain consistent.
+
+    Args:
+        llm_config: OpenAI configuration declared in the workflow.
+        _builder: Builder instance provided by the workflow factory (unused).
+
+    Yields:
+        Strands ``OpenAIModel`` objects ready to stream responses with NeMo Agent toolkit
+        retry/thinking behaviors applied.
+    """
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.STRANDS)
 
@@ -133,7 +149,22 @@ async def openai_strands(llm_config: OpenAIModelConfig, _builder: Builder) -> As
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.STRANDS)
 async def nim_strands(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGenerator[Any, None]:
-    """Build a Strands OpenAI-compatible client for NIM and yield it."""
+    """Build a Strands OpenAI-compatible client for NVIDIA NIM endpoints.
+
+    Install the ``nvidia-nat[strands]`` extra and provide a NIM API key either through
+    ``llm_config.api_key`` or the ``NVIDIA_API_KEY`` environment variable. The wrapper
+    uses the OpenAI-compatible Strands client so Strands can route tool calls while the
+    NeMo Agent toolkit continues to manage retries, timeouts, and optional thinking
+    prompts. Responses API options are blocked to avoid conflicting execution models.
+
+    Args:
+        llm_config: Configuration for calling NVIDIA NIM by way of the OpenAI protocol.
+        _builder: Builder instance supplied during workflow construction (unused).
+
+    Yields:
+        Patched Strands clients that stream responses using the NVIDIA NIM endpoint
+        configured in ``llm_config``.
+    """
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.STRANDS)
 
@@ -216,13 +247,37 @@ async def nim_strands(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGen
 
 @register_llm_client(config_type=AWSBedrockModelConfig, wrapper_type=LLMFrameworkEnum.STRANDS)
 async def bedrock_strands(llm_config: AWSBedrockModelConfig, _builder: Builder) -> AsyncGenerator[Any, None]:
-    """Build a Strands BedrockModel from NAT AWSBedrockModelConfig and yield it."""
+    """Build a Strands Bedrock client from an NVIDIA NeMo Agent toolkit configuration.
+
+    The integration expects the ``nvidia-nat[strands]`` extra plus AWS credentials that
+    can be resolved by ``boto3``. Credentials are loaded in the following priority:
+
+    1. Explicit values embedded in the active AWS profile referenced by
+       ``llm_config.credentials_profile_name``.
+    2. Standard environment variables such as ``AWS_ACCESS_KEY_ID``,
+       ``AWS_SECRET_ACCESS_KEY``, and ``AWS_SESSION_TOKEN``.
+    3. Ambient credentials provided by the compute environment (for example, an IAM role
+       attached to the container or instance).
+
+    When ``llm_config.region_name`` is ``"None"`` or ``None`` Strands uses the regional
+    default configured in AWS. Responses API options remain unsupported so that Strands
+    can own tool execution. Retry and thinking hooks are added automatically before the
+    Bedrock client is yielded.
+
+    Args:
+        llm_config: AWS Bedrock configuration saved in the workflow.
+        _builder: Builder reference supplied by the workflow factory (unused).
+
+    Yields:
+        Strands ``BedrockModel`` instances configured for the selected Bedrock
+        ``model_name`` and patched with NeMo Agent toolkit retry/thinking helpers.
+    """
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.STRANDS)
 
     from strands.models.bedrock import BedrockModel
 
-    params = llm_config.model_dump(exclude={"type", "api_type", "model_name", "region_name", "base_url"},
+    params = llm_config.model_dump(exclude={"type", "api_type", "model_name", "region_name", "base_url", "thinking_system_prompt"},
                                    by_alias=True,
                                    exclude_none=True)
 
