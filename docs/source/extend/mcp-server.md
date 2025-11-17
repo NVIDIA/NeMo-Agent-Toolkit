@@ -207,6 +207,51 @@ async def create_mcp_server(self) -> FastMCP:
 
 **Authentication ownership**: When you override `create_mcp_server()`, your worker controls authentication. If you need custom auth (JWT, OAuth2, API keys), configure it inside `create_mcp_server()`. Any front-end config auth settings are optional hints and may be ignored by your worker.
 
+### Overriding `add_root_level_routes()`
+
+Override `add_root_level_routes()` when you need to add routes to the wrapper FastAPI application that mounts the MCP server. This is useful for adding endpoints that must exist at the root level, outside the MCP server's base path.
+
+```python
+async def add_root_level_routes(self, wrapper_app: FastAPI, mcp: FastMCP):
+    """Add routes to the wrapper app (called when base_path is configured)."""
+
+    # Add OAuth discovery endpoint at root level
+    @wrapper_app.get("/.well-known/oauth-protected-resource")
+    async def oauth_discovery():
+        return {
+            "resource_url": f"http://{self.front_end_config.host}:{self.front_end_config.port}",
+            "authorization_servers": ["https://auth.example.com"],
+        }
+
+    # Add root-level health check
+    @wrapper_app.get("/health")
+    async def root_health():
+        return {"status": "ok", "server": mcp.name}
+```
+
+**Common use cases for root-level routes**:
+- **OAuth discovery endpoints**: `/.well-known/oauth-protected-resource` must be at root level
+- **Root-level health checks**: Health endpoints that monitoring systems expect at specific paths
+- **Static file serving**: Serving static assets outside the MCP server path
+- **Authentication endpoints**: Login, logout, or token refresh endpoints
+
+**Important notes**:
+- This method is only called when `base_path` is configured in your workflow
+- The wrapper app mounts the MCP server at the configured `base_path`
+- Routes added here exist outside the MCP server's path
+- Default implementation does nothing, making this an optional extension point
+
+**Example with base_path**:
+```yaml
+general:
+  front_end:
+    _type: mcp
+    runner_class: "my_package.oauth_worker.OAuthWorker"
+    name: "my_server"
+    base_path: "/api/my_server"  # MCP at /api/my_server/mcp
+    # Root-level routes at root: /.well-known/oauth-protected-resource
+```
+
 ### Accessing Configuration
 
 Your worker has access to configuration through instance variables:
@@ -249,5 +294,6 @@ This guide provides a step-by-step process to create custom MCP server workers i
 1. Extend {py:class}`~nat.front_ends.mcp.mcp_front_end_plugin_worker.MCPFrontEndPluginWorker`
 2. Override `add_routes()` and use `super()` to get default behavior
 3. Override `create_mcp_server()` to use a different server implementation. When doing so, implement your own authentication and authorization logic within that server.
+4. Override `add_root_level_routes()` to add routes to the wrapper FastAPI app when `base_path` is configured (such as OAuth discovery endpoints)
 
 Custom workers enable enterprise features like authentication, telemetry, and integration with existing infrastructure without modifying NeMo Agent toolkit core code.

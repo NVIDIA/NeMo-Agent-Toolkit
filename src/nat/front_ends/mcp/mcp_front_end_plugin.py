@@ -140,6 +140,10 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
         # Mount the MCP server's ASGI app at the configured base_path
         app.mount(self.front_end_config.base_path, mcp.streamable_http_app())
 
+        # Allow plugins to add routes to the wrapper app (e.g., OAuth discovery endpoints)
+        worker = self._get_worker_instance()
+        await worker.add_root_level_routes(app, mcp)
+
         # Configure and start uvicorn server
         config = uvicorn.Config(
             app,
