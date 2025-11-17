@@ -3,7 +3,7 @@ import json
 import boto3
 
 client = boto3.client('bedrock-agentcore', region_name='<AWS_REGION>')
-payload = json.dumps({"inputs" : "How do I use the Strands Agents API?"})
+payload = json.dumps({"inputs": "How do I use the Strands Agents API?"})
 
 response = client.invoke_agent_runtime(
     agentRuntimeArn='arn:aws:bedrock-agentcore:<AWS_REGION>:<AWS_ACCOUNT_ID>:runtime/<AGENT_RUNTIME_ID>',

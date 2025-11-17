@@ -132,7 +132,12 @@ async def openai_strands(llm_config: OpenAIModelConfig, _builder: Builder) -> As
                                    by_alias=True,
                                    exclude_none=True)
     # Remove NAT-specific and retry-specific keys not accepted by OpenAI chat.create
-    for k in ("max_retries", "num_retries", "retry_on_status_codes", "retry_on_errors", "thinking", "thinking_system_prompt"):
+    for k in ("max_retries",
+              "num_retries",
+              "retry_on_status_codes",
+              "retry_on_errors",
+              "thinking",
+              "thinking_system_prompt"):
         params.pop(k, None)
 
     client = OpenAIModel(
@@ -199,9 +204,10 @@ async def nim_strands(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGen
         @classmethod
         def format_request_messages(cls, messages, system_prompt=None, *, system_prompt_content=None, **kwargs):
             # Get the formatted messages from the parent
-            formatted_messages = super().format_request_messages(
-                messages, system_prompt, system_prompt_content=system_prompt_content, **kwargs
-            )
+            formatted_messages = super().format_request_messages(messages,
+                                                                 system_prompt,
+                                                                 system_prompt_content=system_prompt_content,
+                                                                 **kwargs)
 
             # Convert content arrays with only text to strings for NIM
             # compatibility
@@ -230,7 +236,12 @@ async def nim_strands(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGen
                                    by_alias=True,
                                    exclude_none=True)
     # Remove NAT-specific and retry-specific keys not accepted by OpenAI
-    for k in ("max_retries", "num_retries", "retry_on_status_codes", "retry_on_errors", "thinking", "thinking_system_prompt"):
+    for k in ("max_retries",
+              "num_retries",
+              "retry_on_status_codes",
+              "retry_on_errors",
+              "thinking",
+              "thinking_system_prompt"):
         params.pop(k, None)
 
     client = NIMCompatibleOpenAIModel(
@@ -277,9 +288,10 @@ async def bedrock_strands(llm_config: AWSBedrockModelConfig, _builder: Builder) 
 
     from strands.models.bedrock import BedrockModel
 
-    params = llm_config.model_dump(exclude={"type", "api_type", "model_name", "region_name", "base_url", "thinking_system_prompt"},
-                                   by_alias=True,
-                                   exclude_none=True)
+    params = llm_config.model_dump(
+        exclude={"type", "api_type", "model_name", "region_name", "base_url", "thinking_system_prompt"},
+        by_alias=True,
+        exclude_none=True)
 
     for k in ("max_retries",
               "num_retries",

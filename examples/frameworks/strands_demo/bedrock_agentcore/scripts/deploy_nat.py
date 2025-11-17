@@ -14,6 +14,6 @@ response = client.create_agent_runtime(
     #                                       roleArn='<IAM_AGENTCORE_ROLE>')
     roleArn='<IAM_AGENTCORE_ROLE>')
 
-print(f"Agent Runtime created successfully!")
+print("Agent Runtime created successfully!")
 print(f"Agent Runtime ARN: {response['agentRuntimeArn']}")
 print(f"Status: {response['status']}")

@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 End-to-end integration tests for Strands Agent with different LLM providers.
 
@@ -74,8 +73,8 @@ class TestStrandsAgentE2EOpenAI:
 
         from nat.builder.function_info import FunctionInfo
         info = FunctionInfo.from_fn(calculator_impl,
-                                     input_schema=CalculatorInput,
-                                     description="A calculator that performs basic arithmetic operations")
+                                    input_schema=CalculatorInput,
+                                    description="A calculator that performs basic arithmetic operations")
 
         return LambdaFunction.from_info(config=EmptyFunctionConfig(), info=info, instance_name="calculator")
 
@@ -168,12 +167,10 @@ class TestStrandsAgentE2EOpenAI:
         from strands.agent import Agent
 
         # Enable thinking mixin with chain-of-thought prompt
-        llm_config = OpenAIModelConfig(
-            model_name="gpt-4o",
-            temperature=0.0,
-            max_tokens=96,
-            thinking_system_prompt="Think step by step before answering."
-        )
+        llm_config = OpenAIModelConfig(model_name="gpt-4o",
+                                       temperature=0.0,
+                                       max_tokens=96,
+                                       thinking_system_prompt="Think step by step before answering.")
 
         strands_tool = strands_tool_wrapper("calculator", calculator_function, builder)
 
@@ -198,12 +195,10 @@ class TestStrandsAgentE2EOpenAI:
         from strands.agent import Agent
 
         # Enable thinking mixin with streaming
-        llm_config = OpenAIModelConfig(
-            model_name="gpt-4o",
-            temperature=0.0,
-            max_tokens=96,
-            thinking_system_prompt="Analyze each step briefly before responding."
-        )
+        llm_config = OpenAIModelConfig(model_name="gpt-4o",
+                                       temperature=0.0,
+                                       max_tokens=96,
+                                       thinking_system_prompt="Analyze each step briefly before responding.")
 
         strands_tool = strands_tool_wrapper("calculator", calculator_function, builder)
 
@@ -249,9 +244,7 @@ class TestStrandsAgentE2ENIM:
             return EchoOutput(echo=f"You said: {input_data.message}")
 
         from nat.builder.function_info import FunctionInfo
-        info = FunctionInfo.from_fn(echo_impl,
-                                     input_schema=EchoInput,
-                                     description="Echoes back the input message")
+        info = FunctionInfo.from_fn(echo_impl, input_schema=EchoInput, description="Echoes back the input message")
 
         return LambdaFunction.from_info(config=EmptyFunctionConfig(), info=info, instance_name="echo")
 
@@ -300,9 +293,7 @@ class TestStrandsAgentE2ENIM:
         strands_tool = strands_tool_wrapper("echo", echo_function, builder)
 
         async with nim_strands(llm_config, builder) as llm_client:
-            agent = Agent(model=llm_client,
-                          tools=[strands_tool],
-                          system_prompt="You are a helpful assistant.")
+            agent = Agent(model=llm_client, tools=[strands_tool], system_prompt="You are a helpful assistant.")
 
             # Test with a task that requires reasoning
             response = agent("Consider the word 'test' and then echo it back once.")
@@ -320,12 +311,10 @@ class TestStrandsAgentE2ENIM:
         from strands.agent import Agent
 
         # Enable thinking mixin with chain-of-thought prompt
-        llm_config = NIMModelConfig(
-            model_name="meta/llama-3.1-8b-instruct",
-            temperature=0.0,
-            max_tokens=128,
-            thinking_system_prompt="Think step by step before using the tool."
-        )
+        llm_config = NIMModelConfig(model_name="meta/llama-3.1-8b-instruct",
+                                    temperature=0.0,
+                                    max_tokens=128,
+                                    thinking_system_prompt="Think step by step before using the tool.")
 
         strands_tool = strands_tool_wrapper("echo", echo_function, builder)
 
@@ -350,19 +339,15 @@ class TestStrandsAgentE2ENIM:
         from strands.agent import Agent
 
         # Enable thinking mixin with streaming
-        llm_config = NIMModelConfig(
-            model_name="meta/llama-3.1-8b-instruct",
-            temperature=0.0,
-            max_tokens=128,
-            thinking_system_prompt="Analyze each step briefly before responding."
-        )
+        llm_config = NIMModelConfig(model_name="meta/llama-3.1-8b-instruct",
+                                    temperature=0.0,
+                                    max_tokens=128,
+                                    thinking_system_prompt="Analyze each step briefly before responding.")
 
         strands_tool = strands_tool_wrapper("echo", echo_function, builder)
 
         async with nim_strands(llm_config, builder) as llm_client:
-            agent = Agent(model=llm_client,
-                          tools=[strands_tool],
-                          system_prompt="You are a helpful assistant.")
+            agent = Agent(model=llm_client, tools=[strands_tool], system_prompt="You are a helpful assistant.")
 
             # Test with streaming response
             # Note: Strands agent.stream_async() returns an async generator
@@ -403,8 +388,8 @@ class TestStrandsAgentE2EBedrock:
 
         from nat.builder.function_info import FunctionInfo
         info = FunctionInfo.from_fn(greeting_impl,
-                                     input_schema=GreetingInput,
-                                     description="Generates a friendly greeting for a person")
+                                    input_schema=GreetingInput,
+                                    description="Generates a friendly greeting for a person")
 
         return LambdaFunction.from_info(config=EmptyFunctionConfig(), info=info, instance_name="greeting")
 
@@ -460,9 +445,7 @@ class TestStrandsAgentE2EBedrock:
         strands_tool = strands_tool_wrapper("greeting", greeting_function, builder)
 
         async with bedrock_strands(llm_config, builder) as llm_client:
-            agent = Agent(model=llm_client,
-                          tools=[strands_tool],
-                          system_prompt="You are a friendly assistant.")
+            agent = Agent(model=llm_client, tools=[strands_tool], system_prompt="You are a friendly assistant.")
 
             response = agent("Greet Bob in one friendly sentence.")
 
@@ -479,13 +462,11 @@ class TestStrandsAgentE2EBedrock:
         from strands.agent import Agent
 
         # Enable thinking mixin with chain-of-thought prompt
-        llm_config = AWSBedrockModelConfig(
-            model_name="anthropic.claude-3-sonnet-20240229-v1:0",
-            region_name="us-east-1",
-            temperature=0.0,
-            max_tokens=128,
-            thinking_system_prompt="Think step by step before using the tool."
-        )
+        llm_config = AWSBedrockModelConfig(model_name="anthropic.claude-3-sonnet-20240229-v1:0",
+                                           region_name="us-east-1",
+                                           temperature=0.0,
+                                           max_tokens=128,
+                                           thinking_system_prompt="Think step by step before using the tool.")
 
         strands_tool = strands_tool_wrapper("greeting", greeting_function, builder)
 
@@ -510,20 +491,16 @@ class TestStrandsAgentE2EBedrock:
         from strands.agent import Agent
 
         # Enable thinking mixin with streaming
-        llm_config = AWSBedrockModelConfig(
-            model_name="anthropic.claude-3-haiku-20240307-v1:0",
-            region_name="us-east-1",
-            temperature=0.0,
-            max_tokens=128,
-            thinking_system_prompt="Analyze each step briefly before responding."
-        )
+        llm_config = AWSBedrockModelConfig(model_name="anthropic.claude-3-haiku-20240307-v1:0",
+                                           region_name="us-east-1",
+                                           temperature=0.0,
+                                           max_tokens=128,
+                                           thinking_system_prompt="Analyze each step briefly before responding.")
 
         strands_tool = strands_tool_wrapper("greeting", greeting_function, builder)
 
         async with bedrock_strands(llm_config, builder) as llm_client:
-            agent = Agent(model=llm_client,
-                          tools=[strands_tool],
-                          system_prompt="You are a friendly assistant.")
+            agent = Agent(model=llm_client, tools=[strands_tool], system_prompt="You are a friendly assistant.")
 
             # Test with streaming response
             collected_responses = []
@@ -567,9 +544,7 @@ class TestStrandsProfilerIntegration:
             return SimpleOutput(doubled=input_data.value * 2)
 
         from nat.builder.function_info import FunctionInfo
-        info = FunctionInfo.from_fn(simple_impl,
-                                     input_schema=SimpleInput,
-                                     description="Doubles the input value")
+        info = FunctionInfo.from_fn(simple_impl, input_schema=SimpleInput, description="Doubles the input value")
 
         return LambdaFunction.from_info(config=EmptyFunctionConfig(), info=info, instance_name="doubler")
 
@@ -624,9 +599,7 @@ class TestStrandsProfilerIntegration:
 
         try:
             async with openai_strands(llm_config, builder) as llm_client:
-                agent = Agent(model=llm_client,
-                              tools=[strands_tool],
-                              system_prompt="You are a helpful assistant.")
+                agent = Agent(model=llm_client, tools=[strands_tool], system_prompt="You are a helpful assistant.")
 
                 response = agent("Double 10 and return only the result.")
 
