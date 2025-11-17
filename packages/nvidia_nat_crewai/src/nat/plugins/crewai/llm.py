@@ -104,6 +104,7 @@ async def azure_openai_crewai(llm_config: AzureOpenAIModelConfig, _builder: Buil
             exclude_unset=True,
         ),
         model=model,
+        api_version=llm_config.api_version,
     )
 
     yield _patch_llm_based_on_config(client, llm_config)
