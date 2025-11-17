@@ -106,7 +106,7 @@ async def url_directory(config: URLDirectoryConfig, _: Builder) -> AsyncGenerato
 
             return "\n".join(directory_lines)
 
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             logger.exception("Error generating URL directory")
             return f"Error accessing URL directory: {e}"
 

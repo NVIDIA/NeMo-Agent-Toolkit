@@ -42,7 +42,7 @@ A minimal example showcasing a Strands agent that answers questions about Strand
 
 ## Prerequisites
 
-- NeMo Agent Toolkit installed. See the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source).
+- NVIDIA NeMo Agent Toolkit installed. See the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source).
 - API keys as required by your chosen models.
 
 ## Installation and Setup
@@ -120,7 +120,7 @@ nat optimize --config_file examples/frameworks/strands_demo/configs/optimizer_co
 
 **What it optimizes:**
 - **Temperature**: Tests values from 0.1 to 0.7
-- **Top_p**: Tests values from 0.7 to 1.0  
+- **Top_p**: Tests values from 0.7 to 1.0
 - **Max_tokens**: Tests values from 4096 to 8192
 
 The optimizer runs 20 trials with 3 repetitions each for statistical stability and generates a report showing the best parameter combination based on weighted multi-objective scoring.

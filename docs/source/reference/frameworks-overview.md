@@ -181,7 +181,6 @@ uv pip install "nvidia-nat[strands]"
 ```
 
 **Learn more:**
-- [Using Strands with the NeMo Agent toolkit](../workflows/frameworks/strands.md)
 - [AWS documentation for Bedrock AgentCore](https://docs.aws.amazon.com/bedrock/latest/userguide/agents.html)
 
 ### Semantic Kernel
