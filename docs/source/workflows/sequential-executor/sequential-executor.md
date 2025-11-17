@@ -18,14 +18,7 @@ limitations under the License.
 # Configure With the Sequential Executor
 A sequential executor is a deterministic workflow orchestrator that executes functions in a predefined linear order. This section explores ways you can configure using the sequential executor.
 
-## Requirements
 The sequential executor is part of the core NeMo Agent toolkit and does not require additional plugin installations.
-
-If you have performed a source code checkout, install the NeMo Agent toolkit with the following command:
-
-```bash
-uv pip install -e .
-```
 
 ## Configuration
 
