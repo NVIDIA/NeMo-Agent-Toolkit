@@ -33,7 +33,7 @@ Before you begin, ensure you have the following installed:
 
 Follow the official NeMo Agent Toolkit installation guide:
 
-```
+```plaintext
 https://docs.nvidia.com/nemo/agent-toolkit/1.3/quick-start/installing.html
 ```
 
