@@ -146,7 +146,7 @@ aws ecr get-login-password --region <AWS_REGION> | \
 Replace the following placeholders:
 - `<AWS_ACCOUNT_ID>` - Your AWS account ID
 - `<AWS_REGION>` - Your AWS region
-- `<NVIDIA_API_KEY>` - Your NVIDIA API key for hosted NIM endpoints (use environment variables or secrets manager; not needed for self-hosted NVIDIA NIM or models with custom base_url)
+- `<NVIDIA_API_KEY>` - Your NVIDIA API key for hosted NIM endpoints (use environment variables or secrets manager; not needed for self-hosted NVIDIA NIM or models with custom `base_url`)
 - `<AWS_ACCESS_KEY_ID>` - Your AWS access key (use IAM roles instead)
 - `<AWS_SECRET_ACCESS_KEY>` - Your AWS secret key (use IAM roles instead)
 
@@ -236,9 +236,9 @@ uv run examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py
 
 ## Step 5: Instrument for OpenTelemetry
 
-### Update Dockerfile Environment Variables
+### Update `Dockerfile` Environment Variables
 
-Update the following environment variables in the Dockerfile with your Runtime ID (obtained from Step 4):
+Update the following environment variables in the `Dockerfile` with your Runtime ID (obtained from Step 4):
 
 ```dockerfile
 ENV OTEL_RESOURCE_ATTRIBUTES=service.name=nat_test_agent,aws.log.group.names=/aws/bedrock-agentcore/runtimes/<RUNTIME_ID>
@@ -259,7 +259,7 @@ And uncomment the OpenTelemetry instrumented entry point:
 ```dockerfile
 ENTRYPOINT ["sh", "-c", "exec opentelemetry-instrument nat serve --config_file=$NAT_CONFIG_FILE --host 0.0.0.0"]
 ```
-Save the updated Dockerfile
+Save the updated `Dockerfile`
 
 
 ### ReBuild and Push Docker Image to ECR
@@ -271,7 +271,7 @@ Save the updated Dockerfile
 Replace the following placeholders:
 - `<AWS_ACCOUNT_ID>` - Your AWS account ID
 - `<AWS_REGION>` - Your AWS region
-- `<NVIDIA_API_KEY>` - Your NVIDIA API key for hosted NIM endpoints (use environment variables or secrets manager; not needed for self-hosted NVIDIA NIM or models with custom base_url)
+- `<NVIDIA_API_KEY>` - Your NVIDIA API key for hosted NIM endpoints (use environment variables or secrets manager; not needed for self-hosted NVIDIA NIM or models with custom `base_url`)
 - `<AWS_ACCESS_KEY_ID>` - Your AWS access key (use IAM roles instead)
 - `<AWS_SECRET_ACCESS_KEY>` - Your AWS secret key (use IAM roles instead)
 
@@ -623,11 +623,11 @@ If you encounter permission errors, you need specific IAM permissions. Refer to 
 - Higher percentages provide more trace coverage but increase costs
 ---
 
-## Dockerfile Reference
+## `Dockerfile` Reference
 
-### Complete Dockerfile
+### Complete `Dockerfile`
 
-The Dockerfile is organized into the following sections:
+The `Dockerfile` is organized into the following sections:
 
 1. **Base Image Configuration** - Ubuntu base with Python
 2. **Build Dependencies** - Compilers and build tools
@@ -636,7 +636,7 @@ The Dockerfile is organized into the following sections:
 5. **Runtime Configuration** - Entry point and environment
 
 <details>
-<summary>📄 Click to view complete Dockerfile</summary>
+<summary>📄 Click to view complete `Dockerfile`</summary>
 
 ```dockerfile
 # =============================================================================
@@ -784,11 +784,11 @@ ENTRYPOINT ["sh", "-c", "exec opentelemetry-instrument nat serve --config_file=$
 
 ### Credential Management
 
-**NEVER hardcode credentials in your Dockerfile or source code.** Always use secure credential management:
+**NEVER hard-code credentials in your `Dockerfile` or source code.** Always use secure credential management:
 
 | ❌ Never Use | ✅ Use Instead |
 |-------------|---------------|
-| Hardcoded API keys in Dockerfile | AWS Secrets Manager |
+| Hard-coded API keys in `Dockerfile` | AWS Secrets Manager |
 | Build-arg for credentials | Environment variables at runtime |
 | Embedded passwords | IAM roles for authentication |
 | Committed secrets to git | AWS Systems Manager Parameter Store |
@@ -814,7 +814,7 @@ aws secretsmanager create-secret \
 - Never use access keys when IAM roles are available
 - Enable MFA for sensitive operations
 
-### Dockerfile Best Practices
+### `Dockerfile` Best Practices
 
 ```dockerfile
 # ❌ WRONG - Never do this
@@ -828,7 +828,7 @@ ENV AWS_ACCESS_KEY_ID="AKIAxxxxx"
 
 ### Action Items Before Deployment
 
-- [ ] Remove all hardcoded credentials from code
+- [ ] Remove all hard-coded credentials from code
 - [ ] Set up AWS Secrets Manager for API keys
 - [ ] Configure IAM roles for AgentCore runtime
 - [ ] Enable CloudWatch logging with proper IAM permissions
@@ -847,7 +847,7 @@ Throughout this guide, replace the following placeholders with your actual value
 | `<AWS_ACCOUNT_ID>` | Your AWS account ID | `123456789012` |
 | `<AWS_REGION>` | Your AWS region | `us-west-2`, `us-east-1`, `eu-west-1` |
 | `<RUNTIME_ID>` | AgentCore runtime ID | `strands_demo-abc123XYZ` |
-| `<NVIDIA_API_KEY>` | Your NVIDIA API key (only for hosted NIM endpoints) | Retrieve from secrets manager; not needed for self-hosted NVIDIA NIM or models with custom base_url |
+| `<NVIDIA_API_KEY>` | Your NVIDIA API key (only for hosted NIM endpoints) | Retrieve from secrets manager; not needed for self-hosted NVIDIA NIM or models with custom `base_url` |
 | `<AWS_ACCESS_KEY_ID>` | AWS access key | Use IAM roles instead |
 | `<AWS_SECRET_ACCESS_KEY>` | AWS secret key | Use IAM roles instead |
 
