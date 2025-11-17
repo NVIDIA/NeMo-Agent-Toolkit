@@ -116,7 +116,7 @@ async def openai_strands(llm_config: OpenAIModelConfig, _builder: Builder) -> As
                                    by_alias=True,
                                    exclude_none=True)
     # Remove NAT-specific and retry-specific keys not accepted by OpenAI chat.create
-    for k in ("max_retries", "num_retries", "retry_on_status_codes", "retry_on_errors", "thinking"):
+    for k in ("max_retries", "num_retries", "retry_on_status_codes", "retry_on_errors", "thinking", "thinking_system_prompt"):
         params.pop(k, None)
 
     client = OpenAIModel(
@@ -166,9 +166,11 @@ async def nim_strands(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGen
             return super().format_request_message_content(content)
 
         @classmethod
-        def format_request_messages(cls, messages, system_prompt=None):
+        def format_request_messages(cls, messages, system_prompt=None, *, system_prompt_content=None, **kwargs):
             # Get the formatted messages from the parent
-            formatted_messages = super().format_request_messages(messages, system_prompt)
+            formatted_messages = super().format_request_messages(
+                messages, system_prompt, system_prompt_content=system_prompt_content, **kwargs
+            )
 
             # Convert content arrays with only text to strings for NIM
             # compatibility
@@ -197,7 +199,7 @@ async def nim_strands(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGen
                                    by_alias=True,
                                    exclude_none=True)
     # Remove NAT-specific and retry-specific keys not accepted by OpenAI
-    for k in ("max_retries", "num_retries", "retry_on_status_codes", "retry_on_errors", "thinking"):
+    for k in ("max_retries", "num_retries", "retry_on_status_codes", "retry_on_errors", "thinking", "thinking_system_prompt"):
         params.pop(k, None)
 
     client = NIMCompatibleOpenAIModel(
