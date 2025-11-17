@@ -307,7 +307,7 @@ class TestStrandsAgentE2EBedrock:
     """End-to-end integration tests for Strands Agent with AWS Bedrock."""
 
     @pytest.fixture
-    async def greeting_function(self):
+    async def greeting_function(self) -> LambdaFunction:
         """Create a simple greeting function for testing."""
 
         class GreetingInput(BaseModel):
