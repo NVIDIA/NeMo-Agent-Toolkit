@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 # Configure With the Sequential Executor
-A sequential executor is a deterministic workflow orchestrator that executes functions in a predefined linear order. This sections explores ways you can configure using the sequential executor.
+A sequential executor is a deterministic workflow orchestrator that executes functions in a predefined linear order. This section explores ways you can configure using the sequential executor.
 
 ## Requirements
 The sequential executor is part of the core NeMo Agent toolkit and does not require additional plugin installations.
@@ -134,7 +134,7 @@ The sequential executor is well-suited for:
 
 While sequential executors are efficient and predictable, they have several limitations:
 
-* **No Dynamic Decision Making** - Sequential executors follow a fixed execution path and cannot make decisions based on intermediate results. All functions in the tool list will always execute in the same order.
+* **No Dynamic Decision-Making** - Sequential executors follow a fixed execution path and cannot make decisions based on intermediate results. All functions in the tool list will always execute in the same order.
 
 * **No Parallel Execution** - Functions execute sequentially, which means they cannot take advantage of parallel processing opportunities. This can be inefficient for independent operations that could run simultaneously.
 
