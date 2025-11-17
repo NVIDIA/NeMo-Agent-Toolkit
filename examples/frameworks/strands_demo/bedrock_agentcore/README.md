@@ -574,7 +574,7 @@ After the role is created, you'll be redirected to the Roles page:
 3. On the role summary page, locate and copy the **ARN** (Amazon Resource Name)
 
 The ARN will look like this:
-```
+```plaintext
 arn:aws:iam::<AWS_ACCOUNT_ID>:role/AgentCore_NAT
 ```
 
