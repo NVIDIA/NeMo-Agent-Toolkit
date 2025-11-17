@@ -96,8 +96,6 @@ workflow:
 
 The sequential executor follows a fixed execution path where each function's output directly becomes the input for the next function.
 
-The sequential executor follows a fixed execution path where each function's output directly becomes the input for the next function.
-
 <div align="center">
 <img src="../../_static/sequential_executor.png" alt="Sequential Executor Graph Structure" width="800" style="max-width: 100%; height: auto;">
 </div>
@@ -110,7 +108,7 @@ The sequential executor can optionally use the Python type annotations to valida
 2. The execution then raises exceptions or generates warnings based on configuration.
 
 :::{note} 
-The validation takes into account whether functions use streaming or single output modes.
+The validation considers whether functions use streaming or single output modes.
 :::
 
 ## Use Cases

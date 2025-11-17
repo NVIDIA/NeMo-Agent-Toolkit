@@ -15,6 +15,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 # About the Tool Calling Agent
-A tool calling agent is an AI system that directly invokes external tools based on structured function definitions. Unlike ReAct agents, it does not reason between steps but instead selects tools based on predefined function schemas. The agent examines the tool name, description, and input parameter schema to determine which tool to invoke. Some LLMs do not support tool or function calling or being used with tool calling agents.
+A tool calling agent is an AI system that directly invokes external tools based on structured function definitions. Unlike ReAct agents, it does not reason between steps but instead selects tools based on predefined function schemas. The agent examines the tool name, description, and input parameter schema to determine which tool to invoke. In order to use the tool calling agent, you must choose an LLM that has tool-calling support.
 
 The agent uses the NVIDIA NeMo Agent toolkit core library agents and tools to simplify your development experience and deployment. Additionally, you can customize prompts in your YAML config files for your specific needs.
