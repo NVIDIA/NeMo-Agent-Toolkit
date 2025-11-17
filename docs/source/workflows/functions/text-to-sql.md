@@ -169,7 +169,7 @@ The following examples show how to use the text-to-SQL workflow with the NeMo Ag
 nat run --config_file packages/nvidia_nat_vanna/text2sql_training_config.yml --input "Retrieve the total number of customers."
 
 # Once training is complete, use the inference configuration for faster generation.
-uv run nat run --config_file packages/nvidia_nat_vanna/text2sql_config.yml --input "What is the total profit?"
+nat run --config_file packages/nvidia_nat_vanna/text2sql_config.yml --input "What is the total profit?"
 ```
 
 Or use the Python API:
