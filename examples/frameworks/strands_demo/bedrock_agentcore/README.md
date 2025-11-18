@@ -869,7 +869,7 @@ Throughout this guide, replace the following placeholders with your actual value
 
 ## Additional Resources
 
-- [NeMo Agent Toolkit Documentation](https://docs.nvidia.com/nemo/agent-toolkit/1.2/)
+- [NeMo Agent Toolkit Documentation](https://docs.nvidia.com/nemo/agent-toolkit/1.3/)
 - [AWS Bedrock AgentCore Documentation](https://docs.aws.amazon.com/bedrock/)
 - [OpenTelemetry Python Documentation](https://opentelemetry.io/docs/languages/python/)
 - [AWS CloudWatch Logs Documentation](https://docs.aws.amazon.com/cloudwatch/)
