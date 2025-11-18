@@ -42,7 +42,7 @@ dependencies = [
   "pkginfo~=1.12",
   "platformdirs~=4.3",
   "pydantic~=2.11",
-  "pymilvus~=2.4",
+  "pymilvus~=2.5",
   "python-dotenv~=1.1.1",
   "PyYAML~=6.0",
   "ragas~=0.2.14", # If you update ragas be sure to update github links in docs/source/workflows/evaluate.md as well
@@ -98,6 +98,7 @@ telemetry = [
   "nvidia-nat-weave",
 ]
 test = ["nvidia-nat-test"]
+vanna = ["nvidia-nat-vanna"]
 weave = ["nvidia-nat-weave"]
 zep-cloud = ["nvidia-nat-zep-cloud"]
 
@@ -185,6 +186,7 @@ nvidia-nat-redis = { workspace = true }
 nvidia-nat-s3 = { workspace = true }
 nvidia-nat-semantic-kernel = { workspace = true }
 nvidia-nat-test = { workspace = true }
+nvidia-nat-vanna = { workspace = true }
 nvidia-nat-weave = { workspace = true }
 nvidia-nat-zep-cloud = { workspace = true }
 

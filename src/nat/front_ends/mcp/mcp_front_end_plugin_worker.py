@@ -17,11 +17,15 @@ import logging
 from abc import ABC
 from abc import abstractmethod
 from collections.abc import Mapping
+from typing import TYPE_CHECKING
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
+
+if TYPE_CHECKING:
+    from fastapi import FastAPI
 
 from nat.builder.function import Function
 from nat.builder.function_base import FunctionBase
@@ -191,6 +195,28 @@ class MCPFrontEndPluginWorkerBase(ABC):
             functions[workflow.config.workflow.type] = workflow
 
         return functions
+
+    async def add_root_level_routes(self, wrapper_app: "FastAPI", mcp: FastMCP) -> None:
+        """Add routes to the wrapper FastAPI app (optional extension point).
+
+        This method is called when base_path is configured and a wrapper
+        FastAPI app is created to mount the MCP server. Plugins can override
+        this to add routes to the wrapper app at the root level, outside the
+        mounted MCP server path.
+
+        Common use cases:
+        - OAuth discovery endpoints (e.g., /.well-known/oauth-protected-resource)
+        - Health checks at root level
+        - Static file serving
+        - Custom authentication/authorization endpoints
+
+        Default implementation does nothing, making this an optional extension point.
+
+        Args:
+            wrapper_app: The FastAPI wrapper application that mounts the MCP server
+            mcp: The FastMCP server instance (already mounted at base_path)
+        """
+        pass  # Default: no additional root-level routes
 
     def _setup_debug_endpoints(self, mcp: FastMCP, functions: Mapping[str, FunctionBase]) -> None:
         """Set up HTTP debug endpoints for introspecting tools and schemas.
