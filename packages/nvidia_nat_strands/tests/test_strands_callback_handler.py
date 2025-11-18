@@ -170,6 +170,10 @@ class TestStrandsProfilerHandler:
                 return mock_openai_mod
             elif "bedrock" in module_name:
                 return mock_bedrock_mod
+            elif module_name == "strands.agent.agent":
+                mock_agent_mod = MagicMock()
+                mock_agent_mod.Agent = None
+                return mock_agent_mod
             raise ImportError(f"No module named {module_name}")
 
         mock_importlib.import_module.side_effect = import_side_effect
@@ -677,9 +681,6 @@ class TestStrandsProfilerHandlerAgentInstrumentation:
 
         # Create an agent instance - should handle hook registration errors gracefully
         agent = MockAgent()
-
-        # Should have attempted to register hooks despite the error
-        assert agent.hooks.add_callback.called
 
         # Should have attempted to register hooks despite the error
         assert agent.hooks.add_callback.called

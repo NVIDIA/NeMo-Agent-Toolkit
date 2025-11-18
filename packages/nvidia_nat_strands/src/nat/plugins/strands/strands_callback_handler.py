@@ -94,8 +94,9 @@ class StrandsToolInstrumentationHook:
             step_manager.push_intermediate_step(start_payload)
 
             logger.debug("TOOL_START: %s (ID: %s)", tool_name, tool_use_id)
-        except Exception as exc:  # noqa: BLE001
-            logger.error("Error in before_tool_invocation: %s", exc, exc_info=True)
+        except Exception:  # noqa: BLE001
+            logger.exception("Error in before_tool_invocation")
+            raise
 
     def on_after_tool_invocation(self, event: Any) -> None:
         """Handle tool invocation end.
@@ -150,8 +151,9 @@ class StrandsToolInstrumentationHook:
 
             logger.debug("TOOL_END: %s (ID: %s)", tool_name, tool_use_id)
 
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("Failed to handle after_tool_invocation: %s", exc, exc_info=True)
+        except Exception:  # noqa: BLE001
+            logger.exception("Failed to handle after_tool_invocation")
+            raise
 
     def _extract_tool_info(self, selected_tool: Any, tool_use: dict) -> tuple[str, str, dict]:
         """Extract tool name, ID, and input from event.
@@ -237,12 +239,9 @@ class StrandsProfilerHandler(BaseProfilerCallback):
 
             self._patched = True
 
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(
-                "Failed to instrument Strands models: %s",
-                exc,
-                exc_info=True,
-            )
+        except Exception:  # noqa: BLE001
+            logger.exception("Failed to instrument Strands models")
+            raise
 
     def _instrument_agent_init(self) -> None:
         """Patch Agent.__init__ to auto-register hooks on instantiation.
@@ -285,16 +284,16 @@ class StrandsProfilerHandler(BaseProfilerCallback):
 
                     logger.debug("Strands tool hooks registered on Agent instance")
 
-                except Exception as exc:  # noqa: BLE001
-                    logger.warning("Failed to auto-register hooks: %s", exc, exc_info=True)
+                except Exception:  # noqa: BLE001
+                    logger.exception("Failed to auto-register hooks")
 
             # Replace Agent.__init__ with wrapped version
             Agent.__init__ = wrapped_init
 
             logger.info("Strands Agent.__init__ instrumentation applied")
 
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("Failed to instrument Agent.__init__: %s", exc, exc_info=True)
+        except Exception:  # noqa: BLE001
+            logger.exception("Failed to instrument Agent.__init__")
 
     def _extract_model_info(self, model_instance: Any) -> tuple[str, dict[str, Any]]:
         """Extract model name and parameters from Strands model instance."""
@@ -324,8 +323,8 @@ class StrandsProfilerHandler(BaseProfilerCallback):
                 }
                 # Remove None values
                 model_params = {k: v for k, v in model_params.items() if v is not None}
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception:
+            logger.debug("Failed to extract model params", exc_info=True)
 
         return str(model_name), model_params
 
@@ -428,8 +427,8 @@ class StrandsProfilerHandler(BaseProfilerCallback):
                                 token_usage = TokenUsageBaseModel(**usage_info)
                                 _push_end_if_needed()
 
-                        except Exception:  # noqa: BLE001
-                            pass
+                        except Exception:
+                            logger.debug("Failed to extract streaming fields from event", exc_info=True)
                         yield ev
                 else:
                     # Non-async generator fallback

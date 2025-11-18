@@ -17,18 +17,34 @@ root = "../.."
 name = "nvidia-nat-strands"
 dynamic = ["version"]
 dependencies = [
-  "nvidia-nat~=1.3",
-  "strands-agents==1.12.0",
-  "strands-agents-tools==0.2.11",
+  # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
+  # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
+  # Keep sorted!!!
+  "nvidia-nat~=1.4",
+  "strands-agents~=1.12.0",
+  "strands-agents-tools~=0.2.11",
 ]
 requires-python = ">=3.11,<3.14"
 description = "Subpackage for AWS Strands integration in NeMo Agent toolkit"
 readme = "src/nat/meta/pypi.md"
 keywords = ["ai", "rag", "agents"]
-classifiers = ["Programming Language :: Python"]
+license = { text = "Apache-2.0" }
+authors = [{ name = "NVIDIA Corporation" }]
+maintainers = [{ name = "NVIDIA Corporation" }]
+classifiers = [
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+
+[project.urls]
+documentation = "https://docs.nvidia.com/nemo/agent-toolkit/latest/"
+source = "https://github.com/NVIDIA/NeMo-Agent-Toolkit"
 
 
 [tool.uv]
+managed = true
 config-settings = { editable_mode = "compat" }
 
 

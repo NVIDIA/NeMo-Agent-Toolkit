@@ -6558,8 +6558,8 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "nvidia-nat", editable = "." },
-    { name = "strands-agents", specifier = "==1.12.0" },
-    { name = "strands-agents-tools", specifier = "==0.2.11" },
+    { name = "strands-agents", specifier = "~=1.12.0" },
+    { name = "strands-agents-tools", specifier = "~=0.2.11" },
 ]
 
 [[package]]
