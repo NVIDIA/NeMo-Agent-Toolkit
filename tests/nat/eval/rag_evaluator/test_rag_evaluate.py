@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import typing
 from collections.abc import Sequence
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -22,13 +23,13 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 from pydantic import BaseModel
-from ragas.evaluation import EvaluationDataset
-from ragas.evaluation import SingleTurnSample
-from ragas.llms import LangchainLLMWrapper
-from ragas.metrics import Metric
 
 from nat.eval.evaluator.evaluator_model import EvalOutput
 from nat.eval.rag_evaluator.evaluate import RAGEvaluator
+
+if typing.TYPE_CHECKING:
+    from ragas.llms import LangchainLLMWrapper
+    from ragas.metrics import Metric
 
 
 class ExampleModel(BaseModel):
@@ -37,16 +38,18 @@ class ExampleModel(BaseModel):
 
 
 @pytest.fixture
-def ragas_judge_llm() -> LangchainLLMWrapper:
+def ragas_judge_llm() -> "LangchainLLMWrapper":
     """Fixture providing a mocked LangchainLLMWrapper."""
+    from ragas.llms import LangchainLLMWrapper
     mock_llm = MagicMock(spec=LangchainLLMWrapper)
     mock_llm.ainvoke = AsyncMock(return_value="Mocked Async LLM Response")
     return mock_llm
 
 
 @pytest.fixture
-def ragas_metrics() -> Sequence[Metric]:
+def ragas_metrics() -> "Sequence[Metric]":
     """Fixture to provide mocked ragas metrics"""
+    from ragas.metrics import Metric
     metric_names = ["AnswerAccuracy", "ContextRelevance", "ResponseGroundedness"]
     # Create mocked Metric objects for each metric name
     mocked_metrics = [MagicMock(spec=Metric, name=name) for name in metric_names]
@@ -72,6 +75,8 @@ def rag_evaluator_content(ragas_judge_llm, ragas_metrics) -> RAGEvaluator:
 
 def test_eval_input_to_ragas(rag_evaluator, rag_eval_input, intermediate_step_adapter):
     """Test eval_input mapping to ragasas dataset"""
+    from ragas.evaluation import EvaluationDataset
+    from ragas.evaluation import SingleTurnSample
 
     # call actual function
     dataset = rag_evaluator.eval_input_to_ragas(rag_eval_input)
