@@ -20,6 +20,8 @@ import time
 
 import click
 
+from nat.cli.commands.start import start_command
+
 logger = logging.getLogger(__name__)
 
 
@@ -30,6 +32,9 @@ def a2a_command():
     """
     return None
 
+
+# nat a2a serve: reuses the start/a2a frontend command
+a2a_command.add_command(start_command.get_command(None, "a2a"), name="serve")  # type: ignore
 
 # Suppress verbose logs from httpx
 logging.getLogger("httpx").setLevel(logging.WARNING)
