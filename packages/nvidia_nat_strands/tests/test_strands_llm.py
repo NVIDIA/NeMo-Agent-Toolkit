@@ -287,11 +287,7 @@ class TestNIMStrands:
         content = text_content
 
         if "reasoningContent" in content:
-            # This should not be executed for text content
-            raise AssertionError("reasoningContent handling should not be triggered for text content")
-        else:
-            # This is the expected path for non-reasoning content
-            assert True
+            pytest.fail("reasoningContent handling should not be triggered for text content")
 
     @pytest.mark.asyncio
     async def test_nim_strands_excludes_nat_specific_params(self, mock_builder):
