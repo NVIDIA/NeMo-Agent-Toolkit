@@ -30,7 +30,6 @@ if typing.TYPE_CHECKING:
     import galileo.log_streams
     import galileo.projects
     import langsmith.client
-
     from docker.client import DockerClient
 
 
@@ -488,11 +487,12 @@ def populate_milvus_fixture(milvus_uri: str, root_repo_dir: Path):
 @pytest.fixture(name="require_nest_asyncio", scope="session")
 def require_nest_asyncio_fixture():
     """
-    Some tests require nest_asyncio to be installed to allow nested event loops, calling nest_asyncio.apply() more than
-    once is a no-op so it's safe to call this fixture even if one of our dependencies already called it.
+    Some tests require either nest_asyncio (or nest_asyncio2) to be installed to allow nested event loops, calling
+    nest_asyncio2.apply() more than once is a no-op so it's safe to call this fixture even if one of our dependencies
+    already called it.
     """
-    import nest_asyncio
-    nest_asyncio.apply()
+    import nest_asyncio2
+    nest_asyncio2.apply()
 
 
 @pytest.fixture(name="phoenix_url", scope="session")
