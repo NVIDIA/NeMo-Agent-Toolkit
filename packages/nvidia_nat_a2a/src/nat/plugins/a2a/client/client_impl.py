@@ -24,8 +24,8 @@ from pydantic import Field
 from nat.builder.function import FunctionGroup
 from nat.builder.workflow_builder import Builder
 from nat.cli.register_workflow import register_function_group
-from nat.plugins.a2a.client_base import A2ABaseClient
-from nat.plugins.a2a.client_config import A2AClientConfig
+from nat.plugins.a2a.client.client_base import A2ABaseClient
+from nat.plugins.a2a.client.client_config import A2AClientConfig
 
 logger = logging.getLogger(__name__)
 

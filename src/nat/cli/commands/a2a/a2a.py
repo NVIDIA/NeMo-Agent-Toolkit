@@ -64,7 +64,7 @@ async def discover_agent(url: str, timeout: int = 30):
 
         import httpx
 
-        from nat.plugins.a2a.client_base import A2ABaseClient
+        from nat.plugins.a2a.client.client_base import A2ABaseClient
 
         # Create client
         client = A2ABaseClient(base_url=url, task_timeout=timedelta(seconds=timeout))
@@ -250,7 +250,7 @@ async def get_a2a_function_group(url: str, timeout: int = 30):
         from datetime import timedelta
 
         from nat.builder.workflow_builder import WorkflowBuilder
-        from nat.plugins.a2a.client_config import A2AClientConfig
+        from nat.plugins.a2a.client.client_config import A2AClientConfig
 
         builder = WorkflowBuilder()
         await builder.__aenter__()
