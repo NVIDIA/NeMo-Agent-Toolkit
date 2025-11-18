@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import os
 import random
 import subprocess
@@ -484,13 +485,17 @@ def populate_milvus_fixture(milvus_uri: str, root_repo_dir: Path):
                    check=True)
 
 
-@pytest.fixture(name="require_nest_asyncio", scope="session")
+@pytest.fixture(name="require_nest_asyncio", scope="session", autouse=True)
 def require_nest_asyncio_fixture():
     """
     Some tests require either nest_asyncio (or nest_asyncio2) to be installed to allow nested event loops, calling
-    nest_asyncio2.apply() more than once is a no-op so it's safe to call this fixture even if one of our dependencies
-    already called it.
+    nest_asyncio2.apply() more than once is a no-op so. However we need to ensure that the nest_asyncio2 patch is
+    applied prior to the older nest_asyncio patch is applued.
+
+    Requiring us to ensure that any library which will apply the patch on import is lazily imported.
     """
+    assert not hasattr(asyncio, "_nest_patched"), "nest_asyncio2 fixture called but asyncio is already patched"
+
     import nest_asyncio2
     nest_asyncio2.apply()
 
