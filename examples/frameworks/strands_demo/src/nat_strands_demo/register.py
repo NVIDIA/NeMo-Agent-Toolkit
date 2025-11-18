@@ -27,6 +27,9 @@ from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.optimizable import OptimizableMixin
 
+from . import ping_tool  # noqa: F401, pylint: disable=unused-import
+from . import url_directory  # noqa: F401, pylint: disable=unused-import
+
 logger = logging.getLogger(__name__)
 
 

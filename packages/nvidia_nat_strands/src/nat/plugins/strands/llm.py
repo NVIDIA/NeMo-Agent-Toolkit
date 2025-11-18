@@ -51,6 +51,7 @@ from typing import TypeVar
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
+from nat.data_models.common import get_secret_value
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
@@ -158,21 +159,14 @@ async def openai_strands(llm_config: OpenAIModelConfig, _builder: Builder) -> As
 
     from strands.models.openai import OpenAIModel
 
-    params = llm_config.model_dump(exclude={"type", "api_type", "api_key", "base_url", "model_name"},
-                                   by_alias=True,
-                                   exclude_none=True)
-    # Remove NAT-specific and retry-specific keys not accepted by OpenAI chat.create
-    for k in ("max_retries",
-              "num_retries",
-              "retry_on_status_codes",
-              "retry_on_errors",
-              "thinking",
-              "thinking_system_prompt"):
-        params.pop(k, None)
+    params = llm_config.model_dump(
+        exclude={"type", "api_type", "api_key", "base_url", "model_name", "max_retries", "thinking"},
+        by_alias=True,
+        exclude_none=True)
 
     client = OpenAIModel(
         client_args={
-            "api_key": llm_config.api_key or os.getenv("OPENAI_API_KEY"),
+            "api_key": get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY"),
             "base_url": llm_config.base_url,
         },
         model_id=llm_config.model_name,
@@ -262,22 +256,24 @@ async def nim_strands(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGen
 
             return formatted_messages
 
-    params = llm_config.model_dump(exclude={"type", "api_type", "api_key", "base_url", "model_name"},
-                                   by_alias=True,
-                                   exclude_none=True)
-    # Remove NAT-specific and retry-specific keys not accepted by OpenAI
-    for k in ("max_retries",
-              "num_retries",
-              "retry_on_status_codes",
-              "retry_on_errors",
-              "thinking",
-              "thinking_system_prompt"):
-        params.pop(k, None)
+    params = llm_config.model_dump(
+        exclude={"type", "api_type", "api_key", "base_url", "model_name", "max_retries", "thinking"},
+        by_alias=True,
+        exclude_none=True)
+
+    # Determine base_url
+    base_url = llm_config.base_url or "https://integrate.api.nvidia.com/v1"
+
+    # Determine api_key; use dummy key for custom NIM endpoints without authentication
+    # If base_url is populated (not None) and no API key is available, use a dummy value
+    api_key = get_secret_value(llm_config.api_key) or os.getenv("NVIDIA_API_KEY")
+    if llm_config.base_url and llm_config.base_url.strip() and api_key is None:
+        api_key = "dummy-api-key"
 
     client = NIMCompatibleOpenAIModel(
         client_args={
-            "api_key": llm_config.api_key or os.getenv("NVIDIA_API_KEY"),
-            "base_url": llm_config.base_url or "https://integrate.api.nvidia.com/v1",
+            "api_key": api_key,
+            "base_url": base_url,
         },
         model_id=llm_config.model_name,
         params=params,
@@ -319,18 +315,20 @@ async def bedrock_strands(llm_config: AWSBedrockModelConfig, _builder: Builder) 
     from strands.models.bedrock import BedrockModel
 
     params = llm_config.model_dump(
-        exclude={"type", "api_type", "model_name", "region_name", "base_url", "thinking_system_prompt"},
+        exclude={
+            "type",
+            "api_type",
+            "model_name",
+            "region_name",
+            "base_url",
+            "max_retries",
+            "thinking",
+            "context_size",
+            "credentials_profile_name",
+        },
         by_alias=True,
-        exclude_none=True)
-
-    for k in ("max_retries",
-              "num_retries",
-              "retry_on_status_codes",
-              "retry_on_errors",
-              "thinking",
-              "context_size",
-              "credentials_profile_name"):
-        params.pop(k, None)
+        exclude_none=True,
+    )
 
     region = None if llm_config.region_name in (None, "None") else llm_config.region_name
     client = BedrockModel(model_id=llm_config.model_name,

@@ -31,15 +31,23 @@ llms:
     model_name: meta/llama-3.3-70b-instruct
     temperature: 0.6
     top_p: 0.9
-    max_tokens: 4000
+    max_tokens: 4096
   bedrock_llm:
     _type: aws_bedrock
     model_name: anthropic.claude-3-5-sonnet-20240620-v1:0
     region_name: us-east-1
+    max_tokens: 4096
   openai_llm:
     _type: openai
     model_name: gpt-4o-mini
     temperature: 0.0
+
+  # Evaluator LLM (used for evaluation metrics)
+  evaluator_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.0
+    max_tokens: 8192
 
 workflow:
   _type: strands_demo
@@ -73,15 +81,15 @@ eval:
     rag_accuracy:
       _type: ragas
       metric: AnswerAccuracy
-      llm_name: nim_llm
+      llm_name: evaluator_llm
     rag_groundedness:
       _type: ragas
       metric: ResponseGroundedness
-      llm_name: nim_llm
+      llm_name: evaluator_llm
     rag_relevance:
       _type: ragas
       metric: ContextRelevance
-      llm_name: nim_llm
+      llm_name: evaluator_llm
     trajectory_accuracy:
       _type: trajectory
-      llm_name: nim_llm
+      llm_name: evaluator_llm

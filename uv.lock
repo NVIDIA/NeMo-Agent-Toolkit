@@ -5593,11 +5593,11 @@ requires-dist = [
 name = "nat-strands-demo"
 source = { editable = "examples/frameworks/strands_demo" }
 dependencies = [
-    { name = "nvidia-nat", extra = ["profiling", "strands"] },
+    { name = "nvidia-nat", extra = ["langchain", "profiling", "strands"] },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "nvidia-nat", extras = ["profiling", "strands"], editable = "." }]
+requires-dist = [{ name = "nvidia-nat", extras = ["langchain", "profiling", "strands"], editable = "." }]
 
 [[package]]
 name = "nat-swe-bench"

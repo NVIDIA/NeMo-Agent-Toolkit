@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -207,6 +208,24 @@ class TestNIMStrands:
                 call_kwargs = mock_init.call_args[1]
                 client_args = call_kwargs["client_args"]
                 assert client_args["base_url"] == "https://integrate.api.nvidia.com/v1"
+
+    @pytest.mark.asyncio
+    async def test_nim_strands_nim_override_dummy_api_key(self, mock_builder):
+        """Test nim_strands uses dummy API key when base_url is set but no API key available."""
+        nim_config = NIMModelConfig(
+            model_name="test-model",
+            base_url="https://custom-nim.example.com/v1",
+        )
+
+        with patch("strands.models.openai.OpenAIModel.__init__", return_value=None) as mock_init:
+            with patch.dict(os.environ, {}, clear=True):
+                # pylint: disable=not-async-context-manager
+                async with nim_strands(nim_config, mock_builder):
+                    mock_init.assert_called_once()
+                    call_kwargs = mock_init.call_args[1]
+                    client_args = call_kwargs["client_args"]
+                    assert client_args["base_url"] == "https://custom-nim.example.com/v1"
+                    assert client_args["api_key"] == "dummy-api-key"
 
     def test_nim_compatible_openai_model_format_request_messages(self):
         """Test NIMCompatibleOpenAIModel.format_request_messages."""
