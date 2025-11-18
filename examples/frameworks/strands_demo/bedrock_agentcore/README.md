@@ -16,7 +16,7 @@ limitations under the License.
 -->
 <!-- path-check-skip-file -->
 
-# Running Strands with NAT on AWS AgentCore
+# Running Strands with NVIDIA NeMo Agent Toolkit on AWS AgentCore
 
 A comprehensive guide for deploying NVIDIA NeMo Agent Toolkit (NAT) with Strands on AWS AgentCore, including OpenTelemetry instrumentation for monitoring.
 

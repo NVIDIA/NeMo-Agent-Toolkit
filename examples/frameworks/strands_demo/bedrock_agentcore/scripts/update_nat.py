@@ -27,6 +27,6 @@ response = client.update_agent_runtime(
     networkConfiguration={"networkMode": "PUBLIC"},
     roleArn='<IAM_AGENTCORE_ROLE>')
 
-print("Agent Runtime created successfully!")
+print("Agent Runtime updated successfully!")
 print(f"Agent Runtime ARN: {response['agentRuntimeArn']}")
 print(f"Status: {response['status']}")
