@@ -612,3 +612,55 @@ class FunctionInfo:
                                    input_schema=input_schema,
                                    description=description,
                                    converters=converters or [])
+
+
+class PerUserFunctionInfo:
+    """
+    Function metadata for per-user functions with lazy instantiation.
+
+    Parallel to FunctionInfo class, but stores input/output schemas without concrete function implementations.
+    """
+
+    def __init__(
+        self,
+        *,
+        input_schema: type[BaseModel],
+        single_output_schema: type[BaseModel] | type[None] | None = None,
+        stream_output_schema: type[BaseModel] | type[None] | None = None,
+        description: str | None = None,
+        converters: list[Callable] | None = None,
+    ):
+        # Input schema and at least one of the output schemas must be provided,
+        # since the function instance is lazy instantiated.
+        if not single_output_schema and not stream_output_schema:
+            raise ValueError(
+                "At least one of single_output_schema or stream_output_schema must be provided for per-user function")
+
+        self.input_schema: type[BaseModel] = input_schema
+        self.single_output_schema: type[BaseModel] | type[None] | None = single_output_schema
+        self.stream_output_schema: type[BaseModel] | type[None] | None = stream_output_schema
+        self.description: str | None = description
+        self.converters: list[Callable] = converters or []
+
+    @property
+    def input_type(self) -> type[BaseModel]:
+        """Input type (derived from schema)."""
+        return self.input_schema
+
+    @property
+    def single_output_type(self) -> type[BaseModel] | type[None] | None:
+        """Single output type (derived from schema)."""
+        return self.single_output_schema if self.single_output_schema is not type(None) else type(None)
+
+    @property
+    def stream_output_type(self) -> type[BaseModel] | type[None] | None:
+        """Streaming output type (derived from schema)."""
+        return self.stream_output_schema if self.stream_output_schema is not type(None) else type(None)
+
+    @property
+    def has_single_fn(self) -> bool:
+        return self.single_output_schema is not None
+
+    @property
+    def has_stream_fn(self) -> bool:
+        return self.stream_output_schema is not None
