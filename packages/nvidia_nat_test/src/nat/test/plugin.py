@@ -31,6 +31,7 @@ if typing.TYPE_CHECKING:
     import galileo.log_streams
     import galileo.projects
     import langsmith.client
+
     from docker.client import DockerClient
 
 
