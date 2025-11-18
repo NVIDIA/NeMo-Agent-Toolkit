@@ -224,7 +224,7 @@ async def nim_strands(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGen
                     an OpenAI-compatible format.
             """
             # Handle reasoning content by extracting the text
-            if "reasoningContent" in content:
+            if isinstance(content, dict) and "reasoningContent" in content:
                 reasoning_text = content["reasoningContent"].get("reasoningText", {}).get("text", "")
                 return {"text": reasoning_text, "type": "text"}
 
