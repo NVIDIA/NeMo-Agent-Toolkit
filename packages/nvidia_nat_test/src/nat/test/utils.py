@@ -73,14 +73,15 @@ async def run_workflow(*,
                        config_file: "StrPath | None" = None,
                        question: str,
                        expected_answer: str,
-                       assert_expected_answer: bool = True) -> str:
+                       assert_expected_answer: bool = True,
+                       **kwargs) -> str:
     """
     Test specific wrapper for `nat.utils.run_workflow` to run a workflow with a question and validate the expected
     answer. This variant always sets the result type to `str`.
     """
     from nat.utils import run_workflow as nat_run_workflow
 
-    result = await nat_run_workflow(config=config, config_file=config_file, prompt=question, to_type=str)
+    result = await nat_run_workflow(config=config, config_file=config_file, prompt=question, to_type=str, **kwargs)
 
     if assert_expected_answer:
         assert expected_answer.lower() in result.lower(), f"Expected '{expected_answer}' in '{result}'"

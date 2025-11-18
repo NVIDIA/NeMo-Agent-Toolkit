@@ -74,9 +74,17 @@ class TestMCPSessionManagement:
     @pytest.fixture
     def mock_auth_provider(self):
         """Create a mock auth provider for testing."""
+        from nat.data_models.authentication import AuthResult
+
         auth_provider = MagicMock()
         auth_provider.config = MagicMock()
         auth_provider.config.default_user_id = "default-user-123"
+
+        # Mock the authenticate method as an async method that returns an AuthResult
+        async def mock_authenticate(user_id=None, response=None):
+            return AuthResult(credentials=[])
+
+        auth_provider.authenticate = AsyncMock(side_effect=mock_authenticate)
         return auth_provider
 
     @pytest.fixture
@@ -95,6 +103,8 @@ class TestMCPSessionManagement:
         group._shared_auth_provider = mock_auth_provider
         group._client_config = mock_config
         group.mcp_client = mock_base_client
+        # Set the default_user_id to match what's in the mock auth provider config
+        group._default_user_id = mock_auth_provider.config.default_user_id
         return group
 
     async def test_get_session_client_returns_base_client_for_default_user(self, function_group):
@@ -590,10 +600,16 @@ class TestMCPSessionManagement:
             with pytest.raises(RuntimeError, match="Failed to initialize session client: Connection failed"):
                 await function_group._create_session_client(session_id)
 
-    async def test_lifetime_task_timeout(self, function_group):
+    async def test_lifetime_task_timeout(self, mock_config, mock_auth_provider, mock_base_client):
         """Test that lifetime task times out if initialization hangs."""
         session_id = "test-session-timeout"
         mock_client = AsyncMock()
+
+        mock_config.tool_call_timeout = timedelta(seconds=2)
+        fg = MCPFunctionGroup(config=mock_config)
+        fg._shared_auth_provider = mock_auth_provider
+        fg._client_config = mock_config
+        fg.mcp_client = mock_base_client
 
         # Make __aenter__ hang indefinitely
         async def hanging_aenter(self):
@@ -604,8 +620,8 @@ class TestMCPSessionManagement:
         mock_client.__aexit__ = AsyncMock(return_value=None)
 
         with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient', return_value=mock_client):
-            with pytest.raises(RuntimeError, match="Session client initialization timed out after 60.0s"):
-                await function_group._create_session_client(session_id)
+            with pytest.raises(RuntimeError, match=r"Session client initialization timed out after 2\.0s"):
+                await fg._create_session_client(session_id)
 
     async def test_lifetime_task_cleanup_on_stop_event(self, function_group):
         """Test that lifetime task properly exits when stop_event is set."""

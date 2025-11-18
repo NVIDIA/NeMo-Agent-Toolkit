@@ -39,6 +39,8 @@ from pydantic import BaseModel
 from pydantic import Field
 from starlette.websockets import WebSocket
 
+from nat.builder.eval_builder import WorkflowEvalBuilder
+from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.function import Function
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.api_server import ChatRequest
@@ -51,11 +53,14 @@ from nat.data_models.object_store import NoSuchKeyError
 from nat.eval.config import EvaluationRunOutput
 from nat.eval.evaluate import EvaluationRun
 from nat.eval.evaluate import EvaluationRunConfig
+from nat.eval.evaluator.evaluator_model import EvalInput
 from nat.front_ends.fastapi.auth_flow_handlers.http_flow_handler import HTTPAuthenticationFlowHandler
 from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import FlowState
 from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
 from nat.front_ends.fastapi.fastapi_front_end_config import AsyncGenerateResponse
 from nat.front_ends.fastapi.fastapi_front_end_config import AsyncGenerationStatusResponse
+from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateItemRequest
+from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateItemResponse
 from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateRequest
 from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateResponse
 from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateStatusResponse
@@ -227,6 +232,54 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         self._outstanding_flows: dict[str, FlowState] = {}
         self._outstanding_flows_lock = asyncio.Lock()
 
+        # Evaluator storage for single-item evaluation
+        self._evaluators: dict[str, EvaluatorInfo] = {}
+        self._eval_builder: WorkflowEvalBuilder | None = None
+
+    async def initialize_evaluators(self, config: Config):
+        """Initialize and store evaluators from config for single-item evaluation."""
+        if not config.eval or not config.eval.evaluators:
+            logger.info("No evaluators configured, skipping evaluator initialization")
+            return
+
+        try:
+            # Build evaluators using WorkflowEvalBuilder (same pattern as nat eval)
+            # Start with registry=None and let populate_builder set everything up
+            self._eval_builder = WorkflowEvalBuilder(general_config=config.general,
+                                                     eval_general_config=config.eval.general,
+                                                     registry=None)
+
+            # Enter the async context and keep it alive
+            await self._eval_builder.__aenter__()
+
+            # Populate builder with config (this sets up LLMs, functions, etc.)
+            # Skip workflow build since we already have it from the main builder
+            await self._eval_builder.populate_builder(config, skip_workflow=True)
+
+            # Now evaluators should be populated by populate_builder
+            for name in config.eval.evaluators.keys():
+                self._evaluators[name] = self._eval_builder.get_evaluator(name)
+                logger.info(f"Initialized evaluator: {name}")
+
+            logger.info(f"Successfully initialized {len(self._evaluators)} evaluators")
+
+        except Exception as e:
+            logger.error(f"Failed to initialize evaluators: {e}")
+            # Don't fail startup, just log the error
+            self._evaluators = {}
+
+    async def cleanup_evaluators(self):
+        """Clean up evaluator resources on shutdown."""
+        if self._eval_builder:
+            try:
+                await self._eval_builder.__aexit__(None, None, None)
+                logger.info("Evaluator builder context cleaned up")
+            except Exception as e:
+                logger.error(f"Error cleaning up evaluator builder: {e}")
+            finally:
+                self._eval_builder = None
+                self._evaluators.clear()
+
     def get_step_adaptor(self) -> StepAdaptor:
 
         return StepAdaptor(self.front_end_config.step_adaptor)
@@ -236,12 +289,20 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         # Do things like setting the base URL and global configuration options
         app.root_path = self.front_end_config.root_path
 
+        # Initialize evaluators for single-item evaluation
+        # TODO: we need config control over this as it's not always needed
+        await self.initialize_evaluators(self._config)
+
+        # Ensure evaluator resources are cleaned up when the app shuts down
+        app.add_event_handler("shutdown", self.cleanup_evaluators)
+
         await self.add_routes(app, builder)
 
     async def add_routes(self, app: FastAPI, builder: WorkflowBuilder):
 
         await self.add_default_route(app, SessionManager(await builder.build()))
         await self.add_evaluate_route(app, SessionManager(await builder.build()))
+        await self.add_evaluate_item_route(app, SessionManager(await builder.build()))
         await self.add_static_files_route(app, builder)
         await self.add_authorization_route(app)
         await self.add_mcp_client_tool_list_route(app, builder)
@@ -439,6 +500,69 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             else:
                 logger.warning("Dask is not available, evaluation endpoints will not be added.")
 
+    async def add_evaluate_item_route(self, app: FastAPI, session_manager: SessionManager):
+        """Add the single-item evaluation endpoint to the FastAPI app."""
+
+        async def evaluate_single_item(request: EvaluateItemRequest, http_request: Request) -> EvaluateItemResponse:
+            """Handle single-item evaluation requests."""
+
+            async with session_manager.session(http_connection=http_request):
+
+                # Check if evaluator exists
+                if request.evaluator_name not in self._evaluators:
+                    raise HTTPException(status_code=404,
+                                        detail=f"Evaluator '{request.evaluator_name}' not found. "
+                                        f"Available evaluators: {list(self._evaluators.keys())}")
+
+                try:
+                    # Get the evaluator
+                    evaluator = self._evaluators[request.evaluator_name]
+
+                    # Run evaluation on single item
+                    result = await evaluator.evaluate_fn(EvalInput(eval_input_items=[request.item]))
+
+                    # Extract the single output item
+                    if result.eval_output_items:
+                        output_item = result.eval_output_items[0]
+                        return EvaluateItemResponse(success=True, result=output_item, error=None)
+                    else:
+                        return EvaluateItemResponse(success=False, result=None, error="Evaluator returned no results")
+
+                except Exception as e:
+                    logger.exception(f"Error evaluating item with {request.evaluator_name}")
+                    return EvaluateItemResponse(success=False, result=None, error=f"Evaluation failed: {str(e)}")
+
+        # Register the route
+        if self.front_end_config.evaluate_item.path:
+            app.add_api_route(path=self.front_end_config.evaluate_item.path,
+                              endpoint=evaluate_single_item,
+                              methods=[self.front_end_config.evaluate_item.method],
+                              response_model=EvaluateItemResponse,
+                              description=self.front_end_config.evaluate_item.description,
+                              responses={
+                                  404: {
+                                      "description": "Evaluator not found",
+                                      "content": {
+                                          "application/json": {
+                                              "example": {
+                                                  "detail": "Evaluator 'unknown' not found"
+                                              }
+                                          }
+                                      }
+                                  },
+                                  500: {
+                                      "description": "Internal Server Error",
+                                      "content": {
+                                          "application/json": {
+                                              "example": {
+                                                  "detail": "Internal server error occurred"
+                                              }
+                                          }
+                                      }
+                                  }
+                              })
+            logger.info(f"Added evaluate_item route at {self.front_end_config.evaluate_item.path}")
+
     async def add_static_files_route(self, app: FastAPI, builder: WorkflowBuilder):
 
         if not self.front_end_config.object_store:
@@ -544,7 +668,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         GenerateStreamResponseType = workflow.streaming_output_schema
         GenerateSingleResponseType = workflow.single_output_schema
 
-        if self._dask_available:
+        # Skip async generation for custom routes (those with function_name)
+        if self._dask_available and not hasattr(endpoint, 'function_name'):
             # Append job_id and expiry_seconds to the input schema, this effectively makes these reserved keywords
             # Consider prefixing these with "nat_" to avoid conflicts
 
@@ -561,6 +686,10 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                             le=JobStore.MAX_EXPIRY,
                                             description="Optional time (in seconds) before the job expires. "
                                             "Clamped between 600 (10 min) and 86400 (24h).")
+
+                def validate_model(self):
+                    # Override to ensure that the parent class validator is not called
+                    return self
 
         # Ensure that the input is in the body. POD types are treated as query parameters
         if (not issubclass(GenerateBodyType, BaseModel)):
@@ -760,17 +889,18 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                             return AsyncGenerateResponse(job_id=job.job_id, status=job.status)
 
                     job_id = self._job_store.ensure_job_id(request.job_id)
-                    (_, job) = await self._job_store.submit_job(job_id=job_id,
-                                                                expiry_seconds=request.expiry_seconds,
-                                                                job_fn=run_generation,
-                                                                sync_timeout=request.sync_timeout,
-                                                                job_args=[
-                                                                    self._scheduler_address,
-                                                                    self._db_url,
-                                                                    self._config_file_path,
-                                                                    job_id,
-                                                                    request.model_dump(mode="json")
-                                                                ])
+                    (_, job) = await self._job_store.submit_job(
+                        job_id=job_id,
+                        expiry_seconds=request.expiry_seconds,
+                        job_fn=run_generation,
+                        sync_timeout=request.sync_timeout,
+                        job_args=[
+                            self._scheduler_address,
+                            self._db_url,
+                            self._config_file_path,
+                            job_id,
+                            request.model_dump(mode="json", exclude=["job_id", "sync_timeout", "expiry_seconds"])
+                        ])
 
                     if job is not None:
                         response.status_code = 200
@@ -916,7 +1046,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     responses={500: response_500},
                 )
 
-                if self._dask_available:
+                if self._dask_available and not hasattr(endpoint, 'function_name'):
                     app.add_api_route(
                         path=f"{endpoint.path}/async",
                         endpoint=post_async_generation(request_type=AsyncGenerateRequest),
@@ -930,7 +1060,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             else:
                 raise ValueError(f"Unsupported method {endpoint.method}")
 
-            if self._dask_available:
+            if self._dask_available and not hasattr(endpoint, 'function_name'):
                 app.add_api_route(
                     path=f"{endpoint.path}/async/job/{{job_id}}",
                     endpoint=get_async_job_status,

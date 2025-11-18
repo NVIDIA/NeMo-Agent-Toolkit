@@ -109,6 +109,10 @@ class MCPFunctionGroup(FunctionGroup):
         self._shared_auth_provider: AuthProviderBase | None = None
         self._client_config: MCPClientConfig | None = None
 
+        # Auth provider config defaults (set when auth provider is assigned)
+        self._default_user_id: str | None = None
+        self._allow_default_user_id_for_tool_calls: bool = True
+
         # Use random session id for testing only
         self._use_random_session_id_for_testing: bool = False
 
@@ -176,9 +180,8 @@ class MCPFunctionGroup(FunctionGroup):
 
             if not session_id:
                 # use default user id if allowed
-                if self._shared_auth_provider and \
-                    self._shared_auth_provider.config.allow_default_user_id_for_tool_calls:
-                    session_id = self._shared_auth_provider.config.default_user_id
+                if self._shared_auth_provider and self._allow_default_user_id_for_tool_calls:
+                    session_id = self._default_user_id
             return session_id
         except Exception:
             return None
@@ -266,8 +269,7 @@ class MCPFunctionGroup(FunctionGroup):
         # If the session_id equals the configured default_user_id use the base client
         # instead of creating a per-session client
         if self._shared_auth_provider:
-            default_uid = self._shared_auth_provider.config.default_user_id
-            if default_uid and session_id == default_uid:
+            if self._default_user_id and session_id == self._default_user_id:
                 return self.mcp_client
 
         # Fast path: check if session already exists (reader lock for concurrent access)
@@ -435,8 +437,7 @@ def mcp_session_tool_function(tool, function_group: MCPFunctionGroup):
                 return "User not authorized to call the tool"
 
             # Check if this is the default user - if so, use base client directly
-            if (not function_group._shared_auth_provider
-                    or session_id == function_group._shared_auth_provider.config.default_user_id):
+            if (not function_group._shared_auth_provider or session_id == function_group._default_user_id):
                 # Use base client directly for default user
                 client = function_group.mcp_client
                 session_tool = await client.get_tool(tool.name)
@@ -507,7 +508,9 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
                               reconnect_max_backoff=config.reconnect_max_backoff)
     elif config.server.transport == "streamable-http":
         # Use default_user_id for the base client
-        base_user_id = auth_provider.config.default_user_id if auth_provider else None
+        # For interactive OAuth2: from config. For service accounts: defaults to server URL
+        base_user_id = getattr(auth_provider.config, 'default_user_id', str(
+            config.server.url)) if auth_provider else None
         client = MCPStreamableHTTPClient(str(config.server.url),
                                          auth_provider=auth_provider,
                                          user_id=base_user_id,
@@ -528,6 +531,18 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
     # Store shared components for session client creation
     group._shared_auth_provider = auth_provider
     group._client_config = config
+
+    # Set auth provider config defaults
+    # For interactive OAuth2: use config values
+    # For service accounts: default_user_id = server URL, allow_default_user_id_for_tool_calls = True
+    if auth_provider:
+        group._default_user_id = getattr(auth_provider.config, 'default_user_id', str(config.server.url))
+        group._allow_default_user_id_for_tool_calls = getattr(auth_provider.config,
+                                                              'allow_default_user_id_for_tool_calls',
+                                                              True)
+    else:
+        group._default_user_id = None
+        group._allow_default_user_id_for_tool_calls = True
 
     async with client:
         # Expose the live MCP client on the function group instance so other components (e.g., HTTP endpoints)

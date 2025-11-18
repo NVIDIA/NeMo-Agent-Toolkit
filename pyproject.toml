@@ -98,6 +98,7 @@ telemetry = [
   "nvidia-nat-ragaai",
   "nvidia-nat-weave",
 ]
+test = ["nvidia-nat-test"]
 weave = ["nvidia-nat-weave"]
 zep-cloud = ["nvidia-nat-zep-cloud"]
 
@@ -116,6 +117,7 @@ examples = [
   "nat_router_agent",
   "nat_semantic_kernel_demo",
   "nat_sequential_executor",
+  "nat_service_account_auth_mcp",
   "nat_simple_auth",
   "nat_simple_auth_mcp",
   "nat_simple_web_query",
@@ -204,6 +206,7 @@ nat_profiler_agent = { path = "examples/advanced_agents/profiler_agent", editabl
 nat_router_agent = { path = "examples/control_flow/router_agent", editable = true }
 nat_semantic_kernel_demo = { path = "examples/frameworks/semantic_kernel_demo", editable = true }
 nat_sequential_executor = { path = "examples/control_flow/sequential_executor", editable = true }
+nat_service_account_auth_mcp = { path = "examples/MCP/service_account_auth_mcp", editable = true }
 nat_simple_auth = { path = "examples/front_ends/simple_auth", editable = true }
 nat_simple_auth_mcp = { path = "examples/MCP/simple_auth_mcp", editable = true }
 nat_simple_calculator = { path = "examples/getting_started/simple_calculator", editable = true }
@@ -227,8 +230,11 @@ exclude = ["packages/compat"]
 # Dependency groups are only for developers to aid in managing dependencies local to a dev machine.
 dev = [
   "asgi-lifespan~=2.1",
+  "galileo~=1.27",
+  "beautifulsoup4~=4.13",
   "httpx-sse~=0.4",
   "ipython~=8.31",
+  "langsmith", # this is currently a transitive dependency of nat, not specifying a version to avoid conflicts
   "myst-parser~=4.0",
   "nbconvert", # Version determined by jupyter
   "nbsphinx~=0.9",
@@ -260,6 +266,7 @@ nat_authentication = "nat.authentication.register"
 nat_control_flow = "nat.control_flow.register"
 nat_embedders = "nat.embedder.register"
 nat_evaluators = "nat.eval.register"
+nat_middleware = "nat.middleware.register"
 nat_test_time_compute = "nat.experimental.test_time_compute.register"
 nat_llms = "nat.llm.register"
 nat_object_stores = "nat.object_store.register"

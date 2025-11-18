@@ -27,6 +27,8 @@ import pytest
 import pytest_asyncio
 
 if typing.TYPE_CHECKING:
+    import galileo.log_streams
+    import galileo.projects
     import langsmith.client
 
     from docker.client import DockerClient
@@ -290,14 +292,59 @@ def langsmith_client_fixture(langsmith_api_key: str, fail_missing: bool) -> "lan
         pytest.skip(reason=reason)
 
 
+@pytest.fixture(name="project_name")
+def project_name_fixture() -> str:
+    # Create a unique project name for each test run
+    return f"nat-e2e-test-{time.time()}-{random.random()}"
+
+
 @pytest.fixture(name="langsmith_project_name")
-def langsmith_project_name_fixture(langsmith_client: "langsmith.client.Client") -> Generator[str]:
-    # Createa a unique project name for each test run
-    project_name = f"nat-e2e-test-{time.time()}-{random.random()}"
+def langsmith_project_name_fixture(langsmith_client: "langsmith.client.Client", project_name: str) -> Generator[str]:
     langsmith_client.create_project(project_name)
     yield project_name
 
     langsmith_client.delete_project(project_name=project_name)
+
+
+@pytest.fixture(name="galileo_api_key", scope='session')
+def galileo_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require a Galileo API key.
+    """
+    yield require_env_variables(
+        varnames=["GALILEO_API_KEY"],
+        reason="Galileo integration tests require the `GALILEO_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="galileo_project")
+def galileo_project_fixture(galileo_api_key: str, fail_missing: bool,
+                            project_name: str) -> Generator["galileo.projects.Project"]:
+    """
+    Creates a unique Galileo project and deletes it after the test run.
+    """
+    try:
+        import galileo.projects
+        project = galileo.projects.create_project(name=project_name)
+        yield project
+
+        galileo.projects.delete_project(id=project.id)
+    except ImportError as e:
+        reason = "Galileo integration tests require the `galileo` package to be installed."
+        if fail_missing:
+            raise RuntimeError(reason) from e
+        pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="galileo_log_stream")
+def galileo_log_stream_fixture(galileo_project: "galileo.projects.Project") -> "galileo.log_streams.LogStream":
+    """
+    Creates a Galileo log stream for integration tests.
+
+    The log stream is automatically deleted when the associated project is deleted.
+    """
+    import galileo.log_streams
+    return galileo.log_streams.create_log_stream(project_id=galileo_project.id, name="test")
 
 
 @pytest.fixture(name="require_docker", scope='session')
@@ -627,3 +674,147 @@ def langfuse_trace_url_fixture(langfuse_url: str) -> str:
     the trace url which is what this fixture provides.
     """
     return f"{langfuse_url}/api/public/otel/v1/traces"
+
+
+@pytest.fixture(name="oauth2_server_url", scope="session")
+def oauth2_server_url_fixture(fail_missing: bool) -> str:
+    """
+    To run these tests, an oauth2 server must be running.
+    """
+    import requests
+
+    host = os.getenv("NAT_CI_OAUTH2_HOST", "localhost")
+    port = int(os.getenv("NAT_CI_OAUTH2_PORT", "5001"))
+    url = f"http://{host}:{port}"
+    try:
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+
+        return url
+    except Exception as e:
+        reason = f"Unable to connect to OAuth2 server at {url}: {e}"
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="oauth2_client_credentials", scope="session")
+def oauth2_client_credentials_fixture(oauth2_server_url: str, fail_missing: bool) -> dict[str, typing.Any]:
+    """
+    Fixture to provide OAuth2 client credentials for testing
+
+    Simulates the steps a user would take in a web browser to create a new OAuth2 client as documented in:
+    examples/front_ends/simple_auth/README.md
+    """
+
+    try:
+        import requests
+        from bs4 import BeautifulSoup
+        username = os.getenv("NAT_CI_OAUTH2_CLIENT_USERNAME", "Testy Testerson")
+
+        # This post request responds with a cookie that we need for future requests and a 302 redirect, the response
+        # for the redirected url doesn't contain the cookie, so we disable the redirect here to capture the cookie
+        user_create_response = requests.post(oauth2_server_url,
+                                             data=[("username", username)],
+                                             headers={"Content-Type": "application/x-www-form-urlencoded"},
+                                             allow_redirects=False,
+                                             timeout=5)
+        user_create_response.raise_for_status()
+        cookies = user_create_response.cookies
+
+        client_create_response = requests.post(f"{oauth2_server_url}/create_client",
+                                               cookies=cookies,
+                                               headers={"Content-Type": "application/x-www-form-urlencoded"},
+                                               data=[
+                                                   ("client_name", "test"),
+                                                   ("client_uri", "https://test.com"),
+                                                   ("scope", "openid profile email"),
+                                                   ("redirect_uri", "http://localhost:8000/auth/redirect"),
+                                                   ("grant_type", "authorization_code\nrefresh_token"),
+                                                   ("response_type", "code"),
+                                                   ("token_endpoint_auth_method", "client_secret_post"),
+                                               ],
+                                               timeout=5)
+        client_create_response.raise_for_status()
+
+        # Unfortunately the response is HTML so we need to parse it to get the client ID and secret, which are not
+        # locatable via ID tags
+        soup = BeautifulSoup(client_create_response.text, 'html.parser')
+        strong_tags = soup.find_all('strong')
+        i = 0
+        client_id = None
+        client_secret = None
+        while i < len(strong_tags) and None in (client_id, client_secret):
+            tag = strong_tags[i]
+            contents = "".join(tag.contents)
+            if client_id is None and "client_id:" in contents:
+                client_id = tag.next_sibling.strip()
+            elif client_secret is None and "client_secret:" in contents:
+                client_secret = tag.next_sibling.strip()
+
+            i += 1
+
+        assert client_id is not None and client_secret is not None, "Failed to parse client credentials from response"
+
+        return {
+            "id": client_id,
+            "secret": client_secret,
+            "username": username,
+            "url": oauth2_server_url,
+            "cookies": cookies
+        }
+
+    except Exception as e:
+        reason = f"Unable to create OAuth2 client: {e}"
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="local_sandbox_url", scope="session")
+def local_sandbox_url_fixture(fail_missing: bool) -> str:
+    """Check if sandbox server is running before running tests."""
+    import requests
+    url = os.environ.get("NAT_CI_SANDBOX_URL", "http://127.0.0.1:6000")
+    try:
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+        return url
+    except Exception:
+        reason = (f"Sandbox server is not running at {url}. "
+                  "Please start it with: cd src/nat/tool/code_execution/local_sandbox && ./start_local_sandbox.sh")
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason)
+
+
+@pytest.fixture(name="sandbox_config", scope="session")
+def sandbox_config_fixture(local_sandbox_url: str) -> dict[str, typing.Any]:
+    """Configuration for sandbox testing."""
+    return {
+        "base_url": local_sandbox_url,
+        "execute_url": f"{local_sandbox_url.rstrip('/')}/execute",
+        "timeout": int(os.environ.get("SANDBOX_TIMEOUT", "30")),
+        "connection_timeout": 5
+    }
+
+
+@pytest.fixture(name="piston_url", scope="session")
+def piston_url_fixture(fail_missing: bool) -> str:
+    """
+    Configuration for piston testing.
+
+    The public piston server limits usage to five requests per minute.
+    """
+    import requests
+    url = os.environ.get("NAT_CI_PISTON_URL", "https://emkc.org/api/v2/piston")
+    try:
+        response = requests.get(f"{url.rstrip('/')}/runtimes", timeout=30)
+        response.raise_for_status()
+        return url
+    except Exception:
+        reason = (f"Piston server is not running at {url}. "
+                  "Please start it with: cd src/nat/tool/code_execution/local_sandbox && ./start_local_sandbox.sh")
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason)
