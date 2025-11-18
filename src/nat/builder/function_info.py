@@ -305,7 +305,7 @@ class FunctionInfo:
 
         if (single_input_type is not NoneType):
             self.input_type = single_input_type
-        elif (stream_input_type is not None):
+        elif (stream_input_type is not NoneType):
             self.input_type = stream_input_type
         else:
             raise ValueError("At least one of single_fn or stream_fn must be provided")
@@ -321,10 +321,10 @@ class FunctionInfo:
             raise ValueError("input_schema must be provided")
 
         if (self.single_output_schema is None):
-            raise ValueError("single_output_schema must be provided. Use NoneType if there is single output")
+            raise ValueError("single_output_schema must be provided. Use NoneType if there is no single output")
 
         if (self.stream_output_schema is None):
-            raise ValueError("stream_output_schema must be provided. Use NoneType if there is stream output")
+            raise ValueError("stream_output_schema must be provided. Use NoneType if there is no stream output")
 
         if (self.single_fn and self.single_output_schema == NoneType):
             raise ValueError("single_output_schema must be provided if single_fn is provided")

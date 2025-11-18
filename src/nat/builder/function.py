@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
+import inspect
 import logging
 import re
 import typing
@@ -25,12 +27,14 @@ from collections.abc import Sequence
 
 from pydantic import BaseModel
 
+from nat.builder.builder import Builder
 from nat.builder.context import Context
 from nat.builder.function_base import FunctionBase
 from nat.builder.function_base import InputT
 from nat.builder.function_base import SingleOutputT
 from nat.builder.function_base import StreamingOutputT
 from nat.builder.function_info import FunctionInfo
+from nat.builder.function_info import PerUserFunctionInfo
 from nat.data_models.function import EmptyFunctionConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
@@ -388,6 +392,101 @@ class LambdaFunction(Function[InputT, StreamingOutputT, SingleOutputT]):
             pass
 
         return FunctionImpl(config=config, info=info, instance_name=instance_name)
+
+
+class PerUserFunction(Function[InputT, StreamingOutputT, SingleOutputT]):
+    """
+    Build concreate Function instance per-user, which is lazily instantiated when the function is called.
+
+    Each user gets their own separate instance of the function. The function instances are built on first invocation
+    and cached for subsequent calls.
+    """
+
+    def __init__(self,
+                 *,
+                 config: FunctionBaseConfig,
+                 info: PerUserFunctionInfo,
+                 builder: Builder,
+                 original_build_fn: Callable,
+                 instance_name: str | None = None):
+        super().__init__(config=config,
+                         description=info.description,
+                         input_schema=info.input_schema,
+                         streaming_output_schema=info.stream_output_schema,
+                         single_output_schema=info.single_output_schema,
+                         converters=info.converters,
+                         instance_name=instance_name)
+
+        self._info = info
+        self._builder = builder
+        self._original_build_fn = original_build_fn
+
+        # Per-user function instances
+        self._user_instances: dict[str, Function] = {}
+        self._instance_locks: dict[str, asyncio.Lock] = {}
+        self._global_lock: asyncio.Lock = asyncio.Lock()
+
+    @property
+    def has_streaming_output(self) -> bool:
+        return self._info.has_stream_fn
+
+    @property
+    def has_single_output(self) -> bool:
+        return self._info.has_single_fn
+
+    async def _get_user_instance(self) -> Function:
+        """
+        Get or build concrete LambdaFunction instance for the current user.
+        """
+
+        user_id = Context.get().user_id
+        if user_id is None:
+            raise RuntimeError(f"Per-user function '{self.get_instance_name()}' requires user_id in context. "
+                               f"Ensure SessionManager.session() is used or UserWorkflowBuilder sets user_id.")
+
+        # Fast path: instance already exists for current user
+        if user_id in self._user_instances:
+            return self._user_instances[user_id]
+
+        # Slow path: need to build new instance for current user
+        async with self._global_lock:
+            if user_id not in self._instance_locks:
+                self._instance_locks[user_id] = asyncio.Lock()
+
+        async with self._instance_locks[user_id]:
+            # Double-check after acquiring lock
+            if user_id in self._user_instances:
+                return self._user_instances[user_id]
+
+            # Call original build_fn to build the concrete instance
+            async with self._original_build_fn(self.config, self._builder) as build_result:
+
+                # Same process as WorkflowBuilder._build_function()
+                if inspect.isfunction(build_result):
+                    build_result = FunctionInfo.from_fn(build_result)
+
+                if isinstance(build_result, FunctionInfo):
+                    build_result = LambdaFunction.from_info(config=self.config,
+                                                            info=build_result,
+                                                            instance_name=f"{self.get_instance_name()}.{user_id}")
+
+                if not isinstance(build_result, Function):
+                    raise ValueError("Expected a function, FunctionInfo object, or FunctionBase object to be "
+                                     f"returned from the function builder. Got {type(build_result)}")
+
+                self._user_instances[user_id] = build_result
+                return build_result
+
+    async def _ainvoke(self, value: InputT) -> SingleOutputT:
+
+        fn = await self._get_user_instance()
+        return await fn.ainvoke(value)
+
+    async def _astream(self, value: InputT) -> AsyncGenerator[StreamingOutputT]:
+
+        fn = await self._get_user_instance()
+        async for x in fn.astream(value):
+            yield x
 
 
 class FunctionGroup:
