@@ -637,10 +637,10 @@ class PerUserFunctionInfo:
                 "At least one of single_output_schema or stream_output_schema must be provided for per-user function")
 
         self.input_schema: type[BaseModel] = input_schema
-        self.single_output_schema: type[BaseModel] | type[None] | None = single_output_schema
-        self.stream_output_schema: type[BaseModel] | type[None] | None = stream_output_schema
-        self.description: str | None = description
-        self.converters: list[Callable] = converters or []
+        self._single_output_schema: type[BaseModel] | type[None] | None = single_output_schema
+        self._stream_output_schema: type[BaseModel] | type[None] | None = stream_output_schema
+        self._description: str | None = description
+        self._converters: list[Callable] = converters or []
 
     @property
     def input_type(self) -> type[BaseModel]:
@@ -648,14 +648,14 @@ class PerUserFunctionInfo:
         return self.input_schema
 
     @property
-    def single_output_type(self) -> type[BaseModel] | type[None] | None:
+    def single_output_schema(self) -> type[BaseModel] | type[None] | None:
         """Single output type (derived from schema)."""
-        return self.single_output_schema if self.single_output_schema is not type(None) else type(None)
+        return self._single_output_schema
 
     @property
-    def stream_output_type(self) -> type[BaseModel] | type[None] | None:
+    def stream_output_schema(self) -> type[BaseModel] | type[None] | None:
         """Streaming output type (derived from schema)."""
-        return self.stream_output_schema if self.stream_output_schema is not type(None) else type(None)
+        return self._stream_output_schema
 
     @property
     def has_single_fn(self) -> bool:
@@ -664,3 +664,11 @@ class PerUserFunctionInfo:
     @property
     def has_stream_fn(self) -> bool:
         return self.stream_output_schema is not None
+
+    @property
+    def description(self) -> str | None:
+        return self._description
+
+    @property
+    def converters(self) -> list[Callable]:
+        return self._converters
