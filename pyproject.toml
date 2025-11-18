@@ -46,7 +46,7 @@ dependencies = [
   "python-dotenv~=1.1.1",
   "PyYAML~=6.0",
   "ragas~=0.2.14", # If you update ragas be sure to update github links in docs/source/workflows/evaluate.md as well
-  "rich>=13.9,<15.0.0",
+  "rich>=14.0.0,<15.0.0",  # Upgraded from ~=13.9 to support strands-agents-tools (requires >=14.0.0,<15.0.0)
   "tabulate~=0.9",
   "uvicorn[standard]<0.36", # need to limit version until nest_asyncio is resolved
   "wikipedia~=1.4",
@@ -167,7 +167,8 @@ managed = true
 config-settings = { editable_mode = "compat" }
 override-dependencies = [
   # Override tenacity version to resolve conflict between google-adk (<9.0.0) and strands-agents-tools (>=9.1.2)
-  # tenacity 9.x maintains API compatibility with 8.x
+  # tenacity 9.x maintains API compatibility with 8.x except for the statistics attribute (breaking change in 9.0.0)
+  # See: https://github.com/jd/tenacity/releases
   "tenacity>=9.1.2,<10.0.0"
 ]
 

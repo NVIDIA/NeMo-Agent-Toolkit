@@ -30,6 +30,8 @@ A minimal example showcasing a Strands agent that answers questions about Strand
   - [Run the workflow (config.yml)](#1-run-the-workflow-configyml)
   - [Serve AgentCore-compatible endpoints (agentcore_config.yml)](#2-serve-agentcore-compatible-endpoints-agentcore_configyml)
   - [Evaluate accuracy and performance (eval_config.yml)](#3-evaluate-accuracy-and-performance-eval_configyml)
+  - [Optimize workflow parameters (optimizer_config.yml)](#4-optimize-workflow-parameters-optimizer_configyml)
+  - [Profile for GPU cluster sizing (sizing_config.yml)](#5-profile-for-gpu-cluster-sizing-sizing_configyml)
 
 ## Key Features
 
@@ -64,7 +66,7 @@ export AWS_DEFAULT_REGION=us-east-1
 
 ## Run the Workflow
 
-The `configs/` directory contains four ready-to-use configurations. Use the commands below.
+The `configs/` directory contains five ready-to-use configurations. Use the commands below.
 
 ### 1) Run the workflow (config.yml)
 
@@ -83,6 +85,7 @@ Workflow Result:
 
 ### 2) Serve AgentCore-compatible endpoints (agentcore_config.yml)
 
+<!-- path-check-skip-next-line -->
 To run the agent on Amazon Bedrock AgentCore [runtime](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/getting-started-custom.html).  Note that `agentcore_config.yml` defines two required endpoints for AgentCore.  This configuration is a general requirement for any agent, regardless of whether it uses the Strands integration.
 
 ```bash
@@ -97,3 +100,66 @@ Runs the workflow over a dataset and computes evaluation and performance metrics
 nat eval --config_file examples/frameworks/strands_demo/configs/eval_config.yml
 ```
 > Tip: If you hit rate limits, lower concurrency: `--override eval.general.max_concurrency 1`.
+
+### 4) Optimize workflow parameters (optimizer_config.yml)
+
+Automatically finds optimal LLM parameters (temperature, top_p, max_tokens) through systematic experimentation. The optimizer evaluates multiple parameter combinations across multiple trials and repetitions, balancing accuracy, groundedness, relevance, trajectory correctness, latency, and token efficiency.
+
+```bash
+nat optimize --config_file examples/frameworks/strands_demo/configs/optimizer_config.yml
+```
+
+**What it optimizes:**
+- **Temperature**: Tests values from 0.1 to 0.7
+- **Top_p**: Tests values from 0.7 to 1.0  
+- **Max_tokens**: Tests values from 4096 to 8192
+
+The optimizer runs 20 trials with 3 repetitions each for statistical stability and generates a report showing the best parameter combination based on weighted multi-objective scoring.
+
+> Note: Optimization can take significant time. Reduce `n_trials` or adjust the search space in the config for faster experimentation.
+
+### 5) Profile for GPU cluster sizing (sizing_config.yml)
+
+Profiles workflow performance and calculates GPU cluster sizing requirements based on target users and workflow runtime. This configuration requires updating the `base_url` parameter to point to your NIM deployment.
+
+**Step 1: Collect profiling data**
+
+First, update the `base_url` in `sizing_config.yml` to point to your NIM instance, then run the sizing profiler to collect performance metrics at different concurrency levels:
+
+```bash
+nat sizing calc --config_file examples/frameworks/strands_demo/configs/sizing_config.yml \
+  --calc_output_dir /tmp/strands_demo/sizing_calc_run1/ \
+  --concurrencies 1,2,4,8,16,32 \
+  --num_passes 2
+```
+
+This command profiles the workflow at multiple concurrency levels (1, 2, 4, 8, 16, and 32 concurrent requests) with 2 passes for each level to establish baseline performance characteristics.
+
+**Step 2: Calculate GPU sizing for target workload**
+
+Use the profiling data to determine GPU requirements for your target user count and workflow runtime:
+
+```bash
+# For 100 concurrent users with 20-second target runtime
+nat sizing calc --offline_mode \
+  --calc_output_dir /tmp/strands_demo/sizing_calc_run1/ \
+  --test_gpu_count 8 \
+  --target_workflow_runtime 20 \
+  --target_users 100
+
+# For 25 concurrent users with 20-second target runtime
+nat sizing calc --offline_mode \
+  --calc_output_dir /tmp/strands_demo/sizing_calc_run1/ \
+  --test_gpu_count 8 \
+  --target_workflow_runtime 20 \
+  --target_users 25
+```
+
+**Parameters:**
+- `--offline_mode`: Uses previously collected profiling data
+- `--calc_output_dir`: Directory containing the profiling results
+- `--test_gpu_count`: Number of GPUs used during profiling (8 in this example)
+- `--target_workflow_runtime`: Desired workflow completion time in seconds
+- `--target_users`: Number of concurrent users to support
+
+The sizing calculator will output the recommended GPU count needed to meet your performance targets.
