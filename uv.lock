@@ -5656,6 +5656,15 @@ wheels = [
 ]
 
 [[package]]
+name = "nest-asyncio2"
+version = "1.6.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f2/e5/483e900c34a8a6144b544578b53483973ad34ca3e5d49f7e78367b9ca837/nest_asyncio2-1.6.1.tar.gz", hash = "sha256:809296f49d362f77b55020d94bdb61987f7c0ae198bd628c9fec4042860336ac", size = 7013, upload-time = "2025-11-18T15:56:44.177Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bb/6f/3abf81876809a7d9e0ae79655eef9634844b3053fdfba114fb1589e2119a/nest_asyncio2-1.6.1-py3-none-any.whl", hash = "sha256:c420e44030caada8e593b1b7a786eec7871742bb6d498a192317e7124a6e2102", size = 5803, upload-time = "2025-11-18T15:56:42.768Z" },
+]
+
+[[package]]
 name = "networkx"
 version = "3.5"
 source = { registry = "https://pypi.org/simple" }
@@ -5846,7 +5855,7 @@ dependencies = [
     { name = "jinja2" },
     { name = "jsonpath-ng" },
     { name = "mcp" },
-    { name = "nest-asyncio" },
+    { name = "nest-asyncio2" },
     { name = "networkx" },
     { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
@@ -6068,7 +6077,7 @@ requires-dist = [
     { name = "nat-simple-web-query-eval", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/simple_web_query_eval" },
     { name = "nat-swe-bench", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/swe_bench" },
     { name = "nat-user-report", marker = "extra == 'examples'", editable = "examples/object_store/user_report" },
-    { name = "nest-asyncio", specifier = "~=1.6" },
+    { name = "nest-asyncio2", specifier = "~=1.6" },
     { name = "networkx", specifier = "~=3.4" },
     { name = "numpy", marker = "python_full_version < '3.12'", specifier = "~=1.26" },
     { name = "numpy", marker = "python_full_version >= '3.12'", specifier = "~=2.3" },
