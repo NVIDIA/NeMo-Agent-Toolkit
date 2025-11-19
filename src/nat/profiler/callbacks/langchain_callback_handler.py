@@ -33,7 +33,6 @@ from nat.builder.context import Context
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
-from nat.data_models.intermediate_step import ServerToolUseSchema
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import ToolSchema
 from nat.data_models.intermediate_step import TraceMetadata
@@ -49,14 +48,7 @@ def _extract_tools_schema(invocation_params: dict) -> list:
     tools_schema = []
     if invocation_params is not None:
         for tool in invocation_params.get("tools", []):
-            try:
-                tools_schema.append(ToolSchema(**tool))
-            except Exception:
-                logger.debug(
-                    "Failed to parse tool schema from invocation params: %s. \n This "
-                    "can occur when the LLM server has native tools and can be ignored if "
-                    "using the responses API.",
-                    tool)
+            tools_schema.append(ToolSchema(**tool))
 
     return tools_schema
 
@@ -90,6 +82,34 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
                 f"\tCompletion Tokens: {self.completion_tokens}\n"
                 f"Successful Requests: {self.successful_requests}\n")
 
+    def __getstate__(self):
+        """Used for serializing instances"""
+
+        print(f"Serializing LangchainProfilerHandler {self.__dict__}")
+        # start with a copy so we don't accidentally modify the object state
+        # or cause other conflicts
+        state = self.__dict__.copy()
+
+        # remove unpicklable entries
+        del state["_lock"]
+        del state["step_manager"]
+        return state
+
+    def __setstate__(self, state):
+        """Used for deserializing"""
+        # restore the state which was picklable
+
+        print(f"Deserializing LangchainProfilerHandler {self.__dict__}")
+
+        if (getattr(self, "_lock", None) is None):
+            setattr(self, "_lock", threading.Lock())
+
+        with self._lock:
+            self.__dict__.update(state)
+
+            if (getattr(self, "step_manager", None) is None):
+                setattr(self, "step_manager", Context.get().intermediate_step_manager)
+
     @property
     def always_verbose(self) -> bool:
         """Whether to call verbose callbacks even if verbose is False."""
@@ -101,15 +121,11 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
             completion_tokens = usage_metadata.get("output_tokens", 0)
             total_tokens = usage_metadata.get("total_tokens", 0)
 
-            cache_tokens = usage_metadata.get("input_token_details", {}).get("cache_read", 0)
-
-            reasoning_tokens = usage_metadata.get("output_token_details", {}).get("reasoning", 0)
-
-            return TokenUsageBaseModel(prompt_tokens=prompt_tokens,
-                                       completion_tokens=completion_tokens,
-                                       total_tokens=total_tokens,
-                                       cached_tokens=cache_tokens,
-                                       reasoning_tokens=reasoning_tokens)
+            return TokenUsageBaseModel(
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                total_tokens=total_tokens,
+            )
         return TokenUsageBaseModel()
 
     async def on_llm_start(self, serialized: dict[str, Any], prompts: list[str], **kwargs: Any) -> None:
@@ -225,7 +241,6 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         except IndexError:
             generation = None
 
-        message = None
         if isinstance(generation, ChatGeneration):
             try:
                 message = generation.message
@@ -242,19 +257,11 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
                 # add tool calls if included in the output
                 tool_calls = generation.message.additional_kwargs['tool_calls']
                 llm_text_output = f"{llm_text_output}\n\nTool calls: {tool_calls}"
+            elif isinstance(message, AIMessage) and message.tool_calls:
+                tool_calls = message.tool_calls
+                llm_text_output = f"{llm_text_output}\n\nTool calls: {tool_calls}"
         else:
             llm_text_output = ""
-
-        tool_outputs_list = []
-        # Check if message.additional_kwargs as tool_outputs indicative of server side tool calling
-        if message and message.additional_kwargs and "tool_outputs" in message.additional_kwargs:
-            tools_outputs = message.additional_kwargs["tool_outputs"]
-            if isinstance(tools_outputs, list):
-                for tool in tools_outputs:
-                    try:
-                        tool_outputs_list.append(ServerToolUseSchema(**tool))
-                    except Exception:
-                        pass
 
         # update shared state behind lock
         with self._lock:
@@ -267,12 +274,94 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
                 data=StreamEventData(input=self._run_id_to_llm_input.get(str(kwargs.get("run_id", "")), ""),
                                      output=llm_text_output),
                 usage_info=UsageInfo(token_usage=self._extract_token_base_model(usage_metadata)),
-                metadata=TraceMetadata(chat_responses=[generation] if generation else [],
-                                       tool_outputs=tool_outputs_list if tool_outputs_list else []))
+                metadata=TraceMetadata(chat_responses=[generation] if generation else []))
 
             self.step_manager.push_intermediate_step(usage_stat)
 
         self._state = IntermediateStepType.LLM_END
+
+    async def on_llm_error(
+        self,
+        error: BaseException,
+        *,
+        run_id: UUID,
+        parent_run_id: UUID | None = None,
+        tags: list[str] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """Run when LLM errors.
+
+        Args:
+            error: The error that occurred.
+            run_id: The run ID. This is the ID of the current run.
+            parent_run_id: The parent run ID. This is the ID of the parent run.
+            tags: The tags.
+            kwargs (Any): Additional keyword arguments.
+                - response (LLMResult): The response which was generated before
+                    the error occurred.
+        """
+
+        logger.error("Error in LLM: %s", error)
+
+    # def on_llm_end(
+    #     self,
+    #     response: LLMResult,
+    #     *,
+    #     run_id: UUID,
+    #     parent_run_id: UUID | None = None,
+    #     **kwargs: Any,
+    # ) -> Any:
+    #     usage_metadata = {}
+
+    #     model_name = ""
+    #     try:
+    #         model_name = response.llm_output["model_name"]
+    #     except Exception as e:
+    #         try:
+    #             model_name = self._run_id_to_model_name.get(str(kwargs.get("run_id", "")), "")
+    #         except Exception as e_inner:
+    #             logger.exception("Error getting model name: %s from outer error %s", e_inner, e)
+
+    #     try:
+    #         generation = response.generations[0][0]
+    #     except IndexError:
+    #         generation = None
+
+    #     if isinstance(generation, ChatGeneration):
+    #         try:
+    #             message = generation.message
+    #             if isinstance(message, AIMessage):
+    #                 usage_metadata = message.usage_metadata
+    #             else:
+    #                 usage_metadata = {}
+    #         except AttributeError:
+    #             usage_metadata = {}
+
+    #     if generation:
+    #         llm_text_output = generation.message.content
+    #         if "tool_calls" in generation.message.additional_kwargs:
+    #             # add tool calls if included in the output
+    #             tool_calls = generation.message.additional_kwargs['tool_calls']
+    #             llm_text_output = f"{llm_text_output}\n\nTool calls: {tool_calls}"
+    #     else:
+    #         llm_text_output = ""
+
+    #     # update shared state behind lock
+    #     with self._lock:
+    #         usage_stat = IntermediateStepPayload(
+    #             span_event_timestamp=self._run_id_to_start_time.get(str(kwargs.get("run_id", "")), time.time()),
+    #             event_type=IntermediateStepType.LLM_END,
+    #             framework=LLMFrameworkEnum.LANGCHAIN,
+    #             name=model_name,
+    #             UUID=str(kwargs.get("run_id", str(uuid4()))),
+    #             data=StreamEventData(input=self._run_id_to_llm_input.get(str(kwargs.get("run_id", "")), ""),
+    #                                  output=llm_text_output),
+    #             usage_info=UsageInfo(token_usage=self._extract_token_base_model(usage_metadata)),
+    #             metadata=TraceMetadata(chat_responses=[generation] if generation else []))
+
+    #         self.step_manager.push_intermediate_step(usage_stat)
+
+    #     self._state = IntermediateStepType.LLM_END
 
     async def on_tool_start(
         self,
@@ -287,14 +376,15 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         **kwargs: Any,
     ) -> Any:
 
-        stats = IntermediateStepPayload(event_type=IntermediateStepType.TOOL_START,
-                                        framework=LLMFrameworkEnum.LANGCHAIN,
-                                        name=serialized.get("name", ""),
-                                        UUID=str(run_id),
-                                        data=StreamEventData(input=input_str),
-                                        metadata=TraceMetadata(tool_inputs=copy.deepcopy(inputs),
-                                                               tool_info=copy.deepcopy(serialized)),
-                                        usage_info=UsageInfo(token_usage=TokenUsageBaseModel()))
+        stats = IntermediateStepPayload(
+            event_type=IntermediateStepType.TOOL_START,
+            framework=LLMFrameworkEnum.LANGCHAIN,
+            name=serialized.get("name", ""),
+            UUID=str(run_id),
+            data=StreamEventData(input=input_str),
+            # metadata=TraceMetadata(tool_inputs=copy.deepcopy(inputs),
+            #                        tool_info=copy.deepcopy(serialized)),
+            usage_info=UsageInfo(token_usage=TokenUsageBaseModel()))
 
         self.step_manager.push_intermediate_step(stats)
         self._run_id_to_tool_input[str(run_id)] = input_str
