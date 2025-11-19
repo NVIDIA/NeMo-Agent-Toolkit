@@ -17,12 +17,14 @@ import logging
 
 import aioboto3
 from botocore.client import BaseClient
+from botocore.client import Config
 from botocore.exceptions import ClientError
 
 from nat.data_models.object_store import KeyAlreadyExistsError
 from nat.data_models.object_store import NoSuchKeyError
 from nat.object_store.interfaces import ObjectStore
 from nat.object_store.models import ObjectStoreItem
+from nat.object_store.models import ObjectStoreListItem
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +57,10 @@ class S3ObjectStore(ObjectStore):
             self._client_args["region_name"] = region
         if endpoint_url:
             self._client_args["endpoint_url"] = endpoint_url
+            # Use path-style addressing for non-AWS endpoints (MinIO, etc.) to avoid
+            # DNS-based virtual host lookups that fail for local endpoints
+            if 'amazonaws.com' not in endpoint_url.lower():
+                self._client_args["config"] = Config(s3={'addressing_style': 'path'})
 
     async def __aenter__(self) -> "S3ObjectStore":
 
@@ -164,3 +170,52 @@ class S3ObjectStore(ObjectStore):
 
         if results.get('DeleteMarker', False):
             raise NoSuchKeyError(key=key, additional_message="Object was a delete marker")
+
+    async def list_objects(self, prefix: str | None = None) -> list[ObjectStoreListItem]:
+        """
+        List objects in the S3 bucket, optionally filtered by key prefix.
+        """
+        if self._client is None:
+            raise RuntimeError("Connection not established")
+
+        objects = []
+
+        try:
+            paginator = self._client.get_paginator('list_objects_v2')
+
+            pagination_args = {"Bucket": self.bucket_name}
+            if prefix is not None:
+                pagination_args["Prefix"] = prefix
+
+            async for page in paginator.paginate(**pagination_args):
+
+                if 'Contents' not in page:
+                    continue
+
+                for obj in page['Contents']:
+                    key = obj['Key']
+
+                    if key.endswith('/'):
+                        continue
+
+                    try:
+                        head_response = await self._client.head_object(Bucket=self.bucket_name, Key=key)
+                        content_type = head_response.get('ContentType')
+                        metadata = head_response.get('Metadata', {})
+                    except ClientError as e:
+                        logger.warning(f"Failed to get metadata for {key}: {e}")
+                        content_type = None
+                        metadata = {}
+
+                    objects.append(
+                        ObjectStoreListItem(key=key,
+                                            size=obj.get('Size', 0),
+                                            content_type=content_type,
+                                            metadata=metadata if metadata else None,
+                                            last_modified=obj.get('LastModified')))
+
+        except ClientError as e:
+            logger.error(f"Error listing objects with prefix '{prefix}': {e}", exc_info=True)
+            raise RuntimeError(f"Failed to list objects: {str(e)}") from e
+
+        return objects

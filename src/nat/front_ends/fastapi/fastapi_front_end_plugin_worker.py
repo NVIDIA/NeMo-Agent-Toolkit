@@ -18,6 +18,7 @@ import json
 import logging
 import os
 import typing
+import uuid
 from abc import ABC
 from abc import abstractmethod
 from collections.abc import Awaitable
@@ -29,6 +30,8 @@ import httpx
 from authlib.common.errors import AuthlibBaseError as OAuthError
 from fastapi import Body
 from fastapi import FastAPI
+from fastapi import File
+from fastapi import Form
 from fastapi import HTTPException
 from fastapi import Request
 from fastapi import Response
@@ -304,6 +307,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         await self.add_evaluate_route(app, SessionManager(await builder.build()))
         await self.add_evaluate_item_route(app, SessionManager(await builder.build()))
         await self.add_static_files_route(app, builder)
+        await self.add_video_upload_route(app, builder)
         await self.add_authorization_route(app)
         await self.add_mcp_client_tool_list_route(app, builder)
 
@@ -656,6 +660,121 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             methods=["DELETE"],
             description="Delete a static file from the object store",
         )
+
+    async def add_video_upload_route(self, app: FastAPI, builder: WorkflowBuilder):
+        """
+        This endpoint allows uploading video files to the configured object store.
+        Videos are stored with unique keys in a 'videos/' prefix
+        """
+
+        if not self.front_end_config.object_store:
+            logger.debug("No object store configured, skipping video upload route")
+            return
+
+        # Get the object store client
+        object_store_client = await builder.get_object_store_client(self.front_end_config.object_store)
+
+        async def upload_video(file: UploadFile = File(...), metadata: str | None = Form(None)):
+            if not file.content_type or not file.content_type.startswith('video/'):
+                raise HTTPException(status_code=400,
+                                    detail="File must be a video. Content type must start with 'video/'")
+            file_data = await file.read()
+
+            video_uuid = str(uuid.uuid4())
+            safe_filename = file.filename or "video"
+
+            # Sanitize filename to avoid path traversal issues
+            safe_filename = os.path.basename(safe_filename)
+            video_key = f"videos/{video_uuid}/{safe_filename}"
+
+            video_metadata = {
+                "original_filename": file.filename or "",
+                "upload_metadata": metadata or "",
+            }
+
+            try:
+                await object_store_client.put_object(
+                    video_key, ObjectStoreItem(data=file_data, content_type=file.content_type, metadata=video_metadata))
+            except KeyAlreadyExistsError as e:
+                raise HTTPException(status_code=409, detail=str(e)) from e
+            except Exception as e:
+                logger.error(f"Error uploading video: {e}", exc_info=True)
+                raise HTTPException(status_code=500, detail=f"Failed to upload video: {str(e)}") from e
+
+            return {
+                "video_key": video_key,
+                "filename": file.filename,
+                "content_type": file.content_type,
+                "size": len(file_data),
+                "uuid": video_uuid
+            }
+
+        app.add_api_route(path="/videos",
+                          endpoint=upload_video,
+                          methods=["POST"],
+                          description="Upload a video file to the object store")
+
+        async def list_videos():
+            """List all videos in the object store"""
+            try:
+                video_objects = await object_store_client.list_objects(prefix="videos/")
+
+                videos = []
+                for obj in video_objects:
+                    # Extract UUID and filename from path: videos/{uuid}/{filename}
+                    parts = obj.key.split('/')
+                    if len(parts) >= 3 and parts[0] == 'videos':
+                        video_uuid = parts[1]
+                        filename = '/'.join(parts[2:])
+
+                        videos.append({
+                            "video_key": obj.key,
+                            "filename": filename,
+                            "content_type": obj.content_type or "video/mp4",
+                            "size": obj.size,
+                            "uuid": video_uuid,
+                            "uploaded_at": obj.last_modified.isoformat() if obj.last_modified else None
+                        })
+
+                # Sort by uploaded_at descending
+                videos.sort(key=lambda x: x.get('uploaded_at') or '', reverse=True)
+                return {"videos": videos}
+            except Exception as e:
+                logger.error(f"Error listing videos: {e}", exc_info=True)
+                raise HTTPException(status_code=500, detail=f"Failed to list videos: {str(e)}") from e
+
+        app.add_api_route(path="/videos",
+                          endpoint=list_videos,
+                          methods=["GET"],
+                          description="List all videos in the object store")
+
+        async def delete_video(video_key: str):
+            """Delete a video from the object store"""
+
+            if not video_key.startswith('videos/'):
+                raise HTTPException(status_code=400, detail="Invalid video key. Must start with 'videos/'")
+
+            try:
+                try:
+                    await object_store_client.delete_object(video_key)
+                except NoSuchKeyError:
+                    logger.info(f"Video {video_key} not found during delete - treating as success (idempotent)")
+                    return {"message": "Video deleted successfully (was already deleted)", "video_key": video_key}
+
+                return {"message": "Video deleted successfully", "video_key": video_key}
+            except NoSuchKeyError as e:
+                logger.info(f"Video {video_key} not found: {e}")
+                return {"message": "Video deleted successfully (was already deleted)", "video_key": video_key}
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"Error deleting video {video_key}: {e}", exc_info=True)
+                raise HTTPException(status_code=500, detail=f"Failed to delete video: {str(e)}") from e
+
+        app.add_api_route(path="/videos/{video_key:path}",
+                          endpoint=delete_video,
+                          methods=["DELETE"],
+                          description="Delete a video from the object store")
 
     async def add_route(self,
                         app: FastAPI,

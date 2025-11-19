@@ -24,6 +24,7 @@ from nat.utils.type_utils import override
 
 from .interfaces import ObjectStore
 from .models import ObjectStoreItem
+from .models import ObjectStoreListItem
 
 
 class InMemoryObjectStoreConfig(ObjectStoreBaseConfig, name="in_memory"):
@@ -69,6 +70,29 @@ class InMemoryObjectStore(ObjectStore):
                 self._store.pop(key)
         except KeyError:
             raise NoSuchKeyError(key)
+
+    @override
+    async def list_objects(self, prefix: str | None = None) -> list[ObjectStoreListItem]:
+        """
+        List objects in the in-memory store, optionally filtered by key prefix.
+        """
+        async with self._lock:
+            result = []
+            for key, item in self._store.items():
+                if prefix is not None and not key.startswith(prefix):
+                    continue
+
+                if key.endswith('/'):
+                    continue
+
+                result.append(
+                    ObjectStoreListItem(key=key,
+                                        size=len(item.data),
+                                        content_type=item.content_type,
+                                        metadata=item.metadata,
+                                        last_modified=None))
+
+            return result
 
 
 @register_object_store(config_type=InMemoryObjectStoreConfig)
