@@ -42,7 +42,6 @@ class RagaAICatalystExporter(RagaAICatalystMixin, OtelSpanExporter):
         project: Project name for trace grouping
         dataset: Dataset name for trace organization
         tracer_type: RagaAI Catalyst tracer type.
-        external_id: An optional external ID to associate with traces.
         debug_mode: When False (default), creates local rag_agent_traces.json file. When True, skips local file
         creation for cleaner operation.
         batch_size: Batch size for exporting
