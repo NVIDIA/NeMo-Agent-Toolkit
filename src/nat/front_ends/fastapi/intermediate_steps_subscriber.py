@@ -32,6 +32,7 @@ async def pull_intermediate(_q, adapter):
     intermediate_done = asyncio.Event()
     context = Context.get()
     loop = asyncio.get_running_loop()
+    trace_id_emitted = False
 
     async def set_intermediate_done():
         intermediate_done.set()
@@ -43,15 +44,22 @@ async def pull_intermediate(_q, adapter):
         If adapter is None, convert the raw IntermediateStep into the complete
         ResponseIntermediateStep and place it into the queue.
         """
-        if adapter is None:
-            observability_trace_id = context.observability_trace_id
+        nonlocal trace_id_emitted
 
+        # Check if trace ID is now available and emit it once
+        if not trace_id_emitted:
+            observability_trace_id = context.observability_trace_id
+            if observability_trace_id:
+                from nat.data_models.api_server import ResponseObservabilityTrace
+                loop.create_task(_q.put(ResponseObservabilityTrace(observability_trace_id=observability_trace_id)))
+                trace_id_emitted = True
+
+        if adapter is None:
             adapted = ResponseIntermediateStep(id=item.UUID,
                                                type=item.event_type,
                                                name=item.name or "",
                                                parent_id=item.parent_id,
-                                               payload=item.payload.model_dump_json(),
-                                               observability_trace_id=observability_trace_id)
+                                               payload=item.payload.model_dump_json())
         else:
             adapted = adapter.process(item)
 
