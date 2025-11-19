@@ -14,7 +14,9 @@
 # limitations under the License.
 
 import asyncio
+import importlib
 import json
+import os
 import random
 import time
 import types
@@ -74,6 +76,23 @@ def fixture_weave_project_name() -> str:
 @pytest.fixture(name="weave_query")
 def fixture_weave_query(weave_attribute_key: str, weave_identifier: str) -> dict:
     return {"$expr": {"$eq": [{"$getField": f"attributes.{weave_attribute_key}"}, {"$literal": weave_identifier}]}}
+
+
+@pytest.fixture(name="aiq_compatibility_span_prefix")
+def aiq_compatibility_span_prefix_fixture():
+    from nat.data_models import span
+
+    orig_span_prefix = os.environ.get("NAT_SPAN_PREFIX")
+    os.environ["NAT_SPAN_PREFIX"] = "aiq"
+    importlib.reload(span)
+    yield
+
+    if orig_span_prefix is not None:
+        os.environ["NAT_SPAN_PREFIX"] = orig_span_prefix
+    else:
+        del os.environ["NAT_SPAN_PREFIX"]
+
+    importlib.reload(span)
 
 
 @pytest.fixture(name="weave_client")
@@ -216,3 +235,30 @@ async def test_galileo_full_workflow(config_dir: Path,
 
     spans = galileo.search.get_spans(project_id=galileo_project.id, log_stream_id=galileo_log_stream.id)
     assert len(spans.records) > 1
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("catalyst_keys", "aiq_compatibility_span_prefix")
+async def test_catalyst_full_workflow(config_dir: Path,
+                                      catalyst_project_name,
+                                      catalyst_dataset_name,
+                                      question: str,
+                                      expected_answer: str):
+    config_file = config_dir / "config-catalyst.yml"
+    config = load_config(config_file)
+    config.general.telemetry.tracing["catalyst"].project = catalyst_project_name
+    config.general.telemetry.tracing["catalyst"].dataset = catalyst_dataset_name
+
+    await run_workflow(config=config, question=question, expected_answer=expected_answer)
+
+    from ragaai_catalyst import Dataset
+    ds = Dataset(catalyst_project_name)
+
+    dataset_found = False
+    deadline = time.time() + 10
+    while not dataset_found and time.time() < deadline:
+        # Wait for traces to be ingested
+        await asyncio.sleep(0.5)
+        dataset_found = catalyst_dataset_name in ds.list_datasets()
+
+    assert dataset_found
