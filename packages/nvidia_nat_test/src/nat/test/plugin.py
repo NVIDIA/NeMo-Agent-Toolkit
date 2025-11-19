@@ -30,7 +30,6 @@ if typing.TYPE_CHECKING:
     import galileo.log_streams
     import galileo.projects
     import langsmith.client
-
     from docker.client import DockerClient
 
 
@@ -345,6 +344,18 @@ def galileo_log_stream_fixture(galileo_project: "galileo.projects.Project") -> "
     """
     import galileo.log_streams
     return galileo.log_streams.create_log_stream(project_id=galileo_project.id, name="test")
+
+
+@pytest.fixture(name="catalyst_keys", scope='session')
+def catalyst_keys_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require RagaAI Catalyst credentials.
+    """
+    yield require_env_variables(
+        varnames=["CATALYST_ACCESS_KEY", "CATALYST_SECRET_KEY"],
+        reason="Catalyst integration tests require the `CATALYST_ACCESS_KEY` and `CATALYST_SECRET_KEY` environment "
+        "variables to be defined.",
+        fail_missing=fail_missing)
 
 
 @pytest.fixture(name="require_docker", scope='session')
