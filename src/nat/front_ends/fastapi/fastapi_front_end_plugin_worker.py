@@ -688,9 +688,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         registration = registry.get_function(config_type)
 
-        GenerateBodyType = registration.declared_input_schema
-        GenerateStreamResponseType = registration.declared_streaming_output_schema
-        GenerateSingleResponseType = registration.declared_output_schema
+        GenerateBodyType = registration.per_user_function_input_schema
+        GenerateStreamResponseType = registration.per_user_function_streaming_output_schema
+        GenerateSingleResponseType = registration.per_user_function_single_output_schema
 
         # Skip async generation for custom routes (those with function_name)
         if self._dask_available and not hasattr(endpoint, 'function_name'):

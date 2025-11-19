@@ -244,9 +244,9 @@ def register_per_user_function(config_type: type[FunctionConfigT],
                                    build_fn=per_user_build_fn,
                                    framework_wrappers=framework_wrappers_list,
                                    discovery_metadata=discovery_metadata,
-                                   declared_input_schema=input_schema,
-                                   declared_output_schema=single_output_schema,
-                                   declared_streaming_output_schema=streaming_output_schema))
+                                   per_user_function_input_schema=input_schema,
+                                   per_user_function_single_output_schema=single_output_schema,
+                                   per_user_function_streaming_output_schema=streaming_output_schema))
         return per_user_build_fn
 
     return register_per_user_function_inner
