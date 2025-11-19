@@ -829,7 +829,7 @@ def import_adk_early():
     Since ADK is an optional dependency, we will ignore any import errors.
     """
     try:
-        import google.adk.tools.function_tool
+        import google.adk
     except ImportError:
         pass
 
