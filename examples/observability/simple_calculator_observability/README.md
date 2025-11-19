@@ -228,6 +228,12 @@ Transmit traces to RagaAI Catalyst.
     export CATALYST_ENDPOINT=<your_endpoint>
     ```
 
+3. Set the NAT_SPAN_PREFIX environment variable to `aiq` for RagaAI Catalyst compatibility:
+
+    ```bash
+    export NAT_SPAN_PREFIX=aiq
+    ```
+
 3. Run the workflow:
 
     ```bash
