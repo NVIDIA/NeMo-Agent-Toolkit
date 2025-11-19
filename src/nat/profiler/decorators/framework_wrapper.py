@@ -34,6 +34,7 @@ _library_instrumented = {
     "semantic_kernel": False,
     "agno": False,
     "adk": False,
+    "strands": False,
 }
 
 callback_handler_var: ContextVar[Any | None] = ContextVar("callback_handler_var", default=None)
@@ -130,6 +131,21 @@ def set_framework_profiler_handler(
                     handler.instrument()
                     _library_instrumented["adk"] = True
                     logger.debug("ADK callback handler registered")
+
+            if (LLMFrameworkEnum.STRANDS in frameworks and not _library_instrumented["strands"]):
+                try:
+                    from nat.plugins.strands.strands_callback_handler import StrandsProfilerHandler
+                except ImportError as e:
+                    logger.warning(
+                        "Strands profiler not available. Install NAT with Strands extras: "
+                        "pip install \"nvidia-nat[strands]\". Error: %s",
+                        e,
+                    )
+                else:
+                    handler = StrandsProfilerHandler()
+                    handler.instrument()
+                    _library_instrumented["strands"] = True
+                    logger.debug("Strands callback handler registered")
 
             # IMPORTANT: actually call the wrapped function as an async context manager
             async with func(workflow_config, builder) as result:
