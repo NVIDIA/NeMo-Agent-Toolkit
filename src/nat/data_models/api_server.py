@@ -351,7 +351,6 @@ class ChatResponse(ResponseBaseModelOutput):
     usage: Usage
     system_fingerprint: str | None = None
     service_tier: typing.Literal["scale", "default"] | None = None
-    observability_trace_id: str | None = None
 
     @field_serializer('created')
     def serialize_created(self, created: datetime.datetime) -> int:
@@ -365,8 +364,7 @@ class ChatResponse(ResponseBaseModelOutput):
                     object_: str | None = None,
                     model: str | None = None,
                     created: datetime.datetime | None = None,
-                    usage: Usage,
-                    observability_trace_id: str | None = None) -> "ChatResponse":
+                    usage: Usage) -> "ChatResponse":
 
         if id_ is None:
             id_ = str(uuid.uuid4())
@@ -376,12 +374,6 @@ class ChatResponse(ResponseBaseModelOutput):
             model = "unknown-model"
         if created is None:
             created = datetime.datetime.now(datetime.UTC)
-        if observability_trace_id is None:
-            try:
-                from nat.builder.context import Context
-                observability_trace_id = Context.get().observability_trace_id
-            except Exception:
-                pass
 
         return ChatResponse(id=id_,
                             object=object_,
@@ -393,8 +385,7 @@ class ChatResponse(ResponseBaseModelOutput):
                                                                          role=UserMessageContentRoleType.ASSISTANT),
                                                    finish_reason="stop")
                             ],
-                            usage=usage,
-                            observability_trace_id=observability_trace_id)
+                            usage=usage)
 
 
 class ChatResponseChunk(ResponseBaseModelOutput):
@@ -414,7 +405,6 @@ class ChatResponseChunk(ResponseBaseModelOutput):
     system_fingerprint: str | None = None
     service_tier: typing.Literal["scale", "default"] | None = None
     usage: Usage | None = None
-    observability_trace_id: str | None = None
 
     @field_serializer('created')
     def serialize_created(self, created: datetime.datetime) -> int:
@@ -427,8 +417,7 @@ class ChatResponseChunk(ResponseBaseModelOutput):
                     id_: str | None = None,
                     created: datetime.datetime | None = None,
                     model: str | None = None,
-                    object_: str | None = None,
-                    observability_trace_id: str | None = None) -> "ChatResponseChunk":
+                    object_: str | None = None) -> "ChatResponseChunk":
 
         if id_ is None:
             id_ = str(uuid.uuid4())
@@ -438,12 +427,6 @@ class ChatResponseChunk(ResponseBaseModelOutput):
             model = "unknown-model"
         if object_ is None:
             object_ = "chat.completion.chunk"
-        if observability_trace_id is None:
-            try:
-                from nat.builder.context import Context
-                observability_trace_id = Context.get().observability_trace_id
-            except Exception:
-                pass
 
         return ChatResponseChunk(id=id_,
                                  choices=[
@@ -455,8 +438,7 @@ class ChatResponseChunk(ResponseBaseModelOutput):
                                  ],
                                  created=created,
                                  model=model,
-                                 object=object_,
-                                 observability_trace_id=observability_trace_id)
+                                 object=object_)
 
     @staticmethod
     def create_streaming_chunk(content: str,
@@ -467,8 +449,7 @@ class ChatResponseChunk(ResponseBaseModelOutput):
                                role: UserMessageContentRoleType | None = None,
                                finish_reason: str | None = None,
                                usage: Usage | None = None,
-                               system_fingerprint: str | None = None,
-                               observability_trace_id: str | None = None) -> "ChatResponseChunk":
+                               system_fingerprint: str | None = None) -> "ChatResponseChunk":
         """Create an OpenAI-compatible streaming chunk"""
         if id_ is None:
             id_ = str(uuid.uuid4())
@@ -476,12 +457,6 @@ class ChatResponseChunk(ResponseBaseModelOutput):
             created = datetime.datetime.now(datetime.UTC)
         if model is None:
             model = "unknown-model"
-        if observability_trace_id is None:
-            try:
-                from nat.builder.context import Context
-                observability_trace_id = Context.get().observability_trace_id
-            except Exception:
-                pass
 
         delta = ChoiceDelta(content=content, role=role) if content is not None or role is not None else ChoiceDelta()
 
@@ -501,8 +476,7 @@ class ChatResponseChunk(ResponseBaseModelOutput):
             model=model,
             object="chat.completion.chunk",
             usage=usage,
-            system_fingerprint=system_fingerprint,
-            observability_trace_id=observability_trace_id)
+            system_fingerprint=system_fingerprint)
 
 
 class ResponseIntermediateStep(ResponseBaseModelIntermediate):
@@ -518,7 +492,18 @@ class ResponseIntermediateStep(ResponseBaseModelIntermediate):
     type: str = "markdown"
     name: str
     payload: str
-    observability_trace_id: str | None = None
+
+
+class ResponseObservabilityTrace(BaseModel, ResponseSerializable):
+    """
+    ResponseObservabilityTrace is a data model that represents an observability trace event
+    sent once when the trace ID becomes available, following the same pattern as intermediate_data.
+    """
+
+    observability_trace_id: str
+
+    def get_stream_data(self) -> str:
+        return f"observability_trace: {self.model_dump_json()}\n\n"
 
 
 class ResponsePayloadOutput(BaseModel, ResponseSerializable):
@@ -670,7 +655,6 @@ class WebSocketSystemIntermediateStepMessage(BaseModel):
     content: SystemIntermediateStepContent
     status: WebSocketMessageStatus
     timestamp: str = str(datetime.datetime.now(datetime.UTC))
-    observability_trace_id: str | None = None
 
 
 class SystemResponseContent(BaseModel):
@@ -695,7 +679,6 @@ class WebSocketSystemResponseTokenMessage(BaseModel):
     content: SystemResponseContent | Error | GenerateResponse
     status: WebSocketMessageStatus
     timestamp: str = str(datetime.datetime.now(datetime.UTC))
-    observability_trace_id: str | None = None
 
     @field_validator("content")
     @classmethod
@@ -727,7 +710,6 @@ class WebSocketSystemInteractionMessage(BaseModel):
     content: HumanPrompt
     status: WebSocketMessageStatus
     timestamp: str = str(datetime.datetime.now(datetime.UTC))
-    observability_trace_id: str | None = None
 
 
 # ======== GenerateResponse Converters ========

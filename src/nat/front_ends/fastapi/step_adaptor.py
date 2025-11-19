@@ -39,11 +39,6 @@ class StepAdaptor:
         self._history: list[IntermediateStep] = []
         self.config = config
 
-    def _get_observability_trace_id(self) -> str | None:
-        """Retrieve observability_trace_id from context."""
-        from nat.builder.context import Context
-        return Context.get().observability_trace_id
-
     def _step_matches_filter(self, step: IntermediateStep, config: StepAdaptorConfig) -> bool:
         """
         Returns True if this intermediate step should be included (based on the config.mode).
@@ -121,8 +116,7 @@ class StepAdaptor:
         event = ResponseIntermediateStep(id=step.UUID,
                                          name=step.name or "",
                                          payload=payload,
-                                         parent_id=ancestry.function_id,
-                                         observability_trace_id=self._get_observability_trace_id())
+                                         parent_id=ancestry.function_id)
 
         return event
 
@@ -177,8 +171,7 @@ class StepAdaptor:
         event = ResponseIntermediateStep(id=step.UUID,
                                          name=f"Tool: {step.name}",
                                          payload=payload,
-                                         parent_id=ancestry.function_id,
-                                         observability_trace_id=self._get_observability_trace_id())
+                                         parent_id=ancestry.function_id)
 
         return event
 
@@ -213,8 +206,7 @@ class StepAdaptor:
             event = ResponseIntermediateStep(id=step.UUID,
                                              name=f"Function Start: {step.name}",
                                              payload=payload_str,
-                                             parent_id=ancestry.parent_id,
-                                             observability_trace_id=self._get_observability_trace_id())
+                                             parent_id=ancestry.parent_id)
             return event
 
         if step.event_type == IntermediateStepType.FUNCTION_END:
@@ -267,8 +259,7 @@ class StepAdaptor:
             event = ResponseIntermediateStep(id=step.UUID,
                                              name=f"Function Complete: {step.name}",
                                              payload=payload_str,
-                                             parent_id=ancestry.parent_id,
-                                             observability_trace_id=self._get_observability_trace_id())
+                                             parent_id=ancestry.parent_id)
             return event
 
         return None
@@ -294,8 +285,7 @@ class StepAdaptor:
         event = ResponseIntermediateStep(id=payload.UUID,
                                          name=f"{payload.event_type}",
                                          payload=payload_str,
-                                         parent_id=ancestry.function_id,
-                                         observability_trace_id=self._get_observability_trace_id())
+                                         parent_id=ancestry.function_id)
 
         return event
 

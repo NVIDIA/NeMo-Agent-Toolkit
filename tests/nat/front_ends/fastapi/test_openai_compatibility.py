@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import patch
-
 import pytest
 from httpx_sse import aconnect_sse
 
@@ -148,48 +146,6 @@ def test_nat_chat_response_chunk_create_streaming_chunk():
     assert chunk.choices[0].finish_reason == "stop"
 
 
-def test_nat_chat_response_chunk_create_streaming_chunk_with_observability_id():
-    """Test create_streaming_chunk method with observability_trace_id"""
-    # Test with explicit observability_trace_id
-    chunk = ChatResponseChunk.create_streaming_chunk(content="Hello with observability",
-                                                     role=UserMessageContentRoleType.ASSISTANT,
-                                                     observability_trace_id="explicit-observability-id")
-
-    assert chunk.choices[0].delta.content == "Hello with observability"
-    assert chunk.choices[0].delta.role == UserMessageContentRoleType.ASSISTANT
-    assert chunk.observability_trace_id == "explicit-observability-id"
-    assert chunk.object == "chat.completion.chunk"
-
-    # Test with context-based observability_trace_id
-    with patch('nat.builder.context.Context.get') as mock_context:
-        mock_context.return_value.observability_trace_id = "context-observability-id"
-
-        chunk = ChatResponseChunk.create_streaming_chunk(content="Hello from context",
-                                                         role=UserMessageContentRoleType.ASSISTANT)
-
-        assert chunk.choices[0].delta.content == "Hello from context"
-        assert chunk.observability_trace_id == "context-observability-id"
-
-
-def test_nat_chat_response_chunk_from_string_with_observability_id():
-    """Test ChatResponseChunk.from_string method with observability_trace_id"""
-    # Test with explicit observability_trace_id
-    chunk = ChatResponseChunk.from_string("Hello", observability_trace_id="explicit-chunk-observability-id")
-
-    assert chunk.observability_trace_id == "explicit-chunk-observability-id"
-    assert chunk.object == "chat.completion.chunk"
-    assert chunk.choices[0].delta.content == "Hello"
-
-    # Test with context-based observability_trace_id
-    with patch('nat.builder.context.Context.get') as mock_context:
-        mock_context.return_value.observability_trace_id = "context-chunk-observability-id"
-
-        chunk = ChatResponseChunk.from_string("Hello from context")
-
-        assert chunk.observability_trace_id == "context-chunk-observability-id"
-        assert chunk.choices[0].delta.content == "Hello from context"
-
-
 def test_nat_chat_response_timestamp_serialization():
     """Test that timestamps are serialized as Unix timestamps for OpenAI compatibility"""
     import datetime
@@ -210,59 +166,6 @@ def test_nat_chat_response_timestamp_serialization():
     chunk = ChatResponseChunk.from_string("Hello", created=test_time)
     chunk_json = chunk.model_dump()
     assert chunk_json["created"] == 1704110400
-
-
-def test_nat_chat_response_from_string_with_observability_id():
-    """Test ChatResponse.from_string method with observability_trace_id integration"""
-    # Test with explicit observability_trace_id
-    usage = Usage(prompt_tokens=1, completion_tokens=1, total_tokens=2)
-    response = ChatResponse.from_string("Hello with observability",
-                                        usage=usage,
-                                        observability_trace_id="explicit-response-observability-id")
-
-    assert response.choices[0].message.content == "Hello with observability"
-    assert response.observability_trace_id == "explicit-response-observability-id"
-    assert response.object == "chat.completion"
-
-    # Test with context-based observability_trace_id
-    with patch('nat.builder.context.Context.get') as mock_context:
-        mock_context.return_value.observability_trace_id = "context-response-observability-id"
-
-        response = ChatResponse.from_string("Hello from context", usage=usage)
-
-        assert response.choices[0].message.content == "Hello from context"
-        assert response.observability_trace_id == "context-response-observability-id"
-
-    # Test fallback behavior when context is unavailable
-    with patch('nat.builder.context.Context.get', side_effect=Exception("No context")):
-        response = ChatResponse.from_string("Hello without context", usage=usage)
-
-        assert response.choices[0].message.content == "Hello without context"
-        assert response.observability_trace_id is None
-
-
-def test_nat_openai_compatibility_observability_id_serialization():
-    """Test that observability_trace_id is properly serialized in OpenAI-compatible responses"""
-    # Test ChatResponse serialization with observability_trace_id
-    usage = Usage(prompt_tokens=1, completion_tokens=1, total_tokens=2)
-    response = ChatResponse.from_string("Test response",
-                                        usage=usage,
-                                        observability_trace_id="serialization-test-observability-id")
-
-    json_data = response.model_dump()
-    assert json_data["observability_trace_id"] == "serialization-test-observability-id"
-    assert "choices" in json_data
-    assert "usage" in json_data
-
-    # Test ChatResponseChunk serialization with observability_trace_id
-    chunk = ChatResponseChunk.create_streaming_chunk(content="Test chunk",
-                                                     role=UserMessageContentRoleType.ASSISTANT,
-                                                     observability_trace_id="chunk-serialization-observability-id")
-
-    chunk_json = chunk.model_dump()
-    assert chunk_json["observability_trace_id"] == "chunk-serialization-observability-id"
-    assert chunk_json["object"] == "chat.completion.chunk"
-    assert "choices" in chunk_json
 
 
 @pytest.mark.parametrize("openai_api_v1_path", ["/v1/chat/completions", None])

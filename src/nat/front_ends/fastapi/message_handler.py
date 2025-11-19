@@ -226,17 +226,13 @@ class WebSocketMessageHandler:
 
             content: BaseModel = await self._message_validator.convert_data_to_message_content(data_model)
 
-            # Extract observability_trace_id from source data_model if available
-            observability_trace_id = getattr(data_model, 'observability_trace_id', None)
-
             if issubclass(message_schema, WebSocketSystemResponseTokenMessage):
                 message = await self._message_validator.create_system_response_token_message(
                     message_id=message_id,
                     parent_id=self._message_parent_id,
                     conversation_id=self._conversation_id,
                     content=content,
-                    status=status,
-                    observability_trace_id=observability_trace_id)
+                    status=status)
 
             elif issubclass(message_schema, WebSocketSystemIntermediateStepMessage):
                 message = await self._message_validator.create_system_intermediate_step_message(
@@ -244,8 +240,7 @@ class WebSocketMessageHandler:
                     parent_id=await self._message_validator.get_intermediate_step_parent_id(data_model),
                     conversation_id=self._conversation_id,
                     content=content,
-                    status=status,
-                    observability_trace_id=observability_trace_id)
+                    status=status)
 
             elif issubclass(message_schema, WebSocketSystemInteractionMessage):
                 message = await self._message_validator.create_system_interaction_message(
@@ -253,8 +248,7 @@ class WebSocketMessageHandler:
                     parent_id=self._message_parent_id,
                     conversation_id=self._conversation_id,
                     content=content,
-                    status=status,
-                    observability_trace_id=observability_trace_id)
+                    status=status)
 
             elif isinstance(content, Error):
                 raise ValidationError(f"Invalid input data creating websocket message. {data_model.model_dump_json()}")
