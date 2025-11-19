@@ -35,6 +35,7 @@ class CatalystTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, Telemetr
     secret_key: SerializableSecretStr = Field(description="The RagaAI Catalyst API secret key", default="")
     dataset: str | None = Field(description="The RagaAI Catalyst dataset name", default=None)
     tracer_type: str = Field(description="The RagaAI Catalyst tracer type", default="agentic/nemo-framework")
+    external_id: str | None = Field(description="An optional external ID to associate with traces", default=None)
 
     # Debug mode control options
     debug_mode: bool = Field(description="When False (default), creates local rag_agent_traces.json file. "
@@ -65,6 +66,7 @@ async def catalyst_telemetry_exporter(config: CatalystTelemetryExporter, builder
                                      project=config.project,
                                      dataset=config.dataset,
                                      tracer_type=config.tracer_type,
+                                     external_id=config.external_id,
                                      debug_mode=config.debug_mode,
                                      batch_size=config.batch_size,
                                      flush_interval=config.flush_interval,

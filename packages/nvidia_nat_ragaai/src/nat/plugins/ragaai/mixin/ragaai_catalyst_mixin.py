@@ -204,6 +204,7 @@ class RagaAICatalystMixin:
                  project: str,
                  dataset: str,
                  tracer_type: str,
+                 external_id: str | None = None,
                  debug_mode: bool = False,
                  **kwargs):
         """Initialize the RagaAI Catalyst exporter.
@@ -215,6 +216,7 @@ class RagaAICatalystMixin:
             project: RagaAI Catalyst project name.
             dataset: RagaAI Catalyst dataset name.
             tracer_type: RagaAI Catalyst tracer type.
+            external_id: An optional external ID to associate with traces.
             debug_mode: When False (default), creates local rag_agent_traces.json file. When True, skips local file
             creation for cleaner operation.
             kwargs: Additional keyword arguments passed to parent classes.
@@ -224,7 +226,12 @@ class RagaAICatalystMixin:
         ragaai_catalyst.RagaAICatalyst(access_key=access_key, secret_key=secret_key, base_url=base_url)
 
         # Create the DynamicTraceExporter (this will trigger our hook)
-        self._exporter = DynamicTraceExporterOptWrite(project, dataset, base_url, tracer_type, debug_mode=debug_mode)
+        self._exporter = DynamicTraceExporterOptWrite(project,
+                                                      dataset,
+                                                      base_url,
+                                                      tracer_type,
+                                                      external_id=external_id,
+                                                      debug_mode=debug_mode)
 
         super().__init__(*args, **kwargs)
 
