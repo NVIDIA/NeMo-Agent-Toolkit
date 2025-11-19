@@ -548,10 +548,18 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         endpoint: FastApiFrontEndConfig.EndpointBase,
                         session_manager: SessionManager):
 
-        # After migrating to lazy loading workflow, the types can not be inferred at this point.
-        GenerateBodyType = dict
-        GenerateStreamResponseType = dict
-        GenerateSingleResponseType = dict
+        # Extract schemas from TypeRegistry
+        workflow_config = session_manager.config.workflow
+        config_type = type(workflow_config)
+
+        from nat.cli.type_registry import GlobalTypeRegistry
+        registry = GlobalTypeRegistry.get()
+
+        registration = registry.get_function(config_type)
+
+        GenerateBodyType = registration.declared_input_schema
+        GenerateStreamResponseType = registration.declared_streaming_output_schema
+        GenerateSingleResponseType = registration.declared_output_schema
 
         # Skip async generation for custom routes (those with function_name)
         if self._dask_available and not hasattr(endpoint, 'function_name'):
