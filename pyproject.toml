@@ -46,7 +46,7 @@ dependencies = [
   "python-dotenv~=1.1.1",
   "PyYAML~=6.0",
   "ragas~=0.2.14", # If you update ragas be sure to update github links in docs/source/workflows/evaluate.md as well
-  "rich~=13.9",
+  "rich>=14.0.0,<15.0.0",  # Upgraded from ~=13.9 to support strands-agents-tools (requires >=14.0.0,<15.0.0)
   "tabulate~=0.9",
   "uvicorn[standard]~=0.38",
   "wikipedia~=1.4",
@@ -90,6 +90,7 @@ mysql = ["nvidia-nat-mysql"]
 redis = ["nvidia-nat-redis"]
 s3 = ["nvidia-nat-s3"]
 semantic-kernel = ["nvidia-nat-semantic-kernel"]
+strands = ["nvidia-nat-strands"]
 telemetry = [
   "nvidia-nat-data-flywheel",
   "nvidia-nat-opentelemetry",
@@ -128,6 +129,7 @@ examples = [
   "nat_simple_calculator_observability",
   "nat_simple_calculator_hitl",
   "nat_simple_rag",
+  "nat_strands_demo",
   "nat_swe_bench",
   "nat_user_report",
 ]
@@ -159,6 +161,12 @@ openai = [
 [tool.uv]
 managed = true
 config-settings = { editable_mode = "compat" }
+override-dependencies = [
+  # Override tenacity version to resolve conflict between google-adk (<9.0.0) and strands-agents-tools (>=9.1.2)
+  # tenacity 9.x maintains API compatibility with 8.x except for the statistics attribute (breaking change in 9.0.0)
+  # See: https://github.com/jd/tenacity/releases
+  "tenacity>=9.1.2,<10.0.0"
+]
 
 
 [tool.uv.sources]
@@ -181,6 +189,7 @@ nvidia-nat-ragaai = { workspace = true }
 nvidia-nat-redis = { workspace = true }
 nvidia-nat-s3 = { workspace = true }
 nvidia-nat-semantic-kernel = { workspace = true }
+nvidia-nat-strands = { workspace = true }
 nvidia-nat-test = { workspace = true }
 nvidia-nat-vanna = { workspace = true }
 nvidia-nat-weave = { workspace = true }
@@ -212,6 +221,7 @@ nat_simple_calculator_observability = { path = "examples/observability/simple_ca
 nat_simple_rag = { path = "examples/RAG/simple_rag", editable = true }
 nat_simple_web_query = { path = "examples/getting_started/simple_web_query", editable = true }
 nat_simple_web_query_eval = { path = "examples/evaluation_and_profiling/simple_web_query_eval", editable = true }
+nat_strands_demo = { path = "examples/frameworks/strands_demo", editable = true }
 nat_swe_bench = { path = "examples/evaluation_and_profiling/swe_bench", editable = true }
 nat_user_report = { path = "examples/object_store/user_report", editable = true }
 

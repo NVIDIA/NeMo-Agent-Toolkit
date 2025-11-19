@@ -29,6 +29,7 @@ NeMo Agent toolkit integrates with the following frameworks:
 - **LangChain/LangGraph**: A framework for developing applications powered by large language models
 - **LlamaIndex**: A data framework for building LLM applications
 - **Semantic Kernel**: Microsoft's SDK for integrating LLMs with conventional programming languages
+- **Strands**: AWS AgentCore runtime for running production agents on Bedrock
 
 ## Framework Support Levels
 
@@ -61,6 +62,7 @@ The following table summarizes the current support level for each framework:
 | LangChain        | ✅ Yes               | ✅ Yes                 | ✅ Yes                   | ✅ Yes                 | ✅ Yes                |
 | LlamaIndex       | ✅ Yes               | ✅ Yes                 | ❌ No                    | ✅ Yes                 | ✅ Yes                |
 | Semantic Kernel  | ⚠️ Limited           | ❌ No                  | ❌ No                    | ✅ Yes                 | ✅ Yes                |
+| Strands          | ✅ Yes               | ❌ No                  | ❌ No                    | ✅ Yes                 | ✅ Yes                |
 
 ## Framework-Specific Details
 
@@ -160,6 +162,26 @@ For more information, visit the [LlamaIndex website](https://www.llamaindex.ai/)
 ```bash
 uv pip install "nvidia-nat[llama-index]"
 ```
+
+### Strands
+
+Strands is AWS's AgentCore runtime for deploying secure, production-grade agents on Amazon Bedrock. The NeMo Agent toolkit exposes Strands as another framework target so you can keep your existing workflows, tools, and profiler instrumentation while Strands manages execution inside AWS.
+
+| Capability              | Providers / Details                                                                 |
+|-------------------------|-------------------------------------------------------------------------------------|
+| **LLM Providers**       | AWS Bedrock, NVIDIA NIM (OpenAI-compatible), OpenAI                                 |
+| **Embedder Providers**  | None (use framework-agnostic embedders if needed)                                   |
+| **Retriever Providers** | None (use Strands native tools)                                                     |
+| **Tool Calling**        | Fully supported through the Strands `AgentTool` interface                           |
+| **Profiling**           | Comprehensive profiling support through the Strands profiler callback handler       |
+
+**Installation:**
+```bash
+uv pip install "nvidia-nat[strands]"
+```
+
+**Learn more:**
+- [AWS documentation for Bedrock AgentCore](https://docs.aws.amazon.com/bedrock/latest/userguide/agents.html)
 
 ### Semantic Kernel
 

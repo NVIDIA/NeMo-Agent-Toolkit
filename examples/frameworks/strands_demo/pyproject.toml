@@ -1,0 +1,24 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+[tool.setuptools_scm]
+git_describe_command = "git describe --long --first-parent"
+root = "../../.."
+
+[project]
+name = "nat_strands_demo"
+dynamic = ["version"]
+dependencies = [
+  "nvidia-nat[strands,langchain,profiling]~=1.4",
+]
+requires-python = ">=3.11,<3.14"
+description = "Strands example using NeMo Agent toolkit"
+keywords = ["ai", "evaluation", "profiling", "agents", "strands"]
+classifiers = ["Programming Language :: Python"]
+
+[project.entry-points.'nat.components']
+nat_strands_demo = "nat_strands_demo.register"
+
+[tool.uv.sources]
+nvidia-nat = { path = "../../..", editable = true }
