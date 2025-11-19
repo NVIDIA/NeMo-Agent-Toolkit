@@ -213,13 +213,18 @@ Transmit traces to RagaAI Catalyst.
 
     Login to [RagaAI Catalyst](https://catalyst.raga.ai/) and navigate to the settings page.
 
-    Under the "Account" section, you can find your API key. Click on the "Show" button to reveal the API key. Take note of this API key as you will need it to run the workflow.
+    Click on the "Authenticate" tab, then click on "Generate New Key".
 
 2. Set your Catalyst API key:
 
     ```bash
     export CATALYST_ACCESS_KEY=<your_access_key>
     export CATALYST_SECRET_KEY=<your_secret_key>
+    ```
+
+    Optionally set a custom endpoint (default is `https://catalyst.raga.ai/api`):
+
+    ```bash
     export CATALYST_ENDPOINT=<your_endpoint>
     ```
 
