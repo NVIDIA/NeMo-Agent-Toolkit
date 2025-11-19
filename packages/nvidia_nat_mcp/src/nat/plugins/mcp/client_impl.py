@@ -42,6 +42,7 @@ class MCPFunctionGroup(FunctionGroup):
         return self._mcp_client
 
 
+
 @register_function_group(config_type=MCPClientConfig)
 async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
     """
@@ -99,6 +100,8 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
         raise ValueError(f"Unsupported transport: {config.server.transport}")
 
     logger.info("Configured to use MCP server at %s", client.server_name)
+
+
 
     async with client:
         # Expose the live MCP client on the function group instance so other components (e.g., HTTP endpoints)

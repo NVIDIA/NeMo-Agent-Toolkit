@@ -30,14 +30,14 @@ from nat.data_models.middleware import MiddlewareBaseConfig
 from nat.middleware.function_middleware import FunctionMiddleware
 
 
-class TestMiddlewareConfig(MiddlewareBaseConfig, name="test_component_middleware"):
+class _TestMiddlewareConfig(MiddlewareBaseConfig, name="test_component_middleware"):
     """Test middleware configuration."""
 
     test_param: str = Field(default="default_value")
     call_order: list[str] = Field(default_factory=list)
 
 
-class TestMiddleware(FunctionMiddleware):
+class _TestMiddleware(FunctionMiddleware):
     """Test middleware that records calls."""
 
     def __init__(self, *, test_param: str, call_order: list[str]):
@@ -56,9 +56,9 @@ class TestMiddleware(FunctionMiddleware):
 def register_test_middleware():
     """Register test middleware."""
 
-    @register_middleware(config_type=TestMiddlewareConfig)
-    async def test_middleware(config: TestMiddlewareConfig, builder: Builder):
-        yield TestMiddleware(test_param=config.test_param, call_order=config.call_order)
+    @register_middleware(config_type=_TestMiddlewareConfig)
+    async def test_middleware(config: _TestMiddlewareConfig, builder: Builder):
+        yield _TestMiddleware(test_param=config.test_param, call_order=config.call_order)
 
 
 class TestMiddlewareRegistration:
@@ -70,17 +70,17 @@ class TestMiddlewareRegistration:
         registered = registry.get_registered_middleware()
 
         # Find our test middleware
-        test_middlewares = [r for r in registered if r.config_type == TestMiddlewareConfig]
+        test_middlewares = [r for r in registered if r.config_type == _TestMiddlewareConfig]
         assert len(test_middlewares) == 1
-        assert test_middlewares[0].full_type == TestMiddlewareConfig.full_type
+        assert test_middlewares[0].full_type == _TestMiddlewareConfig.full_type
 
     def test_can_retrieve_middleware_registration(self):
         """Test that we can retrieve middleware registration info."""
         registry = GlobalTypeRegistry.get()
-        registration = registry.get_middleware(TestMiddlewareConfig)
+        registration = registry.get_middleware(_TestMiddlewareConfig)
 
-        assert registration.config_type == TestMiddlewareConfig
-        assert registration.full_type == TestMiddlewareConfig.full_type
+        assert registration.config_type == _TestMiddlewareConfig
+        assert registration.full_type == _TestMiddlewareConfig.full_type
         assert registration.build_fn is not None
 
 
@@ -89,40 +89,40 @@ class TestBuilderMethods:
 
     async def test_add_middleware(self):
         """Test adding a function middleware to the builder."""
-        config = TestMiddlewareConfig(test_param="builder_test", call_order=[])
+        config = _TestMiddlewareConfig(test_param="builder_test", call_order=[])
 
         async with WorkflowBuilder() as builder:
             middleware = await builder.add_middleware("test_middleware_1", config)
 
-            assert isinstance(middleware, TestMiddleware)
+            assert isinstance(middleware, _TestMiddleware)
             assert middleware.test_param == "builder_test"
 
     async def test_get_middleware(self):
         """Test retrieving a function middleware from the builder."""
-        config = TestMiddlewareConfig(test_param="get_test", call_order=[])
+        config = _TestMiddlewareConfig(test_param="get_test", call_order=[])
 
         async with WorkflowBuilder() as builder:
             await builder.add_middleware("test_middleware_2", config)
             retrieved = await builder.get_middleware("test_middleware_2")
 
-            assert isinstance(retrieved, TestMiddleware)
+            assert isinstance(retrieved, _TestMiddleware)
             assert retrieved.test_param == "get_test"
 
     async def test_get_middleware_config(self):
         """Test retrieving middleware config from the builder."""
-        config = TestMiddlewareConfig(test_param="config_test", call_order=[])
+        config = _TestMiddlewareConfig(test_param="config_test", call_order=[])
 
         async with WorkflowBuilder() as builder:
             await builder.add_middleware("test_middleware_3", config)
             retrieved_config = builder.get_middleware_config("test_middleware_3")
 
-            assert isinstance(retrieved_config, TestMiddlewareConfig)
+            assert isinstance(retrieved_config, _TestMiddlewareConfig)
             assert retrieved_config.test_param == "config_test"
 
     async def test_get_middlewares_batch(self):
         """Test retrieving multiple middlewares at once."""
-        config1 = TestMiddlewareConfig(test_param="batch1", call_order=[])
-        config2 = TestMiddlewareConfig(test_param="batch2", call_order=[])
+        config1 = _TestMiddlewareConfig(test_param="batch1", call_order=[])
+        config2 = _TestMiddlewareConfig(test_param="batch2", call_order=[])
 
         async with WorkflowBuilder() as builder:
             await builder.add_middleware("batch_1", config1)
@@ -131,13 +131,13 @@ class TestBuilderMethods:
             middlewares = await builder.get_middleware_list(["batch_1", "batch_2"])
 
             assert len(middlewares) == 2
-            assert all(isinstance(i, TestMiddleware) for i in middlewares)
+            assert all(isinstance(i, _TestMiddleware) for i in middlewares)
             params = {i.test_param for i in middlewares}
             assert params == {"batch1", "batch2"}
 
     async def test_duplicate_middleware_raises_error(self):
         """Test that adding duplicate middleware raises error."""
-        config = TestMiddlewareConfig(test_param="duplicate", call_order=[])
+        config = _TestMiddlewareConfig(test_param="duplicate", call_order=[])
 
         async with WorkflowBuilder() as builder:
             await builder.add_middleware("duplicate_test", config)
@@ -180,7 +180,7 @@ class TestYAMLIntegration:
 
             # Verify middleware was built
             middleware = await builder.get_middleware("yaml_middleware")
-            assert isinstance(middleware, TestMiddleware)
+            assert isinstance(middleware, _TestMiddleware)
             assert middleware.test_param == "from_yaml"
 
 
@@ -448,7 +448,7 @@ class TestFunctionGroupMiddlewares:
         call_order = []
 
         # Create test middleware
-        middleware = TestMiddleware(test_param="dynamic", call_order=call_order)
+        middleware = _TestMiddleware(test_param="dynamic", call_order=call_order)
 
         # Create function group with middlewares
         config = FunctionGroupBaseConfig()
@@ -496,8 +496,8 @@ class TestFunctionGroupMiddlewares:
         assert len(call_order1) == 0  # No middlewares called
 
         # Now configure middlewares
-        middleware1 = TestMiddleware(test_param="after1", call_order=call_order1)
-        middleware2 = TestMiddleware(test_param="after2", call_order=call_order2)
+        middleware1 = _TestMiddleware(test_param="after1", call_order=call_order1)
+        middleware2 = _TestMiddleware(test_param="after2", call_order=call_order2)
         group.configure_middleware([middleware1, middleware2])
 
         # Test functions with middlewares

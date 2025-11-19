@@ -31,6 +31,10 @@ PYTEST_ARGS=""
 REPORT_NAME="${CI_PROJECT_DIR}/pytest_junit_report.xml"
 COV_REPORT_NAME="${CI_PROJECT_DIR}/pytest_coverage_report.xml"
 if [ "${CI_CRON_NIGHTLY}" == "1" ]; then
+       rapids-logger "Installing jq (needed for notebook tests)"
+       apt update
+       apt install --no-install-recommends -y jq
+
        PYTEST_ARGS="--run_slow --run_integration"
 
        DATE_TAG=$(date +"%Y%m%d")

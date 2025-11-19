@@ -28,6 +28,8 @@ from pydantic import field_validator
 from nat.data_models.component_ref import ObjectStoreRef
 from nat.data_models.front_end import FrontEndBaseConfig
 from nat.data_models.step_adaptor import StepAdaptorConfig
+from nat.eval.evaluator.evaluator_model import EvalInputItem
+from nat.eval.evaluator.evaluator_model import EvalOutputItem
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +134,19 @@ class AsyncGenerationStatusResponse(BaseAsyncStatusResponse):
     output: dict | None = Field(
         default=None,
         description="Output of the generate request, this is only available if the job completed successfully.")
+
+
+class EvaluateItemRequest(BaseModel):
+    """Request model for single-item evaluation endpoint."""
+    item: EvalInputItem = Field(description="Single evaluation input item to evaluate")
+    evaluator_name: str = Field(description="Name of the evaluator to use (must match config)")
+
+
+class EvaluateItemResponse(BaseModel):
+    """Response model for single-item evaluation endpoint."""
+    success: bool = Field(description="Whether the evaluation completed successfully")
+    result: EvalOutputItem | None = Field(default=None, description="Evaluation result if successful")
+    error: str | None = Field(default=None, description="Error message if evaluation failed")
 
 
 class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
@@ -256,6 +271,13 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
         path="/evaluate",
         description="Evaluates the performance and accuracy of the workflow on a dataset",
     )
+
+    evaluate_item: typing.Annotated[EndpointBase,
+                                    Field(description="Endpoint for evaluating a single item.")] = EndpointBase(
+                                        method="POST",
+                                        path="/evaluate/item",
+                                        description="Evaluate a single item with a specified evaluator",
+                                    )
 
     oauth2_callback_path: str | None = Field(
         default="/auth/redirect",

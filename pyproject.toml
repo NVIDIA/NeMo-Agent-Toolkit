@@ -42,7 +42,7 @@ dependencies = [
   "pkginfo~=1.12",
   "platformdirs~=4.3",
   "pydantic~=2.11",
-  "pymilvus~=2.4",
+  "pymilvus~=2.5",
   "python-dotenv~=1.1.1",
   "PyYAML~=6.0",
   "ragas~=0.2.14", # If you update ragas be sure to update github links in docs/source/workflows/evaluate.md as well
@@ -98,6 +98,7 @@ telemetry = [
   "nvidia-nat-weave",
 ]
 test = ["nvidia-nat-test"]
+vanna = ["nvidia-nat-vanna"]
 weave = ["nvidia-nat-weave"]
 zep-cloud = ["nvidia-nat-zep-cloud"]
 
@@ -115,6 +116,7 @@ examples = [
   "nat_router_agent",
   "nat_semantic_kernel_demo",
   "nat_sequential_executor",
+  "nat_service_account_auth_mcp",
   "nat_simple_auth",
   "nat_simple_auth_mcp",
   "nat_simple_web_query",
@@ -184,6 +186,7 @@ nvidia-nat-redis = { workspace = true }
 nvidia-nat-s3 = { workspace = true }
 nvidia-nat-semantic-kernel = { workspace = true }
 nvidia-nat-test = { workspace = true }
+nvidia-nat-vanna = { workspace = true }
 nvidia-nat-weave = { workspace = true }
 nvidia-nat-zep-cloud = { workspace = true }
 
@@ -201,6 +204,7 @@ nat_profiler_agent = { path = "examples/advanced_agents/profiler_agent", editabl
 nat_router_agent = { path = "examples/control_flow/router_agent", editable = true }
 nat_semantic_kernel_demo = { path = "examples/frameworks/semantic_kernel_demo", editable = true }
 nat_sequential_executor = { path = "examples/control_flow/sequential_executor", editable = true }
+nat_service_account_auth_mcp = { path = "examples/MCP/service_account_auth_mcp", editable = true }
 nat_simple_auth = { path = "examples/front_ends/simple_auth", editable = true }
 nat_simple_auth_mcp = { path = "examples/MCP/simple_auth_mcp", editable = true }
 nat_simple_calculator = { path = "examples/getting_started/simple_calculator", editable = true }
@@ -224,9 +228,11 @@ exclude = ["packages/compat"]
 # Dependency groups are only for developers to aid in managing dependencies local to a dev machine.
 dev = [
   "asgi-lifespan~=2.1",
+  "galileo~=1.27",
   "beautifulsoup4~=4.13",
   "httpx-sse~=0.4",
   "ipython~=8.31",
+  "langsmith", # this is currently a transitive dependency of nat, not specifying a version to avoid conflicts
   "myst-parser~=4.0",
   "nbconvert", # Version determined by jupyter
   "nbsphinx~=0.9",
@@ -292,12 +298,6 @@ markers = [
   "slow: Slow tests",
 ]
 filterwarnings = [
-  # Ignore warnings from qdrant-client (used by mem0) with Python 3.12+ of note is that this only happens the first
-  # time the module is imported and parsed, after that the pyc files in the __pycache__ directory are used which don't
-  # trigger the warnings. In Python 3.12 this triggers a SyntaxWarning, in Python 3.11 it triggers a DeprecationWarning
-  # which unfortunately pytest is unable to filter.
-  # Remove once https://github.com/qdrant/qdrant-client/issues/983 is resolved.
-  "ignore:^invalid escape sequence:SyntaxWarning",
 ]
 testpaths = ["tests", "examples/**/tests", "packages/**/tests"]
 asyncio_mode = "auto"
