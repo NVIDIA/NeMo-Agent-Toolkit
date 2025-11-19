@@ -189,6 +189,14 @@ class RegisteredFunctionInfo(RegisteredInfo[FunctionBaseConfig]):
     build_fn: FunctionRegisteredCallableT = Field(repr=False)
     framework_wrappers: list[str] = Field(default_factory=list)
 
+    # Optional declared schemas for per-user functions which are lazy-loaded
+    declared_input_schema: type[BaseModel] | None = Field(
+        default=None, description="Declared input schema for per-user functions (available without building)")
+    declared_output_schema: type[BaseModel] | None = Field(
+        default=None, description="Declared single output schema for per-user functions")
+    declared_streaming_output_schema: type[BaseModel] | None = Field(
+        default=None, description="Declared streaming output schema for per-user functions")
+
 
 class RegisteredFunctionGroupInfo(RegisteredInfo[FunctionGroupBaseConfig]):
     """

@@ -434,6 +434,9 @@ class PerUserFunction(Function[InputT, StreamingOutputT, SingleOutputT]):
     def has_single_output(self) -> bool:
         return self._info.has_single_fn
 
+    def get_instance_name(self) -> str:
+        return f"{self.config.type}.{Context.get().user_id}"
+
     async def _get_user_instance(self) -> Function:
         """
         Get or build concrete LambdaFunction instance for the current user.
