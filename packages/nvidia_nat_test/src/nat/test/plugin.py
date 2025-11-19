@@ -30,7 +30,6 @@ if typing.TYPE_CHECKING:
     import galileo.log_streams
     import galileo.projects
     import langsmith.client
-
     from docker.client import DockerClient
 
 
@@ -818,3 +817,20 @@ def piston_url_fixture(fail_missing: bool) -> str:
         if fail_missing:
             raise RuntimeError(reason)
         pytest.skip(reason)
+
+
+@pytest.fixture(autouse=True, scope="session")
+def import_adk_early():
+    """
+    Import ADK early to work-around slow import issue (https://github.com/google/adk-python/issues/2433),
+    when ADK is imported early it takes about 8 seconds, however if we wait until the `packages/nvidia_nat_adk/tests`
+    run the same import will take about 70 seconds.
+
+    Since ADK is an optional dependency, we will ignore any import errors.
+    """
+    try:
+        import google.adk.tools.function_tool
+    except ImportError:
+        pass
+
+    return
