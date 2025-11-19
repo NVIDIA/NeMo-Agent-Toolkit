@@ -393,8 +393,7 @@ class TestPatchLLMBasedOnConfig:
             pass
 
         # Use a Nemotron model name so thinking_system_prompt property returns a value
-        config = TestConfigWithThinking(model_name="nvidia/llama-nemotron-4-340b-instruct",
-                                        thinking=True)
+        config = TestConfigWithThinking(model_name="nvidia/llama-nemotron-4-340b-instruct", thinking=True)
 
         mock_patched_client = MagicMock()
         mock_patch_thinking.return_value = mock_patched_client
