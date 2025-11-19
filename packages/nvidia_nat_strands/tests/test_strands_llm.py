@@ -383,25 +383,84 @@ class TestPatchLLMBasedOnConfig:
                                                  retry_on_messages=["timeout"])
         assert result == mock_patched_client
 
-    def test_patch_llm_with_thinking_mixin(self, mock_client):
+    @patch("nat.plugins.strands.llm.patch_with_thinking")
+    def test_patch_llm_with_thinking_mixin(self, mock_patch_thinking, mock_client):
         """Test patching with thinking mixin."""
+        from nat.data_models.thinking_mixin import ThinkingMixin
 
-        config = OpenAIModelConfig(model_name="gpt-4")
+        # Create a config that has thinking mixin
+        class TestConfigWithThinking(OpenAIModelConfig, ThinkingMixin):
+            pass
+
+        # Use a Nemotron model name so thinking_system_prompt property returns a value
+        config = TestConfigWithThinking(model_name="nvidia/llama-nemotron-4-340b-instruct",
+                                        thinking=True)
+
+        mock_patched_client = MagicMock()
+        mock_patch_thinking.return_value = mock_patched_client
 
         result = _patch_llm_based_on_config(mock_client, config)
 
-        # Without mixins, should return the same client
-        assert result == mock_client
+        # Verify thinking patching was called
+        mock_patch_thinking.assert_called_once()
+        call_args = mock_patch_thinking.call_args
+        assert call_args[0][0] == mock_client  # First positional arg is the client
 
-    def test_patch_llm_with_both_mixins(self, mock_client):
+        # Verify the injector was configured correctly
+        injector = call_args[0][1]
+        # For Nemotron models, thinking_system_prompt returns "/think" when thinking=True
+        assert injector.system_prompt == "/think"
+        assert "stream" in injector.function_names
+        assert "structured_output" in injector.function_names
+
+        # Verify the result is the patched client
+        assert result == mock_patched_client
+
+    @patch("nat.plugins.strands.llm.patch_with_thinking")
+    @patch("nat.plugins.strands.llm.patch_with_retry")
+    def test_patch_llm_with_both_mixins(self, mock_patch_retry, mock_patch_thinking, mock_client):
         """Test patching with both retry and thinking mixins."""
+        from nat.data_models.retry_mixin import RetryMixin
+        from nat.data_models.thinking_mixin import ThinkingMixin
 
-        config = OpenAIModelConfig(model_name="gpt-4")
+        # Create a config that has both retry and thinking mixins
+        class TestConfigWithBoth(OpenAIModelConfig, RetryMixin, ThinkingMixin):
+            pass
+
+        # Use a Nemotron model name so thinking_system_prompt property returns a value
+        config = TestConfigWithBoth(model_name="nvidia/llama-nemotron-4-340b-instruct",
+                                    num_retries=3,
+                                    retry_on_status_codes=[500, 502],
+                                    retry_on_errors=["timeout"],
+                                    thinking=True)
+
+        # Setup mocks: retry patches first, then thinking patches the result
+        mock_retry_patched_client = MagicMock()
+        mock_patch_retry.return_value = mock_retry_patched_client
+
+        mock_final_patched_client = MagicMock()
+        mock_patch_thinking.return_value = mock_final_patched_client
 
         result = _patch_llm_based_on_config(mock_client, config)
 
-        # Without mixins, should return the same client
-        assert result == mock_client
+        # Verify retry patching was called first on the original client
+        mock_patch_retry.assert_called_once_with(mock_client,
+                                                 retries=3,
+                                                 retry_codes=[500, 502],
+                                                 retry_on_messages=["timeout"])
+
+        # Verify thinking patching was called second on the retry-patched client
+        mock_patch_thinking.assert_called_once()
+        call_args = mock_patch_thinking.call_args
+        assert call_args[0][0] == mock_retry_patched_client  # Should be the retry-patched client
+
+        # Verify the injector was configured correctly
+        injector = call_args[0][1]
+        # For Nemotron models, thinking_system_prompt returns "/think" when thinking=True
+        assert injector.system_prompt == "/think"
+
+        # Verify the result is the final patched client
+        assert result == mock_final_patched_client
 
 
 class TestStrandsThinkingInjector:
