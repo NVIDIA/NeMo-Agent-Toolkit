@@ -30,6 +30,7 @@ if typing.TYPE_CHECKING:
     import galileo.log_streams
     import galileo.projects
     import langsmith.client
+
     from docker.client import DockerClient
 
 
@@ -829,8 +830,6 @@ def import_adk_early():
     Since ADK is an optional dependency, we will ignore any import errors.
     """
     try:
-        import google.adk
+        import google.adk  # noqa: F401
     except ImportError:
         pass
-
-    return
