@@ -423,14 +423,14 @@ class EvaluationRun:
 
         return workflow_type
 
-    async def wait_for_all_export_tasks_local(self, user_session: Session, timeout: float) -> None:
+    async def wait_for_all_export_tasks_local(self, session: Session, timeout: float) -> None:
         """Wait for all trace export tasks to complete for local workflows.
 
         This only works for local workflows where we have direct access to the
         SessionManager and its underlying workflow with exporter manager.
         """
         try:
-            workflow = user_session.workflow
+            workflow = session.workflow
             all_exporters = await workflow.get_all_exporters()
             if not all_exporters:
                 logger.debug("No exporters to wait for")
@@ -450,9 +450,7 @@ class EvaluationRun:
         except Exception as e:
             logger.warning("Failed to wait for local export tasks: %s", e)
 
-    async def run_and_evaluate(self,
-                               user_session: Session | None = None,
-                               job_id: str | None = None) -> EvaluationRunOutput:
+    async def run_and_evaluate(self, session: Session | None = None, job_id: str | None = None) -> EvaluationRunOutput:
         """
         Run the workflow with the specified config file and evaluate the dataset
         """
@@ -532,10 +530,10 @@ class EvaluationRun:
                 if self.config.endpoint:
                     await self.run_workflow_remote()
                 elif not self.config.skip_workflow:
-                    if user_session is None:
+                    if session is None:
                         workflow = await eval_workflow.build()
-                        user_session = Session(workflow, max_concurrency=self.eval_config.general.max_concurrency)
-                    await self.run_workflow_local(user_session)
+                        session = Session(workflow, max_concurrency=self.eval_config.general.max_concurrency)
+                    await self.run_workflow_local(session)
 
                 # Pre-evaluation process the workflow output
                 self.eval_input = dataset_handler.pre_eval_process_eval_input(self.eval_input)
@@ -545,8 +543,8 @@ class EvaluationRun:
                 await self.run_evaluators(evaluators)
 
                 # Wait for all trace export tasks to complete (local workflows only)
-                if user_session and not self.config.endpoint:
-                    await self.wait_for_all_export_tasks_local(user_session, timeout=self.config.export_timeout)
+                if session and not self.config.endpoint:
+                    await self.wait_for_all_export_tasks_local(session, timeout=self.config.export_timeout)
 
         # Profile the workflow
         profiler_results = await self.profile_workflow()

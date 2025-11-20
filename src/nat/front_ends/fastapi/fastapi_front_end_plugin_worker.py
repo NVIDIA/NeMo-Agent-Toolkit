@@ -360,7 +360,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 async with load_workflow(workflow_config_file_path) as local_session_manager:
                     async with local_session_manager.session() as user_session:
                         output: EvaluationRunOutput = await eval_runner.run_and_evaluate(
-                            user_session=user_session, job_id=job_id)
+                            session=user_session, job_id=job_id)
 
                 if output.workflow_interrupted:
                     await job_store.update_status(job_id, JobStatus.INTERRUPTED)
