@@ -219,7 +219,7 @@ class FastApiFrontEndPluginWorkerBase(ABC):
         return response
 
     @abstractmethod
-    async def configure(self, app: FastAPI, builder: WorkflowBuilder):
+    async def configure(self, app: FastAPI, session_manager: SessionManager):
         pass
 
     @abstractmethod
@@ -304,13 +304,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         # Ensure evaluator resources are cleaned up when the app shuts down
         app.add_event_handler("shutdown", self.cleanup_evaluators)
 
-        # Initialize evaluators for single-item evaluation
-        # TODO: we need config control over this as it's not always needed
-        await self.initialize_evaluators(self._config)
-
-        # Ensure evaluator resources are cleaned up when the app shuts down
-        app.add_event_handler("shutdown", self.cleanup_evaluators)
-
         app.state.session_manager = session_manager
 
         await self.add_routes(app, session_manager)
@@ -319,7 +312,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         await self.add_default_route(app, session_manager)
         await self.add_evaluate_route(app, session_manager)
-        await self.add_evaluate_item_route(app, SessionManager(await builder.build()))
+        await self.add_evaluate_item_route(app, session_manager)
         await self.add_static_files_route(app, session_manager)
         await self.add_authorization_route(app)
         await self.add_mcp_client_tool_list_route(app, session_manager)

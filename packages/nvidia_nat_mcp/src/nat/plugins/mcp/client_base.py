@@ -37,6 +37,7 @@ from mcp.types import TextContent
 from nat.authentication.interfaces import AuthenticatedContext
 from nat.authentication.interfaces import AuthFlowType
 from nat.authentication.interfaces import AuthProviderBase
+from nat.builder.context import Context
 from nat.plugins.mcp.exception_handler import convert_to_mcp_error
 from nat.plugins.mcp.exception_handler import format_mcp_error
 from nat.plugins.mcp.exception_handler import mcp_exception_handler
@@ -108,8 +109,8 @@ class AuthAdapter(httpx.Auth):
                                 response: httpx.Response | None = None) -> dict[str, str]:
         """Get authentication headers from the NAT auth provider."""
         try:
-            # TODO: Add user_id to the authenticate call
-            auth_result = await self.auth_provider.authenticate(response=response)
+            user_id = Context.get().user_id
+            auth_result = await self.auth_provider.authenticate(user_id=user_id, response=response)
 
             # Build headers from credentials
             from nat.data_models.authentication import BearerTokenCred
