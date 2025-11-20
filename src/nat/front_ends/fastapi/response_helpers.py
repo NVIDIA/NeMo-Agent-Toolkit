@@ -23,13 +23,13 @@ from nat.data_models.api_server import ResponseSerializable
 from nat.data_models.step_adaptor import StepAdaptorConfig
 from nat.front_ends.fastapi.intermediate_steps_subscriber import pull_intermediate
 from nat.front_ends.fastapi.step_adaptor import StepAdaptor
-from nat.runtime.session import UserSession
+from nat.runtime.session import Session
 from nat.utils.producer_consumer_queue import AsyncIOProducerConsumerQueue
 
 
 async def generate_streaming_response_as_str(payload: typing.Any,
                                              *,
-                                             user_session: UserSession,
+                                             user_session: Session,
                                              streaming: bool,
                                              step_adaptor: StepAdaptor = StepAdaptor(StepAdaptorConfig()),
                                              result_type: type | None = None,
@@ -51,7 +51,7 @@ async def generate_streaming_response_as_str(payload: typing.Any,
 
 async def generate_streaming_response(payload: typing.Any,
                                       *,
-                                      user_session: UserSession,
+                                      user_session: Session,
                                       streaming: bool,
                                       step_adaptor: StepAdaptor = StepAdaptor(StepAdaptorConfig()),
                                       result_type: type | None = None,
@@ -107,7 +107,7 @@ async def generate_streaming_response(payload: typing.Any,
 
 async def generate_single_response(
     payload: typing.Any,
-    user_session: UserSession,
+    user_session: Session,
     result_type: type | None = None,
 ) -> typing.Any:
     if (not user_session.workflow.has_single_output):
@@ -119,7 +119,7 @@ async def generate_single_response(
 
 async def generate_streaming_response_full(payload: typing.Any,
                                            *,
-                                           user_session: UserSession,
+                                           user_session: Session,
                                            streaming: bool,
                                            result_type: type | None = None,
                                            output_type: type | None = None,
@@ -174,7 +174,7 @@ async def generate_streaming_response_full(payload: typing.Any,
 
 async def generate_streaming_response_full_as_str(payload: typing.Any,
                                                   *,
-                                                  user_session: UserSession,
+                                                  user_session: Session,
                                                   streaming: bool,
                                                   result_type: type | None = None,
                                                   output_type: type | None = None,

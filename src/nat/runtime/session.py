@@ -33,7 +33,7 @@ from nat.builder.context import Context
 from nat.builder.context import ContextState
 from nat.builder.workflow import Workflow
 from nat.builder.workflow_builder import PerUserWorkflowBuilder
-from nat.builder.workflow_builder import SharedWorkflowBuilder
+from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.authentication import AuthenticatedContext
 from nat.data_models.authentication import AuthFlowType
 from nat.data_models.authentication import AuthProviderBaseConfig
@@ -48,14 +48,14 @@ from nat.runtime.runner import Runner
 logger = logging.getLogger(__name__)
 
 
-class UserSession:
+class Session:
 
     def __init__(self,
                  workflow: Workflow,
                  max_concurrency: int = 8,
                  runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE):
         """
-        The UserSession class is used to run and manage a user workflow session. It runs a workflow for a single user
+        The Session class is used to run and manage a user workflow session. It runs a workflow for a single user
         with the specified concurrency limit.
 
         Parameters
@@ -65,8 +65,6 @@ class UserSession:
         max_concurrency : int, optional
             The maximum number of simultaneous workflow invocations, by default 8
         """
-        if workflow is None:
-            raise ValueError("Workflow must be provided to initialize a UserSession")
 
         self._workflow: Workflow = workflow
         self._max_concurrency = max_concurrency
@@ -116,6 +114,22 @@ class SessionManager:
         self._config = config
         self._max_concurrency = max_concurrency
 
+        # Shared workflow builder
+        self._shared_builder: WorkflowBuilder | None = None
+        self._shared_builder_lock = asyncio.Lock()
+
+        # Per-user workflow registry
+        self._user_workflows: dict[str, UserWorkflowData] = {}
+        self._users_lock = aiorwlock.RWLock()
+
+        # Cleanup task
+        self._cleanup_task: asyncio.Task | None = None
+        self._shutdown_event: asyncio.Event = asyncio.Event()
+
+        # Context state
+        self._context_state = ContextState.get()
+        self._context = Context(self._context_state)
+
         front_end_config = config.general.front_end
 
         if isinstance(front_end_config, FastApiFrontEndConfig):
@@ -128,22 +142,6 @@ class SessionManager:
             self._user_idle_timeout = timedelta(minutes=30)
             self._cleanup_check_interval = timedelta(minutes=10)
             self._require_user_id = False
-
-        # Per-user workflow registry
-        self._user_workflows: dict[str, UserWorkflowData] = {}
-        self._users_lock = aiorwlock.RWLock()
-
-        # Shared builder
-        self._shared_builder: SharedWorkflowBuilder | None = None
-        self._shared_builder_lock = asyncio.Lock()
-
-        # Cleanup task
-        self._cleanup_task: asyncio.Task | None = None
-        self._shutdown_event: asyncio.Event = asyncio.Event()
-
-        # Context state
-        self._context_state = ContextState.get()
-        self._context = Context(self._context_state)
 
     @property
     def config(self) -> Config:
@@ -182,13 +180,6 @@ class SessionManager:
     def user_limit(self) -> int:
         return self._max_users
 
-    async def get_workflow(self, user_id: str) -> Workflow:
-        """
-        Get the workflow for a specific user.
-        """
-        workflow_data = await self._get_or_create_user_workflow(user_id)
-        return workflow_data.workflow
-
     @staticmethod
     def _truncate_user_id(user_id: str, length: int = 8) -> str:
         """
@@ -198,7 +189,7 @@ class SessionManager:
             return user_id[:length] + "..."
         return user_id
 
-    async def _ensure_shared_builder(self) -> SharedWorkflowBuilder:
+    async def _ensure_shared_builder(self) -> WorkflowBuilder:
         """
         Ensures the shared builder is created with shared components. Lazy initialization on first user request.
         """
@@ -213,16 +204,17 @@ class SessionManager:
             if self._shared_builder is not None:
                 return self._shared_builder
 
-            logger.info("Initializing shared builder")
+            logger.debug("Initializing shared builder")
 
             try:
-                shared_builder = SharedWorkflowBuilder(general_config=self._config.general)
+                shared_builder = WorkflowBuilder(general_config=self._config.general)
 
                 await shared_builder.__aenter__()
                 await shared_builder.populate_builder(self._config)
 
                 self._shared_builder = shared_builder
-                logger.info("Shared builder initialized")
+
+                logger.debug("Shared builder initialized")
 
                 return shared_builder
 
@@ -265,20 +257,20 @@ class SessionManager:
         # Fast path: Check if user already exists (read lock)
         async with self._users_lock.reader:
             if user_id in self._user_workflows:
-                user_data = self._user_workflows[user_id]
+                user_workflow_data = self._user_workflows[user_id]
                 # no lock needed, atomic timestamp write
-                user_data.last_activity = datetime.now()
+                user_workflow_data.last_activity = datetime.now()
                 logger.debug(f"User {self._truncate_user_id(user_id)} already exists, updating last activity")
-                return user_data
+                return user_workflow_data
 
         # Slow path: Need to create new workflow (write lock)
         async with self._users_lock.writer:
             # Double-check after acquiring lock
             if user_id in self._user_workflows:
-                user_data = self._user_workflows[user_id]
-                user_data.last_activity = datetime.now()
+                user_workflow_data = self._user_workflows[user_id]
+                user_workflow_data.last_activity = datetime.now()
                 logger.debug(f"User {self._truncate_user_id(user_id)} already exists, updating last activity")
-                return user_data
+                return user_workflow_data
 
             # Check user limit
             if len(self._user_workflows) >= self._max_users:
@@ -294,12 +286,13 @@ class SessionManager:
                     raise RuntimeError(f"User limit reached ({self._max_users}), rejecting new user: {user_id}")
 
             workflow, builder = await self._create_user_workflow(user_id)
-            user_data = UserWorkflowData(user_id=user_id, workflow=workflow, builder=builder, \
+            user_workflow_data = UserWorkflowData(user_id=user_id, workflow=workflow, builder=builder, \
                 last_activity=datetime.now(), ref_count=0)
 
-            self._user_workflows[user_id] = user_data
+            self._user_workflows[user_id] = user_workflow_data
             logger.info(f"User {self._truncate_user_id(user_id)} created")
-            return user_data
+
+            return user_workflow_data
 
     @asynccontextmanager
     async def session(self,
@@ -328,37 +321,51 @@ class SessionManager:
         elif isinstance(http_connection, Request):
             self.set_metadata_from_http_request(http_connection)
 
-        # Extract user_id from metadata
+        self._shared_builder = await self._ensure_shared_builder()
+        user_workflow_data = None
         user_id = None
-        cookies = self._context.metadata.cookies
-        if cookies:
-            user_id = cookies.get("nat-session")
 
-        # Validate if required
-        if self._require_user_id and not user_id:
-            raise ValueError("user_id is required for this session but not found in the request.")
+        # If the workflow is shared, create the session with shared builder
+        if not self._shared_builder.is_workflow_per_user:
+            workflow = await self._shared_builder.build()
+            session = Session(workflow=workflow, max_concurrency=self._max_concurrency)
 
-        # Use default if not found
-        if not user_id:
-            user_id = "default_user"
+        # If the workflow is per-user, create the session with user builder
+        else:
+            # Extract user_id from metadata
+            cookies = self._context.metadata.cookies
+            if cookies:
+                user_id = cookies.get("nat-session")
 
-        user_workflow_data = await self._get_or_create_user_workflow(user_id)
+            # Validate if required
+            if self._require_user_id and not user_id:
+                raise ValueError("user_id is required for this session but not found in the request.")
 
-        # track active requests
-        async with user_workflow_data.lock:
-            user_workflow_data.ref_count += 1
-            logger.debug(
-                f"User {self._truncate_user_id(user_id)} reference count increased to {user_workflow_data.ref_count}")
-        user_session = UserSession(workflow=user_workflow_data.workflow, max_concurrency=self._max_concurrency)
+            # Use default if not found
+            if not user_id:
+                user_id = "default_user"
+
+            user_workflow_data = await self._get_or_create_user_workflow(user_id)
+
+            # track active requests
+            async with user_workflow_data.lock:
+                user_workflow_data.ref_count += 1
+                logger.debug(
+                    f"User {self._truncate_user_id(user_id)} reference count increased to {user_workflow_data.ref_count}"
+                )
+            session = Session(workflow=user_workflow_data.workflow, max_concurrency=self._max_concurrency)
 
         try:
-            yield user_session
+            yield session
+
         finally:
-            async with user_workflow_data.lock:
-                user_workflow_data.ref_count -= 1
-                logger.debug(
-                    f"User {self._truncate_user_id(user_id)} reference count decreased to {user_workflow_data.ref_count}"
-                )
+            if self._shared_builder.is_workflow_per_user:
+                if user_workflow_data is not None:
+                    async with user_workflow_data.lock:
+                        user_workflow_data.ref_count -= 1
+                        logger.debug(
+                            f"User {self._truncate_user_id(user_id)} reference count decreased to {user_workflow_data.ref_count}"
+                        )
 
             if token_user_manager is not None:
                 self._context_state.user_manager.reset(token_user_manager)
@@ -405,8 +412,8 @@ class SessionManager:
         """
         Background task that periodically cleans up inactive users. Runs until shutdown_event is set.
         """
-        logger.info(f"Cleanup loop started (interval: {self._cleanup_check_interval}, "
-                    f"timeout: {self._user_idle_timeout})")
+        logger.debug(f"Cleanup loop started (interval: {self._cleanup_check_interval}, "
+                     f"timeout: {self._user_idle_timeout})")
         while not self._shutdown_event.is_set():
             try:
                 await asyncio.wait_for(self._shutdown_event.wait(),
@@ -427,6 +434,9 @@ class SessionManager:
         """
         Start the cleanup loop in a background task.
         """
+        if self._shared_builder is None or not self._shared_builder.is_workflow_per_user:
+            return
+
         if self._cleanup_task is None or self._cleanup_task.done():
             self._cleanup_task = asyncio.create_task(self._cleanup_loop())
             logger.info("Cleanup loop started")

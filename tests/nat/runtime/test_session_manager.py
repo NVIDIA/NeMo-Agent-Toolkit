@@ -21,8 +21,8 @@ from unittest.mock import Mock
 import pytest
 
 from nat.data_models.config import Config
+from nat.runtime.session import Session
 from nat.runtime.session import SessionManager
-from nat.runtime.session import UserSession
 
 
 def test_session_manager_init():
@@ -80,7 +80,7 @@ async def test_session_manager_session_returns_user_session():
 
     async with sm.session(http_connection=mock_request) as user_session:
         # Should return UserSession
-        assert isinstance(user_session, UserSession)
+        assert isinstance(user_session, Session)
         assert user_session.workflow is not None
         assert user_session.config == config
 

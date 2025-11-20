@@ -18,7 +18,7 @@ from unittest.mock import MagicMock
 from unittest.mock import Mock
 
 from nat.builder.workflow import Workflow
-from nat.runtime.session import UserSession
+from nat.runtime.session import Session
 
 
 def test_user_session_stores_workflow():
@@ -26,7 +26,7 @@ def test_user_session_stores_workflow():
     mock_workflow = Mock(spec=Workflow)
     mock_workflow.config = Mock()
 
-    session = UserSession(workflow=mock_workflow, max_concurrency=8)
+    session = Session(workflow=mock_workflow, max_concurrency=8)
 
     assert session.workflow is mock_workflow
     assert session.config == mock_workflow.config
@@ -49,7 +49,7 @@ async def test_user_session_run_executes_workflow():
     # Replace workflow.run with the async context manager
     mock_workflow.run = mock_run
 
-    session = UserSession(workflow=mock_workflow, max_concurrency=8)
+    session = Session(workflow=mock_workflow, max_concurrency=8)
 
     async with session.run("test message") as runner:
         assert runner is mock_runner
@@ -60,7 +60,7 @@ async def test_user_session_concurrency_control():
     mock_workflow = Mock(spec=Workflow)
     mock_workflow.config = Mock()
 
-    session = UserSession(workflow=mock_workflow, max_concurrency=2)
+    session = Session(workflow=mock_workflow, max_concurrency=2)
 
     # Should allow 2 concurrent executions
     assert session._max_concurrency == 2

@@ -40,7 +40,7 @@ from nat.eval.usage_stats import UsageStatsLLM
 from nat.eval.utils.output_uploader import OutputUploader
 from nat.eval.utils.weave_eval import WeaveEvaluationIntegration
 from nat.profiler.data_models import ProfilerResults
-from nat.runtime.session import UserSession
+from nat.runtime.session import Session
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +153,7 @@ class EvaluationRun:
                                                                      llm_latency=llm_latency)
         return self.usage_stats.usage_stats_items[item.id]
 
-    async def run_workflow_local(self, user_session: UserSession):
+    async def run_workflow_local(self, user_session: Session):
         '''
         Launch the workflow with the specified questions and extract the output using the jsonpath
         '''
@@ -423,7 +423,7 @@ class EvaluationRun:
 
         return workflow_type
 
-    async def wait_for_all_export_tasks_local(self, user_session: UserSession, timeout: float) -> None:
+    async def wait_for_all_export_tasks_local(self, user_session: Session, timeout: float) -> None:
         """Wait for all trace export tasks to complete for local workflows.
 
         This only works for local workflows where we have direct access to the
@@ -451,7 +451,7 @@ class EvaluationRun:
             logger.warning("Failed to wait for local export tasks: %s", e)
 
     async def run_and_evaluate(self,
-                               user_session: UserSession | None = None,
+                               user_session: Session | None = None,
                                job_id: str | None = None) -> EvaluationRunOutput:
         """
         Run the workflow with the specified config file and evaluate the dataset
@@ -534,7 +534,7 @@ class EvaluationRun:
                 elif not self.config.skip_workflow:
                     if user_session is None:
                         workflow = await eval_workflow.build()
-                        user_session = UserSession(workflow, max_concurrency=self.eval_config.general.max_concurrency)
+                        user_session = Session(workflow, max_concurrency=self.eval_config.general.max_concurrency)
                     await self.run_workflow_local(user_session)
 
                 # Pre-evaluation process the workflow output
