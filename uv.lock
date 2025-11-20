@@ -5706,11 +5706,11 @@ wheels = [
 
 [[package]]
 name = "nest-asyncio2"
-version = "1.6.2"
+version = "1.6.3"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/39/de/649f789aa34d75f08e3e12b1f2ed56dc34b3e85d4b87d208a507ab608709/nest_asyncio2-1.6.2.tar.gz", hash = "sha256:be466ddd26a9f7913663c1893edffa9d890ccc606e13e643249a8ebbfbfd09fc", size = 9830, upload-time = "2025-11-19T13:14:58.543Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/77/39/36a9b2007cd72105428124926234e80d73367176bb056e4767ed965b2bca/nest_asyncio2-1.6.3.tar.gz", hash = "sha256:5edf8c11bb1180ad03e04597e956ca0f6fad40b9ed5158648ff45105d2561288", size = 10639, upload-time = "2025-11-20T13:54:17.108Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b5/b0/1602ef1eda199549af0e352d42b3eb1a1f19031e88bcaa569e3363b54b17/nest_asyncio2-1.6.2-py3-none-any.whl", hash = "sha256:6321e277880e63affdf464dcfc6c1f811ee2a2d73390ed035dec0daeb90432ef", size = 6592, upload-time = "2025-11-19T13:14:57.55Z" },
+    { url = "https://files.pythonhosted.org/packages/33/a2/28dd3c85f710ef365183eaf99c7d16d2b8a9dc86d25ba018df1b024b47f7/nest_asyncio2-1.6.3-py3-none-any.whl", hash = "sha256:25c2440ccc53441bb6efb0c04c6e8b104145b1f13474653b96a490683e4aaa1e", size = 7175, upload-time = "2025-11-20T13:54:16.012Z" },
 ]
 
 [[package]]
@@ -6128,7 +6128,7 @@ requires-dist = [
     { name = "nat-strands-demo", marker = "extra == 'examples'", editable = "examples/frameworks/strands_demo" },
     { name = "nat-swe-bench", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/swe_bench" },
     { name = "nat-user-report", marker = "extra == 'examples'", editable = "examples/object_store/user_report" },
-    { name = "nest-asyncio2", specifier = "==1.6.2" },
+    { name = "nest-asyncio2", specifier = "==1.6.3" },
     { name = "networkx", specifier = "~=3.4" },
     { name = "numpy", marker = "python_full_version < '3.12'", specifier = "~=1.26" },
     { name = "numpy", marker = "python_full_version >= '3.12'", specifier = "~=2.3" },
