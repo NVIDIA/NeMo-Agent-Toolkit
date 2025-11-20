@@ -252,7 +252,6 @@ dev = [
   "pytest_httpserver==1.1.*",
   "pytest-asyncio==0.24.*",
   "pytest-cov~=6.1",
-  "pytest-pretty~=1.2.0",
   "pytest~=8.3",
   "python-docx~=1.1.0",
   "ruff~=0.12",
