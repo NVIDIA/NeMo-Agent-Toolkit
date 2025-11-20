@@ -497,7 +497,7 @@ class ResponseIntermediateStep(ResponseBaseModelIntermediate):
 class ResponseObservabilityTrace(BaseModel, ResponseSerializable):
     """
     ResponseObservabilityTrace is a data model that represents an observability trace event
-    sent once when the trace ID becomes available, following the same pattern as intermediate_data.
+    sent once when the trace ID becomes available
     """
 
     observability_trace_id: str
@@ -537,6 +537,7 @@ class WebSocketMessageType(str, Enum):
     INTERMEDIATE_STEP_MESSAGE = "system_intermediate_message"
     SYSTEM_INTERACTION_MESSAGE = "system_interaction_message"
     USER_INTERACTION_MESSAGE = "user_interaction_message"
+    OBSERVABILITY_TRACE_MESSAGE = "observability_trace_message"
     ERROR_MESSAGE = "error_message"
 
 
@@ -709,6 +710,28 @@ class WebSocketSystemInteractionMessage(BaseModel):
     conversation_id: str | None = None
     content: HumanPrompt
     status: WebSocketMessageStatus
+    timestamp: str = str(datetime.datetime.now(datetime.UTC))
+
+
+class ObservabilityTraceContent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    observability_trace_id: str
+
+
+class WebSocketObservabilityTraceMessage(BaseModel):
+    """
+    WebSocket message for observability trace ID.
+    Sent once after the workflow completes to correlate the request with observability traces.
+    """
+    # Allow extra fields in the model_config to support derived models
+    model_config = ConfigDict(extra="allow")
+
+    type: typing.Literal[
+        WebSocketMessageType.OBSERVABILITY_TRACE_MESSAGE] = WebSocketMessageType.OBSERVABILITY_TRACE_MESSAGE
+    id: str = "default"
+    parent_id: str = "default"
+    conversation_id: str | None = None
+    content: ObservabilityTraceContent
     timestamp: str = str(datetime.datetime.now(datetime.UTC))
 
 
