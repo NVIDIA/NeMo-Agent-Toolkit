@@ -19,6 +19,7 @@ These tests require actual API keys and will make real API calls to LLM provider
 Run with: pytest --run_integration
 """
 
+import os
 from unittest.mock import MagicMock
 
 import pytest
@@ -33,6 +34,27 @@ from nat.plugins.strands.llm import bedrock_strands
 from nat.plugins.strands.llm import nim_strands
 from nat.plugins.strands.llm import openai_strands
 from nat.plugins.strands.tool_wrapper import strands_tool_wrapper
+
+
+@pytest.fixture
+def openai_api_key():
+    """Fixture to check for OpenAI API key."""
+    if not os.getenv("OPENAI_API_KEY"):
+        pytest.skip("OPENAI_API_KEY environment variable not set")
+
+
+@pytest.fixture
+def nvidia_api_key():
+    """Fixture to check for NVIDIA API key."""
+    if not os.getenv("NVIDIA_API_KEY"):
+        pytest.skip("NVIDIA_API_KEY environment variable not set")
+
+
+@pytest.fixture
+def aws_keys():
+    """Fixture to check for AWS credentials."""
+    if not (os.getenv("AWS_ACCESS_KEY_ID") and os.getenv("AWS_SECRET_ACCESS_KEY")):
+        pytest.skip("AWS credentials not set")
 
 
 class CalculatorInput(BaseModel):
@@ -119,7 +141,7 @@ class TestStrandsAgentE2EOpenAI:
         """Test agent with multiple tool calls."""
         from strands.agent import Agent
 
-        llm_config = OpenAIModelConfig(model_name="gpt-4o", temperature=0.0, max_tokens=96)
+        llm_config = OpenAIModelConfig(model_name="gpt-4o", temperature=0.0, max_tokens=256)
 
         strands_tool = strands_tool_wrapper("calculator", calculator_function, builder)
 
@@ -144,7 +166,7 @@ class TestStrandsAgentE2EOpenAI:
         """Test that agent handles tool errors gracefully."""
         from strands.agent import Agent
 
-        llm_config = OpenAIModelConfig(model_name="gpt-4o", temperature=0.0, max_tokens=64)
+        llm_config = OpenAIModelConfig(model_name="gpt-4o", temperature=0.0, max_tokens=256)
 
         strands_tool = strands_tool_wrapper("calculator", calculator_function, builder)
 
@@ -195,7 +217,7 @@ class TestStrandsAgentE2ENIM:
         from strands.agent import Agent
 
         # Create NIM LLM config
-        llm_config = NIMModelConfig(model_name="meta/llama-3.1-8b-instruct", temperature=0.0, max_tokens=96)
+        llm_config = NIMModelConfig(model_name="meta/llama-3.1-8b-instruct", temperature=0.0, max_tokens=256)
 
         # Convert NAT function to Strands tool
         strands_tool = strands_tool_wrapper("echo", echo_function, builder)
@@ -343,7 +365,7 @@ class TestStrandsAgentE2EBedrock:
         llm_config = AWSBedrockModelConfig(model_name="anthropic.claude-3-sonnet-20240229-v1:0",
                                            region_name="us-east-1",
                                            temperature=0.0,
-                                           max_tokens=96)
+                                           max_tokens=256)
 
         # Convert NAT function to Strands tool
         strands_tool = strands_tool_wrapper("greeting", greeting_function, builder)
