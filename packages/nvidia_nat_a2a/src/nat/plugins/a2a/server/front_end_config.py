@@ -64,12 +64,12 @@ class A2AFrontEndConfig(FrontEndBaseConfig, name="a2a"):
 
     # Agent metadata
     name: str = Field(
-        ...,
-        description="Name of the A2A agent (required)",
+        default="NeMo Agent Toolkit A2A Agent",
+        description="Name of the A2A agent (default: NeMo Agent Toolkit A2A Agent)",
     )
     description: str = Field(
-        ...,
-        description="Description of what the agent does (required)",
+        default="An AI agent powered by NeMo Agent Toolkit exposed via A2A protocol",
+        description="Description of what the agent does (default: generic description)",
     )
 
     # A2A capabilities
