@@ -35,12 +35,12 @@ class WeaveFastAPIPluginWorker(FastApiFrontEndPluginWorker):
     Usage:
         Configure your workflow to use this worker:
 
-        ```yaml
-        general:
-          front_end:
-            _type: fastapi
-            runner_class: nat.plugins.weave.fastapi_plugin_worker.WeaveFastAPIPluginWorker
-        ```
+        .. code-block:: yaml
+
+            general:
+              front_end:
+                _type: fastapi
+                runner_class: nat.plugins.weave.fastapi_plugin_worker.WeaveFastAPIPluginWorker
     """
 
     @override
@@ -57,7 +57,7 @@ class WeaveFastAPIPluginWorker(FastApiFrontEndPluginWorker):
 
         # Find Weave telemetry exporter configuration
         weave_config = None
-        for name, exporter_config in builder._telemetry_exporters.items():
+        for exporter_config in builder._telemetry_exporters.values():
             if hasattr(exporter_config.config, 'project') and \
                exporter_config.config.__class__.__name__ == 'WeaveTelemetryExporter':
                 weave_config = exporter_config.config
@@ -74,8 +74,8 @@ class WeaveFastAPIPluginWorker(FastApiFrontEndPluginWorker):
                 import weave
 
                 # Get the weave project name from the configuration
-                entity = getattr(weave_config, 'entity', None)
-                project = getattr(weave_config, 'project')
+                entity = weave_config.entity if hasattr(weave_config, 'entity') else None
+                project = weave_config.project
                 weave_project = f"{entity}/{project}" if entity else project
 
                 # Extract parameters from payload
