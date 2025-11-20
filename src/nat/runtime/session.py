@@ -32,8 +32,8 @@ from starlette.requests import Request
 from nat.builder.context import Context
 from nat.builder.context import ContextState
 from nat.builder.workflow import Workflow
+from nat.builder.workflow_builder import PerUserWorkflowBuilder
 from nat.builder.workflow_builder import SharedWorkflowBuilder
-from nat.builder.workflow_builder import UserWorkflowBuilder
 from nat.data_models.authentication import AuthenticatedContext
 from nat.data_models.authentication import AuthFlowType
 from nat.data_models.authentication import AuthProviderBaseConfig
@@ -230,7 +230,7 @@ class SessionManager:
                 logger.error("Error initializing shared builder: %s", e)
                 raise RuntimeError(f"Shared builder initialization failed: {e}") from e
 
-    async def _create_user_workflow(self, user_id: str) -> tuple[Workflow, UserWorkflowBuilder]:
+    async def _create_user_workflow(self, user_id: str) -> tuple[Workflow, PerUserWorkflowBuilder]:
         """
         Create a new workflow for a specific user.
         """
@@ -241,9 +241,9 @@ class SessionManager:
             shared_builder = await self._ensure_shared_builder()
 
             # Create per-user builder
-            user_builder = UserWorkflowBuilder(general_config=self._config.general,
-                                               shared_builder=shared_builder,
-                                               user_id=user_id)
+            user_builder = PerUserWorkflowBuilder(general_config=self._config.general,
+                                                  shared_builder=shared_builder,
+                                                  user_id=user_id)
 
             await user_builder.__aenter__()
             await user_builder.populate_builder(self._config)

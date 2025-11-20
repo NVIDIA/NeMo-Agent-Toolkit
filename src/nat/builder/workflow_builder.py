@@ -42,9 +42,11 @@ from nat.builder.llm import LLMProviderInfo
 from nat.builder.retriever import RetrieverProviderInfo
 from nat.builder.workflow import Workflow
 from nat.cli.type_registry import GlobalTypeRegistry
+from nat.cli.type_registry import RegisteredInfo
 from nat.cli.type_registry import TypeRegistry
 from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.common import TypedBaseModel
+from nat.data_models.common import TypedBaseModelT
 from nat.data_models.component import ComponentGroup
 from nat.data_models.component_ref import AuthenticationRef
 from nat.data_models.component_ref import EmbedderRef
@@ -173,6 +175,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         self._functions: dict[str, ConfiguredFunction] = {}
         self._function_groups: dict[str, ConfiguredFunctionGroup] = {}
         self._workflow: ConfiguredFunction | None = None
+        self.is_workflow_per_user: bool = False
 
         self._llms: dict[str, ConfiguredLLM] = {}
         self._auth_providers: dict[str, ConfiguredAuthProvider] = {}
@@ -271,6 +274,12 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             handler.setLevel(old_level)
 
         await self._exit_stack.__aexit__(*exc_details)
+
+    @staticmethod
+    def _should_build_component(registration: RegisteredInfo[TypedBaseModelT]) -> bool:
+        # When overriding this method, make sure it returns results that are mutually exclusive with other builders
+        # to avoid building the component multiple times.
+        return not registration.per_user
 
     async def build(self, entry_function: str | None = None) -> Workflow:
         """
@@ -1173,13 +1182,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         """
         self._log_build_failure("<workflow>", "workflow", completed_components, remaining_components, original_error)
 
-    def _should_build_component(self, config: TypedBaseModel) -> bool:
-        """Determine if a component should be built based on the WorkflowBuilder type and configuration.
-
-        By default all components are built. Subclasses can override this method.
-        """
-        return True
-
     async def populate_builder(self, config: Config, skip_workflow: bool = False):
         """
         Populate the builder with components and optionally set up the workflow.
@@ -1209,47 +1211,85 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
                 # Instantiate a the llm
                 if component_instance.component_group == ComponentGroup.LLMS:
-                    await self.add_llm(component_instance.name, cast(LLMBaseConfig, component_instance.config))
+                    config_obj = cast(LLMBaseConfig, component_instance.config)
+                    registration = self._registry.get_llm_provider(type(config_obj))
+                    if self._should_build_component(registration):
+                        await self.add_llm(component_instance.name, config_obj)
+                    else:
+                        continue
                 # Instantiate a the embedder
                 elif component_instance.component_group == ComponentGroup.EMBEDDERS:
-                    await self.add_embedder(component_instance.name,
-                                            cast(EmbedderBaseConfig, component_instance.config))
+                    config_obj = cast(EmbedderBaseConfig, component_instance.config)
+                    registration = self._registry.get_embedder_provider(type(config_obj))
+                    if self._should_build_component(registration):
+                        await self.add_embedder(component_instance.name, config_obj)
+                    else:
+                        continue
                 # Instantiate a memory client
                 elif component_instance.component_group == ComponentGroup.MEMORY:
-                    await self.add_memory_client(component_instance.name,
-                                                 cast(MemoryBaseConfig, component_instance.config))
+                    config_obj = cast(MemoryBaseConfig, component_instance.config)
+                    registration = self._registry.get_memory(type(config_obj))
+                    if self._should_build_component(registration):
+                        await self.add_memory_client(component_instance.name, config_obj)
+                    else:
+                        continue
                 # Instantiate a object store client
                 elif component_instance.component_group == ComponentGroup.OBJECT_STORES:
-                    await self.add_object_store(component_instance.name,
-                                                cast(ObjectStoreBaseConfig, component_instance.config))
+                    config_obj = cast(ObjectStoreBaseConfig, component_instance.config)
+                    registration = self._registry.get_object_store(type(config_obj))
+                    if self._should_build_component(registration):
+                        await self.add_object_store(component_instance.name, config_obj)
+                    else:
+                        continue
                 # Instantiate a retriever client
                 elif component_instance.component_group == ComponentGroup.RETRIEVERS:
-                    await self.add_retriever(component_instance.name,
-                                             cast(RetrieverBaseConfig, component_instance.config))
+                    config_obj = cast(RetrieverBaseConfig, component_instance.config)
+                    registration = self._registry.get_retriever_provider(type(config_obj))
+                    if self._should_build_component(registration):
+                        await self.add_retriever(component_instance.name, config_obj)
+                    else:
+                        continue
                 # Instantiate middleware
                 elif component_instance.component_group == ComponentGroup.MIDDLEWARE:
-                    await self.add_middleware(component_instance.name,
-                                              cast(MiddlewareBaseConfig, component_instance.config))
+                    config_obj = cast(MiddlewareBaseConfig, component_instance.config)
+                    registration = self._registry.get_middleware(type(config_obj))
+                    if self._should_build_component(registration):
+                        await self.add_middleware(component_instance.name, config_obj)
+                    else:
+                        continue
                 # Instantiate a function group
                 elif component_instance.component_group == ComponentGroup.FUNCTION_GROUPS:
                     config_obj = cast(FunctionGroupBaseConfig, component_instance.config)
-                    if self._should_build_component(config_obj):
+                    registration = self._registry.get_function_group(type(config_obj))
+                    if self._should_build_component(registration):
                         await self.add_function_group(component_instance.name, config_obj)
+                    else:
+                        continue
                 # Instantiate a function
                 elif component_instance.component_group == ComponentGroup.FUNCTIONS:
                     # If the function is the root, set it as the workflow later
-                    if (not component_instance.is_root):
+                    if not component_instance.is_root:
                         config_obj = cast(FunctionBaseConfig, component_instance.config)
-                        if self._should_build_component(config_obj):
+                        registration = self._registry.get_function(type(config_obj))
+                        if self._should_build_component(registration):
                             await self.add_function(component_instance.name, config_obj)
+                        else:
+                            continue
                 elif component_instance.component_group == ComponentGroup.TTC_STRATEGIES:
-                    await self.add_ttc_strategy(component_instance.name,
-                                                cast(TTCStrategyBaseConfig, component_instance.config))
+                    config_obj = cast(TTCStrategyBaseConfig, component_instance.config)
+                    registration = self._registry.get_ttc_strategy(type(config_obj))
+                    if self._should_build_component(registration):
+                        await self.add_ttc_strategy(component_instance.name, config_obj)
+                    else:
+                        continue
 
                 elif component_instance.component_group == ComponentGroup.AUTHENTICATION:
                     config_obj = cast(AuthProviderBaseConfig, component_instance.config)
-                    if self._should_build_component(config_obj):
+                    registration = self._registry.get_auth_provider(type(config_obj))
+                    if self._should_build_component(registration):
                         await self.add_auth_provider(component_instance.name, config_obj)
+                    else:
+                        continue
                 else:
                     raise ValueError(f"Unknown component group {component_instance.component_group}")
 
@@ -1265,10 +1305,16 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         # Instantiate the workflow
         if not skip_workflow:
             try:
-                # Remove workflow from remaining as we start building
-                remaining_components.remove(("<workflow>", "workflow"))
-                await self.set_workflow(config.workflow)
-                completed_components.append(("<workflow>", "workflow"))
+                registration = self._registry.get_function(type(config.workflow))
+
+                if self._should_build_component(registration):
+                    await self.set_workflow(config.workflow)
+                    remaining_components.remove(("<workflow>", "workflow"))
+                    completed_components.append(("<workflow>", "workflow"))
+
+                else:
+                    self.is_workflow_per_user = True
+
             except Exception as e:
                 self._log_build_failure_workflow(completed_components, remaining_components, e)
                 raise
@@ -1505,130 +1551,13 @@ class ChildBuilder(Builder):
         return self._workflow_builder.get_middleware_config(middleware_name)
 
 
-class SharedWorkflowBuilder(WorkflowBuilder):
-    """ Builder for shared components with server lifecycle.
-
-    Holds components built at server startup and lives until server shutdown.
-
-    All dependencies of the components must also have server lifecycle.
-    """
-
-    def __init__(self, *, general_config: GeneralConfig | None = None, registry: TypeRegistry | None = None):
-        super().__init__(general_config=general_config, registry=registry)
-
-    @override
-    def _should_build_component(self, config: TypedBaseModel) -> bool:
-        """Determine if a component should be built based on the configuration.
-
-        SharedWorkflowBuilder should build the following components:
-            - Always-shared (LLMs, embedders, etc.)
-            - Functions/groups with scope: shared
-        """
-        from nat.data_models.authentication import AuthProviderBaseConfig
-        from nat.data_models.component import ComponentScope
-
-        # Auth providers MUST be per-user, should never be built by SharedWorkflowBuilder
-        if isinstance(config, AuthProviderBaseConfig):
-            return False
-
-        # Components without scope are shared
-        if not hasattr(config, "scope"):
-            return True
-
-        return config.scope == ComponentScope.SHARED  # type: ignore
-
-    def _validate_shared_dependencies(self, config: Config):
-        """Validate shared components do not have any dependencies that are per-user.
-
-        Args:
-            config (Config): Configuration for looking up component scopes and dependencies.
-
-        Raises:
-            ValueError: If invalid dependencies detected
-        """
-        from nat.data_models.component import ComponentScope
-
-        errors = []
-
-        # Validate shared function groups
-        for function_group_name, function_group_deps in self.function_group_dependencies.items():
-            function_group_config = config.function_groups.get(function_group_name)
-
-            if function_group_config and function_group_config.scope != ComponentScope.SHARED:
-                continue
-
-            for dep_function_group_name in function_group_deps.function_groups:
-                dep_function_group_config = config.function_groups.get(dep_function_group_name)
-                if dep_function_group_config and dep_function_group_config.scope != ComponentScope.SHARED:
-                    errors.append(f"Shared function group {function_group_name} depends on per-user function group \
-                                  {dep_function_group_name}.")
-
-            for dep_function_name in function_group_deps.functions:
-                dep_function_config = config.functions.get(dep_function_name)
-                if dep_function_config and dep_function_config.scope != ComponentScope.SHARED:
-                    errors.append(f"Shared function group {function_group_name} depends on per-user function \
-                                  {dep_function_name}.")
-
-        # Validate shared functions
-        for function_name, function_deps in self.function_dependencies.items():
-            function_config = config.functions.get(function_name)
-
-            if function_config and function_config.scope != ComponentScope.SHARED:
-                continue
-
-            for dep_function_group_name in function_deps.function_groups:
-                dep_function_group_config = config.function_groups.get(dep_function_group_name)
-                if dep_function_group_config and dep_function_group_config.scope != ComponentScope.SHARED:
-                    errors.append(f"Shared function {function_name} depends on per-user function group \
-                                  {dep_function_group_name}.")
-
-            for dep_function_name in function_deps.functions:
-                dep_function_config = config.functions.get(dep_function_name)
-                if dep_function_config and dep_function_config.scope != ComponentScope.SHARED:
-                    errors.append(f"Shared function {function_name} depends on per-user function \
-                                  {dep_function_name}.")
-
-        if errors:
-            error_msg = "Shared components must not have any per-user dependencies. Found the following invalid \
-                dependencies:\n" + "\n".join(errors)
-            raise ValueError(error_msg)
-
-    @override
-    async def populate_builder(self, config: Config, skip_workflow: bool = True):
-        """Build all shared components and validate dependencies.
-
-        Args:
-            config (Config): The configuration object containing component definitions.
-            skip_workflow (bool, optional): If True, skips the workflow instantiation step.
-            This must be True for SharedWorkflowBuilder, since workflows are always per-user.
-
-        Raises:
-            ValueError: If the workflow is attempted to be populated with a shared builder.
-        """
-        # Workflow is always per-user, so it must be skipped
-        if not skip_workflow:
-            raise ValueError("Shared builder does not support populating with workflow")
-
-        await super().populate_builder(config, skip_workflow=skip_workflow)
-
-        self._validate_shared_dependencies(config)
-
-    @override
-    async def build(self, entry_function: str | None = None) -> Workflow:
-        """
-        Raises:
-            RuntimeError: Always, since shared builders do not build workflows
-        """
-        raise RuntimeError("Shared builder does not support building workflows")
-
-
-class UserWorkflowBuilder(WorkflowBuilder):
+class PerUserWorkflowBuilder(WorkflowBuilder):
 
     def __init__(self,
                  *,
                  general_config: GeneralConfig | None = None,
                  registry: TypeRegistry | None = None,
-                 shared_builder: SharedWorkflowBuilder,
+                 shared_builder: WorkflowBuilder,
                  user_id: str):
         if not user_id:
             raise ValueError("UserWorkflowBuilder requires a non-empty user ID to initialize.")
@@ -1644,6 +1573,7 @@ class UserWorkflowBuilder(WorkflowBuilder):
         self._object_stores = shared_builder._object_stores
         self._retrievers = shared_builder._retrievers
         self._ttc_strategies = shared_builder._ttc_strategies
+        self._middleware = shared_builder._middleware
 
         # Reference shared functions/function groups
         self._function_groups.update(shared_builder._function_groups)
@@ -1676,47 +1606,9 @@ class UserWorkflowBuilder(WorkflowBuilder):
         return await super().__aexit__(*exc_details)
 
     @override
-    def _should_build_component(self, config: TypedBaseModel) -> bool:
-        """Determine if a component should be built based on the configuration.
+    @staticmethod
+    def _should_build_component(registration: RegisteredInfo[TypedBaseModelT]) -> bool:
+        # When overriding this method, make sure it returns results that are mutually exclusive with other builders
+        # to avoid building the component multiple times.
 
-        UserWorkflowBuilder should build the following components:
-            - Functions/groups with scope: per-user
-            - Auth providers (must be per-user)
-        """
-        from nat.data_models.authentication import AuthProviderBaseConfig
-        from nat.data_models.component import ComponentScope
-
-        # Auth providers MUST be per-user
-        if isinstance(config, AuthProviderBaseConfig):
-            return True
-
-        # Components without scope are shared
-        if not hasattr(config, "scope"):
-            return False
-
-        return config.scope == ComponentScope.PER_USER  # type: ignore
-
-    @override
-    async def populate_builder(self, config: Config, skip_workflow: bool = False):
-        """Populate the builder with components and optionally set up the workflow.
-
-        Args:
-            config (Config): The configuration object containing component definitions.
-            skip_workflow (bool): If True, skips the workflow instantiation step. Defaults to False.
-        """
-        await super().populate_builder(config, skip_workflow=skip_workflow)
-
-    @override
-    async def add_middleware(self, name: str | MiddlewareRef, config: MiddlewareBaseConfig) -> Middleware:
-        """Add middleware to the builder."""
-        return await self._workflow_builder.add_middleware(name, config)
-
-    @override
-    async def get_middleware(self, middleware_name: str | MiddlewareRef) -> Middleware:
-        """Get built middleware by name."""
-        return await self._workflow_builder.get_middleware(middleware_name)
-
-    @override
-    def get_middleware_config(self, middleware_name: str | MiddlewareRef) -> MiddlewareBaseConfig:
-        """Get the configuration for middleware."""
-        return self._workflow_builder.get_middleware_config(middleware_name)
+        return registration.per_user

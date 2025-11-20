@@ -140,6 +140,13 @@ class RegisteredInfo(BaseModel, typing.Generic[TypedBaseModelT]):
     config_type: type[TypedBaseModelT]
     discovery_metadata: DiscoveryMetadata = DiscoveryMetadata()
 
+    per_user: bool = Field(default=False,
+                           description="Whether the component is per-user. If True, "
+                           "each user will have their own separate instance of the component. The per-user"
+                           "component instance will be lazily built on first invocation. If False, the"
+                           "component instance will be shared across all users, and will be built immediately."
+                           "Default to False.")
+
     @computed_field
     @cached_property
     def module_name(self) -> str:
@@ -191,43 +198,35 @@ class RegisteredFunctionInfo(RegisteredInfo[FunctionBaseConfig]):
     build_fn: FunctionRegisteredCallableT = Field(repr=False)
     framework_wrappers: list[str] = Field(default_factory=list)
 
-    is_per_user_function: bool = Field(
-        default=False,
-        description="Whether the function is a per-user function. If True, "
-        "each user will have their own separate instance of the function. The per-user"
-        "function instance will be lazily built on first invocation. If False, the"
-        "function instance will be shared across all users, and will be built immediately."
-        "Default to False.")
-
-    # Declared schemas for per-user functions which are lazy-loaded. Must be provided if is_per_user_function is True.
+    # Declared schemas for per-user functions which are lazy-loaded. Must be provided if per_user is True.
     per_user_function_input_schema: type[BaseModel] | None = Field(
         default=None,
-        description="Declared input schema for per-user functions. Must be provided if is_per_user_function"
+        description="Declared input schema for per-user functions. Must be provided if per_user"
         "is True. This is for enabling OpenAPI documentation generation without a concrete function instance.")
     per_user_function_single_output_schema: type[BaseModel] | None = Field(
         default=None,
-        description="Declared single output schema for per-user functions. Must be provided if is_per_user_function"
+        description="Declared single output schema for per-user functions. Must be provided if per_user"
         "is True. This is for enabling OpenAPI documentation generation without a concrete function instance.")
     per_user_function_streaming_output_schema: type[BaseModel] | None = Field(
         default=None,
-        description="Declared streaming output schema for per-user functions. Must be provided if is_per_user_function"
+        description="Declared streaming output schema for per-user functions. Must be provided if per_user"
         "is True. This is for enabling OpenAPI documentation generation without a concrete function instance.")
 
     @model_validator(mode="after")
     def validate_per_user_function_schema_declaration(self) -> Self:
         """
-        Validate if the schemas are explicitly declared when is_per_user_function is True
+        Validate if the schemas are explicitly declared when per_user is True
         """
-        if self.is_per_user_function:
+        if self.per_user:
 
             if self.per_user_function_input_schema is None:
-                raise ValueError("per_user_function_input_schema must be provided if is_per_user_function is True")
+                raise ValueError("per_user_function_input_schema must be provided if per_user is True")
 
             if self.per_user_function_single_output_schema is None and \
                 self.per_user_function_streaming_output_schema is None:
                 raise ValueError(
                     "per_user_function_single_output_schema or per_user_function_streaming_output_schema must be "
-                    "provided if is_per_user_function is True")
+                    "provided if per_user is True")
 
         return self
 
