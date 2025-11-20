@@ -44,8 +44,8 @@ async def test_session_manager_creates_shared_builder_once():
     config = Config()
     session_manager = SessionManager(config=config)
 
-    shared_builder_1 = await session_manager._ensure_shared_builder()
-    shared_builder_2 = await session_manager._ensure_shared_builder()
+    shared_builder_1 = await session_manager.ensure_shared_builder()
+    shared_builder_2 = await session_manager.ensure_shared_builder()
     assert shared_builder_1 is shared_builder_2
 
 

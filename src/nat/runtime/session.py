@@ -50,10 +50,7 @@ logger = logging.getLogger(__name__)
 
 class Session:
 
-    def __init__(self,
-                 workflow: Workflow,
-                 max_concurrency: int = 8,
-                 runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE):
+    def __init__(self, workflow: Workflow, max_concurrency: int = 8):
         """
         The Session class is used to run and manage a user workflow session. It runs a workflow for a single user
         with the specified concurrency limit.
@@ -189,9 +186,13 @@ class SessionManager:
             return user_id[:length] + "..."
         return user_id
 
-    async def _ensure_shared_builder(self) -> WorkflowBuilder:
-        """
-        Ensures the shared builder is created with shared components. Lazy initialization on first user request.
+    async def ensure_shared_builder(self) -> WorkflowBuilder:
+        """Ensure the shared builder is created with shared components. Lazy initialization on first user request.
+
+        Returns
+        -------
+        WorkflowBuilder
+            The shared builder
         """
 
         # Fast path: shared builderalready initialized
@@ -230,7 +231,7 @@ class SessionManager:
 
         try:
             # Ensure shared components are built
-            shared_builder = await self._ensure_shared_builder()
+            shared_builder = await self.ensure_shared_builder()
 
             # Create per-user builder
             user_builder = PerUserWorkflowBuilder(general_config=self._config.general,
@@ -321,7 +322,7 @@ class SessionManager:
         elif isinstance(http_connection, Request):
             self.set_metadata_from_http_request(http_connection)
 
-        self._shared_builder = await self._ensure_shared_builder()
+        self._shared_builder = await self.ensure_shared_builder()
         user_workflow_data = None
         user_id = None
 

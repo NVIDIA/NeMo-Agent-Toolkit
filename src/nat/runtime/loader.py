@@ -117,7 +117,7 @@ async def load_workflow(config_file: StrPath, max_concurrency: int = -1):
     #     yield SessionManager(await workflow.build(), max_concurrency=max_concurrency)
 
     session_manager = SessionManager(config=config, require_user_id=False)
-    await session_manager._ensure_shared_builder()
+    await session_manager.ensure_shared_builder()
     try:
         yield session_manager
     finally:

@@ -577,8 +577,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             logger.debug("No object store configured, skipping static files route")
             return
 
-        # TODO: The current logic needs to ensure the object store is always shared, not per-user
-        shared_builder = await session_manager._ensure_shared_builder()
+        shared_builder = await session_manager.ensure_shared_builder()
         object_store_client = await shared_builder.get_object_store_client(self.front_end_config.object_store)
 
         def sanitize_path(path: str) -> str:
