@@ -485,14 +485,22 @@ def populate_milvus_fixture(milvus_uri: str, root_repo_dir: Path):
                    check=True)
 
 
-@pytest.fixture(name="require_nest_asyncio", scope="session")
+@pytest.fixture(name="require_nest_asyncio", scope="session", autouse=True)
 def require_nest_asyncio_fixture():
     """
-    Some tests require nest_asyncio to be installed to allow nested event loops, calling nest_asyncio.apply() more than
-    once is a no-op so it's safe to call this fixture even if one of our dependencies already called it.
+    Some tests require the nest_asyncio2 patch to be applied to allow nested event loops, calling
+    `nest_asyncio2.apply()` more than once is a no-op. However we need to ensure that the nest_asyncio2 patch is
+    applied prior to the older nest_asyncio patch is applied. Requiring us to ensure that any library which will apply
+    the patch on import is lazily imported.
     """
-    import nest_asyncio
-    nest_asyncio.apply()
+    import nest_asyncio2
+    try:
+        nest_asyncio2.apply(error_on_mispatched=True)
+    except RuntimeError as e:
+        raise RuntimeError(
+            "nest_asyncio2 fixture called but asyncio is already patched, most likely this is due to the nest_asyncio "
+            "being applied first, which is not compatible with Python 3.12+. Please ensure that any libraries which "
+            "apply nest_asyncio on import are lazily imported.") from e
 
 
 @pytest.fixture(name="phoenix_url", scope="session")

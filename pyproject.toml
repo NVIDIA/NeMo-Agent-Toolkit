@@ -29,7 +29,7 @@ dependencies = [
   "jinja2~=3.1",
   "jsonpath-ng~=1.7",
   "mcp~=1.13",
-  "nest-asyncio~=1.6", # refer to https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues/770 for details
+  "nest-asyncio2==1.7.1",
   "networkx~=3.4",
   # langchain-aws pins numpy to 1.* for Python <3.12 -- remove once package is updated
   "numpy~=1.26; python_version < '3.12'",
@@ -48,7 +48,7 @@ dependencies = [
   "ragas~=0.2.14", # If you update ragas be sure to update github links in docs/source/workflows/evaluate.md as well
   "rich>=14.0.0,<15.0.0",  # Upgraded from ~=13.9 to support strands-agents-tools (requires >=14.0.0,<15.0.0)
   "tabulate~=0.9",
-  "uvicorn[standard]<0.36", # need to limit version until nest_asyncio is resolved
+  "uvicorn[standard]~=0.38",
   "wikipedia~=1.4",
 ]
 requires-python = ">=3.11,<3.14"
@@ -142,12 +142,8 @@ gunicorn = [
 # Optional dependency needed when async endpoints are needed
 async_endpoints = [
   "aiosqlite~=0.21",
-  # Newer versions of Dask make use of the asyncio loop_factory https://github.com/dask/distributed/pull/7969
-  # which was added in Python 3.12, the problem is that several of our other dependencies pull in a deprecated
-  # project `nest_asyncio` which patched asyncio.run in an incompatible way.
-  # https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues/770
-  "dask==2023.6",
-  "distributed==2023.6",
+  "dask~=2025.11",
+  "distributed~=2025.11",
   "sqlalchemy[asyncio]~=2.0",
 ]
 
