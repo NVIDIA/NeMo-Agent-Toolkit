@@ -31,7 +31,6 @@ if typing.TYPE_CHECKING:
     import galileo.log_streams
     import galileo.projects
     import langsmith.client
-
     from docker.client import DockerClient
 
 
@@ -495,7 +494,10 @@ def require_nest_asyncio_fixture():
 
     Requiring us to ensure that any library which will apply the patch on import is lazily imported.
     """
-    assert not hasattr(asyncio, "_nest_patched"), "nest_asyncio2 fixture called but asyncio is already patched"
+    assert not hasattr(asyncio, "_nest_patched"), \
+        ("nest_asyncio2 fixture called but asyncio is already patched, most likely this is due to the nest_asyncio "
+         "being applied first, which is not compatible with Python 3.12+. Please ensure that any libraries which "
+         "apply nest_asyncio on import are lazily imported.")
 
     import nest_asyncio2
     nest_asyncio2.apply()

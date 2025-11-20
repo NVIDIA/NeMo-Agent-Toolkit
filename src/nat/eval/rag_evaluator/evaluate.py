@@ -29,6 +29,8 @@ from nat.eval.evaluator.evaluator_model import EvalOutputItem
 from nat.eval.utils.tqdm_position_registry import TqdmPositionRegistry
 
 if typing.TYPE_CHECKING:
+    # We are lazily importing ragas to avoid import-time side effects such as applying the nest_asyncio patch, which is
+    # not compatible with Python 3.12+, we want to ensure that we are able to apply the nest_asyncio2 pathc instead.
     from ragas import EvaluationDataset
     from ragas.dataset_schema import EvaluationResult
     from ragas.llms import LangchainLLMWrapper

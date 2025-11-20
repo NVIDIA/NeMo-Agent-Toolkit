@@ -28,6 +28,8 @@ from nat.eval.evaluator.evaluator_model import EvalOutput
 from nat.eval.rag_evaluator.evaluate import RAGEvaluator
 
 if typing.TYPE_CHECKING:
+    # We are lazily importing ragas to avoid import-time side effects such as applying the nest_asyncio patch, which is
+    # not compatible with Python 3.12+, we want to ensure that we are able to apply the nest_asyncio2 pathc instead.
     from ragas.llms import LangchainLLMWrapper
     from ragas.metrics import Metric
 
