@@ -39,6 +39,7 @@ from nat.data_models.api_server import ChoiceDelta
 from nat.data_models.api_server import ChoiceMessage
 from nat.data_models.api_server import Error
 from nat.data_models.api_server import ErrorTypes
+from nat.data_models.api_server import ObservabilityTraceContent
 from nat.data_models.api_server import ResponseIntermediateStep
 from nat.data_models.api_server import ResponsePayloadOutput
 from nat.data_models.api_server import SystemIntermediateStepContent
@@ -46,6 +47,7 @@ from nat.data_models.api_server import SystemResponseContent
 from nat.data_models.api_server import TextContent
 from nat.data_models.api_server import Usage
 from nat.data_models.api_server import WebSocketMessageType
+from nat.data_models.api_server import WebSocketObservabilityTraceMessage
 from nat.data_models.api_server import WebSocketSystemInteractionMessage
 from nat.data_models.api_server import WebSocketSystemIntermediateStepMessage
 from nat.data_models.api_server import WebSocketSystemResponseTokenMessage
@@ -292,6 +294,17 @@ system_interaction_multiple_choice_dropdown_message = {
     "timestamp": "2025-01-13T10:00:03Z"
 }
 
+observability_trace_message = {
+    "type": "observability_trace_message",
+    "id": "trace_001",
+    "parent_id": "msg_123",
+    "conversation_id": "conv_001",
+    "content": {
+        "observability_trace_id": "weave-trace-xyz"
+    },
+    "timestamp": "2025-01-13T10:00:05Z"
+}
+
 
 @pytest.fixture(name="config")
 def server_config(restore_environ, file_path: str = "tests/nat/server/config.yml") -> BaseModel:
@@ -463,6 +476,15 @@ async def test_valid_user_interaction_response_message():
     assert isinstance(interaction_response_message, WebSocketUserInteractionResponseMessage)
 
 
+async def test_valid_observability_trace_message():
+    """Validate raw message against approved message type WebSocketObservabilityTraceMessage"""
+    message_validator = MessageValidator()
+
+    trace_message = await message_validator.validate_message(observability_trace_message)
+    assert isinstance(trace_message, WebSocketObservabilityTraceMessage)
+    assert trace_message.content.observability_trace_id == "weave-trace-xyz"
+
+
 valid_system_interaction_messages = [
     system_interaction_text_message,
     system_interaction_binary_choice_message,
@@ -632,6 +654,23 @@ async def test_text_prompt_to_websocket_message_to_text_response():
     assert isinstance(human_text_to_interaction_message, WebSocketSystemInteractionMessage)
     assert isinstance(human_text_to_interaction_message.content, HumanPromptText)
     assert isinstance(human_text_response_content, HumanResponseText)
+
+
+async def test_create_observability_trace_message():
+    """Tests ObservabilityTraceContent can be converted to a WebSocketObservabilityTraceMessage"""
+    message_validator = MessageValidator()
+
+    content = ObservabilityTraceContent(observability_trace_id="test-trace-123")
+
+    message = await message_validator.create_observability_trace_message(message_id="trace_msg_001",
+                                                                         parent_id="parent_123",
+                                                                         content=content)
+
+    assert isinstance(message, WebSocketObservabilityTraceMessage)
+    assert message.type == WebSocketMessageType.OBSERVABILITY_TRACE_MESSAGE
+    assert message.id == "trace_msg_001"
+    assert message.parent_id == "parent_123"
+    assert message.content.observability_trace_id == "test-trace-123"
 
 
 async def test_binary_choice_prompt_to_websocket_message_to_binary_choice_response():
