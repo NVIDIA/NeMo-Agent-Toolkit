@@ -37,7 +37,6 @@ from nat.cli.register_workflow import register_telemetry_exporter
 from nat.cli.register_workflow import register_ttc_strategy
 from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.authentication import AuthResult
-from nat.data_models.component import ComponentScope
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
@@ -71,14 +70,6 @@ class FunctionReturningDerivedConfig(FunctionBaseConfig, name="fn_return_derived
 
 class TAuthConfig(AuthProviderBaseConfig, name="test_auth"):
     pass
-
-
-class TSharedFunctionConfig(FunctionBaseConfig, name="test_shared_function"):
-    scope: ComponentScope = ComponentScope.SHARED
-
-
-class TPerUserFunctionConfig(FunctionBaseConfig, name="test_per_user_function"):
-    scope: ComponentScope = ComponentScope.PER_USER
 
 
 class TLLMProviderConfig(LLMBaseConfig, name="test_llm"):

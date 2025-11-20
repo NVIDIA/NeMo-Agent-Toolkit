@@ -58,11 +58,5 @@ class ComponentGroup(StrEnum):
     RETRIEVERS = "retrievers"
 
 
-class ComponentScope(StrEnum):
-    # Keep sorted!!!
-    SHARED = "shared"
-    PER_USER = "per_user"
-
-
 # Compatibility aliases with previous releases
 AIQComponentEnum = ComponentEnum

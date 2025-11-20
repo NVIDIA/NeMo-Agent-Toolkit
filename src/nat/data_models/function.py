@@ -21,7 +21,6 @@ from pydantic import model_validator
 
 from .common import BaseModelRegistryTag
 from .common import TypedBaseModel
-from .component import ComponentScope
 
 
 class FunctionBaseConfig(TypedBaseModel, BaseModelRegistryTag):
