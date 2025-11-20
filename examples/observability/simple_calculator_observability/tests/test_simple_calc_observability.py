@@ -255,10 +255,13 @@ async def test_catalyst_full_workflow(config_dir: Path,
     ds = Dataset(catalyst_project_name)
 
     dataset_found = False
+
+    # Allow some time for the traces to be uploaded
+    await asyncio.sleep(5)
     deadline = time.time() + 10
     while not dataset_found and time.time() < deadline:
-        # Wait for traces to be ingested
-        await asyncio.sleep(0.5)
         dataset_found = catalyst_dataset_name in ds.list_datasets()
+        if not dataset_found:
+            await asyncio.sleep(0.5)
 
     assert dataset_found
