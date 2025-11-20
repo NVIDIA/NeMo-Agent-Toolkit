@@ -23,3 +23,4 @@ class LLMFrameworkEnum(str, Enum):
     SEMANTIC_KERNEL = "semantic_kernel"
     AGNO = "agno"
     ADK = "adk"
+    STRANDS = "strands"

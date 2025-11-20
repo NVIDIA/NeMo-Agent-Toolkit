@@ -22,21 +22,19 @@ from pydantic import Field
 from nat.builder.builder import Builder
 from nat.builder.llm import LLMProviderInfo
 from nat.cli.register_workflow import register_llm_provider
+from nat.data_models.common import OptionalSecretStr
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.optimizable import OptimizableField
 from nat.data_models.optimizable import OptimizableMixin
+from nat.data_models.optimizable import SearchSpace
 from nat.data_models.retry_mixin import RetryMixin
-from nat.data_models.temperature_mixin import TemperatureMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
-from nat.data_models.top_p_mixin import TopPMixin
 
 
 class LiteLlmModelConfig(
         LLMBaseConfig,
         OptimizableMixin,
         RetryMixin,
-        TemperatureMixin,
-        TopPMixin,
         ThinkingMixin,
         name="litellm",
 ):
@@ -44,7 +42,7 @@ class LiteLlmModelConfig(
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")
 
-    api_key: str | None = Field(default=None, description="API key to interact with hosted model.")
+    api_key: OptionalSecretStr = Field(default=None, description="API key to interact with hosted model.")
     base_url: str | None = Field(default=None,
                                  description="Base url to the hosted model.",
                                  validation_alias=AliasChoices("base_url", "api_base"),
@@ -53,6 +51,16 @@ class LiteLlmModelConfig(
                                        serialization_alias="model",
                                        description="The LiteLlm hosted model name.")
     seed: int | None = Field(default=None, description="Random seed to set for generation.")
+    temperature: float | None = OptimizableField(
+        default=None,
+        ge=0.0,
+        description="Sampling temperature to control randomness in the output.",
+        space=SearchSpace(high=0.9, low=0.1, step=0.2))
+    top_p: float | None = OptimizableField(default=None,
+                                           ge=0.0,
+                                           le=1.0,
+                                           description="Top-p for distribution sampling.",
+                                           space=SearchSpace(high=1.0, low=0.5, step=0.1))
 
 
 @register_llm_provider(config_type=LiteLlmModelConfig)

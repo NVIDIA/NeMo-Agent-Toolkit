@@ -120,18 +120,24 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
 
                     from dask.distributed import LocalCluster
 
-                    self._cluster = LocalCluster(processes=True,
+                    use_threads = self.front_end_config.dask_workers == 'threads'
+
+                    # set n_workers to max_running_async_jobs + 1 to allow for one worker to handle the cleanup task
+                    self._cluster = LocalCluster(processes=not use_threads,
                                                  silence_logs=dask_log_level,
-                                                 n_workers=self.front_end_config.max_running_async_jobs,
-                                                 threads_per_worker=1)
+                                                 protocol="tcp",
+                                                 n_workers=self.front_end_config.max_running_async_jobs + 1)
 
                     self._scheduler_address = self._cluster.scheduler.address
 
-                    with self.blocking_client(self._scheduler_address) as client:
-                        # Client.run submits a function to be run on each worker
-                        client.run(self._setup_worker)
+                    if not use_threads and sys.platform != "win32":
+                        with self.blocking_client(self._scheduler_address) as client:
+                            # Client.run submits a function to be run on each worker
+                            client.run(self._setup_worker)
 
-                    logger.info("Created local Dask cluster with scheduler at %s", self._scheduler_address)
+                    logger.info("Created local Dask cluster with scheduler at %s using %s workers",
+                                self._scheduler_address,
+                                self.front_end_config.dask_workers)
 
                 except ImportError:
                     logger.warning("Dask is not installed, async execution and evaluation will not be available.")

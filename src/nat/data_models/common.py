@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import inspect
+import os
 import sys
 import typing
 from hashlib import sha512
@@ -191,6 +192,27 @@ def get_secret_value(v: SecretStr | None) -> str | None:
         return None
     return v.get_secret_value()
 
+
+def set_secret_from_env(model: BaseModel, field_name: str, env_var: str):
+    """
+    Set a SecretStr field in a Pydantic model from an environment variable, but only if the environment variable is set.
+
+    Parameters
+    ----------
+    model: BaseModel
+        The Pydantic model instance containing the field to set.
+    field_name: str
+        The name of the field in the model to set.
+    env_var: str
+        The name of the environment variable to read the secret value from.
+    """
+    env_value = os.getenv(env_var)
+    if env_value is not None:
+        setattr(model, field_name, SecretStr(env_value))
+
+
+# A SecretStr that serializes to plain string
+SerializableSecretStr = typing.Annotated[SecretStr, PlainSerializer(get_secret_value)]
 
 # A SecretStr or None that serializes to plain string
 OptionalSecretStr = typing.Annotated[SecretStr | None, PlainSerializer(get_secret_value)]

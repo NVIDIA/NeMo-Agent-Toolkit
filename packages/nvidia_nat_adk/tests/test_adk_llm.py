@@ -65,7 +65,6 @@ async def test_litellm_adk_with_full_config(mock_litellm_class, litellm_config, 
 
     # Verify LiteLlm was instantiated with correct parameters
     mock_litellm_class.assert_called_once_with('gpt-3.5-turbo',
-                                               top_p=1.0,
                                                temperature=0.7,
                                                api_key='test-api-key',
                                                api_base='https://api.openai.com/v1')
@@ -86,7 +85,7 @@ async def test_litellm_adk_with_minimal_config(mock_litellm_class, minimal_litel
         result_llm = llm
 
     # Verify LiteLlm was instantiated with default values for missing fields
-    mock_litellm_class.assert_called_once_with('gpt-4', top_p=1.0, temperature=0.0)
+    mock_litellm_class.assert_called_once_with('gpt-4')
 
     # Verify the returned LLM instance
     assert result_llm == mock_llm_instance

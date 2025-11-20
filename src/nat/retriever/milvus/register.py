@@ -48,6 +48,7 @@ class MilvusRetrieverConfig(RetrieverBaseConfig, name="milvus_retriever"):
     description: str | None = Field(default=None,
                                     description="If present it will be used as the tool description",
                                     alias="collection_description")
+    use_async_client: bool = Field(default=False, description="Use AsyncMilvusClient for async I/O operations. ")
 
 
 @register_retriever_provider(config_type=MilvusRetrieverConfig)
@@ -58,13 +59,20 @@ async def milvus_retriever(retriever_config: MilvusRetrieverConfig, builder: Bui
 
 @register_retriever_client(config_type=MilvusRetrieverConfig, wrapper_type=None)
 async def milvus_retriever_client(config: MilvusRetrieverConfig, builder: Builder):
-    from pymilvus import MilvusClient
-
     from nat.retriever.milvus.retriever import MilvusRetriever
 
     embedder = await builder.get_embedder(embedder_name=config.embedding_model, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
-    milvus_client = MilvusClient(uri=str(config.uri), **config.connection_args)
+    # Create Milvus client based on use_async_client flag
+    if config.use_async_client:
+        from pymilvus import AsyncMilvusClient
+
+        milvus_client = AsyncMilvusClient(uri=str(config.uri), **config.connection_args)
+    else:
+        from pymilvus import MilvusClient
+
+        milvus_client = MilvusClient(uri=str(config.uri), **config.connection_args)
+
     retriever = MilvusRetriever(
         client=milvus_client,
         embedder=embedder,

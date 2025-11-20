@@ -18,6 +18,7 @@ from typing import TypeVar
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
+from nat.data_models.common import get_secret_value
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
@@ -93,7 +94,7 @@ async def azure_openai_semantic_kernel(llm_config: AzureOpenAIModelConfig, _buil
     validate_no_responses_api(llm_config, LLMFrameworkEnum.SEMANTIC_KERNEL)
 
     llm = AzureChatCompletion(
-        api_key=llm_config.api_key,
+        api_key=get_secret_value(llm_config.api_key),
         api_version=llm_config.api_version,
         endpoint=llm_config.azure_endpoint,
         deployment_name=llm_config.azure_deployment,

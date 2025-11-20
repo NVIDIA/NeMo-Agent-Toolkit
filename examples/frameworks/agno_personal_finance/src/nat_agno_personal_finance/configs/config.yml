@@ -25,6 +25,7 @@ llms:
     model_name: gpt-4o
     max_tokens: 2000
     api_key: ${OPENAI_API_KEY}
+    temperature: 0.0
 
 workflow:
   _type: agno_personal_finance
