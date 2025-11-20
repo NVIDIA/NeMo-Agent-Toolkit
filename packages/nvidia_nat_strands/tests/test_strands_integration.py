@@ -19,7 +19,6 @@ These tests require actual API keys and will make real API calls to LLM provider
 Run with: pytest --run_integration
 """
 
-import os
 from unittest.mock import MagicMock
 
 import pytest
@@ -34,27 +33,6 @@ from nat.plugins.strands.llm import bedrock_strands
 from nat.plugins.strands.llm import nim_strands
 from nat.plugins.strands.llm import openai_strands
 from nat.plugins.strands.tool_wrapper import strands_tool_wrapper
-
-
-@pytest.fixture
-def openai_api_key():
-    """Fixture to check for OpenAI API key."""
-    if not os.getenv("OPENAI_API_KEY"):
-        pytest.skip("OPENAI_API_KEY environment variable not set")
-
-
-@pytest.fixture
-def nvidia_api_key():
-    """Fixture to check for NVIDIA API key."""
-    if not os.getenv("NVIDIA_API_KEY"):
-        pytest.skip("NVIDIA_API_KEY environment variable not set")
-
-
-@pytest.fixture
-def aws_keys():
-    """Fixture to check for AWS credentials."""
-    if not (os.getenv("AWS_ACCESS_KEY_ID") and os.getenv("AWS_SECRET_ACCESS_KEY")):
-        pytest.skip("AWS credentials not set")
 
 
 class CalculatorInput(BaseModel):
