@@ -31,7 +31,6 @@ if typing.TYPE_CHECKING:
     import galileo.log_streams
     import galileo.projects
     import langsmith.client
-
     from docker.client import DockerClient
 
 
@@ -489,19 +488,19 @@ def populate_milvus_fixture(milvus_uri: str, root_repo_dir: Path):
 @pytest.fixture(name="require_nest_asyncio", scope="session", autouse=True)
 def require_nest_asyncio_fixture():
     """
-    Some tests require either nest_asyncio (or nest_asyncio2) to be installed to allow nested event loops, calling
-    nest_asyncio2.apply() more than once is a no-op so. However we need to ensure that the nest_asyncio2 patch is
-    applied prior to the older nest_asyncio patch is applued.
-
-    Requiring us to ensure that any library which will apply the patch on import is lazily imported.
+    Some tests require the nest_asyncio2 patch to be applied to allow nested event loops, calling
+    `nest_asyncio2.apply()` more than once is a no-op. However we need to ensure that the nest_asyncio2 patch is
+    applied prior to the older nest_asyncio patch is applied. Requiring us to ensure that any library which will apply
+    the patch on import is lazily imported.
     """
-    assert not hasattr(asyncio, "_nest_patched"), \
-        ("nest_asyncio2 fixture called but asyncio is already patched, most likely this is due to the nest_asyncio "
-         "being applied first, which is not compatible with Python 3.12+. Please ensure that any libraries which "
-         "apply nest_asyncio on import are lazily imported.")
-
     import nest_asyncio2
-    nest_asyncio2.apply()
+    try:
+        nest_asyncio2.apply(error_on_mispatched=True)
+    except RuntimeError as e:
+        raise RuntimeError(
+            "nest_asyncio2 fixture called but asyncio is already patched, most likely this is due to the nest_asyncio "
+            "being applied first, which is not compatible with Python 3.12+. Please ensure that any libraries which "
+            "apply nest_asyncio on import are lazily imported.") from e
 
 
 @pytest.fixture(name="phoenix_url", scope="session")
