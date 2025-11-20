@@ -1,0 +1,60 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# path-check-skip-file
+
+functions:
+  knowledge_base:
+    _type: url_directory
+    urls:
+      strands_agent_loop: "https://strandsagents.com/latest/documentation/docs/user-guide/concepts/agents/agent-loop/"
+      strands_prompts: "https://strandsagents.com/latest/documentation/docs/user-guide/concepts/agents/prompts/"
+    description: "Get vetted URLs for Strands documentation about agent loops and prompts."
+  current_datetime:
+    _type: current_datetime
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.7
+    max_tokens: 6144
+    top_p: 1.0
+    base_url: <base url to NIM instance>
+  bedrock_llm:
+    _type: aws_bedrock
+    model_name: anthropic.claude-3-5-sonnet-20240620-v1:0
+    region_name: us-east-1
+  openai_llm:
+    _type: openai
+    model_name: gpt-4o-mini
+    temperature: 0.0
+
+workflow:
+  _type: strands_demo
+  llm_name: nim_llm
+  tool_names: [knowledge_base, current_datetime]
+  retry_agent_response_parsing_errors: true
+  parse_agent_response_max_retries: 3
+  system_prompt: "You are a helpful assistant. Use your available tools to find information and answer questions. First use knowledge_base to find URLs, then use http_request with method='GET', url='<the_url>', and convert_to_markdown=true to get content."
+
+eval:
+  general:
+    output:
+      dir: ./.tmp/nat/examples/frameworks/strands_demo/eval/
+      cleanup: false
+    dataset:
+      _type: json
+      file_path: examples/frameworks/strands_demo/data/strands.json

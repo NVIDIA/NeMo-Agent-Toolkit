@@ -1,0 +1,150 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# path-check-skip-file
+
+functions:
+  knowledge_base:
+    _type: url_directory
+    urls:
+      strands_agent_loop: "https://strandsagents.com/latest/documentation/docs/user-guide/concepts/agents/agent-loop/"
+      strands_prompts: "https://strandsagents.com/latest/documentation/docs/user-guide/concepts/agents/prompts/"
+    description: "Get vetted URLs for Strands documentation about agent loops and prompts."
+  current_datetime:
+    _type: current_datetime
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.5
+    top_p: 0.9
+    max_tokens: 4096
+    # Enable optimization for these parameters
+    optimizable_params:
+      - temperature
+      - top_p
+      - max_tokens
+    # Define search spaces
+    search_space:
+      temperature:
+        low: 0.1
+        high: 0.7
+        step: 0.2  # Tests: 0.1, 0.3, 0.5, 0.7
+      top_p:
+        low: 0.7
+        high: 1.0
+        step: 0.1  # Tests: 0.7, 0.8, 0.9, 1.0
+      max_tokens:
+        low: 4096
+        high: 8192
+        step: 512  # Tests: 4096, 4608, 5120, 5632, 6144, 6656, 7168, 7680, 8192
+  
+  # Optimizer LLM (used for prompt optimization)
+  optimizer_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.7
+    max_tokens: 4096
+  
+  # Evaluator LLM (used for evaluation metrics)
+  evaluator_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.0
+    max_tokens: 8192  
+
+workflow:
+  _type: strands_demo
+  llm_name: nim_llm
+  tool_names: [knowledge_base, current_datetime]
+  system_prompt: "You are a helpful assistant. Use your available tools to find information and answer questions. First use knowledge_base to find URLs, then use http_request with method='GET', url='<the_url>', and convert_to_markdown=true to get content."
+
+eval:
+  general:
+    output:
+      dir: ./.tmp/nat/strands_demo/eval/
+      cleanup: true
+    dataset:
+      _type: json
+      file_path: examples/frameworks/strands_demo/data/strands.json
+    profiler:
+      compute_llm_metrics: true
+      csv_exclude_io_text: true
+
+  evaluators:
+    rag_accuracy:
+      _type: ragas
+      metric: AnswerAccuracy
+      llm_name: evaluator_llm
+    rag_groundedness:
+      _type: ragas
+      metric: ResponseGroundedness
+      llm_name: evaluator_llm
+    rag_relevance:
+      _type: ragas
+      metric: ContextRelevance
+      llm_name: evaluator_llm
+    trajectory_accuracy:
+      _type: trajectory
+      llm_name: evaluator_llm
+    token_efficiency:
+      _type: avg_tokens_per_llm_end
+    llm_latency:
+      _type: avg_llm_latency
+
+# Optimizer Configuration
+optimizer:
+  output_path: ./.tmp/nat/strands_demo/optimizer/
+  
+  # Numeric optimization (Optuna)
+  numeric:
+    enabled: true
+    n_trials: 20              # number of trials for numeric parameters
+    sampler: null             # Use TPE (Bayesian) sampling
+ 
+  # Evaluation settings
+  reps_per_param_set: 3      # Run each config 3 times for stability
+  
+  # Multi-objective optimization
+  eval_metrics:
+    accuracy:
+      evaluator_name: rag_accuracy
+      direction: maximize
+      weight: 0.4              # Factual correctness
+    groundedness:
+      evaluator_name: rag_groundedness
+      direction: maximize
+      weight: 0.25             # Source-based responses
+    relevance:
+      evaluator_name: rag_relevance
+      direction: maximize
+      weight: 0.15             # Relevant context retrieval
+    trajectory:
+      evaluator_name: trajectory_accuracy
+      direction: maximize
+      weight: 0.1              # Correct tool usage
+    latency:
+      evaluator_name: llm_latency
+      direction: minimize
+      weight: 0.05             # Response time
+    token_efficiency:
+      evaluator_name: token_efficiency
+      direction: minimize
+      weight: 0.05             # Cost control
+  
+  multi_objective_combination_mode: sum  
+  target: null                # Run all trials (set to 0.92 for early stopping)
+

@@ -36,6 +36,7 @@ dependencies = [
   "nvidia-nat-redis",
   "nvidia-nat-s3",
   "nvidia-nat-semantic-kernel",
+  "nvidia-nat-strands",
   "nvidia-nat-vanna",
   "nvidia-nat-weave",
   "nvidia-nat-zep-cloud",
@@ -81,6 +82,7 @@ nvidia-nat-ragaai = { workspace = true }
 nvidia-nat-redis = { workspace = true }
 nvidia-nat-s3 = { workspace = true }
 nvidia-nat-semantic-kernel = { workspace = true }
+nvidia-nat-strands = { workspace = true }
 nvidia-nat-vanna = { workspace = true }
 nvidia-nat-weave = { workspace = true }
 nvidia-nat-zep-cloud = { workspace = true }
