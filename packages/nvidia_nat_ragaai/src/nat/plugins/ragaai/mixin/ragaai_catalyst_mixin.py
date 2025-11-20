@@ -56,7 +56,7 @@ class RAGATraceExporterOptWrite(RAGATraceExporter):
                                                    self.user_gt,
                                                    self.external_id)
             except Exception as e:
-                print(f"Error in convert_json_format function: {trace_id}: {e}")
+                logger.exception("Error in convert_json_format function: %s: %s", trace_id, e, exc_info=True)
                 return None
 
             try:
@@ -64,7 +64,7 @@ class RAGATraceExporterOptWrite(RAGATraceExporter):
                 if interactions and 'workflow' in interactions:
                     ragaai_trace["workflow"] = interactions['workflow']
             except Exception as e:
-                print(f"Error in format_interactions function: {trace_id}: {e}")
+                logger.exception("Error in format_interactions function: %s: %s", trace_id, e, exc_info=True)
                 return None
 
             try:
@@ -72,20 +72,23 @@ class RAGATraceExporterOptWrite(RAGATraceExporter):
                 files_to_zip = self.files_to_zip or []
                 hash_id, zip_path = zip_list_of_unique_files(files_to_zip, output_dir=self.tmp_dir)
             except Exception as e:
-                print(f"Error in zip_list_of_unique_files function: {trace_id}: {e}")
+                logger.exception("Error in zip_list_of_unique_files function: %s: %s", trace_id, e, exc_info=True)
                 return None
 
             try:
                 ragaai_trace["metadata"]["system_info"] = asdict(self.system_monitor.get_system_info())
                 ragaai_trace["metadata"]["resources"] = asdict(self.system_monitor.get_resources())
             except Exception as e:
-                print(f"Error in get_system_info or get_resources function: {trace_id}: {e}")
+                logger.exception("Error in get_system_info or get_resources function: %s: %s",
+                                 trace_id,
+                                 e,
+                                 exc_info=True)
                 return None
 
             try:
                 ragaai_trace["metadata"]["system_info"]["source_code"] = hash_id
             except Exception as e:
-                print(f"Error in adding source code hash: {trace_id}: {e}")
+                logger.exception("Error in adding source code hash: %s: %s", trace_id, e, exc_info=True)
                 return None
 
             try:
@@ -95,14 +98,14 @@ class RAGATraceExporterOptWrite(RAGATraceExporter):
                     if "end_time" in ragaai_trace:
                         ragaai_trace["data"][0]["end_time"] = ragaai_trace["end_time"]
             except Exception as e:
-                print(f"Error in adding start_time or end_time: {trace_id}: {e}")
+                logger.exception("Error in adding start_time or end_time: %s: %s", trace_id, e, exc_info=True)
                 return None
 
             try:
                 if hasattr(self, 'project_name'):
                     ragaai_trace["project_name"] = self.project_name
             except Exception as e:
-                print(f"Error in adding project name: {trace_id}: {e}")
+                logger.exception("Error in adding project name: %s: %s", trace_id, e, exc_info=True)
                 return None
 
             try:
@@ -110,7 +113,7 @@ class RAGATraceExporterOptWrite(RAGATraceExporter):
                 if hasattr(self, 'tracer_type'):
                     ragaai_trace["tracer_type"] = self.tracer_type
             except Exception as e:
-                print(f"Error in adding tracer type: {trace_id}: {e}")
+                logger.exception("Error in adding tracer type: %s: %s", trace_id, e, exc_info=True)
                 return None
 
             # Add user passed metadata to the trace
@@ -127,7 +130,7 @@ class RAGATraceExporterOptWrite(RAGATraceExporter):
 
                 logger.debug("Completed adding user passed metadata")
             except Exception as e:
-                print(f"Error in adding metadata: {trace_id}: {e}")
+                logger.exception("Error in adding metadata: %s: %s", trace_id, e, exc_info=True)
                 return None
 
             try:
@@ -140,12 +143,12 @@ class RAGATraceExporterOptWrite(RAGATraceExporter):
                     with open(os.path.join(os.getcwd(), 'rag_agent_traces.json'), 'w', encoding="utf-8") as f:
                         json.dump(ragaai_trace, f, cls=TracerJSONEncoder, indent=2)
             except Exception as e:
-                print(f"Error in saving trace json: {trace_id}: {e}")
+                logger.exception("Error in saving trace json: %s: %s", trace_id, e, exc_info=True)
                 return None
 
             return {'trace_file_path': trace_file_path, 'code_zip_path': zip_path, 'hash_id': hash_id}
         except Exception as e:
-            print(f"Error converting trace {trace_id}: {str(e)}")
+            logger.exception("Error converting trace %s: %s", trace_id, str(e), exc_info=True)
             return None
 
 
@@ -242,4 +245,4 @@ class RagaAICatalystMixin:
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, lambda: self._exporter.export(spans))  # type: ignore[arg-type]
         except Exception as e:
-            logger.error("Error exporting spans: %s", e, exc_info=True)
+            logger.exception("Error exporting spans: %s", e, exc_info=True)
