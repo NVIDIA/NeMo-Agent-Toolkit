@@ -236,13 +236,13 @@ Transmit traces to RagaAI Catalyst.
     export NAT_SPAN_PREFIX=aiq
     ```
 
-3. Run the workflow:
+4. Run the workflow:
 
     ```bash
     nat run --config_file examples/observability/simple_calculator_observability/configs/config-catalyst.yml --input "Divide 144 by 12"
     ```
 
-4. Return to the RagaAI Catalyst dashboard to view your traces.
+5. Return to the RagaAI Catalyst dashboard to view your traces.
     Click on "Projects" in the left sidebar, then select your `simple-calculator` project (or the name you used). You should see `simple-calculator-dataset` listed in the datasets. Click on the dataset to bring up the traces.
 
 ### Galileo Integration
