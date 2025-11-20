@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import os
+import tempfile
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -26,16 +28,34 @@ from nat.test.functions import EchoFunctionConfig
 from nat.test.utils import build_nat_client
 
 
-@pytest.fixture(autouse=True)
-def setup_env():
+@pytest.fixture(name="setup_env", autouse=True)
+def fixture_setup_env() -> None:
     """Set up environment variables for tests."""
     # Set a dummy config file path for tests that don't use Dask
     if "NAT_CONFIG_FILE" not in os.environ:
-        os.environ["NAT_CONFIG_FILE"] = "/tmp/dummy_nat_config.yml"
+        temp_dir = tempfile.gettempdir()
+        os.environ["NAT_CONFIG_FILE"] = os.path.join(temp_dir, "dummy_nat_config.yml")
     yield
 
 
-async def test_weave_feedback_endpoint_with_weave_configured():
+@pytest.fixture(name="mock_weave", autouse=True)
+def fixture_mock_weave(monkeypatch):
+    """Mock weave.init and weave client context to avoid authentication issues in unit tests."""
+    mock_weave_client = MagicMock()
+
+    # Mock weave.init
+    monkeypatch.setattr("weave.init", lambda *args, **kwargs: mock_weave_client, raising=False)
+
+    # Mock the weave client context to return the mock client
+    monkeypatch.setattr("weave.trace.context.weave_client_context.require_weave_client", lambda: mock_weave_client,
+                        raising=False)
+    monkeypatch.setattr("weave.trace.context.weave_client_context.get_weave_client", lambda: mock_weave_client,
+                        raising=False)
+
+    yield mock_weave_client
+
+
+async def test_weave_feedback_endpoint_with_weave_configured() -> None:
     """Test that the feedback endpoint is registered when Weave telemetry is configured."""
 
     config = Config(
@@ -59,7 +79,7 @@ async def test_weave_feedback_endpoint_with_weave_configured():
             f"Expected 200 or 500, got {response.status_code}"
 
 
-async def test_feedback_endpoint_not_registered_without_weave():
+async def test_feedback_endpoint_not_registered_without_weave() -> None:
     """Test that the feedback endpoint is not registered when Weave telemetry is not configured."""
 
     config = Config(
@@ -78,7 +98,7 @@ async def test_feedback_endpoint_not_registered_without_weave():
         assert response.status_code == 404
 
 
-async def test_feedback_endpoint_requires_parameters():
+async def test_feedback_endpoint_requires_parameters() -> None:
     """Test that the feedback endpoint validates required parameters."""
 
     config = Config(
@@ -99,7 +119,7 @@ async def test_feedback_endpoint_requires_parameters():
         assert response.status_code == 400
 
 
-async def test_weave_worker_adds_standard_routes():
+async def test_weave_worker_adds_standard_routes() -> None:
     """Test that WeaveFastAPIPluginWorker still adds all standard routes."""
 
     config = Config(
