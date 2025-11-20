@@ -52,4 +52,7 @@ nvidia-nat = { workspace = true }
 
 
 [project.entry-points.'nat.components']
-nat_a2a = "nat.plugins.a2a.register"
+nat_a2a_client = "nat.plugins.a2a.client.client_impl"
+
+[project.entry-points.'nat.front_ends']
+nat_a2a_server = "nat.plugins.a2a.server.register_frontend"
