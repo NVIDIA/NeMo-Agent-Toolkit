@@ -15,34 +15,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# ReAct Agent
-Agents are a major use-case for language models. Agents are systems that use LLMs to reason and determine what actions to take and what inputs to use for those actions. After executing those actions, the agent uses the LLM to determine if more actions are required. This agent is a ReAct (Reasoning and Acting) agent, based on the [ReAct paper](https://react-lm.github.io/).
-
-The ReAct agent's prompt is directly inspired by the prompt examples in the appendix of the
-paper.
-
----
-
-## Features
-- **Pre-built Tools**: Leverages core library agent and tools.
-- **ReAct Reasoning**: Performs reasoning between tool calls; utilizes tool names and descriptions to appropriately route to the correct tool.
-- **Custom Plugin System**: Developers can bring in new tools using plugins.
-- **Customizable Prompt**: Modify, tweak, or change the prompt for your specific needs.
-- **Agentic Workflows**: Fully configurable via YAML for flexibility and productivity.
-- **Ease of Use**: Simplifies developer experience and deployment.
-
----
+# Configure the ReAct Agent
+Configure the NVIDIA NeMo Agent toolkit ReAct agent as a workflow or a function.
 
 ## Requirements
-The ReAct agent requires the `nvidia-nat[langchain]` plugin to be installed.
+The ReAct agent requires the `nvidia-nat[langchain]` plugin, which can be installed with one of the following commands.
 
-If you have performed a source code checkout, you can install this with the following command:
+- If you have performed a source code checkout:
 
 ```bash
 uv pip install -e '.[langchain]'
 ```
 
-If you have installed the NeMo Agent toolkit from a package, you can install this with the following command:
+- If you have installed the NeMo Agent toolkit from a package:
 
 ```bash
 uv pip install "nvidia-nat[langchain]"
@@ -50,10 +35,10 @@ uv pip install "nvidia-nat[langchain]"
 
 ## Configuration
 
-The ReAct agent may be utilized as a workflow or a function.
+The ReAct agent can be used as a workflow or a function.
 
-### Example `config.yml`
-In your YAML file, to use the ReAct agent as a workflow:
+### Example 1: ReAct Agent as a Workflow to Configure `config.yml`
+To use the ReAct agent as a workflow, configure the YAML file as follows:
 ```yaml
 workflow:
   _type: react_agent
@@ -62,7 +47,8 @@ workflow:
   verbose: true
   parse_agent_response_max_retries: 2
 ```
-In your YAML file, to use the ReAct agent as a function:
+### Example 2: ReAct Agent as a Function to Configure `config.yml`
+To use the ReAct agent as a function, configure the YAML file as follows:
 ```yaml
 function_groups:
   calculator:
@@ -74,15 +60,15 @@ functions:
     description: 'Useful for performing simple mathematical calculations.'
 ```
 
-### Configurable Options:
-
-* `workflow_alias`: Defaults to `None`. The alias of the workflow. Useful when the ReAct agent is configured as a workflow and need to expose a customized name as a tool.
+### Configurable Options
+The following are more ways you can configure your config file when using the ReAct agent:
+* `workflow_alias`: Defaults to `None`. The alias of the workflow. Useful when the ReAct agent is configured as a workflow and needs to expose a customized name as a tool.
 
 * `tool_names`: A list of tools that the agent can call. The tools must be functions or function groups configured in the YAML file.
 
 * `llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file.
 
-* `verbose`: Defaults to `False` (useful to prevent logging of sensitive data).  If set to `True`, the agent will log input, output, and intermediate steps.
+* `verbose`: Defaults to `False` (useful to prevent logging of sensitive data). If set to `True`, the agent will log input, output, and intermediate steps.
 
 * `retry_agent_response_parsing_errors`: Defaults to `True`.  If set to `True`, the agent will retry parsing errors.  If set to `False`, the agent will raise an exception.
 
@@ -109,15 +95,15 @@ If modifying the prompt, see the limitations section below. The prompt must have
 * `additional_instructions`: Optional.  Additional instructions to provide to the agent in addition to the base prompt.
 ---
 
-## How the ReAct Agent works
+## How the ReAct Agent Works
 
-A **ReAct agent** is an AI system that decides what actions to take by reasoning step-by-step. Instead of making a decision in one go, it follows an **iterative thought process**. The agent uses an LLM to make the decisions, and to summarize the tool responses in natural human language.  To decide which tool(s) to use to answer the question, the ReAct agent uses the names and descriptions of its tools.
+A **ReAct agent** is an AI system that decides what actions to take by reasoning step-by-step. Instead of making a decision in one go, it follows an iterative thought process. The agent uses an LLM to make the decisions and to summarize the tool responses in natural human language. To decide which tool to use to answer the question, the ReAct agent uses the names and descriptions of its tools.
 
-### **Step-by-Step Breakdown of a ReAct Agent**
-
+### ReAct Agent Workflow
+When you enter a prompt with the ReAct agent, it runs through the following workflow:
 1. **Observation** – The agent receives an input or problem to solve.
 2. **Reasoning (Thought)** – The agent thinks about what to do next.
-3. **Action** – The agent calls a tool (like a search API, calculator, or database query).
+3. **Action** – The agent calls a tool (for example, a search API, calculator, or database query).
 4. **Observation (Feedback)** – The agent examines the tool’s response.
 5. **Repeat** – If more steps are needed, it repeats the process.
 
@@ -139,7 +125,7 @@ Imagine a ReAct agent needs to answer:
 
 ### ReAct Prompting and Output Format
 
-ReAct agents require the LLM to output in ReAct output format.  This is an example of the ReAct output format for calling a tool:
+ReAct agents require the LLM to output in ReAct output format. This is an example of the ReAct output format for calling a tool:
 
 ```
 Thought: To answer this question, I need to find information about Djikstra.
@@ -158,7 +144,7 @@ Thought: I now know the final answer
 Final Answer: Djikstra was a Dutch computer scientist, programmer, software engineer, mathematician, and science essayist. He is best known for his work on the shortest path problem and the development of Dijkstra's algorithm, which is used to find the shortest path between nodes in a weighted graph.
 ```
 
-We may tweak, modify, or completely change the ReAct agent prompt, but the LLM output must match the ReAct output format, and the prompt must have a prompt variable named `{tools}` and `{tool_names}`
+You can tweak, modify, or completely change the ReAct agent prompt, but the LLM output must match the ReAct output format, and the prompt must have a prompt variable named `{tools}` and `{tool_names}`
 
 A sample ReAct agent prompt is provided in prompt.py:
 
@@ -188,11 +174,11 @@ Final Answer: the final answer to the original input question
 ## Limitations
 ReAct agents are powerful but come with several limitations that make them less efficient in certain use cases compared to tool-calling agents or reasoning agents. The limitations are as follows:
 
-* ReAct agents Require More LLM Calls
+* ReAct Agents Require More LLM Calls
 
   ReAct agents perform reasoning step-by-step, which means they first generate thoughts, then take an action, then reason again based on the result. This iterative process can lead to multiple LLM calls per task, increasing latency and API costs.
 
-* Prompt-Sensitivity & Tuning Overhead
+* Prompt-Sensitivity and Tuning Overhead
 
   Since ReAct agents rely heavily on prompting, they require careful tuning. The quality of their decisions depends on the structure of the prompt and the examples given. A poorly tuned prompt can lead to inefficient reasoning or incorrect tool usage.
 
@@ -212,4 +198,4 @@ ReAct agents are powerful but come with several limitations that make them less 
 
   This prevents them from efficiently handling tasks that could be executed in parallel, such as making multiple API calls simultaneously.
 
-In summary, ReAct agents frequently require a bit of tuning to optimize performance and ensure the best results. Proper prompt engineering and configuration adjustments may be necessary depending on the complexity of the tasks required.
+In summary, ReAct agents often require a bit of tuning to optimize performance and ensure the best results. Proper prompt engineering and configuration adjustments may be necessary depending on the complexity of the tasks required.

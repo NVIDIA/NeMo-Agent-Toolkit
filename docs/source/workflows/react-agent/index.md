@@ -15,13 +15,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NVIDIA NeMo Agent Toolkit Quick Start Guide
-Install and set up your NeMo Agent toolkit development environment and get started on the tutorial for launching the API server and UI.
+# About ReAct Agent
+This is a ReAct (Reasoning and Acting) agent, based on the [ReAct paper](https://react-lm.github.io/). The ReAct agent's prompt is directly inspired by the prompt examples in the appendix of the paper. The agent uses the NVIDIA NeMo Agent toolkit core library agents and tools to perform ReAct reasoning between tool calls. In your YAML config files, you can customize prompts for your specific needs. 
+
+To configure your ReAct agent, refer to [Configure the ReAct Agent](./react-agent.md).
 
 ```{toctree}
 :hidden:
-:caption: Quick Start Guide
+:caption: ReAct
 
-Install NeMo Agent Toolkit <./installing.md>
-Launch the API Server and UI <./launching-ui.md>
+Configure ReAct Agent<./react-agent.md>
 ```

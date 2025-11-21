@@ -197,7 +197,7 @@ Show me system information and list all available NeMo Agent components with the
 - Documentation references
 
 **Related Documentation**:
-- [Workflow Overview](../workflows/about/index.md)
+- [Workflow Overview](../workflows/about.md)
 - [Functions Overview](../workflows/functions/index.md)
 
 ---
@@ -244,7 +244,7 @@ Integrate a web search tool into my workflow that can fetch and process search r
 Integrate ReAct agent to the workflow
 ```
 
-**Related Documentation**: [Agent Docs](../workflows/about/index.md)
+**Related Documentation**: [Agent Docs](../workflows/about.md)
 
 ---
 

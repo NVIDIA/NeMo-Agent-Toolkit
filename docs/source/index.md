@@ -78,9 +78,15 @@ Tutorials <./tutorials/index.md>
 :hidden:
 :caption: Manage Workflows
 
-About Workflows <./workflows/about/index.md>
+About Workflows <./workflows/about.md>
 ./workflows/run-workflows.md
-Workflow Configuration <./workflows/workflow-configuration.md>
+ReAct Agent <./workflows/react-agent/index.md>
+Reasoning Agent <./workflows/reasoning-agent/index.md>
+ReWOO Agent <./workflows/rewoo-agent/index.md>
+Responses API and Agent <./workflows/responses-api-and-agent/index.md>
+Router Agent <./workflows/router-agent/index.md>
+Sequential Executor <./workflows/sequential-executor/index.md>
+Tool Calling Agent <./workflows/tool-calling-agent/index.md>
 ./workflows/llms/index.md
 ./workflows/embedders.md
 ./workflows/retrievers.md

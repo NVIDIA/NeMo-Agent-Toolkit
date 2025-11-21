@@ -102,7 +102,7 @@ The Tool Calling Agent can be used as either a workflow or a function, and there
 If you’re looking for an example workflow where the Tool Calling Agent runs as the main workflow, refer to [config.yml](configs/config.yml).
 To see the Tool Calling Agent used as a function within a workflow, alongside the Reasoning Agent, refer to [config-reasoning.yml](configs/config-reasoning.yml).
 This README primarily covers the former case, where the Tool Calling Agent functions as the main workflow, in config.yml.
-For more details, refer to the [ReAct Agent documentation](../../../docs/source/workflows/about/tool-calling-agent.md) and the [Reasoning Agent documentation](../../../docs/source/workflows/about/react-agent.md)
+For more details, refer to the [Tool Calling Agent documentation](../../../docs/source/workflows/tool-calling-agent/index.md) and the [React Agent documentation](../../../docs/source/workflows/react-agent/index.md)
 
 Run the following command from the root of the NeMo Agent Toolkit repo to execute this workflow with the specified input:
 

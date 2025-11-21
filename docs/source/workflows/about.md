@@ -17,11 +17,11 @@ limitations under the License.
 
 # About NVIDIA NeMo Agent Toolkit Workflows
 
-Workflows are the heart of the NeMo Agent toolkit because they define which agentic tools and models are used to perform a given task or series of tasks.
+Workflows are the core of the NeMo Agent toolkit because they define which agentic tools and models are used to perform a given task or series of tasks.
 
 ## Understanding the Workflow Configuration File
 
-The workflow configuration file is a YAML file that specifies the tools and models to use in a workflow, along with general configuration settings. This section examines the configuration of the `examples/getting_started/simple_web_query` workflow to show how they're organized.
+The workflow configuration file is a YAML file that specifies the tools and models to use in a workflow, along with general configuration settings. This section examines the configuration of the `examples/getting_started/simple_web_query` workflow to show how they are organized.
 
 `examples/getting_started/simple_web_query/configs/config.yml`:
 ```yaml
@@ -56,21 +56,18 @@ workflow:
 
 This workflow configuration is divided into four sections: `functions`, `llms`, `embedders`, and `workflow`. The `functions` section contains the tools used in the workflow, while `llms` and `embedders` define the models used in the workflow, and lastly the `workflow` section ties the other sections together and defines the workflow itself.
 
-In this workflow the `webpage_query` tool is used to query the LangSmith User Guide, and the `current_datetime` tool is used to get the current date and time. The `description` entry is what is used to instruct the LLM when and how to use the tool. In this case, the `description` is explicitly defined for the `webpage_query` tool.
+In this workflow, the `webpage_query` tool queries the LangSmith User Guide, and the `current_datetime` tool gets the current date and time. The `description` entry instructs the LLM when and how to use the tool. In this case, the workflow explicitly defines `description` for the `webpage_query` tool.
 
-The `webpage_query` tool makes use of the `nv-embedqa-e5-v5` embedder, which is defined in the `embedders` section.
+The `webpage_query` tool uses the `nv-embedqa-e5-v5` embedder, which is defined in the `embedders` section.
 
-For details on workflow configuration, including sections not utilized in the above example, refer to the [Workflow Configuration](../workflow-configuration.md) document.
+For details on workflow configuration, including sections not utilized in the above example, refer to the [Workflow Configuration](./workflow-configuration.md) document.
 
-## Workflow Types
-
-```{toctree}
-
-ReAct Agent <./react-agent.md>
-Reasoning Agent <./reasoning-agent.md>
-ReWOO Agent <./rewoo-agent.md>
-Responses API and Agent <./responses-api-and-agent.md>
-Router Agent <./router-agent.md>
-Sequential Executor <./sequential-executor.md>
-Tool Calling Agent <./tool-calling-agent.md>
-```
+## Using Agents With Workflows
+There are several different agents that use language models. They are systems that use LLMs to reason and determine the actions to take and inputs to use for those actions. After executing those actions, the agent uses the LLM to determine if more actions are required. The following are agents and an executor offered by NeMo Agent toolkit:
+- [ReAct Agent](../workflows/react-agent/index.md)
+- [Reasoning Agent](../workflows/reasoning-agent/index.md)
+- [ReWOO Agent](../workflows/rewoo-agent/index.md)
+- [Responses API and Agent](../workflows/responses-api-and-agent/index.md)
+- [Router Agent](../workflows/router-agent/index.md)
+- [Sequential Executor](../workflows/sequential-executor/index.md)
+- [Tool Calling Agent](../workflows/tool-calling-agent/index.md)

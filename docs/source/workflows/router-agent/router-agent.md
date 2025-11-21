@@ -15,36 +15,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Router Agent
-
-The Router Agent is a control flow component that analyzes incoming requests and directs them to the most appropriate branch (other agents or tools) based on the request content. It uses a single-pass architecture to select exactly one branch that best handles the request, making it ideal for scenarios where different types of requests need specialized handling.
-
-The Router Agent's implementation uses a two-node graph structure: a Router Node that analyzes the request and selects the appropriate branch, and a Branch Node that executes the selected branch and returns the result.
-
----
-
-## Features
-- **Single-Pass Architecture**: Uses a two-node graph structure with Router Node (analyzes request and selects branch) and Branch Node (executes the selected branch)
-- **Intelligent Request Routing**: Analyzes user input and selects exactly one branch that best handles the request
-- **Pre-built Tools**: Leverages core library agents and tools
-- **Configurable Branches**: Support for routing to any combination of functions, tools, or agents
-- **Easy Fine-tuning**: Single-pass approach makes it easy to customize routing logic through prompt modification
-- **Customizable Prompts**: Modify system and user prompts for specific routing needs
-- **Agentic Workflows**: Fully configurable via YAML for flexibility and productivity
-- **Ease of Use**: Simplifies developer experience and deployment
-
----
+# Configure the Router Agent
+Configure the NVIDIA NeMo Agent toolkit router agent as a workflow or a function. The router agent workflow consists of two phases: routing and execution.
 
 ## Requirements
-The Router Agent requires the `nvidia-nat[langchain]` plugin to be installed.
+The router agent requires the `nvidia-nat[langchain]` plugin to be installed, which can be installed with one of the following commands.
 
-If you have performed a source code checkout, install this with the following command:
+If you have performed a source code checkout:
 
 ```bash
 uv pip install -e '.[langchain]'
 ```
 
-If you have installed the NeMo Agent toolkit from a package, you can install this with the following command:
+If you have installed the NeMo Agent toolkit from a package:
 
 ```bash
 uv pip install "nvidia-nat[langchain]"
@@ -52,10 +35,10 @@ uv pip install "nvidia-nat[langchain]"
 
 ## Configuration
 
-The Router Agent may be utilized as a workflow or a function.
+The router agent may be used as a workflow or a function.
 
-### Example `config.yml`
-In your YAML file, to use the Router Agent (`router_agent`) as a workflow:
+### Example 1: Router Agent as a Workflow to Configure `config.yml`
+To use the router agent as a workflow, configure the YAML file as follows:
 ```yaml
 workflow:
   _type: router_agent
@@ -63,8 +46,8 @@ workflow:
   llm_name: nim_llm
   detailed_logs: true
 ```
-
-In your YAML file, to use the Router Agent as a function:
+### Example 2: Router Agent as a Function to Configure `config.yml`
+To use the router agent as a function, configure the YAML file as follows:
 ```yaml
 functions:
   fruit_advisor:
@@ -82,10 +65,11 @@ functions:
 ```
 
 ### Configurable Options
+The router agent supports the following required and optional configurations.
 
 #### Required Options
 
-* `workflow_alias`: Defaults to `None`. The alias of the workflow. Useful when the Router agent is configured as a workflow and need to expose a customized name as a tool.
+* `workflow_alias`: Defaults to `None`. The alias of the workflow. Useful when the router agent is configured as a workflow and needs to expose a customized name as a tool.
 
 * `branches`: A list of available tools, functions, or agents that the router can direct requests to. These branches must be configured in the YAML file.
 
@@ -93,7 +77,7 @@ functions:
 
 #### Optional Options
 
-* `description`: Defaults to "Router Agent Workflow". When the Router Agent is configured as a function, this config option allows control of the tool description (for example, when used as a tool within another agent).
+* `description`: Defaults to "Router Agent Workflow". When the router agent is configured as a function, this config option allows control of the tool description (for example, when used as a tool within another agent).
 
 * `system_prompt`: Optional. Custom system prompt to use with the agent. Allows override of the default routing instructions.
 
@@ -106,45 +90,42 @@ functions:
 * `log_response_max_chars`: Defaults to 1000. Maximum number of characters to display in logs when logging branch responses.
 
 ---
-
-## Step-by-Step Breakdown of a Router Agent
-The Router Agent uses a single-pass graph architecture that efficiently analyzes requests and routes them to appropriate branches:
+## The Router Agent Workflow
+The router agent uses a single-pass graph architecture that analyzes requests and routes them to appropriate branches:
 
 <div align="center">
 <img src="../../_static/router_agent.png" alt="Router Agent Graph Structure" width="400" style="max-width: 100%; height: auto;">
 </div>
 
-The Router Agent follows a streamlined two-phase process:
+The router agent follows a streamlined two-phase process:
 
-1. **Routing Phase** – The Router Node analyzes the user request and selects the most appropriate branch based on branch descriptions and request content.
-2. **Execution Phase** – The Branch Node executes the selected branch with the original input and returns the result.
+1. **Routing Phase** – The router node analyzes the user request and selects the most appropriate branch based on branch descriptions and request content.
+2. **Execution Phase** – The branch node executes the selected branch with the original input and returns the result.
 
 ### Example Walkthrough
 
-Imagine a Router Agent configured with three advisors needs to handle:
+Imagine a router agent configured with three advisors needs to handle:
 
 > "I want a yellow fruit"
 
 #### Routing Phase
-1. **Request Analysis**: The Router Node receives the input "I want a yellow fruit"
+1. **Request Analysis**: The router node receives the input "I want a yellow fruit"
 2. **Branch Evaluation**: The agent evaluates available branches:
    - `fruit_advisor`: "Provides recommendations for fruits based on user preferences"
    - `city_advisor`: "Suggests cities to visit based on user interests"
    - `literature_advisor`: "Recommends books and literary works"
-3. **Branch Selection**: Based on the request content, the Router Node selects `fruit_advisor` as the most appropriate branch
+3. **Branch Selection**: Based on the request content, the router node selects `fruit_advisor` as the most appropriate branch
 
 #### Execution Phase
-1. **Branch Execution**: The Branch Node calls the `fruit_advisor` function with the original input
+1. **Branch Execution**: The branch node calls the `fruit_advisor` function with the original input
 2. **Response Generation**: The `fruit_advisor` processes the request and returns "banana"
-3. **Result Return**: The Router Agent returns the final result: "banana"
+3. **Result Return**: The router agent returns the final result: "banana"
 
-Since the Router Agent uses a single-pass architecture, it efficiently routes requests without multiple reasoning steps, making it ideal for scenarios where you need to direct different types of requests to specialized handlers.
-
----
+Since the router agent uses a single-pass architecture, it routes requests without multiple reasoning steps.
 
 ## Use Cases
 
-The Router Agent is particularly well-suited for:
+The router agent is well-suited for:
 
 * **Multi-domain Applications**: Route requests to different specialized agents based on topic (such as technical support, sales, or general inquiries)
 * **Workflow Orchestration**: Direct different types of tasks to appropriate processing pipelines
@@ -155,9 +136,9 @@ The Router Agent is particularly well-suited for:
 
 ## Limitations
 
-The following are the limitations of Router Agents:
+The following are the limitations of router agents:
 
-* **Single Branch Selection**: The Router Agent selects only one branch per request and does not perform multi-step routing or branch combination.
+* **Single Branch Selection**: The router agent selects only one branch per request and does not perform multi-step routing or branch combination.
 
 * **No Inter-branch Communication**: Branches operate independently and cannot communicate with each other within a single request.
 
