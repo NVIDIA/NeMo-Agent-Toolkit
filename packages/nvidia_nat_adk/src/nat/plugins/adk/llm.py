@@ -51,6 +51,8 @@ async def azure_openai_adk(config: AzureOpenAIModelConfig, _builder: Builder):
     if config.azure_endpoint:
         config_dict["api_base"] = config.azure_endpoint
 
+    config_dict["api_version"] = config.api_version
+
     yield LiteLlm(f"azure/{config.azure_deployment}", **config_dict)
 
 

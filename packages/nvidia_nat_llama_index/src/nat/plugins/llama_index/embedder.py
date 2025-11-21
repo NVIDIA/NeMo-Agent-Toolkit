@@ -29,7 +29,12 @@ async def azure_openai_llama_index(embedder_config: AzureOpenAIEmbedderModelConf
     from llama_index.embeddings.azure_openai import AzureOpenAIEmbedding
 
     client = AzureOpenAIEmbedding(
-        **embedder_config.model_dump(exclude={"type"}, by_alias=True, exclude_none=True, exclude_unset=True))
+        **embedder_config.model_dump(exclude={"type", "api_version"},
+                                     by_alias=True,
+                                     exclude_none=True,
+                                     exclude_unset=True),
+        api_version=embedder_config.api_version,
+    )
 
     if isinstance(embedder_config, RetryMixin):
         client = patch_with_retry(client,

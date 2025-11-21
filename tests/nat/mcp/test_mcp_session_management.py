@@ -74,9 +74,17 @@ class TestMCPSessionManagement:
     @pytest.fixture
     def mock_auth_provider(self):
         """Create a mock auth provider for testing."""
+        from nat.data_models.authentication import AuthResult
+
         auth_provider = MagicMock()
         auth_provider.config = MagicMock()
         auth_provider.config.default_user_id = "default-user-123"
+
+        # Mock the authenticate method as an async method that returns an AuthResult
+        async def mock_authenticate(user_id=None, response=None):
+            return AuthResult(credentials=[])
+
+        auth_provider.authenticate = AsyncMock(side_effect=mock_authenticate)
         return auth_provider
 
     @pytest.fixture
@@ -95,6 +103,8 @@ class TestMCPSessionManagement:
         group._shared_auth_provider = mock_auth_provider
         group._client_config = mock_config
         group.mcp_client = mock_base_client
+        # Set the default_user_id to match what's in the mock auth provider config
+        group._default_user_id = mock_auth_provider.config.default_user_id
         return group
 
     async def test_get_session_client_returns_base_client_for_default_user(self, function_group):

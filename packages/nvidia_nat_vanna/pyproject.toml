@@ -1,0 +1,55 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["nat.*"]
+
+
+[tool.setuptools_scm]
+git_describe_command = "git describe --long --first-parent"
+root = "../.."
+
+
+[project]
+name = "nvidia-nat-vanna"
+dynamic = ["version"]
+dependencies = [
+  # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
+  # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
+  # Keep sorted!!!
+  "databricks-sql-connector~=4.1.4",
+  "databricks-sqlalchemy~=2.0.8",
+  "langchain-core~=0.3.76",
+  "nvidia-nat~=1.4",
+  "nvidia-nat-langchain~=1.4",
+  "pandas~=2.0",
+  "pymilvus[model]~=2.5.11",
+  "sqlglot~=26.33.0",
+  "vanna[chromadb]~=0.7.9",
+]
+requires-python = ">=3.11,<3.14"
+description = "Vanna-based Text-to-SQL integration for NeMo Agent Toolkit with Databricks support"
+readme = "src/nat/meta/pypi.md"
+keywords = ["ai", "agents", "text2sql", "vanna", "sql", "database"]
+classifiers = [
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+
+
+[tool.uv]
+config-settings = { editable_mode = "compat" }
+
+
+[tool.uv.sources]
+nvidia-nat = { workspace = true }
+nvidia-nat-langchain = { workspace = true }
+
+
+[project.entry-points.'nat.components']
+nat_vanna = "nat.plugins.vanna.register"

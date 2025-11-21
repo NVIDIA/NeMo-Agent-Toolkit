@@ -28,7 +28,7 @@ import sys
 import time
 
 import click
-import nest_asyncio
+import nest_asyncio2
 from dotenv import load_dotenv
 
 from nat.utils.log_levels import LOG_LEVELS
@@ -50,7 +50,7 @@ from .commands.workflow.workflow import workflow_command
 load_dotenv()
 
 # Apply at the beginning of the file to avoid issues with asyncio
-nest_asyncio.apply()
+nest_asyncio2.apply()
 
 
 def setup_logging(log_level: str):

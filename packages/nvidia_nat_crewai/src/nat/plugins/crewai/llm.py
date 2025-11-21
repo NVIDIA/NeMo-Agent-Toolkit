@@ -98,12 +98,13 @@ async def azure_openai_crewai(llm_config: AzureOpenAIModelConfig, _builder: Buil
 
     client = LLM(
         **llm_config.model_dump(
-            exclude={"type", "api_key", "azure_endpoint", "azure_deployment", "thinking", "api_type"},
+            exclude={"type", "api_key", "azure_endpoint", "azure_deployment", "thinking", "api_type", "api_version"},
             by_alias=True,
             exclude_none=True,
             exclude_unset=True,
         ),
         model=model,
+        api_version=llm_config.api_version,
     )
 
     yield _patch_llm_based_on_config(client, llm_config)

@@ -41,6 +41,14 @@ class LambdaStreamFnConfig(FunctionBaseConfig, name="test_lambda_stream"):
     pass
 
 
+class OrderedMiddlewareConfig(FunctionBaseConfig, name="test_ordered_middleware"):
+    pass
+
+
+class FinalMiddlewareConfig(FunctionBaseConfig, name="test_final_middleware"):
+    pass
+
+
 @pytest.fixture(scope="module", autouse=True)
 async def _register_lambda_fn():
 

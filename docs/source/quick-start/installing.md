@@ -53,6 +53,7 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[s3]` or `nvidia-nat-s3` - [Amazon S3](https://aws.amazon.com/s3/)
 - `nvidia-nat[semantic-kernel]` or `nvidia-nat-semantic-kernel` - [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/)
 - `nvidia-nat[test]` or `nvidia-nat-test` - NeMo Agent toolkit test
+- `nvidia-nat[vanna]` or `nvidia-nat-vanna` - [Vanna](https://vanna.ai/) text-to-SQL with Databricks support
 - `nvidia-nat[weave]` or `nvidia-nat-weave` - [Weights & Biases Weave](https://weave-docs.wandb.ai)
 - `nvidia-nat[zep-cloud]` or `nvidia-nat-zep-cloud` - [Zep](https://www.getzep.com/)
 

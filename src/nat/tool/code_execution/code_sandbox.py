@@ -152,7 +152,7 @@ class LocalSandbox(Sandbox):
             output_json = output.json()
             assert isinstance(output_json, dict)
             return output_json
-        except json.JSONDecodeError as e:
+        except (requests.exceptions.JSONDecodeError, AssertionError) as e:
             logger.exception("Error parsing output: %s. %s", output.text, e)
             return {'process_status': 'error', 'stdout': '', 'stderr': f'Unknown error: {e} \"{output.text}\"'}
 

@@ -103,7 +103,8 @@ async def test_aws_bedrock_langchain_agent():
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("azure_openai_keys")
-async def test_azure_openai_langchain_agent():
+@pytest.mark.parametrize("api_version", [None, '2025-04-01-preview'])
+async def test_azure_openai_langchain_agent(api_version: str | None):
     """
     Test Azure OpenAI LLM with LangChain/LangGraph agent.
     Requires AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT to be set.
@@ -112,7 +113,10 @@ async def test_azure_openai_langchain_agent():
     """
     prompt = ChatPromptTemplate.from_messages([("system", "You are a helpful AI assistant."), ("human", "{input}")])
 
-    llm_config = AzureOpenAIModelConfig(azure_deployment=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4.1"))
+    config_args = {"azure_deployment": os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4.1")}
+    if api_version is not None:
+        config_args["api_version"] = api_version
+    llm_config = AzureOpenAIModelConfig(**config_args)
 
     async with WorkflowBuilder() as builder:
         await builder.add_llm("azure_openai_llm", llm_config)

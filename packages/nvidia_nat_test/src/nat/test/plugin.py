@@ -27,6 +27,8 @@ import pytest
 import pytest_asyncio
 
 if typing.TYPE_CHECKING:
+    import galileo.log_streams
+    import galileo.projects
     import langsmith.client
 
     from docker.client import DockerClient
@@ -290,14 +292,90 @@ def langsmith_client_fixture(langsmith_api_key: str, fail_missing: bool) -> "lan
         pytest.skip(reason=reason)
 
 
+@pytest.fixture(name="project_name")
+def project_name_fixture() -> str:
+    # Create a unique project name for each test run
+    return f"nat-e2e-test-{time.time()}-{random.random()}"
+
+
 @pytest.fixture(name="langsmith_project_name")
-def langsmith_project_name_fixture(langsmith_client: "langsmith.client.Client") -> Generator[str]:
-    # Createa a unique project name for each test run
-    project_name = f"nat-e2e-test-{time.time()}-{random.random()}"
+def langsmith_project_name_fixture(langsmith_client: "langsmith.client.Client", project_name: str) -> Generator[str]:
     langsmith_client.create_project(project_name)
     yield project_name
 
     langsmith_client.delete_project(project_name=project_name)
+
+
+@pytest.fixture(name="galileo_api_key", scope='session')
+def galileo_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require a Galileo API key.
+    """
+    yield require_env_variables(
+        varnames=["GALILEO_API_KEY"],
+        reason="Galileo integration tests require the `GALILEO_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="galileo_project")
+def galileo_project_fixture(galileo_api_key: str, fail_missing: bool,
+                            project_name: str) -> Generator["galileo.projects.Project"]:
+    """
+    Creates a unique Galileo project and deletes it after the test run.
+    """
+    try:
+        import galileo.projects
+        project = galileo.projects.create_project(name=project_name)
+        yield project
+
+        galileo.projects.delete_project(id=project.id)
+    except ImportError as e:
+        reason = "Galileo integration tests require the `galileo` package to be installed."
+        if fail_missing:
+            raise RuntimeError(reason) from e
+        pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="galileo_log_stream")
+def galileo_log_stream_fixture(galileo_project: "galileo.projects.Project") -> "galileo.log_streams.LogStream":
+    """
+    Creates a Galileo log stream for integration tests.
+
+    The log stream is automatically deleted when the associated project is deleted.
+    """
+    import galileo.log_streams
+    return galileo.log_streams.create_log_stream(project_id=galileo_project.id, name="test")
+
+
+@pytest.fixture(name="catalyst_keys", scope='session')
+def catalyst_keys_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require RagaAI Catalyst credentials.
+    """
+    yield require_env_variables(
+        varnames=["CATALYST_ACCESS_KEY", "CATALYST_SECRET_KEY"],
+        reason="Catalyst integration tests require the `CATALYST_ACCESS_KEY` and `CATALYST_SECRET_KEY` environment "
+        "variables to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="catalyst_project_name")
+def catalyst_project_name_fixture(catalyst_keys) -> str:
+    return os.environ.get("NAT_CI_CATALYST_PROJECT_NAME", "nat-e2e")
+
+
+@pytest.fixture(name="catalyst_dataset_name")
+def catalyst_dataset_name_fixture(catalyst_project_name: str, project_name: str) -> str:
+    """
+    We can't create and delete projects, but we can create and delete datasets, so use a unique dataset name
+    """
+    dataset_name = project_name.replace('.', '-')
+    yield dataset_name
+
+    from ragaai_catalyst import Dataset
+    ds = Dataset(catalyst_project_name)
+    if dataset_name in ds.list_datasets():
+        ds.delete_dataset(dataset_name)
 
 
 @pytest.fixture(name="require_docker", scope='session')
@@ -438,14 +516,22 @@ def populate_milvus_fixture(milvus_uri: str, root_repo_dir: Path):
                    check=True)
 
 
-@pytest.fixture(name="require_nest_asyncio", scope="session")
+@pytest.fixture(name="require_nest_asyncio", scope="session", autouse=True)
 def require_nest_asyncio_fixture():
     """
-    Some tests require nest_asyncio to be installed to allow nested event loops, calling nest_asyncio.apply() more than
-    once is a no-op so it's safe to call this fixture even if one of our dependencies already called it.
+    Some tests require the nest_asyncio2 patch to be applied to allow nested event loops, calling
+    `nest_asyncio2.apply()` more than once is a no-op. However we need to ensure that the nest_asyncio2 patch is
+    applied prior to the older nest_asyncio patch is applied. Requiring us to ensure that any library which will apply
+    the patch on import is lazily imported.
     """
-    import nest_asyncio
-    nest_asyncio.apply()
+    import nest_asyncio2
+    try:
+        nest_asyncio2.apply(error_on_mispatched=True)
+    except RuntimeError as e:
+        raise RuntimeError(
+            "nest_asyncio2 fixture called but asyncio is already patched, most likely this is due to the nest_asyncio "
+            "being applied first, which is not compatible with Python 3.12+. Please ensure that any libraries which "
+            "apply nest_asyncio on import are lazily imported.") from e
 
 
 @pytest.fixture(name="phoenix_url", scope="session")
@@ -771,3 +857,18 @@ def piston_url_fixture(fail_missing: bool) -> str:
         if fail_missing:
             raise RuntimeError(reason)
         pytest.skip(reason)
+
+
+@pytest.fixture(autouse=True, scope="session")
+def import_adk_early():
+    """
+    Import ADK early to work-around slow import issue (https://github.com/google/adk-python/issues/2433),
+    when ADK is imported early it takes about 8 seconds, however if we wait until the `packages/nvidia_nat_adk/tests`
+    run the same import will take about 70 seconds.
+
+    Since ADK is an optional dependency, we will ignore any import errors.
+    """
+    try:
+        import google.adk  # noqa: F401
+    except ImportError:
+        pass
