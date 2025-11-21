@@ -60,25 +60,14 @@ In this workflow, the `webpage_query` tool queries the LangSmith User Guide, and
 
 The `webpage_query` tool uses the `nv-embedqa-e5-v5` embedder, which is defined in the `embedders` section.
 
-For details on workflow configuration, including sections not utilized in the above example, refer to the [Workflow Configuration](../workflow-configuration.md) document.
+For details on workflow configuration, including sections not utilized in the above example, refer to the [Workflow Configuration](./workflow-configuration.md) document.
 
 ## Using Agents With Workflows
 There are several different agents that use language models. They are systems that use LLMs to reason and determine the actions to take and inputs to use for those actions. After executing those actions, the agent uses the LLM to determine if more actions are required. The following are agents and an executor offered by NeMo Agent toolkit:
-- [ReAct Agent](./react-agent.md)
-- [Reasoning Agent](./reasoning-agent.md)
-- [ReWOO Agent](./rewoo-agent.md)
-- [Responses API and Agent](./responses-api-and-agent.md)
-- [Router Agent](./router-agent.md)
-- [Sequential Executor](./sequential-executor.md)
-- [Tool Calling Agent](./tool-calling-agent.md)
-
-```{toctree}
-:hidden:
-ReAct Agent <./react-agent.md>
-Reasoning Agent <./reasoning-agent.md>
-ReWOO Agent <./rewoo-agent.md>
-Responses API and Agent <./responses-api-and-agent.md>
-Router Agent <./router-agent.md>
-Sequential Executor <./sequential-executor.md>
-Tool Calling Agent <./tool-calling-agent.md>
-```
+- [ReAct Agent](../workflows/react-agent/index.md)
+- [Reasoning Agent](../workflows/reasoning-agent/index.md)
+- [ReWOO Agent](../workflows/rewoo-agent/index.md)
+- [Responses API and Agent](../workflows/responses-api-and-agent/index.md)
+- [Router Agent](../workflows/router-agent/index.md)
+- [Sequential Executor](../workflows/sequential-executor/index.md)
+- [Tool Calling Agent](../workflows/tool-calling-agent/index.md)

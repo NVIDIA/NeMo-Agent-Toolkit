@@ -53,7 +53,7 @@ Each agent example contains its own installation and usage instructions. Navigat
 ## Learn More
 
 For a deeper dive into the AI Agents utilized in the examples, refer to the component documentation:
-- [ReAct Agent](../../docs/source/workflows/about/react-agent.md)
-- [Reasoning Agent](../../docs/source/workflows/about/reasoning-agent.md)
-- [Tool Calling Agent](../../docs/source/workflows/about/tool-calling-agent.md)
-- [ReWOO Agent](../../docs/source/workflows/about/rewoo-agent.md)
+- [ReAct Agent](../../docs/source/workflows/react-agent/index.md)
+- [Reasoning Agent](../../docs/source/workflows/reasoning-agent/index.md)
+- [Tool Calling Agent](../../docs/source/workflows/tool-calling-agent/index.md)
+- [ReWOO Agent](../../docs/source/workflows/rewoo-agent/index.md)
