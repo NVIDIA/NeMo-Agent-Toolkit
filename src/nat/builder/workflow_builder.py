@@ -42,8 +42,11 @@ from nat.builder.llm import LLMProviderInfo
 from nat.builder.retriever import RetrieverProviderInfo
 from nat.builder.workflow import Workflow
 from nat.cli.type_registry import GlobalTypeRegistry
+from nat.cli.type_registry import RegisteredInfo
 from nat.cli.type_registry import TypeRegistry
 from nat.data_models.authentication import AuthProviderBaseConfig
+from nat.data_models.common import TypedBaseModel
+from nat.data_models.common import TypedBaseModelT
 from nat.data_models.component import ComponentGroup
 from nat.data_models.component_ref import AuthenticationRef
 from nat.data_models.component_ref import EmbedderRef
@@ -172,6 +175,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         self._functions: dict[str, ConfiguredFunction] = {}
         self._function_groups: dict[str, ConfiguredFunctionGroup] = {}
         self._workflow: ConfiguredFunction | None = None
+        self.is_workflow_per_user: bool = False
 
         self._llms: dict[str, ConfiguredLLM] = {}
         self._auth_providers: dict[str, ConfiguredAuthProvider] = {}
@@ -270,6 +274,12 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             handler.setLevel(old_level)
 
         await self._exit_stack.__aexit__(*exc_details)
+
+    @staticmethod
+    def _should_build_component(registration: RegisteredInfo[TypedBaseModelT]) -> bool:
+        # When overriding this method, make sure it returns results that are mutually exclusive with other builders
+        # to avoid building the component multiple times.
+        return not registration.per_user
 
     async def build(self, entry_function: str | None = None) -> Workflow:
         """
@@ -1201,44 +1211,85 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
                 # Instantiate a the llm
                 if component_instance.component_group == ComponentGroup.LLMS:
-                    await self.add_llm(component_instance.name, cast(LLMBaseConfig, component_instance.config))
+                    config_obj = cast(LLMBaseConfig, component_instance.config)
+                    registration = self._registry.get_llm_provider(type(config_obj))
+                    if self._should_build_component(registration):
+                        await self.add_llm(component_instance.name, config_obj)
+                    else:
+                        continue
                 # Instantiate a the embedder
                 elif component_instance.component_group == ComponentGroup.EMBEDDERS:
-                    await self.add_embedder(component_instance.name,
-                                            cast(EmbedderBaseConfig, component_instance.config))
+                    config_obj = cast(EmbedderBaseConfig, component_instance.config)
+                    registration = self._registry.get_embedder_provider(type(config_obj))
+                    if self._should_build_component(registration):
+                        await self.add_embedder(component_instance.name, config_obj)
+                    else:
+                        continue
                 # Instantiate a memory client
                 elif component_instance.component_group == ComponentGroup.MEMORY:
-                    await self.add_memory_client(component_instance.name,
-                                                 cast(MemoryBaseConfig, component_instance.config))
+                    config_obj = cast(MemoryBaseConfig, component_instance.config)
+                    registration = self._registry.get_memory(type(config_obj))
+                    if self._should_build_component(registration):
+                        await self.add_memory_client(component_instance.name, config_obj)
+                    else:
+                        continue
                 # Instantiate a object store client
                 elif component_instance.component_group == ComponentGroup.OBJECT_STORES:
-                    await self.add_object_store(component_instance.name,
-                                                cast(ObjectStoreBaseConfig, component_instance.config))
+                    config_obj = cast(ObjectStoreBaseConfig, component_instance.config)
+                    registration = self._registry.get_object_store(type(config_obj))
+                    if self._should_build_component(registration):
+                        await self.add_object_store(component_instance.name, config_obj)
+                    else:
+                        continue
                 # Instantiate a retriever client
                 elif component_instance.component_group == ComponentGroup.RETRIEVERS:
-                    await self.add_retriever(component_instance.name,
-                                             cast(RetrieverBaseConfig, component_instance.config))
+                    config_obj = cast(RetrieverBaseConfig, component_instance.config)
+                    registration = self._registry.get_retriever_provider(type(config_obj))
+                    if self._should_build_component(registration):
+                        await self.add_retriever(component_instance.name, config_obj)
+                    else:
+                        continue
                 # Instantiate middleware
                 elif component_instance.component_group == ComponentGroup.MIDDLEWARE:
-                    await self.add_middleware(component_instance.name,
-                                              cast(MiddlewareBaseConfig, component_instance.config))
+                    config_obj = cast(MiddlewareBaseConfig, component_instance.config)
+                    registration = self._registry.get_middleware(type(config_obj))
+                    if self._should_build_component(registration):
+                        await self.add_middleware(component_instance.name, config_obj)
+                    else:
+                        continue
                 # Instantiate a function group
                 elif component_instance.component_group == ComponentGroup.FUNCTION_GROUPS:
-                    await self.add_function_group(component_instance.name,
-                                                  cast(FunctionGroupBaseConfig, component_instance.config))
+                    config_obj = cast(FunctionGroupBaseConfig, component_instance.config)
+                    registration = self._registry.get_function_group(type(config_obj))
+                    if self._should_build_component(registration):
+                        await self.add_function_group(component_instance.name, config_obj)
+                    else:
+                        continue
                 # Instantiate a function
                 elif component_instance.component_group == ComponentGroup.FUNCTIONS:
                     # If the function is the root, set it as the workflow later
-                    if (not component_instance.is_root):
-                        await self.add_function(component_instance.name,
-                                                cast(FunctionBaseConfig, component_instance.config))
+                    if not component_instance.is_root:
+                        config_obj = cast(FunctionBaseConfig, component_instance.config)
+                        registration = self._registry.get_function(type(config_obj))
+                        if self._should_build_component(registration):
+                            await self.add_function(component_instance.name, config_obj)
+                        else:
+                            continue
                 elif component_instance.component_group == ComponentGroup.TTC_STRATEGIES:
-                    await self.add_ttc_strategy(component_instance.name,
-                                                cast(TTCStrategyBaseConfig, component_instance.config))
+                    config_obj = cast(TTCStrategyBaseConfig, component_instance.config)
+                    registration = self._registry.get_ttc_strategy(type(config_obj))
+                    if self._should_build_component(registration):
+                        await self.add_ttc_strategy(component_instance.name, config_obj)
+                    else:
+                        continue
 
                 elif component_instance.component_group == ComponentGroup.AUTHENTICATION:
-                    await self.add_auth_provider(component_instance.name,
-                                                 cast(AuthProviderBaseConfig, component_instance.config))
+                    config_obj = cast(AuthProviderBaseConfig, component_instance.config)
+                    registration = self._registry.get_auth_provider(type(config_obj))
+                    if self._should_build_component(registration):
+                        await self.add_auth_provider(component_instance.name, config_obj)
+                    else:
+                        continue
                 else:
                     raise ValueError(f"Unknown component group {component_instance.component_group}")
 
@@ -1254,10 +1305,16 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         # Instantiate the workflow
         if not skip_workflow:
             try:
-                # Remove workflow from remaining as we start building
-                remaining_components.remove(("<workflow>", "workflow"))
-                await self.set_workflow(config.workflow)
-                completed_components.append(("<workflow>", "workflow"))
+                registration = self._registry.get_function(type(config.workflow))
+
+                if self._should_build_component(registration):
+                    await self.set_workflow(config.workflow)
+                    remaining_components.remove(("<workflow>", "workflow"))
+                    completed_components.append(("<workflow>", "workflow"))
+
+                else:
+                    self.is_workflow_per_user = True
+
             except Exception as e:
                 self._log_build_failure_workflow(completed_components, remaining_components, e)
                 raise
@@ -1492,3 +1549,66 @@ class ChildBuilder(Builder):
     def get_middleware_config(self, middleware_name: str | MiddlewareRef) -> MiddlewareBaseConfig:
         """Get the configuration for middleware."""
         return self._workflow_builder.get_middleware_config(middleware_name)
+
+
+class PerUserWorkflowBuilder(WorkflowBuilder):
+
+    def __init__(self,
+                 *,
+                 general_config: GeneralConfig | None = None,
+                 registry: TypeRegistry | None = None,
+                 shared_builder: WorkflowBuilder,
+                 user_id: str):
+        if not user_id:
+            raise ValueError("UserWorkflowBuilder requires a non-empty user ID to initialize.")
+
+        super().__init__(general_config=general_config, registry=registry)
+        self.shared_builder = shared_builder
+        self._user_id = user_id
+
+        # Always shared components
+        self._llms = shared_builder._llms
+        self._embedders = shared_builder._embedders
+        self._memory_clients = shared_builder._memory_clients
+        self._object_stores = shared_builder._object_stores
+        self._retrievers = shared_builder._retrievers
+        self._ttc_strategies = shared_builder._ttc_strategies
+        self._middleware = shared_builder._middleware
+
+        # Reference shared functions/function groups
+        self._function_groups.update(shared_builder._function_groups)
+        self._functions.update(shared_builder._functions)
+
+        # Track existing dependencies
+        self.function_group_dependencies.update(shared_builder.function_group_dependencies)
+        self.function_dependencies.update(shared_builder.function_dependencies)
+
+    @property
+    def user_id(self) -> str:
+        return self._user_id
+
+    async def __aenter__(self):
+
+        result = await super().__aenter__()
+
+        if self._user_id:
+            self._user_id_token = self._context_state.user_id.set(self._user_id)
+        else:
+            self._user_id_token = None
+
+        return result
+
+    async def __aexit__(self, *exc_details):
+
+        if hasattr(self, "_user_id_token") and self._user_id_token is not None:
+            self._context_state.user_id.reset(self._user_id_token)
+
+        return await super().__aexit__(*exc_details)
+
+    @override
+    @staticmethod
+    def _should_build_component(registration: RegisteredInfo[TypedBaseModelT]) -> bool:
+        # When overriding this method, make sure it returns results that are mutually exclusive with other builders
+        # to avoid building the component multiple times.
+
+        return registration.per_user

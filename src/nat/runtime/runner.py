@@ -33,10 +33,6 @@ from nat.utils.reactive.subject import Subject
 logger = logging.getLogger(__name__)
 
 
-class UserManagerBase:
-    pass
-
-
 class RunnerState(Enum):
     UNINITIALIZED = 0
     INITIALIZED = 1

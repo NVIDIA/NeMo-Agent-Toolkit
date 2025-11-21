@@ -139,13 +139,21 @@ class FastApiFrontEndPluginWorkerBase(ABC):
 
             logger.debug("Starting NAT server from process %s", os.getpid())
 
-            async with WorkflowBuilder.from_config(self.config) as builder:
+            session_manager = SessionManager(config=self.config,
+                                             max_users=self.front_end_config.max_concurrent_users,
+                                             user_idle_timeout=self.front_end_config.user_idle_timeout,
+                                             cleanup_check_interval=self.front_end_config.cleanup_check_interval,
+                                             require_user_id=self.front_end_config.require_user_id)
+            session_manager.start_cleanup_loop()
 
-                await self.configure(starting_app, builder)
+            await self.configure(starting_app, session_manager)
 
+            try:
                 yield
-
-            logger.debug("Closing NAT server from process %s", os.getpid())
+            finally:
+                logger.debug("Closing NAT server from process %s", os.getpid())
+                await session_manager.shutdown()
+                logger.debug("NAT server from process %s closed", os.getpid())
 
         nat_app = FastAPI(lifespan=lifespan)
 
@@ -211,7 +219,7 @@ class FastApiFrontEndPluginWorkerBase(ABC):
         return response
 
     @abstractmethod
-    async def configure(self, app: FastAPI, builder: WorkflowBuilder):
+    async def configure(self, app: FastAPI, session_manager: SessionManager):
         pass
 
     @abstractmethod
@@ -284,7 +292,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         return StepAdaptor(self.front_end_config.step_adaptor)
 
-    async def configure(self, app: FastAPI, builder: WorkflowBuilder):
+    async def configure(self, app: FastAPI, session_manager: SessionManager):
 
         # Do things like setting the base URL and global configuration options
         app.root_path = self.front_end_config.root_path
@@ -296,22 +304,21 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         # Ensure evaluator resources are cleaned up when the app shuts down
         app.add_event_handler("shutdown", self.cleanup_evaluators)
 
-        await self.add_routes(app, builder)
+        app.state.session_manager = session_manager
 
-    async def add_routes(self, app: FastAPI, builder: WorkflowBuilder):
+        await self.add_routes(app, session_manager)
 
-        await self.add_default_route(app, SessionManager(await builder.build()))
-        await self.add_evaluate_route(app, SessionManager(await builder.build()))
-        await self.add_evaluate_item_route(app, SessionManager(await builder.build()))
-        await self.add_static_files_route(app, builder)
+    async def add_routes(self, app: FastAPI, session_manager: SessionManager):
+
+        await self.add_default_route(app, session_manager)
+        await self.add_evaluate_route(app, session_manager)
+        await self.add_evaluate_item_route(app, session_manager)
+        await self.add_static_files_route(app, session_manager)
         await self.add_authorization_route(app)
-        await self.add_mcp_client_tool_list_route(app, builder)
+        await self.add_mcp_client_tool_list_route(app, session_manager)
 
         for ep in self.front_end_config.endpoints:
-
-            entry_workflow = await builder.build(entry_function=ep.function_name)
-
-            await self.add_route(app, endpoint=ep, session_manager=SessionManager(entry_workflow))
+            await self.add_route(app, endpoint=ep, session_manager=session_manager)
 
     async def add_default_route(self, app: FastAPI, session_manager: SessionManager):
 
@@ -351,8 +358,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 eval_runner = EvaluationRun(eval_config)
 
                 async with load_workflow(workflow_config_file_path) as local_session_manager:
-                    output: EvaluationRunOutput = await eval_runner.run_and_evaluate(
-                        session_manager=local_session_manager, job_id=job_id)
+                    async with local_session_manager.session() as user_session:
+                        output: EvaluationRunOutput = await eval_runner.run_and_evaluate(
+                            session=user_session, job_id=job_id)
 
                 if output.workflow_interrupted:
                     await job_store.update_status(job_id, JobStatus.INTERRUPTED)
@@ -563,13 +571,14 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                               })
             logger.info(f"Added evaluate_item route at {self.front_end_config.evaluate_item.path}")
 
-    async def add_static_files_route(self, app: FastAPI, builder: WorkflowBuilder):
+    async def add_static_files_route(self, app: FastAPI, session_manager: SessionManager):
 
         if not self.front_end_config.object_store:
             logger.debug("No object store configured, skipping static files route")
             return
 
-        object_store_client = await builder.get_object_store_client(self.front_end_config.object_store)
+        shared_builder = await session_manager.ensure_shared_builder()
+        object_store_client = await shared_builder.get_object_store_client(self.front_end_config.object_store)
 
         def sanitize_path(path: str) -> str:
             sanitized_path = os.path.normpath(path.strip("/"))
@@ -662,11 +671,18 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         endpoint: FastApiFrontEndConfig.EndpointBase,
                         session_manager: SessionManager):
 
-        workflow = session_manager.workflow
+        # Extract schemas from TypeRegistry
+        workflow_config = session_manager.config.workflow
+        config_type = type(workflow_config)
 
-        GenerateBodyType = workflow.input_schema
-        GenerateStreamResponseType = workflow.streaming_output_schema
-        GenerateSingleResponseType = workflow.single_output_schema
+        from nat.cli.type_registry import GlobalTypeRegistry
+        registry = GlobalTypeRegistry.get()
+
+        registration = registry.get_function(config_type)
+
+        GenerateBodyType = registration.per_user_function_input_schema
+        GenerateStreamResponseType = registration.per_user_function_streaming_output_schema
+        GenerateSingleResponseType = registration.per_user_function_single_output_schema
 
         # Skip async generation for custom routes (those with function_name)
         if self._dask_available and not hasattr(endpoint, 'function_name'):
@@ -715,10 +731,11 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 response.headers["Content-Type"] = "application/json"
 
-                async with session_manager.session(http_connection=request,
-                                                   user_authentication_callback=self._http_flow_handler.authenticate):
+                async with session_manager.session(
+                        http_connection=request,
+                        user_authentication_callback=self._http_flow_handler.authenticate) as user_session:
 
-                    return await generate_single_response(None, session_manager, result_type=result_type)
+                    return await generate_single_response(None, user_session, result_type=result_type)
 
             return get_single
 
@@ -726,13 +743,14 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def get_stream(request: Request):
 
-                async with session_manager.session(http_connection=request,
-                                                   user_authentication_callback=self._http_flow_handler.authenticate):
+                async with session_manager.session(
+                        http_connection=request,
+                        user_authentication_callback=self._http_flow_handler.authenticate) as user_session:
 
                     return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                              content=generate_streaming_response_as_str(
                                                  None,
-                                                 session_manager=session_manager,
+                                                 user_session=user_session,
                                                  streaming=streaming,
                                                  step_adaptor=self.get_step_adaptor(),
                                                  result_type=result_type,
@@ -745,13 +763,12 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             async def get_stream(filter_steps: str | None = None):
 
                 return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
-                                         content=generate_streaming_response_full_as_str(
-                                             None,
-                                             session_manager=session_manager,
-                                             streaming=streaming,
-                                             result_type=result_type,
-                                             output_type=output_type,
-                                             filter_steps=filter_steps))
+                                         content=generate_streaming_response_full_as_str(None,
+                                                                                         user_session=user_session,
+                                                                                         streaming=streaming,
+                                                                                         result_type=result_type,
+                                                                                         output_type=output_type,
+                                                                                         filter_steps=filter_steps))
 
             return get_stream
 
@@ -761,10 +778,11 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 response.headers["Content-Type"] = "application/json"
 
-                async with session_manager.session(http_connection=request,
-                                                   user_authentication_callback=self._http_flow_handler.authenticate):
+                async with session_manager.session(
+                        http_connection=request,
+                        user_authentication_callback=self._http_flow_handler.authenticate) as user_session:
 
-                    return await generate_single_response(payload, session_manager, result_type=result_type)
+                    return await generate_single_response(payload, user_session, result_type=result_type)
 
             return post_single
 
@@ -775,13 +793,14 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def post_stream(request: Request, payload: request_type):
 
-                async with session_manager.session(http_connection=request,
-                                                   user_authentication_callback=self._http_flow_handler.authenticate):
+                async with session_manager.session(
+                        http_connection=request,
+                        user_authentication_callback=self._http_flow_handler.authenticate) as user_session:
 
                     return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                              content=generate_streaming_response_as_str(
                                                  payload,
-                                                 session_manager=session_manager,
+                                                 user_session=user_session,
                                                  streaming=streaming,
                                                  step_adaptor=self.get_step_adaptor(),
                                                  result_type=result_type,
@@ -799,10 +818,14 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def post_stream(payload: request_type, filter_steps: str | None = None):
 
+                async with session_manager.session(
+                        http_connection=request,
+                        user_authentication_callback=self._http_flow_handler.authenticate) as user_session:
+
                 return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                          content=generate_streaming_response_full_as_str(
                                              payload,
-                                             session_manager=session_manager,
+                                             user_session=user_session,
                                              streaming=streaming,
                                              result_type=result_type,
                                              output_type=output_type,
@@ -822,20 +845,21 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 response.headers["Content-Type"] = "application/json"
                 stream_requested = getattr(payload, 'stream', False)
 
-                async with session_manager.session(http_connection=request):
+                async with session_manager.session(http_connection=request,
+                                                   user_authentication_callback=self._http_flow_handler.authenticate) as user_session:
                     if stream_requested:
 
                         # Return streaming response
                         return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                                  content=generate_streaming_response_as_str(
                                                      payload,
-                                                     session_manager=session_manager,
+                                                     user_session=user_session,
                                                      streaming=True,
                                                      step_adaptor=self.get_step_adaptor(),
                                                      result_type=ChatResponseChunk,
                                                      output_type=ChatResponseChunk))
 
-                    return await generate_single_response(payload, session_manager, result_type=ChatResponse)
+                    return await generate_single_response(payload, user_session, result_type=ChatResponse)
 
             return post_openai_api_compatible
 
@@ -865,8 +889,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
             try:
                 async with load_workflow(config_file_path) as local_session_manager:
-                    result = await generate_single_response(
-                        payload, local_session_manager, result_type=local_session_manager.workflow.single_output_schema)
+                    async with local_session_manager.session() as user_session:
+                        result = await generate_single_response(
+                            payload, user_session, result_type=user_session.workflow.single_output_schema)
 
                 await job_store.update_status(job_id, JobStatus.SUCCESS, output=result)
             except Exception as e:
@@ -1197,7 +1222,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 methods=["GET"],
                 description="Handles the authorization code and state returned from the Authorization Code Grant Flow.")
 
-    async def add_mcp_client_tool_list_route(self, app: FastAPI, builder: WorkflowBuilder):
+    async def add_mcp_client_tool_list_route(self, app: FastAPI, session_manager: SessionManager):
         """Add the MCP client tool list endpoint to the FastAPI app."""
         from typing import Any
 
@@ -1212,7 +1237,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         class MCPClientToolListResponse(BaseModel):
             mcp_clients: list[dict[str, Any]]
 
-        async def get_mcp_client_tool_list() -> MCPClientToolListResponse:
+        @app.get("mcp/tools/list", response_model=MCPClientToolListResponse)
+        async def get_mcp_client_tool_list(request: Request) -> MCPClientToolListResponse:
             """
             Get the list of MCP tools from all MCP clients in the workflow configuration.
             Checks session health and compares with workflow function group configuration.
@@ -1220,162 +1246,128 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             mcp_clients_info = []
 
             try:
-                # Get all function groups from the builder
-                function_groups = builder._function_groups
+                # Get per-user workflow via session
+                async with session_manager.session(http_connection=request) as user_session:
+                    workflow = user_session.workflow
+                    function_groups = workflow.function_groups
 
-                # Find MCP client function groups
-                for group_name, configured_group in function_groups.items():
-                    if configured_group.config.type != "mcp_client":
-                        continue
+                    # Find MCP client function groups
+                    for group_name, configured_group in function_groups.items():
+                        if configured_group.get_config().type != "mcp_client":
+                            continue
 
-                    from nat.plugins.mcp.client_config import MCPClientConfig
+                        from nat.plugins.mcp.client_config import MCPClientConfig
 
-                    config = configured_group.config
-                    assert isinstance(config, MCPClientConfig)
+                        config = configured_group.get_config()
+                        assert isinstance(config, MCPClientConfig)
 
-                    # Reuse the existing MCP client session stored on the function group instance
-                    group_instance = configured_group.instance
+                        # Reuse the existing MCP client session stored on the function group instance
 
-                    client = group_instance.mcp_client
-                    if client is None:
-                        raise RuntimeError(f"MCP client not found for group {group_name}")
-
-                    try:
-                        session_healthy = False
-                        server_tools: dict[str, Any] = {}
+                        client = configured_group.mcp_client
+                        if client is None:
+                            raise RuntimeError(f"MCP client not found for group {group_name}")
 
                         try:
-                            server_tools = await client.get_tools()
-                            session_healthy = True
-                        except Exception as e:
-                            logger.exception(f"Failed to connect to MCP server {client.server_name}: {e}")
                             session_healthy = False
+                            server_tools: dict[str, Any] = {}
 
-                        # Get workflow function group configuration (configured client-side tools)
-                        configured_short_names: set[str] = set()
-                        configured_full_to_fn: dict[str, Function] = {}
-                        try:
-                            # Pass a no-op filter function to bypass any default filtering that might check
-                            # health status, preventing potential infinite recursion during health status checks.
-                            async def pass_through_filter(fn):
-                                return fn
+                            try:
+                                server_tools = await client.get_tools()
+                                session_healthy = True
+                            except Exception as e:
+                                logger.exception(f"Failed to connect to MCP server {client.server_name}: {e}")
+                                session_healthy = False
 
-                            accessible_functions = await group_instance.get_accessible_functions(
-                                filter_fn=pass_through_filter)
-                            configured_full_to_fn = accessible_functions
-                            configured_short_names = {name.split('.', 1)[1] for name in accessible_functions.keys()}
+                            # Get workflow function group configuration (configured client-side tools)
+                            configured_short_names: set[str] = set()
+                            configured_full_to_fn: dict[str, Function] = {}
+                            try:
+                                # Pass a no-op filter function to bypass any default filtering that might check
+                                # health status, preventing potential infinite recursion during health status checks.
+                                async def pass_through_filter(fn):
+                                    return fn
+
+                                accessible_functions = await configured_group.get_accessible_functions(
+                                    filter_fn=pass_through_filter)
+                                configured_full_to_fn = accessible_functions
+                                configured_short_names = {name.split('.', 1)[1] for name in accessible_functions.keys()}
+                            except Exception as e:
+                                logger.exception(f"Failed to get accessible functions for group {group_name}: {e}")
+
+                            # Build alias->original mapping and override configs from overrides
+                            alias_to_original: dict[str, str] = {}
+                            override_configs: dict[str, Any] = {}
+                            try:
+                                if config.tool_overrides is not None:
+                                    for orig_name, override in config.tool_overrides.items():
+                                        if override.alias is not None:
+                                            alias_to_original[override.alias] = orig_name
+                                            override_configs[override.alias] = override
+                                        else:
+                                            override_configs[orig_name] = override
+                            except Exception:
+                                pass
+
+                            # Create tool info list (always return configured tools; mark availability)
+                            tools_info: list[dict[str, Any]] = []
+                            available_count = 0
+                            for wf_fn, fn_short in zip(configured_full_to_fn.values(), configured_short_names):
+                                orig_name = alias_to_original.get(fn_short, fn_short)
+                                available = session_healthy and (orig_name in server_tools)
+                                if available:
+                                    available_count += 1
+
+                                # Prefer tool override description, then workflow function description,
+                                # then server description
+                                description = ""
+                                if fn_short in override_configs and override_configs[fn_short].description:
+                                    description = override_configs[fn_short].description
+                                elif wf_fn.description:
+                                    description = wf_fn.description
+                                elif available and orig_name in server_tools:
+                                    description = server_tools[orig_name].description or ""
+
+                                tools_info.append(
+                                    MCPToolInfo(name=fn_short,
+                                                description=description or "",
+                                                server=client.server_name,
+                                                available=available).model_dump())
+
+                            # Sort tools_info by name to maintain consistent ordering
+                            tools_info.sort(key=lambda x: x['name'])
+
+                            mcp_clients_info.append({
+                                "function_group": group_name,
+                                "server": client.server_name,
+                                "transport": config.server.transport,
+                                "session_healthy": session_healthy,
+                                "protected": True if config.server.auth_provider is not None else False,
+                                "tools": tools_info,
+                                "total_tools": len(configured_short_names),
+                                "available_tools": available_count
+                            })
+
                         except Exception as e:
-                            logger.exception(f"Failed to get accessible functions for group {group_name}: {e}")
+                            logger.error(f"Error processing MCP client {group_name}: {e}")
+                            mcp_clients_info.append({
+                                "function_group": group_name,
+                                "server": "unknown",
+                                "transport": config.server.transport if config.server else "unknown",
+                                "session_healthy": False,
+                                "protected": False,
+                                "error": str(e),
+                                "tools": [],
+                                "total_tools": 0,
+                                "workflow_tools": 0
+                            })
 
-                        # Build alias->original mapping and override configs from overrides
-                        alias_to_original: dict[str, str] = {}
-                        override_configs: dict[str, Any] = {}
-                        try:
-                            if config.tool_overrides is not None:
-                                for orig_name, override in config.tool_overrides.items():
-                                    if override.alias is not None:
-                                        alias_to_original[override.alias] = orig_name
-                                        override_configs[override.alias] = override
-                                    else:
-                                        override_configs[orig_name] = override
-                        except Exception:
-                            pass
-
-                        # Create tool info list (always return configured tools; mark availability)
-                        tools_info: list[dict[str, Any]] = []
-                        available_count = 0
-                        for wf_fn, fn_short in zip(configured_full_to_fn.values(), configured_short_names):
-                            orig_name = alias_to_original.get(fn_short, fn_short)
-                            available = session_healthy and (orig_name in server_tools)
-                            if available:
-                                available_count += 1
-
-                            # Prefer tool override description, then workflow function description,
-                            # then server description
-                            description = ""
-                            if fn_short in override_configs and override_configs[fn_short].description:
-                                description = override_configs[fn_short].description
-                            elif wf_fn.description:
-                                description = wf_fn.description
-                            elif available and orig_name in server_tools:
-                                description = server_tools[orig_name].description or ""
-
-                            tools_info.append(
-                                MCPToolInfo(name=fn_short,
-                                            description=description or "",
-                                            server=client.server_name,
-                                            available=available).model_dump())
-
-                        # Sort tools_info by name to maintain consistent ordering
-                        tools_info.sort(key=lambda x: x['name'])
-
-                        mcp_clients_info.append({
-                            "function_group": group_name,
-                            "server": client.server_name,
-                            "transport": config.server.transport,
-                            "session_healthy": session_healthy,
-                            "protected": True if config.server.auth_provider is not None else False,
-                            "tools": tools_info,
-                            "total_tools": len(configured_short_names),
-                            "available_tools": available_count
-                        })
-
-                    except Exception as e:
-                        logger.error(f"Error processing MCP client {group_name}: {e}")
-                        mcp_clients_info.append({
-                            "function_group": group_name,
-                            "server": "unknown",
-                            "transport": config.server.transport if config.server else "unknown",
-                            "session_healthy": False,
-                            "protected": False,
-                            "error": str(e),
-                            "tools": [],
-                            "total_tools": 0,
-                            "workflow_tools": 0
-                        })
-
-                return MCPClientToolListResponse(mcp_clients=mcp_clients_info)
+                    return MCPClientToolListResponse(mcp_clients=mcp_clients_info)
 
             except Exception as e:
                 logger.error(f"Error in MCP client tool list endpoint: {e}")
-                raise HTTPException(status_code=500, detail=f"Failed to retrieve MCP client information: {str(e)}")
+                return MCPClientToolListResponse(mcp_clients=[{"error": f"Failed to list MCP tools: {str(e)}"}])
 
-        # Add the route to the FastAPI app
-        app.add_api_route(
-            path="/mcp/client/tool/list",
-            endpoint=get_mcp_client_tool_list,
-            methods=["GET"],
-            response_model=MCPClientToolListResponse,
-            description="Get list of MCP client tools with session health and workflow configuration comparison",
-            responses={
-                200: {
-                    "description": "Successfully retrieved MCP client tool information",
-                    "content": {
-                        "application/json": {
-                            "example": {
-                                "mcp_clients": [{
-                                    "function_group": "mcp_tools",
-                                    "server": "streamable-http:http://localhost:9901/mcp",
-                                    "transport": "streamable-http",
-                                    "session_healthy": True,
-                                    "protected": False,
-                                    "tools": [{
-                                        "name": "tool_a",
-                                        "description": "Tool A description",
-                                        "server": "streamable-http:http://localhost:9901/mcp",
-                                        "available": True
-                                    }],
-                                    "total_tools": 1,
-                                    "available_tools": 1
-                                }]
-                            }
-                        }
-                    }
-                },
-                500: {
-                    "description": "Internal Server Error"
-                }
-            })
+        return get_mcp_client_tool_list
 
     async def _add_flow(self, state: str, flow_state: FlowState):
         async with self._outstanding_flows_lock:

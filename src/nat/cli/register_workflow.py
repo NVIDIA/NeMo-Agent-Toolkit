@@ -15,6 +15,8 @@
 
 from contextlib import asynccontextmanager
 
+from pydantic import BaseModel
+
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.type_registry import AuthProviderBuildCallableT
 from nat.cli.type_registry import AuthProviderRegisteredCallableT
@@ -182,6 +184,72 @@ def register_function(config_type: type[FunctionConfigT],
         return context_manager_fn
 
     return register_function_inner
+
+
+def register_per_user_function(config_type: type[FunctionConfigT],
+                               input_schema: type[BaseModel],
+                               single_output_schema: type[BaseModel] | None = None,
+                               streaming_output_schema: type[BaseModel] | None = None,
+                               framework_wrappers: list[LLMFrameworkEnum | str] | None = None):
+    """
+    Register a per-user function with optional framework_wrappers for automatic profiler hooking.
+
+    Concrete function instances are built per-user on first function invocation. Schemas must be provided to
+    ensure OpenAPI documentation can be generated without a concrete function instance.
+
+    Args:
+        config_type: The function configuration type
+        input_schema: The input schema for the function
+        single_output_schema: The single output schema for the function
+        streaming_output_schema: The streaming output schema for the function
+        framework_wrappers: Optional list of framework wrappers for automatic profiler hooking
+    """
+
+    def register_per_user_function_inner(
+            fn: FunctionBuildCallableT[FunctionConfigT]) -> FunctionRegisteredCallableT[FunctionConfigT]:
+        from collections.abc import AsyncGenerator
+
+        from nat.builder.builder import Builder
+        from nat.builder.function import PerUserFunction
+        from nat.builder.function_info import PerUserFunctionInfo
+        from nat.data_models.function import FunctionBaseConfig
+
+        from .type_registry import GlobalTypeRegistry
+        from .type_registry import RegisteredFunctionInfo
+
+        original_build_fn = asynccontextmanager(fn)
+
+        # Create wrapper that returns PerUserFunction which does not build the concrete function instance
+        @asynccontextmanager
+        async def per_user_build_fn(config: FunctionBaseConfig,
+                                    builder: Builder) -> AsyncGenerator[PerUserFunction, None]:
+            info = PerUserFunctionInfo(input_schema=input_schema,
+                                       single_output_schema=single_output_schema,
+                                       streaming_output_schema=streaming_output_schema)
+            per_user_fn = PerUserFunction(config=config,
+                                          info=info,
+                                          builder=builder,
+                                          original_build_fn=original_build_fn)
+            yield per_user_fn
+
+        framework_wrappers_list = list(framework_wrappers or [])
+
+        discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
+                                                                component_type=ComponentEnum.FUNCTION)
+
+        # Register with TypeRegistry, including declared schemas
+        GlobalTypeRegistry.get().register_function(
+            RegisteredFunctionInfo(full_type=config_type.full_type,
+                                   config_type=config_type,
+                                   build_fn=per_user_build_fn,
+                                   framework_wrappers=framework_wrappers_list,
+                                   discovery_metadata=discovery_metadata,
+                                   per_user_function_input_schema=input_schema,
+                                   per_user_function_single_output_schema=single_output_schema,
+                                   per_user_function_streaming_output_schema=streaming_output_schema))
+        return per_user_build_fn
+
+    return register_per_user_function_inner
 
 
 def register_function_group(config_type: type[FunctionGroupConfigT],

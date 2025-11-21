@@ -23,20 +23,20 @@ from nat.data_models.api_server import ResponseSerializable
 from nat.data_models.step_adaptor import StepAdaptorConfig
 from nat.front_ends.fastapi.intermediate_steps_subscriber import pull_intermediate
 from nat.front_ends.fastapi.step_adaptor import StepAdaptor
-from nat.runtime.session import SessionManager
+from nat.runtime.session import Session
 from nat.utils.producer_consumer_queue import AsyncIOProducerConsumerQueue
 
 
 async def generate_streaming_response_as_str(payload: typing.Any,
                                              *,
-                                             session_manager: SessionManager,
+                                             user_session: Session,
                                              streaming: bool,
                                              step_adaptor: StepAdaptor = StepAdaptor(StepAdaptorConfig()),
                                              result_type: type | None = None,
                                              output_type: type | None = None) -> AsyncGenerator[str]:
 
     async for item in generate_streaming_response(payload,
-                                                  session_manager=session_manager,
+                                                  user_session=user_session,
                                                   streaming=streaming,
                                                   step_adaptor=step_adaptor,
                                                   result_type=result_type,
@@ -51,13 +51,13 @@ async def generate_streaming_response_as_str(payload: typing.Any,
 
 async def generate_streaming_response(payload: typing.Any,
                                       *,
-                                      session_manager: SessionManager,
+                                      user_session: Session,
                                       streaming: bool,
                                       step_adaptor: StepAdaptor = StepAdaptor(StepAdaptorConfig()),
                                       result_type: type | None = None,
                                       output_type: type | None = None) -> AsyncGenerator[ResponseSerializable]:
 
-    async with session_manager.run(payload) as runner:
+    async with user_session.run(payload) as runner:
 
         q: AsyncIOProducerConsumerQueue[ResponseSerializable] = AsyncIOProducerConsumerQueue()
 
@@ -65,7 +65,7 @@ async def generate_streaming_response(payload: typing.Any,
         intermediate_complete = await pull_intermediate(q, step_adaptor)
 
         async def pull_result():
-            if session_manager.workflow.has_streaming_output and streaming:
+            if user_session.workflow.has_streaming_output and streaming:
                 async for chunk in runner.result_stream(to_type=output_type):
                     await q.put(chunk)
             else:
@@ -107,19 +107,19 @@ async def generate_streaming_response(payload: typing.Any,
 
 async def generate_single_response(
     payload: typing.Any,
-    session_manager: SessionManager,
+    user_session: Session,
     result_type: type | None = None,
 ) -> typing.Any:
-    if (not session_manager.workflow.has_single_output):
+    if (not user_session.workflow.has_single_output):
         raise ValueError("Cannot get a single output value for streaming workflows")
 
-    async with session_manager.run(payload) as runner:
+    async with user_session.run(payload) as runner:
         return await runner.result(to_type=result_type)
 
 
 async def generate_streaming_response_full(payload: typing.Any,
                                            *,
-                                           session_manager: SessionManager,
+                                           user_session: Session,
                                            streaming: bool,
                                            result_type: type | None = None,
                                            output_type: type | None = None,
@@ -137,14 +137,14 @@ async def generate_streaming_response_full(payload: typing.Any,
         else:
             allowed_types = set(filter_steps.split(','))
 
-    async with session_manager.run(payload) as runner:
+    async with user_session.run(payload) as runner:
         q: AsyncIOProducerConsumerQueue[ResponseSerializable] = AsyncIOProducerConsumerQueue()
 
         # Start the intermediate stream without step adaptor
         intermediate_complete = await pull_intermediate(q, None)
 
         async def pull_result():
-            if session_manager.workflow.has_streaming_output and streaming:
+            if user_session.workflow.has_streaming_output and streaming:
                 async for chunk in runner.result_stream(to_type=output_type):
                     await q.put(chunk)
             else:
@@ -174,7 +174,7 @@ async def generate_streaming_response_full(payload: typing.Any,
 
 async def generate_streaming_response_full_as_str(payload: typing.Any,
                                                   *,
-                                                  session_manager: SessionManager,
+                                                  user_session: Session,
                                                   streaming: bool,
                                                   result_type: type | None = None,
                                                   output_type: type | None = None,
@@ -183,7 +183,7 @@ async def generate_streaming_response_full_as_str(payload: typing.Any,
     Similar to generate_streaming_response but converts the response to a string format.
     """
     async for item in generate_streaming_response_full(payload,
-                                                       session_manager=session_manager,
+                                                       user_session=user_session,
                                                        streaming=streaming,
                                                        result_type=result_type,
                                                        output_type=output_type,
