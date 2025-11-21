@@ -15,6 +15,9 @@
 
 
 general:
+  front_end:
+    _type: fastapi
+    runner_class: nat.plugins.weave.fastapi_plugin_worker.WeaveFastAPIPluginWorker
   telemetry:
     tracing:
       weave:
