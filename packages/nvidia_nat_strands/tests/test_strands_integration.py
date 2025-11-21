@@ -119,7 +119,7 @@ class TestStrandsAgentE2EOpenAI:
         """Test agent with multiple tool calls."""
         from strands.agent import Agent
 
-        llm_config = OpenAIModelConfig(model_name="gpt-4o", temperature=0.0, max_tokens=96)
+        llm_config = OpenAIModelConfig(model_name="gpt-4o", temperature=0.0, max_tokens=256)
 
         strands_tool = strands_tool_wrapper("calculator", calculator_function, builder)
 
@@ -144,7 +144,7 @@ class TestStrandsAgentE2EOpenAI:
         """Test that agent handles tool errors gracefully."""
         from strands.agent import Agent
 
-        llm_config = OpenAIModelConfig(model_name="gpt-4o", temperature=0.0, max_tokens=64)
+        llm_config = OpenAIModelConfig(model_name="gpt-4o", temperature=0.0, max_tokens=256)
 
         strands_tool = strands_tool_wrapper("calculator", calculator_function, builder)
 
@@ -195,7 +195,7 @@ class TestStrandsAgentE2ENIM:
         from strands.agent import Agent
 
         # Create NIM LLM config
-        llm_config = NIMModelConfig(model_name="meta/llama-3.1-8b-instruct", temperature=0.0, max_tokens=96)
+        llm_config = NIMModelConfig(model_name="meta/llama-3.1-8b-instruct", temperature=0.0, max_tokens=256)
 
         # Convert NAT function to Strands tool
         strands_tool = strands_tool_wrapper("echo", echo_function, builder)
@@ -343,7 +343,7 @@ class TestStrandsAgentE2EBedrock:
         llm_config = AWSBedrockModelConfig(model_name="anthropic.claude-3-sonnet-20240229-v1:0",
                                            region_name="us-east-1",
                                            temperature=0.0,
-                                           max_tokens=96)
+                                           max_tokens=256)
 
         # Convert NAT function to Strands tool
         strands_tool = strands_tool_wrapper("greeting", greeting_function, builder)
