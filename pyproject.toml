@@ -256,6 +256,7 @@ dev = [
   "sphinx~=8.2",
   "sphinx-autoapi>=3.6",
   "sphinx-copybutton>=0.5",
+  "sphinx_design~=0.6",
   "sphinx-mermaid",
   "tomlkit~=0.13.2",
   "twine~=6.0",

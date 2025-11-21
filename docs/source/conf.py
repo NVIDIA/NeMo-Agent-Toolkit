@@ -81,8 +81,8 @@ def _build_api_tree() -> Path:
     return api_tree
 
 
-API_TREE = _build_api_tree()
-print(f"API tree built at {API_TREE}")
+#API_TREE = _build_api_tree()
+#print(f"API tree built at {API_TREE}")
 
 # -- Project information -----------------------------------------------------
 
@@ -106,19 +106,20 @@ version = '.'.join(release.split('.')[:2])
 # ones.
 extensions = [
     # Temp disable API building, this adds 4 minutes to the build time, re-enable prior to merging
-    'autoapi.extension',
+    #'autoapi.extension',
     'IPython.sphinxext.ipython_console_highlighting',
     'IPython.sphinxext.ipython_directive',
     'myst_parser',
     'nbsphinx',
     'sphinx_copybutton',
+    'sphinx_design',
     'sphinx.ext.doctest',
     'sphinx.ext.graphviz',
     'sphinx.ext.intersphinx',
     "sphinxmermaid"
 ]
 
-autoapi_dirs = [str(API_TREE.absolute())]
+# autoapi_dirs = [str(API_TREE.absolute())]
 
 autoapi_root = "api"
 autoapi_python_class_content = "both"
@@ -348,6 +349,6 @@ def skip_pydantic_special_attrs(app: object, what: str, name: str, obj: "PythonO
 
 
 # Temp disable API building, this adds 4 minutes to the build time, re-enable prior to merging
-def setup(sphinx):
-    # Work-around for for Pydantic docstrings that trigger parsing warnings
-    sphinx.connect("autoapi-skip-member", skip_pydantic_special_attrs)
+# def setup(sphinx):
+#     # Work-around for for Pydantic docstrings that trigger parsing warnings
+#     sphinx.connect("autoapi-skip-member", skip_pydantic_special_attrs)

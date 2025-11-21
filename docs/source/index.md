@@ -21,6 +21,24 @@ limitations under the License.
 
 NVIDIA NeMo Agent toolkit is a flexible, lightweight, and unifying library that allows you to easily connect existing enterprise agents to data sources and tools across any framework.
 
+## Installation
+
+
+::::{tab-set}
+:sync-group: category
+
+   :::{tab-item} pip
+   :selected:
+   :sync: pip
+   pip install nvidia-nat
+   :::
+
+   :::{tab-item} uv
+   :sync: uv
+   uv pip install nvidia-nat
+   :::
+
+::::
 
 :::{note}
 NeMo Agent toolkit was previously known as <!-- vale off -->AgentIQ<!-- vale on -->, however the API has not changed and is fully compatible with previous releases. Users should update their dependencies to depend on `nvidia-nat` instead of `aiqtoolkit` or `agentiq`. The transitional packages named `aiqtoolkit` and `agentiq` are available for backwards compatibility, but will be removed in the future.
