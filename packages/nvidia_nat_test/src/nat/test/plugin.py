@@ -347,6 +347,37 @@ def galileo_log_stream_fixture(galileo_project: "galileo.projects.Project") -> "
     return galileo.log_streams.create_log_stream(project_id=galileo_project.id, name="test")
 
 
+@pytest.fixture(name="catalyst_keys", scope='session')
+def catalyst_keys_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require RagaAI Catalyst credentials.
+    """
+    yield require_env_variables(
+        varnames=["CATALYST_ACCESS_KEY", "CATALYST_SECRET_KEY"],
+        reason="Catalyst integration tests require the `CATALYST_ACCESS_KEY` and `CATALYST_SECRET_KEY` environment "
+        "variables to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="catalyst_project_name")
+def catalyst_project_name_fixture(catalyst_keys) -> str:
+    return os.environ.get("NAT_CI_CATALYST_PROJECT_NAME", "nat-e2e")
+
+
+@pytest.fixture(name="catalyst_dataset_name")
+def catalyst_dataset_name_fixture(catalyst_project_name: str, project_name: str) -> str:
+    """
+    We can't create and delete projects, but we can create and delete datasets, so use a unique dataset name
+    """
+    dataset_name = project_name.replace('.', '-')
+    yield dataset_name
+
+    from ragaai_catalyst import Dataset
+    ds = Dataset(catalyst_project_name)
+    if dataset_name in ds.list_datasets():
+        ds.delete_dataset(dataset_name)
+
+
 @pytest.fixture(name="require_docker", scope='session')
 def require_docker_fixture(fail_missing: bool) -> "DockerClient":
     """
@@ -485,14 +516,22 @@ def populate_milvus_fixture(milvus_uri: str, root_repo_dir: Path):
                    check=True)
 
 
-@pytest.fixture(name="require_nest_asyncio", scope="session")
+@pytest.fixture(name="require_nest_asyncio", scope="session", autouse=True)
 def require_nest_asyncio_fixture():
     """
-    Some tests require nest_asyncio to be installed to allow nested event loops, calling nest_asyncio.apply() more than
-    once is a no-op so it's safe to call this fixture even if one of our dependencies already called it.
+    Some tests require the nest_asyncio2 patch to be applied to allow nested event loops, calling
+    `nest_asyncio2.apply()` more than once is a no-op. However we need to ensure that the nest_asyncio2 patch is
+    applied prior to the older nest_asyncio patch is applied. Requiring us to ensure that any library which will apply
+    the patch on import is lazily imported.
     """
-    import nest_asyncio
-    nest_asyncio.apply()
+    import nest_asyncio2
+    try:
+        nest_asyncio2.apply(error_on_mispatched=True)
+    except RuntimeError as e:
+        raise RuntimeError(
+            "nest_asyncio2 fixture called but asyncio is already patched, most likely this is due to the nest_asyncio "
+            "being applied first, which is not compatible with Python 3.12+. Please ensure that any libraries which "
+            "apply nest_asyncio on import are lazily imported.") from e
 
 
 @pytest.fixture(name="phoenix_url", scope="session")
