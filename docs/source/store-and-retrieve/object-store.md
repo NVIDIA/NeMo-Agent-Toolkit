@@ -38,13 +38,27 @@ class ObjectStoreItem:
     metadata: dict[str, str] | None  # Custom key-value metadata (optional)
 ```
 
+### ObjectStoreListItem
+The `ObjectStoreListItem` model represents only an object's metadata.
+```python
+class ObjectStoreListItem:
+    key: str                           # The object's unique key
+    size: int                          # Size in bytes
+    content_type: str | None           # MIME type (e.g., "video/mp4")
+    metadata: dict[str, str] | None    # Custom metadata
+    last_modified: datetime | None     # Last modification timestamp
+```
+
+Note: Unlike `ObjectStoreItem`, this model does not include the `data` field, making listings fast and memory-efficient.
+
 ### ObjectStore Interface
-The `ObjectStore` abstract interface defines the four standard operations:
+The `ObjectStore` abstract interface defines the five standard operations:
 
 - **put_object(key, item)**: Store a new object with a unique key. Raises if the key already exists.
 - **upsert_object(key, item)**: Update (or inserts) an object with the given key.
 - **get_object(key)**: Retrieve an object by its key. Raises if the key doesn't exist.
 - **delete_object(key)**: Remove an object from the store. Raises if the key doesn't exist.
+- **list_objects(prefix)**: List objects in the store, optionally filtered by key prefix.
 
 ```python
 class ObjectStore(ABC):
@@ -62,6 +76,10 @@ class ObjectStore(ABC):
 
     @abstractmethod
     async def delete_object(self, key: str) -> None:
+        ...
+
+    @abstractmethod
+    async def list_objects(self, prefix: str | None = None) -> list["ObjectStoreListItem"]:
         ...
 ```
 
@@ -152,9 +170,19 @@ async def my_function(config: MyFunctionConfig, builder: Builder):
     retrieved_item = await object_store.get_object("greeting.txt")
     print(retrieved_item.data.decode("utf-8"))
 
+    # List objects with optional prefix filtering
+    all_objects = await object_store.list_objects()
+    for obj in all_objects:
+        print(f"{obj.key}: {obj.size} bytes, {obj.content_type}")
+    
+    # List only objects with specific prefix
+    greetings = await object_store.list_objects(prefix="greeting")
+    
     # Delete an object
     await object_store.delete_object("greeting.txt")
 ```
+
+The `list_objects()` method returns metadata for stored objects without downloading their content. This is efficient for building file browsers, galleries, or managing large files. The optional `prefix` parameter filters objects by key prefix, similar to listing files in a directory.
 
 ### File Server Integration
 By adding the `object_store` field in the `general.front_end` block of the configuration, clients can directly download and upload files to the connected object store:
@@ -194,9 +222,66 @@ This enables HTTP endpoints for object store operations:
   $ curl -X DELETE http://localhost:9000/static/folder/data.txt
   ```
 
+### Video Upload Integration
+
+When `object_store` is configured in the FastAPI front end, the UI also exposes video upload endpoints. Uploaded videos are stored with the `videos/` prefix and can be accessed from your workflow functions using the same ObjectStore instance.
+
+```yaml
+general:
+  front_end:
+    object_store: my_video_store  # Enables video routes
+    _type: fastapi
+
+object_stores:
+  my_video_store:
+    _type: s3
+    endpoint_url: http://localhost:9000
+    access_key: minioadmin
+    secret_key: minioadmin
+    bucket_name: my-video-bucket
+
+functions:
+  my_video_function:
+    _type: my_video_processor
+    object_store: my_video_store  # Same store as frontend
+```
+
+This enables HTTP endpoints for object store operations:
+
+- **GET** `/videos` - List uploaded videos
+  ```console
+  $ curl -X GET http://localhost:8000/videos
+  ```
+- **POST** `/videos` - Upload a new video
+  ```console
+  $ curl -X POST -F "file=@my_video.mp4;type=video/mp4" http://localhost:8000/videos
+  ```
+- **DELETE** `/videos/{video_key}` - Delete a video
+  ```console
+  $ curl -X DELETE http://localhost:8000/videos/videos_12345.mp4
+  ```
+
+Your workflow functions can access uploaded videos using `list_objects(prefix="videos/")` and `get_object(video_key)` as shown in the usage examples above.
+
 ## Examples
 The following examples demonstrate how to use the object store module in the NeMo Agent toolkit:
 * `examples/object_store/user_report` - A complete workflow that stores and retrieves user diagnostic reports using different object store backends
+
+## Running Tests
+
+Run these from the repository root after installing dependencies:
+
+```bash
+# In-memory object store unit tests
+pytest tests/nat/object_store/test_in_memory_object_store.py -v
+
+# FastAPI video upload routes
+pytest tests/nat/front_ends/fastapi/test_video_upload_routes.py -v
+
+# S3 provider integration tests (requires MinIO or S3 running and S3 plugin installed)
+# Install S3 plugin first: uv pip install -e packages/nvidia_nat_s3
+pytest packages/nvidia_nat_s3/tests/test_s3_object_store.py --run_integration -v
+```
 
 ## Error Handling
 Object stores may raise specific exceptions:

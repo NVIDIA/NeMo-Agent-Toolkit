@@ -17,6 +17,7 @@ from abc import ABC
 from abc import abstractmethod
 
 from .models import ObjectStoreItem
+from .models import ObjectStoreListItem
 
 
 class ObjectStore(ABC):
@@ -80,5 +81,19 @@ class ObjectStore(ABC):
 
         Raises:
             NoSuchKeyError: If the item does not exist.
+        """
+        pass
+
+    @abstractmethod
+    async def list_objects(self, prefix: str | None = None) -> list[ObjectStoreListItem]:
+        """
+        List objects in the object store, optionally filtered by key prefix.
+
+        Args:
+            prefix (str | None): Optional prefix to filter object keys.
+                                 If None, returns all objects.
+
+        Returns:
+            list[ObjectStoreListItem]: List of object metadata (without the actual data).
         """
         pass

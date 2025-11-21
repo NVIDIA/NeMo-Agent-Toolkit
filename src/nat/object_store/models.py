@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from datetime import datetime
+
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
@@ -36,3 +38,28 @@ class ObjectStoreItem(BaseModel):
     data: bytes = Field(description="The data to store in the object store.")
     content_type: str | None = Field(description="The content type of the data.", default=None)
     metadata: dict[str, str] | None = Field(description="The metadata of the data.", default=None)
+
+
+class ObjectStoreListItem(BaseModel):
+    """
+    Represents metadata about an object in the store without the actual data.
+
+    Attributes
+    ----------
+    key : str
+        The key/path of the object in the store.
+    size : int
+        The size of the object in bytes.
+    content_type : str | None
+        The content type of the data.
+    metadata : dict[str, str] | None
+        Metadata associated with the object.
+    last_modified : datetime | None
+        The last modification timestamp of the object.
+    """
+
+    key: str = Field(description="The key/path of the object in the store.")
+    size: int = Field(description="The size of the object in bytes.")
+    content_type: str | None = Field(description="The content type of the data.", default=None)
+    metadata: dict[str, str] | None = Field(description="The metadata of the data.", default=None)
+    last_modified: datetime | None = Field(description="The last modification timestamp.", default=None)

@@ -24,6 +24,7 @@ from nat.data_models.object_store import KeyAlreadyExistsError
 from nat.data_models.object_store import NoSuchKeyError
 from nat.object_store.interfaces import ObjectStore
 from nat.object_store.models import ObjectStoreItem
+from nat.object_store.models import ObjectStoreListItem
 
 
 @pytest.mark.asyncio(loop_scope="class")
@@ -114,4 +115,64 @@ class ObjectStoreTests:
 
         # Try to delete the object again
         with pytest.raises(NoSuchKeyError):
+            await store.delete_object(key)
+
+    async def test_list_objects(self, store: ObjectStore):
+        """Test listing objects with and without prefix filtering"""
+
+        test_id = str(uuid.uuid4())[:8]
+
+        test_objects = {
+            f"videos/{test_id}/video1.mp4":
+                ObjectStoreItem(data=b"video1_data", content_type="video/mp4", metadata={"title": "Video 1"}),
+            f"videos/{test_id}/video2.mp4":
+                ObjectStoreItem(data=b"video2_data", content_type="video/mp4", metadata={"title": "Video 2"}),
+            f"images/{test_id}/image1.png":
+                ObjectStoreItem(data=b"image1_data", content_type="image/png", metadata={"title": "Image 1"}),
+            f"docs/{test_id}/doc1.txt":
+                ObjectStoreItem(data=b"doc1_data", content_type="text/plain")
+        }
+
+        for key, item in test_objects.items():
+            await store.put_object(key, item)
+
+        # Test 1: List all objects (no prefix)
+        all_objects = await store.list_objects()
+        all_keys = {obj.key for obj in all_objects}
+
+        for key in test_objects.keys():
+            assert key in all_keys, f"Expected key {key} not found in all_objects"
+
+        # Test 2: List with videos prefix
+        video_objects = await store.list_objects(prefix=f"videos/{test_id}/")
+        assert len(video_objects) == 2, f"Expected 2 video objects, got {len(video_objects)}"
+
+        video_keys = {obj.key for obj in video_objects}
+        assert f"videos/{test_id}/video1.mp4" in video_keys
+        assert f"videos/{test_id}/video2.mp4" in video_keys
+
+        for obj in video_objects:
+            assert isinstance(obj, ObjectStoreListItem)
+            assert obj.key.startswith(f"videos/{test_id}/")
+            assert obj.size > 0
+            assert obj.content_type == "video/mp4"
+            assert obj.metadata is not None
+            assert "title" in obj.metadata
+
+        # Test 3: List with images prefix
+        image_objects = await store.list_objects(prefix=f"images/{test_id}/")
+        assert len(image_objects) == 1
+        assert image_objects[0].key == f"images/{test_id}/image1.png"
+        assert image_objects[0].content_type == "image/png"
+
+        # Test 4: List with non-existent prefix
+        empty_objects = await store.list_objects(prefix=f"nonexistent/{test_id}/")
+        assert len(empty_objects) == 0
+
+        # Test 5: List with partial prefix
+        all_test_objects = await store.list_objects(prefix=f"videos/{test_id}")
+        assert len(all_test_objects) >= 2  # At least our video objects
+
+        # Cleanup
+        for key in test_objects.keys():
             await store.delete_object(key)
