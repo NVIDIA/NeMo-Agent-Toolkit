@@ -26,3 +26,10 @@ The agent uses the NVIDIA NeMo Agent toolkit core library agents and tools to si
 The router agent's implementation uses a two-node graph structure:
 1. **Router Node**: In the routing phase, analyzes the request and selects the appropriate branch.
 2. **Branch Node**: In the execution phase, executes the selected branch and returns the result.
+
+```{toctree}
+:hidden:
+:caption: Router Agent
+
+Configure Router Agent<./router-agent.md>
+```

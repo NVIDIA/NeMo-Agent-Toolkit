@@ -32,3 +32,10 @@ The ReWOO agent implementation is broken down into three phases:
     - By having a clear plan before execution, the agent is less likely to make incorrect assumptions or get sidetracked by intermediate results before generating the final answer.
 
 To configure your ReWOO agent, refer to [Configure the ReWOO Agent](./rewoo-agent.md).
+
+```{toctree}
+:hidden:
+:caption: ReWOO
+
+Configure ReWOO Agent<./rewoo-agent.md>
+```

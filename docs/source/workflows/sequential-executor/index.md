@@ -19,3 +19,9 @@ limitations under the License.
 A sequential executor is a control flow component that chains multiple functions together, where each function's output becomes the input for the next function. You can opt to validate the compatibility of the output of one function and the input type of the next function in the chain. This creates a linear tool execution pipeline that executes functions in a predetermined sequence without requiring LLMs or agents for orchestration. The sequential executor process allows for better error handling. 
 
 Additionally, you can customize prompts, such as streaming support and compatibility validation, in your YAML config files for your specific needs. 
+
+```{toctree}
+:hidden:
+:caption: Sequential Executor
+Configure Sequential Executor<./sequential-executor.md>
+```

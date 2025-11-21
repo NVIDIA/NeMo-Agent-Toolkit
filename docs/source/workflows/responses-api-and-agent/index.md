@@ -28,3 +28,10 @@ The Responses API enables models to:
 - Use toolkit tools through `nat_tools`, executed by the agent graph.
 
 To configure your LLM agent for the Responses API and use the dedicated agent, refer to [Configure the Responses API and Agent](./responses-api-and-agent.md).
+
+```{toctree}
+:hidden:
+:caption: Responses API and Agent
+
+Configure Responses API and Agent<./responses-api-and-agent.md>
+```
