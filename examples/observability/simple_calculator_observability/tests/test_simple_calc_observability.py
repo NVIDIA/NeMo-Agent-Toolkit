@@ -14,9 +14,7 @@
 # limitations under the License.
 
 import asyncio
-import importlib
 import json
-import os
 import random
 import time
 import types
@@ -80,19 +78,25 @@ def fixture_weave_query(weave_attribute_key: str, weave_identifier: str) -> dict
 
 @pytest.fixture(name="aiq_compatibility_span_prefix")
 def aiq_compatibility_span_prefix_fixture():
+    """
+    The values of the SpanAttributes are defined on import based upon the NAT_SPAN_PREFIX environment variable.
+    Setting the environment variable after the fact has no impact.
+    """
     from nat.data_models import span
 
-    orig_span_prefix = os.environ.get("NAT_SPAN_PREFIX")
-    os.environ["NAT_SPAN_PREFIX"] = "aiq"
-    importlib.reload(span)
+    orig_span_prefix = span._SPAN_PREFIX
+
+    orig_enum_values = {}
+    for enum_item in span.SpanAttributes:
+        enum_value = enum_item.value
+        if enum_value.startswith(f"{orig_span_prefix}."):
+            orig_enum_values[enum_item.name] = enum_value
+            enum_item._value_ = enum_value.replace(f"{orig_span_prefix}.", "aiq.", 1)
     yield
 
-    if orig_span_prefix is not None:
-        os.environ["NAT_SPAN_PREFIX"] = orig_span_prefix
-    else:
-        del os.environ["NAT_SPAN_PREFIX"]
-
-    importlib.reload(span)
+    span._SPAN_PREFIX = orig_span_prefix
+    for (enum_item_name, enum_value) in orig_enum_values.items():
+        span.SpanAttributes[enum_item_name]._value_ = enum_value
 
 
 @pytest.fixture(name="weave_client")
