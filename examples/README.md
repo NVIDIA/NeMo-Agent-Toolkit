@@ -67,6 +67,7 @@ To run the examples, install the NeMo Agent toolkit from source, if you haven't 
 - **[`react`](agents/react/README.md)**: ReAct (Reasoning and Acting) agent implementation for step-by-step problem-solving
 - **[`rewoo`](agents/rewoo/README.md)**: ReWOO (Reasoning WithOut Observation) agent pattern for planning-based workflows
 - **[`tool_calling`](agents/tool_calling/README.md)**: Tool-calling agent with direct function invocation capabilities
+- **[`auto_memory_wrapper`](agents/auto_memory_wrapper/README.md)**: Automatic memory wrapper agent that adds guaranteed memory capture and retrieval to any NAT agent without requiring LLM memory tool invocation
 
 ### Advanced Agents
 - **[`AIQ Blueprint`](advanced_agents/aiq_blueprint/README.md)**: Blueprint documentation for the official NVIDIA AIQ Blueprint for building an AI agent designed for enterprise research use cases.

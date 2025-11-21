@@ -16,6 +16,7 @@
 # flake8: noqa
 
 # Import any workflows which need to be automatically registered here
+from .auto_memory_wrapper import register as auto_memory_wrapper
 from .prompt_optimizer import register as prompt_optimizer
 from .react_agent import register as react_agent
 from .reasoning_agent import reasoning_agent
