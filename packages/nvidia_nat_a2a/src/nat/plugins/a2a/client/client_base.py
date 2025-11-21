@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Minimal A2A client for testing with hello_world agent."""
 
 from __future__ import annotations
 
@@ -73,32 +72,44 @@ class A2ABaseClient:
             raise RuntimeError("A2ABaseClient already initialized")
 
         self._exit_stack = AsyncExitStack()
+        stack = self._exit_stack
 
-        # Create httpx client
-        self._httpx_client = await self._exit_stack.enter_async_context(
+        # 1) httpx client on the stack
+        self._httpx_client = await stack.enter_async_context(
             httpx.AsyncClient(timeout=httpx.Timeout(self._task_timeout.total_seconds())))
 
-        # Resolve agent card
+        # 2) Resolve agent card
         await self._resolve_agent_card()
 
-        # Create client using ClientFactory
         if not self._agent_card:
             raise RuntimeError("Agent card not resolved")
 
-        client_config = ClientConfig(httpx_client=self._httpx_client, streaming=True)
+        # 3) Create A2A client
+        client_config = ClientConfig(
+            httpx_client=self._httpx_client,
+            streaming=True,  # keep streaming enabled
+        )
         factory = ClientFactory(client_config)
         self._client = factory.create(self._agent_card)
+
+        # 4) Ensure the A2A client is explicitly closed while loop is alive
+        aclose = getattr(self._client, "aclose", None)
+        if aclose is not None:
+            stack.push_async_callback(aclose)
 
         logger.info("Connected to A2A agent at %s", self._base_url)
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
         if self._exit_stack:
+            # closes: A2A client (via aclose) THEN httpx.AsyncClient
             await self._exit_stack.aclose()
             self._exit_stack = None
-            self._httpx_client = None
-            self._client = None
-            self._agent_card = None
+
+        # Drop references so nothing tries to auto-clean later
+        self._httpx_client = None
+        self._client = None
+        self._agent_card = None
 
     async def _resolve_agent_card(self):
         """Fetch the agent card from the A2A agent."""
@@ -144,8 +155,15 @@ class A2ABaseClient:
         parts: list[Part] = [Part(root=text_part)]
         message = Message(role=Role.user, parts=parts, message_id=uuid4().hex, task_id=task_id, context_id=context_id)
 
-        async for response in self._client.send_message(message):
-            yield response
+        agen = self._client.send_message(message)
+        try:
+            async for response in agen:
+                yield response
+        finally:
+            # Make sure the underlying stream is closed while the loop is alive
+            aclose = getattr(agen, "aclose", None)
+            if aclose is not None:
+                await aclose()
 
     async def get_task(self, task_id: str, history_length: int | None = None):
         """
