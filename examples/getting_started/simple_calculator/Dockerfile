@@ -30,7 +30,12 @@ ENV PYTHONDONTWRITEBYTECODE=1
 
 # Install compiler [g++, gcc] (currently only needed for thinc indirect dependency)
 RUN apt-get update && \
-    apt-get install -y g++ gcc
+    apt-get install -y g++ gcc ca-certificates && \
+    update-ca-certificates
+
+# Set SSL environment variables
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 
 # Set working directory
 WORKDIR /workspace
