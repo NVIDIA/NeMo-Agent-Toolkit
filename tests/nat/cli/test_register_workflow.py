@@ -17,12 +17,14 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 import pytest
+from pydantic import BaseModel
 
 from _utils.configs import EmbedderProviderTestConfig
 from _utils.configs import FunctionTestConfig
 from _utils.configs import LLMProviderTestConfig
 from _utils.configs import MemoryTestConfig
 from _utils.configs import ObjectStoreTestConfig
+from _utils.configs import PerUserFunctionTestConfig
 from _utils.configs import RegistryHandlerTestConfig
 from nat.builder.builder import Builder
 from nat.builder.embedder import EmbedderProviderInfo
@@ -36,6 +38,7 @@ from nat.cli.register_workflow import register_llm_client
 from nat.cli.register_workflow import register_llm_provider
 from nat.cli.register_workflow import register_memory
 from nat.cli.register_workflow import register_object_store
+from nat.cli.register_workflow import register_per_user_function
 from nat.cli.register_workflow import register_registry_handler
 from nat.cli.register_workflow import register_tool_wrapper
 from nat.cli.type_registry import TypeRegistry
@@ -244,3 +247,230 @@ def test_register_registry_handler(registry: TypeRegistry):
     assert registry_handler_info.local_name == RegistryHandlerTestConfig.static_type()
     assert registry_handler_info.config_type is RegistryHandlerTestConfig
     assert registry_handler_info.build_fn is build_fn
+
+
+def test_register_per_user_function_with_single_output(registry: TypeRegistry):
+    """Test per-user function registration with single output schema."""
+
+    class PerUserInputSchema(BaseModel):
+        message: str
+
+    class PerUserOutputSchema(BaseModel):
+        result: str
+
+    with pytest.raises(KeyError):
+        registry.get_function(PerUserFunctionTestConfig)
+
+    @register_per_user_function(config_type=PerUserFunctionTestConfig,
+                                input_schema=PerUserInputSchema,
+                                single_output_schema=PerUserOutputSchema)
+    async def build_fn(config: PerUserFunctionTestConfig, builder: Builder):
+
+        async def _impl(inp: PerUserInputSchema) -> PerUserOutputSchema:
+            return PerUserOutputSchema(result=inp.message)
+
+        yield _impl
+
+    func_info = registry.get_function(PerUserFunctionTestConfig)
+    assert func_info.full_type == PerUserFunctionTestConfig.static_full_type()
+    assert func_info.local_name == PerUserFunctionTestConfig.static_type()
+    assert func_info.config_type is PerUserFunctionTestConfig
+    assert func_info.build_fn is build_fn
+
+    assert func_info.is_per_user is True
+    assert func_info.per_user_function_input_schema is PerUserInputSchema
+    assert func_info.per_user_function_single_output_schema is PerUserOutputSchema
+    assert func_info.per_user_function_streaming_output_schema is None
+
+
+def test_register_per_user_function_with_streaming(registry: TypeRegistry):
+    """Test per-user function registration with streaming output schema."""
+
+    class StreamInputSchema(BaseModel):
+        text: str
+
+    class StreamOutputSchema(BaseModel):
+        chunk: str
+
+    class PerUserStreamFunctionConfig(FunctionTestConfig, name="test_per_user_stream"):
+        pass
+
+    # Register with streaming output schema
+    @register_per_user_function(config_type=PerUserStreamFunctionConfig,
+                                input_schema=StreamInputSchema,
+                                streaming_output_schema=StreamOutputSchema)
+    async def build_fn(config: PerUserStreamFunctionConfig, builder: Builder):
+
+        async def _impl(inp: StreamInputSchema):
+            yield StreamOutputSchema(chunk=inp.text)
+
+        yield _impl
+
+    # Verify registration
+    func_info = registry.get_function(PerUserStreamFunctionConfig)
+    assert func_info.is_per_user is True
+    assert func_info.per_user_function_input_schema is StreamInputSchema
+    assert func_info.per_user_function_single_output_schema is None
+    assert func_info.per_user_function_streaming_output_schema is StreamOutputSchema
+
+
+def test_register_per_user_function_with_both_outputs(registry: TypeRegistry):
+    """Test per-user function registration with both single and streaming output schemas."""
+
+    class DualInputSchema(BaseModel):
+        value: int
+
+    class DualSingleOutputSchema(BaseModel):
+        total: int
+
+    class DualStreamOutputSchema(BaseModel):
+        partial: int
+
+    class PerUserDualFunctionConfig(FunctionTestConfig, name="test_per_user_dual"):
+        pass
+
+    # Register with both output schemas
+    @register_per_user_function(config_type=PerUserDualFunctionConfig,
+                                input_schema=DualInputSchema,
+                                single_output_schema=DualSingleOutputSchema,
+                                streaming_output_schema=DualStreamOutputSchema)
+    async def build_fn(config: PerUserDualFunctionConfig, builder: Builder):
+
+        async def _impl(inp: DualInputSchema) -> DualSingleOutputSchema:
+            return DualSingleOutputSchema(total=inp.value)
+
+        yield _impl
+
+    # Verify registration
+    func_info = registry.get_function(PerUserDualFunctionConfig)
+    assert func_info.is_per_user is True
+    assert func_info.per_user_function_input_schema is DualInputSchema
+    assert func_info.per_user_function_single_output_schema is DualSingleOutputSchema
+    assert func_info.per_user_function_streaming_output_schema is DualStreamOutputSchema
+
+
+def test_register_per_user_function_missing_output_schema(registry: TypeRegistry):
+    """Test that registration fails when no output schema is provided."""
+
+    class MissingOutputInputSchema(BaseModel):
+        data: str
+
+    class MissingOutputFunctionConfig(FunctionTestConfig, name="test_missing_output"):
+        pass
+
+    # Should fail validation - no output schema provided
+    with pytest.raises(
+            ValueError,
+            match="per_user_function_single_output_schema or per_user_function_streaming_output_schema must be provided"
+    ):
+
+        @register_per_user_function(config_type=MissingOutputFunctionConfig, input_schema=MissingOutputInputSchema)
+        async def build_fn(config: MissingOutputFunctionConfig, builder: Builder):
+
+            async def _impl(inp: MissingOutputInputSchema):
+                pass
+
+            yield _impl
+
+
+def test_register_per_user_function_missing_input_schema(registry: TypeRegistry):
+    """Test that registration fails when no input schema is provided."""
+
+    class MissingInputOutputSchema(BaseModel):
+        result: str
+
+    class MissingInputFunctionConfig(FunctionTestConfig, name="test_missing_input"):
+        pass
+
+    # Should fail validation - no input schema provided
+    with pytest.raises(ValueError, match="per_user_function_input_schema must be provided"):
+
+        @register_per_user_function(
+            config_type=MissingInputFunctionConfig,
+            input_schema=None,  # type: ignore
+            single_output_schema=MissingInputOutputSchema)
+        async def build_fn(config: MissingInputFunctionConfig, builder: Builder):
+
+            async def _impl():
+                return MissingInputOutputSchema(result="test")
+
+            yield _impl
+
+
+def test_register_per_user_function_vs_regular_function(registry: TypeRegistry):
+    """Test that per-user functions are distinguished from regular functions."""
+
+    # Register a regular function
+    class RegularFunctionConfig(FunctionTestConfig, name="test_regular"):
+        pass
+
+    @register_function(config_type=RegularFunctionConfig)
+    async def regular_build_fn(config: RegularFunctionConfig, builder: Builder):
+
+        async def _impl():
+            pass
+
+        yield _impl
+
+    # Register a per-user function
+    class PerUserCompareInputSchema(BaseModel):
+        text: str
+
+    class PerUserCompareOutputSchema(BaseModel):
+        result: str
+
+    class PerUserCompareFunctionConfig(FunctionTestConfig, name="test_per_user_compare"):
+        pass
+
+    @register_per_user_function(config_type=PerUserCompareFunctionConfig,
+                                input_schema=PerUserCompareInputSchema,
+                                single_output_schema=PerUserCompareOutputSchema)
+    async def per_user_build_fn(config: PerUserCompareFunctionConfig, builder: Builder):
+
+        async def _impl(inp: PerUserCompareInputSchema) -> PerUserCompareOutputSchema:
+            return PerUserCompareOutputSchema(result=inp.text)
+
+        yield _impl
+
+    # Verify regular function is not per-user
+    regular_func_info = registry.get_function(RegularFunctionConfig)
+    assert regular_func_info.is_per_user is False
+    assert regular_func_info.per_user_function_input_schema is None
+    assert regular_func_info.per_user_function_single_output_schema is None
+    assert regular_func_info.per_user_function_streaming_output_schema is None
+
+    # Verify per-user function is marked correctly
+    per_user_func_info = registry.get_function(PerUserCompareFunctionConfig)
+    assert per_user_func_info.is_per_user is True
+    assert per_user_func_info.per_user_function_input_schema is PerUserCompareInputSchema
+    assert per_user_func_info.per_user_function_single_output_schema is PerUserCompareOutputSchema
+
+
+def test_register_per_user_function_with_framework_wrappers(registry: TypeRegistry):
+    """Test per-user function registration with framework wrappers."""
+
+    class WrapperInputSchema(BaseModel):
+        query: str
+
+    class WrapperOutputSchema(BaseModel):
+        answer: str
+
+    class PerUserWrapperFunctionConfig(FunctionTestConfig, name="test_per_user_wrapper"):
+        pass
+
+    # Register with framework wrappers
+    @register_per_user_function(config_type=PerUserWrapperFunctionConfig,
+                                input_schema=WrapperInputSchema,
+                                single_output_schema=WrapperOutputSchema,
+                                framework_wrappers=["langchain", "llama_index"])
+    async def build_fn(config: PerUserWrapperFunctionConfig, builder: Builder):
+
+        async def _impl(inp: WrapperInputSchema) -> WrapperOutputSchema:
+            return WrapperOutputSchema(answer=inp.query)
+
+        yield _impl
+
+    # Verify framework wrappers are registered
+    func_info = registry.get_function(PerUserWrapperFunctionConfig)
+    assert func_info.is_per_user is True
+    assert func_info.framework_wrappers == ["langchain", "llama_index"]

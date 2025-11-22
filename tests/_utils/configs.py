@@ -32,6 +32,10 @@ class FunctionTestConfig(FunctionBaseConfig, name="test_function"):
     pass
 
 
+class PerUserFunctionTestConfig(FunctionBaseConfig, name="test_per_user_function"):
+    pass
+
+
 class ToolDocstringTestConfig(FunctionBaseConfig, name="test_tool_docstring"):
     pass
 
