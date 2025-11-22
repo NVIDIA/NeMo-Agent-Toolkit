@@ -15,6 +15,8 @@
 
 from contextlib import asynccontextmanager
 
+from pydantic import BaseModel
+
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.type_registry import AuthProviderBuildCallableT
 from nat.cli.type_registry import AuthProviderRegisteredCallableT
@@ -182,6 +184,55 @@ def register_function(config_type: type[FunctionConfigT],
         return context_manager_fn
 
     return register_function_inner
+
+
+def register_per_user_function(config_type: type[FunctionConfigT],
+                               input_schema: type[BaseModel],
+                               single_output_schema: type[BaseModel] | None = None,
+                               streaming_output_schema: type[BaseModel] | None = None,
+                               framework_wrappers: list[LLMFrameworkEnum | str] | None = None):
+    """
+    Register a per-user function with optional framework_wrappers for automatic profiler hooking.
+
+    The per-user function is instantiated lazily on user's first invocation. Each user will have a separate instance of
+    the function. Schemas must be provided to enable OpenAPI documentation generation without a concrete instance.
+
+    Args:
+        config_type: The function configuration type
+        input_schema: The input schema for the function
+        single_output_schema: The single output schema for the function
+        streaming_output_schema: The streaming output schema for the function
+        framework_wrappers: Optional list of framework wrappers for automatic profiler hooking
+    """
+
+    def register_per_user_function_inner(
+            fn: FunctionBuildCallableT[FunctionConfigT]) -> FunctionRegisteredCallableT[FunctionConfigT]:
+        from .type_registry import GlobalTypeRegistry
+        from .type_registry import RegisteredFunctionInfo
+
+        context_manager_fn = asynccontextmanager(fn)
+
+        framework_wrappers_list = list(framework_wrappers or [])
+
+        discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
+                                                                component_type=ComponentEnum.FUNCTION)
+
+        GlobalTypeRegistry.get().register_function(
+            RegisteredFunctionInfo(
+                full_type=config_type.full_type,
+                config_type=config_type,
+                build_fn=context_manager_fn,
+                framework_wrappers=framework_wrappers_list,
+                discovery_metadata=discovery_metadata,
+                is_per_user=True,
+                per_user_function_input_schema=input_schema,
+                per_user_function_single_output_schema=single_output_schema,
+                per_user_function_streaming_output_schema=streaming_output_schema,
+            ))
+
+        return context_manager_fn
+
+    return register_per_user_function_inner
 
 
 def register_function_group(config_type: type[FunctionGroupConfigT],
