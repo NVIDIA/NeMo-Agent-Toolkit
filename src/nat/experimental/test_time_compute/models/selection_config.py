@@ -11,7 +11,7 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
-# limitations under the License..
+# limitations under the License.
 
 import typing
 
@@ -49,6 +49,7 @@ class LLMBasedPlanSelectionConfig(TTCStrategyBaseConfig, name="llm_based_plan_se
         "the plans and select the best one. Ensure it is clear and concise.")
 
     @model_validator(mode="before")
+    @classmethod
     def validate_strategies(cls, values: dict[str, typing.Any]) -> dict[str, typing.Any]:
         """
         Ensure that the selection_llm is provided when using LLMBasedSelection.
@@ -91,6 +92,7 @@ class LLMBasedAgentOutputSelectionConfig(TTCStrategyBaseConfig, name="llm_based_
         "{input}, and {results} ")
 
     @model_validator(mode="before")
+    @classmethod
     def validate_strategies(cls, values: dict[str, typing.Any]) -> dict[str, typing.Any]:
         """
         Ensure that the selection_llm is provided when using LLMBasedSelection.
@@ -128,6 +130,7 @@ class LLMBasedOutputMergingConfig(TTCStrategyBaseConfig, name="llm_based_agent_o
         "{input}, and {results} ")
 
     @model_validator(mode="before")
+    @classmethod
     def validate_strategies(cls, values: dict[str, typing.Any]) -> dict[str, typing.Any]:
         """
         Ensure that the selection_llm is provided when using LLMBasedSelection.
@@ -152,3 +155,37 @@ class BestOfNSelectionConfig(TTCStrategyBaseConfig, name="best_of_n_selection"):
     Configuration for Best of N Selection
     """
     pass
+
+
+class LLMJudgeSelectionConfig(TTCStrategyBaseConfig, name="llm_judge_selection"):
+    """
+    Configuration for a judge-based selection strategy.
+    """
+    judge_llm: LLMRef | typing.Any = Field(
+        description="The LLM to use for the selection (judge) strategy."
+    )
+
+    selection_template: str = Field(
+        default=("You are a fair and critical judge. You will be provided with a "
+                 "user query and several candidate responses.\n"
+                 "Your task is to select the best response based on accuracy, "
+                 "helpfulness, and clarity.\n\n"
+                 "User Query: {original_prompt}\n\n"
+                 "Candidate Responses:\n"
+                 "{results}\n\n"
+                 "Please analyze the responses and select the single best one.\n"
+                 "Respond with 'SELECTED ITEM: <number>' where <number> is the "
+                 "index of the selected response (starting from 1).\n"
+                 "Provide a brief reasoning after the selection."),
+        description="The template to use for the judge to select the best "
+                    "response."
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def validate_config(cls, values: dict) -> dict:
+        if not values.get('judge_llm'):
+            raise ValueError(
+                "`judge_llm` must be provided for llm_judge_selection strategy."
+            )
+        return values
