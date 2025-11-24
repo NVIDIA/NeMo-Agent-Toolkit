@@ -73,7 +73,7 @@ export AWS_SECRET_ACCESS_KEY=<YOUR_AWS_SECRET_ACCESS_KEY>
 export AWS_DEFAULT_REGION=us-east-1
 ```
 
-## Run the Workflow Locally
+## Run the Workflow locally
 
 The `configs/` directory contains five ready-to-use configurations. Use the commands below.
 

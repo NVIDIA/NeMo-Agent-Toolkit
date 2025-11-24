@@ -165,7 +165,7 @@ uv pip install "nvidia-nat[llama-index]"
 
 ### Strands
 
-Strands is AWS's framework for building agents that can be deployed on Amazon Bedrock AgentCore runtime. The NeMo Agent toolkit exposes Strands as another framework target so you can keep your existing workflows, tools, and profiler instrumentation while Strands and AgentCore manages execution inside AWS.
+Strands is AWS's framework for building agents that can be deployed on Amazon Bedrock AgentCore runtime. The NeMo Agent toolkit exposes Strands as another framework target so you can keep your existing workflows, tools, and profiler instrumentation while Strands and AgentCore manage execution inside AWS.
 
 | Capability              | Providers / Details                                                                 |
 |-------------------------|-------------------------------------------------------------------------------------|
