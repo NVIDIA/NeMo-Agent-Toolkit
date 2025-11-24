@@ -13,9 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Import backends to ensure they are registered
-from nat.finetuning.backends import openpipe_art
+import logging
+from contextlib import asynccontextmanager
 
-__all__ = [
-    "openpipe_art",
-]
+@asynccontextmanager
+async def suppress_logs(prefix, level=logging.ERROR):
+    # gather every logger created so far whose name starts with "aiq"
+    loggers = [logging.getLogger(name)
+               for name in logging.root.manager.loggerDict
+               if name.startswith(prefix)]
+    old = {lg: lg.level for lg in loggers}
+    try:
+        for lg in loggers:
+            lg.setLevel(level)
+            lg.propagate = False
+        yield
+    finally:
+        for lg, lvl in old.items():
+            lg.setLevel(lvl)
+            lg.propagate = True

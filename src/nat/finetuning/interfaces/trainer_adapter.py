@@ -18,13 +18,12 @@ from abc import abstractmethod
 from typing import Any
 
 from nat.data_models.finetuning import (
-    RLTrainerConfig, 
-    TrainerRunConfig, 
-    TrajectoryCollection, 
-    TrainingJobRef, 
+    TrainerAdapterConfig,
+    FinetuneRunConfig,
+    TrajectoryCollection,
+    TrainingJobRef,
     TrainingJobStatus
 )
-
 
 
 class TrainerAdapter(ABC):
@@ -32,8 +31,8 @@ class TrainerAdapter(ABC):
     Adapter to send Trajectories to remote training cluster for weights updates.
     """
 
-    def __init__(self, trainer_config: RLTrainerConfig, run_config: TrainerRunConfig, backend: str):
-        self.trainer_config = trainer_config
+    def __init__(self, adapter_config: TrainerAdapterConfig, run_config: FinetuneRunConfig, backend: str):
+        self.adapter_config = adapter_config
         self.run_config = run_config
         self._backend = backend
 
@@ -57,7 +56,6 @@ class TrainerAdapter(ABC):
             bool: True if the backend is healthy, False otherwise.
         """
         raise NotImplementedError
-
 
     @abstractmethod
     async def submit(self, trajectories: TrajectoryCollection) -> TrainingJobRef:
@@ -101,14 +99,14 @@ class TrainerAdapter(ABC):
 
     @abstractmethod
     def log_progress(
-        self,
-        ref: TrainingJobRef,
-        metrics: dict[str, Any],
-        output_dir: str | None = None
+            self,
+            ref: TrainingJobRef,
+            metrics: dict[str, Any],
+            output_dir: str | None = None
     ) -> None:
         """
         Log training adapter progress.
-        
+
         Args:
             ref: Training job reference
             metrics: Dictionary of metrics to log

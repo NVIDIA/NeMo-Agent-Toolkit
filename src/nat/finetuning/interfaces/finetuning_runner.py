@@ -22,8 +22,8 @@ import math
 
 from nat.data_models.finetuning import (
     CurriculumLearningConfig,
-    RLTrainerConfig,
-    TrainerRunConfig,
+    FinetuneRunConfig,
+    TrainerConfig,
     Trajectory,
     TrajectoryCollection,
     TrainingJobRef,
@@ -47,8 +47,8 @@ class FinetuningRunner(ABC):
 
     def __init__(
             self,
-            trainer_config: RLTrainerConfig,
-            run_config: TrainerRunConfig,
+            trainer_config: TrainerConfig,
+            run_config: FinetuneRunConfig,
             backend: str,
             **kwargs
     ) -> None:
@@ -177,10 +177,11 @@ class FinetuningRunner(ABC):
         """
         logger.info("Running validation evaluation for epoch %d", epoch+1)
 
-        config = self.run_config.validation_config_file if self.run_config.validation_config_file else self.run_config.config_file
+        config = self.run_config.validation_config_file if (
+            self.run_config.validation_config_file) else self.run_config.config_file
 
         # Create a temporary run config with validation dataset
-        validation_run_config = TrainerRunConfig(
+        validation_run_config = FinetuneRunConfig(
             config_file=config,
             target_functions=self.run_config.target_functions,
             dataset=validation_dataset,
@@ -224,7 +225,7 @@ class FinetuningRunner(ABC):
             }
 
     @abstractmethod
-    def _create_trajectory_builder(self, run_config: TrainerRunConfig):
+    def _create_trajectory_builder(self, run_config: FinetuneRunConfig):
         """
         Create a trajectory builder instance for the specific backend.
 
@@ -279,187 +280,5 @@ class FinetuningRunner(ABC):
     ) -> TrajectoryCollection:
         """
         Apply curriculum learning to filter trajectory groups based on difficulty.
-
-        This method:
-        1. Sorts trajectory groups by average reward (difficulty)
-        2. Filters out groups with no reward variance (no learning signal)
-        3. Selects appropriate groups based on curriculum progression
-        4. Expands curriculum at specified intervals
-
-        Args:
-            trajectory_collection: The complete collection of trajectories
-            epoch: Current epoch number
-
-        Returns:
-            TrajectoryCollection: Filtered trajectories for training
         """
-        if not self.curriculum_config.enabled:
-            # Curriculum learning disabled, return all trajectories
-            return trajectory_collection
-
-        if len(trajectory_collection.trajectories) == 1:
-            # Only one group, so we pick only run a random subsample if specified
-            if self.curriculum_config.random_subsample is not None:
-                import random
-                fraction = self.curriculum_config.random_subsample
-                trajectory_group = trajectory_collection.trajectories[0]
-                max_required_trajectories = int(math.ceil(len(trajectory_group) * fraction))
-                if len(trajectory_group) > max_required_trajectories:
-                    selected_trajectories = random.sample(
-                        trajectory_group,
-                        max_required_trajectories
-                    )
-                    logger.info(
-                        "After random subsampling %.2f, using %d trajectories from single group",
-                        fraction,
-                        len(selected_trajectories)
-                    )
-                    return TrajectoryCollection(
-                        trajectories=[selected_trajectories],
-                        run_id=trajectory_collection.run_id
-                    )
-
-            return trajectory_collection
-
-        # Calculate statistics for each trajectory group
-        group_stats = []
-        for group_idx, trajectory_group in enumerate(trajectory_collection.trajectories):
-            if not trajectory_group:
-                continue
-
-            rewards = [t.reward for t in trajectory_group]
-            avg_reward = sum(rewards) / len(rewards)
-            variance = sum((r - avg_reward) ** 2 for r in rewards) / len(rewards)
-            max_diff = max(rewards) - min(rewards)
-
-            # Skip groups with insufficient reward variance (no learning signal)
-            if max_diff < self.curriculum_config.min_reward_diff:
-                logger.info(
-                    "Skipping trajectory group %d with max_diff %.6f < %.6f (no learning signal)",
-                    group_idx, max_diff, self.curriculum_config.min_reward_diff
-                )
-                continue
-
-            group_stats.append({
-                "index": group_idx,
-                "avg_reward": avg_reward,
-                "variance": variance,
-                "trajectories": trajectory_group
-            })
-
-        if not group_stats:
-            logger.warning("No trajectory groups with sufficient variance found")
-            return TrajectoryCollection(
-                trajectories=[],
-                run_id=trajectory_collection.run_id
-            )
-
-        # Sort groups by average reward (difficulty)
-        group_stats.sort(
-            key=lambda x: x["avg_reward"],
-            reverse=not self.curriculum_config.sort_ascending
-        )
-
-        # Store total groups if first epoch
-        if self._curriculum_state["total_groups"] == 0:
-            self._curriculum_state["total_groups"] = len(group_stats)
-
-        # Check if we should expand the curriculum
-        epochs_since_expansion = epoch - self._curriculum_state["last_expansion_epoch"]
-        should_expand = (
-            epochs_since_expansion >= self.curriculum_config.expansion_interval
-            and self._curriculum_state["current_percentile"] < 1.0
-        )
-
-        if should_expand:
-            # Expand curriculum by increment_percentile
-            old_percentile = self._curriculum_state["current_percentile"]
-            self._curriculum_state["current_percentile"] = min(
-                1.0,
-                old_percentile + self.curriculum_config.increment_percentile
-            )
-            self._curriculum_state["last_expansion_epoch"] = epoch
-
-            logger.info(
-                "Expanding curriculum at epoch %d: %.1f%% -> %.1f%% of trajectory groups",
-                epoch,
-                old_percentile * 100,
-                self._curriculum_state["current_percentile"] * 100
-            )
-
-        # Calculate number of groups to include
-        num_groups_to_include = max(
-            1,  # Always include at least one group
-            int(math.ceil(len(group_stats) * self._curriculum_state["current_percentile"]))
-        )
-
-        # Select the appropriate groups
-        selected_groups = group_stats[:num_groups_to_include]
-
-        # Track which groups are included
-        included_indices = {g["index"] for g in selected_groups}
-        new_groups = included_indices - self._curriculum_state["included_groups"]
-        if new_groups:
-            logger.info(
-                "Adding %d new trajectory groups to curriculum at epoch %d",
-                len(new_groups), epoch
-            )
-        self._curriculum_state["included_groups"] = included_indices
-
-        # Log curriculum statistics
-        selected_trajectories = [g["trajectories"] for g in selected_groups]
-        total_trajectories = sum(len(traj_list) for traj_list in selected_trajectories)
-
-        logger.info(
-            "Curriculum learning at epoch %d: Using %d/%d groups (%.1f%%), "
-            "%d total trajectories. Avg reward range: [%.4f, %.4f]",
-            epoch,
-            len(selected_groups),
-            len(group_stats),
-            self._curriculum_state["current_percentile"] * 100,
-            total_trajectories,
-            selected_groups[-1]["avg_reward"] if selected_groups else 0,
-            selected_groups[0]["avg_reward"] if selected_groups else 0
-        )
-
-        if self.curriculum_config.random_subsample is not None:
-            # Randomly select only a fraction of trajectory groups to use
-            import random
-            fraction = self.curriculum_config.random_subsample
-            # Max required groups is the theoretical max based on fraction
-            max_required_groups = int(math.ceil(len(group_stats) * fraction))
-            # Now select at most that many groups from selected groups
-            if len(selected_groups) > max_required_groups:
-                selected_groups = random.sample(
-                    selected_groups,
-                    max_required_groups
-                )
-                # Rebuild selected trajectories
-                selected_trajectories = [g["trajectories"] for g in selected_groups]
-                logger.info(
-                    "After random subsampling %.2f, using %d trajectory groups",
-                    fraction,
-                    len(selected_groups)
-                )
-
-        return TrajectoryCollection(
-            trajectories=selected_trajectories,
-            run_id=trajectory_collection.run_id
-        )
-
-    def get_curriculum_state(self) -> dict[str, Any]:
-        """
-        Get the current state of curriculum learning.
-
-        Returns:
-            dict: Current curriculum state including percentile and group statistics
-        """
-        # Convert set to list for JSON serialization
-        state = {
-            "current_percentile": self._curriculum_state["current_percentile"],
-            "last_expansion_epoch": self._curriculum_state["last_expansion_epoch"],
-            "total_groups": self._curriculum_state["total_groups"],
-            "included_groups": list(self._curriculum_state["included_groups"]),
-            "config": self.curriculum_config.model_dump() if self.curriculum_config else None
-        }
-        return state
+        raise NotImplementedError("Curriculum learning not implemented for this backend.")
