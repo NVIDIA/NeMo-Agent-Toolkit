@@ -49,6 +49,8 @@ limitations under the License.
 
 - [**Function Groups:**](./docs/source/workflows/function-groups.md) NeMo Agent Toolkit now supports Function Groups, allowing you to package multiple related functions together to share configuration, context, and resources.
 
+- [**Amazon Bedrock AgentCore and Strands Agents Support:**](./docs/source/reference/frameworks-overview.md#strands) NeMo Agent Toolkit now supports building agents using Strands Agents framework and deploying them securely on Amazon Bedrock AgentCore runtime.
+
 ## ✨ Key Features
 
 - 🧩 [**Framework Agnostic:**](./docs/source/reference/frameworks-overview.md) NeMo Agent Toolkit works side-by-side and around existing agentic frameworks, such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), and [Google ADK](https://google.github.io/adk-docs/), as well as custom enterprise agentic frameworks and simple Python agents. This allows you to use your current technology stack without replatforming. NeMo Agent Toolkit complements any existing agentic framework or memory tool you're using and isn't tied to any specific agentic framework, LLM provider, or data source.
@@ -161,7 +163,6 @@ Before getting started, it's possible to run this simple workflow and many other
 
 ## 🛣️ Roadmap
 
-- [ ] Add support for the [AWS Strands](https://github.com/strands-agents/sdk-python) framework.
 - [ ] Automatic Reinforcement Learning (RL) to fine-tune LLMs for a specific agent.
 - [ ] Integration with [NeMo Guardrails](https://github.com/NVIDIA/NeMo-Guardrails) to secure any function in an agent workflow.
 - [ ] End-to-end acceleration using intelligent integrations with [NVIDIA Dynamo](https://github.com/ai-dynamo/dynamo).
