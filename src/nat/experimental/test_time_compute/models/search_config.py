@@ -125,22 +125,15 @@ class MultiQueryRetrievalSearchConfig(TTCStrategyBaseConfig, name="multi_query_r
 
 class MultiLLMGenerationConfig(TTCStrategyBaseConfig, name="multi_llm_generation"):
     """Configuration for a 'multi LLM generation' strategy."""
-    llms: list[LLMRef] = Field(
-        default_factory=list,
-        description="List of LLMs to use for response generation."
-    )
-    generation_template: str = Field(
-        default=("You are a helpful AI assistant. Answer the following user "
-                 "query:\n\nQuery: {prompt}\n\nAnswer:"),
-        description="The template to use for generating responses."
-    )
+    llms: list[LLMRef] = Field(default_factory=list, description="List of LLMs to use for response generation.")
+    generation_template: str = Field(default=("You are a helpful AI assistant. Answer the following user "
+                                              "query:\n\nQuery: {prompt}\n\nAnswer:"),
+                                     description="The template to use for generating responses.")
 
     @model_validator(mode="before")
     @classmethod
     def validate_config(cls, values: dict) -> dict:
         if not values.get('llms'):
-            raise ValueError(
-                "At least one LLMRef must be provided in `llms` for "
-                "multi_llm_generation strategy."
-            )
+            raise ValueError("At least one LLMRef must be provided in `llms` for "
+                             "multi_llm_generation strategy.")
         return values

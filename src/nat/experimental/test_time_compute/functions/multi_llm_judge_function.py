@@ -34,32 +34,23 @@ class MultiLLMJudgeFunctionConfig(FunctionBaseConfig, name="multi_llm_judge_func
     Configuration for a function that orchestrates multi-LLM search and
     judge-based selection.
     """
-    search_strategy: TTCStrategyRef = Field(
-        description="Strategy to search/generate responses "
-                    "(e.g. multi_llm_generation)"
-    )
-    selection_strategy: TTCStrategyRef = Field(
-        description="Strategy to select the best response "
-                    "(e.g. llm_judge_selection)"
-    )
+    search_strategy: TTCStrategyRef = Field(description="Strategy to search/generate responses "
+                                            "(e.g. multi_llm_generation)")
+    selection_strategy: TTCStrategyRef = Field(description="Strategy to select the best response "
+                                               "(e.g. llm_judge_selection)")
 
 
 @register_function(config_type=MultiLLMJudgeFunctionConfig)
-async def execute_multi_llm_judge_function(config: MultiLLMJudgeFunctionConfig,
-                                           builder: Builder):
+async def execute_multi_llm_judge_function(config: MultiLLMJudgeFunctionConfig, builder: Builder):
     # Resolve Strategies
     # Using CUSTOM pipeline type as this is a custom orchestration
-    search_strat = await builder.get_ttc_strategy(
-        strategy_name=config.search_strategy,
-        pipeline_type=PipelineTypeEnum.CUSTOM,
-        stage_type=StageTypeEnum.SEARCH
-    )
+    search_strat = await builder.get_ttc_strategy(strategy_name=config.search_strategy,
+                                                  pipeline_type=PipelineTypeEnum.CUSTOM,
+                                                  stage_type=StageTypeEnum.SEARCH)
 
-    select_strat = await builder.get_ttc_strategy(
-        strategy_name=config.selection_strategy,
-        pipeline_type=PipelineTypeEnum.CUSTOM,
-        stage_type=StageTypeEnum.SELECTION
-    )
+    select_strat = await builder.get_ttc_strategy(strategy_name=config.selection_strategy,
+                                                  pipeline_type=PipelineTypeEnum.CUSTOM,
+                                                  stage_type=StageTypeEnum.SELECTION)
 
     async def execute_fn(user_query: str) -> str:
         logger.info("Starting Multi-LLM Judge Function execution.")
@@ -69,31 +60,21 @@ async def execute_multi_llm_judge_function(config: MultiLLMJudgeFunctionConfig,
         initial_items = [TTCItem(input=user_query)]
 
         logger.info("Executing search strategy...")
-        generated_items = await search_strat.ainvoke(
-            items=initial_items,
-            original_prompt=user_query
-        )
+        generated_items = await search_strat.ainvoke(items=initial_items, original_prompt=user_query)
 
         if not generated_items:
-            logger.warning(
-                "Search strategy produced no items. Returning empty string."
-            )
+            logger.warning("Search strategy produced no items. Returning empty string.")
             return ""
 
         logger.info("Generated %d responses.", len(generated_items))
 
         # Step 2: Selection (Judge)
         logger.info("Executing selection strategy...")
-        selected_items = await select_strat.ainvoke(
-            items=generated_items,
-            original_prompt=user_query
-        )
+        selected_items = await select_strat.ainvoke(items=generated_items, original_prompt=user_query)
 
         if not selected_items:
-            logger.warning(
-                "Selection strategy returned no items. "
-                "Returning first generated item."
-            )
+            logger.warning("Selection strategy returned no items. "
+                           "Returning first generated item.")
             return str(generated_items[0].output)
 
         result = str(selected_items[0].output)

@@ -19,9 +19,7 @@ import re
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_ttc_strategy
-from nat.experimental.test_time_compute.models.selection_config import (
-    LLMJudgeSelectionConfig
-)
+from nat.experimental.test_time_compute.models.selection_config import LLMJudgeSelectionConfig
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
 from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
@@ -46,16 +44,10 @@ class LLMJudgeSelection(StrategyBase):
         Builds the Judge LLM configured in the strategy.
         """
         logger.debug("Building components for LLMJudgeSelection")
-        self.judge_llm_bound = await builder.get_llm(
-            self.config.judge_llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN
-        )
+        self.judge_llm_bound = await builder.get_llm(self.config.judge_llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     def supported_pipeline_types(self) -> list[PipelineTypeEnum]:
-        return [
-            PipelineTypeEnum.CUSTOM,
-            PipelineTypeEnum.PLANNING,
-            PipelineTypeEnum.AGENT_EXECUTION
-        ]
+        return [PipelineTypeEnum.CUSTOM, PipelineTypeEnum.PLANNING, PipelineTypeEnum.AGENT_EXECUTION]
 
     def stage_type(self) -> StageTypeEnum:
         return StageTypeEnum.SELECTION
@@ -69,9 +61,7 @@ class LLMJudgeSelection(StrategyBase):
         Select the best item using the configured Judge LLM.
         """
         if not self.judge_llm_bound:
-            raise ValueError(
-                "Judge LLM not bound. Ensure `build_components` has been called."
-            )
+            raise ValueError("Judge LLM not bound. Ensure `build_components` has been called.")
 
         if not items:
             logger.warning("No items provided for selection.")
@@ -86,10 +76,7 @@ class LLMJudgeSelection(StrategyBase):
         # Format the results for the prompt
         results_str = ""
         for idx, item in enumerate(items):
-            item_output = (
-                str(item.output.model_dump())
-                if isinstance(item.output, BaseModel) else str(item.output)
-            )
+            item_output = (str(item.output.model_dump()) if isinstance(item.output, BaseModel) else str(item.output))
             results_str += f"{idx + 1}. {remove_r1_think_tags(item_output)}\n\n"
 
         prompt_template = PromptTemplate(
@@ -99,21 +86,14 @@ class LLMJudgeSelection(StrategyBase):
         )
 
         # Use input from first item if original_prompt is missing
-        query = original_prompt if original_prompt else (
-            items[0].input or "Unknown Query"
-        )
+        query = original_prompt if original_prompt else (items[0].input or "Unknown Query")
 
-        prompt = (await prompt_template.ainvoke(input={
-            "original_prompt": query,
-            "results": results_str
-        })).to_string()
+        prompt = (await prompt_template.ainvoke(input={"original_prompt": query, "results": results_str})).to_string()
 
         logger.info("Asking Judge LLM to select the best response.")
         judge_response = await self.judge_llm_bound.ainvoke(prompt)
         judge_content = remove_r1_think_tags(
-            judge_response.content
-            if hasattr(judge_response, 'content') else str(judge_response)
-        )
+            judge_response.content if hasattr(judge_response, 'content') else str(judge_response))
 
         # Parse selection
         # Expected format: 'SELECTED ITEM: <number>'
@@ -130,24 +110,18 @@ class LLMJudgeSelection(StrategyBase):
                     selected_item.metadata["judge_reasoning"] = judge_content
                     return [selected_item]
                 else:
-                    logger.warning(
-                        "Judge selected index %d which is out of range.", index + 1
-                    )
+                    logger.warning("Judge selected index %d which is out of range.", index + 1)
             except ValueError:
                 logger.warning("Failed to parse integer from judge selection.")
 
-        logger.warning(
-            "Could not parse valid selection from judge response. "
-            "Returning first item as fallback."
-        )
+        logger.warning("Could not parse valid selection from judge response. "
+                       "Returning first item as fallback.")
         # Fallback to first item
         return [items[0]]
 
 
 @register_ttc_strategy(config_type=LLMJudgeSelectionConfig)
-async def register_llm_judge_selection(
-    config: LLMJudgeSelectionConfig, builder: Builder
-):
+async def register_llm_judge_selection(config: LLMJudgeSelectionConfig, builder: Builder):
     strategy = LLMJudgeSelection(config)
     await strategy.build_components(builder)
     yield strategy
