@@ -346,7 +346,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                             k: v.config
                             for k, v in self._ttc_strategies.items()
                         })
-
         if (entry_function is None):
             entry_fn_obj = self.get_workflow()
         else:
@@ -425,7 +424,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         if inspect.isfunction(build_result):
 
             build_result = FunctionInfo.from_fn(build_result)
-
         if (isinstance(build_result, FunctionInfo)):
             # Create the function object
             build_result = LambdaFunction.from_info(config=config, info=build_result, instance_name=name)
@@ -437,6 +435,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         # Resolve middleware names from config to middleware instances
         # Only FunctionMiddleware types can be used with functions
         middleware_instances = []
+        
         for middleware_name in config.middleware:
             if middleware_name not in self._middleware:
                 raise ValueError(f"Middleware `{middleware_name}` not found for function `{name}`. "
@@ -447,7 +446,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                     f"Middleware `{middleware_name}` is not a FunctionMiddleware and cannot be used with functions. "
                     f"Only FunctionMiddleware types support function-specific wrapping.")
             middleware_instances.append(middleware_obj)
-
         build_result.configure_middleware(middleware_instances)
 
         return ConfiguredFunction(config=config, instance=build_result)
@@ -501,12 +499,12 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                                 f"cannot be used with function groups. "
                                 f"Only FunctionMiddleware types support function-specific wrapping.")
             middleware_instances.append(middleware_obj)
-
+        # set the instance name for the function group based on the workflow-provided name
+        build_result.set_instance_name(name)
+    
         # Configure middleware for the function group
         build_result.configure_middleware(middleware_instances)
 
-        # set the instance name for the function group based on the workflow-provided name
-        build_result.set_instance_name(name)
         return ConfiguredFunctionGroup(config=config, instance=build_result)
 
     @override
