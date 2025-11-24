@@ -133,7 +133,6 @@ class MultiLLMGenerationConfig(TTCStrategyBaseConfig, name="multi_llm_generation
     @model_validator(mode="before")
     @classmethod
     def validate_config(cls, values: dict) -> dict:
-        if not values.get('llms'):
-            raise ValueError("At least one LLMRef must be provided in `llms` for "
-                             "multi_llm_generation strategy.")
+        if not values.get('llms') or not isinstance(values.get('llms'), list) or len(values['llms']) == 0:
+            raise ValueError("At least one LLMRef must be provided for multi_llm_generation strategy.")
         return values
