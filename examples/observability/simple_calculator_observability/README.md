@@ -209,25 +209,41 @@ For detailed Weave setup instructions, see the [Fine-grained Tracing with Weave]
 
 Transmit traces to RagaAI Catalyst.
 
-1. Get your Catalyst credentials:
+1. Get your Catalyst credentials and create a project:
 
-    Login to [RagaAI Catalyst](https://catalyst.raga.ai/) and navigate to the settings page.
+    1. Login to [RagaAI Catalyst](https://catalyst.raga.ai/) and navigate to the settings page.
 
-    Under the "Account" section, you can find your API key. Click on the "Show" button to reveal the API key. Take note of this API key as you will need it to run the workflow.
+    2. Click on the "Authenticate" tab, then click on "Generate New Key". Take note of the Access Key and Secret Key as you will need them to run the workflow.
+    3. Click on "Projects" in the left sidebar, then click on the "Create Project" button. Name your project `simple-calculator` and click "Create". Alternately another project name can be used, just ensure to update the project name in `examples/observability/simple_calculator_observability/configs/config-catalyst.yml` to match.
+
 
 2. Set your Catalyst API key:
 
     ```bash
     export CATALYST_ACCESS_KEY=<your_access_key>
     export CATALYST_SECRET_KEY=<your_secret_key>
+    ```
+
+    Optionally set a custom endpoint (default is `https://catalyst.raga.ai/api`):
+
+    ```bash
     export CATALYST_ENDPOINT=<your_endpoint>
     ```
 
-3. Run the workflow:
+3. Set the NAT_SPAN_PREFIX environment variable to `aiq` for RagaAI Catalyst compatibility:
+
+    ```bash
+    export NAT_SPAN_PREFIX=aiq
+    ```
+
+4. Run the workflow:
 
     ```bash
     nat run --config_file examples/observability/simple_calculator_observability/configs/config-catalyst.yml --input "Divide 144 by 12"
     ```
+
+5. Return to the RagaAI Catalyst dashboard to view your traces.
+    Click on "Projects" in the left sidebar, then select your `simple-calculator` project (or the name you used). You should see `simple-calculator-dataset` listed in the datasets. Click on the dataset to bring up the traces.
 
 ### Galileo Integration
 

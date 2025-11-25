@@ -16,6 +16,7 @@
 import asyncio
 import logging
 import shutil
+import warnings
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -68,7 +69,13 @@ class EvaluationRun:
         # Create evaluation trace context
         try:
             from nat.eval.utils.eval_trace_ctx import WeaveEvalTraceContext
-            self.eval_trace_context = WeaveEvalTraceContext()
+            with warnings.catch_warnings():
+                # Ignore deprecation warnings being triggered by weave. https://github.com/wandb/weave/issues/3666
+                warnings.filterwarnings("ignore",
+                                        category=DeprecationWarning,
+                                        message=r"`sentry_sdk\.Hub` is deprecated")
+
+                self.eval_trace_context = WeaveEvalTraceContext()
         except Exception:
             from nat.eval.utils.eval_trace_ctx import EvalTraceContext
             self.eval_trace_context = EvalTraceContext()
