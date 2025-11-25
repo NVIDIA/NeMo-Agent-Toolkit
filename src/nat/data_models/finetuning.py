@@ -212,6 +212,8 @@ class FinetuneConfig(BaseModel):
     curriculum_learning: CurriculumLearningConfig = Field(
         default=CurriculumLearningConfig(), description="Configuration for curriculum learning during fine-tuning")
 
+    num_epochs: int = Field(default=1, description="Number of epochs to run", ge=1)
+
 
     # Overridden by command line args
     run_configuration: FinetuneRunConfig | None = Field(

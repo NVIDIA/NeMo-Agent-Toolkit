@@ -19,20 +19,59 @@ import asyncio
 import logging
 from pathlib import Path
 
-from nat.data_models.finetuning import FinetuneRunConfig
+from nat.data_models.finetuning import FinetuneRunConfig, FinetuneConfig
 from nat.data_models.config import Config
+from nat.finetuning.interfaces.finetuning_runner import Trainer
 
 logger = logging.getLogger(__name__)
 
 
-async def run_finetuning(config: Config) -> None:
+async def run_finetuning(runner: Trainer) -> None:
     """
     Run finetuning based on the provided configuration.
 
     Args:
-        config: The NAT configuration containing finetuning settings
+        trainer: An instance of the Trainer to run finetuning with
     """
-    pass
+    try:
+        # Initialize the runner
+        logger.info("Initializing finetuning runner...")
+
+        # Get number of epochs from config
+        num_epochs = runner.run_config.num_epochs
+
+        # Run training for specified epochs
+        logger.info("Starting training for %d epochs...", num_epochs)
+        job_statuses = await runner.run(num_epochs)
+
+        # Log final status
+        for status in job_statuses:
+            logger.info(
+                "Job %s completed with status: %s",
+                status.run_id, status.status
+            )
+            if status.message:
+                logger.info("  Message: %s", status.message)
+
+        # Get and log final metrics
+        if job_statuses:
+            final_run_id = job_statuses[-1].run_id
+            try:
+                metrics = await runner.get_metrics(final_run_id)
+                logger.info("Final metrics: %s", metrics)
+            except (ValueError, RuntimeError) as e:
+                logger.warning("Failed to retrieve metrics: %s", e)
+
+        logger.info("Finetuning completed successfully!")
+
+    except Exception as e:
+        logger.error("Finetuning failed: %s", e)
+        raise
+    finally:
+        # Always cleanup resources
+        logger.info("Cleaning up finetuning resources...")
+        await runner.cleanup()
+        logger.info("Cleanup completed")
 
 
 async def finetuning_main(run_config: FinetuneRunConfig) -> None:
@@ -68,16 +107,12 @@ async def finetuning_main(run_config: FinetuneRunConfig) -> None:
                                             trajectory_builder=trajectory_builder,
                                             trainer_adapter=trainer_adapter)
 
-        trainer.initialize()
+        await trainer.initialize(run_config=finetuning_config)
 
         logger.info("Initialized trainer: %s", trainer_name)
 
-
-
-
-
     # Run finetuning
-    await run_finetuning(config)
+    await run_finetuning(trainer)
 
 
 def run_finetuning_sync(run_config: FinetuneRunConfig) -> None:

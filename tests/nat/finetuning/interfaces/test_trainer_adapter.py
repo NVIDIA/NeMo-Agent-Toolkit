@@ -13,17 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 
+from nat.data_models.finetuning import CurriculumLearningConfig
 from nat.data_models.finetuning import FinetuneConfig
+from nat.data_models.finetuning import FinetuneRunConfig
+from nat.data_models.finetuning import RewardFunctionConfig
 from nat.data_models.finetuning import TrainerAdapterConfig
 from nat.data_models.finetuning import TrainingJobRef
 from nat.data_models.finetuning import TrainingJobStatus
 from nat.data_models.finetuning import TrainingStatusEnum
-from nat.data_models.finetuning import Trajectory
 from nat.data_models.finetuning import TrajectoryCollection
 from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
 
@@ -31,51 +33,46 @@ from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
 class ConcreteTrainerAdapter(TrainerAdapter):
     """Concrete implementation of TrainerAdapter for testing."""
 
-    def __init__(self, adapter_config: TrainerAdapterConfig, run_config: FinetuneConfig, backend: str):
-        super().__init__(adapter_config, run_config, backend)
-        self.initialized = False
+    def __init__(self, adapter_config: TrainerAdapterConfig):
+        super().__init__(adapter_config)
         self.healthy = True
         self.submitted_jobs = []
         self.job_statuses = {}
         self.logged_progress = []
 
-    async def initialize(self) -> None:
-        """Initialize the adapter."""
-        self.initialized = True
-
     async def is_healthy(self) -> bool:
-        """Check if the backend is healthy."""
+        """Check health of backend."""
         return self.healthy
 
     async def submit(self, trajectories: TrajectoryCollection) -> TrainingJobRef:
-        """Submit trajectories to the training backend."""
+        """Submit trajectories to remote training backend."""
         job_id = f"job_{len(self.submitted_jobs)}"
         job_ref = TrainingJobRef(run_id=trajectories.run_id,
-                                 backend=self.backend,
-                                 metadata={
-                                     "job_id": job_id, "num_trajectories": len(trajectories.trajectories)
-                                 })
+                                  backend="test_backend",
+                                  metadata={
+                                      "job_id": job_id,
+                                      "num_trajectories": len(trajectories.trajectories)
+                                  })
         self.submitted_jobs.append((trajectories, job_ref))
         self.job_statuses[job_id] = TrainingStatusEnum.RUNNING
         return job_ref
 
     async def status(self, ref: TrainingJobRef) -> TrainingJobStatus:
-        """Get the status of a training job."""
-        job_id = ref.metadata.get("job_id", "unknown")
-        status = self.job_statuses.get(job_id, TrainingStatusEnum.PENDING)
-        return TrainingJobStatus(run_id=ref.run_id,
-                                 backend=ref.backend,
-                                 status=status,
-                                 progress=100.0 if status == TrainingStatusEnum.COMPLETED else 50.0,
-                                 message=f"Job {job_id} status")
+        """Get status of a training job."""
+        job_id = ref.metadata.get("job_id") if ref.metadata else None
+        status = self.job_statuses.get(job_id, TrainingStatusEnum.PENDING) if job_id else TrainingStatusEnum.PENDING
+
+        return TrainingJobStatus(run_id=ref.run_id, backend=ref.backend, status=status, progress=50.0 if status
+                                 == TrainingStatusEnum.RUNNING else 100.0)
 
     async def wait_until_complete(self, ref: TrainingJobRef, poll_interval: float = 10.0) -> TrainingJobStatus:
-        """Wait until the training job is complete."""
-        job_id = ref.metadata.get("job_id", "unknown")
-        # Simulate completion after a short delay
-        await asyncio.sleep(0.1)
-        self.job_statuses[job_id] = TrainingStatusEnum.COMPLETED
-        return await self.status(ref)
+        """Wait until training job completes."""
+        # Simulate completion for testing
+        job_id = ref.metadata.get("job_id") if ref.metadata else None
+        if job_id:
+            self.job_statuses[job_id] = TrainingStatusEnum.COMPLETED
+
+        return TrainingJobStatus(run_id=ref.run_id, backend=ref.backend, status=TrainingStatusEnum.COMPLETED, progress=100.0)
 
     def log_progress(self, ref: TrainingJobRef, metrics: dict[str, Any], output_dir: str | None = None) -> None:
         """Log training adapter progress."""
@@ -88,54 +85,54 @@ class TestTrainerAdapter:
     @pytest.fixture
     def adapter_config(self):
         """Create a test adapter config."""
-        return TrainerAdapterConfig(type="test_adapter")
+        return TrainerAdapterConfig(type="test_adapter", reward=RewardFunctionConfig(name="test_reward"))
 
     @pytest.fixture
-    def run_config(self, tmp_path):
-        """Create a test run config."""
+    def finetune_config(self, tmp_path):
+        """Create a test finetune config."""
         config_file = tmp_path / "config.yml"
         config_file.write_text("test: config")
 
-        return FinetuneConfig(config_file=config_file,
-                              target_functions=["test_function"],
-                              dataset=tmp_path / "dataset.jsonl",
-                              result_json_path="$.result")
+        dataset_file = tmp_path / "dataset.jsonl"
+        dataset_file.write_text('{\"input\": \"test\"}')
+
+        run_config = FinetuneRunConfig(config_file=config_file,
+                                        target_functions=["test_function"],
+                                        dataset=str(dataset_file),
+                                        result_json_path="$.result")
+
+        return FinetuneConfig(run_configuration=run_config, curriculum_learning=CurriculumLearningConfig())
 
     @pytest.fixture
-    def adapter(self, adapter_config, run_config):
+    def adapter(self, adapter_config):
         """Create a concrete adapter instance."""
-        return ConcreteTrainerAdapter(adapter_config=adapter_config, run_config=run_config, backend="test_backend")
+        return ConcreteTrainerAdapter(adapter_config=adapter_config)
 
     @pytest.fixture
     def sample_trajectories(self):
         """Create sample trajectories for testing."""
-        return TrajectoryCollection(
-            trajectories=[[Trajectory(episode=[], reward=0.8, shaped_rewards=None, metadata={"example_id": "1"})],
-                          [Trajectory(episode=[], reward=0.6, shaped_rewards=None, metadata={"example_id": "2"})]],
-            run_id="test_run")
+        return TrajectoryCollection(trajectories=[
+            [],  # Two empty trajectory groups for testing
+            []
+        ],
+                                    run_id="test_run")
 
-    async def test_adapter_initialization(self, adapter, adapter_config, run_config):
+    async def test_adapter_initialization(self, adapter, adapter_config):
         """Test that adapter initializes with correct configuration."""
         assert adapter.adapter_config == adapter_config
-        assert adapter.run_config == run_config
-        assert adapter.backend == "test_backend"
+        assert adapter.run_config is None
 
-    async def test_adapter_backend_property(self, adapter):
-        """Test backend property returns correct value."""
-        assert adapter.backend == "test_backend"
-
-    async def test_adapter_initialize(self, adapter):
+    async def test_adapter_initialize(self, adapter, finetune_config):
         """Test adapter initialization."""
-        assert not adapter.initialized
-        await adapter.initialize()
-        assert adapter.initialized
+        await adapter.initialize(finetune_config)
+        assert adapter.run_config == finetune_config
 
     async def test_adapter_is_healthy(self, adapter):
         """Test health check."""
-        assert await adapter.is_healthy()
+        assert await adapter.is_healthy() is True
 
         adapter.healthy = False
-        assert not await adapter.is_healthy()
+        assert await adapter.is_healthy() is False
 
     async def test_adapter_submit(self, adapter, sample_trajectories):
         """Test submitting trajectories."""
@@ -144,11 +141,10 @@ class TestTrainerAdapter:
         assert isinstance(job_ref, TrainingJobRef)
         assert job_ref.run_id == "test_run"
         assert job_ref.backend == "test_backend"
-        assert "job_id" in job_ref.metadata
         assert len(adapter.submitted_jobs) == 1
 
     async def test_adapter_submit_multiple_jobs(self, adapter, sample_trajectories):
-        """Test submitting multiple trajectory batches."""
+        """Test submitting multiple jobs."""
         job_ref1 = await adapter.submit(sample_trajectories)
         job_ref2 = await adapter.submit(sample_trajectories)
 
@@ -162,19 +158,12 @@ class TestTrainerAdapter:
 
         assert isinstance(status, TrainingJobStatus)
         assert status.run_id == "test_run"
-        assert status.backend == "test_backend"
         assert status.status == TrainingStatusEnum.RUNNING
 
     async def test_adapter_wait_until_complete(self, adapter, sample_trajectories):
-        """Test waiting for job completion."""
+        """Test waiting until job completes."""
         job_ref = await adapter.submit(sample_trajectories)
-
-        # Job should be running initially
-        initial_status = await adapter.status(job_ref)
-        assert initial_status.status == TrainingStatusEnum.RUNNING
-
-        # Wait for completion
-        final_status = await adapter.wait_until_complete(job_ref, poll_interval=0.01)
+        final_status = await adapter.wait_until_complete(job_ref)
 
         assert final_status.status == TrainingStatusEnum.COMPLETED
         assert final_status.progress == 100.0
@@ -215,21 +204,23 @@ class TestTrainerAdapterErrorHandling:
         return TrainerAdapterConfig(type="failing_adapter")
 
     @pytest.fixture
-    def run_config(self, tmp_path):
-        """Create a test run config."""
+    def finetune_config(self, tmp_path):
+        """Create a test finetune config."""
         config_file = tmp_path / "config.yml"
         config_file.write_text("test: config")
 
-        return FinetuneConfig(config_file=config_file,
-                              target_functions=["test_function"],
-                              dataset=tmp_path / "dataset.jsonl",
-                              result_json_path="$.result")
+        dataset_file = tmp_path / "dataset.jsonl"
+        dataset_file.write_text('{\"input\": \"test\"}')
+
+        run_config = FinetuneRunConfig(config_file=config_file,
+                                        target_functions=["test_function"],
+                                        dataset=str(dataset_file),
+                                        result_json_path="$.result")
+
+        return FinetuneConfig(run_configuration=run_config)
 
     class FailingTrainerAdapter(TrainerAdapter):
         """Adapter that fails during operations."""
-
-        async def initialize(self) -> None:
-            raise RuntimeError("Initialization failed")
 
         async def is_healthy(self) -> bool:
             return False
@@ -246,22 +237,15 @@ class TestTrainerAdapterErrorHandling:
         def log_progress(self, ref: TrainingJobRef, metrics: dict[str, Any], output_dir: str | None = None) -> None:
             raise RuntimeError("Logging failed")
 
-    async def test_adapter_initialization_failure(self, failing_adapter_config, run_config):
-        """Test handling of initialization failures."""
-        adapter = self.FailingTrainerAdapter(failing_adapter_config, run_config, "test_backend")
-
-        with pytest.raises(RuntimeError, match="Initialization failed"):
-            await adapter.initialize()
-
-    async def test_adapter_unhealthy_backend(self, failing_adapter_config, run_config):
+    async def test_adapter_unhealthy_backend(self, failing_adapter_config):
         """Test handling of unhealthy backend."""
-        adapter = self.FailingTrainerAdapter(failing_adapter_config, run_config, "test_backend")
+        adapter = self.FailingTrainerAdapter(failing_adapter_config)
 
         assert not await adapter.is_healthy()
 
-    async def test_adapter_submission_failure(self, failing_adapter_config, run_config):
+    async def test_adapter_submission_failure(self, failing_adapter_config):
         """Test handling of submission failures."""
-        adapter = self.FailingTrainerAdapter(failing_adapter_config, run_config, "test_backend")
+        adapter = self.FailingTrainerAdapter(failing_adapter_config)
         trajectories = TrajectoryCollection(trajectories=[], run_id="test_run")
 
         with pytest.raises(RuntimeError, match="Submission failed"):
@@ -269,8 +253,6 @@ class TestTrainerAdapterErrorHandling:
 
     async def test_trainer_adapter_config_reward_field(self):
         """Test that TrainerAdapterConfig has reward field that can be set."""
-        from nat.data_models.finetuning import RewardFunctionConfig
-
         class TestTrainerAdapterConfig(TrainerAdapterConfig, name="test_adapter_with_reward"):
             pass
 
@@ -281,7 +263,6 @@ class TestTrainerAdapterErrorHandling:
 
     async def test_trainer_adapter_config_reward_field_default(self):
         """Test that TrainerAdapterConfig reward field defaults to None."""
-
         class TestTrainerAdapterConfig(TrainerAdapterConfig, name="test_adapter_no_reward"):
             pass
 

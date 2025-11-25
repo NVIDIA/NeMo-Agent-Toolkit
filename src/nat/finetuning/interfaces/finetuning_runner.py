@@ -153,8 +153,7 @@ class Trainer(ABC):
         """
         raise NotImplementedError
 
-    async def run_validation_evaluation(self, epoch: int, run_id: str,
-                                        validation_dataset: str | Path) -> dict[str, Any]:
+    async def run_validation_evaluation(self, epoch: int, run_id: str) -> dict[str, Any]:
         """
         Run evaluation on validation dataset to collect rewards.
 
@@ -177,11 +176,11 @@ class Trainer(ABC):
 
         # Create a temporary run config with validation dataset
         validation_run_config = FinetuneRunConfig(config_file=config,
-                                               dataset=validation_dataset,
-                                               result_json_path=self.run_config.result_json_path,
-                                               endpoint=self.run_config.endpoint,
-                                               endpoint_timeout=self.run_config.endpoint_timeout,
-                                               override=self.run_config.override)
+                                               dataset=self.run_config.run_configuration.validation_dataset,
+                                               result_json_path=self.run_config.run_configuration.result_json_path,
+                                               endpoint=self.run_config.run_configuration.endpoint,
+                                               endpoint_timeout=self.run_config.run_configuration.endpoint_timeout,
+                                               override=self.run_config.run_configuration.override)
 
         # Create a temporary trajectory builder for validation
         validation_builder = self.trajectory_builder
