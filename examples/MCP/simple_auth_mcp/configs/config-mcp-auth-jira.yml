@@ -43,7 +43,7 @@ authentication:
     server_url: https://nvaihub.nvidia.com/maas/jira/mcp/
     redirect_uri: ${NAT_REDIRECT_URI:-http://localhost:8000/auth/redirect}
     default_user_id: ${NAT_USER_ID}
-    allow_default_user_id_for_tool_calls: ${ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS:-true}
+    allow_default_user_id_for_tool_calls: ${ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS:-false}
 
 llms:
   nim_llm:
