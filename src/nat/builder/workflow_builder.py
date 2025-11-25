@@ -368,6 +368,18 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                         ttc_strategies={
                             k: v.config
                             for k, v in self._ttc_strategies.items()
+                        },
+                        trainers={
+                            k: v.config
+                            for k, v in self._trainers.items()
+                        },
+                        trainer_adapters={
+                            k: v.config
+                            for k, v in self._trainer_adapters.items()
+                        },
+                        trajectory_builders={
+                            k: v.config
+                            for k, v in self._trajectory_builders.items()
                         })
 
         if (entry_function is None):
