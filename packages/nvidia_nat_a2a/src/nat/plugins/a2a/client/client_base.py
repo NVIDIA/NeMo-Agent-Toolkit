@@ -87,7 +87,7 @@ class A2ABaseClient:
         # 3) Create A2A client
         client_config = ClientConfig(
             httpx_client=self._httpx_client,
-            streaming=True,  # keep streaming enabled
+            streaming=True
         )
         factory = ClientFactory(client_config)
         self._client = factory.create(self._agent_card)

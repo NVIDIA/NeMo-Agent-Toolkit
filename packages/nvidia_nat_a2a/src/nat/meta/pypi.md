@@ -21,14 +21,16 @@ limitations under the License.
 # NVIDIA NeMo Agent Toolkit A2A Subpackage
 Subpackage for A2A Protocol integration in NeMo Agent Toolkit.
 
-This package provides A2A (Agent-to-Agent) Protocol functionality, allowing NeMo Agent Toolkit workflows to connect to remote A2A agents and invoke their skills as functions.
+This package provides A2A (Agent-to-Agent) Protocol functionality, allowing NeMo Agent Toolkit workflows to connect to remote A2A agents and invoke their skills as functions. This package includes both the client and server components of the A2A protocol.
 
 ## Features
-
+### Client
 - Connect to remote A2A agents via HTTP/REST transport
 - Discover agent capabilities through Agent Cards
-- Invoke agent skills as NeMo Agent Toolkit functions
 - Submit tasks to remote agents with async execution
-- Support for OAuth2, mTLS, and API key authentication
+
+### Server
+- Serve A2A agents via HTTP/REST transport
+- Support for A2A agent executor pattern
 
 For more information about the NVIDIA NeMo Agent Toolkit, please visit the [NeMo Agent Toolkit GitHub Repo](https://github.com/NVIDIA/NeMo-Agent-Toolkit).
