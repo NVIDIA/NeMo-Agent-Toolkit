@@ -22,7 +22,7 @@ import pytest
 
 from nat.data_models.finetuning import EpisodeItem
 from nat.data_models.finetuning import EpisodeItemRole
-from nat.data_models.finetuning import FinetuneRunConfig
+from nat.data_models.finetuning import FinetuneConfig
 from nat.data_models.finetuning import Trajectory
 from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.finetuning import TrajectoryCollection
@@ -34,7 +34,7 @@ from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 class ConcreteTrajectoryBuilder(TrajectoryBuilder):
     """Concrete implementation of TrajectoryBuilder for testing."""
 
-    def __init__(self, trajectory_builder_config: TrajectoryBuilderConfig, run_config: FinetuneRunConfig, backend: str):
+    def __init__(self, trajectory_builder_config: TrajectoryBuilderConfig, run_config: FinetuneConfig, backend: str):
         super().__init__(trajectory_builder_config, run_config, backend)
         self.started_runs = []
         self.finalized_runs = []
@@ -85,7 +85,7 @@ class TestTrajectoryBuilder:
         dataset_file = tmp_path / "dataset.jsonl"
         dataset_file.write_text('{"input": "test"}')
 
-        return FinetuneRunConfig(
+        return FinetuneConfig(
             config_file=config_file,
             target_functions=["test_function"],
             dataset=str(dataset_file),  # Convert Path to string
@@ -230,10 +230,10 @@ class TestTrajectoryBuilderEdgeCases:
         config_file = tmp_path / "config.yml"
         config_file.write_text("test: config")
 
-        return FinetuneRunConfig(config_file=config_file,
-                                 target_functions=["test_function"],
-                                 dataset=tmp_path / "dataset.jsonl",
-                                 result_json_path="$.result")
+        return FinetuneConfig(config_file=config_file,
+                              target_functions=["test_function"],
+                              dataset=tmp_path / "dataset.jsonl",
+                              result_json_path="$.result")
 
     class FailingTrajectoryBuilder(TrajectoryBuilder):
         """Builder that fails during operations."""

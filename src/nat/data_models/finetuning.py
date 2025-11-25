@@ -17,6 +17,7 @@ import typing
 from enum import Enum
 from pathlib import Path
 from typing import Any
+import logging
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -24,6 +25,8 @@ from pydantic import model_validator
 
 from .common import BaseModelRegistryTag
 from .common import TypedBaseModel
+
+logger = logging.getLogger(__name__)
 
 
 class RewardFunctionConfig(BaseModel):
@@ -56,17 +59,6 @@ class TrainerAdapterConfig(TypedBaseModel, BaseModelRegistryTag):
     reward: RewardFunctionConfig | None = Field(
         description="Configuration for the reward function used during training.", default=None)
 
-
-class FinetuningConfig(BaseModel):
-    """
-    Configuration for fine-tuning
-    """
-    enabled: bool = Field(description="Whether fine-tuning is enabled.", default=False)
-    trainer: str | None = Field(description="The trainer to use for fine-tuning.", default=None)
-    trajectory_builder: str | None = Field(description="The trajectory builder to use for fine-tuning.", default=None)
-    trainer_adapter: str | None = Field(description="The trainer adapter to use for fine-tuning.", default=None)
-    reward_function: RewardFunctionConfig | None = Field(description="Configuration for the reward function.",
-                                                         default=None)
 
 
 TrainerConfigT = typing.TypeVar("TrainerConfigT", bound=TrainerConfig)
@@ -186,14 +178,11 @@ class CurriculumLearningConfig(BaseModel):
             raise ValueError("increment_percentile must be between 0 and 1")
         return self
 
-
 class FinetuneRunConfig(BaseModel):
     """
-    Parameters used for a Trainer run
+    CLI Args for running finetuning and configuring
     """
-
-    config_file: Path | BaseModel  # allow for instantiated configs to be passed in
-    target_functions: list[str] = ["<workflow>"]
+    config_file: Path | BaseModel = Field(description="Config file for NAT", default=None)
     dataset: str | Path | None = None  # dataset file path can be specified in the config file
     result_json_path: str = "$"
     endpoint: str | None = None  # only used when running the workflow remotely
@@ -207,5 +196,41 @@ class FinetuneRunConfig(BaseModel):
     validation_config_file: str | Path | None = Field(default=None,
                                                       description="Optional separate config file for validation runs")
 
+class FinetuneConfig(BaseModel):
+    """
+    Parameters used for a Trainer run
+    """
+
+    enabled: bool = Field(description="Whether fine-tuning is enabled.", default=False)
+    trainer: str | None = Field(description="The trainer to use for fine-tuning.", default=None)
+    trajectory_builder: str | None = Field(description="The trajectory builder to use for fine-tuning.", default=None)
+
+    trainer_adapter: str | None = Field(description="The trainer adapter to use for fine-tuning.", default=None)
+    reward_function: RewardFunctionConfig | None = Field(description="Configuration for the reward function.",
+                                                         default=None)
+    target_functions: list[str] = ["<workflow>"]
     curriculum_learning: CurriculumLearningConfig = Field(
         default=CurriculumLearningConfig(), description="Configuration for curriculum learning during fine-tuning")
+
+
+    # Overridden by command line args
+    run_configuration: FinetuneRunConfig | None = Field(
+        description="Run-time configuration for fine-tuning (overrides CLI arguments).", default=None)
+
+
+    # Before validator: if enabled, config file, trainer, trajectory builder, trainer adapter and reward
+    # function must be set
+    @model_validator(mode="before")
+    def validate_finetuning_enabled(cls, values: dict[str, Any]) -> dict[str, Any]:
+        if values.get("enabled", False):
+            required_fields = ["config_file", "trainer", "trajectory_builder", "trainer_adapter", "reward_function"]
+            missing_fields = [field for field in required_fields if values.get(field) is None]
+            if missing_fields:
+                raise ValueError(f"When fine-tuning is enabled, the following fields must be set: "
+                                 f"{', '.join(missing_fields)}")
+
+        # Warn user their config will be overridden by CLI args
+        if "run_configuration" in values and values["run_configuration"] is not None:
+            logger.warning("run_configuration will be overridden by CLI arguments during finetuning run.")
+
+        return values

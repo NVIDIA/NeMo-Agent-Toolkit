@@ -17,7 +17,7 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Any
 
-from nat.data_models.finetuning import FinetuneRunConfig
+from nat.data_models.finetuning import FinetuneConfig
 from nat.data_models.finetuning import TrainerAdapterConfig
 from nat.data_models.finetuning import TrainingJobRef
 from nat.data_models.finetuning import TrainingJobStatus
@@ -29,21 +29,15 @@ class TrainerAdapter(ABC):
     Adapter to send Trajectories to remote training cluster for weights updates.
     """
 
-    def __init__(self, adapter_config: TrainerAdapterConfig, run_config: FinetuneRunConfig, backend: str):
+    def __init__(self, adapter_config: TrainerAdapterConfig):
         self.adapter_config = adapter_config
-        self.run_config = run_config
-        self._backend = backend
+        self.run_config: FinetuneConfig = None
 
-    @property
-    def backend(self) -> str:
-        return self._backend
-
-    @abstractmethod
-    async def initialize(self) -> None:
+    async def initialize(self, run_config: FinetuneConfig) -> None:
         """
         Asynchronously initialize any resources needed for the trainer adapter.
         """
-        raise NotImplementedError
+        self.run_config = run_config
 
     @abstractmethod
     async def is_healthy(self) -> bool:

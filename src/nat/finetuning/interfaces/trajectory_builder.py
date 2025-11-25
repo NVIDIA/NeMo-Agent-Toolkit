@@ -17,7 +17,7 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Any
 
-from nat.data_models.finetuning import FinetuneRunConfig
+from nat.data_models.finetuning import FinetuneConfig
 from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.finetuning import TrajectoryCollection
 from nat.eval.config import EvaluationRunOutput
@@ -30,14 +30,15 @@ class TrajectoryBuilder(ABC):
     Abstract interface for building trajectories from episode items.
     """
 
-    def __init__(self, trajectory_builder_config: TrajectoryBuilderConfig, run_config: FinetuneRunConfig, backend: str):
+    def __init__(self, trajectory_builder_config: TrajectoryBuilderConfig):
         self.trajectory_builder_config = trajectory_builder_config
-        self.run_config = run_config
-        self._backend = backend
+        self.run_config: FinetuneConfig = None
 
-    @property
-    def backend(self) -> str:
-        return self._backend
+    async def initialize(self, run_config: FinetuneConfig) -> None:
+        """
+        Asynchronously initialize any resources needed for the trajectory builder.
+        """
+        self.run_config = run_config
 
     async def run_eval(self) -> EvaluationRunOutput:
         """
@@ -49,12 +50,12 @@ class TrajectoryBuilder(ABC):
         from nat.eval.evaluate import EvaluationRun
         from nat.eval.evaluate import EvaluationRunConfig
 
-        eval_cfg = EvaluationRunConfig(config_file=self.run_config.config_file,
-                                       dataset=self.run_config.dataset,
-                                       result_json_path=self.run_config.result_json_path,
-                                       endpoint=self.run_config.endpoint,
-                                       endpoint_timeout=self.run_config.endpoint_timeout,
-                                       override=self.run_config.override)
+        eval_cfg = EvaluationRunConfig(config_file=self.run_config.run_configuration.config_file,
+                                       dataset=self.run_config.run_configuration.dataset,
+                                       result_json_path=self.run_config.run_configuration.result_json_path,
+                                       endpoint=self.run_config.run_configuration.endpoint,
+                                       endpoint_timeout=self.run_config.run_configuration.endpoint_timeout,
+                                       override=self.run_config.run_configuration.override)
 
         async with suppress_logs(prefix="nat.eval"):
             evaluation_output = await EvaluationRun(config=eval_cfg).run_and_evaluate()

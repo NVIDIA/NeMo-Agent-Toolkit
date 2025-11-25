@@ -20,7 +20,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from nat.data_models.finetuning import CurriculumLearningConfig
-from nat.data_models.finetuning import FinetuneRunConfig
+from nat.data_models.finetuning import FinetuneConfig
 from nat.data_models.finetuning import RewardFunctionConfig
 from nat.data_models.finetuning import TrainerConfig
 from nat.data_models.finetuning import TrainingJobRef
@@ -36,7 +36,7 @@ from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 class ConcreteTrainer(Trainer):
     """Concrete implementation of Trainer for testing."""
 
-    def __init__(self, trainer_config: TrainerConfig, run_config: FinetuneRunConfig, backend: str, **kwargs):
+    def __init__(self, trainer_config: TrainerConfig, run_config: FinetuneConfig, backend: str, **kwargs):
         super().__init__(trainer_config, run_config, backend, **kwargs)
         self.initialized = False
         self.cleaned_up = False
@@ -79,7 +79,7 @@ class ConcreteTrainer(Trainer):
         """Log training progress."""
         self.logged_progress.append({"epoch": epoch, "metrics": metrics, "output_dir": output_dir})
 
-    def _create_trajectory_builder(self, run_config: FinetuneRunConfig):
+    def _create_trajectory_builder(self, run_config: FinetuneConfig):
         """Create a trajectory builder instance."""
         mock_builder = MagicMock(spec=TrajectoryBuilder)
         mock_builder.run_eval = AsyncMock(return_value=MagicMock(spec=EvaluationRunOutput))
@@ -105,11 +105,11 @@ class TestTrainer:
         config_file = tmp_path / "config.yml"
         config_file.write_text("test: config")
 
-        return FinetuneRunConfig(config_file=config_file,
-                                 target_functions=["test_function"],
-                                 dataset=tmp_path / "dataset.jsonl",
-                                 result_json_path="$.result",
-                                 curriculum_learning=CurriculumLearningConfig())
+        return FinetuneConfig(config_file=config_file,
+                              target_functions=["test_function"],
+                              dataset=tmp_path / "dataset.jsonl",
+                              result_json_path="$.result",
+                              curriculum_learning=CurriculumLearningConfig())
 
     @pytest.fixture
     def trainer(self, trainer_config, run_config):

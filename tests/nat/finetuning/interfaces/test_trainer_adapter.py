@@ -18,7 +18,7 @@ from typing import Any
 
 import pytest
 
-from nat.data_models.finetuning import FinetuneRunConfig
+from nat.data_models.finetuning import FinetuneConfig
 from nat.data_models.finetuning import TrainerAdapterConfig
 from nat.data_models.finetuning import TrainingJobRef
 from nat.data_models.finetuning import TrainingJobStatus
@@ -31,7 +31,7 @@ from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
 class ConcreteTrainerAdapter(TrainerAdapter):
     """Concrete implementation of TrainerAdapter for testing."""
 
-    def __init__(self, adapter_config: TrainerAdapterConfig, run_config: FinetuneRunConfig, backend: str):
+    def __init__(self, adapter_config: TrainerAdapterConfig, run_config: FinetuneConfig, backend: str):
         super().__init__(adapter_config, run_config, backend)
         self.initialized = False
         self.healthy = True
@@ -96,10 +96,10 @@ class TestTrainerAdapter:
         config_file = tmp_path / "config.yml"
         config_file.write_text("test: config")
 
-        return FinetuneRunConfig(config_file=config_file,
-                                 target_functions=["test_function"],
-                                 dataset=tmp_path / "dataset.jsonl",
-                                 result_json_path="$.result")
+        return FinetuneConfig(config_file=config_file,
+                              target_functions=["test_function"],
+                              dataset=tmp_path / "dataset.jsonl",
+                              result_json_path="$.result")
 
     @pytest.fixture
     def adapter(self, adapter_config, run_config):
@@ -220,10 +220,10 @@ class TestTrainerAdapterErrorHandling:
         config_file = tmp_path / "config.yml"
         config_file.write_text("test: config")
 
-        return FinetuneRunConfig(config_file=config_file,
-                                 target_functions=["test_function"],
-                                 dataset=tmp_path / "dataset.jsonl",
-                                 result_json_path="$.result")
+        return FinetuneConfig(config_file=config_file,
+                              target_functions=["test_function"],
+                              dataset=tmp_path / "dataset.jsonl",
+                              result_json_path="$.result")
 
     class FailingTrainerAdapter(TrainerAdapter):
         """Adapter that fails during operations."""

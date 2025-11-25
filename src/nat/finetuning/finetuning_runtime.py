@@ -19,6 +19,7 @@ import asyncio
 import logging
 from pathlib import Path
 
+from nat.data_models.finetuning import FinetuneRunConfig
 from nat.data_models.config import Config
 
 logger = logging.getLogger(__name__)
@@ -34,7 +35,7 @@ async def run_finetuning(config: Config) -> None:
     pass
 
 
-async def finetuning_main(config_file: Path) -> None:
+async def finetuning_main(run_config: FinetuneRunConfig) -> None:
     """
     Main entry point for finetuning runtime.
 
@@ -42,18 +43,48 @@ async def finetuning_main(config_file: Path) -> None:
         config_file: Path to the configuration file
     """
 
+    from nat.builder.workflow_builder import WorkflowBuilder
     from nat.runtime.loader import load_config
-    config = load_config(config_file=config_file)
+
+    config = load_config(config_file=run_config.config_file)
+    finetuning_config = config.finetuning
+    finetuning_config.run_configuration = run_config
+
+    if not config.finetuning.enabled:
+        raise ValueError("Finetuning is not enabled in the provided configuration.")
+
+    async with WorkflowBuilder.from_config(config=config) as builder:
+        # Get trajectory builder and trainer adapter from builder
+        logger.info("Initializing finetuning components...")
+        trajectory_builder_name = finetuning_config.trajectory_builder
+        trainer_adapter_name = finetuning_config.trainer_adapter
+        trajectory_builder = await builder.get_trajectory_builder(trajectory_builder_name)
+        trainer_adapter = await builder.get_trainer_adapter(trainer_adapter_name)
+        logger.info("Finetuning components initialized.")
+
+        # Initialize trainer
+        trainer_name = finetuning_config.trainer
+        trainer = await builder.get_trainer(trainer_name,
+                                            trajectory_builder=trajectory_builder,
+                                            trainer_adapter=trainer_adapter)
+
+        trainer.initialize()
+
+        logger.info("Initialized trainer: %s", trainer_name)
+
+
+
+
 
     # Run finetuning
     await run_finetuning(config)
 
 
-def run_finetuning_sync(config_file: Path) -> None:
+def run_finetuning_sync(run_config: FinetuneRunConfig) -> None:
     """
     Synchronous wrapper for running finetuning.
 
     Args:
         config_file: Path to the configuration file
     """
-    asyncio.run(finetuning_main(config_file))
+    asyncio.run(finetuning_main(run_config))

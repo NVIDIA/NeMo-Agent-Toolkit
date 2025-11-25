@@ -19,7 +19,7 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Any
 
-from nat.data_models.finetuning import FinetuneRunConfig
+from nat.data_models.finetuning import FinetuneConfig, FinetuneRunConfig
 from nat.data_models.finetuning import TrainerConfig
 from nat.data_models.finetuning import TrainingJobRef
 from nat.data_models.finetuning import TrainingJobStatus
@@ -41,7 +41,7 @@ class Trainer(ABC):
     3. Managing multiple epochs of training
     """
 
-    def __init__(self, trainer_config: TrainerConfig, run_config: FinetuneRunConfig, backend: str, **kwargs) -> None:
+    def __init__(self, trainer_config: TrainerConfig, **kwargs) -> None:
         """
         Initialize the Trainer.
 
@@ -52,19 +52,13 @@ class Trainer(ABC):
             curriculum_config: Optional curriculum learning configuration
         """
         self.trainer_config = trainer_config
-        self.run_config = run_config
-        self._backend = backend
-        self.curriculum_config = run_config.curriculum_learning
-        self.trajectory_builder: TrajectoryBuilder | None = None
-        self.trainer_adapter: TrainerAdapter | None = None
+        self.run_config: FinetuneConfig = None
+        self.curriculum_config = None
+        self.trajectory_builder: TrajectoryBuilder  = None
+        self.trainer_adapter: TrainerAdapter = None
 
         # Curriculum learning state
-        self._curriculum_state = {
-            "current_percentile": self.curriculum_config.initial_percentile,
-            "last_expansion_epoch": -1,
-            "total_groups": 0,
-            "included_groups": set()
-        }
+        self._curriculum_state = None
 
     async def bind_components(self, trajectory_builder: TrajectoryBuilder, trainer_adapter: TrainerAdapter) -> None:
         """
@@ -77,13 +71,7 @@ class Trainer(ABC):
         self.trajectory_builder = trajectory_builder
         self.trainer_adapter = trainer_adapter
 
-    @property
-    def backend(self) -> str:
-        """Return the backend type."""
-        return self._backend
-
-    @abstractmethod
-    async def initialize(self) -> None:
+    async def initialize(self, run_config: FinetuneConfig) -> None:
         """
         Initialize the runner and its components.
 
@@ -92,7 +80,19 @@ class Trainer(ABC):
         - Initialize the TrainerAdapter
         - Verify connectivity to backend services
         """
-        raise NotImplementedError
+
+        self.run_config = run_config
+        self.curriculum_config = self.run_config.curriculum_learning
+        self._curriculum_state = {
+            "current_percentile": self.curriculum_config.initial_percentile,
+            "last_expansion_epoch": -1,
+            "total_groups": 0,
+            "included_groups": set()
+        }
+
+        await self.trajectory_builder.initialize(run_config)
+        await self.trainer_adapter.initialize(run_config)
+
 
     @abstractmethod
     async def run_epoch(self, epoch: int, run_id: str) -> TrainingJobRef:
@@ -171,22 +171,27 @@ class Trainer(ABC):
         """
         logger.info("Running validation evaluation for epoch %d", epoch + 1)
 
-        config = self.run_config.validation_config_file if (
-            self.run_config.validation_config_file) else self.run_config.config_file
+        config = self.run_config.run_configuration.validation_config_file if (
+            self.run_config.run_configuration.validation_config_file
+        ) else self.run_config.run_configuration.config_file
 
         # Create a temporary run config with validation dataset
         validation_run_config = FinetuneRunConfig(config_file=config,
-                                                  target_functions=self.run_config.target_functions,
-                                                  dataset=validation_dataset,
-                                                  result_json_path=self.run_config.result_json_path,
-                                                  endpoint=self.run_config.endpoint,
-                                                  endpoint_timeout=self.run_config.endpoint_timeout,
-                                                  override=self.run_config.override)
+                                               dataset=validation_dataset,
+                                               result_json_path=self.run_config.result_json_path,
+                                               endpoint=self.run_config.endpoint,
+                                               endpoint_timeout=self.run_config.endpoint_timeout,
+                                               override=self.run_config.override)
 
         # Create a temporary trajectory builder for validation
-        validation_builder = self._create_trajectory_builder(validation_run_config)
+        validation_builder = self.trajectory_builder
+        original_run_config = validation_builder.run_config.run_configuration
+
 
         try:
+
+            validation_builder.run_config.run_configuration = validation_run_config
+
             # Run evaluation
             eval_output = await validation_builder.run_eval()
 
@@ -200,20 +205,17 @@ class Trainer(ABC):
 
         except Exception as e:
             logger.error("Error during validation evaluation: %s", e)
-            return {"epoch": epoch, "dataset_type": "validation", "error": str(e), "avg_reward": 0.0, "num_examples": 0}
+            return {
+                "epoch": epoch,
+                "dataset_type": "validation",
+                "error": str(e),
+                "avg_reward": 0.0,
+                "num_examples": 0
+            }
+        finally:
+            # Restore original run config
+            validation_builder.run_config.run_configuration = original_run_config
 
-    @abstractmethod
-    def _create_trajectory_builder(self, run_config: FinetuneRunConfig):
-        """
-        Create a trajectory builder instance for the specific backend.
-
-        Args:
-            run_config: Configuration for the run
-
-        Returns:
-            TrajectoryBuilder: Instance of trajectory builder
-        """
-        raise NotImplementedError
 
     def _calculate_validation_metrics(self, eval_output: EvaluationRunOutput) -> dict[str, Any]:
         """

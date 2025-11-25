@@ -27,7 +27,7 @@ from pydantic import ValidatorFunctionWrapHandler
 from pydantic import field_validator
 
 from nat.data_models.evaluate import EvalConfig
-from nat.data_models.finetuning import FinetuningConfig
+from nat.data_models.finetuning import FinetuneConfig
 from nat.data_models.finetuning import TrainerAdapterConfig
 from nat.data_models.finetuning import TrainerConfig
 from nat.data_models.finetuning import TrajectoryBuilderConfig
@@ -297,7 +297,7 @@ class Config(HashableBaseModel):
     trainers: dict[str, TrainerConfig] = Field(default_factory=dict)
     trainer_adapters: dict[str, TrainerAdapterConfig] = Field(default_factory=dict)
     trajectory_builders: dict[str, TrajectoryBuilderConfig] = Field(default_factory=dict)
-    finetuning: FinetuningConfig = FinetuningConfig()
+    finetuning: FinetuneConfig = FinetuneConfig()
 
     def print_summary(self, stream: typing.TextIO = sys.stdout):
         """Print a summary of the configuration"""
