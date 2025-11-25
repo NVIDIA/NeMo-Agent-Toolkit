@@ -16,10 +16,10 @@
 import logging
 from abc import ABC
 from abc import abstractmethod
-from pathlib import Path
 from typing import Any
 
-from nat.data_models.finetuning import FinetuneConfig, FinetuneRunConfig
+from nat.data_models.finetuning import FinetuneConfig
+from nat.data_models.finetuning import FinetuneRunConfig
 from nat.data_models.finetuning import TrainerConfig
 from nat.data_models.finetuning import TrainingJobRef
 from nat.data_models.finetuning import TrainingJobStatus
@@ -54,7 +54,7 @@ class Trainer(ABC):
         self.trainer_config = trainer_config
         self.run_config: FinetuneConfig = None
         self.curriculum_config = None
-        self.trajectory_builder: TrajectoryBuilder  = None
+        self.trajectory_builder: TrajectoryBuilder = None
         self.trainer_adapter: TrainerAdapter = None
 
         # Curriculum learning state
@@ -92,7 +92,6 @@ class Trainer(ABC):
 
         await self.trajectory_builder.initialize(run_config)
         await self.trainer_adapter.initialize(run_config)
-
 
     @abstractmethod
     async def run_epoch(self, epoch: int, run_id: str) -> TrainingJobRef:
@@ -171,21 +170,19 @@ class Trainer(ABC):
         logger.info("Running validation evaluation for epoch %d", epoch + 1)
 
         config = self.run_config.run_configuration.validation_config_file if (
-            self.run_config.run_configuration.validation_config_file
-        ) else self.run_config.run_configuration.config_file
+            self.run_config.run_configuration.validation_config_file) else self.run_config.run_configuration.config_file
 
         # Create a temporary run config with validation dataset
         validation_run_config = FinetuneRunConfig(config_file=config,
-                                               dataset=self.run_config.run_configuration.validation_dataset,
-                                               result_json_path=self.run_config.run_configuration.result_json_path,
-                                               endpoint=self.run_config.run_configuration.endpoint,
-                                               endpoint_timeout=self.run_config.run_configuration.endpoint_timeout,
-                                               override=self.run_config.run_configuration.override)
+                                                  dataset=self.run_config.run_configuration.validation_dataset,
+                                                  result_json_path=self.run_config.run_configuration.result_json_path,
+                                                  endpoint=self.run_config.run_configuration.endpoint,
+                                                  endpoint_timeout=self.run_config.run_configuration.endpoint_timeout,
+                                                  override=self.run_config.run_configuration.override)
 
         # Create a temporary trajectory builder for validation
         validation_builder = self.trajectory_builder
         original_run_config = validation_builder.run_config.run_configuration
-
 
         try:
 
@@ -204,17 +201,10 @@ class Trainer(ABC):
 
         except Exception as e:
             logger.error("Error during validation evaluation: %s", e)
-            return {
-                "epoch": epoch,
-                "dataset_type": "validation",
-                "error": str(e),
-                "avg_reward": 0.0,
-                "num_examples": 0
-            }
+            return {"epoch": epoch, "dataset_type": "validation", "error": str(e), "avg_reward": 0.0, "num_examples": 0}
         finally:
             # Restore original run config
             validation_builder.run_config.run_configuration = original_run_config
-
 
     def _calculate_validation_metrics(self, eval_output: EvaluationRunOutput) -> dict[str, Any]:
         """

@@ -13,11 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import typing
 from enum import Enum
 from pathlib import Path
 from typing import Any
-import logging
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -58,7 +58,6 @@ class TrainerAdapterConfig(TypedBaseModel, BaseModelRegistryTag):
     """
     reward: RewardFunctionConfig | None = Field(
         description="Configuration for the reward function used during training.", default=None)
-
 
 
 TrainerConfigT = typing.TypeVar("TrainerConfigT", bound=TrainerConfig)
@@ -178,6 +177,7 @@ class CurriculumLearningConfig(BaseModel):
             raise ValueError("increment_percentile must be between 0 and 1")
         return self
 
+
 class FinetuneRunConfig(BaseModel):
     """
     CLI Args for running finetuning and configuring
@@ -195,6 +195,7 @@ class FinetuneRunConfig(BaseModel):
 
     validation_config_file: str | Path | None = Field(default=None,
                                                       description="Optional separate config file for validation runs")
+
 
 class FinetuneConfig(BaseModel):
     """
@@ -214,11 +215,9 @@ class FinetuneConfig(BaseModel):
 
     num_epochs: int = Field(default=1, description="Number of epochs to run", ge=1)
 
-
     # Overridden by command line args
     run_configuration: FinetuneRunConfig | None = Field(
         description="Run-time configuration for fine-tuning (overrides CLI arguments).", default=None)
-
 
     # Before validator: if enabled, config file, trainer, trajectory builder, trainer adapter and reward
     # function must be set

@@ -20,9 +20,12 @@ from unittest.mock import patch
 
 import pytest
 
+from nat.data_models.finetuning import CurriculumLearningConfig
 from nat.data_models.finetuning import EpisodeItem
 from nat.data_models.finetuning import EpisodeItemRole
 from nat.data_models.finetuning import FinetuneConfig
+from nat.data_models.finetuning import FinetuneRunConfig
+from nat.data_models.finetuning import RewardFunctionConfig
 from nat.data_models.finetuning import Trajectory
 from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.finetuning import TrajectoryCollection
@@ -34,8 +37,8 @@ from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 class ConcreteTrajectoryBuilder(TrajectoryBuilder):
     """Concrete implementation of TrajectoryBuilder for testing."""
 
-    def __init__(self, trajectory_builder_config: TrajectoryBuilderConfig, run_config: FinetuneConfig, backend: str):
-        super().__init__(trajectory_builder_config, run_config, backend)
+    def __init__(self, trajectory_builder_config: TrajectoryBuilderConfig):
+        super().__init__(trajectory_builder_config)
         self.started_runs = []
         self.finalized_runs = []
         self.computed_rewards = []
@@ -74,39 +77,38 @@ class TestTrajectoryBuilder:
     @pytest.fixture
     def builder_config(self):
         """Create a test trajectory builder config."""
-        return TrajectoryBuilderConfig(type="test_trajectory_builder")
+        return TrajectoryBuilderConfig(type="test_trajectory_builder", reward=RewardFunctionConfig(name="test_reward"))
 
     @pytest.fixture
-    def run_config(self, tmp_path):
-        """Create a test run config."""
+    def finetune_config(self, tmp_path):
+        """Create a test finetune config."""
         config_file = tmp_path / "config.yml"
         config_file.write_text("test: config")
 
         dataset_file = tmp_path / "dataset.jsonl"
         dataset_file.write_text('{"input": "test"}')
 
-        return FinetuneConfig(
-            config_file=config_file,
-            target_functions=["test_function"],
-            dataset=str(dataset_file),  # Convert Path to string
-            result_json_path="$.result")
+        run_config = FinetuneRunConfig(config_file=config_file,
+                                       target_functions=["test_function"],
+                                       dataset=str(dataset_file),
+                                       result_json_path="$.result")
+
+        return FinetuneConfig(run_configuration=run_config, curriculum_learning=CurriculumLearningConfig())
 
     @pytest.fixture
-    def builder(self, builder_config, run_config):
+    def builder(self, builder_config):
         """Create a concrete trajectory builder instance."""
-        return ConcreteTrajectoryBuilder(trajectory_builder_config=builder_config,
-                                         run_config=run_config,
-                                         backend="test_backend")
+        return ConcreteTrajectoryBuilder(trajectory_builder_config=builder_config)
 
-    async def test_builder_initialization(self, builder, builder_config, run_config):
+    async def test_builder_initialization(self, builder, builder_config):
         """Test that builder initializes with correct configuration."""
         assert builder.trajectory_builder_config == builder_config
-        assert builder.run_config == run_config
-        assert builder.backend == "test_backend"
+        assert builder.run_config is None
 
-    async def test_builder_backend_property(self, builder):
-        """Test backend property returns correct value."""
-        assert builder.backend == "test_backend"
+    async def test_builder_initialize(self, builder, finetune_config):
+        """Test builder initialization."""
+        await builder.initialize(finetune_config)
+        assert builder.run_config == finetune_config
 
     async def test_builder_start_run(self, builder):
         """Test starting a run."""
@@ -183,8 +185,10 @@ class TestTrajectoryBuilder:
         assert builder.logged_progress[0]["output_dir"] == "/tmp/logs"
 
     @patch('nat.eval.evaluate.EvaluationRun')
-    async def test_builder_run_eval(self, mock_eval_run, builder):
+    async def test_builder_run_eval(self, mock_eval_run, builder, finetune_config):
         """Test running evaluation."""
+        await builder.initialize(finetune_config)
+
         # Mock the evaluation run
         mock_eval_output = MagicMock(spec=EvaluationRunOutput)
         mock_eval_instance = AsyncMock()
@@ -225,15 +229,20 @@ class TestTrajectoryBuilderEdgeCases:
         return TrajectoryBuilderConfig(type="test_trajectory_builder")
 
     @pytest.fixture
-    def run_config(self, tmp_path):
-        """Create a test run config."""
+    def finetune_config(self, tmp_path):
+        """Create a test finetune config."""
         config_file = tmp_path / "config.yml"
         config_file.write_text("test: config")
 
-        return FinetuneConfig(config_file=config_file,
-                              target_functions=["test_function"],
-                              dataset=tmp_path / "dataset.jsonl",
-                              result_json_path="$.result")
+        dataset_file = tmp_path / "dataset.jsonl"
+        dataset_file.write_text('{"input": "test"}')
+
+        run_config = FinetuneRunConfig(config_file=config_file,
+                                       target_functions=["test_function"],
+                                       dataset=str(dataset_file),
+                                       result_json_path="$.result")
+
+        return FinetuneConfig(run_configuration=run_config)
 
     class FailingTrajectoryBuilder(TrajectoryBuilder):
         """Builder that fails during operations."""
@@ -247,30 +256,30 @@ class TestTrajectoryBuilderEdgeCases:
         def log_progress(self, run_id: str, metrics: dict[str, Any], output_dir: str | None = None) -> None:
             raise RuntimeError("Logging failed")
 
-    async def test_builder_start_run_failure(self, builder_config, run_config):
+    async def test_builder_start_run_failure(self, builder_config):
         """Test handling of start_run failures."""
-        builder = self.FailingTrajectoryBuilder(builder_config, run_config, "test_backend")
+        builder = self.FailingTrajectoryBuilder(builder_config)
 
         with pytest.raises(RuntimeError, match="Start run failed"):
             await builder.start_run("run_001")
 
-    async def test_builder_finalize_failure(self, builder_config, run_config):
+    async def test_builder_finalize_failure(self, builder_config):
         """Test handling of finalize failures."""
-        builder = self.FailingTrajectoryBuilder(builder_config, run_config, "test_backend")
+        builder = self.FailingTrajectoryBuilder(builder_config)
 
         with pytest.raises(RuntimeError, match="Finalize failed"):
             await builder.finalize("run_001")
 
-    async def test_builder_log_progress_failure(self, builder_config, run_config):
+    async def test_builder_log_progress_failure(self, builder_config):
         """Test handling of log_progress failures."""
-        builder = self.FailingTrajectoryBuilder(builder_config, run_config, "test_backend")
+        builder = self.FailingTrajectoryBuilder(builder_config)
 
         with pytest.raises(RuntimeError, match="Logging failed"):
             builder.log_progress("run_001", {})
 
-    async def test_builder_multiple_runs(self, builder_config, run_config):
+    async def test_builder_multiple_runs(self, builder_config):
         """Test handling multiple runs sequentially."""
-        builder = ConcreteTrajectoryBuilder(builder_config, run_config, "test_backend")
+        builder = ConcreteTrajectoryBuilder(builder_config)
 
         # Start and finalize first run
         await builder.start_run("run_001")
@@ -289,9 +298,9 @@ class TestTrajectoryBuilderEdgeCases:
         assert len(collection1.trajectories) == 1
         assert len(collection2.trajectories) == 2
 
-    async def test_builder_trajectory_with_logprobs(self, builder_config, run_config):
+    async def test_builder_trajectory_with_logprobs(self, builder_config):
         """Test that trajectories properly handle logprobs."""
-        builder = ConcreteTrajectoryBuilder(builder_config, run_config, "test_backend")
+        builder = ConcreteTrajectoryBuilder(builder_config)
         builder.trajectories_data = [{"id": 1}]
 
         collection = await builder.finalize("run_001")
@@ -305,7 +314,6 @@ class TestTrajectoryBuilderEdgeCases:
 
     async def test_trajectory_builder_config_reward_field(self):
         """Test that TrajectoryBuilderConfig has reward field that can be set."""
-        from nat.data_models.finetuning import RewardFunctionConfig
 
         class TestTrajectoryBuilderConfig(TrajectoryBuilderConfig, name="test_builder_with_reward"):
             pass

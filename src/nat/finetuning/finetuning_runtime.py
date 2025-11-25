@@ -17,10 +17,8 @@
 
 import asyncio
 import logging
-from pathlib import Path
 
-from nat.data_models.finetuning import FinetuneRunConfig, FinetuneConfig
-from nat.data_models.config import Config
+from nat.data_models.finetuning import FinetuneRunConfig
 from nat.finetuning.interfaces.finetuning_runner import Trainer
 
 logger = logging.getLogger(__name__)
@@ -46,10 +44,7 @@ async def run_finetuning(runner: Trainer) -> None:
 
         # Log final status
         for status in job_statuses:
-            logger.info(
-                "Job %s completed with status: %s",
-                status.run_id, status.status
-            )
+            logger.info("Job %s completed with status: %s", status.run_id, status.status)
             if status.message:
                 logger.info("  Message: %s", status.message)
 

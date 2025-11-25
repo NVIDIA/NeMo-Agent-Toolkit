@@ -14,7 +14,6 @@
 # limitations under the License.
 
 from typing import Any
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -48,11 +47,10 @@ class ConcreteTrainerAdapter(TrainerAdapter):
         """Submit trajectories to remote training backend."""
         job_id = f"job_{len(self.submitted_jobs)}"
         job_ref = TrainingJobRef(run_id=trajectories.run_id,
-                                  backend="test_backend",
-                                  metadata={
-                                      "job_id": job_id,
-                                      "num_trajectories": len(trajectories.trajectories)
-                                  })
+                                 backend="test_backend",
+                                 metadata={
+                                     "job_id": job_id, "num_trajectories": len(trajectories.trajectories)
+                                 })
         self.submitted_jobs.append((trajectories, job_ref))
         self.job_statuses[job_id] = TrainingStatusEnum.RUNNING
         return job_ref
@@ -62,8 +60,10 @@ class ConcreteTrainerAdapter(TrainerAdapter):
         job_id = ref.metadata.get("job_id") if ref.metadata else None
         status = self.job_statuses.get(job_id, TrainingStatusEnum.PENDING) if job_id else TrainingStatusEnum.PENDING
 
-        return TrainingJobStatus(run_id=ref.run_id, backend=ref.backend, status=status, progress=50.0 if status
-                                 == TrainingStatusEnum.RUNNING else 100.0)
+        return TrainingJobStatus(run_id=ref.run_id,
+                                 backend=ref.backend,
+                                 status=status,
+                                 progress=50.0 if status == TrainingStatusEnum.RUNNING else 100.0)
 
     async def wait_until_complete(self, ref: TrainingJobRef, poll_interval: float = 10.0) -> TrainingJobStatus:
         """Wait until training job completes."""
@@ -72,7 +72,10 @@ class ConcreteTrainerAdapter(TrainerAdapter):
         if job_id:
             self.job_statuses[job_id] = TrainingStatusEnum.COMPLETED
 
-        return TrainingJobStatus(run_id=ref.run_id, backend=ref.backend, status=TrainingStatusEnum.COMPLETED, progress=100.0)
+        return TrainingJobStatus(run_id=ref.run_id,
+                                 backend=ref.backend,
+                                 status=TrainingStatusEnum.COMPLETED,
+                                 progress=100.0)
 
     def log_progress(self, ref: TrainingJobRef, metrics: dict[str, Any], output_dir: str | None = None) -> None:
         """Log training adapter progress."""
@@ -97,9 +100,9 @@ class TestTrainerAdapter:
         dataset_file.write_text('{\"input\": \"test\"}')
 
         run_config = FinetuneRunConfig(config_file=config_file,
-                                        target_functions=["test_function"],
-                                        dataset=str(dataset_file),
-                                        result_json_path="$.result")
+                                       target_functions=["test_function"],
+                                       dataset=str(dataset_file),
+                                       result_json_path="$.result")
 
         return FinetuneConfig(run_configuration=run_config, curriculum_learning=CurriculumLearningConfig())
 
@@ -111,11 +114,12 @@ class TestTrainerAdapter:
     @pytest.fixture
     def sample_trajectories(self):
         """Create sample trajectories for testing."""
-        return TrajectoryCollection(trajectories=[
-            [],  # Two empty trajectory groups for testing
-            []
-        ],
-                                    run_id="test_run")
+        return TrajectoryCollection(
+            trajectories=[
+                [],  # Two empty trajectory groups for testing
+                []
+            ],
+            run_id="test_run")
 
     async def test_adapter_initialization(self, adapter, adapter_config):
         """Test that adapter initializes with correct configuration."""
@@ -213,9 +217,9 @@ class TestTrainerAdapterErrorHandling:
         dataset_file.write_text('{\"input\": \"test\"}')
 
         run_config = FinetuneRunConfig(config_file=config_file,
-                                        target_functions=["test_function"],
-                                        dataset=str(dataset_file),
-                                        result_json_path="$.result")
+                                       target_functions=["test_function"],
+                                       dataset=str(dataset_file),
+                                       result_json_path="$.result")
 
         return FinetuneConfig(run_configuration=run_config)
 
@@ -253,6 +257,7 @@ class TestTrainerAdapterErrorHandling:
 
     async def test_trainer_adapter_config_reward_field(self):
         """Test that TrainerAdapterConfig has reward field that can be set."""
+
         class TestTrainerAdapterConfig(TrainerAdapterConfig, name="test_adapter_with_reward"):
             pass
 
@@ -263,6 +268,7 @@ class TestTrainerAdapterErrorHandling:
 
     async def test_trainer_adapter_config_reward_field_default(self):
         """Test that TrainerAdapterConfig reward field defaults to None."""
+
         class TestTrainerAdapterConfig(TrainerAdapterConfig, name="test_adapter_no_reward"):
             pass
 

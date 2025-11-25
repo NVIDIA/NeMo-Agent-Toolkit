@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
@@ -25,10 +24,10 @@ from nat.data_models.finetuning import FinetuneConfig
 from nat.data_models.finetuning import FinetuneRunConfig
 from nat.data_models.finetuning import RewardFunctionConfig
 from nat.data_models.finetuning import TrainerConfig
-from nat.data_models.finetuning import TrajectoryCollection
 from nat.data_models.finetuning import TrainingJobRef
 from nat.data_models.finetuning import TrainingJobStatus
 from nat.data_models.finetuning import TrainingStatusEnum
+from nat.data_models.finetuning import TrajectoryCollection
 from nat.eval.config import EvaluationRunOutput
 from nat.finetuning.interfaces.finetuning_runner import Trainer
 from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
@@ -81,6 +80,7 @@ class TestTrainer:
     @pytest.fixture
     def trainer_config(self):
         """Create a test trainer config."""
+
         # Create a concrete config class
         class TestTrainerConfig(TrainerConfig, name="test_trainer_with_reward"):
             pass
@@ -97,9 +97,9 @@ class TestTrainer:
         dataset_file.write_text('{\"input\": \"test\"}')
 
         run_config = FinetuneRunConfig(config_file=config_file,
-                                        target_functions=["test_function"],
-                                        dataset=str(dataset_file),
-                                        result_json_path="$.result")
+                                       target_functions=["test_function"],
+                                       dataset=str(dataset_file),
+                                       result_json_path="$.result")
 
         return FinetuneConfig(run_configuration=run_config, curriculum_learning=CurriculumLearningConfig())
 
@@ -198,8 +198,7 @@ class TestTrainer:
         mock_eval_output = MagicMock(spec=EvaluationRunOutput)
         mock_metric = MagicMock()
         mock_metric.score = 0.8
-        mock_eval_output.evaluation_results = [("test_reward",
-                                                  MagicMock(eval_output_items=[mock_metric, mock_metric]))]
+        mock_eval_output.evaluation_results = [("test_reward", MagicMock(eval_output_items=[mock_metric, mock_metric]))]
 
         # Mock trajectory builder
         mock_trajectory_builder = MagicMock(spec=TrajectoryBuilder)
@@ -253,7 +252,7 @@ class TestTrainer:
         mock_metric2 = MagicMock()
         mock_metric2.score = 0.6
         mock_eval_output.evaluation_results = [("test_reward",
-                                                  MagicMock(eval_output_items=[mock_metric1, mock_metric2]))]
+                                                MagicMock(eval_output_items=[mock_metric1, mock_metric2]))]
 
         metrics = trainer._calculate_validation_metrics(mock_eval_output)
 
@@ -308,6 +307,7 @@ class TestTrainer:
 
     async def test_trainer_config_reward_field_default(self):
         """Test that TrainerConfig reward field defaults to None."""
+
         class TestTrainerConfigNoReward(TrainerConfig, name="test_trainer_no_reward"):
             pass
 

@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """CLI command for running finetuning."""
 
 import logging
@@ -27,17 +26,11 @@ from nat.finetuning.finetuning_runtime import run_finetuning_sync
 logger = logging.getLogger(__name__)
 
 
-@click.command(
-    name="finetune",
-    help="Run finetuning on a workflow using collected trajectories."
-)
-@click.option(
-    "--config_file",
-    required=True,
-    type=click.Path(exists=True, path_type=Path, resolve_path=True),
-    help="Path to the configuration file containing finetuning settings"
-
-)
+@click.command(name="finetune", help="Run finetuning on a workflow using collected trajectories.")
+@click.option("--config_file",
+              required=True,
+              type=click.Path(exists=True, path_type=Path, resolve_path=True),
+              help="Path to the configuration file containing finetuning settings")
 @click.option(
     "--dataset",
     type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=Path),
@@ -64,13 +57,11 @@ logger = logging.getLogger(__name__)
     default=300,
     help="HTTP response timeout in seconds. Only relevant if endpoint is specified.",
 )
-@click.option(
-    "--override",
-    "-o",
-    multiple=True,
-    type=(str, str),
-    help="Override config values (e.g., -o finetuning.num_epochs 5)"
-)
+@click.option("--override",
+              "-o",
+              multiple=True,
+              type=(str, str),
+              help="Override config values (e.g., -o finetuning.num_epochs 5)")
 @click.option(
     "--validation_dataset",
     type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=Path),
@@ -122,17 +113,18 @@ def finetune_command(
 
     try:
         # Run the finetuning process
-        run_finetuning_sync(FinetuneRunConfig(
-            config_file=config_file,
-            dataset=dataset,
-            result_json_path=result_json_path,
-            endpoint=endpoint,
-            endpoint_timeout=endpoint_timeout,
-            override=override,
-            validation_dataset=validation_dataset,
-            validation_interval=validation_interval,
-            validation_config_file=validation_config_file,
-        ))
+        run_finetuning_sync(
+            FinetuneRunConfig(
+                config_file=config_file,
+                dataset=dataset,
+                result_json_path=result_json_path,
+                endpoint=endpoint,
+                endpoint_timeout=endpoint_timeout,
+                override=override,
+                validation_dataset=validation_dataset,
+                validation_interval=validation_interval,
+                validation_config_file=validation_config_file,
+            ))
 
         logger.info("Finetuning completed successfully")
     except Exception as e:
