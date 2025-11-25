@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nat.finetuning.interfaces.finetuning_runner import FinetuningRunner
+from nat.finetuning.interfaces.finetuning_runner import Trainer
 from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
 
 __all__ = [
-    "FinetuningRunner",
+    "Trainer",
     "TrajectoryBuilder",
     "TrainerAdapter",
 ]

@@ -74,7 +74,7 @@ from nat.experimental.decorators.experimental_warning_decorator import experimen
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
 from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
-from nat.finetuning.interfaces.finetuning_runner import FinetuningRunner
+from nat.finetuning.interfaces.finetuning_runner import Trainer
 from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
 from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 from nat.memory.interfaces import MemoryEditor
@@ -158,7 +158,7 @@ class ConfiguredMiddleware:
 @dataclasses.dataclass
 class ConfiguredTrainer:
     config: TrainerConfig
-    instance: FinetuningRunner
+    instance: Trainer
 
 @dataclasses.dataclass
 class ConfiguredTrainerAdapter:
@@ -972,7 +972,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
     @override
     @experimental(feature_name="Finetuning")
-    async def add_trainer(self, name: str | TrainerRef, config: TrainerConfig) -> FinetuningRunner:
+    async def add_trainer(self, name: str | TrainerRef, config: TrainerConfig) -> Trainer:
         if (name in self._trainers):
             raise ValueError(f"Trainer '{name}' already exists in the list of trainers")
 
@@ -1031,7 +1031,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
     @override
     async def get_trainer(self, trainer_name: str | TrainerRef,
                           trajectory_builder: TrajectoryBuilder,
-                          trainer_adapter: TrainerAdapter) -> FinetuningRunner:
+                          trainer_adapter: TrainerAdapter) -> Trainer:
 
         if trainer_name not in self._trainers:
             raise ValueError(f"Trainer '{trainer_name}' not found")
@@ -1374,6 +1374,24 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                 elif component_instance.component_group == ComponentGroup.AUTHENTICATION:
                     await self.add_auth_provider(component_instance.name,
                                                  cast(AuthProviderBaseConfig, component_instance.config))
+
+                elif component_instance.component_group == ComponentGroup.TRAINING:
+                    if isinstance(component_instance.config, TrainerConfig):
+                        await self.add_trainer(component_instance.name,
+                                               cast(TrainerConfig, component_instance.config))
+
+                    elif isinstance(component_instance.config, TrainerAdapterConfig):
+                        await self.add_trainer_adapter(component_instance.name,
+                                                      cast(TrainerAdapterConfig, component_instance.config))
+
+                    elif isinstance(component_instance.config, TrajectoryBuilderConfig):
+                        await self.add_trajectory_builder(component_instance.name,
+                                                         cast(TrajectoryBuilderConfig, component_instance.config))
+
+                    else:
+                        raise ValueError(f"Unknown training component config type for "
+                                         f"{component_instance.name}: {type(component_instance.config)}")
+
                 else:
                     raise ValueError(f"Unknown component group {component_instance.component_group}")
 
@@ -1566,7 +1584,7 @@ class ChildBuilder(Builder):
 
     @override
     @experimental(feature_name="Finetuning")
-    async def add_trainer(self, name: str | TrainerRef, config: TrainerConfig) -> FinetuningRunner:
+    async def add_trainer(self, name: str | TrainerRef, config: TrainerConfig) -> Trainer:
         return await self._workflow_builder.add_trainer(name, config)
 
     @override
@@ -1583,7 +1601,7 @@ class ChildBuilder(Builder):
     @override
     async def get_trainer(self, trainer_name: str | TrainerRef,
                           trajectory_builder: TrajectoryBuilder,
-                          trainer_adapter: TrainerAdapter) -> FinetuningRunner:
+                          trainer_adapter: TrainerAdapter) -> Trainer:
         return await self._workflow_builder.get_trainer(trainer_name, trajectory_builder, trainer_adapter)
 
     @override

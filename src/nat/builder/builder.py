@@ -52,7 +52,7 @@ from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.experimental.decorators.experimental_warning_decorator import experimental
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
-from nat.finetuning.interfaces.finetuning_runner import FinetuningRunner
+from nat.finetuning.interfaces.finetuning_runner import Trainer
 from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
 from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 from nat.memory.interfaces import MemoryEditor
@@ -268,7 +268,7 @@ class Builder(ABC):
 
     @abstractmethod
     @experimental(feature_name="Finetuning")
-    async def add_trainer(self, name: str | TrainerRef, config: TrainerConfig) -> FinetuningRunner:
+    async def add_trainer(self, name: str | TrainerRef, config: TrainerConfig) -> Trainer:
         pass
 
     @abstractmethod
@@ -285,7 +285,7 @@ class Builder(ABC):
     @abstractmethod
     async def get_trainer(self, trainer_name: str | TrainerRef,
                           trajectory_builder: TrajectoryBuilder,
-                          trainer_adapter: TrainerAdapter) -> FinetuningRunner:
+                          trainer_adapter: TrainerAdapter) -> Trainer:
         pass
 
     @abstractmethod

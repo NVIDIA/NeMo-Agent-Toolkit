@@ -33,11 +33,11 @@ from nat.eval.config import EvaluationRunOutput
 logger = logging.getLogger(__name__)
 
 
-class FinetuningRunner(ABC):
+class Trainer(ABC):
     """
     Abstract interface for running finetuning workflows.
 
-    The FinetuningRunner orchestrates the entire finetuning process by:
+    The Trainer orchestrates the entire finetuning process by:
     1. Running evaluations to generate trajectories via TrajectoryBuilder
     2. Submitting trajectories for training via TrainerAdapter
     3. Managing multiple epochs of training
@@ -51,7 +51,7 @@ class FinetuningRunner(ABC):
             **kwargs
     ) -> None:
         """
-        Initialize the FinetuningRunner.
+        Initialize the Trainer.
 
         Args:
             trainer_config: Configuration for the trainer backend
