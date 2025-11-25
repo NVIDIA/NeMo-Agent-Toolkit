@@ -167,6 +167,7 @@ override-dependencies = [
   # tenacity 9.x maintains API compatibility with 8.x except for the statistics attribute (breaking change in 9.0.0)
   # See: https://github.com/jd/tenacity/releases
   "tenacity>=9.1.2,<10.0.0",
+  # Override dependencies that nvidia-nat-openpipe-art would otherwise regress
   "litellm==1.74.9",
   "openai>=1.106,<2.dev0"
 ]

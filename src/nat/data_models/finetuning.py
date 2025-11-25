@@ -214,6 +214,8 @@ class FinetuneConfig(BaseModel):
         default=CurriculumLearningConfig(), description="Configuration for curriculum learning during fine-tuning")
 
     num_epochs: int = Field(default=1, description="Number of epochs to run", ge=1)
+    output_dir: Path = Field(default=Path("./.tmp/nat/finetuning/"),
+                             description="Directory for outputs and checkpoints")
 
     # Overridden by command line args
     run_configuration: FinetuneRunConfig | None = Field(

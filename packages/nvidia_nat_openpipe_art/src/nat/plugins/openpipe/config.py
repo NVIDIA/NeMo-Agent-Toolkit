@@ -13,23 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nat.builder.builder import Builder
-from nat.cli.register_workflow import register_trajectory_builder
+from pydantic import Field
 
-from .config import OpenPipeARTTrajectoryBuilderConfig
-from .trajectory_builder import ARTTrajectoryBuilder
+from nat.data_models.finetuning import TrajectoryBuilderConfig
 
 
-@register_trajectory_builder(config_type=OpenPipeARTTrajectoryBuilderConfig)
-async def register_art_trajectory_builder(config: OpenPipeARTTrajectoryBuilderConfig, builder: Builder):
+class OpenPipeARTTrajectoryBuilderConfig(TrajectoryBuilderConfig, name="openpipe_art_traj_builder"):
     """
-    Register the ART trajectory builder.
-
-    Args:
-        config: TrajectoryBuilderConfig object
-        builder: Builder instance
-
-    Returns:
-        ARTTrajectoryBuilder instance
+    Configuration for the OpenPipe ART Trajectory Builder.
     """
-    yield ARTTrajectoryBuilder(trajectory_builder_config=config)
+    num_generations: int = Field(default=2,
+                                 description="Number of trajectory generations per example in eval dataset",
+                                 ge=1)
