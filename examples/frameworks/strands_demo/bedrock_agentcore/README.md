@@ -34,9 +34,7 @@ Before you begin, ensure you have the following installed:
 
 Follow the official NeMo Agent Toolkit installation guide:
 
-```plaintext
-https://docs.nvidia.com/nemo/agent-toolkit/1.3/quick-start/installing.html
-```
+See the [Install Guide](../../../../docs/source/quick-start/installing.md#install-from-source).
 
 ## Step 2: Install and Test the Agent Locally
 
