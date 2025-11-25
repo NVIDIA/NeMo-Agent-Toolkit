@@ -36,19 +36,28 @@ class TrainerConfig(TypedBaseModel, BaseModelRegistryTag):
     """
     Base configuration for the Trainer
     """
-    pass
+    reward: RewardFunctionConfig | None = Field(
+        description="Configuration for the reward function used during training.",
+        default=None
+    )
 
 class TrajectoryBuilderConfig(TypedBaseModel, BaseModelRegistryTag):
     """
     Configuration for the trajectory collector
     """
-    pass
+    reward: RewardFunctionConfig | None = Field(
+        description="Configuration for the reward function used during trajectory building.",
+        default=None
+    )
 
 class TrainerAdapterConfig(TypedBaseModel, BaseModelRegistryTag):
     """
     Configuration for the trainer adapter
     """
-    pass
+    reward: RewardFunctionConfig | None = Field(
+        description="Configuration for the reward function used during training.",
+        default=None
+    )
 
 
 class FinetuningConfig(BaseModel):
