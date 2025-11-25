@@ -327,7 +327,9 @@ class MockBuilder(Builder):
         """Mock implementation."""
         return MagicMock(spec=Trainer)
 
-    async def get_trainer(self, trainer_name: str, trajectory_builder: TrajectoryBuilder,
+    async def get_trainer(self,
+                          trainer_name: str,
+                          trajectory_builder: TrajectoryBuilder,
                           trainer_adapter: TrainerAdapter) -> Trainer:
         """Return a mock trainer if one is configured."""
         key = f"trainer_{trainer_name}"

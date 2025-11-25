@@ -17,9 +17,11 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Any
 
+from nat.data_models.finetuning import FinetuneRunConfig
+from nat.data_models.finetuning import TrajectoryBuilderConfig
+from nat.data_models.finetuning import TrajectoryCollection
 from nat.eval.config import EvaluationRunOutput
 from nat.eval.evaluator.evaluator_model import EvalOutputItem
-from nat.data_models.finetuning import FinetuneRunConfig, TrajectoryBuilderConfig, TrajectoryCollection
 from nat.utils.io.supress_logs import suppress_logs
 
 
@@ -28,8 +30,7 @@ class TrajectoryBuilder(ABC):
     Abstract interface for building trajectories from episode items.
     """
 
-    def __init__(self, trajectory_builder_config: TrajectoryBuilderConfig,
-                 run_config: FinetuneRunConfig, backend: str):
+    def __init__(self, trajectory_builder_config: TrajectoryBuilderConfig, run_config: FinetuneRunConfig, backend: str):
         self.trajectory_builder_config = trajectory_builder_config
         self.run_config = run_config
         self._backend = backend
@@ -48,14 +49,12 @@ class TrajectoryBuilder(ABC):
         from nat.eval.evaluate import EvaluationRun
         from nat.eval.evaluate import EvaluationRunConfig
 
-        eval_cfg = EvaluationRunConfig(
-            config_file=self.run_config.config_file,
-            dataset=self.run_config.dataset,
-            result_json_path=self.run_config.result_json_path,
-            endpoint=self.run_config.endpoint,
-            endpoint_timeout=self.run_config.endpoint_timeout,
-            override=self.run_config.override
-        )
+        eval_cfg = EvaluationRunConfig(config_file=self.run_config.config_file,
+                                       dataset=self.run_config.dataset,
+                                       result_json_path=self.run_config.result_json_path,
+                                       endpoint=self.run_config.endpoint,
+                                       endpoint_timeout=self.run_config.endpoint_timeout,
+                                       override=self.run_config.override)
 
         async with suppress_logs(prefix="nat.eval"):
             evaluation_output = await EvaluationRun(config=eval_cfg).run_and_evaluate()
@@ -101,12 +100,7 @@ class TrajectoryBuilder(ABC):
         return float(output_item.score) if output_item.score is not None else 0.0
 
     @abstractmethod
-    def log_progress(
-            self,
-            run_id: str,
-            metrics: dict[str, Any],
-            output_dir: str | None = None
-    ) -> None:
+    def log_progress(self, run_id: str, metrics: dict[str, Any], output_dir: str | None = None) -> None:
         """
         Log trajectory building progress.
 

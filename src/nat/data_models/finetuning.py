@@ -13,17 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pathlib import Path
-from enum import Enum
-from typing import Any, Literal
-
-from pydantic import Field
-from pydantic import BaseModel, model_validator
 import typing
+from enum import Enum
+from pathlib import Path
+from typing import Any
+
+from pydantic import BaseModel
+from pydantic import Field
+from pydantic import model_validator
 
 from .common import BaseModelRegistryTag
 from .common import TypedBaseModel
-
 
 
 class RewardFunctionConfig(BaseModel):
@@ -32,32 +32,29 @@ class RewardFunctionConfig(BaseModel):
     """
     name: str = Field(description="Name of the reward function.")
 
+
 class TrainerConfig(TypedBaseModel, BaseModelRegistryTag):
     """
     Base configuration for the Trainer
     """
     reward: RewardFunctionConfig | None = Field(
-        description="Configuration for the reward function used during training.",
-        default=None
-    )
+        description="Configuration for the reward function used during training.", default=None)
+
 
 class TrajectoryBuilderConfig(TypedBaseModel, BaseModelRegistryTag):
     """
     Configuration for the trajectory collector
     """
     reward: RewardFunctionConfig | None = Field(
-        description="Configuration for the reward function used during trajectory building.",
-        default=None
-    )
+        description="Configuration for the reward function used during trajectory building.", default=None)
+
 
 class TrainerAdapterConfig(TypedBaseModel, BaseModelRegistryTag):
     """
     Configuration for the trainer adapter
     """
     reward: RewardFunctionConfig | None = Field(
-        description="Configuration for the reward function used during training.",
-        default=None
-    )
+        description="Configuration for the reward function used during training.", default=None)
 
 
 class FinetuningConfig(BaseModel):
@@ -65,27 +62,17 @@ class FinetuningConfig(BaseModel):
     Configuration for fine-tuning
     """
     enabled: bool = Field(description="Whether fine-tuning is enabled.", default=False)
-    trainer: str | None = Field(
-        description="The trainer to use for fine-tuning.",
-        default=None
-    )
-    trajectory_builder: str | None = Field(
-        description="The trajectory builder to use for fine-tuning.",
-        default=None
-    )
-    trainer_adapter: str | None = Field(
-        description="The trainer adapter to use for fine-tuning.",
-        default=None
-    )
-    reward_function: RewardFunctionConfig | None = Field(
-        description="Configuration for the reward function.",
-        default=None
-    )
+    trainer: str | None = Field(description="The trainer to use for fine-tuning.", default=None)
+    trajectory_builder: str | None = Field(description="The trajectory builder to use for fine-tuning.", default=None)
+    trainer_adapter: str | None = Field(description="The trainer adapter to use for fine-tuning.", default=None)
+    reward_function: RewardFunctionConfig | None = Field(description="Configuration for the reward function.",
+                                                         default=None)
 
 
 TrainerConfigT = typing.TypeVar("TrainerConfigT", bound=TrainerConfig)
 TrajectoryBuilderConfigT = typing.TypeVar("TrajectoryBuilderConfigT", bound=TrajectoryBuilderConfig)
 TrainerAdapterConfigT = typing.TypeVar("TrainerAdapterConfigT", bound=TrainerAdapterConfig)
+
 
 class TrainingJobRef(BaseModel):
     """
@@ -115,8 +102,7 @@ class TrainingJobStatus(BaseModel):
                                    default=None)
     message: str | None = Field(description="Any additional message or information about the training job.",
                                 default=None)
-    metadata: dict | None = Field(description="Any additional metadata for the training job.",
-                                  default=None)
+    metadata: dict | None = Field(description="Any additional metadata for the training job.", default=None)
 
 
 class EpisodeItemRole(str, Enum):
@@ -135,8 +121,7 @@ class EpisodeItem(BaseModel):
     """
     role: EpisodeItemRole = Field(description="The role of the agent (e.g., 'user', 'assistant').")
     content: str = Field(description="The content of the message.")
-    logprobs: Any | None = Field(description="The log probabilities of the tokens in the message.",
-                                 default=None)
+    logprobs: Any | None = Field(description="The log probabilities of the tokens in the message.", default=None)
     metadata: dict | None = Field(description="Any additional metadata for the step.", default=None)
 
     # Add model validator after construction that checks that logprobs can't be none of role is assistant
@@ -158,14 +143,12 @@ class Trajectory(BaseModel):
     metadata: dict | None = Field(description="Any additional metadata for the trajectory.", default=None)
 
 
-
 class TrajectoryCollection(BaseModel):
     """
     A collection of trajectories.
     """
     trajectories: list[list[Trajectory]] = Field(
-        description="A list of trajectory lists, each inner list contains trajectories for one example."
-    )
+        description="A list of trajectory lists, each inner list contains trajectories for one example.")
     run_id: str = Field(description="The ID of the run this collection belongs to.")
 
 
@@ -176,40 +159,23 @@ class CurriculumLearningConfig(BaseModel):
     Curriculum learning progressively introduces harder training examples
     to improve model learning and convergence.
     """
-    enabled: bool = Field(
-        default=False,
-        description="Whether to enable curriculum learning"
-    )
-    initial_percentile: float = Field(
-        default=0.3,
-        description="Initial percentile of trajectory groups to include (0.0-1.0). "
-                    "E.g., 0.3 means start with top 30% easiest groups"
-    )
-    increment_percentile: float = Field(
-        default=0.2,
-        description="Percentile increment when expanding curriculum. "
-                    "E.g., 0.2 means add 20% more groups each expansion"
-    )
-    expansion_interval: int = Field(
-        default=5,
-        description="Number of epochs between curriculum expansions",
-        ge=1
-    )
-    min_reward_diff: float = Field(
-        default=0.1,
-        description="Minimum reward difference within a group to be included. "
-                    "Groups with all same rewards provide no learning signal"
-    )
-    sort_ascending: bool = Field(
-        default=False,
-        description="If True, sort groups from low to high reward (hard to easy). "
-                    "If False, sort from high to low reward (easy to hard)"
-    )
+    enabled: bool = Field(default=False, description="Whether to enable curriculum learning")
+    initial_percentile: float = Field(default=0.3,
+                                      description="Initial percentile of trajectory groups to include (0.0-1.0). "
+                                      "E.g., 0.3 means start with top 30% easiest groups")
+    increment_percentile: float = Field(default=0.2,
+                                        description="Percentile increment when expanding curriculum. "
+                                        "E.g., 0.2 means add 20% more groups each expansion")
+    expansion_interval: int = Field(default=5, description="Number of epochs between curriculum expansions", ge=1)
+    min_reward_diff: float = Field(default=0.1,
+                                   description="Minimum reward difference within a group to be included. "
+                                   "Groups with all same rewards provide no learning signal")
+    sort_ascending: bool = Field(default=False,
+                                 description="If True, sort groups from low to high reward (hard to easy). "
+                                 "If False, sort from high to low reward (easy to hard)")
 
     random_subsample: float | None = Field(
-        default=None,
-        description="If set, randomly subsample this fraction of trajectories from each group."
-    )
+        default=None, description="If set, randomly subsample this fraction of trajectories from each group.")
 
     @model_validator(mode="after")
     def validate_percentiles(self) -> "CurriculumLearningConfig":
@@ -233,23 +199,13 @@ class FinetuneRunConfig(BaseModel):
     endpoint: str | None = None  # only used when running the workflow remotely
     endpoint_timeout: int = 300
     override: tuple[tuple[str, str], ...] = ()
-    validation_dataset: str | Path | None = Field(
-        default=None,
-        description="Validation dataset file path for periodic validation"
-    )
+    validation_dataset: str | Path | None = Field(default=None,
+                                                  description="Validation dataset file path for periodic validation")
 
-    validation_interval: int = Field(
-        default=5,
-        description="Run validation every N epochs",
-        ge=1
-    )
+    validation_interval: int = Field(default=5, description="Run validation every N epochs", ge=1)
 
-    validation_config_file: str | Path | None = Field(
-        default=None,
-        description="Optional separate config file for validation runs"
-    )
+    validation_config_file: str | Path | None = Field(default=None,
+                                                      description="Optional separate config file for validation runs")
 
     curriculum_learning: CurriculumLearningConfig = Field(
-        default=CurriculumLearningConfig(),
-        description="Configuration for curriculum learning during fine-tuning"
-    )
+        default=CurriculumLearningConfig(), description="Configuration for curriculum learning during fine-tuning")

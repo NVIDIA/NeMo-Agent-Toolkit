@@ -54,12 +54,16 @@ from nat.data_models.component_ref import MemoryRef
 from nat.data_models.component_ref import MiddlewareRef
 from nat.data_models.component_ref import ObjectStoreRef
 from nat.data_models.component_ref import RetrieverRef
+from nat.data_models.component_ref import TrainerAdapterRef
+from nat.data_models.component_ref import TrainerRef
+from nat.data_models.component_ref import TrajectoryBuilderRef
 from nat.data_models.component_ref import TTCStrategyRef
-from nat.data_models.component_ref import TrainerRef, TrainerAdapterRef, TrajectoryBuilderRef
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
 from nat.data_models.embedder import EmbedderBaseConfig
-from nat.data_models.finetuning import TrainerConfig, TrainerAdapterConfig, TrajectoryBuilderConfig
+from nat.data_models.finetuning import TrainerAdapterConfig
+from nat.data_models.finetuning import TrainerConfig
+from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.function_dependencies import FunctionDependencies
@@ -155,15 +159,18 @@ class ConfiguredMiddleware:
     config: MiddlewareBaseConfig
     instance: Middleware
 
+
 @dataclasses.dataclass
 class ConfiguredTrainer:
     config: TrainerConfig
     instance: Trainer
 
+
 @dataclasses.dataclass
 class ConfiguredTrainerAdapter:
     config: TrainerAdapterConfig
     instance: TrainerAdapter
+
 
 @dataclasses.dataclass
 class ConfiguredTrajectoryBuilder:
@@ -981,7 +988,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         return self._retrievers[retriever_name].config
 
-
     @override
     @experimental(feature_name="Finetuning")
     async def add_trainer(self, name: str | TrainerRef, config: TrainerConfig) -> Trainer:
@@ -1041,7 +1047,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise
 
     @override
-    async def get_trainer(self, trainer_name: str | TrainerRef,
+    async def get_trainer(self,
+                          trainer_name: str | TrainerRef,
                           trajectory_builder: TrajectoryBuilder,
                           trainer_adapter: TrainerAdapter) -> Trainer:
 
@@ -1049,10 +1056,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise ValueError(f"Trainer '{trainer_name}' not found")
 
         trainer_instance = self._trainers[trainer_name].instance
-        await trainer_instance.bind_components(
-            trainer_adapter=trainer_adapter,
-            trajectory_builder=trajectory_builder
-        )
+        await trainer_instance.bind_components(trainer_adapter=trainer_adapter, trajectory_builder=trajectory_builder)
 
         return trainer_instance
 
@@ -1071,9 +1075,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         return self._trainer_adapters[trainer_adapter_name].config
 
     @override
-    async def get_trajectory_builder_config(self,
-                                            trajectory_builder_name: str | TrajectoryBuilderRef) -> (
-            TrajectoryBuilderConfig):
+    async def get_trajectory_builder_config(
+            self, trajectory_builder_name: str | TrajectoryBuilderRef) -> (TrajectoryBuilderConfig):
         if trajectory_builder_name not in self._trajectory_builders:
             raise ValueError(f"Trajectory builder '{trajectory_builder_name}' not found")
 
@@ -1388,16 +1391,15 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                                                  cast(AuthProviderBaseConfig, component_instance.config))
 
                 elif component_instance.component_group == ComponentGroup.TRAINERS:
-                    await self.add_trainer(component_instance.name,
-                                               cast(TrainerConfig, component_instance.config))
+                    await self.add_trainer(component_instance.name, cast(TrainerConfig, component_instance.config))
 
                 elif component_instance.component_group == ComponentGroup.TRAINER_ADAPTERS:
                     await self.add_trainer_adapter(component_instance.name,
-                                                      cast(TrainerAdapterConfig, component_instance.config))
+                                                   cast(TrainerAdapterConfig, component_instance.config))
 
                 elif component_instance.component_group == ComponentGroup.TRAJECTORY_BUILDERS:
                     await self.add_trajectory_builder(component_instance.name,
-                                                         cast(TrajectoryBuilderConfig, component_instance.config))
+                                                      cast(TrajectoryBuilderConfig, component_instance.config))
                 else:
                     raise ValueError(f"Unknown component group {component_instance.component_group}")
 
@@ -1605,7 +1607,8 @@ class ChildBuilder(Builder):
         return await self._workflow_builder.add_trajectory_builder(name, config)
 
     @override
-    async def get_trainer(self, trainer_name: str | TrainerRef,
+    async def get_trainer(self,
+                          trainer_name: str | TrainerRef,
                           trajectory_builder: TrajectoryBuilder,
                           trainer_adapter: TrainerAdapter) -> Trainer:
         return await self._workflow_builder.get_trainer(trainer_name, trajectory_builder, trainer_adapter)
@@ -1619,9 +1622,8 @@ class ChildBuilder(Builder):
         return await self._workflow_builder.get_trainer_adapter_config(trainer_adapter_name)
 
     @override
-    async def get_trajectory_builder_config(self,
-                                            trajectory_builder_name: str | TrajectoryBuilderRef) -> (
-            TrajectoryBuilderConfig):
+    async def get_trajectory_builder_config(
+            self, trajectory_builder_name: str | TrajectoryBuilderRef) -> (TrajectoryBuilderConfig):
         return await self._workflow_builder.get_trajectory_builder_config(trajectory_builder_name)
 
     @override

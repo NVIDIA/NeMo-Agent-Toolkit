@@ -233,11 +233,20 @@ def test_recursive_componentref_discovery():
         ComponentRefNode(ref_name="retriever0", component_group=ComponentGroup.RETRIEVERS),  # type: ignore
         ComponentRefNode(ref_name="trainer0", component_group=ComponentGroup.TRAINERS),  # type: ignore
         ComponentRefNode(ref_name="trainer_adapter0", component_group=ComponentGroup.TRAINER_ADAPTERS),  # type: ignore
-        ComponentRefNode(ref_name="trajectory_builder0", component_group=ComponentGroup.TRAJECTORY_BUILDERS)))  # type: ignore
+        ComponentRefNode(ref_name="trajectory_builder0",
+                         component_group=ComponentGroup.TRAJECTORY_BUILDERS)))  # type: ignore
 
     # Validate across each base component type class
-    base_config_types = [FunctionBaseConfig, LLMBaseConfig, EmbedderBaseConfig, MemoryBaseConfig, RetrieverBaseConfig,
-                         TrainerConfig, TrainerAdapterConfig, TrajectoryBuilderConfig]
+    base_config_types = [
+        FunctionBaseConfig,
+        LLMBaseConfig,
+        EmbedderBaseConfig,
+        MemoryBaseConfig,
+        RetrieverBaseConfig,
+        TrainerConfig,
+        TrainerAdapterConfig,
+        TrajectoryBuilderConfig
+    ]
 
     for base_config_type in base_config_types:
 
@@ -477,35 +486,52 @@ def test_finetuning_component_dependencies():
 
     @register_function(SimpleFnConfig)
     async def simple_fn(config: SimpleFnConfig, builder: Builder):
+
         async def _inner_func(fn_input: str) -> str:
             return ""
+
         yield _inner_func
 
     # Create test config with finetuning components that have dependencies
     config_dict = {
-        "functions": {"fn0": SimpleFnConfig()},
-        "llms": {"llm0": NIMModelConfig(model_name="test")},
-        "embedders": {"embedder0": NIMEmbedderModelConfig(model_name="test")},
-        "memory": {"memory0": DummyMemoryConfig()},
-        "retrievers": {"retriever0": NemoRetrieverConfig(uri="http://test.com")},  # type: ignore
-        "object_stores": {"object_store0": InMemoryObjectStoreConfig()},
+        "functions": {
+            "fn0": SimpleFnConfig()
+        },
+        "llms": {
+            "llm0": NIMModelConfig(model_name="test")
+        },
+        "embedders": {
+            "embedder0": NIMEmbedderModelConfig(model_name="test")
+        },
+        "memory": {
+            "memory0": DummyMemoryConfig()
+        },
+        "retrievers": {
+            "retriever0": NemoRetrieverConfig(uri="http://test.com")
+        },  # type: ignore
+        "object_stores": {
+            "object_store0": InMemoryObjectStoreConfig()
+        },
         "trainers": {
-            "trainer0": TrainerWithDepsConfig(
-                llm="llm0",  # type: ignore
-                function_ref="fn0"  # type: ignore
-            )
+            "trainer0":
+                TrainerWithDepsConfig(
+                    llm="llm0",  # type: ignore
+                    function_ref="fn0"  # type: ignore
+                )
         },
         "trainer_adapters": {
-            "trainer_adapter0": TrainerAdapterWithDepsConfig(
-                embedder="embedder0",  # type: ignore
-                memory="memory0"  # type: ignore
-            )
+            "trainer_adapter0":
+                TrainerAdapterWithDepsConfig(
+                    embedder="embedder0",  # type: ignore
+                    memory="memory0"  # type: ignore
+                )
         },
         "trajectory_builders": {
-            "trajectory_builder0": TrajectoryBuilderWithDepsConfig(
-                retriever="retriever0",  # type: ignore
-                object_store="object_store0"  # type: ignore
-            )
+            "trajectory_builder0":
+                TrajectoryBuilderWithDepsConfig(
+                    retriever="retriever0",  # type: ignore
+                    object_store="object_store0"  # type: ignore
+                )
         },
         "workflow": SimpleFnConfig()
     }

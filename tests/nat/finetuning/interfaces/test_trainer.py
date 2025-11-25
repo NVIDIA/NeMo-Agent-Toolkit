@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
@@ -24,10 +23,10 @@ from nat.data_models.finetuning import CurriculumLearningConfig
 from nat.data_models.finetuning import FinetuneRunConfig
 from nat.data_models.finetuning import RewardFunctionConfig
 from nat.data_models.finetuning import TrainerConfig
-from nat.data_models.finetuning import TrajectoryCollection
 from nat.data_models.finetuning import TrainingJobRef
 from nat.data_models.finetuning import TrainingJobStatus
 from nat.data_models.finetuning import TrainingStatusEnum
+from nat.data_models.finetuning import TrajectoryCollection
 from nat.eval.config import EvaluationRunOutput
 from nat.finetuning.interfaces.finetuning_runner import Trainer
 from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
@@ -52,11 +51,7 @@ class ConcreteTrainer(Trainer):
     async def run_epoch(self, epoch: int, run_id: str) -> TrainingJobRef:
         """Run a single epoch of training."""
         self.epochs_run.append((epoch, run_id))
-        return TrainingJobRef(
-            run_id=run_id,
-            backend=self.backend,
-            metadata={"epoch": epoch}
-        )
+        return TrainingJobRef(run_id=run_id, backend=self.backend, metadata={"epoch": epoch})
 
     async def run(self, num_epochs: int) -> list[TrainingJobStatus]:
         """Run the complete finetuning workflow."""
@@ -64,22 +59,17 @@ class ConcreteTrainer(Trainer):
         for epoch in range(num_epochs):
             run_id = f"run_{epoch}"
             await self.run_epoch(epoch, run_id)
-            statuses.append(TrainingJobStatus(
-                run_id=run_id,
-                backend=self.backend,
-                status=TrainingStatusEnum.COMPLETED,
-                progress=100.0,
-                message=f"Epoch {epoch} completed"
-            ))
+            statuses.append(
+                TrainingJobStatus(run_id=run_id,
+                                  backend=self.backend,
+                                  status=TrainingStatusEnum.COMPLETED,
+                                  progress=100.0,
+                                  message=f"Epoch {epoch} completed"))
         return statuses
 
     async def get_metrics(self, run_id: str) -> dict[str, Any]:
         """Get training metrics for a specific run."""
-        return {
-            "run_id": run_id,
-            "loss": 0.5,
-            "accuracy": 0.95
-        }
+        return {"run_id": run_id, "loss": 0.5, "accuracy": 0.95}
 
     async def cleanup(self) -> None:
         """Clean up resources."""
@@ -87,11 +77,7 @@ class ConcreteTrainer(Trainer):
 
     def log_progress(self, epoch: int, metrics: dict[str, Any], output_dir: str | None = None) -> None:
         """Log training progress."""
-        self.logged_progress.append({
-            "epoch": epoch,
-            "metrics": metrics,
-            "output_dir": output_dir
-        })
+        self.logged_progress.append({"epoch": epoch, "metrics": metrics, "output_dir": output_dir})
 
     def _create_trajectory_builder(self, run_config: FinetuneRunConfig):
         """Create a trajectory builder instance."""
@@ -106,6 +92,7 @@ class TestTrainer:
     @pytest.fixture
     def trainer_config(self):
         """Create a test trainer config."""
+
         # Create a concrete config class
         class TestTrainerConfig(TrainerConfig, name="test_trainer_with_reward"):
             pass
@@ -118,22 +105,16 @@ class TestTrainer:
         config_file = tmp_path / "config.yml"
         config_file.write_text("test: config")
 
-        return FinetuneRunConfig(
-            config_file=config_file,
-            target_functions=["test_function"],
-            dataset=tmp_path / "dataset.jsonl",
-            result_json_path="$.result",
-            curriculum_learning=CurriculumLearningConfig()
-        )
+        return FinetuneRunConfig(config_file=config_file,
+                                 target_functions=["test_function"],
+                                 dataset=tmp_path / "dataset.jsonl",
+                                 result_json_path="$.result",
+                                 curriculum_learning=CurriculumLearningConfig())
 
     @pytest.fixture
     def trainer(self, trainer_config, run_config):
         """Create a concrete trainer instance."""
-        return ConcreteTrainer(
-            trainer_config=trainer_config,
-            run_config=run_config,
-            backend="test_backend"
-        )
+        return ConcreteTrainer(trainer_config=trainer_config, run_config=run_config, backend="test_backend")
 
     async def test_trainer_initialization(self, trainer, trainer_config, run_config):
         """Test that trainer initializes with correct configuration."""
@@ -216,19 +197,14 @@ class TestTrainer:
         mock_eval_output = MagicMock(spec=EvaluationRunOutput)
         mock_metric = MagicMock()
         mock_metric.score = 0.8
-        mock_eval_output.evaluation_results = [
-            ("test_reward", MagicMock(eval_output_items=[mock_metric, mock_metric]))
-        ]
+        mock_eval_output.evaluation_results = [("test_reward", MagicMock(eval_output_items=[mock_metric, mock_metric]))]
 
-        trainer._create_trajectory_builder = MagicMock(
-            return_value=MagicMock(run_eval=AsyncMock(return_value=mock_eval_output))
-        )
+        trainer._create_trajectory_builder = MagicMock(return_value=MagicMock(run_eval=AsyncMock(
+            return_value=mock_eval_output)))
 
-        metrics = await trainer.run_validation_evaluation(
-            epoch=1,
-            run_id="test_run",
-            validation_dataset=validation_dataset
-        )
+        metrics = await trainer.run_validation_evaluation(epoch=1,
+                                                          run_id="test_run",
+                                                          validation_dataset=validation_dataset)
 
         assert "epoch" in metrics
         assert metrics["epoch"] == 1
@@ -243,15 +219,12 @@ class TestTrainer:
         validation_dataset.write_text('{"input": "test"}')
 
         # Mock to raise an error
-        trainer._create_trajectory_builder = MagicMock(
-            return_value=MagicMock(run_eval=AsyncMock(side_effect=Exception("Test error")))
-        )
+        trainer._create_trajectory_builder = MagicMock(return_value=MagicMock(run_eval=AsyncMock(
+            side_effect=Exception("Test error"))))
 
-        metrics = await trainer.run_validation_evaluation(
-            epoch=1,
-            run_id="test_run",
-            validation_dataset=validation_dataset
-        )
+        metrics = await trainer.run_validation_evaluation(epoch=1,
+                                                          run_id="test_run",
+                                                          validation_dataset=validation_dataset)
 
         assert "error" in metrics
         assert metrics["error"] == "Test error"
@@ -264,9 +237,8 @@ class TestTrainer:
         mock_metric1.score = 0.8
         mock_metric2 = MagicMock()
         mock_metric2.score = 0.6
-        mock_eval_output.evaluation_results = [
-            ("test_reward", MagicMock(eval_output_items=[mock_metric1, mock_metric2]))
-        ]
+        mock_eval_output.evaluation_results = [("test_reward",
+                                                MagicMock(eval_output_items=[mock_metric1, mock_metric2]))]
 
         metrics = trainer._calculate_validation_metrics(mock_eval_output)
 
@@ -308,6 +280,7 @@ class TestTrainer:
 
     async def test_trainer_config_reward_field_default(self):
         """Test that TrainerConfig reward field defaults to None."""
+
         class TestTrainerConfigNoReward(TrainerConfig, name="test_trainer_no_reward"):
             pass
 

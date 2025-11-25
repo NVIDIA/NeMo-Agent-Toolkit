@@ -29,7 +29,9 @@ from nat.data_models.component_ref import ComponentRefNode
 from nat.data_models.component_ref import generate_instance_id
 from nat.data_models.config import Config
 from nat.data_models.embedder import EmbedderBaseConfig
-from nat.data_models.finetuning import TrainerConfig, TrainerAdapterConfig, TrajectoryBuilderConfig
+from nat.data_models.finetuning import TrainerAdapterConfig
+from nat.data_models.finetuning import TrainerConfig
+from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.llm import LLMBaseConfig

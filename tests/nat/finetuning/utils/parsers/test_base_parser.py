@@ -45,11 +45,9 @@ class TestParseToOpenAIMessages:
 
     def test_skip_non_relevant_event_types(self):
         """Test that non-LLM/TOOL events are skipped."""
-        step = create_mock_step(
-            IntermediateStepType.WORKFLOW_START,
-            IntermediateStepState.START,
-            framework=LLMFrameworkEnum.LANGCHAIN
-        )
+        step = create_mock_step(IntermediateStepType.WORKFLOW_START,
+                                IntermediateStepState.START,
+                                framework=LLMFrameworkEnum.LANGCHAIN)
 
         result = parse_to_openai_messages([step])
         assert len(result) == 0
@@ -59,8 +57,7 @@ class TestParseToOpenAIMessages:
         step = create_mock_step(
             IntermediateStepType.LLM_END,
             IntermediateStepState.CHUNK,  # Should be skipped
-            framework=LLMFrameworkEnum.LANGCHAIN
-        )
+            framework=LLMFrameworkEnum.LANGCHAIN)
 
         result = parse_to_openai_messages([step])
         assert len(result) == 0
@@ -68,16 +65,13 @@ class TestParseToOpenAIMessages:
     def test_skip_llm_start_after_tool_end(self):
         """Test that LLM_START after TOOL_END is skipped."""
         steps = [
-            create_mock_step(
-                IntermediateStepType.TOOL_END,
-                IntermediateStepState.END,
-                framework=LLMFrameworkEnum.LANGCHAIN
-            ),
+            create_mock_step(IntermediateStepType.TOOL_END,
+                             IntermediateStepState.END,
+                             framework=LLMFrameworkEnum.LANGCHAIN),
             create_mock_step(
                 IntermediateStepType.LLM_START,  # Should be skipped
                 IntermediateStepState.START,
-                framework=LLMFrameworkEnum.LANGCHAIN
-            ),
+                framework=LLMFrameworkEnum.LANGCHAIN),
         ]
 
         # Mock the data for tool_end
@@ -90,22 +84,16 @@ class TestParseToOpenAIMessages:
 
     def test_unsupported_framework_is_skipped(self):
         """Test that unsupported framework is skipped."""
-        step = create_mock_step(
-            IntermediateStepType.LLM_END,
-            IntermediateStepState.END,
-            framework="unsupported_framework"
-        )
+        step = create_mock_step(IntermediateStepType.LLM_END,
+                                IntermediateStepState.END,
+                                framework="unsupported_framework")
 
         result = parse_to_openai_messages([step])
         assert len(result) == 0
 
     def test_none_framework_is_skipped(self):
         """Test that None framework is skipped."""
-        step = create_mock_step(
-            IntermediateStepType.LLM_END,
-            IntermediateStepState.END,
-            framework=None
-        )
+        step = create_mock_step(IntermediateStepType.LLM_END, IntermediateStepState.END, framework=None)
 
         result = parse_to_openai_messages([step])
         assert len(result) == 0
@@ -121,65 +109,68 @@ class TestValidateMessageSequence:
 
     def test_valid_user_assistant_alternation(self):
         """Test valid user-assistant alternation."""
-        messages = [
-            {"role": "user", "content": "Hello"},
-            {"role": "assistant", "content": "Hi there!"},
-            {"role": "user", "content": "How are you?"},
-            {"role": "assistant", "content": "I'm doing well!"}
-        ]
+        messages = [{
+            "role": "user", "content": "Hello"
+        }, {
+            "role": "assistant", "content": "Hi there!"
+        }, {
+            "role": "user", "content": "How are you?"
+        }, {
+            "role": "assistant", "content": "I'm doing well!"
+        }]
 
         result = _validate_message_sequence(messages)
         assert result == messages
 
     def test_system_messages_at_beginning(self):
         """Test that system messages at beginning are valid."""
-        messages = [
-            {"role": "system", "content": "You are a helpful assistant"},
-            {"role": "user", "content": "Hello"},
-            {"role": "assistant", "content": "Hi!"}
-        ]
+        messages = [{
+            "role": "system", "content": "You are a helpful assistant"
+        }, {
+            "role": "user", "content": "Hello"
+        }, {
+            "role": "assistant", "content": "Hi!"
+        }]
 
         result = _validate_message_sequence(messages)
         assert result == messages
 
     def test_system_message_after_non_system_raises_error(self):
         """Test that system message after non-system raises error."""
-        messages = [
-            {"role": "user", "content": "Hello"},
-            {"role": "system", "content": "Invalid system message"}
-        ]
+        messages = [{"role": "user", "content": "Hello"}, {"role": "system", "content": "Invalid system message"}]
 
         with pytest.raises(ValueError, match="System message found at position"):
             _validate_message_sequence(messages)
 
     def test_consecutive_user_messages_raises_error(self):
         """Test that consecutive user messages raise error."""
-        messages = [
-            {"role": "user", "content": "First message"},
-            {"role": "user", "content": "Second message"}
-        ]
+        messages = [{"role": "user", "content": "First message"}, {"role": "user", "content": "Second message"}]
 
         with pytest.raises(ValueError, match="Consecutive user messages"):
             _validate_message_sequence(messages)
 
     def test_consecutive_assistant_messages_raises_error(self):
         """Test that consecutive assistant messages raise error."""
-        messages = [
-            {"role": "user", "content": "Hello"},
-            {"role": "assistant", "content": "First response"},
-            {"role": "assistant", "content": "Second response"}
-        ]
+        messages = [{
+            "role": "user", "content": "Hello"
+        }, {
+            "role": "assistant", "content": "First response"
+        }, {
+            "role": "assistant", "content": "Second response"
+        }]
 
         with pytest.raises(ValueError, match="Consecutive assistant messages"):
             _validate_message_sequence(messages)
 
     def test_non_user_messages_at_start_are_concatenated(self):
         """Test that non-user messages at start are concatenated into user message."""
-        messages = [
-            {"role": "tool", "content": "Tool result"},
-            {"role": "function", "content": "Function result"},
-            {"role": "assistant", "content": "Response"}
-        ]
+        messages = [{
+            "role": "tool", "content": "Tool result"
+        }, {
+            "role": "function", "content": "Function result"
+        }, {
+            "role": "assistant", "content": "Response"
+        }]
 
         result = _validate_message_sequence(messages)
         # Should concatenate first two messages into a single user message
@@ -191,11 +182,13 @@ class TestValidateMessageSequence:
 
     def test_user_and_non_user_messages_at_start_are_concatenated(self):
         """Test that user and non-user messages at start are concatenated."""
-        messages = [
-            {"role": "user", "content": "User message"},
-            {"role": "tool", "content": "Tool result"},
-            {"role": "assistant", "content": "Response"}
-        ]
+        messages = [{
+            "role": "user", "content": "User message"
+        }, {
+            "role": "tool", "content": "Tool result"
+        }, {
+            "role": "assistant", "content": "Response"
+        }]
 
         result = _validate_message_sequence(messages)
         # Should concatenate first two messages into a single user message
@@ -207,23 +200,30 @@ class TestValidateMessageSequence:
 
     def test_valid_with_tool_messages(self):
         """Test valid sequence with tool messages."""
-        messages = [
-            {"role": "user", "content": "What's the weather?"},
-            {"role": "assistant", "content": "Let me check", "tool_calls": [{"id": "1"}]},
-            {"role": "tool", "content": "Sunny, 75°F", "tool_call_id": "1"},
-            {"role": "assistant", "content": "The weather is sunny!"}
-        ]
+        messages = [{
+            "role": "user", "content": "What's the weather?"
+        }, {
+            "role": "assistant", "content": "Let me check", "tool_calls": [{
+                "id": "1"
+            }]
+        }, {
+            "role": "tool", "content": "Sunny, 75°F", "tool_call_id": "1"
+        }, {
+            "role": "assistant", "content": "The weather is sunny!"
+        }]
 
         result = _validate_message_sequence(messages)
         assert result == messages
 
     def test_system_then_non_user_at_start_are_concatenated(self):
         """Test that system message followed by non-user messages are handled."""
-        messages = [
-            {"role": "system", "content": "You are helpful"},
-            {"role": "tool", "content": "Tool result"},
-            {"role": "assistant", "content": "Response"}
-        ]
+        messages = [{
+            "role": "system", "content": "You are helpful"
+        }, {
+            "role": "tool", "content": "Tool result"
+        }, {
+            "role": "assistant", "content": "Response"
+        }]
 
         result = _validate_message_sequence(messages)
         # System should remain, tool should be converted to user, assistant remains
@@ -235,11 +235,13 @@ class TestValidateMessageSequence:
 
     def test_empty_content_in_non_user_messages(self):
         """Test handling of empty content in non-user messages at start."""
-        messages = [
-            {"role": "tool", "content": ""},
-            {"role": "function", "content": "Function result"},
-            {"role": "assistant", "content": "Response"}
-        ]
+        messages = [{
+            "role": "tool", "content": ""
+        }, {
+            "role": "function", "content": "Function result"
+        }, {
+            "role": "assistant", "content": "Response"
+        }]
 
         result = _validate_message_sequence(messages)
         # Should concatenate, but empty content tool shouldn't add much

@@ -14,8 +14,8 @@
 # limitations under the License.
 
 from nat.finetuning.interfaces.finetuning_runner import Trainer
-from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
+from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 
 __all__ = [
     "Trainer",

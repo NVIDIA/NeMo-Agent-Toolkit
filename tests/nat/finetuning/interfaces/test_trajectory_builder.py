@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
@@ -35,8 +34,7 @@ from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 class ConcreteTrajectoryBuilder(TrajectoryBuilder):
     """Concrete implementation of TrajectoryBuilder for testing."""
 
-    def __init__(self, trajectory_builder_config: TrajectoryBuilderConfig,
-                 run_config: FinetuneRunConfig, backend: str):
+    def __init__(self, trajectory_builder_config: TrajectoryBuilderConfig, run_config: FinetuneRunConfig, backend: str):
         super().__init__(trajectory_builder_config, run_config, backend)
         self.started_runs = []
         self.finalized_runs = []
@@ -53,41 +51,21 @@ class ConcreteTrajectoryBuilder(TrajectoryBuilder):
         self.finalized_runs.append((run_id, meta))
 
         # Create sample trajectories
-        trajectories = [
-            [
-                Trajectory(
-                    episode=[
-                        EpisodeItem(
-                            role=EpisodeItemRole.USER,
-                            content="test input",
-                            logprobs=None
-                        ),
-                        EpisodeItem(
-                            role=EpisodeItemRole.ASSISTANT,
-                            content="test output",
-                            logprobs={"test": 0.5}
-                        )
-                    ],
-                    reward=0.8,
-                    shaped_rewards=[0.4, 0.4],
-                    metadata={"example_id": str(i)}
-                )
-            ]
-            for i in range(len(self.trajectories_data))
-        ]
+        trajectories = [[
+            Trajectory(episode=[
+                EpisodeItem(role=EpisodeItemRole.USER, content="test input", logprobs=None),
+                EpisodeItem(role=EpisodeItemRole.ASSISTANT, content="test output", logprobs={"test": 0.5})
+            ],
+                       reward=0.8,
+                       shaped_rewards=[0.4, 0.4],
+                       metadata={"example_id": str(i)})
+        ] for i in range(len(self.trajectories_data))]
 
-        return TrajectoryCollection(
-            trajectories=trajectories,
-            run_id=run_id
-        )
+        return TrajectoryCollection(trajectories=trajectories, run_id=run_id)
 
     def log_progress(self, run_id: str, metrics: dict[str, Any], output_dir: str | None = None) -> None:
         """Log trajectory building progress."""
-        self.logged_progress.append({
-            "run_id": run_id,
-            "metrics": metrics,
-            "output_dir": output_dir
-        })
+        self.logged_progress.append({"run_id": run_id, "metrics": metrics, "output_dir": output_dir})
 
 
 class TestTrajectoryBuilder:
@@ -111,17 +89,14 @@ class TestTrajectoryBuilder:
             config_file=config_file,
             target_functions=["test_function"],
             dataset=str(dataset_file),  # Convert Path to string
-            result_json_path="$.result"
-        )
+            result_json_path="$.result")
 
     @pytest.fixture
     def builder(self, builder_config, run_config):
         """Create a concrete trajectory builder instance."""
-        return ConcreteTrajectoryBuilder(
-            trajectory_builder_config=builder_config,
-            run_config=run_config,
-            backend="test_backend"
-        )
+        return ConcreteTrajectoryBuilder(trajectory_builder_config=builder_config,
+                                         run_config=run_config,
+                                         backend="test_backend")
 
     async def test_builder_initialization(self, builder, builder_config, run_config):
         """Test that builder initializes with correct configuration."""
@@ -255,12 +230,10 @@ class TestTrajectoryBuilderEdgeCases:
         config_file = tmp_path / "config.yml"
         config_file.write_text("test: config")
 
-        return FinetuneRunConfig(
-            config_file=config_file,
-            target_functions=["test_function"],
-            dataset=tmp_path / "dataset.jsonl",
-            result_json_path="$.result"
-        )
+        return FinetuneRunConfig(config_file=config_file,
+                                 target_functions=["test_function"],
+                                 dataset=tmp_path / "dataset.jsonl",
+                                 result_json_path="$.result")
 
     class FailingTrajectoryBuilder(TrajectoryBuilder):
         """Builder that fails during operations."""
@@ -344,6 +317,7 @@ class TestTrajectoryBuilderEdgeCases:
 
     async def test_trajectory_builder_config_reward_field_default(self):
         """Test that TrajectoryBuilderConfig reward field defaults to None."""
+
         class TestTrajectoryBuilderConfig(TrajectoryBuilderConfig, name="test_builder_no_reward"):
             pass
 

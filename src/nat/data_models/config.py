@@ -27,8 +27,11 @@ from pydantic import ValidatorFunctionWrapHandler
 from pydantic import field_validator
 
 from nat.data_models.evaluate import EvalConfig
+from nat.data_models.finetuning import FinetuningConfig
+from nat.data_models.finetuning import TrainerAdapterConfig
+from nat.data_models.finetuning import TrainerConfig
+from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.front_end import FrontEndBaseConfig
-from nat.data_models.finetuning import FinetuningConfig, TrainerConfig, TrainerAdapterConfig, TrajectoryBuilderConfig
 from nat.data_models.function import EmptyFunctionConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig

@@ -189,6 +189,7 @@ class MiddlewareRef(ComponentRef):
     def component_group(self):
         return ComponentGroup.MIDDLEWARE
 
+
 class TrainerRef(ComponentRef):
     """
     A reference to a trainer in a NAT configuration object.

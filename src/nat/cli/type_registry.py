@@ -52,8 +52,12 @@ from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.embedder import EmbedderBaseConfigT
 from nat.data_models.evaluator import EvaluatorBaseConfig
 from nat.data_models.evaluator import EvaluatorBaseConfigT
-from nat.data_models.finetuning import TrainerConfig, TrainerAdapterConfig, TrajectoryBuilderConfig
-from nat.data_models.finetuning import TrainerConfigT, TrainerAdapterConfigT, TrajectoryBuilderConfigT
+from nat.data_models.finetuning import TrainerAdapterConfig
+from nat.data_models.finetuning import TrainerAdapterConfigT
+from nat.data_models.finetuning import TrainerConfig
+from nat.data_models.finetuning import TrainerConfigT
+from nat.data_models.finetuning import TrajectoryBuilderConfig
+from nat.data_models.finetuning import TrajectoryBuilderConfigT
 from nat.data_models.front_end import FrontEndBaseConfig
 from nat.data_models.front_end import FrontEndConfigT
 from nat.data_models.function import FunctionBaseConfig
@@ -79,14 +83,14 @@ from nat.data_models.telemetry_exporter import TelemetryExporterConfigT
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfigT
 from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
+from nat.finetuning.interfaces.finetuning_runner import Trainer
+from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
+from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 from nat.memory.interfaces import MemoryEditor
 from nat.middleware.middleware import Middleware
 from nat.object_store.interfaces import ObjectStore
 from nat.observability.exporter.base_exporter import BaseExporter
 from nat.registry_handlers.registry_handler_base import AbstractRegistryHandler
-from nat.finetuning.interfaces.finetuning_runner import Trainer
-from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
-from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -184,6 +188,7 @@ class RegisteredTrainerInfo(RegisteredInfo[TrainerConfig]):
 
     build_fn: TrainerBuildCallableT = Field(repr=False)
 
+
 class RegisteredTrainerAdapterInfo(RegisteredInfo[TrainerAdapterConfig]):
     """
     Represents a registered Trainer Adapter. Trainer Adapters are responsible for adapting the training process to
@@ -191,6 +196,7 @@ class RegisteredTrainerAdapterInfo(RegisteredInfo[TrainerAdapterConfig]):
     """
 
     build_fn: TrainerAdapterBuildCallableT = Field(repr=False)
+
 
 class RegisteredTrajectoryBuilderInfo(RegisteredInfo[TrajectoryBuilderConfig]):
     """
@@ -429,7 +435,7 @@ class TypeRegistry:
         self._registered_trainer_infos: dict[type[TrainerConfig], RegisteredTrainerInfo] = {}
         self._registered_trainer_adapter_infos: dict[type[TrainerAdapterConfig], RegisteredTrainerAdapterInfo] = {}
         self._registered_trajectory_builder_infos: dict[type[TrajectoryBuilderConfig],
-            RegisteredTrajectoryBuilderInfo] = {}
+                                                        RegisteredTrajectoryBuilderInfo] = {}
 
         # Packages
         self._registered_packages: dict[str, RegisteredPackage] = {}

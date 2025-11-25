@@ -78,8 +78,7 @@ def _parse_assistant_message(message: IntermediateStep) -> dict:
             result["content"] = content
 
             # Check for tool calls in additional_kwargs
-            if (hasattr(payload, 'message') and
-                    hasattr(payload.message, 'additional_kwargs')):
+            if (hasattr(payload, 'message') and hasattr(payload.message, 'additional_kwargs')):
                 additional_kwargs = payload.message.additional_kwargs
                 if 'tool_calls' in additional_kwargs:
                     result["tool_calls"] = additional_kwargs['tool_calls']
@@ -142,8 +141,7 @@ def _parse_input_message(message: IntermediateStep) -> dict:
     if isinstance(input_data, str):
         # Check if it looks like a system message (heuristic)
         lower_input = input_data.lower()
-        if (lower_input.startswith("system:") or
-                "system prompt" in lower_input):
+        if (lower_input.startswith("system:") or "system prompt" in lower_input):
             return {"role": "system", "content": input_data}
         else:
             return {"role": "user", "content": input_data}
@@ -250,11 +248,7 @@ def _extract_content(data: Any) -> str:
         if "blocks" in data:
             blocks = data["blocks"]
             if isinstance(blocks, list):
-                return ''.join(
-                    block.get('text', '')
-                    if isinstance(block, dict) else str(block)
-                    for block in blocks
-                )
+                return ''.join(block.get('text', '') if isinstance(block, dict) else str(block) for block in blocks)
         # Fallback to JSON representation
         return json.dumps(data)
     elif isinstance(data, list):

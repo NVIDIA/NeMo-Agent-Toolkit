@@ -16,12 +16,11 @@
 import logging
 from contextlib import asynccontextmanager
 
+
 @asynccontextmanager
 async def suppress_logs(prefix, level=logging.ERROR):
     # gather every logger created so far whose name starts with "aiq"
-    loggers = [logging.getLogger(name)
-               for name in logging.root.manager.loggerDict
-               if name.startswith(prefix)]
+    loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict if name.startswith(prefix)]
     old = {lg: lg.level for lg in loggers}
     try:
         for lg in loggers:

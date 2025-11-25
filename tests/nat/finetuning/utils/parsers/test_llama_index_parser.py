@@ -38,13 +38,7 @@ class TestParseDictMessage:
 
     def test_parse_with_blocks(self):
         """Test parsing dict with LlamaIndex blocks format."""
-        msg_dict = {
-            "role": "assistant",
-            "blocks": [
-                {"text": "First block "},
-                {"text": "Second block"}
-            ]
-        }
+        msg_dict = {"role": "assistant", "blocks": [{"text": "First block "}, {"text": "Second block"}]}
         result = _parse_dict_message(msg_dict)
         assert result["role"] == "assistant"
         assert result["content"] == "First block Second block"
@@ -56,10 +50,7 @@ class TestParseDictMessage:
         block2 = MagicMock()
         block2.text = "Block 2"
 
-        msg_dict = {
-            "role": "assistant",
-            "blocks": [block1, block2]
-        }
+        msg_dict = {"role": "assistant", "blocks": [block1, block2]}
         result = _parse_dict_message(msg_dict)
         assert result["role"] == "assistant"
         assert result["content"] == "Block 1 Block 2"
@@ -75,9 +66,15 @@ class TestParseDictMessage:
         msg_dict = {
             "role": "assistant",
             "content": "Test",
-            "tool_calls": [{"id": "1"}],
-            "function_call": {"name": "test"},
-            "logprobs": {"tokens": []}
+            "tool_calls": [{
+                "id": "1"
+            }],
+            "function_call": {
+                "name": "test"
+            },
+            "logprobs": {
+                "tokens": []
+            }
         }
         result = _parse_dict_message(msg_dict)
         assert result["tool_calls"] == [{"id": "1"}]
@@ -110,12 +107,7 @@ class TestExtractContent:
 
     def test_extract_from_dict_with_blocks(self):
         """Test extracting content from dict with blocks."""
-        data = {
-            "blocks": [
-                {"text": "First "},
-                {"text": "Second"}
-            ]
-        }
+        data = {"blocks": [{"text": "First "}, {"text": "Second"}]}
         assert _extract_content(data) == "First Second"
 
     def test_extract_from_dict_fallback_to_json(self):

@@ -19,16 +19,14 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Any
 
-from nat.data_models.finetuning import (
-    FinetuneRunConfig,
-    TrainerConfig,
-    TrajectoryCollection,
-    TrainingJobRef,
-    TrainingJobStatus,
-)
+from nat.data_models.finetuning import FinetuneRunConfig
+from nat.data_models.finetuning import TrainerConfig
+from nat.data_models.finetuning import TrainingJobRef
+from nat.data_models.finetuning import TrainingJobStatus
+from nat.data_models.finetuning import TrajectoryCollection
+from nat.eval.config import EvaluationRunOutput
 from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
 from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
-from nat.eval.config import EvaluationRunOutput
 
 logger = logging.getLogger(__name__)
 
@@ -43,13 +41,7 @@ class Trainer(ABC):
     3. Managing multiple epochs of training
     """
 
-    def __init__(
-            self,
-            trainer_config: TrainerConfig,
-            run_config: FinetuneRunConfig,
-            backend: str,
-            **kwargs
-    ) -> None:
+    def __init__(self, trainer_config: TrainerConfig, run_config: FinetuneRunConfig, backend: str, **kwargs) -> None:
         """
         Initialize the Trainer.
 
@@ -74,10 +66,7 @@ class Trainer(ABC):
             "included_groups": set()
         }
 
-    async def bind_components(self,
-        trajectory_builder: TrajectoryBuilder,
-        trainer_adapter: TrainerAdapter
-    ) -> None:
+    async def bind_components(self, trajectory_builder: TrajectoryBuilder, trainer_adapter: TrainerAdapter) -> None:
         """
         Bind the TrajectoryBuilder and TrainerAdapter components.
 
@@ -153,12 +142,7 @@ class Trainer(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def log_progress(
-            self,
-            epoch: int,
-            metrics: dict[str, Any],
-            output_dir: str | None = None
-    ) -> None:
+    def log_progress(self, epoch: int, metrics: dict[str, Any], output_dir: str | None = None) -> None:
         """
         Log training progress for monitoring.
 
@@ -169,12 +153,8 @@ class Trainer(ABC):
         """
         raise NotImplementedError
 
-    async def run_validation_evaluation(
-            self,
-            epoch: int,
-            run_id: str,
-            validation_dataset: str | Path
-    ) -> dict[str, Any]:
+    async def run_validation_evaluation(self, epoch: int, run_id: str,
+                                        validation_dataset: str | Path) -> dict[str, Any]:
         """
         Run evaluation on validation dataset to collect rewards.
 
@@ -189,54 +169,38 @@ class Trainer(ABC):
         Returns:
             dict: Validation metrics including average reward
         """
-        logger.info("Running validation evaluation for epoch %d", epoch+1)
+        logger.info("Running validation evaluation for epoch %d", epoch + 1)
 
         config = self.run_config.validation_config_file if (
             self.run_config.validation_config_file) else self.run_config.config_file
 
         # Create a temporary run config with validation dataset
-        validation_run_config = FinetuneRunConfig(
-            config_file=config,
-            target_functions=self.run_config.target_functions,
-            dataset=validation_dataset,
-            result_json_path=self.run_config.result_json_path,
-            endpoint=self.run_config.endpoint,
-            endpoint_timeout=self.run_config.endpoint_timeout,
-            override=self.run_config.override
-        )
+        validation_run_config = FinetuneRunConfig(config_file=config,
+                                                  target_functions=self.run_config.target_functions,
+                                                  dataset=validation_dataset,
+                                                  result_json_path=self.run_config.result_json_path,
+                                                  endpoint=self.run_config.endpoint,
+                                                  endpoint_timeout=self.run_config.endpoint_timeout,
+                                                  override=self.run_config.override)
 
         # Create a temporary trajectory builder for validation
-        validation_builder = self._create_trajectory_builder(
-            validation_run_config
-        )
+        validation_builder = self._create_trajectory_builder(validation_run_config)
 
         try:
             # Run evaluation
             eval_output = await validation_builder.run_eval()
 
             # Calculate validation metrics from eval output
-            validation_metrics = self._calculate_validation_metrics(
-                eval_output
-            )
+            validation_metrics = self._calculate_validation_metrics(eval_output)
             validation_metrics["epoch"] = epoch
             validation_metrics["dataset_type"] = "validation"
 
-            logger.info(
-                "Validation metrics for epoch %d: %s",
-                epoch,
-                validation_metrics
-            )
+            logger.info("Validation metrics for epoch %d: %s", epoch, validation_metrics)
             return validation_metrics
 
         except Exception as e:
             logger.error("Error during validation evaluation: %s", e)
-            return {
-                "epoch": epoch,
-                "dataset_type": "validation",
-                "error": str(e),
-                "avg_reward": 0.0,
-                "num_examples": 0
-            }
+            return {"epoch": epoch, "dataset_type": "validation", "error": str(e), "avg_reward": 0.0, "num_examples": 0}
 
     @abstractmethod
     def _create_trajectory_builder(self, run_config: FinetuneRunConfig):
@@ -251,8 +215,7 @@ class Trainer(ABC):
         """
         raise NotImplementedError
 
-    def _calculate_validation_metrics(self, eval_output:EvaluationRunOutput
-                                      ) -> dict[str, Any]:
+    def _calculate_validation_metrics(self, eval_output: EvaluationRunOutput) -> dict[str, Any]:
         """
         Calculate validation metrics from evaluation output.
 
@@ -264,12 +227,7 @@ class Trainer(ABC):
         """
         # Default implementation - subclasses can override for
         # backend-specific metrics
-        metrics = {
-            "avg_reward": 0.0,
-            "min_reward": 0.0,
-            "max_reward": 0.0,
-            "num_examples": 0
-        }
+        metrics = {"avg_reward": 0.0, "min_reward": 0.0, "max_reward": 0.0, "num_examples": 0}
 
         rewards = []
         for metric_name, metric_value in eval_output.evaluation_results:
@@ -277,7 +235,6 @@ class Trainer(ABC):
                 reward_results = metric_value.eval_output_items
                 for reward_item in reward_results:
                     rewards.append(reward_item.score)
-
 
         if rewards:
             metrics["avg_reward"] = sum(rewards) / len(rewards)
@@ -287,11 +244,8 @@ class Trainer(ABC):
 
         return metrics
 
-    def apply_curriculum_learning(
-        self,
-        trajectory_collection: TrajectoryCollection,
-        epoch: int
-    ) -> TrajectoryCollection:
+    def apply_curriculum_learning(self, trajectory_collection: TrajectoryCollection,
+                                  epoch: int) -> TrajectoryCollection:
         """
         Apply curriculum learning to filter trajectory groups based on difficulty.
         """

@@ -16,15 +16,13 @@
 
 import json
 
-from langchain_core.messages import (
-    AIMessage,
-    AIMessageChunk,
-    BaseMessage,
-    FunctionMessage,
-    HumanMessage,
-    SystemMessage,
-    ToolMessage,
-)
+from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessageChunk
+from langchain_core.messages import BaseMessage
+from langchain_core.messages import FunctionMessage
+from langchain_core.messages import HumanMessage
+from langchain_core.messages import SystemMessage
+from langchain_core.messages import ToolMessage
 
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepType
@@ -70,10 +68,10 @@ def _parse_assistant_message(message: IntermediateStep) -> dict:
             # Handle dict payloads
             try:
                 msg = AIMessage(**payload["message"])
-            except:
+            except Exception as _:
                 try:
                     msg = AIMessageChunk(**payload["message"])
-                except:
+                except Exception as _:
                     msg = None
 
         # Handle ChatGeneration objects from LangChain
@@ -113,8 +111,7 @@ def _parse_assistant_message(message: IntermediateStep) -> dict:
         result["content"] = ""
 
     # Check for logprobs in data field
-    logprobs = (getattr(message.data, 'logprobs', None)
-                if message.data else None)
+    logprobs = (getattr(message.data, 'logprobs', None) if message.data else None)
     if logprobs:
         result["logprobs"] = logprobs
 
@@ -240,8 +237,7 @@ def _parse_dict_message(msg_dict: dict) -> dict:
         result["content"] = ""
 
     # Copy over optional fields
-    optional_fields = ["tool_calls", "tool_call_id",
-                       "function_call", "name", "logprobs"]
+    optional_fields = ["tool_calls", "tool_call_id", "function_call", "name", "logprobs"]
     for field in optional_fields:
         if field in msg_dict:
             result[field] = msg_dict[field]

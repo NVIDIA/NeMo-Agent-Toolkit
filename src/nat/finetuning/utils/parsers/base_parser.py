@@ -18,7 +18,8 @@ import logging
 
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.intermediate_step import IntermediateStep
-from nat.data_models.intermediate_step import IntermediateStepType, IntermediateStepState, IntermediateStepCategory
+from nat.data_models.intermediate_step import IntermediateStepState
+from nat.data_models.intermediate_step import IntermediateStepType
 from nat.finetuning.utils.parsers import langchain_parser
 from nat.finetuning.utils.parsers import llama_index_parser
 
@@ -47,13 +48,12 @@ def parse_to_openai_messages(steps: list[IntermediateStep]) -> list[dict]:
     for message in steps:
         # Skip LLM_START events that come after TOOL_END events
         # These represent the assistant processing tool results internally
-        if message.event_type not in [IntermediateStepType.LLM_END,
-                                      IntermediateStepType.LLM_START,
-                                      IntermediateStepType.TOOL_END]:
+        if message.event_type not in [
+                IntermediateStepType.LLM_END, IntermediateStepType.LLM_START, IntermediateStepType.TOOL_END
+        ]:
             continue
 
-        if (message.event_type == IntermediateStepType.LLM_START and
-                last_event_type == IntermediateStepType.TOOL_END):
+        if (message.event_type == IntermediateStepType.LLM_START and last_event_type == IntermediateStepType.TOOL_END):
             continue
 
         # Skip streaming chunks
@@ -62,11 +62,9 @@ def parse_to_openai_messages(steps: list[IntermediateStep]) -> list[dict]:
 
         # Parse the message based on framework
         if message.framework == LLMFrameworkEnum.LANGCHAIN:
-            parsed_msg = langchain_parser.parse_to_openai_message(
-                message=message)
+            parsed_msg = langchain_parser.parse_to_openai_message(message=message)
         elif message.framework == LLMFrameworkEnum.LLAMA_INDEX:
-            parsed_msg = llama_index_parser.parse_to_openai_message(
-                message=message)
+            parsed_msg = llama_index_parser.parse_to_openai_message(message=message)
         else:
             if message.framework is not None:
                 logger.warning(f"Unsupported framework: {message.framework} for message {message}")
@@ -111,11 +109,9 @@ def _validate_message_sequence(messages: list[dict]) -> list[dict]:
     for i, msg in enumerate(messages):
         if msg.get("role") == "system":
             if found_non_system:
-                raise ValueError(
-                    f"System message found at position {i} after "
-                    "non-system messages. System messages must only "
-                    "appear at the beginning."
-                )
+                raise ValueError(f"System message found at position {i} after "
+                                 "non-system messages. System messages must only "
+                                 "appear at the beginning.")
         else:
             found_non_system = True
 
@@ -159,9 +155,7 @@ def _validate_message_sequence(messages: list[dict]) -> list[dict]:
                     if role not in ["user"]:
                         # Non-user message that needs to be consolidated
                         if content:
-                            content_parts.append(
-                                f"[{role.upper()}]: {content}"
-                            )
+                            content_parts.append(f"[{role.upper()}]: {content}")
                         indices_to_remove.append(i)
                     else:
                         # User message - include its content
@@ -172,10 +166,7 @@ def _validate_message_sequence(messages: list[dict]) -> list[dict]:
                 # Create a single user message with concatenated content
                 if content_parts:
                     concatenated_content = "\n\n".join(content_parts)
-                    new_user_message = {
-                        "role": "user",
-                        "content": concatenated_content
-                    }
+                    new_user_message = {"role": "user", "content": concatenated_content}
 
                     # Log warning about the modification
                     logger.warning(
@@ -183,9 +174,7 @@ def _validate_message_sequence(messages: list[dict]) -> list[dict]:
                         "before the first assistant message. "
                         "Concatenated these into a single user message. "
                         "Original roles: %s",
-                        len(messages_to_concatenate),
-                        [msg.get("role") for _, msg in messages_to_concatenate]
-                    )
+                        len(messages_to_concatenate), [msg.get("role") for _, msg in messages_to_concatenate])
 
                     # Remove the old messages and insert the new one
                     # Remove in reverse order to maintain indices
@@ -211,17 +200,13 @@ def _validate_message_sequence(messages: list[dict]) -> list[dict]:
             if prev_role:
                 # Check for invalid consecutive roles
                 if role == "user" and prev_role == "user":
-                    raise ValueError(
-                        f"Consecutive user messages at positions {i-1} "
-                        f"and {i}. User messages must be followed by "
-                        "assistant messages."
-                    )
+                    raise ValueError(f"Consecutive user messages at positions {i-1} "
+                                     f"and {i}. User messages must be followed by "
+                                     "assistant messages.")
                 elif role == "assistant" and prev_role == "assistant":
-                    raise ValueError(
-                        f"Consecutive assistant messages at positions "
-                        f"{i-1} and {i}. Assistant messages must be "
-                        "followed by user or tool messages."
-                    )
+                    raise ValueError(f"Consecutive assistant messages at positions "
+                                     f"{i-1} and {i}. Assistant messages must be "
+                                     "followed by user or tool messages.")
 
                 # Tool/function messages must be followed by assistant
                 # if (prev_role in ["tool", "function"] and

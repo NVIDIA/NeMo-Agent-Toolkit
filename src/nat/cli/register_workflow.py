@@ -24,7 +24,6 @@ from nat.cli.type_registry import EmbedderProviderBuildCallableT
 from nat.cli.type_registry import EmbedderProviderRegisteredCallableT
 from nat.cli.type_registry import EvaluatorBuildCallableT
 from nat.cli.type_registry import EvaluatorRegisteredCallableT
-from nat.cli.type_registry import TrainerBuildCallableT, TrainerAdapterBuildCallableT, TrajectoryBuilderBuildCallableT
 from nat.cli.type_registry import FrontEndBuildCallableT
 from nat.cli.type_registry import FrontEndRegisteredCallableT
 from nat.cli.type_registry import FunctionBuildCallableT
@@ -56,6 +55,9 @@ from nat.cli.type_registry import TeleExporterRegisteredCallableT
 from nat.cli.type_registry import TelemetryExporterBuildCallableT
 from nat.cli.type_registry import TelemetryExporterConfigT
 from nat.cli.type_registry import ToolWrapperBuildCallableT
+from nat.cli.type_registry import TrainerAdapterBuildCallableT
+from nat.cli.type_registry import TrainerBuildCallableT
+from nat.cli.type_registry import TrajectoryBuilderBuildCallableT
 from nat.cli.type_registry import TTCStrategyBuildCallableT
 from nat.cli.type_registry import TTCStrategyRegisterCallableT
 from nat.data_models.authentication import AuthProviderBaseConfigT
@@ -63,7 +65,9 @@ from nat.data_models.component import ComponentEnum
 from nat.data_models.discovery_metadata import DiscoveryMetadata
 from nat.data_models.embedder import EmbedderBaseConfigT
 from nat.data_models.evaluator import EvaluatorBaseConfigT
-from nat.data_models.finetuning import TrainerConfigT, TrainerAdapterConfigT, TrajectoryBuilderConfigT
+from nat.data_models.finetuning import TrainerAdapterConfigT
+from nat.data_models.finetuning import TrainerConfigT
+from nat.data_models.finetuning import TrajectoryBuilderConfigT
 from nat.data_models.front_end import FrontEndConfigT
 from nat.data_models.function import FunctionConfigT
 from nat.data_models.function import FunctionGroupConfigT
@@ -483,9 +487,7 @@ def register_ttc_strategy(config_type: type[TTCStrategyRegisterCallableT]):
 
 def register_trainer(config_type: type[TrainerConfigT]):
 
-    def register_trainer_inner(
-        fn: TrainerBuildCallableT[TrainerConfigT]
-    ) -> TrainerBuildCallableT[TrainerConfigT]:
+    def register_trainer_inner(fn: TrainerBuildCallableT[TrainerConfigT]) -> TrainerBuildCallableT[TrainerConfigT]:
         from .type_registry import GlobalTypeRegistry
         from .type_registry import RegisteredTrainerInfo
 
@@ -504,9 +506,11 @@ def register_trainer(config_type: type[TrainerConfigT]):
 
     return register_trainer_inner
 
+
 def register_trainer_adapter(config_type: type[TrainerAdapterConfigT]):
+
     def register_trainer_adapter_inner(
-        fn: TrainerAdapterBuildCallableT[TrainerAdapterConfigT]
+            fn: TrainerAdapterBuildCallableT[TrainerAdapterConfigT]
     ) -> TrainerAdapterBuildCallableT[TrainerAdapterConfigT]:
         from .type_registry import GlobalTypeRegistry
         from .type_registry import RegisteredTrainerAdapterInfo
@@ -526,7 +530,9 @@ def register_trainer_adapter(config_type: type[TrainerAdapterConfigT]):
 
     return register_trainer_adapter_inner
 
+
 def register_trajectory_builder(config_type: type[TrajectoryBuilderConfigT]):
+
     def register_trajectory_builder_inner(
         fn: TrajectoryBuilderBuildCallableT[TrajectoryBuilderConfigT]
     ) -> TrajectoryBuilderBuildCallableT[TrajectoryBuilderConfigT]:
@@ -547,6 +553,7 @@ def register_trajectory_builder(config_type: type[TrajectoryBuilderConfigT]):
         return context_manager_fn
 
     return register_trajectory_builder_inner
+
 
 def register_retriever_provider(config_type: type[RetrieverBaseConfigT]):
 

@@ -35,11 +35,15 @@ from nat.data_models.component_ref import MemoryRef
 from nat.data_models.component_ref import MiddlewareRef
 from nat.data_models.component_ref import ObjectStoreRef
 from nat.data_models.component_ref import RetrieverRef
+from nat.data_models.component_ref import TrainerAdapterRef
+from nat.data_models.component_ref import TrainerRef
+from nat.data_models.component_ref import TrajectoryBuilderRef
 from nat.data_models.component_ref import TTCStrategyRef
-from nat.data_models.component_ref import TrainerRef, TrainerAdapterRef, TrajectoryBuilderRef
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.evaluator import EvaluatorBaseConfig
-from nat.data_models.finetuning import TrainerConfig, TrainerAdapterConfig, TrajectoryBuilderConfig
+from nat.data_models.finetuning import TrainerAdapterConfig
+from nat.data_models.finetuning import TrainerConfig
+from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.function_dependencies import FunctionDependencies
@@ -283,7 +287,8 @@ class Builder(ABC):
         pass
 
     @abstractmethod
-    async def get_trainer(self, trainer_name: str | TrainerRef,
+    async def get_trainer(self,
+                          trainer_name: str | TrainerRef,
                           trajectory_builder: TrajectoryBuilder,
                           trainer_adapter: TrainerAdapter) -> Trainer:
         pass
@@ -305,9 +310,8 @@ class Builder(ABC):
         pass
 
     @abstractmethod
-    async def get_trajectory_builder_config(self,
-                                            trajectory_builder_name: str | TrajectoryBuilderRef) -> (
-            TrajectoryBuilderConfig):
+    async def get_trajectory_builder_config(
+            self, trajectory_builder_name: str | TrajectoryBuilderRef) -> (TrajectoryBuilderConfig):
         pass
 
     @abstractmethod

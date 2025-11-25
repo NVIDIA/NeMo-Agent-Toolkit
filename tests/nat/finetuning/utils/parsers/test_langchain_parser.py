@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 from unittest.mock import MagicMock
 
 from langchain_core.messages import AIMessage
@@ -119,9 +118,15 @@ class TestParseDictMessage:
         msg_dict = {
             "role": "assistant",
             "content": "Test",
-            "tool_calls": [{"id": "1"}],
-            "logprobs": {"tokens": []},
-            "function_call": {"name": "test"}
+            "tool_calls": [{
+                "id": "1"
+            }],
+            "logprobs": {
+                "tokens": []
+            },
+            "function_call": {
+                "name": "test"
+            }
         }
         result = _parse_dict_message(msg_dict)
         assert result["tool_calls"] == [{"id": "1"}]

@@ -14,18 +14,17 @@
 # limitations under the License.
 
 import asyncio
-from pathlib import Path
 from typing import Any
 
 import pytest
 
 from nat.data_models.finetuning import FinetuneRunConfig
 from nat.data_models.finetuning import TrainerAdapterConfig
-from nat.data_models.finetuning import Trajectory
-from nat.data_models.finetuning import TrajectoryCollection
 from nat.data_models.finetuning import TrainingJobRef
 from nat.data_models.finetuning import TrainingJobStatus
 from nat.data_models.finetuning import TrainingStatusEnum
+from nat.data_models.finetuning import Trajectory
+from nat.data_models.finetuning import TrajectoryCollection
 from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
 
 
@@ -51,11 +50,11 @@ class ConcreteTrainerAdapter(TrainerAdapter):
     async def submit(self, trajectories: TrajectoryCollection) -> TrainingJobRef:
         """Submit trajectories to the training backend."""
         job_id = f"job_{len(self.submitted_jobs)}"
-        job_ref = TrainingJobRef(
-            run_id=trajectories.run_id,
-            backend=self.backend,
-            metadata={"job_id": job_id, "num_trajectories": len(trajectories.trajectories)}
-        )
+        job_ref = TrainingJobRef(run_id=trajectories.run_id,
+                                 backend=self.backend,
+                                 metadata={
+                                     "job_id": job_id, "num_trajectories": len(trajectories.trajectories)
+                                 })
         self.submitted_jobs.append((trajectories, job_ref))
         self.job_statuses[job_id] = TrainingStatusEnum.RUNNING
         return job_ref
@@ -64,13 +63,11 @@ class ConcreteTrainerAdapter(TrainerAdapter):
         """Get the status of a training job."""
         job_id = ref.metadata.get("job_id", "unknown")
         status = self.job_statuses.get(job_id, TrainingStatusEnum.PENDING)
-        return TrainingJobStatus(
-            run_id=ref.run_id,
-            backend=ref.backend,
-            status=status,
-            progress=100.0 if status == TrainingStatusEnum.COMPLETED else 50.0,
-            message=f"Job {job_id} status"
-        )
+        return TrainingJobStatus(run_id=ref.run_id,
+                                 backend=ref.backend,
+                                 status=status,
+                                 progress=100.0 if status == TrainingStatusEnum.COMPLETED else 50.0,
+                                 message=f"Job {job_id} status")
 
     async def wait_until_complete(self, ref: TrainingJobRef, poll_interval: float = 10.0) -> TrainingJobStatus:
         """Wait until the training job is complete."""
@@ -82,11 +79,7 @@ class ConcreteTrainerAdapter(TrainerAdapter):
 
     def log_progress(self, ref: TrainingJobRef, metrics: dict[str, Any], output_dir: str | None = None) -> None:
         """Log training adapter progress."""
-        self.logged_progress.append({
-            "ref": ref,
-            "metrics": metrics,
-            "output_dir": output_dir
-        })
+        self.logged_progress.append({"ref": ref, "metrics": metrics, "output_dir": output_dir})
 
 
 class TestTrainerAdapter:
@@ -103,46 +96,23 @@ class TestTrainerAdapter:
         config_file = tmp_path / "config.yml"
         config_file.write_text("test: config")
 
-        return FinetuneRunConfig(
-            config_file=config_file,
-            target_functions=["test_function"],
-            dataset=tmp_path / "dataset.jsonl",
-            result_json_path="$.result"
-        )
+        return FinetuneRunConfig(config_file=config_file,
+                                 target_functions=["test_function"],
+                                 dataset=tmp_path / "dataset.jsonl",
+                                 result_json_path="$.result")
 
     @pytest.fixture
     def adapter(self, adapter_config, run_config):
         """Create a concrete adapter instance."""
-        return ConcreteTrainerAdapter(
-            adapter_config=adapter_config,
-            run_config=run_config,
-            backend="test_backend"
-        )
+        return ConcreteTrainerAdapter(adapter_config=adapter_config, run_config=run_config, backend="test_backend")
 
     @pytest.fixture
     def sample_trajectories(self):
         """Create sample trajectories for testing."""
         return TrajectoryCollection(
-            trajectories=[
-                [
-                    Trajectory(
-                        episode=[],
-                        reward=0.8,
-                        shaped_rewards=None,
-                        metadata={"example_id": "1"}
-                    )
-                ],
-                [
-                    Trajectory(
-                        episode=[],
-                        reward=0.6,
-                        shaped_rewards=None,
-                        metadata={"example_id": "2"}
-                    )
-                ]
-            ],
-            run_id="test_run"
-        )
+            trajectories=[[Trajectory(episode=[], reward=0.8, shaped_rewards=None, metadata={"example_id": "1"})],
+                          [Trajectory(episode=[], reward=0.6, shaped_rewards=None, metadata={"example_id": "2"})]],
+            run_id="test_run")
 
     async def test_adapter_initialization(self, adapter, adapter_config, run_config):
         """Test that adapter initializes with correct configuration."""
@@ -230,11 +200,7 @@ class TestTrainerAdapter:
 
     async def test_adapter_status_with_unknown_job(self, adapter):
         """Test getting status for an unknown job."""
-        unknown_ref = TrainingJobRef(
-            run_id="unknown_run",
-            backend="test_backend",
-            metadata={"job_id": "unknown_job"}
-        )
+        unknown_ref = TrainingJobRef(run_id="unknown_run", backend="test_backend", metadata={"job_id": "unknown_job"})
 
         status = await adapter.status(unknown_ref)
         assert status.status == TrainingStatusEnum.PENDING
@@ -254,12 +220,10 @@ class TestTrainerAdapterErrorHandling:
         config_file = tmp_path / "config.yml"
         config_file.write_text("test: config")
 
-        return FinetuneRunConfig(
-            config_file=config_file,
-            target_functions=["test_function"],
-            dataset=tmp_path / "dataset.jsonl",
-            result_json_path="$.result"
-        )
+        return FinetuneRunConfig(config_file=config_file,
+                                 target_functions=["test_function"],
+                                 dataset=tmp_path / "dataset.jsonl",
+                                 result_json_path="$.result")
 
     class FailingTrainerAdapter(TrainerAdapter):
         """Adapter that fails during operations."""
@@ -317,6 +281,7 @@ class TestTrainerAdapterErrorHandling:
 
     async def test_trainer_adapter_config_reward_field_default(self):
         """Test that TrainerAdapterConfig reward field defaults to None."""
+
         class TestTrainerAdapterConfig(TrainerAdapterConfig, name="test_adapter_no_reward"):
             pass
 

@@ -17,13 +17,11 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Any
 
-from nat.data_models.finetuning import (
-    TrainerAdapterConfig,
-    FinetuneRunConfig,
-    TrajectoryCollection,
-    TrainingJobRef,
-    TrainingJobStatus
-)
+from nat.data_models.finetuning import FinetuneRunConfig
+from nat.data_models.finetuning import TrainerAdapterConfig
+from nat.data_models.finetuning import TrainingJobRef
+from nat.data_models.finetuning import TrainingJobStatus
+from nat.data_models.finetuning import TrajectoryCollection
 
 
 class TrainerAdapter(ABC):
@@ -98,12 +96,7 @@ class TrainerAdapter(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def log_progress(
-            self,
-            ref: TrainingJobRef,
-            metrics: dict[str, Any],
-            output_dir: str | None = None
-    ) -> None:
+    def log_progress(self, ref: TrainingJobRef, metrics: dict[str, Any], output_dir: str | None = None) -> None:
         """
         Log training adapter progress.
 
@@ -113,4 +106,3 @@ class TrainerAdapter(ABC):
             output_dir: Optional output directory override
         """
         raise NotImplementedError
-
