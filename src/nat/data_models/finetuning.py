@@ -21,6 +21,9 @@ from pydantic import Field
 from pydantic import BaseModel, model_validator
 import typing
 
+from .common import BaseModelRegistryTag
+from .common import TypedBaseModel
+
 
 
 class RewardFunctionConfig(BaseModel):
@@ -29,23 +32,27 @@ class RewardFunctionConfig(BaseModel):
     """
     name: str = Field(description="Name of the reward function.")
 
-class TrainerConfig(BaseModel):
+class TrainerConfig(TypedBaseModel, BaseModelRegistryTag):
     """
     Base configuration for the Trainer
     """
     pass
 
-class TrajectoryBuilderConfig(BaseModel):
+class TrajectoryBuilderConfig(TypedBaseModel, BaseModelRegistryTag):
     """
     Configuration for the trajectory collector
     """
     pass
 
-class TrainerAdapterConfig(BaseModel):
+class TrainerAdapterConfig(TypedBaseModel, BaseModelRegistryTag):
     """
     Configuration for the trainer adapter
     """
     pass
+
+TrainerConfigT = typing.TypeVar("TrainerConfigT", bound=TrainerConfig)
+TrajectoryBuilderConfigT = typing.TypeVar("TrajectoryBuilderConfigT", bound=TrajectoryBuilderConfig)
+TrainerAdapterConfigT = typing.TypeVar("TrainerAdapterConfigT", bound=TrainerAdapterConfig)
 
 class TrainingJobRef(BaseModel):
     """

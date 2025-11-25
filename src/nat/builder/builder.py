@@ -36,8 +36,10 @@ from nat.data_models.component_ref import MiddlewareRef
 from nat.data_models.component_ref import ObjectStoreRef
 from nat.data_models.component_ref import RetrieverRef
 from nat.data_models.component_ref import TTCStrategyRef
+from nat.data_models.component_ref import TrainerRef, TrainerAdapterRef, TrajectoryBuilderRef
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.evaluator import EvaluatorBaseConfig
+from nat.data_models.finetuning import TrainerConfig, TrainerAdapterConfig, TrajectoryBuilderConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.function_dependencies import FunctionDependencies
@@ -50,6 +52,9 @@ from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.experimental.decorators.experimental_warning_decorator import experimental
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
+from nat.finetuning.interfaces.finetuning_runner import FinetuningRunner
+from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
+from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 from nat.memory.interfaces import MemoryEditor
 from nat.middleware.middleware import Middleware
 from nat.object_store.interfaces import ObjectStore

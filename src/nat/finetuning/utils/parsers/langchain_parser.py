@@ -41,7 +41,6 @@ def parse_to_openai_message(message: IntermediateStep) -> dict:
     Returns:
         A dictionary formatted for OpenAI API consumption.
     """
-    result = {}
 
     # Handle different event types to determine role and extract content
     if message.event_type == IntermediateStepType.LLM_END:
