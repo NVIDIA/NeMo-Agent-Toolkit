@@ -24,6 +24,7 @@ members = [
     "nvidia-nat-mcp",
     "nvidia-nat-mem0ai",
     "nvidia-nat-mysql",
+    "nvidia-nat-openpipe-art",
     "nvidia-nat-opentelemetry",
     "nvidia-nat-phoenix",
     "nvidia-nat-profiling",
@@ -6009,6 +6010,9 @@ nvidia-haystack = [
 openai = [
     { name = "openai" },
 ]
+openpipe-art = [
+    { name = "nvidia-nat-openpipe-art" },
+]
 opentelemetry = [
     { name = "nvidia-nat-opentelemetry" },
 ]
@@ -6148,6 +6152,7 @@ requires-dist = [
     { name = "nvidia-nat-mcp", marker = "extra == 'mcp'", editable = "packages/nvidia_nat_mcp" },
     { name = "nvidia-nat-mem0ai", marker = "extra == 'mem0ai'", editable = "packages/nvidia_nat_mem0ai" },
     { name = "nvidia-nat-mysql", marker = "extra == 'mysql'", editable = "packages/nvidia_nat_mysql" },
+    { name = "nvidia-nat-openpipe-art", marker = "extra == 'openpipe-art'", editable = "packages/nvidia_nat_openpipe_art" },
     { name = "nvidia-nat-opentelemetry", marker = "extra == 'opentelemetry'", editable = "packages/nvidia_nat_opentelemetry" },
     { name = "nvidia-nat-opentelemetry", marker = "extra == 'telemetry'", editable = "packages/nvidia_nat_opentelemetry" },
     { name = "nvidia-nat-phoenix", marker = "extra == 'phoenix'", editable = "packages/nvidia_nat_phoenix" },
@@ -6183,7 +6188,7 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.38" },
     { name = "wikipedia", specifier = "~=1.4" },
 ]
-provides-extras = ["all", "adk", "agno", "crewai", "data-flywheel", "ingestion", "langchain", "llama-index", "mcp", "mem0ai", "opentelemetry", "phoenix", "profiling", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "strands", "telemetry", "test", "vanna", "weave", "zep-cloud", "examples", "gunicorn", "async-endpoints", "nvidia-haystack", "litellm", "openai"]
+provides-extras = ["all", "adk", "agno", "crewai", "data-flywheel", "ingestion", "langchain", "llama-index", "mcp", "mem0ai", "opentelemetry", "phoenix", "profiling", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "strands", "telemetry", "test", "vanna", "weave", "zep-cloud", "openpipe-art", "examples", "gunicorn", "async-endpoints", "nvidia-haystack", "litellm", "openai"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -6448,6 +6453,16 @@ requires-dist = [
     { name = "aiomysql", specifier = ">=0.2.0" },
     { name = "nvidia-nat", editable = "." },
 ]
+
+[[package]]
+name = "nvidia-nat-openpipe-art"
+source = { editable = "packages/nvidia_nat_openpipe_art" }
+dependencies = [
+    { name = "openpipe-art" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "openpipe-art", specifier = "==0.5.1" }]
 
 [[package]]
 name = "nvidia-nat-opentelemetry"
@@ -7040,6 +7055,21 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/07/15/be7566a4bba4b57f7c70b088f42735f2005e2c0adce646a537f63dcf21de/openinference_semantic_conventions-0.1.24.tar.gz", hash = "sha256:3223b8c3958525457a369d58ebf0c56230a1f00567ae1e99f1c2049a8ac2cacd", size = 12741, upload-time = "2025-10-10T03:49:13.987Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9f/c5/fa81b19042b387826151f984a91fa3d0b52b08374e4d5786521ac2d9e704/openinference_semantic_conventions-0.1.24-py3-none-any.whl", hash = "sha256:b2d650ca7e39c5fb02bf908b8049d6ece2a2657757448e1925a38b59548a80b3", size = 10373, upload-time = "2025-10-10T03:49:00.318Z" },
+]
+
+[[package]]
+name = "openpipe-art"
+version = "0.5.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "litellm" },
+    { name = "openai" },
+    { name = "typer" },
+    { name = "weave" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0d/cb/44ec1546b29b67299042812249659337e4e9357710ea228cb08b3fbe8b03/openpipe_art-0.5.1.tar.gz", hash = "sha256:dc9a51cc912d6e7f2e84f6787fefc852d136a9352cc881ffbc7b3821cd16422d", size = 7978357, upload-time = "2025-10-22T15:58:37.951Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ed/8c/dc0752a523b0635f1bec5eb84b2c669774681356d535441693d250d554db/openpipe_art-0.5.1-py3-none-any.whl", hash = "sha256:a3e04520166b13c25b1761f57f65faa732b35b6393d540cc22ffc13af6043337", size = 166998, upload-time = "2025-10-22T15:58:36.221Z" },
 ]
 
 [[package]]
