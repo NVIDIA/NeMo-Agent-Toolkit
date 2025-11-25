@@ -6489,7 +6489,6 @@ source = { editable = "packages/nvidia_nat_profiling" }
 dependencies = [
     { name = "matplotlib" },
     { name = "nvidia-nat" },
-    { name = "openpipe-art" },
     { name = "prefixspan" },
     { name = "scikit-learn" },
 ]
@@ -6498,7 +6497,6 @@ dependencies = [
 requires-dist = [
     { name = "matplotlib", specifier = "~=3.9" },
     { name = "nvidia-nat", editable = "." },
-    { name = "openpipe-art", specifier = "==0.5.3" },
     { name = "prefixspan", specifier = "~=0.5.2" },
     { name = "scikit-learn", specifier = "~=1.6" },
 ]
@@ -7042,21 +7040,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/07/15/be7566a4bba4b57f7c70b088f42735f2005e2c0adce646a537f63dcf21de/openinference_semantic_conventions-0.1.24.tar.gz", hash = "sha256:3223b8c3958525457a369d58ebf0c56230a1f00567ae1e99f1c2049a8ac2cacd", size = 12741, upload-time = "2025-10-10T03:49:13.987Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9f/c5/fa81b19042b387826151f984a91fa3d0b52b08374e4d5786521ac2d9e704/openinference_semantic_conventions-0.1.24-py3-none-any.whl", hash = "sha256:b2d650ca7e39c5fb02bf908b8049d6ece2a2657757448e1925a38b59548a80b3", size = 10373, upload-time = "2025-10-10T03:49:00.318Z" },
-]
-
-[[package]]
-name = "openpipe-art"
-version = "0.5.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "litellm" },
-    { name = "openai" },
-    { name = "typer" },
-    { name = "weave" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/c2/39/d2e5d332419c0e84335bb3d81bc6ec3ea85f5c1fa00ab5c0df621a518218/openpipe_art-0.5.3.tar.gz", hash = "sha256:70b1dd9e1373db7a52937dce5da088821384ffa3794d970d1350533ebfd42a36", size = 7984395, upload-time = "2025-11-24T16:14:31.217Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/96/8a/651fb63db71479a762f0ed70de2e01fbd22bc3c1edb6bccd43dfd31ff0ec/openpipe_art-0.5.3-py3-none-any.whl", hash = "sha256:d3c6fcafd424c87abe1e444155ba1a8a0ae6b64b239a212a713519723dd4da27", size = 168634, upload-time = "2025-11-24T16:14:28.74Z" },
 ]
 
 [[package]]

@@ -56,11 +56,11 @@ class FinetuningConfig(BaseModel):
     Configuration for fine-tuning
     """
     enabled: bool = Field(description="Whether fine-tuning is enabled.", default=False)
-    trainer: TrainerConfig = Field(description="Configuration for the trainer.", default_factory=TrainerConfig)
-    trajectory_builder: TrajectoryBuilderConfig = Field(description="Configuration for the trajectory builder.",
-                                                        default_factory=TrajectoryBuilderConfig)
-    trainer_adapter: TrainerAdapterConfig = Field(description="Configuration for the trainer adapter.",
-                                                  default_factory=TrainerAdapterConfig)
+    trainer: TrainerConfig | None = Field(description="Configuration for the trainer.", default=None)
+    trajectory_builder: TrajectoryBuilderConfig | None = Field(description="Configuration for the trajectory builder.",
+                                                        default=None)
+    trainer_adapter: TrainerAdapterConfig | None = Field(description="Configuration for the trainer adapter.",
+                                                  default=None)
     reward_function: RewardFunctionConfig | None = Field(
         description="Configuration for the reward function.",
         default=None
