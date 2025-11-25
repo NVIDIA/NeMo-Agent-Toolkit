@@ -50,6 +50,35 @@ class TrainerAdapterConfig(TypedBaseModel, BaseModelRegistryTag):
     """
     pass
 
+
+class FinetuningConfig(BaseModel):
+    """
+    Configuration for fine-tuning
+    """
+    enabled: bool = Field(description="Whether fine-tuning is enabled.", default=False)
+    trainer: TrainerConfig = Field(description="Configuration for the trainer.", default_factory=TrainerConfig)
+    trajectory_builder: TrajectoryBuilderConfig = Field(description="Configuration for the trajectory builder.",
+                                                        default_factory=TrajectoryBuilderConfig)
+    trainer_adapter: TrainerAdapterConfig = Field(description="Configuration for the trainer adapter.",
+                                                  default_factory=TrainerAdapterConfig)
+    reward_function: RewardFunctionConfig | None = Field(
+        description="Configuration for the reward function.",
+        default=None
+    )
+
+    # Before validator to ensure we're not using defaults if enabled is true
+    @model_validator(mode="before")
+    def check_enabled_configs(cls, values: dict[str, Any]) -> dict[str, Any]:
+        if values.get("enabled", False):
+            if "trainer" not in values or values["trainer"] is None:
+                raise ValueError("Trainer configuration must be provided when fine-tuning is enabled.")
+            if "trajectory_builder" not in values or values["trajectory_builder"] is None:
+                raise ValueError("Trajectory builder configuration must be provided when fine-tuning is enabled.")
+            if "trainer_adapter" not in values or values["trainer_adapter"] is None:
+                raise ValueError("Trainer adapter configuration must be provided when fine-tuning is enabled.")
+        return values
+
+
 TrainerConfigT = typing.TypeVar("TrainerConfigT", bound=TrainerConfig)
 TrajectoryBuilderConfigT = typing.TypeVar("TrajectoryBuilderConfigT", bound=TrajectoryBuilderConfig)
 TrainerAdapterConfigT = typing.TypeVar("TrainerAdapterConfigT", bound=TrainerAdapterConfig)

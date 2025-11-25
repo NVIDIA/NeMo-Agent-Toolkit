@@ -29,6 +29,7 @@ from nat.data_models.component_ref import ComponentRefNode
 from nat.data_models.component_ref import generate_instance_id
 from nat.data_models.config import Config
 from nat.data_models.embedder import EmbedderBaseConfig
+from nat.data_models.finetuning import TrainerConfig, TrainerAdapterConfig, TrajectoryBuilderConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.llm import LLMBaseConfig
@@ -54,6 +55,7 @@ _component_group_order = [
     ComponentGroup.MIDDLEWARE,
     ComponentGroup.FUNCTION_GROUPS,
     ComponentGroup.FUNCTIONS,
+    ComponentGroup.TRAINING
 ]
 
 
@@ -110,6 +112,8 @@ def group_from_component(component: TypedBaseModel) -> ComponentGroup | None:
         return ComponentGroup.AUTHENTICATION
     if (isinstance(component, EmbedderBaseConfig)):
         return ComponentGroup.EMBEDDERS
+    if (isinstance(component, (TrainerConfig, TrainerAdapterConfig, TrajectoryBuilderConfig))):
+        return ComponentGroup.TRAINING
     if (isinstance(component, FunctionBaseConfig)):
         return ComponentGroup.FUNCTIONS
     if (isinstance(component, FunctionGroupBaseConfig)):
@@ -267,6 +271,9 @@ def build_dependency_sequence(config: "Config") -> list[ComponentInstanceData]:
                         len(config.memory) + len(config.object_stores) + len(config.retrievers) +
                         len(config.ttc_strategies) + len(config.authentication) + len(config.middleware) + 1
                         )  # +1 for the workflow
+
+    if config.finetune.enabled:
+        total_node_count += 3 # for trainer, trainer_adapter, trajectory_builder
 
     dependency_map: dict
     dependency_graph: nx.DiGraph

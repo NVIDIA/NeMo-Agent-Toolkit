@@ -267,6 +267,50 @@ class Builder(ABC):
         pass
 
     @abstractmethod
+    @experimental(feature_name="Finetuning")
+    async def add_trainer(self, name: str | TrainerRef, config: TrainerConfig) -> FinetuningRunner:
+        pass
+
+    @abstractmethod
+    @experimental(feature_name="Finetuning")
+    async def add_trainer_adapter(self, name: str | TrainerAdapterRef, config: TrainerAdapterConfig) -> TrainerAdapter:
+        pass
+
+    @abstractmethod
+    @experimental(feature_name="Finetuning")
+    async def add_trajectory_builder(self, name: str | TrajectoryBuilderRef,
+                                     config: TrajectoryBuilderConfig) -> TrajectoryBuilder:
+        pass
+
+    @abstractmethod
+    async def get_trainer(self, trainer_name: str | TrainerRef,
+                          trajectory_builder: TrajectoryBuilder,
+                          trainer_adapter: TrainerAdapter) -> FinetuningRunner:
+        pass
+
+    @abstractmethod
+    async def get_trainer_adapter(self, trainer_adapter_name: str | TrainerAdapterRef) -> TrainerAdapter:
+        pass
+
+    @abstractmethod
+    async def get_trajectory_builder(self, trajectory_builder_name: str | TrajectoryBuilderRef) -> TrajectoryBuilder:
+        pass
+
+    @abstractmethod
+    async def get_trainer_config(self, trainer_name: str | TrainerRef) -> TrainerConfig:
+        pass
+
+    @abstractmethod
+    async def get_trainer_adapter_config(self, trainer_adapter_name: str | TrainerAdapterRef) -> TrainerAdapterConfig:
+        pass
+
+    @abstractmethod
+    async def get_trajectory_builder_config(self,
+                                            trajectory_builder_name: str | TrajectoryBuilderRef) -> (
+            TrajectoryBuilderConfig):
+        pass
+
+    @abstractmethod
     @experimental(feature_name="TTC")
     async def add_ttc_strategy(self, name: str | TTCStrategyRef, config: TTCStrategyBaseConfig):
         pass

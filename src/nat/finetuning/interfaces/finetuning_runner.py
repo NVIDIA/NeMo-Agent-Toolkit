@@ -18,19 +18,17 @@ from abc import ABC
 from abc import abstractmethod
 from pathlib import Path
 from typing import Any
-import math
 
 from nat.data_models.finetuning import (
-    CurriculumLearningConfig,
     FinetuneRunConfig,
     TrainerConfig,
-    Trajectory,
     TrajectoryCollection,
     TrainingJobRef,
-    TrainingJobStatus
+    TrainingJobStatus,
 )
+from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
+from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 from nat.eval.config import EvaluationRunOutput
-from nat.eval.evaluator.evaluator_model import EvalOutputItem
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +63,8 @@ class FinetuningRunner(ABC):
         self.run_config = run_config
         self._backend = backend
         self.curriculum_config = run_config.curriculum_learning
+        self.trajectory_builder: TrajectoryBuilder | None = None
+        self.trainer_adapter: TrainerAdapter | None = None
 
         # Curriculum learning state
         self._curriculum_state = {
@@ -73,6 +73,20 @@ class FinetuningRunner(ABC):
             "total_groups": 0,
             "included_groups": set()
         }
+
+    async def bind_components(self,
+        trajectory_builder: TrajectoryBuilder,
+        trainer_adapter: TrainerAdapter
+    ) -> None:
+        """
+        Bind the TrajectoryBuilder and TrainerAdapter components.
+
+        Args:
+            trajectory_builder: Instance of TrajectoryBuilder
+            trainer_adapter: Instance of TrainerAdapter
+        """
+        self.trajectory_builder = trajectory_builder
+        self.trainer_adapter = trainer_adapter
 
     @property
     def backend(self) -> str:

@@ -28,6 +28,7 @@ from pydantic import field_validator
 
 from nat.data_models.evaluate import EvalConfig
 from nat.data_models.front_end import FrontEndBaseConfig
+from nat.data_models.finetuning import FinetuningConfig
 from nat.data_models.function import EmptyFunctionConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
@@ -288,6 +289,9 @@ class Config(HashableBaseModel):
 
     # Evaluation Options
     eval: EvalConfig = EvalConfig()
+
+    # Finetuning Options
+    finetune: FinetuningConfig = FinetuningConfig()
 
     def print_summary(self, stream: typing.TextIO = sys.stdout):
         """Print a summary of the configuration"""
