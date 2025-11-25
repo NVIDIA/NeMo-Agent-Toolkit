@@ -1228,10 +1228,14 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                                                   cast(FunctionGroupBaseConfig, component_instance.config))
                 # Instantiate a function
                 elif component_instance.component_group == ComponentGroup.FUNCTIONS:
-                    # If the function is the root, set it as the workflow later
-                    if (not component_instance.is_root):
-                        await self.add_function(component_instance.name,
-                                                cast(FunctionBaseConfig, component_instance.config))
+                    config_obj = cast(FunctionBaseConfig, component_instance.config)
+                    registration = self._registry.get_function(type(config_obj))
+                    if registration.is_per_user:
+                        # Skip per-user functions as they will be built lazily by PerUserWorkflowBuilder
+                        continue
+                    elif not component_instance.is_root:
+                        # If the function is not the root, add it to the workflow builder
+                        await self.add_function(component_instance.name, config_obj)
                 elif component_instance.component_group == ComponentGroup.TTC_STRATEGIES:
                     await self.add_ttc_strategy(component_instance.name,
                                                 cast(TTCStrategyBaseConfig, component_instance.config))
@@ -1254,19 +1258,592 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         # Instantiate the workflow
         if not skip_workflow:
             try:
-                # Remove workflow from remaining as we start building
-                remaining_components.remove(("<workflow>", "workflow"))
-                await self.set_workflow(config.workflow)
-                completed_components.append(("<workflow>", "workflow"))
+                workflow_registration = self._registry.get_function(type(config.workflow))
+                # If the workflow is shared (not per-user), build it
+                # Otherwise, build it lazily by PerUserWorkflowBuilder
+                if not workflow_registration.is_per_user:
+                    # Remove workflow from remaining as we start building
+                    remaining_components.remove(("<workflow>", "workflow"))
+                    await self.set_workflow(config.workflow)
+                    completed_components.append(("<workflow>", "workflow"))
             except Exception as e:
                 self._log_build_failure_workflow(completed_components, remaining_components, e)
                 raise
+
+        # Check if any shared components have dependencies on per-user components
+        self._validate_dependencies(config)
+
+    def _validate_dependencies(self, config: Config):
+        """
+        Validate no shared component has dependencies on any per-user components.
+
+        This prevents invalid configurations where shared components try to use per-user functions that do not exist
+        at shared builder initialization time.
+        """
+
+        # Check shared functions do not depend on per-user functions
+        for fn_name, fn_deps in self.function_dependencies.items():
+            fn_config = self.get_function_config(fn_name)
+            fn_registration = self._registry.get_function(type(fn_config))
+
+            if not fn_registration.is_per_user:
+                for dep_fn_name in fn_deps.functions:
+                    dep_config = config.functions.get(dep_fn_name)
+                    if dep_config is not None:
+                        dep_registration = self._registry.get_function(type(dep_config))
+                        if dep_registration.is_per_user:
+                            raise ValueError(f"Function `{fn_name}` depends on per-user function `{dep_fn_name}`")
+
+        if self._workflow is not None:
+            workflow_config = self.get_workflow_config()
+            workflow_registration = self._registry.get_function(type(workflow_config))
+
+            # Per-user workflow must be owned by PerUserWorkflowBuilder
+            if workflow_registration.is_per_user:
+                raise ValueError("Workflow is a per-user function, but it is owned by a shared WorkflowBuilder")
+
+            else:
+                workflow_deps = self.function_dependencies.get("<workflow>", FunctionDependencies())
+
+                for dep_fn_name in workflow_deps.functions:
+                    if dep_fn_name in config.functions:
+                        dep_config = config.functions[dep_fn_name]
+                        if dep_config is not None:
+                            dep_registration = self._registry.get_function(type(dep_config))
+                            if dep_registration.is_per_user:
+                                raise ValueError(f"Shared Workflow depends on per-user function `{dep_fn_name}`")
 
     @classmethod
     @asynccontextmanager
     async def from_config(cls, config: Config):
 
         async with cls(general_config=config.general) as builder:
+            await builder.populate_builder(config)
+            yield builder
+
+
+class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
+    """
+    Builder for per-user components that are lazily instantiated.
+
+    This builder is created per-user and only builds functions/function_groups
+    that are marked as per-user. It delegates to a shared WorkflowBuilder for
+    all shared components (LLMs, embedders, memory, etc.).
+
+    Lifecycle:
+    - Created when a user first makes a request
+    - Kept alive while the user is active
+    - Cleaned up after user inactivity timeout
+    """
+
+    def __init__(self, user_id: str, shared_builder: WorkflowBuilder, registry: TypeRegistry | None = None):
+
+        self._user_id = user_id
+        self._shared_builder = shared_builder
+        self._workflow: ConfiguredFunction | None = None
+
+        if registry is None:
+            registry = GlobalTypeRegistry.get()
+        self._registry = registry
+
+        self._per_user_functions: dict[str, ConfiguredFunction] = {}
+        self._per_user_function_groups: dict[str, ConfiguredFunctionGroup] = {}
+
+        self._exit_stack: AsyncExitStack | None = None
+
+        self.per_user_function_dependencies: dict[str, FunctionDependencies] = {}
+        self.per_user_function_group_dependencies: dict[str, FunctionDependencies] = {}
+        self.current_function_building: str | None = None
+        self._current_function_group_building: str | None = None
+
+    async def __aenter__(self):
+
+        self._exit_stack = AsyncExitStack()
+        return self
+
+    async def __aexit__(self, *exc_details):
+
+        assert self._exit_stack is not None, "Exit stack not initialized"
+        await self._exit_stack.__aexit__(*exc_details)
+
+    def _get_exit_stack(self) -> AsyncExitStack:
+        if self._exit_stack is None:
+            raise ValueError(
+                "Exit stack not initialized. Did you forget to call `async with PerUserWorkflowBuilder() as builder`?")
+        return self._exit_stack
+
+    @property
+    def user_id(self) -> str:
+        return self._user_id
+
+    async def _build_per_user_function(self, name: str, config: FunctionBaseConfig) -> ConfiguredFunction:
+        registration = self._registry.get_function(type(config))
+
+        if not registration.is_per_user:
+            raise ValueError(f"Function `{name}` is not a per-user function")
+
+        inner_builder = ChildBuilder(self)
+
+        llms = {k: v.instance for k, v in self._shared_builder._llms.items()}
+        function_frameworks = detect_llm_frameworks_in_build_fn(registration)
+
+        build_fn = chain_wrapped_build_fn(registration.build_fn, llms, function_frameworks)
+        self.current_function_building = config.type
+        self.per_user_function_dependencies[config.type] = FunctionDependencies()
+
+        build_result = await self._get_exit_stack().enter_async_context(build_fn(config, inner_builder))
+        self.per_user_function_dependencies[name] = inner_builder.dependencies
+
+        if inspect.isfunction(build_result):
+            build_result = FunctionInfo.from_fn(build_result)
+
+        if isinstance(build_result, FunctionInfo):
+            build_result = LambdaFunction.from_info(config=config, info=build_result, instance_name=name)
+
+        if not isinstance(build_result, Function):
+            raise ValueError(f"Expected a function, FunctionInfo object, or FunctionBase object to be "
+                             f"returned from the function builder. Got {type(build_result)}")
+
+        middleware_instances = []
+        for middleware_name in config.middleware:
+            middleware_obj = await self._shared_builder.get_middleware(middleware_name)
+            if not isinstance(middleware_obj, FunctionMiddleware):
+                raise TypeError(
+                    f"Middleware `{middleware_name}` is not a FunctionMiddleware and cannot be used with functions.")
+            middleware_instances.append(middleware_obj)
+
+        build_result.configure_middleware(middleware_instances)
+
+        return ConfiguredFunction(config=config, instance=build_result)
+
+    @override
+    async def add_function(self, name: str | FunctionRef, config: FunctionBaseConfig) -> Function:
+        if isinstance(name, FunctionRef):
+            name = str(name)
+
+        if name in self._per_user_functions:
+            raise ValueError(f"Function `{name}` already exists in the list of per-user functions")
+
+        registration = self._registry.get_function(type(config))
+        if registration.is_per_user:
+            build_result = await self._build_per_user_function(name, config)
+            self._per_user_functions[name] = build_result
+
+            return build_result.instance
+
+        return await self._shared_builder.get_function(name)
+
+    @override
+    async def get_function(self, name: str | FunctionRef) -> Function:
+        if isinstance(name, FunctionRef):
+            name = str(name)
+
+        # Check per-user cache first
+        if name in self._per_user_functions:
+            return self._per_user_functions[name].instance
+
+        # Delegate to shared builder
+        return await self._shared_builder.get_function(name)
+
+    @override
+    def get_function_config(self, name: str | FunctionRef) -> FunctionBaseConfig:
+        if isinstance(name, FunctionRef):
+            name = str(name)
+
+        if name in self._per_user_functions:
+            return self._per_user_functions[name].config
+
+        return self._shared_builder.get_function_config(name)
+
+    @override
+    async def add_function_group(self, name: str | FunctionGroupRef, config: FunctionGroupBaseConfig) -> FunctionGroup:
+        # TODO: For now, function groups are shared only (Step 1 focuses on functions)
+        return await self._shared_builder.get_function_group(name)
+
+    @override
+    async def get_function_group(self, name: str | FunctionGroupRef) -> FunctionGroup:
+        # TODO: For now, function groups are shared only (Step 1 focuses on functions)
+        return await self._shared_builder.get_function_group(name)
+
+    @override
+    def get_function_group_config(self, name: str | FunctionGroupRef) -> FunctionGroupBaseConfig:
+        # TODO: For now, function groups are shared only (Step 1 focuses on functions)
+        return self._shared_builder.get_function_group_config(name)
+
+    @override
+    async def set_workflow(self, config: FunctionBaseConfig) -> Function:
+        if self._workflow is not None:
+            logger.warning("Overwriting existing workflow")
+
+        build_result = await self._build_per_user_function(name="<workflow>", config=config)
+
+        self._workflow = build_result
+
+        return build_result.instance
+
+    @override
+    def get_workflow(self) -> Function:
+        # If we have a per-user workflow, return it
+        if self._workflow is not None:
+            return self._workflow.instance
+
+        # Otherwise, delegate to shared builder
+        return self._shared_builder.get_workflow()
+
+    @override
+    def get_workflow_config(self) -> FunctionBaseConfig:
+        # If we have a per-user workflow config, return it
+        if self._workflow is not None:
+            return self._workflow.config
+
+        # Otherwise, delegate to shared builder
+        return self._shared_builder.get_workflow_config()
+
+    @override
+    def get_function_dependencies(self, fn_name: str | FunctionRef) -> FunctionDependencies:
+        if isinstance(fn_name, FunctionRef):
+            fn_name = str(fn_name)
+
+        if fn_name in self.per_user_function_dependencies:
+            return self.per_user_function_dependencies[fn_name]
+        return self._shared_builder.get_function_dependencies(fn_name)
+
+    @override
+    def get_function_group_dependencies(self, fn_name: str | FunctionGroupRef) -> FunctionDependencies:
+        if isinstance(fn_name, FunctionGroupRef):
+            fn_name = str(fn_name)
+
+        # Check per-user dependencies first
+        if fn_name in self.per_user_function_group_dependencies:
+            return self.per_user_function_group_dependencies[fn_name]
+
+        # Fall back to shared builder
+        return self._shared_builder.get_function_group_dependencies(fn_name)
+
+    @override
+    async def get_tools(self,
+                        tool_names: Sequence[str | FunctionRef | FunctionGroupRef],
+                        wrapper_type: LLMFrameworkEnum | str) -> list[typing.Any]:
+        # Mix of per-user and shared tools
+        # TODO: add function group related logic later
+        tools = []
+        for name in tool_names:
+            tool = await self.get_tool(name, wrapper_type)
+            tools.append(tool)
+        return tools
+
+    @override
+    async def get_tool(self, fn_name: str | FunctionRef, wrapper_type: LLMFrameworkEnum | str) -> typing.Any:
+        if isinstance(fn_name, FunctionRef):
+            fn_name = str(fn_name)
+        if fn_name in self._per_user_functions:
+            fn = self._per_user_functions[fn_name]
+            try:
+                tool_wrapper_reg = self._registry.get_tool_wrapper(llm_framework=wrapper_type)
+                return tool_wrapper_reg.build_fn(fn_name, fn.instance, self)
+            except Exception as e:
+                logger.error("Error fetching tool `%s`: %s", fn_name, e)
+                raise
+        return await self._shared_builder.get_tool(fn_name, wrapper_type)
+
+    @override
+    async def add_llm(self, name: str, config: LLMBaseConfig) -> None:
+        return await self._shared_builder.add_llm(name, config)
+
+    @override
+    async def get_llm(self, llm_name: str, wrapper_type: LLMFrameworkEnum | str) -> typing.Any:
+        return await self._shared_builder.get_llm(llm_name, wrapper_type)
+
+    @override
+    def get_llm_config(self, llm_name: str) -> LLMBaseConfig:
+        return self._shared_builder.get_llm_config(llm_name)
+
+    @experimental(feature_name="Authentication")
+    @override
+    async def add_auth_provider(self, name: str, config: AuthProviderBaseConfig) -> AuthProviderBase:
+        return await self._shared_builder.add_auth_provider(name, config)
+
+    @override
+    async def get_auth_provider(self, auth_provider_name: str) -> AuthProviderBase:
+        return await self._shared_builder.get_auth_provider(auth_provider_name)
+
+    @override
+    async def add_embedder(self, name: str, config: EmbedderBaseConfig) -> None:
+        return await self._shared_builder.add_embedder(name, config)
+
+    @override
+    async def get_embedder(self, embedder_name: str, wrapper_type: LLMFrameworkEnum | str) -> typing.Any:
+        return await self._shared_builder.get_embedder(embedder_name, wrapper_type)
+
+    @override
+    def get_embedder_config(self, embedder_name: str) -> EmbedderBaseConfig:
+        return self._shared_builder.get_embedder_config(embedder_name)
+
+    @override
+    async def add_memory_client(self, name: str, config: MemoryBaseConfig) -> MemoryEditor:
+        return await self._shared_builder.add_memory_client(name, config)
+
+    @override
+    async def get_memory_client(self, memory_name: str) -> MemoryEditor:
+        return await self._shared_builder.get_memory_client(memory_name)
+
+    @override
+    def get_memory_client_config(self, memory_name: str) -> MemoryBaseConfig:
+        return self._shared_builder.get_memory_client_config(memory_name)
+
+    @override
+    async def add_object_store(self, name: str, config: ObjectStoreBaseConfig) -> ObjectStore:
+        return await self._shared_builder.add_object_store(name, config)
+
+    @override
+    async def get_object_store_client(self, object_store_name: str) -> ObjectStore:
+        return await self._shared_builder.get_object_store_client(object_store_name)
+
+    @override
+    def get_object_store_config(self, object_store_name: str) -> ObjectStoreBaseConfig:
+        return self._shared_builder.get_object_store_config(object_store_name)
+
+    @override
+    async def add_retriever(self, name: str | RetrieverRef, config: RetrieverBaseConfig) -> None:
+        return await self._shared_builder.add_retriever(name, config)
+
+    @override
+    async def get_retriever(self,
+                            retriever_name: str | RetrieverRef,
+                            wrapper_type: LLMFrameworkEnum | str | None = None) -> Retriever:
+        return await self._shared_builder.get_retriever(retriever_name, wrapper_type)
+
+    @override
+    async def get_retriever_config(self, retriever_name: str | RetrieverRef) -> RetrieverBaseConfig:
+        return await self._shared_builder.get_retriever_config(retriever_name)
+
+    @experimental(feature_name="TTC")
+    @override
+    async def add_ttc_strategy(self, name: str | TTCStrategyRef, config: TTCStrategyBaseConfig) -> None:
+        return await self._shared_builder.add_ttc_strategy(name, config)
+
+    @override
+    async def get_ttc_strategy(self,
+                               strategy_name: str | TTCStrategyRef,
+                               pipeline_type: PipelineTypeEnum,
+                               stage_type: StageTypeEnum) -> StrategyBase:
+        return await self._shared_builder.get_ttc_strategy(strategy_name, pipeline_type, stage_type)
+
+    @override
+    async def get_ttc_strategy_config(self,
+                                      strategy_name: str | TTCStrategyRef,
+                                      pipeline_type: PipelineTypeEnum,
+                                      stage_type: StageTypeEnum) -> TTCStrategyBaseConfig:
+        return await self._shared_builder.get_ttc_strategy_config(strategy_name, pipeline_type, stage_type)
+
+    @override
+    def get_user_manager(self) -> UserManagerHolder:
+        return self._shared_builder.get_user_manager()
+
+    @override
+    async def add_middleware(self, name: str | MiddlewareRef, config: MiddlewareBaseConfig) -> Middleware:
+        return await self._shared_builder.add_middleware(name, config)
+
+    @override
+    async def get_middleware(self, middleware_name: str | MiddlewareRef) -> Middleware:
+        return await self._shared_builder.get_middleware(middleware_name)
+
+    @override
+    def get_middleware_config(self, middleware_name: str | MiddlewareRef) -> MiddlewareBaseConfig:
+        return self._shared_builder.get_middleware_config(middleware_name)
+
+    async def populate_builder(self, config: Config):
+        """
+        Populate the per-user builder with per-user components from config.
+
+        Only builds components that are marked as per-user.
+        Builds in dependency order to handle per-user functions depending on other per-user functions.
+
+        Args:
+            config: The full configuration object
+
+        Raises:
+            ValueError: If a per-user component has invalid dependencies
+        """
+        # Generate build sequence using the same dependency resolution as shared builder
+        build_sequence = build_dependency_sequence(config)
+
+        # Filter to only per-user components and build them in dependency order
+        for component_instance in build_sequence:
+            # Handle per-user functions
+            if component_instance.component_group == ComponentGroup.FUNCTIONS:
+                config_obj = cast(FunctionBaseConfig, component_instance.config)
+                registration = self._registry.get_function(type(config_obj))
+
+                if registration.is_per_user:
+                    if component_instance.is_root:
+                        # This is the per-user workflow
+                        logger.debug(f"Building per-user workflow for user {self._user_id}")
+                        await self.set_workflow(config_obj)
+                    else:
+                        # Regular per-user function
+                        logger.debug(f"Building per-user function '{component_instance.name}' for user {self._user_id}")
+                        await self.add_function(component_instance.name, config_obj)
+
+            # TODO: Handle per-user function groups when implemented
+            # elif component_instance.component_group == ComponentGroup.FUNCTION_GROUPS:
+            #     ...
+
+        logger.info(f"Per-user builder populated for user {self._user_id}: "
+                    f"{len(self._per_user_functions)} functions, "
+                    f"workflow={'set' if self._workflow else 'delegated to shared'}")
+
+    async def build(self, entry_function: str | None = None) -> Workflow:
+        """
+        Creates a workflow instance for this specific user.
+
+        Combines per-user functions with shared components from the shared builder.
+
+        Parameters
+        ----------
+        entry_function : str | None, optional
+            The function name to use as the entry point. If None, uses the workflow.
+            By default None
+
+        Returns
+        -------
+        Workflow
+            A per-user workflow instance
+
+        Raises
+        ------
+        ValueError
+            If no workflow is set (neither per-user nor shared)
+        """
+        # Determine entry function
+        if entry_function is None:
+            # Use workflow (could be per-user or shared)
+            entry_fn_obj = self.get_workflow()
+        else:
+            # Use specified function (could be per-user or shared)
+            entry_fn_obj = await self.get_function(entry_function)
+
+        # Collect all functions (per-user + shared)
+        all_functions = {}
+
+        # Add shared functions
+        for name, configured_fn in self._shared_builder._functions.items():
+            all_functions[name] = configured_fn.instance
+
+        # Override with per-user functions
+        for name, configured_fn in self._per_user_functions.items():
+            all_functions[name] = configured_fn.instance
+
+        # Collect all function groups (for now, all from shared)
+        # TODO: Add per-user function groups when implemented
+        all_function_groups = {
+            name: configured_fg.instance
+            for name, configured_fg in self._shared_builder._function_groups.items()
+        }
+
+        # Build function configs (per-user + shared)
+        function_configs = {}
+        for name, configured_fn in self._shared_builder._functions.items():
+            function_configs[name] = configured_fn.config
+        for name, configured_fn in self._per_user_functions.items():
+            function_configs[name] = configured_fn.config
+
+        # Build function group configs (all from shared for now)
+        function_group_configs = {
+            name: configured_fg.config
+            for name, configured_fg in self._shared_builder._function_groups.items()
+        }
+
+        # Determine workflow config
+        if self._workflow is not None:
+            workflow_config = self._workflow.config
+        else:
+            workflow_config = self._shared_builder.get_workflow_config()
+
+        # Build the Config object
+        per_user_config = Config(general=self._shared_builder.general_config,
+                                 functions=function_configs,
+                                 function_groups=function_group_configs,
+                                 workflow=workflow_config,
+                                 llms={
+                                     k: v.config
+                                     for k, v in self._shared_builder._llms.items()
+                                 },
+                                 embedders={
+                                     k: v.config
+                                     for k, v in self._shared_builder._embedders.items()
+                                 },
+                                 memory={
+                                     k: v.config
+                                     for k, v in self._shared_builder._memory_clients.items()
+                                 },
+                                 object_stores={
+                                     k: v.config
+                                     for k, v in self._shared_builder._object_stores.items()
+                                 },
+                                 retrievers={
+                                     k: v.config
+                                     for k, v in self._shared_builder._retrievers.items()
+                                 },
+                                 ttc_strategies={
+                                     k: v.config
+                                     for k, v in self._shared_builder._ttc_strategies.items()
+                                 })
+
+        # Create the Workflow instance
+        workflow = Workflow.from_entry_fn(config=per_user_config,
+                                          entry_fn=entry_fn_obj,
+                                          functions=all_functions,
+                                          function_groups=all_function_groups,
+                                          llms={
+                                              k: v.instance
+                                              for k, v in self._shared_builder._llms.items()
+                                          },
+                                          embeddings={
+                                              k: v.instance
+                                              for k, v in self._shared_builder._embedders.items()
+                                          },
+                                          memory={
+                                              k: v.instance
+                                              for k, v in self._shared_builder._memory_clients.items()
+                                          },
+                                          object_stores={
+                                              k: v.instance
+                                              for k, v in self._shared_builder._object_stores.items()
+                                          },
+                                          telemetry_exporters={
+                                              k: v.instance
+                                              for k, v in self._shared_builder._telemetry_exporters.items()
+                                          },
+                                          retrievers={
+                                              k: v.instance
+                                              for k, v in self._shared_builder._retrievers.items()
+                                          },
+                                          ttc_strategies={
+                                              k: v.instance
+                                              for k, v in self._shared_builder._ttc_strategies.items()
+                                          },
+                                          context_state=self._shared_builder._context_state)
+
+        return workflow
+
+    @classmethod
+    @asynccontextmanager
+    async def from_config(cls, user_id: str, config: Config, shared_builder: WorkflowBuilder):
+        """
+        Create and populate a PerUserWorkflowBuilder from config.
+
+        This is the primary entry point for creating per-user builders.
+
+        Args:
+            user_id: Unique identifier for the user
+            config: Full configuration object
+            shared_builder: The shared WorkflowBuilder instance
+
+        Yields:
+            PerUserWorkflowBuilder: Populated per-user builder instance
+        """
+        async with cls(user_id=user_id, shared_builder=shared_builder) as builder:
             await builder.populate_builder(config)
             yield builder
 
