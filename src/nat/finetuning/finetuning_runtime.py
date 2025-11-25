@@ -29,7 +29,7 @@ async def run_finetuning(runner: Trainer) -> None:
     Run finetuning based on the provided configuration.
 
     Args:
-        trainer: An instance of the Trainer to run finetuning with
+        runner: An instance of the Trainer to run finetuning with
     """
     try:
         # Initialize the runner
@@ -74,7 +74,7 @@ async def finetuning_main(run_config: FinetuneRunConfig) -> None:
     Main entry point for finetuning runtime.
 
     Args:
-        config_file: Path to the configuration file
+        run_config: FinetuneRunConfig object containing finetuning settings
     """
 
     from nat.builder.workflow_builder import WorkflowBuilder
@@ -115,6 +115,6 @@ def run_finetuning_sync(run_config: FinetuneRunConfig) -> None:
     Synchronous wrapper for running finetuning.
 
     Args:
-        config_file: Path to the configuration file
+        run_config: FinetuneRunConfig object containing finetuning settings
     """
     asyncio.run(finetuning_main(run_config))
