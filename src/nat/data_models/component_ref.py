@@ -197,7 +197,7 @@ class TrainerRef(ComponentRef):
     @property
     @override
     def component_group(self):
-        return ComponentGroup.TRAINING
+        return ComponentGroup.TRAINERS
 
 
 class TrajectoryBuilderRef(ComponentRef):
@@ -208,7 +208,7 @@ class TrajectoryBuilderRef(ComponentRef):
     @property
     @override
     def component_group(self):
-        return ComponentGroup.TRAINING
+        return ComponentGroup.TRAJECTORY_BUILDERS
 
 
 class TrainerAdapterRef(ComponentRef):
@@ -219,4 +219,4 @@ class TrainerAdapterRef(ComponentRef):
     @property
     @override
     def component_group(self):
-        return ComponentGroup.TRAINING
+        return ComponentGroup.TRAINER_ADAPTERS

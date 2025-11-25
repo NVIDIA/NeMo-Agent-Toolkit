@@ -1375,23 +1375,17 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                     await self.add_auth_provider(component_instance.name,
                                                  cast(AuthProviderBaseConfig, component_instance.config))
 
-                elif component_instance.component_group == ComponentGroup.TRAINING:
-                    if isinstance(component_instance.config, TrainerConfig):
-                        await self.add_trainer(component_instance.name,
+                elif component_instance.component_group == ComponentGroup.TRAINERS:
+                    await self.add_trainer(component_instance.name,
                                                cast(TrainerConfig, component_instance.config))
 
-                    elif isinstance(component_instance.config, TrainerAdapterConfig):
-                        await self.add_trainer_adapter(component_instance.name,
+                elif component_instance.component_group == ComponentGroup.TRAINER_ADAPTERS:
+                    await self.add_trainer_adapter(component_instance.name,
                                                       cast(TrainerAdapterConfig, component_instance.config))
 
-                    elif isinstance(component_instance.config, TrajectoryBuilderConfig):
-                        await self.add_trajectory_builder(component_instance.name,
+                elif component_instance.component_group == ComponentGroup.TRAJECTORY_BUILDERS:
+                    await self.add_trajectory_builder(component_instance.name,
                                                          cast(TrajectoryBuilderConfig, component_instance.config))
-
-                    else:
-                        raise ValueError(f"Unknown training component config type for "
-                                         f"{component_instance.name}: {type(component_instance.config)}")
-
                 else:
                     raise ValueError(f"Unknown component group {component_instance.component_group}")
 

@@ -59,7 +59,9 @@ class ComponentGroup(StrEnum):
     MEMORY = "memory"
     OBJECT_STORES = "object_stores"
     RETRIEVERS = "retrievers"
-    TRAINING = "training"
+    TRAINERS = "trainers"
+    TRAINER_ADAPTERS = "trainer_adapters"
+    TRAJECTORY_BUILDERS = "trajectory_builders"
 
 
 # Compatibility aliases with previous releases
