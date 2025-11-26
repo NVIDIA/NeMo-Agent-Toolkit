@@ -1850,7 +1850,7 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
 
 class ChildBuilder(Builder):
 
-    def __init__(self, workflow_builder: WorkflowBuilder) -> None:
+    def __init__(self, workflow_builder: Builder) -> None:
 
         self._workflow_builder = workflow_builder
 
@@ -1912,7 +1912,13 @@ class ChildBuilder(Builder):
                         wrapper_type: LLMFrameworkEnum | str) -> list[typing.Any]:
         tools = await self._workflow_builder.get_tools(tool_names, wrapper_type)
         for tool_name in tool_names:
-            if tool_name in self._workflow_builder._function_groups:
+            if isinstance(self._workflow_builder, WorkflowBuilder):
+                function_groups = self._workflow_builder._function_groups
+            elif isinstance(self._workflow_builder, PerUserWorkflowBuilder):
+                function_groups = self._workflow_builder._per_user_function_groups
+            else:
+                raise ValueError("Invalid workflow builder type")
+            if tool_name in function_groups:
                 self._dependencies.add_function_group(tool_name)
             else:
                 self._dependencies.add_function(tool_name)
