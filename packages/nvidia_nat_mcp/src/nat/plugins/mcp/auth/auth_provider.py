@@ -371,7 +371,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                 # Manual registration mode
                 self._cached_credentials = OAuth2Credentials(
                     client_id=self.config.client_id,
-                    client_secret=self.config.client_secret,
+                    client_secret=self.config.client_secret.get_secret_value() if self.config.client_secret else None,
                 )
                 logger.info("Using manual client_id: %s", self._cached_credentials.client_id)
             else:
