@@ -15,4 +15,5 @@
 # Import the generated workflow function to trigger registration
 # Add flags to ignore unused import with ruff and flak8
 # ruff: noqa: F401
+from .evaluator_register import register_accuracy_evaluator
 from .rl_with_openpipe_art import rl_with_openpipe_art_function

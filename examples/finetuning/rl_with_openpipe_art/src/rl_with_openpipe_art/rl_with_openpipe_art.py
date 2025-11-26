@@ -69,14 +69,14 @@ class TicTacToeGame:
         current_player = self.player_x
         turn_index = 0
 
-        logger.info("=== Starting LLM vs LLM Tic-Tac-Toe (XML moves) ===")
-        logger.info("Initial board:")
-        logger.info("\n" + board_to_str(self.board))
+        logger.debug("=== Starting LLM vs LLM Tic-Tac-Toe (XML moves) ===")
+        logger.debug("Initial board:")
+        logger.debug("\n" + board_to_str(self.board))
 
         while True:
-            logger.info(f"\n--- Turn {turn_index + 1}: {current_player.name} ({current_player.symbol}) ---")
-            logger.info("Current board:")
-            logger.info("\n" + board_to_str(self.board))
+            logger.debug(f"\n--- Turn {turn_index + 1}: {current_player.name} ({current_player.symbol}) ---")
+            logger.debug("Current board:")
+            logger.debug("\n" + board_to_str(self.board))
 
             # Ask LLM for a move (with retries)
             row, col, raw = current_player.choose_move(self.board)
@@ -98,21 +98,21 @@ class TicTacToeGame:
                     raw_llm_output=raw,
                 ))
 
-            logger.info(f"{current_player.name} plays at (row={row+1}, col={col+1}).")
-            logger.info(f"Heuristic score for this move (from {current_player.symbol}'s perspective): {score:.2f}")
-            logger.info("Board after move:")
-            logger.info("\n" + board_to_str(self.board))
+            logger.debug(f"{current_player.name} plays at (row={row+1}, col={col+1}).")
+            logger.debug(f"Heuristic score for this move (from {current_player.symbol}'s perspective): {score:.2f}")
+            logger.debug("Board after move:")
+            logger.debug("\n" + board_to_str(self.board))
 
             # Check game termination
             winner_val = check_winner(self.board)
             if winner_val != 0:
                 winner_symbol = "X" if winner_val == 1 else "O"
                 winner_name = (self.player_x.name if winner_symbol == "X" else self.player_o.name)
-                logger.info(f"*** Game over! {winner_name} ({winner_symbol}) wins. ***")
+                logger.debug(f"*** Game over! {winner_name} ({winner_symbol}) wins. ***")
                 return winner_val
 
             if is_draw(self.board):
-                logger.info("*** Game over! It's a draw. ***")
+                logger.debug("*** Game over! It's a draw. ***")
                 return 0  # Draw
 
             # Swap players
