@@ -122,9 +122,9 @@ def evaluate_board_for_player(board: np.ndarray, player_val: int) -> float:
 
     winner = check_winner(board)
     if winner == player_val:
-        return 1e6  # immediate win
+        return 100  # immediate win
     elif winner == -player_val:
-        return -1e6  # immediate loss
+        return -100  # immediate loss
     elif is_draw(board):
         return 0.0
 

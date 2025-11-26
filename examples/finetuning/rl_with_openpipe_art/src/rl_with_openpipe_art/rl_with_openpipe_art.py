@@ -71,12 +71,12 @@ class TicTacToeGame:
 
         logger.info("=== Starting LLM vs LLM Tic-Tac-Toe (XML moves) ===")
         logger.info("Initial board:")
-        logger.info(board_to_str(self.board))
+        logger.info("\n" + board_to_str(self.board))
 
         while True:
             logger.info(f"\n--- Turn {turn_index + 1}: {current_player.name} ({current_player.symbol}) ---")
             logger.info("Current board:")
-            logger.info(board_to_str(self.board))
+            logger.info("\n" + board_to_str(self.board))
 
             # Ask LLM for a move (with retries)
             row, col, raw = current_player.choose_move(self.board)
@@ -101,7 +101,7 @@ class TicTacToeGame:
             logger.info(f"{current_player.name} plays at (row={row+1}, col={col+1}).")
             logger.info(f"Heuristic score for this move (from {current_player.symbol}'s perspective): {score:.2f}")
             logger.info("Board after move:")
-            logger.info(board_to_str(self.board))
+            logger.info("\n" + board_to_str(self.board))
 
             # Check game termination
             winner_val = check_winner(self.board)
