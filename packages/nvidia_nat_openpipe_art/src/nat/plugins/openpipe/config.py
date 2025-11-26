@@ -39,7 +39,7 @@ class ARTBackendConfig(BaseModel):
 
     port: int = Field(description="Port for Remote Backend")
 
-    name: str = Field(default="trainer_run_4", description="Name of the Trainer run.")
+    name: str = Field(default="trainer_run", description="Name of the Trainer run.")
 
     project: str = Field(default="trainer_project", description="Project name for the Trainer run.")
 
