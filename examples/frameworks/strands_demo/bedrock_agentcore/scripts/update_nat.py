@@ -1,5 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.
-# All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +19,7 @@ import json
 import boto3
 
 
-def get_secret(secret_name, region_name):
+def get_secret(secret_name: str, region_name: str) -> dict[str, str]:
     """Retrieve secret from AWS Secrets Manager."""
     session = boto3.session.Session()
     secrets_client = session.client(service_name='secretsmanager', region_name=region_name)
@@ -28,7 +27,7 @@ def get_secret(secret_name, region_name):
     try:
         get_secret_value_response = secrets_client.get_secret_value(SecretId=secret_name)
     except Exception as e:
-        raise Exception(f"Error retrieving secret: {e}") from e
+        raise RuntimeError(f"Error retrieving secret: {e}") from e
 
     secret = get_secret_value_response['SecretString']
     return json.loads(secret)

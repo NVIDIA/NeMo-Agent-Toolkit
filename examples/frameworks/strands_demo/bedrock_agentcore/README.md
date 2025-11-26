@@ -203,7 +203,7 @@ import json
 import boto3
 
 
-def get_secret(secret_name, region_name):
+def get_secret(secret_name: str, region_name: str) -> dict[str, str]:
     """Retrieve secret from AWS Secrets Manager."""
     session = boto3.session.Session()
     secrets_client = session.client(
@@ -216,7 +216,7 @@ def get_secret(secret_name, region_name):
             SecretId=secret_name
         )
     except Exception as e:
-        raise Exception(f"Error retrieving secret: {e}") from e
+        raise RuntimeError(f"Error retrieving secret: {e}") from e
 
     secret = get_secret_value_response['SecretString']
     return json.loads(secret)
@@ -369,7 +369,7 @@ import json
 import boto3
 
 
-def get_secret(secret_name, region_name):
+def get_secret(secret_name: str, region_name: str) -> dict[str, str]:
     """Retrieve secret from AWS Secrets Manager."""
     session = boto3.session.Session()
     secrets_client = session.client(
@@ -382,7 +382,7 @@ def get_secret(secret_name, region_name):
             SecretId=secret_name
         )
     except Exception as e:
-        raise Exception(f"Error retrieving secret: {e}") from e
+        raise RuntimeError(f"Error retrieving secret: {e}") from e
 
     secret = get_secret_value_response['SecretString']
     return json.loads(secret)
@@ -647,12 +647,9 @@ Since we need a custom policy, we'll create it now:
             "Sid": "SecretsManagerAccess",
             "Effect": "Allow",
             "Action": [
-                "secretsmanager:CreateSecret",
-                "secretsmanager:PutSecretValue",
-                "secretsmanager:GetSecretValue",
-                "secretsmanager:DeleteSecret"
+                "secretsmanager:GetSecretValue"
             ],
-            "Resource": "arn:aws:secretsmanager:*:*:secret:nvidia-api-credentials"
+            "Resource": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:nvidia-api-credentials-*"
         }
     ]
 }
