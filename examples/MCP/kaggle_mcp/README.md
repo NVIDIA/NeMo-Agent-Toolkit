@@ -49,7 +49,7 @@ authentication:
   kaggle:
     _type: api_key
     raw_key: ${KAGGLE_BEARER_TOKEN}
-    auth_scheme: BEARER
+    auth_scheme: Bearer
 ```
 
 ### Environment Variables
@@ -94,16 +94,18 @@ The configuration connects to Kaggle's MCP server using:
 - **Authentication**: Bearer token via `api_key` provider
 
 ## CLI Commands
+
 You can use the following CLI commands to interact with the Kaggle MCP server. This is useful for prototyping and debugging.
 
-### Tool Discovery
+### Discover Tools (No Authentication Required)
 
 To list available tools from the Kaggle MCP server:
 
 ```bash
 nat mcp client tool list --url https://www.kaggle.com/mcp
 ```
-### Tool schema validation
+
+### Get Tool Schema (No Authentication Required)
 
 To validate the tool schema:
 
@@ -111,13 +113,32 @@ To validate the tool schema:
 nat mcp client tool list --url https://www.kaggle.com/mcp --tool list_dataset_files
 ```
 
-### Tool call
+### Authenticated Tool Calls
 
-To call a tool:
+**Important**: The Kaggle MCP server requires bearer token authentication for tool calls. The NAT CLI `mcp client tool call` command currently supports OAuth2 authentication but not bearer token authentication directly via command-line flags.
+
+For authenticated tool calls with bearer token, use the workflow configuration:
 
 ```bash
-nat mcp client tool call list_dataset_files --url https://www.kaggle.com/mcp --json-args '{"dataset_name": "titanic"}'
+# Set your Kaggle bearer token
+export KAGGLE_BEARER_TOKEN="your_kaggle_api_key_here"
+
+# Use the workflow which includes authentication configuration
+nat run --config_file examples/MCP/kaggle_mcp/configs/config.yml \
+  --input "List files in the kaggle/titanic dataset"
 ```
+
+The workflow automatically handles bearer token authentication as configured in `config.yml`:
+
+```yaml
+authentication:
+  kaggle:
+    _type: api_key
+    raw_key: ${KAGGLE_BEARER_TOKEN}
+    auth_scheme: Bearer
+```
+
+**Note**: Kaggle's MCP tools use a nested `request` object structure. Tool parameters must be wrapped in a `{"request": {...}}` object. The workflow handles this automatically based on the tool schema.
 
 ## References
 

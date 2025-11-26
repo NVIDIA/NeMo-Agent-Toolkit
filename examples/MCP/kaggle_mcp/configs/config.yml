@@ -31,7 +31,7 @@ authentication:
   kaggle:
     _type: api_key
     raw_key: ${KAGGLE_BEARER_TOKEN}
-    auth_scheme: BEARER
+    auth_scheme: Bearer
 
 workflow:
    # Use an agent that 'reasons' and 'acts'
