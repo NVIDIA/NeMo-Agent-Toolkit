@@ -14,14 +14,17 @@
 # limitations under the License.
 
 from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_trainer_adapter
 from nat.cli.register_workflow import register_trajectory_builder
 
-from .config import OpenPipeARTTrajectoryBuilderConfig
+from .config import ARTTrainerAdapterConfig
+from .config import ARTTrajectoryBuilderConfig
+from .trainer_adapter import ARTTrainerAdapter
 from .trajectory_builder import ARTTrajectoryBuilder
 
 
-@register_trajectory_builder(config_type=OpenPipeARTTrajectoryBuilderConfig)
-async def register_art_trajectory_builder(config: OpenPipeARTTrajectoryBuilderConfig, builder: Builder):
+@register_trajectory_builder(config_type=ARTTrajectoryBuilderConfig)
+async def register_art_trajectory_builder(config: ARTTrajectoryBuilderConfig, builder: Builder):
     """
     Register the ART trajectory builder.
 
@@ -33,3 +36,18 @@ async def register_art_trajectory_builder(config: OpenPipeARTTrajectoryBuilderCo
         ARTTrajectoryBuilder instance
     """
     yield ARTTrajectoryBuilder(trajectory_builder_config=config)
+
+
+@register_trainer_adapter(config_type=ARTTrainerAdapterConfig)
+async def register_art_trainer_adapter(config: ARTTrainerAdapterConfig, builder: Builder):
+    """
+    Register the ART trainer adapter.
+
+    Args:
+        config: TrainerAdapterConfig object
+        builder: Builder instance
+
+    Returns:
+        ARTTrainerAdapter instance
+    """
+    yield ARTTrainerAdapter(adapter_config=config)

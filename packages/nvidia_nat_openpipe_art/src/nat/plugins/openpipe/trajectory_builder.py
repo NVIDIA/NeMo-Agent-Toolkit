@@ -46,7 +46,7 @@ from nat.eval.evaluator.evaluator_model import EvalInputItem
 from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 from nat.finetuning.utils.parsers.base_parser import parse_to_openai_messages
 
-from .config import OpenPipeARTTrajectoryBuilderConfig
+from .config import ARTTrajectoryBuilderConfig
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ class ARTTrajectoryBuilder(TrajectoryBuilder):
 
     def __init__(
         self,
-        trajectory_builder_config: OpenPipeARTTrajectoryBuilderConfig,
+        trajectory_builder_config: ARTTrajectoryBuilderConfig,
     ):
         super().__init__(trajectory_builder_config=trajectory_builder_config)
         self.evaluation_runs: dict[str, list[asyncio.Task[EvaluationRunOutput]]] = {}

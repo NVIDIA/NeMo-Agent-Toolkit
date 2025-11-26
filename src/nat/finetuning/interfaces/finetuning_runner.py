@@ -89,6 +89,7 @@ class Trainer(ABC):
             "total_groups": 0,
             "included_groups": set()
         }
+        self.trainer_config.reward = self.run_config.reward_function
 
         await self.trajectory_builder.initialize(run_config)
         await self.trainer_adapter.initialize(run_config)

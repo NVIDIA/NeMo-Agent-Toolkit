@@ -38,6 +38,7 @@ class TrainerAdapter(ABC):
         Asynchronously initialize any resources needed for the trainer adapter.
         """
         self.run_config = run_config
+        self.adapter_config.reward = self.run_config.reward_function
 
     @abstractmethod
     async def is_healthy(self) -> bool:

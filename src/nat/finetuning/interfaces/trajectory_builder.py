@@ -39,6 +39,7 @@ class TrajectoryBuilder(ABC):
         Asynchronously initialize any resources needed for the trajectory builder.
         """
         self.run_config = run_config
+        self.trajectory_builder_config.reward = self.run_config.reward_function
 
     async def run_eval(self) -> EvaluationRunOutput:
         """
