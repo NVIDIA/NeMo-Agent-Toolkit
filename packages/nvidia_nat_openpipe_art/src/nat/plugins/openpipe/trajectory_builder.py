@@ -41,6 +41,7 @@ from nat.data_models.finetuning import EpisodeItemRole
 from nat.data_models.finetuning import Trajectory
 from nat.data_models.finetuning import TrajectoryCollection
 from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepCategory
 from nat.eval.config import EvaluationRunOutput
 from nat.eval.evaluator.evaluator_model import EvalInputItem
 from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
@@ -222,6 +223,10 @@ class ARTTrajectoryBuilder(TrajectoryBuilder):
                 filtered_trajectory = []
                 for item in input_item.trajectory:
                     if item.function_ancestry.function_name in self.run_config.target_functions:
+                        # If target model is specified, filter by model name
+                        if (self.run_config.target_model and item.event_type == IntermediateStepCategory.LLM
+                                and item.payload.name != self.run_config.target_model):
+                            continue
                         filtered_trajectory.append(item)
 
                 if not filtered_trajectory:

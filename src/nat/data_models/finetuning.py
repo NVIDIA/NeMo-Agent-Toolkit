@@ -210,6 +210,10 @@ class FinetuneConfig(BaseModel):
     reward_function: RewardFunctionConfig | None = Field(description="Configuration for the reward function.",
                                                          default=None)
     target_functions: list[str] = ["<workflow>"]
+    target_model: str | None = Field(
+        description="Target model name to fine-tune. If None, all intermediate steps will be used without "
+        "filtering. This can lead to issues if multiple models are used in the workflow.",
+        default=None)
     curriculum_learning: CurriculumLearningConfig = Field(
         default=CurriculumLearningConfig(), description="Configuration for curriculum learning during fine-tuning")
 
