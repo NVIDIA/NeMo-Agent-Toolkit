@@ -18,14 +18,19 @@ import boto3
 client = boto3.client('bedrock-agentcore-control', region_name='<AWS_REGION>')
 
 response = client.update_agent_runtime(
-    agentRuntimeId='<AGENT_RUNTIME_ID>',
+    agentRuntimeId='<RUNTIME_ID>',
     agentRuntimeArtifact={
         'containerConfiguration': {
             'containerUri': '<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/strands-demo:latest'
         }
     },
     networkConfiguration={"networkMode": "PUBLIC"},
-    roleArn='<IAM_AGENTCORE_ROLE>')
+    roleArn='<IAM_ROLE_ARN>',
+    environmentVariables={
+        'NVIDIA_API_KEY': '<YOUR_NVIDIA_API_KEY>',
+        'AWS_ACCESS_KEY_ID': '<YOUR_AWS_ACCESS_KEY_ID>',
+        'AWS_SECRET_ACCESS_KEY': '<YOUR_AWS_SECRET_ACCESS_KEY>'
+    })
 
 print("Agent Runtime updated successfully!")
 print(f"Agent Runtime ARN: {response['agentRuntimeArn']}")

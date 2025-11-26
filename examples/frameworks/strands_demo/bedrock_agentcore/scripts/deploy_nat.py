@@ -25,7 +25,12 @@ response = client.create_agent_runtime(
         }
     },
     networkConfiguration={"networkMode": "PUBLIC"},
-    roleArn='<IAM_AGENTCORE_ROLE>')
+    roleArn='<IAM_ROLE_ARN>',
+    environmentVariables={
+        'NVIDIA_API_KEY': '<YOUR_NVIDIA_API_KEY>',
+        'AWS_ACCESS_KEY_ID': '<YOUR_AWS_ACCESS_KEY_ID>',
+        'AWS_SECRET_ACCESS_KEY': '<YOUR_AWS_SECRET_ACCESS_KEY>'
+    })
 
 print("Agent Runtime created successfully!")
 print(f"Agent Runtime ARN: {response['agentRuntimeArn']}")

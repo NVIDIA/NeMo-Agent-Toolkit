@@ -72,7 +72,7 @@ Enter your AWS ACCESS KEY, AWS SECRET ACCESS KEY, and REGION for your AWS Accoun
 
 ### Run the Container Locally
 
-> **Note:** The `NVIDIA_API_KEY` is required only when using NVIDIA-hosted NIM endpoints (default configuration). If you are using a self-hosted NVIDIA NIM or model with OAI compatible endpoint and a custom `base_url` specified in your configuration file (such as shown in `sizing_config.yml`), you do not need to set the `NVIDIA_API_KEY` environment variable.
+**Note:** The `NVIDIA_API_KEY` is required only when using NVIDIA-hosted NIM endpoints (default configuration). If you are using a self-hosted NVIDIA NIM or model with OAI compatible endpoint and a custom `base_url` specified in your configuration file (such as `base_url: <base url to NIM instance>` in `sizing_config.yml`), you do not need to provide the `NVIDIA_API_KEY`.
 
 ```bash
 docker run \
@@ -140,21 +140,14 @@ aws ecr get-login-password --region <AWS_REGION> | \
 
 > **Important:** Never pass credentials as build arguments. Use AWS IAM roles and environment variables instead. The example below shows the structure but credentials should be managed securely.
 
-> **Note:** The `NVIDIA_API_KEY` is required only when using NVIDIA-hosted NIM endpoints (default configuration). If you are using a self-hosted NVIDIA NIM or model with OAI compatible endpoint and a custom `base_url` specified in your configuration file (such as `base_url: <base url to NIM instance>` in `sizing_config.yml`), you do not need to provide the `NVIDIA_API_KEY`.
-
 Replace the following placeholders:
 - `<AWS_ACCOUNT_ID>` - Your AWS account ID
 - `<AWS_REGION>` - Your AWS region
-- `<NVIDIA_API_KEY>` - Your NVIDIA API key for hosted NIM endpoints (use environment variables or secrets manager; not needed for self-hosted NVIDIA NIM or models with custom `base_url`)
-- `<AWS_ACCESS_KEY_ID>` - Your AWS access key (use IAM roles instead)
-- `<AWS_SECRET_ACCESS_KEY>` - Your AWS secret key (use IAM roles instead)
+
 
 ```bash
 docker build \
   --build-arg NAT_VERSION=$(python -m setuptools_scm) \
-  --build-arg NVIDIA_API_KEY="<NVIDIA_API_KEY>" \
-  --build-arg AWS_ACCESS_KEY_ID="<AWS_ACCESS_KEY_ID>" \
-  --build-arg AWS_SECRET_ACCESS_KEY="<AWS_SECRET_ACCESS_KEY>" \
   -t <AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/strands-demo:latest \
   -f examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile \
   --platform linux/arm64 \
@@ -168,6 +161,9 @@ Update `examples/frameworks/strands_demo/bedrock_agentcore/scripts/deploy_nat.py
 - Your AWS region
 - ECR image URI
 - IAM Role ARN
+- `<NVIDIA_API_KEY>` - Your NVIDIA API key (use environment variables or secrets manager)
+- `<AWS_ACCESS_KEY_ID>` - Your AWS access key (use IAM roles instead)
+- `<AWS_SECRET_ACCESS_KEY>` - Your AWS secret key (use IAM roles instead)
 
 **deploy_nat.py:**
 
@@ -184,7 +180,12 @@ response = client.create_agent_runtime(
         }
     },
     networkConfiguration={"networkMode": "PUBLIC"},
-    roleArn='<IAM_ROLE_ARN>'
+    roleArn='<IAM_ROLE_ARN>',
+    environmentVariables={
+        'NVIDIA_API_KEY': '<YOUR_NVIDIA_API_KEY>',
+        'AWS_ACCESS_KEY_ID': '<YOUR_AWS_ACCESS_KEY_ID>',
+        'AWS_SECRET_ACCESS_KEY': '<YOUR_AWS_SECRET_ACCESS_KEY>'
+    }
 )
 
 print(f"Agent Runtime created successfully!")
@@ -265,21 +266,14 @@ Save the updated `Dockerfile`
 
 > **Important:** Never pass credentials as build arguments. Use AWS IAM roles and environment variables instead. The example below shows the structure but credentials should be managed securely.
 
-> **Note:** The `NVIDIA_API_KEY` is required only when using NVIDIA-hosted NIM endpoints (default configuration). If you are using a self-hosted NVIDIA NIM or model with OAI compatible endpoint and a custom `base_url` specified in your configuration file (such as `base_url: <base url to NIM instance>` in `sizing_config.yml`), you do not need to provide the `NVIDIA_API_KEY`.
-
 Replace the following placeholders:
 - `<AWS_ACCOUNT_ID>` - Your AWS account ID
 - `<AWS_REGION>` - Your AWS region
-- `<NVIDIA_API_KEY>` - Your NVIDIA API key for hosted NIM endpoints (use environment variables or secrets manager; not needed for self-hosted NVIDIA NIM or models with custom `base_url`)
-- `<AWS_ACCESS_KEY_ID>` - Your AWS access key (use IAM roles instead)
-- `<AWS_SECRET_ACCESS_KEY>` - Your AWS secret key (use IAM roles instead)
+
 
 ```bash
 docker build \
   --build-arg NAT_VERSION=$(python -m setuptools_scm) \
-  --build-arg NVIDIA_API_KEY \
-  --build-arg AWS_ACCESS_KEY_ID \
-  --build-arg AWS_SECRET_ACCESS_KEY \
   -t <AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/strands-demo:latest \
   -f examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile \
   --platform linux/arm64 \
@@ -296,6 +290,9 @@ Update `update_nat2.py` with:
 - Runtime ID
 - ECR image URI
 - IAM Role ARN
+- `<NVIDIA_API_KEY>` - Your NVIDIA API key (use environment variables or secrets manager)
+- `<AWS_ACCESS_KEY_ID>` - Your AWS access key (use IAM roles instead)
+- `<AWS_SECRET_ACCESS_KEY>` - Your AWS secret key (use IAM roles instead)
 
 **update_nat.py:**
 
@@ -312,7 +309,12 @@ response = client.update_agent_runtime(
         }
     },
     networkConfiguration={"networkMode": "PUBLIC"},
-    roleArn='<IAM_ROLE_ARN>'
+    roleArn='<IAM_ROLE_ARN>',
+    environmentVariables={
+        'NVIDIA_API_KEY': '<YOUR_NVIDIA_API_KEY>',
+        'AWS_ACCESS_KEY_ID': '<YOUR_AWS_ACCESS_KEY_ID>',
+        'AWS_SECRET_ACCESS_KEY': '<YOUR_AWS_SECRET_ACCESS_KEY>'
+    }
 )
 
 print(f"Agent Runtime updated successfully!")
@@ -573,7 +575,7 @@ After the role is created, you'll be redirected to the Roles page:
 3. On the role summary page, locate and copy the **ARN** (Amazon Resource Name)
 
 The ARN will look like this:
-```plaintext
+```
 arn:aws:iam::<AWS_ACCOUNT_ID>:role/AgentCore_NAT
 ```
 
@@ -635,7 +637,7 @@ The `Dockerfile` is organized into the following sections:
 5. **Runtime Configuration** - Entry point and environment
 
 <details>
-<summary>📄 Click to view complete `Dockerfile`</summary>
+<summary>📄 Click to view complete Dockerfile</summary>
 
 ```dockerfile
 # =============================================================================
@@ -783,11 +785,11 @@ ENTRYPOINT ["sh", "-c", "exec opentelemetry-instrument nat serve --config_file=$
 
 ### Credential Management
 
-**NEVER hard-code credentials in your `Dockerfile` or source code.** Always use secure credential management:
+**NEVER hardcode credentials in your `Dockerfile` or source code.** Always use secure credential management:
 
 | ❌ Never Use | ✅ Use Instead |
 |-------------|---------------|
-| Hard-coded API keys in `Dockerfile` | AWS Secrets Manager |
+| Hardcoded API keys in `Dockerfile` | AWS Secrets Manager |
 | Build-arg for credentials | Environment variables at runtime |
 | Embedded passwords | IAM roles for authentication |
 | Committed secrets to git | AWS Systems Manager Parameter Store |
@@ -795,11 +797,8 @@ ENTRYPOINT ["sh", "-c", "exec opentelemetry-instrument nat serve --config_file=$
 ### Recommended Approach
 
 **For NVIDIA API Key:**
-
-> **Note:** The NVIDIA API key is only required when using NVIDIA-hosted NIM endpoints. If you are using a self-hosted NVIDIA NIM or model with OAI compatible endpoint and a custom `base_url` in your configuration (such as `base_url: <base url to NIM instance>` in your workflow config), you do not need the NVIDIA API key.
-
 ```bash
-# Store in AWS Secrets Manager (only if using NVIDIA-hosted endpoints)
+# Store in AWS Secrets Manager
 aws secretsmanager create-secret \
   --name nvidia-api-key \
   --secret-string "<NVIDIA_API_KEY>" \
@@ -827,7 +826,7 @@ ENV AWS_ACCESS_KEY_ID="AKIAxxxxx"
 
 ### Action Items Before Deployment
 
-- [ ] Remove all hard-coded credentials from code
+- [ ] Remove all hardcoded credentials from code
 - [ ] Set up AWS Secrets Manager for API keys
 - [ ] Configure IAM roles for AgentCore runtime
 - [ ] Enable CloudWatch logging with proper IAM permissions
@@ -846,7 +845,7 @@ Throughout this guide, replace the following placeholders with your actual value
 | `<AWS_ACCOUNT_ID>` | Your AWS account ID | `123456789012` |
 | `<AWS_REGION>` | Your AWS region | `us-west-2`, `us-east-1`, `eu-west-1` |
 | `<RUNTIME_ID>` | AgentCore runtime ID | `strands_demo-abc123XYZ` |
-| `<NVIDIA_API_KEY>` | Your NVIDIA API key (only for hosted NIM endpoints) | Retrieve from secrets manager; not needed for self-hosted NVIDIA NIM or models with custom `base_url` |
+| `<NVIDIA_API_KEY>` | Your NVIDIA API key | Retrieve from secrets manager |
 | `<AWS_ACCESS_KEY_ID>` | AWS access key | Use IAM roles instead |
 | `<AWS_SECRET_ACCESS_KEY>` | AWS secret key | Use IAM roles instead |
 
