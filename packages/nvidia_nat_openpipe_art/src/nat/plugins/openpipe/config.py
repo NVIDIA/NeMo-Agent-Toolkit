@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from pydantic import Field
 
 from nat.data_models.finetuning import TrainerAdapterConfig
+from nat.data_models.finetuning import TrainerConfig
 from nat.data_models.finetuning import TrajectoryBuilderConfig
 
 
@@ -60,10 +61,17 @@ class ARTBackendConfig(BaseModel):
     server_config: art.dev.OpenAIServerConfig | None = Field(description="Server args for Remote Backend", default=None)
 
 
-class ARTTrainerAdapterConfig(TrainerAdapterConfig):
+class ARTTrainerAdapterConfig(TrainerAdapterConfig, name="openpipe_art_trainer_adapter"):
     """
     Configuration for the ART Trainer run
     """
 
     backend: ARTBackendConfig = Field(description="Configuration for the ART backend.")
     training: art.dev.TrainerArgs | None = Field(description="Training args for Remote Backend", default=None)
+
+
+class ARTTrainerConfig(TrainerConfig, name="openpipe_art_trainer"):
+    """
+    Configuration for the ART Trainer run
+    """
+    pass

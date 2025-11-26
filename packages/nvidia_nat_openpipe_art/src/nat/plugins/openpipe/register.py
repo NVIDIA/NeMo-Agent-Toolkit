@@ -14,11 +14,14 @@
 # limitations under the License.
 
 from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_trainer
 from nat.cli.register_workflow import register_trainer_adapter
 from nat.cli.register_workflow import register_trajectory_builder
 
 from .config import ARTTrainerAdapterConfig
+from .config import ARTTrainerConfig
 from .config import ARTTrajectoryBuilderConfig
+from .trainer import ARTTrainer
 from .trainer_adapter import ARTTrainerAdapter
 from .trajectory_builder import ARTTrajectoryBuilder
 
@@ -51,3 +54,18 @@ async def register_art_trainer_adapter(config: ARTTrainerAdapterConfig, builder:
         ARTTrainerAdapter instance
     """
     yield ARTTrainerAdapter(adapter_config=config)
+
+
+@register_trainer(config_type=ARTTrainerConfig)
+async def register_art_trainer(config: ARTTrainerConfig, builder: Builder):
+    """
+    Register the ART trainer.
+
+    Args:
+        config: TrainerConfig object
+        builder: Builder instance
+
+    Returns:
+        ARTTrainer instance
+    """
+    yield ARTTrainer(trainer_config=config)

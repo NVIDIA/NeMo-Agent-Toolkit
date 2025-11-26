@@ -242,3 +242,20 @@ class Trainer(ABC):
         Apply curriculum learning to filter trajectory groups based on difficulty.
         """
         raise NotImplementedError("Curriculum learning not implemented for this backend.")
+
+    def get_curriculum_state(self) -> dict[str, Any]:
+        """
+        Get the current state of curriculum learning.
+
+        Returns:
+            dict: Current curriculum state including percentile and group statistics
+        """
+        # Convert set to list for JSON serialization
+        state = {
+            "current_percentile": self._curriculum_state["current_percentile"],
+            "last_expansion_epoch": self._curriculum_state["last_expansion_epoch"],
+            "total_groups": self._curriculum_state["total_groups"],
+            "included_groups": list(self._curriculum_state["included_groups"]),
+            "config": self.curriculum_config.model_dump() if self.curriculum_config else None
+        }
+        return state
