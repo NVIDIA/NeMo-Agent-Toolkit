@@ -14,3 +14,4 @@
 # limitations under the License.
 
 # Import the generated workflow function to trigger registration
+from .rl_with_openpipe_art import rl_with_openpipe_art_function
