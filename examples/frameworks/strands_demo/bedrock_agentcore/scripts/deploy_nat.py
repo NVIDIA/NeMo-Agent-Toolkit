@@ -12,25 +12,54 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Deploy NAT agent runtime with NVIDIA API key from AWS Secrets Manager."""
+
+import json
 
 import boto3
 
-client = boto3.client('bedrock-agentcore-control', region_name='<AWS_REGION>')
 
-response = client.create_agent_runtime(
-    agentRuntimeName='strands_demo',
-    agentRuntimeArtifact={
-        'containerConfiguration': {
-            'containerUri': '<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/strands-demo:latest'
-        }
-    },
-    networkConfiguration={"networkMode": "PUBLIC"},
-    roleArn='<IAM_ROLE_ARN>',
-    environmentVariables={
-        'NVIDIA_API_KEY': '<YOUR_NVIDIA_API_KEY>',
-        'AWS_ACCESS_KEY_ID': '<YOUR_AWS_ACCESS_KEY_ID>',
-        'AWS_SECRET_ACCESS_KEY': '<YOUR_AWS_SECRET_ACCESS_KEY>'
-    })
+def get_secret(secret_name, region_name):
+    """Retrieve secret from AWS Secrets Manager."""
+    session = boto3.session.Session()
+    secrets_client = session.client(service_name='secretsmanager', region_name=region_name)
+
+    try:
+        get_secret_value_response = secrets_client.get_secret_value(SecretId=secret_name)
+    except Exception as e:
+        raise Exception(f"Error retrieving secret: {e}") from e
+
+    secret = get_secret_value_response['SecretString']
+    return json.loads(secret)
+
+
+# Configuration
+AWS_REGION = '<AWS_REGION>'
+AWS_ACCOUNT_ID = '<AWS_ACCOUNT_ID>'
+AGENT_RUNTIME_NAME = 'strands_demo'
+CONTAINER_IMAGE = 'strands-demo:latest'
+IAM_AGENTCORE_ROLE = '<IAM_AGENTCORE_ROLE>'
+SECRET_NAME = 'nvidia-api-credentials'
+
+# Fetch NVIDIA API key from Secrets Manager
+secrets = get_secret(SECRET_NAME, AWS_REGION)
+nvidia_api_key = secrets.get('NVIDIA_API_KEY')
+
+if not nvidia_api_key:
+    raise ValueError("NVIDIA_API_KEY not found in secrets")
+
+client = boto3.client('bedrock-agentcore-control', region_name=AWS_REGION)
+
+response = client.create_agent_runtime(agentRuntimeName=AGENT_RUNTIME_NAME,
+                                       agentRuntimeArtifact={
+                                           'containerConfiguration': {
+                                               'containerUri': (f'{AWS_ACCOUNT_ID}.dkr.ecr.{AWS_REGION}'
+                                                                f'.amazonaws.com/{CONTAINER_IMAGE}')
+                                           }
+                                       },
+                                       networkConfiguration={"networkMode": "PUBLIC"},
+                                       roleArn=IAM_AGENTCORE_ROLE,
+                                       environmentVariables={'NVIDIA_API_KEY': nvidia_api_key})
 
 print("Agent Runtime created successfully!")
 print(f"Agent Runtime ARN: {response['agentRuntimeArn']}")

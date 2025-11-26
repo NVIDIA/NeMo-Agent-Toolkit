@@ -109,6 +109,40 @@ Workflow Result:
 
 If you have not set up the AWS environment in the previous step, do so now.
 
+### Create AWS Secrets Entry for NVIDIA_API_KEY
+for the NAT deployment scripts.
+This is security best practice
+
+## Prerequisites
+
+- AWS CLI installed and configured
+- Appropriate IAM permissions to create secrets in AWS Secrets Manager
+- Your NVIDIA API key
+
+## Create the Secret
+
+Use the following AWS CLI command to create the secret:
+
+```bash
+aws secretsmanager create-secret \
+  --name nvidia-api-credentials \
+  --description "NVIDIA API credentials for NAT agent runtime" \
+  --secret-string '{"NVIDIA_API_KEY":"your-nvidia-api-key-here"}' \
+  --region us-west-2
+```
+
+Replace `your-nvidia-api-key-here` with your actual NVIDIA API key.
+
+## Verify the Secret
+
+To verify the secret was created successfully:
+
+```bash
+aws secretsmanager describe-secret \
+  --secret-id nvidia-api-credentials \
+  --region us-west-2
+```
+
 ### Create ECR Repository
 
 Replace `<AWS_REGION>` with your AWS region (e.g., us-west-2, us-east-1, eu-west-1):
@@ -161,34 +195,70 @@ Update `examples/frameworks/strands_demo/bedrock_agentcore/scripts/deploy_nat.py
 - Your AWS region
 - ECR image URI
 - IAM Role ARN
-- `<NVIDIA_API_KEY>` - Your NVIDIA API key (use environment variables or secrets manager)
-- `<AWS_ACCESS_KEY_ID>` - Your AWS access key (use IAM roles instead)
-- `<AWS_SECRET_ACCESS_KEY>` - Your AWS secret key (use IAM roles instead)
 
 **deploy_nat.py:**
 
 ```python
+import json
 import boto3
 
-client = boto3.client('bedrock-agentcore-control', region_name='<AWS_REGION>')
+
+def get_secret(secret_name, region_name):
+    """Retrieve secret from AWS Secrets Manager."""
+    session = boto3.session.Session()
+    secrets_client = session.client(
+        service_name='secretsmanager',
+        region_name=region_name
+    )
+
+    try:
+        get_secret_value_response = secrets_client.get_secret_value(
+            SecretId=secret_name
+        )
+    except Exception as e:
+        raise Exception(f"Error retrieving secret: {e}") from e
+
+    secret = get_secret_value_response['SecretString']
+    return json.loads(secret)
+
+
+# Configuration
+AWS_REGION = '<AWS_REGION>'
+AWS_ACCOUNT_ID = '<AWS_ACCOUNT_ID>'
+AGENT_RUNTIME_NAME = 'strands_demo'
+CONTAINER_IMAGE = 'strands-demo:latest'
+IAM_AGENTCORE_ROLE = '<IAM_AGENTCORE_ROLE>'
+SECRET_NAME = 'nvidia-api-credentials'
+
+# Fetch NVIDIA API key from Secrets Manager
+secrets = get_secret(SECRET_NAME, AWS_REGION)
+nvidia_api_key = secrets.get('NVIDIA_API_KEY')
+
+if not nvidia_api_key:
+    raise ValueError("NVIDIA_API_KEY not found in secrets")
+
+client = boto3.client(
+    'bedrock-agentcore-control',
+    region_name=AWS_REGION
+)
 
 response = client.create_agent_runtime(
-    agentRuntimeName='strands_demo',
+    agentRuntimeName=AGENT_RUNTIME_NAME,
     agentRuntimeArtifact={
         'containerConfiguration': {
-            'containerUri': '<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/strands-demo:latest'
+            'containerUri': (
+                f'{AWS_ACCOUNT_ID}.dkr.ecr.{AWS_REGION}'
+                f'.amazonaws.com/{CONTAINER_IMAGE}'
+            )
         }
     },
     networkConfiguration={"networkMode": "PUBLIC"},
-    roleArn='<IAM_ROLE_ARN>',
+    roleArn=IAM_AGENTCORE_ROLE,
     environmentVariables={
-        'NVIDIA_API_KEY': '<YOUR_NVIDIA_API_KEY>',
-        'AWS_ACCESS_KEY_ID': '<YOUR_AWS_ACCESS_KEY_ID>',
-        'AWS_SECRET_ACCESS_KEY': '<YOUR_AWS_SECRET_ACCESS_KEY>'
-    }
-)
+        'NVIDIA_API_KEY': nvidia_api_key
+    })
 
-print(f"Agent Runtime created successfully!")
+print("Agent Runtime created successfully!")
 print(f"Agent Runtime ARN: {response['agentRuntimeArn']}")
 print(f"Status: {response['status']}")
 ```
@@ -236,9 +306,9 @@ uv run examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py
 
 ## Step 5: Instrument for OpenTelemetry
 
-### Update `Dockerfile` Environment Variables
+### Update Dockerfile Environment Variables
 
-Update the following environment variables in the `Dockerfile` with your Runtime ID (obtained from Step 4):
+Update the following environment variables in the Dockerfile with your Runtime ID (obtained from Step 4):
 
 ```dockerfile
 ENV OTEL_RESOURCE_ATTRIBUTES=service.name=nat_test_agent,aws.log.group.names=/aws/bedrock-agentcore/runtimes/<RUNTIME_ID>
@@ -259,7 +329,7 @@ And uncomment the OpenTelemetry instrumented entry point:
 ```dockerfile
 ENTRYPOINT ["sh", "-c", "exec opentelemetry-instrument nat serve --config_file=$NAT_CONFIG_FILE --host 0.0.0.0"]
 ```
-Save the updated `Dockerfile`
+Save the updated Dockerfile
 
 
 ### ReBuild and Push Docker Image to ECR
@@ -290,34 +360,71 @@ Update `update_nat2.py` with:
 - Runtime ID
 - ECR image URI
 - IAM Role ARN
-- `<NVIDIA_API_KEY>` - Your NVIDIA API key (use environment variables or secrets manager)
-- `<AWS_ACCESS_KEY_ID>` - Your AWS access key (use IAM roles instead)
-- `<AWS_SECRET_ACCESS_KEY>` - Your AWS secret key (use IAM roles instead)
 
 **update_nat.py:**
 
 ```python
+import json
+
 import boto3
 
-client = boto3.client('bedrock-agentcore-control', region_name='<AWS_REGION>')
+
+def get_secret(secret_name, region_name):
+    """Retrieve secret from AWS Secrets Manager."""
+    session = boto3.session.Session()
+    secrets_client = session.client(
+        service_name='secretsmanager',
+        region_name=region_name
+    )
+
+    try:
+        get_secret_value_response = secrets_client.get_secret_value(
+            SecretId=secret_name
+        )
+    except Exception as e:
+        raise Exception(f"Error retrieving secret: {e}") from e
+
+    secret = get_secret_value_response['SecretString']
+    return json.loads(secret)
+
+
+# Configuration
+AWS_REGION = '<AWS_REGION>'
+AWS_ACCOUNT_ID = '<AWS_ACCOUNT_ID>'
+AGENT_RUNTIME_ID = '<AGENT_RUNTIME_ID>'
+CONTAINER_IMAGE = 'strands-demo:latest'
+IAM_AGENTCORE_ROLE = '<IAM_AGENTCORE_ROLE>'
+SECRET_NAME = 'nvidia-api-credentials'
+
+# Fetch NVIDIA API key from Secrets Manager
+secrets = get_secret(SECRET_NAME, AWS_REGION)
+nvidia_api_key = secrets.get('NVIDIA_API_KEY')
+
+if not nvidia_api_key:
+    raise ValueError("NVIDIA_API_KEY not found in secrets")
+
+client = boto3.client(
+    'bedrock-agentcore-control',
+    region_name=AWS_REGION
+)
 
 response = client.update_agent_runtime(
-    agentRuntimeId='<RUNTIME_ID>',
+    agentRuntimeId=AGENT_RUNTIME_ID,
     agentRuntimeArtifact={
         'containerConfiguration': {
-            'containerUri': '<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/strands-demo:latest'
+            'containerUri': (
+                f'{AWS_ACCOUNT_ID}.dkr.ecr.{AWS_REGION}'
+                f'.amazonaws.com/{CONTAINER_IMAGE}'
+            )
         }
     },
     networkConfiguration={"networkMode": "PUBLIC"},
-    roleArn='<IAM_ROLE_ARN>',
+    roleArn=IAM_AGENTCORE_ROLE,
     environmentVariables={
-        'NVIDIA_API_KEY': '<YOUR_NVIDIA_API_KEY>',
-        'AWS_ACCESS_KEY_ID': '<YOUR_AWS_ACCESS_KEY_ID>',
-        'AWS_SECRET_ACCESS_KEY': '<YOUR_AWS_SECRET_ACCESS_KEY>'
-    }
-)
+        'NVIDIA_API_KEY': nvidia_api_key
+    })
 
-print(f"Agent Runtime updated successfully!")
+print("Agent Runtime updated successfully!")
 print(f"Agent Runtime ARN: {response['agentRuntimeArn']}")
 print(f"Status: {response['status']}")
 ```
@@ -535,6 +642,17 @@ Since we need a custom policy, we'll create it now:
                 "arn:aws:bedrock-agentcore:<AWS_REGION>:<AWS_ACCOUNT_ID>:workload-identity-directory/default",
                 "arn:aws:bedrock-agentcore:<AWS_REGION>:<AWS_ACCOUNT_ID>:workload-identity-directory/default/workload-identity/*"
             ]
+        },
+        {
+            "Sid": "SecretsManagerAccess",
+            "Effect": "Allow",
+            "Action": [
+                "secretsmanager:CreateSecret",
+                "secretsmanager:PutSecretValue",
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:DeleteSecret"
+            ],
+            "Resource": "arn:aws:secretsmanager:*:*:secret:nvidia-api-credentials"
         }
     ]
 }
@@ -624,11 +742,11 @@ If you encounter permission errors, you need specific IAM permissions. Refer to 
 - Higher percentages provide more trace coverage but increase costs
 ---
 
-## `Dockerfile` Reference
+## Dockerfile Reference
 
-### Complete `Dockerfile`
+### Complete Dockerfile
 
-The `Dockerfile` is organized into the following sections:
+The Dockerfile is organized into the following sections:
 
 1. **Base Image Configuration** - Ubuntu base with Python
 2. **Build Dependencies** - Compilers and build tools
@@ -785,11 +903,11 @@ ENTRYPOINT ["sh", "-c", "exec opentelemetry-instrument nat serve --config_file=$
 
 ### Credential Management
 
-**NEVER hardcode credentials in your `Dockerfile` or source code.** Always use secure credential management:
+**NEVER hard-code credentials in your Dockerfile or source code.** Always use secure credential management:
 
 | ❌ Never Use | ✅ Use Instead |
 |-------------|---------------|
-| Hardcoded API keys in `Dockerfile` | AWS Secrets Manager |
+| Hard-coded API keys in Dockerfile | AWS Secrets Manager |
 | Build-arg for credentials | Environment variables at runtime |
 | Embedded passwords | IAM roles for authentication |
 | Committed secrets to git | AWS Systems Manager Parameter Store |
@@ -812,7 +930,7 @@ aws secretsmanager create-secret \
 - Never use access keys when IAM roles are available
 - Enable MFA for sensitive operations
 
-### `Dockerfile` Best Practices
+### Dockerfile Best Practices
 
 ```dockerfile
 # ❌ WRONG - Never do this
@@ -826,7 +944,7 @@ ENV AWS_ACCESS_KEY_ID="AKIAxxxxx"
 
 ### Action Items Before Deployment
 
-- [ ] Remove all hardcoded credentials from code
+- [ ] Remove all hard-coded credentials from code
 - [ ] Set up AWS Secrets Manager for API keys
 - [ ] Configure IAM roles for AgentCore runtime
 - [ ] Enable CloudWatch logging with proper IAM permissions
@@ -866,7 +984,7 @@ Throughout this guide, replace the following placeholders with your actual value
 
 ## Additional Resources
 
-- [NeMo Agent Toolkit Documentation](https://docs.nvidia.com/nemo/agent-toolkit/1.3/)
+- [NeMo Agent Toolkit Documentation](https://docs.nvidia.com/nemo/agent-toolkit/1.2/)
 - [AWS Bedrock AgentCore Documentation](https://docs.aws.amazon.com/bedrock/)
 - [OpenTelemetry Python Documentation](https://opentelemetry.io/docs/languages/python/)
 - [AWS CloudWatch Logs Documentation](https://docs.aws.amazon.com/cloudwatch/)
