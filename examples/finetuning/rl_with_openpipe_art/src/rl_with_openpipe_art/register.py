@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 # Import the generated workflow function to trigger registration
+# Add flags to ignore unused import with ruff and flak8
+# ruff: noqa: F401
 from .rl_with_openpipe_art import rl_with_openpipe_art_function
