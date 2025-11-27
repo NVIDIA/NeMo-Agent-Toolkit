@@ -99,3 +99,78 @@ def check_winner(board: np.ndarray) -> int:
 
 def is_draw(board: np.ndarray) -> bool:
     return (board == 0).sum() == 0 and check_winner(board) == 0
+
+
+# ---------- Heuristic evaluation (Alpha-Beta-style evaluation function) ----------
+
+
+def evaluate_board_for_player(board: np.ndarray, player_val: int) -> float:
+    """
+    Heuristic evaluation from the perspective of `player_val` (1 for X, -1 for O).
+
+    Alpha-Beta-style evaluation, but used *post-facto* (no search), based on:
+      - Terminal states (win/lose/draw)
+      - Line control (open lines, two-in-a-row, blocks)
+      - Center / corner / edge control
+      - Forks (two simultaneous threats)
+      - Immediate opponent threats
+
+    Higher score = better for `player_val`.
+    """
+
+    assert player_val in (1, -1), "player_val must be 1 (X) or -1 (O)"
+
+    winner = check_winner(board)
+    if winner == player_val:
+        return 100  # immediate win
+    elif winner == -player_val:
+        return -100  # immediate loss
+    elif is_draw(board):
+        return 0.0
+
+    # Perspective transform: player_val pieces -> +1, opponent -> -1
+    b = board * player_val
+
+    # Extract all lines at once: shape (8, 3)
+    line_vals = b[LINE_INDICES[..., 0], LINE_INDICES[..., 1]]
+
+    player_counts = (line_vals == 1).sum(axis=1)
+    opp_counts = (line_vals == -1).sum(axis=1)
+    empty_counts = (line_vals == 0).sum(axis=1)
+
+    # Offensive / defensive line scores
+    line_scores = np.zeros(8, dtype=float)
+
+    offensive_weights = np.array([0.0, 1.0, 4.0, 0.0])  # index = num_player_marks
+    defensive_weights = np.array([0.0, 1.2, 6.0, 0.0])  # index = num_opp_marks
+
+    pure_off = (opp_counts == 0) & (player_counts > 0)
+    pure_def = (player_counts == 0) & (opp_counts > 0)
+
+    line_scores[pure_off] += offensive_weights[player_counts[pure_off]]
+    line_scores[pure_def] -= defensive_weights[opp_counts[pure_def]]
+
+    # Fork potential: lines with 2 of ours + 1 empty
+    fork_lines = (player_counts == 2) & (opp_counts == 0) & (empty_counts == 1)
+    num_forks = int(fork_lines.sum())
+    fork_score = 0.0
+    if num_forks >= 2:
+        fork_score += 8.0 * (num_forks - 1)
+
+    # Center / corner / edge control
+    center = int(b[1, 1])
+    center_score = 3.0 * center
+
+    corners = np.array([b[0, 0], b[0, 2], b[2, 0], b[2, 2]], dtype=int)
+    corner_score = 1.5 * int(corners.sum())
+
+    edges = np.array([b[0, 1], b[1, 0], b[1, 2], b[2, 1]], dtype=int)
+    edge_score = 0.5 * int(edges.sum())
+
+    # Opponent immediate threats: lines with 2 opponent marks + 1 empty
+    opp_threats = (player_counts == 0) & (opp_counts == 2) & (empty_counts == 1)
+    opp_threat_score = -7.0 * int(opp_threats.sum())
+
+    total_score = (float(line_scores.sum()) + fork_score + center_score + corner_score + edge_score + opp_threat_score)
+
+    return total_score

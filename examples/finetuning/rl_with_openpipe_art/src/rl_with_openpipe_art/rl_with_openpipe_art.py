@@ -28,6 +28,7 @@ from nat.data_models.function import FunctionBaseConfig
 
 from .core import board_to_str
 from .core import check_winner
+from .core import evaluate_board_for_player
 from .core import is_draw
 from .core import new_board
 from .llm_agents import LLMTicTacToePlayer
@@ -45,6 +46,7 @@ class MoveRecord:
     symbol: str
     row: int  # 0-based
     col: int  # 0-based
+    score: float
     raw_llm_output: str
 
 
@@ -82,6 +84,9 @@ class TicTacToeGame:
             # Apply move
             self.board[row, col] = current_player.value
 
+            # Heuristic score *after* move, from current player's perspective
+            score = evaluate_board_for_player(self.board, current_player.value)
+
             self.history.append(
                 MoveRecord(
                     turn_index=turn_index,
@@ -89,10 +94,12 @@ class TicTacToeGame:
                     symbol=current_player.symbol,
                     row=row,
                     col=col,
+                    score=score,
                     raw_llm_output=raw,
                 ))
 
             logger.debug(f"{current_player.name} plays at (row={row+1}, col={col+1}).")
+            logger.debug(f"Heuristic score for this move (from {current_player.symbol}'s perspective): {score:.2f}")
             logger.debug("Board after move:")
             logger.debug("\n" + board_to_str(self.board))
 
