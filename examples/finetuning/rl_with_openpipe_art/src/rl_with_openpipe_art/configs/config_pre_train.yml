@@ -1,0 +1,28 @@
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-4-maverick-17b-128e-instruct
+    temperature: 0.5
+  nim_small_llm:
+    _type: nim
+    model_name: qwen/qwen2.5-7b-instruct
+    temperature: 0.5
+
+workflow:
+  _type: rl_with_openpipe_art
+  larger_model: nim_llm
+  smaller_model: nim_small_llm
+  max_parser_retries: 3
+  play_larger_random: false
+
+eval:
+  general:
+    max_concurrency: 16
+    output_dir: .tmp/nat/examples/rl_openpipe/eval/pre_train
+    dataset:
+      _type: json
+      file_path: examples/finetuning/rl_with_openpipe_art/data/data.json
+
+  evaluators:
+    rl_accuracy:
+      _type: rl_accuracy

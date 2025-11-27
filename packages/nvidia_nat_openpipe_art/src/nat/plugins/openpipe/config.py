@@ -52,13 +52,17 @@ class ARTBackendConfig(BaseModel):
     delete_old_checkpoints: bool = Field(description="Whether to delete old checkpoints after a training epoch",
                                          default=False)
 
-    init_args: art.dev.InitArgs | None = Field(description="Initialization args for Remote Backend", default=None)
+    init_args: art.dev.InitArgs | dict = Field(description="Initialization args for Remote Backend",
+                                               default_factory=dict)
 
-    engine_args: art.dev.EngineArgs | None = Field(description="Engine args for Remote Backend", default=None)
+    engine_args: art.dev.EngineArgs | dict = Field(description="Engine args for Remote Backend",
+                                               default_factory=dict)
 
-    torchtune_args: art.dev.TorchtuneArgs | None = Field(description="Torchtune args for Remote Backend", default=None)
+    torchtune_args: art.dev.TorchtuneArgs | dict = Field(description="Torchtune args for Remote Backend",
+                                               default_factory=dict)
 
-    server_config: art.dev.OpenAIServerConfig | None = Field(description="Server args for Remote Backend", default=None)
+    server_config: art.dev.OpenAIServerConfig | dict = Field(description="Server args for Remote Backend" ,
+                                               default_factory=dict)
 
 
 class ARTTrainerAdapterConfig(TrainerAdapterConfig, name="openpipe_art_trainer_adapter"):
@@ -67,7 +71,8 @@ class ARTTrainerAdapterConfig(TrainerAdapterConfig, name="openpipe_art_trainer_a
     """
 
     backend: ARTBackendConfig = Field(description="Configuration for the ART backend.")
-    training: art.dev.TrainerArgs | None = Field(description="Training args for Remote Backend", default=None)
+    training: art.dev.TrainerArgs | dict = Field(description="Training args for Remote Backend",
+                                               default_factory=dict)
 
 
 class ARTTrainerConfig(TrainerConfig, name="openpipe_art_trainer"):
