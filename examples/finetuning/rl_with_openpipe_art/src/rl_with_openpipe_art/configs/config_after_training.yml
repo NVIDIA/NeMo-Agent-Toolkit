@@ -1,0 +1,37 @@
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama3-8b-instruct
+    temperature: 0.1
+
+  nim_small_llm:
+    _type: nim
+    model_name: Qwen/Qwen2.5-7B-Instruct
+    temperature: 0.1
+
+  openpipe_llm:
+    _type: openai
+    # Model name should be the same as the trainer adapter config base_model
+    model_name: Qwen/Qwen2.5-7B-Instruct
+    base_url: http://localhost:8000/v1
+    api_key: default
+    temperature: 0.2
+
+workflow:
+  _type: rl_with_openpipe_art
+  larger_model: nim_llm
+  smaller_model: openpipe_llm
+  max_parser_retries: 3
+  play_larger_random: false
+
+eval:
+  general:
+    max_concurrency: 8
+    output_dir: .tmp/nat/examples/rl_openpipe/eval/baseline
+    dataset:
+      _type: json
+      file_path: examples/finetuning/rl_with_openpipe_art/data/data.json
+
+  evaluators:
+    rl_accuracy:
+      _type: rl_accuracy

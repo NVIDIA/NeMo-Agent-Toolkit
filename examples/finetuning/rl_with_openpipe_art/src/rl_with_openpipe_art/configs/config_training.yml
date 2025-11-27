@@ -22,7 +22,7 @@ workflow:
   larger_model: nim_llm
   smaller_model: openpipe_llm
   max_parser_retries: 3
-  play_larger_random: true
+  play_larger_random: false
 
 eval:
   general:
