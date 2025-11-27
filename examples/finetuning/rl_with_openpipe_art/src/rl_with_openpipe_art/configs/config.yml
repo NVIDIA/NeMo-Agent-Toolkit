@@ -26,3 +26,66 @@ eval:
   evaluators:
     rl_accuracy:
       _type: rl_accuracy
+
+#################################
+#### Begin Finetuning Config ####
+#################################
+
+trajectory_builders:
+  openpipe_traj_builder:
+    _type: openpipe_art_traj_builder
+    num_generations: 1
+
+trainer_adapters:
+  openpipe_trainer_adapter:
+    _type: openpipe_art_trainer_adapter
+    backend:
+
+      # General Backend Arguments
+      ip: "0.0.0.0"
+      port: 7623
+      name: "tic_tac_toe"
+      project: "tic_tac_toe_project"
+      base_model: "Qwen/Qwen2.5-7B-Instruct"
+      api_key: "default"
+
+      # Model Initialization Arguments
+      init_args:
+        max_seq_length: 8192
+        enable_prefix_caching: false
+
+      # VLLM Engine Arguments
+      engine_args:
+        gpu_memory_utilization: 0.9
+        tensor_parallel_size: 1
+
+      # Training Arguments
+      # Adjust these arguments based on GPU size
+      training:
+        gradient_accumulation_steps: 1
+        learning_rate: 1e-5
+        num_generations: 96 # Number of evaluation data points bc num_generations is 1
+        sync_ref_model: true
+        ref_model_sync_steps: 100
+        beta: 0.1
+        temperature: 0.3
+        per_device_train_batch_size: 8
+
+trainers:
+  openpipe_trainer:
+    _type: openpipe_art_trainer
+
+
+######### Put it all together into a finetuning config
+
+finetuning:
+  enabled: false
+  trainer: openpipe_trainer
+  trajectory_builder: openpipe_traj_builder
+  trainer_adapter: openpipe_art_trainer_adapter
+  reward_function:
+    name: rl_accuracy
+  num_epochs: 50
+  output_dir: ./.tmp/nat/finetuning/tic_tac_toe
+
+

@@ -327,6 +327,9 @@ class Config(HashableBaseModel):
                      "workflow",
                      "ttc_strategies",
                      "authentication",
+                     "trainers",
+                     "trainer_adapters",
+                     "trajectory_builders",
                      mode="wrap")
     @classmethod
     def validate_components(cls, value: typing.Any, handler: ValidatorFunctionWrapHandler, info: ValidationInfo):
@@ -387,6 +390,18 @@ class Config(HashableBaseModel):
         WorkflowAnnotation = typing.Annotated[(type_registry.compute_annotation(FunctionBaseConfig)),
                                               Discriminator(TypedBaseModel.discriminator)]
 
+        TrainersAnnotation = dict[str,
+                                  typing.Annotated[type_registry.compute_annotation(TrainerConfig),
+                                                   Discriminator(TypedBaseModel.discriminator)]]
+
+        TrainerAdaptersAnnotation = dict[str,
+                                         typing.Annotated[type_registry.compute_annotation(TrainerAdapterConfig),
+                                                          Discriminator(TypedBaseModel.discriminator)]]
+
+        TrajectoryBuildersAnnotation = dict[str,
+                                            typing.Annotated[type_registry.compute_annotation(TrajectoryBuilderConfig),
+                                                             Discriminator(TypedBaseModel.discriminator)]]
+
         should_rebuild = False
 
         auth_providers_field = cls.model_fields.get("authentication")
@@ -442,6 +457,22 @@ class Config(HashableBaseModel):
         workflow_field = cls.model_fields.get("workflow")
         if workflow_field is not None and workflow_field.annotation != WorkflowAnnotation:
             workflow_field.annotation = WorkflowAnnotation
+            should_rebuild = True
+
+        trainers_field = cls.model_fields.get("trainers")
+        if trainers_field is not None and trainers_field.annotation != TrainersAnnotation:
+            trainers_field.annotation = TrainersAnnotation
+            should_rebuild = True
+
+        trainer_adapters_field = cls.model_fields.get("trainer_adapters")
+        if trainer_adapters_field is not None and trainer_adapters_field.annotation != TrainerAdaptersAnnotation:
+            trainer_adapters_field.annotation = TrainerAdaptersAnnotation
+            should_rebuild = True
+
+        trajectory_builders_field = cls.model_fields.get("trajectory_builders")
+        if (trajectory_builders_field is not None
+                and trajectory_builders_field.annotation != TrajectoryBuildersAnnotation):
+            trajectory_builders_field.annotation = TrajectoryBuildersAnnotation
             should_rebuild = True
 
         if (GeneralConfig.rebuild_annotations()):
