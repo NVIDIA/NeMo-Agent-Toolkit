@@ -1,11 +1,12 @@
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+    model_name: meta/llama3-8b-instruct
     temperature: 0.1
+
   nim_small_llm:
     _type: nim
-    model_name: meta/llama3-8b-instruct
+    model_name: Qwen/Qwen2.5-7B-Instruct
     temperature: 0.1
 
   openpipe_llm:
