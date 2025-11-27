@@ -93,6 +93,12 @@ def _process_validation_error(err: ValidationError, handler: ValidatorFunctionWr
                 registered_keys = GlobalTypeRegistry.get().get_registered_ttc_strategies()
             elif (info.field_name == "middleware"):
                 registered_keys = GlobalTypeRegistry.get().get_registered_middleware()
+            elif (info.field_name == "trainers"):
+                registered_keys = GlobalTypeRegistry.get().get_registered_trainers()
+            elif (info.field_name == "trainer_adapters"):
+                registered_keys = GlobalTypeRegistry.get().get_registered_trainer_adapters()
+            elif (info.field_name == "trajectory_builders"):
+                registered_keys = GlobalTypeRegistry.get().get_registered_trajectory_builders()
 
             else:
                 assert False, f"Unknown field name {info.field_name} in validator"

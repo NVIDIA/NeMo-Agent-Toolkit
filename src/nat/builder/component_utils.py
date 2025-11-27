@@ -175,7 +175,16 @@ def recursive_componentref_discovery(cls: TypedBaseModel, value: typing.Any,
             yield from recursive_componentref_discovery(cls, field_data, field_info.annotation)
     if (decomposed_type.is_union):
         for arg in decomposed_type.args:
-            if arg is typing.Any or DecomposedType(arg).is_instance(value):
+            # Check if value matches this union arg type
+            # TypedDict and some other types don't support isinstance checks,
+            # so we catch the TypeError and skip them
+            try:
+                is_match = arg is typing.Any or DecomposedType(arg).is_instance(value)
+            except TypeError:
+                # Skip types that don't support isinstance (e.g., TypedDict)
+                continue
+
+            if is_match:
                 yield from recursive_componentref_discovery(cls, value, arg)
     else:
         for arg in decomposed_type.args:
