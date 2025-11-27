@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import random
 import re
 from dataclasses import dataclass
@@ -23,6 +24,8 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from .core import available_moves
 from .core import board_to_str
+
+logger = logging.getLogger(__name__)
 
 # ---------- XML move parsing ----------
 
@@ -68,6 +71,7 @@ class LLMTicTacToePlayer:
     value: int  # 1 for X, -1 for O
     chain: Any  # LangChain Runnable: prompt | model | StrOutputParser
     max_retries: int = 3
+    choose_random: bool = False
 
     def choose_move(self, board) -> tuple[int, int, str]:
         """
@@ -78,6 +82,12 @@ class LLMTicTacToePlayer:
         """
         board_str = board_to_str(board)
         moves: list[tuple[int, int]] = available_moves(board)
+
+        if self.choose_random:
+            fallback_move = random.choice(moves)
+            raw_response = f"<move>\n  <row>{fallback_move[0]+1}</row>\n  <col>{fallback_move[1]+1}</col>\n</move>"
+            return fallback_move[0], fallback_move[1], raw_response
+
         if not moves:
             raise RuntimeError("No available moves; game should be over.")
 
@@ -102,12 +112,12 @@ class LLMTicTacToePlayer:
             if move is not None and move in moves:
                 return move[0], move[1], text
 
-            print(f"[WARN] {self.name} produced invalid move on attempt {attempt}: "
-                  f"'{text}'. Retrying...")
+            logger.debug(f"[WARN] {self.name} produced invalid move on attempt {attempt}: "
+                         f"'{text}'. Retrying...")
 
         # Fallback: pick a random legal move
-        print(f"[WARN] {self.name} failed to produce a valid move after "
-              f"{self.max_retries} attempts. Falling back to random move.")
+        logger.warning(f"[WARN] {self.name} failed to produce a valid move after "
+                       f"{self.max_retries} attempts. Falling back to random move.")
         fallback_move = random.choice(moves)
         return fallback_move[0], fallback_move[1], last_raw
 

@@ -127,6 +127,8 @@ class RlWithOpenpipeArtFunctionConfig(FunctionBaseConfig, name="rl_with_openpipe
     larger_model: LLMRef = Field(description="LLMRef for the larger model to use.")
     smaller_model: LLMRef = Field(description="LLMRef for the smaller model to use.")
     max_parser_retries: int = Field(default=3, description="Maximum number of retries for parsing LLM output.")
+    play_larger_random: bool = Field(
+        default=False, description="If true, the larger model will play randomly instead of using the LLM chain.")
 
 
 @register_function(config_type=RlWithOpenpipeArtFunctionConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
@@ -177,6 +179,7 @@ async def rl_with_openpipe_art_function(config: RlWithOpenpipeArtFunctionConfig,
                 value=-1,
                 chain=build_player_chain(larger_model, "O"),
                 max_retries=max_retries,
+                choose_random=config.play_larger_random,
             )
         else:
             player_o = LLMTicTacToePlayer(
@@ -192,6 +195,7 @@ async def rl_with_openpipe_art_function(config: RlWithOpenpipeArtFunctionConfig,
                 value=1,
                 chain=build_player_chain(larger_model, "X"),
                 max_retries=max_retries,
+                choose_random=config.play_larger_random,
             )
 
         game = TicTacToeGame(player_x=player_x, player_o=player_o)

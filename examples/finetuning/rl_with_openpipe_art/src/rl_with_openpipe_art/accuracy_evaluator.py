@@ -16,7 +16,8 @@
 from typing import override
 
 from nat.eval.evaluator.base_evaluator import BaseEvaluator
-from nat.eval.evaluator.evaluator_model import EvalInputItem, EvalOutputItem
+from nat.eval.evaluator.evaluator_model import EvalInputItem
+from nat.eval.evaluator.evaluator_model import EvalOutputItem
 
 
 class AccuracyEvaluator(BaseEvaluator):

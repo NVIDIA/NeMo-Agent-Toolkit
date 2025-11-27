@@ -31,8 +31,6 @@ async def register_accuracy_evaluator(config: AccuracyEvaluatorConfig, builder: 
 
     evaluator = AccuracyEvaluator(builder.get_max_concurrency())
 
-    yield EvaluatorInfo(
-        config=config,
-        evaluate_fn=evaluator.evaluate,
-        description="Custom accuracy evaluator for RL workflow outputs"
-    )
+    yield EvaluatorInfo(config=config,
+                        evaluate_fn=evaluator.evaluate,
+                        description="Custom accuracy evaluator for RL workflow outputs")
