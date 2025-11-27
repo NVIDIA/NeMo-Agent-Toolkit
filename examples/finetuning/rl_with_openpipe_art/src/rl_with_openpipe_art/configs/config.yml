@@ -59,30 +59,29 @@ trainer_adapters:
         gpu_memory_utilization: 0.9
         tensor_parallel_size: 1
 
-      # Training Arguments
-      # Adjust these arguments based on GPU size
-      training:
-        gradient_accumulation_steps: 1
-        learning_rate: 1e-5
-        num_generations: 96 # Number of evaluation data points bc num_generations is 1
-        sync_ref_model: true
-        ref_model_sync_steps: 100
-        beta: 0.1
-        temperature: 0.3
-        per_device_train_batch_size: 8
+    # Training Arguments
+    # Adjust these arguments based on GPU size
+    training:
+      gradient_accumulation_steps: 1
+      learning_rate: 1e-5
+      num_generations: 96 # Number of evaluation data points bc num_generations is 1
+      sync_ref_model: true
+      ref_model_sync_steps: 100
+      beta: 0.1
+      temperature: 0.3
+      per_device_train_batch_size: 8
 
 trainers:
   openpipe_trainer:
     _type: openpipe_art_trainer
 
-
 ######### Put it all together into a finetuning config
 
 finetuning:
-  enabled: false
+  enabled: true
   trainer: openpipe_trainer
   trajectory_builder: openpipe_traj_builder
-  trainer_adapter: openpipe_art_trainer_adapter
+  trainer_adapter: openpipe_trainer_adapter
   reward_function:
     name: rl_accuracy
   num_epochs: 50

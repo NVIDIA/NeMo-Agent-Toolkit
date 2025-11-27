@@ -230,7 +230,7 @@ class FinetuneConfig(BaseModel):
     @model_validator(mode="before")
     def validate_finetuning_enabled(cls, values: dict[str, Any]) -> dict[str, Any]:
         if values.get("enabled", False):
-            required_fields = ["config_file", "trainer", "trajectory_builder", "trainer_adapter", "reward_function"]
+            required_fields = ["trainer", "trajectory_builder", "trainer_adapter", "reward_function"]
             missing_fields = [field for field in required_fields if values.get(field) is None]
             if missing_fields:
                 raise ValueError(f"When fine-tuning is enabled, the following fields must be set: "
