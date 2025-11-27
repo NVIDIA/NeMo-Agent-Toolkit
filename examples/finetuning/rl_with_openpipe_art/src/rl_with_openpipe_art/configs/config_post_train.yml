@@ -1,12 +1,12 @@
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.1-8b-instruct
-    temperature: 0.1
+    model_name: meta/llama-4-maverick-17b-128e-instruct
+    temperature: 0.5
   nim_small_llm:
     _type: nim
     model_name: qwen/qwen2.5-7b-instruct
-    temperature: 0.1
+    temperature: 0.5
 
 workflow:
   _type: rl_with_openpipe_art
@@ -21,7 +21,7 @@ eval:
     output_dir: .tmp/nat/examples/rl_openpipe/eval/post_train
     dataset:
       _type: json
-      file_path: examples/finetuning/rl_with_openpipe_art/data/data.json
+      file_path: examples/finetuning/rl_with_openpipe_art/data/eval_data.json
 
   evaluators:
     rl_accuracy:

@@ -10,7 +10,7 @@ llms:
     model_name: Qwen/Qwen2.5-7B-Instruct
     base_url: http://localhost:8000/v1
     api_key: default
-    temperature: 0.2
+    temperature: 1.0
 
 workflow:
   _type: rl_with_openpipe_art
@@ -56,7 +56,6 @@ trainer_adapters:
       # Model Initialization Arguments
       init_args:
         max_seq_length: 8192
-        enable_prefix_caching: false
 
       # VLLM Engine Arguments
       engine_args:
@@ -66,14 +65,7 @@ trainer_adapters:
     # Training Arguments
     # Adjust these arguments based on GPU size
     training:
-      gradient_accumulation_steps: 1
       learning_rate: 1e-5
-      num_generations: 96 # Number of evaluation data points bc num_generations is 1
-      sync_ref_model: true
-      ref_model_sync_steps: 100
-      beta: 0
-      temperature: 0.2
-      per_device_train_batch_size: 32
 
 trainers:
   openpipe_trainer:
