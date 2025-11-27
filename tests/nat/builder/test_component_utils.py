@@ -466,6 +466,9 @@ async def test_load_hierarchial_workflow(nested_nat_config: Config):
 
 def test_finetuning_component_dependencies():
     """Test that finetuning components can have dependencies and are properly tracked"""
+    from nat.cli.register_workflow import register_trainer
+    from nat.cli.register_workflow import register_trainer_adapter
+    from nat.cli.register_workflow import register_trajectory_builder
 
     # Create finetuning configs with dependencies on other components
     class TrainerWithDepsConfig(TrainerConfig, name="trainer_with_deps"):
@@ -479,6 +482,22 @@ def test_finetuning_component_dependencies():
     class TrajectoryBuilderWithDepsConfig(TrajectoryBuilderConfig, name="trajectory_builder_with_deps"):
         retriever: RetrieverRef
         object_store: ObjectStoreRef
+
+    # Register the custom finetuning components
+    @register_trainer(TrainerWithDepsConfig)
+    async def build_trainer(config: TrainerWithDepsConfig, builder: Builder):
+        from nat.plugins.openpipe.trainer import ARTTrainer
+        yield ARTTrainer(trainer_config=config)
+
+    @register_trainer_adapter(TrainerAdapterWithDepsConfig)
+    async def build_trainer_adapter(config: TrainerAdapterWithDepsConfig, builder: Builder):
+        from nat.plugins.openpipe.trainer_adapter import ARTTrainerAdapter
+        yield ARTTrainerAdapter(adapter_config=config)
+
+    @register_trajectory_builder(TrajectoryBuilderWithDepsConfig)
+    async def build_trajectory_builder(config: TrajectoryBuilderWithDepsConfig, builder: Builder):
+        from nat.plugins.openpipe.trajectory_builder import ARTTrajectoryBuilder
+        yield ARTTrajectoryBuilder(trajectory_builder_config=config)
 
     # Setup a minimal function config
     class SimpleFnConfig(FunctionBaseConfig, name="simple_fn"):

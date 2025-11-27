@@ -14,7 +14,7 @@ llms:
     model_name: Qwen/Qwen2.5-7B-Instruct
     base_url: http://localhost:8000/v1
     api_key: default
-    temperature: 0.1
+    temperature: 0.2
 
 workflow:
   _type: rl_with_openpipe_art
@@ -76,7 +76,7 @@ trainer_adapters:
       sync_ref_model: true
       ref_model_sync_steps: 100
       beta: 0.1
-      temperature: 0.3
+      temperature: 0.2
       per_device_train_batch_size: 8
 
 trainers:
