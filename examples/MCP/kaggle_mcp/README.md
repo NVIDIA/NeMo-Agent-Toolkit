@@ -123,21 +123,21 @@ The Kaggle MCP server requires bearer token authentication for tool calls.
 # Set your Kaggle bearer token
 export KAGGLE_BEARER_TOKEN="your_kaggle_api_key_here"
 
-# Call a tool with bearer token authentication
+# Search for Titanic datasets
 nat mcp client tool call search_datasets \
   --url https://www.kaggle.com/mcp \
   --bearer-token-env KAGGLE_BEARER_TOKEN \
-  --json-args '{"request": {"search": "climate"}}'
+  --json-args '{"request": {"search": "titanic"}}'
 ```
 
 #### Using Direct Token
 
 ```bash
-# Call a tool with direct token (less secure)
+# Search for Titanic datasets with direct token (less secure)
 nat mcp client tool call search_datasets \
   --url https://www.kaggle.com/mcp \
   --bearer-token "your_kaggle_api_key_here" \
-  --json-args '{"request": {"search": "climate"}}'
+  --json-args '{"request": {"search": "titanic"}}'
 ```
 
 **Note**: The `--bearer-token-env` approach is more secure because it doesn't expose the token in command history or process lists.
@@ -152,7 +152,7 @@ export KAGGLE_BEARER_TOKEN="your_kaggle_api_key_here"
 
 # Use the workflow which includes authentication configuration
 nat run --config_file examples/MCP/kaggle_mcp/configs/config.yml \
-  --input "List files in the kaggle/titanic dataset"
+  --input "Search for Titanic datasets on Kaggle"
 ```
 
 The workflow automatically handles bearer token authentication as configured in `config.yml`:
