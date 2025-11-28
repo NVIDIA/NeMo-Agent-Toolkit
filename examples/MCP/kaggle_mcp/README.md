@@ -66,7 +66,7 @@ Run the workflow with a query:
 
 ```bash
 nat run --config_file examples/MCP/kaggle_mcp/configs/config.yml \
-  --input "Search for datasets about machine learning"
+  --input ""List files in the kaggle/titanic dataset"
 ```
 
 Example queries:
@@ -110,14 +110,41 @@ nat mcp client tool list --url https://www.kaggle.com/mcp
 To validate the tool schema:
 
 ```bash
-nat mcp client tool list --url https://www.kaggle.com/mcp --tool list_dataset_files
+nat mcp client tool list --url https://www.kaggle.com/mcp --tool search_datasets
 ```
 
 ### Authenticated Tool Calls
 
-**Important**: The Kaggle MCP server requires bearer token authentication for tool calls. The NAT CLI `mcp client tool call` command currently supports OAuth2 authentication but not bearer token authentication directly via command-line flags.
+The Kaggle MCP server requires bearer token authentication for tool calls.
 
-For authenticated tool calls with bearer token, use the workflow configuration:
+#### Using Environment Variable (Recommended)
+
+```bash
+# Set your Kaggle bearer token
+export KAGGLE_BEARER_TOKEN="your_kaggle_api_key_here"
+
+# Call a tool with bearer token authentication
+nat mcp client tool call search_datasets \
+  --url https://www.kaggle.com/mcp \
+  --bearer-token-env KAGGLE_BEARER_TOKEN \
+  --json-args '{"request": {"search": "climate"}}'
+```
+
+#### Using Direct Token
+
+```bash
+# Call a tool with direct token (less secure)
+nat mcp client tool call search_datasets \
+  --url https://www.kaggle.com/mcp \
+  --bearer-token "your_kaggle_api_key_here" \
+  --json-args '{"request": {"search": "climate"}}'
+```
+
+**Note**: The `--bearer-token-env` approach is more secure because it doesn't expose the token in command history or process lists.
+
+#### Using Workflow Configuration
+
+For more complex scenarios or integration with agents, use the workflow configuration:
 
 ```bash
 # Set your Kaggle bearer token
@@ -138,7 +165,7 @@ authentication:
     auth_scheme: Bearer
 ```
 
-**Note**: Kaggle's MCP tools use a nested `request` object structure. Tool parameters must be wrapped in a `{"request": {...}}` object. The workflow handles this automatically based on the tool schema.
+**Important**: Kaggle's MCP tools use a nested `request` object structure. Tool parameters must be wrapped in a `{"request": {...}}` object.
 
 ## References
 
