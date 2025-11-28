@@ -224,10 +224,12 @@ async def _create_bearer_token_auth_config(
     bearer_token_env: str | None,
 ):
     """Create bearer token auth configuration for CLI usage."""
+    import os
+
+    from pydantic import SecretStr
+
     from nat.authentication.api_key.api_key_auth_provider_config import APIKeyAuthProviderConfig
     from nat.data_models.authentication import HeaderAuthScheme
-    from pydantic import SecretStr
-    import os
 
     # Get token from env var or direct input
     if bearer_token_env:
@@ -940,8 +942,7 @@ async def call_tool_and_print(command: str | None,
               help='OAuth2 redirect URI for authentication (streamable-http only, not with --direct)')
 @click.option('--auth-user-id', help='User ID for authentication (streamable-http only, not with --direct)')
 @click.option('--auth-scopes', help='OAuth2 scopes (comma-separated, streamable-http only, not with --direct)')
-@click.option('--bearer-token',
-              help='Bearer token for authentication (streamable-http only, not with --direct)')
+@click.option('--bearer-token', help='Bearer token for authentication (streamable-http only, not with --direct)')
 @click.option('--bearer-token-env',
               help='Environment variable name containing bearer token (e.g., KAGGLE_BEARER_TOKEN)')
 def mcp_client_tool_call(tool_name: str,
