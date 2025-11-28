@@ -762,3 +762,69 @@ def test_call_tool_and_print_group_tool_not_found(monkeypatch):
     except RuntimeError as exc:  # noqa: BLE001
         err = str(exc)
     assert err is not None and "Tool 'echo' not found" in err
+
+
+@patch("nat.cli.commands.mcp.mcp.call_tool_and_print", new_callable=AsyncMock)
+def test_mcp_client_tool_call_bearer_token_direct(mock_call, cli_runner):
+    """Test that bearer token flags are passed correctly"""
+    mock_call.return_value = "OK"
+    result = cli_runner.invoke(mcp_client_tool_call, [
+        "my_tool",
+        "--bearer-token",
+        "test_token_123",
+        "--json-args",
+        "{}",
+    ])
+    assert result.exit_code == 0
+    assert mock_call.await_args is not None
+    _, kwargs = mock_call.await_args
+    assert kwargs.get("bearer_token") == "test_token_123"
+    assert kwargs.get("bearer_token_env") is None
+
+
+@patch("nat.cli.commands.mcp.mcp.call_tool_and_print", new_callable=AsyncMock)
+def test_mcp_client_tool_call_bearer_token_env(mock_call, cli_runner):
+    """Test that bearer token env flag is passed correctly"""
+    mock_call.return_value = "OK"
+    result = cli_runner.invoke(mcp_client_tool_call, [
+        "my_tool",
+        "--bearer-token-env",
+        "MY_TOKEN_VAR",
+        "--json-args",
+        "{}",
+    ])
+    assert result.exit_code == 0
+    assert mock_call.await_args is not None
+    _, kwargs = mock_call.await_args
+    assert kwargs.get("bearer_token") is None
+    assert kwargs.get("bearer_token_env") == "MY_TOKEN_VAR"
+
+
+def test_mcp_client_tool_call_bearer_token_both_flags_error(cli_runner):
+    """Test that using both bearer token flags fails"""
+    result = cli_runner.invoke(mcp_client_tool_call,
+                               [
+                                   "my_tool",
+                                   "--bearer-token",
+                                   "token123",
+                                   "--bearer-token-env",
+                                   "MY_VAR",
+                                   "--json-args",
+                                   "{}",
+                               ])
+    assert result.exit_code == 0
+    assert "Cannot use both --bearer-token and --bearer-token-env" in result.output
+
+
+def test_mcp_client_tool_call_bearer_token_with_direct_error(cli_runner):
+    """Test that bearer token with --direct fails"""
+    result = cli_runner.invoke(mcp_client_tool_call, [
+        "my_tool",
+        "--direct",
+        "--bearer-token",
+        "token123",
+        "--json-args",
+        "{}",
+    ])
+    assert result.exit_code == 0
+    assert "Bearer token authentication is not supported with --direct" in result.output
