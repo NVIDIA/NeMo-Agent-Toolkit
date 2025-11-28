@@ -83,7 +83,7 @@ def _process_validation_error(err: ValidationError, handler: ValidatorFunctionWr
                 registered_keys = GlobalTypeRegistry.get().get_registered_logging_method()
             elif (info.field_name == "evaluators"):
                 registered_keys = GlobalTypeRegistry.get().get_registered_evaluators()
-            elif (info.field_name == "front_ends"):
+            elif (info.field_name == "front_end"):
                 registered_keys = GlobalTypeRegistry.get().get_registered_front_ends()
             elif (info.field_name == "ttc_strategies"):
                 registered_keys = GlobalTypeRegistry.get().get_registered_ttc_strategies()
