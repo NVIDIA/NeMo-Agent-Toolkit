@@ -26,7 +26,7 @@ This example demonstrates how to use the Kaggle MCP server with NeMo Agent Toolk
 
 ### Getting Your Kaggle Bearer Token
 
-The Kaggle MCP server uses bearer token authentication. Obtain your Kaggle bearer token from https://www.kaggle.com/settings/account.
+The Kaggle MCP server uses bearer token authentication. Obtain your Kaggle bearer token from [Kaggle Account Settings](https://www.kaggle.com/settings/account).
 
 ## Configuration
 

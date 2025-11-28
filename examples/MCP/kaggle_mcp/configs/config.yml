@@ -42,7 +42,7 @@ authentication:
 workflow:
    # Use an agent that 'reasons' and 'acts'
    _type: react_agent
-   # Give it access to our wikipedia search tool
+   # Give it access to our kaggle MCP tools
    tool_names: [kaggle_mcp_tools]
    # Tell it which LLM to use
    llm_name: nim_llm
