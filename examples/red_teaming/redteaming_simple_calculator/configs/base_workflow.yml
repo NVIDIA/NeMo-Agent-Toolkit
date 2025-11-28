@@ -57,7 +57,7 @@ middleware:
 eval:
   general:
     max_concurrency: 4
-    output_dir: ./.tmp/nat/redteaming/base
+    output_dir: ./.tmp/nat/redteaming/simple_calculator
     dataset:
       _type: json
   evaluators:

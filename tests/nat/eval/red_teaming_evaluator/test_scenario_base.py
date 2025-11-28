@@ -18,20 +18,49 @@ from typing import cast
 
 import pytest
 
+from nat.builder.builder import Builder
+from nat.builder.function import FunctionGroup
+from nat.cli.register_workflow import register_front_end
+from nat.cli.register_workflow import register_function_group
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.config import Config
 from nat.data_models.evaluate import EvalConfig
+from nat.data_models.front_end import FrontEndBaseConfig
 from nat.data_models.function import EmptyFunctionConfig
 from nat.data_models.function import FunctionGroupBaseConfig
-from nat.eval.red_teaming_evaluator.filter_conditions import IntermediateStepsFilterCondition
+from nat.eval.red_teaming_evaluator import IntermediateStepsFilterCondition
+from nat.eval.red_teaming_evaluator import RedTeamingScenarioBase
 from nat.eval.red_teaming_evaluator.register import RedTeamingEvaluatorConfig
-from nat.eval.runners.red_team_eval_runner.red_team_eval_config import RedTeamScenarioEntry
 from nat.middleware.red_teaming_middleware import RedTeamingMiddlewareConfig
+
+# Import register module to trigger registration of built-in middleware types
+import nat.middleware.register  # noqa: F401
 
 
 class SimpleFunctionGroupConfig(FunctionGroupBaseConfig, name="simple_function_group"):
     """Simple function group config for testing."""
     pass
+
+# Registration needed for Config validation.
+class DummyFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
+    """Dummy front end config for testing - replaces FastAPI to avoid dependency."""
+    pass
+
+
+@pytest.fixture(scope="module", autouse=True)
+async def register_test_types():
+    """Register test types with GlobalTypeRegistry."""
+
+    @register_function_group(config_type=SimpleFunctionGroupConfig)
+    async def simple_function_group(config: SimpleFunctionGroupConfig, _builder: Builder):
+        """Test function group for scenario tests."""
+        group = FunctionGroup(config=config)
+        yield group
+
+    @register_front_end(config_type=DummyFrontEndConfig)
+    async def dummy_front_end(config: DummyFrontEndConfig, _builder: Builder):
+        """Dummy front end for scenario tests - replaces FastAPI."""
+        yield None
 
 
 @pytest.fixture
@@ -63,7 +92,6 @@ def base_config():
     )
     eval_config.evaluators["red_team_eval"] = red_team_eval_config
     config.eval = eval_config
-
     return config
 
 
@@ -78,8 +106,9 @@ def base_config_with_filter_conditions(base_config):
 
 def test_middleware_removed_from_functions_and_placed_on_target_function(base_config):
     """Test middleware removed from all functions and placed only on target function."""
-    scenario = RedTeamScenarioEntry(
-        scenario_id="test", middleware_name="red_teaming_middleware"
+    scenario = RedTeamingScenarioBase(
+        scenario_id="test", middleware_name="red_teaming_middleware",
+        middleware_config_override={"target_function_or_group": "func1"}
     )
     modified_config = scenario.apply_to_config(copy.deepcopy(base_config))
 
@@ -92,8 +121,8 @@ def test_middleware_removed_from_functions_and_placed_on_target_function_group(b
     """Test middleware removed from all functions/groups and placed only on target function group."""
     config = copy.deepcopy(base_config)
     config.middleware["red_teaming_middleware"].target_function_or_group = "group1"
-    scenario = RedTeamScenarioEntry(
-        scenario_id="test", middleware_name="red_teaming_middleware",
+    scenario = RedTeamingScenarioBase(
+        scenario_id="test", middleware_name="red_teaming_middleware"
     )
     modified_config = scenario.apply_to_config(config)
 
@@ -104,10 +133,10 @@ def test_middleware_removed_from_functions_and_placed_on_target_function_group(b
 
 def test_evaluation_instructions_replaced(base_config):
     """Test scenario-specific instructions replace base configuration instructions."""
-    scenario = RedTeamScenarioEntry(
+    scenario = RedTeamingScenarioBase(
         scenario_id="test",
         middleware_name="red_teaming_middleware",
-        evaluation_instructions="New instructions",
+        evaluation_instructions="New instructions"
     )
     modified_config = scenario.apply_to_config(copy.deepcopy(base_config))
     evaluator_config = cast(RedTeamingEvaluatorConfig, modified_config.eval.evaluators["red_team_eval"])
@@ -117,10 +146,10 @@ def test_evaluation_instructions_replaced(base_config):
 def test_filter_conditions_replaced(base_config_with_filter_conditions):
     """Test scenario filter conditions replace base configuration filter conditions."""
     new_filter = IntermediateStepsFilterCondition(name="new_filter", event_type="LLM_END")
-    scenario = RedTeamScenarioEntry(
+    scenario = RedTeamingScenarioBase(
         scenario_id="test",
         middleware_name="red_teaming_middleware",
-        filter_conditions=[new_filter],
+        filter_conditions=[new_filter]
     )
     modified_config = scenario.apply_to_config(copy.deepcopy(base_config_with_filter_conditions))
     evaluator_config = cast(RedTeamingEvaluatorConfig, modified_config.eval.evaluators["red_team_eval"])
@@ -133,7 +162,7 @@ def test_full_scenario_applied(base_config_with_filter_conditions):
     """Test that a fully populated scenario with all fields is correctly applied to config."""
     # Create a comprehensive scenario with all fields populated
     new_filter = IntermediateStepsFilterCondition(name="scenario_filter", event_type="TOOL_START")
-    scenario = RedTeamScenarioEntry(
+    scenario = RedTeamingScenarioBase(
         scenario_id="comprehensive_test",
         middleware_name="red_teaming_middleware",
         middleware_config_override={
@@ -141,7 +170,7 @@ def test_full_scenario_applied(base_config_with_filter_conditions):
             "target_function_or_group": "func2"
         },
         evaluation_instructions="Comprehensive scenario instructions",
-        filter_conditions=[new_filter],
+        filter_conditions=[new_filter]
     )
 
     # Apply scenario to config
@@ -176,7 +205,7 @@ def test_error_when_no_target_function_or_group_specified(base_config):
     config = copy.deepcopy(base_config)
     config.middleware["red_teaming_middleware"].target_function_or_group = None
 
-    scenario = RedTeamScenarioEntry(
+    scenario = RedTeamingScenarioBase(
         scenario_id="test",
         middleware_name="red_teaming_middleware",
     )
@@ -187,7 +216,7 @@ def test_error_when_no_target_function_or_group_specified(base_config):
 
 def test_error_when_middleware_not_found(base_config):
     """Test that ValueError is raised when specified middleware doesn't exist in config."""
-    scenario = RedTeamScenarioEntry(
+    scenario = RedTeamingScenarioBase(
         scenario_id="test",
         middleware_name="nonexistent_middleware",
     )
@@ -198,7 +227,7 @@ def test_error_when_middleware_not_found(base_config):
 
 def test_error_when_target_not_found(base_config):
     """Test that ValueError is raised when target function/group doesn't exist."""
-    scenario = RedTeamScenarioEntry(
+    scenario = RedTeamingScenarioBase(
         scenario_id="test",
         middleware_name="red_teaming_middleware",
         middleware_config_override={"target_function_or_group": "nonexistent_target"}
@@ -210,7 +239,7 @@ def test_error_when_target_not_found(base_config):
 
 def test_error_when_middleware_config_override_has_invalid_key(base_config):
     """Test that KeyError is raised when middleware_config_override contains invalid key."""
-    scenario = RedTeamScenarioEntry(
+    scenario = RedTeamingScenarioBase(
         scenario_id="test",
         middleware_name="red_teaming_middleware",
         middleware_config_override={
