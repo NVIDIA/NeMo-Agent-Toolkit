@@ -29,8 +29,9 @@ class AccuracyEvaluator(BaseEvaluator):
     - Score 0: if expected_answer != workflow_output AND expected_answer != "0"
     """
 
-    def __init__(self, max_concurrency: int = 4):
+    def __init__(self, max_concurrency: int = 4, penalize_failure: bool = False):
         super().__init__(max_concurrency, tqdm_desc="Evaluating accuracy")
+        self.penalize_failure = penalize_failure
 
     @override
     async def evaluate_item(self, item: EvalInputItem) -> EvalOutputItem:
@@ -39,15 +40,18 @@ class AccuracyEvaluator(BaseEvaluator):
         workflow_output = str(item.output_obj)
 
         # Scoring logic
-        if expected_answer == workflow_output:
+        if workflow_output == "Win!":
             score = 1.0
             match_status = "exact_match"
-        elif expected_answer == "0":
+        elif workflow_output == "Draw!":
             score = 0.5
             match_status = "mismatch_with_zero_expected"
+        elif workflow_output == "Aborted!":
+            score = -1 if self.penalize_failure else 0.0
+            match_status = "aborted"
         else:
             score = 0.0
-            match_status = "mismatch"
+            match_status = "loss"
 
         # The reasoning field provides detailed information about the evaluation
         reasoning = {

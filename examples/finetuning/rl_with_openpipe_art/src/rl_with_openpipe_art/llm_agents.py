@@ -70,7 +70,7 @@ class LLMTicTacToePlayer:
     symbol: str  # 'X' or 'O'
     value: int  # 1 for X, -1 for O
     chain: Any  # LangChain Runnable: prompt | model | StrOutputParser
-    max_retries: int = 3
+    max_retries: int = 0
     choose_random: bool = False
 
     def choose_move(self, board) -> tuple[int, int, str]:
@@ -82,6 +82,8 @@ class LLMTicTacToePlayer:
         """
         board_str = board_to_str(board)
         moves: list[tuple[int, int]] = available_moves(board)
+        # Shuffle moves
+        moves = random.sample(moves, len(moves))
 
         if self.choose_random:
             fallback_move = random.choice(moves)
@@ -92,9 +94,8 @@ class LLMTicTacToePlayer:
             raise RuntimeError("No available moves; game should be over.")
 
         available_str = ", ".join(f"({r+1},{c+1})" for r, c in moves)
-
-        last_raw = ""
-        for attempt in range(1, self.max_retries + 1):
+        # ruff
+        for attempt in range(0, self.max_retries + 1):
             raw_response = self.chain.invoke({
                 "board": board_str,
                 "symbol": self.symbol,
@@ -106,7 +107,6 @@ class LLMTicTacToePlayer:
             else:
                 text = str(raw_response)
 
-            last_raw = text
             move = parse_move_any(text)
 
             if move is not None and move in moves:
@@ -115,11 +115,7 @@ class LLMTicTacToePlayer:
             logger.debug(f"[WARN] {self.name} produced invalid move on attempt {attempt}: "
                          f"'{text}'. Retrying...")
 
-        # Fallback: pick a random legal move
-        logger.warning(f"[WARN] {self.name} failed to produce a valid move after "
-                       f"{self.max_retries} attempts. Falling back to random move.")
-        fallback_move = random.choice(moves)
-        return fallback_move[0], fallback_move[1], last_raw
+        raise RuntimeError(f"{self.name} failed to produce a valid move")
 
 
 # ---------- Prompt construction ----------
@@ -162,13 +158,6 @@ Choose your move and respond ONLY with:
 <move>
   <row>R</row>
   <col>C</col>
-</move>
-
-For example:
-
-<move>
-  <row>1</row>
-  <col>3</col>
 </move>
 """
 

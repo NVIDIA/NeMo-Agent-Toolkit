@@ -29,7 +29,24 @@ async def register_accuracy_evaluator(config: AccuracyEvaluatorConfig, builder: 
     """Register custom accuracy evaluator."""
     from .accuracy_evaluator import AccuracyEvaluator
 
-    evaluator = AccuracyEvaluator(builder.get_max_concurrency())
+    evaluator = AccuracyEvaluator(builder.get_max_concurrency(), penalize_failure=False)
+
+    yield EvaluatorInfo(config=config,
+                        evaluate_fn=evaluator.evaluate,
+                        description="Custom accuracy evaluator for RL workflow outputs")
+
+
+class AccuracyEvaluatorConfig(EvaluatorBaseConfig, name="rl_accuracy_with_penalty"):
+    """Configuration for custom accuracy evaluator for RL with OpenPipe ART."""
+    pass
+
+
+@register_evaluator(config_type=AccuracyEvaluatorConfig)
+async def register_accuracy_evaluator_penalty(config: AccuracyEvaluatorConfig, builder: EvalBuilder):
+    """Register custom accuracy evaluator."""
+    from .accuracy_evaluator import AccuracyEvaluator
+
+    evaluator = AccuracyEvaluator(builder.get_max_concurrency(), penalize_failure=True)
 
     yield EvaluatorInfo(config=config,
                         evaluate_fn=evaluator.evaluate,

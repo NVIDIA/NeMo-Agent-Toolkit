@@ -71,57 +71,60 @@ class TicTacToeGame:
         logger.debug("Initial board:")
         logger.debug("\n" + board_to_str(self.board))
 
-        while True:
-            logger.debug(f"\n--- Turn {turn_index + 1}: {current_player.name} ({current_player.symbol}) ---")
-            logger.debug("Current board:")
-            logger.debug("\n" + board_to_str(self.board))
+        try:
+            while True:
+                logger.debug(f"\n--- Turn {turn_index + 1}: {current_player.name} ({current_player.symbol}) ---")
+                logger.debug("Current board:")
+                logger.debug("\n" + board_to_str(self.board))
 
-            # Ask LLM for a move (with retries)
-            row, col, raw = current_player.choose_move(self.board)
+                # Ask LLM for a move (with retries)
+                row, col, raw = current_player.choose_move(self.board)
 
-            # Apply move
-            self.board[row, col] = current_player.value
+                # Apply move
+                self.board[row, col] = current_player.value
 
-            self.history.append(
-                MoveRecord(
-                    turn_index=turn_index,
-                    player_name=current_player.name,
-                    symbol=current_player.symbol,
-                    row=row,
-                    col=col,
-                    raw_llm_output=raw,
-                ))
+                self.history.append(
+                    MoveRecord(
+                        turn_index=turn_index,
+                        player_name=current_player.name,
+                        symbol=current_player.symbol,
+                        row=row,
+                        col=col,
+                        raw_llm_output=raw,
+                    ))
 
-            logger.debug(f"{current_player.name} plays at (row={row+1}, col={col+1}).")
-            logger.debug("Board after move:")
-            logger.debug("\n" + board_to_str(self.board))
+                logger.debug(f"{current_player.name} plays at (row={row+1}, col={col+1}).")
+                logger.debug("Board after move:")
+                logger.debug("\n" + board_to_str(self.board))
 
-            # Check game termination
-            winner_val = check_winner(self.board)
-            if winner_val != 0:
-                winner_symbol = "X" if winner_val == 1 else "O"
-                winner_name = (self.player_x.name if winner_symbol == "X" else self.player_o.name)
-                logger.debug(f"*** Game over! {winner_name} ({winner_symbol}) wins. ***")
-                return winner_val
+                # Check game termination
+                winner_val = check_winner(self.board)
+                if winner_val != 0:
+                    winner_symbol = "X" if winner_val == 1 else "O"
+                    winner_name = (self.player_x.name if winner_symbol == "X" else self.player_o.name)
+                    logger.debug(f"*** Game over! {winner_name} ({winner_symbol}) wins. ***")
+                    return winner_val
 
-            if is_draw(self.board):
-                logger.debug("*** Game over! It's a draw. ***")
-                return 0  # Draw
+                if is_draw(self.board):
+                    logger.debug("*** Game over! It's a draw. ***")
+                    return 0  # Draw
 
-            # Swap players
-            current_player = self.player_o if current_player is self.player_x else self.player_x
-            turn_index += 1
+                # Swap players
+                current_player = self.player_o if current_player is self.player_x else self.player_x
+                turn_index += 1
+
+        except RuntimeError as _:
+            logger.debug("*** Game aborted due to too many invalid moves. ***")
+            return -2
 
 
 class RlWithOpenpipeArtFunctionConfig(FunctionBaseConfig, name="rl_with_openpipe_art"):
     """
     NAT function template. Please update the description.
     """
-    larger_model: LLMRef = Field(description="LLMRef for the larger model to use.")
-    smaller_model: LLMRef = Field(description="LLMRef for the smaller model to use.")
-    max_parser_retries: int = Field(default=3, description="Maximum number of retries for parsing LLM output.")
-    play_larger_random: bool = Field(
-        default=False, description="If true, the larger model will play randomly instead of using the LLM chain.")
+    player_model: LLMRef = Field(description="LLMRef for the player model to use.")
+    opponent_model: LLMRef | None = Field(description="LLMRef for the opponent model to use.", default=None)
+    max_parser_retries: int = Field(default=0, description="Maximum number of retries for parsing LLM output.")
 
 
 @register_function(config_type=RlWithOpenpipeArtFunctionConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
@@ -139,8 +142,9 @@ async def rl_with_openpipe_art_function(config: RlWithOpenpipeArtFunctionConfig,
         FunctionInfo: The function info object for the function.
     """
 
-    smaller_model = await builder.get_llm(config.smaller_model, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-    larger_model = await builder.get_llm(config.larger_model, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    player_model = await builder.get_llm(config.player_model, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    opponent_model = await builder.get_llm(
+        config.opponent_model, wrapper_type=LLMFrameworkEnum.LANGCHAIN) if config.opponent_model else player_model
     max_retries = config.max_parser_retries
 
     # Define the function that will be registered.
@@ -163,37 +167,45 @@ async def rl_with_openpipe_art_function(config: RlWithOpenpipeArtFunctionConfig,
                 name="Smaller Model",
                 symbol="X",
                 value=1,
-                chain=build_player_chain(smaller_model, "X"),
+                chain=build_player_chain(player_model, "X"),
                 max_retries=max_retries,
             )
             player_o = LLMTicTacToePlayer(
                 name="Larger Model",
                 symbol="O",
                 value=-1,
-                chain=build_player_chain(larger_model, "O"),
+                chain=build_player_chain(opponent_model, "O"),
                 max_retries=max_retries,
-                choose_random=config.play_larger_random,
+                choose_random=True if config.opponent_model is None else False,
             )
         else:
             player_o = LLMTicTacToePlayer(
                 name="Smaller Model",
                 symbol="O",
                 value=-1,
-                chain=build_player_chain(smaller_model, "O"),
+                chain=build_player_chain(player_model, "O"),
                 max_retries=max_retries,
             )
             player_x = LLMTicTacToePlayer(
                 name="Larger Model",
                 symbol="X",
                 value=1,
-                chain=build_player_chain(larger_model, "X"),
+                chain=build_player_chain(opponent_model, "X"),
                 max_retries=max_retries,
-                choose_random=config.play_larger_random,
+                choose_random=True if config.opponent_model is None else False,
             )
 
         game = TicTacToeGame(player_x=player_x, player_o=player_o)
         winner = game.play()
-        return str(winner)
+
+        if winner == 1:
+            return "Win!"
+        elif winner == -1:
+            return "Lose!"
+        elif winner == -2:
+            return "Aborted!"
+        else:
+            return "Draw!"
 
     # The callable is wrapped in a FunctionInfo object.
     # The description parameter is used to describe the function.

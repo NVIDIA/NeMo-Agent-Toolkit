@@ -238,7 +238,7 @@ class ARTTrainerAdapter(TrainerAdapter):
                              verbose=False,
                              config=art.types.TrainConfig(
                                  beta=getattr(self.adapter_config.training, "beta", 0.1),
-                                 learning_rate=getattr(self.adapter_config.training, "lr", 5e-6),
+                                 learning_rate=getattr(self.adapter_config.training, "learning_rate", 5e-5),
                              )),
             name=f"art-train:{trajectories.run_id}",
         )

@@ -50,8 +50,14 @@ def new_board() -> np.ndarray:
 def board_to_str(board: np.ndarray) -> str:
     """Pretty ASCII board for prompts / logging."""
     mapping = {1: "X", -1: "O", 0: "."}
-    rows = [" ".join(mapping[int(x)] for x in row) for row in board]
-    return "\n".join(rows)
+    # Return a string representation of tic tac toe board with rows and columns
+    # Also add numbered rows and columns for easier reading, starting at index 1
+    rows = []
+    for i in range(3):
+        row_str = " ".join(mapping[board[i, j]] for j in range(3))
+        rows.append(f"{i + 1} {row_str}")
+    header = "  1 2 3"
+    return "\n".join([header] + rows)
 
 
 def available_moves(board: np.ndarray) -> list[tuple[int, int]]:

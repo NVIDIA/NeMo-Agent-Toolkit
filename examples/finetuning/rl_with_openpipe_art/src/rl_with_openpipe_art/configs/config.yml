@@ -1,9 +1,4 @@
 llms:
-  nim_llm:
-    _type: nim
-    model_name: meta/llama-3.1-70b-instruct
-    temperature: 0.1
-
   openpipe_llm:
     _type: openai
     # Model name should be the same as the trainer adapter config base_model
@@ -14,10 +9,7 @@ llms:
 
 workflow:
   _type: rl_with_openpipe_art
-  larger_model: nim_llm
-  smaller_model: openpipe_llm
-  max_parser_retries: 3
-  play_larger_random: true
+  player_model: openpipe_llm
 
 eval:
   general:
@@ -29,7 +21,7 @@ eval:
 
   evaluators:
     rl_accuracy:
-      _type: rl_accuracy
+      _type: rl_accuracy_with_penalty
 
 #################################
 #### Begin Finetuning Config ####
@@ -44,7 +36,6 @@ trainer_adapters:
   openpipe_trainer_adapter:
     _type: openpipe_art_trainer_adapter
     backend:
-
       # General Backend Arguments
       ip: "0.0.0.0"
       port: 7623
@@ -52,20 +43,17 @@ trainer_adapters:
       project: "tic_tac_toe_project"
       base_model: "Qwen/Qwen2.5-7B-Instruct"
       api_key: "default"
-
       # Model Initialization Arguments
       init_args:
         max_seq_length: 8192
-
       # VLLM Engine Arguments
       engine_args:
         gpu_memory_utilization: 0.9
         tensor_parallel_size: 1
-
     # Training Arguments
     # Adjust these arguments based on GPU size
     training:
-      learning_rate: 1e-5
+      learning_rate: 5e-5
 
 trainers:
   openpipe_trainer:
