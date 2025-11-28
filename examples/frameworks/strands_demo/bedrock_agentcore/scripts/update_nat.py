@@ -19,8 +19,6 @@ import json
 import boto3
 import os
 
-
-
 # Configuration
 CONTAINER_IMAGE = 'strands-demo:latest'
 IAM_AGENTCORE_ROLE = '<IAM_AGENTCORE_ROLE>'
@@ -30,7 +28,6 @@ AWS_ACCOUNT_ID = os.environ['AWS_ACCOUNT_ID']
 IAM_AGENTCORE_ROLE = f'arn:aws:iam::{os.environ.get("AWS_ACCOUNT_ID")}:role/AgentCore_NAT'
 
 RUNTIME_NAME = "strands-demo"
-#AGENT_RUNTIME_ID = os.environ['AGENT_RUNTIME_ARN']
 
 cclient = boto3.client('bedrock-agentcore-control', region_name=AWS_REGION)
 cresponse = cclient.list_agent_runtimes()

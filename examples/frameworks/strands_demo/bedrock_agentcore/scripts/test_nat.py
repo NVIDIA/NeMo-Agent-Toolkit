@@ -22,7 +22,6 @@ import os
 AWS_REGION = os.environ['AWS_DEFAULT_REGION']
 AWS_ACCOUNT_ID = os.environ['AWS_ACCOUNT_ID']
 RUNTIME_NAME = "strands-demo"
-#AGENT_RUNTIME_ID = os.environ['AGENT_RUNTIME_ARN']
 
 cclient = boto3.client('bedrock-agentcore-control', region_name=AWS_REGION)
 cresponse = cclient.list_agent_runtimes()
@@ -39,7 +38,6 @@ payload = json.dumps({"inputs": "How do I use the Strands Agents API?"})
 
 response = client.invoke_agent_runtime(
     agentRuntimeArn=f'arn:aws:bedrock-agentcore:{AWS_REGION}:{AWS_ACCOUNT_ID}:runtime/{runtime_id}',
-    #    runtimeSessionId='<RUNTIME_SESSION_ID>',  # Must be 33+ chars
     payload=payload,
     qualifier="DEFAULT"  # Optional
 )
