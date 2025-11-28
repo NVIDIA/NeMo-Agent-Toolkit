@@ -800,20 +800,18 @@ def test_mcp_client_tool_call_bearer_token_env(mock_call, cli_runner):
     assert kwargs.get("bearer_token_env") == "MY_TOKEN_VAR"
 
 
-def test_mcp_client_tool_call_bearer_token_both_flags_error(cli_runner):
-    """Test that using both bearer token flags fails"""
-    result = cli_runner.invoke(mcp_client_tool_call,
-                               [
-                                   "my_tool",
-                                   "--bearer-token",
-                                   "token123",
-                                   "--bearer-token-env",
-                                   "MY_VAR",
-                                   "--json-args",
-                                   "{}",
-                               ])
+def test_mcp_client_tool_call_bearer_token_with_oauth_error(cli_runner):
+    """Test that bearer token cannot be used with OAuth"""
+    result = cli_runner.invoke(mcp_client_tool_call, [
+        "my_tool",
+        "--bearer-token",
+        "token123",
+        "--auth",
+        "--json-args",
+        "{}",
+    ])
     assert result.exit_code == 0
-    assert "Cannot use both --bearer-token and --bearer-token-env" in result.output
+    assert "Cannot use both OAuth2 (--auth) and bearer token authentication" in result.output
 
 
 def test_mcp_client_tool_call_bearer_token_with_direct_error(cli_runner):
@@ -827,4 +825,4 @@ def test_mcp_client_tool_call_bearer_token_with_direct_error(cli_runner):
         "{}",
     ])
     assert result.exit_code == 0
-    assert "Bearer token authentication is not supported with --direct" in result.output
+    assert "--bearer-token and --bearer-token-env are not supported with --direct mode" in result.output
