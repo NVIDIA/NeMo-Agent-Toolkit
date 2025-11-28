@@ -103,6 +103,7 @@ docker run \
   -e NVIDIA_API_KEY \
   -e AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY \
+  -e AWS_DEFAULT_REGION \
   strands_demo \
   --platform linux/arm64
 ```
@@ -175,7 +176,6 @@ Verify the REGION, ACCOUNT_ID, and ROLE are correct for your environment
 
 ```python
 
-import json
 import boto3
 import os
 
@@ -184,7 +184,7 @@ AWS_REGION = os.environ['AWS_DEFAULT_REGION']
 AWS_ACCOUNT_ID = os.environ['AWS_ACCOUNT_ID']
 IAM_AGENTCORE_ROLE = f'arn:aws:iam::{os.environ.get("AWS_ACCOUNT_ID")}:role/AgentCore_NAT'
 CONTAINER_IMAGE = 'strands-demo'
-AGENT_NAME = 'strands-demo'
+AGENT_NAME = 'strands_demo'
 
 client = boto3.client(
     'bedrock-agentcore-control',
@@ -202,7 +202,10 @@ response = client.create_agent_runtime(
         }
     },
     networkConfiguration={"networkMode": "PUBLIC"},
-    roleArn=IAM_AGENTCORE_ROLE
+    roleArn=IAM_AGENTCORE_ROLE,
+     environmentVariables={
+        'AWS_DEFAULT_REGION': AWS_REGION
+    },
 )
 
 print("Agent Runtime created successfully!")
@@ -238,7 +241,7 @@ import os
 
 AWS_REGION = os.environ['AWS_DEFAULT_REGION']
 AWS_ACCOUNT_ID = os.environ['AWS_ACCOUNT_ID']
-RUNTIME_NAME = "strands-demo"
+RUNTIME_NAME = "strands_demo"
 
 cclient = boto3.client('bedrock-agentcore-control', region_name=AWS_REGION)
 cresponse = cclient.list_agent_runtimes()
@@ -279,7 +282,6 @@ For this step you will need your Runtime ID (obtained from Step 6) to update you
 
 NOTE:  If you do not have the runtime ID, you can check the AWS Console or run the following script:
 ```bash
-import json
 import boto3
 import os
 
@@ -287,7 +289,7 @@ import os
 
 AWS_REGION = os.environ['AWS_DEFAULT_REGION']
 AWS_ACCOUNT_ID = os.environ['AWS_ACCOUNT_ID']
-RUNTIME_NAME = "strands-demo"
+RUNTIME_NAME = "strands_demo"
 
 cclient = boto3.client('bedrock-agentcore-control', region_name=AWS_REGION)
 cresponse = cclient.list_agent_runtimes()
@@ -354,7 +356,6 @@ Since you already have the agent deployed, you will need to run an update (rathe
 **update_nat.py:**
 
 ```python
-import json
 import boto3
 import os
 
@@ -366,7 +367,7 @@ AWS_REGION = os.environ['AWS_DEFAULT_REGION']
 AWS_ACCOUNT_ID = os.environ['AWS_ACCOUNT_ID']
 IAM_AGENTCORE_ROLE = f'arn:aws:iam::{os.environ.get("AWS_ACCOUNT_ID")}:role/AgentCore_NAT'
 
-RUNTIME_NAME = "strands-demo"
+RUNTIME_NAME = "strands_demo"
 
 cclient = boto3.client('bedrock-agentcore-control', region_name=AWS_REGION)
 cresponse = cclient.list_agent_runtimes()
@@ -393,7 +394,10 @@ response = client.update_agent_runtime(
         }
     },
     networkConfiguration={"networkMode": "PUBLIC"},
-    roleArn=IAM_AGENTCORE_ROLE
+    roleArn=IAM_AGENTCORE_ROLE,
+     environmentVariables={
+        'AWS_DEFAULT_REGION': AWS_REGION
+    },
 )
 
 print("Agent Runtime updated successfully!")
