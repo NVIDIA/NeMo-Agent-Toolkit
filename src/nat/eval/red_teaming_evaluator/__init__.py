@@ -15,6 +15,7 @@
 
 from nat.eval.red_teaming_evaluator.data_models import ConditionEvaluationResult
 from nat.eval.red_teaming_evaluator.data_models import RedTeamingEvalOutputItem
+from nat.eval.red_teaming_evaluator.data_models import RedTeamingScenarioBase
 from nat.eval.red_teaming_evaluator.evaluate import RedTeamingEvaluator
 from nat.eval.red_teaming_evaluator.evaluate import ReductionStrategy
 from nat.eval.red_teaming_evaluator.filter_conditions import IntermediateStepsFilterCondition
@@ -25,4 +26,5 @@ __all__ = [
     "IntermediateStepsFilterCondition",
     "ConditionEvaluationResult",
     "RedTeamingEvalOutputItem",
+    "RedTeamingScenarioBase",
 ]
