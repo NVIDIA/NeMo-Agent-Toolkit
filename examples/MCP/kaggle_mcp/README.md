@@ -17,28 +17,16 @@ limitations under the License.
 
 # Kaggle MCP Example
 
-This example demonstrates how to use the Kaggle MCP server with NeMo Agent Toolkit (NAT) to interact with Kaggle's datasets, notebooks, models, and competitions.
+This example demonstrates how to use the Kaggle MCP server with NeMo Agent Toolkit to interact with Kaggle's datasets, notebooks, models, and competitions.
 
 ## Prerequisites
 
-- NAT installed with MCP support (`nvidia-nat-mcp` package)
+- NeMo Agent Toolkit installed with MCP support (`nvidia-nat-mcp` package)
 - A Kaggle account and API token
 
-## Getting Your Kaggle Bearer Token
+### Getting Your Kaggle Bearer Token
 
-The Kaggle MCP server uses bearer token authentication. To obtain your token:
-
-1. Go to your [Kaggle Account Settings](https://www.kaggle.com/settings)
-2. Scroll down to the **API** section
-3. Click **Create New Token**
-4. This will download a `kaggle.json` file containing your credentials:
-   ```json
-   {
-     "username": "your_username",
-     "key": "your_api_key"
-   }
-   ```
-5. Your bearer token is the `key` value from this file
+The Kaggle MCP server uses bearer token authentication. Obtain your Kaggle bearer token from https://www.kaggle.com/settings/account.
 
 ## Configuration
 
@@ -71,9 +59,7 @@ nat run --config_file examples/MCP/kaggle_mcp/configs/config.yml \
 
 Example queries:
 - "Find the most popular datasets about natural language processing"
-- "Search for notebooks related to computer vision"
 - "What competitions are currently active?"
-- "List the files in the titanic dataset"
 
 ## Configuration Details
 
@@ -115,7 +101,7 @@ nat mcp client tool list --url https://www.kaggle.com/mcp --tool search_datasets
 
 ### Authenticated Tool Calls
 
-The Kaggle MCP server requires bearer token authentication for tool calls.
+The Kaggle MCP server requires bearer token authentication for some tool calls.
 
 #### Using Environment Variable (Recommended)
 
@@ -142,30 +128,53 @@ nat mcp client tool call search_datasets \
 
 **Note**: The `--bearer-token-env` approach is more secure because it doesn't expose the token in command history or process lists.
 
-#### Using Workflow Configuration
+## Troubleshooting
 
-For more complex scenarios or integration with agents, use the workflow configuration:
+### Agent Uses Wrong Parameter Names
+
+**Problem**: The agent generates tool calls with incorrect parameter names, such as using `query` instead of `search` for `search_datasets`.
+
+**Cause**: The default tool descriptions from Kaggle MCP are generic and don't specify parameter names, causing the LLM to infer incorrect names.
+
+**Solution**: Check the tool schema and add tool overrides in your `config.yml` to provide explicit parameter guidance:
 
 ```bash
-# Set your Kaggle bearer token
-export KAGGLE_BEARER_TOKEN="your_kaggle_api_key_here"
-
-# Use the workflow which includes authentication configuration
-nat run --config_file examples/MCP/kaggle_mcp/configs/config.yml \
-  --input "Search for Titanic datasets on Kaggle"
+nat mcp client tool list --url https://www.kaggle.com/mcp --tool search_datasets
 ```
 
-The workflow automatically handles bearer token authentication as configured in `config.yml`:
+After getting the tool schema, add the following tool overrides to your `config.yml`:
 
 ```yaml
-authentication:
-  kaggle:
-    _type: api_key
-    raw_key: ${KAGGLE_BEARER_TOKEN}
-    auth_scheme: Bearer
+function_groups:
+  kaggle_mcp_tools:
+    tool_overrides:
+      search_datasets:
+        description: >
+          Search for datasets on Kaggle. Use the 'search' parameter (not 'query')
+          to search by keywords. Example: {"request": {"search": "titanic"}}
 ```
 
-**Important**: Kaggle's MCP tools use a nested `request` object structure. Tool parameters must be wrapped in a `{"request": {...}}` object.
+### Permission Denied Errors
+
+**Problem**: Tool calls fail with "Permission 'datasets.get' was denied" or similar errors.
+
+**Cause**: Your Kaggle API token lacks the required permissions for certain operations.
+
+**Solution**:
+- Ensure you're using a valid Kaggle API key from https://www.kaggle.com/settings/account
+- Some operations require dataset ownership or special permissions
+- Use `search_datasets` for browsing (requires minimal permissions)
+- Use `list_dataset_files` only for datasets you own or have access to
+
+### CLI Tool Calls Work but Workflow Fails
+
+**Problem**: `nat mcp client tool call` succeeds but `nat run` with a workflow fails with the same tool.
+
+**Possible causes**:
+1. **Parameter validation**: CLI bypasses some validation that workflows enforce
+2. **Agent parameter inference**: Agent might use wrong parameter names (see "Agent Uses Wrong Parameter Names" above)
+
+**Solution**: Use `--direct` mode to test the raw MCP server behavior, then add tool overrides to guide the agent.
 
 ## References
 
