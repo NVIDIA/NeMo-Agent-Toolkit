@@ -50,8 +50,8 @@ class BaseEvaluator(ABC):
 
     async def evaluate(self, eval_input: EvalInput) -> EvalOutput:
         pbar = None
+        tqdm_position = TqdmPositionRegistry.claim()
         try:
-            tqdm_position = TqdmPositionRegistry.claim()
             pbar = tqdm(total=len(eval_input.eval_input_items), desc=self.tqdm_desc, position=tqdm_position)
 
             async def wrapped(item):
@@ -67,7 +67,8 @@ class BaseEvaluator(ABC):
 
             output_items = await asyncio.gather(*[wrapped(item) for item in eval_input.eval_input_items])
         finally:
-            pbar.close()
+            if pbar:
+                pbar.close()
             TqdmPositionRegistry.release(tqdm_position)
 
         # Compute average if possible
@@ -75,3 +76,6 @@ class BaseEvaluator(ABC):
         avg_score = round(sum(numeric_scores) / len(numeric_scores), 2) if numeric_scores else None
 
         return EvalOutput(average_score=avg_score, eval_output_items=output_items)
+
+
+

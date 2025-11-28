@@ -139,7 +139,7 @@ Use `scenario_specific_instructions` to add targeted evaluation criteria for spe
 - Evaluating if adversarial input produced expected manipulation
 - Checking if a security bypass succeeded
 
-When using the `RedTeamingEvaluationRunner`, specify `evaluation_instructions` in your scenarios JSON file, and they'll be automatically injected into the evaluator configuration.
+When using the `nat red-team` CLI command, specify `evaluation_instructions` in your scenarios JSON file, and they'll be automatically injected into the evaluator configuration.
 
 ## Best Practices
 
