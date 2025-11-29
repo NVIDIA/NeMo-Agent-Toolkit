@@ -5,7 +5,7 @@ llms:
     model_name: Qwen/Qwen2.5-7B-Instruct
     base_url: http://localhost:8000/v1
     api_key: default
-    temperature: 1.0
+    temperature: 0.6
 
 workflow:
   _type: rl_with_openpipe_art
@@ -13,7 +13,7 @@ workflow:
 
 eval:
   general:
-    max_concurrency: 32
+    max_concurrency: 8
     output_dir: .tmp/nat/examples/rl_openpipe/eval/finetune
     dataset:
       _type: json
@@ -53,7 +53,8 @@ trainer_adapters:
     # Training Arguments
     # Adjust these arguments based on GPU size
     training:
-      learning_rate: 5e-5
+      learning_rate: 1e-5
+      beta: 0.1
 
 trainers:
   openpipe_trainer:

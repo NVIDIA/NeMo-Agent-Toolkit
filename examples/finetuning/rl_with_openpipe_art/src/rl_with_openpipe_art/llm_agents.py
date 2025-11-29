@@ -17,10 +17,14 @@ import logging
 import random
 import re
 from dataclasses import dataclass
+from dataclasses import field
 from typing import Any
 
+from langchain_core.messages import AIMessage
+from langchain_core.messages import HumanMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import MessagesPlaceholder
 
 from .core import available_moves
 from .core import board_to_str
@@ -72,6 +76,8 @@ class LLMTicTacToePlayer:
     chain: Any  # LangChain Runnable: prompt | model | StrOutputParser
     max_retries: int = 0
     choose_random: bool = False
+    messages: list = field(default_factory=list)
+    steps = 0
 
     def choose_move(self, board) -> tuple[int, int, str]:
         """
@@ -93,13 +99,14 @@ class LLMTicTacToePlayer:
         if not moves:
             raise RuntimeError("No available moves; game should be over.")
 
-        available_str = ", ".join(f"({r+1},{c+1})" for r, c in moves)
         # ruff
         for attempt in range(0, self.max_retries + 1):
+            # Provide all user and LLM messages + current board
+            self.steps += 1
+            current_messages = self.messages + [HumanMessage(content=board_str)]
+
             raw_response = self.chain.invoke({
-                "board": board_str,
-                "symbol": self.symbol,
-                "available_moves": available_str,
+                "messages": current_messages,
             })
 
             if isinstance(raw_response, dict):
@@ -110,6 +117,9 @@ class LLMTicTacToePlayer:
             move = parse_move_any(text)
 
             if move is not None and move in moves:
+                # Update history with valid move
+                self.messages.append(HumanMessage(content=board_str))
+                self.messages.append(AIMessage(content=text))
                 return move[0], move[1], text
 
             logger.debug(f"[WARN] {self.name} produced invalid move on attempt {attempt}: "
@@ -144,23 +154,6 @@ Where R and C are integers in [1, 3].
 No explanation, no comments, no markdown, nothing else besides that XML.
 """
 
-HUMAN_TEMPLATE = """
-Current board:
-
-{board}
-
-Available moves (row,col): {available_moves}
-
-You are playing as '{symbol}'.
-
-Choose your move and respond ONLY with:
-
-<move>
-  <row>R</row>
-  <col>C</col>
-</move>
-"""
-
 
 def build_player_chain(model, player_symbol: str) -> Any:
     """
@@ -169,7 +162,7 @@ def build_player_chain(model, player_symbol: str) -> Any:
     """
     prompt = ChatPromptTemplate.from_messages([
         ("system", SYSTEM_TEMPLATE),
-        ("human", HUMAN_TEMPLATE),
+        MessagesPlaceholder(variable_name="messages"),
     ]).partial(symbol=player_symbol)
     parser = StrOutputParser()
     chain = prompt | model | parser

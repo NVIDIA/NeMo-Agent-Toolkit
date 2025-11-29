@@ -166,6 +166,8 @@ class ARTTrajectoryBuilder(TrajectoryBuilder):
                             "system": EpisodeItemRole.SYSTEM,
                             "tool": EpisodeItemRole.TOOL,
                             "function": EpisodeItemRole.FUNCTION,
+                            "human": EpisodeItemRole.USER,
+                            "ai": EpisodeItemRole.ASSISTANT,
                         }
 
                         role = role_mapping.get(msg.get("role"), EpisodeItemRole.OTHER)

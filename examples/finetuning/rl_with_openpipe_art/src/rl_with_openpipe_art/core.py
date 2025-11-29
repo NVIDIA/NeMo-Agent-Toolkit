@@ -49,7 +49,7 @@ def new_board() -> np.ndarray:
 
 def board_to_str(board: np.ndarray) -> str:
     """Pretty ASCII board for prompts / logging."""
-    mapping = {1: "X", -1: "O", 0: "."}
+    mapping = {1: "X", -1: "O", 0: "_"}
     # Return a string representation of tic tac toe board with rows and columns
     # Also add numbered rows and columns for easier reading, starting at index 1
     rows = []

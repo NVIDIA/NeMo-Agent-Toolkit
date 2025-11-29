@@ -115,7 +115,7 @@ class TicTacToeGame:
 
         except RuntimeError as _:
             logger.debug("*** Game aborted due to too many invalid moves. ***")
-            return -2
+            return current_player.steps
 
 
 class RlWithOpenpipeArtFunctionConfig(FunctionBaseConfig, name="rl_with_openpipe_art"):
@@ -124,7 +124,7 @@ class RlWithOpenpipeArtFunctionConfig(FunctionBaseConfig, name="rl_with_openpipe
     """
     player_model: LLMRef = Field(description="LLMRef for the player model to use.")
     opponent_model: LLMRef | None = Field(description="LLMRef for the opponent model to use.", default=None)
-    max_parser_retries: int = Field(default=0, description="Maximum number of retries for parsing LLM output.")
+    max_parser_retries: int = Field(default=3, description="Maximum number of retries for parsing LLM output.")
 
 
 @register_function(config_type=RlWithOpenpipeArtFunctionConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
@@ -202,10 +202,10 @@ async def rl_with_openpipe_art_function(config: RlWithOpenpipeArtFunctionConfig,
             return "Win!"
         elif winner == -1:
             return "Lose!"
-        elif winner == -2:
-            return "Aborted!"
-        else:
+        elif winner == 0:
             return "Draw!"
+        else:
+            return str(winner)
 
     # The callable is wrapped in a FunctionInfo object.
     # The description parameter is used to describe the function.

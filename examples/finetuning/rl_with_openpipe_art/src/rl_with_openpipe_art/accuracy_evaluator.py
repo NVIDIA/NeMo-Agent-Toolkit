@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import math
 from typing import override
 
 from nat.eval.evaluator.base_evaluator import BaseEvaluator
@@ -46,12 +47,14 @@ class AccuracyEvaluator(BaseEvaluator):
         elif workflow_output == "Draw!":
             score = 0.5
             match_status = "mismatch_with_zero_expected"
-        elif workflow_output == "Aborted!":
-            score = -1 if self.penalize_failure else 0.0
-            match_status = "aborted"
-        else:
+        elif workflow_output == "Lose!":
             score = 0.0
             match_status = "loss"
+        else:
+            score = 0.0
+            if self.penalize_failure:
+                score = -1 + (math.log(int(workflow_output) + 1) / math.log(100))
+            match_status = "aborted"
 
         # The reasoning field provides detailed information about the evaluation
         reasoning = {

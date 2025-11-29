@@ -44,7 +44,7 @@ def parse_to_openai_messages(steps: list[IntermediateStep]) -> list[dict]:
 
     # Track the last event type to handle special cases
     last_event_type = None
-
+    message_content_hashes = set()
     for message in steps:
         # Skip LLM_START events that come after TOOL_END events
         # These represent the assistant processing tool results internally
@@ -71,7 +71,19 @@ def parse_to_openai_messages(steps: list[IntermediateStep]) -> list[dict]:
             continue
 
         # Add the parsed message
-        messages.append(parsed_msg)
+        if isinstance(parsed_msg, list):
+            # Trajectories are additive, we want to avoid repeating previously seen messages
+            for msg in parsed_msg:
+                content_hash = hash(msg["role"] + ": " + msg["content"])
+                if content_hash not in message_content_hashes:
+                    messages.append(msg)
+                    message_content_hashes.add(content_hash)
+        else:
+            content_hash = hash(parsed_msg["role"] + ": " + parsed_msg["content"])
+            if content_hash not in message_content_hashes:
+                messages.append(parsed_msg)
+                message_content_hashes.add(content_hash)
+
         last_event_type = message.event_type
 
     # Validate and fix the message sequence
@@ -88,8 +100,7 @@ def _validate_message_sequence(messages: list[dict]) -> list[dict]:
     1. System messages can only appear at the beginning
     2. After system messages, must alternate between user/tool and assistant
     3. Cannot have consecutive user messages or consecutive assistant messages
-    4. Tool messages must be followed by assistant messages
-    5. If first non-system messages are not user messages, they will be
+    4. If first non-system messages are not user messages, they will be
        concatenated into a single user message (with a warning)
 
     Args:
@@ -207,15 +218,6 @@ def _validate_message_sequence(messages: list[dict]) -> list[dict]:
                     raise ValueError(f"Consecutive assistant messages at positions "
                                      f"{i-1} and {i}. Assistant messages must be "
                                      "followed by user or tool messages.")
-
-                # Tool/function messages must be followed by assistant
-                # if (prev_role in ["tool", "function"] and
-                #         role not in ["assistant"]):
-                #     raise ValueError(
-                #         f"{prev_role.capitalize()} message at position "
-                #         f"{i-1} must be followed by assistant message, "
-                #         f"but found {role} at position {i}."
-                #     )
 
             prev_role = role
 

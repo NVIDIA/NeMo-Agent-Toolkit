@@ -28,7 +28,7 @@ from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepType
 
 
-def parse_to_openai_message(message: IntermediateStep) -> dict:
+def parse_to_openai_message(message: IntermediateStep) -> dict | list[dict]:
     """
     Convert IntermediateStep to OpenAI-compatible message dictionary.
 
@@ -50,6 +50,9 @@ def parse_to_openai_message(message: IntermediateStep) -> dict:
     elif message.event_type == IntermediateStepType.LLM_START:
         # Extract user/system messages from the input
         result = _parse_input_message(message)
+        # drop logprobs field if exists
+        if "logprobs" in result:
+            del result["logprobs"]
     else:
         # For other types, try to infer from the data
         result = _parse_generic_message(message)
@@ -146,7 +149,7 @@ def _parse_tool_message(message: IntermediateStep) -> dict:
     return result
 
 
-def _parse_input_message(message: IntermediateStep) -> dict:
+def _parse_input_message(message: IntermediateStep) -> dict | list[dict]:
     """Parse user or system messages from LLM_START event."""
     if not message.data or not message.data.input:
         return {"role": "user", "content": ""}
@@ -156,19 +159,21 @@ def _parse_input_message(message: IntermediateStep) -> dict:
     # Handle list of messages
     if isinstance(input_data, list) and len(input_data) > 0:
         # Get the last message in the list
-        last_msg = input_data[-1]
-
-        # Handle BaseMessage objects
-        if isinstance(last_msg, BaseMessage):
-            return _parse_langchain_message(last_msg)
-        # Handle dict messages
-        elif isinstance(last_msg, dict):
-            return _parse_dict_message(last_msg)
-        # Handle string messages
-        elif isinstance(last_msg, str):
-            return {"role": "user", "content": last_msg}
-        else:
-            return {"role": "user", "content": str(last_msg)}
+        messages = []
+        for msg in input_data:
+            last_msg = msg
+            # Handle BaseMessage objects
+            if isinstance(last_msg, BaseMessage):
+                messages.append(_parse_langchain_message(last_msg))
+            # Handle dict messages
+            elif isinstance(last_msg, dict):
+                messages.append(_parse_dict_message(last_msg))
+            # Handle string messages
+            elif isinstance(last_msg, str):
+                messages.append({"role": "user", "content": last_msg})
+            else:
+                messages.append({"role": "user", "content": str(last_msg)})
+        return messages
     # Handle single message
     elif isinstance(input_data, BaseMessage):
         return _parse_langchain_message(input_data)
@@ -226,7 +231,20 @@ def _parse_dict_message(msg_dict: dict) -> dict:
     result = {}
 
     # Extract role
-    result["role"] = msg_dict.get("role", "user")
+    #result["role"] = msg_dict.get("role", "user")
+    if "role" in msg_dict:
+        role = msg_dict["role"]
+    elif "type" in msg_dict:
+        role = msg_dict["type"]
+    else:
+        role = "user"
+
+    if role == 'ai':
+        role = 'assistant'
+    elif role == 'human':
+        role = 'user'
+
+    result["role"] = role
 
     # Extract content
     if "content" in msg_dict:
