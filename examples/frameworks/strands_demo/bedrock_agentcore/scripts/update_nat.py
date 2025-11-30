@@ -19,7 +19,7 @@ import boto3
 
 # Configuration
 CONTAINER_IMAGE = 'strands-demo:latest'
-IAM_AGENTCORE_ROLE = '<IAM_AGENTCORE_ROLE>'
+# IAM_AGENTCORE_ROLE = '<IAM_AGENTCORE_ROLE>'
 
 AWS_REGION = os.environ['AWS_DEFAULT_REGION']
 AWS_ACCOUNT_ID = os.environ['AWS_ACCOUNT_ID']
@@ -31,11 +31,15 @@ RUNTIME_NAME = "strands-demo"
 cclient = boto3.client('bedrock-agentcore-control', region_name=AWS_REGION)
 cresponse = cclient.list_agent_runtimes()
 
+runtime_id: str | None = None
 for runtime in cresponse['agentRuntimes']:
-    if runtime['agentRuntimeName'] == RUNTIME_NAME:
+    if runtime.get("agentRuntimeName") == RUNTIME_NAME:
         runtime_id = runtime['agentRuntimeId']
         print(f"Found runtime ID: {runtime_id}")
         break
+
+if runtime_id is None:
+    raise RuntimeError(f'No agent runtime found with name "{RUNTIME_NAME}"')
 
 client = boto3.client('bedrock-agentcore-control', region_name=AWS_REGION)
 

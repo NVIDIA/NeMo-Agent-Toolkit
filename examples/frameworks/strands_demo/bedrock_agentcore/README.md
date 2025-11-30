@@ -63,7 +63,7 @@ Replace <YOUR_ACCOUNT_ID HERE> with your AWS account number (example: 2111234567
 for the NAT deployment scripts.
 This is security best practice
 
-## Prerequisites
+## Prerequisites for secrets manager
 
 - AWS CLI installed and configured
 - Appropriate IAM permissions to create secrets in AWS Secrets Manager
@@ -682,7 +682,7 @@ After the role is created, you'll be redirected to the Roles page:
 3. On the role summary page, locate and copy the **ARN** (Amazon Resource Name)
 
 The ARN will look like this:
-```
+```text
 arn:aws:iam::<AWS_ACCOUNT_ID>:role/AgentCore_NAT
 ```
 
