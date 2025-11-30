@@ -34,7 +34,7 @@ Before you begin, ensure you have the following installed:
 
 Follow the official NeMo Agent toolkit installation guide:
 
-```
+```text
 https://docs.nvidia.com/nemo/agent-toolkit/1.2/quick-start/installing.html
 ```
 
@@ -81,7 +81,7 @@ aws secretsmanager create-secret \
   --region $AWS_DEFAULT_REGION
 ```
 
-Replace `your-nvidia-api-key-here` with your actual NVIDIA API key.
+Replace `YOUR NVIDIA API KEY HERE` with your actual NVIDIA API key.
 
 ## Verify the Secret
 
