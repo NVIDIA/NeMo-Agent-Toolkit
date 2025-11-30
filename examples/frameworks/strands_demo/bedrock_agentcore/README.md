@@ -479,7 +479,7 @@ The role includes the following permission sets:
 | **X-Ray Tracing** | Send distributed tracing data for observability |
 | **CloudWatch Metrics** | Publish custom metrics to CloudWatch |
 | **Workload Identity** | Access workload identity tokens for authentication |
-| **Secrets Manager** | Access the secret:nvidia-api-credentials key in Secrets Manager |
+| **Secrets Manager** | Access the `secret:nvidia-api-credentials` key in Secrets Manager |
 ---
 
 ## Prerequisites
