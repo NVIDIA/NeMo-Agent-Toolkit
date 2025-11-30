@@ -52,8 +52,8 @@ Enter your AWS ACCESS KEY, AWS SECRET ACCESS KEY, and REGION for your AWS Accoun
     export AWS_SECRET_ACCESS_KEY=$(aws configure get default.aws_secret_access_key)
     export AWS_DEFAULT_REGION=$(aws configure get default.region)
 ```
-### Set Account for local configurion
-Replacce <YOUR_ACCOUNT_ID HERE> with your AWS account number (example: 211123456789)
+### Set Account for local configuration
+Replace <YOUR_ACCOUNT_ID HERE> with your AWS account number (example: 211123456789)
 
 ```bash
     export AWS_ACCOUNT_ID="<YOUR AWS ACCOUNT ID HERE>"
@@ -291,9 +291,9 @@ uv run examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py
 
 ## Step 7: Instrument for OpenTelemetry
 
-### Update Dockerfile Environment Variables
+### Update `Dockerfile` Environment Variables
 
-For this step you will need your Runtime ID (obtained from Step 6) to update your Dockerfile:
+For this step you will need your Runtime ID (obtained from Step 6) to update your `Dockerfile`:
 
 NOTE:  If you do not have the runtime ID, you can check the AWS Console or run the following script:
 ```bash
@@ -322,9 +322,9 @@ You can run it here:
 uv run examples/frameworks/strands_demo/bedrock_agentcore/scripts/get_agentcore_runtime_id.py
 ```
 
-Update the following environment variables in the Dockerfile with your Runtime ID.
+Update the following environment variables in the `Dockerfile` with your Runtime ID.
 
-The location of the Dockerfile is:
+The location of the `Dockerfile` is:
  examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile
 
 ```dockerfile
@@ -346,7 +346,7 @@ And uncomment the OpenTelemetry instrumented entry point:
 ```dockerfile
 ENTRYPOINT ["sh", "-c", "exec /workspace/examples/frameworks/strands_demo/bedrock_agentcore/scripts/run_nat_with_OTEL.sh"]
 ```
-Save the updated Dockerfile
+Save the updated `Dockerfile`
 
 
 ### ReBuild and Push Docker Image to ECR
@@ -744,7 +744,7 @@ The Dockerfile is organized into the following sections:
 5. **Runtime Configuration** - Entry point and environment
 
 <details>
-<summary>📄 Click to view complete Dockerfile</summary>
+<summary>📄 Click to view complete `Dockerfile`</summary>
 
 ```dockerfile
 # SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
