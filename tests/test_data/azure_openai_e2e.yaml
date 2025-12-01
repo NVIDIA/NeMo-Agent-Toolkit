@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+functions:
+  current_datetime:
+    _type: current_datetime
+
 llms:
   agent_llm:
     _type: azure_openai
@@ -24,4 +28,4 @@ workflow:
   _type: react_agent
   llm_name: agent_llm
   verbose: true
-  tool_names: []
+  tool_names: [current_datetime]
