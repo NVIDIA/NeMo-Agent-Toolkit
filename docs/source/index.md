@@ -72,9 +72,7 @@ We would love to hear from you! Please file an issue on [GitHub](https://github.
 
 ```{toctree}
 :hidden:
-:caption: About NVIDIA NeMo Agent Toolkit
-Overview <self>
-Release Notes <./release-notes.md>
+About <self>
 ```
 
 ```{toctree}
@@ -83,7 +81,6 @@ Release Notes <./release-notes.md>
 
 Install <./quick-start/installing.md>
 Quick Start Guide <./quick-start/quick-start.md>
-Launching UI <./quick-start/launching-ui.md>
 Tutorials <./tutorials/index.md>
 ```
 
@@ -177,6 +174,7 @@ Running Tests <./resources/running-tests.md>
 ./resources/running-ci-locally.md
 ./support.md
 ./resources/licensing.md
+Release Notes <./release-notes.md>
 ```
 
 <!-- This role is needed at the index to set the default backtick role -->
