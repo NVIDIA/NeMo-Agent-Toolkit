@@ -170,5 +170,4 @@ function_groups:
 ## References
 
 - [Kaggle MCP Documentation](https://www.kaggle.com/docs/mcp)
-- [NAT MCP Documentation](https://docs.nvidia.com/nemo-agent-toolkit/mcp/)
-- [NAT Authentication Guide](https://docs.nvidia.com/nemo-agent-toolkit/authentication/)
+- [NeMo Agent Toolkit MCP Documentation](../../../docs/source/workflows/mcp/index.md)
