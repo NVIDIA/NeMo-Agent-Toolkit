@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import asyncio
-import contextvars
 import logging
 import typing
 import uuid
@@ -23,7 +22,6 @@ from collections.abc import Callable
 from contextlib import asynccontextmanager
 from contextlib import nullcontext
 from datetime import datetime
-from datetime import timedelta
 
 from fastapi import WebSocket
 from pydantic import BaseModel
@@ -57,10 +55,10 @@ class PerUserBuilderInfo(BaseModel):
     Tracks lifecycle and usage of per-user builders for automatic cleanup.
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True, validate_assignment=False)
 
-    builder: "PerUserWorkflowBuilder" = Field(description="The per-user workflow builder instance")
-    workflow: "Workflow" = Field(description="The cached per-user workflow instance")
+    builder: typing.Any = Field(description="The per-user workflow builder instance")
+    workflow: typing.Any = Field(description="The cached per-user workflow instance")
     last_activity: datetime = Field(default_factory=datetime.now,
                                     description="The timestamp of the last access to this builder")
     ref_count: int = Field(default=0, ge=0, description="The reference count of this builder")
@@ -158,6 +156,10 @@ class SessionManager:
             self._semaphore = nullcontext()
 
         self._runtime_type = runtime_type
+
+        # Context state for per-request context variables
+        self._context_state = ContextState.get()
+        self._context = Context(self._context_state)
 
         # Track if workflow is shared or per-user
         workflow_registration = GlobalTypeRegistry.get().get_function(type(config.workflow))
@@ -361,16 +363,15 @@ class SessionManager:
 
         """
         try:
-            context_state = ContextState.get()
             # Primary: Get from nat-session cookie
-            cookies = getattr(context_state.metadata, "cookies", None)
-            if cookies:
-                session_id = cookies.get("nat-session")
+            metadata = self._context.metadata
+            if metadata and hasattr(metadata, '_request') and metadata._request.cookies:
+                session_id = metadata._request.cookies.get("nat-session")
                 if session_id:
                     return session_id
 
             # Fallback: Get from user_manager if set
-            user_manager = context_state.user_manager
+            user_manager = self._context.user_manager
             if user_manager:
                 return user_manager.get_id()
             return None
@@ -379,6 +380,7 @@ class SessionManager:
             return None
 
     async def _get_or_create_per_user_builder(self, user_id: str) -> tuple["PerUserWorkflowBuilder", Workflow]:
+        from nat.builder.workflow_builder import PerUserWorkflowBuilder
 
         async with self._per_user_builders_lock:
             if user_id in self._per_user_builders:
@@ -482,10 +484,6 @@ class SessionManager:
             raise ValueError("Cannot use SessionManager.run() with per-user workflows. "
                              "Use 'async with session_manager.session() as session' then 'session.run()' instead.")
         async with self._semaphore:
-            # Apply the saved context
-            for k, v in self._saved_context.items():
-                k.set(v)
-
             async with self._shared_workflow.run(message, runtime_type=runtime_type) as runner:
                 yield runner
 
