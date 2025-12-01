@@ -236,7 +236,7 @@ html_theme_options = {
     '''
     ],
     "show_nav_level":
-        2,
+        1,
     "switcher": {
         "json_url": "../versions1.json", "version_match": version
     },
