@@ -29,8 +29,8 @@ function_groups:
     tool_overrides:
       search_datasets:
         description: >
-          Search for datasets on Kaggle. Use the 'search' parameter (not 'query')
-          to search by keywords. Returns a list of datasets with metadata including
+          Search for datasets on Kaggle. Use the 'search' parameter to search by keywords.
+          Returns a list of datasets with metadata including
           title, owner, download count, and URL. Example: {"request": {"search": "titanic"}}
 
 authentication:

@@ -54,7 +54,7 @@ Run the workflow with a query:
 
 ```bash
 nat run --config_file examples/MCP/kaggle_mcp/configs/config.yml \
-  --input ""List files in the kaggle/titanic dataset"
+  --input "List files in the kaggle/titanic dataset"
 ```
 
 Example queries:
