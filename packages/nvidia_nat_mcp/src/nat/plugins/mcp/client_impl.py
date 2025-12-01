@@ -450,11 +450,19 @@ def mcp_session_tool_function(tool, function_group: MCPFunctionGroup):
 
             # Preserve original calling convention
             if tool_input:
-                args = tool_input.model_dump()
+                args = tool_input.model_dump(exclude_none=True, mode='json')
                 return await session_tool.acall(args)
 
-            _ = session_tool.input_schema.model_validate(kwargs)
-            return await session_tool.acall(kwargs)
+            # kwargs arrives with all optional fields set to None because NAT's framework
+            # converts the input dict to a Pydantic model (filling in all Field(default=None)),
+            # then dumps it back to a dict. We need to strip out these None values because
+            # many MCP servers (e.g., Kaggle) reject requests with excessive null fields.
+            # We re-validate here (yes, redundant) to leverage Pydantic's exclude_none with
+            # mode='json' for recursive None removal in nested models.
+            # Reference: function_info.py:_convert_input_pydantic
+            validated_input = session_tool.input_schema.model_validate(kwargs)
+            args = validated_input.model_dump(exclude_none=True, mode='json')
+            return await session_tool.acall(args)
         except Exception as e:
             logger.warning("Error calling tool %s", tool.name, exc_info=True)
             return str(e)
