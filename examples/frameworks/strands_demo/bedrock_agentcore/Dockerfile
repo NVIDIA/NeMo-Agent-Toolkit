@@ -30,7 +30,18 @@ ENV PYTHONDONTWRITEBYTECODE=1
 
 # Install compiler [g++, gcc] (currently only needed for thinc indirect dependency)
 RUN apt-get update && \
-    apt-get install -y g++ gcc
+    apt-get install -y --no-install-recommends g++ gcc curl unzip jq ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+
+# Install AWS CLI v2
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip" && \
+    unzip awscliv2.zip && \
+    ./aws/install && \
+    rm -rf awscliv2.zip aws
+
+# Verify installation
+CMD ["aws", "--version"]
 
 # Set working directory
 WORKDIR /workspace
@@ -49,7 +60,13 @@ RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
     uv venv --python ${PYTHON_VERSION} /workspace/.venv && \
     uv sync --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
     uv pip install -e '.[telemetry]' --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
-    uv pip install --link-mode=copy ./examples/frameworks/strands_demo
+    uv pip install --link-mode=copy ./examples/frameworks/strands_demo && \
+    uv pip install boto3 aws-opentelemetry-distro && \
+    find /workspace/.venv -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true && \
+    find /workspace/.venv -type f -name "*.pyc" -delete && \
+    find /workspace/.venv -type f -name "*.pyo" -delete && \
+    find /workspace/.venv -name "*.dist-info" -type d -exec rm -rf {}/RECORD {} + 2>/dev/null || true && \
+    rm -rf /workspace/.venv/lib/python*/site-packages/pip /workspace/.venv/lib/python*/site-packages/setuptools
 
 # AWS OpenTelemetry Distribution
 ENV OTEL_PYTHON_DISTRO=aws_distro
@@ -65,22 +82,31 @@ ENV AGENT_OBSERVABILITY_ENABLED=true
 # Service Identification attributed (gets added to all span logs)
 # Example:
 # OTEL_RESOURCE_ATTRIBUTES=service.version=1.0,service.name=mcp-calculator,aws.log.group.names=mcp/mcp-calculator-logs
-ENV OTEL_RESOURCE_ATTRIBUTES=service.name=nat_test_agent,aws.log.group.names=/aws/bedrock-agentcore/runtimes/<AGENTCORE_RUNTIME_ID>
+#ENV OTEL_RESOURCE_ATTRIBUTES=service.name=nat_test_agent,aws.log.group.names=/aws/bedrock-agentcore/runtimes/<AGENTCORE_RUNTIME_ID>
+ENV OTEL_RESOURCE_ATTRIBUTES=service.name=nat_test_agent,aws.log.group.names=/aws/bedrock-agentcore/runtimes/strands_test_demo-oNUmOg6xk0
 
 # CloudWatch Integration (ensure the log group and log stream are pre-created and exists)
 # Example:
 # OTEL_EXPORTER_OTLP_LOGS_HEADERS=x-aws-log-group=mcp/mcp-calculator-logs,x-aws-log-stream=default,x-aws-metric-namespace=mcp-calculator
-ENV OTEL_EXPORTER_OTLP_LOGS_HEADERS=x-aws-log-group=/aws/bedrock-agentcore/runtimes/<AGENTCORE_RUNTIME_ID>,x-aws-log-stream=otel-rt-logs,x-aws-metric-namespace=strands_demo
+#ENV OTEL_EXPORTER_OTLP_LOGS_HEADERS=x-aws-log-group=/aws/bedrock-agentcore/runtimes/<AGENTCORE_RUNTIME_ID>,x-aws-log-stream=otel-rt-logs,x-aws-metric-namespace=strands_demo
+ENV OTEL_EXPORTER_OTLP_LOGS_HEADERS=x-aws-log-group=/aws/bedrock-agentcore/runtimes/strands_test_demo-oNUmOg6xk0,x-aws-log-stream=otel-rt-logs,x-aws-metric-namespace=strands_demo
 
-RUN uv pip install boto3
-RUN uv pip install aws-opentelemetry-distro
+# Remove build dependencies and cleanup (keep ca-certificates, curl, jq, unzip)
+RUN apt-mark manual ca-certificates curl jq unzip && \
+    apt-get purge -y --auto-remove g++ gcc && \
+    rm -rf /var/lib/apt/lists/* && \
+    rm -rf /workspace/.git /workspace/.github /workspace/tests /workspace/docs && \
+    find /workspace -type f -name "*.md" -not -path "*/site-packages/*" -delete && \
+    find /workspace -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true && \
+    find /workspace -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
     
 # Environment variables for the venv
 ENV PATH="/workspace/.venv/bin:$PATH"
+ENV REGION="us-west-2"
 
 # Set the config file environment variable
 ENV NAT_CONFIG_FILE=/workspace/examples/frameworks/strands_demo/configs/agentcore_config.yml
 
 # Define the entry point to start the server
-ENTRYPOINT ["sh", "-c", "exec nat serve --config_file=$NAT_CONFIG_FILE --host 0.0.0.0"]
+ENTRYPOINT ["sh", "-c", "exec /workspace/examples/frameworks/strands_demo/bedrock_agentcore/scripts/run_nat_with_OTEL.sh"]
 #ENTRYPOINT ["sh", "-c", "exec opentelemetry-instrument nat serve --config_file=$NAT_CONFIG_FILE --host 0.0.0.0"]
