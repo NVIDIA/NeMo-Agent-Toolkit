@@ -14,7 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-# NVIDIA NeMo Agent toolkit Optimizer Guide
+# NVIDIA NeMo Agent Toolkit Optimizer Guide
 
 Welcome to the NeMo Agent toolkit Optimizer guide. This document provides a comprehensive overview of how to use the NeMo Agent toolkit Optimizer to tune your NeMo Agent toolkit workflows.
 
