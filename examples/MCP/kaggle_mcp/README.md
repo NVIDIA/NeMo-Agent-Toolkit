@@ -17,7 +17,7 @@ limitations under the License.
 
 # Kaggle MCP Example
 
-This example demonstrates how to use the Kaggle MCP server with NeMo Agent Toolkit to interact with Kaggle's datasets, notebooks, models, and competitions.
+This example demonstrates how to use the Kaggle MCP server with NVIDIA NeMo Agent Toolkit to interact with Kaggle's datasets, notebooks, models, and competitions.
 
 ## Prerequisites
 
