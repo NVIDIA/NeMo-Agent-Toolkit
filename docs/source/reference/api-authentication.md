@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NVIDIA NeMo Agent Toolkit Streamlining API Authentication
+# NVIDIA NeMo Agent Toolkit Authentication Provider API
 
 :::{warning}
 **Experimental Feature**: The Authentication Provider API is experimental and may change in future releases. Future versions may introduce breaking changes without notice.
