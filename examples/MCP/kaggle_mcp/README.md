@@ -30,7 +30,7 @@ The Kaggle MCP server uses bearer token authentication. Obtain your Kaggle beare
 
 ## Configuration
 
-The `config.yml` file uses NAT's built-in `api_key` authentication provider with Bearer token scheme:
+The `config.yml` file uses the built-in `api_key` authentication provider with Bearer token scheme:
 
 ```yaml
 authentication:
@@ -63,21 +63,12 @@ Example queries:
 
 ## Configuration Details
 
-### Authentication Provider
-
-This example uses NAT's `api_key` authentication provider, which supports:
-- **BEARER** scheme (default) - Adds `Authorization: Bearer <token>` header
-- **X_API_KEY** scheme - Adds `X-Api-Key: <token>` header
-- **CUSTOM** scheme - Custom header name and prefix
-
-For Kaggle, we use the BEARER scheme as shown in the Kaggle MCP documentation.
-
 ### MCP Client Setup
 
 The configuration connects to Kaggle's MCP server using:
 - **Transport**: `streamable-http` (recommended for HTTP-based MCP servers)
 - **URL**: `https://www.kaggle.com/mcp`
-- **Authentication**: Bearer token via `api_key` provider
+- **Authentication**: Bearer token via the built-in `api_key` authentication provider
 
 ## CLI Commands
 
