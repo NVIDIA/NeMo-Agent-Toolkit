@@ -54,11 +54,11 @@ Run the workflow with a query:
 
 ```bash
 nat run --config_file examples/MCP/kaggle_mcp/configs/config.yml \
-  --input "List files in the kaggle/titanic dataset"
+  --input "Find the most popular datasets about natural language processing"
 ```
 
 Example queries:
-- "Find the most popular datasets about natural language processing"
+- "What is the titanic dataset about?"
 - "What competitions are currently active?"
 
 ## Configuration Details
