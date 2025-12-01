@@ -19,6 +19,7 @@ import string
 
 from pydantic import Field
 from pydantic import field_validator
+from pydantic import model_validator
 
 from nat.authentication.exceptions.api_key_exceptions import APIKeyFieldError
 from nat.authentication.exceptions.api_key_exceptions import HeaderNameFieldError
@@ -78,9 +79,10 @@ class APIKeyAuthProviderConfig(AuthProviderBaseConfig, name="api_key"):
 
     @field_validator('custom_header_name')
     @classmethod
-    def validate_custom_header_name(cls, value: str) -> str:
-        if not value:
-            raise HeaderNameFieldError('value_missing', 'custom_header_name is required.')
+    def validate_custom_header_name(cls, value: str | None) -> str | None:
+        # Only validate format if value is provided (required check is in model_validator)
+        if value is None:
+            return value
 
         if value != value.strip():
             raise HeaderNameFieldError('whitespace_found',
@@ -99,9 +101,10 @@ class APIKeyAuthProviderConfig(AuthProviderBaseConfig, name="api_key"):
 
     @field_validator('custom_header_prefix')
     @classmethod
-    def validate_custom_header_prefix(cls, value: str) -> str:
-        if not value:
-            raise HeaderPrefixFieldError('value_missing', 'custom_header_prefix is required.')
+    def validate_custom_header_prefix(cls, value: str | None) -> str | None:
+        # Only validate format if value is provided (required check is in model_validator)
+        if value is None:
+            return value
 
         if value != value.strip():
             raise HeaderPrefixFieldError(
@@ -125,3 +128,15 @@ class APIKeyAuthProviderConfig(AuthProviderBaseConfig, name="api_key"):
                                    'required after construction.')
 
         return value
+
+    @model_validator(mode='after')
+    def validate_custom_scheme_requirements(self) -> 'APIKeyAuthProviderConfig':
+        """Validate that custom_header_name and custom_header_prefix are provided when using CUSTOM scheme."""
+        if self.auth_scheme == HeaderAuthScheme.CUSTOM:
+            if not self.custom_header_name:
+                raise HeaderNameFieldError('value_missing',
+                                           'custom_header_name is required when auth_scheme is CUSTOM.')
+            if not self.custom_header_prefix:
+                raise HeaderPrefixFieldError('value_missing',
+                                             'custom_header_prefix is required when auth_scheme is CUSTOM.')
+        return self
