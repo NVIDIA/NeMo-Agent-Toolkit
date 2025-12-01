@@ -68,6 +68,7 @@ class AzureOpenAIModelConfig(
         """
         return self.azure_deployment
 
+
 @register_llm_provider(config_type=AzureOpenAIModelConfig)
 async def azure_openai_llm(config: AzureOpenAIModelConfig, _builder: Builder):
 
