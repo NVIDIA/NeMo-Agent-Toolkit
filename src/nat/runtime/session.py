@@ -15,14 +15,20 @@
 
 import asyncio
 import contextvars
+import logging
 import typing
 import uuid
 from collections.abc import Awaitable
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from contextlib import nullcontext
+from datetime import datetime
+from datetime import timedelta
 
 from fastapi import WebSocket
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
 from starlette.requests import HTTPConnection
 from starlette.requests import Request
 
@@ -37,67 +43,375 @@ from nat.data_models.interactive import HumanResponse
 from nat.data_models.interactive import InteractionPrompt
 from nat.data_models.runtime_enum import RuntimeTypeEnum
 
-_T = typing.TypeVar("_T")
+if typing.TYPE_CHECKING:
+    from nat.builder.workflow_builder import PerUserWorkflowBuilder
+    from nat.builder.workflow_builder import WorkflowBuilder
+
+logger = logging.getLogger(__name__)
 
 
-class UserManagerBase:
-    pass
+class PerUserBuilderInfo(BaseModel):
+    """
+    Container for per-user builder data with activity tracking.
+
+    Tracks lifecycle and usage of per-user builders for automatic cleanup.
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    builder: "PerUserWorkflowBuilder" = Field(description="The per-user workflow builder instance")
+    workflow: "Workflow" = Field(description="The cached per-user workflow instance")
+    last_activity: datetime = Field(default_factory=datetime.now,
+                                    description="The timestamp of the last access to this builder")
+    ref_count: int = Field(default=0, ge=0, description="The reference count of this builder")
+    lock: asyncio.Lock = Field(default_factory=asyncio.Lock, description="Lock for thread-safe ref_count updates")
 
 
-class SessionManager:
+class Session:
+    """
+    Represents an active session with access to workflow and builders.
 
-    def __init__(self,
-                 workflow: Workflow,
-                 max_concurrency: int = 8,
-                 runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE):
-        """
-        The SessionManager class is used to run and manage a user workflow session. It runs and manages the context,
-        and configuration of a workflow with the specified concurrency.
+    Each session is tied to a specific request, and provides access to the appropriate workflow
+    instance (shared or per-user).
 
-        Parameters
-        ----------
-        workflow : Workflow
-            The workflow to run
-        max_concurrency : int, optional
-            The maximum number of simultaneous workflow invocations, by default 8
-        runtime_type : RuntimeTypeEnum, optional
-            The type of runtime the session manager is operating in, by default RuntimeTypeEnum.RUN_OR_SERVE
-        """
+    Lifecycle:
+    - Created for each request via SessionManager.session()
+    - Automatically manages ref_count for per-user builder tracking
+    - Cleans up context variables on exit
+    """
 
-        if (workflow is None):
-            raise ValueError("Workflow cannot be None")
-
-        self._workflow: Workflow = workflow
-
-        self._max_concurrency = max_concurrency
-        self._context_state = ContextState.get()
-        self._context = Context(self._context_state)
-        self._runtime_type = runtime_type
-
-        # We save the context because Uvicorn spawns a new process
-        # for each request, and we need to restore the context vars
-        self._saved_context = contextvars.copy_context()
-
-        if (max_concurrency > 0):
-            self._semaphore = asyncio.Semaphore(max_concurrency)
-        else:
-            # If max_concurrency is 0, then we don't need to limit the concurrency but we still need a context
-            self._semaphore = nullcontext()
+    def __init__(self, session_manager: "SessionManager", workflow: Workflow, user_id: str | None = None):
+        self._session_manager = session_manager
+        self._workflow = workflow
+        self._user_id = user_id
 
     @property
-    def config(self) -> Config:
-        return self._workflow.config
+    def user_id(self) -> str | None:
+        return self._user_id
 
     @property
     def workflow(self) -> Workflow:
         return self._workflow
 
     @property
-    def context(self) -> Context:
-        return self._context
+    def session_manager(self) -> "SessionManager":
+        return self._session_manager
+
+    @asynccontextmanager
+    async def run(self, message, runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE):
+        """
+        Start a workflow run using this session's workflow.
+
+        Args:
+            message: Input message for the workflow
+            runtime_type: Runtime type (defaults to SessionManager's runtime_type)
+
+        Yields:
+            Runner instance for the workflow execution
+        """
+        async with self._session_manager._semaphore:
+
+            async with self._workflow.run(message, runtime_type=runtime_type) as runner:
+                yield runner
+
+
+class SessionManager:
+
+    def __init__(self,
+                 config: Config,
+                 shared_builder: "WorkflowBuilder",
+                 shared_workflow: Workflow | None = None,
+                 max_concurrency: int = 8,
+                 runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE):
+        """
+        The SessionManager class is used to manage workflow builders and sessions.
+        It manages workflow sessions and per-user builders with lifecycle management.
+
+        Architecture:
+        - One SessionManager per FastAPI server
+        - Creates/caches PerUserWorkflowBuilder instances per user
+        - Cleans up inactive builders based on timeout
+
+        Parameters
+        ----------
+        config : Config
+            The configuration for the workflow
+        shared_builder : WorkflowBuilder
+            The shared workflow builder
+        shared_workflow : Workflow, optional
+            The shared workflow, by default None
+        max_concurrency : int, optional
+            The maximum number of simultaneous workflow invocations, by default 8
+        runtime_type : RuntimeTypeEnum, optional
+            The type of runtime the session manager is operating in, by default RuntimeTypeEnum.RUN_OR_SERVE
+        """
+
+        from nat.cli.type_registry import GlobalTypeRegistry
+
+        self._config = config
+        self._max_concurrency = max_concurrency
+        # Semaphore for limiting concurrency
+        if max_concurrency > 0:
+            self._semaphore = asyncio.Semaphore(max_concurrency)
+        else:
+            # If max_concurrency is 0, then we don't need to limit the concurrency but we still need a context
+            self._semaphore = nullcontext()
+
+        self._runtime_type = runtime_type
+
+        # Track if workflow is shared or per-user
+        workflow_registration = GlobalTypeRegistry.get().get_function(type(config.workflow))
+        self._is_workflow_per_user = workflow_registration.is_per_user
+
+        # Shared components
+        self._shared_builder = shared_builder
+        self._shared_workflow = shared_workflow
+
+        # Per-user management
+        self._per_user_builders: dict[str, PerUserBuilderInfo] = {}
+        self._per_user_builders_lock = asyncio.Lock()
+        self._per_user_builders_cleanup_task: asyncio.Task | None = None
+        self._per_user_session_timeout = config.general.per_user_workflow_timeout
+        self._per_user_session_cleanup_interval = config.general.per_user_workflow_cleanup_interval
+        self._shutdown_event = asyncio.Event()
+
+        # Cache schemas for per-user workflows
+        if self._is_workflow_per_user:
+            self._per_user_workflow_input_schema = workflow_registration.per_user_function_input_schema
+            self._per_user_workflow_single_output_schema = workflow_registration.per_user_function_single_output_schema
+            self._per_user_workflow_streaming_output_schema = workflow_registration.per_user_function_streaming_output_schema
+        else:
+            self._per_user_workflow_input_schema = None
+            self._per_user_workflow_single_output_schema = None
+            self._per_user_workflow_streaming_output_schema = None
+
+    @property
+    def config(self) -> Config:
+        return self._config
+
+    @property
+    def workflow(self) -> Workflow:
+        """
+        Get workflow for backward compatibility.
+
+        Only works for shared workflows. For per-user workflows, use session.workflow.
+
+        Raises:
+            ValueError: If workflow is per-user
+        """
+        if self._is_workflow_per_user:
+            raise ValueError("Workflow is per-user. Access workflow through session.workflow instead.")
+        if self._shared_workflow is None:
+            raise ValueError("No shared workflow available")
+        return self._shared_workflow
+
+    @property
+    def shared_builder(self) -> "WorkflowBuilder":
+        return self._shared_builder
+
+    @property
+    def is_workflow_per_user(self) -> bool:
+        return self._is_workflow_per_user
+
+    def get_workflow_input_schema(self) -> type[BaseModel]:
+        """Get workflow input schema for OpenAPI documentation."""
+
+        if self._is_workflow_per_user:
+            return self._per_user_workflow_input_schema
+
+        return self._shared_workflow.input_schema
+
+    def get_workflow_single_output_schema(self) -> type[BaseModel]:
+        """Get workflow single output schema for OpenAPI documentation."""
+
+        if self._is_workflow_per_user:
+            return self._per_user_workflow_single_output_schema
+
+        return self._shared_workflow.single_output_schema
+
+    def get_workflow_streaming_output_schema(self) -> type[BaseModel]:
+        """Get workflow streaming output schema for OpenAPI documentation."""
+
+        if self._is_workflow_per_user:
+            return self._per_user_workflow_streaming_output_schema
+
+        return self._shared_workflow.streaming_output_schema
+
+    @classmethod
+    @asynccontextmanager
+    async def from_config(cls,
+                          config: Config,
+                          max_concurrency: int = 8,
+                          runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE):
+        """
+        Create SessionManager from config.
+
+        This builds the shared WorkflowBuilder and optionally the shared workflow.
+        Per-user components are NOT built here - they're built on-demand per user.
+
+        Args:
+            config: Configuration object
+            max_concurrency: Maximum concurrent workflow invocations
+            runtime_type: Runtime type for the session manager
+
+        Yields:
+            SessionManager instance
+        """
+        from nat.builder.workflow_builder import WorkflowBuilder
+        from nat.cli.type_registry import GlobalTypeRegistry
+
+        async with WorkflowBuilder.from_config(config) as shared_builder:
+            workflow_registration = GlobalTypeRegistry.get().get_function(type(config.workflow))
+            if workflow_registration.is_per_user:
+                shared_workflow = None
+                logger.info("Workflow is per-user - will be built per user upon first request")
+            else:
+                shared_workflow = await shared_builder.build()
+                logger.info("Shared workflow built successfully")
+
+            session_manager = cls(config=config,
+                                  shared_builder=shared_builder,
+                                  shared_workflow=shared_workflow,
+                                  max_concurrency=max_concurrency,
+                                  runtime_type=runtime_type)
+
+            if session_manager._is_workflow_per_user:
+                # Start background cleanup task
+                session_manager._per_user_builders_cleanup_task = asyncio.create_task(
+                    session_manager._run_periodic_cleanup())
+
+            try:
+                yield session_manager
+
+            finally:
+                if session_manager._is_workflow_per_user:
+                    # Shutdown cleanup task
+                    session_manager._shutdown_event.set()
+                    if session_manager._per_user_builders_cleanup_task:
+                        try:
+                            await asyncio.wait_for(session_manager._per_user_builders_cleanup_task, timeout=5.0)
+                        except TimeoutError:
+                            logger.warning("Cleanup task did not finish in time, cancelling")
+                            session_manager._per_user_builders_cleanup_task.cancel()
+
+                    # Cleanup all per-user builders
+                    async with session_manager._per_user_builders_lock:
+                        for user_id, builder_info in list(session_manager._per_user_builders.items()):
+                            logger.debug(f"Cleaning up per-user builder for user {user_id}")
+                            try:
+                                await builder_info.builder.__aexit__(None, None, None)
+                            except Exception as e:
+                                logger.error(f"Error cleaning up builder for user {user_id}: {e}")
+                        session_manager._per_user_builders.clear()
+
+    async def _run_periodic_cleanup(self):
+
+        logger.debug("Running periodic cleanup of per-user builders")
+        while not self._shutdown_event.is_set():
+            try:
+                # Wait for either cleanup interval or shutdown
+                await asyncio.wait_for(self._shutdown_event.wait(),
+                                       timeout=self._per_user_session_cleanup_interval.total_seconds())
+                # If we get here, shutdown was signaled
+                break
+            except TimeoutError:
+                # Timeout means it's time to run cleanup
+                try:
+                    cleaned = await self._cleanup_inactive_per_user_builders()
+                    if cleaned > 0:
+                        logger.debug(f"Cleaned up {cleaned} inactive per-user builder(s)")
+                except Exception as e:
+                    logger.error(f"Error during periodic cleanup: {e}", exc_info=True)
+
+        logger.debug("Periodic cleanup task shutting down")
+
+    async def _cleanup_inactive_per_user_builders(self) -> int:
+
+        now = datetime.now()
+        threshold = now - self._per_user_session_timeout
+        builders_to_cleanup: list[tuple[str, PerUserBuilderInfo]] = []
+
+        # Identify builders to cleanup (under lock)
+        async with self._per_user_builders_lock:
+            for user_id, builder_info in list(self._per_user_builders.items()):
+                if builder_info.ref_count == 0 and builder_info.last_activity < threshold:
+                    # Remove from dict and add to cleanup list
+                    builders_to_cleanup.append((user_id, builder_info))
+                    del self._per_user_builders[user_id]
+                    logger.debug(f"Marked per-user builder for user {user_id} for cleanup "
+                                 f"(inactive since {builder_info.last_activity.isoformat()})")
+        # Cleanup builders (outside lock to avoid blocking)
+        for user_id, builder_info in builders_to_cleanup:
+            try:
+                await builder_info.builder.__aexit__(None, None, None)
+                logger.debug(f"Successfully cleaned up per-user builder for user {user_id}")
+            except Exception as e:
+                logger.error(f"Error cleaning up per-user builder for user {user_id}: {e}", exc_info=True)
+
+        return len(builders_to_cleanup)
+
+    def _get_user_id_from_context(self) -> str | None:
+        """
+        Get user ID from current context.
+
+        Extraction order:
+        1. From nat-session cookie (primary method)
+        2. From context user_manager if set
+        3. None (for shared workflow or unauthenticated access)
+
+        """
+        try:
+            context_state = ContextState.get()
+            # Primary: Get from nat-session cookie
+            cookies = getattr(context_state.metadata, "cookies", None)
+            if cookies:
+                session_id = cookies.get("nat-session")
+                if session_id:
+                    return session_id
+
+            # Fallback: Get from user_manager if set
+            user_manager = context_state.user_manager
+            if user_manager:
+                return user_manager.get_id()
+            return None
+        except Exception as e:
+            logger.debug(f"Could not extract user_id from context: {e}")
+            return None
+
+    async def _get_or_create_per_user_builder(self, user_id: str) -> tuple["PerUserWorkflowBuilder", Workflow]:
+
+        async with self._per_user_builders_lock:
+            if user_id in self._per_user_builders:
+                builder_info = self._per_user_builders[user_id]
+                builder_info.last_activity = datetime.now()
+
+                return builder_info.builder, builder_info.workflow
+
+            builder = PerUserWorkflowBuilder(user_id=user_id, shared_builder=self._shared_builder)
+            # Enter the builder's context manually to avoid exiting the context manager
+            await builder.__aenter__()
+            try:
+                await builder.populate_builder(self._config)
+                workflow = await builder.build()
+
+                builder_info = PerUserBuilderInfo(builder=builder,
+                                                  workflow=workflow,
+                                                  last_activity=datetime.now(),
+                                                  ref_count=0,
+                                                  lock=asyncio.Lock())
+                self._per_user_builders[user_id] = builder_info
+                return builder_info.builder, builder_info.workflow
+            except Exception as e:
+                logger.error(f"Error creating per-user builder for user {user_id}: {e}", exc_info=True)
+                try:
+                    await builder.__aexit__(None, None, None)
+                except Exception as cleanup_error:
+                    logger.error(f"Error during builder cleanup after failed creation: {cleanup_error}", exc_info=True)
+                raise e
 
     @asynccontextmanager
     async def session(self,
+                      user_id: str | None = None,
                       user_manager=None,
                       http_connection: HTTPConnection | None = None,
                       user_message_id: str | None = None,
@@ -124,9 +438,34 @@ class SessionManager:
         if isinstance(http_connection, Request):
             self.set_metadata_from_http_request(http_connection)
 
+        if user_id is None and self._is_workflow_per_user:
+            user_id = self._get_user_id_from_context()
+            if user_id is None:
+                raise ValueError("user_id is required for per-user workflow but could not be extracted from context. "
+                                 "Ensure 'nat-session' cookie is set or pass user_id explicitly.")
+
+        builder_info: PerUserBuilderInfo | None = None
+
+        if self._is_workflow_per_user and user_id is not None:
+            logger.debug(f"Getting or creating per-user builder for user {user_id}")
+            _, workflow = await self._get_or_create_per_user_builder(user_id)
+            builder_info = self._per_user_builders[user_id]
+            async with builder_info.lock:
+                builder_info.ref_count += 1
+                logger.debug(f"Incremented ref_count for user {user_id} to {builder_info.ref_count}")
+
+        else:
+            workflow = self._shared_workflow
+
         try:
-            yield self
+            session = Session(session_manager=self, user_id=user_id, workflow=workflow)
+            yield session
         finally:
+            if builder_info is not None:
+                async with builder_info.lock:
+                    builder_info.ref_count -= 1
+                    builder_info.last_activity = datetime.now()
+
             if token_user_manager is not None:
                 self._context_state.user_manager.reset(token_user_manager)
             if token_user_input is not None:
@@ -139,12 +478,15 @@ class SessionManager:
         """
         Start a workflow run
         """
+        if self._is_workflow_per_user:
+            raise ValueError("Cannot use SessionManager.run() with per-user workflows. "
+                             "Use 'async with session_manager.session() as session' then 'session.run()' instead.")
         async with self._semaphore:
             # Apply the saved context
             for k, v in self._saved_context.items():
                 k.set(v)
 
-            async with self._workflow.run(message, runtime_type=runtime_type) as runner:
+            async with self._shared_workflow.run(message, runtime_type=runtime_type) as runner:
                 yield runner
 
     def set_metadata_from_http_request(self, request: Request) -> None:
