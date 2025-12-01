@@ -47,7 +47,7 @@ supported_pipeline_types() -> list[PipelineTypeEnum]
 stage_type()                -> StageTypeEnum
 ```
 
-The `Builder` will ensure that when an `TTC Strategy` is requested, that the stage and pipeline types match the implementation's supported types.
+The `Builder` will ensure that when a `TTC Strategy` is requested, that the stage and pipeline types match the implementation's supported types.
 
 ### `StrategyBase`
 
