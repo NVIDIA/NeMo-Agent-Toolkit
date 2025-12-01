@@ -731,11 +731,11 @@ If you encounter permission errors, you need specific IAM permissions. Refer to 
 - Higher percentages provide more trace coverage but increase costs
 ---
 
-## Dockerfile Reference
+## `Dockerfile` Reference
 
-### Complete Dockerfile
+### Complete `Dockerfile`
 
-The Dockerfile is organized into the following sections:
+The `Dockerfile` is organized into the following sections:
 
 1. **Base Image Configuration** - Ubuntu base with Python
 2. **Build Dependencies** - Compilers and build tools
