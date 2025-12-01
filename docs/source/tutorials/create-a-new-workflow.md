@@ -115,7 +115,7 @@ Examining the `webquery_tool` function (`examples/getting_started/simple_web_que
     docs = [document async for document in loader.alazy_load()]
 ```
 
-For the new tool, instead of the `WebBaseLoader` class, use the [`langchain_community.document_loaders.DirectoryLoader`](https://api.python.langchain.com/en/latest/document_loaders/langchain_community.document_loaders.directory.DirectoryLoader.html) and [`langchain_community.document_loaders.TextLoader`](https://api.python.langchain.com/en/latest/document_loaders/langchain_community.document_loaders.text.TextLoader.html) classes.
+For the new tool, instead of the `WebBaseLoader` class, use the `langchain_community.document_loaders.DirectoryLoader` and `langchain_community.document_loaders.TextLoader` classes.
 
 ```python
     (ingest_dir, ingest_glob) = os.path.split(config.ingest_glob)
