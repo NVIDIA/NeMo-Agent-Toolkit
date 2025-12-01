@@ -14,8 +14,8 @@
 # limitations under the License.
 
 import logging
+from collections.abc import AsyncGenerator
 from typing import Any
-from typing import AsyncGenerator
 
 from pydantic import BaseModel
 from pydantic import Field

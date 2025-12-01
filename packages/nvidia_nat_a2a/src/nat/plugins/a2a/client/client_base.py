@@ -85,10 +85,7 @@ class A2ABaseClient:
             raise RuntimeError("Agent card not resolved")
 
         # 3) Create A2A client
-        client_config = ClientConfig(
-            httpx_client=self._httpx_client,
-            streaming=True
-        )
+        client_config = ClientConfig(httpx_client=self._httpx_client, streaming=True)
         factory = ClientFactory(client_config)
         self._client = factory.create(self._agent_card)
 
