@@ -303,6 +303,8 @@ markers = [
   "slow: Slow tests",
 ]
 filterwarnings = [
+  # Work-around for a warning emitted by strands https://github.com/strands-agents/sdk-python/issues/1236
+  "ignore:^These events have been moved to production.*strands:DeprecationWarning",
 ]
 testpaths = ["tests", "examples/**/tests", "packages/**/tests"]
 asyncio_mode = "auto"

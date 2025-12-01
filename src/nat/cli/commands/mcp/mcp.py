@@ -217,6 +217,41 @@ async def _create_mcp_client_config(
     return MCPClientConfig(server=server_cfg)
 
 
+async def _create_bearer_token_auth_config(
+    builder,
+    server_cfg,
+    bearer_token: str | None,
+    bearer_token_env: str | None,
+):
+    """Create bearer token auth configuration for CLI usage."""
+    import os
+
+    from pydantic import SecretStr
+
+    from nat.authentication.api_key.api_key_auth_provider_config import APIKeyAuthProviderConfig
+    from nat.data_models.authentication import HeaderAuthScheme
+
+    # Get token from env var or direct input
+    if bearer_token_env:
+        token_value = os.getenv(bearer_token_env)
+        if not token_value:
+            raise ValueError(f"Environment variable '{bearer_token_env}' not found or empty")
+    elif bearer_token:
+        token_value = bearer_token
+    else:
+        raise ValueError("No bearer token provided")
+
+    # Create API key auth config with Bearer scheme
+    auth_config = APIKeyAuthProviderConfig(
+        raw_key=SecretStr(token_value),
+        auth_scheme=HeaderAuthScheme.BEARER,
+    )
+
+    auth_provider_name = "bearer_token_cli"
+    await builder.add_auth_provider(auth_provider_name, auth_config)
+    server_cfg.auth_provider = auth_provider_name
+
+
 async def list_tools_via_function_group(
     command: str | None,
     url: str | None,
@@ -795,7 +830,9 @@ async def call_tool_and_print(command: str | None,
                               direct: bool,
                               auth_redirect_uri: str | None = None,
                               auth_user_id: str | None = None,
-                              auth_scopes: list[str] | None = None) -> str:
+                              auth_scopes: list[str] | None = None,
+                              bearer_token: str | None = None,
+                              bearer_token_env: str | None = None) -> str:
     """Call an MCP tool either directly or via the function group and return output.
 
     When ``direct`` is True, uses the raw MCP protocol client (bypassing the
@@ -842,11 +879,18 @@ async def call_tool_and_print(command: str | None,
         env=env if transport == 'stdio' else None,
     )
 
-    group_cfg = MCPClientConfig(server=server_cfg)
-
     async with WorkflowBuilder() as builder:  # type: ignore
-        # Add auth provider if url is provided and auth_redirect_uri is given (only for streamable-http)
-        if url and transport == 'streamable-http' and auth_redirect_uri:
+        # Configure authentication if provided
+        if bearer_token or bearer_token_env:
+            # Use bearer token auth
+            try:
+                await _create_bearer_token_auth_config(builder, server_cfg, bearer_token, bearer_token_env)
+                group_cfg = MCPClientConfig(server=server_cfg)
+            except Exception as e:
+                click.echo(f"[ERROR] Failed to configure bearer token authentication: {e}", err=True)
+                return ""
+        elif url and transport == 'streamable-http' and auth_redirect_uri:
+            # Use OAuth2 auth
             try:
                 group_cfg = await _create_mcp_client_config(builder,
                                                             server_cfg,
@@ -857,6 +901,10 @@ async def call_tool_and_print(command: str | None,
                                                             auth_scopes)
             except ImportError:
                 click.echo("[WARNING] MCP OAuth2 authentication requires nvidia-nat-mcp package.", err=True)
+                group_cfg = MCPClientConfig(server=server_cfg)
+        else:
+            # No auth
+            group_cfg = MCPClientConfig(server=server_cfg)
 
         group = await builder.add_function_group("mcp_client", group_cfg)
         fns = await group.get_accessible_functions()
@@ -894,6 +942,9 @@ async def call_tool_and_print(command: str | None,
               help='OAuth2 redirect URI for authentication (streamable-http only, not with --direct)')
 @click.option('--auth-user-id', help='User ID for authentication (streamable-http only, not with --direct)')
 @click.option('--auth-scopes', help='OAuth2 scopes (comma-separated, streamable-http only, not with --direct)')
+@click.option('--bearer-token', help='Bearer token for authentication (streamable-http only, not with --direct)')
+@click.option('--bearer-token-env',
+              help='Environment variable name containing bearer token (e.g., KAGGLE_BEARER_TOKEN)')
 def mcp_client_tool_call(tool_name: str,
                          direct: bool,
                          url: str | None,
@@ -905,7 +956,9 @@ def mcp_client_tool_call(tool_name: str,
                          auth: bool,
                          auth_redirect_uri: str | None,
                          auth_user_id: str | None,
-                         auth_scopes: str | None) -> None:
+                         auth_scopes: str | None,
+                         bearer_token: str | None,
+                         bearer_token_env: str | None) -> None:
     """Call an MCP tool by name with optional JSON arguments.
 
     Validates transport parameters, parses ``--json-args`` into a dictionary,
@@ -950,6 +1003,16 @@ def mcp_client_tool_call(tool_name: str,
         auth, url, auth_redirect_uri, auth_user_id, auth_scopes
     )
 
+    # Validate: only one auth method at a time
+    if (auth or auth_redirect_uri) and (bearer_token or bearer_token_env):
+        click.echo("[ERROR] Cannot use both OAuth2 (--auth) and bearer token authentication", err=True)
+        return
+
+    # Bearer token not supported with --direct
+    if direct and (bearer_token or bearer_token_env):
+        click.echo("[ERROR] --bearer-token and --bearer-token-env are not supported with --direct mode", err=True)
+        return
+
     # Parse tool args
     arg_obj: dict[str, Any] = {}
     if json_args:
@@ -977,6 +1040,8 @@ def mcp_client_tool_call(tool_name: str,
                 auth_redirect_uri=auth_redirect_uri,
                 auth_user_id=auth_user_id,
                 auth_scopes=auth_scopes_list,
+                bearer_token=bearer_token,
+                bearer_token_env=bearer_token_env,
             ))
         if output:
             click.echo(output)
