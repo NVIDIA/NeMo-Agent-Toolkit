@@ -14,10 +14,11 @@ name = "nat_currency_agent_a2a"
 dynamic = ["version"]
 dependencies = [
     "nvidia-nat[a2a]~=1.4",
+    "mcp-server-time~=2025.8"
 ]
 requires-python = ">=3.11,<3.14"
-description = "A2A client example for currency exchange rate queries"
-keywords = ["ai", "mcp", "protocol", "agents"]
+description = "A2A client example demonstrating external/third-party A2A server integration"
+keywords = ["ai", "a2a", "protocol", "agents"]
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
