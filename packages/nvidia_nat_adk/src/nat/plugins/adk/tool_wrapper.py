@@ -28,6 +28,7 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function import Function
 from nat.cli.register_workflow import register_tool_wrapper
+from nat.utils.string_utils import sanitize_tool_name_for_openai
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,12 @@ def google_adk_tool_wrapper(
         A Google ADK `FunctionTool` wrapping the NAT `Function`.
     """
     import inspect
+
+    # Sanitize tool name for LLM compatibility (OpenAI, Claude, etc. require ^[a-zA-Z0-9_-]+$)
+    sanitized_name = sanitize_tool_name_for_openai(name)
+    if sanitized_name != name:
+        logger.debug("Sanitized tool name '%s' to '%s' for LLM compatibility", name, sanitized_name)
+    name = sanitized_name
 
     async def callable_ainvoke(*args: Any, **kwargs: Any) -> Any:
         """Async function to invoke the NAT function.

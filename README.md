@@ -51,6 +51,36 @@ limitations under the License.
 
 - [**Amazon Bedrock AgentCore and Strands Agents Support:**](./docs/source/reference/frameworks-overview.md#strands) NeMo Agent Toolkit now supports building agents using Strands Agents framework and deploying them securely on Amazon Bedrock AgentCore runtime.
 
+## Recent Improvements
+
+### Automatic Tool Name Sanitization for LLM Compatibility
+
+NeMo Agent Toolkit now automatically sanitizes tool names to comply with LLM provider validation rules. This fix resolves issues where tool names containing dots (e.g., `mcp_client.tool_name`) or other invalid characters were rejected by OpenAI, Claude Sonnet 4 (via Bedrock), and other LLM providers that enforce strict naming patterns.
+
+**What Changed:**
+
+- **Added utility function** (`sanitize_tool_name_for_openai`) that automatically converts tool names to match the required pattern `^[a-zA-Z0-9_-]+$`
+- **Updated LangChain tool wrapper** to sanitize tool names before creating StructuredTool objects
+- **Updated ADK tool wrapper** to sanitize tool names before creating FunctionTool objects
+
+**Impact:**
+
+- Tool names with dots (e.g., `calculator.divide`) are automatically converted to valid names (e.g., `calculator_divide`)
+- Tool names with spaces or other invalid characters are sanitized automatically
+- No configuration changes required - works transparently for all existing workflows
+- Tool routing and functionality remain unchanged - only the name sent to LLMs is sanitized
+
+**Example:**
+
+Before this fix, MCP function groups generating tool names like `mcp_client.tool_name` would cause validation errors when used with OpenAI models. Now, these names are automatically sanitized to `mcp_client_tool_name` before being sent to the LLM, preventing validation errors while maintaining full functionality.
+
+**Affected Components:**
+
+- MCP function groups (`mcp_client`)
+- All LangChain-based agents (tool_calling_agent, react_agent, rewoo_agent, responses_api_agent)
+- Google ADK workflows
+- Tool override/alias system
+
 ## ✨ Key Features
 
 - 🧩 [**Framework Agnostic:**](./docs/source/reference/frameworks-overview.md) NeMo Agent Toolkit works side-by-side and around existing agentic frameworks, such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), and [Google ADK](https://google.github.io/adk-docs/), as well as custom enterprise agentic frameworks and simple Python agents. This allows you to use your current technology stack without replatforming. NeMo Agent Toolkit complements any existing agentic framework or memory tool you're using and isn't tied to any specific agentic framework, LLM provider, or data source.

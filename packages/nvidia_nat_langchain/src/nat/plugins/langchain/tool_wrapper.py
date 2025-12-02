@@ -19,6 +19,7 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function import Function
 from nat.cli.register_workflow import register_tool_wrapper
+from nat.utils.string_utils import sanitize_tool_name_for_openai
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,12 @@ def langchain_tool_wrapper(name: str, fn: Function, builder: Builder):
 
     loop = asyncio.get_running_loop()
 
+    # Sanitize tool name for OpenAI compatibility
+    # OpenAI requires tool names to match ^[a-zA-Z0-9_-]+$ pattern
+    sanitized_name = sanitize_tool_name_for_openai(name)
+    if sanitized_name != name:
+        logger.debug("Sanitized tool name '%s' to '%s' for OpenAI compatibility", name, sanitized_name)
+
     # Provide a sync wrapper for the tool to support synchronous tool calls
     def _sync_fn(*args, **kwargs):
         logger.warning("Invoking a synchronous tool call, performance may be degraded: `%s`", fn.instance_name)
@@ -47,6 +54,6 @@ def langchain_tool_wrapper(name: str, fn: Function, builder: Builder):
 
     return StructuredTool.from_function(coroutine=fn.acall_invoke,
                                         func=_sync_fn,
-                                        name=name,
+                                        name=sanitized_name,
                                         description=fn.description,
                                         args_schema=fn.input_schema)
