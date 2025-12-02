@@ -64,9 +64,12 @@ Using asynchronous operations allows for better performance and scalability when
 ## Writing Functions
 For information about writing functions, refer to the [Writing Custom Functions](../../extend/functions.md) document.
 
+## Related Topics
 
-## Using Functions
 ```{toctree}
+:titlesonly:
+
+./function-groups.md
 ./code-execution.md
 ./text-to-sql.md
 ```

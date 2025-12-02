@@ -115,10 +115,11 @@ MCP Server <./run-workflows/mcp-server.md>
 :caption: Components
 
 Agents <./components/agents/index.md>
+Functions <./components/functions/index.md>
 ./workflows/llms/index.md
 ./workflows/embedders.md
 ./workflows/retrievers.md
-Functions <./workflows/functions/index.md>
+
 ./workflows/function-groups.md
 ```
 
