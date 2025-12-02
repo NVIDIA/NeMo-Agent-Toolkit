@@ -132,10 +132,7 @@ Sharing Components <./components/sharing-components.md>
 
 Plugins <./extend/plugins.md>
 Custom Components <./extend/custom-components/index.md>
-
-
-Test With nat_test_llm <./extend/test-with-nat-test-llm.md>
-Add Unit Tests for Tools <./workflows/add-unit-tests-for-tools.md>
+./extend/testing/index.md
 ```
 
 ```{toctree}
