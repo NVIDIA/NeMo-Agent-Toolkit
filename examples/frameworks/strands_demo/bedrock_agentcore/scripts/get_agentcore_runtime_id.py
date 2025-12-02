@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import os
 
 import boto3
@@ -33,16 +32,3 @@ for runtime in cresponse['agentRuntimes']:
         runtime_id = runtime['agentRuntimeId']
         print(f"Found runtime ID: {runtime_id}")
         break
-
-client = boto3.client('bedrock-agentcore', region_name=AWS_REGION)
-payload = json.dumps({"inputs": "How do I use the Strands Agents API?"})
-
-response = client.invoke_agent_runtime(
-    agentRuntimeArn=f'arn:aws:bedrock-agentcore:{AWS_REGION}:{AWS_ACCOUNT_ID}:runtime/{runtime_id}',
-    #    runtimeSessionId='<RUNTIME_SESSION_ID>',  # Must be 33+ chars
-    payload=payload,
-    qualifier="DEFAULT"  # Optional
-)
-response_body = response['response'].read()
-response_data = json.loads(response_body)
-print("Agent Response:", response_data)
