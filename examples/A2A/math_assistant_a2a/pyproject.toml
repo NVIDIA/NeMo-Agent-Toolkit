@@ -7,7 +7,7 @@ git_describe_command = "git describe --long --first-parent"
 root = "../../.."
 
 [project]
-name = "nat_simple_calculator_a2a"
+name = "nat_math_assistant_a2a"
 dynamic = ["version"]
 dependencies = [
     "nvidia-nat[a2a]~=1.4",
@@ -23,4 +23,4 @@ classifiers = ["Programming Language :: Python"]
 nvidia-nat = { path = "../../..", editable = true }
 
 [project.entry-points.'nat.components']
-nat_simple_calculator_a2a = "nat_simple_calculator_a2a.register"
+nat_math_assistant_a2a = "nat_math_assistant_a2a.register"

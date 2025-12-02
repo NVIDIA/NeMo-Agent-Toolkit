@@ -5307,6 +5307,21 @@ requires-dist = [
 ]
 
 [[package]]
+name = "nat-math-assistant-a2a"
+source = { editable = "examples/A2A/math_assistant_a2a" }
+dependencies = [
+    { name = "mcp-server-time" },
+    { name = "nvidia-nat", extra = ["a2a", "mcp"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "mcp-server-time", specifier = "~=2025.8" },
+    { name = "nvidia-nat", extras = ["a2a"], editable = "." },
+    { name = "nvidia-nat", extras = ["mcp"], editable = "." },
+]
+
+[[package]]
 name = "nat-multi-frameworks"
 source = { editable = "examples/frameworks/multi_frameworks" }
 dependencies = [
@@ -5443,21 +5458,6 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "nvidia-nat", extras = ["langchain"], editable = "." }]
-
-[[package]]
-name = "nat-simple-calculator-a2a"
-source = { editable = "examples/A2A/simple_calculator_a2a" }
-dependencies = [
-    { name = "mcp-server-time" },
-    { name = "nvidia-nat", extra = ["a2a", "mcp"] },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "mcp-server-time", specifier = "~=2025.8" },
-    { name = "nvidia-nat", extras = ["a2a"], editable = "." },
-    { name = "nvidia-nat", extras = ["mcp"], editable = "." },
-]
 
 [[package]]
 name = "nat-simple-calculator-custom-routes"
@@ -5930,6 +5930,7 @@ examples = [
     { name = "nat-currency-agent-a2a" },
     { name = "nat-email-phishing-analyzer" },
     { name = "nat-haystack-deep-research-agent" },
+    { name = "nat-math-assistant-a2a" },
     { name = "nat-multi-frameworks" },
     { name = "nat-plot-charts" },
     { name = "nat-por-to-jiratickets" },
@@ -5941,7 +5942,6 @@ examples = [
     { name = "nat-simple-auth" },
     { name = "nat-simple-auth-mcp" },
     { name = "nat-simple-calculator" },
-    { name = "nat-simple-calculator-a2a" },
     { name = "nat-simple-calculator-custom-routes" },
     { name = "nat-simple-calculator-eval" },
     { name = "nat-simple-calculator-hitl" },
@@ -6085,6 +6085,7 @@ requires-dist = [
     { name = "nat-currency-agent-a2a", marker = "extra == 'examples'", editable = "examples/A2A/currency_agent_a2a" },
     { name = "nat-email-phishing-analyzer", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/email_phishing_analyzer" },
     { name = "nat-haystack-deep-research-agent", marker = "extra == 'examples'", editable = "examples/frameworks/haystack_deep_research_agent" },
+    { name = "nat-math-assistant-a2a", marker = "extra == 'examples'", editable = "examples/A2A/math_assistant_a2a" },
     { name = "nat-multi-frameworks", marker = "extra == 'examples'", editable = "examples/frameworks/multi_frameworks" },
     { name = "nat-plot-charts", marker = "extra == 'examples'", editable = "examples/custom_functions/plot_charts" },
     { name = "nat-por-to-jiratickets", marker = "extra == 'examples'", editable = "examples/HITL/por_to_jiratickets" },
@@ -6096,7 +6097,6 @@ requires-dist = [
     { name = "nat-simple-auth", marker = "extra == 'examples'", editable = "examples/front_ends/simple_auth" },
     { name = "nat-simple-auth-mcp", marker = "extra == 'examples'", editable = "examples/MCP/simple_auth_mcp" },
     { name = "nat-simple-calculator", marker = "extra == 'examples'", editable = "examples/getting_started/simple_calculator" },
-    { name = "nat-simple-calculator-a2a", marker = "extra == 'examples'", editable = "examples/A2A/simple_calculator_a2a" },
     { name = "nat-simple-calculator-custom-routes", marker = "extra == 'examples'", editable = "examples/front_ends/simple_calculator_custom_routes" },
     { name = "nat-simple-calculator-eval", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/simple_calculator_eval" },
     { name = "nat-simple-calculator-hitl", marker = "extra == 'examples'", editable = "examples/HITL/simple_calculator_hitl" },

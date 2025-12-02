@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# A2A Calculator Client Example
+# Math Assistant A2A Example
 
-This example demonstrates a simple A2A client that connects to a NAT-based calculator server while integrating with local tools, showcasing end-to-end NAT-to-NAT A2A communication with hybrid tool composition.
+This example demonstrates a math assistant that connects to a NAT-based calculator server while integrating with local tools, showcasing end-to-end NAT-to-NAT A2A communication with hybrid tool composition.
 
 ## Key Features
 
@@ -27,8 +27,8 @@ This example demonstrates a simple A2A client that connects to a NAT-based calcu
 
 ```mermaid
 flowchart LR
-    subgraph "Calculator Workflow"
-        CC[Calculator Workflow]
+    subgraph "Math Assistant A2A"
+        CC[Math Assistant A2A]
         CC --> CTA[Calculator A2A Client]
         CC --> CTM[Time MCP Client]
         CC --> CLE[Logic Evaluator Tools]
@@ -62,7 +62,7 @@ Follow the instructions in the [Install Guide](../../../../docs/source/quick-sta
 From the root directory of the NeMo Agent toolkit library, install this example:
 
 ```bash
-uv pip install -e examples/A2A/simple_calculator_a2a
+uv pip install -e examples/A2A/math_assistant_a2a
 ```
 
 ### Set Up API Keys
@@ -84,13 +84,18 @@ First, start the calculator server that this client will connect to:
 nat a2a serve --config_file examples/getting_started/simple_calculator/configs/config.yml --port 10000
 ```
 
+Verify the server is running:
+```bash
+nat a2a client discover --url http://localhost:10000
+```
+
 ### Run the Calculator Client
 
 In a separate terminal, run the client workflow:
 
 ```bash
 # Terminal 2: Run the calculator client
-nat run --config_file examples/A2A/simple_calculator_a2a/configs/config.yml \
+nat run --config_file examples/A2A/math_assistant_a2a/configs/config.yml \
   --input "Is the product of 2 and 4 greater than the current hour of the day?"
 ```
 
