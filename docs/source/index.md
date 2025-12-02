@@ -93,7 +93,7 @@ Troubleshooting <./get-started/troubleshooting.md>
 
 About Workflows <./build-workflows/about-workflows.md>
 Workflow Configuration <./build-workflows/workflow-configuration.md>
-Using Remote MCP Functions <./build-workflows/using-remote-mcp-functions.md>
+MCP <./build-workflows/mcp.md>
 Interactive Models <./build-workflows/interactive-models.md>
 Middleware <./build-workflows/middleware.md>
 /build-workflows/tuning/index.md
