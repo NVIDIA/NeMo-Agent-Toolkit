@@ -274,3 +274,11 @@ Tool calls may fail if one of the following happens:
 - [Secure Token Storage](./mcp-auth-token-storage.md) - Learn about configuring secure token storage for MCP authentication
 - [MCP Client](./mcp-client.md) - Connect to and use tools from remote MCP servers
 - [Object Store Documentation](../../store-and-retrieve/object-store.md) - Configure object stores for persistent token storage
+
+
+```{toctree}
+:caption: MCP Authentication
+
+Service Account Authentication <./mcp-service-account-auth.md>
+Secure Token Storage <./mcp-auth-token-storage.md>
+```
