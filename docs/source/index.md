@@ -119,7 +119,7 @@ Functions <./components/functions/index.md>
 ./components/embedders.md
 ./components/retrievers.md
 ./components/llms/index.md
-
+./components/auth/index.md
 ```
 
 ```{toctree}
