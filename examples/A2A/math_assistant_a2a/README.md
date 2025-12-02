@@ -131,8 +131,21 @@ The configuration demonstrates three types of tool integration:
 
 **Server Not Running**:
 ```bash
-nat a2a client discover --url http://localhost:10000
+# Check if the calculator server is running
+curl http://localhost:10000/.well-known/agent-card.json
 ```
+
+**Port Conflicts**:
+- Ensure port 10000 is available for the calculator server
+- Check for other services using the port
+- Modify the port in both the server startup and config.yml if needed
+
+### Performance Issues
+
+**Timeouts**:
+- Increase `task_timeout` in config if calculations take longer
+- Check network connectivity to remote services
+- Verify the calculator server is responsive
 
 ## Related Examples
 
