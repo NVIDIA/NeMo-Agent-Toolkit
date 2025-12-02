@@ -123,6 +123,7 @@ Functions <./components/functions/index.md>
 Memory Module <./components/memory.md>
 Object Store <./components/object-store.md>
 Test Time Compute <./components/test-time-compute.md>
+Sharing Components <./components/sharing-components.md>
 ```
 
 ```{toctree}
@@ -130,7 +131,6 @@ Test Time Compute <./components/test-time-compute.md>
 :caption: Extend
 
 Plugins <./extend/plugins.md>
-Sharing Components <./extend/sharing-components.md>
 Custom Components <./extend/custom-components/index.md>
 
 
