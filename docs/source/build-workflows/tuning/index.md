@@ -15,9 +15,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
+# Tuning Workflows
+
 ```{toctree}
-:hidden:
-:caption: Tuning Workflows
+:titlesonly:
 
 Evaluate Workflows <./evaluate.md>
 ./observe/index.md

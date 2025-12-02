@@ -96,7 +96,7 @@ Workflow Configuration <./build-workflows/workflow-configuration.md>
 Using Remote MCP Functions <./build-workflows/using-remote-mcp-functions.md>
 Interactive Models <./build-workflows/interactive-models.md>
 Middleware <./build-workflows/middleware.md>
-Tuning <./build-workflows/tuning/index.md>
+/build-workflows/tuning/index.md
 ```
 
 ```{toctree}
