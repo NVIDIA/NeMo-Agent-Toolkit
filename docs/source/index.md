@@ -147,17 +147,13 @@ WebSocket Message Schema <./reference/websockets.md>
 
 ```{toctree}
 :hidden:
-:caption: Resources
+:caption: Extra
 
-FAQ <./resources/faq.md>
-Security Considerations <./resources/security-considerations.md>
-Code of Conduct <./resources/code-of-conduct.md>
-Migration Guide <./resources/migration-guide.md>
-Contributing <./resources/contributing.md>
-Running Tests <./resources/running-tests.md>
-./resources/running-ci-locally.md
-./resources/licensing.md
-Release Notes <./release-notes.md>
+FAQ <./extra/faq.md>
+Release Notes <./extra/release-notes.md>
+Migration Guide <./extra/migration-guide.md>
+Security Considerations <./extra/security-considerations.md>
+Contributing <./extra/contributing/index.md>
 ```
 
 <!-- This role is needed at the index to set the default backtick role -->

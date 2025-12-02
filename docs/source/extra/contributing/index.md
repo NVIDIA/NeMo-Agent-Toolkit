@@ -330,3 +330,15 @@ If you are expanding the checker to support a new file type or adding a new per-
   - Use for situations where capitalization will be preserved like the GitHub URL, directories, etc.
   - Do not use dashes or underscores
   - Note that the 't' is lowercase in toolkit unless used in a title or heading
+
+
+## Related Documentation
+
+```{toctree}
+:titlesonly:
+
+Code of Conduct <./code-of-conduct.md>
+./licensing.md
+./cursor/index.md
+./testing/index.md
+```
