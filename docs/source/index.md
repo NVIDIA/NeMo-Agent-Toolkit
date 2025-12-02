@@ -105,7 +105,7 @@ Middleware <./build-workflows/middleware.md>
 
 Run Workflows <./run-workflows/run-workflows.md>
 Command Line Interface (CLI) <./run-workflows/cli.md>
-./improve-workflows/observe/index.md
+./run-workflows/observe/index.md
 API Server and User Interface <./run-workflows/launching-ui.md>
 MCP Server <./run-workflows/mcp-server.md>
 ```
