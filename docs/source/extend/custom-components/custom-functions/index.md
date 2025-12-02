@@ -557,3 +557,11 @@ async def my_function(config: MyFunctionConfig, builder: Builder):
 ```
 
 Every function has its own set of converters and are independent of the converters used by other functions. This allows for functions to convert between common types such as `str` -> `dict` or `int` -> `float` without breaking the type safety of other functions.
+
+## Related Documentation
+
+```{toctree}
+:titlesonly:
+
+./function-groups.md
+```

@@ -129,21 +129,11 @@ Test Time Compute <./components/test-time-compute.md>
 :hidden:
 :caption: Extend
 
-Writing Custom Functions <./extend/functions.md>
-Writing Custom Function Groups <./extend/function-groups.md>
 Plugins <./extend/plugins.md>
 Sharing Components <./extend/sharing-components.md>
-Adding a Custom Evaluator <./extend/custom-evaluator.md>
-./extend/adding-a-retriever.md
-./extend/memory.md
-Adding an LLM Provider <./extend/adding-an-llm-provider.md>
-Gated Fields <./extend/gated-fields.md>
-Adding an Object Store Provider <./extend/object-store.md>
-Adding an Authentication Provider <./extend/adding-an-authentication-provider.md>
-Integrating AWS Bedrock Models <./extend/integrating-aws-bedrock-models.md>
-Cursor Rules Developer Guide <./extend/cursor-rules-developer-guide.md>
-Adding a Telemetry Exporter <./extend/telemetry-exporters.md>
-Adding a Custom MCP Server Worker <./extend/mcp-server.md>
+Custom Components <./extend/custom-components/index.md>
+
+
 Test With nat_test_llm <./extend/test-with-nat-test-llm.md>
 Add Unit Tests for Tools <./workflows/add-unit-tests-for-tools.md>
 ```
