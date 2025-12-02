@@ -232,6 +232,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         self._outstanding_flows: dict[str, FlowState] = {}
         self._outstanding_flows_lock = asyncio.Lock()
 
+        # Track session managers for each route
+        self._session_managers: list[SessionManager] = []
+
         # Evaluator storage for single-item evaluation
         self._evaluators: dict[str, EvaluatorInfo] = {}
         self._eval_builder: WorkflowEvalBuilder | None = None
@@ -268,6 +271,27 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             # Don't fail startup, just log the error
             self._evaluators = {}
 
+    async def _create_session_manager(self,
+                                      builder: WorkflowBuilder,
+                                      entry_function: str | None = None) -> SessionManager:
+        """Create and register a SessionManager."""
+
+        sm = await SessionManager.create(config=self._config, shared_builder=builder, entry_function=entry_function)
+        self._session_managers.append(sm)
+
+        return sm
+
+    async def cleanup_session_managers(self):
+        """Clean up all SessionManager resources on shutdown."""
+        for sm in self._session_managers:
+            try:
+                await sm.shutdown()
+            except Exception as e:
+                logger.error(f"Error cleaning up SessionManager: {e}")
+
+        self._session_managers.clear()
+        logger.info("All SessionManagers cleaned up")
+
     async def cleanup_evaluators(self):
         """Clean up evaluator resources on shutdown."""
         if self._eval_builder:
@@ -293,6 +317,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         # TODO: we need config control over this as it's not always needed
         await self.initialize_evaluators(self._config)
 
+        # Ensure session manager resources are cleaned up when the app shuts down
+        app.add_event_handler("shutdown", self.cleanup_session_managers)
+
         # Ensure evaluator resources are cleaned up when the app shuts down
         app.add_event_handler("shutdown", self.cleanup_evaluators)
 
@@ -300,18 +327,19 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
     async def add_routes(self, app: FastAPI, builder: WorkflowBuilder):
 
-        await self.add_default_route(app, SessionManager(await builder.build()))
-        await self.add_evaluate_route(app, SessionManager(await builder.build()))
-        await self.add_evaluate_item_route(app, SessionManager(await builder.build()))
+        await self.add_default_route(app, await self._create_session_manager(builder))
+        await self.add_evaluate_route(app, await self._create_session_manager(builder))
+        await self.add_evaluate_item_route(app, await self._create_session_manager(builder))
+
         await self.add_static_files_route(app, builder)
         await self.add_authorization_route(app)
         await self.add_mcp_client_tool_list_route(app, builder)
 
         for ep in self.front_end_config.endpoints:
 
-            entry_workflow = await builder.build(entry_function=ep.function_name)
-
-            await self.add_route(app, endpoint=ep, session_manager=SessionManager(entry_workflow))
+            await self.add_route(app,
+                                 endpoint=ep,
+                                 session_manager=await self._create_session_manager(builder, ep.function_name))
 
     async def add_default_route(self, app: FastAPI, session_manager: SessionManager):
 
