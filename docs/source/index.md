@@ -103,7 +103,10 @@ Middleware <./build-workflows/middleware.md>
 :hidden:
 :caption: Run Workflows
 
-./run-workflows/run-workflows.md
+Run Workflows <./run-workflows/run-workflows.md>
+Command Line Interface (CLI) <./run-workflows/cli.md>
+API Server and User Interface <./run-workflows/launching-ui.md>
+MCP Server <./run-workflows/mcp-server.md>
 ```
 
 
@@ -160,7 +163,7 @@ API Authentication <./reference/api-authentication.md>
 Frameworks Overview <./reference/frameworks-overview.md>
 API Server Endpoints <./reference/api-server-endpoints.md>
 WebSockets <./reference/websockets.md>
-Command Line Interface (CLI) <./reference/cli.md>
+
 Cursor Rules Reference <./reference/cursor-rules-reference.md>
 Evaluation <./reference/evaluate.md>
 Evaluation Endpoints <./reference/evaluate-api.md>
