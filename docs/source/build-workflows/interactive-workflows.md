@@ -15,8 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-<!-- TODO Rename this -->
-# Interactive Models Guide
+# Interactive Workflows Guide
 
 NeMo Agent toolkit provides interactive prompt and response Pydantic data models as a way to validate, serialize, and document
 data structures to support human input during the execution of an agent workflow.
