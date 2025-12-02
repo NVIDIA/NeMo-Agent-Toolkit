@@ -698,10 +698,7 @@ class TestSessionManagerCreate:
 
         config = create_mock_config()
 
-        sm = await SessionManager.create(
-            config=config,
-            shared_builder=shared_builder,
-            entry_function="my_entry")
+        sm = await SessionManager.create(config=config, shared_builder=shared_builder, entry_function="my_entry")
 
         assert sm._entry_function == "my_entry"
         assert "my_entry" in build_called_with
@@ -725,10 +722,7 @@ class TestSessionManagerCreate:
 
         config = create_mock_config()
 
-        sm = await SessionManager.create(
-            config=config,
-            shared_builder=shared_builder,
-            entry_function="my_entry")
+        sm = await SessionManager.create(config=config, shared_builder=shared_builder, entry_function="my_entry")
 
         # Should NOT have built shared workflow
         assert len(build_called) == 0
@@ -743,9 +737,7 @@ class TestSessionManagerCreate:
 
         config = create_mock_config()
 
-        sm = await SessionManager.create(
-            config=config,
-            shared_builder=MockWorkflowBuilder())
+        sm = await SessionManager.create(config=config, shared_builder=MockWorkflowBuilder())
 
         assert sm._per_user_builders_cleanup_task is not None
         assert not sm._per_user_builders_cleanup_task.done()
@@ -762,9 +754,7 @@ class TestSessionManagerCreate:
         shared_builder = MockWorkflowBuilder()
         shared_builder.build = AsyncMock(return_value=MockWorkflow())
 
-        sm = await SessionManager.create(
-            config=create_mock_config(),
-            shared_builder=shared_builder)
+        sm = await SessionManager.create(config=create_mock_config(), shared_builder=shared_builder)
 
         assert sm._per_user_builders_cleanup_task is None
 
@@ -779,9 +769,7 @@ class TestSessionManagerShutdown:
         """Test shutdown() stops the cleanup task."""
         mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=True)
 
-        sm = await SessionManager.create(
-            config=create_mock_config(),
-            shared_builder=MockWorkflowBuilder())
+        sm = await SessionManager.create(config=create_mock_config(), shared_builder=MockWorkflowBuilder())
 
         cleanup_task = sm._per_user_builders_cleanup_task
         assert cleanup_task is not None
@@ -800,9 +788,7 @@ class TestSessionManagerShutdown:
         """Test shutdown() cleans up all per-user builders."""
         mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=True)
 
-        sm = await SessionManager.create(
-            config=create_mock_config(),
-            shared_builder=MockWorkflowBuilder())
+        sm = await SessionManager.create(config=create_mock_config(), shared_builder=MockWorkflowBuilder())
 
         # Create some per-user builders
         async with sm.session(user_id="user1"):
@@ -834,9 +820,7 @@ class TestSessionManagerShutdown:
         shared_builder = MockWorkflowBuilder()
         shared_builder.build = AsyncMock(return_value=MockWorkflow())
 
-        sm = await SessionManager.create(
-            config=create_mock_config(),
-            shared_builder=shared_builder)
+        sm = await SessionManager.create(config=create_mock_config(), shared_builder=shared_builder)
 
         # Should not raise
         await sm.shutdown()
@@ -894,15 +878,9 @@ class TestMultipleSessionManagersSharedBuilder:
 
         shared_builder.build = mock_build
 
-        sm_default = await SessionManager.create(
-            config=config,
-            shared_builder=shared_builder,
-            entry_function=None)
+        sm_default = await SessionManager.create(config=config, shared_builder=shared_builder, entry_function=None)
 
-        sm_eval = await SessionManager.create(
-            config=config,
-            shared_builder=shared_builder,
-            entry_function="eval")
+        sm_eval = await SessionManager.create(config=config, shared_builder=shared_builder, entry_function="eval")
 
         # Should have built separate workflows
         assert len(workflows_built) == 2
