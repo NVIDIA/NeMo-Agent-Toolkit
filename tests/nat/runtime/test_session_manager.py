@@ -106,7 +106,8 @@ class MockPerUserWorkflowBuilder:
     async def populate_builder(self, config):
         pass
 
-    async def build(self):
+    async def build(self, entry_function: str | None = None):
+        """Build workflow with optional entry function."""
         return MockWorkflow()
 
 
@@ -196,6 +197,7 @@ class TestSessionManagerInit:
 
         sm = SessionManager(config=config,
                             shared_builder=shared_builder,
+                            entry_function=None,
                             shared_workflow=shared_workflow,
                             max_concurrency=8)
 
@@ -204,6 +206,7 @@ class TestSessionManagerInit:
         assert sm.is_workflow_per_user is False
         assert sm._shared_workflow == shared_workflow
         assert sm._per_user_builders == {}
+        assert sm._entry_function is None
 
     @patch('nat.cli.type_registry.GlobalTypeRegistry')
     def test_init_with_per_user_workflow(self, mock_registry):
@@ -216,6 +219,7 @@ class TestSessionManagerInit:
         sm = SessionManager(
             config=config,
             shared_builder=shared_builder,
+            entry_function=None,
             shared_workflow=None,  # No shared workflow for per-user
             max_concurrency=8)
 
@@ -223,13 +227,17 @@ class TestSessionManagerInit:
         assert sm._shared_workflow is None
         assert sm._per_user_workflow_input_schema == MockInputSchema
         assert sm._per_user_workflow_single_output_schema == MockOutputSchema
+        assert sm._entry_function is None
 
     @patch('nat.cli.type_registry.GlobalTypeRegistry')
     def test_workflow_property_raises_for_per_user(self, mock_registry):
         """Test workflow property raises error for per-user workflows."""
         mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=True)
 
-        sm = SessionManager(config=create_mock_config(), shared_builder=MockWorkflowBuilder(), shared_workflow=None)
+        sm = SessionManager(config=create_mock_config(),
+                            shared_builder=MockWorkflowBuilder(),
+                            entry_function=None,
+                            shared_workflow=None)
 
         with pytest.raises(ValueError, match="Workflow is per-user"):
             _ = sm.workflow
@@ -241,6 +249,7 @@ class TestSessionManagerInit:
 
         sm = SessionManager(config=create_mock_config(),
                             shared_builder=MockWorkflowBuilder(),
+                            entry_function=None,
                             shared_workflow=MockWorkflow(),
                             max_concurrency=0)
 
@@ -257,7 +266,10 @@ class TestSessionManagerSchemas:
         mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=False)
 
         workflow = MockWorkflow()
-        sm = SessionManager(config=create_mock_config(), shared_builder=MockWorkflowBuilder(), shared_workflow=workflow)
+        sm = SessionManager(config=create_mock_config(),
+                            shared_builder=MockWorkflowBuilder(),
+                            entry_function=None,
+                            shared_workflow=workflow)
 
         assert sm.get_workflow_input_schema() == MockInputSchema
 
@@ -266,7 +278,10 @@ class TestSessionManagerSchemas:
         """Test get_workflow_input_schema for per-user workflow."""
         mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=True)
 
-        sm = SessionManager(config=create_mock_config(), shared_builder=MockWorkflowBuilder(), shared_workflow=None)
+        sm = SessionManager(config=create_mock_config(),
+                            shared_builder=MockWorkflowBuilder(),
+                            entry_function=None,
+                            shared_workflow=None)
 
         assert sm.get_workflow_input_schema() == MockInputSchema
 
@@ -280,7 +295,10 @@ class TestSessionManagerRun:
         """Test run() raises error for per-user workflows."""
         mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=True)
 
-        sm = SessionManager(config=create_mock_config(), shared_builder=MockWorkflowBuilder(), shared_workflow=None)
+        sm = SessionManager(config=create_mock_config(),
+                            shared_builder=MockWorkflowBuilder(),
+                            entry_function=None,
+                            shared_workflow=None)
 
         with pytest.raises(ValueError, match="Cannot use SessionManager.run\\(\\) with per-user workflows"):
             async with sm.run("test message"):
@@ -299,6 +317,7 @@ class TestSessionManagerSession:
         shared_workflow = MockWorkflow()
         sm = SessionManager(config=create_mock_config(),
                             shared_builder=MockWorkflowBuilder(),
+                            entry_function=None,
                             shared_workflow=shared_workflow)
 
         async with sm.session() as session:
@@ -312,7 +331,10 @@ class TestSessionManagerSession:
         """Test session() with per-user workflow requires user_id."""
         mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=True)
 
-        sm = SessionManager(config=create_mock_config(), shared_builder=MockWorkflowBuilder(), shared_workflow=None)
+        sm = SessionManager(config=create_mock_config(),
+                            shared_builder=MockWorkflowBuilder(),
+                            entry_function=None,
+                            shared_workflow=None)
 
         with pytest.raises(ValueError, match="user_id is required for per-user workflow"):
             async with sm.session():
@@ -325,7 +347,10 @@ class TestSessionManagerSession:
         """Test session() with per-user workflow and explicit user_id."""
         mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=True)
 
-        sm = SessionManager(config=create_mock_config(), shared_builder=MockWorkflowBuilder(), shared_workflow=None)
+        sm = SessionManager(config=create_mock_config(),
+                            shared_builder=MockWorkflowBuilder(),
+                            entry_function=None,
+                            shared_workflow=None)
 
         async with sm.session(user_id="user123") as session:
             assert isinstance(session, Session)
@@ -340,7 +365,10 @@ class TestSessionManagerSession:
         """Test session() increments ref_count on entry and decrements on exit."""
         mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=True)
 
-        sm = SessionManager(config=create_mock_config(), shared_builder=MockWorkflowBuilder(), shared_workflow=None)
+        sm = SessionManager(config=create_mock_config(),
+                            shared_builder=MockWorkflowBuilder(),
+                            entry_function=None,
+                            shared_workflow=None)
 
         async with sm.session(user_id="user123") as session:
             builder_info = sm._per_user_builders["user123"]
@@ -356,7 +384,10 @@ class TestSessionManagerSession:
         """Test session() reuses cached per-user builder."""
         mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=True)
 
-        sm = SessionManager(config=create_mock_config(), shared_builder=MockWorkflowBuilder(), shared_workflow=None)
+        sm = SessionManager(config=create_mock_config(),
+                            shared_builder=MockWorkflowBuilder(),
+                            entry_function=None,
+                            shared_workflow=None)
 
         # First session creates builder
         async with sm.session(user_id="user123"):
@@ -375,6 +406,7 @@ class TestSessionManagerSession:
 
         sm = SessionManager(config=create_mock_config(),
                             shared_builder=MockWorkflowBuilder(),
+                            entry_function=None,
                             shared_workflow=MockWorkflow())
 
         ctx_state = ContextState.get()
@@ -402,7 +434,10 @@ class TestSessionManagerCleanup:
         config = create_mock_config()
         config.general.per_user_workflow_timeout = timedelta(seconds=1)
 
-        sm = SessionManager(config=config, shared_builder=MockWorkflowBuilder(), shared_workflow=None)
+        sm = SessionManager(config=config,
+                            shared_builder=MockWorkflowBuilder(),
+                            entry_function=None,
+                            shared_workflow=None)
 
         # Create a builder
         async with sm.session(user_id="user123"):
@@ -427,7 +462,10 @@ class TestSessionManagerCleanup:
         config = create_mock_config()
         config.general.per_user_workflow_timeout = timedelta(seconds=0)  # Immediate timeout
 
-        sm = SessionManager(config=config, shared_builder=MockWorkflowBuilder(), shared_workflow=None)
+        sm = SessionManager(config=config,
+                            shared_builder=MockWorkflowBuilder(),
+                            entry_function=None,
+                            shared_workflow=None)
 
         async with sm.session(user_id="user123"):
             # While session is active, cleanup should skip this builder
@@ -489,7 +527,10 @@ class TestPerUserWorkflowIntegration:
         """Test multiple users get isolated builders."""
         mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=True)
 
-        sm = SessionManager(config=create_mock_config(), shared_builder=MockWorkflowBuilder(), shared_workflow=None)
+        sm = SessionManager(config=create_mock_config(),
+                            shared_builder=MockWorkflowBuilder(),
+                            entry_function=None,
+                            shared_workflow=None)
 
         async with sm.session(user_id="user1") as session1:
             async with sm.session(user_id="user2") as session2:
@@ -517,7 +558,10 @@ class TestPerUserWorkflowIntegration:
         """Test concurrent sessions for same user share builder and track ref_count."""
         mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=True)
 
-        sm = SessionManager(config=create_mock_config(), shared_builder=MockWorkflowBuilder(), shared_workflow=None)
+        sm = SessionManager(config=create_mock_config(),
+                            shared_builder=MockWorkflowBuilder(),
+                            entry_function=None,
+                            shared_workflow=None)
 
         async with sm.session(user_id="user1") as session1:
             assert sm._per_user_builders["user1"].ref_count == 1
@@ -532,3 +576,211 @@ class TestPerUserWorkflowIntegration:
 
         # After outer exits, ref_count = 0
         assert sm._per_user_builders["user1"].ref_count == 0
+
+
+class TestSessionManagerEntryFunction:
+    """Tests for SessionManager entry_function support."""
+
+    @patch('nat.cli.type_registry.GlobalTypeRegistry')
+    def test_init_with_entry_function(self, mock_registry):
+        """Test SessionManager stores entry_function."""
+        mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=False)
+
+        config = create_mock_config()
+        shared_builder = MockWorkflowBuilder()
+        shared_workflow = MockWorkflow()
+
+        sm = SessionManager(config=config,
+                            shared_builder=shared_builder,
+                            entry_function="custom_func",
+                            shared_workflow=shared_workflow,
+                            max_concurrency=8)
+
+        assert sm._entry_function == "custom_func"
+
+    @patch('nat.cli.type_registry.GlobalTypeRegistry')
+    def test_init_without_entry_function(self, mock_registry):
+        """Test SessionManager defaults entry_function to None."""
+        mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=False)
+
+        sm = SessionManager(config=create_mock_config(),
+                            shared_builder=MockWorkflowBuilder(),
+                            entry_function=None,
+                            shared_workflow=MockWorkflow())
+
+        assert sm._entry_function is None
+
+    @patch('nat.builder.workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
+    @patch('nat.cli.type_registry.GlobalTypeRegistry')
+    @pytest.mark.asyncio
+    async def test_per_user_builder_uses_entry_function(self, mock_registry):
+        """Test per-user builder is created with correct entry_function."""
+        mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=True)
+
+        sm = SessionManager(config=create_mock_config(),
+                            shared_builder=MockWorkflowBuilder(),
+                            entry_function="custom_entry",
+                            shared_workflow=None)
+
+        # Mock the build method to capture the entry_function argument
+        build_called_with = []
+        original_build = MockPerUserWorkflowBuilder.build
+
+        async def mock_build_with_capture(self, entry_function=None):
+            build_called_with.append(entry_function)
+            return await original_build(self, entry_function)
+
+        MockPerUserWorkflowBuilder.build = mock_build_with_capture
+
+        try:
+            async with sm.session(user_id="user123"):
+                pass
+
+            # Verify build was called with the correct entry_function
+            assert "custom_entry" in build_called_with
+        finally:
+            MockPerUserWorkflowBuilder.build = original_build
+
+    @patch('nat.builder.workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
+    @patch('nat.cli.type_registry.GlobalTypeRegistry')
+    @pytest.mark.asyncio
+    async def test_different_entry_functions_create_separate_caches(self, mock_registry):
+        """
+        Test that different SessionManagers with different entry_functions
+        create separate per-user builder caches (route isolation).
+        """
+        mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=True)
+
+        shared_builder = MockWorkflowBuilder()
+        config = create_mock_config()
+
+        # Create two SessionManagers with different entry functions
+        sm1 = SessionManager(
+            config=config,
+            shared_builder=shared_builder,
+            entry_function=None,  # Default route
+            shared_workflow=None)
+
+        sm2 = SessionManager(
+            config=config,
+            shared_builder=shared_builder,
+            entry_function="custom_func",  # Custom route
+            shared_workflow=None)
+
+        # Same user accessing different routes
+        async with sm1.session(user_id="alice"):
+            assert "alice" in sm1._per_user_builders
+
+        async with sm2.session(user_id="alice"):
+            assert "alice" in sm2._per_user_builders
+
+        # Verify they have separate caches
+        assert sm1._per_user_builders is not sm2._per_user_builders
+
+    @patch('nat.builder.workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
+    @patch('nat.cli.type_registry.GlobalTypeRegistry')
+    @pytest.mark.asyncio
+    async def test_from_config_builds_shared_workflow_with_entry_function(self, mock_registry):
+        """Test from_config passes entry_function to shared workflow build."""
+        mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=False)
+
+        shared_builder = MockWorkflowBuilder()
+
+        # Track build calls
+        build_called_with = []
+
+        async def mock_build(entry_function=None):
+            build_called_with.append(entry_function)
+            return MockWorkflow()
+
+        shared_builder.build = mock_build
+
+        config = create_mock_config()
+
+        async with SessionManager.from_config(config=config, shared_builder=shared_builder,
+                                              entry_function="eval_func") as sm:
+            assert sm._entry_function == "eval_func"
+            assert "eval_func" in build_called_with
+
+
+class TestMultipleSessionManagersSharedBuilder:
+    """Tests for multiple SessionManagers sharing a WorkflowBuilder."""
+
+    @patch('nat.builder.workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
+    @patch('nat.cli.type_registry.GlobalTypeRegistry')
+    @pytest.mark.asyncio
+    async def test_multiple_session_managers_share_builder(self, mock_registry):
+        """Test multiple SessionManagers can share the same WorkflowBuilder."""
+        mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=True)
+
+        shared_builder = MockWorkflowBuilder()
+        config = create_mock_config()
+
+        # Create multiple SessionManagers
+        sm1 = SessionManager(config=config, shared_builder=shared_builder, entry_function=None)
+
+        sm2 = SessionManager(config=config, shared_builder=shared_builder, entry_function="custom")
+
+        # Verify they share the same builder
+        assert sm1.shared_builder is sm2.shared_builder
+
+        # But have independent per-user caches
+        async with sm1.session(user_id="user1"):
+            pass
+
+        async with sm2.session(user_id="user1"):
+            pass
+
+        assert "user1" in sm1._per_user_builders
+        assert "user1" in sm2._per_user_builders
+        # Different PerUserWorkflowBuilder instances
+        assert sm1._per_user_builders["user1"].builder is not sm2._per_user_builders["user1"].builder
+
+    @patch('nat.cli.type_registry.GlobalTypeRegistry')
+    @pytest.mark.asyncio
+    async def test_route_isolation_for_shared_workflows(self, mock_registry):
+        """Test route isolation works for shared (non-per-user) workflows."""
+        mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=False)
+
+        shared_builder = MockWorkflowBuilder()
+        config = create_mock_config()
+
+        # Track workflows built
+        workflows_built = []
+
+        async def mock_build(entry_function=None):
+            workflow = MockWorkflow()
+            workflows_built.append((entry_function, workflow))
+            return workflow
+
+        shared_builder.build = mock_build
+
+        async with SessionManager.from_config(config=config, shared_builder=shared_builder,
+                                              entry_function=None) as sm_default:
+            async with SessionManager.from_config(config=config, shared_builder=shared_builder,
+                                                  entry_function="eval") as sm_eval:
+                # Should have built separate workflows
+                assert len(workflows_built) == 2
+                assert workflows_built[0][0] is None  # default
+                assert workflows_built[1][0] == "eval"
+
+                # Different workflow instances
+                assert sm_default._shared_workflow is not sm_eval._shared_workflow
+
+    @patch('nat.builder.workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
+    @patch('nat.cli.type_registry.GlobalTypeRegistry')
+    @pytest.mark.asyncio
+    async def test_per_user_with_custom_entry_function(self, mock_registry):
+        """Test per-user workflow with custom entry function."""
+        mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=True)
+
+        sm = SessionManager(config=create_mock_config(),
+                            shared_builder=MockWorkflowBuilder(),
+                            entry_function="my_custom_entry",
+                            shared_workflow=None)
+
+        async with sm.session(user_id="user1") as session:
+            assert session.user_id == "user1"
+            assert session.workflow is not None
+            # The workflow was built with the custom entry function
+            assert sm._entry_function == "my_custom_entry"

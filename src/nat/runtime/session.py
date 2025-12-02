@@ -118,6 +118,7 @@ class SessionManager:
     def __init__(self,
                  config: Config,
                  shared_builder: "WorkflowBuilder",
+                 entry_function: str | None = None,
                  shared_workflow: Workflow | None = None,
                  max_concurrency: int = 8,
                  runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE):
@@ -136,6 +137,8 @@ class SessionManager:
             The configuration for the workflow
         shared_builder : WorkflowBuilder
             The shared workflow builder
+        entry_function : str | None, optional
+            The entry function for this SessionManager's workflows, by default None
         shared_workflow : Workflow, optional
             The shared workflow, by default None
         max_concurrency : int, optional
@@ -148,6 +151,8 @@ class SessionManager:
 
         self._config = config
         self._max_concurrency = max_concurrency
+        self._entry_function = entry_function
+
         # Semaphore for limiting concurrency
         if max_concurrency > 0:
             self._semaphore = asyncio.Semaphore(max_concurrency)
@@ -243,6 +248,8 @@ class SessionManager:
     @asynccontextmanager
     async def from_config(cls,
                           config: Config,
+                          shared_builder: "WorkflowBuilder",
+                          entry_function: str | None = None,
                           max_concurrency: int = 8,
                           runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE):
         """
@@ -259,52 +266,51 @@ class SessionManager:
         Yields:
             SessionManager instance
         """
-        from nat.builder.workflow_builder import WorkflowBuilder
         from nat.cli.type_registry import GlobalTypeRegistry
 
-        async with WorkflowBuilder.from_config(config) as shared_builder:
-            workflow_registration = GlobalTypeRegistry.get().get_function(type(config.workflow))
-            if workflow_registration.is_per_user:
-                shared_workflow = None
-                logger.info("Workflow is per-user - will be built per user upon first request")
-            else:
-                shared_workflow = await shared_builder.build()
-                logger.info("Shared workflow built successfully")
+        workflow_registration = GlobalTypeRegistry.get().get_function(type(config.workflow))
+        if workflow_registration.is_per_user:
+            shared_workflow = None
+            logger.info(f"Workflow is per-user - will be built per user (entry_function={entry_function})")
+        else:
+            shared_workflow = await shared_builder.build(entry_function=entry_function)
+            logger.info(f"Shared workflow built successfully (entry_function={entry_function})")
 
-            session_manager = cls(config=config,
-                                  shared_builder=shared_builder,
-                                  shared_workflow=shared_workflow,
-                                  max_concurrency=max_concurrency,
-                                  runtime_type=runtime_type)
+        session_manager = cls(config=config,
+                              shared_builder=shared_builder,
+                              entry_function=entry_function,
+                              shared_workflow=shared_workflow,
+                              max_concurrency=max_concurrency,
+                              runtime_type=runtime_type)
 
+        if session_manager._is_workflow_per_user:
+            # Start background cleanup task
+            session_manager._per_user_builders_cleanup_task = asyncio.create_task(
+                session_manager._run_periodic_cleanup())
+
+        try:
+            yield session_manager
+
+        finally:
             if session_manager._is_workflow_per_user:
-                # Start background cleanup task
-                session_manager._per_user_builders_cleanup_task = asyncio.create_task(
-                    session_manager._run_periodic_cleanup())
+                # Shutdown cleanup task
+                session_manager._shutdown_event.set()
+                if session_manager._per_user_builders_cleanup_task:
+                    try:
+                        await asyncio.wait_for(session_manager._per_user_builders_cleanup_task, timeout=5.0)
+                    except TimeoutError:
+                        logger.warning("Cleanup task did not finish in time, cancelling")
+                        session_manager._per_user_builders_cleanup_task.cancel()
 
-            try:
-                yield session_manager
-
-            finally:
-                if session_manager._is_workflow_per_user:
-                    # Shutdown cleanup task
-                    session_manager._shutdown_event.set()
-                    if session_manager._per_user_builders_cleanup_task:
+                # Cleanup all per-user builders
+                async with session_manager._per_user_builders_lock:
+                    for user_id, builder_info in list(session_manager._per_user_builders.items()):
+                        logger.debug(f"Cleaning up per-user builder for user {user_id}")
                         try:
-                            await asyncio.wait_for(session_manager._per_user_builders_cleanup_task, timeout=5.0)
-                        except TimeoutError:
-                            logger.warning("Cleanup task did not finish in time, cancelling")
-                            session_manager._per_user_builders_cleanup_task.cancel()
-
-                    # Cleanup all per-user builders
-                    async with session_manager._per_user_builders_lock:
-                        for user_id, builder_info in list(session_manager._per_user_builders.items()):
-                            logger.debug(f"Cleaning up per-user builder for user {user_id}")
-                            try:
-                                await builder_info.builder.__aexit__(None, None, None)
-                            except Exception as e:
-                                logger.error(f"Error cleaning up builder for user {user_id}: {e}")
-                        session_manager._per_user_builders.clear()
+                            await builder_info.builder.__aexit__(None, None, None)
+                        except Exception as e:
+                            logger.error(f"Error cleaning up builder for user {user_id}: {e}")
+                    session_manager._per_user_builders.clear()
 
     async def _run_periodic_cleanup(self):
 
@@ -389,12 +395,13 @@ class SessionManager:
 
                 return builder_info.builder, builder_info.workflow
 
+            logger.info(f"Creating per-user builder for user={user_id}, entry_function={self._entry_function}")
             builder = PerUserWorkflowBuilder(user_id=user_id, shared_builder=self._shared_builder)
             # Enter the builder's context manually to avoid exiting the context manager
             await builder.__aenter__()
             try:
                 await builder.populate_builder(self._config)
-                workflow = await builder.build()
+                workflow = await builder.build(entry_function=self._entry_function)
 
                 builder_info = PerUserBuilderInfo(builder=builder,
                                                   workflow=workflow,
@@ -402,6 +409,7 @@ class SessionManager:
                                                   ref_count=0,
                                                   lock=asyncio.Lock())
                 self._per_user_builders[user_id] = builder_info
+                logger.debug(f"Created per-user builder for user={user_id}, entry_function={self._entry_function}")
                 return builder_info.builder, builder_info.workflow
             except Exception as e:
                 logger.error(f"Error creating per-user builder for user {user_id}: {e}", exc_info=True)
