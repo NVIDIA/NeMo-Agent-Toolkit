@@ -120,15 +120,10 @@ Functions <./components/functions/index.md>
 ./components/retrievers.md
 ./components/llms/index.md
 ./components/auth/index.md
-```
-
-```{toctree}
-:hidden:
-:caption: Store and Retrieve
-
-Memory Module <./store-and-retrieve/memory.md>
-./store-and-retrieve/retrievers.md
-Object Store <./store-and-retrieve/object-store.md>
+./components/integrations/index.md
+Memory Module <./components/memory.md>
+Object Store <./components/object-store.md>
+Test Time Compute <./components/test-time-compute.md>
 ```
 
 ```{toctree}
@@ -160,14 +155,12 @@ Add Unit Tests for Tools <./workflows/add-unit-tests-for-tools.md>
 
 ./api/index.rst
 API Authentication <./reference/api-authentication.md>
-Frameworks Overview <./reference/frameworks-overview.md>
 API Server Endpoints <./reference/api-server-endpoints.md>
 WebSockets <./reference/websockets.md>
 
 Cursor Rules Reference <./reference/cursor-rules-reference.md>
 Evaluation <./reference/evaluate.md>
 Evaluation Endpoints <./reference/evaluate-api.md>
-Test Time Compute <./reference/test-time-compute.md>
 ```
 
 ```{toctree}
