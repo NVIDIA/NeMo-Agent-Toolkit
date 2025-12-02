@@ -25,10 +25,58 @@ Retrievers are an important component of Retrieval Augmented Generation (RAG) wo
  - **Extensible Via Plugins**: Additional retrievers can be added as plugins by developers to support more data stores.
  - **Additional Framework Implementations**: Retrievers can be loaded using a framework implementation rather than the default NeMo Agent toolkit retriever implementation.
 
-## Included Retrievers
- - [Milvus](https://milvus.io/docs)
- - [NeMo Retriever](https://docs.nvidia.com/nemo/retriever/index.html)
+## Included Retriever Providers
+NeMo Agent toolkit supports the following retriever providers:
+| Provider | Type | Description |
+|----------|------|-------------|
+| [NVIDIA NIM](https://build.nvidia.com) | `nemo_retriever` | NVIDIA Inference Microservice (NIM) |
+| [Milvus](https://milvus.io) | `milvus_retriever` | Milvus |
 
+## Retriever Configuration
+
+The retriever configuration is defined in the `retrievers` section of the workflow configuration file. The `_type` value refers to the retriever provider, and the `model_name` value always refers to the name of the model to use.
+
+```yaml
+retrievers:
+  nemo_retriever:
+    _type: nemo_retriever
+    uri: http://localhost:8000
+    collection_name: my_collection
+    top_k: 10
+  milvus_retriever:
+    _type: milvus_retriever
+    uri: http://localhost:19530
+    collection_name: my_other_collection
+    top_k: 10
+```
+
+### NVIDIA NIM
+
+The NIM retriever provider is defined by the {py:class}`~nat.retriever.nemo_retriever.NemoRetrieverConfig` class.
+
+* `uri` - The URI of the NIM retriever service.
+* `collection_name` - The name of the collection to search.
+* `top_k` - The number of results to return.
+* `output_fields` - A list of fields to return from the data store. If `None`, all fields but the vector are returned.
+* `timeout` - Maximum time to wait for results to be returned from the service.
+* `nvidia_api_key` - API key used to authenticate with the service. If `None`, will use ENV Variable `NVIDIA_API_KEY`.
+
+### Milvus
+
+The Milvus retriever provider is defined by the {py:class}`~nat.retriever.milvus.MilvusRetrieverConfig` class.
+
+* `uri` - The URI of the Milvus service.
+* `connection_args` - Dictionary of arguments used to connect to and authenticate with the Milvus service.
+* `embedding_model` - The name of the embedding model to use to generate the vector from the query.
+* `collection_name` - The name of the Milvus collection to search.
+* `content_field` - Name of the primary field to store or retrieve.
+* `top_k` - The number of results to return.
+* `output_fields` - A list of fields to return from the data store. If `None`, all fields but the vector are returned.
+* `search_params` - Search parameters to use when performing vector search.
+* `vector_field` - Name of the field to compare with the vector generated from the query.
+* `description` - If present it will be used as the tool description.
+
+<!-- TODO: Remove redundant sections -->
 ## Usage
 ### Configuration
 Retrievers are configured similarly to other NeMo Agent toolkit components, such as Functions and LLMs. Each Retriever provider (e.g., Milvus) has a Pydantic config object which defines its configurable parameters and type. These parameters can then be configured in the config file under the `retrievers` section.
