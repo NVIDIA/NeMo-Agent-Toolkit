@@ -105,8 +105,19 @@ Middleware <./build-workflows/middleware.md>
 
 Run Workflows <./run-workflows/run-workflows.md>
 Command Line Interface (CLI) <./run-workflows/cli.md>
+./improve-workflows/observe/index.md
 API Server and User Interface <./run-workflows/launching-ui.md>
 MCP Server <./run-workflows/mcp-server.md>
+```
+
+```{toctree}
+:hidden:
+:caption: Improve Workflows
+
+Evaluate Workflows <./improve-workflows/evaluate.md>
+Profiling and Performance Monitoring <./improve-workflows/profiler.md>
+Optimizer Guide <./improve-workflows/optimizer.md>
+Sizing Calculator <./improve-workflows/sizing-calc.md>
 ```
 
 ```{toctree}
