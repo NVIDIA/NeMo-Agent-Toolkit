@@ -423,9 +423,6 @@ nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/c
         --override llms.nim_rag_eval_llm.model_name meta/llama-3.1-70b-instruct
 ```
 
-##  Profiling and Performance Monitoring of NeMo Agent Toolkit Workflows
-You can profile workflows using the NeMo Agent toolkit evaluation system. For more information, refer to the [Profiler](profiler.md) documentation.
-
 ## Evaluation Details
 
 NeMo Agent toolkit provides a set of evaluators to run and evaluate the workflows. In addition to the built-in evaluators, the toolkit provides a plugin system to add custom evaluators.
