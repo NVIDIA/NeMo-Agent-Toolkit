@@ -94,11 +94,10 @@ Troubleshooting <./get-started/troubleshooting.md>
 About Workflows <./build-workflows/about-workflows.md>
 Workflow Configuration <./build-workflows/workflow-configuration.md>
 Using Remote MCP Functions <./build-workflows/using-remote-mcp-functions.md>
-Evaluate Workflows <./workflows/evaluate.md>
+Interactive Models <./build-workflows/interactive-models.md>
+Middleware <./build-workflows/middleware.md>
+Tuning <./build-workflows/tuning/index.md>
 Add Unit Tests for Tools <./workflows/add-unit-tests-for-tools.md>
-Profiling Workflows <./workflows/profiler.md>
-Sizing Calculator <./workflows/sizing-calc.md>
-./workflows/observe/index.md
 ```
 
 ```{toctree}
@@ -159,15 +158,12 @@ Test With nat_test_llm <./extend/test-with-nat-test-llm.md>
 ./api/index.rst
 API Authentication <./reference/api-authentication.md>
 Frameworks Overview <./reference/frameworks-overview.md>
-Interactive Models <./reference/interactive-models.md>
 API Server Endpoints <./reference/api-server-endpoints.md>
 WebSockets <./reference/websockets.md>
 Command Line Interface (CLI) <./reference/cli.md>
 Cursor Rules Reference <./reference/cursor-rules-reference.md>
 Evaluation <./reference/evaluate.md>
 Evaluation Endpoints <./reference/evaluate-api.md>
-Middleware <./reference/middleware.md>
-Optimizer <./reference/optimizer.md>
 Test Time Compute <./reference/test-time-compute.md>
 ```
 
