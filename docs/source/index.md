@@ -89,7 +89,7 @@ Troubleshooting <./get-started/troubleshooting.md>
 
 ```{toctree}
 :hidden:
-:caption: Manage Workflows
+:caption: Build Workflows
 
 About Workflows <./workflows/about.md>
 ./workflows/run-workflows.md
