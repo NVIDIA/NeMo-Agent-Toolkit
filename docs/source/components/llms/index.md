@@ -175,9 +175,10 @@ workflow:
 * See a short tutorial using YAML and `nat_test_llm`: [Test with nat_test_llm](../../extend/test-with-nat-test-llm.md)
 <!-- vale on -->
 
+## Related Topics
+
 ```{toctree}
-:hidden:
-:caption: LLMs
+:titlesonly:
 
 Using Local LLMs <./using-local-llms.md>
 ```

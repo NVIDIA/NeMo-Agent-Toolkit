@@ -116,11 +116,10 @@ MCP Server <./run-workflows/mcp-server.md>
 
 Agents <./components/agents/index.md>
 Functions <./components/functions/index.md>
-./workflows/llms/index.md
-./workflows/embedders.md
-./workflows/retrievers.md
+./components/embedders.md
+./components/retrievers.md
+./components/llms/index.md
 
-./workflows/function-groups.md
 ```
 
 ```{toctree}
