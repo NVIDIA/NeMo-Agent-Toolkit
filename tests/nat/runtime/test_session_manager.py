@@ -677,16 +677,17 @@ class TestSessionManagerEntryFunction:
         # Verify they have separate caches
         assert sm1._per_user_builders is not sm2._per_user_builders
 
-    @patch('nat.builder.workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
+
+class TestSessionManagerCreate:
+    """Tests for SessionManager.create() factory method."""
+
     @patch('nat.cli.type_registry.GlobalTypeRegistry')
     @pytest.mark.asyncio
-    async def test_from_config_builds_shared_workflow_with_entry_function(self, mock_registry):
-        """Test from_config passes entry_function to shared workflow build."""
+    async def test_create_shared_workflow(self, mock_registry):
+        """Test create() builds shared workflow for non-per-user."""
         mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=False)
 
         shared_builder = MockWorkflowBuilder()
-
-        # Track build calls
         build_called_with = []
 
         async def mock_build(entry_function=None):
@@ -697,10 +698,148 @@ class TestSessionManagerEntryFunction:
 
         config = create_mock_config()
 
-        async with SessionManager.from_config(config=config, shared_builder=shared_builder,
-                                              entry_function="eval_func") as sm:
-            assert sm._entry_function == "eval_func"
-            assert "eval_func" in build_called_with
+        sm = await SessionManager.create(
+            config=config,
+            shared_builder=shared_builder,
+            entry_function="my_entry")
+
+        assert sm._entry_function == "my_entry"
+        assert "my_entry" in build_called_with
+        assert sm._shared_workflow is not None
+        assert sm._is_workflow_per_user is False
+
+    @patch('nat.cli.type_registry.GlobalTypeRegistry')
+    @pytest.mark.asyncio
+    async def test_create_per_user_workflow(self, mock_registry):
+        """Test create() does NOT build workflow for per-user."""
+        mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=True)
+
+        shared_builder = MockWorkflowBuilder()
+        build_called = []
+
+        async def mock_build(entry_function=None):
+            build_called.append(entry_function)
+            return MockWorkflow()
+
+        shared_builder.build = mock_build
+
+        config = create_mock_config()
+
+        sm = await SessionManager.create(
+            config=config,
+            shared_builder=shared_builder,
+            entry_function="my_entry")
+
+        # Should NOT have built shared workflow
+        assert len(build_called) == 0
+        assert sm._shared_workflow is None
+        assert sm._is_workflow_per_user is True
+
+    @patch('nat.cli.type_registry.GlobalTypeRegistry')
+    @pytest.mark.asyncio
+    async def test_create_starts_cleanup_task_for_per_user(self, mock_registry):
+        """Test create() starts cleanup task for per-user workflow."""
+        mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=True)
+
+        config = create_mock_config()
+
+        sm = await SessionManager.create(
+            config=config,
+            shared_builder=MockWorkflowBuilder())
+
+        assert sm._per_user_builders_cleanup_task is not None
+        assert not sm._per_user_builders_cleanup_task.done()
+
+        # Cleanup
+        await sm.shutdown()
+
+    @patch('nat.cli.type_registry.GlobalTypeRegistry')
+    @pytest.mark.asyncio
+    async def test_create_does_not_start_cleanup_for_shared(self, mock_registry):
+        """Test create() does NOT start cleanup task for shared workflow."""
+        mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=False)
+
+        shared_builder = MockWorkflowBuilder()
+        shared_builder.build = AsyncMock(return_value=MockWorkflow())
+
+        sm = await SessionManager.create(
+            config=create_mock_config(),
+            shared_builder=shared_builder)
+
+        assert sm._per_user_builders_cleanup_task is None
+
+
+class TestSessionManagerShutdown:
+    """Tests for SessionManager.shutdown() method."""
+
+    @patch('nat.builder.workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
+    @patch('nat.cli.type_registry.GlobalTypeRegistry')
+    @pytest.mark.asyncio
+    async def test_shutdown_stops_cleanup_task(self, mock_registry):
+        """Test shutdown() stops the cleanup task."""
+        mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=True)
+
+        sm = await SessionManager.create(
+            config=create_mock_config(),
+            shared_builder=MockWorkflowBuilder())
+
+        cleanup_task = sm._per_user_builders_cleanup_task
+        assert cleanup_task is not None
+        assert not cleanup_task.done()
+
+        await sm.shutdown()
+
+        # Give the task time to finish
+        await asyncio.sleep(0.1)
+        assert cleanup_task.done() or cleanup_task.cancelled()
+
+    @patch('nat.builder.workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
+    @patch('nat.cli.type_registry.GlobalTypeRegistry')
+    @pytest.mark.asyncio
+    async def test_shutdown_cleans_up_all_per_user_builders(self, mock_registry):
+        """Test shutdown() cleans up all per-user builders."""
+        mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=True)
+
+        sm = await SessionManager.create(
+            config=create_mock_config(),
+            shared_builder=MockWorkflowBuilder())
+
+        # Create some per-user builders
+        async with sm.session(user_id="user1"):
+            pass
+        async with sm.session(user_id="user2"):
+            pass
+
+        assert len(sm._per_user_builders) == 2
+
+        # Get references to builders to check __aexit__ was called
+        builder1 = sm._per_user_builders["user1"].builder
+        builder2 = sm._per_user_builders["user2"].builder
+
+        await sm.shutdown()
+
+        # Builders should be cleared
+        assert len(sm._per_user_builders) == 0
+
+        # Builders should have been exited
+        assert builder1._exited is True
+        assert builder2._exited is True
+
+    @patch('nat.cli.type_registry.GlobalTypeRegistry')
+    @pytest.mark.asyncio
+    async def test_shutdown_is_safe_for_shared_workflow(self, mock_registry):
+        """Test shutdown() is safe to call on shared workflow SessionManager."""
+        mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=False)
+
+        shared_builder = MockWorkflowBuilder()
+        shared_builder.build = AsyncMock(return_value=MockWorkflow())
+
+        sm = await SessionManager.create(
+            config=create_mock_config(),
+            shared_builder=shared_builder)
+
+        # Should not raise
+        await sm.shutdown()
 
 
 class TestMultipleSessionManagersSharedBuilder:
@@ -755,17 +894,23 @@ class TestMultipleSessionManagersSharedBuilder:
 
         shared_builder.build = mock_build
 
-        async with SessionManager.from_config(config=config, shared_builder=shared_builder,
-                                              entry_function=None) as sm_default:
-            async with SessionManager.from_config(config=config, shared_builder=shared_builder,
-                                                  entry_function="eval") as sm_eval:
-                # Should have built separate workflows
-                assert len(workflows_built) == 2
-                assert workflows_built[0][0] is None  # default
-                assert workflows_built[1][0] == "eval"
+        sm_default = await SessionManager.create(
+            config=config,
+            shared_builder=shared_builder,
+            entry_function=None)
 
-                # Different workflow instances
-                assert sm_default._shared_workflow is not sm_eval._shared_workflow
+        sm_eval = await SessionManager.create(
+            config=config,
+            shared_builder=shared_builder,
+            entry_function="eval")
+
+        # Should have built separate workflows
+        assert len(workflows_built) == 2
+        assert workflows_built[0][0] is None  # default
+        assert workflows_built[1][0] == "eval"
+
+        # Different workflow instances
+        assert sm_default._shared_workflow is not sm_eval._shared_workflow
 
     @patch('nat.builder.workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
     @patch('nat.cli.type_registry.GlobalTypeRegistry')

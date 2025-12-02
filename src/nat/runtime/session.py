@@ -245,36 +245,27 @@ class SessionManager:
         return self._shared_workflow.streaming_output_schema
 
     @classmethod
-    @asynccontextmanager
-    async def from_config(cls,
-                          config: Config,
-                          shared_builder: "WorkflowBuilder",
-                          entry_function: str | None = None,
-                          max_concurrency: int = 8,
-                          runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE):
+    async def create(cls,
+                     config: Config,
+                     shared_builder: "WorkflowBuilder",
+                     entry_function: str | None = None,
+                     max_concurrency: int = 8,
+                     runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE) -> "SessionManager":
         """
-        Create SessionManager from config.
+        Create a SessionManager. This is the preferred way to instantiate.
 
-        This builds the shared WorkflowBuilder and optionally the shared workflow.
-        Per-user components are NOT built here - they're built on-demand per user.
-
-        Args:
-            config: Configuration object
-            max_concurrency: Maximum concurrent workflow invocations
-            runtime_type: Runtime type for the session manager
-
-        Yields:
-            SessionManager instance
+        Handles async workflow building and starts cleanup task if per-user.
         """
         from nat.cli.type_registry import GlobalTypeRegistry
 
         workflow_registration = GlobalTypeRegistry.get().get_function(type(config.workflow))
+
         if workflow_registration.is_per_user:
             shared_workflow = None
-            logger.info(f"Workflow is per-user - will be built per user (entry_function={entry_function})")
+            logger.info(f"Workflow is per-user (entry_function={entry_function})")
         else:
             shared_workflow = await shared_builder.build(entry_function=entry_function)
-            logger.info(f"Shared workflow built successfully (entry_function={entry_function})")
+            logger.info(f"Shared workflow built (entry_function={entry_function})")
 
         session_manager = cls(config=config,
                               shared_builder=shared_builder,
@@ -283,34 +274,12 @@ class SessionManager:
                               max_concurrency=max_concurrency,
                               runtime_type=runtime_type)
 
+        # Start cleanup task for per-user workflows
         if session_manager._is_workflow_per_user:
-            # Start background cleanup task
             session_manager._per_user_builders_cleanup_task = asyncio.create_task(
                 session_manager._run_periodic_cleanup())
 
-        try:
-            yield session_manager
-
-        finally:
-            if session_manager._is_workflow_per_user:
-                # Shutdown cleanup task
-                session_manager._shutdown_event.set()
-                if session_manager._per_user_builders_cleanup_task:
-                    try:
-                        await asyncio.wait_for(session_manager._per_user_builders_cleanup_task, timeout=5.0)
-                    except TimeoutError:
-                        logger.warning("Cleanup task did not finish in time, cancelling")
-                        session_manager._per_user_builders_cleanup_task.cancel()
-
-                # Cleanup all per-user builders
-                async with session_manager._per_user_builders_lock:
-                    for user_id, builder_info in list(session_manager._per_user_builders.items()):
-                        logger.debug(f"Cleaning up per-user builder for user {user_id}")
-                        try:
-                            await builder_info.builder.__aexit__(None, None, None)
-                        except Exception as e:
-                            logger.error(f"Error cleaning up builder for user {user_id}: {e}")
-                    session_manager._per_user_builders.clear()
+        return session_manager
 
     async def _run_periodic_cleanup(self):
 
@@ -494,6 +463,32 @@ class SessionManager:
         async with self._semaphore:
             async with self._shared_workflow.run(message, runtime_type=runtime_type) as runner:
                 yield runner
+
+    async def shutdown(self) -> None:
+        """
+        Shutdown the SessionManager and cleanup resources.
+
+        Call this when the SessionManager is no longer needed.
+        """
+        if self._is_workflow_per_user:
+            # Shutdown cleanup task
+            self._shutdown_event.set()
+            if self._per_user_builders_cleanup_task:
+                try:
+                    await asyncio.wait_for(self._per_user_builders_cleanup_task, timeout=5.0)
+                except TimeoutError:
+                    logger.warning("Cleanup task did not finish in time, cancelling")
+                    self._per_user_builders_cleanup_task.cancel()
+
+            # Cleanup all per-user builders
+            async with self._per_user_builders_lock:
+                for user_id, builder_info in list(self._per_user_builders.items()):
+                    logger.debug(f"Cleaning up per-user builder for user {user_id}")
+                    try:
+                        await builder_info.builder.__aexit__(None, None, None)
+                    except Exception as e:
+                        logger.error(f"Error cleaning up builder for user {user_id}: {e}")
+                self._per_user_builders.clear()
 
     def set_metadata_from_http_request(self, request: Request) -> None:
         """
