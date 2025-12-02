@@ -24,7 +24,7 @@ dependencies = [
   "colorama~=0.4.6",
   "datasets~=4.0", # workaround for uv's solver choosing different versions of datasets based on sys_platform
   "expandvars~=1.0",
-  "fastapi~=0.120.1",
+  "fastapi~=0.119.0",
   "httpx~=0.27",
   "jinja2~=3.1",
   "jsonpath-ng~=1.7",
@@ -162,7 +162,7 @@ openai = [
 managed = true
 config-settings = { editable_mode = "compat" }
 override-dependencies = [
-  # Override tenacity version to resolve conflict between google-adk (<9.0.0) and strands-agents-tools (>=9.1.2)
+  # Override tenacity version to resolve conflict between ragaai-catalyst (“tenacity==8.3.0”). and strands-agents-tools ("tenacity>=9.1.2")
   # tenacity 9.x maintains API compatibility with 8.x except for the statistics attribute (breaking change in 9.0.0)
   # See: https://github.com/jd/tenacity/releases
   "tenacity>=9.1.2,<10.0.0"
