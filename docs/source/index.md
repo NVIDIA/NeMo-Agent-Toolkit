@@ -113,13 +113,13 @@ MCP Server <./run-workflows/mcp-server.md>
 ```{toctree}
 :hidden:
 :caption: Components
-Agents <./components/agents.md>
+
+Agents <./components/agents/index.md>
 ./workflows/llms/index.md
 ./workflows/embedders.md
 ./workflows/retrievers.md
 Functions <./workflows/functions/index.md>
 ./workflows/function-groups.md
-
 ```
 
 ```{toctree}
