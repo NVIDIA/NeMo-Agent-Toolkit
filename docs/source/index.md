@@ -80,9 +80,11 @@ About <self>
 :hidden:
 :caption: Get Started
 
-Install <./quick-start/installing.md>
-Quick Start Guide <./quick-start/quick-start.md>
-Tutorials <./tutorials/index.md>
+Install <./get-started/installing.md>
+Quick Start Guide <./get-started/quick-start.md>
+Tutorials <./get-started/tutorials/index.md>
+./get-started/getting-help.md
+Troubleshooting <./get-started/troubleshooting.md>
 ```
 
 ```{toctree}
@@ -159,7 +161,6 @@ Evaluation Endpoints <./reference/evaluate-api.md>
 Middleware <./reference/middleware.md>
 Optimizer <./reference/optimizer.md>
 Test Time Compute <./reference/test-time-compute.md>
-Troubleshooting <./troubleshooting.md>
 ```
 
 ```{toctree}
@@ -173,7 +174,6 @@ Migration Guide <./resources/migration-guide.md>
 Contributing <./resources/contributing.md>
 Running Tests <./resources/running-tests.md>
 ./resources/running-ci-locally.md
-./support.md
 ./resources/licensing.md
 Release Notes <./release-notes.md>
 ```

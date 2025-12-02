@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Support
+# Getting Help
 
 * Refer to the [Known Issues](./release-notes.md#known-issues) section of the release notes for known issues and workarounds.
 * Refer to our [Troubleshooting](./troubleshooting.md) guide for common issues and their solutions.
