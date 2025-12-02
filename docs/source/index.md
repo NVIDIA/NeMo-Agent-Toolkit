@@ -140,13 +140,9 @@ Custom Components <./extend/custom-components/index.md>
 :caption: Reference
 
 ./api/index.rst
-API Authentication <./reference/api-authentication.md>
 API Server Endpoints <./reference/api-server-endpoints.md>
-WebSockets <./reference/websockets.md>
-
-Cursor Rules Reference <./reference/cursor-rules-reference.md>
-Evaluation <./reference/evaluate.md>
-Evaluation Endpoints <./reference/evaluate-api.md>
+Evaluation API Endpoints <./reference/evaluate-api.md>
+WebSocket Message Schema <./reference/websockets.md>
 ```
 
 ```{toctree}
