@@ -37,7 +37,7 @@ dependencies = [
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
   # Keep sorted!!!
   "nvidia-nat~=1.4",
-  "strands-agents~=1.15",
+  "strands-agents~=1.17",
   "strands-agents-tools~=0.2",
 ]
 requires-python = ">=3.11,<3.14"

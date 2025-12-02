@@ -28,10 +28,10 @@ The remainder of this document explains each step in detail.
 
 | Stage         | Purpose                                                      | Examples                                                                                                                                      |
 | ------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Search**    | Generate many alternative plans, prompts, or tool invocations | `single_shot_multi_plan`, `multi_llm_plan`, `multi_query_retrieval_search`                                                                    |
+| **Search**    | Generate many alternative plans, prompts, or tool invocations | `single_shot_multi_plan`, `multi_llm_plan`, `multi_query_retrieval_search`, `multi_llm_generation`                                            |
 | **Editing**   | Refine or transform the candidates                           | `iterative_plan_refinement`, `llm_as_a_judge_editor`, `motivation_aware_summarization`                                                        |
 | **Scoring**   | Assign a numeric quality score                               | `llm_based_plan_scorer`, `llm_based_agent_scorer`, `motivation_aware_scorer`                                                                  |
-| **Selection** | Down‑select or merge                                         | `best_of_n_selector`, `threshold_selector`, `llm_based_plan_selector`, `llm_based_output_merging_selector`, `llm_based_agent_output_selector` |
+| **Selection** | Down‑select or merge                                         | `best_of_n_selector`, `threshold_selector`, `llm_based_plan_selector`, `llm_based_output_merging_selector`, `llm_based_agent_output_selector`, `llm_judge_selection` |
 
 A pipeline type tells a strategy where it is used.
 
@@ -92,6 +92,7 @@ Below is a non‑exhaustive catalog you can use immediately; refer to the inline
 | Search    | `SingleShotMultiPlanConfig`                                     | Few‑shot prompt that emits *n* candidate plans at different temperatures. |
 |           | `MultiLLMPlanConfig`                                            | Query multiple LLMs in parallel, then concatenate plans.                  |
 |           | `MultiQueryRetrievalSearchConfig`                               | Reformulate a retrieval query from diverse perspectives.                  |
+|           | `MultiLLMGenerationConfig`                                      | Generate responses using multiple LLMs in parallel.                       |
 | Editing   | `IterativePlanRefinementConfig`                                 | Loop: *plan → critique → edit*.                                           |
 |           | `LLMAsAJudgeEditorConfig`                                       | “Feedback LLM + editing LLM” cooperative refinement.                      |
 |           | `MotivationAwareSummarizationConfig`                            | Grounded summary that respects user’s “motivation”.                       |
@@ -101,6 +102,7 @@ Below is a non‑exhaustive catalog you can use immediately; refer to the inline
 | Selection | `BestOfNSelectionConfig`                                        | Keep the highest‑scoring item.                                            |
 |           | `ThresholdSelectionConfig`                                      | Filter by score ≥ τ.                                                      |
 |           | `LLMBasedPlanSelectionConfig` / …AgentOutput… / …OutputMerging… | Let an LLM choose or merge.                                               |
+|           | `LLMJudgeSelectionConfig`                                       | Use a Judge LLM to select the best response.                              |
 
 
 ## Pre‑Built TTC Functions
@@ -113,6 +115,7 @@ NeMo Agent toolkit ships higher‑level wrappers that hide all orchestration.
 | **`ttc_tool_orchestration_function`** | Accepts a list of tool invocations, optionally runs search/edit/score/select, then executes each tool concurrently. |
 | **`execute_score_select_function`**   | Run a function *k* times, score each output, pick the best.                                                         |
 | **`plan_select_execute_function`**    | End‑to‑end: plan → optionally edit/score → select plan → feed downstream agent.                                     |
+| **`multi_llm_judge_function`**        | Run multi-LLM generation and judge-based selection to answer a query.                                               |
 
 These are declared in `nat.experimental.test_time_compute.functions.*` and can be referenced in your `Config` just like any other function.
 

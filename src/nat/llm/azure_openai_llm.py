@@ -16,6 +16,7 @@
 from pydantic import AliasChoices
 from pydantic import ConfigDict
 from pydantic import Field
+from pydantic import computed_field
 
 from nat.builder.builder import Builder
 from nat.builder.llm import LLMProviderInfo
@@ -58,6 +59,14 @@ class AzureOpenAIModelConfig(
                                            le=1.0,
                                            description="Top-p for distribution sampling.",
                                            space=SearchSpace(high=1.0, low=0.5, step=0.1))
+
+    @computed_field
+    @property
+    def model_name(self) -> str:
+        """
+        Returns the model name for compatibility with other parts of the code base which expect a model_name attribute.
+        """
+        return self.azure_deployment
 
 
 @register_llm_provider(config_type=AzureOpenAIModelConfig)

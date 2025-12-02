@@ -347,6 +347,37 @@ def galileo_log_stream_fixture(galileo_project: "galileo.projects.Project") -> "
     return galileo.log_streams.create_log_stream(project_id=galileo_project.id, name="test")
 
 
+@pytest.fixture(name="catalyst_keys", scope='session')
+def catalyst_keys_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require RagaAI Catalyst credentials.
+    """
+    yield require_env_variables(
+        varnames=["CATALYST_ACCESS_KEY", "CATALYST_SECRET_KEY"],
+        reason="Catalyst integration tests require the `CATALYST_ACCESS_KEY` and `CATALYST_SECRET_KEY` environment "
+        "variables to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="catalyst_project_name")
+def catalyst_project_name_fixture(catalyst_keys) -> str:
+    return os.environ.get("NAT_CI_CATALYST_PROJECT_NAME", "nat-e2e")
+
+
+@pytest.fixture(name="catalyst_dataset_name")
+def catalyst_dataset_name_fixture(catalyst_project_name: str, project_name: str) -> str:
+    """
+    We can't create and delete projects, but we can create and delete datasets, so use a unique dataset name
+    """
+    dataset_name = project_name.replace('.', '-')
+    yield dataset_name
+
+    from ragaai_catalyst import Dataset
+    ds = Dataset(catalyst_project_name)
+    if dataset_name in ds.list_datasets():
+        ds.delete_dataset(dataset_name)
+
+
 @pytest.fixture(name="require_docker", scope='session')
 def require_docker_fixture(fail_missing: bool) -> "DockerClient":
     """

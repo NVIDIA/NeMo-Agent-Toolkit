@@ -626,7 +626,7 @@ class TestMCPOAuth2Provider:
     async def test_discover_and_register_with_manual_credentials(self, mock_config):
         """Test discover and register with manual credentials."""
         config = mock_config.model_copy(update={
-            'client_id': 'manual_client_id', 'client_secret': 'manual_client_secret'
+            'client_id': 'manual_client_id', 'client_secret': SecretStr('manual_client_secret')
         })
         provider = MCPOAuth2Provider(config)
 

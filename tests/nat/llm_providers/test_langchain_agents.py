@@ -129,3 +129,12 @@ async def test_azure_openai_langchain_agent(api_version: str | None):
         assert response.content is not None
         assert isinstance(response.content, str)
         assert "3" in response.content.lower()
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("azure_openai_keys")
+async def test_azure_openai_react_e2e(test_data_dir: str):
+    from nat.test.utils import run_workflow
+
+    config_file = os.path.join(test_data_dir, "azure_openai_e2e.yaml")
+    await run_workflow(config_file=config_file, question="What is 1+2?", expected_answer="3")
