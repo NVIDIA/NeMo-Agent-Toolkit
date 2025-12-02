@@ -150,7 +150,7 @@ Custom Components <./extend/custom-components/index.md>
 :hidden:
 :caption: Reference
 
-./api/index.rst
+Python API <./api/index.rst>
 API Server Endpoints <./reference/api-server-endpoints.md>
 Evaluation API Endpoints <./reference/evaluate-api.md>
 WebSocket Message Schema <./reference/websockets.md>
