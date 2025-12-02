@@ -86,6 +86,7 @@ nat a2a serve --config_file examples/getting_started/simple_calculator/configs/c
 
 Verify the server is running:
 ```bash
+# Terminal 2: Check discover card
 nat a2a client discover --url http://localhost:10000
 ```
 
