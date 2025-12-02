@@ -93,12 +93,7 @@ Troubleshooting <./get-started/troubleshooting.md>
 
 About Workflows <./build-workflows/about-workflows.md>
 Workflow Configuration <./build-workflows/workflow-configuration.md>
-./workflows/llms/index.md
-./workflows/embedders.md
-./workflows/retrievers.md
-Functions <./workflows/functions/index.md>
-./workflows/function-groups.md
-./workflows/mcp/index.md
+Using Remote MCP Functions <./build-workflows/using-remote-mcp-functions.md>
 Evaluate Workflows <./workflows/evaluate.md>
 Add Unit Tests for Tools <./workflows/add-unit-tests-for-tools.md>
 Profiling Workflows <./workflows/profiler.md>
@@ -110,13 +105,20 @@ Sizing Calculator <./workflows/sizing-calc.md>
 :hidden:
 :caption: Run Workflows
 
-./workflows/run-workflows.md
+./run-workflows/run-workflows.md
 ```
+
 
 ```{toctree}
 :hidden:
 :caption: Components
 Agents <./components/agents.md>
+./workflows/llms/index.md
+./workflows/embedders.md
+./workflows/retrievers.md
+Functions <./workflows/functions/index.md>
+./workflows/function-groups.md
+
 ```
 
 ```{toctree}
