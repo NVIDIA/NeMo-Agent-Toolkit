@@ -58,3 +58,13 @@ workflow:
   verbose: true
   retry_parsing_errors: true
   max_retries: 3
+
+
+  eval:
+  general:
+    max_concurrency: 1
+    output_dir: .tmp/nat/examples/getting_started/simple_calculator
+    dataset:
+      _type: json
+      file_path: examples/getting_started/simple_calculator/data/simple_calculator.json
+  evaluators:
