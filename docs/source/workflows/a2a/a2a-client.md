@@ -300,7 +300,7 @@ nat a2a client call --url http://localhost:10000 --message "Your query here"
 **Agent Not Reachable**:
 ```bash
 # Verify agent is running and accessible
-curl http://localhost:10000/.well-known/agent-card.json
+curl http://localhost:10000/.well-known/agent-card.json | jq
 ```
 
 **Port Conflicts**:
