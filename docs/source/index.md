@@ -109,7 +109,6 @@ API Server and User Interface <./run-workflows/launching-ui.md>
 MCP Server <./run-workflows/mcp-server.md>
 ```
 
-
 ```{toctree}
 :hidden:
 :caption: Components
@@ -132,7 +131,7 @@ Test Time Compute <./components/test-time-compute.md>
 
 Writing Custom Functions <./extend/functions.md>
 Writing Custom Function Groups <./extend/function-groups.md>
-Extending the NeMo Agent Toolkit Using Plugins <./extend/plugins.md>
+Plugins <./extend/plugins.md>
 Sharing Components <./extend/sharing-components.md>
 Adding a Custom Evaluator <./extend/custom-evaluator.md>
 ./extend/adding-a-retriever.md
