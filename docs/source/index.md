@@ -97,7 +97,6 @@ Using Remote MCP Functions <./build-workflows/using-remote-mcp-functions.md>
 Interactive Models <./build-workflows/interactive-models.md>
 Middleware <./build-workflows/middleware.md>
 Tuning <./build-workflows/tuning/index.md>
-Add Unit Tests for Tools <./workflows/add-unit-tests-for-tools.md>
 ```
 
 ```{toctree}
@@ -149,6 +148,7 @@ Cursor Rules Developer Guide <./extend/cursor-rules-developer-guide.md>
 Adding a Telemetry Exporter <./extend/telemetry-exporters.md>
 Adding a Custom MCP Server Worker <./extend/mcp-server.md>
 Test With nat_test_llm <./extend/test-with-nat-test-llm.md>
+Add Unit Tests for Tools <./workflows/add-unit-tests-for-tools.md>
 ```
 
 ```{toctree}
