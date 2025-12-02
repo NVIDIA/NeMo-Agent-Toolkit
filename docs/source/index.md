@@ -91,9 +91,8 @@ Troubleshooting <./get-started/troubleshooting.md>
 :hidden:
 :caption: Build Workflows
 
-About Workflows <./workflows/about.md>
-./workflows/run-workflows.md
-Workflow Configuration <./workflows/workflow-configuration.md>
+About Workflows <./build_workflows/about-workflows.md>
+Workflow Configuration <./build_workflows/workflow-configuration.md>
 ./workflows/llms/index.md
 ./workflows/embedders.md
 ./workflows/retrievers.md
@@ -105,6 +104,13 @@ Add Unit Tests for Tools <./workflows/add-unit-tests-for-tools.md>
 Profiling Workflows <./workflows/profiler.md>
 Sizing Calculator <./workflows/sizing-calc.md>
 ./workflows/observe/index.md
+```
+
+```{toctree}
+:hidden:
+:caption: Run Workflows
+
+./workflows/run-workflows.md
 ```
 
 ```{toctree}
