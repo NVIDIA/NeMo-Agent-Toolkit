@@ -91,7 +91,7 @@ The agent demonstrates hybrid tool capabilities, coordinating between A2A calcul
 ```bash
 # Basic hybrid calculation combining math and time
 nat run --config_file examples/A2A/simple_calculator_a2a/configs/config.yml \
-  --input "Is the product of 15 and 8 greater than the current hour of the day?"
+  --input "Is the product of 2 and 4 greater than the current hour of the day?"
 ```
 
 ### Additional Examples
