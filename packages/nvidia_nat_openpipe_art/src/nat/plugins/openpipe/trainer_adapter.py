@@ -175,10 +175,7 @@ class ARTTrainerAdapter(TrainerAdapter):
                     for msg in episode[1:-1]:
                         if msg.role == EpisodeItemRole.ASSISTANT:
                             t.messages_and_choices.append(
-                                Choice(index=0,
-                                       logprobs=msg.logprobs,
-                                       message=_to_chat_msg(msg),
-                                       finish_reason="tool_calls"))
+                                Choice(index=0, logprobs=msg.logprobs, message=_to_chat_msg(msg), finish_reason="stop"))
                         else:
                             t.messages_and_choices.append(_to_chat_msg(msg))
 
@@ -237,7 +234,7 @@ class ARTTrainerAdapter(TrainerAdapter):
             self.model.train(trajectory_groups=trajectory_groups,
                              verbose=False,
                              config=art.types.TrainConfig(
-                                 beta=getattr(self.adapter_config.training, "beta", 0.1),
+                                 beta=getattr(self.adapter_config.training, "beta", 0),
                                  learning_rate=getattr(self.adapter_config.training, "learning_rate", 5e-5),
                              )),
             name=f"art-train:{trajectories.run_id}",

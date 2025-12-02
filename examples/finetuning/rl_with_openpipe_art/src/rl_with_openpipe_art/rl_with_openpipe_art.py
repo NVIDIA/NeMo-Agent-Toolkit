@@ -124,7 +124,7 @@ class RlWithOpenpipeArtFunctionConfig(FunctionBaseConfig, name="rl_with_openpipe
     """
     player_model: LLMRef = Field(description="LLMRef for the player model to use.")
     opponent_model: LLMRef | None = Field(description="LLMRef for the opponent model to use.", default=None)
-    max_parser_retries: int = Field(default=3, description="Maximum number of retries for parsing LLM output.")
+    max_parser_retries: int = Field(default=0, description="Maximum number of retries for parsing LLM output.")
 
 
 @register_function(config_type=RlWithOpenpipeArtFunctionConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
