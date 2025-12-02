@@ -162,6 +162,7 @@ openai = [
 managed = true
 config-settings = { editable_mode = "compat" }
 override-dependencies = [
+  # TODO: remove this when ragaai-catalsty supports tenacity version ~-9.0
   # Override tenacity version to resolve conflict between ragaai-catalyst (“tenacity==8.3.0”). and strands-agents-tools ("tenacity>=9.1.2")
   # tenacity 9.x maintains API compatibility with 8.x except for the statistics attribute (breaking change in 9.0.0)
   # See: https://github.com/jd/tenacity/releases
