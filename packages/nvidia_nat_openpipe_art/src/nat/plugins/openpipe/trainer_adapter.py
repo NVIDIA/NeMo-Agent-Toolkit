@@ -172,21 +172,12 @@ class ARTTrainerAdapter(TrainerAdapter):
 
                     t = art.Trajectory(messages_and_choices=[first_msg], reward=reward)
 
-                    for msg in episode[1:-1]:
+                    for msg in episode[1:]:
                         if msg.role == EpisodeItemRole.ASSISTANT:
                             t.messages_and_choices.append(
                                 Choice(index=0, logprobs=msg.logprobs, message=_to_chat_msg(msg), finish_reason="stop"))
                         else:
                             t.messages_and_choices.append(_to_chat_msg(msg))
-
-                    # Handle the last message
-                    last_msg = episode[-1]
-
-                    t.messages_and_choices.append(
-                        Choice(index=0,
-                               logprobs=last_msg.logprobs,
-                               message=_to_chat_msg(last_msg),
-                               finish_reason="stop"))
 
                     # Sanity check: art.Trajectory.model_validate()
                     t.model_validate(t.model_dump())

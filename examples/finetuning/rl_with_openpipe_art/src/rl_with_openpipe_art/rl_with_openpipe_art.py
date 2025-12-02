@@ -198,14 +198,24 @@ async def rl_with_openpipe_art_function(config: RlWithOpenpipeArtFunctionConfig,
         game = TicTacToeGame(player_x=player_x, player_o=player_o)
         winner = game.play()
 
-        if winner == 1:
-            return "Win!"
-        elif winner == -1:
-            return "Lose!"
-        elif winner == 0:
-            return "Draw!"
+        if role == "X":
+            if winner == 1:
+                return "Win!"
+            elif winner == -1:
+                return "Lose!"
+            elif winner == 0:
+                return "Draw!"
+            else:
+                return str(winner)
         else:
-            return str(winner)
+            if winner == -1:
+                return "Win!"
+            elif winner == 1:
+                return "Lose!"
+            elif winner == 0:
+                return "Draw!"
+            else:
+                return str(winner)
 
     # The callable is wrapped in a FunctionInfo object.
     # The description parameter is used to describe the function.

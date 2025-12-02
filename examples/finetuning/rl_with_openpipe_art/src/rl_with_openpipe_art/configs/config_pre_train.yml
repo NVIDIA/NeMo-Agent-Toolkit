@@ -14,7 +14,7 @@ eval:
     output_dir: .tmp/nat/examples/rl_openpipe/eval/pre_train
     dataset:
       _type: json
-      file_path: examples/finetuning/rl_with_openpipe_art/data/data.json
+      file_path: examples/finetuning/rl_with_openpipe_art/data/eval_data.json
 
   evaluators:
     rl_accuracy:
