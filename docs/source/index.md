@@ -91,8 +91,8 @@ Troubleshooting <./get-started/troubleshooting.md>
 :hidden:
 :caption: Build Workflows
 
-About Workflows <./build_workflows/about-workflows.md>
-Workflow Configuration <./build_workflows/workflow-configuration.md>
+About Workflows <./build-workflows/about-workflows.md>
+Workflow Configuration <./build-workflows/workflow-configuration.md>
 ./workflows/llms/index.md
 ./workflows/embedders.md
 ./workflows/retrievers.md
