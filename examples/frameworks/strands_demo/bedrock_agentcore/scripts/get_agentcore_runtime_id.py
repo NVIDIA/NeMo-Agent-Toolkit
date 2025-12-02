@@ -13,16 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-
 import boto3
+import os
 
 # Configuration
 
 AWS_REGION = os.environ['AWS_DEFAULT_REGION']
 AWS_ACCOUNT_ID = os.environ['AWS_ACCOUNT_ID']
-RUNTIME_NAME = "strands-demo"
-#AGENT_RUNTIME_ID = os.environ['AGENT_RUNTIME_ARN']
+RUNTIME_NAME = "strands_demo"
+
 
 cclient = boto3.client('bedrock-agentcore-control', region_name=AWS_REGION)
 cresponse = cclient.list_agent_runtimes()
@@ -32,3 +31,5 @@ for runtime in cresponse['agentRuntimes']:
         runtime_id = runtime['agentRuntimeId']
         print(f"Found runtime ID: {runtime_id}")
         break
+
+

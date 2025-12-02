@@ -14,32 +14,34 @@
 # limitations under the License.
 
 import json
-import os
-
 import boto3
+import os
 
 # Configuration
 
 AWS_REGION = os.environ['AWS_DEFAULT_REGION']
 AWS_ACCOUNT_ID = os.environ['AWS_ACCOUNT_ID']
-RUNTIME_NAME = "strands-demo"
-#AGENT_RUNTIME_ID = os.environ['AGENT_RUNTIME_ARN']
+RUNTIME_NAME = "strands_demo"
 
 cclient = boto3.client('bedrock-agentcore-control', region_name=AWS_REGION)
 cresponse = cclient.list_agent_runtimes()
 
+runtime_id = None
 for runtime in cresponse['agentRuntimes']:
     if runtime['agentRuntimeName'] == RUNTIME_NAME:
         runtime_id = runtime['agentRuntimeId']
         print(f"Found runtime ID: {runtime_id}")
         break
 
+if runtime_id is None:
+    raise RuntimeError(f"No AgentCore runtime named {RUNTIME_NAME!r} found in region {AWS_REGION}")
+
+
 client = boto3.client('bedrock-agentcore', region_name=AWS_REGION)
-payload = json.dumps({"inputs": "How do I use the Strands Agents API?"})
+payload = json.dumps({"inputs": "What is AWS AgentCore?"})
 
 response = client.invoke_agent_runtime(
     agentRuntimeArn=f'arn:aws:bedrock-agentcore:{AWS_REGION}:{AWS_ACCOUNT_ID}:runtime/{runtime_id}',
-    #    runtimeSessionId='<RUNTIME_SESSION_ID>',  # Must be 33+ chars
     payload=payload,
     qualifier="DEFAULT"  # Optional
 )
