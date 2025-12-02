@@ -46,9 +46,9 @@ flowchart LR
         CS --> CDT[current_datetime]
     end
 
-    style CC fill:#e1f5fe
-    style CS fill:#f3e5f5
-    style AP fill:#fff3e0
+    style CC fill:#e1f5fe,color:#000
+    style CS fill:#f3e5f5,color:#000
+    style AP fill:#fff3e0,color:#000
 ```
 
 ## Installation and Setup
