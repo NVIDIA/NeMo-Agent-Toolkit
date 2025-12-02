@@ -27,6 +27,8 @@ We recommend reading the [Evaluating NeMo Agent toolkit Workflows](../workflows/
 
 NeMo Agent toolkit provides a set of evaluators to run and evaluate NeMo Agent toolkit workflows. In addition to the built-in evaluators, NeMo Agent toolkit provides a plugin system to add custom evaluators.
 
+## Summary
+This guide provides a step-by-step process to create and register a custom evaluator with NeMo Agent toolkit. The similarity evaluator is used as an example to demonstrate the process. The evaluator configuration, evaluator function, and evaluation results are explained in detail.
 
 ## Existing Evaluators
 You can view the list of existing evaluators by running the following command:
@@ -216,5 +218,3 @@ The results of each evaluator is stored in a separate file with name `<keyword>_
 ```
 The contents of the file have been `snipped` for brevity.
 
-# Summary
-This guide provides a step-by-step process to create and register a custom evaluator with NeMo Agent toolkit. The similarity evaluator is used as an example to demonstrate the process. The evaluator configuration, evaluator function, and evaluation results are explained in detail.

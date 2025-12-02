@@ -15,19 +15,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Adding Custom Components
+# Custom Components
 
 ```{toctree}
 :titlesonly:
 
-Writing Functions <./custom-functions/index.md>
-Adding an Authentication Provider <./adding-an-authentication-provider.md>
-Adding an LLM Provider <./adding-an-llm-provider.md>
-./adding-a-retriever.md
-Adding an Evaluator <./custom-evaluator.md>
-Adding an MCP Server Worker <./mcp-server.md>
-./memory.md
-Adding an Object Store Provider <./object-store.md>
-Adding a Telemetry Exporter <./telemetry-exporters.md>
+Functions <./custom-functions/functions.md>
+Function Groups <./custom-functions/function-groups.md>
+Authentication Provider <./adding-an-authentication-provider.md>
+LLM Provider <./adding-an-llm-provider.md>
+Retriever <./adding-a-retriever.md>
+Evaluator <./custom-evaluator.md>
+MCP Server Worker <./mcp-server.md>
+Memory Provider <./memory.md>
+Object Store Provider <./object-store.md>
+Telemetry Exporter <./telemetry-exporters.md>
 Gated Fields <./gated-fields.md>
 ```
