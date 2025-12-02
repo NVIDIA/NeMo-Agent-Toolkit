@@ -1,0 +1,81 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+function_groups:
+  # A2A Calculator Server - connects to NAT simple_calculator workflow
+  calculator_a2a:
+    _type: a2a_client
+    url: http://localhost:10000
+    task_timeout: 60
+    include_skills_in_description: true
+
+  # Local MCP server for time/date operations
+  mcp_time:
+    _type: mcp_client
+    server:
+      transport: stdio
+      command: "python"
+      args: ["-m", "mcp_server_time", "--local-timezone=America/Los_Angeles"]
+    tool_overrides:
+      get_current_time:
+        alias: get_current_time_mcp
+        description: "Get current date and time in Pacific timezone"
+    include:
+      - get_current_time_mcp
+
+  # Local logic evaluator for conditional operations
+  logic_evaluator:
+    _type: logic_evaluator
+
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.0
+    max_tokens: 1024
+
+workflow:
+  _type: react_agent
+  tool_names:
+    - calculator_a2a  # A2A calculator functions
+    - mcp_time.get_current_time_mcp  # Local time function
+    - logic_evaluator.if_then_else  # Conditional logic
+    - logic_evaluator.evaluate_condition  # Comparison operations
+  llm_name: nim_llm
+  verbose: true
+  retry_parsing_errors: true
+  max_retries: 3
+  system_prompt: |
+    You are a mathematical assistant with access to calculator services, time utilities, and conditional logic.
+
+    Available tools:
+    - Calculator A2A service: Full suite of mathematical operations (add, subtract, multiply, divide, compare)
+    - Time service: Current date/time in Pacific timezone
+    - Logic evaluator: if-then-else decisions and condition evaluation
+    - Comparison operations: Evaluate conditions with operators (==, !=, >, <, >=, <=)
+
+    When solving problems:
+    1. Use calculator tools for mathematical operations
+    2. Use time tools for time-based comparisons
+    3. Use logic tools for conditional decision-making
+    4. Show your work step by step
+
+    Example queries you can handle:
+    - "What is 42 * 17?"
+    - "Is 144 ÷ 12 greater than the current hour?"
+    - "Calculate compound interest: $1000 at 5% for 3 years"
+    - "If 25 > 10, return 'big' otherwise return 'small'"
+    - "Check if the current hour is greater than 12, and if so say 'afternoon' else say 'morning'"

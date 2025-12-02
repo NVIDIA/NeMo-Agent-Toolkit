@@ -5256,11 +5256,15 @@ requires-dist = [
 name = "nat-currency-agent-a2a"
 source = { editable = "examples/A2A/currency_agent_a2a" }
 dependencies = [
+    { name = "mcp-server-time" },
     { name = "nvidia-nat", extra = ["a2a"] },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "nvidia-nat", extras = ["a2a"], editable = "." }]
+requires-dist = [
+    { name = "mcp-server-time", specifier = "~=2025.8" },
+    { name = "nvidia-nat", extras = ["a2a"], editable = "." },
+]
 
 [[package]]
 name = "nat-email-phishing-analyzer"
@@ -5439,6 +5443,21 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "nvidia-nat", extras = ["langchain"], editable = "." }]
+
+[[package]]
+name = "nat-simple-calculator-a2a"
+source = { editable = "examples/A2A/simple_calculator_a2a" }
+dependencies = [
+    { name = "mcp-server-time" },
+    { name = "nvidia-nat", extra = ["a2a", "mcp"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "mcp-server-time", specifier = "~=2025.8" },
+    { name = "nvidia-nat", extras = ["a2a"], editable = "." },
+    { name = "nvidia-nat", extras = ["mcp"], editable = "." },
+]
 
 [[package]]
 name = "nat-simple-calculator-custom-routes"
@@ -5922,6 +5941,7 @@ examples = [
     { name = "nat-simple-auth" },
     { name = "nat-simple-auth-mcp" },
     { name = "nat-simple-calculator" },
+    { name = "nat-simple-calculator-a2a" },
     { name = "nat-simple-calculator-custom-routes" },
     { name = "nat-simple-calculator-eval" },
     { name = "nat-simple-calculator-hitl" },
@@ -6076,6 +6096,7 @@ requires-dist = [
     { name = "nat-simple-auth", marker = "extra == 'examples'", editable = "examples/front_ends/simple_auth" },
     { name = "nat-simple-auth-mcp", marker = "extra == 'examples'", editable = "examples/MCP/simple_auth_mcp" },
     { name = "nat-simple-calculator", marker = "extra == 'examples'", editable = "examples/getting_started/simple_calculator" },
+    { name = "nat-simple-calculator-a2a", marker = "extra == 'examples'", editable = "examples/A2A/simple_calculator_a2a" },
     { name = "nat-simple-calculator-custom-routes", marker = "extra == 'examples'", editable = "examples/front_ends/simple_calculator_custom_routes" },
     { name = "nat-simple-calculator-eval", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/simple_calculator_eval" },
     { name = "nat-simple-calculator-hitl", marker = "extra == 'examples'", editable = "examples/HITL/simple_calculator_hitl" },
