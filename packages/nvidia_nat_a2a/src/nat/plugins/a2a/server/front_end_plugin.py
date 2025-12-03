@@ -58,7 +58,7 @@ class A2AFrontEndPlugin(FrontEndBase[A2AFrontEndConfig]):
             # Create A2A server
             a2a_server = worker.create_a2a_server(agent_card, agent_executor)
 
-            # Start the server
+            # Start the server with proper cleanup
             try:
                 logger.info(
                     "Starting A2A server '%s' at http://%s:%s",
@@ -86,6 +86,10 @@ class A2AFrontEndPlugin(FrontEndBase[A2AFrontEndConfig]):
             except Exception as e:
                 logger.error("A2A server error: %s", e, exc_info=True)
                 raise
+            finally:
+                # Ensure cleanup of resources (httpx client)
+                await worker.cleanup()
+                logger.info("A2A server resources cleaned up")
 
     def _get_worker_instance(self) -> A2AFrontEndPluginWorker:
         """Get an instance of the worker class.

@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+from contextlib import asynccontextmanager
 
 import httpx
 
@@ -50,6 +51,9 @@ class A2AFrontEndPluginWorker:
         # Max concurrency for handling A2A tasks
         # This limits how many workflow invocations can run simultaneously
         self.max_concurrency = 8  # Could be made configurable
+
+        # HTTP client for push notifications (managed for cleanup)
+        self._httpx_client: httpx.AsyncClient | None = None
 
     async def _get_all_functions(self, workflow: Workflow) -> dict[str, Function]:
         """Get all functions from the workflow.
@@ -163,14 +167,18 @@ class A2AFrontEndPluginWorker:
 
         Returns:
             Configured A2A Starlette application
+
+        Note:
+            The httpx client is stored in self._httpx_client for lifecycle management.
+            Call cleanup() during server shutdown to properly close the client.
         """
-        # Create HTTP client for push notifications
-        httpx_client = httpx.AsyncClient()
+        # Create HTTP client for push notifications and store for cleanup
+        self._httpx_client = httpx.AsyncClient()
 
         # Create push notification infrastructure
         push_config_store = InMemoryPushNotificationConfigStore()
         push_sender = BasePushNotificationSender(
-            httpx_client=httpx_client,
+            httpx_client=self._httpx_client,
             config_store=push_config_store,
         )
 
@@ -191,3 +199,13 @@ class A2AFrontEndPluginWorker:
         logger.info("Created A2A server with DefaultRequestHandler")
 
         return server
+
+    async def cleanup(self) -> None:
+        """Clean up resources, particularly the httpx client.
+
+        This should be called during server shutdown to prevent connection leaks.
+        """
+        if self._httpx_client is not None:
+            await self._httpx_client.aclose()
+            self._httpx_client = None
+            logger.info("Closed httpx client for push notifications")
