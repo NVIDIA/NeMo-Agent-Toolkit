@@ -26,6 +26,7 @@ from nat.cli.register_workflow import register_function
 from nat.cli.register_workflow import register_per_user_function
 from nat.data_models.config import Config
 from nat.data_models.function import FunctionBaseConfig
+from nat.runtime.session import SessionManager
 
 
 # Test schemas for per-user functions
@@ -71,6 +72,25 @@ class PerUserDependentFnConfig(FunctionBaseConfig, name="per_user_dependent"):
 class SharedDependentFnConfig(FunctionBaseConfig, name="bad_shared_fn"):
     """A shared function that incorrectly depends on a per-user function."""
     per_user_fn_name: str
+
+
+# E2E test configs for SessionManager integration
+class CounterInput(BaseModel):
+    action: str = Field(description="Either 'increment' or 'get'")
+
+
+class CounterOutput(BaseModel):
+    count: int = Field(description="Current count value")
+
+
+class PerUserCounterConfig(FunctionBaseConfig, name="per_user_counter"):
+    """A per-user counter that maintains state per user."""
+    initial_value: int = 0
+
+
+class PerUserCounterWorkflowConfig(FunctionBaseConfig, name="per_user_counter_workflow"):
+    """A per-user workflow that uses the counter."""
+    counter_name: str = "counter"
 
 
 # Register all test components
@@ -142,6 +162,34 @@ async def _register_components():
             return PerUserOutputSchema(result=f"shared-workflow: {inp.message}")
 
         yield FunctionInfo.from_fn(_impl)
+
+    # Per-user counter - each user gets their own counter instance (for e2e tests)
+    @register_per_user_function(config_type=PerUserCounterConfig,
+                                input_schema=CounterInput,
+                                single_output_schema=CounterOutput)
+    async def per_user_counter(config: PerUserCounterConfig, builder: Builder):
+        # This state is unique per user!
+        counter_state = {"count": config.initial_value}
+
+        async def _counter(inp: CounterInput) -> CounterOutput:
+            if inp.action == "increment":
+                counter_state["count"] += 1
+            return CounterOutput(count=counter_state["count"])
+
+        yield FunctionInfo.from_fn(_counter)
+
+    # Per-user workflow that uses the counter (for e2e tests)
+    @register_per_user_function(config_type=PerUserCounterWorkflowConfig,
+                                input_schema=CounterInput,
+                                single_output_schema=CounterOutput)
+    async def per_user_counter_workflow(config: PerUserCounterWorkflowConfig, builder: Builder):
+        # Get the per-user counter function
+        counter_fn = await builder.get_function(config.counter_name)
+
+        async def _workflow(inp: CounterInput) -> CounterOutput:
+            return await counter_fn.ainvoke(inp, to_type=CounterOutput)
+
+        yield FunctionInfo.from_fn(_workflow)
 
 
 async def test_workflow_builder_skips_per_user_functions():
@@ -539,3 +587,104 @@ async def test_per_user_workflow_builder_build_with_shared_entry_function():
             # Workflow should use shared_fn as entry
             result = await workflow._entry_fn.ainvoke("shared_entry_test", to_type=str)
             assert result == "shared: shared_entry_test"
+
+
+# ============= E2E Tests with SessionManager =============
+
+
+async def test_per_user_function_isolation_with_session_manager():
+    """Test that different users have isolated per-user function state via SessionManager."""
+
+    config = Config(functions={
+        "counter": PerUserCounterConfig(initial_value=0),
+    },
+                    workflow=PerUserCounterWorkflowConfig(counter_name="counter"))
+
+    async with WorkflowBuilder.from_config(config) as builder:
+        # Create SessionManager (per-user workflow)
+        sm = await SessionManager.create(config=config, shared_builder=builder)
+
+        try:
+            # User 1: Increment counter twice
+            async with sm.session(user_id="alice") as session:
+                async with session.run(CounterInput(action="increment")) as runner:
+                    result1 = await runner.result(to_type=CounterOutput)
+                    assert result1.count == 1
+
+            async with sm.session(user_id="alice") as session:
+                async with session.run(CounterInput(action="increment")) as runner:
+                    result2 = await runner.result(to_type=CounterOutput)
+                    assert result2.count == 2  # Alice's counter is at 2
+
+            # User 2: Should have their own counter starting at 0
+            async with sm.session(user_id="bob") as session:
+                async with session.run(CounterInput(action="get")) as runner:
+                    result3 = await runner.result(to_type=CounterOutput)
+                    assert result3.count == 0  # Bob's counter is at 0 (fresh!)
+
+            async with sm.session(user_id="bob") as session:
+                async with session.run(CounterInput(action="increment")) as runner:
+                    result4 = await runner.result(to_type=CounterOutput)
+                    assert result4.count == 1  # Bob's counter is at 1
+
+            # Verify Alice's counter is still at 2
+            async with sm.session(user_id="alice") as session:
+                async with session.run(CounterInput(action="get")) as runner:
+                    result5 = await runner.result(to_type=CounterOutput)
+                    assert result5.count == 2  # Still 2!
+
+        finally:
+            await sm.shutdown()
+
+
+async def test_per_user_builder_caching_with_session_manager():
+    """Test that per-user builders are cached and reused via SessionManager."""
+
+    config = Config(functions={
+        "counter": PerUserCounterConfig(initial_value=10),
+    },
+                    workflow=PerUserCounterWorkflowConfig(counter_name="counter"))
+
+    async with WorkflowBuilder.from_config(config) as builder:
+        sm = await SessionManager.create(config=config, shared_builder=builder)
+
+        try:
+            # First access creates the builder
+            async with sm.session(user_id="user1") as session:
+                async with session.run(CounterInput(action="increment")) as runner:
+                    result = await runner.result(to_type=CounterOutput)
+                    assert result.count == 11
+
+            # Second access should reuse the cached builder (state persists)
+            async with sm.session(user_id="user1") as session:
+                async with session.run(CounterInput(action="get")) as runner:
+                    result = await runner.result(to_type=CounterOutput)
+                    assert result.count == 11  # Same builder, same state
+
+        finally:
+            await sm.shutdown()
+
+
+async def test_session_manager_schemas_for_per_user_workflow():
+    """Test that SessionManager provides correct schemas for per-user workflows."""
+
+    config = Config(functions={
+        "counter": PerUserCounterConfig(),
+    },
+                    workflow=PerUserCounterWorkflowConfig(counter_name="counter"))
+
+    async with WorkflowBuilder.from_config(config) as builder:
+        sm = await SessionManager.create(config=config, shared_builder=builder)
+
+        try:
+            # Verify schemas are accessible (for OpenAPI docs)
+            assert sm.get_workflow_input_schema() == CounterInput
+            assert sm.get_workflow_single_output_schema() == CounterOutput
+            assert sm.is_workflow_per_user is True
+
+            # workflow property should raise for per-user
+            with pytest.raises(ValueError, match="Workflow is per-user"):
+                _ = sm.workflow
+
+        finally:
+            await sm.shutdown()
