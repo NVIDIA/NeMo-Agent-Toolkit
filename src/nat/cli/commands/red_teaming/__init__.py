@@ -13,28 +13,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Base workflow configuration for red teaming evaluation
-# This is a simple calculator workflow that will be red teamed.
-# Middleware and evaluator configurations are defined in red_teaming.yml.
-
-function_groups:
-  my_calculator:
-    _type: calculator
-
-functions:
-  current_datetime:
-    _type: current_datetime
-
-llms:
-  nim_llm:
-    _type: nim
-    model_name: meta/llama-3.1-70b-instruct
-    temperature: 0.0
-    max_tokens: 1024
-
-workflow:
-  _type: react_agent
-  tool_names: [my_calculator, current_datetime]
-  llm_name: nim_llm
-  verbose: true
-  parse_agent_response_max_retries: 3

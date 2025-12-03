@@ -71,9 +71,6 @@ class FunctionGroupBaseConfig(TypedBaseModel, BaseModelRegistryTag):
 class EmptyFunctionConfig(FunctionBaseConfig, name="EmptyFunctionConfig"):
     pass
 
-class EmptyFunctionGroupConfig(FunctionGroupBaseConfig, name="EmptyFunctionGroupConfig"):
-    pass
-
 
 FunctionConfigT = typing.TypeVar("FunctionConfigT", bound=FunctionBaseConfig)
 
