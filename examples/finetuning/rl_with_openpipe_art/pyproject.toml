@@ -9,7 +9,7 @@ git_describe_command = "git describe --long --first-parent"
 root = "../../.."
 
 [project]
-name = "rl_with_openpipe_art"
+name = "nat_rl_with_openpipe_art"
 dynamic = ["version"]
 dependencies = [
   "nvidia-nat[langchain]~=1.4",

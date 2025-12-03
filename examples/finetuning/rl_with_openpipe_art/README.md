@@ -45,11 +45,12 @@ The model learns to play against a **random opponent**, receiving rewards based 
 
    ```bash
    # Create a separate virtual environment for ART
-   python -m venv ~/.venvs/art-env
+   uv venv art-env python=3.12
    source ~/.venvs/art-env/bin/activate
-
+   export HF_TOKEN=<your_huggingface_token>
    # Install OpenPipe ART
-   pip install openpipe-art
+   uv pip install openpipe-art
+   uv pip install openpipe-art[backend]
 
    # Verify installation
    art --help
@@ -155,14 +156,10 @@ In your **ART virtual environment**, start vLLM to serve the base model:
 ```bash
 # Activate the ART environment
 source ~/.venvs/art-env/bin/activate
-
+export HF_TOKEN=<your_huggingface_token>
 # Start vLLM server
 python -m vllm.entrypoints.openai.api_server \
-    --model Qwen/Qwen2.5-3B-Instruct \
-    --host 0.0.0.0 \
-    --port 8000 \
-    --enable-prefix-caching \
-    --gpu-memory-utilization 0.9
+    --model Qwen/Qwen2.5-3B-Instruct
 ```
 
 Wait for the server to fully load the model. You should see:
@@ -209,6 +206,7 @@ In your **ART virtual environment**:
 ```bash
 # Activate the ART environment
 source ~/.venvs/art-env/bin/activate
+export HF_TOKEN=<your_huggingface_token>
 
 # Start the ART server
 uv run art --host 0.0.0.0 --port 7623

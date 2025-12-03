@@ -226,7 +226,7 @@ class ARTTrajectoryBuilder(TrajectoryBuilder):
                 for item in input_item.trajectory:
                     if item.function_ancestry.function_name in self.run_config.target_functions:
                         # If target model is specified, filter by model name
-                        if (self.run_config.target_model and item.event_type == IntermediateStepCategory.LLM
+                        if (self.run_config.target_model and item.event_category == IntermediateStepCategory.LLM
                                 and item.payload.name != self.run_config.target_model):
                             continue
                         filtered_trajectory.append(item)
