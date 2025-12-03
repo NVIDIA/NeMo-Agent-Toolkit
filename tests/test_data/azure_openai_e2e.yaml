@@ -13,16 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import warnings
+functions:
+  current_datetime:
+    _type: current_datetime
 
-import pytest
+llms:
+  agent_llm:
+    _type: azure_openai
+    azure_deployment: gpt-35-turbo
+    azure_endpoint: $AZURE_OPENAI_ENDPOINT
+    api_version: 2025-04-01-preview
 
-
-@pytest.fixture(scope="session", autouse=True)
-def ignore_warnings():
-    """
-    Ignore warning about google-cloud-storage deprecation in tests. Remove once issue #1188 is resolved.
-    """
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=FutureWarning, message=r"^Support for google-cloud-storage")
-        yield
+workflow:
+  _type: react_agent
+  llm_name: agent_llm
+  verbose: true
+  tool_names: [current_datetime]
