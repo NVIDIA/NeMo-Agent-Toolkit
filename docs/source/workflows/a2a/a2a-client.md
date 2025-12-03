@@ -55,7 +55,7 @@ workflow:
   llm_name: nim_llm
 ```
 
-The `a2a_client` function group connects to a remote A2A agent, discovers its skills through the [Agent Card](https://a2aproject.org/specification/agent-card), and provides a function interface for invoking those skills.
+The `a2a_client` function group connects to a remote A2A agent, discovers its skills through the [Agent Card](https://a2a-protocol.org/latest/topics/agent-discovery/), and provides a function interface for invoking those skills.
 
 ### Configuration Options
 
@@ -322,7 +322,7 @@ curl http://localhost:10000/.well-known/agent-card.json | jq
 
 ## Protocol Compliance
 
-The A2A client is built on the official [A2A Python SDK](https://github.com/a2aproject/a2a-sdk-python) to ensure protocol compliance. For detailed protocol specifications, refer to the [A2A Protocol Documentation](https://a2aproject.org/specification/).
+The A2A client is built on the official [A2A Python SDK](https://github.com/a2aproject/a2a-python) to ensure protocol compliance. For detailed protocol specifications, refer to the [A2A Protocol Documentation](https://a2a-protocol.org/latest/specification/).
 
 ## Related Documentation
 

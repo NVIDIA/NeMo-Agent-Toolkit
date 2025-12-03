@@ -55,7 +55,7 @@ flowchart LR
 
 ### Prerequisites
 
-Follow the instructions in the [Install Guide](../../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+Follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 
 ### Install Dependencies
 
