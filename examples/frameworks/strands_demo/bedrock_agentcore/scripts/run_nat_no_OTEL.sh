@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -13,7 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!/bin/bash
 
 set -e -o pipefail
 
@@ -24,6 +25,5 @@ fi
 
 export NVIDIA_API_KEY=$(aws secretsmanager get-secret-value --secret-id 'nvidia-api-credentials' \
                      --region $AWS_DEFAULT_REGION --query SecretString --output text | jq -r '.NVIDIA_API_KEY')
-
 
 exec nat serve --config_file=$NAT_CONFIG_FILE --host 0.0.0.0

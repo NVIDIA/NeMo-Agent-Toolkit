@@ -21,8 +21,7 @@ import boto3
 
 AWS_REGION = os.environ['AWS_DEFAULT_REGION']
 AWS_ACCOUNT_ID = os.environ['AWS_ACCOUNT_ID']
-RUNTIME_NAME = "strands-demo"
-#AGENT_RUNTIME_ID = os.environ['AGENT_RUNTIME_ARN']
+RUNTIME_NAME = "strands_demo"
 
 cclient = boto3.client('bedrock-agentcore-control', region_name=AWS_REGION)
 cresponse = cclient.list_agent_runtimes()
