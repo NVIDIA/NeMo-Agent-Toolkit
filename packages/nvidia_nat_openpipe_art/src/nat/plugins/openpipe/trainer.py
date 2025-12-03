@@ -102,7 +102,7 @@ class ARTTrainer(Trainer):
         Returns:
             TrainingJobRef: Reference to the submitted training job
         """
-        logger.info(f"Starting epoch {epoch} for run {run_id}")
+        logger.info(f"Starting epoch {epoch + 1} for run {run_id}")
 
         # Start the trajectory builder for this epoch
         epoch_meta = {

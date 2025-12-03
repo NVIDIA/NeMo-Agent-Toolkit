@@ -1,12 +1,13 @@
 llms:
-  nim_small_llm:
-    _type: nim
-    model_name: qwen/qwen2.5-7b-instruct
-    temperature: 0.5
+  small_llm:
+    _type: openai
+    model_name: Qwen/Qwen2.5-3B-Instruct
+    base_url: http://localhost:8000/v1
+    temperature: 0.1
 
 workflow:
   _type: rl_with_openpipe_art
-  player_model: nim_small_llm
+  player_model: small_llm
 
 eval:
   general:
@@ -17,5 +18,5 @@ eval:
       file_path: examples/finetuning/rl_with_openpipe_art/data/eval_data.json
 
   evaluators:
-    rl_accuracy:
-      _type: rl_accuracy
+    percent_games_won:
+      _type: percent_games_won

@@ -19,7 +19,7 @@ from nat.cli.register_workflow import register_evaluator
 from nat.data_models.evaluator import EvaluatorBaseConfig
 
 
-class AccuracyEvaluatorConfig(EvaluatorBaseConfig, name="rl_accuracy"):
+class AccuracyEvaluatorConfig(EvaluatorBaseConfig, name="percent_games_won"):
     """Configuration for custom accuracy evaluator for RL with OpenPipe ART."""
     pass
 
@@ -29,14 +29,14 @@ async def register_accuracy_evaluator(config: AccuracyEvaluatorConfig, builder: 
     """Register custom accuracy evaluator."""
     from .accuracy_evaluator import AccuracyEvaluator
 
-    evaluator = AccuracyEvaluator(builder.get_max_concurrency(), penalize_failure=False)
+    evaluator = AccuracyEvaluator(builder.get_max_concurrency())
 
     yield EvaluatorInfo(config=config,
                         evaluate_fn=evaluator.evaluate,
                         description="Custom accuracy evaluator for RL workflow outputs")
 
 
-class AccuracyEvaluatorConfig(EvaluatorBaseConfig, name="rl_accuracy_with_penalty"):
+class AccuracyEvaluatorConfig(EvaluatorBaseConfig, name="step_value_computation"):
     """Configuration for custom accuracy evaluator for RL with OpenPipe ART."""
     pass
 
@@ -46,7 +46,7 @@ async def register_accuracy_evaluator_penalty(config: AccuracyEvaluatorConfig, b
     """Register custom accuracy evaluator."""
     from .accuracy_evaluator import AccuracyEvaluator
 
-    evaluator = AccuracyEvaluator(builder.get_max_concurrency(), penalize_failure=True)
+    evaluator = AccuracyEvaluator(builder.get_max_concurrency(), use_intermediate_steps=True)
 
     yield EvaluatorInfo(config=config,
                         evaluate_fn=evaluator.evaluate,

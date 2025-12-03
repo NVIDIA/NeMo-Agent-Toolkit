@@ -71,23 +71,33 @@ def parse_to_openai_messages(steps: list[IntermediateStep]) -> list[dict]:
             continue
 
         # Add the parsed message
-        if isinstance(parsed_msg, list):
-            # Trajectories are additive, we want to avoid repeating previously seen messages
-            for msg in parsed_msg:
-                content_hash = hash(msg["role"] + ": " + msg["content"])
-                if content_hash not in message_content_hashes:
-                    messages.append(msg)
-                    message_content_hashes.add(content_hash)
-        else:
-            content_hash = hash(parsed_msg["role"] + ": " + parsed_msg["content"])
-            if content_hash not in message_content_hashes:
+        if message.event_type == IntermediateStepType.LLM_START:
+            # LLM_START messages may contain multiple messages (e.g., tools called by the LLM)
+            # We deduplicate previously seen messages if sharing message history to the model
+            if isinstance(parsed_msg, list):
+                for msg in parsed_msg:
+                    content_hash = hash(msg["role"] + ": " + msg["content"])
+                    if content_hash not in message_content_hashes:
+                        messages.append(msg)
+                        message_content_hashes.add(content_hash)
+            else:
+                content_hash = hash(parsed_msg["role"] + ": " + parsed_msg["content"])
                 messages.append(parsed_msg)
                 message_content_hashes.add(content_hash)
+        else:
+            assert not isinstance(parsed_msg, list), "TOOL_END or LLM_END should not produce multiple messages"
+            content_hash = hash(parsed_msg["role"] + ": " + parsed_msg["content"])
+            message_content_hashes.add(content_hash)
+            messages.append(parsed_msg)
 
         last_event_type = message.event_type
 
     # Validate and fix the message sequence
-    messages = _validate_message_sequence(messages)
+    try:
+        messages = _validate_message_sequence(messages)
+    except Exception as _:
+        logger.exception("Error validating message sequence.")
+        raise
 
     return messages
 

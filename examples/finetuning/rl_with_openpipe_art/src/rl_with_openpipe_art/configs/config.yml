@@ -2,18 +2,19 @@ llms:
   openpipe_llm:
     _type: openai
     # Model name should be the same as the trainer adapter config base_model
-    model_name: Qwen/Qwen2.5-7B-Instruct
+    model_name: Qwen/Qwen2.5-3B-Instruct
     base_url: http://localhost:8000/v1
     api_key: default
-    temperature: 0.6
+    temperature: 0.2
 
 workflow:
   _type: rl_with_openpipe_art
   player_model: openpipe_llm
+  max_parser_retries: 2
 
 eval:
   general:
-    max_concurrency: 8
+    max_concurrency: 16
     output_dir: .tmp/nat/examples/rl_openpipe/eval/finetune
     dataset:
       _type: json
@@ -21,7 +22,7 @@ eval:
 
   evaluators:
     rl_accuracy:
-      _type: rl_accuracy_with_penalty
+      _type: step_value_computation
 
 #################################
 #### Begin Finetuning Config ####
@@ -39,9 +40,9 @@ trainer_adapters:
       # General Backend Arguments
       ip: "0.0.0.0"
       port: 7623
-      name: "tic_tac_toe"
+      name: "tic_tac_toe_24_gen_1_temp_0_2_no_retry_smooth_step_weighted"
       project: "tic_tac_toe_project"
-      base_model: "Qwen/Qwen2.5-7B-Instruct"
+      base_model: "Qwen/Qwen2.5-3B-Instruct"
       api_key: "default"
       # Model Initialization Arguments
       init_args:
@@ -51,10 +52,8 @@ trainer_adapters:
         gpu_memory_utilization: 0.9
         tensor_parallel_size: 1
     # Training Arguments
-    # Adjust these arguments based on GPU size
     training:
-      learning_rate: 1e-5
-      beta: 0.1
+      learning_rate: 1e-6
 
 trainers:
   openpipe_trainer:
@@ -69,7 +68,7 @@ finetuning:
   trainer_adapter: openpipe_trainer_adapter
   reward_function:
     name: rl_accuracy
-  num_epochs: 50
+  num_epochs: 5
   output_dir: ./.tmp/nat/finetuning/tic_tac_toe
 
 

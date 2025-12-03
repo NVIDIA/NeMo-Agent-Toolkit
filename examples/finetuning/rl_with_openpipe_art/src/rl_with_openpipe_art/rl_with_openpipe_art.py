@@ -14,20 +14,26 @@
 # limitations under the License.
 
 import logging
+import uuid
 from dataclasses import dataclass
 
 import numpy as np
 from pydantic import Field
 
 from nat.builder.builder import Builder
+from nat.builder.context import Context
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
+from nat.builder.intermediate_step_manager import IntermediateStepManager
 from nat.cli.register_workflow import register_function
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStepType
 
 from .core import board_to_str
 from .core import check_winner
+from .core import evaluate_board_for_player
 from .core import is_draw
 from .core import new_board
 from .llm_agents import LLMTicTacToePlayer
@@ -55,11 +61,18 @@ class TicTacToeGame:
     board: np.ndarray
     history: list[MoveRecord]
 
-    def __init__(self, player_x: LLMTicTacToePlayer, player_o: LLMTicTacToePlayer):
+    def __init__(self, player_x: LLMTicTacToePlayer, player_o: LLMTicTacToePlayer, role: str):
         self.player_x = player_x
         self.player_o = player_o
         self.board = new_board()
+
+        if role == "X":
+            self.role = player_x.name
+        else:
+            self.role = player_o.name
+
         self.history = []
+        self.step_manager: IntermediateStepManager = Context.get().intermediate_step_manager
 
     def play(self) -> int:
         """Run the full game loop until win or draw."""
@@ -82,6 +95,34 @@ class TicTacToeGame:
 
                 # Apply move
                 self.board[row, col] = current_player.value
+
+                # Create an intermediate step for the value of the current agent move - better evaluations
+                if current_player.name == self.role:
+                    uuid_str = str(uuid.uuid4())[:8]
+
+                    start_payload = IntermediateStepPayload(event_type=IntermediateStepType.CUSTOM_START,
+                                                            name="agent_move",
+                                                            metadata={
+                                                                "agent_name": current_player.name,
+                                                                "step": turn_index,
+                                                                "symbol": current_player.symbol,
+                                                            },
+                                                            UUID=uuid_str)
+
+                    self.step_manager.push_intermediate_step(start_payload)
+
+                    end_payload = IntermediateStepPayload(
+                        event_type=IntermediateStepType.CUSTOM_END,
+                        name="agent_move",
+                        metadata={
+                            "agent_name": current_player.name,
+                            "step": turn_index,
+                            "symbol": current_player.symbol,
+                            "value": evaluate_board_for_player(self.board, current_player.value)
+                        },
+                        UUID=uuid_str)
+
+                    self.step_manager.push_intermediate_step(end_payload)
 
                 self.history.append(
                     MoveRecord(
@@ -195,7 +236,7 @@ async def rl_with_openpipe_art_function(config: RlWithOpenpipeArtFunctionConfig,
                 choose_random=True if config.opponent_model is None else False,
             )
 
-        game = TicTacToeGame(player_x=player_x, player_o=player_o)
+        game = TicTacToeGame(player_x=player_x, player_o=player_o, role=role)
         winner = game.play()
 
         if role == "X":
@@ -207,15 +248,14 @@ async def rl_with_openpipe_art_function(config: RlWithOpenpipeArtFunctionConfig,
                 return "Draw!"
             else:
                 return str(winner)
+        elif winner == -1:
+            return "Win!"
+        elif winner == 1:
+            return "Lose!"
+        elif winner == 0:
+            return "Draw!"
         else:
-            if winner == -1:
-                return "Win!"
-            elif winner == 1:
-                return "Lose!"
-            elif winner == 0:
-                return "Draw!"
-            else:
-                return str(winner)
+            return str(winner)
 
     # The callable is wrapped in a FunctionInfo object.
     # The description parameter is used to describe the function.

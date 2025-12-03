@@ -88,8 +88,6 @@ class LLMTicTacToePlayer:
         """
         board_str = board_to_str(board)
         moves: list[tuple[int, int]] = available_moves(board)
-        # Shuffle moves
-        moves = random.sample(moves, len(moves))
 
         if self.choose_random:
             fallback_move = random.choice(moves)
@@ -103,23 +101,28 @@ class LLMTicTacToePlayer:
         for attempt in range(0, self.max_retries + 1):
             # Provide all user and LLM messages + current board
             self.steps += 1
-            current_messages = self.messages + [HumanMessage(content=board_str)]
+
+            if attempt > 0:
+                self.messages.append(
+                    HumanMessage(content=f"You made an invalid move. You have "
+                                 f"{self.max_retries - attempt + 1} attempts left.\n"
+                                 f"Available moves are: "
+                                 f"{', '.join(f'({r+1},{c+1})' for r,c in moves)}\n. "
+                                 f"Current board:\n{board_str}"))
+            else:
+                self.messages.append(HumanMessage(content=board_str))
 
             raw_response = self.chain.invoke({
-                "messages": current_messages,
+                "messages": self.messages,
             })
 
-            if isinstance(raw_response, dict):
-                text = str(raw_response)
-            else:
-                text = str(raw_response)
+            text = str(raw_response)
 
             move = parse_move_any(text)
 
+            self.messages.append(AIMessage(content=text))
+
             if move is not None and move in moves:
-                # Update history with valid move
-                self.messages.append(HumanMessage(content=board_str))
-                self.messages.append(AIMessage(content=text))
                 return move[0], move[1], text
 
             logger.debug(f"[WARN] {self.name} produced invalid move on attempt {attempt}: "
