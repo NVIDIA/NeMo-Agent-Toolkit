@@ -17,7 +17,7 @@ limitations under the License.
 
 # Agent-to-Agent Protocol (A2A)
 
-NeMo Agent toolkit [Agent-to-Agent Protocol (A2A)](https://a2aproject.org/) integration includes:
+NVIDIA NeMo Agent toolkit [Agent-to-Agent Protocol (A2A)](https://a2aproject.org/) integration includes:
 * An [A2A client](./a2a-client.md) to connect to and interact with remote A2A agents.
 * An [A2A server](./a2a-server.md) to publish NAT workflows as A2A agents that can be discovered and invoked by other A2A clients.
 * [CLI utilities](./a2a-cli.md) for testing, debugging, and interacting with A2A agents.

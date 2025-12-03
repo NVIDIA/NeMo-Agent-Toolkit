@@ -27,8 +27,8 @@ from nat.builder.workflow_builder import WorkflowBuilder
 from nat.plugins.a2a.client.client_config import A2AClientConfig
 
 
-@pytest.fixture
-def sample_agent_card():
+@pytest.fixture(name="sample_agent_card")
+def fixture_sample_agent_card():
     """Sample agent card for testing.
 
     Returns a complete AgentCard with multiple skills for testing
@@ -72,8 +72,8 @@ def sample_agent_card():
     )
 
 
-@pytest.fixture
-def mock_a2a_client(sample_agent_card):  # noqa: F811
+@pytest.fixture(name="mock_a2a_client")
+def fixture_mock_a2a_client(sample_agent_card):
     """Mock A2A client that simulates agent responses.
 
     This fixture creates a mock A2A client with predefined responses
@@ -104,8 +104,8 @@ def mock_a2a_client(sample_agent_card):  # noqa: F811
     return mock_client
 
 
-@pytest.fixture
-async def a2a_function_group(mock_a2a_client):
+@pytest.fixture(name="a2a_function_group")
+async def fixture_a2a_function_group(mock_a2a_client):
     """A2A client function group with mocked agent.
 
     This fixture provides a fully configured A2A client function group

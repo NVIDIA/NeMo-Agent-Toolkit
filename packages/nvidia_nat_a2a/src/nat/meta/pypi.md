@@ -19,9 +19,9 @@ limitations under the License.
 
 
 # NVIDIA NeMo Agent Toolkit A2A Subpackage
-Subpackage for A2A Protocol integration in NeMo Agent Toolkit.
+Subpackage for A2A Protocol integration in NeMo Agent toolkit.
 
-This package provides A2A (Agent-to-Agent) Protocol functionality, allowing NeMo Agent Toolkit workflows to connect to remote A2A agents and invoke their skills as functions. This package includes both the client and server components of the A2A protocol.
+This package provides A2A (Agent-to-Agent) Protocol functionality, allowing NeMo Agent toolkit workflows to connect to remote A2A agents and invoke their skills as functions. This package includes both the client and server components of the A2A protocol.
 
 ## Features
 ### Client
