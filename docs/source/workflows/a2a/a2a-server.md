@@ -57,18 +57,11 @@ You can customize the server settings using command-line flags:
 nat a2a serve --config_file examples/getting_started/simple_calculator/configs/config.yml \
   --host 0.0.0.0 \
   --port 11000 \
-  --name "My Calculator Agent" \
+  --name "Calculator Agent" \
   --description "A calculator agent for mathematical operations"
 ```
 
-**Available options:**
-- `--host`: Host to bind the server to (default: `localhost`)
-- `--port`: Port to bind the server to (default: `10000`)
-- `--name`: Name of the A2A agent (default: workflow name)
-- `--description`: Description of the agent's capabilities
-- `--version`: Agent version (default: `1.0.0`)
-
-## Configuration File Approach
+### Configuration File Approach
 
 You can also configure the A2A server directly in your workflow configuration file using the `general.front_end` section:
 
@@ -89,38 +82,13 @@ Then start the server with:
 nat a2a serve --config_file examples/getting_started/simple_calculator/configs/config.yml
 ```
 
-## Configuration Options
+### Configuration Options
 
 You can get the complete list of configuration options and their schemas by running:
 ```bash
 nat info components -t front_end -q a2a
 ```
 
-## Agent Card Discovery
-
-When you start an A2A server, it automatically generates an Agent Card that describes the agent's capabilities. The Agent Card is available at:
-
-```
-http://<host>:<port>/.well-known/agent-card.json
-```
-
-### Viewing the Agent Card
-
-```bash
-# Using curl
-curl http://localhost:10000/.well-known/agent-card.json | jq
-
-# Using NAT CLI
-nat a2a client discover --url http://localhost:10000
-```
-
-### Agent Card Structure
-
-The Agent Card contains:
-- **Agent metadata**: Name, description, version, provider
-- **Skills**: Available functions/tools with descriptions and examples
-- **Capabilities**: Streaming support, push notifications
-- **Content modes**: Supported input/output formats
 
 ## How Workflows Map to A2A Agents
 
@@ -157,23 +125,44 @@ workflow:
 }
 ```
 
-## Verifying Server Health
+### Viewing the Agent Card
+When you start an A2A server, it automatically generates an Agent Card that describes the agent's capabilities. The Agent Card is available at:
 
-### Using the CLI
-
-```bash
-# Check if server is running
-nat a2a client discover --url http://localhost:10000
-
-# Call the agent
-nat a2a client call --url http://localhost:10000 --message "What is product of 42 and 67?"
+```
+http://<host>:<port>/.well-known/agent-card.json
 ```
 
-### Using HTTP Endpoints
+You can view the Agent Card using the URL above or the CLI.
+```bash
+export A2A_SERVER_URL=http://localhost:10000
+```
 
 ```bash
-# Check agent card
-curl http://localhost:10000/.well-known/agent-card.json | jq
+# Using curl
+curl $A2A_SERVER_URL/.well-known/agent-card.json | jq
+
+# Using NAT CLI
+nat a2a client discover --url $A2A_SERVER_URL
+```
+
+Sample output:
+![Agent Card](../../_static/a2a_agent_card.png)
+
+
+### Invoking the Agent with the CLI
+
+```bash
+# Call the agent
+nat a2a client call --url $A2A_SERVER_URL --message "What is product of 42 and 67?"
+```
+
+Sample output:
+```
+Query: What is product of 42 and 67?
+
+The product of 42 and 67 is 2814.0
+
+(0.85s)
 ```
 
 ## Examples
@@ -195,48 +184,9 @@ lsof -i :10000
 nat a2a serve --config_file config.yml --port 11000
 ```
 
-**Configuration Errors**:
-- Verify your workflow configuration is valid
-- Check that all required dependencies are installed
-- Review server logs for specific error messages
-
-### Agent Card Not Accessible
-
-**Connection Refused**:
-- Verify the server is running
-- Check firewall settings
-- Ensure you're using the correct host and port
-
-**Empty Skills List**:
-- Verify your workflow has functions/tools configured
-- Check that function groups are properly defined
-- Review workflow configuration for errors
-
-### Performance Issues
-
-**Slow Responses**:
-- Check LLM response times
-- Review function execution performance
-- Monitor server resource usage
-
 ## Security Considerations
 
-### Authentication Limitations
-
 **Coming Soon**: Server-side authentication is in progress and will be available shortly.
-
-### Local Development
-
-For local development, use `localhost` or `127.0.0.1` as the host (default). This limits access to your local machine only.
-
-### Production Deployment
-
-For production environments:
-- Run the A2A server behind a trusted network or authenticating reverse proxy with HTTPS
-- Do not expose the server directly to the public Internet without authentication
-- Do not bind to non-localhost addresses (such as `0.0.0.0` or public IP addresses) without proper security measures
-- Use a reverse proxy (NGINX, Traefik) with authentication and rate limiting
-- Implement network-level security (VPN, firewall rules)
 
 ## Protocol Compliance
 

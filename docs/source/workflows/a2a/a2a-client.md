@@ -284,22 +284,11 @@ nat a2a client call --url http://localhost:10000 --message "Your query here"
 curl http://localhost:10000/.well-known/agent-card.json | jq
 ```
 
-**Port Conflicts**:
-- Ensure the specified port matches the remote agent's port
-- Check for firewall or network restrictions
-- Verify the agent is listening on the expected interface
-
 ### Performance Issues
 
 **Timeouts**:
 - Increase `task_timeout` in configuration
 - Check network latency to remote agent
-- Verify the remote agent is responsive
-
-**Slow Responses**:
-- Consider enabling streaming for long-running tasks
-- Check remote agent performance
-- Review network connectivity
 
 ## Protocol Compliance
 

@@ -70,7 +70,7 @@ CLI Utilities <./a2a-cli.md>
 
 The A2A integration is built on the official [A2A Python SDK](https://github.com/a2aproject/a2a-python) to ensure protocol compliance. For detailed protocol specifications, refer to the [A2A Protocol Documentation](https://a2a-protocol.org/latest/specification/).
 
-## Comparison: A2A vs MCP
+## A2A vs MCP
 
 Both A2A and MCP enable integration with external capabilities, but they serve different purposes:
 
@@ -82,15 +82,4 @@ Both A2A and MCP enable integration with external capabilities, but they serve d
 | **Use Case** | Delegating to other agents | Accessing tools and context |
 | **Best For** | Multi-agent systems | Tool integration |
 
-**When to use A2A:**
-- Delegating complex tasks to specialized agents
-- Building multi-agent systems
-- Integrating with agent services
-
-**When to use MCP:**
-- Accessing specific tools and functions
-- Integrating with local or remote tool servers
-- Providing context to LLMs
-
-**Hybrid approach:**
-Use both protocols together for maximum flexibility (see the Math Assistant A2A example).
+You typically use A2A to delegate complex tasks to other agents and MCP to access tools and context. You can use both protocols together for maximum flexibility (see the [Math Assistant A2A example](../examples/A2A/math_assistant_a2a/README.md)).
