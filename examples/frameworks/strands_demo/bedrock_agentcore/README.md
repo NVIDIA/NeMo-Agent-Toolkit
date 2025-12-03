@@ -97,7 +97,7 @@ docker build \
 <!-- path-check-skip-end -->
 
 ### Run the Container Locally
-
+<!-- path-check-skip-begin -->
 ```bash
 docker run \
   -p 8080:8080 \
@@ -109,6 +109,7 @@ docker run \
   strands_demo \
   --platform linux/arm64
 ```
+<!-- path-check-skip-end -->
 
 ### Test Local Deployment
 
