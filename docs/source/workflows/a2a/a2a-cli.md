@@ -151,19 +151,9 @@ The sum of 2 and 2 is 4.
 (0.85s)
 ```
 
-## Comparison: CLI vs Workflow Integration
+## Purpose of the CLI
 
-### When to Use CLI Commands
-
-- **Quick testing**: Test A2A agents during development
-- **Debugging**: Troubleshoot connection and configuration issues
-- **Discovery**: Explore available agents and their capabilities
-
-### When to Use Workflow Integration
-
-- **Production use**: Integrate A2A agents into production workflows
-- **Complex orchestration**: Combine multiple agents and tools
-- **Multi-step reasoning**: Use LLM-based agents for complex tasks
+The A2A CLI utilities provide a quick and convenient way to interact with A2A agents from the command line. Use these commands to test agents during development, troubleshoot connection issues, explore agent capabilities, and verify that agents are working correctly before integrating them into production workflows.
 
 ## Related Documentation
 
