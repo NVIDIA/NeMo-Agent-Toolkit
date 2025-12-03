@@ -21,24 +21,30 @@ limitations under the License.
 
 NVIDIA NeMo Agent toolkit is a flexible, lightweight, and unifying library that allows you to easily connect existing enterprise agents to data sources and tools across any framework.
 
-## Installation
-
+## Install
 
 ::::{tab-set}
-:sync-group: category
-
-   :::{tab-item} pip
-   :selected:
-   :sync: pip
-   pip install nvidia-nat
-   :::
+:sync-group: install-tool
 
    :::{tab-item} uv
+   :selected:
    :sync: uv
+   ```bash
    uv pip install nvidia-nat
+   ```
+   :::
+
+
+   :::{tab-item} pip
+   :sync: pip
+   ```bash
+   pip install nvidia-nat
+   ```
    :::
 
 ::::
+
+For detailed installation instructions, including optional dependencies, please refer to the [Install Guide](./get-started/installing.md).
 
 ## Key Features
 
