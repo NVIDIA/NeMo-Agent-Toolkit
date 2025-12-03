@@ -67,8 +67,6 @@ async def discover_agent(url: str, timeout: int = 30):
     try:
         from datetime import timedelta
 
-        import httpx
-
         from nat.plugins.a2a.client.client_base import A2ABaseClient
 
         # Create client
