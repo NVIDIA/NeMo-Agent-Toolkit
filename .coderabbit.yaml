@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 # Docs: https://docs.coderabbit.ai/getting-started/configure-coderabbit/
 language: "en-US"
 reviews:
@@ -28,7 +27,7 @@ reviews:
     issue_assessment:
       mode: warning
   auto_review:
-    base_branches: ["develop", "release/.*"]
+    base_branches: ["develop", "release/.*", "epic/.*"]
     enabled: true
     drafts: false
     auto_incremental_review: true
