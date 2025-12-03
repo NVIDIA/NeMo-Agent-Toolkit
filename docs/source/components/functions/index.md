@@ -17,13 +17,13 @@ limitations under the License.
 
 # Functions
 
-This is not an exhaustive list of functions included with NeMo Agent toolkit. For a complete list of included functions, for a complete list of functions run the following command:
+This is not an exhaustive list of functions and function groups included with NeMo Agent toolkit. For a complete list of functions run the following command:
 
 ```bash
 nat info components -t function
 ```
 
-and for a complete list of function groups, run the following command:
+For a complete list of function groups, run the following command:
 
 ```bash
 nat info components -t function_group

@@ -26,6 +26,14 @@ In NeMo Agent toolkit, functions are a core abstraction that offer type-safe, as
 * Unified interfaces to improve composability
 * Support for both streaming and non-streaming (single) outputs
 
+## Included Functions
+For a complete list of functions run the following command:
+
+```bash
+nat info components -t function
+```
+
+
 ## Key Concepts
 
 ### Type Safety

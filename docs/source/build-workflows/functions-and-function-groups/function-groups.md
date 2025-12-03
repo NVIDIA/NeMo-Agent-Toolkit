@@ -28,6 +28,14 @@ By allowing related functions to share a single configuration object and runtime
 - **Scattered logic**: Related operations are defined separately, making code harder to maintain
 - **Inconsistent state**: Functions that should share context maintain separate state
 
+## Included Function Groups
+For a complete list of function groups, run the following command:
+
+```bash
+nat info components -t function_group
+```
+
+
 ### Example: Without Function Groups
 
 Consider three functions that work with an object store. Without function groups, each function needs its own configuration and creates its own connection:
