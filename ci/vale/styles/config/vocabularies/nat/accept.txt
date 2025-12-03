@@ -6,6 +6,7 @@
 [Aa]gno
 AIQ
 API(s?)
+ART
 Arize
 arXiv
 [Aa]sync
@@ -85,6 +86,7 @@ LangSmith
 [Ll]aunchable(s?)
 # libcudf isn't styled in the way that cuDF is https://docs.rapids.ai/api/libcudf/stable/
 libcudf
+[Lo]ogprob(s?)
 LLM(s?)
 # https://github.com/logpai/loghub/
 Loghub
@@ -109,6 +111,7 @@ OAuth
 URIs
 OTel
 onboarding
+OpenPipe
 [Oo]verfitting
 pandas
 [Pp]arallelization
