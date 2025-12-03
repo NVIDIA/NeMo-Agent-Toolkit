@@ -438,7 +438,9 @@ class SessionManager:
 
         try:
             session = Session(session_manager=self, user_id=user_id, workflow=workflow)
+
             yield session
+
         finally:
             if builder_info is not None:
                 async with builder_info.lock:
