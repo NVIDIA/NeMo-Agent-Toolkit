@@ -690,15 +690,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         endpoint: FastApiFrontEndConfig.EndpointBase,
                         session_manager: SessionManager):
 
-        if session_manager.is_workflow_per_user:
-            GenerateBodyType = session_manager.get_workflow_input_schema()
-            GenerateStreamResponseType = session_manager.get_workflow_streaming_output_schema()
-            GenerateSingleResponseType = session_manager.get_workflow_single_output_schema()
-        else:
-            workflow = session_manager.workflow
-            GenerateBodyType = workflow.input_schema
-            GenerateStreamResponseType = workflow.streaming_output_schema
-            GenerateSingleResponseType = workflow.single_output_schema
+        GenerateBodyType = session_manager.get_workflow_input_schema()
+        GenerateStreamResponseType = session_manager.get_workflow_streaming_output_schema()
+        GenerateSingleResponseType = session_manager.get_workflow_single_output_schema()
 
         # Skip async generation for custom routes (those with function_name)
         if self._dask_available and not hasattr(endpoint, 'function_name'):
