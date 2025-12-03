@@ -203,8 +203,7 @@ events = await agent.send_message(
 The A2A client discovers agent capabilities through the Agent Card and creates a function interface for interacting with them. The following diagram shows the complete discovery and mapping process:
 
 ```mermaid
-%%{init: {'theme':'base', 'themeVariables': {'fontSize':'14px'}}}%%
-graph TB
+flowchart TB
     subgraph A2A["A2A Agent Card Discovery"]
         AC[AgentCard<br/>name: Dice Agent<br/>url: http://localhost:9999<br/>version: 1.0.0<br/>description: Roll dice and get random numbers]
         S1[Skill: roll_dice<br/>description: Roll N-sided dice<br/>examples: Roll 2d6, Roll 1d20]
@@ -213,42 +212,24 @@ graph TB
         AC --> S2
     end
 
-    subgraph NAT["NAT Function Group"]
-        FG[Config<br/>dice_agent:<br/>&nbsp; _type: a2a_client<br/>&nbsp; url: http://localhost:9999]
+    AC ==>|discovers & maps to| FG[NAT Function Group<br/>dice_agent]
 
-        subgraph Level1["Level 1: High-Level, LLM-Friendly"]
-            F1[dice_agent.call<br/>query: str → str<br/>Description with skills optionally embedded]
-        end
-
-        subgraph Level2["Level 2: Standard Helpers"]
-            F2[dice_agent.get_skills]
-            F3[dice_agent.get_info]
-            F4[dice_agent.get_task]
-            F5[dice_agent.cancel_task]
-        end
-
-        subgraph Level3["Level 3: Low-Level Protocol"]
-            F6[dice_agent.send_message<br/>query, task_id, context_id<br/>→ raw events list]
-            F7[dice_agent.send_message_streaming<br/>query, task_id, context_id<br/>→ yields events]
-        end
-
-        FG --> Level1
-        Level1 --> Level2
-        Level2 --> Level3
+    subgraph "Three-Level API"
+        L1["Level 1: High-Level<br/>dice_agent.call(query)<br/>Natural language interface<br/>Skills optionally embedded in description"]
+        L2["Level 2: Helpers<br/>dice_agent.get_skills(), dice_agent.get_info()<br/>dice_agent.get_task(), dice_agent.cancel_task()<br/>Task management utilities"]
+        L3["Level 3: Low-Level<br/>dice_agent.send_message(), dice_agent.send_message_streaming()<br/>Raw A2A Protocol access with task/context IDs"]
     end
 
-    AC ==>|discovers & maps to| FG
-    S1 -.->|embedded in<br/>description| F1
-    S2 -.->|embedded in<br/>description| F1
-    S1 -.->|returned by| F2
-    S2 -.->|returned by| F2
+    FG --> L1
+    FG --> L2
+    FG --> L3
 
-    classDef leftAlign text-align:left
-    class AC,S1,S2,FG,F1,F6,F7 leftAlign
+    S1 -.->|embedded in description| L1
+    S2 -.->|embedded in description| L1
 
-    style Level1 fill:#e1f5e1,color:#000
-    style Level2 fill:#e1e5f5,color:#000
-    style Level3 fill:#f5e1e1,color:#000
+    style L1 fill:#e1f5e1,color:#000
+    style L2 fill:#e1e5f5,color:#000
+    style L3 fill:#f5e1e1,color:#000
 ```
 
 **Discovery Process:**
