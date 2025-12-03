@@ -8,6 +8,7 @@ llms:
 workflow:
   _type: rl_with_openpipe_art
   player_model: small_llm
+  max_parser_retries: 2
 
 eval:
   general:

@@ -5,7 +5,7 @@ llms:
     model_name: Qwen/Qwen2.5-3B-Instruct
     base_url: http://localhost:8000/v1
     api_key: default
-    temperature: 0.2
+    temperature: 0.4
 
 workflow:
   _type: rl_with_openpipe_art
@@ -40,7 +40,7 @@ trainer_adapters:
       # General Backend Arguments
       ip: "0.0.0.0"
       port: 7623
-      name: "tic_tac_toe_24_gen_1_temp_0_2_no_retry_smooth_step_weighted"
+      name: "tic_tac_toe_training_run"
       project: "tic_tac_toe_project"
       base_model: "Qwen/Qwen2.5-3B-Instruct"
       api_key: "default"
@@ -52,8 +52,10 @@ trainer_adapters:
         gpu_memory_utilization: 0.9
         tensor_parallel_size: 1
     # Training Arguments
+    # Adjust these arguments based on GPU size
     training:
-      learning_rate: 1e-6
+      learning_rate: 1e-5
+      beta: 0.1
 
 trainers:
   openpipe_trainer:
@@ -68,7 +70,7 @@ finetuning:
   trainer_adapter: openpipe_trainer_adapter
   reward_function:
     name: rl_accuracy
-  num_epochs: 5
+  num_epochs: 8
   output_dir: ./.tmp/nat/finetuning/tic_tac_toe
 
 
