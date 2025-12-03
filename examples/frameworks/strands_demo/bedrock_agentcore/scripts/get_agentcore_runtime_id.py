@@ -13,16 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import warnings
+import os
 
-import pytest
+import boto3
 
+# Configuration
 
-@pytest.fixture(scope="session", autouse=True)
-def ignore_warnings():
-    """
-    Ignore warning about google-cloud-storage deprecation in tests. Remove once issue #1188 is resolved.
-    """
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=FutureWarning, message=r"^Support for google-cloud-storage")
-        yield
+AWS_REGION = os.environ['AWS_DEFAULT_REGION']
+AWS_ACCOUNT_ID = os.environ['AWS_ACCOUNT_ID']
+RUNTIME_NAME = "strands-demo"
+#AGENT_RUNTIME_ID = os.environ['AGENT_RUNTIME_ARN']
+
+cclient = boto3.client('bedrock-agentcore-control', region_name=AWS_REGION)
+cresponse = cclient.list_agent_runtimes()
+
+for runtime in cresponse['agentRuntimes']:
+    if runtime['agentRuntimeName'] == RUNTIME_NAME:
+        runtime_id = runtime['agentRuntimeId']
+        print(f"Found runtime ID: {runtime_id}")
+        break
