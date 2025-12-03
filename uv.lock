@@ -1567,9 +1567,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "toolz" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/db/33/eacaa72731f7fc64868caaf2d35060d50049eff889bd217263e68f76472f/dask-2025.11.0.tar.gz", hash = "sha256:23d59e624b80ee05b7cc8df858682cca58262c4c3b197ccf61da0f6543c8f7c3", size = 10984781 }
+sdist = { url = "https://files.pythonhosted.org/packages/db/33/eacaa72731f7fc64868caaf2d35060d50049eff889bd217263e68f76472f/dask-2025.11.0.tar.gz", hash = "sha256:23d59e624b80ee05b7cc8df858682cca58262c4c3b197ccf61da0f6543c8f7c3", size = 10984781, upload-time = "2025-11-06T16:56:51.535Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1d/54/a46920229d12c3a6e9f0081d1bdaeffad23c1826353ace95714faee926e5/dask-2025.11.0-py3-none-any.whl", hash = "sha256:08c35a8146c05c93b34f83cf651009129c42ee71762da7ca452fb7308641c2b8", size = 1477108 },
+    { url = "https://files.pythonhosted.org/packages/1d/54/a46920229d12c3a6e9f0081d1bdaeffad23c1826353ace95714faee926e5/dask-2025.11.0-py3-none-any.whl", hash = "sha256:08c35a8146c05c93b34f83cf651009129c42ee71762da7ca452fb7308641c2b8", size = 1477108, upload-time = "2025-11-06T16:56:44.892Z" },
 ]
 
 [[package]]
@@ -1780,9 +1780,9 @@ dependencies = [
     { name = "urllib3" },
     { name = "zict" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c5/be/085a60b627c1f2b795827ce41d4cc1e11e74ffdadcb5235ee5fb620f7929/distributed-2025.11.0.tar.gz", hash = "sha256:372c2f0c2faa890fc42188349969ba468161a9b356df49c4ca7d9a8d551a7ace", size = 2119140 }
+sdist = { url = "https://files.pythonhosted.org/packages/c5/be/085a60b627c1f2b795827ce41d4cc1e11e74ffdadcb5235ee5fb620f7929/distributed-2025.11.0.tar.gz", hash = "sha256:372c2f0c2faa890fc42188349969ba468161a9b356df49c4ca7d9a8d551a7ace", size = 2119140, upload-time = "2025-11-06T16:57:32.391Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/46/ec/da78855318971c2be94d0283a41de6941a6b9f16146fb00babc74903ae01/distributed-2025.11.0-py3-none-any.whl", hash = "sha256:1794ff25b19ba347ccce563fb1dd5898c3bb30f500b15f8c20ad373f6281b30f", size = 1009248 },
+    { url = "https://files.pythonhosted.org/packages/46/ec/da78855318971c2be94d0283a41de6941a6b9f16146fb00babc74903ae01/distributed-2025.11.0-py3-none-any.whl", hash = "sha256:1794ff25b19ba347ccce563fb1dd5898c3bb30f500b15f8c20ad373f6281b30f", size = 1009248, upload-time = "2025-11-06T16:57:28.714Z" },
 ]
 
 [[package]]
@@ -5421,6 +5421,19 @@ requires-dist = [
 ]
 
 [[package]]
+name = "nat-rl-with-openpipe-art"
+source = { editable = "examples/finetuning/rl_with_openpipe_art" }
+dependencies = [
+    { name = "nvidia-nat", extra = ["langchain", "openpipe-art"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
+    { name = "nvidia-nat", extras = ["openpipe-art"], editable = "." },
+]
+
+[[package]]
 name = "nat-router-agent"
 source = { editable = "examples/control_flow/router_agent" }
 dependencies = [
@@ -5731,9 +5744,9 @@ wheels = [
 name = "nest-asyncio2"
 version = "1.7.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/2d/eb/ecf8bbf9d22a4e8f7be1628336fe0202da7660790053aa28abeb6c15eb14/nest_asyncio2-1.7.1.tar.gz", hash = "sha256:a1fe5bbbd20894dcceb1842322d74992c5834d5ab692af2c4f59a9a4fcf75fe8", size = 13797 }
+sdist = { url = "https://files.pythonhosted.org/packages/2d/eb/ecf8bbf9d22a4e8f7be1628336fe0202da7660790053aa28abeb6c15eb14/nest_asyncio2-1.7.1.tar.gz", hash = "sha256:a1fe5bbbd20894dcceb1842322d74992c5834d5ab692af2c4f59a9a4fcf75fe8", size = 13797, upload-time = "2025-11-20T20:46:07.085Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8c/48/c1f1ddcfd04bba60470235c2f83733ecff43ebe068dc7715aab60bc92ad8/nest_asyncio2-1.7.1-py3-none-any.whl", hash = "sha256:f83bc1744c3cfa7d47fd29431e5e168db6cb76eda1bb20108955c32f60d7eddf", size = 7504 },
+    { url = "https://files.pythonhosted.org/packages/8c/48/c1f1ddcfd04bba60470235c2f83733ecff43ebe068dc7715aab60bc92ad8/nest_asyncio2-1.7.1-py3-none-any.whl", hash = "sha256:f83bc1744c3cfa7d47fd29431e5e168db6cb76eda1bb20108955c32f60d7eddf", size = 7504, upload-time = "2025-11-20T20:46:05.704Z" },
 ]
 
 [[package]]
@@ -5979,6 +5992,7 @@ examples = [
     { name = "nat-plot-charts" },
     { name = "nat-por-to-jiratickets" },
     { name = "nat-profiler-agent" },
+    { name = "nat-rl-with-openpipe-art" },
     { name = "nat-router-agent" },
     { name = "nat-semantic-kernel-demo" },
     { name = "nat-sequential-executor" },
@@ -6135,6 +6149,7 @@ requires-dist = [
     { name = "nat-plot-charts", marker = "extra == 'examples'", editable = "examples/custom_functions/plot_charts" },
     { name = "nat-por-to-jiratickets", marker = "extra == 'examples'", editable = "examples/HITL/por_to_jiratickets" },
     { name = "nat-profiler-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/profiler_agent" },
+    { name = "nat-rl-with-openpipe-art", marker = "extra == 'examples'", editable = "examples/finetuning/rl_with_openpipe_art" },
     { name = "nat-router-agent", marker = "extra == 'examples'", editable = "examples/control_flow/router_agent" },
     { name = "nat-semantic-kernel-demo", marker = "extra == 'examples'", editable = "examples/frameworks/semantic_kernel_demo" },
     { name = "nat-sequential-executor", marker = "extra == 'examples'", editable = "examples/control_flow/sequential_executor" },
@@ -7091,9 +7106,9 @@ dependencies = [
     { name = "typer" },
     { name = "weave" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0d/cb/44ec1546b29b67299042812249659337e4e9357710ea228cb08b3fbe8b03/openpipe_art-0.5.1.tar.gz", hash = "sha256:dc9a51cc912d6e7f2e84f6787fefc852d136a9352cc881ffbc7b3821cd16422d", size = 7978357 }
+sdist = { url = "https://files.pythonhosted.org/packages/0d/cb/44ec1546b29b67299042812249659337e4e9357710ea228cb08b3fbe8b03/openpipe_art-0.5.1.tar.gz", hash = "sha256:dc9a51cc912d6e7f2e84f6787fefc852d136a9352cc881ffbc7b3821cd16422d", size = 7978357, upload-time = "2025-10-22T15:58:37.951Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ed/8c/dc0752a523b0635f1bec5eb84b2c669774681356d535441693d250d554db/openpipe_art-0.5.1-py3-none-any.whl", hash = "sha256:a3e04520166b13c25b1761f57f65faa732b35b6393d540cc22ffc13af6043337", size = 166998 },
+    { url = "https://files.pythonhosted.org/packages/ed/8c/dc0752a523b0635f1bec5eb84b2c669774681356d535441693d250d554db/openpipe_art-0.5.1-py3-none-any.whl", hash = "sha256:a3e04520166b13c25b1761f57f65faa732b35b6393d540cc22ffc13af6043337", size = 166998, upload-time = "2025-10-22T15:58:36.221Z" },
 ]
 
 [[package]]
@@ -10766,9 +10781,9 @@ dependencies = [
     { name = "click" },
     { name = "h11" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/cb/ce/f06b84e2697fef4688ca63bdb2fdf113ca0a3be33f94488f2cadb690b0cf/uvicorn-0.38.0.tar.gz", hash = "sha256:fd97093bdd120a2609fc0d3afe931d4d4ad688b6e75f0f929fde1bc36fe0e91d", size = 80605 }
+sdist = { url = "https://files.pythonhosted.org/packages/cb/ce/f06b84e2697fef4688ca63bdb2fdf113ca0a3be33f94488f2cadb690b0cf/uvicorn-0.38.0.tar.gz", hash = "sha256:fd97093bdd120a2609fc0d3afe931d4d4ad688b6e75f0f929fde1bc36fe0e91d", size = 80605, upload-time = "2025-10-18T13:46:44.63Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ee/d9/d88e73ca598f4f6ff671fb5fde8a32925c2e08a637303a1d12883c7305fa/uvicorn-0.38.0-py3-none-any.whl", hash = "sha256:48c0afd214ceb59340075b4a052ea1ee91c16fbc2a9b1469cca0e54566977b02", size = 68109 },
+    { url = "https://files.pythonhosted.org/packages/ee/d9/d88e73ca598f4f6ff671fb5fde8a32925c2e08a637303a1d12883c7305fa/uvicorn-0.38.0-py3-none-any.whl", hash = "sha256:48c0afd214ceb59340075b4a052ea1ee91c16fbc2a9b1469cca0e54566977b02", size = 68109, upload-time = "2025-10-18T13:46:42.958Z" },
 ]
 
 [package.optional-dependencies]
