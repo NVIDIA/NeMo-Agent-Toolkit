@@ -45,7 +45,7 @@ In this guide, you will learn how to:
 
     exporters:
       file:
-        path: ./.tmp/llm_spans.json
+        path: /otellogs/llm_spans.json
         format: json
 
     service:
@@ -60,16 +60,23 @@ In this guide, you will learn how to:
 
     ```bash
     mkdir otellogs
+    chmod 777 otellogs
     docker run -v $(pwd)/otelcollectorconfig.yaml:/etc/otelcol-contrib/config.yaml \
       -p 4318:4318 \
-      -v $(pwd)/otellogs:/tmp/ \
+      -v $(pwd)/otellogs:/otellogs/ \
       otel/opentelemetry-collector-contrib:0.128.0
     ```
 
 ### Install the OpenTelemetry Subpackage
 
+If you installed the NeMo Agent toolkit from source, you can install package extras with the following command:
 ```bash
 uv pip install -e '.[opentelemetry]'
+```
+
+If you have not installed the NeMo Agent toolkit from source, you can install package extras with the following command:
+```bash
+uv pip install nvidia-nat[opentelemetry]
 ```
 
 
@@ -92,8 +99,6 @@ general:
 ### Run the workflow
 
 ```bash
-# ensure you have installed nvidia-nat with telemetry, eg uv pip install -e '.[telemetry]'
-uv pip install -e <path/to/your/workflow/root>
 nat run --config_file <path/to/your/config/file.yml> --input "your notional input"
 ```
 
