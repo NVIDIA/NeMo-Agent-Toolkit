@@ -746,6 +746,9 @@ class FunctionGroup:
     def set_instance_name(self, instance_name: str):
         """
         Sets the instance name for the function group.
+        Also updates all child function instance names to match the new group instance name,
+        preserving each function's suffix. This ensures naming consistency and prevents
+        mismatched names when the workflow builder assigns an instance name to the function group.
 
         Parameters
         ----------

@@ -39,7 +39,7 @@ from .commands.info.info import info_command
 from .commands.mcp.mcp import mcp_command
 from .commands.object_store.object_store import object_store_command
 from .commands.optimize import optimizer_command
-from .commands.red_team import red_team_command
+from .commands.red_teaming.red_teaming import red_team_command
 from .commands.registry.registry import registry_command
 from .commands.sizing.sizing import sizing
 from .commands.start import start_command
