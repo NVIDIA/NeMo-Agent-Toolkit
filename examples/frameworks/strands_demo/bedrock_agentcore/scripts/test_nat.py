@@ -14,8 +14,9 @@
 # limitations under the License.
 
 import json
-import boto3
 import os
+
+import boto3
 
 # Configuration
 
@@ -35,7 +36,6 @@ for runtime in cresponse['agentRuntimes']:
 
 if runtime_id is None:
     raise RuntimeError(f"No AgentCore runtime named {RUNTIME_NAME!r} found in region {AWS_REGION}")
-
 
 client = boto3.client('bedrock-agentcore', region_name=AWS_REGION)
 payload = json.dumps({"inputs": "What is AWS AgentCore?"})

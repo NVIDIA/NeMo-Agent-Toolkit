@@ -14,8 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import boto3
 import os
+
+import boto3
 
 # Configuration
 AWS_REGION = os.environ['AWS_DEFAULT_REGION']
@@ -24,26 +25,19 @@ IAM_AGENTCORE_ROLE = f'arn:aws:iam::{os.environ.get("AWS_ACCOUNT_ID")}:role/Agen
 CONTAINER_IMAGE = 'strands-demo'
 AGENT_NAME = 'strands_demo'
 
-client = boto3.client(
-    'bedrock-agentcore-control',
-    region_name=AWS_REGION
-)
+client = boto3.client('bedrock-agentcore-control', region_name=AWS_REGION)
 
 response = client.create_agent_runtime(
     agentRuntimeName=AGENT_NAME,
     agentRuntimeArtifact={
         'containerConfiguration': {
-            'containerUri': (
-                f'{AWS_ACCOUNT_ID}.dkr.ecr.{AWS_REGION}'
-                f'.amazonaws.com/{CONTAINER_IMAGE}:latest'
-            )
+            'containerUri': (f'{AWS_ACCOUNT_ID}.dkr.ecr.{AWS_REGION}'
+                             f'.amazonaws.com/{CONTAINER_IMAGE}:latest')
         }
     },
     networkConfiguration={"networkMode": "PUBLIC"},
     roleArn=IAM_AGENTCORE_ROLE,
-    environmentVariables={
-        'AWS_DEFAULT_REGION': AWS_REGION
-    },
+    environmentVariables={'AWS_DEFAULT_REGION': AWS_REGION},
 )
 
 print("Agent Runtime created successfully!")
