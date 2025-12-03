@@ -64,12 +64,7 @@ Using asynchronous operations allows for better performance and scalability when
 ## Writing Functions
 For information about writing functions, refer to the [Writing Custom Functions](../../extend/functions.md) document.
 
-## Related Topics
+## Function Groups
 
-```{toctree}
-:titlesonly:
+Function groups are collections of related functions that can share configuration, context, and resources, for more information, refer to the [Function Groups](./function-groups.md) document.
 
-./function-groups.md
-./code-execution.md
-./text-to-sql.md
-```

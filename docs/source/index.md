@@ -125,7 +125,7 @@ Sizing Calculator <./improve-workflows/sizing-calc.md>
 :caption: Components
 
 Agents <./components/agents/index.md>
-Functions <./components/functions/index.md>
+Functions <./components/functions-and-function-groups/index.md>
 ./components/embedders.md
 ./components/retrievers.md
 ./components/llms/index.md
