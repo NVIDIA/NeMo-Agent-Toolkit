@@ -103,7 +103,6 @@ Workflow Configuration <./build-workflows/workflow-configuration.md>
 MCP <./build-workflows/mcp.md>
 Interactive Workflows <./build-workflows/interactive-workflows.md>
 Middleware <./build-workflows/middleware.md>
-/build-workflows/tuning/index.md
 ```
 
 ```{toctree}
