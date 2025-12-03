@@ -15,7 +15,6 @@
 """Test A2A client functional behavior."""
 
 from datetime import timedelta
-from unittest.mock import AsyncMock
 from unittest.mock import patch
 
 from nat.builder.workflow_builder import WorkflowBuilder
@@ -44,12 +43,11 @@ class TestA2AClientFunctionality:
         # Verify skills are returned with correct structure
         assert "skills" in result
         assert "agent" in result
-        assert isinstance(result["agent"], str)
-        assert len(result["agent"]) > 0
+        assert result["agent"] == "Test Agent"
 
         # Verify skills are present
         skills = result["skills"]
-        assert len(skills) >= 3, "Should have at least 3 skills"
+        assert len(skills) == 3, "Should have exactly 3 skills from sample agent card"
 
         skill_ids = [s["id"] for s in skills]
         assert "calculator.add" in skill_ids
@@ -58,11 +56,10 @@ class TestA2AClientFunctionality:
 
         # Verify skill details are present and well-formed
         add_skill = next(s for s in skills if s["id"] == "calculator.add")
-        assert "name" in add_skill
-        assert len(add_skill["name"]) > 0
-        assert "description" in add_skill
-        assert len(add_skill["description"]) > 0
+        assert add_skill["name"] == "Add"
+        assert add_skill["description"] == "Add two or more numbers together"
         assert "examples" in add_skill
+        assert len(add_skill["examples"]) > 0
 
     async def test_client_invokes_high_level_call(self, a2a_function_group):
         """Test calling agent with natural language query.
@@ -70,7 +67,7 @@ class TestA2AClientFunctionality:
         Verifies that the high-level call() function exists and has
         the correct signature for natural language queries.
         """
-        group, mock_client = a2a_function_group
+        group, _ = a2a_function_group
         functions = await group.get_accessible_functions()
 
         # Verify call function exists
@@ -84,9 +81,9 @@ class TestA2AClientFunctionality:
         assert "query" in schema_props
         assert schema_props["query"]["type"] == "string"
 
-        # Verify function has description
+        # Verify function has description containing agent info
         assert call_fn.description is not None
-        assert len(call_fn.description) > 0
+        assert "Test agent for unit tests" in call_fn.description
 
     async def test_skills_embedded_when_enabled(self, sample_agent_card):
         """Test skills are embedded in function description when enabled.
@@ -94,10 +91,10 @@ class TestA2AClientFunctionality:
         Verifies that when include_skills_in_description is True,
         the skill details are included in the high-level function description.
         """
-        with patch('nat.plugins.a2a.client.client_base.A2ABaseClient') as mock_class:
-            mock_instance = AsyncMock()
-            mock_instance.agent_card = sample_agent_card
-            mock_class.return_value.__aenter__.return_value = mock_instance
+        with patch('nat.plugins.a2a.client.client_impl.A2ABaseClient') as mock_class:
+            # Configure the mock: return_value is what gets assigned to self._client
+            mock_class.return_value.agent_card = sample_agent_card
+            mock_class.return_value.__aenter__.return_value = mock_class.return_value
 
             config = A2AClientConfig(
                 url="http://localhost:10000",
@@ -124,10 +121,10 @@ class TestA2AClientFunctionality:
         Verifies that when include_skills_in_description is False,
         the skill details are NOT included in the function description.
         """
-        with patch('nat.plugins.a2a.client.client_base.A2ABaseClient') as mock_class:
-            mock_instance = AsyncMock()
-            mock_instance.agent_card = sample_agent_card
-            mock_class.return_value.__aenter__.return_value = mock_instance
+        with patch('nat.plugins.a2a.client.client_impl.A2ABaseClient') as mock_class:
+            # Configure the mock: return_value is what gets assigned to self._client
+            mock_class.return_value.agent_card = sample_agent_card
+            mock_class.return_value.__aenter__.return_value = mock_class.return_value
 
             config = A2AClientConfig(
                 url="http://localhost:10000",
@@ -164,28 +161,18 @@ class TestA2AClientFunctionality:
         result = await get_info_fn.acall_invoke()
 
         # Verify metadata structure and content
-        assert "name" in result
-        assert isinstance(result["name"], str)
-        assert len(result["name"]) > 0
-
-        assert "version" in result
-        assert isinstance(result["version"], str)
-
-        assert "description" in result
-        assert isinstance(result["description"], str)
-
-        assert "url" in result
-        assert isinstance(result["url"], str)
-        assert result["url"].startswith("http")
+        assert result["name"] == "Test Agent"
+        assert result["version"] == "1.0.0"
+        assert result["description"] == "Test agent for unit tests"
+        assert result["url"] == "http://localhost:10000/"
 
         # Verify capabilities
         assert "capabilities" in result
         assert isinstance(result["capabilities"], dict)
-        assert "streaming" in result["capabilities"]
+        assert result["capabilities"]["streaming"] is True
 
         # Verify skill count
-        assert "num_skills" in result
-        assert result["num_skills"] >= 3
+        assert result["num_skills"] == 3
 
     async def test_client_connection_configuration(self, sample_agent_card):
         """Test client connection configuration is properly set.
@@ -194,9 +181,9 @@ class TestA2AClientFunctionality:
         connection parameters from the configuration.
         """
         with patch('nat.plugins.a2a.client.client_impl.A2ABaseClient') as mock_class:
-            mock_instance = AsyncMock()
-            mock_instance.agent_card = sample_agent_card
-            mock_class.return_value.__aenter__.return_value = mock_instance
+            # Configure the mock: return_value is what gets assigned to self._client
+            mock_class.return_value.agent_card = sample_agent_card
+            mock_class.return_value.__aenter__.return_value = mock_class.return_value
 
             config = A2AClientConfig(url="http://localhost:10000", task_timeout=60.0)
 
@@ -214,7 +201,8 @@ class TestA2AClientFunctionality:
             # Timeout is converted to timedelta
             from datetime import timedelta
             assert call_kwargs['task_timeout'] == timedelta(seconds=60)
-            assert call_kwargs['agent_card_path'] is None
+            # Default A2A agent card path
+            assert call_kwargs['agent_card_path'] == '/.well-known/agent-card.json'
 
     async def test_client_timeout_configuration(self, sample_agent_card):
         """Test client timeout can be configured.
@@ -222,10 +210,10 @@ class TestA2AClientFunctionality:
         Verifies that the task_timeout configuration is properly
         set and accessible.
         """
-        with patch('nat.plugins.a2a.client.client_base.A2ABaseClient') as mock_class:
-            mock_instance = AsyncMock()
-            mock_instance.agent_card = sample_agent_card
-            mock_class.return_value.__aenter__.return_value = mock_instance
+        with patch('nat.plugins.a2a.client.client_impl.A2ABaseClient') as mock_class:
+            # Configure the mock: return_value is what gets assigned to self._client
+            mock_class.return_value.agent_card = sample_agent_card
+            mock_class.return_value.__aenter__.return_value = mock_class.return_value
 
             config = A2AClientConfig(
                 url="http://localhost:10000",
@@ -241,7 +229,7 @@ class TestA2AClientFunctionality:
                 # Verify group was created successfully
                 assert group is not None
                 functions = await group.get_accessible_functions()
-                assert len(functions) > 0
+                assert len(functions) == 7
 
     async def test_multiple_functions_accessible(self, a2a_function_group):
         """Test multiple functions are accessible from function group.
@@ -256,7 +244,7 @@ class TestA2AClientFunctionality:
         assert len(functions) == 7, "Should have 7 functions (1 high-level + 4 helpers + 2 low-level)"
 
         # Verify each function is properly structured
-        for func_name, func in functions.items():
+        for func in functions.values():
             assert func is not None
             assert hasattr(func, 'acall_invoke')
             assert func.description is not None

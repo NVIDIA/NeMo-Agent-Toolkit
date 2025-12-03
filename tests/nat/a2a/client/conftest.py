@@ -86,7 +86,8 @@ def fixture_mock_a2a_client(sample_agent_card):
         AsyncMock configured with agent card and response methods
     """
     mock_client = AsyncMock()
-    mock_client.agent_card = sample_agent_card
+    # Configure the mock to properly return the agent_card as a property
+    type(mock_client).agent_card = sample_agent_card
 
     # Create a proper async function for send_message
     async def mock_send_message(query, task_id=None, context_id=None):
@@ -105,7 +106,7 @@ def fixture_mock_a2a_client(sample_agent_card):
 
 
 @pytest.fixture(name="a2a_function_group")
-async def fixture_a2a_function_group(mock_a2a_client):
+async def fixture_a2a_function_group(mock_a2a_client, sample_agent_card):
     """A2A client function group with mocked agent.
 
     This fixture provides a fully configured A2A client function group
@@ -113,13 +114,16 @@ async def fixture_a2a_function_group(mock_a2a_client):
 
     Args:
         mock_a2a_client: Mock A2A client fixture
+        sample_agent_card: Sample agent card fixture
 
     Yields:
         Tuple of (function_group, mock_client) for testing
     """
-    with patch('nat.plugins.a2a.client.client_base.A2ABaseClient') as mock_class:
-        # Configure the mock to return our mock client
-        mock_class.return_value.__aenter__.return_value = mock_a2a_client
+    with patch('nat.plugins.a2a.client.client_impl.A2ABaseClient') as mock_class:
+        # Configure the mock: the return_value is what gets assigned to self._client
+        # Set agent_card on the mock instance that will be used
+        mock_class.return_value.agent_card = sample_agent_card
+        mock_class.return_value.__aenter__.return_value = mock_class.return_value
 
         # Create A2A client configuration
         config = A2AClientConfig(
@@ -130,4 +134,4 @@ async def fixture_a2a_function_group(mock_a2a_client):
         # Create workflow builder and add function group
         async with WorkflowBuilder() as builder:
             group = await builder.add_function_group("test_agent", config)
-            yield group, mock_a2a_client
+            yield group, mock_class.return_value
