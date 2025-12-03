@@ -18,8 +18,6 @@ from datetime import timedelta
 from unittest.mock import AsyncMock
 from unittest.mock import patch
 
-import pytest
-
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.plugins.a2a.client.client_config import A2AClientConfig
 

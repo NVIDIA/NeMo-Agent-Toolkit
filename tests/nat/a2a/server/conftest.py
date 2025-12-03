@@ -17,8 +17,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from nat.config import Config
-from nat.config import GeneralConfig
+from nat.data_models.config import Config
+from nat.data_models.config import GeneralConfig
 from nat.plugins.a2a.server.front_end_config import A2AFrontEndConfig
 
 

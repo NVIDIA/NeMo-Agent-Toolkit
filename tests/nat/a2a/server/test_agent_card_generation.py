@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 
 from nat.plugins.a2a.server.front_end_plugin_worker import A2AFrontEndPluginWorker
 
