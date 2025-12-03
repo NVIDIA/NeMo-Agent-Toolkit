@@ -559,4 +559,4 @@ finetuning:
 
 - [Finetuning Concepts](concepts.md) - Core concepts and architecture
 - [OpenPipe ART Integration](rl_with_openpipe.md) - Using the ART backend
-- [Custom Evaluators](../extend/custom-evaluator.md) - Creating reward functions
+- [Custom Evaluators](../../extend/custom-evaluator.md) - Creating reward functions

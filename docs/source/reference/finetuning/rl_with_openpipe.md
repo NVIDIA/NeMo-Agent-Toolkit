@@ -596,4 +596,4 @@ See the example's README for detailed instructions.
 - [Finetuning Concepts](concepts.md) - Core concepts and RL fundamentals
 - [Extending the Finetuning Harness](extending.md) - Creating custom components
 - [OpenPipe ART Documentation](https://art.openpipe.ai/) - Official ART documentation
-- [Custom Evaluators](../extend/custom-evaluator.md) - Creating reward functions
+- [Custom Evaluators](../../extend/custom-evaluator.md) - Creating reward functions
