@@ -14,7 +14,7 @@ Before you begin, ensure you have the following installed:
 
 ## Step 1: Setup NeMo Agent Toolkit Environment
 
-Follow the official NeMo Agent Toolkit installation guide:
+Follow the official NeMo Agent toolkit installation guide:
 
 ```text
 https://docs.nvidia.com/nemo/agent-toolkit/1.2/quick-start/installing.html
@@ -869,7 +869,7 @@ Throughout this guide, replace the following placeholders with your actual value
 
 ## Additional Resources
 
-- [NeMo Agent Toolkit Documentation](https://docs.nvidia.com/nemo/agent-toolkit/1.2/)
+- [NVIDIA NeMo Agent Toolkit Documentation](https://docs.nvidia.com/nemo/agent-toolkit/1.2/)
 - [AWS Bedrock AgentCore Documentation](https://docs.aws.amazon.com/bedrock/)
 - [OpenTelemetry Python Documentation](https://opentelemetry.io/docs/languages/python/)
 - [AWS CloudWatch Logs Documentation](https://docs.aws.amazon.com/cloudwatch/)
