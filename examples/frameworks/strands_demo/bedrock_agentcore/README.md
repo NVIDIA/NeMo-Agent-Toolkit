@@ -745,9 +745,9 @@ The `Dockerfile` is organized into the following sections:
 <details>
 <summary>📄 Click to view complete `Dockerfile`</summary>
 
+<!-- path-check-skip-begin -->
 ```dockerfile
 
-<!-- path-check-skip-next-line -->
 ARG BASE_IMAGE_URL=nvcr.io/nvidia/base/ubuntu
 ARG BASE_IMAGE_TAG=22.04_20240212
 ARG PYTHON_VERSION=3.13
@@ -772,7 +772,6 @@ RUN apt-get update && \
 # Install AWS CLI v2
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip" && \
     unzip awscliv2.zip && \
-<!-- path-check-skip-next-line -->
     ./aws/install && \
     rm -rf awscliv2.zip aws
 
@@ -809,7 +808,6 @@ ENV OTEL_PYTHON_DISTRO=aws_distro
 #OTEL_PYTHON_CONFIGURATOR=aws_configurator
 
 # Export Protocol
-<!-- path-check-skip-next-line -->
 ENV OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 ENV OTEL_TRACES_EXPORTER=otlp
 
@@ -818,7 +816,6 @@ ENV AGENT_OBSERVABILITY_ENABLED=true
 
 # Service Identification attributed (gets added to all span logs)
 # Example:
-<!-- path-check-skip-next-line -->
 # OTEL_RESOURCE_ATTRIBUTES=service.version=1.0,service.name=mcp-calculator,aws.log.group.names=mcp/mcp-calculator-logs
 ENV OTEL_RESOURCE_ATTRIBUTES=service.name=nat_test_agent,aws.log.group.names=/aws/bedrock-agentcore/runtimes/<AGENTCORE_RUNTIME_ID>
 
@@ -846,7 +843,7 @@ ENV NAT_CONFIG_FILE=/workspace/examples/frameworks/strands_demo/configs/agentcor
 ENTRYPOINT ["sh", "-c", "exec /workspace/examples/frameworks/strands_demo/bedrock_agentcore/scripts/run_nat_no_OTEL.sh"]
 
 ```
-
+<!-- path-check-skip-end -->
 ---
 
 ## Placeholder Reference
