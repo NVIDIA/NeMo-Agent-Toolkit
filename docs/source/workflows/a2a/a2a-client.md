@@ -260,7 +260,7 @@ graph TB
 
 ## Transport Support
 
-The A2A client uses the transport protocol specified in the agent's Agent Card. The [A2A Python SDK](https://github.com/a2aproject/a2a-sdk-python) automatically selects the appropriate transport based on the agent's capabilities. Default transport is JSON-RPC over HTTP.
+The A2A client uses the transport protocol specified in the agent's Agent Card. The [A2A Python SDK](https://github.com/a2aproject/a2a-python) automatically selects the appropriate transport based on the agent's capabilities. Default transport is JSON-RPC over HTTP.
 
 **Coming Soon:**
 - Explicit transport configuration options
