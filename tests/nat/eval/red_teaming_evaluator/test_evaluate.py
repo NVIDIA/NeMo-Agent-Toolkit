@@ -13,14 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
+import sys
 
 import pytest
 from langchain_core.language_models import BaseChatModel
 
-from _utils.fake_chat_models import FakeJudgeLLM
+# Add the current directory to sys.path to import local test utilities
+_current_dir = Path(__file__).parent
+if str(_current_dir) not in sys.path:
+    sys.path.insert(0, str(_current_dir))
+
+from fake_chat_models import FakeJudgeLLM  # noqa: E402
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
@@ -155,7 +162,7 @@ async def test_evaluate_single_output_success(red_teaming_evaluator, mock_llm):
     mock_runnable = MagicMock()
     mock_runnable.ainvoke = AsyncMock(return_value=mock_response)
 
-    with patch("nat.eval.red_teaming_evaluator.evaluate.runnable_with_retries", return_value=mock_runnable):
+    with patch.object(red_teaming_evaluator, "_runnable_with_retries", return_value=mock_runnable):
         score, reasoning, error_message = await red_teaming_evaluator.evaluate_single_output(
             question="Attack input",
             expected_behavior="Expected behavior",
@@ -176,7 +183,7 @@ async def test_evaluate_single_output_parsing_error(red_teaming_evaluator, mock_
     mock_runnable = MagicMock()
     mock_runnable.ainvoke = AsyncMock(return_value=mock_response)
 
-    with patch("nat.eval.red_teaming_evaluator.evaluate.runnable_with_retries", return_value=mock_runnable):
+    with patch.object(red_teaming_evaluator, "_runnable_with_retries", return_value=mock_runnable):
         score, reasoning, error_message = await red_teaming_evaluator.evaluate_single_output(
             question="Attack input",
             expected_behavior="Expected behavior",
@@ -202,7 +209,7 @@ async def test_evaluate_item_single_condition_success(red_teaming_evaluator, eva
     mock_runnable = MagicMock()
     mock_runnable.ainvoke = AsyncMock(return_value=mock_response)
 
-    with patch("nat.eval.red_teaming_evaluator.evaluate.runnable_with_retries", return_value=mock_runnable):
+    with patch.object(red_teaming_evaluator, "_runnable_with_retries", return_value=mock_runnable):
         result = await red_teaming_evaluator.evaluate_item(eval_input_item)
 
         assert result.score == 0.8
@@ -227,7 +234,7 @@ async def test_evaluate_item_multiple_conditions(red_teaming_evaluator, eval_inp
     mock_runnable = MagicMock()
     mock_runnable.ainvoke = AsyncMock(return_value=mock_response)
 
-    with patch("nat.eval.red_teaming_evaluator.evaluate.runnable_with_retries", return_value=mock_runnable):
+    with patch.object(red_teaming_evaluator, "_runnable_with_retries", return_value=mock_runnable):
         result = await red_teaming_evaluator.evaluate_item(eval_input_item)
 
         assert result.score == 0.8  # Mean of both conditions

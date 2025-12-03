@@ -13,110 +13,69 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Utility functions for red team evaluation workflows."""
+"""Utility functions for red team evaluation CLI."""
+
+from __future__ import annotations
 
 import json
 import logging
 from pathlib import Path
 
-from nat.data_models.config import Config
-from nat.eval.red_teaming_evaluator import RedTeamingScenarioBase
-from nat.middleware.red_teaming_middleware import RedTeamingMiddlewareConfig
+import yaml
+
+from nat.eval.runners.red_teaming_runner import RedTeamingRunnerConfig
 
 logger = logging.getLogger(__name__)
 
 
-def load_red_team_scenarios(scenarios_file: Path) -> list[RedTeamingScenarioBase]:
-    """
-    Load red team scenario entries from JSON file.
+def load_red_teaming_config(config_file: Path) -> RedTeamingRunnerConfig:
+    """Load a RedTeamingRunnerConfig from a YAML or JSON file.
 
     Args:
-        scenarios_file: Path to JSON file containing scenario entries
+        config_file: Path to the configuration file (YAML or JSON)
 
     Returns:
-        List of red team scenario entries
+        Parsed RedTeamingRunnerConfig object
 
     Raises:
-        ValueError: If JSON file is invalid or contains validation errors
+        ValueError: If the file format is invalid or parsing fails
+        FileNotFoundError: If the file doesn't exist
     """
-    logger.info(f"Loading red team scenarios from: {scenarios_file}")
+    # Ensure plugins are discovered and registered before parsing the config.
+    # This triggers rebuild_annotations() which allows Pydantic to resolve
+    # discriminated unions (e.g., _type: nim -> NIMConfig).
+    from nat.runtime.loader import PluginTypes
+    from nat.runtime.loader import discover_and_register_plugins
+    discover_and_register_plugins(PluginTypes.CONFIG_OBJECT)
 
-    with open(scenarios_file, encoding='utf-8') as f:
-        scenarios_data = json.load(f)
+    logger.info("Loading red teaming config from: %s", config_file)
 
-    if not isinstance(scenarios_data, list):
-        raise ValueError(
-            f"Red team scenarios file must contain a JSON array, got {type(scenarios_data)}"
-        )
+    if not config_file.exists():
+        raise FileNotFoundError(f"Red teaming config file not found: {config_file}")
 
-    # Parse into RedTeamingScenarioBase objects
-    scenarios = []
-    for idx, entry_data in enumerate(scenarios_data):
-        try:
-            scenario = RedTeamingScenarioBase(**entry_data)
-            scenarios.append(scenario)
-        except Exception as e:
+    with open(config_file, encoding='utf-8') as f:
+        if config_file.suffix in ('.yml', '.yaml'):
+            config_data = yaml.safe_load(f)
+        elif config_file.suffix == '.json':
+            config_data = json.load(f)
+        else:
             raise ValueError(
-                f"Invalid scenario entry at index {idx}: {e}"
-            ) from e
+                f"Unsupported file format: {config_file.suffix}. "
+                "Use .yml, .yaml, or .json"
+            )
 
-    # Validate: warn if multiple null middleware
-    null_middleware_scenarios = [s for s in scenarios if s.middleware_name is None]
-    if len(null_middleware_scenarios) > 1:
-        logger.warning(
-            f"Found {len(null_middleware_scenarios)} scenarios with null middleware_name "
-            f"(baseline scenarios): {[s.scenario_id for s in null_middleware_scenarios]}. "
-            "It's recommended to have only one baseline scenario."
-        )
-
-    logger.info(f"Loaded {len(scenarios)} scenarios successfully")
-    return scenarios
-
-
-def validate_base_config(config: Config) -> None:
-    """
-    Validate that the base configuration meets requirements for red teaming evaluation.
-
-    Args:
-        config: The workflow configuration to validate
-
-    Raises:
-        ValueError: If the config doesn't contain at least one middleware or
-            doesn't contain a red_teaming_evaluator
-    """
-    # Validate middleware requirement
-    if not config.middleware or len(config.middleware) == 0:
+    if not isinstance(config_data, dict):
         raise ValueError(
-            "base config must contain at least one middleware. "
-            "Red teaming evaluation requires middleware to be configured."
-        )
-    has_red_teaming_middleware = False
-    for _, middleware_config in config.middleware.items():
-        if isinstance(middleware_config, RedTeamingMiddlewareConfig):
-            has_red_teaming_middleware = True
-            break
-    if not has_red_teaming_middleware:
-        raise ValueError(
-            f"base config must contain at least one middleware of type "
-            f"RedTeamingMiddleware. Available middleware: {list(config.middleware.keys())}"
+            f"Red teaming config file must contain a dictionary, got {type(config_data)}"
         )
 
-    # Check for red_teaming_evaluator
-    has_red_teaming_evaluator = False
-    for evaluator_name, evaluator_config in config.eval.evaluators.items():
-        if hasattr(evaluator_config, 'type') and evaluator_config.type == 'red_teaming_evaluator':
-            has_red_teaming_evaluator = True
-            break
+    try:
+        config = RedTeamingRunnerConfig(**config_data)
+    except Exception as e:
+        raise ValueError(f"Failed to parse red teaming config: {e}") from e
 
-    if not has_red_teaming_evaluator:
-        available_evaluator_types = [
-            getattr(eval_config, 'type', 'unknown')
-            for eval_config in config.eval.evaluators.values()
-            if hasattr(eval_config, 'type')
-        ]
-        raise ValueError(
-            "base config must contain at least one evaluator of type "
-            "'red_teaming_evaluator'. "
-            f"Found evaluator types: {available_evaluator_types if available_evaluator_types else 'none'}."
-        )
-
+    logger.info(
+        "Loaded red teaming config with %d scenarios",
+        len(config.scenarios)
+    )
+    return config
