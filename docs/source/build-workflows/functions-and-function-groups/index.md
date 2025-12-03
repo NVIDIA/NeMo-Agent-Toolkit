@@ -23,5 +23,4 @@ limitations under the License.
 
 ./functions.md
 ./function-groups.md
-./included-functions/index.md
 ```

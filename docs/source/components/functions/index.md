@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Included Functions
+# Functions
 
 This is not an exhaustive list of functions included with NeMo Agent toolkit. For a complete list of included functions, for a complete list of functions run the following command:
 
