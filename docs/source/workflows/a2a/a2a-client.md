@@ -37,7 +37,7 @@ uv pip install "nvidia-nat[a2a]"
 
 ## A2A Client Configuration
 
-NeMo Agent toolkit enables workflows to interact with remote A2A agents through function groups. The library handles agent discovery, skill mapping, and creates a function interface for invoking remote agent capabilities.
+NeMo Agent toolkit enables workflows to interact with remote A2A agents through function groups.
 
 ### Basic Configuration
 
@@ -109,8 +109,8 @@ flowchart TB
 
     subgraph "Three-Level API"
         L1["Level 1: High-Level<br/>agent_name.call(query)<br/>Natural language interface"]
-        L2["Level 2: Helpers<br/>get_skills(), get_info(), get_task()<br/>Task management utilities"]
-        L3["Level 3: Low-Level<br/>send_message(), send_message_streaming()<br/>Raw A2A Protocol access"]
+        L2["Level 2: Helpers<br/>agent_name.get_skills(), agent_name.get_info(), agent_name.get_task()<br/>Task management utilities"]
+        L3["Level 3: Low-Level<br/>agent_name.send_message(), agent_name.send_message_streaming()<br/>Raw A2A Protocol access"]
     end
 
     FG --> L1
