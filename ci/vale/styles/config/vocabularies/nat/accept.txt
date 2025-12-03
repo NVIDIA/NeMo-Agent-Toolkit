@@ -87,7 +87,7 @@ LangSmith
 [Ll]aunchable(s?)
 # libcudf isn't styled in the way that cuDF is https://docs.rapids.ai/api/libcudf/stable/
 libcudf
-[Lo]ogprob(s?)
+[Ll]ogprob(s?)
 LLM(s?)
 # https://github.com/logpai/loghub/
 Loghub
