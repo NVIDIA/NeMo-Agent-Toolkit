@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from pydantic import Field
 
 from nat.builder.builder import Builder
+from nat.builder.component_utils import WORKFLOW_COMPONENT_NAME
 from nat.builder.function_info import FunctionInfo
 from nat.builder.workflow_builder import PerUserWorkflowBuilder
 from nat.builder.workflow_builder import WorkflowBuilder
@@ -57,7 +58,7 @@ class PerUserWorkflowConfig(FunctionBaseConfig, name="per_user_workflow"):
     pass
 
 
-class SharedWorkflowConfig(FunctionBaseConfig, name="<workflow>"):
+class SharedWorkflowConfig(FunctionBaseConfig, name=WORKFLOW_COMPONENT_NAME):
     """A shared workflow config for testing."""
     pass
 
@@ -149,7 +150,7 @@ async def test_workflow_builder_skips_per_user_functions():
     config = Config(functions={
         "shared_fn": SharedFunctionConfig(),
         "per_user_fn": PerUserFunctionConfig(),
-        "<workflow>": SharedWorkflowConfig(),
+        WORKFLOW_COMPONENT_NAME: SharedWorkflowConfig(),
     },
                     workflow=SharedWorkflowConfig())
 
@@ -184,7 +185,7 @@ async def test_workflow_builder_skips_per_user_workflow():
 async def test_workflow_builder_builds_shared_workflow():
     """Test that WorkflowBuilder builds shared workflows normally."""
 
-    config = Config(functions={"<workflow>": SharedWorkflowConfig()}, workflow=SharedWorkflowConfig())
+    config = Config(functions={WORKFLOW_COMPONENT_NAME: SharedWorkflowConfig()}, workflow=SharedWorkflowConfig())
 
     async with WorkflowBuilder.from_config(config) as builder:
         # Shared workflow should be built
@@ -210,7 +211,7 @@ async def test_workflow_builder_validates_shared_depends_on_per_user():
     config = Config(functions={
         "per_user_fn": PerUserFunctionConfig(),
         "bad_shared_fn": SharedDependentFnConfig(per_user_fn_name="per_user_fn"),
-        "<workflow>": SharedWorkflowConfig(),
+        WORKFLOW_COMPONENT_NAME: SharedWorkflowConfig(),
     },
                     workflow=SharedWorkflowConfig())
 
@@ -223,7 +224,7 @@ async def test_workflow_builder_validates_shared_depends_on_per_user():
 async def test_per_user_workflow_builder_initialization():
     """Test PerUserWorkflowBuilder can be initialized."""
 
-    config = Config(functions={"<workflow>": SharedWorkflowConfig()}, workflow=SharedWorkflowConfig())
+    config = Config(functions={WORKFLOW_COMPONENT_NAME: SharedWorkflowConfig()}, workflow=SharedWorkflowConfig())
 
     async with WorkflowBuilder.from_config(config) as shared_builder:
         async with PerUserWorkflowBuilder(user_id="user123", shared_builder=shared_builder) as per_user_builder:
@@ -240,7 +241,7 @@ async def test_per_user_workflow_builder_populate_builds_per_user_functions():
     config = Config(functions={
         "shared_fn": SharedFunctionConfig(),
         "per_user_fn": PerUserFunctionConfig(),
-        "<workflow>": SharedWorkflowConfig(),
+        WORKFLOW_COMPONENT_NAME: SharedWorkflowConfig(),
     },
                     workflow=SharedWorkflowConfig())
 
@@ -279,7 +280,7 @@ async def test_per_user_workflow_builder_populate_builds_per_user_workflow():
 async def test_per_user_workflow_builder_delegates_to_shared_workflow():
     """Test PerUserWorkflowBuilder delegates to shared workflow when workflow is shared."""
 
-    config = Config(functions={"<workflow>": SharedWorkflowConfig()}, workflow=SharedWorkflowConfig())
+    config = Config(functions={WORKFLOW_COMPONENT_NAME: SharedWorkflowConfig()}, workflow=SharedWorkflowConfig())
 
     async with WorkflowBuilder.from_config(config) as shared_builder:
         async with PerUserWorkflowBuilder(user_id="user123", shared_builder=shared_builder) as per_user_builder:
@@ -430,7 +431,7 @@ async def test_per_user_workflow_builder_delegates_llm_access():
         yield LLMProviderInfo(config=config, description="Test LLM")
 
     config = Config(llms={"test_llm": LLMProviderTestConfig()},
-                    functions={"<workflow>": SharedWorkflowConfig()},
+                    functions={WORKFLOW_COMPONENT_NAME: SharedWorkflowConfig()},
                     workflow=SharedWorkflowConfig())
 
     async with WorkflowBuilder.from_config(config) as shared_builder:

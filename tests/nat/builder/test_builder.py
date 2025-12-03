@@ -22,6 +22,7 @@ from pydantic import ConfigDict
 from pydantic import Field
 
 from nat.builder.builder import Builder
+from nat.builder.component_utils import WORKFLOW_COMPONENT_NAME
 from nat.builder.embedder import EmbedderProviderInfo
 from nat.builder.function import Function
 from nat.builder.function import FunctionGroup
@@ -1432,7 +1433,7 @@ def test_log_build_failure_workflow_helper_method(caplog_fixture):
 
     # Verify error logging content
     log_text = caplog_fixture.text
-    assert "Failed to initialize component <workflow> (workflow)" in log_text
+    assert f"Failed to initialize component {WORKFLOW_COMPONENT_NAME} (workflow)" in log_text
     assert "Successfully built components:" in log_text
     assert "- comp1 (llms)" in log_text
     assert "- comp2 (embedders)" in log_text
@@ -1599,7 +1600,7 @@ async def test_integration_error_logging_with_failing_function(caplog_fixture):
     # Should list remaining components that still need to be built
     assert "Remaining components to build:" in log_text
     assert "- another_working_function (functions)" in log_text
-    assert "- <workflow> (workflow)" in log_text
+    assert f"- {WORKFLOW_COMPONENT_NAME} (workflow)" in log_text
 
     # Should include the original error
     assert "Original error:" in log_text
@@ -1633,7 +1634,7 @@ async def test_integration_error_logging_with_workflow_failure(caplog_fixture):
     log_text = caplog_fixture.text
 
     # Should have the main error message for workflow failure
-    assert "Failed to initialize component <workflow> (workflow)" in log_text
+    assert f"Failed to initialize component {WORKFLOW_COMPONENT_NAME} (workflow)" in log_text
 
     # Should list all successfully built components (functions should have succeeded)
     assert "Successfully built components:" in log_text

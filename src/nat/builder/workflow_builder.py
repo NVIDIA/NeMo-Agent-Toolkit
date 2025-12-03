@@ -28,6 +28,7 @@ from typing import cast
 from nat.authentication.interfaces import AuthProviderBase
 from nat.builder.builder import Builder
 from nat.builder.builder import UserManagerHolder
+from nat.builder.component_utils import WORKFLOW_COMPONENT_NAME
 from nat.builder.component_utils import ComponentInstanceData
 from nat.builder.component_utils import build_dependency_sequence
 from nat.builder.context import Context
@@ -189,8 +190,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         # Create a mapping to track function name -> other function names it depends on
         self.function_dependencies: dict[str, FunctionDependencies] = {}
         self.function_group_dependencies: dict[str, FunctionDependencies] = {}
-        self.current_function_building: str | None = None
-        self.current_function_group_building: str | None = None
 
     async def __aenter__(self):
 
@@ -412,11 +411,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         build_fn = chain_wrapped_build_fn(registration.build_fn, llms, function_frameworks)
 
-        # Set the currently building function so the ChildBuilder can track dependencies
-        self.current_function_building = config.type
-        # Empty set of dependencies for the current function
-        self.function_dependencies[config.type] = FunctionDependencies()
-
         build_result = await self._get_exit_stack().enter_async_context(build_fn(config, inner_builder))
 
         self.function_dependencies[name] = inner_builder.dependencies
@@ -474,11 +468,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         function_frameworks = detect_llm_frameworks_in_build_fn(registration)
 
         build_fn = chain_wrapped_build_fn(registration.build_fn, llms, function_frameworks)
-
-        # Set the currently building function group so the ChildBuilder can track dependencies
-        self.current_function_group_building = config.type
-        # Empty set of dependencies for the current function group
-        self.function_group_dependencies[config.type] = FunctionDependencies()
 
         build_result = await self._get_exit_stack().enter_async_context(build_fn(config, inner_builder))
 
@@ -591,7 +580,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         if self._workflow is not None:
             warnings.warn("Overwriting existing workflow")
 
-        build_result = await self._build_function(name="<workflow>", config=config)
+        build_result = await self._build_function(name=WORKFLOW_COMPONENT_NAME, config=config)
 
         self._workflow = build_result
 
@@ -1170,7 +1159,11 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             remaining_components (list[tuple[str, str]]): List of (name, type) tuples for components still to be built
             original_error (Exception): The original exception that caused the failure
         """
-        self._log_build_failure("<workflow>", "workflow", completed_components, remaining_components, original_error)
+        self._log_build_failure(WORKFLOW_COMPONENT_NAME,
+                                "workflow",
+                                completed_components,
+                                remaining_components,
+                                original_error)
 
     async def populate_builder(self, config: Config, skip_workflow: bool = False):
         """
@@ -1189,7 +1182,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         remaining_components = [(str(comp.name), comp.component_group.value) for comp in build_sequence
                                 if not comp.is_root]
         if not skip_workflow:
-            remaining_components.append(("<workflow>", "workflow"))
+            remaining_components.append((WORKFLOW_COMPONENT_NAME, "workflow"))
 
         # Loop over all objects and add to the workflow builder
         for component_instance in build_sequence:
@@ -1263,9 +1256,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                 # Otherwise, build it lazily by PerUserWorkflowBuilder
                 if not workflow_registration.is_per_user:
                     # Remove workflow from remaining as we start building
-                    remaining_components.remove(("<workflow>", "workflow"))
+                    remaining_components.remove((WORKFLOW_COMPONENT_NAME, "workflow"))
                     await self.set_workflow(config.workflow)
-                    completed_components.append(("<workflow>", "workflow"))
+                    completed_components.append((WORKFLOW_COMPONENT_NAME, "workflow"))
             except Exception as e:
                 self._log_build_failure_workflow(completed_components, remaining_components, e)
                 raise
@@ -1283,6 +1276,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         # Check shared functions do not depend on per-user functions
         for fn_name, fn_deps in self.function_dependencies.items():
+            if fn_name == WORKFLOW_COMPONENT_NAME:
+                continue
+
             fn_config = self.get_function_config(fn_name)
             fn_registration = self._registry.get_function(type(fn_config))
 
@@ -1303,7 +1299,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                 raise ValueError("Workflow is a per-user function, but it is owned by a shared WorkflowBuilder")
 
             else:
-                workflow_deps = self.function_dependencies.get("<workflow>", FunctionDependencies())
+                workflow_deps = self.function_dependencies.get(WORKFLOW_COMPONENT_NAME, FunctionDependencies())
 
                 for dep_fn_name in workflow_deps.functions:
                     if dep_fn_name in config.functions:
@@ -1353,8 +1349,6 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         self.per_user_function_dependencies: dict[str, FunctionDependencies] = {}
         self.per_user_function_group_dependencies: dict[str, FunctionDependencies] = {}
-        self.current_function_building: str | None = None
-        self._current_function_group_building: str | None = None
 
     async def __aenter__(self):
 
@@ -1388,8 +1382,6 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
         function_frameworks = detect_llm_frameworks_in_build_fn(registration)
 
         build_fn = chain_wrapped_build_fn(registration.build_fn, llms, function_frameworks)
-        self.current_function_building = config.type
-        self.per_user_function_dependencies[config.type] = FunctionDependencies()
 
         build_result = await self._get_exit_stack().enter_async_context(build_fn(config, inner_builder))
         self.per_user_function_dependencies[name] = inner_builder.dependencies
@@ -1475,7 +1467,7 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
         if self._workflow is not None:
             logger.warning("Overwriting existing workflow")
 
-        build_result = await self._build_per_user_function(name="<workflow>", config=config)
+        build_result = await self._build_per_user_function(name=WORKFLOW_COMPONENT_NAME, config=config)
 
         self._workflow = build_result
 
