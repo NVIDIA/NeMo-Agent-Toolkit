@@ -27,7 +27,7 @@ reviews:
     issue_assessment:
       mode: warning
   auto_review:
-    base_branches: ["develop", "release/.*", "epic/.*"]
+    base_branches: ["develop", "epic/.*", "release/.*"]
     enabled: true
     drafts: false
     auto_incremental_review: true
