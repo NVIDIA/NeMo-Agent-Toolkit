@@ -59,11 +59,11 @@ Use the following AWS CLI command to create the secret:
 aws secretsmanager create-secret \
   --name nvidia-api-credentials \
   --description "NVIDIA API credentials for NAT agent runtime" \
-  --secret-string '{"NVIDIA_API_KEY":"<YOUR NVIDIA API KEY HERE>"}' \
+  --secret-string '{"NVIDIA_API_KEY":"<YOUR-NVIDIA-API-KEY-HERE>"}' \
   --region $AWS_DEFAULT_REGION
 ```
 
-Replace `your-nvidia-api-key-here` with your actual NVIDIA API key.
+Replace `YOUR-NVIDIA-API-KEY-HERE` with your actual NVIDIA API key.
 
 ## Verify the Secret
 
@@ -89,7 +89,7 @@ uv pip install -e examples/frameworks/strands_demo
 docker build \
   --build-arg NAT_VERSION=$(python -m setuptools_scm) \
   -t strands_demo \
-  -f examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile \
+  -f ./examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile \
   --platform linux/arm64 \
   --load .
 ```
@@ -164,7 +164,7 @@ aws ecr get-login-password --region $AWS_DEFAULT_REGION | \
 docker build \
   --build-arg NAT_VERSION=$(python -m setuptools_scm) \
   -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/strands-demo:latest \
-  -f examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile \
+  -f ./examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile \
   --platform linux/arm64 \
   --push .
 ```
@@ -218,7 +218,7 @@ print(f"Status: {response['status']}")
 ### Deploy the Agent
 
 ```bash
-uv run examples/frameworks/strands_demo/bedrock_agentcore/scripts/deploy_nat.py
+uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/deploy_nat.py
 ```
 
 **Important:** Record the runtime ID from the output for the next steps. It will look something like: `strands_demo-abc123XYZ`
@@ -274,14 +274,14 @@ print("Agent Response:", response_data)
 ### Run the Test
 
 ```bash
-uv run examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py
+uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py
 ```
 
 ## Step 7: Instrument for OpenTelemetry
 
 ### Update Dockerfile Environment Variables
 
-For this step you will need your Runtime ID (obtained from Step 6) to update your Dockerfile:
+For this step you will need your Runtime ID (obtained from Step 6) to update your `Dockerfile`:
 
 NOTE:  If you do not have the runtime ID, you can check the AWS Console or run the following script:
 ```python
@@ -306,13 +306,13 @@ for runtime in cresponse['agentRuntimes']:
 
 You can run it here:
 ```bash
-uv run examples/frameworks/strands_demo/bedrock_agentcore/scripts/get_agentcore_runtime_id.py
+uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/get_agentcore_runtime_id.py
 ```
 
-Update the following environment variables in the Dockerfile with your Runtime ID.
+Update the following environment variables in the `Dockerfile` with your Runtime ID.
 
-The location of the Dockerfile is:
- examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile
+The location of the `Dockerfile` is:
+ `./examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile`
 
 ```dockerfile
 ENV OTEL_RESOURCE_ATTRIBUTES=service.name=nat_test_agent,aws.log.group.names=/aws/bedrock-agentcore/runtimes/<RUNTIME_ID>
@@ -333,7 +333,7 @@ And uncomment the OpenTelemetry instrumented entry point:
 ```dockerfile
 ENTRYPOINT ["sh", "-c", "exec /workspace/examples/frameworks/strands_demo/bedrock_agentcore/scripts/run_nat_with_OTEL.sh"]
 ```
-Save the updated Dockerfile
+Save the updated `Dockerfile`
 
 
 ### ReBuild and Push Docker Image to ECR
@@ -345,7 +345,7 @@ Save the updated Dockerfile
 docker build \
   --build-arg NAT_VERSION=$(python -m setuptools_scm) \
   -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/strands-demo:latest \
-  -f examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile \
+  -f ./examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile \
   --platform linux/arm64 \
   --push .
 ```
@@ -415,13 +415,13 @@ print(f"Status: {response['status']}")
 ### Run the Update Script
 
 ```bash
-uv run examples/frameworks/strands_demo/bedrock_agentcore/scripts/update_nat.py
+uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/update_nat.py
 ```
 
 ### Final Test 
 
 ```bash
-uv run examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py
+uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py
 ```
 
 > **Note:** If you do not see OpenTelemetry telemetry for your agent after a few test runs, please refer to Appendix 2 to ensure you have enabled OpenTelemetry support in CloudWatch.
@@ -471,7 +471,7 @@ The role includes the following permission sets:
 | **X-Ray Tracing** | Send distributed tracing data for observability |
 | **CloudWatch Metrics** | Publish custom metrics to CloudWatch |
 | **Workload Identity** | Access workload identity tokens for authentication |
-| **Secrets Manager** | Access the secret:nvidia-api-credentials key in Secrets Manager |
+| **Secrets Manager** | Access the `secret:nvidia-api-credentials` key in Secrets Manager |
 
 ---
 
@@ -728,7 +728,7 @@ If you encounter permission errors, you need specific IAM permissions. Refer to 
 
 ### Complete Dockerfile
 
-The Dockerfile is organized into the following sections:
+The `Dockerfile` is organized into the following sections:
 
 1. **Base Image Configuration** - Ubuntu base with Python
 2. **Build Dependencies** - Compilers and build tools
@@ -737,7 +737,7 @@ The Dockerfile is organized into the following sections:
 5. **Runtime Configuration** - Entry point and environment
 
 <details>
-<summary>📄 Click to view complete Dockerfile</summary>
+<summary>📄 Click to view complete `Dockerfile`</summary>
 
 ```dockerfile
 
@@ -833,7 +833,6 @@ ENV PATH="/workspace/.venv/bin:$PATH"
 ENV NAT_CONFIG_FILE=/workspace/examples/frameworks/strands_demo/configs/agentcore_config.yml
 
 # Define the entry point to start the server
-#ENTRYPOINT ["sh", "-c", "exec /workspace/examples/frameworks/strands_demo/bedrock_agentcore/scripts/run_nat_with_OTEL.sh"]
 ENTRYPOINT ["sh", "-c", "exec /workspace/examples/frameworks/strands_demo/bedrock_agentcore/scripts/run_nat_no_OTEL.sh"]
 
 ```
