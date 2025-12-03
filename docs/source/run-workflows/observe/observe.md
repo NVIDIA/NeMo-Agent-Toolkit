@@ -128,39 +128,28 @@ The `tracing` section contains one or more tracing providers. Each provider has 
 
 ### Available Tracing Exporters
 
-Each exporter has its own detailed configuration guide with complete setup instructions and examples:
+The following table lists each exporter with its supported features and configuration guide:
 
-- **[Catalyst](https://catalyst.raga.ai/)** - Refer to [Observing with Catalyst](?provider=catalyst#provider-integration-guides){.external}
-- **Custom Exporters** - Refer to [Adding Telemetry Exporters](../../extend/telemetry-exporters.md) for creating custom integrations
-- **[NVIDIA Data Flywheel Blueprint](https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel)** - Refer to [Observing with Data Flywheel](?provider=data-flywheel#provider-integration-guides){.external}
-- **[DBNL](https://distributional.com/)** - Refer to [Observing with DBNL](?provider=dbnl#provider-integration-guides){.external}
-- **[Dynatrace](https://dynatrace.com/)** - Refer to [Observing with Dynatrace](?provider=dynatrace#provider-integration-guides){.external}
+| Provider                                                                                            | Description                                                                                               | Supported Features                                        |
+| --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| [Catalyst](https://catalyst.raga.ai/)                                                               | Refer to [Observing with Catalyst](?provider=catalyst#provider-integration-guides){.external}             | Logging, Tracing                                          |
+| [NVIDIA Data Flywheel Blueprint](https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel) | Refer to [Observing with Data Flywheel](?provider=data-flywheel#provider-integration-guides){.external}   | Logging, Tracing                                          |
+| [DBNL](https://distributional.com/)                                                                 | Refer to [Observing with DBNL](?provider=dbnl#provider-integration-guides){.external}                     | Logging, Tracing                                          |
+| [Dynatrace](https://dynatrace.com/)                                                                 | Refer to [Observing with Dynatrace](?provider=dynatrace#provider-integration-guides){.external}           | Logging, Tracing                                          |
+| [Galileo](https://galileo.ai/)                                                                      | Refer to [Observing with Galileo](?provider=galileo#provider-integration-guides){.external}               | Logging, Tracing                                          |
+| [Langfuse](https://langfuse.com/)                                                                   | OTLP-compatible observability platform                                                                    | Logging, Tracing                                          |
+| [LangSmith](https://www.langchain.com/langsmith)                                                    | LangChain's observability platform                                                                        | Logging, Tracing                                          |
+| [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/)                                 | Refer to [Observing with OTel Collector](?provider=otel-collector#provider-integration-guides){.external} | Logging, Tracing                                          |
+| [Patronus](https://www.patronus.ai/)                                                                | AI evaluation and monitoring platform                                                                     | Logging, Tracing                                          |
+| [Phoenix](https://phoenix.arize.com/)                                                               | Refer to [Observing with Phoenix](?provider=phoenix#provider-integration-guides){.external}               | Logging, Tracing                                          |
+| [W&B Weave](https://wandb.ai/site/weave/)                                                           | Refer to [Observing with W&B Weave](?provider=wandb-weave#provider-integration-guides){.external}         | Logging, Tracing, W&B Weave Redaction, Evaluation Metrics |
+
+Additional options:
+
 - **File Export** - Built-in file-based tracing for local development and debugging
-- **[Galileo](https://galileo.ai/)** - Refer to [Observing with Galileo](?provider=galileo#provider-integration-guides){.external}
-- **[Langfuse](https://langfuse.com/)** - OTLP-compatible observability platform
-- **[LangSmith](https://www.langchain.com/langsmith)** - LangChain's observability platform
-- **[OpenTelemetry Collector](https://opentelemetry.io/docs/collector/)** - Refer to [Observing with OTel Collector](?provider=otel-collector#provider-integration-guides){.external}
-- **[Patronus](https://www.patronus.ai/)** - AI evaluation and monitoring platform
-- **[Phoenix](https://phoenix.arize.com/)** - Refer to [Observing with Phoenix](?provider=phoenix#provider-integration-guides){.external}
-- **[W&B Weave](https://wandb.ai/site/weave/)** - Refer to [Observing with W&B Weave](?provider=wandb-weave#provider-integration-guides){.external}
+- **Custom Exporters** - Refer to [Adding Telemetry Exporters](../../extend/telemetry-exporters.md) for creating custom integrations
 
-For complete configuration examples and setup instructions, refer to the individual guides linked above or check the `examples/observability/` directory.
-
-#### Observability Support by Providers
-
-| Provider | Supported Features|
-|----------|-----------|
-| Catalyst | Logging, Tracing |
-| Data Flywheel | Logging, Tracing |
-| DBNL | Logging, Tracing |
-| Dynatrace | Logging, Tracing |
-| Galileo | Logging, Tracing |
-| Langfuse | Logging, Tracing |
-| LangSmith | Logging, Tracing |
-| OpenTelemetry Collector | Logging, Tracing |
-| Patronus | Logging, Tracing |
-| Phoenix | Logging, Tracing |
-| W&B Weave | Logging, Tracing, W&B Weave Redaction, Evaluation Metrics |
+For complete configuration examples and setup instructions, check the `examples/observability/` directory.
 
 ### NeMo Agent Toolkit Observability Components
 
