@@ -85,6 +85,7 @@ uv pip install -e examples/frameworks/strands_demo
 
 ### Build the Docker Image
 
+<!-- path-check-skip-begin -->
 ```bash
 docker build \
   --build-arg NAT_VERSION=$(python -m setuptools_scm) \
@@ -93,6 +94,7 @@ docker build \
   --platform linux/arm64 \
   --load .
 ```
+<!-- path-check-skip-end -->
 
 ### Run the Container Locally
 
@@ -110,6 +112,7 @@ docker run \
 
 ### Test Local Deployment
 
+<!-- path-check-skip-begin -->
 ```bash
 curl -X 'POST' \
   'http://localhost:8080/invocations' \
@@ -117,6 +120,7 @@ curl -X 'POST' \
   -H 'Content-Type: application/json' \
   -d '{"inputs" : "How do I use the Strands Agents API?"}'
 ```
+<!-- path-check-skip-end -->
 
 **Expected Workflow Output**
 The workflow produces a large amount of output, the end of the output should contain something similar to the following:
@@ -159,7 +163,7 @@ aws ecr get-login-password --region $AWS_DEFAULT_REGION | \
 
 > **Important:** Never pass credentials as build arguments. Use AWS IAM roles and environment variables instead. The example below shows the structure but credentials should be managed securely.
 
-
+<!-- path-check-skip-begin -->
 ```bash
 docker build \
   --build-arg NAT_VERSION=$(python -m setuptools_scm) \
@@ -168,6 +172,7 @@ docker build \
   --platform linux/arm64 \
   --push .
 ```
+<!-- path-check-skip-end -->
 
 ### Verify Deployment Script
 Verify the REGION, ACCOUNT_ID, and ROLE are correct for your environment
@@ -279,7 +284,7 @@ uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py
 
 ## Step 7: Instrument for OpenTelemetry
 
-### Update Dockerfile Environment Variables
+### Update `Dockerfile` Environment Variables
 
 For this step you will need your Runtime ID (obtained from Step 6) to update your `Dockerfile`:
 
@@ -340,7 +345,7 @@ Save the updated `Dockerfile`
 
 > **Important:** Never pass credentials as build arguments. Use AWS IAM roles and environment variables instead. The example below shows the structure but credentials should be managed securely.
 
-
+<!-- path-check-skip-begin -->
 ```bash
 docker build \
   --build-arg NAT_VERSION=$(python -m setuptools_scm) \
@@ -349,6 +354,7 @@ docker build \
   --platform linux/arm64 \
   --push .
 ```
+<!-- path-check-skip-end -->
 
 ### Update the Agent with New Version
 
@@ -465,9 +471,9 @@ The role includes the following permission sets:
 
 | Permission Set | Purpose |
 |---------------|---------|
-| **Bedrock Model Access** | Invoke foundation models for AI/ML operations |
+| **Bedrock Model Access** | Invoke foundation models for AI and ML operations |
 | **ECR Access** | Pull container images for runtime deployment |
-| **CloudWatch Logs** | Create log groups/streams and write application logs |
+| **CloudWatch Logs** | Create log groups and streams, and write application logs |
 | **X-Ray Tracing** | Send distributed tracing data for observability |
 | **CloudWatch Metrics** | Publish custom metrics to CloudWatch |
 | **Workload Identity** | Access workload identity tokens for authentication |
@@ -724,9 +730,9 @@ If you encounter permission errors, you need specific IAM permissions. Refer to 
 - Higher percentages provide more trace coverage but increase costs
 ---
 
-## Dockerfile Reference
+## `Dockerfile` Reference
 
-### Complete Dockerfile
+### Complete `Dockerfile`
 
 The `Dockerfile` is organized into the following sections:
 
@@ -741,6 +747,7 @@ The `Dockerfile` is organized into the following sections:
 
 ```dockerfile
 
+<!-- path-check-skip-next-line -->
 ARG BASE_IMAGE_URL=nvcr.io/nvidia/base/ubuntu
 ARG BASE_IMAGE_TAG=22.04_20240212
 ARG PYTHON_VERSION=3.13
@@ -765,6 +772,7 @@ RUN apt-get update && \
 # Install AWS CLI v2
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip" && \
     unzip awscliv2.zip && \
+<!-- path-check-skip-next-line -->
     ./aws/install && \
     rm -rf awscliv2.zip aws
 
@@ -801,6 +809,7 @@ ENV OTEL_PYTHON_DISTRO=aws_distro
 #OTEL_PYTHON_CONFIGURATOR=aws_configurator
 
 # Export Protocol
+<!-- path-check-skip-next-line -->
 ENV OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 ENV OTEL_TRACES_EXPORTER=otlp
 
@@ -809,6 +818,7 @@ ENV AGENT_OBSERVABILITY_ENABLED=true
 
 # Service Identification attributed (gets added to all span logs)
 # Example:
+<!-- path-check-skip-next-line -->
 # OTEL_RESOURCE_ATTRIBUTES=service.version=1.0,service.name=mcp-calculator,aws.log.group.names=mcp/mcp-calculator-logs
 ENV OTEL_RESOURCE_ATTRIBUTES=service.name=nat_test_agent,aws.log.group.names=/aws/bedrock-agentcore/runtimes/<AGENTCORE_RUNTIME_ID>
 
