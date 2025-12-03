@@ -138,7 +138,7 @@ autoapi_python_use_implicit_namespaces = False
 # Enable this for debugging
 autoapi_keep_files = True
 
-myst_enable_extensions = ["colon_fence"]
+myst_enable_extensions = ["attrs_inline", "colon_fence"]
 
 html_show_sourcelink = False  # Remove 'view source code' from top of page (for html, not python)
 set_type_checking_flag = True  # Enable 'expensive' imports for sphinx_autodoc_typehints

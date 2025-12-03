@@ -11,7 +11,7 @@ http://www.apache.org/licenses/LICENSE-2.0
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
+Refer to the License for the specific language governing permissions and
 limitations under the License.
 -->
 
@@ -130,19 +130,19 @@ The `tracing` section contains one or more tracing providers. Each provider has 
 
 Each exporter has its own detailed configuration guide with complete setup instructions and examples:
 
-- **[Catalyst](https://catalyst.raga.ai/)** - See [Observing with Catalyst](./observe-workflow-with-catalyst.md)
-- **Custom Exporters** - See [Adding Telemetry Exporters](../../extend/telemetry-exporters.md) for creating custom integrations
-- **[NVIDIA Data Flywheel Blueprint](https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel)** - See [Observing with Data Flywheel](./observe-workflow-with-data-flywheel.md)
-- **[DBNL](https://distributional.com/)** - See [Observing with DBNL](./observe-workflow-with-dbnl.md)
-- **[Dynatrace](https://dynatrace.com/)** - See [Observing with Dynatrace](./observe-workflow-with-dynatrace.md)
+- **[Catalyst](https://catalyst.raga.ai/)** - Refer to [Observing with Catalyst](?provider=catalyst#provider-integration-guides){.external}
+- **Custom Exporters** - Refer to [Adding Telemetry Exporters](../../extend/telemetry-exporters.md) for creating custom integrations
+- **[NVIDIA Data Flywheel Blueprint](https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel)** - Refer to [Observing with Data Flywheel](?provider=data-flywheel#provider-integration-guides){.external}
+- **[DBNL](https://distributional.com/)** - Refer to [Observing with DBNL](?provider=dbnl#provider-integration-guides){.external}
+- **[Dynatrace](https://dynatrace.com/)** - Refer to [Observing with Dynatrace](?provider=dynatrace#provider-integration-guides){.external}
 - **File Export** - Built-in file-based tracing for local development and debugging
-- **[Galileo](https://galileo.ai/)** - See [Observing with Galileo](./observe-workflow-with-galileo.md)
+- **[Galileo](https://galileo.ai/)** - Refer to [Observing with Galileo](?provider=galileo#provider-integration-guides){.external}
 - **[Langfuse](https://langfuse.com/)** - OTLP-compatible observability platform
 - **[LangSmith](https://www.langchain.com/langsmith)** - LangChain's observability platform
-- **[OpenTelemetry Collector](https://opentelemetry.io/docs/collector/)** - See [Observing with OTel Collector](./observe-workflow-with-otel-collector.md)
+- **[OpenTelemetry Collector](https://opentelemetry.io/docs/collector/)** - Refer to [Observing with OTel Collector](?provider=otel-collector#provider-integration-guides){.external}
 - **[Patronus](https://www.patronus.ai/)** - AI evaluation and monitoring platform
-- **[Phoenix](https://phoenix.arize.com/)** - See [Observing with Phoenix](./observe-workflow-with-phoenix.md)
-- **[W&B Weave](https://wandb.ai/site/weave/)** - See [Observing with W&B Weave](./observe-workflow-with-weave.md)
+- **[Phoenix](https://phoenix.arize.com/)** - Refer to [Observing with Phoenix](?provider=phoenix#provider-integration-guides){.external}
+- **[W&B Weave](https://wandb.ai/site/weave/)** - Refer to [Observing with W&B Weave](?provider=wandb-weave#provider-integration-guides){.external}
 
 For complete configuration examples and setup instructions, refer to the individual guides linked above or check the `examples/observability/` directory.
 
@@ -196,18 +196,68 @@ Each exporter can optionally include a processing pipeline that transforms, filt
 
 ### Registering a New Telemetry Provider as a Plugin
 
-For complete information about developing and integrating custom telemetry exporters, including detailed examples, best practices, and advanced configuration options, see [Adding Telemetry Exporters](../../extend/telemetry-exporters.md).
+For complete information about developing and integrating custom telemetry exporters, including detailed examples, best practices, and advanced configuration options, Refer to [Adding Telemetry Exporters](../../extend/telemetry-exporters.md).
 
-```{toctree}
-:hidden:
-:caption: Observe Workflows
+## Provider Integration Guides
 
-Observing with Catalyst <./observe-workflow-with-catalyst.md>
-Observing with Data Flywheel <./observe-workflow-with-data-flywheel.md>
-Observing with DBNL <./observe-workflow-with-dbnl.md>
-Observing with Dynatrace <./observe-workflow-with-dynatrace.md>
-Observing with Galileo <./observe-workflow-with-galileo.md>
-Observing with OTEL Collector <./observe-workflow-with-otel-collector.md>
-Observing with Phoenix <./observe-workflow-with-phoenix.md>
-Observing with W&B Weave <./observe-workflow-with-weave.md>
-```
+::::{tab-set}
+  :sync-group: provider
+
+  :::{tab-item} Catalyst
+  :sync: catalyst
+
+    :::{include} ./observe-workflow-with-catalyst.md
+
+  :::
+
+  :::{tab-item} Data Flywheel
+  :sync: data-flywheel
+
+    :::{include} ./observe-workflow-with-data-flywheel.md
+
+  :::
+
+  :::{tab-item} DBNL
+  :sync: dbnl
+
+    :::{include} ./observe-workflow-with-dbnl.md
+
+  :::
+
+  :::{tab-item} Dynatrace
+  :sync: dynatrace
+
+    :::{include} ./observe-workflow-with-dynatrace.md
+
+  :::
+
+  :::{tab-item} Galileo
+  :sync: galileo
+
+    :::{include} ./observe-workflow-with-galileo.md
+
+  :::
+
+  :::{tab-item} OTel Collector
+  :sync: otel-collector
+
+    :::{include} ./observe-workflow-with-otel-collector.md
+
+  :::
+
+  :::{tab-item} Phoenix
+  :sync: phoenix
+   
+    :::{include} ./observe-workflow-with-phoenix.md
+
+  :::
+
+  :::{tab-item} W&B Weave
+  :sync: wandb-weave
+  
+    :::{include} ./observe-workflow-with-weave.md
+
+  :::
+
+::::
+
