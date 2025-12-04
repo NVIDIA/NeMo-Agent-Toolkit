@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import logging
-from contextlib import asynccontextmanager
 
 import httpx
 
