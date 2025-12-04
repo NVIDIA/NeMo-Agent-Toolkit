@@ -103,6 +103,8 @@ Workflow Configuration <./build-workflows/workflow-configuration.md>
 ./build-workflows/llms/index.md
 ./build-workflows/embedders.md
 ./build-workflows/retrievers.md
+Memory Module <./build-workflows/memory.md>
+Object Store <./build-workflows/object-store.md>
 MCP <./build-workflows/mcp.md>
 Interactive Workflows <./build-workflows/interactive-workflows.md>
 Middleware <./build-workflows/middleware.md>
@@ -137,8 +139,6 @@ Agents <./components/agents/index.md>
 ./components/functions/index.md
 ./components/auth/index.md
 ./components/integrations/index.md
-Memory Module <./components/memory.md>
-Object Store <./components/object-store.md>
 Test Time Compute <./components/test-time-compute.md>
 Sharing Components <./components/sharing-components.md>
 ```
