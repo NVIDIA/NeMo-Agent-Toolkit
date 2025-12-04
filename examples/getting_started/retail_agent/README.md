@@ -41,6 +41,10 @@ This example demonstrates an end-to-end agentic workflow for a retail customer s
   - [Available Tools](#available-tools)
     - [Retail Tools Function Group](#retail-tools-function-group)
     - [Calculator Function Group](#calculator-function-group)
+  - [Evaluation](#evaluation)
+    - [Running the Evaluation](#running-the-evaluation)
+    - [Evaluation Dataset](#evaluation-dataset)
+    - [Evaluation Output](#evaluation-output)
   - [Notes](#notes)
   - [Architecture](#architecture)
 
@@ -268,6 +272,49 @@ The retail agent has access to the following tools:
 ### Calculator Function Group
 
 The agent also has access to calculator tools (add, subtract, multiply, divide, compare) for calculating order totals and comparing prices.
+
+---
+
+## Evaluation
+
+The retail agent includes an evaluation framework to assess the agent's performance across various customer service scenarios.
+
+### Running the Evaluation
+
+To run the evaluation, execute the following command from the root of the NeMo Agent toolkit repository:
+
+```bash
+nat eval --config_file examples/getting_started/retail_agent/configs/config.yml
+```
+
+The evaluation uses the `tunable_rag_evaluator` to score the agent's responses against expected outcomes. The evaluator uses an LLM-as-a-judge approach to determine how well the agent handles each test case.
+
+### Evaluation Dataset
+
+The evaluation dataset (`data/evalset.json`) contains six test scenarios covering:
+
+1. **Product Inquiry:** Customer asking about available garden trowels
+2. **Review Submission:** Customer submitting a product review with rating
+3. **Order Placement:** Customer placing an order with quantity and total cost request
+4. **Unknown Customer Inquiry:** Handling inquiries from customers not in the system
+5. **Implicit Product Reference:** Processing a review where the product is not explicitly named (requires the agent to look up purchase history)
+6. **Combined Request:** Handling a review submission and order placement in a single email
+
+Each test case includes:
+- `question`: The customer email input
+- `answer`: A description of the expected agent behavior and response
+
+### Evaluation Output
+
+The evaluation results are saved to `./.tmp/nat/examples/evaluation_and_profiling/nat_retail_agent/llama-33-70b/` and include:
+- **Scores:** Each response is scored on a scale from 0.0 to 1.0
+- **Profiler Metrics:** Base performance metrics for workflow execution
+
+The scoring criteria evaluates whether:
+- The agent sends an email to the correct recipient
+- The agent uses appropriate greetings (Sir/Madam based on context)
+- The response contains required information (product details, order confirmation, and so on)
+- No inappropriate actions are taken (such as creating orders when only an inquiry was made)
 
 ---
 
