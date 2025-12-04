@@ -60,7 +60,7 @@ def _build_api_tree() -> Path:
     shutil.copytree(nat_dir, dest_dir)
     dest_plugins_dir = dest_dir / "plugins"
 
-    for sub_dir in (dest_dir, ):  # dest_plugins_dir):
+    for sub_dir in (dest_dir, dest_plugins_dir):
         with open(sub_dir / "__init__.py", "w", encoding="utf-8") as f:
             f.write("")
 
@@ -134,7 +134,7 @@ autoapi_options = [
 autoapi_python_use_implicit_namespaces = False
 
 # Enable this for debugging
-autoapi_keep_files = True
+autoapi_keep_files = False
 
 myst_enable_extensions = ["attrs_inline", "colon_fence"]
 
