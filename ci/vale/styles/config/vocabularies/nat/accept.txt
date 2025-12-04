@@ -78,6 +78,7 @@ isort
 Jama
 Jira
 jsonlines
+[Kk]aggle
 Langfuse
 LangChain
 LangGraph
