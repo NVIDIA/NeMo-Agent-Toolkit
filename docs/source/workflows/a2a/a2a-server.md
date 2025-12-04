@@ -128,7 +128,7 @@ workflow:
 ### Viewing the Agent Card
 When you start an A2A server, it automatically generates an Agent Card that describes the agent's capabilities. The Agent Card is available at:
 
-```
+```text
 http://<host>:<port>/.well-known/agent-card.json
 ```
 
@@ -157,7 +157,7 @@ nat a2a client call --url $A2A_SERVER_URL --message "What is product of 42 and 6
 ```
 
 Sample output:
-```
+```text
 Query: What is product of 42 and 67?
 
 The product of 42 and 67 is 2814.0

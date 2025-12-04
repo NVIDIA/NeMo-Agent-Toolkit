@@ -148,7 +148,7 @@ workflow:
 ```
 
 The LLM will see a function like:
-```
+```text
 currency_agent(query: str) -> str
 Description: Currency conversion agent with the following skills:
   - convert_currency: Convert between currencies

@@ -82,7 +82,7 @@ nat a2a client get_info --url $A2A_SERVER_URL
 ```
 
 **Output example:**
-```
+```text
 Agent Information
   Name:        Calculator Agent
   Version:     1.0.0
@@ -102,7 +102,7 @@ nat a2a client get_skills --url $A2A_SERVER_URL
 ```
 
 **Output example:**
-```
+```text
 Agent Skills (6)
   Agent: Calculator Agent
 
@@ -143,7 +143,7 @@ nat a2a client call --url $A2A_SERVER_URL --message "What is 2 + 2?"
 ```
 
 **Output example:**
-```
+```text
 Query: What is 2 + 2?
 
 The sum of 2 and 2 is 4.
