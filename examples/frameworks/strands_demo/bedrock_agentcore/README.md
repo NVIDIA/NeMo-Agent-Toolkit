@@ -14,7 +14,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-<!-- path-check-skip-file -->
 
 # Running Strands with NAT on AWS AgentCore
 
@@ -63,7 +62,7 @@ Replace <YOUR_ACCOUNT_ID HERE> with your AWS account number (example: 2111234567
 for the NAT deployment scripts.
 This is security best practice
 
-## Prerequisites for secrets manager
+## Secrets Manager Prerequisites
 
 - AWS CLI installed and configured
 - Appropriate IAM permissions to create secrets in AWS Secrets Manager
@@ -77,11 +76,11 @@ Use the following AWS CLI command to create the secret:
 aws secretsmanager create-secret \
   --name nvidia-api-credentials \
   --description "NVIDIA API credentials for NAT agent runtime" \
-  --secret-string '{"NVIDIA_API_KEY":"<YOUR NVIDIA API KEY HERE>"}' \
+  --secret-string '{"NVIDIA_API_KEY":"<YOUR-NVIDIA-API-KEY-HERE>"}' \
   --region $AWS_DEFAULT_REGION
 ```
 
-Replace `YOUR NVIDIA API KEY HERE` with your actual NVIDIA API key.
+Replace `YOUR-NVIDIA-API-KEY-HERE` with your actual NVIDIA API key.
 
 ## Verify the Secret
 
@@ -103,17 +102,19 @@ uv pip install -e examples/frameworks/strands_demo
 
 ### Build the Docker Image
 
+<!-- path-check-skip-begin -->
 ```bash
 docker build \
   --build-arg NAT_VERSION=$(python -m setuptools_scm) \
   -t strands_demo \
-  -f examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile \
+  -f ./examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile \
   --platform linux/arm64 \
   --load .
 ```
+<!-- path-check-skip-end -->
 
 ### Run the Container Locally
-
+<!-- path-check-skip-begin -->
 ```bash
 docker run \
   -p 8080:8080 \
@@ -121,12 +122,15 @@ docker run \
   -e NVIDIA_API_KEY \
   -e AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY \
+  -e AWS_DEFAULT_REGION \
   strands_demo \
   --platform linux/arm64
 ```
+<!-- path-check-skip-end -->
 
 ### Test Local Deployment
 
+<!-- path-check-skip-begin -->
 ```bash
 curl -X 'POST' \
   'http://localhost:8080/invocations' \
@@ -134,6 +138,7 @@ curl -X 'POST' \
   -H 'Content-Type: application/json' \
   -d '{"inputs" : "How do I use the Strands Agents API?"}'
 ```
+<!-- path-check-skip-end -->
 
 **Expected Workflow Output**
 The workflow produces a large amount of output, the end of the output should contain something similar to the following:
@@ -176,15 +181,16 @@ aws ecr get-login-password --region $AWS_DEFAULT_REGION | \
 
 > **Important:** Never pass credentials as build arguments. Use AWS IAM roles and environment variables instead. The example below shows the structure but credentials should be managed securely.
 
-
+<!-- path-check-skip-begin -->
 ```bash
 docker build \
   --build-arg NAT_VERSION=$(python -m setuptools_scm) \
   -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/strands-demo:latest \
-  -f examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile \
+  -f ./examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile \
   --platform linux/arm64 \
   --push .
 ```
+<!-- path-check-skip-end -->
 
 ### Verify Deployment Script
 Verify the REGION, ACCOUNT_ID, and ROLE are correct for your environment
@@ -193,7 +199,6 @@ Verify the REGION, ACCOUNT_ID, and ROLE are correct for your environment
 
 ```python
 
-import json
 import boto3
 import os
 
@@ -202,7 +207,7 @@ AWS_REGION = os.environ['AWS_DEFAULT_REGION']
 AWS_ACCOUNT_ID = os.environ['AWS_ACCOUNT_ID']
 IAM_AGENTCORE_ROLE = f'arn:aws:iam::{os.environ.get("AWS_ACCOUNT_ID")}:role/AgentCore_NAT'
 CONTAINER_IMAGE = 'strands-demo'
-AGENT_NAME = 'strands-demo'
+AGENT_NAME = 'strands_demo'
 
 client = boto3.client(
     'bedrock-agentcore-control',
@@ -220,7 +225,10 @@ response = client.create_agent_runtime(
         }
     },
     networkConfiguration={"networkMode": "PUBLIC"},
-    roleArn=IAM_AGENTCORE_ROLE
+    roleArn=IAM_AGENTCORE_ROLE,
+    environmentVariables={
+        'AWS_DEFAULT_REGION': AWS_REGION
+    },
 )
 
 print("Agent Runtime created successfully!")
@@ -233,7 +241,7 @@ print(f"Status: {response['status']}")
 ### Deploy the Agent
 
 ```bash
-uv run examples/frameworks/strands_demo/bedrock_agentcore/scripts/deploy_nat.py
+uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/deploy_nat.py
 ```
 
 **Important:** Record the runtime ID from the output for the next steps. It will look something like: `strands_demo-abc123XYZ`
@@ -256,24 +264,27 @@ import os
 
 AWS_REGION = os.environ['AWS_DEFAULT_REGION']
 AWS_ACCOUNT_ID = os.environ['AWS_ACCOUNT_ID']
-RUNTIME_NAME = "strands-demo"
+RUNTIME_NAME = "strands_demo"
 
 cclient = boto3.client('bedrock-agentcore-control', region_name=AWS_REGION)
 cresponse = cclient.list_agent_runtimes()
 
+runtime_id = None
 for runtime in cresponse['agentRuntimes']:
     if runtime['agentRuntimeName'] == RUNTIME_NAME:
         runtime_id = runtime['agentRuntimeId']
         print(f"Found runtime ID: {runtime_id}")
         break
 
+if runtime_id is None:
+    raise RuntimeError(f"No AgentCore runtime named {RUNTIME_NAME!r} found in region {AWS_REGION}")
+
 
 client = boto3.client('bedrock-agentcore', region_name=AWS_REGION)
-payload = json.dumps({"inputs": "How do I use the Strands Agents API?"})
+payload = json.dumps({"inputs": "What is AWS AgentCore?"})
 
 response = client.invoke_agent_runtime(
     agentRuntimeArn=f'arn:aws:bedrock-agentcore:{AWS_REGION}:{AWS_ACCOUNT_ID}:runtime/{runtime_id}',
-    #    runtimeSessionId='<RUNTIME_SESSION_ID>',  # Must be 33+ chars
     payload=payload,
     qualifier="DEFAULT"  # Optional
 )
@@ -286,7 +297,7 @@ print("Agent Response:", response_data)
 ### Run the Test
 
 ```bash
-uv run examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py
+uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py
 ```
 
 ## Step 7: Instrument for OpenTelemetry
@@ -296,8 +307,7 @@ uv run examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py
 For this step you will need your Runtime ID (obtained from Step 6) to update your `Dockerfile`:
 
 NOTE:  If you do not have the runtime ID, you can check the AWS Console or run the following script:
-```bash
-import json
+```python
 import boto3
 import os
 
@@ -305,7 +315,7 @@ import os
 
 AWS_REGION = os.environ['AWS_DEFAULT_REGION']
 AWS_ACCOUNT_ID = os.environ['AWS_ACCOUNT_ID']
-RUNTIME_NAME = "strands-demo"
+RUNTIME_NAME = "strands_demo"
 
 cclient = boto3.client('bedrock-agentcore-control', region_name=AWS_REGION)
 cresponse = cclient.list_agent_runtimes()
@@ -319,13 +329,13 @@ for runtime in cresponse['agentRuntimes']:
 
 You can run it here:
 ```bash
-uv run examples/frameworks/strands_demo/bedrock_agentcore/scripts/get_agentcore_runtime_id.py
+uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/get_agentcore_runtime_id.py
 ```
 
 Update the following environment variables in the `Dockerfile` with your Runtime ID.
 
 The location of the `Dockerfile` is:
- examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile
+ `./examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile`
 
 ```dockerfile
 ENV OTEL_RESOURCE_ATTRIBUTES=service.name=nat_test_agent,aws.log.group.names=/aws/bedrock-agentcore/runtimes/<RUNTIME_ID>
@@ -353,15 +363,16 @@ Save the updated `Dockerfile`
 
 > **Important:** Never pass credentials as build arguments. Use AWS IAM roles and environment variables instead. The example below shows the structure but credentials should be managed securely.
 
-
+<!-- path-check-skip-begin -->
 ```bash
 docker build \
   --build-arg NAT_VERSION=$(python -m setuptools_scm) \
   -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/strands-demo:latest \
-  -f examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile \
+  -f ./examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile \
   --platform linux/arm64 \
   --push .
 ```
+<!-- path-check-skip-end -->
 
 ### Update the Agent with New Version
 
@@ -372,28 +383,30 @@ Since you already have the agent deployed, you will need to run an update (rathe
 **update_nat.py:**
 
 ```python
-import json
 import boto3
 import os
 
 # Configuration
 CONTAINER_IMAGE = 'strands-demo:latest'
-IAM_AGENTCORE_ROLE = '<IAM_AGENTCORE_ROLE>'
 
 AWS_REGION = os.environ['AWS_DEFAULT_REGION']
 AWS_ACCOUNT_ID = os.environ['AWS_ACCOUNT_ID']
 IAM_AGENTCORE_ROLE = f'arn:aws:iam::{os.environ.get("AWS_ACCOUNT_ID")}:role/AgentCore_NAT'
 
-RUNTIME_NAME = "strands-demo"
+RUNTIME_NAME = "strands_demo"
 
 cclient = boto3.client('bedrock-agentcore-control', region_name=AWS_REGION)
 cresponse = cclient.list_agent_runtimes()
 
+runtime_id = None
 for runtime in cresponse['agentRuntimes']:
     if runtime['agentRuntimeName'] == RUNTIME_NAME:
         runtime_id = runtime['agentRuntimeId']
         print(f"Found runtime ID: {runtime_id}")
         break
+
+if runtime_id is None:
+    raise RuntimeError(f"No AgentCore runtime named {RUNTIME_NAME!r} found in region {AWS_REGION}")
 
 client = boto3.client(
     'bedrock-agentcore-control',
@@ -411,7 +424,10 @@ response = client.update_agent_runtime(
         }
     },
     networkConfiguration={"networkMode": "PUBLIC"},
-    roleArn=IAM_AGENTCORE_ROLE
+    roleArn=IAM_AGENTCORE_ROLE,
+    environmentVariables={
+        'AWS_DEFAULT_REGION': AWS_REGION
+    },
 )
 
 print("Agent Runtime updated successfully!")
@@ -423,13 +439,13 @@ print(f"Status: {response['status']}")
 ### Run the Update Script
 
 ```bash
-uv run examples/frameworks/strands_demo/bedrock_agentcore/scripts/update_nat.py
+uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/update_nat.py
 ```
 
-### Final Test
+### Final Test 
 
 ```bash
-uv run examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py
+uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py
 ```
 
 > **Note:** If you do not see OpenTelemetry telemetry for your agent after a few test runs, please refer to Appendix 2 to ensure you have enabled OpenTelemetry support in CloudWatch.
@@ -473,13 +489,14 @@ The role includes the following permission sets:
 
 | Permission Set | Purpose |
 |---------------|---------|
-| **Bedrock Model Access** | Invoke foundation models for AI/ML operations |
+| **Bedrock Model Access** | Invoke foundation models for AI and ML operations |
 | **ECR Access** | Pull container images for runtime deployment |
-| **CloudWatch Logs** | Create log groups/streams and write application logs |
+| **CloudWatch Logs** | Create log groups and streams, and write application logs |
 | **X-Ray Tracing** | Send distributed tracing data for observability |
 | **CloudWatch Metrics** | Publish custom metrics to CloudWatch |
 | **Workload Identity** | Access workload identity tokens for authentication |
 | **Secrets Manager** | Access the `secret:nvidia-api-credentials` key in Secrets Manager |
+
 ---
 
 ## Prerequisites
@@ -682,7 +699,7 @@ After the role is created, you'll be redirected to the Roles page:
 3. On the role summary page, locate and copy the **ARN** (Amazon Resource Name)
 
 The ARN will look like this:
-```text
+```
 arn:aws:iam::<AWS_ACCOUNT_ID>:role/AgentCore_NAT
 ```
 
@@ -746,21 +763,8 @@ The `Dockerfile` is organized into the following sections:
 <details>
 <summary>📄 Click to view complete `Dockerfile`</summary>
 
+<!-- path-check-skip-begin -->
 ```dockerfile
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 ARG BASE_IMAGE_URL=nvcr.io/nvidia/base/ubuntu
 ARG BASE_IMAGE_TAG=22.04_20240212
@@ -831,14 +835,12 @@ ENV AGENT_OBSERVABILITY_ENABLED=true
 # Service Identification attributed (gets added to all span logs)
 # Example:
 # OTEL_RESOURCE_ATTRIBUTES=service.version=1.0,service.name=mcp-calculator,aws.log.group.names=mcp/mcp-calculator-logs
-#ENV OTEL_RESOURCE_ATTRIBUTES=service.name=nat_test_agent,aws.log.group.names=/aws/bedrock-agentcore/runtimes/<AGENTCORE_RUNTIME_ID>
-ENV OTEL_RESOURCE_ATTRIBUTES=service.name=nat_test_agent,aws.log.group.names=/aws/bedrock-agentcore/runtimes/strands_test_demo-oNUmOg6xk0
+ENV OTEL_RESOURCE_ATTRIBUTES=service.name=nat_test_agent,aws.log.group.names=/aws/bedrock-agentcore/runtimes/<AGENTCORE_RUNTIME_ID>
 
 # CloudWatch Integration (ensure the log group and log stream are pre-created and exists)
 # Example:
 # OTEL_EXPORTER_OTLP_LOGS_HEADERS=x-aws-log-group=mcp/mcp-calculator-logs,x-aws-log-stream=default,x-aws-metric-namespace=mcp-calculator
-#ENV OTEL_EXPORTER_OTLP_LOGS_HEADERS=x-aws-log-group=/aws/bedrock-agentcore/runtimes/<AGENTCORE_RUNTIME_ID>,x-aws-log-stream=otel-rt-logs,x-aws-metric-namespace=strands_demo
-ENV OTEL_EXPORTER_OTLP_LOGS_HEADERS=x-aws-log-group=/aws/bedrock-agentcore/runtimes/strands_test_demo-oNUmOg6xk0,x-aws-log-stream=otel-rt-logs,x-aws-metric-namespace=strands_demo
+ENV OTEL_EXPORTER_OTLP_LOGS_HEADERS=x-aws-log-group=/aws/bedrock-agentcore/runtimes/<AGENTCORE_RUNTIME_ID>,x-aws-log-stream=otel-rt-logs,x-aws-metric-namespace=strands_demo
 
 # Remove build dependencies and cleanup (keep ca-certificates, curl, jq, unzip)
 RUN apt-mark manual ca-certificates curl jq unzip && \
@@ -848,7 +850,7 @@ RUN apt-mark manual ca-certificates curl jq unzip && \
     find /workspace -type f -name "*.md" -not -path "*/site-packages/*" -delete && \
     find /workspace -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true && \
     find /workspace -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
-
+    
 # Environment variables for the venv
 ENV PATH="/workspace/.venv/bin:$PATH"
 
@@ -856,11 +858,10 @@ ENV PATH="/workspace/.venv/bin:$PATH"
 ENV NAT_CONFIG_FILE=/workspace/examples/frameworks/strands_demo/configs/agentcore_config.yml
 
 # Define the entry point to start the server
-#ENTRYPOINT ["sh", "-c", "exec /workspace/examples/frameworks/strands_demo/bedrock_agentcore/scripts/run_nat_with_OTEL.sh"]
 ENTRYPOINT ["sh", "-c", "exec /workspace/examples/frameworks/strands_demo/bedrock_agentcore/scripts/run_nat_no_OTEL.sh"]
 
 ```
-
+<!-- path-check-skip-end -->
 ---
 
 ## Placeholder Reference
@@ -893,7 +894,7 @@ Throughout this guide, replace the following placeholders with your actual value
 
 ## Additional Resources
 
-- [NeMo Agent Toolkit Documentation](https://docs.nvidia.com/nemo/agent-toolkit/1.2/)
+- [NVIDIA NeMo Agent Toolkit Documentation](https://docs.nvidia.com/nemo/agent-toolkit/1.2/)
 - [AWS Bedrock AgentCore Documentation](https://docs.aws.amazon.com/bedrock/)
 - [OpenTelemetry Python Documentation](https://opentelemetry.io/docs/languages/python/)
 - [AWS CloudWatch Logs Documentation](https://docs.aws.amazon.com/cloudwatch/)
