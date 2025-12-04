@@ -1217,6 +1217,11 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                                               cast(MiddlewareBaseConfig, component_instance.config))
                 # Instantiate a function group
                 elif component_instance.component_group == ComponentGroup.FUNCTION_GROUPS:
+                    config_obj = cast(FunctionGroupBaseConfig, component_instance.config)
+                    registration = self._registry.get_function_group(type(config_obj))
+                    if registration.is_per_user:
+                        # Skip per-user function groups as they will be built lazily by PerUserWorkflowBuilder
+                        continue
                     await self.add_function_group(component_instance.name,
                                                   cast(FunctionGroupBaseConfig, component_instance.config))
                 # Instantiate a function
@@ -1408,6 +1413,47 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         return ConfiguredFunction(config=config, instance=build_result)
 
+    async def _build_per_user_function_group(self, name: str,
+                                             config: FunctionGroupBaseConfig) -> ConfiguredFunctionGroup:
+        registration = self._registry.get_function_group(type(config))
+
+        if not registration.is_per_user:
+            raise ValueError(f"Function group `{name}` is not a per-user function group")
+
+        inner_builder = ChildBuilder(self)
+
+        llms = {k: v.instance for k, v in self._shared_builder._llms.items()}
+        function_frameworks = detect_llm_frameworks_in_build_fn(registration)
+
+        build_fn = chain_wrapped_build_fn(registration.build_fn, llms, function_frameworks)
+
+        build_result = await self._get_exit_stack().enter_async_context(build_fn(config, inner_builder))
+
+        self.per_user_function_group_dependencies[name] = inner_builder.dependencies
+
+        if not isinstance(build_result, FunctionGroup):
+            raise ValueError("Expected a FunctionGroup object to be returned from the function group builder. "
+                             f"Got {type(build_result)}")
+
+        # Resolve middleware names from config to middleware instances
+        # Only FunctionMiddleware types can be used with function groups
+        middleware_instances = []
+        for middleware_name in config.middleware:
+            middleware_obj = await self._shared_builder.get_middleware(middleware_name)
+            if not isinstance(middleware_obj, FunctionMiddleware):
+                raise TypeError(f"Middleware `{middleware_name}` is not a FunctionMiddleware and "
+                                f"cannot be used with function groups. "
+                                f"Only FunctionMiddleware types support function-specific wrapping.")
+            middleware_instances.append(middleware_obj)
+
+        # Configure middleware for the function group
+        build_result.configure_middleware(middleware_instances)
+
+        # Set the instance name for the function group based on the workflow-provided name
+        build_result.set_instance_name(name)
+
+        return ConfiguredFunctionGroup(config=config, instance=build_result)
+
     @override
     async def add_function(self, name: str | FunctionRef, config: FunctionBaseConfig) -> Function:
         if isinstance(name, FunctionRef):
@@ -1449,17 +1495,56 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
 
     @override
     async def add_function_group(self, name: str | FunctionGroupRef, config: FunctionGroupBaseConfig) -> FunctionGroup:
-        # TODO: For now, function groups are shared only (Step 1 focuses on functions)
-        return await self._shared_builder.get_function_group(name)
+        if isinstance(name, FunctionGroupRef):
+            name = str(name)
+
+        if (name in self._per_user_function_groups or name in self._per_user_functions):
+            raise ValueError(f"Function group `{name}` already exists in the list of function groups or functions")
+
+        registration = self._registry.get_function_group(type(config))
+        if registration.is_per_user:
+            # Build the per-user function group
+            build_result = await self._build_per_user_function_group(name=name, config=config)
+
+            self._per_user_function_groups[name] = build_result
+
+            # If the function group exposes functions, add them to the per-user function registry
+            included_functions = await build_result.instance.get_included_functions()
+            for k in included_functions:
+                if k in self._per_user_functions:
+                    raise ValueError(f"Exposed function `{k}` from group `{name}` conflicts with an existing function")
+            self._per_user_functions.update({
+                k: ConfiguredFunction(config=v.config, instance=v)
+                for k, v in included_functions.items()
+            })
+
+            return build_result.instance
+        else:
+            # Shared function group - delegate to shared builder
+            return await self._shared_builder.get_function_group(name)
 
     @override
     async def get_function_group(self, name: str | FunctionGroupRef) -> FunctionGroup:
-        # TODO: For now, function groups are shared only (Step 1 focuses on functions)
+        if isinstance(name, FunctionGroupRef):
+            name = str(name)
+
+        # Check per-user function groups first
+        if name in self._per_user_function_groups:
+            return self._per_user_function_groups[name].instance
+
+        # Fall back to shared builder for shared function groups
         return await self._shared_builder.get_function_group(name)
 
     @override
     def get_function_group_config(self, name: str | FunctionGroupRef) -> FunctionGroupBaseConfig:
-        # TODO: For now, function groups are shared only (Step 1 focuses on functions)
+        if isinstance(name, FunctionGroupRef):
+            name = str(name)
+
+        # Check per-user function groups first
+        if name in self._per_user_function_groups:
+            return self._per_user_function_groups[name].config
+
+        # Fall back to shared builder
         return self._shared_builder.get_function_group_config(name)
 
     @override
@@ -1516,13 +1601,49 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
     async def get_tools(self,
                         tool_names: Sequence[str | FunctionRef | FunctionGroupRef],
                         wrapper_type: LLMFrameworkEnum | str) -> list[typing.Any]:
-        # Mix of per-user and shared tools
-        # TODO: add function group related logic later
-        tools = []
-        for name in tool_names:
-            tool = await self.get_tool(name, wrapper_type)
-            tools.append(tool)
-        return tools
+        unique = set(tool_names)
+        if len(unique) != len(tool_names):
+            raise ValueError("Tool names must be unique")
+
+        async def _get_tools(n: str | FunctionRef | FunctionGroupRef):
+            tools = []
+            is_function_group_ref = isinstance(n, FunctionGroupRef)
+            if isinstance(n, FunctionRef) or is_function_group_ref:
+                n = str(n)
+
+            # Check per-user function groups first
+            if n not in self._per_user_function_groups:
+                # Check shared function groups
+                if n not in self._shared_builder._function_groups:
+                    # The passed tool name is probably a function, but first check if it's a function group
+                    if is_function_group_ref:
+                        raise ValueError(f"Function group `{n}` not found in the list of function groups")
+                    tools.append(await self.get_tool(n, wrapper_type))
+                else:
+                    # It's a shared function group
+                    tool_wrapper_reg = self._registry.get_tool_wrapper(llm_framework=wrapper_type)
+                    current_function_group = self._shared_builder._function_groups[n]
+                    for fn_name, fn_instance in (await current_function_group.instance.get_accessible_functions()).items():
+                        try:
+                            tools.append(tool_wrapper_reg.build_fn(fn_name, fn_instance, self))
+                        except Exception:
+                            logger.error("Error fetching tool `%s`", fn_name, exc_info=True)
+                            raise
+            else:
+                # It's a per-user function group
+                tool_wrapper_reg = self._registry.get_tool_wrapper(llm_framework=wrapper_type)
+                current_function_group = self._per_user_function_groups[n]
+                for fn_name, fn_instance in (await current_function_group.instance.get_accessible_functions()).items():
+                    try:
+                        tools.append(tool_wrapper_reg.build_fn(fn_name, fn_instance, self))
+                    except Exception:
+                        logger.error("Error fetching tool `%s`", fn_name, exc_info=True)
+                        raise
+            return tools
+
+        tool_lists = await asyncio.gather(*[_get_tools(n) for n in tool_names])
+        # Flatten the list of lists into a single list
+        return [tool for sublist in tool_lists for tool in sublist]
 
     @override
     async def get_tool(self, fn_name: str | FunctionRef, wrapper_type: LLMFrameworkEnum | str) -> typing.Any:
@@ -1677,12 +1798,18 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
                         logger.debug(f"Building per-user function '{component_instance.name}' for user {self._user_id}")
                         await self.add_function(component_instance.name, config_obj)
 
-            # TODO: Handle per-user function groups when implemented
-            # elif component_instance.component_group == ComponentGroup.FUNCTION_GROUPS:
-            #     ...
+            elif component_instance.component_group == ComponentGroup.FUNCTION_GROUPS:
+                config_obj = cast(FunctionGroupBaseConfig, component_instance.config)
+                registration = self._registry.get_function_group(type(config_obj))
+                if registration.is_per_user:
+                    # Build the per-user function group
+                    logger.debug(
+                        f"Building per-user function group '{component_instance.name}' for user {self._user_id}")
+                    await self.add_function_group(component_instance.name, config_obj)
 
         logger.info(f"Per-user builder populated for user {self._user_id}: "
                     f"{len(self._per_user_functions)} functions, "
+                    f"{len(self._per_user_function_groups)} function groups, "
                     f"workflow={'set' if self._workflow else 'delegated to shared'}")
 
     async def build(self, entry_function: str | None = None) -> Workflow:
@@ -1726,12 +1853,14 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
         for name, configured_fn in self._per_user_functions.items():
             all_functions[name] = configured_fn.instance
 
-        # Collect all function groups (for now, all from shared)
-        # TODO: Add per-user function groups when implemented
-        all_function_groups = {
-            name: configured_fg.instance
-            for name, configured_fg in self._shared_builder._function_groups.items()
-        }
+        # Collect all function groups (shared + per-user)
+        all_function_groups = {}
+        # Add shared function groups
+        for name, configured_fg in self._shared_builder._function_groups.items():
+            all_function_groups[name] = configured_fg.instance
+        # Override with per-user function groups
+        for name, configured_fg in self._per_user_function_groups.items():
+            all_function_groups[name] = configured_fg.instance
 
         # Build function configs (per-user + shared)
         function_configs = {}
@@ -1740,11 +1869,12 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
         for name, configured_fn in self._per_user_functions.items():
             function_configs[name] = configured_fn.config
 
-        # Build function group configs (all from shared for now)
-        function_group_configs = {
-            name: configured_fg.config
-            for name, configured_fg in self._shared_builder._function_groups.items()
-        }
+        # Build function group configs (shared + per-user)
+        function_group_configs = {}
+        for name, configured_fg in self._shared_builder._function_groups.items():
+            function_group_configs[name] = configured_fg.config
+        for name, configured_fg in self._per_user_function_groups.items():
+            function_group_configs[name] = configured_fg.config
 
         # Determine workflow config
         if self._workflow is not None:

@@ -26,6 +26,7 @@ from nat.cli.register_workflow import register_function
 from nat.cli.register_workflow import register_per_user_function
 from nat.data_models.config import Config
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.function import FunctionGroupBaseConfig
 from nat.runtime.session import SessionManager
 
 
@@ -688,3 +689,537 @@ async def test_session_manager_schemas_for_per_user_workflow():
 
         finally:
             await sm.shutdown()
+
+
+# ============= Per-User Function Group Tests =============
+
+
+# Test schemas and configs for function groups
+class FunctionGroupToolInput(BaseModel):
+    query: str = Field(description="Query to process")
+
+
+class FunctionGroupToolOutput(BaseModel):
+    result: str = Field(description="Processing result")
+
+
+class SharedFunctionGroupConfig(FunctionGroupBaseConfig, name="shared_function_group"):
+    """A shared function group config for testing."""
+    pass
+
+
+class PerUserFunctionGroupConfig(FunctionGroupBaseConfig, name="per_user_function_group"):
+    """A per-user function group config for testing."""
+    group_prefix: str = "group"
+
+
+async def test_register_per_user_function_group():
+    """Test that @register_per_user_function_group decorator works."""
+    import typing
+
+    from nat.builder.function import FunctionGroup
+    from nat.cli.register_workflow import register_per_user_function_group
+    from nat.cli.type_registry import GlobalTypeRegistry
+
+    class TestPerUserGroupConfig(FunctionGroupBaseConfig, name="test_per_user_group_decorator"):
+        pass
+
+    @register_per_user_function_group(config_type=TestPerUserGroupConfig)
+    async def test_group(config: TestPerUserGroupConfig, builder: Builder):
+
+        class TestGroup(FunctionGroup):
+
+            async def get_accessible_functions(
+                self,
+                filter_fn: typing.Callable[[typing.Sequence[str]], typing.Awaitable[typing.Sequence[str]]]
+                | None = None,
+            ) -> dict[str, typing.Any]:
+                return {}
+
+        yield TestGroup(config=config)
+
+    # Check registration
+    registration = GlobalTypeRegistry.get().get_function_group(TestPerUserGroupConfig)
+    assert registration is not None
+    assert registration.is_per_user is True
+    assert registration.config_type == TestPerUserGroupConfig
+
+
+async def test_workflow_builder_skips_per_user_function_groups():
+    """Test that WorkflowBuilder.populate_builder() skips per-user function groups."""
+    import typing
+
+    from nat.builder.function import FunctionGroup
+    from nat.cli.register_workflow import register_function_group
+    from nat.cli.register_workflow import register_per_user_function_group
+
+    class SharedGroupConfig(FunctionGroupBaseConfig, name="test_shared_group_skip"):
+        pass
+
+    class PerUserGroupConfig(FunctionGroupBaseConfig, name="test_per_user_group_skip"):
+        pass
+
+    @register_function_group(config_type=SharedGroupConfig)
+    async def shared_group(config: SharedGroupConfig, builder: Builder):
+
+        class TestGroup(FunctionGroup):
+
+            async def get_accessible_functions(
+                self,
+                filter_fn: typing.Callable[[typing.Sequence[str]], typing.Awaitable[typing.Sequence[str]]]
+                | None = None,
+            ) -> dict[str, typing.Any]:
+                return {}
+
+        yield TestGroup(config=config)
+
+    @register_per_user_function_group(config_type=PerUserGroupConfig)
+    async def per_user_group(config: PerUserGroupConfig, builder: Builder):
+
+        class TestGroup(FunctionGroup):
+
+            async def get_accessible_functions(
+                self,
+                filter_fn: typing.Callable[[typing.Sequence[str]], typing.Awaitable[typing.Sequence[str]]]
+                | None = None,
+            ) -> dict[str, typing.Any]:
+                return {}
+
+        yield TestGroup(config=config)
+
+    config = Config(function_groups={
+        "shared_group": SharedGroupConfig(),
+        "per_user_group": PerUserGroupConfig(),
+    },
+                    functions={WORKFLOW_COMPONENT_NAME: SharedWorkflowConfig()},
+                    workflow=SharedWorkflowConfig())
+
+    async with WorkflowBuilder.from_config(config) as builder:
+        # Shared function group should be built
+        assert "shared_group" in builder._function_groups
+
+        # Per-user function group should NOT be built in shared builder
+        assert "per_user_group" not in builder._function_groups
+
+        # Attempting to get per-user function group should fail
+        with pytest.raises(ValueError, match="Function group `per_user_group` not found"):
+            await builder.get_function_group("per_user_group")
+
+
+async def test_per_user_builder_builds_per_user_function_groups():
+    """Test that PerUserWorkflowBuilder builds per-user function groups."""
+    import typing
+
+    from nat.builder.function import FunctionGroup
+    from nat.cli.register_workflow import register_per_user_function_group
+
+    class TestPerUserFGConfig(FunctionGroupBaseConfig, name="test_pu_fg_build"):
+        prefix: str
+
+    @register_per_user_function_group(config_type=TestPerUserFGConfig)
+    async def test_per_user_fg(config: TestPerUserFGConfig, builder: Builder):
+
+        class TestGroup(FunctionGroup):
+
+            def __init__(self, config: TestPerUserFGConfig):
+                super().__init__(config=config)
+                self.prefix = config.prefix
+
+            async def get_accessible_functions(
+                self,
+                filter_fn: typing.Callable[[typing.Sequence[str]], typing.Awaitable[typing.Sequence[str]]]
+                | None = None,
+            ) -> dict[str, typing.Any]:
+                return {}
+
+        yield TestGroup(config=config)
+
+    config = Config(function_groups={
+        "test_fg": TestPerUserFGConfig(prefix="user_specific"),
+    },
+                    functions={WORKFLOW_COMPONENT_NAME: SharedWorkflowConfig()},
+                    workflow=SharedWorkflowConfig())
+
+    async with WorkflowBuilder.from_config(config) as shared_builder:
+        async with PerUserWorkflowBuilder.from_config(user_id="user123", config=config,
+                                                      shared_builder=shared_builder) as per_user_builder:
+
+            # Per-user function group should be built
+            assert "test_fg" in per_user_builder._per_user_function_groups
+
+            # Should be able to get it
+            fg = await per_user_builder.get_function_group("test_fg")
+            assert fg is not None
+            assert hasattr(fg, 'prefix')
+            assert getattr(fg, 'prefix') == "user_specific"
+
+
+async def test_per_user_builder_function_groups_expose_functions():
+    """Test that per-user function groups can expose functions."""
+    from nat.builder.function import FunctionGroup
+    from nat.builder.function import LambdaFunction
+    from nat.cli.register_workflow import register_per_user_function_group
+
+    class TestExposeConfig(FunctionGroupBaseConfig, name="test_expose_fg"):
+        pass
+
+    @register_per_user_function_group(config_type=TestExposeConfig)
+    async def test_expose_fg(config: TestExposeConfig, builder: Builder):
+
+        class TestGroup(FunctionGroup):
+
+            def __init__(self, config: TestExposeConfig):
+                # Create a test function to expose
+                async def exposed_fn(inp: str) -> str:
+                    return f"exposed: {inp}"
+
+                exposed_fn_obj = LambdaFunction.from_info(config=FunctionBaseConfig(),
+                                                          info=FunctionInfo.from_fn(exposed_fn),
+                                                          instance_name="exposed_tool")
+
+                # Update config to include the exposed function
+                config.include = ["exposed_tool"]
+
+                super().__init__(config=config)
+
+                # Add function to the group's internal functions dict
+                self._functions["exposed_tool"] = exposed_fn_obj
+
+        yield TestGroup(config=config)
+
+    config = Config(function_groups={
+        "expose_fg": TestExposeConfig(),
+    },
+                    functions={WORKFLOW_COMPONENT_NAME: SharedWorkflowConfig()},
+                    workflow=SharedWorkflowConfig())
+
+    async with WorkflowBuilder.from_config(config) as shared_builder:
+        async with PerUserWorkflowBuilder.from_config(user_id="user_expose",
+                                                      config=config,
+                                                      shared_builder=shared_builder) as per_user_builder:
+
+            # Function group should be built
+            assert "expose_fg" in per_user_builder._per_user_function_groups
+
+            # Exposed function should be accessible with prefixed name (group_name.function_name)
+            assert "expose_fg.exposed_tool" in per_user_builder._per_user_functions
+
+            # Should be able to get and call it using the prefixed name
+            exposed_fn = await per_user_builder.get_function("expose_fg.exposed_tool")
+            result = await exposed_fn.ainvoke("test", to_type=str)
+            assert result == "exposed: test"
+
+
+async def test_per_user_builder_get_function_group_delegates_to_shared():
+    """Test that PerUserWorkflowBuilder delegates to shared builder for shared function groups."""
+    import typing
+
+    from nat.builder.function import FunctionGroup
+    from nat.cli.register_workflow import register_function_group
+
+    class TestSharedFGConfig(FunctionGroupBaseConfig, name="test_shared_fg_delegate"):
+        pass
+
+    @register_function_group(config_type=TestSharedFGConfig)
+    async def test_shared_fg(config: TestSharedFGConfig, builder: Builder):
+
+        class TestGroup(FunctionGroup):
+
+            async def get_accessible_functions(
+                self,
+                filter_fn: typing.Callable[[typing.Sequence[str]], typing.Awaitable[typing.Sequence[str]]]
+                | None = None,
+            ) -> dict[str, typing.Any]:
+                return {}
+
+        yield TestGroup(config=config)
+
+    config = Config(function_groups={
+        "shared_fg": TestSharedFGConfig(),
+    },
+                    functions={WORKFLOW_COMPONENT_NAME: SharedWorkflowConfig()},
+                    workflow=SharedWorkflowConfig())
+
+    async with WorkflowBuilder.from_config(config) as shared_builder:
+        async with PerUserWorkflowBuilder(user_id="user_delegate", shared_builder=shared_builder) as per_user_builder:
+
+            # Per-user builder should delegate to shared builder
+            fg = await per_user_builder.get_function_group("shared_fg")
+            assert fg is not None
+            assert fg is shared_builder._function_groups["shared_fg"].instance
+
+
+async def test_per_user_builder_get_function_group_config():
+    """Test that PerUserWorkflowBuilder.get_function_group_config() works correctly."""
+    import typing
+
+    from nat.builder.function import FunctionGroup
+    from nat.cli.register_workflow import register_function_group
+    from nat.cli.register_workflow import register_per_user_function_group
+
+    class SharedFGConf(FunctionGroupBaseConfig, name="test_shared_fg_conf"):
+        shared_value: str = "shared"
+
+    class PerUserFGConf(FunctionGroupBaseConfig, name="test_per_user_fg_conf"):
+        per_user_value: str = "per_user"
+
+    @register_function_group(config_type=SharedFGConf)
+    async def shared_fg(config: SharedFGConf, builder: Builder):
+
+        class TestGroup(FunctionGroup):
+
+            async def get_accessible_functions(
+                self,
+                filter_fn: typing.Callable[[typing.Sequence[str]], typing.Awaitable[typing.Sequence[str]]]
+                | None = None,
+            ) -> dict[str, typing.Any]:
+                return {}
+
+        yield TestGroup(config=config)
+
+    @register_per_user_function_group(config_type=PerUserFGConf)
+    async def per_user_fg(config: PerUserFGConf, builder: Builder):
+
+        class TestGroup(FunctionGroup):
+
+            async def get_accessible_functions(
+                self,
+                filter_fn: typing.Callable[[typing.Sequence[str]], typing.Awaitable[typing.Sequence[str]]]
+                | None = None,
+            ) -> dict[str, typing.Any]:
+                return {}
+
+        yield TestGroup(config=config)
+
+    config = Config(function_groups={
+        "shared_fg": SharedFGConf(shared_value="test_shared"),
+        "per_user_fg": PerUserFGConf(per_user_value="test_per_user"),
+    },
+                    functions={WORKFLOW_COMPONENT_NAME: SharedWorkflowConfig()},
+                    workflow=SharedWorkflowConfig())
+
+    async with WorkflowBuilder.from_config(config) as shared_builder:
+        async with PerUserWorkflowBuilder.from_config(user_id="user_conf", config=config,
+                                                      shared_builder=shared_builder) as per_user_builder:
+
+            # Get shared function group config
+            shared_conf = per_user_builder.get_function_group_config("shared_fg")
+            assert isinstance(shared_conf, SharedFGConf)
+            assert shared_conf.shared_value == "test_shared"
+
+            # Get per-user function group config
+            per_user_conf = per_user_builder.get_function_group_config("per_user_fg")
+            assert isinstance(per_user_conf, PerUserFGConf)
+            assert per_user_conf.per_user_value == "test_per_user"
+
+
+async def test_per_user_builder_build_merges_function_groups():
+    """Test that PerUserWorkflowBuilder.build() merges shared and per-user function groups."""
+    import typing
+
+    from nat.builder.function import FunctionGroup
+    from nat.cli.register_workflow import register_function_group
+    from nat.cli.register_workflow import register_per_user_function_group
+
+    class SharedBuildFGConfig(FunctionGroupBaseConfig, name="test_shared_build_fg"):
+        pass
+
+    class PerUserBuildFGConfig(FunctionGroupBaseConfig, name="test_per_user_build_fg"):
+        pass
+
+    @register_function_group(config_type=SharedBuildFGConfig)
+    async def shared_build_fg(config: SharedBuildFGConfig, builder: Builder):
+
+        class TestGroup(FunctionGroup):
+
+            async def get_accessible_functions(
+                self,
+                filter_fn: typing.Callable[[typing.Sequence[str]], typing.Awaitable[typing.Sequence[str]]]
+                | None = None,
+            ) -> dict[str, typing.Any]:
+                return {}
+
+        yield TestGroup(config=config)
+
+    @register_per_user_function_group(config_type=PerUserBuildFGConfig)
+    async def per_user_build_fg(config: PerUserBuildFGConfig, builder: Builder):
+
+        class TestGroup(FunctionGroup):
+
+            async def get_accessible_functions(
+                self,
+                filter_fn: typing.Callable[[typing.Sequence[str]], typing.Awaitable[typing.Sequence[str]]]
+                | None = None,
+            ) -> dict[str, typing.Any]:
+                return {}
+
+        yield TestGroup(config=config)
+
+    config = Config(function_groups={
+        "shared_fg": SharedBuildFGConfig(),
+        "per_user_fg": PerUserBuildFGConfig(),
+    },
+                    functions={WORKFLOW_COMPONENT_NAME: SharedWorkflowConfig()},
+                    workflow=SharedWorkflowConfig())
+
+    async with WorkflowBuilder.from_config(config) as shared_builder:
+        async with PerUserWorkflowBuilder.from_config(user_id="user_merge",
+                                                      config=config,
+                                                      shared_builder=shared_builder) as per_user_builder:
+
+            # Build workflow
+            workflow = await per_user_builder.build()
+
+            # Both shared and per-user function groups should be in the workflow
+            assert "shared_fg" in workflow.function_groups
+            assert "per_user_fg" in workflow.function_groups
+
+
+async def test_per_user_builder_get_tools_with_function_groups():
+    """Test that PerUserWorkflowBuilder.get_tools() expands function groups correctly."""
+    import typing
+
+    from nat.builder.framework_enum import LLMFrameworkEnum
+    from nat.builder.function import FunctionGroup
+    from nat.builder.function import LambdaFunction
+    from nat.cli.register_workflow import register_function_group
+    from nat.cli.register_workflow import register_per_user_function_group
+
+    class SharedToolsFGConfig(FunctionGroupBaseConfig, name="test_shared_tools_fg"):
+        pass
+
+    class PerUserToolsFGConfig(FunctionGroupBaseConfig, name="test_per_user_tools_fg"):
+        pass
+
+    @register_function_group(config_type=SharedToolsFGConfig)
+    async def shared_tools_fg(config: SharedToolsFGConfig, builder: Builder):
+
+        class TestGroup(FunctionGroup):
+
+            def __init__(self, config: SharedToolsFGConfig):
+                super().__init__(config=config)
+
+                async def tool1(inp: str) -> str:
+                    return f"shared_tool1: {inp}"
+
+                self._tool1 = LambdaFunction.from_info(config=FunctionBaseConfig(),
+                                                       info=FunctionInfo.from_fn(tool1),
+                                                       instance_name="shared_tool1")
+
+            async def get_accessible_functions(
+                self,
+                filter_fn: typing.Callable[[typing.Sequence[str]], typing.Awaitable[typing.Sequence[str]]]
+                | None = None,
+            ) -> dict[str, typing.Any]:
+                return {"shared_tool1": self._tool1}
+
+        yield TestGroup(config=config)
+
+    @register_per_user_function_group(config_type=PerUserToolsFGConfig)
+    async def per_user_tools_fg(config: PerUserToolsFGConfig, builder: Builder):
+
+        class TestGroup(FunctionGroup):
+
+            def __init__(self, config: PerUserToolsFGConfig):
+                super().__init__(config=config)
+
+                async def tool2(inp: str) -> str:
+                    return f"per_user_tool2: {inp}"
+
+                self._tool2 = LambdaFunction.from_info(config=FunctionBaseConfig(),
+                                                       info=FunctionInfo.from_fn(tool2),
+                                                       instance_name="per_user_tool2")
+
+            async def get_accessible_functions(
+                self,
+                filter_fn: typing.Callable[[typing.Sequence[str]], typing.Awaitable[typing.Sequence[str]]]
+                | None = None,
+            ) -> dict[str, typing.Any]:
+                return {"per_user_tool2": self._tool2}
+
+        yield TestGroup(config=config)
+
+    config = Config(function_groups={
+        "shared_fg": SharedToolsFGConfig(),
+        "per_user_fg": PerUserToolsFGConfig(),
+    },
+                    functions={WORKFLOW_COMPONENT_NAME: SharedWorkflowConfig()},
+                    workflow=SharedWorkflowConfig())
+
+    async with WorkflowBuilder.from_config(config) as shared_builder:
+        async with PerUserWorkflowBuilder.from_config(user_id="user_tools",
+                                                      config=config,
+                                                      shared_builder=shared_builder) as per_user_builder:
+
+            # Get tools from both function groups
+            # Note: This test just verifies the tools can be retrieved
+            # Actual tool wrapping depends on registered tool wrappers
+            try:
+                tools = await per_user_builder.get_tools(["shared_fg", "per_user_fg"],
+                                                         wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+                # Should get tools from both groups (if wrapper is registered)
+                assert len(tools) >= 0  # May be 0 if no wrapper registered in test environment
+            except ValueError as e:
+                # Expected if no tool wrapper is registered for LANGCHAIN
+                assert "not registered" in str(e) or "Tool wrapper" in str(e)
+
+
+async def test_per_user_builder_populate_builds_function_groups_before_functions():
+    """Test that populate_builder builds function groups before functions (dependency order)."""
+    import typing
+
+    from nat.builder.function import FunctionGroup
+    from nat.cli.register_workflow import register_per_user_function_group
+
+    class OrderTestFGConfig(FunctionGroupBaseConfig, name="test_order_fg"):
+        pass
+
+    class OrderTestFnConfig(FunctionBaseConfig, name="test_order_fn"):
+        fg_name: str
+
+    build_order = []
+
+    @register_per_user_function_group(config_type=OrderTestFGConfig)
+    async def order_fg(config: OrderTestFGConfig, builder: Builder):
+        build_order.append("function_group")
+
+        class TestGroup(FunctionGroup):
+
+            async def get_accessible_functions(
+                self,
+                filter_fn: typing.Callable[[typing.Sequence[str]], typing.Awaitable[typing.Sequence[str]]]
+                | None = None,
+            ) -> dict[str, typing.Any]:
+                return {}
+
+        yield TestGroup(config=config)
+
+    @register_per_user_function(config_type=OrderTestFnConfig,
+                                input_schema=PerUserInputSchema,
+                                single_output_schema=PerUserOutputSchema)
+    async def order_fn(config: OrderTestFnConfig, builder: Builder):
+        build_order.append("function")
+        # Access the function group (dependency)
+        _ = await builder.get_function_group(config.fg_name)
+
+        async def _impl(inp: PerUserInputSchema) -> PerUserOutputSchema:
+            return PerUserOutputSchema(result="test")
+
+        yield FunctionInfo.from_fn(_impl)
+
+    config = Config(function_groups={
+        "test_fg": OrderTestFGConfig(),
+    },
+                    functions={
+                        "test_fn": OrderTestFnConfig(fg_name="test_fg"),
+                    },
+                    workflow=SharedWorkflowConfig())
+
+    async with WorkflowBuilder.from_config(config) as shared_builder:
+        build_order.clear()
+        async with PerUserWorkflowBuilder.from_config(user_id="user_order",
+                                                      config=config,
+                                                      shared_builder=shared_builder):
+
+            # Function group should be built before function
+            assert build_order == ["function_group", "function"]

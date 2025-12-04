@@ -269,6 +269,43 @@ def register_function_group(config_type: type[FunctionGroupConfigT],
     return register_function_group_inner
 
 
+def register_per_user_function_group(config_type: type[FunctionGroupConfigT],
+                                     framework_wrappers: list[LLMFrameworkEnum | str] | None = None):
+    """
+    Register a per-user function group with optional framework_wrappers for automatic profiler hooking.
+
+    Per-user function groups are instantiated separately for each user, allowing for user-specific
+    shared state across multiple functions within the group.
+    """
+
+    def register_per_user_function_group_inner(
+        fn: FunctionGroupBuildCallableT[FunctionGroupConfigT]
+    ) -> FunctionGroupRegisteredCallableT[FunctionGroupConfigT]:
+        from .type_registry import GlobalTypeRegistry
+        from .type_registry import RegisteredFunctionGroupInfo
+
+        context_manager_fn = asynccontextmanager(fn)
+
+        framework_wrappers_list = list(framework_wrappers or [])
+
+        discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
+                                                                component_type=ComponentEnum.FUNCTION_GROUP)
+
+        GlobalTypeRegistry.get().register_function_group(
+            RegisteredFunctionGroupInfo(
+                full_type=config_type.full_type,
+                config_type=config_type,
+                build_fn=context_manager_fn,
+                framework_wrappers=framework_wrappers_list,
+                discovery_metadata=discovery_metadata,
+                is_per_user=True,
+            ))
+
+        return context_manager_fn
+
+    return register_per_user_function_group_inner
+
+
 def register_middleware(config_type: type[MiddlewareBaseConfigT]):
     """
     Register a middleware component.

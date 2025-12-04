@@ -367,7 +367,9 @@ class SessionManager:
             logger.info(f"Creating per-user builder for user={user_id}, entry_function={self._entry_function}")
             builder = PerUserWorkflowBuilder(user_id=user_id, shared_builder=self._shared_builder)
             # Enter the builder's context manually to avoid exiting the context manager
+            # Exit the context when cleaning up the builder
             await builder.__aenter__()
+
             try:
                 await builder.populate_builder(self._config)
                 workflow = await builder.build(entry_function=self._entry_function)
