@@ -213,7 +213,7 @@ Add a text processing function to my workflow that splits text into sentences an
 ```
 
 **Related Documentation**:
-- [Writing Custom Functions](../../extend/custom-components/custom-functions/functions.md)
+- [Writing Custom Functions](../../../extend/custom-components/custom-functions/functions.md)
 - [Functions Overview](../../../build-workflows/functions-and-function-groups/functions.md)
 
 ---
