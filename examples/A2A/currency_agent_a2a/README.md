@@ -88,6 +88,11 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 ```
 
 The currency agent requires a Google Gemini API key. Get one by following the instructions in the [Google Gemini API key documentation](https://ai.google.dev/gemini-api/docs/api-key).
+
+```bash
+export GOOGLE_API_KEY=<YOUR_GOOGLE_API_KEY>
+```
+
 ## Usage
 
 ### Verify External Server
