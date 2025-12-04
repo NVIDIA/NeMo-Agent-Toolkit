@@ -6212,7 +6212,7 @@ dev = [
     { name = "nbconvert" },
     { name = "nbsphinx", specifier = "~=0.9" },
     { name = "nvidia-nat-test", editable = "packages/nvidia_nat_test" },
-    { name = "nvidia-sphinx-theme", specifier = ">=0.0.7" },
+    { name = "nvidia-sphinx-theme", specifier = ">=0.0.9" },
     { name = "pre-commit", specifier = ">=4.0,<5.0" },
     { name = "pytest", specifier = "~=8.3" },
     { name = "pytest-asyncio", specifier = "==0.24.*" },
@@ -6667,14 +6667,14 @@ requires-dist = [
 
 [[package]]
 name = "nvidia-sphinx-theme"
-version = "0.0.8"
+version = "0.0.9.post1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydata-sphinx-theme" },
     { name = "sphinx" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/dd/74/996dbc314da8ed670cd5e040d0b4b5be79ff1fc3db3fe25e63134deebe9a/nvidia_sphinx_theme-0.0.8-py3-none-any.whl", hash = "sha256:18f117aa154a3a156251a75647279c541464f3e75f7df2ae283e720cc7d0bc2c", size = 140678, upload-time = "2025-03-24T21:56:25.621Z" },
+    { url = "https://files.pythonhosted.org/packages/8c/79/017fab2f7167a9a9795665f894d04f77aafceca80821b51589bb4b23ff5c/nvidia_sphinx_theme-0.0.9.post1-py3-none-any.whl", hash = "sha256:21ca60206dff2f380d7783d64bbaf71a5b9cacae53c7d0686f089c16b5a3d45a", size = 143816, upload-time = "2025-11-09T23:16:55.719Z" },
 ]
 
 [[package]]
