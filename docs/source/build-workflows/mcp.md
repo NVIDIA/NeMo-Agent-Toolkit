@@ -483,9 +483,9 @@ You can inspect the MCP tools available on the client side using the UI.
 4. Click on the MCP tab in the side panel to inspect the MCP tools available on the client side.
 
 ### Sample Output
-![MCP Side Panel](../../_static/mcp_side_panel.png)
+![MCP Side Panel](../_static/mcp_side_panel.png)
 
-![MCP Tools](../../_static/mcp_tools.png)
+![MCP Tools](../_static/mcp_tools.png)
 
 
 ### Troubleshooting
