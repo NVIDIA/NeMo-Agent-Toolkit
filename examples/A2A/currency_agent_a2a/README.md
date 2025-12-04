@@ -68,6 +68,7 @@ cd a2a-samples/samples/python/agents/langgraph
 # Step 3: Run the currency agent on port 11000
 uv run app --port 11000
 ```
+A Dockerfile will be provided in the future to run the currency agent as a container.
 
 ### Install Currency Agent Client
 

@@ -66,7 +66,7 @@ The `a2a_client` function group supports the following configuration options:
 | `url` | string | A2A agent URL | Required |
 | `agent_card_path` | string | Path to agent card endpoint | `/.well-known/agent-card.json` |
 | `task_timeout` | int | Task timeout in seconds | 300 |
-| `include_skills_in_description` | bool | Embed discovered skills in function description | `true` |
+| `include_skills_in_description` | boolean | Embed discovered skills in function description | `true` |
 | `auth_provider` | string | Reference to authentication provider | None |
 
 **Note**: You can get the complete list of configuration options and their schemas by running:
@@ -217,7 +217,7 @@ flowchart TB
     subgraph "Three-Level API"
         L1["Level 1: High-Level<br/>dice_agent.call(query)<br/>Natural language interface<br/>Skills optionally embedded in description"]
         L2["Level 2: Helpers<br/>dice_agent.get_skills(), dice_agent.get_info()<br/>dice_agent.get_task(), dice_agent.cancel_task()<br/>Task management utilities"]
-        L3["Level 3: Low-Level<br/>dice_agent.send_message(), dice_agent.send_message_streaming()<br/>Raw A2A Protocol access with task/context IDs"]
+        L3["Level 3: Low-Level<br/>dice_agent.send_message(), dice_agent.send_message_streaming()<br/>Raw A2A Protocol access with task and context IDs"]
     end
 
     FG --> L1

@@ -21,7 +21,7 @@ function_groups:
     task_timeout: 60
     include_skills_in_description: true
 
-  # Local MCP server for time/date operations
+  # Local MCP server for time and date operations
   mcp_time:
     _type: mcp_client
     server:

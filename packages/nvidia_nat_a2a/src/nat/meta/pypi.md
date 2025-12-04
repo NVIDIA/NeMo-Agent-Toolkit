@@ -25,12 +25,12 @@ This package provides A2A (Agent-to-Agent) Protocol functionality, allowing NeMo
 
 ## Features
 ### Client
-- Connect to remote A2A agents via HTTP/REST transport
+- Connect to remote A2A agents via HTTP with JSON-RPC transport
 - Discover agent capabilities through Agent Cards
 - Submit tasks to remote agents with async execution
 
 ### Server
-- Serve A2A agents via HTTP/REST transport
+- Serve A2A agents via HTTP with JSON-RPC transport
 - Support for A2A agent executor pattern
 
 For more information about the NVIDIA NeMo Agent Toolkit, please visit the [NeMo Agent Toolkit GitHub Repo](https://github.com/NVIDIA/NeMo-Agent-Toolkit).

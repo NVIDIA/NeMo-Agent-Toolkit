@@ -47,7 +47,7 @@ JSON metadata describing an A2A agent's capabilities, including:
 A component that connects to remote A2A agents and invokes their skills. In NAT, the `a2a_client` function group provides a function interface for interacting with remote agents.
 
 ### A2A Server
-A service that exposes NAT workflows as A2A agents. The `nat a2a serve` command publishes workflows, making them discoverable and invokable by other A2A clients.
+A service that exposes NAT workflows as A2A agents. The `nat a2a serve` command publishes workflows, making them discoverable and invocable by other A2A clients.
 
 ## Examples
 
@@ -76,7 +76,7 @@ Both A2A and MCP enable integration with external capabilities, but they serve d
 
 | Aspect | A2A | MCP |
 |--------|-----|-----|
-| **Purpose** | Agent-to-agent communication | Tool/context integration |
+| **Purpose** | Agent-to-agent communication | Tool and context integration |
 | **Granularity** | Agent level (high-level tasks) | Tool level (specific functions) |
 | **Discovery** | Agent Card with skills | Tool list with schemas |
 | **Use Case** | Delegating to other agents | Accessing tools and context |
