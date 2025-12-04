@@ -67,5 +67,5 @@ async def main():
 
 ## Notes
 - `nat_test_llm` is for development and CI only. Do not use it in production.
-- To implement your own provider, see: [Adding an LLM Provider](../extend/adding-an-llm-provider.md).
-- For more about configuring LLMs, see: [LLMs](../workflows/llms/index.md).
+- To implement your own provider, see: [Adding an LLM Provider](../custom-components/adding-an-llm-provider.md).
+- For more about configuring LLMs, see: [LLMs](../../build-workflows/llms/index.md).

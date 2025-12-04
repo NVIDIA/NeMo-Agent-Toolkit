@@ -110,7 +110,7 @@ workflow:
   max_retries: 3
 ```
 
-For MySQL or Redis configurations, replace the `object_stores` section with the appropriate object store type. Refer to the [Object Store Documentation](../../store-and-retrieve/object-store.md) for configuration options for each backend.
+For MySQL or Redis configurations, replace the `object_stores` section with the appropriate object store type. Refer to the [Object Store Documentation](../../../build-workflows/object-store.md) for configuration options for each backend.
 
 ## Token Storage Format
 
@@ -197,7 +197,7 @@ Then configure your custom storage in the MCP provider initialization.
 
 ## Related Documentation
 
-- [MCP Client Configuration](mcp-client.md)
-- [Object Store Documentation](../../store-and-retrieve/object-store.md)
-- [Authentication API Reference](../../reference/api-authentication.md)
-- [Extending Object Stores](../../extend/object-store.md)
+- [MCP Client Configuration](../../../build-workflows/mcp.md)
+- [Object Store Documentation](../../../build-workflows/object-store.md)
+- [Authentication API Reference](../api-authentication.md)
+- [Extending Object Stores](../../../extend/custom-components/object-store.md)

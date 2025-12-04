@@ -204,4 +204,4 @@ Object stores may raise specific exceptions:
 - **NoSuchKeyError**: When trying to retrieve or delete an object with a non-existent key
 
 ## Additional Resources
-For information on how to write a new object store provider, see the [Adding an Object Store Provider](../extend/object-store.md) document.
+For information on how to write a new object store provider, see the [Adding an Object Store Provider](../extend/custom-components/object-store.md) document.

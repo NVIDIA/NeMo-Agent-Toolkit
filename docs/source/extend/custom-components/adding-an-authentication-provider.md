@@ -22,7 +22,7 @@ limitations under the License.
 :::
 
 :::{note}
-We recommend reading the [Streamlining API Authentication](../reference/api-authentication.md) guide before proceeding with this detailed documentation.
+We recommend reading the [Streamlining API Authentication](../../components/auth/api-authentication.md) guide before proceeding with this detailed documentation.
 :::
 
 The NeMo Agent toolkit offers a set of built-in authentication providers for accessing API resources. Additionally, it includes

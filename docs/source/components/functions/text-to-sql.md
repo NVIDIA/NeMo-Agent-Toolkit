@@ -30,7 +30,7 @@ The NVIDIA NeMo Agent toolkit provides text-to-SQL capabilities through the `tex
 
 ## Installation
 
-The text-to-SQL plugin is distributed as a separate package that can be installed alongside the NeMo Agent toolkit. If you have not yet installed the NeMo Agent toolkit, refer to the [Installing](../../quick-start/installing.md) guide.
+The text-to-SQL plugin is distributed as a separate package that can be installed alongside the NeMo Agent toolkit. If you have not yet installed the NeMo Agent toolkit, refer to the [Installing](../../get-started/installing.md) guide.
 
 If you have performed a source code checkout, you can install this with the following command:
 
@@ -48,7 +48,7 @@ uv pip install "nvidia-nat[vanna]"
 
 ### Prerequisites
 
-- NVIDIA API Key (refer to [Obtaining API Keys](../../quick-start/installing.md#obtaining-api-keys))
+- NVIDIA API Key (refer to [Obtaining API Keys](../../get-started/installing.md#obtaining-api-keys))
 - Milvus vector database (local or cloud)
 - Databricks workspace with SQL warehouse or compute cluster access
 
@@ -511,7 +511,7 @@ Error: Failed to connect to database
 ## Additional Resources
 
 For more information:
-- [Writing Custom Functions](../../extend/functions.md) - Learn how to create your own functions
-- [Workflow Configuration](../workflow-configuration.md) - Complete configuration reference
-- [Contributing Guidelines](../../resources/contributing.md) - How to contribute to the NeMo Agent toolkit
-- [Support](../../support.md) - Get help and support
+- [Writing Custom Functions](../../extend/custom-components/custom-functions/functions.md) - Learn how to create your own functions
+- [Workflow Configuration](../../build-workflows/workflow-configuration.md) - Complete configuration reference
+- [Contributing Guidelines](../../extra/contributing/index.md) - How to contribute to the NeMo Agent toolkit
+- [Support](../../get-started/getting-help.md) - Get help and support

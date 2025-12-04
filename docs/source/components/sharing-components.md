@@ -21,14 +21,14 @@ Every NeMo Agent toolkit component is packaged inside of a NeMo Agent toolkit pl
 
 ## Enabling Local and Remote Discovery
 To begin building a sharable component, do the following:
-* Define a configuration object as described in [Customizing the Configuration Object](../workflows/workflow-configuration.md)
-* Define a function as described in [Creating a New Tool and Workflow](../tutorials/create-a-new-workflow.md).
+* Define a configuration object as described in [Customizing the Configuration Object](../build-workflows/workflow-configuration.md)
+* Define a function as described in [Creating a New Tool and Workflow](../get-started/tutorials/create-a-new-workflow.md).
 
 This section emphasizes the details of configuration objects that facilitate component discovery.
 
 After installing the NeMo Agent toolkit library, and potentially other NeMo Agent toolkit plugin packages, a developer may want to know what
 components are available for workflow development or evaluation. A great tool for this is the `nat info components` CLI
-utility described in [Components Information](../reference/cli.md#components-information). This command produces a
+utility described in [Components Information](../run-workflows/cli.md#components-information). This command produces a
 table containing information dynamically accumulated from each NeMo Agent toolkit component. The `details` column is sourced from
 each configuration object's docstring and field descriptions. Behind the scenes, these data (and others) are aggregated
 into a component's `DiscoveryMetadata` to enable local and remote discovery. This object includes the following key
@@ -130,7 +130,7 @@ process of discovering useful components and development of NeMo Agent toolkit b
 
 The last option for distribution is through source code. Since each NeMo Agent toolkit package is a pip installable Python package,
 each can be installed directly from source. Examples of this installation path are provided in the
-[Get Started](../quick-start/installing.md) guide.
+[Get Started](../get-started/installing.md) guide.
 
 ## Summary
 

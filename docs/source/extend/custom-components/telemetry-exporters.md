@@ -1362,7 +1362,7 @@ logging.getLogger("nat.observability").setLevel(logging.DEBUG)
 **Q: How do I handle authentication?**
 
 - Use environment variables for credentials: `api_key: str = Field(default="", description="API key from MYSERVICE_API_KEY")`
-- Environment variables can be configured directly in the workflow YAML configuration file through [Environment Variable Interpolation](../workflows/workflow-configuration.md#environment-variable-interpolation)
+- Environment variables can be configured directly in the workflow YAML configuration file through [Environment Variable Interpolation](../../build-workflows/workflow-configuration.md#environment-variable-interpolation)
 - Check environment variables in registration: `api_key = config.api_key or os.environ.get("MYSERVICE_API_KEY")`
 
 **Q: My exporter isn't receiving events. What's wrong?**

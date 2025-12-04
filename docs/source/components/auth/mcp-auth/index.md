@@ -170,7 +170,7 @@ At this point, a consent window is displayed to the user. The user must authoriz
 Subsequent tool calls can be disabled for the default user ID by setting `allow_default_user_id_for_tool_calls` to `false` in the authentication configuration. This is recommended for multi-user workflows to avoid accidental tool calls by unauthorized users.
 
 3. Launch the UI:
-- Launch the UI by following the instructions in the [User Interface](../../quick-start/launching-ui.md) documentation.
+- Launch the UI by following the instructions in the [User Interface](../../../run-workflows/launching-ui.md) documentation.
 - Connect to the UI at `http://localhost:3000`
 
 :::important
@@ -274,7 +274,7 @@ Tool calls may fail if one of the following happens:
 - [Secure Token Storage](./mcp-auth-token-storage.md) - Learn about configuring secure token storage for MCP authentication
 - [Service Account Authentication](./mcp-service-account-auth.md) - Learn about using service accounts for headless MCP authentication
 - [MCP Client](./mcp-client.md) - Connect to and use tools from remote MCP servers
-- [Object Store Documentation](../../store-and-retrieve/object-store.md) - Configure object stores for persistent token storage
+- [Object Store Documentation](../../../build-workflows/object-store.md) - Configure object stores for persistent token storage
 
 ```{toctree}
 :hidden:

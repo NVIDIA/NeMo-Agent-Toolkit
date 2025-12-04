@@ -671,6 +671,6 @@ Solution: Ensure the register module is imported. NAT automatically imports `nat
 
 ## See Also
 
-- [Writing Custom Functions](../extend/functions.md)
-- [Function Groups](../extend/function-groups.md)
+- [Writing Custom Functions](../extend/custom-components/custom-functions/functions.md)
+- [Function Groups](../extend/custom-components/custom-functions/function-groups.md)
 - [Plugin System](../extend/plugins.md)

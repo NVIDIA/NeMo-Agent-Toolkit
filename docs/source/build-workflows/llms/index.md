@@ -71,7 +71,7 @@ The NIM LLM provider is defined by the {py:class}`~nat.llm.nim_llm.NIMModelConfi
 * `max_retries` - The maximum number of retries for the request
 
 :::{note}
-`temperature` and `top_p` are model-gated fields and may not be supported by all models. If unsupported and explicitly set, validation will fail. See [Gated Fields](../../extend/gated-fields.md) for details.
+`temperature` and `top_p` are model-gated fields and may not be supported by all models. If unsupported and explicitly set, validation will fail. See [Gated Fields](../../extend/custom-components/gated-fields.md) for details.
 :::
 
 ### OpenAI
@@ -93,7 +93,7 @@ The OpenAI LLM provider is defined by the {py:class}`~nat.llm.openai_llm.OpenAIM
 * `max_retries` - The maximum number of retries for the request
 
 :::{note}
-`temperature` and `top_p` are model-gated fields and may not be supported by all models. If unsupported and explicitly set, validation will fail. See [Gated Fields](../../extend/gated-fields.md) for details.
+`temperature` and `top_p` are model-gated fields and may not be supported by all models. If unsupported and explicitly set, validation will fail. See [Gated Fields](../../extend/custom-components/gated-fields.md) for details.
 :::
 
 ### AWS Bedrock
@@ -129,7 +129,7 @@ The Azure OpenAI LLM provider is defined by the {py:class}`~nat.llm.azure_openai
 * `max_retries` - The maximum number of retries for the request
 
 :::{note}
-`temperature` is model-gated and may not be supported by all models. See [Gated Fields](../../extend/gated-fields.md) for details.
+`temperature` is model-gated and may not be supported by all models. See [Gated Fields](../../extend/custom-components/gated-fields.md) for details.
 :::
 
 ### LiteLLM
@@ -170,9 +170,9 @@ workflow:
   system_prompt: "Say only the answer."
 ```
 
-* Learn how to add your own LLM provider: [Adding an LLM Provider](../../extend/adding-an-llm-provider.md)
+* Learn how to add your own LLM provider: [Adding an LLM Provider](../../extend/custom-components/adding-an-llm-provider.md)
 <!-- vale off -->
-* See a short tutorial using YAML and `nat_test_llm`: [Test with nat_test_llm](../../extend/test-with-nat-test-llm.md)
+* See a short tutorial using YAML and `nat_test_llm`: [Test with nat_test_llm](../../extend/testing/test-with-nat-test-llm.md)
 <!-- vale on -->
 
 ## Related Topics

@@ -22,7 +22,7 @@ limitations under the License.
 :::
 
 :::{note}
-We recommend reading the [Evaluating NeMo Agent toolkit Workflows](../workflows/evaluate.md) guide before proceeding with this detailed documentation.
+We recommend reading the [Evaluating NeMo Agent toolkit Workflows](../../improve-workflows/evaluate.md) guide before proceeding with this detailed documentation.
 :::
 
 NeMo Agent toolkit provides a set of evaluators to run and evaluate NeMo Agent toolkit workflows. In addition to the built-in evaluators, NeMo Agent toolkit provides a plugin system to add custom evaluators.

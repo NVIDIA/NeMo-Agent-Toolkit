@@ -34,4 +34,4 @@ The following examples demonstrate how to use the memory module in the NeMo Agen
 * `examples/RAG/simple_rag`
 
 ## Additional Resources
-For information on how to write a new memory module provider can be found in the [Adding a Memory Provider](../extend/memory.md) document.
+For information on how to write a new memory module provider can be found in the [Adding a Memory Provider](../extend/custom-components/memory.md) document.

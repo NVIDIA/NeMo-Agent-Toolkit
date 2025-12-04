@@ -478,7 +478,7 @@ You can inspect the MCP tools available on the client side using the UI.
    nat serve --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml
    ```
 
-3. Launch the UI by following the instructions in the [Launching the UI](../../quick-start/launching-ui.md) documentation.
+3. Launch the UI by following the instructions in the [Launching the UI](../run-workflows/launching-ui.md) documentation.
 
 4. Click on the MCP tab in the side panel to inspect the MCP tools available on the client side.
 

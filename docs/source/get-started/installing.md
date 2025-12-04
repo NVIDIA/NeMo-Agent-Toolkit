@@ -107,7 +107,7 @@ Or for all optional dependencies:
 pip install "nvidia-nat[all]"
 ```
 
-The full list of optional dependencies can be found [here](../quick-start/installing.md#framework-integrations).
+The full list of optional dependencies can be found [here](#framework-integrations).
 
 ## Install From Source
 

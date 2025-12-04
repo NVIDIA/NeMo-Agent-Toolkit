@@ -19,11 +19,11 @@ limitations under the License.
 
 This example demonstrates how to use the NVIDIA NeMo Agent toolkit with MCP servers that require authentication. You'll authenticate with protected MCP services and access secured tools through OAuth2 flows.
 
-It is recommended to read the [MCP Authentication](../../../docs/source/workflows/mcp/mcp-auth.md) documentation first.
+It is recommended to read the [MCP Authentication](../../../docs/source/components/auth/mcp-auth/index.md) documentation first.
 
 ## Prerequisites
 
-1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
+1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installing.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 2. **MCP Server**: Access to an MCP server that requires authentication (e.g., corporate Jira system)
 
 **Note**: If you installed NeMo Agent toolkit from source, MCP client functionality is already included. If you installed from PyPI, you may need to install the MCP client package separately with `uv pip install "nvidia-nat[mcp]"`.
@@ -72,7 +72,7 @@ nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jir
 
 2. **Start the UI**:
 
-   Start the UI by following the instructions in the [Launching the UI](../../../docs/source/quick-start/launching-ui.md) guide. Connect to the URL http://localhost:3000.
+   Start the UI by following the instructions in the [Launching the UI](../../../docs/source/run-workflows/launching-ui.md) guide. Connect to the URL http://localhost:3000.
 
    > [!IMPORTANT]
    > Ensure that `WebSocket` mode is enabled by navigating to the top-right corner and selecting the `WebSocket` option in the arrow pop-out. WebSocket connections are required for OAuth authentication workflows.

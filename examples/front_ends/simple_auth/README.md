@@ -119,7 +119,7 @@ docker compose -f examples/front_ends/simple_auth/docker-compose.yml --project-d
 
 ## Deploy the NeMo Agent Toolkit UI
 
-Follow the instructions in the [Launching the UI](../../../docs/source/quick-start/launching-ui.md) guide to set up and launch the NeMo Agent Toolkit UI.
+Follow the instructions in the [Launching the UI](../../../docs/source/run-workflows/launching-ui.md) guide to set up and launch the NeMo Agent Toolkit UI.
 
 ## Update Your Environment Variables
 
@@ -146,7 +146,7 @@ handles authentication.
 
 Open the NeMo Agent Toolkit UI in your browser at http://localhost:3000.
 
-By default, the UI is configured to connect to your agent's API endpoint at `http://localhost:8000` and the WebSocket URL at `ws://localhost:8000/websocket`. These default values can be changed using environment variables. See the [Launching the UI](../../../docs/source/quick-start/launching-ui.md) guide for environment variable configuration details.
+By default, the UI is configured to connect to your agent's API endpoint at `http://localhost:8000` and the WebSocket URL at `ws://localhost:8000/websocket`. These default values can be changed using environment variables. See the [Launching the UI](../../../docs/source/run-workflows/launching-ui.md) guide for environment variable configuration details.
 
 > [!IMPORTANT]
 > In your chat window, ensure that `WebSocket` mode is enabled by navigating to the top-right corner and selecting the `WebSocket` option in the arrow pop-out. This is required for the OAuth 2.0 authentication flow to work properly.

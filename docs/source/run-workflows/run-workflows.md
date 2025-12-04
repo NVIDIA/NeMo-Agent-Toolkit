@@ -31,7 +31,7 @@ A workflow is defined by a YAML configuration file that specifies the tools and 
 
 ## Prerequisites
 
-Ensure that you have followed the instructions in the [Install Guide](../quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+Ensure that you have followed the instructions in the [Install Guide](../get-started/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 
 The examples in this document utilize the `examples/getting_started/simple_web_query` workflow, install it by running the following commands from the root directory of the NeMo Agent toolkit library:
 ```bash
@@ -39,7 +39,7 @@ uv pip install -e examples/getting_started/simple_web_query
 ```
 
 ### Set Up API Keys
-If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/quick-start/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+If you have not already done so, follow the [Obtaining API Keys](../get-started/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
@@ -66,7 +66,7 @@ nat run --config_file examples/getting_started/simple_web_query/configs/config.y
 ```
 
 ## Using the `nat eval` Command
-The `nat eval` command is similar to the `nat run` command. However, in addition to running the workflow, it also evaluates the accuracy of the workflow, refer to [Evaluating NeMo Agent toolkit Workflows](../workflows/evaluate.md) for more information.
+The `nat eval` command is similar to the `nat run` command. However, in addition to running the workflow, it also evaluates the accuracy of the workflow, refer to [Evaluating NeMo Agent toolkit Workflows](../improve-workflows/evaluate.md) for more information.
 
 ## Using the `nat serve` Command
 The `nat serve` command starts a web server that listens for incoming requests and runs the specified workflow. The server can be accessed with a web browser or by sending a POST request to the server's endpoint. Similar to the `nat run` command, the `nat serve` command requires a configuration file specified by the `--config_file` flag.

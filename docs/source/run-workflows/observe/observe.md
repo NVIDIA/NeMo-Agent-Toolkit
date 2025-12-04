@@ -86,7 +86,7 @@ The following table lists each exporter with its supported features and configur
 Additional options:
 
 - **File Export** - Built-in file-based tracing for local development and debugging
-- **Custom Exporters** - Refer to [Adding Telemetry Exporters](../../extend/telemetry-exporters.md) for creating custom integrations
+- **Custom Exporters** - Refer to [Adding Telemetry Exporters](../../extend/custom-components/telemetry-exporters.md) for creating custom integrations
 
 For complete configuration examples and setup instructions, check the `examples/observability/` directory.
 
@@ -186,7 +186,7 @@ Each exporter can optionally include a processing pipeline that transforms, filt
 
 ### Registering a New Telemetry Provider as a Plugin
 
-For complete information about developing and integrating custom telemetry exporters, including detailed examples, best practices, and advanced configuration options, Refer to [Adding Telemetry Exporters](../../extend/telemetry-exporters.md).
+For complete information about developing and integrating custom telemetry exporters, including detailed examples, best practices, and advanced configuration options, Refer to [Adding Telemetry Exporters](../../extend/custom-components/telemetry-exporters.md).
 
 ## Provider Integration Guides
 

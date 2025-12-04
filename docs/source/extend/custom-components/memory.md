@@ -17,7 +17,7 @@ limitations under the License.
 
 # Adding a Memory Provider
 
-This documentation presumes familiarity with the NeMo Agent toolkit plugin architecture, the concept of "function registration" using `@register_function`, and how we define tool/workflow configurations in the NeMo Agent toolkit config described in the [Creating a New Tool and Workflow](../tutorials/create-a-new-workflow.md) tutorial.
+This documentation presumes familiarity with the NeMo Agent toolkit plugin architecture, the concept of "function registration" using `@register_function`, and how we define tool/workflow configurations in the NeMo Agent toolkit config described in the [Creating a New Tool and Workflow](../../get-started/tutorials/create-a-new-workflow.md) tutorial.
 
 ## Key Memory Module Components
 

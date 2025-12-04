@@ -90,7 +90,7 @@ class TextFileIngestFunctionConfig(FunctionBaseConfig, name="text_file_ingest"):
 
 :::{note}
 The `name` parameter; the value of this will need to match the `_type` value in the workflow configuration file.
-For more details on NeMo Agent toolkit configuration objects, refer to the [Configuration Object Details](../workflows/workflow-configuration.md#configuration-object) section of the [Workflow Configuration](../workflows/workflow-configuration.md) document.
+For more details on NeMo Agent toolkit configuration objects, refer to the [Configuration Object Details](../../build-workflows/workflow-configuration.md#configuration-object) section of the [Workflow Configuration](../../build-workflows/workflow-configuration.md) document.
 :::
 
 ## Customizing the Tool Function
@@ -222,7 +222,7 @@ The `pyproject.toml` file defines your package metadata and dependencies. In thi
   ]
   ```
 
-  In this example, you have been using NeMo Agent toolkit with LangChain/LangGraph. This is why the dependency is declared on `nvidia-nat[langchain]`, that is to say NeMo Agent toolkit with the LangChain/LangGraph integration plugin. If you want to use LlamaIndex, declare the dependency on `nvidia-nat[llama-index]`. This is described in more detail in [Framework Integrations](../quick-start/installing.md#framework-integrations).
+  In this example, you have been using NeMo Agent toolkit with LangChain/LangGraph. This is why the dependency is declared on `nvidia-nat[langchain]`, that is to say NeMo Agent toolkit with the LangChain/LangGraph integration plugin. If you want to use LlamaIndex, declare the dependency on `nvidia-nat[llama-index]`. This is described in more detail in [Framework Integrations](../installing.md#framework-integrations).
 
 - **Version**: In this example, and in NeMo Agent toolkit in general, we use [setuptools-scm](https://setuptools-scm.readthedocs.io/en/latest/) to automatically determine the version of the package based on the Git tags. We did this by setting `dynamic = ["version"]` and declaring a build dependency on both `setuptools` and `setuptools_scm` in the `build-system` section of `pyproject.toml`:
   ```toml

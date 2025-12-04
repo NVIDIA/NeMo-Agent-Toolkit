@@ -462,7 +462,7 @@ function_groups:
 
 This section describes how to create and add function groups.
 
-To create your own custom function groups, see the [Writing Custom Function Groups](../extend/function-groups.md) guide, which covers:
+To create your own custom function groups, see the [Writing Custom Function Groups](../../extend/custom-components/custom-functions/function-groups.md) guide, which covers:
 
 - Defining configuration classes with Pydantic fields
 - Registering function groups with decorators
@@ -643,7 +643,7 @@ async with WorkflowBuilder() as builder:
 
 #### Per-Function Filters
 
-Per-function filters are applied to individual functions during group creation. See the [Writing Custom Function Groups](../extend/function-groups.md) guide for details.
+Per-function filters are applied to individual functions during group creation. See the [Writing Custom Function Groups](../../extend/custom-components/custom-functions/function-groups.md) guide for details.
 
 #### Filter Interaction
 
@@ -901,4 +901,4 @@ async with WorkflowBuilder() as builder:
 
 ## Writing Function Groups
 
-For details on creating and registering your own groups, see the [Writing Custom Function Groups](../extend/function-groups.md) guide.
+For details on creating and registering your own groups, see the [Writing Custom Function Groups](../../extend/custom-components/custom-functions/function-groups.md) guide.

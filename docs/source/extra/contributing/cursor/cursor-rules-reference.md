@@ -77,7 +77,7 @@ Help me set up NeMo Agent toolkit development environment with all required depe
 - Dependency management
 - Initial configuration steps
 
-**Related Documentation**: [Installation Guide](../quick-start/installing.md)
+**Related Documentation**: [Installation Guide](../../../get-started/installing.md)
 
 ---
 
@@ -93,7 +93,7 @@ Install NeMo Agent toolkit with all plugins and verify the installation is worki
 
 
 
-**Related Documentation**: [Installation Guide](../quick-start/installing.md)
+**Related Documentation**: [Installation Guide](../../../get-started/installing.md)
 
 ---
 
@@ -148,8 +148,8 @@ Run my workflow locally for testing and then serve it as an API endpoint on port
 
 
 **Related Documentation**:
-- [CLI Reference - Run Commands](./cli.md#run)
-- [Running Workflows](../workflows/run-workflows.md)
+- [CLI Reference - Run Commands](../../../run-workflows/cli.md#run)
+- [Running Workflows](../../../run-workflows/run-workflows.md)
 
 ---
 
@@ -164,8 +164,8 @@ Evaluate my workflow performance using a test dataset with accuracy and precisio
 ```
 
 **Related Documentation**:
-- [CLI Reference - Evaluation Commands](./cli.md#evaluation)
-- [Workflow Evaluation](../workflows/evaluate.md)
+- [CLI Reference - Evaluation Commands](../../../run-workflows/cli.md#evaluation)
+- [Workflow Evaluation](../../../improve-workflows/evaluate.md)
 
 ---
 
@@ -179,7 +179,7 @@ Evaluate my workflow performance using a test dataset with accuracy and precisio
 Show me system information and list all available NeMo Agent components with their details.
 ```
 
-**Related Documentation**: [CLI Reference - Info Commands](./cli.md#information-commands)
+**Related Documentation**: [CLI Reference - Info Commands](../../../run-workflows/cli.md#information-commands)
 
 ---
 
@@ -197,8 +197,8 @@ Show me system information and list all available NeMo Agent components with the
 - Documentation references
 
 **Related Documentation**:
-- [Workflow Overview](../workflows/about/index.md)
-- [Functions Overview](../workflows/functions/index.md)
+- [Workflow Overview](../../../build-workflows/about-workflows.md)
+- [Functions Overview](../../../build-workflows/functions-and-function-groups/functions.md)
 
 ---
 
@@ -213,8 +213,8 @@ Add a text processing function to my workflow that splits text into sentences an
 ```
 
 **Related Documentation**:
-- [Writing Custom Functions](../extend/functions.md)
-- [Functions Overview](../workflows/functions/index.md)
+- [Writing Custom Functions](../../custom-components/custom-functions/functions.md)
+- [Functions Overview](../../../build-workflows/functions-and-function-groups/functions.md)
 
 ---
 
@@ -228,7 +228,7 @@ Add a text processing function to my workflow that splits text into sentences an
 Integrate a web search tool into my workflow that can fetch and process search results from the internet.
 ```
 
-**Related Documentation**: [Adding Tools Tutorial](../tutorials/add-tools-to-a-workflow.md)
+**Related Documentation**: [Adding Tools Tutorial](../../../get-started/tutorials/add-tools-to-a-workflow.md)
 
 ---
 
@@ -244,7 +244,7 @@ Integrate a web search tool into my workflow that can fetch and process search r
 Integrate ReAct agent to the workflow
 ```
 
-**Related Documentation**: [Agent Docs](../workflows/about/index.md)
+**Related Documentation**: [Agent Docs](../../../components/agents/index.md)
 
 ---
 
