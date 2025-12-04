@@ -39,12 +39,12 @@ if typing.TYPE_CHECKING:
 
 # API builds take about 4 minutes, while the rest of the build process takes about 30 seconds.
 build_api_docs = os.getenv('NAT_DISABLE_API_BUILD', '0') != '1'
+cur_dir = Path(os.path.abspath(__file__)).parent
 
 def _build_api_tree() -> Path:
     # Work-around for https://github.com/readthedocs/sphinx-autoapi/issues/298
     # AutoAPI support for implicit namespaces is broken, so we need to manually
 
-    cur_dir = Path(os.path.abspath(__file__)).parent
     docs_dir = cur_dir.parent
     root_dir = docs_dir.parent
     nat_dir = root_dir / "src" / "nat"
@@ -138,6 +138,13 @@ if build_api_docs:
 
     # Enable this for debugging
     autoapi_keep_files = os.getenv('NAT_AUTOAPI_KEEP_FILES', '0') == '1'
+
+else:
+    # Create an empty 'api' directory to avoid build errors when API docs are disabled
+    api_stub_path = cur_dir / 'api'
+    api_stub_path.mkdir(exist_ok=True)
+    with open(api_stub_path / "index.md", "w", encoding="utf-8") as f:
+        f.write("# Python API\n\nPlaceholder for API documentation build with NAT_DISABLE_API_BUILD=1.")
 
 myst_enable_extensions = ["attrs_inline", "colon_fence"]
 
