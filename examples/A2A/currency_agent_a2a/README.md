@@ -58,17 +58,18 @@ Follow the instructions in the [Install Guide](../../../docs/source/quick-start/
 The currency agent runs as an external service using the a2a-samples repository:
 
 ```bash
-# Step 1: Clone the a2a-samples repository
+# Step 1: Clone the a2a-samples repository and checkout a tested tag
 cd external
 git clone https://github.com/a2aproject/a2a-samples.git
+cd a2a-samples
+git checkout eb3885f # tested on 12/2025 with NAT 1.4.0
 
 # Step 2: Navigate to the LangGraph agent
-cd a2a-samples/samples/python/agents/langgraph
+cd samples/python/agents/langgraph
 
 # Step 3: Run the currency agent on port 11000
 uv run app --port 11000
 ```
-A Dockerfile will be provided in the future to run the currency agent as a container.
 
 ### Install Currency Agent Client
 
