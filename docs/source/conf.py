@@ -37,6 +37,8 @@ from pathlib import Path
 if typing.TYPE_CHECKING:
     from autoapi._objects import PythonObject
 
+# API builds take about 4 minutes, while the rest of the build process takes about 30 seconds.
+build_api_docs = os.getenv('NAT_DISABLE_API_BUILD', '0') != '1'
 
 def _build_api_tree() -> Path:
     # Work-around for https://github.com/readthedocs/sphinx-autoapi/issues/298
@@ -79,10 +81,6 @@ def _build_api_tree() -> Path:
 
     return api_tree
 
-
-API_TREE = _build_api_tree()
-print(f"API tree built at {API_TREE}")
-
 # -- Project information -----------------------------------------------------
 
 project = 'NVIDIA NeMo Agent Toolkit'
@@ -104,7 +102,6 @@ version = '.'.join(release.split('.')[:2])
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'autoapi.extension',
     'IPython.sphinxext.ipython_console_highlighting',
     'IPython.sphinxext.ipython_directive',
     'myst_parser',
@@ -117,24 +114,30 @@ extensions = [
     "sphinxmermaid"
 ]
 
-autoapi_dirs = [str(API_TREE.absolute())]
+if build_api_docs:
+    api_tree = _build_api_tree()
+    print(f"API tree built at {api_tree}")
 
-autoapi_root = "api"
-autoapi_python_class_content = "both"
-autoapi_options = [
-    'members',
-    'undoc-members',
-    'private-members',
-    'show-inheritance',
-    'show-module-summary',
-    'imported-members',
-]
+    extensions.append('autoapi.extension')
 
-# set to true once https://github.com/readthedocs/sphinx-autoapi/issues/298 is fixed
-autoapi_python_use_implicit_namespaces = False
+    autoapi_dirs = [str(api_tree.absolute())]
 
-# Enable this for debugging
-autoapi_keep_files = False
+    autoapi_root = "api"
+    autoapi_python_class_content = "both"
+    autoapi_options = [
+        'members',
+        'undoc-members',
+        'private-members',
+        'show-inheritance',
+        'show-module-summary',
+        'imported-members',
+    ]
+
+    # set to true once https://github.com/readthedocs/sphinx-autoapi/issues/298 is fixed
+    autoapi_python_use_implicit_namespaces = False
+
+    # Enable this for debugging
+    autoapi_keep_files = os.getenv('NAT_AUTOAPI_KEEP_FILES', '0') == '1'
 
 myst_enable_extensions = ["attrs_inline", "colon_fence"]
 
@@ -333,19 +336,19 @@ default_role = "py:obj"
 # versions of Pydantic.
 PYDANTIC_DEFAULT_DOCSTRING = "A base class for creating Pydantic models."
 
+if build_api_docs:
+    def skip_pydantic_special_attrs(app: object, what: str, name: str, obj: "PythonObject", skip: bool,
+                                    options: list[str]) -> bool:
 
-def skip_pydantic_special_attrs(app: object, what: str, name: str, obj: "PythonObject", skip: bool,
-                                options: list[str]) -> bool:
+        if not skip:
+            bases = getattr(obj, 'bases', [])
+            if (not skip and ('pydantic.BaseModel' in bases or 'EndpointBase' in bases)
+                    and PYDANTIC_DEFAULT_DOCSTRING in obj.docstring):
+                obj.docstring = ""
 
-    if not skip:
-        bases = getattr(obj, 'bases', [])
-        if (not skip and ('pydantic.BaseModel' in bases or 'EndpointBase' in bases)
-                and PYDANTIC_DEFAULT_DOCSTRING in obj.docstring):
-            obj.docstring = ""
-
-    return skip
+        return skip
 
 
-def setup(sphinx):
-    # Work-around for for Pydantic docstrings that trigger parsing warnings
-    sphinx.connect("autoapi-skip-member", skip_pydantic_special_attrs)
+    def setup(sphinx):
+        # Work-around for for Pydantic docstrings that trigger parsing warnings
+        sphinx.connect("autoapi-skip-member", skip_pydantic_special_attrs)
