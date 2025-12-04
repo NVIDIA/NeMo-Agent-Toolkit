@@ -33,6 +33,7 @@ class A2AClientConfig(FunctionGroupBaseConfig, name="a2a_client"):
         agent_card_path: Path to the agent card (default: /.well-known/agent-card.json)
         task_timeout: Maximum time to wait for task completion (default: 300 seconds)
         include_skills_in_description: Include skill details in high-level function description (default: True)
+        streaming: Whether to enable streaming support for the A2A client (default: False)
         auth_provider: Optional reference to NAT auth provider for authentication
     """
 
