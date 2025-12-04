@@ -58,8 +58,9 @@ class A2AClientConfig(FunctionGroupBaseConfig, name="a2a_client"):
         "Skills are always available via get_skills() helper.",
     )
 
+    # streaming is disabled by default because of AIQ-2496
     streaming: bool = Field(
-        default=True,
+        default=False,
         description="Whether to enable streaming support for the A2A client",
     )
 
