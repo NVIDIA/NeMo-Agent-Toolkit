@@ -6222,7 +6222,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "a2a-sdk", specifier = "~=0.3.16" },
+    { name = "a2a-sdk", specifier = "~=0.3.20" },
     { name = "nvidia-nat", editable = "." },
 ]
 

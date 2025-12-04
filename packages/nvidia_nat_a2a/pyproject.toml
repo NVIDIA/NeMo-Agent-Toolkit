@@ -21,7 +21,7 @@ dependencies = [
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
   # Keep sorted!!!
   "nvidia-nat~=1.4",
-  "a2a-sdk~=0.3.16",
+  "a2a-sdk~=0.3.20",
 ]
 requires-python = ">=3.11,<3.14"
 description = "Subpackage for A2A Protocol integration in NeMo Agent Toolkit"

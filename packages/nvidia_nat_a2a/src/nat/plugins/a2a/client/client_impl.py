@@ -71,6 +71,7 @@ class A2AClientFunctionGroup(FunctionGroup):
             base_url=base_url,
             agent_card_path=config.agent_card_path,
             task_timeout=config.task_timeout,
+            streaming=config.streaming
         )
         await self._client.__aenter__()
         logger.info("Connected to A2A agent at %s", base_url)
