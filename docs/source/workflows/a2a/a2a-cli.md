@@ -17,7 +17,7 @@ limitations under the License.
 
 # A2A CLI Utilities
 
-The NeMo Agent toolkit provides command-line utilities for testing, debugging, and interacting with A2A agents. These tools are useful for development, testing, and troubleshooting A2A integrations.
+The NVIDIA NeMo Agent toolkit provides command-line utilities for testing, debugging, and interacting with A2A agents. These tools are useful for development, testing, and troubleshooting A2A integrations.
 
 This guide covers the A2A CLI utilities. For information on using A2A clients in workflows, refer to [A2A Client](./a2a-client.md). For publishing workflows as A2A servers, refer to [A2A Server](./a2a-server.md).
 

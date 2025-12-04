@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NeMo Agent Toolkit as an A2A Server
+# NVIDIA NeMo Agent Toolkit Workflow as an A2A Server
 
 [Agent-to-Agent (A2A) Protocol](https://a2aproject.org/) is an open standard from the Linux Foundation that enables agent-to-agent communication and collaboration. You can publish NeMo Agent toolkit workflows as A2A agents, making them discoverable and invocable by other A2A clients.
 
