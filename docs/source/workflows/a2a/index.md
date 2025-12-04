@@ -82,4 +82,4 @@ Both A2A and MCP enable integration with external capabilities, but they serve d
 | **Use Case** | Delegating to other agents | Accessing tools and context |
 | **Best For** | Multi-agent systems | Tool integration |
 
-You typically use A2A to delegate complex tasks to other agents and MCP to access tools and context. You can use both protocols together for maximum flexibility (see the [Math Assistant A2A example](../examples/A2A/math_assistant_a2a/README.md)).
+You typically use A2A to delegate complex tasks to other agents and MCP to access tools and context. You can use both protocols together for maximum flexibility.
