@@ -22,7 +22,7 @@ Model Context Protocol (MCP) is an open protocol developed by Anthropic that sta
 
 You can create a workflow that uses MCP tools as functions. In this case, the workflow acts as an MCP host and creates MCP clients to connect to MCP servers and use their tools as functions.
 
-This guide covers how to use a NeMo Agent toolkit workflow as an MCP host with one or more MCP clients. For more information on how to use the NeMo Agent toolkit as an MCP server, refer to [MCP Server](./mcp-server.md).
+This guide covers how to use a NeMo Agent toolkit workflow as an MCP host with one or more MCP clients. For more information on how to use the NeMo Agent toolkit as an MCP server, refer to [MCP Server](../run-workflows/mcp-server.md).
 
 ## Installation
 
@@ -32,7 +32,7 @@ MCP client functionality requires the `nvidia-nat-mcp` package. Install it with:
 uv pip install "nvidia-nat[mcp]"
 ```
 ## Accessing Protected MCP Servers
-NeMo Agent toolkit can access protected MCP servers through the MCP client auth provider. For more information, refer to [MCP Authentication](./mcp-auth.md).
+NeMo Agent toolkit can access protected MCP servers through the MCP client auth provider. For more information, refer to [MCP Authentication](../components/auth/mcp-auth/index.md).
 
 ## MCP Client Configuration
 NeMo Agent toolkit enables workflows to use MCP tools as functions. The library handles the MCP server connection, tool discovery, and function registration. This allows the workflow to use MCP tools as regular functions.
@@ -66,14 +66,14 @@ You can use the `mcp_client` function group to connect to an MCP server, dynamic
 
 The function group supports filtering using the `include` and `exclude` parameters. You can also optionally override the tool name and description defined by the MCP server using the `tool_overrides` parameter.
 
-The function group can be directly referenced in the workflow configuration and provides all accessible tools from the MCP server to the workflow. Multiple function groups can be used in the same workflow to access tools from multiple MCP servers. Refer to [Function Groups](../function-groups.md) for more information about function group capabilities.
+The function group can be directly referenced in the workflow configuration and provides all accessible tools from the MCP server to the workflow. Multiple function groups can be used in the same workflow to access tools from multiple MCP servers. Refer to [Function Groups](./functions-and-function-groups/function-groups.md) for more information about function group capabilities.
 
 A tool within a function group can also be referenced by its name using the following syntax: `<function_group_name>.<tool_name>`.
 
 :::{note}
 This requires that the tool name is explicitly listed under the optional `include` list of the function group configuration.
 
-See [function group accessibility](../function-groups.md#understanding-function-accessibility) for more details.
+See [function group accessibility](./functions-and-function-groups/function-groups.md#understanding-function-accessibility) for more details.
 :::
 Example:
 ```yaml
@@ -273,7 +273,7 @@ To run this example:
 ```bash
 nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml
 ```
-This starts an MCP server on port 9901 with endpoint `/mcp` and uses `streamable-http` transport. Refer to [MCP Server](./mcp-server.md) for more information.
+This starts an MCP server on port 9901 with endpoint `/mcp` and uses `streamable-http` transport. Refer to [MCP Server](../run-workflows/mcp-server.md) for more information.
 
 2. Run the workflow:
 ```bash
@@ -360,7 +360,7 @@ To use a protected MCP server, you need to provide the `--auth` flag:
 ```bash
 nat mcp client tool list --url http://example.com/mcp --auth
 ```
-This will use the `mcp_oauth2` authentication provider to authenticate the user. For more information, refer to [MCP Authentication](./mcp-auth.md).
+This will use the `mcp_oauth2` authentication provider to authenticate the user. For more information, refer to [MCP Authentication](../components/auth/mcp-auth/index.md).
 
 ## List MCP Client Tools using the HTTP endpoint
 This is useful when you want to inspect the tools configured on the client side and whether each tool is available on the connected server.

@@ -59,7 +59,7 @@ Add a text processing function to my workflow that splits text into sentences an
 Run my workflow locally for testing and then serve it as an API endpoint on port 8080.
 ```
 
-For complete documentation with all available rules, prompts, and examples, refer to the **[Cursor Rules Reference](../reference/cursor-rules-reference.md)**.
+For complete documentation with all available rules, prompts, and examples, refer to the **[Cursor Rules Reference](../../extra/contributing/cursor/cursor-rules-reference.md)**.
 
 ## Building a Demo Agent with Cursor Rules
 
@@ -74,7 +74,7 @@ Prompt:
 Install NeMo Agent toolkit with all required dependencies and verify the installation
 ```
 
-The assistant will reference and apply the [toolkit-installation](../../../.cursor/rules/nat-setup/nat-toolkit-installation.mdc) rule to validate prerequisites and install the toolkit, followed by installation verification.
+The assistant will reference and apply the `.cursor/rules/nat-setup/nat-toolkit-installation.mdc` rule to validate prerequisites and install the toolkit, followed by installation verification.
 
 <div align="center">
   <img src="../_static/cursor_rules_demo/install.gif" width="600">
@@ -86,7 +86,7 @@ Prompt:
 ```
 Find datetime-related functions and tools available in NeMo Agent toolkit
 ```
-The assistant will reference and apply the [info](../../../.cursor/rules/nat-cli/nat-info.mdc) rule to discover available tools and functions.
+The assistant will reference and apply the `.cursor/rules/nat-cli/nat-info.mdc` rule to discover available tools and functions.
 
 <div align="center">
   <img src="../_static/cursor_rules_demo/find_tool.gif" width="600">
@@ -100,7 +100,7 @@ Prompt:
 Create a new workflow named `demo_workflow` in the examples folder
 ```
 
-The assistant will reference and apply the [general](../../../.cursor/rules/nat-workflows/general.mdc) rule to generate a new workflow using the `nat workflow create` command.
+The assistant will reference and apply the `.cursor/rules/nat-workflows/general.mdc` rule to generate a new workflow using the `nat workflow create` command.
 
 <div align="center">
   <img src="../_static/cursor_rules_demo/create_workflow.gif" width="600">
@@ -113,7 +113,7 @@ Prompt:
 Add the current_datetime function to the demo_workflow
 ```
 
-The assistant will reference and apply the [add-functions](../../../.cursor/rules/nat-workflows/add-functions.mdc) rule to integrate the function into the workflow.
+The assistant will reference and apply the `.cursor/rules/nat-workflows/add-functions.mdc` rule to integrate the function into the workflow.
 
 <div align="center">
   <img src="../_static/cursor_rules_demo/add_tool.gif" width="600">
@@ -126,7 +126,7 @@ Prompt:
 ```
 Integrate ReAct agent to the workflow
 ```
-The assistant will reference and apply the [general](../../../.cursor/rules/nat-agents/general.mdc) rule to integrate a ReAct agent within the workflow.
+The assistant will reference and apply the `.cursor/rules/nat-agents/general.mdc` rule to integrate a ReAct agent within the workflow.
 
 <div align="center">
   <img src="../_static/cursor_rules_demo/react_agent.gif" width="600">
@@ -139,7 +139,7 @@ Prompt:
 Run the demo_workflow
 ```
 
-The assistant will reference and apply the [run-serve](../../../.cursor/rules/nat-cli/nat-run-serve.mdc) rule to run the workflow.
+The assistant will reference and apply the `.cursor/rules/nat-cli/nat-run-serve.mdc` rule to run the workflow.
 
 <div align="center">
   <img src="../_static/cursor_rules_demo/run_workflow.gif" width="600">
@@ -155,9 +155,9 @@ Keep your prompts specific and concise. For instance, rather than stating "Creat
 
 NeMo Agent toolkit offers a comprehensive collection of Cursor rules organized into four primary categories:
 
-- **[Foundation Rules](../reference/cursor-rules-reference.md#foundation-rules)**: Core code quality standards and cursor rules management
-- **[Setup and Installation Rules](../reference/cursor-rules-reference.md#setup-and-installation-rules)**: Environment configuration and toolkit installation procedures
-- **[CLI Command Rules](../reference/cursor-rules-reference.md#cli-command-rules)**: Complete CLI operations and command handling
-- **[Workflow Development Rules](../reference/cursor-rules-reference.md#workflow-development-rules)**: Function and tool development for workflow creation
+- **[Foundation Rules](../../extra/contributing/cursor/cursor-rules-reference.md#foundation-rules)**: Core code quality standards and cursor rules management
+- **[Setup and Installation Rules](../../extra/contributing/cursor/cursor-rules-reference.md#setup-and-installation-rules)**: Environment configuration and toolkit installation procedures
+- **[CLI Command Rules](../../extra/contributing/cursor/cursor-rules-reference.md#cli-command-rules)**: Complete CLI operations and command handling
+- **[Workflow Development Rules](../../extra/contributing/cursor/cursor-rules-reference.md#workflow-development-rules)**: Function and tool development for workflow creation
 
-For a **comprehensive overview of all supported tasks**, including detailed prompts, examples, and capabilities for each rule, refer to the **[Cursor Rules Reference](../reference/cursor-rules-reference.md)**.
+For a **comprehensive overview of all supported tasks**, including detailed prompts, examples, and capabilities for each rule, refer to the **[Cursor Rules Reference](../../extra/contributing/cursor/cursor-rules-reference.md)**.

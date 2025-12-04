@@ -48,7 +48,7 @@ uv pip install "nvidia-nat[vanna]"
 
 ### Prerequisites
 
-- NVIDIA API Key (refer to [Obtaining API Keys](../../get-started/installing.md#obtaining-api-keys))
+- NVIDIA API Key (refer to [Obtaining API Keys](../../get-started/quick-start.md#obtaining-api-keys))
 - Milvus vector database (local or cloud)
 - Databricks workspace with SQL warehouse or compute cluster access
 

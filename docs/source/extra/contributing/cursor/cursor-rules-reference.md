@@ -115,7 +115,7 @@ Show me how to use CLI commands to manage workflows
 - Error troubleshooting
 - Best practices for CLI operations
 
-**Related Documentation**: [CLI Reference](./cli.md)
+**Related Documentation**: [CLI Reference](../../../run-workflows/cli.md)
 
 ---
 
@@ -131,7 +131,7 @@ Create a workflow named demo_workflow in examples directory with description "De
 
 
 
-**Related Documentation**: [CLI Reference - Workflow Commands](./cli.md#workflow)
+**Related Documentation**: [CLI Reference - Workflow Commands](../../../run-workflows/cli.md#workflow)
 
 ---
 
@@ -213,7 +213,7 @@ Add a text processing function to my workflow that splits text into sentences an
 ```
 
 **Related Documentation**:
-- [Writing Custom Functions](../../custom-components/custom-functions/functions.md)
+- [Writing Custom Functions](../../extend/custom-components/custom-functions/functions.md)
 - [Functions Overview](../../../build-workflows/functions-and-function-groups/functions.md)
 
 ---
@@ -276,4 +276,4 @@ Integrate ReAct agent to the workflow
 * **Reference Documentation**: Follow the "Related Documentation" links for deeper understanding
 * **Test Incrementally**: Apply one rule at a time and test the results
 
-For tutorials and examples on using these rules, see [Build a Demo Agent Workflow Using Cursor Rules for NeMo Agent Toolkit](../tutorials/build-a-demo-agent-workflow-using-cursor-rules.md).
+For tutorials and examples on using these rules, see [Build a Demo Agent Workflow Using Cursor Rules for NeMo Agent Toolkit](../../../get-started/tutorials/build-a-demo-agent-workflow-using-cursor-rules.md).

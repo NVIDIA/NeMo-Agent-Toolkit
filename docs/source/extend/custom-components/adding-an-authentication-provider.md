@@ -90,8 +90,8 @@ After implementing a new authentication provider, it’s important to verify tha
 
 ## Packaging the Provider
 
-The provider will need to be bundled into a Python package, which in turn will be registered with the toolkit as a [plugin](../extend/plugins.md). In the `pyproject.toml` file of the package the
-`project.entry-points.'nat.components'` section, defines a Python module as the entry point of the plugin. Details on how this is defined are found in the [Entry Point](../extend/plugins.md#entry-point) section of the plugins document. By convention, the entry point module is named `register.py`, but this is not a requirement.
+The provider will need to be bundled into a Python package, which in turn will be registered with the toolkit as a [plugin](../plugins.md). In the `pyproject.toml` file of the package the
+`project.entry-points.'nat.components'` section, defines a Python module as the entry point of the plugin. Details on how this is defined are found in the [Entry Point](../plugins.md#entry-point) section of the plugins document. By convention, the entry point module is named `register.py`, but this is not a requirement.
 
 In the entry point module, the registration of provider, that is the function decorated with `register_auth_provider`, needs to be defined, either directly or imported from another module. A hypothetical `register.py` file could be defined as follows:
 

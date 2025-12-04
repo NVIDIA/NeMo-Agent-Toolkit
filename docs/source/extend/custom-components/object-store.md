@@ -360,4 +360,4 @@ To integrate your object store provider as a plugin, follow the standard NeMo Ag
 3. Add the necessary dependencies to your plugin's `pyproject.toml`
 4. Ensure your plugin is discoverable by NeMo Agent toolkit
 
-For more information on creating plugins, see the [Plugins](../extend/plugins.md) documentation.
+For more information on creating plugins, see the [Plugins](../plugins.md) documentation.

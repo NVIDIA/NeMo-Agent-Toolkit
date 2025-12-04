@@ -17,7 +17,7 @@ limitations under the License.
 
 # Evaluate API Endpoints
 :::{note}
-It is recommended that the [Evaluating NeMo Agent toolkit Workflows](./evaluate.md) guide be read before proceeding with this detailed documentation.
+It is recommended that the [Evaluating NeMo Agent toolkit Workflows](../improve-workflows/evaluate.md) guide be read before proceeding with this detailed documentation.
 :::
 
 The evaluation endpoint can be used to start evaluation jobs on a remote NeMo Agent toolkit server. This endpoint is only available when the `async_endpoints` optional dependency extra is installed. For users installing from source, this can be done by running `uv pip install -e '.[async_endpoints]'` from the root directory of the NeMo Agent toolkit library. Similarly, for users installing from PyPI, this can be done by running `pip install "nvidia-nat[async_endpoints]"`.

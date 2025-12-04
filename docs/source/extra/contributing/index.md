@@ -128,7 +128,7 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
 
 ## Code contributions
 
-Please ensure that all new contributions adhere to the latest version notes within the [Migration Guide](./migration-guide.md).
+Please ensure that all new contributions adhere to the latest version notes within the [Migration Guide](../migration-guide.md).
 
 ### Example Workflow Contributions
 We welcome contributions of new example workflows in this repository and in the [NeMo-Agent-Toolkit-Examples](https://github.com/NVIDIA/NeMo-Agent-Toolkit-Examples) repository. The difference is that examples in this repository are maintained, tested, and updated with each release of the NeMo Agent toolkit. These examples have high quality standards and demonstrate a capability of the NeMo Agent toolkit, while examples in the NeMo-Agent-Toolkit-Examples repository are community contributed and are tied to a specific version of the NeMo Agent toolkit, and do not need to demonstrate a specific capability of the library.
@@ -151,8 +151,8 @@ We welcome contributions of new example workflows in this repository and in the 
         ```bash
         pytest
         ```
-      If you added an integration test, or changed code that is covered by an integration test, you will need to run the integration tests. Refer to the [Running Tests](./running-tests.md) guide for more information on running integration tests, along with the [Writing Integration Tests](./running-tests.md#writing-integration-tests) section.
-    * Optionally [run the entire CI pipeline locally](./running-ci-locally.md) with the `./ci/scripts/run_ci_local.sh all` command. This is useful if CI is failing in GitHub Actions and you want to debug the issue locally.
+      If you added an integration test, or changed code that is covered by an integration test, you will need to run the integration tests. Refer to the [Running Tests](./testing/running-tests.md) guide for more information on running integration tests, along with the [Writing Integration Tests](./testing/running-tests.md#writing-integration-tests) section.
+    * Optionally [run the entire CI pipeline locally](./testing/running-ci-locally.md) with the `./ci/scripts/run_ci_local.sh all` command. This is useful if CI is failing in GitHub Actions and you want to debug the issue locally.
 1. When done, [create your pull request](https://github.com/NVIDIA/NeMo-Agent-Toolkit/compare). Select `develop` as the `Target branch` of your pull request.
     - Ensure the body of the pull request references the issue you are working on in the form of `Closes #<issue number>`.
 1. Wait for other developers to review your code and update code as needed.

@@ -68,7 +68,7 @@ Both of these methods will result in a function that can be used in the same way
 
 ### Function Configuration Object
 
-To use a function from a configuration file, it must be registered with NeMo Agent toolkit. Registering a function is done with the {py:deco}`nat.cli.register_workflow.register_function` decorator. More information about registering components can be found in the [Plugin System](../extend/plugins.md) documentation.
+To use a function from a configuration file, it must be registered with NeMo Agent toolkit. Registering a function is done with the {py:deco}`nat.cli.register_workflow.register_function` decorator. More information about registering components can be found in the [Plugin System](../../plugins.md) documentation.
 
 When registering a function, we first need to define the function configuration object. This object is used to configure the function and is passed to the function when it is invoked. Any options that are available to the function must be specified in the configuration object.
 

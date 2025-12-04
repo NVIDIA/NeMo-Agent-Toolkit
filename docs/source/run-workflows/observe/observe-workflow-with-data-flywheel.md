@@ -137,4 +137,4 @@ For more information about NVIDIA Data Flywheel:
 - [NVIDIA Data Flywheel Blueprint](https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel)
 - [NVIDIA Data Flywheel Blueprint Brev.dev Launchable](https://brev.nvidia.com/launchable/deploy/now?launchableID=env-2wggjBvDlVp4pLQD8ytZySh5m8W)
 - [NVIDIA Data Flywheel GitHub Repository](https://github.com/NVIDIA-AI-Blueprints/data-flywheel)
-- [NeMo Agent toolkit Observability Guide](./index.md)
+- [NeMo Agent toolkit Observability Guide](./observe.md)

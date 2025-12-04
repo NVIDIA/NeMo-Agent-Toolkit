@@ -27,7 +27,7 @@ We do not set all of the same environment variables that GitHub Actions would se
 
 ## Prerequisites
 - [Docker](https://docs.docker.com/get-docker/)
-- NeMo Agent toolkit source repository cloned locally with both the `origin` and `upstream` remotes set up. Refer to [Creating the Environment](./contributing.md#creating-the-environment) for more details.
+- NeMo Agent toolkit source repository cloned locally with both the `origin` and `upstream` remotes set up. Refer to [Creating the Environment](../index.md#creating-the-environment) for more details.
 
 ## Usage
 Typical usage is as follows:
