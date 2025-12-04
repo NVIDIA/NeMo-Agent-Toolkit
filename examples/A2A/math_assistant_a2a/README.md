@@ -113,16 +113,13 @@ The configuration demonstrates three types of tool integration:
 1. **A2A Client Tools** (`calculator_a2a`):
    - Connects to remote calculator server
    - Provides: `add`, `subtract`, `multiply`, `divide`, `compare` functions
-   - Timeout: 60 seconds
-   - Skill descriptions included for better agent understanding
 
 2. **MCP Client Tools** (`mcp_time`):
    - Local MCP server for time operations
    - Provides: `get_current_time_mcp` function
-   - Configured for Pacific timezone
 
 3. **Logic Evaluator** (`logic_evaluator`):
-   - Local utility for logical operations
+   - Simple local utility for logical operations
    - Provides: `if_then_else` and `evaluate_condition` functions
 
 ## Troubleshooting
@@ -132,7 +129,7 @@ The configuration demonstrates three types of tool integration:
 **Server Not Running**:
 ```bash
 # Check if the calculator server is running
-curl http://localhost:10000/.well-known/agent-card.json
+curl http://localhost:10000/.well-known/agent-card.json | jq
 ```
 
 **Port Conflicts**:
@@ -145,7 +142,6 @@ curl http://localhost:10000/.well-known/agent-card.json
 **Timeouts**:
 - Increase `task_timeout` in config if calculations take longer
 - Check network connectivity to remote services
-- Verify the calculator server is responsive
 
 ## Related Examples
 

@@ -87,6 +87,11 @@ Set your NVIDIA API key as an environment variable:
 export NVIDIA_API_KEY=<YOUR_API_KEY>
 ```
 
+The currency agent requires a Google Gemini API key. See the [Currency Agent README](https://github.com/a2aproject/a2a-samples/blob/main/samples/python/agents/langgraph/README.md) for more details.
+```bash
+export GOOGLE_API_KEY=<YOUR_API_KEY>
+```
+
 ## Usage
 
 ### Verify External Server
@@ -121,14 +126,10 @@ The configuration demonstrates two types of tool integration:
 1. **A2A Client Tools** (`currency_agent`):
    - Connects to external LangGraph currency agent
    - Provides currency conversion and exchange rate queries
-   - Timeout: 60 seconds
-   - Port: 11000 (to avoid conflicts with other A2A examples)
 
 2. **MCP Client Tools** (`mcp_date_time`):
    - Local MCP server for time operations
    - Provides: `get_current_time_mcp_tool` function
-   - Configured for Pacific timezone
-   - Enables historical date queries
 
 ## Troubleshooting
 
@@ -137,7 +138,7 @@ The configuration demonstrates two types of tool integration:
 **External Server Not Running**:
 ```bash
 # Check if the LangGraph agent is running
-curl http://localhost:11000/.well-known/agent-card.json
+curl http://localhost:11000/.well-known/agent-card.json | jq
 ```
 
 **Port Conflicts**:
@@ -150,7 +151,7 @@ curl http://localhost:11000/.well-known/agent-card.json
 **Timeouts**:
 - Increase `task_timeout` in config if queries take longer
 - Check network connectivity to the external service
-- Verify the external agent is responsive
+
 
 ## Related Examples
 

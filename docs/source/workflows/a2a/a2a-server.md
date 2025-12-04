@@ -82,13 +82,26 @@ Then start the server with:
 nat a2a serve --config_file examples/getting_started/simple_calculator/configs/config.yml
 ```
 
-### Configuration Options
+### Concurrency Control
+
+The A2A server includes built-in concurrency control to prevent resource exhaustion when handling multiple simultaneous requests. You can configure the maximum number of concurrent workflow executions:
+
+```yaml
+general:
+  front_end:
+    _type: a2a
+    name: "Calculator Agent"
+    max_concurrency: 16  # Maximum concurrent workflow executions (default: 8)
+```
+
+When the limit is reached, additional requests wait in a queue until a workflow completes.
+
+### Additional Configuration Options
 
 You can get the complete list of configuration options and their schemas by running:
 ```bash
 nat info components -t front_end -q a2a
 ```
-
 
 ## How Workflows Map to A2A Agents
 

@@ -47,9 +47,9 @@ class A2AFrontEndPluginWorker:
         self.full_config = config
         self.front_end_config: A2AFrontEndConfig = config.general.front_end  # type: ignore
 
-        # Max concurrency for handling A2A tasks
+        # Max concurrency for handling A2A tasks (from configuration)
         # This limits how many workflow invocations can run simultaneously
-        self.max_concurrency = 8  # Could be made configurable
+        self.max_concurrency = self.front_end_config.max_concurrency
 
         # HTTP client for push notifications (managed for cleanup)
         self._httpx_client: httpx.AsyncClient | None = None

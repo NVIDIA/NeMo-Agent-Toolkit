@@ -78,6 +78,15 @@ class A2AFrontEndConfig(FrontEndBaseConfig, name="a2a"):
         description="Agent capabilities configuration",
     )
 
+    # Concurrency control
+    max_concurrency: int = Field(
+        default=8,
+        description="Maximum number of concurrent workflow executions (default: 8). "
+                   "Controls how many A2A requests can execute workflows simultaneously. "
+                   "Set to 0 or -1 for unlimited concurrency.",
+        ge=-1,
+    )
+
     # Content modes
     default_input_modes: list[str] = Field(
         default_factory=lambda: ["text", "text/plain"],
