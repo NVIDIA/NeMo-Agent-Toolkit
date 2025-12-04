@@ -100,6 +100,9 @@ Troubleshooting <./get-started/troubleshooting.md>
 About Workflows <./build-workflows/about-workflows.md>
 Workflow Configuration <./build-workflows/workflow-configuration.md>
 ./build-workflows/functions-and-function-groups/index.md
+./build-workflows/llms/index.md
+./build-workflows/embedders.md
+./build-workflows/retrievers.md
 MCP <./build-workflows/mcp.md>
 Interactive Workflows <./build-workflows/interactive-workflows.md>
 Middleware <./build-workflows/middleware.md>
@@ -132,9 +135,6 @@ Sizing Calculator <./improve-workflows/sizing-calc.md>
 
 Agents <./components/agents/index.md>
 ./components/functions/index.md
-./components/embedders.md
-./components/retrievers.md
-./components/llms/index.md
 ./components/auth/index.md
 ./components/integrations/index.md
 Memory Module <./components/memory.md>
