@@ -23,7 +23,7 @@ from a2a.types import AgentCapabilities
 from a2a.types import AgentCard
 from a2a.types import AgentSkill
 
-from nat.builder.function_group import FunctionGroup
+from nat.builder.function import FunctionGroup
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.plugins.a2a.client.client_config import A2AClientConfig
 
