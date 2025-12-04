@@ -14,7 +14,6 @@
 # limitations under the License.
 """Client-specific fixtures for A2A client tests."""
 
-from collections.abc import Tuple
 from datetime import timedelta
 from unittest.mock import AsyncMock
 from unittest.mock import patch
@@ -109,7 +108,7 @@ def fixture_mock_a2a_client(sample_agent_card: AgentCard) -> AsyncMock:
 
 @pytest.fixture(name="a2a_function_group")
 async def fixture_a2a_function_group(mock_a2a_client: AsyncMock,
-                                     sample_agent_card: AgentCard) -> Tuple[FunctionGroup, AsyncMock]:
+                                     sample_agent_card: AgentCard) -> tuple[FunctionGroup, AsyncMock]:
     """A2A client function group with mocked agent.
 
     This fixture provides a fully configured A2A client function group
