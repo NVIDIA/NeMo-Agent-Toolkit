@@ -23,7 +23,7 @@ from nat.plugins.a2a.server.front_end_config import A2AFrontEndConfig
 
 
 @pytest.fixture(name="mock_workflow_with_functions")
-def fixture_mock_workflow_with_functions():
+def fixture_mock_workflow_with_functions() -> MagicMock:
     """Mock workflow with test functions for A2A server testing."""
     mock_workflow = MagicMock()
 
@@ -52,7 +52,7 @@ def fixture_mock_workflow_with_functions():
 
 
 @pytest.fixture(name="a2a_server_config")
-def fixture_a2a_server_config():
+def fixture_a2a_server_config() -> Config:
     """Sample A2A server configuration for testing."""
     return Config(general=GeneralConfig(front_end=A2AFrontEndConfig(
         name="Test Agent", description="Test agent for unit tests", host="localhost", port=10000, version="1.0.0")))

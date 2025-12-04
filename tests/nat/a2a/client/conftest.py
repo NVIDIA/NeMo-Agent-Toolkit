@@ -14,6 +14,7 @@
 # limitations under the License.
 """Client-specific fixtures for A2A client tests."""
 
+from collections.abc import Tuple
 from datetime import timedelta
 from unittest.mock import AsyncMock
 from unittest.mock import patch
@@ -23,12 +24,13 @@ from a2a.types import AgentCapabilities
 from a2a.types import AgentCard
 from a2a.types import AgentSkill
 
+from nat.builder.function_group import FunctionGroup
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.plugins.a2a.client.client_config import A2AClientConfig
 
 
 @pytest.fixture(name="sample_agent_card")
-def fixture_sample_agent_card():
+def fixture_sample_agent_card() -> AgentCard:
     """Sample agent card for testing.
 
     Returns a complete AgentCard with multiple skills for testing
@@ -73,7 +75,7 @@ def fixture_sample_agent_card():
 
 
 @pytest.fixture(name="mock_a2a_client")
-def fixture_mock_a2a_client(sample_agent_card):
+def fixture_mock_a2a_client(sample_agent_card: AgentCard) -> AsyncMock:
     """Mock A2A client that simulates agent responses.
 
     This fixture creates a mock A2A client with predefined responses
@@ -106,7 +108,8 @@ def fixture_mock_a2a_client(sample_agent_card):
 
 
 @pytest.fixture(name="a2a_function_group")
-async def fixture_a2a_function_group(mock_a2a_client, sample_agent_card):
+async def fixture_a2a_function_group(mock_a2a_client: AsyncMock,
+                                     sample_agent_card: AgentCard) -> Tuple[FunctionGroup, AsyncMock]:
     """A2A client function group with mocked agent.
 
     This fixture provides a fully configured A2A client function group
