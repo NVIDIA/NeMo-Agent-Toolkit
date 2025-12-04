@@ -20,7 +20,7 @@ The ReWOO (Reasoning WithOut Observation) agent is an advanced agent paradigm th
 
 The agent uses the NVIDIA NeMo Agent toolkit core library agents and tools to simplify your development experience and deployment. Additionally, you can customize prompts in your YAML config files for your specific needs. 
 
-# Understanding the ReWOO Agent Phases
+## Understanding the ReWOO Agent Phases
 The ReWOO agent implementation is broken down into three phases:
 1. [**Planning Phase**](./rewoo-agent.md#planning-phase) – The agent receives a task and creates a complete plan with all necessary tool calls and evidence placeholders.
     - Plans all steps upfront and uses placeholders (for example, "#E1", "#E2"), which significantly reduces token consumption.
@@ -37,5 +37,5 @@ To configure your ReWOO agent, refer to [Configure the ReWOO Agent](./rewoo-agen
 :hidden:
 :caption: ReWOO
 
-Configure ReWOO Agent<./rewoo-agent.md>
+Configure ReWOO Agent <./rewoo-agent.md>
 ```

@@ -80,6 +80,7 @@ Tutorials <./tutorials/index.md>
 
 About Workflows <./workflows/about.md>
 ./workflows/run-workflows.md
+Workflow Configuration <./workflows/workflow-configuration.md>
 ReAct Agent <./workflows/react-agent/index.md>
 Reasoning Agent <./workflows/reasoning-agent/index.md>
 ReWOO Agent <./workflows/rewoo-agent/index.md>
