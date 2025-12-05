@@ -14,24 +14,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-
-# Responses API and Agent
-
-The NeMo Agent toolkit supports OpenAI's Responses API through two complementary pieces:
-
-1) LLM client configuration via the `api_type` field, and 2) a dedicated workflow agent `_type: responses_api_agent` designed for tool use with the Responses API.
-
-Unlike standard chat-based integrations, the Responses API enables models to use built-in tools (for example, Code Interpreter) and connect to remote tools using the Model Context Protocol (MCP). This page explains how to configure an LLM for Responses and how to use the dedicated agent.
-
-
-## Features
-
-- **LLM Client Switch**: Select the LLM client mode using `api_type`.
-- **Built-in Tools**: Bind Responses built-ins such as Code Interpreter via `builtin_tools`.
-- **MCP Tools**: Connect remote tools using `mcp_tools` with fields like `server_label` and `server_url`.
-- **NAT Tools**: Continue to use toolkit tools through `nat_tools` (executed by the agent graph).
-- **Agentic Workflow**: The `_type: responses_api_agent` integrates tool binding with the NeMo Agent dual-node graph.
-
+# Configure the Responses API and Agent
+Configure the Responses API and agent with a LLM client and through the agent graph.
 
 ## Requirements
 
@@ -43,7 +27,7 @@ Unlike standard chat-based integrations, the Responses API enables models to use
 
 LLM clients support an `api_type` selector. By default, `api_type` is `chat_completions`. To use the Responses API, set `api_type` to `responses` in your LLM configuration.
 
-### Example
+### Example LLM Configuration
 
 ```yaml
 llms:
@@ -54,13 +38,14 @@ llms:
     api_type: responses
 ```
 
-Notes:
-- If `api_type` is omitted, the client uses `chat_completions`.
+:::{note}
+- If the `api_type` is omitted, the client will use `chat_completions`.
 - The Responses API unlocks built-in tools and MCP integration.
+:::
 
 ## Agent Configuration: `_type: responses_api_agent`
 
-The Responses API agent binds tools directly to the LLM for execution under the Responses API, while NAT tools run via the agent graph. This preserves the familiar flow of the NeMo Agent toolkit with added tool capabilities.
+The Responses API agent binds tools directly to the LLM for execution under the Responses API, while NeMo Agent toolkit tools run through the agent graph. This preserves the familiar flow of the NeMo Agent toolkit with added tool capabilities.
 
 ### Example `config.yml`
 
@@ -100,11 +85,11 @@ workflow:
 ```
 
 ## Configurable Options
-
+The following are more ways you can configure your config file when using the Responses API and Agent:
 - `llm_name`: The LLM to use. Must refer to an entry under `llms`.
 - `verbose`: Defaults to `false`. When `true`, the agent logs input, output, and intermediate steps.
 - `handle_tool_errors`: Defaults to `true`. When enabled, tool errors are returned to the model (instead of raising) so it can recover.
-- `nat_tools`: A list of toolkit tools (by function ref) that run in the agent graph.
+- `nat_tools`: A list of NeMo Agent toolkit tools (by function ref) that run in the agent graph.
 - `builtin_tools`: A list of built-in tools to bind on the LLM. Availability depends on the selected model.
 - `mcp_tools`: A list of MCP tool descriptors bound on the LLM, with fields `server_label`, `server_url`, `allowed_tools`, and `require_approval`.
 - `max_iterations`: Defaults to `15`. Maximum number of tool invocations the agent may perform.
