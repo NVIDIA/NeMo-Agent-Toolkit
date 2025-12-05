@@ -192,7 +192,8 @@ linkcheck_ignore = [
     r'https://www.mysql.com',
     r'https://api.service.com',
     r'https?://example\.com/mcp/?',
-    r'http://custom-server'
+    r'http://custom-server',
+    r'^\?provider=',
 ]
 
 # The suffix(es) of source filenames.
