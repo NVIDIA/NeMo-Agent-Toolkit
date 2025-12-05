@@ -158,7 +158,7 @@ Before getting started, it's possible to run this simple workflow and many other
 * 🧪 [Examples](./examples/README.md): Explore examples of NeMo Agent Toolkit workflows located in the [`examples`](./examples) directory of the source repository.
 * 🛠️ [Create and Customize NeMo Agent Toolkit Workflows](docs/source/get-started/tutorials/customize-a-workflow.md): Learn how to create and customize NeMo Agent Toolkit workflows.
 * 🎯 [Evaluate with NeMo Agent Toolkit](./docs/source/improve-workflows/evaluate.md): Learn how to evaluate your NeMo Agent Toolkit workflows.
-* 🆘 [Troubleshooting](./docs/source/get-started/troubleshooting.md): Get help with common issues.
+* 🆘 [Troubleshooting](./docs/source/resources/troubleshooting.md): Get help with common issues.
 
 
 ## 🛣️ Roadmap
