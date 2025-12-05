@@ -1780,12 +1780,13 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
                     else:
                         continue
 
+                # TODO: fixme
                 # Remove from remaining and add to completed after successful build (if not root)
-                if not component_instance.is_root:
-                    self.remaining_components.remove(
-                        (str(component_instance.name), component_instance.component_group.value))
-                    self.completed_components.append(
-                        (str(component_instance.name), component_instance.component_group.value))
+                # if not component_instance.is_root:
+                #     self.remaining_components.remove(
+                #         (str(component_instance.name), component_instance.component_group.value))
+                #     self.completed_components.append(
+                #         (str(component_instance.name), component_instance.component_group.value))
 
             except Exception as e:
                 WorkflowBuilder.log_build_failure(str(component_instance.name),

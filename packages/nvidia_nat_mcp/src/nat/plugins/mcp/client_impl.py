@@ -655,6 +655,7 @@ async def per_user_mcp_client_function_group(config: PerUserMCPClientConfig, _bu
     Returns:
         The function group
     """
+    from nat.builder.context import Context
     from nat.plugins.mcp.client_base import MCPSSEClient
     from nat.plugins.mcp.client_base import MCPStdioClient
     from nat.plugins.mcp.client_base import MCPStreamableHTTPClient
@@ -664,11 +665,7 @@ async def per_user_mcp_client_function_group(config: PerUserMCPClientConfig, _bu
     if config.server.auth_provider:
         auth_provider = await _builder.get_auth_provider(config.server.auth_provider)
 
-    # The builder must be a PerUserWorkflowBuilder
-    if not isinstance(_builder, PerUserWorkflowBuilder):
-        raise ValueError("The builder must be a PerUserWorkflowBuilder")
-
-    user_id = _builder.user_id
+    # user_id = Context.get().metadata.user_id
 
     # Build the appropriate client
     if config.server.transport == "stdio":
