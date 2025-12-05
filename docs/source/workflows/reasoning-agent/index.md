@@ -14,14 +14,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+# About Reasoning Agent
 
-# NVIDIA NeMo Agent Toolkit Quick Start Guide
-Install and set up your NeMo Agent toolkit development environment and get started on the tutorial for launching the API server and UI.
+The reasoning agent is an AI system that uses the NVIDIA NeMo Agent toolkit core library agents and tools to directly invoke an underlying function while performing reasoning on top. Unlike ReAct agents, it reasons ahead of time through planning rather than between steps. However, an LLM that supports reasoning needs to be chosen for use with a reasoning agent. Additionally, you can customize prompts in your YAML config file for your specific needs. 
+
+To configure your reasoning agent, refer to [Configure the Reasoning Agent](./reasoning-agent.md).
 
 ```{toctree}
 :hidden:
-:caption: Quick Start Guide
+:caption: Reasoning
 
-Install NeMo Agent Toolkit <./installing.md>
-Launch the API Server and UI <./launching-ui.md>
+Configure Reasoning Agent<./reasoning-agent.md>
 ```
