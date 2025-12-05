@@ -1,0 +1,159 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""
+NAT Function for choosing a move in Tic-Tac-Toe.
+
+This function is designed to be invoked multiple times by the TTC harness
+to generate candidate moves that can then be scored and selected.
+"""
+
+import logging
+from typing import Any
+
+import numpy as np
+from langchain_core.messages import AIMessage
+from langchain_core.messages import HumanMessage
+from pydantic import BaseModel
+from pydantic import Field
+
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.function_info import FunctionInfo
+from nat.cli.register_workflow import register_function
+from nat.data_models.component_ref import LLMRef
+from nat.data_models.function import FunctionBaseConfig
+
+from .core import available_moves
+from .core import board_to_str
+from .llm_agents import build_player_chain
+from .llm_agents import parse_move_any
+
+logger = logging.getLogger(__name__)
+
+
+class ChooseMoveInput(BaseModel):
+    """Input schema for the choose_move function."""
+
+    board: list[list[int]] = Field(description="3x3 board state as nested list (0=empty, 1=X, -1=O)")
+    player_symbol: str = Field(description="Player symbol: 'X' or 'O'")
+
+
+class ChooseMoveOutput(BaseModel):
+    """Output schema for the choose_move function."""
+
+    row: int = Field(description="0-based row index of the move")
+    col: int = Field(description="0-based column index of the move")
+    raw_response: str = Field(description="Raw LLM response text")
+
+
+class ChooseMoveConfig(FunctionBaseConfig, name="choose_move"):
+    """Configuration for the choose_move NAT Function."""
+
+    llm: LLMRef = Field(description="LLM to use for move generation")
+    max_retries: int = Field(default=2, description="Maximum number of parsing retries")
+
+
+@register_function(config_type=ChooseMoveConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
+async def choose_move_function(config: ChooseMoveConfig, builder: Builder):
+    """
+    NAT Function that generates a single move for a given board state.
+
+    This function is designed to be called multiple times by the TTC harness
+    to generate candidate moves. Each invocation produces one move suggestion.
+
+    Args:
+        config: Configuration specifying the LLM and retry settings
+        builder: NAT builder for loading LLM models
+
+    Yields:
+        FunctionInfo wrapping the move generation function
+    """
+    llm = await builder.get_llm(config.llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    max_retries = config.max_retries
+
+    async def _choose_move(input_data: ChooseMoveInput | dict[str, Any]) -> ChooseMoveOutput:
+        """
+        Generate a single move for the given board state.
+
+        Args:
+            input_data: Board state and player symbol
+
+        Returns:
+            ChooseMoveOutput with row, col, and raw_response
+        """
+        # Handle both dict and Pydantic model input
+        if isinstance(input_data, dict):
+            board_list = input_data["board"]
+            player_symbol = input_data["player_symbol"]
+        else:
+            board_list = input_data.board
+            player_symbol = input_data.player_symbol
+
+        # Convert to numpy array
+        board = np.array(board_list, dtype=int)
+
+        # Build chain for this player symbol
+        chain = build_player_chain(llm, player_symbol)
+
+        # Get available moves
+        legal_moves = available_moves(board)
+        if not legal_moves:
+            raise RuntimeError("No available moves; game should be over.")
+
+        # Conversation history for retries
+        messages: list = []
+
+        for attempt in range(max_retries + 1):
+            board_str = board_to_str(board)
+
+            if attempt > 0:
+                # Add retry message with available moves hint
+                messages.append(
+                    HumanMessage(
+                        content=f"You made an invalid move. You have "
+                        f"{max_retries - attempt + 1} attempts left.\n"
+                        f"Available moves are: "
+                        f"{', '.join(f'({r+1},{c+1})' for r,c in legal_moves)}\n"
+                        f"Current board:\n{board_str}"
+                    )
+                )
+            else:
+                messages.append(HumanMessage(content=board_str))
+
+            # Invoke the LLM
+            raw_response = await chain.ainvoke({"messages": messages})
+            text = str(raw_response)
+
+            # Add AI response to history
+            messages.append(AIMessage(content=text))
+
+            # Parse the move
+            move = parse_move_any(text)
+
+            if move is not None and move in legal_moves:
+                return ChooseMoveOutput(row=move[0], col=move[1], raw_response=text)
+
+            logger.debug(
+                f"[WARN] Invalid move on attempt {attempt + 1}: '{text}'. "
+                f"Legal moves: {legal_moves}. Retrying..."
+            )
+
+        raise RuntimeError(f"Failed to produce a valid move after {max_retries + 1} attempts")
+
+    yield FunctionInfo.from_fn(
+        _choose_move,
+        description="Generate a single Tic-Tac-Toe move for the given board state and player symbol.",
+    )

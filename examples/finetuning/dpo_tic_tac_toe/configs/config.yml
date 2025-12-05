@@ -1,0 +1,65 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Configuration for DPO Tic-Tac-Toe workflow
+#
+# This workflow uses Test Time Compute (TTC) to generate multiple candidate
+# moves per turn, score them using game-theoretic evaluation, and select
+# the best move. All candidates are recorded as intermediate steps for
+# DPO preference dataset construction.
+
+llms:
+  # LLM for the trained player
+  # Uses vLLM or any OpenAI-compatible endpoint
+  training_llm:
+    _type: openai
+    model_name: Qwen/Qwen2.5-3B-Instruct
+    base_url: http://localhost:8000/v1
+    api_key: default
+    temperature: 0.6  # Higher temperature for diverse candidate generation
+    extra_body:
+      logprobs: true
+      top_logprobs: 5
+
+functions:
+  # The choose_move function generates individual moves
+  choose_move:
+    _type: choose_move
+    llm: training_llm
+    max_retries: 2
+
+ttc_strategies:
+  # Custom scorer using game-theoretic evaluation
+  move_scorer:
+    _type: board_position_scorer
+
+  # Best-of-N selector chooses highest scored move
+  move_selector:
+    _type: best_of_n_selection
+
+workflow:
+  _type: dpo_tic_tac_toe
+  player_llm: training_llm
+  opponent_llm: null  # Use random opponent for consistent training signal
+  choose_move_fn: choose_move
+  scorer: move_scorer
+  selector: move_selector
+  num_candidates: 3  # Generate 3 candidate moves per turn
+  max_parser_retries: 2
+
+eval:
+  general:
+    max_concurrency: 8
+    output_dir: .tmp/nat/dpo_tic_tac_toe/eval
+    dataset:
+      _type: json
+      file_path: data/data.json
+
+  evaluators:
+    # Simple game outcome evaluator
+    game_outcome:
+      _type: dpo_game_outcome
+
+    # DPO data collector for preference pairs
+    dpo_collector:
+      _type: dpo_data_collector
