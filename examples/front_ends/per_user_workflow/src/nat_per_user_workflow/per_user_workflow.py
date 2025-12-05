@@ -62,8 +62,8 @@ class PerUserAssistantConfig(FunctionBaseConfig, name="per_user_assistant"):
 
 # ============= Per-User Workflow =============
 @register_per_user_function(config_type=PerUserAssistantConfig,
-                            input_schema=UserAssistantInput,
-                            single_output_schema=UserAssistantOutput)
+                            input_type=UserAssistantInput,
+                            single_output_type=UserAssistantOutput)
 async def per_user_assistant_workflow(config: PerUserAssistantConfig, builder: Builder):
     """
     A per-user assistant workflow that combines notepad and preferences.

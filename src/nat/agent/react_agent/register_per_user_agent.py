@@ -36,8 +36,8 @@ class PerUserReActAgentWorkflowConfig(ReActAgentWorkflowConfig, name="per_user_r
 
 
 @register_per_user_function(config_type=PerUserReActAgentWorkflowConfig,
-                            input_schema=ChatRequest,
-                            single_output_schema=ChatResponse,
+                            input_type=ChatRequest,
+                            single_output_type=ChatResponse,
                             framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def per_user_react_agent_workflow(config: PerUserReActAgentWorkflowConfig, builder: Builder):
     """Per-user ReAct Agent - each user gets their own isolated instance."""

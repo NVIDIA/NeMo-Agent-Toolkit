@@ -73,6 +73,7 @@ from nat.data_models.middleware import MiddlewareBaseConfigT
 from nat.data_models.object_store import ObjectStoreBaseConfigT
 from nat.data_models.registry_handler import RegistryHandlerBaseConfigT
 from nat.data_models.retriever import RetrieverBaseConfigT
+from nat.utils.type_utils import DecomposedType
 
 
 def register_telemetry_exporter(config_type: type[TelemetryExporterConfigT]):
@@ -187,9 +188,9 @@ def register_function(config_type: type[FunctionConfigT],
 
 
 def register_per_user_function(config_type: type[FunctionConfigT],
-                               input_schema: type[BaseModel],
-                               single_output_schema: type[BaseModel] | None = None,
-                               streaming_output_schema: type[BaseModel] | None = None,
+                               input_type: type | type[BaseModel],
+                               single_output_type: type | type[BaseModel] | None = None,
+                               streaming_output_type: type | type[BaseModel] | None = None,
                                framework_wrappers: list[LLMFrameworkEnum | str] | None = None):
     """
     Register a per-user function with optional framework_wrappers for automatic profiler hooking.
@@ -199,9 +200,9 @@ def register_per_user_function(config_type: type[FunctionConfigT],
 
     Args:
         config_type: The function configuration type
-        input_schema: The input schema for the function
-        single_output_schema: The single output schema for the function
-        streaming_output_schema: The streaming output schema for the function
+        input_type: The input type for the function (can be a type or a Pydantic model)
+        single_output_type: The single output type for the function (can be a type or a Pydantic model)
+        streaming_output_type: The streaming output type for the function (can be a type or a Pydantic model)
         framework_wrappers: Optional list of framework wrappers for automatic profiler hooking
     """
 
@@ -210,12 +211,21 @@ def register_per_user_function(config_type: type[FunctionConfigT],
         from .type_registry import GlobalTypeRegistry
         from .type_registry import RegisteredFunctionInfo
 
+        if not input_type:
+            raise ValueError("input_type must be provided to register a per-user function")
+
         context_manager_fn = asynccontextmanager(fn)
 
         framework_wrappers_list = list(framework_wrappers or [])
 
         discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
                                                                 component_type=ComponentEnum.FUNCTION)
+
+        # Convert types to Pydantic models if they are not already
+        input_schema = DecomposedType(input_type).get_pydantic_schema()
+        single_output_schema = DecomposedType(single_output_type).get_pydantic_schema() if single_output_type else None
+        streaming_output_schema = DecomposedType(
+            streaming_output_type).get_pydantic_schema() if streaming_output_type else None
 
         GlobalTypeRegistry.get().register_function(
             RegisteredFunctionInfo(

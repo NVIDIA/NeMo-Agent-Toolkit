@@ -86,8 +86,8 @@ def _register_components():
 
     # Per-user counter workflow - maintains state per user
     @register_per_user_function(config_type=PerUserCounterWorkflowConfig,
-                                input_schema=CounterInput,
-                                single_output_schema=CounterOutput)
+                                input_type=CounterInput,
+                                single_output_type=CounterOutput)
     async def per_user_counter_workflow(config: PerUserCounterWorkflowConfig, builder: Builder):
         from nat.builder.context import Context
 

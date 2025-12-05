@@ -109,8 +109,8 @@ async def _register_components():
 
     # Register per-user function
     @register_per_user_function(config_type=PerUserFunctionConfig,
-                                input_schema=PerUserInputSchema,
-                                single_output_schema=PerUserOutputSchema)
+                                input_type=PerUserInputSchema,
+                                single_output_type=PerUserOutputSchema)
     async def build_per_user_fn(config: PerUserFunctionConfig, b: Builder):
 
         async def _impl(inp: PerUserInputSchema) -> PerUserOutputSchema:
@@ -120,8 +120,8 @@ async def _register_components():
 
     # Register another per-user function for dependency testing
     @register_per_user_function(config_type=PerUserFunctionBConfig,
-                                input_schema=PerUserInputSchema,
-                                single_output_schema=PerUserOutputSchema)
+                                input_type=PerUserInputSchema,
+                                single_output_type=PerUserOutputSchema)
     async def build_per_user_fn_b(config: PerUserFunctionBConfig, b: Builder):
 
         async def _impl(inp: PerUserInputSchema) -> PerUserOutputSchema:
@@ -131,8 +131,8 @@ async def _register_components():
 
     # Register per-user function that depends on another per-user function
     @register_per_user_function(config_type=PerUserDependentFnConfig,
-                                input_schema=PerUserInputSchema,
-                                single_output_schema=PerUserOutputSchema)
+                                input_type=PerUserInputSchema,
+                                single_output_type=PerUserOutputSchema)
     async def build_per_user_dependent_fn(config: PerUserDependentFnConfig, b: Builder):
         # Get the other per-user function
         other_fn = await b.get_function(config.other_fn_name)
@@ -146,8 +146,8 @@ async def _register_components():
 
     # Register per-user workflow
     @register_per_user_function(config_type=PerUserWorkflowConfig,
-                                input_schema=PerUserInputSchema,
-                                single_output_schema=PerUserOutputSchema)
+                                input_type=PerUserInputSchema,
+                                single_output_type=PerUserOutputSchema)
     async def build_per_user_workflow(config: PerUserWorkflowConfig, b: Builder):
 
         async def _impl(inp: PerUserInputSchema) -> PerUserOutputSchema:
@@ -166,8 +166,8 @@ async def _register_components():
 
     # Per-user counter - each user gets their own counter instance (for e2e tests)
     @register_per_user_function(config_type=PerUserCounterConfig,
-                                input_schema=CounterInput,
-                                single_output_schema=CounterOutput)
+                                input_type=CounterInput,
+                                single_output_type=CounterOutput)
     async def per_user_counter(config: PerUserCounterConfig, builder: Builder):
         # This state is unique per user!
         counter_state = {"count": config.initial_value}
@@ -181,8 +181,8 @@ async def _register_components():
 
     # Per-user workflow that uses the counter (for e2e tests)
     @register_per_user_function(config_type=PerUserCounterWorkflowConfig,
-                                input_schema=CounterInput,
-                                single_output_schema=CounterOutput)
+                                input_type=CounterInput,
+                                single_output_type=CounterOutput)
     async def per_user_counter_workflow(config: PerUserCounterWorkflowConfig, builder: Builder):
         # Get the per-user counter function
         counter_fn = await builder.get_function(config.counter_name)
@@ -414,8 +414,8 @@ async def test_per_user_function_can_call_shared_function():
         shared_fn_name: str
 
     @register_per_user_function(config_type=PerUserCallsSharedConfig,
-                                input_schema=PerUserInputSchema,
-                                single_output_schema=PerUserOutputSchema)
+                                input_type=PerUserInputSchema,
+                                single_output_type=PerUserOutputSchema)
     async def register(config: PerUserCallsSharedConfig, b: Builder):
         # Get shared function during build
         shared_fn = await b.get_function(config.shared_fn_name)
@@ -1195,8 +1195,8 @@ async def test_per_user_builder_populate_builds_function_groups_before_functions
         yield TestGroup(config=config)
 
     @register_per_user_function(config_type=OrderTestFnConfig,
-                                input_schema=PerUserInputSchema,
-                                single_output_schema=PerUserOutputSchema)
+                                input_type=PerUserInputSchema,
+                                single_output_type=PerUserOutputSchema)
     async def order_fn(config: OrderTestFnConfig, builder: Builder):
         build_order.append("function")
         # Access the function group (dependency)

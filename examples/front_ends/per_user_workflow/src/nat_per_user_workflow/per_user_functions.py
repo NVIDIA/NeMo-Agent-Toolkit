@@ -79,7 +79,7 @@ class PerUserPreferencesConfig(FunctionBaseConfig, name="per_user_preferences"):
 
 
 # ============= Per-User Functions =============
-@register_per_user_function(config_type=PerUserNotepadConfig, input_schema=NoteInput, single_output_schema=NoteOutput)
+@register_per_user_function(config_type=PerUserNotepadConfig, input_type=NoteInput, single_output_type=NoteOutput)
 async def per_user_notepad(config: PerUserNotepadConfig, builder: Builder):
     """
     A per-user notepad that stores notes separately for each user.
@@ -130,8 +130,8 @@ async def per_user_notepad(config: PerUserNotepadConfig, builder: Builder):
 
 
 @register_per_user_function(config_type=PerUserPreferencesConfig,
-                            input_schema=PreferenceInput,
-                            single_output_schema=PreferenceOutput)
+                            input_type=PreferenceInput,
+                            single_output_type=PreferenceOutput)
 async def per_user_preferences(config: PerUserPreferencesConfig, builder: Builder):
     """
     A per-user preferences store.
