@@ -7,6 +7,14 @@
 # moves per turn, score them using game-theoretic evaluation, and select
 # the best move. All candidates are recorded as intermediate steps for
 # DPO preference dataset construction.
+#
+# Architecture:
+#   workflow (dpo_tic_tac_toe)
+#     └── ttc_move_selector (NAT Function)
+#           ├── move_searcher (TTC SEARCH strategy)
+#           │     └── choose_move (NAT Function)
+#           ├── move_scorer (TTC SCORING strategy)
+#           └── move_selector (TTC SELECTION strategy)
 
 llms:
   # LLM for the trained player
@@ -22,29 +30,38 @@ llms:
       top_logprobs: 5
 
 functions:
-  # The choose_move function generates individual moves
+  # Base function that generates a single move
   choose_move:
     _type: choose_move
     llm: training_llm
     max_retries: 2
 
+  # TTC move selector that wraps search → score → select
+  ttc_move_selector:
+    _type: ttc_move_selector
+    search: move_searcher
+    scorer: move_scorer
+    selector: move_selector
+
 ttc_strategies:
-  # Custom scorer using game-theoretic evaluation
+  # TTC SEARCH: Generates N candidate moves by calling choose_move multiple times
+  move_searcher:
+    _type: multi_candidate_move_search
+    choose_move_fn: choose_move
+    num_candidates: 3
+
+  # TTC SCORING: Evaluates moves using game-theoretic position analysis
   move_scorer:
     _type: board_position_scorer
 
-  # Best-of-N selector chooses highest scored move
+  # TTC SELECTION: Selects the highest-scoring move
   move_selector:
     _type: best_of_n_selection
 
 workflow:
   _type: dpo_tic_tac_toe
-  player_llm: training_llm
   opponent_llm: null  # Use random opponent for consistent training signal
-  choose_move_fn: choose_move
-  scorer: move_scorer
-  selector: move_selector
-  num_candidates: 3  # Generate 3 candidate moves per turn
+  ttc_move_selector_fn: ttc_move_selector
   max_parser_retries: 2
 
 eval:
