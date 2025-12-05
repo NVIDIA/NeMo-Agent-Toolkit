@@ -64,8 +64,8 @@ For detailed installation instructions, including optional dependencies, please 
 
 - [**Full MCP Support:**](./build-workflows/mcp.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use NeMo Agent toolkit as an [MCP client](./build-workflows/mcp.md) to connect to and use tools served by remote MCP servers. You can also use NeMo Agent toolkit as an [MCP server](./run-workflows/mcp-server.md) to publish tools via MCP.
 
-## FAQ
-For frequently asked questions, refer to [FAQ](./resources/faq.md).
+## FAQs
+For frequently asked questions, refer to [FAQs](./resources/faq.md).
 
 ## Feedback
 
@@ -165,7 +165,7 @@ WebSocket Message Schema <./reference/websockets.md>
 :hidden:
 :caption: Resources
 
-FAQ <./resources/faq.md>
+FAQss <./resources/faq.md>
 ./resources/support.md
 Troubleshooting <./resources/troubleshooting.md>
 Migration Guide <./resources/migration-guide.md>

@@ -1351,7 +1351,7 @@ import logging
 logging.getLogger("nat.observability").setLevel(logging.DEBUG)
 ```
 
-### FAQ
+### FAQs
 
 **Q: Which exporter type should I use?**
 
