@@ -89,8 +89,7 @@ About <self>
 Install <./get-started/installing.md>
 Quick Start Guide <./get-started/quick-start.md>
 Tutorials <./get-started/tutorials/index.md>
-./get-started/getting-help.md
-Troubleshooting <./get-started/troubleshooting.md>
+Release Notes <./get-started/release-notes.md>
 ```
 
 ```{toctree}
@@ -167,7 +166,8 @@ WebSocket Message Schema <./reference/websockets.md>
 :caption: Resources
 
 FAQ <./resources/faq.md>
-Release Notes <./resources/release-notes.md>
+./resources/support.md
+Troubleshooting <./resources/troubleshooting.md>
 Migration Guide <./resources/migration-guide.md>
 Security Considerations <./resources/security-considerations.md>
 Contributing <./resources/contributing/index.md>

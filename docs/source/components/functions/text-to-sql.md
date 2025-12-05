@@ -514,4 +514,4 @@ For more information:
 - [Writing Custom Functions](../../extend/custom-components/custom-functions/functions.md) - Learn how to create your own functions
 - [Workflow Configuration](../../build-workflows/workflow-configuration.md) - Complete configuration reference
 - [Contributing Guidelines](../../resources/contributing/index.md) - How to contribute to the NeMo Agent toolkit
-- [Support](../../get-started/getting-help.md) - Get help and support
+- [Support](../../resources/support.md) - Get help and support
