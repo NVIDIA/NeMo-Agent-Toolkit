@@ -98,9 +98,12 @@ class NATFunctionAgentTool(AgentTool):
 
         Parameters
         ----------
-            tool_use: The tool use request containing tool ID and parameters.
-            _invocation_state: Unused parameter for compatibility.
-            _kwargs: Unused parameter for compatibility.
+            tool_use : ToolUse
+                The tool use request containing tool ID and parameters.
+            _invocation_state : dict[str, Any]
+                Unused parameter for compatibility.
+            _kwargs : Any
+                Unused parameter for compatibility.
 
         Yields
         ------
