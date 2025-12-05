@@ -71,17 +71,17 @@ The following table lists each exporter with its supported features and configur
 
 | Provider | Integration Documentation | Supported Features |
 | -------- | ------------------------- | ------------------ |
-| [Catalyst](https://catalyst.raga.ai/) | [Observing with Catalyst](?provider=catalyst#provider-integration-guides){.external} | Logging, Tracing |
-| [NVIDIA Data Flywheel Blueprint](https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel) | [Observing with Data Flywheel](?provider=data-flywheel#provider-integration-guides){.external} | Logging, Tracing |
-| [DBNL](https://distributional.com/) | [Observing with DBNL](?provider=dbnl#provider-integration-guides){.external} | Logging, Tracing |
-| [Dynatrace](https://dynatrace.com/) | [Observing with Dynatrace](?provider=dynatrace#provider-integration-guides){.external} | Logging, Tracing |
-| [Galileo](https://galileo.ai/) | [Observing with Galileo](?provider=galileo#provider-integration-guides){.external} | Logging, Tracing |
+| [Catalyst](https://catalyst.raga.ai/) | [Observing with Catalyst](?provider=Catalyst#provider-integration-guides){.external} | Logging, Tracing |
+| [NVIDIA Data Flywheel Blueprint](https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel) | [Observing with Data Flywheel](?provider=Data-Flywheel#provider-integration-guides){.external} | Logging, Tracing |
+| [DBNL](https://distributional.com/) | [Observing with DBNL](?provider=DBNL#provider-integration-guides){.external} | Logging, Tracing |
+| [Dynatrace](https://dynatrace.com/) | [Observing with Dynatrace](?provider=Dynatrace#provider-integration-guides){.external} | Logging, Tracing |
+| [Galileo](https://galileo.ai/) | [Observing with Galileo](?provider=Galileo#provider-integration-guides){.external} | Logging, Tracing |
 | [Langfuse](https://langfuse.com/) | Refer to the `examples/observability/simple_calculator_observability` example for usage details | Logging, Tracing |
 | [LangSmith](https://www.langchain.com/langsmith) | Refer to the `examples/observability/simple_calculator_observability` example for usage details| Logging, Tracing |
-| [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) | [Observing with OTel Collector](?provider=otel-collector#provider-integration-guides){.external} | Logging, Tracing |
-| [Patronus](https://www.patronus.ai/) | AI evaluation and monitoring platform | Logging, Tracing |
-| [Phoenix](https://phoenix.arize.com/) | [Observing with Phoenix](?provider=phoenix#provider-integration-guides){.external} | Logging, Tracing |
-| [W&B Weave](https://wandb.ai/site/weave/) | [Observing with W&B Weave](?provider=wandb-weave#provider-integration-guides){.external} | Logging, Tracing, W&B Weave Redaction, Evaluation Metrics |
+| [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) | [Observing with OTel Collector](?provider=OTel-collector#provider-integration-guides){.external} | Logging, Tracing |
+| [Patronus](https://www.patronus.ai/) | Refer to the `examples/observability/simple_calculator_observability` example for usage details | Logging, Tracing |
+| [Phoenix](https://phoenix.arize.com/) | [Observing with Phoenix](?provider=Phoenix#provider-integration-guides){.external} | Logging, Tracing |
+| [W&B Weave](https://wandb.ai/site/weave/) | [Observing with W&B Weave](?provider=Wandb-Weave#provider-integration-guides){.external} | Logging, Tracing, W&B Weave Redaction, Evaluation Metrics |
 
 Additional options:
 
@@ -194,56 +194,56 @@ For complete information about developing and integrating custom telemetry expor
   :sync-group: provider
 
   :::{tab-item} Catalyst
-  :sync: catalyst
+  :sync: Catalyst
 
     :::{include} ./observe-workflow-with-catalyst.md
 
   :::
 
   :::{tab-item} Data Flywheel
-  :sync: data-flywheel
+  :sync: Data-Flywheel
 
     :::{include} ./observe-workflow-with-data-flywheel.md
 
   :::
 
   :::{tab-item} DBNL
-  :sync: dbnl
+  :sync: DBNL
 
     :::{include} ./observe-workflow-with-dbnl.md
 
   :::
 
   :::{tab-item} Dynatrace
-  :sync: dynatrace
+  :sync: Dynatrace
 
     :::{include} ./observe-workflow-with-dynatrace.md
 
   :::
 
   :::{tab-item} Galileo
-  :sync: galileo
+  :sync: Galileo
 
     :::{include} ./observe-workflow-with-galileo.md
 
   :::
 
   :::{tab-item} OTel Collector
-  :sync: otel-collector
+  :sync: OTel-collector
 
     :::{include} ./observe-workflow-with-otel-collector.md
 
   :::
 
   :::{tab-item} Phoenix
-  :sync: phoenix
+  :sync: Phoenix
    
     :::{include} ./observe-workflow-with-phoenix.md
 
   :::
 
   :::{tab-item} W&B Weave
-  :sync: wandb-weave
+  :sync: Wandb-Weave
   
     :::{include} ./observe-workflow-with-weave.md
 
