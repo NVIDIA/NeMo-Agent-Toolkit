@@ -77,7 +77,7 @@ Install NeMo Agent toolkit with all required dependencies and verify the install
 The assistant will reference and apply the `.cursor/rules/nat-setup/nat-toolkit-installation.mdc` rule to validate prerequisites and install the toolkit, followed by installation verification.
 
 <div align="center">
-  <img src="../_static/cursor_rules_demo/install.gif" width="600">
+  <img src="../../_static/cursor_rules_demo/install.gif" width="600">
 </div>
 
 ### Explore Available Tools
@@ -89,7 +89,7 @@ Find datetime-related functions and tools available in NeMo Agent toolkit
 The assistant will reference and apply the `.cursor/rules/nat-cli/nat-info.mdc` rule to discover available tools and functions.
 
 <div align="center">
-  <img src="../_static/cursor_rules_demo/find_tool.gif" width="600">
+  <img src="../../_static/cursor_rules_demo/find_tool.gif" width="600">
 </div>
 
 
@@ -103,7 +103,7 @@ Create a new workflow named `demo_workflow` in the examples folder
 The assistant will reference and apply the `.cursor/rules/nat-workflows/general.mdc` rule to generate a new workflow using the `nat workflow create` command.
 
 <div align="center">
-  <img src="../_static/cursor_rules_demo/create_workflow.gif" width="600">
+  <img src="../../_static/cursor_rules_demo/create_workflow.gif" width="600">
 </div>
 
 ### Configure the DateTime Function
@@ -116,7 +116,7 @@ Add the current_datetime function to the demo_workflow
 The assistant will reference and apply the `.cursor/rules/nat-workflows/add-functions.mdc` rule to integrate the function into the workflow.
 
 <div align="center">
-  <img src="../_static/cursor_rules_demo/add_tool.gif" width="600">
+  <img src="../../_static/cursor_rules_demo/add_tool.gif" width="600">
 </div>
 
 
@@ -129,7 +129,7 @@ Integrate ReAct agent to the workflow
 The assistant will reference and apply the `.cursor/rules/nat-agents/general.mdc` rule to integrate a ReAct agent within the workflow.
 
 <div align="center">
-  <img src="../_static/cursor_rules_demo/react_agent.gif" width="600">
+  <img src="../../_static/cursor_rules_demo/react_agent.gif" width="600">
 </div>
 
 ### Run the Workflow
@@ -142,7 +142,7 @@ Run the demo_workflow
 The assistant will reference and apply the `.cursor/rules/nat-cli/nat-run-serve.mdc` rule to run the workflow.
 
 <div align="center">
-  <img src="../_static/cursor_rules_demo/run_workflow.gif" width="600">
+  <img src="../../_static/cursor_rules_demo/run_workflow.gif" width="600">
 </div>
 
 Congratulations! You have successfully created a functional demo workflow using Cursor rules with minimal manual coding!
