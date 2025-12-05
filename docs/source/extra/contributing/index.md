@@ -15,7 +15,7 @@
     limitations under the License.
 -->
 
-# Contributing to NVIDIA NeMo Agent toolkit
+# Contributing to NVIDIA NeMo Agent Toolkit
 
 Contributions to NeMo Agent toolkit fall into the following three categories.
 
