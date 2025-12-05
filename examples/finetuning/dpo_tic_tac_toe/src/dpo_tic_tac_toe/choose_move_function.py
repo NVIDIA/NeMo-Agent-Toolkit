@@ -18,6 +18,13 @@ NAT Function for choosing a move in Tic-Tac-Toe.
 
 This function is designed to be invoked multiple times by the TTC harness
 to generate candidate moves that can then be scored and selected.
+
+Supports both LLM-based and random move generation:
+- If an LLM is configured, uses the LLM to generate moves
+- If no LLM is configured (llm=None), generates random moves
+
+This allows the TTC pipeline to be used for both trained players (LLM)
+and opponents (random), enabling DPO data collection from all turns.
 """
 
 import logging
@@ -39,6 +46,7 @@ from nat.data_models.function import FunctionBaseConfig
 from .core import available_moves
 from .core import board_to_str
 from .llm_agents import build_player_chain
+from .llm_agents import make_random_move
 from .llm_agents import parse_move_any
 
 logger = logging.getLogger(__name__)
@@ -60,9 +68,18 @@ class ChooseMoveOutput(BaseModel):
 
 
 class ChooseMoveConfig(FunctionBaseConfig, name="choose_move"):
-    """Configuration for the choose_move NAT Function."""
+    """
+    Configuration for the choose_move NAT Function.
 
-    llm: LLMRef = Field(description="LLM to use for move generation")
+    If llm is None, the function generates random moves. This enables
+    the TTC pipeline to be used for both LLM-based and random players,
+    allowing DPO data collection from all game turns.
+    """
+
+    llm: LLMRef | None = Field(
+        default=None,
+        description="LLM to use for move generation. If None, generates random moves."
+    )
     max_retries: int = Field(default=2, description="Maximum number of parsing retries")
 
 
@@ -74,6 +91,10 @@ async def choose_move_function(config: ChooseMoveConfig, builder: Builder):
     This function is designed to be called multiple times by the TTC harness
     to generate candidate moves. Each invocation produces one move suggestion.
 
+    Supports two modes:
+    - LLM mode (llm is configured): Uses the LLM to generate moves
+    - Random mode (llm is None): Generates random legal moves
+
     Args:
         config: Configuration specifying the LLM and retry settings
         builder: NAT builder for loading LLM models
@@ -81,10 +102,15 @@ async def choose_move_function(config: ChooseMoveConfig, builder: Builder):
     Yields:
         FunctionInfo wrapping the move generation function
     """
-    llm = await builder.get_llm(config.llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-    max_retries = config.max_retries
+    # Load LLM if configured, otherwise use random mode
+    llm = None
+    if config.llm is not None:
+        llm = await builder.get_llm(config.llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
-    async def _choose_move(input_data: ChooseMoveInput | dict[str, Any]) -> ChooseMoveOutput:
+    max_retries = config.max_retries
+    use_random = llm is None
+
+    async def _choose_move(input_data: ChooseMoveInput) -> ChooseMoveOutput:
         """
         Generate a single move for the given board state.
 
@@ -94,17 +120,19 @@ async def choose_move_function(config: ChooseMoveConfig, builder: Builder):
         Returns:
             ChooseMoveOutput with row, col, and raw_response
         """
-        # Handle both dict and Pydantic model input
-        if isinstance(input_data, dict):
-            board_list = input_data["board"]
-            player_symbol = input_data["player_symbol"]
-        else:
-            board_list = input_data.board
-            player_symbol = input_data.player_symbol
+
+        board_list = input_data.board
+        player_symbol = input_data.player_symbol
 
         # Convert to numpy array
         board = np.array(board_list, dtype=int)
 
+        # === Random mode: generate a random legal move ===
+        if use_random:
+            row, col, raw_response = make_random_move(board)
+            return ChooseMoveOutput(row=row, col=col, raw_response=raw_response)
+
+        # === LLM mode: use the LLM to generate a move ===
         # Build chain for this player symbol
         chain = build_player_chain(llm, player_symbol)
 

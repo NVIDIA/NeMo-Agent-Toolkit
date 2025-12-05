@@ -114,7 +114,7 @@ async def ttc_move_selector_function(config: TTCMoveSelectorConfig, builder: Bui
         stage_type=StageTypeEnum.SELECTION,
     )
 
-    async def _select_move(input_data: TTCMoveSelectorInput | dict[str, Any]) -> TTCMoveSelectorOutput:
+    async def _select_move(input_data: TTCMoveSelectorInput) -> TTCMoveSelectorOutput:
         """
         Select the best move using the TTC pipeline.
 
@@ -126,15 +126,9 @@ async def ttc_move_selector_function(config: TTCMoveSelectorConfig, builder: Bui
         """
         step_manager = Context.get().intermediate_step_manager
 
-        # Handle both dict and Pydantic model input
-        if isinstance(input_data, dict):
-            board = input_data["board"]
-            player_symbol = input_data["player_symbol"]
-            turn_index = input_data["turn_index"]
-        else:
-            board = input_data.board
-            player_symbol = input_data.player_symbol
-            turn_index = input_data.turn_index
+        board = input_data.board
+        player_symbol = input_data.player_symbol
+        turn_index = input_data.turn_index
 
         player_value = 1 if player_symbol == "X" else -1
         turn_id = f"turn_{turn_index}_{uuid.uuid4().hex[:8]}"

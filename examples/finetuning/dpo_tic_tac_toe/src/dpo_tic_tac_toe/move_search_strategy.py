@@ -33,6 +33,8 @@ from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
 from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
 from nat.experimental.test_time_compute.models.ttc_item import TTCItem
 
+from .choose_move_function import ChooseMoveInput
+
 logger = logging.getLogger(__name__)
 
 
@@ -118,10 +120,10 @@ class MultiCandidateMoveSearcher(StrategyBase):
             for candidate_idx in range(self.num_candidates):
                 try:
                     # Call choose_move function
-                    move_result = await self.choose_move_fn.ainvoke({
-                        "board": board,
-                        "player_symbol": player_symbol,
-                    })
+                    move_result = await self.choose_move_fn.ainvoke(ChooseMoveInput(
+                        board=board,
+                        player_symbol=player_symbol,
+                    ))
 
                     # Wrap in TTCItem with metadata for scoring
                     candidate_item = TTCItem(

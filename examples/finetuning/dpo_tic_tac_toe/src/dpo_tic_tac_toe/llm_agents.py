@@ -16,13 +16,17 @@
 """
 LLM agent utilities for Tic-Tac-Toe.
 
-This module provides XML parsing and LangChain chain construction for LLM-based
-Tic-Tac-Toe players. The actual choose_move logic is moved to a separate NAT
-Function (choose_move_function.py) to enable proper TTC integration.
+This module provides XML parsing, random move generation, and LangChain chain
+construction for LLM-based Tic-Tac-Toe players. The actual choose_move logic
+is moved to a separate NAT Function (choose_move_function.py) to enable proper
+TTC integration.
 """
 
+import random
 import re
 from typing import Any
+
+import numpy as np
 
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
@@ -60,6 +64,45 @@ def parse_move_any(text: str) -> tuple[int, int] | None:
     """Try XML parsing for move extraction."""
     mv = parse_move_xml(text)
     return mv
+
+
+# ---------- Random move generation ----------
+
+
+def make_random_move(board: np.ndarray) -> tuple[int, int, str]:
+    """
+    Generate a random legal move with a proper XML raw_response.
+
+    This is used for random opponents when no LLM is specified. The raw_response
+    is formatted consistently with LLM responses for proper history tracking.
+
+    Args:
+        board: 3x3 numpy array board state (0=empty, 1=X, -1=O)
+
+    Returns:
+        Tuple of (row, col, raw_response) where row/col are 0-based indices
+        and raw_response is the XML-formatted move string.
+
+    Raises:
+        RuntimeError: If no legal moves are available.
+    """
+    # Find all empty positions
+    legal_moves: list[tuple[int, int]] = []
+    for r in range(3):
+        for c in range(3):
+            if board[r, c] == 0:
+                legal_moves.append((r, c))
+
+    if not legal_moves:
+        raise RuntimeError("No available moves; game should be over.")
+
+    # Pick a random move
+    row, col = random.choice(legal_moves)
+
+    # Generate XML response consistent with LLM format
+    raw_response = f"<move>\n  <row>{row + 1}</row>\n  <col>{col + 1}</col>\n</move>"
+
+    return row, col, raw_response
 
 
 # ---------- Prompt construction ----------
