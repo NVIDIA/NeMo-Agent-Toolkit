@@ -31,6 +31,7 @@ import glob
 import os
 import shutil
 import subprocess
+import textwrap
 import typing
 from pathlib import Path
 
@@ -143,8 +144,15 @@ else:
     # Create an empty 'api' directory to avoid build errors when API docs are disabled
     api_stub_path = cur_dir / 'api'
     api_stub_path.mkdir(exist_ok=True)
-    with open(api_stub_path / "index.md", "w", encoding="utf-8") as f:
-        f.write("# Python API\n\nPlaceholder for API documentation build with NAT_DISABLE_API_BUILD=1.")
+    with open(api_stub_path / "index.rst", "w", encoding="utf-8") as f:
+        index_rst ="""
+                   ==========
+                   Python API
+                   ==========
+
+                   Placeholder for API documentation build with NAT_DISABLE_API_BUILD=1.
+                   """
+        f.write(textwrap.dedent(index_rst))
 
 myst_enable_extensions = ["attrs_inline", "colon_fence"]
 
