@@ -27,10 +27,13 @@ from pydantic import BaseModel
 from nat.authentication.interfaces import AuthProviderBase
 from nat.builder.builder import Builder
 from nat.builder.function import FunctionGroup
+from nat.builder.workflow_builder import PerUserWorkflowBuilder
 from nat.cli.register_workflow import register_function_group
+from nat.cli.register_workflow import register_per_user_function_group
 from nat.plugins.mcp.client_base import MCPBaseClient
 from nat.plugins.mcp.client_config import MCPClientConfig
 from nat.plugins.mcp.client_config import MCPToolOverrideConfig
+from nat.plugins.mcp.client_config import PerUserMCPClientConfig
 from nat.plugins.mcp.utils import truncate_session_id
 
 logger = logging.getLogger(__name__)
@@ -415,6 +418,20 @@ class MCPFunctionGroup(FunctionGroup):
         return client, stop_event, task
 
 
+class PerUserMCPFunctionGroup(FunctionGroup):
+    """
+    A specialized FunctionGroup for per-user MCP clients.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.mcp_client: MCPBaseClient | None = None
+        self.mcp_client_server_name: str | None = None
+        self.mcp_client_transport: str | None = None
+        self.user_id: str | None = None
+
+
 def mcp_session_tool_function(tool, function_group: MCPFunctionGroup):
     """Create a session-aware NAT function for an MCP tool.
 
@@ -463,6 +480,43 @@ def mcp_session_tool_function(tool, function_group: MCPFunctionGroup):
             validated_input = session_tool.input_schema.model_validate(kwargs)
             args = validated_input.model_dump(exclude_none=True, mode='json')
             return await session_tool.acall(args)
+        except Exception as e:
+            logger.warning("Error calling tool %s", tool.name, exc_info=True)
+            return str(e)
+
+    return FunctionInfo.create(single_fn=_response_fn,
+                               description=tool.description,
+                               input_schema=tool.input_schema,
+                               converters=[_convert_from_str])
+
+
+def mcp_per_user_tool_function(tool, client: MCPBaseClient):
+    """
+    Create a per-user NAT Function for per-user MCP clients.
+    """
+    from nat.builder.function import FunctionInfo
+
+    def _convert_from_str(input_str: str) -> tool.input_schema:
+        return tool.input_schema.model_validate_json(input_str)
+
+    async def _response_fn(tool_input: BaseModel | None = None, **kwargs) -> str:
+        try:
+            mcp_tool = await client.get_tool(tool.name)
+
+            if tool_input:
+                args = tool_input.model_dump(exclude_none=True, mode='json')
+                return await mcp_tool.acall(args)
+
+            # kwargs arrives with all optional fields set to None because NAT's framework
+            # converts the input dict to a Pydantic model (filling in all Field(default=None)),
+            # then dumps it back to a dict. We need to strip out these None values because
+            # many MCP servers (e.g., Kaggle) reject requests with excessive null fields.
+            # We re-validate here (yes, redundant) to leverage Pydantic's exclude_none with
+            # mode='json' for recursive None removal in nested models.
+            # Reference: function_info.py:_convert_input_pydantic
+            validated_input = mcp_tool.input_schema.model_validate(kwargs)
+            args = validated_input.model_dump(exclude_none=True, mode='json')
+            return await mcp_tool.acall(args)
         except Exception as e:
             logger.warning("Error calling tool %s", tool.name, exc_info=True)
             return str(e)
@@ -574,12 +628,108 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
             # Create the tool function according to configuration
             tool_fn = mcp_session_tool_function(tool, group)
 
-            # Normalize optional typing for linter/type-checker compatibility
-            single_fn = tool_fn.single_fn
-            if single_fn is None:
-                # Should not happen because FunctionInfo always sets a single_fn
-                logger.warning("Skipping tool %s because single_fn is None", function_name)
-                continue
+            input_schema = tool_fn.input_schema
+            # Convert NoneType sentinel to None for FunctionGroup.add_function signature
+            if input_schema is type(None):  # noqa: E721
+                input_schema = None
+
+            # Add to group
+            logger.info("Adding tool %s to group", function_name)
+            group.add_function(name=function_name,
+                               description=description,
+                               fn=tool_fn.single_fn,
+                               input_schema=input_schema,
+                               converters=tool_fn.converters)
+
+        yield group
+
+
+@register_per_user_function_group(config_type=PerUserMCPClientConfig)
+async def per_user_mcp_client_function_group(config: PerUserMCPClientConfig, _builder: Builder):
+    """
+    Connect to an MCP server and expose tools as a function group for per-user workflows.
+
+    Args:
+        config: The configuration for the MCP client
+        _builder: The builder
+    Returns:
+        The function group
+    """
+    from nat.plugins.mcp.client_base import MCPSSEClient
+    from nat.plugins.mcp.client_base import MCPStdioClient
+    from nat.plugins.mcp.client_base import MCPStreamableHTTPClient
+
+    # Resolve auth provider if specified
+    auth_provider = None
+    if config.server.auth_provider:
+        auth_provider = await _builder.get_auth_provider(config.server.auth_provider)
+
+    # The builder must be a PerUserWorkflowBuilder
+    if not isinstance(_builder, PerUserWorkflowBuilder):
+        raise ValueError("The builder must be a PerUserWorkflowBuilder")
+
+    user_id = _builder.user_id
+
+    # Build the appropriate client
+    if config.server.transport == "stdio":
+        if not config.server.command:
+            raise ValueError("command is required for stdio transport")
+        client = MCPStdioClient(config.server.command,
+                                config.server.args,
+                                config.server.env,
+                                tool_call_timeout=config.tool_call_timeout,
+                                auth_flow_timeout=config.auth_flow_timeout,
+                                reconnect_enabled=config.reconnect_enabled,
+                                reconnect_max_attempts=config.reconnect_max_attempts,
+                                reconnect_initial_backoff=config.reconnect_initial_backoff,
+                                reconnect_max_backoff=config.reconnect_max_backoff)
+    elif config.server.transport == "sse":
+        client = MCPSSEClient(str(config.server.url),
+                              tool_call_timeout=config.tool_call_timeout,
+                              auth_flow_timeout=config.auth_flow_timeout,
+                              reconnect_enabled=config.reconnect_enabled,
+                              reconnect_max_attempts=config.reconnect_max_attempts,
+                              reconnect_initial_backoff=config.reconnect_initial_backoff,
+                              reconnect_max_backoff=config.reconnect_max_backoff)
+    elif config.server.transport == "streamable-http":
+        client = MCPStreamableHTTPClient(str(config.server.url),
+                                         auth_provider=auth_provider,
+                                         user_id=user_id,
+                                         tool_call_timeout=config.tool_call_timeout,
+                                         auth_flow_timeout=config.auth_flow_timeout,
+                                         reconnect_enabled=config.reconnect_enabled,
+                                         reconnect_max_attempts=config.reconnect_max_attempts,
+                                         reconnect_initial_backoff=config.reconnect_initial_backoff,
+                                         reconnect_max_backoff=config.reconnect_max_backoff)
+    else:
+        raise ValueError(f"Unsupported transport: {config.server.transport}")
+
+    logger.info("Per-user MCP client configured for server: %s (user: %s)", client.server_name, user_id)
+
+    group = PerUserMCPFunctionGroup(config=config)
+
+    async with client:
+        # Expose the live MCP client on the function group instance so other components (e.g., HTTP endpoints)
+        # can reuse the already-established session instead of creating a new client per request.
+        group.mcp_client = client
+        group.mcp_client_server_name = client.server_name
+        group.mcp_client_transport = client.transport
+        group.user_id = user_id
+
+        all_tools = await client.get_tools()
+        tool_overrides = mcp_apply_tool_alias_and_description(all_tools, config.tool_overrides)
+
+        # Add each tool as a function to the group
+        for tool_name, tool in all_tools.items():
+            # Get override if it exists
+            override = tool_overrides.get(tool_name)
+
+            # Use override values or defaults
+            function_name = override.alias if override and override.alias else tool_name
+            description = override.description if override and override.description else tool.description
+
+            # Create the tool function according to configuration
+            tool_fn = mcp_per_user_tool_function(tool, client)
 
             input_schema = tool_fn.input_schema
             # Convert NoneType sentinel to None for FunctionGroup.add_function signature
@@ -590,7 +740,7 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
             logger.info("Adding tool %s to group", function_name)
             group.add_function(name=function_name,
                                description=description,
-                               fn=single_fn,
+                               fn=tool_fn.single_fn,
                                input_schema=input_schema,
                                converters=tool_fn.converters)
 
