@@ -20,6 +20,7 @@ import time
 
 import click
 
+from nat.cli.cli_utils.validation import validate_url
 from nat.cli.commands.start import start_command
 
 logger = logging.getLogger(__name__)
@@ -172,7 +173,7 @@ def format_agent_card_display(agent_card, verbose: bool = False):
 
 
 @a2a_client_command.command(name="discover", help="Discover A2A agent and display AgentCard information.")
-@click.option('--url', required=True, help='A2A agent URL (e.g., http://localhost:9999)')
+@click.option('--url', required=True, callback=validate_url, help='A2A agent URL (e.g., http://localhost:9999)')
 @click.option('--json-output', is_flag=True, help='Output AgentCard as JSON')
 @click.option('--verbose', is_flag=True, help='Show full AgentCard details')
 @click.option('--save', type=click.Path(), help='Save AgentCard to file')
@@ -343,7 +344,7 @@ def format_call_response_display(message: str, response: str, elapsed: float):
 
 
 @a2a_client_command.command(name="get_info", help="Get agent metadata and information.")
-@click.option('--url', required=True, help='A2A agent URL (e.g., http://localhost:9999)')
+@click.option('--url', required=True, callback=validate_url, help='A2A agent URL (e.g., http://localhost:9999)')
 @click.option('--json-output', is_flag=True, help='Output as JSON')
 @click.option('--timeout', default=30, show_default=True, help='Timeout in seconds')
 def a2a_client_get_info(url: str, json_output: bool, timeout: int):
@@ -394,7 +395,7 @@ def a2a_client_get_info(url: str, json_output: bool, timeout: int):
 
 
 @a2a_client_command.command(name="get_skills", help="Get agent skills and capabilities.")
-@click.option('--url', required=True, help='A2A agent URL (e.g., http://localhost:9999)')
+@click.option('--url', required=True, callback=validate_url, help='A2A agent URL (e.g., http://localhost:9999)')
 @click.option('--json-output', is_flag=True, help='Output as JSON')
 @click.option('--timeout', default=30, show_default=True, help='Timeout in seconds')
 def a2a_client_get_skills(url: str, json_output: bool, timeout: int):
@@ -446,7 +447,7 @@ def a2a_client_get_skills(url: str, json_output: bool, timeout: int):
 
 
 @a2a_client_command.command(name="call", help="Call the agent with a message.")
-@click.option('--url', required=True, help='A2A agent URL (e.g., http://localhost:9999)')
+@click.option('--url', required=True, callback=validate_url, help='A2A agent URL (e.g., http://localhost:9999)')
 @click.option('--message', required=True, help='Message to send to the agent')
 @click.option('--task-id', help='Optional task ID for continuing a conversation')
 @click.option('--context-id', help='Optional context ID for maintaining context')
