@@ -28,7 +28,7 @@ The NeMo Agent toolkit includes three memory module providers, all of which are 
 * [Zep](https://www.getzep.com/) which is provided by the [`nvidia-nat-zep-cloud`](https://pypi.org/project/nvidia-nat-zep-cloud/) plugin.
 
 ## Examples
-The following examples demonstrate how to use the memory module in the NeMo Agent toolkit:
+The following examples in the [repository](https://github.com/NVIDIA/NeMo-Agent-Toolkit) demonstrate how to use the memory module in the NeMo Agent toolkit:
 * `examples/memory/redis`
 * `examples/frameworks/semantic_kernel_demo`
 * `examples/RAG/simple_rag`
