@@ -164,7 +164,7 @@ WebSocket Message Schema <./reference/websockets.md>
 
 ```{toctree}
 :hidden:
-:caption: Extra
+:caption: Resources
 
 FAQ <./extra/faq.md>
 Release Notes <./extra/release-notes.md>
