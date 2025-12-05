@@ -21,6 +21,7 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_per_user_function
 from nat.data_models.api_server import ChatRequest
+from nat.data_models.api_server import ChatRequestOrMessage
 from nat.data_models.api_server import ChatResponse
 
 logger = logging.getLogger(__name__)
@@ -71,7 +72,7 @@ async def per_user_react_agent_workflow(config: PerUserReActAgentWorkflowConfig,
         pass_tool_call_errors_to_agent=config.pass_tool_call_errors_to_agent,
         normalize_tool_input_quotes=config.normalize_tool_input_quotes).build_graph()
 
-    async def _response_fn(chat_request_or_message) -> ChatResponse | str:
+    async def _response_fn(chat_request_or_message: ChatRequestOrMessage) -> ChatResponse | str:
         try:
             message = GlobalTypeConverter.get().convert(chat_request_or_message, to_type=ChatRequest)
             messages: list[BaseMessage] = trim_messages(messages=[m.model_dump() for m in message.messages],

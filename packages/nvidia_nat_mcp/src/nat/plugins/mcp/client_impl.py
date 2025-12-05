@@ -665,7 +665,7 @@ async def per_user_mcp_client_function_group(config: PerUserMCPClientConfig, _bu
     if config.server.auth_provider:
         auth_provider = await _builder.get_auth_provider(config.server.auth_provider)
 
-    # user_id = Context.get().metadata.user_id
+    user_id = Context.get().user_id
 
     # Build the appropriate client
     if config.server.transport == "stdio":
