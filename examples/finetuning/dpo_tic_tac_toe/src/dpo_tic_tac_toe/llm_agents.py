@@ -132,6 +132,45 @@ No explanation, no comments, no markdown, nothing else besides that XML.
 """
 
 
+def get_system_prompt(player_symbol: str) -> str:
+    """Get the formatted system prompt for a player symbol."""
+    return SYSTEM_TEMPLATE.format(symbol=player_symbol)
+
+
+def format_prompt_for_dpo(
+    player_symbol: str,
+    messages: list,
+) -> str:
+    """
+    Format the full prompt as a string for DPO training.
+
+    Returns the prompt as a simple string with each message on its own line:
+        system: <content>
+        user: <content>
+        assistant: <content>
+        ...
+
+    Args:
+        player_symbol: The player symbol ('X' or 'O')
+        messages: List of LangChain messages (HumanMessage, AIMessage)
+
+    Returns:
+        Formatted prompt string
+    """
+    from langchain_core.messages import AIMessage
+    from langchain_core.messages import HumanMessage
+
+    lines = [f"system: {get_system_prompt(player_symbol)}"]
+
+    for msg in messages:
+        if isinstance(msg, HumanMessage):
+            lines.append(f"user: {msg.content}")
+        elif isinstance(msg, AIMessage):
+            lines.append(f"assistant: {msg.content}")
+
+    return "\n".join(lines)
+
+
 def build_player_chain(model, player_symbol: str) -> Any:
     """
     Build a LangChain Runnable for a Tic-Tac-Toe player:

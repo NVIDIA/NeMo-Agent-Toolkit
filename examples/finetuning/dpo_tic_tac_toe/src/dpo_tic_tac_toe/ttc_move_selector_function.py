@@ -159,14 +159,16 @@ async def ttc_move_selector_function(config: TTCMoveSelectorConfig, builder: Bui
             move_id = f"{turn_id}_move_{idx}"
             is_selected = item is selected_item
 
-            # Extract move data
+            # Extract move data including prompt
             move_output = item.output
             if hasattr(move_output, "row"):
                 row, col = move_output.row, move_output.col
                 raw_response = move_output.raw_response
+                prompt = move_output.prompt
             else:
                 row, col = move_output["row"], move_output["col"]
                 raw_response = move_output["raw_response"]
+                prompt = move_output["prompt"]
 
             step_uuid = str(uuid.uuid4())[:8]
 
@@ -185,7 +187,7 @@ async def ttc_move_selector_function(config: TTCMoveSelectorConfig, builder: Bui
                 )
             )
 
-            # Write CUSTOM_END with full move data
+            # Write CUSTOM_END with full move data including prompt
             step_manager.push_intermediate_step(
                 IntermediateStepPayload(
                     event_type=IntermediateStepType.CUSTOM_END,
@@ -196,6 +198,7 @@ async def ttc_move_selector_function(config: TTCMoveSelectorConfig, builder: Bui
                         "turn_index": turn_index,
                         "candidate_index": idx,
                         "board_state_before": board,
+                        "prompt": prompt,  # Full prompt in OpenAI chat format
                         "move": {"row": row, "col": col},
                         "raw_llm_response": raw_response,
                         "score": item.score,
