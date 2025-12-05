@@ -85,9 +85,6 @@ async def discover_agent(url: str, timeout: int = 30):
             "A2A client functionality requires nvidia-nat-a2a package. Install with: uv pip install nvidia-nat-a2a",
             err=True)
         return None
-    except Exception as e:
-        logger.error(f"Error discovering agent: {e}", exc_info=True)
-        raise
 
 
 def format_agent_card_display(agent_card, verbose: bool = False):
