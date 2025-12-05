@@ -37,37 +37,37 @@ limitations under the License.
 </div>
 
 > [!NOTE]
-> NeMo Agent Toolkit was previously known as the Agent Intelligence (AIQ) toolkit, and <!-- vale off -->AgentIQ<!-- vale on -->. The library was renamed to better reflect the purpose of the toolkit and to align with the NVIDIA NeMo family of products. The core technologies, performance, and roadmap remain unchanged and the API is fully compatible with previous releases. Please refer to the [Migration Guide](./docs/source/resources/migration-guide.md) for more information.
+> NeMo Agent Toolkit was previously known as the Agent Intelligence (AIQ) toolkit, and <!-- vale off -->AgentIQ<!-- vale on -->. The library was renamed to better reflect the purpose of the toolkit and to align with the NVIDIA NeMo family of products. The core technologies, performance, and roadmap remain unchanged and the API is fully compatible with previous releases. Please refer to the [Migration Guide](./docs/source/extra/migration-guide.md) for more information.
 
 ## 🔥 New Features
 
-- [**Automatic Hyperparameter Tuning:**](docs/source/reference/optimizer.md) Automatically tune the hyperparameters of your agents, tools, and workflows to maximize performance, minimize cost, and increase accuracy.
+- [**Automatic Hyperparameter Tuning:**](docs/source/improve-workflows/optimizer.md) Automatically tune the hyperparameters of your agents, tools, and workflows to maximize performance, minimize cost, and increase accuracy.
 
-- [**Google ADK Support:**](./docs/source/reference/frameworks-overview.md#adk-google-agent-development-kit) Users of Google's Agent Development Kit (ADK) framework are now supported in NeMo Agent Toolkit.
+- [**Google ADK Support:**](./docs/source/components/integrations/frameworks.md#adk-google-agent-development-kit) Users of Google's Agent Development Kit (ADK) framework are now supported in NeMo Agent Toolkit.
 
-- [**MCP Authorization:**](./docs/source/workflows/mcp/mcp-auth.md) NeMo Agent Toolkit now supports MCP authorization. This allows you to use NeMo Agent Toolkit with MCP authorization when using the streamable HTTP protocol.
+- [**MCP Authorization:**](./docs/source/components/auth/mcp-auth/index.md) NeMo Agent Toolkit now supports MCP authorization. This allows you to use NeMo Agent Toolkit with MCP authorization when using the streamable HTTP protocol.
 
-- [**Function Groups:**](./docs/source/workflows/function-groups.md) NeMo Agent Toolkit now supports Function Groups, allowing you to package multiple related functions together to share configuration, context, and resources.
+- [**Function Groups:**](./docs/source/build-workflows/functions-and-function-groups/function-groups.md) NeMo Agent Toolkit now supports Function Groups, allowing you to package multiple related functions together to share configuration, context, and resources.
 
-- [**Amazon Bedrock AgentCore and Strands Agents Support:**](./docs/source/reference/frameworks-overview.md#strands) NeMo Agent Toolkit now supports building agents using Strands Agents framework and deploying them securely on Amazon Bedrock AgentCore runtime.
+- [**Amazon Bedrock AgentCore and Strands Agents Support:**](./docs/source/components/integrations/frameworks.md#strands) NeMo Agent Toolkit now supports building agents using Strands Agents framework and deploying them securely on Amazon Bedrock AgentCore runtime.
 
 ## ✨ Key Features
 
-- 🧩 [**Framework Agnostic:**](./docs/source/reference/frameworks-overview.md) NeMo Agent Toolkit works side-by-side and around existing agentic frameworks, such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), and [Google ADK](https://google.github.io/adk-docs/), as well as custom enterprise agentic frameworks and simple Python agents. This allows you to use your current technology stack without replatforming. NeMo Agent Toolkit complements any existing agentic framework or memory tool you're using and isn't tied to any specific agentic framework, LLM provider, or data source.
+- 🧩 [**Framework Agnostic:**](./docs/source/components/integrations/frameworks.md) NeMo Agent Toolkit works side-by-side and around existing agentic frameworks, such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), and [Google ADK](https://google.github.io/adk-docs/), as well as custom enterprise agentic frameworks and simple Python agents. This allows you to use your current technology stack without replatforming. NeMo Agent Toolkit complements any existing agentic framework or memory tool you're using and isn't tied to any specific agentic framework, LLM provider, or data source.
 
-- 🔁 [**Reusability:**](./docs/source/extend/sharing-components.md) Every agent, tool, and agentic workflow in this library exists as a function call that works together in complex software applications. The composability between these agents, tools, and workflows allows you to build once and reuse in different scenarios.
+- 🔁 [**Reusability:**](./docs/source/components/sharing-components.md) Every agent, tool, and agentic workflow in this library exists as a function call that works together in complex software applications. The composability between these agents, tools, and workflows allows you to build once and reuse in different scenarios.
 
-- ⚡ [**Rapid Development:**](docs/source/tutorials/customize-a-workflow.md) Start with a pre-built agent, tool, or workflow, and customize it to your needs. This allows you and your development teams to move quickly if you're already developing with agents.
+- ⚡ [**Rapid Development:**](docs/source/get-started/tutorials/customize-a-workflow.md) Start with a pre-built agent, tool, or workflow, and customize it to your needs. This allows you and your development teams to move quickly if you're already developing with agents.
 
-- 📈 [**Profiling:**](./docs/source/workflows/profiler.md) Use the profiler to profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks. While we encourage you to wrap (decorate) every tool and agent to get the most out of the profiler, you have the freedom to integrate your tools, agents, and workflows to whatever level you want. You start small and go to where you believe you'll see the most value and expand from there.
+- 📈 [**Profiling:**](./docs/source/improve-workflows/profiler.md) Use the profiler to profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks. While we encourage you to wrap (decorate) every tool and agent to get the most out of the profiler, you have the freedom to integrate your tools, agents, and workflows to whatever level you want. You start small and go to where you believe you'll see the most value and expand from there.
 
-- 🔎 [**Observability:**](./docs/source/workflows/observe/index.md) Monitor and debug your workflows with dedicated integrations for popular observability platforms such as Phoenix, Weave, and Langfuse, plus compatibility with OpenTelemetry-based observability platforms. Track performance, trace execution flows, and gain insights into your agent behaviors.
+- 🔎 [**Observability:**](./docs/source/run-workflows/observe/observe.md) Monitor and debug your workflows with dedicated integrations for popular observability platforms such as Phoenix, Weave, and Langfuse, plus compatibility with OpenTelemetry-based observability platforms. Track performance, trace execution flows, and gain insights into your agent behaviors.
 
-- 🧪 [**Evaluation System:**](./docs/source/workflows/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
+- 🧪 [**Evaluation System:**](./docs/source/improve-workflows/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
 
-- 💬 [**User Interface:**](./docs/source/quick-start/launching-ui.md) Use the NeMo Agent Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
+- 💬 [**User Interface:**](./docs/source/run-workflows/launching-ui.md) Use the NeMo Agent Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
 
-- 🔗 [**Full MCP Support:**](./docs/source/workflows/mcp/index.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use NeMo Agent Toolkit as an [MCP client](./docs/source/workflows/mcp/mcp-client.md) to connect to and use tools served by remote MCP servers. You can also use NeMo Agent Toolkit as an [MCP server](./docs/source/workflows/mcp/mcp-server.md) to publish tools via MCP.
+- 🔗 [**Full MCP Support:**](./docs/source/build-workflows/mcp.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use NeMo Agent Toolkit as an [MCP client](./docs/source/build-workflows/mcp.md) to connect to and use tools served by remote MCP servers. You can also use NeMo Agent Toolkit as an [MCP server](./docs/source/run-workflows/mcp-server.md) to publish tools via MCP.
 
 With NeMo Agent Toolkit, you can move quickly, experiment freely, and ensure reliability across all your agent-driven projects.
 
@@ -96,7 +96,7 @@ Or for all optional dependencies:
 pip install "nvidia-nat[all]"
 ```
 
-Detailed installation instructions, including the full list of optional dependencies, can be found in the [Installation Guide](./docs/source/quick-start/installing.md).
+Detailed installation instructions, including the full list of optional dependencies, can be found in the [Installation Guide](./docs/source/get-started/installing.md).
 
 ## 🌟 Hello World Example
 
@@ -153,12 +153,12 @@ Before getting started, it's possible to run this simple workflow and many other
 ## 📚 Additional Resources
 
 * 📖 [Documentation](https://docs.nvidia.com/nemo/agent-toolkit/latest): Explore the full documentation for NeMo Agent Toolkit.
-* 🧭 [Get Started Guide](./docs/source/quick-start/installing.md): Set up your environment and start building with NeMo Agent Toolkit.
-* 🤝 [Contributing](./docs/source/resources/contributing.md): Learn how to contribute to NeMo Agent Toolkit and set up your development environment.
+* 🧭 [Get Started Guide](./docs/source/get-started/installing.md): Set up your environment and start building with NeMo Agent Toolkit.
+* 🤝 [Contributing](./docs/source/extra/contributing/index.md): Learn how to contribute to NeMo Agent Toolkit and set up your development environment.
 * 🧪 [Examples](./examples/README.md): Explore examples of NeMo Agent Toolkit workflows located in the [`examples`](./examples) directory of the source repository.
-* 🛠️ [Create and Customize NeMo Agent Toolkit Workflows](docs/source/tutorials/customize-a-workflow.md): Learn how to create and customize NeMo Agent Toolkit workflows.
-* 🎯 [Evaluate with NeMo Agent Toolkit](./docs/source/workflows/evaluate.md): Learn how to evaluate your NeMo Agent Toolkit workflows.
-* 🆘 [Troubleshooting](./docs/source/troubleshooting.md): Get help with common issues.
+* 🛠️ [Create and Customize NeMo Agent Toolkit Workflows](docs/source/get-started/tutorials/customize-a-workflow.md): Learn how to create and customize NeMo Agent Toolkit workflows.
+* 🎯 [Evaluate with NeMo Agent Toolkit](./docs/source/improve-workflows/evaluate.md): Learn how to evaluate your NeMo Agent Toolkit workflows.
+* 🆘 [Troubleshooting](./docs/source/get-started/troubleshooting.md): Get help with common issues.
 
 
 ## 🛣️ Roadmap
