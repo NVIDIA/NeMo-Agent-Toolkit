@@ -19,6 +19,10 @@ from __future__ import annotations
 from nat.cli.register_workflow import register_middleware
 from nat.middleware.cache_middleware import CacheMiddleware
 from nat.middleware.cache_middleware import CacheMiddlewareConfig
+from nat.middleware.defense_middleware_content_guard import ContentSafetyGuardMiddleware
+from nat.middleware.defense_middleware_content_guard import ContentSafetyGuardMiddlewareConfig
+from nat.middleware.defense_middleware_output_verifier import OutputVerifierMiddleware
+from nat.middleware.defense_middleware_output_verifier import OutputVerifierMiddlewareConfig
 from nat.middleware.red_teaming_middleware import RedTeamingMiddleware
 from nat.middleware.red_teaming_middleware_config import RedTeamingMiddlewareConfig
 
@@ -52,3 +56,31 @@ async def red_teaming_middleware(config: RedTeamingMiddlewareConfig, builder):
                                payload_placement=config.payload_placement,
                                target_location=config.target_location,
                                target_field=config.target_field)
+
+@register_middleware(config_type=ContentSafetyGuardMiddlewareConfig)
+async def content_safety_guard_middleware(config: ContentSafetyGuardMiddlewareConfig, builder):
+    """Build a Content Safety Guard middleware from configuration.
+
+    Args:
+        config: The content safety guard middleware configuration
+        builder: The workflow builder used to resolve the LLM
+
+    Yields:
+        A configured Content Safety Guard middleware instance
+    """
+    # Pass the builder and config, LLM will be loaded lazily
+    yield ContentSafetyGuardMiddleware(config=config, builder=builder)
+
+@register_middleware(config_type=OutputVerifierMiddlewareConfig)
+async def output_verifier_middleware(config: OutputVerifierMiddlewareConfig, builder):
+    """Build an Output Verifier middleware from configuration.
+
+    Args:
+        config: The Output Verifier middleware configuration
+        builder: The workflow builder used to resolve the LLM
+
+    Yields:
+        A configured Output Verifier middleware instance
+    """
+    # Pass the builder and config, LLM will be loaded lazily
+    yield OutputVerifierMiddleware(config=config, builder=builder)
