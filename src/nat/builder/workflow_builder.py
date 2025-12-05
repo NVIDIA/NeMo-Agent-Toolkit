@@ -1203,7 +1203,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
                 # Remove from remaining and add to completed after successful build (if not root)
                 if not component_instance.is_root:
-                    # Only remove from remaining if the component is not per-user
                     self.remaining_components.remove(
                         (str(component_instance.name), component_instance.component_group.value))
                     self.completed_components.append(
@@ -1768,9 +1767,7 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
                             f"Building per-user function group '{component_instance.name}' for user {self._user_id}")
                         await self.add_function_group(component_instance.name, config_obj)
                     else:
-                        raise ValueError(
-                            f"PerUserWorkflowBuilder trying to build FunctionGroup `{component_instance.name}` that is not per-user"
-                        )
+                        continue
 
                 elif component_instance.component_group == ComponentGroup.FUNCTIONS:
                     config_obj = cast(FunctionBaseConfig, component_instance.config)
@@ -1781,9 +1778,7 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
                                 f"Building per-user function '{component_instance.name}' for user {self._user_id}")
                             await self.add_function(component_instance.name, config_obj)
                     else:
-                        raise ValueError(
-                            f"PerUserWorkflowBuilder trying to build Function `{component_instance.name}` that is not per-user"
-                        )
+                        continue
 
                 # Remove from remaining and add to completed after successful build (if not root)
                 if not component_instance.is_root:
@@ -1803,11 +1798,10 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
         if not skip_workflow:
             try:
                 registration = self._registry.get_function(type(config.workflow))
-                if not registration.is_per_user:
-                    raise ValueError("PerUserWorkflowBuilder trying to build Workflow that is not per-user")
-                self.remaining_components.remove((WORKFLOW_COMPONENT_NAME, "workflow"))
-                await self.set_workflow(config.workflow)
-                self.completed_components.append((WORKFLOW_COMPONENT_NAME, "workflow"))
+                if registration.is_per_user:
+                    self.remaining_components.remove((WORKFLOW_COMPONENT_NAME, "workflow"))
+                    await self.set_workflow(config.workflow)
+                    self.completed_components.append((WORKFLOW_COMPONENT_NAME, "workflow"))
             except Exception as e:
                 WorkflowBuilder.log_build_failure(WORKFLOW_COMPONENT_NAME,
                                                   "workflow",
