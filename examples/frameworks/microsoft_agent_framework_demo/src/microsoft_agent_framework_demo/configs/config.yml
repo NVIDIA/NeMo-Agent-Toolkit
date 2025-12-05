@@ -27,10 +27,10 @@ memory:
     _type: mem0_memory
 
 functions:
-  hotel_price:
-    _type: hotel_price
-  local_events:
-    _type: local_events
+  hotel_price_maf:
+    _type: microsoft_agent_framework_demo/hotel_price_maf
+  local_events_maf:
+    _type: microsoft_agent_framework_demo/local_events_maf
   add_memory:
     _type: add_memory
     memory: saas_memory
@@ -52,15 +52,15 @@ llms:
   aoai_llm:
     _type: azure_openai
     model_name: gpt-4.1
-    api_key: <API Key>
+    api_key: <API KEY>
     api_version: 2025-01-01-preview
-    base_url: https://<AOAI Endpoint>.cognitiveservices.azure.com
+    base_url: https://<ENDPOINT NAME>.cognitiveservices.azure.com
     deployment_name: gpt-4.1
 
 workflow:
   _type: maf
-  tool_names: [hotel_price, local_events, add_memory, get_memory]
-  llm_name: aoai_llm #openai_llm
+  tool_names: [hotel_price_maf, local_events_maf, add_memory, get_memory]
+  llm_name: aoai_llm 
   verbose: true
   itinerary_expert_name: ItineraryExpert
   itinerary_expert_instructions: |

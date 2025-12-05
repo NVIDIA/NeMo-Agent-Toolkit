@@ -32,13 +32,13 @@ class LocalEventsResponse(BaseModel):
     events: list[LocalEvent]
 
 
-class LocalEventsToolConfig(FunctionBaseConfig, name="local_events"):
-    data_path: str = "examples/frameworks/semantic_kernel_demo/data/local_events.json"
+class LocalEventsToolConfig(FunctionBaseConfig, name="local_events_maf"):
+    data_path: str = "examples/frameworks/microsoft_agent_framework_demo/data/local_events.json"
 
 
-@ai_function(name="local_price", description="Retrieves local events information for any location")
+#@ai_function(name="local_price", description="Retrieves local events information for any location")
 @register_function(config_type=LocalEventsToolConfig)
-async def local_events(tool_config: LocalEventsToolConfig, builder: Builder):
+async def local_events_maf(tool_config: LocalEventsToolConfig, builder: Builder):
 
     import json
 

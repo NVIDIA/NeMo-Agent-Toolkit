@@ -21,8 +21,8 @@ from nat.cli.register_workflow import register_function
 from nat.data_models.function import FunctionBaseConfig
 
 
-class HotelPriceToolConfig(FunctionBaseConfig, name="hotel_price"):
-    data_path: str = "examples/frameworks/semantic_kernel_demo/data/hotel_prices.json"
+class HotelPriceToolConfig(FunctionBaseConfig, name="hotel_price_maf"):
+    data_path: str = "examples/frameworks/microsoft_agent_framework_demo/data/hotel_prices.json"
     date_format: str = "%Y-%m-%d"
 
 
@@ -40,13 +40,12 @@ class HotelOffersResponse(BaseModel):
 
 from agent_framework import ai_function
 
-@ai_function(name="hotel_price", description="Retrieves hotel prices information for any location")
+#@ai_function(name="hotel_price", description="Retrieves hotel prices information for any location")
 @register_function(config_type=HotelPriceToolConfig)
-async def hotel_price(tool_config: HotelPriceToolConfig, builder: Builder):
+async def hotel_price_maf(tool_config: HotelPriceToolConfig, builder: Builder):
 
     import json
 
-    print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Data Path: ", tool_config.data_path)
     with open(tool_config.data_path, encoding='utf-8') as f:
         hotel_prices = json.load(f)
 

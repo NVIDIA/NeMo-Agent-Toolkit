@@ -25,17 +25,19 @@ from nat.data_models.component_ref import FunctionRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
 
+from agent_framework import GroupChatBuilder, GroupChatStateSnapshot
+
 from . import hotel_price_tool  # noqa: F401, pylint: disable=unused-import
 from . import local_events_tool  # noqa: F401, pylint: disable=unused-import
 
 logger = logging.getLogger(__name__)
 
 
-class SKTravelPlanningWorkflowConfig(FunctionBaseConfig, name="semantic_kernel"):
+class SKTravelPlanningWorkflowConfig(FunctionBaseConfig, name="maf"):
     tool_names: list[FunctionRef] = Field(default_factory=list,
-                                          description="The list of tools to provide to the semantic kernel.")
-    llm_name: LLMRef = Field(description="The LLM model to use with the semantic kernel.")
-    verbose: bool = Field(default=False, description="Set the verbosity of the semantic kernel's logging.")
+                                          description="The list of tools to provide to the Microsoft Agent Framework.")
+    llm_name: LLMRef = Field(description="The LLM model to use with the Microsoft Agent Framework.")
+    verbose: bool = Field(default=False, description="Set the verbosity of the Microsoft Agent Framework's logging.")
     itinerary_expert_name: str = Field(description="The name of the itinerary expert.")
     itinerary_expert_instructions: str = Field(description="The instructions for the itinerary expert.")
     budget_advisor_name: str = Field(description="The name of the budget advisor.")
@@ -46,19 +48,16 @@ class SKTravelPlanningWorkflowConfig(FunctionBaseConfig, name="semantic_kernel")
                                                description="The instructions for using the long term memory.")
 
 
-@register_function(config_type=SKTravelPlanningWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.SEMANTIC_KERNEL])
-async def semantic_kernel_travel_planning_workflow_orig(config: SKTravelPlanningWorkflowConfig, builder: Builder):
+@register_function(config_type=SKTravelPlanningWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.MAF])
+async def maf_travel_planning_workflow(config: SKTravelPlanningWorkflowConfig, builder: Builder):
 
     from agent_framework import ChatAgent
 
 
-    chat_service = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.SEMANTIC_KERNEL)
+    chat_service = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.MAF)
 
    
-    tools = await builder.get_tools(config.tool_names, wrapper_type=LLMFrameworkEnum.SEMANTIC_KERNEL)
-
-
-    all_tools = [hotel_price_tool.hotel_price, local_events_tool.local_events]
+    tools = await builder.get_tools(config.tool_names, wrapper_type=LLMFrameworkEnum.MAF)
 
 
     itinerary_expert_name = config.itinerary_expert_name
@@ -72,14 +71,14 @@ async def semantic_kernel_travel_planning_workflow_orig(config: SKTravelPlanning
             name=itinerary_expert_name,
             chat_client=chat_service,
             instructions=itinerary_expert_instructions,
-            tools=all_tools
+            tools=tools
         )
 
     agent_budget = ChatAgent(
             name=budget_advisor_name,
             chat_client=chat_service,
             instructions=budget_advisor_instructions,
-            tools=all_tools
+            tools=tools
         )
 
 
@@ -88,15 +87,19 @@ async def semantic_kernel_travel_planning_workflow_orig(config: SKTravelPlanning
             name=summarize_agent_name,
             chat_client=chat_service,
             instructions=summarize_agent_instructions,
-            tools=all_tools
+            tools=tools
         )
 
 
 
     agents=[agent_itinerary, agent_budget, agent_summary]
+    
+    global current_agent_idx 
     current_agent_idx = -1
 
     def round_robin_speaker(state: GroupChatStateSnapshot) -> str | None:
+        global current_agent_idx
+
         if current_agent_idx > len(agents):
             current_agent_idx = -1
         
@@ -107,7 +110,9 @@ async def semantic_kernel_travel_planning_workflow_orig(config: SKTravelPlanning
             return None
 
 
-        response = any(keyword in history[-1].content.lower()
+        print("aaaa:", history[-1].message.text)
+
+        response = any(keyword in history[-1].message.text.lower()
                     for keyword in ["final plan", "total cost", "more information"])
 
         print("Current response: ", response)
@@ -116,10 +121,10 @@ async def semantic_kernel_travel_planning_workflow_orig(config: SKTravelPlanning
             return None
         else:
             current_agent_idx += 1
-            return agents[current_agent_idx]
+            return agents[current_agent_idx].name
 
 
-    from agent_framework import GroupChatBuilder, GroupChatStateSnapshot
+
 
     # Build the group chat workflow
     chat = (

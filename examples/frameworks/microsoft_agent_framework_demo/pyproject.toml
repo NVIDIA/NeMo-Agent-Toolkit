@@ -10,11 +10,11 @@ root = "../../.."
 name = "nat_microsoft_agent_framework_demo"
 dynamic = ["version"]
 dependencies = [
-  "nvidia-nat[langchain,maf]~=1.4",
+  "nvidia-nat[maf]~=1.4",
   "usearch==2.21.0",
 ]
 requires-python = ">=3.11,<3.14"
-description = "Semantic Kernel Example"
+description = "Microsoft Agent Framework Example"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 
@@ -22,4 +22,4 @@ classifiers = ["Programming Language :: Python"]
 nvidia-nat = { path = "../../..", editable = true }
 
 [project.entry-points.'nat.components']
-nat_semantic_kernel_demo = "nat_semantic_kernel_demo.register"
+nat_microsoft_agent_framework_demo = "microsoft_agent_framework_demo.register"
