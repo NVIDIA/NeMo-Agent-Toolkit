@@ -15,52 +15,29 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# ReWOO Agent
-The ReWOO (Reasoning WithOut Observation) agent is an advanced agent paradigm that decouples reasoning from observations to improve efficiency in augmented language models. Based on the [ReWOO paper](https://arxiv.org/abs/2305.18323), this agent separates the planning and execution phases to reduce token consumption and improve performance.
-
-The ReWOO agent's implementation follows the paper's methodology of decoupling reasoning from observations, which leads to more efficient tool usage and better token efficiency for reasoning tasks.
-
-
-## Features
-- **Decoupled Architecture**: Separates planning and execution phases for improved efficiency
-- **Pre-built Tools**: Leverages core library agent and tools
-- **Efficient Token Usage**: Reduces token consumption by decoupling reasoning from observations
-- **Custom Plugin System**: Developers can bring in new tools using plugins
-- **Customizable Prompts**: Modify planner and solver prompts for specific needs
-- **Agentic Workflows**: Fully configurable via YAML for flexibility and productivity
-- **Ease of Use**: Simplifies developer experience and deployment
-
----
+# Configure the ReWOO Agent
+Configure the NVIDIA NeMo Agent toolkit ReWOO agent as a workflow or a function. The ReWOO agent workflow is broken down into three phases, planning, execution, and solution.
 
 ## Requirements
-The ReWOO agent requires the `nvidia-nat[langchain]` plugin to be installed.
+The ReWOO agent requires the `nvidia-nat[langchain]` plugin to be installed, which can be installed with one of the following commands.
 
-If you have performed a source code checkout, you can install this with the following command:
+- If you have performed a source code checkout, you can install this with the following command:
 
 ```bash
 uv pip install -e '.[langchain]'
 ```
 
-If you have installed the NeMo Agent toolkit from a package, you can install this with the following command:
+- If you have installed the NeMo Agent toolkit from a package, you can install this with the following command:
 
 ```bash
 uv pip install "nvidia-nat[langchain]"
 ```
-
-## Benefits
-
-* **Token Efficiency**: By planning all steps upfront and using placeholders (e.g., "#E1", "#E2") for intermediate results, ReWOO significantly reduces token consumption. These placeholders are replaced with actual values during execution, eliminating the need to include full tool outputs in each reasoning step.
-
-* **Cleaner Reasoning**: The separation of planning and execution allows the agent to focus purely on logical reasoning during the planning phase, without being distracted by intermediate results. The placeholder system makes data flow between steps explicit and manageable.
-
-* **Reduced Hallucination**: By having a clear plan before execution, the agent is less likely to make incorrect assumptions or get sidetracked by intermediate results.
-
 ## Configuration
 
-The ReWOO agent may be utilized as a workflow or a function.
+You can use the ReWOO agent as a workflow or a function.
 
-### Example `config.yml`
-In your YAML file, to use the ReWOO agent (`rewoo_agent`) as a workflow:
+### Example 1: ReWOO Agent as a Workflow to Configure `config.yml`
+To use the ReWOO agent as a workflow, configure the YAML file as follows:
 ```yaml
 workflow:
   _type: rewoo_agent
@@ -69,7 +46,7 @@ workflow:
   verbose: true
   use_tool_schema: true
 ```
-
+### Example 2: ReWOO Agent as a Function to Configure `config.yml`
 In your YAML file, to use the ReWOO agent as a function:
 ```yaml
 function_groups:
@@ -82,11 +59,11 @@ functions:
     description: 'Useful for performing simple mathematical calculations.'
 ```
 
-### Configurable Options:
-
+### Configurable Options
+The following are more ways you can configure your config file when using the ReWOO agent:
 * `workflow_alias`: Defaults to `None`. The alias of the workflow. Useful when the ReWOO agent is configured as a workflow and need to expose a customized name as a tool.
 
-* `tool_names`: A list of tools that the agent can call. The tools must be functions or function groups configured in the YAML file
+* `tool_names`: A list of tools that the agent can call. The tools must be functions or function groups configured in the YAML file.
 
 * `llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file
 
@@ -112,14 +89,7 @@ functions:
 
 * `raise_tool_call_error`: Defaults to True. Whether to raise a exception immediately if a tool call fails. If set to False, the tool call error message will be included in the tool response and passed to the next tool.
 
-
-## **Step-by-Step Breakdown of a ReWOO Agent**
-
-1. **Planning Phase** – The agent receives a task and creates a complete plan with all necessary tool calls and evidence placeholders.
-2. **Execution Phase** – The agent executes each step of the plan sequentially, replacing placeholders with actual tool outputs.
-3. **Solution Phase** – The agent uses all gathered evidence to generate the final answer.
-
-### Example Walkthrough
+## Example ReWOO Agent Workflow
 
 Imagine a ReWOO agent needs to answer:
 
@@ -149,9 +119,9 @@ The agent creates a plan like:
 ```
 
 #### Execution Phase
-1. Executes the first step to get today's date
-2. Uses that date to search for historical weather data
-3. Replaces placeholders with actual results
+1. Execute the first step to get today's date.
+2. Use that date to search for historical weather data.
+3. Replace placeholders with actual results.
 
 #### Solution Phase
 Generates the final answer using all gathered evidence.
@@ -168,12 +138,13 @@ The ReWOO agent uses two distinct prompts:
 
 
 ## Limitations
+
 ReWOO agents, while efficient, come with several limitations:
 
-* Planning Overhead: The initial planning phase requires the agent to think through the entire task before starting execution. This can be inefficient for simple tasks that could be solved with fewer steps.
+**Planning Overhead**: The initial planning phase requires the agent to think through the entire task before starting execution. This can be inefficient for simple tasks that could be solved with fewer steps.
 
-* Limited Adaptability: Since the plan is created upfront, the agent cannot easily adapt to unexpected tool failures or new information that might require a different approach.
+**Limited Adaptability**: Since the plan is created upfront, the agent cannot easily adapt to unexpected tool failures or new information that might require a different approach.
 
-* Complex Planning Requirements: The planning phase requires the agent to have a good understanding of all available tools and their capabilities. Poor tool descriptions or complex tool interactions can lead to suboptimal plans.
+**Complex Planning Requirements**: The planning phase requires the agent to have a good understanding of all available tools and their capabilities. Poor tool descriptions or complex tool interactions can lead to suboptimal plans.
 
 In summary, ReWOO agents are most effective for tasks that benefit from upfront planning (relatively stable workflow) and where token efficiency is important. They may not be the best choice for tasks requiring high adaptability and uncertainty of tool outputs.

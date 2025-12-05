@@ -73,6 +73,7 @@ source = "https://github.com/NVIDIA/NeMo-Agent-Toolkit"
 # Optional dependencies are things that users would want to install with NAT. i.e. `uv pip install "nvidia-nat[langchain]"`
 # Keep sorted!!!
 all = ["nvidia-nat-all"] # meta-package
+a2a = ["nvidia-nat-a2a"]
 adk = ["nvidia-nat-adk"]
 agno = ["nvidia-nat-agno"]
 crewai = ["nvidia-nat-crewai"]
@@ -109,6 +110,7 @@ examples = [
   "nat_haystack_deep_research_agent",
   "nat_alert_triage_agent",
   "nat_automated_description_generation",
+  "nat_currency_agent_a2a",
   "nat_email_phishing_analyzer",
   "nat_multi_frameworks",
   "nat_plot_charts",
@@ -123,6 +125,7 @@ examples = [
   "nat_simple_web_query",
   "nat_simple_web_query_eval",
   "nat_simple_calculator",
+  "nat_math_assistant_a2a",
   "nat_simple_calculator_custom_routes",
   "nat_simple_calculator_eval",
   "nat_simple_calculator_mcp",
@@ -173,6 +176,7 @@ override-dependencies = [
 [tool.uv.sources]
 # Workspace members
 nvidia-nat-all = { workspace = true }
+nvidia-nat-a2a = { workspace = true }
 nvidia-nat-agno = { workspace = true }
 nvidia-nat-adk = { workspace = true }
 nvidia-nat-crewai = { workspace = true }
@@ -199,6 +203,7 @@ nvidia-nat-zep-cloud = { workspace = true }
 # All examples here
 nat_adk_demo = { path = "examples/frameworks/adk_demo", editable = true }
 nat_agno_personal_finance = { path = "examples/frameworks/agno_personal_finance", editable = true }
+nat_currency_agent_a2a = { path = "examples/A2A/currency_agent_a2a", editable = true }
 nat_haystack_deep_research_agent = { path = "examples/frameworks/haystack_deep_research_agent", editable = true }
 nat_alert_triage_agent = { path = "examples/advanced_agents/alert_triage_agent", editable = true }
 nat_automated_description_generation = { path = "examples/custom_functions/automated_description_generation", editable = true }
@@ -214,6 +219,7 @@ nat_service_account_auth_mcp = { path = "examples/MCP/service_account_auth_mcp",
 nat_simple_auth = { path = "examples/front_ends/simple_auth", editable = true }
 nat_simple_auth_mcp = { path = "examples/MCP/simple_auth_mcp", editable = true }
 nat_simple_calculator = { path = "examples/getting_started/simple_calculator", editable = true }
+nat_math_assistant_a2a = { path = "examples/A2A/math_assistant_a2a", editable = true }
 nat_simple_calculator_custom_routes = { path = "examples/front_ends/simple_calculator_custom_routes", editable = true }
 nat_simple_calculator_eval = { path = "examples/evaluation_and_profiling/simple_calculator_eval", editable = true }
 nat_simple_calculator_hitl = { path = "examples/HITL/simple_calculator_hitl", editable = true }

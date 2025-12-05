@@ -17,7 +17,7 @@ limitations under the License.
 
 # Router Agent Example
 
-This example demonstrates how to use a configurable Router Agent with the NeMo Agent toolkit. The Router Agent analyzes incoming requests and directly routes them to the most appropriate branch (other agents, functions or tools) based on the request content. For this purpose, NeMo Agent toolkit provides a [`router_agent`](../../../docs/source/components/agents/router-agent.md) workflow type.
+This example demonstrates how to use a configurable Router Agent with the NeMo Agent toolkit. The Router Agent analyzes incoming requests and directly routes them to the most appropriate branch (other agents, functions or tools) based on the request content. For this purpose, NeMo Agent toolkit provides a [`router_agent`](../../../docs/source/components/router-agent/index.md) workflow type.
 
 ## Table of Contents
 
