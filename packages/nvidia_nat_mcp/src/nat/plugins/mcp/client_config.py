@@ -129,3 +129,48 @@ class MCPClientConfig(FunctionGroupBaseConfig, name="mcp_client"):
         if self.reconnect_max_backoff < self.reconnect_initial_backoff:
             raise ValueError("reconnect_max_backoff must be greater than or equal to reconnect_initial_backoff")
         return self
+
+
+class PerUserMCPClientConfig(FunctionGroupBaseConfig, name="per_user_mcp_client"):
+    """
+    MCP Client configuration for per-user workflows that are registered with @register_per_user_function.
+
+    By using this configuration, each user gets their own MCP client instance.
+    """
+    server: MCPServerConfig = Field(..., description="Server connection details (transport, url/command, etc.)")
+    tool_call_timeout: timedelta = Field(
+        default=timedelta(seconds=60),
+        description="Timeout (in seconds) for the MCP tool call. Defaults to 60 seconds.")
+    auth_flow_timeout: timedelta = Field(
+        default=timedelta(seconds=300),
+        description="Timeout (in seconds) for the MCP auth flow. When the tool call requires interactive \
+        authentication, this timeout is used. Defaults to 300 seconds.")
+    reconnect_enabled: bool = Field(
+        default=True,
+        description="Whether to enable reconnecting to the MCP server if the connection is lost. \
+        Defaults to True.")
+    reconnect_max_attempts: int = Field(default=2,
+                                        ge=0,
+                                        description="Maximum number of reconnect attempts. Defaults to 2.")
+    reconnect_initial_backoff: float = Field(
+        default=0.5, ge=0.0, description="Initial backoff time for reconnect attempts. Defaults to 0.5 seconds.")
+    reconnect_max_backoff: float = Field(
+        default=50.0, ge=0.0, description="Maximum backoff time for reconnect attempts. Defaults to 50 seconds.")
+    tool_overrides: dict[str, MCPToolOverrideConfig] | None = Field(
+        default=None,
+        description="""Optional tool name overrides and description changes.
+        Example:
+          tool_overrides:
+            calculator_add:
+              alias: "add_numbers"
+              description: "Add two numbers together"
+            calculator_multiply:
+              description: "Multiply two numbers"  # alias defaults to original name
+        """)
+
+    @model_validator(mode="after")
+    def _validate_reconnect_backoff(self) -> "PerUserMCPClientConfig":
+        """Validate reconnect backoff values."""
+        if self.reconnect_max_backoff < self.reconnect_initial_backoff:
+            raise ValueError("reconnect_max_backoff must be greater than or equal to reconnect_initial_backoff")
+        return self
