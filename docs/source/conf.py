@@ -42,6 +42,7 @@ if typing.TYPE_CHECKING:
 build_api_docs = os.getenv('NAT_DISABLE_API_BUILD', '0') != '1'
 cur_dir = Path(os.path.abspath(__file__)).parent
 
+
 def _build_api_tree() -> Path:
     # Work-around for https://github.com/readthedocs/sphinx-autoapi/issues/298
     # AutoAPI support for implicit namespaces is broken, so we need to manually
@@ -81,6 +82,7 @@ def _build_api_tree() -> Path:
                             f.write("")
 
     return api_tree
+
 
 # -- Project information -----------------------------------------------------
 
@@ -145,7 +147,7 @@ else:
     api_stub_path = cur_dir / 'api'
     api_stub_path.mkdir(exist_ok=True)
     with open(api_stub_path / "index.rst", "w", encoding="utf-8") as f:
-        index_rst ="""
+        index_rst = """
                    ==========
                    Python API
                    ==========
@@ -353,7 +355,12 @@ default_role = "py:obj"
 PYDANTIC_DEFAULT_DOCSTRING = "A base class for creating Pydantic models."
 
 if build_api_docs:
-    def skip_pydantic_special_attrs(app: object, what: str, name: str, obj: "PythonObject", skip: bool,
+
+    def skip_pydantic_special_attrs(app: object,
+                                    what: str,
+                                    name: str,
+                                    obj: "PythonObject",
+                                    skip: bool,
                                     options: list[str]) -> bool:
 
         if not skip:
@@ -363,7 +370,6 @@ if build_api_docs:
                 obj.docstring = ""
 
         return skip
-
 
     def setup(sphinx):
         # Work-around for for Pydantic docstrings that trigger parsing warnings
