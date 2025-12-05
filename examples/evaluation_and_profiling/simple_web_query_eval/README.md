@@ -148,7 +148,7 @@ aws s3 mb \
   ${S3_ENDPOINT_URL:+--endpoint-url=${S3_ENDPOINT_URL}}
 ```
 
-For more information about using remote files for evaluation, refer to the [evaluation guide](../../../docs/source/reference/evaluate.md).
+For more information about using remote files for evaluation, refer to the [evaluation guide](../../../docs/source/improve-workflows/evaluate.md).
 
 ##### Upload dataset to the S3 bucket
 To use the sample config file `eval_upload.yml`, you need to upload the following dataset files to the S3 bucket at path `input/`:
