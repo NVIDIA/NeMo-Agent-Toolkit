@@ -27,7 +27,7 @@ There are currently five workflow transactions that can be initiated using HTTP 
 ## Start the NeMo Agent Toolkit Server
 This section describes how to start the NeMo Agent toolkit server.
 ### Set Up API Keys
-If you have not already done so, follow the [Obtaining API Keys](../get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
+If you have not already done so, follow the [Obtaining API Keys](../../get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
 ```
@@ -537,11 +537,11 @@ If you're migrating from OpenAI's API:
 3. **Test Compatibility**: Verify all features work as expected
 
 ## Evaluation Endpoint
-You can also evaluate workflows via the NeMo Agent toolkit `evaluate` endpoint. For more information, refer to the [NeMo Agent toolkit Evaluation Endpoint](../reference/evaluate-api.md) documentation.
+You can also evaluate workflows via the NeMo Agent toolkit `evaluate` endpoint. For more information, refer to the [NeMo Agent toolkit Evaluation Endpoint](./evaluate-api.md) documentation.
 
 ## Choosing between Streaming and Non-Streaming
 Use streaming if you need real-time updates or live communication where users expect immediate feedback. Use non-streaming if your workflow responds with simple updates and less feedback is needed.
 
 ## NeMo Agent Toolkit API Server Interaction Guide
 A custom user interface can communicate with the API server using both HTTP requests and WebSocket connections.
-For details on proper WebSocket messaging integration, refer to the [WebSocket Messaging Interface](../reference/websockets.md) documentation.
+For details on proper WebSocket messaging integration, refer to the [WebSocket Messaging Interface](./websockets.md) documentation.
