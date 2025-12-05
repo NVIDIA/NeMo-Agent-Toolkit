@@ -46,8 +46,6 @@ from nat.data_models.function import FunctionBaseConfig
 from .core import available_moves
 from .core import board_to_str
 from .llm_agents import build_player_chain
-from .llm_agents import format_prompt_for_dpo
-from .llm_agents import get_system_prompt
 from .llm_agents import make_random_move
 from .llm_agents import parse_move_any
 
@@ -67,9 +65,7 @@ class ChooseMoveOutput(BaseModel):
     row: int = Field(description="0-based row index of the move")
     col: int = Field(description="0-based column index of the move")
     raw_response: str = Field(description="Raw LLM response text")
-    prompt: str = Field(
-        description="Full prompt as string: 'role: content' per line"
-    )
+    prompt: str = Field(description="Board state string (last user input)")
 
 
 class ChooseMoveConfig(FunctionBaseConfig, name="choose_move"):
@@ -136,10 +132,8 @@ async def choose_move_function(config: ChooseMoveConfig, builder: Builder):
         # === Random mode: generate a random legal move ===
         if use_random:
             row, col, raw_response = make_random_move(board)
-            # For random moves, construct a synthetic prompt for consistency
-            prompt = f"system: {get_system_prompt(player_symbol)}\nuser: {board_str}"
             return ChooseMoveOutput(
-                row=row, col=col, raw_response=raw_response, prompt=prompt
+                row=row, col=col, raw_response=raw_response, prompt=board_str
             )
 
         # === LLM mode: use the LLM to generate a move ===
@@ -164,15 +158,12 @@ async def choose_move_function(config: ChooseMoveConfig, builder: Builder):
                         content=f"You made an invalid move. You have "
                         f"{max_retries - attempt + 1} attempts left.\n"
                         f"Available moves are: "
-                        f"{', '.join(f'({r+1},{c+1})' for r,c in legal_moves)}\n"
+                        f"{', '.join(f'({r+1},{c+1})' for r, c in legal_moves)}\n"
                         f"Current board:\n{current_board_str}"
                     )
                 )
             else:
                 messages.append(HumanMessage(content=current_board_str))
-
-            # Capture the prompt BEFORE invoking (exclude AI response)
-            prompt_before_response = format_prompt_for_dpo(player_symbol, messages)
 
             # Invoke the LLM
             raw_response = await chain.ainvoke({"messages": messages})
@@ -185,11 +176,12 @@ async def choose_move_function(config: ChooseMoveConfig, builder: Builder):
             move = parse_move_any(text)
 
             if move is not None and move in legal_moves:
+                # Use the board string as the prompt (last user input)
                 return ChooseMoveOutput(
                     row=move[0],
                     col=move[1],
                     raw_response=text,
-                    prompt=prompt_before_response,
+                    prompt=current_board_str,
                 )
 
             logger.debug(
