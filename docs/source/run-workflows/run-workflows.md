@@ -18,15 +18,15 @@ limitations under the License.
 # Run NVIDIA NeMo Agent Toolkit Workflows
 
 A workflow is defined by a YAML configuration file that specifies the tools and models to use. NeMo Agent toolkit provides the following ways to run a workflow:
-- Using the `nat run` command.
+- [Using the `nat run` command](#using-the-nat-run-command).
    - This is the simplest and most common way to run a workflow.
-- Using the `nat serve` command.
+- [Using the `nat serve` command](#using-the-nat-serve-command).
    - This starts a web server that listens for incoming requests and runs the specified workflow.
-- Using the `nat mcp serve` command.
+- [Using the `nat mcp serve` command](#using-the-nat-mcp-serve-command).
    - This starts a Model Context Protocol (MCP) server that publishes the functions from your workflow as MCP tools.
-- Using the `nat eval` command.
+- [Using the `nat eval` command](#using-the-nat-eval-command).
    - In addition to running the workflow, it also evaluates the accuracy of the workflow.
-- Using the Python API
+- [Using the Python API](#using-the-python-api).
    - This is the most flexible way to run a workflow.
 
 ![Running Workflows](../_static/running_workflows.png)
@@ -66,9 +66,6 @@ The following command runs the same workflow with the input question provided in
 echo "What is LangSmith?" > .tmp/input.txt
 nat run --config_file examples/getting_started/simple_web_query/configs/config.yml --input_file .tmp/input.txt
 ```
-
-## Using the `nat eval` Command
-The `nat eval` command is similar to the `nat run` command. However, in addition to running the workflow, it also evaluates the accuracy of the workflow, refer to [Evaluating NeMo Agent toolkit Workflows](../improve-workflows/evaluate.md) for more information.
 
 ## Using the `nat serve` Command
 The `nat serve` command starts a web server that listens for incoming requests and runs the specified workflow. The server can be accessed with a web browser or by sending a POST request to the server's endpoint. Similar to the `nat run` command, the `nat serve` command requires a configuration file specified by the `--config_file` flag.
@@ -118,6 +115,8 @@ nat mcp client tool call react_agent --json-args '{"query": "What is LangSmith?"
 
 Refer to [MCP Server](./mcp-server.md) for more information on the NeMo Agent toolkit MCP server.
 
+## Using the `nat eval` Command
+The `nat eval` command is similar to the `nat run` command. However, in addition to running the workflow, it also evaluates the accuracy of the workflow, refer to [Evaluating NeMo Agent toolkit Workflows](../improve-workflows/evaluate.md) for more information.
 
 ## Using the Python API
 
