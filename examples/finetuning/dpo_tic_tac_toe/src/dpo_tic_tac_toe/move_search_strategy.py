@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 TTC Search Strategy for generating multiple candidate moves in Tic-Tac-Toe.
 
@@ -120,10 +119,11 @@ class MultiCandidateMoveSearcher(StrategyBase):
             for candidate_idx in range(self.num_candidates):
                 try:
                     # Call choose_move function
-                    move_result = await self.choose_move_fn.ainvoke(ChooseMoveInput(
-                        board=board,
-                        player_symbol=player_symbol,
-                    ))
+                    move_result = await self.choose_move_fn.ainvoke(
+                        ChooseMoveInput(
+                            board=board,
+                            player_symbol=player_symbol,
+                        ))
 
                     # Wrap in TTCItem with metadata for scoring
                     candidate_item = TTCItem(
@@ -138,11 +138,9 @@ class MultiCandidateMoveSearcher(StrategyBase):
                     )
                     output_items.append(candidate_item)
 
-                    logger.debug(
-                        f"Generated candidate {candidate_idx}: "
-                        f"row={move_result.row if hasattr(move_result, 'row') else move_result['row']}, "
-                        f"col={move_result.col if hasattr(move_result, 'col') else move_result['col']}"
-                    )
+                    logger.debug(f"Generated candidate {candidate_idx}: "
+                                 f"row={move_result.row if hasattr(move_result, 'row') else move_result['row']}, "
+                                 f"col={move_result.col if hasattr(move_result, 'col') else move_result['col']}")
 
                 except RuntimeError as e:
                     logger.warning(f"Failed to generate candidate {candidate_idx}: {e}")

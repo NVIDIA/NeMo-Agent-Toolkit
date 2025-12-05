@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 Evaluators for the DPO Tic-Tac-Toe workflow.
 
@@ -110,10 +109,7 @@ class DPODataCollectorEvaluator(BaseEvaluator):
         moves_by_turn: dict[str, list[dict]] = {}
 
         for step in item.trajectory:
-            if (
-                step.event_type == IntermediateStepType.CUSTOM_END
-                and step.payload.name == "dpo_candidate_move"
-            ):
+            if (step.event_type == IntermediateStepType.CUSTOM_END and step.payload.name == "dpo_candidate_move"):
                 metadata = step.payload.metadata
                 if metadata:
                     turn_id = metadata.get("turn_id")

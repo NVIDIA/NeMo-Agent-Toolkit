@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 NAT component registration entry point for DPO Tic-Tac-Toe example.
 
@@ -23,14 +22,9 @@ with the NAT framework via the entry point in pyproject.toml.
 # ruff: noqa: F401
 
 # Register the choose_move NAT Function (base move generator)
-from .choose_move_function import choose_move_function
-
 # Register TTC strategies
 from .board_position_scorer import register_board_position_scorer  # SCORING
-from .move_search_strategy import register_multi_candidate_move_search  # SEARCH
-
-# Register the TTC move selector NAT Function (wraps search/score/select)
-from .ttc_move_selector_function import ttc_move_selector_function
+from .choose_move_function import choose_move_function
 
 # Register the main DPO workflow
 from .dpo_workflow import dpo_tic_tac_toe_workflow
@@ -38,3 +32,7 @@ from .dpo_workflow import dpo_tic_tac_toe_workflow
 # Register evaluators
 from .evaluator_register import register_dpo_data_collector_evaluator
 from .evaluator_register import register_game_outcome_evaluator
+from .move_search_strategy import register_multi_candidate_move_search  # SEARCH
+
+# Register the TTC move selector NAT Function (wraps search/score/select)
+from .ttc_move_selector_function import ttc_move_selector_function

@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 NAT Function that wraps TTC search → score → select pipeline for move selection.
 
@@ -26,7 +25,6 @@ It also records all candidates as intermediate steps for DPO data collection.
 
 import logging
 import uuid
-from typing import Any
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -135,7 +133,9 @@ async def ttc_move_selector_function(config: TTCMoveSelectorConfig, builder: Bui
 
         # Create initial TTCItem for the search strategy
         initial_item = TTCItem(
-            input={"board": board, "player_symbol": player_symbol},
+            input={
+                "board": board, "player_symbol": player_symbol
+            },
             metadata={"turn_index": turn_index},
         )
 
@@ -184,8 +184,7 @@ async def ttc_move_selector_function(config: TTCMoveSelectorConfig, builder: Bui
                         "candidate_index": idx,
                     },
                     UUID=step_uuid,
-                )
-            )
+                ))
 
             # Write CUSTOM_END with full move data including prompt
             step_manager.push_intermediate_step(
@@ -199,7 +198,9 @@ async def ttc_move_selector_function(config: TTCMoveSelectorConfig, builder: Bui
                         "candidate_index": idx,
                         "board_state_before": board,
                         "prompt": prompt,  # Full prompt in OpenAI chat format
-                        "move": {"row": row, "col": col},
+                        "move": {
+                            "row": row, "col": col
+                        },
                         "raw_llm_response": raw_response,
                         "score": item.score,
                         "is_selected": is_selected,
@@ -207,8 +208,7 @@ async def ttc_move_selector_function(config: TTCMoveSelectorConfig, builder: Bui
                         "player_value": player_value,
                     },
                     UUID=step_uuid,
-                )
-            )
+                ))
 
         # Extract selected move data
         selected_output = selected_item.output

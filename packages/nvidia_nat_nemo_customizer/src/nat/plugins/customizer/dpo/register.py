@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 Registration module for the DPO Trajectory Builder.
 
@@ -28,9 +27,7 @@ from .dpo_trajectory_builder import DPOTrajectoryBuilder
 
 
 @register_trajectory_builder(config_type=DPOTrajectoryBuilderConfig)
-async def dpo_trajectory_builder(
-    config: DPOTrajectoryBuilderConfig, builder: Builder
-):
+async def dpo_trajectory_builder(config: DPOTrajectoryBuilderConfig, builder: Builder):
     """
     Register the DPO (Direct Preference Optimization) trajectory builder.
 

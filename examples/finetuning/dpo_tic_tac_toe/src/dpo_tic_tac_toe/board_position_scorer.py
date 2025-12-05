@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 Custom TTC Scorer for Tic-Tac-Toe that uses game-theoretic position evaluation.
 
@@ -129,9 +128,7 @@ class BoardPositionScorer(StrategyBase):
                 score = evaluate_board_for_player(board_after_move, player_value)
                 item.score = float(score)
 
-                logger.debug(
-                    f"Scored move ({row}, {col}) for player {player_value}: {score:.3f}"
-                )
+                logger.debug(f"Scored move ({row}, {col}) for player {player_value}: {score:.3f}")
 
             except Exception as e:
                 logger.error(f"Error scoring item: {e}")

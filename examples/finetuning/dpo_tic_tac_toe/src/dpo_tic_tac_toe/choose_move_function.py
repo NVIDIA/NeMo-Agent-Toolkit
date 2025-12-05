@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 NAT Function for choosing a move in Tic-Tac-Toe.
 
@@ -28,7 +27,6 @@ and opponents (random), enabling DPO data collection from all turns.
 """
 
 import logging
-from typing import Any
 
 import numpy as np
 from langchain_core.messages import AIMessage
@@ -77,10 +75,8 @@ class ChooseMoveConfig(FunctionBaseConfig, name="choose_move"):
     allowing DPO data collection from all game turns.
     """
 
-    llm: LLMRef | None = Field(
-        default=None,
-        description="LLM to use for move generation. If None, generates random moves."
-    )
+    llm: LLMRef | None = Field(default=None,
+                               description="LLM to use for move generation. If None, generates random moves.")
     max_retries: int = Field(default=2, description="Maximum number of parsing retries")
 
 
@@ -132,9 +128,7 @@ async def choose_move_function(config: ChooseMoveConfig, builder: Builder):
         # === Random mode: generate a random legal move ===
         if use_random:
             row, col, raw_response = make_random_move(board)
-            return ChooseMoveOutput(
-                row=row, col=col, raw_response=raw_response, prompt=board_str
-            )
+            return ChooseMoveOutput(row=row, col=col, raw_response=raw_response, prompt=board_str)
 
         # === LLM mode: use the LLM to generate a move ===
         # Build chain for this player symbol
@@ -154,14 +148,11 @@ async def choose_move_function(config: ChooseMoveConfig, builder: Builder):
             if attempt > 0:
                 # Add retry message with available moves hint
                 messages.append(
-                    HumanMessage(
-                        content=f"You made an invalid move. You have "
-                        f"{max_retries - attempt + 1} attempts left.\n"
-                        f"Available moves are: "
-                        f"{', '.join(f'({r+1},{c+1})' for r, c in legal_moves)}\n"
-                        f"Current board:\n{current_board_str}"
-                    )
-                )
+                    HumanMessage(content=f"You made an invalid move. You have "
+                                 f"{max_retries - attempt + 1} attempts left.\n"
+                                 f"Available moves are: "
+                                 f"{', '.join(f'({r+1},{c+1})' for r, c in legal_moves)}\n"
+                                 f"Current board:\n{current_board_str}"))
             else:
                 messages.append(HumanMessage(content=current_board_str))
 
@@ -184,10 +175,8 @@ async def choose_move_function(config: ChooseMoveConfig, builder: Builder):
                     prompt=current_board_str,
                 )
 
-            logger.debug(
-                f"[WARN] Invalid move on attempt {attempt + 1}: '{text}'. "
-                f"Legal moves: {legal_moves}. Retrying..."
-            )
+            logger.debug(f"[WARN] Invalid move on attempt {attempt + 1}: '{text}'. "
+                         f"Legal moves: {legal_moves}. Retrying...")
 
         raise RuntimeError(f"Failed to produce a valid move after {max_retries + 1} attempts")
 

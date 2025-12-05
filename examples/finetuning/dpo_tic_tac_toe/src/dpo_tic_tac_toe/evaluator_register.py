@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 Evaluator registration for DPO Tic-Tac-Toe workflow.
 """
@@ -50,9 +49,7 @@ class DPODataCollectorEvaluatorConfig(EvaluatorBaseConfig, name="dpo_data_collec
 
 
 @register_evaluator(config_type=DPODataCollectorEvaluatorConfig)
-async def register_dpo_data_collector_evaluator(
-    config: DPODataCollectorEvaluatorConfig, builder: EvalBuilder
-):
+async def register_dpo_data_collector_evaluator(config: DPODataCollectorEvaluatorConfig, builder: EvalBuilder):
     """Register the DPO data collector evaluator."""
     from .evaluator import DPODataCollectorEvaluator
 

@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 LLM agent utilities for Tic-Tac-Toe.
 
@@ -27,7 +26,6 @@ import re
 from typing import Any
 
 import numpy as np
-
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.prompts import MessagesPlaceholder

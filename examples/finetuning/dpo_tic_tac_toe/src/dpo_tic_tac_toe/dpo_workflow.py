@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 DPO Tic-Tac-Toe Workflow
 
@@ -60,12 +59,9 @@ class DPOTicTacToeConfig(FunctionBaseConfig, name="dpo_tic_tac_toe"):
     the opponent can use either LLM or random move generation.
     """
 
-    trained_ttc_move_selector_fn: FunctionRef = Field(
-        description="TTC move selector for trained player (uses LLM)"
-    )
+    trained_ttc_move_selector_fn: FunctionRef = Field(description="TTC move selector for trained player (uses LLM)")
     opponent_ttc_move_selector_fn: FunctionRef = Field(
-        description="TTC move selector for opponent (can use LLM or random)"
-    )
+        description="TTC move selector for opponent (can use LLM or random)")
 
 
 @register_function(config_type=DPOTicTacToeConfig)
@@ -89,12 +85,8 @@ async def dpo_tic_tac_toe_workflow(config: DPOTicTacToeConfig, builder: Builder)
         FunctionInfo wrapping the game play function
     """
     # Get TTC move selectors for both players
-    trained_move_selector = await builder.get_function(
-        config.trained_ttc_move_selector_fn
-    )
-    opponent_move_selector = await builder.get_function(
-        config.opponent_ttc_move_selector_fn
-    )
+    trained_move_selector = await builder.get_function(config.trained_ttc_move_selector_fn)
+    opponent_move_selector = await builder.get_function(config.opponent_ttc_move_selector_fn)
 
     async def _play_game(role: str) -> str:
         """
@@ -134,9 +126,7 @@ async def dpo_tic_tac_toe_workflow(config: DPOTicTacToeConfig, builder: Builder)
             logger.debug("\n" + board_to_str(board))
 
             # Select the appropriate TTC move selector
-            move_selector = (
-                trained_move_selector if is_trained_turn else opponent_move_selector
-            )
+            move_selector = (trained_move_selector if is_trained_turn else opponent_move_selector)
             player_type = "Trained" if is_trained_turn else "Opponent"
 
             try:

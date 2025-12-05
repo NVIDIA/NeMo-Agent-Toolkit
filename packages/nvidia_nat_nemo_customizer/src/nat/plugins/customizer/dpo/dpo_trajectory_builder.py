@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 DPO (Direct Preference Optimization) Trajectory Builder.
 
@@ -53,7 +52,6 @@ from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 from .config import DPOTrajectoryBuilderConfig
 
 logger = logging.getLogger(__name__)
-
 
 # =============================================================================
 # Data Classes
@@ -317,9 +315,7 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
 
         return TrajectoryCollection(trajectories=grouped, run_id=run_id)
 
-    def log_progress(
-        self, run_id: str, metrics: dict[str, Any], output_dir: str | None = None
-    ) -> None:
+    def log_progress(self, run_id: str, metrics: dict[str, Any], output_dir: str | None = None) -> None:
         """
         Log trajectory building progress.
 
@@ -363,9 +359,7 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
     # Internal Methods
     # =========================================================================
 
-    def _collect_candidates(
-        self, eval_result: EvaluationRunOutput
-    ) -> dict[str, list[CandidateStep]]:
+    def _collect_candidates(self, eval_result: EvaluationRunOutput) -> dict[str, list[CandidateStep]]:
         """
         Extract CUSTOM intermediate steps and group by turn_id.
 
@@ -384,9 +378,7 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
         candidates_by_turn: dict[str, list[CandidateStep]] = {}
 
         # Create mapping of example ID to input item
-        input_items_map: dict[str, EvalInputItem] = {
-            item.id: item for item in eval_result.eval_input.eval_input_items
-        }
+        input_items_map: dict[str, EvalInputItem] = {item.id: item for item in eval_result.eval_input.eval_input_items}
 
         for example_id, input_item in input_items_map.items():
             # Filter for CUSTOM_END steps with matching name
@@ -425,15 +417,11 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
         Returns:
             True if this is a CUSTOM_END step with the configured name.
         """
-        return (
-            step.event_category == IntermediateStepCategory.CUSTOM
-            and step.event_type == IntermediateStepType.CUSTOM_END
-            and step.payload.name == self.config.custom_step_name
-        )
+        return (step.event_category == IntermediateStepCategory.CUSTOM
+                and step.event_type == IntermediateStepType.CUSTOM_END
+                and step.payload.name == self.config.custom_step_name)
 
-    def _parse_candidate(
-        self, example_id: str, step: IntermediateStep
-    ) -> CandidateStep | None:
+    def _parse_candidate(self, example_id: str, step: IntermediateStep) -> CandidateStep | None:
         """
         Parse a CandidateStep from an intermediate step.
 
@@ -497,9 +485,7 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
             )
             return None
 
-    def _generate_preference_pairs(
-        self, candidates_by_turn: dict[str, list[CandidateStep]]
-    ) -> list[PreferencePair]:
+    def _generate_preference_pairs(self, candidates_by_turn: dict[str, list[CandidateStep]]) -> list[PreferencePair]:
         """
         Generate preference pairs from grouped candidates.
 
@@ -523,9 +509,7 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
             # Check if we have enough candidates
             if len(candidates) < 2:
                 if self.config.require_multiple_candidates:
-                    self._metrics["skipped_single_candidate"] = (
-                        self._metrics.get("skipped_single_candidate", 0) + 1
-                    )
+                    self._metrics["skipped_single_candidate"] = (self._metrics.get("skipped_single_candidate", 0) + 1)
                     logger.debug("Skipping turn %s with single candidate", turn_key)
                     continue
 
@@ -542,9 +526,7 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
         logger.debug("Generated %d preference pairs", len(all_pairs))
         return all_pairs
 
-    def _generate_exhaustive_pairs(
-        self, sorted_candidates: list[CandidateStep]
-    ) -> list[PreferencePair]:
+    def _generate_exhaustive_pairs(self, sorted_candidates: list[CandidateStep]) -> list[PreferencePair]:
         """
         Generate all pairwise comparisons where score(chosen) > score(rejected).
 
@@ -557,14 +539,12 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
         pairs: list[PreferencePair] = []
 
         for i, chosen in enumerate(sorted_candidates):
-            for rejected in sorted_candidates[i + 1 :]:
+            for rejected in sorted_candidates[i + 1:]:
                 score_diff = chosen.score - rejected.score
 
                 # Apply minimum score difference filter
                 if score_diff < self.config.min_score_diff:
-                    self._metrics["skipped_score_diff"] = (
-                        self._metrics.get("skipped_score_diff", 0) + 1
-                    )
+                    self._metrics["skipped_score_diff"] = (self._metrics.get("skipped_score_diff", 0) + 1)
                     continue
 
                 pairs.append(
@@ -585,20 +565,17 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
                             "chosen_raw_metadata": chosen.raw_metadata,
                             "rejected_raw_metadata": rejected.raw_metadata,
                         },
-                    )
-                )
+                    ))
 
         # Sort by score difference (highest first) and apply limit
         pairs.sort(key=lambda p: p.score_diff, reverse=True)
 
         if self.config.max_pairs_per_turn is not None:
-            pairs = pairs[: self.config.max_pairs_per_turn]
+            pairs = pairs[:self.config.max_pairs_per_turn]
 
         return pairs
 
-    def _generate_best_vs_worst_pair(
-        self, sorted_candidates: list[CandidateStep]
-    ) -> list[PreferencePair]:
+    def _generate_best_vs_worst_pair(self, sorted_candidates: list[CandidateStep]) -> list[PreferencePair]:
         """
         Generate a single pair: best candidate vs worst candidate.
 
@@ -618,9 +595,7 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
 
         # Apply minimum score difference filter
         if score_diff < self.config.min_score_diff:
-            self._metrics["skipped_score_diff"] = (
-                self._metrics.get("skipped_score_diff", 0) + 1
-            )
+            self._metrics["skipped_score_diff"] = (self._metrics.get("skipped_score_diff", 0) + 1)
             return []
 
         return [
@@ -672,9 +647,7 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
             if self.config.include_system_prompt:
                 system_prompt = pair.metadata.get(
                     self.config.system_prompt_key,
-                    pair.metadata.get("chosen_raw_metadata", {}).get(
-                        self.config.system_prompt_key
-                    ),
+                    pair.metadata.get("chosen_raw_metadata", {}).get(self.config.system_prompt_key),
                 )
                 if system_prompt:
                     episode.append(
@@ -683,18 +656,15 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
                             content=str(system_prompt),
                             logprobs=None,
                             metadata=None,
-                        )
-                    )
+                        ))
 
             # Add user prompt
-            episode.append(
-                EpisodeItem(
-                    role=EpisodeItemRole.USER,
-                    content=pair.prompt,
-                    logprobs=None,
-                    metadata=None,
-                )
-            )
+            episode.append(EpisodeItem(
+                role=EpisodeItemRole.USER,
+                content=pair.prompt,
+                logprobs=None,
+                metadata=None,
+            ))
 
             # Add chosen assistant response
             # Note: We use an empty dict for logprobs to satisfy EpisodeItem validation
@@ -709,8 +679,7 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
                         "score": pair.chosen_score,
                         "candidate_index": pair.chosen_index,
                     },
-                )
-            )
+                ))
 
             # Compute reward
             if self.config.reward_from_score_diff:
@@ -729,14 +698,12 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
                     "rejected_response": pair.rejected_response,
                     "rejected_score": pair.rejected_score,
                     "rejected_index": pair.rejected_index,
-                    "score_diff": pair.score_diff,
-                    # Tracking fields
+                    "score_diff": pair.score_diff,  # Tracking fields
                     "example_id": pair.example_id,
                     "turn_id": pair.turn_id,
                     "prompt": pair.prompt,
                     "chosen_score": pair.chosen_score,
-                    "chosen_index": pair.chosen_index,
-                    # Additional metadata
+                    "chosen_index": pair.chosen_index,  # Additional metadata
                     **pair.metadata,
                 },
             )
@@ -745,9 +712,7 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
 
         return trajectories
 
-    def _group_by_example(
-        self, trajectories: list[Trajectory]
-    ) -> list[list[Trajectory]]:
+    def _group_by_example(self, trajectories: list[Trajectory]) -> list[list[Trajectory]]:
         """
         Group trajectories by example ID for curriculum learning.
 
