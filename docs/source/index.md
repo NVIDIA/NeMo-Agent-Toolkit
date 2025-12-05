@@ -165,7 +165,7 @@ WebSocket Message Schema <./reference/websockets.md>
 :hidden:
 :caption: Resources
 
-FAQss <./resources/faq.md>
+FAQs <./resources/faq.md>
 ./resources/support.md
 Troubleshooting <./resources/troubleshooting.md>
 Migration Guide <./resources/migration-guide.md>
