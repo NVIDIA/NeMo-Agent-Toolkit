@@ -157,6 +157,11 @@ litellm = [
 openai = [
   "openai~=1.106"
 ]
+huggingface = [
+  "transformers~=4.47",
+  "torch~=2.6",
+  "accelerate~=1.5"
+]
 
 [tool.uv]
 managed = true
