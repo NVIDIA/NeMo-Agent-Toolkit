@@ -17,7 +17,7 @@ limitations under the License.
 
 # Getting Help
 
-* Refer to the [Known Issues](../extra/release-notes.md#known-issues) section of the release notes for known issues and workarounds.
+* Refer to the [Known Issues](../resources/release-notes.md#known-issues) section of the release notes for known issues and workarounds.
 * Refer to our [Troubleshooting](./troubleshooting.md) guide for common issues and their solutions.
 * Check the [open issues](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues) on GitHub to see if your issue has already been reported.
 * If you have a question or need help, please file an [issue](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues/new/choose).

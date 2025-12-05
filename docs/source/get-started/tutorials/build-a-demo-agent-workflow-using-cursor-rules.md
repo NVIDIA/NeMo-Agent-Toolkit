@@ -59,7 +59,7 @@ Add a text processing function to my workflow that splits text into sentences an
 Run my workflow locally for testing and then serve it as an API endpoint on port 8080.
 ```
 
-For complete documentation with all available rules, prompts, and examples, refer to the **[Cursor Rules Reference](../../extra/contributing/cursor/cursor-rules-reference.md)**.
+For complete documentation with all available rules, prompts, and examples, refer to the **[Cursor Rules Reference](../../resources/contributing/cursor/cursor-rules-reference.md)**.
 
 ## Building a Demo Agent with Cursor Rules
 
@@ -155,9 +155,9 @@ Keep your prompts specific and concise. For instance, rather than stating "Creat
 
 NeMo Agent toolkit offers a comprehensive collection of Cursor rules organized into four primary categories:
 
-- **[Foundation Rules](../../extra/contributing/cursor/cursor-rules-reference.md#foundation-rules)**: Core code quality standards and cursor rules management
-- **[Setup and Installation Rules](../../extra/contributing/cursor/cursor-rules-reference.md#setup-and-installation-rules)**: Environment configuration and toolkit installation procedures
-- **[CLI Command Rules](../../extra/contributing/cursor/cursor-rules-reference.md#cli-command-rules)**: Complete CLI operations and command handling
-- **[Workflow Development Rules](../../extra/contributing/cursor/cursor-rules-reference.md#workflow-development-rules)**: Function and tool development for workflow creation
+- **[Foundation Rules](../../resources/contributing/cursor/cursor-rules-reference.md#foundation-rules)**: Core code quality standards and cursor rules management
+- **[Setup and Installation Rules](../../resources/contributing/cursor/cursor-rules-reference.md#setup-and-installation-rules)**: Environment configuration and toolkit installation procedures
+- **[CLI Command Rules](../../resources/contributing/cursor/cursor-rules-reference.md#cli-command-rules)**: Complete CLI operations and command handling
+- **[Workflow Development Rules](../../resources/contributing/cursor/cursor-rules-reference.md#workflow-development-rules)**: Function and tool development for workflow creation
 
-For a **comprehensive overview of all supported tasks**, including detailed prompts, examples, and capabilities for each rule, refer to the **[Cursor Rules Reference](../../extra/contributing/cursor/cursor-rules-reference.md)**.
+For a **comprehensive overview of all supported tasks**, including detailed prompts, examples, and capabilities for each rule, refer to the **[Cursor Rules Reference](../../resources/contributing/cursor/cursor-rules-reference.md)**.

@@ -65,7 +65,7 @@ For detailed installation instructions, including optional dependencies, please 
 - [**Full MCP Support:**](./build-workflows/mcp.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use NeMo Agent toolkit as an [MCP client](./build-workflows/mcp.md) to connect to and use tools served by remote MCP servers. You can also use NeMo Agent toolkit as an [MCP server](./run-workflows/mcp-server.md) to publish tools via MCP.
 
 ## FAQ
-For frequently asked questions, refer to [FAQ](./extra/faq.md).
+For frequently asked questions, refer to [FAQ](./resources/faq.md).
 
 ## Feedback
 
@@ -166,11 +166,11 @@ WebSocket Message Schema <./reference/websockets.md>
 :hidden:
 :caption: Resources
 
-FAQ <./extra/faq.md>
-Release Notes <./extra/release-notes.md>
-Migration Guide <./extra/migration-guide.md>
-Security Considerations <./extra/security-considerations.md>
-Contributing <./extra/contributing/index.md>
+FAQ <./resources/faq.md>
+Release Notes <./resources/release-notes.md>
+Migration Guide <./resources/migration-guide.md>
+Security Considerations <./resources/security-considerations.md>
+Contributing <./resources/contributing/index.md>
 ```
 
 <!-- This role is needed at the index to set the default backtick role -->
