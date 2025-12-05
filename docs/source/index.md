@@ -128,6 +128,7 @@ Evaluate Workflows <./improve-workflows/evaluate.md>
 Profiling and Performance Monitoring <./improve-workflows/profiler.md>
 Optimizer Guide <./improve-workflows/optimizer.md>
 Sizing Calculator <./improve-workflows/sizing-calc.md>
+Test Time Compute <./improve-workflows/test-time-compute.md>
 ```
 
 ```{toctree}
@@ -138,7 +139,6 @@ Agents <./components/agents/index.md>
 ./components/functions/index.md
 ./components/auth/index.md
 ./components/integrations/index.md
-Test Time Compute <./components/test-time-compute.md>
 Sharing Components <./components/sharing-components.md>
 ```
 
@@ -156,9 +156,7 @@ Custom Components <./extend/custom-components/index.md>
 :caption: Reference
 
 Python API <./api/index.rst>
-API Server Endpoints <./reference/api-server-endpoints.md>
-Evaluation API Endpoints <./reference/evaluate-api.md>
-WebSocket Message Schema <./reference/websockets.md>
+./reference/rest-api/index.md
 ```
 
 ```{toctree}
