@@ -191,6 +191,11 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         self.function_dependencies: dict[str, FunctionDependencies] = {}
         self.function_group_dependencies: dict[str, FunctionDependencies] = {}
 
+        # List of completed built components
+        self.completed_components: list[tuple[str, str]] = []
+        # List of remaining components to be built
+        self.remaining_components: list[tuple[str, str]] = []
+
     async def __aenter__(self):
 
         self._exit_stack = AsyncExitStack()
@@ -1090,12 +1095,12 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         exporter = await self._get_exit_stack().enter_async_context(exporter_context_manager)
         self._telemetry_exporters[name] = ConfiguredTelemetryExporter(config=config, instance=exporter)
 
-    def _log_build_failure(self,
-                           component_name: str,
-                           component_type: str,
-                           completed_components: list[tuple[str, str]],
-                           remaining_components: list[tuple[str, str]],
-                           original_error: Exception) -> None:
+    @staticmethod
+    def log_build_failure(component_name: str,
+                          component_type: str,
+                          completed_components: list[tuple[str, str]],
+                          remaining_components: list[tuple[str, str]],
+                          original_error: Exception) -> None:
         """
         Common method to log comprehensive build failure information.
 
@@ -1124,47 +1129,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         logger.error("Original error: %s", original_error, exc_info=True)
 
-    def _log_build_failure_component(self,
-                                     failing_component: ComponentInstanceData,
-                                     completed_components: list[tuple[str, str]],
-                                     remaining_components: list[tuple[str, str]],
-                                     original_error: Exception) -> None:
-        """
-        Log comprehensive component build failure information.
-
-        Args:
-            failing_component (ComponentInstanceData): The ComponentInstanceData that failed to build
-            completed_components (list[tuple[str, str]]): List of (name, type) tuples for successfully built components
-            remaining_components (list[tuple[str, str]]): List of (name, type) tuples for components still to be built
-            original_error (Exception): The original exception that caused the failure
-        """
-        component_name = failing_component.name
-        component_type = failing_component.component_group.value
-
-        self._log_build_failure(component_name,
-                                component_type,
-                                completed_components,
-                                remaining_components,
-                                original_error)
-
-    def _log_build_failure_workflow(self,
-                                    completed_components: list[tuple[str, str]],
-                                    remaining_components: list[tuple[str, str]],
-                                    original_error: Exception) -> None:
-        """
-        Log comprehensive workflow build failure information.
-
-        Args:
-            completed_components (list[tuple[str, str]]): List of (name, type) tuples for successfully built components
-            remaining_components (list[tuple[str, str]]): List of (name, type) tuples for components still to be built
-            original_error (Exception): The original exception that caused the failure
-        """
-        self._log_build_failure(WORKFLOW_COMPONENT_NAME,
-                                "workflow",
-                                completed_components,
-                                remaining_components,
-                                original_error)
-
     async def populate_builder(self, config: Config, skip_workflow: bool = False):
         """
         Populate the builder with components and optionally set up the workflow.
@@ -1177,21 +1141,14 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         # Generate the build sequence
         build_sequence = build_dependency_sequence(config)
 
-        # Initialize progress tracking
-        completed_components = []
-        remaining_components = [(str(comp.name), comp.component_group.value) for comp in build_sequence
-                                if not comp.is_root]
+        self.remaining_components = [(str(comp.name), comp.component_group.value) for comp in build_sequence
+                                     if not comp.is_root]
         if not skip_workflow:
-            remaining_components.append((WORKFLOW_COMPONENT_NAME, "workflow"))
+            self.remaining_components.append((WORKFLOW_COMPONENT_NAME, "workflow"))
 
-        # Loop over all objects and add to the workflow builder
+        # Loop over all components and add to the workflow builder
         for component_instance in build_sequence:
             try:
-                # Remove from remaining as we start building (if not root)
-                if not component_instance.is_root:
-                    remaining_components.remove(
-                        (str(component_instance.name), component_instance.component_group.value))
-
                 # Instantiate a the llm
                 if component_instance.component_group == ComponentGroup.LLMS:
                     await self.add_llm(component_instance.name, cast(LLMBaseConfig, component_instance.config))
@@ -1244,13 +1201,20 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                 else:
                     raise ValueError(f"Unknown component group {component_instance.component_group}")
 
-                # Add to completed after successful build (if not root)
+                # Remove from remaining and add to completed after successful build (if not root)
                 if not component_instance.is_root:
-                    completed_components.append(
+                    # Only remove from remaining if the component is not per-user
+                    self.remaining_components.remove(
+                        (str(component_instance.name), component_instance.component_group.value))
+                    self.completed_components.append(
                         (str(component_instance.name), component_instance.component_group.value))
 
             except Exception as e:
-                self._log_build_failure_component(component_instance, completed_components, remaining_components, e)
+                WorkflowBuilder.log_build_failure(str(component_instance.name),
+                                                  component_instance.component_group.value,
+                                                  self.completed_components,
+                                                  self.remaining_components,
+                                                  e)
                 raise
 
         # Instantiate the workflow
@@ -1261,11 +1225,15 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                 # Otherwise, build it lazily by PerUserWorkflowBuilder
                 if not workflow_registration.is_per_user:
                     # Remove workflow from remaining as we start building
-                    remaining_components.remove((WORKFLOW_COMPONENT_NAME, "workflow"))
+                    self.remaining_components.remove((WORKFLOW_COMPONENT_NAME, "workflow"))
                     await self.set_workflow(config.workflow)
-                    completed_components.append((WORKFLOW_COMPONENT_NAME, "workflow"))
+                    self.completed_components.append((WORKFLOW_COMPONENT_NAME, "workflow"))
             except Exception as e:
-                self._log_build_failure_workflow(completed_components, remaining_components, e)
+                WorkflowBuilder.log_build_failure(WORKFLOW_COMPONENT_NAME,
+                                                  "workflow",
+                                                  self.completed_components,
+                                                  self.remaining_components,
+                                                  e)
                 raise
 
         # Check if any shared components have dependencies on per-user components
@@ -1354,6 +1322,10 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         self.per_user_function_dependencies: dict[str, FunctionDependencies] = {}
         self.per_user_function_group_dependencies: dict[str, FunctionDependencies] = {}
+
+        # Copy the completed and remaining components from the shared builder
+        self.completed_components: list[tuple[str, str]] = shared_builder.completed_components.copy()
+        self.remaining_components: list[tuple[str, str]] = shared_builder.remaining_components.copy()
 
     async def __aenter__(self):
 
@@ -1765,7 +1737,7 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
     def get_middleware_config(self, middleware_name: str | MiddlewareRef) -> MiddlewareBaseConfig:
         return self._shared_builder.get_middleware_config(middleware_name)
 
-    async def populate_builder(self, config: Config):
+    async def populate_builder(self, config: Config, skip_workflow: bool = False):
         """
         Populate the per-user builder with per-user components from config.
 
@@ -1774,43 +1746,75 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         Args:
             config: The full configuration object
-
+            skip_workflow: If True, skips the workflow instantiation step. Defaults to False.
         Raises:
             ValueError: If a per-user component has invalid dependencies
         """
         # Generate build sequence using the same dependency resolution as shared builder
         build_sequence = build_dependency_sequence(config)
 
-        # Filter to only per-user components and build them in dependency order
+        if not skip_workflow:
+            self.remaining_components.append((WORKFLOW_COMPONENT_NAME, "workflow"))
+
+        # Filter to only per-user functions and function groups and build them in dependency order
         for component_instance in build_sequence:
-            # Handle per-user functions
-            if component_instance.component_group == ComponentGroup.FUNCTIONS:
-                config_obj = cast(FunctionBaseConfig, component_instance.config)
-                registration = self._registry.get_function(type(config_obj))
-
-                if registration.is_per_user:
-                    if component_instance.is_root:
-                        # This is the per-user workflow
-                        logger.debug(f"Building per-user workflow for user {self._user_id}")
-                        await self.set_workflow(config_obj)
+            try:
+                if component_instance.component_group == ComponentGroup.FUNCTION_GROUPS:
+                    config_obj = cast(FunctionGroupBaseConfig, component_instance.config)
+                    registration = self._registry.get_function_group(type(config_obj))
+                    if registration.is_per_user:
+                        # Build the per-user function group
+                        logger.debug(
+                            f"Building per-user function group '{component_instance.name}' for user {self._user_id}")
+                        await self.add_function_group(component_instance.name, config_obj)
                     else:
-                        # Regular per-user function
-                        logger.debug(f"Building per-user function '{component_instance.name}' for user {self._user_id}")
-                        await self.add_function(component_instance.name, config_obj)
+                        raise ValueError(
+                            f"PerUserWorkflowBuilder trying to build FunctionGroup `{component_instance.name}` that is not per-user"
+                        )
 
-            elif component_instance.component_group == ComponentGroup.FUNCTION_GROUPS:
-                config_obj = cast(FunctionGroupBaseConfig, component_instance.config)
-                registration = self._registry.get_function_group(type(config_obj))
-                if registration.is_per_user:
-                    # Build the per-user function group
-                    logger.debug(
-                        f"Building per-user function group '{component_instance.name}' for user {self._user_id}")
-                    await self.add_function_group(component_instance.name, config_obj)
+                elif component_instance.component_group == ComponentGroup.FUNCTIONS:
+                    config_obj = cast(FunctionBaseConfig, component_instance.config)
+                    registration = self._registry.get_function(type(config_obj))
+                    if registration.is_per_user:
+                        if not component_instance.is_root:
+                            logger.debug(
+                                f"Building per-user function '{component_instance.name}' for user {self._user_id}")
+                            await self.add_function(component_instance.name, config_obj)
+                    else:
+                        raise ValueError(
+                            f"PerUserWorkflowBuilder trying to build Function `{component_instance.name}` that is not per-user"
+                        )
 
-        logger.info(f"Per-user builder populated for user {self._user_id}: "
-                    f"{len(self._per_user_functions)} functions, "
-                    f"{len(self._per_user_function_groups)} function groups, "
-                    f"workflow={'set' if self._workflow else 'delegated to shared'}")
+                # Remove from remaining and add to completed after successful build (if not root)
+                if not component_instance.is_root:
+                    self.remaining_components.remove(
+                        (str(component_instance.name), component_instance.component_group.value))
+                    self.completed_components.append(
+                        (str(component_instance.name), component_instance.component_group.value))
+
+            except Exception as e:
+                WorkflowBuilder.log_build_failure(str(component_instance.name),
+                                                  component_instance.component_group.value,
+                                                  self.completed_components,
+                                                  self.remaining_components,
+                                                  e)
+                raise
+
+        if not skip_workflow:
+            try:
+                registration = self._registry.get_function(type(config.workflow))
+                if not registration.is_per_user:
+                    raise ValueError("PerUserWorkflowBuilder trying to build Workflow that is not per-user")
+                self.remaining_components.remove((WORKFLOW_COMPONENT_NAME, "workflow"))
+                await self.set_workflow(config.workflow)
+                self.completed_components.append((WORKFLOW_COMPONENT_NAME, "workflow"))
+            except Exception as e:
+                WorkflowBuilder.log_build_failure(WORKFLOW_COMPONENT_NAME,
+                                                  "workflow",
+                                                  self.completed_components,
+                                                  self.remaining_components,
+                                                  e)
+                raise
 
     async def build(self, entry_function: str | None = None) -> Workflow:
         """

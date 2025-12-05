@@ -125,11 +125,11 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
         remaining_components = [(name, "evaluator") for name in remaining_evaluators]
 
         # Use the inherited common logging method from WorkflowBuilder
-        self._log_build_failure(failing_evaluator_name,
-                                "evaluator",
-                                completed_components,
-                                remaining_components,
-                                original_error)
+        self.log_build_failure(failing_evaluator_name,
+                               "evaluator",
+                               completed_components,
+                               remaining_components,
+                               original_error)
 
     @override
     async def populate_builder(self, config: Config, skip_workflow: bool = False):
