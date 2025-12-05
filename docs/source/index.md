@@ -52,6 +52,8 @@ NeMo Agent toolkit was previously known as <!-- vale off -->AgentIQ<!-- vale on 
 
 - [**Full MCP Support:**](./workflows/mcp/index.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use NeMo Agent toolkit as an [MCP client](./workflows/mcp/mcp-client.md) to connect to and use tools served by remote MCP servers. You can also use NeMo Agent toolkit as an [MCP server](./workflows/mcp/mcp-server.md) to publish tools via MCP.
 
+- [**A2A Protocol Support:**](./workflows/a2a/index.md) Compatible with [Agent-to-Agent (A2A) Protocol](https://a2aproject.org/). You can use NeMo Agent toolkit as an [A2A client](./workflows/a2a/a2a-client.md) to connect to and delegate tasks to remote A2A agents. You can also use NeMo Agent toolkit as an [A2A server](./workflows/a2a/a2a-server.md) to publish workflows as discoverable A2A agents.
+
 ## FAQ
 For frequently asked questions, refer to [FAQ](./resources/faq.md).
 
@@ -94,6 +96,7 @@ Tool Calling Agent <./workflows/tool-calling-agent/index.md>
 Functions <./workflows/functions/index.md>
 ./workflows/function-groups.md
 ./workflows/mcp/index.md
+./workflows/a2a/index.md
 Evaluate Workflows <./workflows/evaluate.md>
 Add Unit Tests for Tools <./workflows/add-unit-tests-for-tools.md>
 Profiling Workflows <./workflows/profiler.md>
