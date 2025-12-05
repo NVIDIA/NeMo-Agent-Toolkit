@@ -22,6 +22,8 @@ A workflow is defined by a YAML configuration file that specifies the tools and 
    - This is the simplest and most common way to run a workflow.
 - Using the `nat serve` command.
    - This starts a web server that listens for incoming requests and runs the specified workflow.
+- Using the `nat mcp serve` command.
+   - This starts a Model Context Protocol (MCP) server that publishes the functions from your workflow as MCP tools.
 - Using the `nat eval` command.
    - In addition to running the workflow, it also evaluates the accuracy of the workflow.
 - Using the Python API
@@ -87,6 +89,35 @@ curl --request POST \
 ```
 
 Refer to `nat serve --help` for more information on how to customize the server.
+
+## Using the `nat mcp serve` Command
+The `nat mcp serve` command starts a Model Context Protocol (MCP) server that publishes the functions from your workflow as MCP tools. This allows other MCP clients to connect to the server and use the published tools.
+
+The following command runs the `examples/getting_started/simple_web_query` workflow as an MCP server listening on the default port `9901`:
+```bash
+nat mcp serve --config_file examples/getting_started/simple_web_query/configs/config.yml
+```
+
+In a separate terminal, you can use the `nat mcp client` command to inspect and interact with the MCP server.
+
+To list the available tools on the MCP server, run the following command:
+```bash
+nat mcp client tool list
+```
+The above command defaults to the default MCP server URL of `http://localhost:9901/mcp`, if your MCP server is running on a different URL, you can specify it with the ` --url` flag.
+
+To inspect a specific tool, run the following command:
+```bash
+nat mcp client tool list --tool react_agent
+```
+
+To invoke a tool on the MCP server, run the following command:
+```bash
+nat mcp client tool call react_agent --json-args '{"query": "What is LangSmith?"}'
+```
+
+Refer to [MCP Server](./mcp-server.md) for more information on the NeMo Agent toolkit MCP server.
+
 
 ## Using the Python API
 
