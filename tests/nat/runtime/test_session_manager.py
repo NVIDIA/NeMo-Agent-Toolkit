@@ -486,21 +486,16 @@ class TestSessionManagerContextExtraction:
                             shared_builder=MockWorkflowBuilder(),
                             shared_workflow=MockWorkflow())
 
-        # Mock the context metadata with proper nested structure
+        # Set user_id in context state (this is what set_metadata_from_http_request does
+        # when it extracts the nat-session cookie)
         ctx_state = ContextState.get()
-        original_metadata = ctx_state.metadata.get()
-
-        mock_metadata = MagicMock()
-        mock_request = MagicMock()
-        mock_request.cookies = {"nat-session": "session-123"}
-        mock_metadata._request = mock_request
-        token = ctx_state.metadata.set(mock_metadata)
+        token = ctx_state.user_id.set("session-123")
 
         try:
             user_id = sm._get_user_id_from_context()
             assert user_id == "session-123"
         finally:
-            ctx_state.metadata.reset(token)
+            ctx_state.user_id.reset(token)
 
     @patch('nat.cli.type_registry.GlobalTypeRegistry')
     def test_get_user_id_returns_none_when_no_cookie(self, mock_registry):
