@@ -332,18 +332,16 @@ class SessionManager:
         Get user ID from current context.
 
         Extraction order:
-        1. From nat-session cookie (primary method)
+        1. From context user_id (set from nat-session cookie)
         2. From context user_manager if set
         3. None (for shared workflow or unauthenticated access)
 
         """
         try:
-            # Primary: Get from nat-session cookie
-            metadata = self._context.metadata
-            if metadata and hasattr(metadata, '_request') and metadata._request.cookies:
-                session_id = metadata._request.cookies.get("nat-session")
-                if session_id:
-                    return session_id
+            # Primary: Get from context user_id (already extracted from nat-session cookie)
+            user_id = self._context.user_id
+            if user_id:
+                return user_id
 
             # Fallback: Get from user_manager if set
             user_manager = self._context.user_manager
@@ -516,6 +514,10 @@ class SessionManager:
         if request.headers.get("user-message-id"):
             self._context_state.user_message_id.set(request.headers["user-message-id"])
 
+        # Set user_id from nat-session cookie
+        if request.cookies.get("nat-session"):
+            self._context_state.user_id.set(request.cookies["nat-session"])
+
         # W3C Trace Context header: traceparent: 00-<trace-id>-<span-id>-<flags>
         traceparent = request.headers.get("traceparent")
         if traceparent:
@@ -565,6 +567,10 @@ class SessionManager:
             # Set cookies in metadata (same as HTTP request)
             self._context.metadata._request.cookies = cookies
             self._context_state.metadata.set(self._context.metadata)
+
+            # Set user_id from nat-session cookie
+            if cookies.get("nat-session"):
+                self._context_state.user_id.set(cookies["nat-session"])
 
         if conversation_id is not None:
             self._context_state.conversation_id.set(conversation_id)
