@@ -19,10 +19,10 @@ limitations under the License.
 
 [Agent-to-Agent (A2A) Protocol](https://a2aproject.org/) is an open standard from the Linux Foundation that enables agent-to-agent communication and collaboration. You can publish NeMo Agent toolkit workflows as A2A agents so they can be discovered and called by other A2A clients.
 
-This guide covers how to publish NAT workflows as A2A servers. For information on connecting to remote A2A agents, refer to [A2A Client](./a2a-client.md). For CLI utilities, refer to [A2A CLI](./a2a-cli.md).
+This guide covers how to publish NAT workflows as A2A servers. For information on connecting to remote A2A agents, refer to [A2A Client](../build-workflows/a2a-client.md). For CLI utilities, refer to [A2A CLI](../run-workflows/a2a-cli.md).
 
 :::{note}
-**Read First**: This guide assumes familiarity with A2A client concepts. Please read [A2A Client](./a2a-client.md) first for foundational understanding.
+**Read First**: This guide assumes familiarity with A2A client concepts. Please read [A2A Client](../build-workflows/a2a-client.md) first for foundational understanding.
 :::
 
 ## Installation
@@ -207,5 +207,5 @@ The A2A server is built on the official [A2A Python SDK](https://github.com/a2ap
 
 ## Related Documentation
 
-- [A2A Client Guide](./a2a-client.md) - Connecting to remote A2A agents
+- [A2A Client Guide](../build-workflows/a2a-client.md) - Connecting to remote A2A agents
 - [A2A CLI Guide](./a2a-cli.md) - CLI utilities for testing and debugging

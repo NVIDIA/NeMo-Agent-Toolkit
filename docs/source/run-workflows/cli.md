@@ -87,9 +87,9 @@ nat
 The `nat a2a` command group provides utilities for working with Agent-to-Agent (A2A) communication. These commands allow you to serve workflows as A2A agents and interact with remote A2A agents from the command line.
 
 For comprehensive A2A documentation, see:
-- [A2A Server](../workflows/a2a/a2a-server.md) - Publishing workflows as A2A servers
-- [A2A Client](../workflows/a2a/a2a-client.md) - Using A2A clients in workflows
-- [A2A CLI Utilities](../workflows/a2a/a2a-cli.md) - Command-line tools for A2A
+- [A2A Server](./a2a-server.md) - Publishing workflows as A2A servers
+- [A2A Client](../build-workflows/a2a-client.md) - Using A2A clients in workflows
+- [A2A CLI Utilities](../run-workflows/a2a-cli.md) - Command-line tools for A2A
 
 ### Serve
 
@@ -147,7 +147,7 @@ Commands:
   get_skills Get agent skills and capabilities.
 ```
 
-For detailed usage examples and command options, refer to [A2A CLI Utilities](../workflows/a2a/a2a-cli.md).
+For detailed usage examples and command options, refer to [A2A CLI Utilities](./a2a-cli.md).
 
 ## Start
 
