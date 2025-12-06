@@ -23,11 +23,11 @@ An agent is a system that can use an LLM to reason through a problem, create a p
 ```{toctree}
 :titlesonly:
 
-ReAct Agent <./react-agent.md>
-Reasoning Agent <./reasoning-agent.md>
-ReWOO Agent <./rewoo-agent.md>
-Responses API and Agent <./responses-api-and-agent.md>
-Router Agent <./router-agent.md>
-Sequential Executor <./sequential-executor.md>
-Tool Calling Agent <./tool-calling-agent.md>
+ReAct Agent <./react-agent/index.md>
+Reasoning Agent <./reasoning-agent/index.md>
+ReWOO Agent <./rewoo-agent/index.md>
+Responses API and Agent <./responses-api-and-agent/index.md>
+Router Agent <./router-agent/index.md>
+Sequential Executor <./sequential-executor/index.md>
+Tool Calling Agent <./tool-calling-agent/index.md>
 ```
