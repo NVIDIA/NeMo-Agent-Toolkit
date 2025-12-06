@@ -115,10 +115,10 @@ For an example of using reasoning agent with the ReAct agent, refer to [Run the 
 ### Comparing ReAct Agent With and Without the Reasoning Agent
 
 #### ReAct Agent Without Reasoning Agent
-[![Running Workflows](../../_static/agent_without_reasoning_wrapper.png)](../../_static/agent_without_reasoning_wrapper.png)
+[![Running Workflows](../../../_static/agent_without_reasoning_wrapper.png)](../../../_static/agent_without_reasoning_wrapper.png)
 
 #### ReAct Agent With Reasoning Agent
-[![Running Workflows](../../_static/agent_with_reasoning_wrapper.png)](../../_static/agent_with_reasoning_wrapper.png)
+[![Running Workflows](../../../_static/agent_with_reasoning_wrapper.png)](../../../_static/agent_with_reasoning_wrapper.png)
 
 ---
 

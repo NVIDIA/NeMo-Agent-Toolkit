@@ -67,7 +67,7 @@ nat a2a client discover --url $A2A_SERVER_URL
 ```
 
 **Output example:**
-![Agent Card](../../_static/a2a_agent_card.png)
+![Agent Card](../_static/a2a_agent_card.png)
 
 
 ## Agent Information Commands
@@ -157,5 +157,5 @@ The A2A CLI utilities provide a quick and convenient way to interact with A2A ag
 
 ## Related Documentation
 
-- [A2A Client Guide](./a2a-client.md) - Using A2A agents in workflows
+- [A2A Client Guide](../build-workflows/a2a-client.md) - Using A2A agents in workflows
 - [A2A Server Guide](./a2a-server.md) - Publishing workflows as A2A agents

@@ -159,7 +159,7 @@ nat a2a client discover --url $A2A_SERVER_URL
 ```
 
 Sample output:
-![Agent Card](../../_static/a2a_agent_card.png)
+![Agent Card](../_static/a2a_agent_card.png)
 
 
 ### Invoking the Agent with the CLI

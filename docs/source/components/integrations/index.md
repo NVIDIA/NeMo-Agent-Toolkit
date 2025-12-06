@@ -21,5 +21,6 @@ limitations under the License.
 :titlesonly:
 
 ./frameworks.md
+./a2a.md
 ./integrating-aws-bedrock-models.md
 ```

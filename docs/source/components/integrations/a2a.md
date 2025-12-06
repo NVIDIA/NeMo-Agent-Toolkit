@@ -58,13 +58,10 @@ The following examples demonstrate A2A integration:
 
 ## Documentation
 
-```{toctree}
-:caption: A2A
+- [Connecting to Remote Agents](../../build-workflows/a2a-client.md)
+- [Publishing NAT Workflows](../../run-workflows/a2a-server.md)
+- [CLI Utilities](../../run-workflows/a2a-cli.md)
 
-Connecting to Remote Agents <./a2a-client.md>
-Publishing NAT Workflows <./a2a-server.md>
-CLI Utilities <./a2a-cli.md>
-```
 
 ## Protocol Compliance
 

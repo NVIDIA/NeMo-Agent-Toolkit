@@ -94,7 +94,7 @@ The router agent supports the following required and optional configurations.
 The router agent uses a single-pass graph architecture that analyzes requests and routes them to appropriate branches:
 
 <div align="center">
-<img src="../../_static/router_agent.png" alt="Router Agent Graph Structure" width="400" style="max-width: 100%; height: auto;">
+<img src="../../../_static/router_agent.png" alt="Router Agent Graph Structure" width="400" style="max-width: 100%; height: auto;">
 </div>
 
 The router agent follows a streamlined two-phase process:

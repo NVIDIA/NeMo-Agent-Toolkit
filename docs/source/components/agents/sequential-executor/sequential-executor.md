@@ -97,7 +97,7 @@ workflow:
 The sequential executor follows a fixed execution path where each function's output directly becomes the input for the next function.
 
 <div align="center">
-<img src="../../_static/sequential_executor.png" alt="Sequential Executor Graph Structure" width="800" style="max-width: 100%; height: auto;">
+<img src="../../../_static/sequential_executor.png" alt="Sequential Executor Graph Structure" width="800" style="max-width: 100%; height: auto;">
 </div>
 
 ### Type Compatibility Validation

@@ -122,6 +122,7 @@ Command Line Interface (CLI) <./run-workflows/cli.md>
 API Server and User Interface <./run-workflows/launching-ui.md>
 MCP Server <./run-workflows/mcp-server.md>
 A2A Server <./run-workflows/a2a-server.md>
+A2A CLI <./run-workflows/a2a-cli.md>
 ```
 
 ```{toctree}
