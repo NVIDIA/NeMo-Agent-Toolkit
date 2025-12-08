@@ -87,7 +87,7 @@ The ReAct agent can be used as either a workflow or a function, and there's an e
 If you’re looking for an example workflow where the ReAct agent runs as the main workflow, refer to [config.yml](configs/config.yml).
 To see the ReAct agent used as a function within a workflow, alongside the Reasoning Agent, refer to [config-reasoning.yml](configs/config-reasoning.yml).
 This README primarily covers the former case, where the ReAct agent functions as the main workflow, in config.yml.
-For more details, refer to the [ReAct agent documentation](../../../docs/source/components/react-agent/index.md) and the [Reasoning agent documentation](../../../docs/source/components/reasoning-agent/index.md)
+For more details, refer to the [ReAct agent documentation](../../../docs/source/components/agents/react-agent/index.md) and the [Reasoning agent documentation](../../../docs/source/components/agents/reasoning-agent/index.md)
 
 Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
 
