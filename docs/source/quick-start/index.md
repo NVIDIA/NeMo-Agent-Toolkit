@@ -22,6 +22,6 @@ Install and set up your NeMo Agent toolkit development environment and get start
 :hidden:
 :caption: Quick Start Guide
 
-Installing NeMo Agent Toolkit <./installing.md>
-Launching the API Server and UI <./launching-ui.md>
+Install NeMo Agent Toolkit <./installing.md>
+Launch the API Server and UI <./launching-ui.md>
 ```

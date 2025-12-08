@@ -17,18 +17,21 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import typing
+import uuid
 import warnings
+from datetime import datetime
 from pathlib import Path
 
 import yaml
 
-from nat.cli.cli_utils.config_override import update_config_value
 from nat.data_models.config import Config
 from nat.data_models.evaluate import EvalGeneralConfig
 from nat.eval.config import EvaluationRunConfig
 from nat.eval.config import EvaluationRunOutput
+from nat.eval.evaluator.evaluator_model import EvalOutput
 from nat.eval.red_teaming_evaluator.register import RedTeamingEvaluatorConfig
 from nat.eval.runners.config import MultiEvaluationRunConfig
 from nat.eval.runners.multi_eval_runner import MultiEvaluationRunner
@@ -125,8 +128,15 @@ class RedTeamingRunner:
 
         runner = MultiEvaluationRunner(config=multi_eval_config)
         results = await runner.run_all()
-
         logger.info("Red team evaluation completed")
+        summary = self._compute_result_summary(results)
+        (base_output_dir / "red_teaming_summary.json").write_text(json.dumps(summary, indent=2, default=str))
+
+        # Build and save flat results
+        flat_results = self._build_flat_results(results)
+        results_file = self._save_flat_results(flat_results, base_output_dir)
+
+        self._log_results_summary(summary, base_output_dir, results_file)
         return results
 
     def generate_workflow_configs(self) -> dict[str, Config]:
@@ -197,23 +207,30 @@ class RedTeamingRunner:
     def setup_output_directory(self, scenario_configs: dict[str, Config]) -> Path:
         """Set up the base output directory.
 
+        If the directory already exists, creates a new directory with a timestamp
+        and unique identifier suffix.
+
         Args:
             scenario_configs: The generated scenario configurations.
 
         Returns:
             The base output directory path.
-
-        Raises:
-            ValueError: If output directory already exists.
         """
         # Determine base output directory from first scenario
         first_scenario = next(iter(scenario_configs.values()))
         base_output_dir = first_scenario.eval.general.output_dir
 
         if base_output_dir.exists():
-            raise ValueError(
-                f"Output directory already exists: {base_output_dir}. "
-                "Please remove it or specify a different output directory."
+            # Generate a unique directory name with timestamp and 4-digit UID
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            short_uid = uuid.uuid4().hex[:4]
+            new_dir_name = f"{base_output_dir.name}_{timestamp}_{short_uid}"
+            base_output_dir = base_output_dir.parent / new_dir_name
+
+            warnings.warn(
+                f"Output directory already exists. Creating new directory: {base_output_dir}",
+                UserWarning,
+                stacklevel=2
             )
 
         base_output_dir.mkdir(parents=True, exist_ok=True)
@@ -268,7 +285,7 @@ class RedTeamingRunner:
         for scenario_id, config in scenario_configs.items():
             config_dict = config.model_dump(mode='json')
             for path, value in self.overrides:
-                update_config_value(config_dict, path, value)
+                self._update_config_value(config_dict, path, value)
             result[scenario_id] = Config(**config_dict)
         return result
 
@@ -471,7 +488,7 @@ class RedTeamingRunner:
 
         # Get the new general config as dict, excluding unset values
         # This ensures we only override values that were explicitly set
-        general_dict = general.model_dump(mode='python', exclude_unset=True)
+        general_dict = general.model_dump(mode='python', exclude_unset=False)
 
         # Log which fields are being overridden
         existing_general = config_dict["eval"]["general"]
@@ -563,13 +580,255 @@ class RedTeamingRunner:
 
         if scenario.filter_conditions is not None:
             evaluator_dict["filter_conditions"] = [
-                fc.model_dump() for fc in scenario.filter_conditions
+                fc.model_dump(mode='python') for fc in scenario.filter_conditions
             ]
             logger.debug("Applied scenario filter_conditions override")
 
         # Add evaluator to config
         config_dict["eval"]["evaluators"]["red_teaming_evaluator"] = evaluator_dict
 
+    def _update_config_value(self, config_dict: dict[str, typing.Any], path: str, value: typing.Any) -> None:
+        """Update a single value in the config dictionary at the specified path.
+
+        Args:
+            config_dict: The configuration dictionary to update.
+            path: The path to the value to update.
+            value: The new value to set at the specified path.
+        """
+
+        parts = path.split('.')
+        current = config_dict
+        # Navigate through nested dictionaries until reaching the parent of target
+        for part in parts[:-1]:
+            current = current[part]
+        # Update the value at the target location
+        current[parts[-1]] = value
+
+    def _find_red_teaming_evaluator_results(self, results: dict[str, EvaluationRunOutput]) -> dict[str, EvalOutput]:
+        """Find the red teaming evaluator results in the results.
+
+        Args:
+            results: The results of the red teaming evaluation.
+
+        Returns:
+            The red teaming evaluator results.
+        """
+        red_teaming_evaluator_results = {}
+        for scenario_id, result in results.items():
+            for evaluator_results in result.evaluation_results:
+                evaluator_name = evaluator_results[0]
+                if evaluator_name == 'red_teaming_evaluator':
+                    red_teaming_evaluator_results[scenario_id] = evaluator_results[1]
+        return red_teaming_evaluator_results
+
+    def _compute_result_summary(self, results: dict[str, EvaluationRunOutput]) -> dict[str, typing.Any]:
+        """Compute the result summary for the red teaming evaluation.
+
+        Args:
+            results: The results of the red teaming evaluation.
+
+        Returns:
+            The result summary.
+        """
+
+        summary = {}
+        per_scenario_summary = {}
+        mean_scores = []
+        evaluator_results = self._find_red_teaming_evaluator_results(results)
+
+        # Counters for run statistics
+        num_scenarios = len(evaluator_results)
+        items_per_scenario = {}
+        total_workflow_runs = 0
+        total_evaluations = 0
+        evaluation_successes = 0
+        evaluation_failures = 0
+
+        for scenario_id, result in evaluator_results.items():
+            scenario_scores = []
+            num_items = len(result.eval_output_items)
+            items_per_scenario[scenario_id] = num_items
+            total_workflow_runs += num_items
+
+            for eval_output_item in result.eval_output_items:
+                scenario_scores.append(eval_output_item.score)
+
+                # Count evaluations and successes/failures from results_by_condition
+                if hasattr(eval_output_item, 'results_by_condition') and eval_output_item.results_by_condition:
+                    for condition_name, condition_result in eval_output_item.results_by_condition.items():
+                        total_evaluations += 1
+                        if condition_result.error_message is not None:
+                            evaluation_failures += 1
+                        else:
+                            evaluation_successes += 1
+
+            # Eval result per evaluator.
+            mean_scores.append(result.average_score)
+            per_scenario_summary[scenario_id] = {
+                "mean_score": result.average_score,
+                "max_score": max(scenario_scores) if scenario_scores else 0.0,
+                "min_score": min(scenario_scores) if scenario_scores else 0.0,
+                "scores": scenario_scores,
+            }
+
+        overall_sum = sum(mean_scores)
+        overall_mean = overall_sum / len(mean_scores) if mean_scores and overall_sum > 0 else 0.0
+
+        summary['overall_score'] = overall_mean
+        summary['per_scenario_summary'] = per_scenario_summary
+
+        # Add run statistics
+        summary['num_scenarios'] = num_scenarios
+        summary['items_per_scenario'] = items_per_scenario
+        summary['total_workflow_runs'] = total_workflow_runs
+        summary['total_evaluations'] = total_evaluations
+        summary['evaluation_successes'] = evaluation_successes
+        summary['evaluation_failures'] = evaluation_failures
+
+        return summary
+
+    def _log_results_summary(
+        self,
+        summary: dict[str, typing.Any],
+        output_dir: Path,
+        results_file: Path | None = None
+    ) -> None:
+        """Log a nicely formatted summary of the red teaming evaluation results.
+
+        Args:
+            summary: The computed summary dictionary with overall_score and per_scenario_summary.
+            output_dir: The base output directory where results are saved.
+            results_file: Optional path to the flat results JSONL file.
+        """
+        per_scenario = summary.get('per_scenario_summary', {})
+        overall_score = summary.get('overall_score', 0.0)
+
+        # Run statistics
+        num_scenarios = summary.get('num_scenarios', 0)
+        items_per_scenario = summary.get('items_per_scenario', {})
+        total_workflow_runs = summary.get('total_workflow_runs', 0)
+        total_evaluations = summary.get('total_evaluations', 0)
+        evaluation_successes = summary.get('evaluation_successes', 0)
+        evaluation_failures = summary.get('evaluation_failures', 0)
+
+        # Build the output lines
+        lines = [
+            "",
+            "=" * 70,
+            "  RED TEAMING EVALUATION RESULTS",
+            "=" * 70,
+            "",
+        ]
+
+        # Run statistics section
+        lines.append("  Run Statistics:")
+        lines.append(f"    Scenarios:              {num_scenarios}")
+        items_breakdown = ", ".join(f"{sid}: {count}" for sid, count in items_per_scenario.items())
+        lines.append(f"    Items per scenario:     {items_breakdown}")
+        lines.append(f"    Total workflow runs:    {total_workflow_runs}")
+        lines.append(f"    Total evaluations:      {total_evaluations}")
+        lines.append(f"    Evaluation successes:   {evaluation_successes}")
+        lines.append(f"    Evaluation failures:    {evaluation_failures}")
+        lines.append("")
+
+        # Overall score
+        lines.append(f"  Overall Score: {overall_score:.4f}")
+        lines.append("")
+
+        # Build table
+        if per_scenario:
+            # Calculate column widths
+            scenario_ids = list(per_scenario.keys())
+            max_scenario_len = max(len(sid) for sid in scenario_ids)
+            scenario_col_width = max(max_scenario_len, len("Scenario"))
+
+            # Table header
+            lines.append("  " + "-" * (scenario_col_width + 45))
+            header = f"  {'Scenario':<{scenario_col_width}}  |  {'Mean':>8}  |  {'Max':>8}  |  {'Min':>8}"
+            lines.append(header)
+            lines.append("  " + "-" * (scenario_col_width + 45))
+
+            # Table rows
+            for scenario_id, data in per_scenario.items():
+                mean_val = data.get('mean_score', 0.0)
+                max_val = data.get('max_score', 0.0)
+                min_val = data.get('min_score', 0.0)
+                row = (
+                    f"  {scenario_id:<{scenario_col_width}}  |  "
+                    f"{mean_val:>8.4f}  |  {max_val:>8.4f}  |  {min_val:>8.4f}"
+                )
+                lines.append(row)
+
+            lines.append("  " + "-" * (scenario_col_width + 45))
+
+        lines.append("")
+        lines.append(f"  Output Directory: {output_dir.resolve()}")
+        if results_file is not None:
+            lines.append(f"  Results File:     {results_file.resolve()}")
+        lines.append("")
+        lines.append("=" * 70)
+        lines.append("")
+
+        # Log the formatted output
+        logger.info("\n".join(lines))
+
+    def _build_flat_results(self, results: dict[str, EvaluationRunOutput]) -> list[dict[str, typing.Any]]:
+        """Build a flat list of dictionaries from nested evaluation results.
+
+        Each record represents a single condition evaluation, with a unique identifier
+        combining scenario_id, item_id, and condition_name.
+
+        Args:
+            results: The nested results from the red teaming evaluation.
+
+        Returns:
+            A list of flat dictionaries, one per condition evaluation.
+        """
+        flat_results = []
+        evaluator_results = self._find_red_teaming_evaluator_results(results)
+
+        for scenario_id, result in evaluator_results.items():
+            for eval_output_item in result.eval_output_items:
+                item_id = eval_output_item.id
+
+                if hasattr(eval_output_item, 'results_by_condition') and eval_output_item.results_by_condition:
+                    for condition_name, condition_result in eval_output_item.results_by_condition.items():
+                        # Extract evaluated_output from intermediate_step.payload.output
+                        evaluated_output = None
+                        if condition_result.intermediate_step is not None:
+                            payload = condition_result.intermediate_step.payload
+                            if payload is not None and hasattr(payload, 'output'):
+                                evaluated_output = payload.output
+
+                        flat_record = {
+                            "uid": f"{scenario_id}_{item_id}_{condition_name}",
+                            "scenario_id": scenario_id,
+                            "item_id": item_id,
+                            "condition_name": condition_name,
+                            "score": condition_result.score,
+                            "reasoning": condition_result.reasoning,
+                            "evaluated_output": evaluated_output,
+                            "error_message": condition_result.error_message,
+                        }
+                        flat_results.append(flat_record)
+
+        return flat_results
+
+    def _save_flat_results(self, flat_results: list[dict[str, typing.Any]], output_dir: Path) -> Path:
+        """Save flat results to a JSONL file.
+
+        Args:
+            flat_results: The flat list of result dictionaries.
+            output_dir: The directory to save the file to.
+
+        Returns:
+            The path to the saved JSONL file.
+        """
+        output_file = output_dir / "evaluation_results.jsonl"
+        with open(output_file, 'w', encoding='utf-8') as f:
+            for record in flat_results:
+                f.write(json.dumps(record, default=str) + '\n')
+        return output_file
 
 __all__ = [
     "RedTeamingRunner",
