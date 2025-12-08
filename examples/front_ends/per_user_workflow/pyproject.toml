@@ -4,7 +4,7 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 
 [tool.setuptools_scm]
 git_describe_command = "git describe --long --first-parent"
-root = "../.."
+root = "../../.."
 
 [project]
 name = "nat_per_user_workflow"
@@ -17,7 +17,7 @@ description = "Per-User Workflow NeMo Agent Toolkit example"
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-nvidia-nat = { path = "../..", editable = true }
+nvidia-nat = { path = "../../..", editable = true }
 
 [project.entry-points.'nat.components']
 nat_per_user_workflow = "nat_per_user_workflow.register"

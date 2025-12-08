@@ -118,6 +118,7 @@ Object Store <./store-and-retrieve/object-store.md>
 :caption: Extend
 
 Writing Custom Functions <./extend/functions.md>
+Writing Per-User Functions <./extend/per-user-functions.md>
 Writing Custom Function Groups <./extend/function-groups.md>
 Extending the NeMo Agent Toolkit Using Plugins <./extend/plugins.md>
 Sharing Components <./extend/sharing-components.md>

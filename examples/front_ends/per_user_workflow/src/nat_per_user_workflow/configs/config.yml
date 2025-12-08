@@ -14,45 +14,15 @@
 # limitations under the License.
 
 
-# Per-User Workflow Example Configuration
-#
-# This example demonstrates the per-user workflow pattern where each user
-# gets their own isolated workflow and function instances with separate state.
-#
-# To run this example:
-#   cd examples/per_user_workflow && pip install -e .
-#   nat serve --config_file=examples/per_user_workflow/configs/config.yml
-#
-# Then test with different user sessions:
-#   # User 1 adds a note
-#   curl -X POST http://localhost:8000/generate \
-#     -H "Content-Type: application/json" \
-#     -H "Cookie: nat-session=user1" \
-#     -d '{"command": "note", "action": "add", "param1": "My first note"}'
-#
-#   # User 2 checks their notes (should be empty)
-#   curl -X POST http://localhost:8000/generate \
-#     -H "Content-Type: application/json" \
-#     -H "Cookie: nat-session=user2" \
-#     -d '{"command": "note", "action": "list"}'
-#
-#   # User 1 lists their notes (should have 1 note)
-#   curl -X POST http://localhost:8000/generate \
-#     -H "Content-Type: application/json" \
-#     -H "Cookie: nat-session=user1" \
-#     -d '{"command": "note", "action": "list"}'
-
 general:
   per_user_workflow_timeout: 30
   per_user_workflow_cleanup_interval: 5
 
 functions:
-  # Per-user notepad - each user gets their own notepad
   notepad:
     _type: per_user_notepad
     max_notes: 50
 
-  # Per-user preferences - each user gets their own preferences
   preferences:
     _type: per_user_preferences
     default_preferences:
@@ -60,7 +30,6 @@ functions:
       language: "en"
       notifications: "enabled"
 
-# Per-user workflow - each user gets their own workflow instance
 workflow:
   _type: per_user_assistant
   notepad_name: notepad
