@@ -37,6 +37,20 @@ python -m http.server --directory docs/build/html 8000
 <!-- path-check-skip-next-line -->
 Outputs to `docs/build/docs/html`
 
+### Optional Quick Build Command
+
+A full documentation build can take several minutes. The time consuming steps are building the Python API and performing the link check. 
+
+To skip both of these steps, you can use the following command:
+```bash
+NAT_DISABLE_API_BUILD=1 make -C docs html
+```
+
+To run the link check separately, use:
+```bash
+make -C docs linkcheck
+```
+
 **Note**: When viewing documentation locally, the version switcher in the navigation bar will redirect to the production documentation site (`https://docs.nvidia.com/nemo/agent-toolkit/`) when selecting a different version. This is expected behavior, as the version switcher uses absolute URLs to ensure proper page path preservation in production.
 
 ## Contributing
