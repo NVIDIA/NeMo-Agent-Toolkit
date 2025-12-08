@@ -47,10 +47,10 @@ async def run_retail_agent(workflow: "Workflow", email_input: dict[str, str]) ->
     """
     # Format the email input for the agent
     formatted_input = f"""
-Email From: {email_input['from']}
-CC: {email_input.get('cc', 'None')}
+Email From: {email_input["from"]}
+CC: {email_input.get("cc", "None")}
 Content:
-{email_input['content']}
+{email_input["content"]}
 """
     async with workflow.run(formatted_input) as runner:
         result = await runner.result(to_type=str)
@@ -70,9 +70,9 @@ async def test_product_inquiry(workflow: "Workflow"):
     result_lower = result.lower()
 
     # Check that the agent mentions the trowel product
-    assert any(
-        keyword in result_lower for keyword in ["trowel", "garden trowel", "premium garden"]
-    ), f"Expected product information in response, got: {result}"
+    assert any(keyword in result_lower for keyword in ["trowel", "garden trowel", "premium garden"]), (
+        f"Expected product information in response, got: {result}"
+    )
 
 
 @pytest.mark.integration
@@ -88,10 +88,9 @@ async def test_review_submission(workflow: "Workflow"):
     result_lower = result.lower()
 
     # Check that the agent acknowledges the review submission
-    assert any(
-        keyword in result_lower
-        for keyword in ["review", "thank", "submitted", "feedback", "appreciate"]
-    ), f"Expected review acknowledgment in response, got: {result}"
+    assert any(keyword in result_lower for keyword in ["review", "thank", "submitted", "feedback", "appreciate"]), (
+        f"Expected review acknowledgment in response, got: {result}"
+    )
 
 
 @pytest.mark.integration
@@ -107,10 +106,9 @@ async def test_order_placement(workflow: "Workflow"):
     result_lower = result.lower()
 
     # Check that the agent mentions the order or watering can
-    assert any(
-        keyword in result_lower
-        for keyword in ["order", "watering can", "purchase", "total", "price"]
-    ), f"Expected order information in response, got: {result}"
+    assert any(keyword in result_lower for keyword in ["order", "watering can", "purchase", "total", "price"]), (
+        f"Expected order information in response, got: {result}"
+    )
 
 
 @pytest.mark.integration
@@ -126,10 +124,9 @@ async def test_customer_history_lookup(workflow: "Workflow"):
     result_lower = result.lower()
 
     # Check that the agent provides customer history information
-    assert any(
-        keyword in result_lower
-        for keyword in ["order", "purchase", "history", "bought", "past orders"]
-    ), f"Expected customer history in response, got: {result}"
+    assert any(keyword in result_lower for keyword in ["order", "purchase", "history", "bought", "past orders"]), (
+        f"Expected customer history in response, got: {result}"
+    )
 
 
 @pytest.mark.integration
@@ -145,24 +142,6 @@ async def test_product_comparison(workflow: "Workflow"):
     result_lower = result.lower()
 
     # Check that the agent provides product information
-    assert any(
-        keyword in result_lower for keyword in ["glove", "price", "option"]
-    ), f"Expected product comparison in response, got: {result}"
-
-
-@pytest.mark.integration
-@pytest.mark.usefixtures("nvidia_api_key")
-async def test_order_with_calculation(workflow: "Workflow"):
-    """Test that the agent can calculate order totals using the calculator tool."""
-    email_input = {
-        "from": "john.doe@email.com",
-        "content": "I want to order 3 Premium Garden Trowels and 2 Garden Gloves. What will be the total cost?",
-    }
-
-    result = await run_retail_agent(workflow, email_input)
-    result_lower = result.lower()
-
-    # Check that the agent provides pricing information
-    assert any(
-        keyword in result_lower for keyword in ["total", "cost", "price", "$"]
-    ), f"Expected total calculation in response, got: {result}"
+    assert any(keyword in result_lower for keyword in ["glove", "price", "option"]), (
+        f"Expected product comparison in response, got: {result}"
+    )

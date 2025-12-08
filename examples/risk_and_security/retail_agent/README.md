@@ -40,7 +40,6 @@ This example demonstrates an end-to-end agentic workflow for a retail customer s
     - [Available Products](#available-products)
   - [Available Tools](#available-tools)
     - [Retail Tools Function Group](#retail-tools-function-group)
-    - [Calculator Function Group](#calculator-function-group)
   - [Evaluation](#evaluation)
     - [Running the Evaluation](#running-the-evaluation)
     - [Evaluation Dataset](#evaluation-dataset)
@@ -55,9 +54,8 @@ This example demonstrates an end-to-end agentic workflow for a retail customer s
 - **Email Processing:** Processes customer emails to understand intent (product inquiry, review submission, or order placement).
 - **Customer Management:** Retrieves customer information including purchase history, total orders, and past reviews.
 - **Product Catalog:** Access to a comprehensive gardening equipment catalog with descriptions, pricing, stock levels, and reviews.
-- **Order Processing:** Handles order placement with stock validation and total cost calculation.
+- **Order Processing:** Handles order placement with stock validation.
 - **Review System:** Accepts and processes product reviews from existing customers.
-- **Multi-Tool Integration:** Combines retail-specific tools with calculator functions for order total calculations.
 - **ReAct Agent:** Uses iterative reasoning to determine appropriate actions based on email content.
 
 ---
@@ -73,8 +71,6 @@ From the root directory of the NeMo Agent toolkit library, run the following com
 ```bash
 uv pip install -e examples/risk_and_security/retail_agent
 ```
-
-This will also install the simple calculator example as a dependency since the retail agent uses calculator functions.
 
 ### Set Up API Keys
 
@@ -212,10 +208,6 @@ The retail agent has access to the following tools:
    - Input: customer_email (string), product_name (string), quantity (integer)
    - Output: Success message with updated order details (mock - no actual database update)
 
-### Calculator Function Group
-
-The agent also has access to calculator tools (add, subtract, multiply, divide, compare) for calculating order totals and comparing prices.
-
 ---
 
 ## Example Usage
@@ -267,23 +259,8 @@ The agent will:
 
 1. Look up customer information using `get_customer_info`
 2. Check product details and stock using `get_product_info`
-3. Calculate the total cost using calculator tools (2 × $45.99 = $91.98)
-4. Update customer order information using `update_customer_info`
-5. Send order confirmation using `send_email`
-
----
-
-### Order with Multiple Products
-
-**Input:**
-
-```bash
-nat run --config_file examples/risk_and_security/retail_agent/configs/config.yml --input "Email From: emma.wilson@email.com
-Content: I want to order 3 Premium Garden Trowels and 2 pairs of Premium Garden Gloves. What will be the total cost?"
-```
-
-**Expected Output:**
-The agent will calculate: (3 × $29.99) + (2 × $29.99) = $149.95 and provide order details.
+3. Update customer order information using `update_customer_info`
+4. Send order confirmation using `send_email`
 
 ---
 
