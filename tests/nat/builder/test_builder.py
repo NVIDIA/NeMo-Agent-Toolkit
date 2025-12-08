@@ -30,7 +30,7 @@ from nat.builder.function_info import FunctionInfo
 from nat.builder.llm import LLMProviderInfo
 from nat.builder.retriever import RetrieverProviderInfo
 from nat.builder.workflow import Workflow
-from nat.builder.workflow_builder import WorkflowBuilder
+from nat.builder.workflow_builder import WorkflowBuilder, _log_build_failure
 from nat.cli.register_workflow import register_embedder_client
 from nat.cli.register_workflow import register_embedder_provider
 from nat.cli.register_workflow import register_function
@@ -1394,19 +1394,17 @@ def mock_component_data():
 
 
 def test_log_build_failure_helper_method(caplog_fixture, mock_component_data):
-    """Test the log_build_failure helper method directly."""
-    builder = WorkflowBuilder()
-
+    """Test the _log_build_failure helper function directly."""
     completed_components = [("comp1", "llms"), ("comp2", "embedders")]
     remaining_components = [("comp3", "functions"), ("comp4", "memory")]
     original_error = ValueError("Test error message")
 
-    # Call the helper method
-    builder.log_build_failure(mock_component_data.name,
-                              mock_component_data.component_group.value,
-                              completed_components,
-                              remaining_components,
-                              original_error)
+    # Call the helper function
+    _log_build_failure(mock_component_data.name,
+                       mock_component_data.component_group.value,
+                       completed_components,
+                       remaining_components,
+                       original_error)
 
     # Verify error logging content
     log_text = caplog_fixture.text
@@ -1422,19 +1420,17 @@ def test_log_build_failure_helper_method(caplog_fixture, mock_component_data):
 
 
 def test_log_build_failure_workflow_helper_method(caplog_fixture):
-    """Test the log_build_failure helper method for workflow directly."""
-    builder = WorkflowBuilder()
-
+    """Test the _log_build_failure helper function for workflow directly."""
     completed_components = [("comp1", "llms"), ("comp2", "embedders")]
     remaining_components = [("comp3", "functions")]
     original_error = ValueError("Workflow build failed")
 
-    # Call the helper method
-    builder.log_build_failure(WORKFLOW_COMPONENT_NAME,
-                              "workflow",
-                              completed_components,
-                              remaining_components,
-                              original_error)
+    # Call the helper function
+    _log_build_failure(WORKFLOW_COMPONENT_NAME,
+                       "workflow",
+                       completed_components,
+                       remaining_components,
+                       original_error)
 
     # Verify error logging content
     log_text = caplog_fixture.text
@@ -1449,17 +1445,15 @@ def test_log_build_failure_workflow_helper_method(caplog_fixture):
 
 def test_log_build_failure_no_completed_components(caplog_fixture, mock_component_data):
     """Test error logging when no components have been successfully built."""
-    builder = WorkflowBuilder()
-
     completed_components = []
     remaining_components = [("comp1", "embedders"), ("comp2", "functions")]
     original_error = ValueError("First component failed")
 
-    builder.log_build_failure(mock_component_data.name,
-                              mock_component_data.component_group.value,
-                              completed_components,
-                              remaining_components,
-                              original_error)
+    _log_build_failure(mock_component_data.name,
+                       mock_component_data.component_group.value,
+                       completed_components,
+                       remaining_components,
+                       original_error)
 
     log_text = caplog_fixture.text
     assert "Failed to initialize component test_component (llms)" in log_text
@@ -1472,17 +1466,15 @@ def test_log_build_failure_no_completed_components(caplog_fixture, mock_componen
 
 def test_log_build_failure_no_remaining_components(caplog_fixture, mock_component_data):
     """Test error logging when no components remain to be built."""
-    builder = WorkflowBuilder()
-
     completed_components = [("comp1", "llms"), ("comp2", "embedders")]
     remaining_components = []
     original_error = ValueError("Last component failed")
 
-    builder.log_build_failure(mock_component_data.name,
-                              mock_component_data.component_group.value,
-                              completed_components,
-                              remaining_components,
-                              original_error)
+    _log_build_failure(mock_component_data.name,
+                       mock_component_data.component_group.value,
+                       completed_components,
+                       remaining_components,
+                       original_error)
 
     log_text = caplog_fixture.text
     assert "Failed to initialize component test_component (llms)" in log_text
