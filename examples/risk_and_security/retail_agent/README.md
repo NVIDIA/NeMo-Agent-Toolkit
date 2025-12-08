@@ -17,7 +17,7 @@ limitations under the License.
 
 # Retail Agent for Gardening Equipment
 
-This example demonstrates an end-to-end agentic workflow for a retail customer service agent specialized in gardening equipment. The agent processes customer emails to handle product inquiries, order placement, and review submissions using the NeMo Agent toolkit.
+This example demonstrates an end-to-end agentic workflow for a retail customer service agent specialized in gardening equipment. The agent processes customer emails to handle product inquiries, order placement, and review submissions using the NVIDIA NeMo Agent toolkit.
 
 ## Table of Contents
 

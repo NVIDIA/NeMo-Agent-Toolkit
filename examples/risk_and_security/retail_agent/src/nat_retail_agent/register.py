@@ -76,7 +76,7 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
     """Create and register the retail agent function group.
 
     Args:
-        config: Retail tools function group configuration.
+        _config: Retail tools function group configuration.
         _builder: Workflow builder (unused).
 
     Yields:
@@ -86,11 +86,17 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
     customers_file = _config.data_dir / "customers.json"
     products_file = _config.data_dir / "products.json"
 
-    with open(customers_file) as f:
-        customers_data = json.load(f)
+    try:
+        with open(customers_file) as f:
+            customers_data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        raise RuntimeError(f"Failed to load customers data from {customers_file}: {e}") from e
 
-    with open(products_file) as f:
-        products_data = json.load(f)
+    try:
+        with open(products_file) as f:
+            products_data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        raise RuntimeError(f"Failed to load products data from {products_file}: {e}") from e
 
     group = FunctionGroup(config=_config)
 
