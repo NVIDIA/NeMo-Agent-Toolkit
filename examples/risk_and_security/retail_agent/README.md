@@ -89,6 +89,8 @@ nat run --config_file examples/risk_and_security/retail_agent/configs/config.yml
 Content: I'm interested in learning about your garden trowels. What options do you have available?"
 ```
 
+The expected output of this run is shown below in the Examples seciont.
+
 ---
 
 ## Agent Capabilities
@@ -224,6 +226,98 @@ Content: Hello, I'm interested in learning about your garden trowels. What do yo
 **Expected Output:**
 The agent will use the `get_product_info` or `get_all_products` tool to retrieve information about garden trowels and respond with product details including description, price, and stock availability.
 
+```text
+Configuration Summary:
+--------------------
+Workflow Type: react_agent
+Number of Functions: 0
+Number of Function Groups: 1
+Number of LLMs: 1
+Number of Embedders: 0
+Number of Memory: 0
+Number of Object Stores: 0
+Number of Retrievers: 0
+Number of TTC Strategies: 0
+Number of Authentication Providers: 0
+------------------------------
+[AGENT]
+Agent input: Email From: david.brown@email.com
+Content: Hello, I'm interested in learning about your garden trowels. What do you have available?
+Agent's thoughts:
+Thought: The customer is inquiring about garden trowels, so I should provide them with information about the available products.
+
+Action: retail_tools.get_all_products
+Action Input: None
+
+------------------------------
+[AGENT]
+Calling tools: retail_tools.get_all_products
+Tool's input: None
+Tool's response:
+[{'id': 'PROD001', 'name': 'Premium Garden Trowel', 'description': 'Professional-grade stainless steel trowel with ergonomic soft-grip handle. Perfect for transplanting, digging, and breaking up soil. Rust-resistant and built to last.', 'price': 29.99, 'stock': 45, 'average_rating': 5.0, 'review_count': 1}, {'id': 'PROD002', 'name': 'Professional Pruning Shears', 'description': 'High-carbon steel blades with precision-ground edges for clean cuts. Ergonomic design reduces hand fatigue. Ideal for trimming flowers, shrubs, and small branches up to 3/4 inch diameter.', 'price': 79.99, 'stock': 28, 'average_rating': 4.0, 'review_count': 1}, {'id': 'PROD003', 'name': 'Ergonomic Watering Can', 'description': '2-gallon capacity watering can with balanced design for easy pouring. Features a removable rose head for gentle watering. UV-resistant plastic construction.', 'price': 45.99, 'stock': 62, 'average_rating': 'No ratings yet', 'review_count': 0}, {'id': 'PROD004', 'name': 'Heavy-Duty Garden...(rest of response truncated)
+------------------------------
+[AGENT]
+Agent input: Email From: david.brown@email.com
+Content: Hello, I'm interested in learning about your garden trowels. What do you have available?
+Agent's thoughts:
+Thought: I have the list of available products, and I can see that there are a few products related to gardening, such as trowels, pruning shears, and hoes. I should use the get_product_info tool to find a product that matches the customer's description of a garden trowel.
+
+Action: retail_tools.get_product_info
+Action Input: {"product_identifier": "garden trowel"}
+------------------------------
+[AGENT]
+Calling tools: retail_tools.get_product_info
+Tool's input: {'product_identifier': 'garden trowel'}
+Tool's response:
+[{'error': 'No product found with identifier: garden trowel'}]
+------------------------------
+[AGENT]
+Agent input: Email From: david.brown@email.com
+Content: Hello, I'm interested in learning about your garden trowels. What do you have available?
+Agent's thoughts:
+Thought: The customer is inquiring about garden trowels, and I found a product named 'Premium Garden Trowel' in the list of all products. I should provide the customer with information about this product.
+
+Action: retail_tools.get_product_info
+Action Input: {"product_identifier": "Premium Garden Trowel"}
+------------------------------
+[AGENT]
+Calling tools: retail_tools.get_product_info
+Tool's input: {'product_identifier': 'Premium Garden Trowel'}
+Tool's response:
+[{'id': 'PROD001', 'name': 'Premium Garden Trowel', 'description': 'Professional-grade stainless steel trowel with ergonomic soft-grip handle. Perfect for transplanting, digging, and breaking up soil. Rust-resistant and built to last.', 'price': 29.99, 'stock': 45, 'reviews': [{'customer_id': 'CUST001', 'customer_name': 'John Doe', 'rating': 5, 'review': 'Excellent tool! Very durable and comfortable to use.'}]}]
+------------------------------
+[AGENT]
+Agent input: Email From: david.brown@email.com
+Content: Hello, I'm interested in learning about your garden trowels. What do you have available?
+Agent's thoughts:
+Thought: I have found a product that matches the customer's description of a garden trowel. I should send an email to the customer with the product information and ask if they would like to place an order.
+
+Action: retail_tools.send_email
+Action Input: {"recipient_email": "david.brown@email.com", "content": "Dear Sir, \n\nWe have a Premium Garden Trowel (PROD001) available that might interest you. It is a professional-grade stainless steel trowel with an ergonomic soft-grip handle, perfect for transplanting, digging, and breaking up soil. The price is $29.99, and we currently have 45 in stock. If you would like to place an order, please let me know and I will be happy to assist you. \n\nBest regards, \n[Your Name]"}
+------------------------------
+[AGENT]
+Calling tools: retail_tools.send_email
+Tool's input: {'recipient_email': 'david.brown@email.com', 'content': 'Dear Sir, \n\nWe have a Premium Garden Trowel (PROD001) available that might interest you. It is a professional-grade stainless steel trowel with an ergonomic soft-grip handle, perfect for transplanting, digging, and breaking up soil. The price is $29.99, and we currently have 45 in stock. If you would like to place an order, please let me know and I will be happy to assist you. \n\nBest regards, \n[Your Name]'}
+Tool's response:
+[{'success': True, 'message': 'Email sent successfully', 'email_details': {'to': 'david.brown@email.com', 'cc': 'None', 'content': 'Dear Sir, \n\nWe have a Premium Garden Trowel (PROD001) available that might interest you. It is a professional-grade stainless steel trowel with an ergonomic soft-grip handle, perfect for transplanting, digging, and breaking up soil. The price is $29.99, and we currently have 45 in stock. If you would like to place an order, please let me know and I will be happy to assist you. \n\nBest regards, \n[Your Name]', 'timestamp': '2024-11-25T10:00:00Z'}, 'note': 'This is a mock operation - no actual email was sent.'}]
+------------------------------
+[AGENT]
+Agent input: Email From: david.brown@email.com
+Content: Hello, I'm interested in learning about your garden trowels. What do you have available?
+Agent's thoughts:
+Thought: I now know the final answer
+
+Final Answer: The customer has been sent an email with the product information, and they will be contacted again if they respond with an interest in placing an order. The email details are as follows:
+{'to': 'david.brown@email.com',
+'cc': 'None',
+'content': 'Dear Sir, \n\nWe have a Premium Garden Trowel (PROD001) available that might interest you. It is a professional-grade stainless steel trowel with an ergonomic soft-grip handle, perfect for transplanting, digging, and breaking up soil. The price is $29.99, and we currently have 45 in stock. If you would like to place an order, please let me know and I will be happy to assist you. \n\nBest regards, \n[Your Name]',
+'timestamp': '2024-11-25T10:00:00Z'}
+------------------------------
+Workflow Result:
+["The customer has been sent an email with the product information, and they will be contacted again if they respond with an interest in placing an order. The email details are as follows: \n{'to': 'david.brown@email.com', \n'cc': 'None', \n'content': 'Dear Sir, \\n\\nWe have a Premium Garden Trowel (PROD001) available that might interest you. It is a professional-grade stainless steel trowel with an ergonomic soft-grip handle, perfect for transplanting, digging, and breaking up soil. The price is $29.99, and we currently have 45 in stock. If you would like to place an order, please let me know and I will be happy to assist you. \\n\\nBest regards, \\n[Your Name]', \n'timestamp': '2024-11-25T10:00:00Z'}"]
+--------------------------------------------------
+```
+
 ---
 
 ### Review Submission
@@ -243,6 +337,55 @@ The agent will:
 3. Submit the review using `write_review`
 4. Send a confirmation email using `send_email`
 
+The output logs will be similar to these:
+
+```text
+[AGENT]
+Agent input: Email From: john.doe@email.com
+Content: I'd like to write a review for the Premium Garden Trowel I purchased. It's fantastic! I give it 5 stars. The stainless steel is very durable and the grip is comfortable.
+Agent's thoughts:
+Thought: The customer wants to write a review for the Premium Garden Trowel, so I should use the write_review tool to submit the review.
+
+Action: retail_tools.write_review
+Action Input: {"customer_email": "john.doe@email.com", "product_name": "Premium Garden Trowel", "rating": 5, "review_text": "The stainless steel is very durable and the grip is comfortable. It's fantastic!"}
+
+------------------------------
+[AGENT]
+Calling tools: retail_tools.write_review
+Tool's input: {'customer_email': 'john.doe@email.com', 'product_name': 'Premium Garden Trowel', 'rating': 5, 'review_text': "The stainless steel is very durable and the grip is comfortable. It's fantastic!"}
+Tool's response:
+[{'success': True, 'message': 'Review submitted successfully for Premium Garden Trowel', 'review': {'customer_name': 'John Doe', 'product_name': 'Premium Garden Trowel', 'rating': 5, 'review_text': "The stainless steel is very durable and the grip is comfortable. It's fantastic!"}, 'note': 'This is a mock operation - the review was not actually saved to the database.'}]
+------------------------------
+[AGENT]
+Agent input: Email From: john.doe@email.com
+Content: I'd like to write a review for the Premium Garden Trowel I purchased. It's fantastic! I give it 5 stars. The stainless steel is very durable and the grip is comfortable.
+Agent's thoughts:
+Thought: The review has been submitted successfully, now I should respond to the customer to confirm that their review has been received and thank them for taking the time to write it.
+
+Action: retail_tools.send_email
+Action Input: {"recipient_email": "john.doe@email.com", "content": "Dear Sir, thank you for taking the time to write a review for the Premium Garden Trowel. We appreciate your feedback and are glad to hear that you're enjoying the product. Your review has been submitted successfully.", "cc": ""}
+------------------------------
+[AGENT]
+Calling tools: retail_tools.send_email
+Tool's input: {'recipient_email': 'john.doe@email.com', 'content': "Dear Sir, thank you for taking the time to write a review for the Premium Garden Trowel. We appreciate your feedback and are glad to hear that you're enjoying the product. Your review has been submitted successfully.", 'cc': ''}
+Tool's response:
+[{'success': True, 'message': 'Email sent successfully', 'email_details': {'to': 'john.doe@email.com', 'cc': 'None', 'content': "Dear Sir, thank you for taking the time to write a review for the Premium Garden Trowel. We appreciate your feedback and are glad to hear that you're enjoying the product. Your review has been submitted successfully.", 'timestamp': '2024-11-25T10:00:00Z'}, 'note': 'This is a mock operation - no actual email was sent.'}]
+------------------------------
+[AGENT]
+Agent input: Email From: john.doe@email.com
+Content: I'd like to write a review for the Premium Garden Trowel I purchased. It's fantastic! I give it 5 stars. The stainless steel is very durable and the grip is comfortable.
+Agent's thoughts:
+Thought: I now know the final answer
+------------------------------
+Final Answer: The customer's review has been submitted successfully and an email has been sent to confirm this. The email details are as follows:
+{'to': 'john.doe@email.com',
+'cc': 'None',
+'content': "Dear Sir, thank you for taking the time to write a review for the Premium Garden Trowel. We appreciate your feedback and are glad to hear that you're enjoying the product. Your review has been submitted successfully.",
+'timestamp': '2024-11-25T10:00:00Z'}
+Workflow Result:
+['The customer\'s review has been submitted successfully and an email has been sent to confirm this. The email details are as follows: \n{\'to\': \'john.doe@email.com\', \n\'cc\': \'None\', \n\'content\': "Dear Sir, thank you for taking the time to write a review for the Premium Garden Trowel. We appreciate your feedback and are glad to hear that you\'re enjoying the product. Your review has been submitted successfully.", \n\'timestamp\': \'2024-11-25T10:00:00Z\'}']
+```
+
 ---
 
 ### Order Placement
@@ -261,6 +404,73 @@ The agent will:
 2. Check product details and stock using `get_product_info`
 3. Update customer order information using `update_customer_info`
 4. Send order confirmation using `send_email`
+
+The output of the run:
+
+```text
+[AGENT]
+Agent input: Email From: sarah.smith@email.com
+Content: I would like to order 2 Ergonomic Watering Cans. Can you process this order and let me know the total cost?
+Agent's thoughts:
+Thought: The customer wants to order 2 Ergonomic Watering Cans. To confirm the order, I first need to check the product information, including stock and pricing.
+
+Action: retail_tools.get_product_info
+Action Input: {"product_identifier": "Ergonomic Watering Can"}
+
+------------------------------
+[AGENT]
+Calling tools: retail_tools.get_product_info
+Tool's input: {'product_identifier': 'Ergonomic Watering Can'}
+Tool's response:
+[{'id': 'PROD003', 'name': 'Ergonomic Watering Can', 'description': '2-gallon capacity watering can with balanced design for easy pouring. Features a removable rose head for gentle watering. UV-resistant plastic construction.', 'price': 45.99, 'stock': 62, 'reviews': []}]
+------------------------------
+[AGENT]
+Agent input: Email From: sarah.smith@email.com
+Content: I would like to order 2 Ergonomic Watering Cans. Can you process this order and let me know the total cost?
+Agent's thoughts:
+Thought: I have found the product information for the Ergonomic Watering Can, which has a product ID of PROD003, a price of $45.99, and is in stock. Since the customer wants to order 2 units, I will calculate the total cost.
+
+The total cost will be 2 * $45.99 = $91.98. I will now confirm the order details with the customer and update their information.
+
+Action: retail_tools.update_customer_info
+Action Input: {"customer_email": "sarah.smith@email.com", "product_name": "PROD003", "quantity": 2}
+------------------------------
+[AGENT]
+Calling tools: retail_tools.update_customer_info
+Tool's input: {'customer_email': 'sarah.smith@email.com', 'product_name': 'PROD003', 'quantity': 2}
+Tool's response:
+[{'success': True, 'message': 'Order placed successfully for Sarah Smith', 'order_details': {'customer_name': 'Sarah Smith', 'customer_email': 'sarah.smith@email.com', 'product_name': 'Ergonomic Watering Can', 'product_id': 'PROD003', 'quantity': 2, 'unit_price': 45.99, 'total': 91.98, 'new_total_orders': 3, 'new_total_spent': 231.95}, 'note': 'This is a mock operation - the order was not actually saved to the database.'}]
+------------------------------
+[AGENT]
+Agent input: Email From: sarah.smith@email.com
+Content: I would like to order 2 Ergonomic Watering Cans. Can you process this order and let me know the total cost?
+Agent's thoughts:
+Thought: The customer's order has been successfully placed. I will now send a confirmation email to the customer with the order details.
+
+Action: retail_tools.send_email
+Action Input: {"recipient_email": "sarah.smith@email.com", "content": "Dear Madam, \n\nYour order for 2 Ergonomic Watering Cans (PROD003) has been successfully placed. The total cost is $91.98. \n\nThank you for shopping with us. \n\nBest regards, GreenThumb Gardening Equipment", "cc": ""}
+------------------------------
+[AGENT]
+Calling tools: retail_tools.send_email
+Tool's input: {'recipient_email': 'sarah.smith@email.com', 'content': 'Dear Madam, \n\nYour order for 2 Ergonomic Watering Cans (PROD003) has been successfully placed. The total cost is $91.98. \n\nThank you for shopping with us. \n\nBest regards, GreenThumb Gardening Equipment', 'cc': ''}
+Tool's response:
+[{'success': True, 'message': 'Email sent successfully', 'email_details': {'to': 'sarah.smith@email.com', 'cc': 'None', 'content': 'Dear Madam, \n\nYour order for 2 Ergonomic Watering Cans (PROD003) has been successfully placed. The total cost is $91.98. \n\nThank you for shopping with us. \n\nBest regards, GreenThumb Gardening Equipment', 'timestamp': '2024-11-25T10:00:00Z'}, 'note': 'This is a mock operation - no actual email was sent.'}]
+------------------------------
+[AGENT]
+Agent input: Email From: sarah.smith@email.com
+Content: I would like to order 2 Ergonomic Watering Cans. Can you process this order and let me know the total cost?
+Agent's thoughts:
+Thought: I now know the final answer
+------------------------------
+Final Answer: The customer, Sarah Smith, has been emailed with the order details. The email_details are as follows:
+{'to': 'sarah.smith@email.com',
+'cc': 'None',
+'content': 'Dear Madam, \n\nYour order for 2 Ergonomic Watering Cans (PROD003) has been successfully placed. The total cost is $91.98. \n\nThank you for shopping with us. \n\nBest regards, GreenThumb Gardening Equipment',
+'timestamp': '2024-11-25T10:00:00Z'}
+Workflow Result:
+["The customer, Sarah Smith, has been emailed with the order details. The email_details are as follows: \n{'to': 'sarah.smith@email.com', \n'cc': 'None', \n'content': 'Dear Madam, \\n\\nYour order for 2 Ergonomic Watering Cans (PROD003) has been successfully placed. The total cost is $91.98. \\n\\nThank you for shopping with us. \\n\\nBest regards, GreenThumb Gardening Equipment', \n'timestamp': '2024-11-25T10:00:00Z'}"]
+--------------------------------------------------
+```
 
 ---
 
