@@ -71,7 +71,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
 From the root directory of the NeMo Agent toolkit library, run the following commands:
 
 ```bash
-uv pip install -e examples/getting_started/retail_agent
+uv pip install -e examples/risk_and_security/retail_agent
 ```
 
 This will also install the simple calculator example as a dependency since the retail agent uses calculator functions.
@@ -89,7 +89,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 Return to your original terminal, and run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
 
 ```bash
-nat run --config_file examples/getting_started/retail_agent/configs/config.yml --input "Email From: john.doe@email.com
+nat run --config_file examples/risk_and_security/retail_agent/configs/config.yml --input "Email From: john.doe@email.com
 Content: I'm interested in learning about your garden trowels. What options do you have available?"
 ```
 
@@ -110,8 +110,9 @@ The retail agent can handle three main types of customer requests:
 ### Product Inquiry
 
 **Input:**
+
 ```bash
-nat run --config_file examples/getting_started/retail_agent/configs/config.yml --input "Email From: david.brown@email.com
+nat run --config_file examples/risk_and_security/retail_agent/configs/config.yml --input "Email From: david.brown@email.com
 Content: Hello, I'm interested in learning about your garden trowels. What do you have available?"
 ```
 
@@ -123,13 +124,15 @@ The agent will use the `get_product_info` or `get_all_products` tool to retrieve
 ### Review Submission
 
 **Input:**
+
 ```bash
-nat run --config_file examples/getting_started/retail_agent/configs/config.yml --input "Email From: john.doe@email.com
+nat run --config_file examples/risk_and_security/retail_agent/configs/config.yml --input "Email From: john.doe@email.com
 Content: I'd like to write a review for the Premium Garden Trowel I purchased. It's fantastic! I give it 5 stars. The stainless steel is very durable and the grip is comfortable."
 ```
 
 **Expected Output:**
 The agent will:
+
 1. Look up the customer information using `get_customer_info`
 2. Verify the product exists using `get_product_info`
 3. Submit the review using `write_review`
@@ -140,13 +143,15 @@ The agent will:
 ### Order Placement
 
 **Input:**
+
 ```bash
-nat run --config_file examples/getting_started/retail_agent/configs/config.yml --input "Email From: sarah.smith@email.com
+nat run --config_file examples/risk_and_security/retail_agent/configs/config.yml --input "Email From: sarah.smith@email.com
 Content: I would like to order 2 Ergonomic Watering Cans. Can you process this order and let me know the total cost?"
 ```
 
 **Expected Output:**
 The agent will:
+
 1. Look up customer information using `get_customer_info`
 2. Check product details and stock using `get_product_info`
 3. Calculate the total cost using calculator tools (2 × $45.99 = $91.98)
@@ -158,8 +163,9 @@ The agent will:
 ### Order with Multiple Products
 
 **Input:**
+
 ```bash
-nat run --config_file examples/getting_started/retail_agent/configs/config.yml --input "Email From: emma.wilson@email.com
+nat run --config_file examples/risk_and_security/retail_agent/configs/config.yml --input "Email From: emma.wilson@email.com
 Content: I want to order 3 Premium Garden Trowels and 2 pairs of Premium Garden Gloves. What will be the total cost?"
 ```
 
@@ -189,7 +195,7 @@ Customers are stored in `data/customers.json` with the following structure:
     }
   ],
   "total_orders": 3,
-  "total_spent": 245.50,
+  "total_spent": 245.5,
   "past_reviews": [
     {
       "product_id": "PROD001",
@@ -226,6 +232,7 @@ Products are stored in `data/products.json` with the following structure:
 ### Available Products
 
 The catalog includes 10 gardening products:
+
 - Premium Garden Trowel ($29.99)
 - Professional Pruning Shears ($79.99)
 - Ergonomic Watering Can ($45.99)
@@ -246,22 +253,27 @@ The retail agent has access to the following tools:
 ### Retail Tools Function Group
 
 1. **get_customer_info** - Looks up customer by email address
+
    - Input: email (string)
    - Output: Customer object with id, name, past orders, total orders, total spent, and past reviews
 
 2. **get_product_info** - Retrieves single product details
+
    - Input: product_id or product_name (string)
    - Output: Product object with id, name, description, price, stock, and reviews
 
 3. **get_all_products** - Lists all products for comparison
+
    - Input: None
    - Output: List of all products with basic information
 
 4. **write_review** - Mock function to add a review
+
    - Input: customer_email (string), product_name (string), rating (integer 1-5), review_text (string)
    - Output: Success message (mock - no actual database update)
 
 5. **send_email** - Mock function to send email response
+
    - Input: recipient_email (string), content (string), cc (optional string)
    - Output: Success message with email details (mock - no actual email sent)
 
@@ -284,7 +296,7 @@ The retail agent includes an evaluation framework to assess the agent's performa
 To run the evaluation, execute the following command from the root of the NeMo Agent toolkit repository:
 
 ```bash
-nat eval --config_file examples/getting_started/retail_agent/configs/config.yml
+nat eval --config_file examples/risk_and_security/retail_agent/configs/config.yml
 ```
 
 The evaluation uses the `tunable_rag_evaluator` to score the agent's responses against expected outcomes. The evaluator uses an LLM-as-a-judge approach to determine how well the agent handles each test case.
@@ -301,16 +313,19 @@ The evaluation dataset (`data/evalset.json`) contains six test scenarios coverin
 6. **Combined Request:** Handling a review submission and order placement in a single email
 
 Each test case includes:
+
 - `question`: The customer email input
 - `answer`: A description of the expected agent behavior and response
 
 ### Evaluation Output
 
 The evaluation results are saved to `./.tmp/nat/examples/evaluation_and_profiling/nat_retail_agent/llama-33-70b/` and include:
+
 - **Scores:** Each response is scored on a scale from 0.0 to 1.0
 - **Profiler Metrics:** Base performance metrics for workflow execution
 
 The scoring criteria evaluates whether:
+
 - The agent sends an email to the correct recipient
 - The agent uses appropriate greetings (Sir/Madam based on context)
 - The response contains required information (product details, order confirmation, and so on)
@@ -329,6 +344,7 @@ The scoring criteria evaluates whether:
 ## Architecture
 
 This example uses:
+
 - **ReAct Agent:** Provides iterative reasoning between tool calls to handle complex multi-step customer requests
 - **Function Groups:** Organizes related retail tools together for better modularity
 - **Custom Functions:** All retail tools are implemented as custom async functions

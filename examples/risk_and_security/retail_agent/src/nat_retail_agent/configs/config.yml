@@ -60,7 +60,7 @@ eval:
       cleanup: true
     dataset:
       _type: json
-      file_path: examples/getting_started/retail_agent/data/evalset.json
+      file_path: examples/risk_and_security/retail_agent/data/evalset.json
     profiler:
       base_metrics: true
 
