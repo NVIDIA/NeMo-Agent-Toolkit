@@ -103,9 +103,10 @@ def process_red_team_eval(
     override: tuple[tuple[str, str], ...],
 ):
     """Process the red team eval command and execute the evaluation."""
-    from nat.cli.cli_utils.red_teaming_utils import load_red_teaming_config
     from nat.eval.runners.red_teaming_runner import RedTeamingRunner
     from nat.runtime.loader import load_config
+
+    from .red_teaming_utils import load_red_teaming_config
 
     # Must have at least one of these
     if red_team_config is None and config_file is None:
