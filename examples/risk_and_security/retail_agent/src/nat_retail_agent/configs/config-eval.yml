@@ -53,7 +53,7 @@ eval:
     max_concurrency: 1
     workflow_alias: nat-simple-llama-33-70b
     output:
-      dir: ./.tmp/nat/examples/evaluation_and_profiling/nat_retail_agent/llama-33-70b
+      dir: ./.tmp/nat/examples/risk_and_security/retail_agent/nat_retail_agent/llama-33-70b
       cleanup: true
     dataset:
       _type: json

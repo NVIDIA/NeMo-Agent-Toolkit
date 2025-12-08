@@ -59,6 +59,7 @@ Content:
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
+@pytest.mark.asyncio
 async def test_product_inquiry(workflow: "Workflow"):
     """Test that the agent can handle product information inquiries."""
     email_input = {
@@ -77,6 +78,7 @@ async def test_product_inquiry(workflow: "Workflow"):
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
+@pytest.mark.asyncio
 async def test_review_submission(workflow: "Workflow"):
     """Test that the agent can handle review submissions from existing customers."""
     email_input = {
@@ -95,6 +97,7 @@ async def test_review_submission(workflow: "Workflow"):
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
+@pytest.mark.asyncio
 async def test_order_placement(workflow: "Workflow"):
     """Test that the agent can handle order placement requests."""
     email_input = {
@@ -113,6 +116,7 @@ async def test_order_placement(workflow: "Workflow"):
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
+@pytest.mark.asyncio
 async def test_customer_history_lookup(workflow: "Workflow"):
     """Test that the agent can look up customer purchase history."""
     email_input = {
@@ -131,6 +135,7 @@ async def test_customer_history_lookup(workflow: "Workflow"):
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
+@pytest.mark.asyncio
 async def test_product_comparison(workflow: "Workflow"):
     """Test that the agent can compare multiple products."""
     email_input = {
