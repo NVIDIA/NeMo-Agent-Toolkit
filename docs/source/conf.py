@@ -185,8 +185,8 @@ numpydoc_class_members_toctree = False
 # Ignore example.com/mcp as it is inaccessible when building the docs
 # Once v1.2 is merged into main, remove the ignore for the banner.png
 linkcheck_ignore = [
-    r'http://localhost:\d+/',
-    r'https://localhost:\d+/',
+    r'http://localhost:\d+',
+    r'https://localhost:\d+',
     r'^http://$',
     r'^https://$',
     r'https://(platform\.)?openai.com',
@@ -196,6 +196,7 @@ linkcheck_ignore = [
     r'https?://example\.com/mcp/?',
     r'http://custom-server',
     r'^\?provider=',
+    r'https://agent\.example\.com'
 ]
 
 # The suffix(es) of source filenames.
