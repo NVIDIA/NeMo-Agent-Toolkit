@@ -370,7 +370,7 @@ class TestSessionManagerSession:
                             entry_function=None,
                             shared_workflow=None)
 
-        async with sm.session(user_id="user123") as session:
+        async with sm.session(user_id="user123"):
             builder_info = sm._per_user_builders["user123"]
             assert builder_info.ref_count == 1
 
@@ -510,6 +510,7 @@ class TestSessionManagerContextExtraction:
         user_id = sm._get_user_id_from_context()
         # Should return None (or user_manager fallback if set)
         # The exact behavior depends on default metadata state
+        assert user_id is None
 
 
 class TestPerUserWorkflowIntegration:
@@ -527,8 +528,8 @@ class TestPerUserWorkflowIntegration:
                             entry_function=None,
                             shared_workflow=None)
 
-        async with sm.session(user_id="user1") as session1:
-            async with sm.session(user_id="user2") as session2:
+        async with sm.session(user_id="user1"):
+            async with sm.session(user_id="user2"):
                 # Both should have their own builders
                 assert "user1" in sm._per_user_builders
                 assert "user2" in sm._per_user_builders
@@ -561,7 +562,7 @@ class TestPerUserWorkflowIntegration:
         async with sm.session(user_id="user1") as session1:
             assert sm._per_user_builders["user1"].ref_count == 1
 
-            async with sm.session(user_id="user1") as session2:
+            async with sm.session(user_id="user1"):
                 # Same builder, ref_count = 2
                 assert sm._per_user_builders["user1"].ref_count == 2
                 assert session1.workflow is not None  # Both have access to workflow

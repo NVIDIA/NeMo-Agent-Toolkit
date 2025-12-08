@@ -186,7 +186,8 @@ class SessionManager:
         if self._is_workflow_per_user:
             self._per_user_workflow_input_schema = workflow_registration.per_user_function_input_schema
             self._per_user_workflow_single_output_schema = workflow_registration.per_user_function_single_output_schema
-            self._per_user_workflow_streaming_output_schema = workflow_registration.per_user_function_streaming_output_schema
+            self._per_user_workflow_streaming_output_schema = \
+                                                        workflow_registration.per_user_function_streaming_output_schema
         else:
             self._per_user_workflow_input_schema = None
             self._per_user_workflow_single_output_schema = None
