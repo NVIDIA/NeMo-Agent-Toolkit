@@ -110,7 +110,7 @@ When you enter a prompt with the reasoning agent, it runs through the following 
 2. **Reasoning on top of Function** – The agent reasons the best plan of action to take, based on the input and the augmented underlying function.
 3. **Instruction / Plan Execution** – The agent invokes the underlying function, passing its plan of action along to it.
 
-For an example of using reasoning agent with the ReAct agent, refer to [Run the Workflow](https://github.com/NVIDIA/NeMo-Agent-Toolkit/tree/develop/examples/agents/react#run-the-workflow).
+For an example of using reasoning agent with the ReAct agent, refer to the ReAct agent example `examples/agents/react/README.md` in the [NeMo Agent toolkit repository](https://github.com/NVIDIA/NeMo-Agent-Toolkit).
 
 ### Comparing ReAct Agent With and Without the Reasoning Agent
 
