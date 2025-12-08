@@ -61,14 +61,14 @@ class A2ABaseClient:
         task_timeout: timedelta = timedelta(seconds=300),
         streaming: bool = True,
         auth_provider: "AuthProviderBase | None" = None,
-        user_id: str | None = None,
+        default_user_id: str | None = None,
     ):
         self._base_url = base_url
         self._agent_card_path = agent_card_path
         self._task_timeout = task_timeout
         self._streaming = streaming
         self._auth_provider = auth_provider
-        self._user_id = user_id
+        self._default_user_id = default_user_id
 
         self._httpx_client: httpx.AsyncClient | None = None
         self._client: Client | None = None
@@ -103,11 +103,11 @@ class A2ABaseClient:
 
                 credential_service = A2ACredentialService(
                     auth_provider=self._auth_provider,
-                    user_id=self._user_id,
+                    default_user_id=self._default_user_id,
                     agent_card=self._agent_card,
                 )
                 interceptors.append(AuthInterceptor(credential_service))
-                logger.info("Authentication configured for A2A client")
+                logger.info("Authentication configured for A2A client (default_user_id: %s)", self._default_user_id)
             except ImportError as e:
                 logger.error("Failed to setup authentication: %s", e)
                 raise RuntimeError("Authentication requires a2a-sdk with AuthInterceptor support") from e

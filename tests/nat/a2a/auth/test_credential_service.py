@@ -186,7 +186,7 @@ async def test_bearer_token_mapping(scheme_name,
     card = sample_agent_card({scheme_name: scheme})
     service = A2ACredentialService(
         auth_provider=provider,
-        user_id="test-user",
+        default_user_id="test-user",
         agent_card=card,
     )
 
@@ -279,7 +279,7 @@ async def test_user_id_from_context(oauth2_scheme, mock_auth_provider, sample_ag
     card = sample_agent_card({"oauth": oauth2_scheme})
     service = A2ACredentialService(
         auth_provider=provider,
-        user_id="default-user",
+        default_user_id="default-user",
         agent_card=card,
     )
 
@@ -356,7 +356,7 @@ def test_provider_validation(provider_name,
     if should_pass:
         service = A2ACredentialService(
             auth_provider=provider,
-            user_id="test-user",
+            default_user_id="test-user",
             agent_card=card,
         )
         assert service is not None

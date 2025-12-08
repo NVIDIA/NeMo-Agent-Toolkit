@@ -51,18 +51,18 @@ class A2ACredentialService(CredentialService):
 
     Args:
         auth_provider: NAT authentication provider instance
-        user_id: Optional user identifier for authentication
+        default_user_id: Default user identifier for authentication (defaults to agent URL)
         agent_card: Agent card containing security scheme definitions
     """
 
     def __init__(
         self,
         auth_provider: AuthProviderBase,
-        user_id: str | None = None,
+        default_user_id: str | None = None,
         agent_card: AgentCard | None = None,
     ):
         self._auth_provider = auth_provider
-        self._user_id = user_id
+        self._default_user_id = default_user_id
         self._agent_card = agent_card
         self._cached_auth_result: AuthResult | None = None
 
@@ -121,9 +121,8 @@ class A2ACredentialService(CredentialService):
         Resolve user ID from context or configuration.
 
         Priority order:
-        1. sessionId from context.state
-        2. Configured user_id
-        3. None (anonymous/default)
+        1. sessionId from context.state (for multi-user workflows via nat serve)
+        2. Configured default_user_id (for CLI via nat run, defaults to agent URL)
 
         Args:
             context: Client call context
@@ -133,7 +132,7 @@ class A2ACredentialService(CredentialService):
         """
         if context and "sessionId" in context.state:
             return context.state["sessionId"]
-        return self._user_id
+        return self._default_user_id
 
     async def _authenticate(self, user_id: str | None) -> AuthResult | None:
         """
