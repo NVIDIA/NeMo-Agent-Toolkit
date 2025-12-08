@@ -504,9 +504,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                                  f"It must be configured in the `middleware` section of the YAML configuration.")
             middleware_obj = self._middleware[middleware_name].instance
             if not isinstance(middleware_obj, FunctionMiddleware):
-                raise TypeError(
-                    f"Middleware `{middleware_name}` is not a FunctionMiddleware and cannot be used with {component_type}s. "
-                    f"Only FunctionMiddleware types support function-specific wrapping.")
+                raise TypeError(f"Middleware `{middleware_name}` is not a FunctionMiddleware and cannot be used"
+                                f"with {component_type}s. "
+                                f"Only FunctionMiddleware types support function-specific wrapping.")
             middleware_instances.append(middleware_obj)
         return middleware_instances
 
@@ -1419,9 +1419,9 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
         for middleware_name in middleware_names:
             middleware_obj = await self._shared_builder.get_middleware(middleware_name)
             if not isinstance(middleware_obj, FunctionMiddleware):
-                raise TypeError(
-                    f"Middleware `{middleware_name}` is not a FunctionMiddleware and cannot be used with {component_type}s. "
-                    f"Only FunctionMiddleware types support function-specific wrapping.")
+                raise TypeError(f"Middleware `{middleware_name}` is not a FunctionMiddleware and cannot be used"
+                                f"with {component_type}s. "
+                                f"Only FunctionMiddleware types support function-specific wrapping.")
             middleware_instances.append(middleware_obj)
         return middleware_instances
 
@@ -1636,7 +1636,8 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
                     # It's a shared function group
                     tool_wrapper_reg = self._registry.get_tool_wrapper(llm_framework=wrapper_type)
                     current_function_group = self._shared_builder._function_groups[n]
-                    for fn_name, fn_instance in (await current_function_group.instance.get_accessible_functions()).items():
+                    for fn_name, fn_instance in \
+                                            (await current_function_group.instance.get_accessible_functions()).items():
                         try:
                             tools.append(tool_wrapper_reg.build_fn(fn_name, fn_instance, self))
                         except Exception:

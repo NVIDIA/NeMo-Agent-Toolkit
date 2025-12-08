@@ -508,7 +508,7 @@ def test_register_per_user_function_with_simple_input_type(registry: TypeRegistr
 
     # The converted model should have a 'value' field of type str
     assert 'value' in input_schema.model_fields
-    assert input_schema.model_fields['value'].annotation == str
+    assert input_schema.model_fields['value'].annotation is str
 
     # Output schema should remain as-is (already a Pydantic model)
     assert func_info.per_user_function_single_output_schema is SimpleInputOutputSchema
@@ -546,7 +546,7 @@ def test_register_per_user_function_with_simple_output_type(registry: TypeRegist
 
     # The converted model should have a 'value' field of type str
     assert 'value' in output_schema.model_fields
-    assert output_schema.model_fields['value'].annotation == str
+    assert output_schema.model_fields['value'].annotation is str
 
 
 def test_register_per_user_function_with_all_simple_types(registry: TypeRegistry):
@@ -572,17 +572,17 @@ def test_register_per_user_function_with_all_simple_types(registry: TypeRegistry
     # Verify input schema conversion
     input_schema = func_info.per_user_function_input_schema
     assert issubclass(input_schema, BaseModel)
-    assert input_schema.model_fields['value'].annotation == str
+    assert input_schema.model_fields['value'].annotation is str
 
     # Verify single output schema conversion
     single_output_schema = func_info.per_user_function_single_output_schema
     assert issubclass(single_output_schema, BaseModel)
-    assert single_output_schema.model_fields['value'].annotation == int
+    assert single_output_schema.model_fields['value'].annotation is int
 
     # Verify streaming output schema conversion
     streaming_output_schema = func_info.per_user_function_streaming_output_schema
     assert issubclass(streaming_output_schema, BaseModel)
-    assert streaming_output_schema.model_fields['value'].annotation == float
+    assert streaming_output_schema.model_fields['value'].annotation is float
 
 
 def test_register_per_user_function_pydantic_model_unchanged(registry: TypeRegistry):
