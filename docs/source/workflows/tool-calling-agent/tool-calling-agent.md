@@ -15,31 +15,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Tool Calling Agent
-
-A tool calling agent is an AI system that directly invokes external tools based on structured function definitions. Unlike ReAct agents, it does not reason between steps but instead relies on predefined tool schemas to decide which tool to call. To decide which tools to use to answer the question, agent uses the name, description, and input parameter schema of each tool to decide which tools to use to answer the question. Not all LLMs support tool calling / function calling, and can be used with tool calling agents.
-
----
-
-## Features
-- **Pre-built Tools**: Leverages core library agent and tools.
-- **Tool Calling / Function calling Agent:** Leverages tool / function input schema to appropriately route to the correct tool
-- **Custom Plugin System**: Developers can bring in new tools using plugins.
-- **Agentic Workflows**: Fully configurable via YAML for flexibility and productivity.
-- **Ease of Use**: Simplifies developer experience and deployment.
-
----
+# Configure the Tool Calling Agent
+Configure the NVIDIA NeMo Agent toolkit tool calling agent as a workflow or a function.
 
 ## Requirements
-The tool calling agent requires the `nvidia-nat[langchain]` plugin to be installed.
+The tool calling agent requires the `nvidia-nat[langchain]` plugin, which can be installed with one of the following commands.
 
-If you have performed a source code checkout, install this with the following command:
+- If you have performed a source code checkout:
 
 ```bash
 uv pip install -e '.[langchain]'
 ```
 
-If you have installed the NeMo Agent toolkit from a package, you can install this with the following command:
+- If you have installed the NeMo Agent toolkit from a package:
 
 ```bash
 uv pip install "nvidia-nat[langchain]"
@@ -48,8 +36,8 @@ uv pip install "nvidia-nat[langchain]"
 ## Configuration
 The tool calling agent may be utilized as a workflow or a function.
 
-### Example `config.yml`
-In your YAML file, to use the tool calling agent (`tool_calling_agent`) as a workflow:
+### Example 1: Tool Calling Agent as a Workflow to Configure `config.yml`
+To use the tool calling agent as a workflow, configure the YAML file as follows:
 ```yaml
 workflow:
   _type: tool_calling_agent
@@ -59,6 +47,7 @@ workflow:
   handle_tool_errors: true
 ```
 
+### Example 2: Tool Calling Agent as a Function to Configure `config.yml`
 In your YAML file, to use the tool calling agent as a function:
 ```yaml
 function_groups:
