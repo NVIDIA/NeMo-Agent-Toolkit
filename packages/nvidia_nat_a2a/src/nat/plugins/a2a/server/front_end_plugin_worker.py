@@ -27,6 +27,7 @@ from a2a.types import AgentCard
 from a2a.types import AgentSkill
 from nat.builder.function import Function
 from nat.builder.workflow import Workflow
+from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.config import Config
 from nat.plugins.a2a.server.agent_executor_adapter import NATWorkflowAgentExecutor
 from nat.plugins.a2a.server.front_end_config import A2AFrontEndConfig
@@ -131,7 +132,7 @@ class A2AFrontEndPluginWorker:
 
         return agent_card
 
-    def create_agent_executor(self, workflow: Workflow) -> NATWorkflowAgentExecutor:
+    def create_agent_executor(self, workflow: Workflow, builder: WorkflowBuilder) -> NATWorkflowAgentExecutor:
         """Create agent executor adapter for the workflow.
 
         This creates a SessionManager to handle concurrent A2A task requests,
@@ -139,13 +140,16 @@ class A2AFrontEndPluginWorker:
 
         Args:
             workflow: The NAT workflow to expose
+            builder: The workflow builder used to create the workflow
 
         Returns:
             NATWorkflowAgentExecutor that wraps the workflow with a SessionManager
         """
         # Create SessionManager to handle concurrent requests with proper limits
         session_manager = SessionManager(
-            workflow=workflow,
+            config=self.full_config,
+            shared_builder=builder,
+            shared_workflow=workflow,
             max_concurrency=self.max_concurrency,
         )
 

@@ -22,7 +22,8 @@ from pathlib import Path
 from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.framework_enum import LLMFrameworkEnum
-from nat.builder.workflow_builder import WorkflowBuilder, _log_build_failure
+from nat.builder.workflow_builder import WorkflowBuilder
+from nat.builder.workflow_builder import _log_build_failure
 from nat.cli.type_registry import TypeRegistry
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
