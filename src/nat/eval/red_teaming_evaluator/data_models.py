@@ -23,7 +23,7 @@ from nat.data_models.intermediate_step import IntermediateStep
 from nat.eval.evaluator.evaluator_model import EvalOutputItem
 
 
-class ConditionEvaluationResult(EvalOutputItem):
+class ConditionEvalOutputItem(EvalOutputItem):
     """Evaluation results for a single IntermediateStep that meets the filtering condition.
 
     Attributes:
@@ -45,11 +45,11 @@ class ConditionEvaluationResult(EvalOutputItem):
     )
 
     @classmethod
-    def empty(cls, id: str, error: str | None = None) -> ConditionEvaluationResult:
-        """Create an empty ConditionEvaluationResult.
+    def empty(cls, id: str, error: str | None = None) -> ConditionEvalOutputItem:
+        """Create an empty ConditionEvalOutputItem.
 
         Returns:
-            Empty ConditionEvaluationResult instance
+            Empty ConditionEvalOutputItem instance
         """
         return cls(
             id=id,
@@ -73,6 +73,6 @@ class RedTeamingEvalOutputItem(EvalOutputItem):
         results_by_condition: Map from condition name to evaluation results
     """
 
-    results_by_condition: dict[str, ConditionEvaluationResult] = Field(
+    results_by_condition: dict[str, ConditionEvalOutputItem] = Field(
         description="Results organized by filter condition name"
     )

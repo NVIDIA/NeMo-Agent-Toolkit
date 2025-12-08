@@ -32,26 +32,6 @@ class _Placeholder:
     """Placeholder class to represent a value that is not set yet."""
     pass
 
-def update_config_value(config: dict[str, Any], path: str, value: Any) -> None:
-    """Update a single value in the config dictionary at the specified path.
-
-    Args:
-        config: The configuration dictionary to update
-        path: String representing the path to the value using dot notation (e.g. "llms.nim_llm.temperature")
-        value: The new value to set at the specified path
-
-    Example:
-        If config is {"llms": {"nim_llm": {"temperature": 0.5}}}
-        and path is "llms.nim_llm.temperature" with value 0.7,
-        this will update config to {"llms": {"nim_llm": {"temperature": 0.7}}}
-    """
-    parts = path.split('.')
-    current = config
-    # Navigate through nested dictionaries until reaching the parent of target
-    for part in parts[:-1]:
-        current = current[part]
-    # Update the value at the target location
-    current[parts[-1]] = value
 
 class LayeredConfig:
 
@@ -151,6 +131,27 @@ class LayeredConfig:
             logger.error("Error accessing path %s: %s", path, e)
             raise
 
+    def _update_config_value(self, config: dict[str, Any], path: str, value: Any) -> None:
+        """Update a single value in the config dictionary at the specified path.
+
+        Args:
+            config: The configuration dictionary to update
+            path: String representing the path to the value using dot notation (e.g. "llms.nim_llm.temperature")
+            value: The new value to set at the specified path
+
+        Example:
+            If config is {"llms": {"nim_llm": {"temperature": 0.5}}}
+            and path is "llms.nim_llm.temperature" with value 0.7,
+            this will update config to {"llms": {"nim_llm": {"temperature": 0.7}}}
+        """
+        parts = path.split('.')
+        current = config
+        # Navigate through nested dictionaries until reaching the parent of target
+        for part in parts[:-1]:
+            current = current[part]
+        # Update the value at the target location
+        current[parts[-1]] = value
+
     def get_effective_config(self) -> dict[str, Any]:
         """Get the configuration with all overrides applied.
 
@@ -174,7 +175,7 @@ class LayeredConfig:
 
         # Apply each override to the config copy
         for path, value in self.overrides.items():
-            update_config_value(config, path, value)
+            self._update_config_value(config, path, value)
 
         # Return the result
         self._effective_config = config
@@ -228,4 +229,3 @@ def add_override_option(command):
         type=(str, str),
         multiple=True,
         help="Override config values using dot notation (e.g., --override llms.nim_llm.temperature 0.7)")(command)
-

@@ -27,7 +27,7 @@ from langchain_core.runnables import RunnableLambda
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.eval.evaluator.base_evaluator import BaseEvaluator
 from nat.eval.evaluator.evaluator_model import EvalInputItem
-from nat.eval.red_teaming_evaluator.data_models import ConditionEvaluationResult
+from nat.eval.red_teaming_evaluator.data_models import ConditionEvalOutputItem
 from nat.eval.red_teaming_evaluator.data_models import RedTeamingEvalOutputItem
 from nat.eval.red_teaming_evaluator.filter_conditions import IntermediateStepsFilterCondition
 
@@ -207,7 +207,7 @@ class RedTeamingEvaluator(BaseEvaluator):
         expected_behavior: str,
         trajectory: list[IntermediateStep],
         item_id: str
-    ) -> ConditionEvaluationResult:
+    ) -> ConditionEvalOutputItem:
         """
         Evaluate a single filter condition on a trajectory.
         Assumes only one intermediate step per condition evaluation.
@@ -220,7 +220,7 @@ class RedTeamingEvaluator(BaseEvaluator):
             item_id: The ID of the evaluation item
 
         Returns:
-            Tuple of (condition_score, ConditionEvaluationResult)
+            Tuple of (condition_score, ConditionEvalOutputItem)
         """
         # Filter trajectory using this condition.
         filtered_steps = self.filter_trajectory(trajectory, condition)
@@ -229,15 +229,15 @@ class RedTeamingEvaluator(BaseEvaluator):
             error_message = f"No steps matched filter '{condition.name}' for item {item_id}"
             logger.warning(error_message)
             # Create an empty result for this condition
-            return ConditionEvaluationResult.empty(id=item_id, error = error_message)
+            return ConditionEvalOutputItem.empty(id=item_id, error = error_message)
 
-        async def evaluate_step(step: IntermediateStep) -> ConditionEvaluationResult:
+        async def evaluate_step(step: IntermediateStep) -> ConditionEvalOutputItem:
             output = self.extract_output_from_step(step)
             if not output:
                 logger.warning(f"Empty output for step in filter '{condition.name}' for item {item_id}")
-                return ConditionEvaluationResult.empty(id=item_id, error = "Empty output for step in filter '{condition.name}' for item {item_id}")
+                return ConditionEvalOutputItem.empty(id=item_id, error = "Empty output for step in filter '{condition.name}' for item {item_id}")
             step_score, step_reasoning, error_message = await self.evaluate_single_output(question, expected_behavior, output)
-            return ConditionEvaluationResult(
+            return ConditionEvalOutputItem(
                 id=item_id,
                 score=step_score,
                 reasoning=step_reasoning,
@@ -245,7 +245,7 @@ class RedTeamingEvaluator(BaseEvaluator):
                 intermediate_step=step
             )
 
-        selected_step_evaluation_result: ConditionEvaluationResult | None = None
+        selected_step_evaluation_result: ConditionEvalOutputItem | None = None
 
         if self.reduction_strategy == ReductionStrategy.MAX:
             best_score = float("-inf")
@@ -262,7 +262,7 @@ class RedTeamingEvaluator(BaseEvaluator):
 
             if selected_step_evaluation_result is None:
                 logger.warning(f"All steps had empty outputs for filter '{condition.name}' in item {item_id}")
-                return ConditionEvaluationResult.empty(
+                return ConditionEvalOutputItem.empty(
                     id=item_id,
                     error = "All evaluations failed for filter '{condition.name}' in item {item_id}")
         else:
@@ -288,7 +288,7 @@ class RedTeamingEvaluator(BaseEvaluator):
         trajectory = item.trajectory
 
         # Evaluate each filter condition separately
-        condition_results: dict[str, ConditionEvaluationResult] = {}
+        condition_results: dict[str, ConditionEvalOutputItem] = {}
         all_scores = []
 
         for condition in self.filter_conditions:
