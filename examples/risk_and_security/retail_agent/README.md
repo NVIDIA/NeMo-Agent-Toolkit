@@ -105,75 +105,6 @@ The retail agent can handle three main types of customer requests:
 
 ---
 
-## Example Usage
-
-### Product Inquiry
-
-**Input:**
-
-```bash
-nat run --config_file examples/risk_and_security/retail_agent/configs/config.yml --input "Email From: david.brown@email.com
-Content: Hello, I'm interested in learning about your garden trowels. What do you have available?"
-```
-
-**Expected Output:**
-The agent will use the `get_product_info` or `get_all_products` tool to retrieve information about garden trowels and respond with product details including description, price, and stock availability.
-
----
-
-### Review Submission
-
-**Input:**
-
-```bash
-nat run --config_file examples/risk_and_security/retail_agent/configs/config.yml --input "Email From: john.doe@email.com
-Content: I'd like to write a review for the Premium Garden Trowel I purchased. It's fantastic! I give it 5 stars. The stainless steel is very durable and the grip is comfortable."
-```
-
-**Expected Output:**
-The agent will:
-
-1. Look up the customer information using `get_customer_info`
-2. Verify the product exists using `get_product_info`
-3. Submit the review using `write_review`
-4. Send a confirmation email using `send_email`
-
----
-
-### Order Placement
-
-**Input:**
-
-```bash
-nat run --config_file examples/risk_and_security/retail_agent/configs/config.yml --input "Email From: sarah.smith@email.com
-Content: I would like to order 2 Ergonomic Watering Cans. Can you process this order and let me know the total cost?"
-```
-
-**Expected Output:**
-The agent will:
-
-1. Look up customer information using `get_customer_info`
-2. Check product details and stock using `get_product_info`
-3. Calculate the total cost using calculator tools (2 × $45.99 = $91.98)
-4. Update customer order information using `update_customer_info`
-5. Send order confirmation using `send_email`
-
----
-
-### Order with Multiple Products
-
-**Input:**
-
-```bash
-nat run --config_file examples/risk_and_security/retail_agent/configs/config.yml --input "Email From: emma.wilson@email.com
-Content: I want to order 3 Premium Garden Trowels and 2 pairs of Premium Garden Gloves. What will be the total cost?"
-```
-
-**Expected Output:**
-The agent will calculate: (3 × $29.99) + (2 × $29.99) = $149.95 and provide order details.
-
----
-
 ## Data Structure
 
 ### Customer Information
@@ -284,6 +215,75 @@ The retail agent has access to the following tools:
 ### Calculator Function Group
 
 The agent also has access to calculator tools (add, subtract, multiply, divide, compare) for calculating order totals and comparing prices.
+
+---
+
+## Example Usage
+
+### Product Inquiry
+
+**Input:**
+
+```bash
+nat run --config_file examples/risk_and_security/retail_agent/configs/config.yml --input "Email From: david.brown@email.com
+Content: Hello, I'm interested in learning about your garden trowels. What do you have available?"
+```
+
+**Expected Output:**
+The agent will use the `get_product_info` or `get_all_products` tool to retrieve information about garden trowels and respond with product details including description, price, and stock availability.
+
+---
+
+### Review Submission
+
+**Input:**
+
+```bash
+nat run --config_file examples/risk_and_security/retail_agent/configs/config.yml --input "Email From: john.doe@email.com
+Content: I'd like to write a review for the Premium Garden Trowel I purchased. It's fantastic! I give it 5 stars. The stainless steel is very durable and the grip is comfortable."
+```
+
+**Expected Output:**
+The agent will:
+
+1. Look up the customer information using `get_customer_info`
+2. Verify the product exists using `get_product_info`
+3. Submit the review using `write_review`
+4. Send a confirmation email using `send_email`
+
+---
+
+### Order Placement
+
+**Input:**
+
+```bash
+nat run --config_file examples/risk_and_security/retail_agent/configs/config.yml --input "Email From: sarah.smith@email.com
+Content: I would like to order 2 Ergonomic Watering Cans. Can you process this order and let me know the total cost?"
+```
+
+**Expected Output:**
+The agent will:
+
+1. Look up customer information using `get_customer_info`
+2. Check product details and stock using `get_product_info`
+3. Calculate the total cost using calculator tools (2 × $45.99 = $91.98)
+4. Update customer order information using `update_customer_info`
+5. Send order confirmation using `send_email`
+
+---
+
+### Order with Multiple Products
+
+**Input:**
+
+```bash
+nat run --config_file examples/risk_and_security/retail_agent/configs/config.yml --input "Email From: emma.wilson@email.com
+Content: I want to order 3 Premium Garden Trowels and 2 pairs of Premium Garden Gloves. What will be the total cost?"
+```
+
+**Expected Output:**
+The agent will calculate: (3 × $29.99) + (2 × $29.99) = $149.95 and provide order details.
 
 ---
 
