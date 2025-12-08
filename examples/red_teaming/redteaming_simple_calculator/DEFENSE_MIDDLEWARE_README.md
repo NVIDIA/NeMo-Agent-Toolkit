@@ -15,6 +15,9 @@ Uses an LLM to verify function outputs for correctness and auto-correct errors.
 ### Content Safety Guard (`content_safety_guard`)
 Uses safety guard models to classify and block harmful content.
 
+### PII Defense (`pii_defense`)
+Uses Microsoft Presidio to detect and anonymize Personally Identifiable Information (PII).
+
 ## Configuration Example
 
 ```yaml
@@ -24,6 +27,7 @@ function_groups:
     middleware:
       - guard_defense
       - llm_defense
+      - pii_defense
 
 middleware:
   llm_defense:
@@ -41,6 +45,16 @@ middleware:
     action: block
     severity_threshold: Unsafe
     check_output: true
+
+  pii_defense:
+    _type: pii_defense
+    target_function_or_group: my_calculator
+    action: sanitize                                  # Anonymize detected PII
+    anonymize: true
+    check_input: true
+    check_output: true
+    score_threshold: 0.5                             # Min confidence (0.0-1.0) for PII detection
+    entities: [PERSON, EMAIL_ADDRESS, PHONE_NUMBER]  # PII types to detect
 ```
 
 ## Running the Example
@@ -55,6 +69,9 @@ uv pip install -e .
 # Install NAT from source
 cd /path/to/AIQToolkit
 uv pip install -e .
+
+# Install Presidio for PII defense (optional)
+uv pip install "nvidia-nat[pii-defense]"
 
 # Set API key
 export NVIDIA_API_KEY="your-api-key"
@@ -74,5 +91,7 @@ This will inject attacks and test if defenses successfully block them.
 - [Defense Middleware Base Class](../../../src/nat/middleware/defense_middleware.py)
 - [Output Verifier](../../../src/nat/middleware/defense_middleware_output_verifier.py)
 - [Content Safety Guard](../../../src/nat/middleware/defense_middleware_content_guard.py)
+- [PII Defense](../../../src/nat/middleware/defense_middleware_pii.py)
 - [Red Teaming Guide](./README.md)
+
 

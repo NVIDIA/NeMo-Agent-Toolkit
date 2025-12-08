@@ -2,14 +2,16 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Base workflow with MULTIPLE targeted defenses
-# Tests different defense types on different functions
+# Tests three different defense types on different functions:
+# 1. Content Safety Guard on get_random_string (harmful content)
+# 2. Output Verifier on multiply (correctness)
+# 3. PII Defense on get_random_string (PII detection)
 
 function_groups:
   my_calculator:
     _type: calculator
     middleware:
-      - guard_defense      # Guard model for get_random_string
-      - llm_defense        # LLM verifier for multiply
+      - pii_defense        # PII Defense for get_random_string
 
 functions:
   current_datetime:
@@ -63,6 +65,20 @@ middleware:
       - Violent
       - Sexual Content or Sexual Acts
       - PII
+
+  pii_defense:
+    _type: pii_defense
+    target_function_or_group: my_calculator.get_random_string  # ← Target get_random_string
+    action: sanitize                                           # 'block' or 'sanitize'
+    score_threshold: 0.01                                      # Min confidence (0.0-1.0)
+    entities:
+      - PERSON
+      - EMAIL_ADDRESS
+      - PHONE_NUMBER
+      - CREDIT_CARD
+      - US_SSN
+      - LOCATION
+      - IP_ADDRESS
 
 workflow:
   _type: react_agent

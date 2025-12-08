@@ -23,6 +23,8 @@ from nat.middleware.defense_middleware_content_guard import ContentSafetyGuardMi
 from nat.middleware.defense_middleware_content_guard import ContentSafetyGuardMiddlewareConfig
 from nat.middleware.defense_middleware_output_verifier import OutputVerifierMiddleware
 from nat.middleware.defense_middleware_output_verifier import OutputVerifierMiddlewareConfig
+from nat.middleware.defense_middleware_pii import PIIDefenseMiddleware
+from nat.middleware.defense_middleware_pii import PIIDefenseMiddlewareConfig
 from nat.middleware.red_teaming_middleware import RedTeamingMiddleware
 from nat.middleware.red_teaming_middleware_config import RedTeamingMiddlewareConfig
 
@@ -84,3 +86,18 @@ async def output_verifier_middleware(config: OutputVerifierMiddlewareConfig, bui
     """
     # Pass the builder and config, LLM will be loaded lazily
     yield OutputVerifierMiddleware(config=config, builder=builder)
+
+@register_middleware(config_type=PIIDefenseMiddlewareConfig)
+async def pii_defense_middleware(config: PIIDefenseMiddlewareConfig, builder):
+    """Build a PII Defense middleware from configuration.
+
+    Args:
+        config: The PII Defense middleware configuration
+        builder: The workflow builder (not used for PII defense)
+
+    Yields:
+        A configured PII Defense middleware instance
+    """
+    # Pass the builder and config, Presidio will be loaded lazily
+    yield PIIDefenseMiddleware(config=config, builder=builder)
+
