@@ -93,6 +93,38 @@ eval:
     game_outcome:
       _type: dpo_game_outcome
 
-    # DPO data collector for preference pairs
-    dpo_collector:
-      _type: dpo_data_collector
+# =============================================================================
+# DPO Finetuning Configuration
+# =============================================================================
+
+trajectory_builders:
+  # DPO trajectory builder that collects preference pairs from scored candidates
+  dpo_builder:
+    _type: dpo_traj_builder
+    # Name of the CUSTOM intermediate step to collect
+    custom_step_name: dpo_candidate_move
+    # Generate all pairwise comparisons (not just best vs worst)
+    exhaustive_pairs: true
+    # Minimum score difference to create a pair (filters trivial pairs)
+    min_score_diff: 0.01
+    # Maximum pairs per turn (None = unlimited)
+    max_pairs_per_turn: 5
+    # Field mappings (match the ttc_move_selector_function.py output)
+    turn_id_key: turn_id
+    score_key: score
+    prompt_key: prompt
+    response_key: raw_llm_response
+    candidate_index_key: candidate_index
+    # Reward computation
+    reward_from_score_diff: true
+
+# Finetuning configuration (requires a trainer adapter to be implemented)
+finetuning:
+  enabled: false  # Set to true when trainer adapter is available
+  trajectory_builder: dpo_builder
+  # trainer_adapter: <your_dpo_trainer_adapter>
+  # trainer: <your_dpo_trainer>
+  reward_function:
+    name: game_outcome
+  num_epochs: 10
+  output_dir: .tmp/nat/dpo_tic_tac_toe/finetuning
