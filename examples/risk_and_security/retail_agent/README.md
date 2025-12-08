@@ -296,7 +296,7 @@ The retail agent includes an evaluation framework to assess the agent's performa
 To run the evaluation, execute the following command from the root of the NeMo Agent toolkit repository:
 
 ```bash
-nat eval --config_file examples/risk_and_security/retail_agent/configs/config.yml
+nat eval --config_file examples/risk_and_security/retail_agent/configs/config-eval.yml
 ```
 
 The evaluation uses the `tunable_rag_evaluator` to score the agent's responses against expected outcomes. The evaluator uses an LLM-as-a-judge approach to determine how well the agent handles each test case.

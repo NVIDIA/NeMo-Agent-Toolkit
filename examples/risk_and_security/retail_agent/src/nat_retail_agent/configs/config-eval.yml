@@ -26,6 +26,9 @@ llms:
     model_name: meta/llama-3.3-70b-instruct
     temperature: 0.0
     max_tokens: 1024
+  eval_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
 
 workflow:
   _type: react_agent
@@ -47,3 +50,30 @@ workflow:
     - After confirming an order, use update_customer_info and send_email to finalize.
     - Be helpful and suggest related products when appropriate
     - Always confirm important details like quantities and email addresses
+
+eval:
+  general:
+    max_concurrency: 1
+    workflow_alias: nat-simple-llama-33-70b
+    output:
+      dir: ./.tmp/nat/examples/evaluation_and_profiling/nat_retail_agent/llama-33-70b
+      cleanup: true
+    dataset:
+      _type: json
+      file_path: examples/risk_and_security/retail_agent/data/evalset.json
+    profiler:
+      base_metrics: true
+
+  evaluators:
+    tuneable_eval:
+      _type: tunable_rag_evaluator
+      llm_name: eval_llm
+      default_scoring: false
+      judge_llm_prompt: >
+        You are an intelligent evaluator that scores the generated answer based on the expectation in the answer_description field.
+        
+        Rules:
+        - The score must be a float of any value between 0.0 and 1.0 on a sliding scale.
+        - The score should be 1 if the generated answer contains all the information required by the description.
+        - The score should decrease proportionally to the amount of items missed from the description, including the any evidence of actions explicitly mentioned not to be taken.
+        - The presence of auxiliary information, like small talk, asking for confirmation, etc. should not matter unless called out explicitly in the description.
