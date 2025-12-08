@@ -421,8 +421,13 @@ class SessionManager:
         if user_id is None and self._is_workflow_per_user:
             user_id = self._get_user_id_from_context()
             if user_id is None:
-                raise ValueError("user_id is required for per-user workflow but could not be extracted from context. "
-                                 "Ensure 'nat-session' cookie is set or pass user_id explicitly.")
+                user_id = self._config.general.default_user_id
+                if user_id:
+                    logger.info(f"Using default_user_id='{user_id}' for per-user workflow")
+                else:
+                    raise ValueError(
+                        "user_id is required for per-user workflow but could not be extracted from context, and the "
+                        "default_user_id is not set. Ensure 'nat-session' cookie is set or pass user_id explicitly.")
 
         builder_info: PerUserBuilderInfo | None = None
 
