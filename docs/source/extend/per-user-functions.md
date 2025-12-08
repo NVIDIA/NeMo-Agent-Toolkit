@@ -211,7 +211,7 @@ async def shared_function(config, builder):
 
 ## Complete Example
 
-For a complete working example demonstrating per-user functions and workflows, see the [Per-User Workflow Example](../../../examples/front_ends/per_user_workflow/README.md).
+For a complete working example demonstrating per-user functions and workflows, see the example in `examples/front_ends/per_user_workflow`.
 
 This example includes:
 - Per-user notepad function with isolated note storage
