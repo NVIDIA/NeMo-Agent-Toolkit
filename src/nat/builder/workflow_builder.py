@@ -29,7 +29,6 @@ from nat.authentication.interfaces import AuthProviderBase
 from nat.builder.builder import Builder
 from nat.builder.builder import UserManagerHolder
 from nat.builder.component_utils import WORKFLOW_COMPONENT_NAME
-from nat.builder.component_utils import ComponentInstanceData
 from nat.builder.component_utils import build_dependency_sequence
 from nat.builder.context import Context
 from nat.builder.context import ContextState
@@ -150,6 +149,98 @@ class ConfiguredTTCStrategy:
 class ConfiguredMiddleware:
     config: MiddlewareBaseConfig
     instance: Middleware
+
+
+async def _build_function_impl(
+    *,
+    name: str,
+    config: FunctionBaseConfig,
+    registry: TypeRegistry,
+    exit_stack: AsyncExitStack,
+    inner_builder: 'ChildBuilder',
+    llms: dict[str, LLMProviderInfo],
+    dependencies: dict[str, FunctionDependencies],
+    middleware_instances: list[FunctionMiddleware],
+) -> ConfiguredFunction:
+    """
+    Helper for core function building logic.
+
+    Args:
+        name: The function name
+        config: The function configuration
+        registry: Type registry to look up the function registration
+        exit_stack: Async exit stack for context management
+        inner_builder: ChildBuilder instance for dependency tracking
+        llms: Dictionary of LLM instances
+        dependencies: Dictionary to store function dependencies
+        middleware_instances: Pre-resolved middleware instances
+    """
+    registration = registry.get_function(type(config))
+
+    function_frameworks = detect_llm_frameworks_in_build_fn(registration)
+    build_fn = chain_wrapped_build_fn(registration.build_fn, llms, function_frameworks)
+
+    build_result = await exit_stack.enter_async_context(build_fn(config, inner_builder))
+
+    dependencies[name] = inner_builder.dependencies
+
+    # If the build result is a function, wrap it in a FunctionInfo
+    if inspect.isfunction(build_result):
+        build_result = FunctionInfo.from_fn(build_result)
+
+    if isinstance(build_result, FunctionInfo):
+        build_result = LambdaFunction.from_info(config=config, info=build_result, instance_name=name)
+
+    if not isinstance(build_result, Function):
+        raise ValueError("Expected a function, FunctionInfo object, or FunctionBase object to be "
+                         f"returned from the function builder. Got {type(build_result)}")
+
+    build_result.configure_middleware(middleware_instances)
+
+    return ConfiguredFunction(config=config, instance=build_result)
+
+
+async def _build_function_group_impl(
+    *,
+    name: str,
+    config: FunctionGroupBaseConfig,
+    registry: TypeRegistry,
+    exit_stack: AsyncExitStack,
+    inner_builder: 'ChildBuilder',
+    llms: dict[str, LLMProviderInfo],
+    dependencies: dict[str, FunctionDependencies],
+    middleware_instances: list[FunctionMiddleware],
+) -> ConfiguredFunctionGroup:
+    """
+    Core function group building logic shared between WorkflowBuilder and PerUserWorkflowBuilder.
+
+    Args:
+        name: The function group name
+        config: The function group configuration
+        registry: Type registry to look up the function group registration
+        exit_stack: Async exit stack for context management
+        inner_builder: ChildBuilder instance for dependency tracking
+        llms: Dictionary of LLM instances
+        dependencies: Dictionary to store function group dependencies
+        middleware_instances: Pre-resolved middleware instances
+    """
+    registration = registry.get_function_group(type(config))
+
+    function_frameworks = detect_llm_frameworks_in_build_fn(registration)
+    build_fn = chain_wrapped_build_fn(registration.build_fn, llms, function_frameworks)
+
+    build_result = await exit_stack.enter_async_context(build_fn(config, inner_builder))
+
+    dependencies[name] = inner_builder.dependencies
+
+    if not isinstance(build_result, FunctionGroup):
+        raise ValueError("Expected a FunctionGroup object to be returned from the function group builder. "
+                         f"Got {type(build_result)}")
+
+    build_result.configure_middleware(middleware_instances)
+    build_result.set_instance_name(name)
+
+    return ConfiguredFunctionGroup(config=config, instance=build_result)
 
 
 class WorkflowBuilder(Builder, AbstractAsyncContextManager):
@@ -400,9 +491,26 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         return self._exit_stack
 
-    async def _build_function(self, name: str, config: FunctionBaseConfig) -> ConfiguredFunction:
-        registration = self._registry.get_function(type(config))
+    async def _resolve_middleware_instances(self, middleware_names: list[str], component_name: str,
+                                            component_type: str) -> list[FunctionMiddleware]:
+        """
+        Resolve middleware names to FunctionMiddleware instances.
+        """
 
+        middleware_instances: list[FunctionMiddleware] = []
+        for middleware_name in middleware_names:
+            if middleware_name not in self._middleware:
+                raise ValueError(f"Middleware `{middleware_name}` not found for {component_type} `{component_name}`. "
+                                 f"It must be configured in the `middleware` section of the YAML configuration.")
+            middleware_obj = self._middleware[middleware_name].instance
+            if not isinstance(middleware_obj, FunctionMiddleware):
+                raise TypeError(
+                    f"Middleware `{middleware_name}` is not a FunctionMiddleware and cannot be used with {component_type}s. "
+                    f"Only FunctionMiddleware types support function-specific wrapping.")
+            middleware_instances.append(middleware_obj)
+        return middleware_instances
+
+    async def _build_function(self, name: str, config: FunctionBaseConfig) -> ConfiguredFunction:
         inner_builder = ChildBuilder(self)
 
         # We need to do this for every function because we don't know
@@ -410,46 +518,22 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         # be set before the function is built
         # It's only slower the first time because of the import
         # So we can afford to do this for every function
-
         llms = {k: v.instance for k, v in self._llms.items()}
-        function_frameworks = detect_llm_frameworks_in_build_fn(registration)
-
-        build_fn = chain_wrapped_build_fn(registration.build_fn, llms, function_frameworks)
-
-        build_result = await self._get_exit_stack().enter_async_context(build_fn(config, inner_builder))
-
-        self.function_dependencies[name] = inner_builder.dependencies
-
-        # If the build result is a function, wrap it in a FunctionInfo
-        if inspect.isfunction(build_result):
-
-            build_result = FunctionInfo.from_fn(build_result)
-
-        if (isinstance(build_result, FunctionInfo)):
-            # Create the function object
-            build_result = LambdaFunction.from_info(config=config, info=build_result, instance_name=name)
-
-        if (not isinstance(build_result, Function)):
-            raise ValueError("Expected a function, FunctionInfo object, or FunctionBase object to be "
-                             f"returned from the function builder. Got {type(build_result)}")
 
         # Resolve middleware names from config to middleware instances
         # Only FunctionMiddleware types can be used with functions
-        middleware_instances = []
-        for middleware_name in config.middleware:
-            if middleware_name not in self._middleware:
-                raise ValueError(f"Middleware `{middleware_name}` not found for function `{name}`. "
-                                 f"It must be configured in the `middleware` section of the YAML configuration.")
-            middleware_obj = self._middleware[middleware_name].instance
-            if not isinstance(middleware_obj, FunctionMiddleware):
-                raise TypeError(
-                    f"Middleware `{middleware_name}` is not a FunctionMiddleware and cannot be used with functions. "
-                    f"Only FunctionMiddleware types support function-specific wrapping.")
-            middleware_instances.append(middleware_obj)
+        middleware_instances = await self._resolve_middleware_instances(config.middleware, name, "function")
 
-        build_result.configure_middleware(middleware_instances)
-
-        return ConfiguredFunction(config=config, instance=build_result)
+        return await _build_function_impl(
+            name=name,
+            config=config,
+            registry=self._registry,
+            exit_stack=self._get_exit_stack(),
+            inner_builder=inner_builder,
+            llms=llms,
+            dependencies=self.function_dependencies,
+            middleware_instances=middleware_instances,
+        )
 
     async def _build_function_group(self, name: str, config: FunctionGroupBaseConfig) -> ConfiguredFunctionGroup:
         """Build a function group from the provided configuration.
@@ -464,44 +548,22 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         Raises:
             ValueError: If the function group builder returns invalid results
         """
-        registration = self._registry.get_function_group(type(config))
-
         inner_builder = ChildBuilder(self)
 
         # Build the function group - use the same wrapping pattern as _build_function
         llms = {k: v.instance for k, v in self._llms.items()}
-        function_frameworks = detect_llm_frameworks_in_build_fn(registration)
-
-        build_fn = chain_wrapped_build_fn(registration.build_fn, llms, function_frameworks)
-
-        build_result = await self._get_exit_stack().enter_async_context(build_fn(config, inner_builder))
-
-        self.function_group_dependencies[name] = inner_builder.dependencies
-
-        if not isinstance(build_result, FunctionGroup):
-            raise ValueError("Expected a FunctionGroup object to be returned from the function group builder. "
-                             f"Got {type(build_result)}")
-
         # Resolve middleware names from config to middleware instances
         # Only FunctionMiddleware types can be used with function groups
-        middleware_instances = []
-        for middleware_name in config.middleware:
-            if middleware_name not in self._middleware:
-                raise ValueError(f"Middleware `{middleware_name}` not found for function group `{name}`. "
-                                 f"It must be configured in the `middleware` section of the YAML configuration.")
-            middleware_obj = self._middleware[middleware_name].instance
-            if not isinstance(middleware_obj, FunctionMiddleware):
-                raise TypeError(f"Middleware `{middleware_name}` is not a FunctionMiddleware and "
-                                f"cannot be used with function groups. "
-                                f"Only FunctionMiddleware types support function-specific wrapping.")
-            middleware_instances.append(middleware_obj)
+        middleware_instances = await self._resolve_middleware_instances(config.middleware, name, "function group")
 
-        # Configure middleware for the function group
-        build_result.configure_middleware(middleware_instances)
-
-        # set the instance name for the function group based on the workflow-provided name
-        build_result.set_instance_name(name)
-        return ConfiguredFunctionGroup(config=config, instance=build_result)
+        return await _build_function_group_impl(name=name,
+                                                config=config,
+                                                registry=self._registry,
+                                                exit_stack=self._get_exit_stack(),
+                                                inner_builder=inner_builder,
+                                                llms=llms,
+                                                dependencies=self.function_group_dependencies,
+                                                middleware_instances=middleware_instances)
 
     @override
     async def add_function(self, name: str | FunctionRef, config: FunctionBaseConfig) -> Function:
@@ -1346,6 +1408,23 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
     def user_id(self) -> str:
         return self._user_id
 
+    async def _resolve_middleware_instances_from_shared_builder(self,
+                                                                middleware_names: Sequence[str],
+                                                                component_type: str = "function"
+                                                                ) -> list[FunctionMiddleware]:
+        """
+        Resolve middleware names to FunctionMiddleware instances from the shared builder.
+        """
+        middleware_instances: list[FunctionMiddleware] = []
+        for middleware_name in middleware_names:
+            middleware_obj = await self._shared_builder.get_middleware(middleware_name)
+            if not isinstance(middleware_obj, FunctionMiddleware):
+                raise TypeError(
+                    f"Middleware `{middleware_name}` is not a FunctionMiddleware and cannot be used with {component_type}s. "
+                    f"Only FunctionMiddleware types support function-specific wrapping.")
+            middleware_instances.append(middleware_obj)
+        return middleware_instances
+
     async def _build_per_user_function(self, name: str, config: FunctionBaseConfig) -> ConfiguredFunction:
         registration = self._registry.get_function(type(config))
 
@@ -1355,34 +1434,16 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
         inner_builder = ChildBuilder(self)
 
         llms = {k: v.instance for k, v in self._shared_builder._llms.items()}
-        function_frameworks = detect_llm_frameworks_in_build_fn(registration)
-
-        build_fn = chain_wrapped_build_fn(registration.build_fn, llms, function_frameworks)
-
-        build_result = await self._get_exit_stack().enter_async_context(build_fn(config, inner_builder))
-        self.per_user_function_dependencies[name] = inner_builder.dependencies
-
-        if inspect.isfunction(build_result):
-            build_result = FunctionInfo.from_fn(build_result)
-
-        if isinstance(build_result, FunctionInfo):
-            build_result = LambdaFunction.from_info(config=config, info=build_result, instance_name=name)
-
-        if not isinstance(build_result, Function):
-            raise ValueError(f"Expected a function, FunctionInfo object, or FunctionBase object to be "
-                             f"returned from the function builder. Got {type(build_result)}")
-
-        middleware_instances = []
-        for middleware_name in config.middleware:
-            middleware_obj = await self._shared_builder.get_middleware(middleware_name)
-            if not isinstance(middleware_obj, FunctionMiddleware):
-                raise TypeError(
-                    f"Middleware `{middleware_name}` is not a FunctionMiddleware and cannot be used with functions.")
-            middleware_instances.append(middleware_obj)
-
-        build_result.configure_middleware(middleware_instances)
-
-        return ConfiguredFunction(config=config, instance=build_result)
+        middleware_instances = await self._resolve_middleware_instances_from_shared_builder(
+            config.middleware, "function")
+        return await _build_function_impl(name=name,
+                                          config=config,
+                                          registry=self._registry,
+                                          exit_stack=self._get_exit_stack(),
+                                          inner_builder=inner_builder,
+                                          llms=llms,
+                                          dependencies=self.per_user_function_dependencies,
+                                          middleware_instances=middleware_instances)
 
     async def _build_per_user_function_group(self, name: str,
                                              config: FunctionGroupBaseConfig) -> ConfiguredFunctionGroup:
@@ -1394,36 +1455,17 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
         inner_builder = ChildBuilder(self)
 
         llms = {k: v.instance for k, v in self._shared_builder._llms.items()}
-        function_frameworks = detect_llm_frameworks_in_build_fn(registration)
+        middleware_instances = await self._resolve_middleware_instances_from_shared_builder(
+            config.middleware, "function group")
 
-        build_fn = chain_wrapped_build_fn(registration.build_fn, llms, function_frameworks)
-
-        build_result = await self._get_exit_stack().enter_async_context(build_fn(config, inner_builder))
-
-        self.per_user_function_group_dependencies[name] = inner_builder.dependencies
-
-        if not isinstance(build_result, FunctionGroup):
-            raise ValueError("Expected a FunctionGroup object to be returned from the function group builder. "
-                             f"Got {type(build_result)}")
-
-        # Resolve middleware names from config to middleware instances
-        # Only FunctionMiddleware types can be used with function groups
-        middleware_instances = []
-        for middleware_name in config.middleware:
-            middleware_obj = await self._shared_builder.get_middleware(middleware_name)
-            if not isinstance(middleware_obj, FunctionMiddleware):
-                raise TypeError(f"Middleware `{middleware_name}` is not a FunctionMiddleware and "
-                                f"cannot be used with function groups. "
-                                f"Only FunctionMiddleware types support function-specific wrapping.")
-            middleware_instances.append(middleware_obj)
-
-        # Configure middleware for the function group
-        build_result.configure_middleware(middleware_instances)
-
-        # Set the instance name for the function group based on the workflow-provided name
-        build_result.set_instance_name(name)
-
-        return ConfiguredFunctionGroup(config=config, instance=build_result)
+        return await _build_function_group_impl(name=name,
+                                                config=config,
+                                                registry=self._registry,
+                                                exit_stack=self._get_exit_stack(),
+                                                inner_builder=inner_builder,
+                                                llms=llms,
+                                                dependencies=self.per_user_function_group_dependencies,
+                                                middleware_instances=middleware_instances)
 
     @override
     async def add_function(self, name: str | FunctionRef, config: FunctionBaseConfig) -> Function:
@@ -1766,6 +1808,10 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
                         logger.debug(
                             f"Building per-user function group '{component_instance.name}' for user {self._user_id}")
                         await self.add_function_group(component_instance.name, config_obj)
+                        self.remaining_components.remove(
+                            (str(component_instance.name), component_instance.component_group.value))
+                        self.completed_components.append(
+                            (str(component_instance.name), component_instance.component_group.value))
                     else:
                         continue
 
@@ -1777,16 +1823,12 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
                             logger.debug(
                                 f"Building per-user function '{component_instance.name}' for user {self._user_id}")
                             await self.add_function(component_instance.name, config_obj)
+                            self.remaining_components.remove(
+                                (str(component_instance.name), component_instance.component_group.value))
+                            self.completed_components.append(
+                                (str(component_instance.name), component_instance.component_group.value))
                     else:
                         continue
-
-                # TODO: The logic is broken. Need to fix it.
-                # # Remove from remaining and add to completed after successful build (if not root)
-                # if not component_instance.is_root:
-                #     self.remaining_components.remove(
-                #         (str(component_instance.name), component_instance.component_group.value))
-                #     self.completed_components.append(
-                #         (str(component_instance.name), component_instance.component_group.value))
 
             except Exception as e:
                 WorkflowBuilder.log_build_failure(str(component_instance.name),
