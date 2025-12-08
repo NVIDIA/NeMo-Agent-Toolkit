@@ -20,6 +20,7 @@ from pydantic import field_validator
 from pydantic import model_validator
 
 from nat.data_models.authentication import AuthProviderBaseConfig
+from nat.data_models.common import OptionalSecretStr
 
 
 class OAuth2ResourceServerConfig(AuthProviderBaseConfig, name="oauth2_resource_server"):
@@ -66,7 +67,7 @@ class OAuth2ResourceServerConfig(AuthProviderBaseConfig, name="oauth2_resource_s
         default=None,
         description="OAuth2 client ID for authenticating to the introspection endpoint (opaque token validation).",
     )
-    client_secret: str | None = Field(
+    client_secret: OptionalSecretStr = Field(
         default=None,
         description="OAuth2 client secret for authenticating to the introspection endpoint (opaque token validation).",
     )

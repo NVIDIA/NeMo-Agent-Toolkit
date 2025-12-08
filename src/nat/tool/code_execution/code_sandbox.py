@@ -92,7 +92,9 @@ class Sandbox(abc.ABC):
             raise ValueError(f"Language {language} not supported")
 
         generated_code = generated_code.strip().strip("`")
-        code_to_execute = textwrap.dedent("""
+        # Use json.dumps to properly escape the generated_code instead of repr()
+        escaped_code = json.dumps(generated_code)
+        code_to_execute = textwrap.dedent(f"""
             import traceback
             import json
             import os
@@ -101,11 +103,6 @@ class Sandbox(abc.ABC):
             import io
             warnings.filterwarnings('ignore')
             os.environ['OPENBLAS_NUM_THREADS'] = '16'
-        """).strip()
-
-        # Use json.dumps to properly escape the generated_code instead of repr()
-        escaped_code = json.dumps(generated_code)
-        code_to_execute += textwrap.dedent(f"""
 
             generated_code = {escaped_code}
 
@@ -155,7 +152,7 @@ class LocalSandbox(Sandbox):
             output_json = output.json()
             assert isinstance(output_json, dict)
             return output_json
-        except json.JSONDecodeError as e:
+        except (requests.exceptions.JSONDecodeError, AssertionError) as e:
             logger.exception("Error parsing output: %s. %s", output.text, e)
             return {'process_status': 'error', 'stdout': '', 'stderr': f'Unknown error: {e} \"{output.text}\"'}
 

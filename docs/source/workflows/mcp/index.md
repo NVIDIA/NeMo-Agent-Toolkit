@@ -20,6 +20,7 @@ limitations under the License.
 NeMo Agent toolkit [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) integration includes:
 * An [MCP client](./mcp-client.md) to connect to and use tools served by remote MCP servers.
 * An [MCP server](./mcp-server.md) to publish tools using MCP to be used by any MCP client.
+* Support for both [interactive OAuth2 authentication](./mcp-auth.md) and [headless service account authentication](./mcp-service-account-auth.md).
 
 **Note:** MCP client functionality requires the `nvidia-nat-mcp` package. Install it with `uv pip install "nvidia-nat[mcp]"`.
 
@@ -30,5 +31,6 @@ NeMo Agent toolkit [Model Context Protocol (MCP)](https://modelcontextprotocol.i
 Connecting to Remote Tools <./mcp-client.md>
 Serving NeMo Agent toolkit Functions <./mcp-server.md>
 MCP Authentication <./mcp-auth.md>
+Service Account Authentication <./mcp-service-account-auth.md>
 Secure Token Storage <./mcp-auth-token-storage.md>
 ```

@@ -28,11 +28,12 @@ import sys
 import time
 
 import click
-import nest_asyncio
+import nest_asyncio2
 from dotenv import load_dotenv
 
 from nat.utils.log_levels import LOG_LEVELS
 
+from .commands.a2a.a2a import a2a_command
 from .commands.configure.configure import configure_command
 from .commands.evaluate import eval_command
 from .commands.info.info import info_command
@@ -50,7 +51,7 @@ from .commands.workflow.workflow import workflow_command
 load_dotenv()
 
 # Apply at the beginning of the file to avoid issues with asyncio
-nest_asyncio.apply()
+nest_asyncio2.apply()
 
 
 def setup_logging(log_level: str):
@@ -102,6 +103,7 @@ def cli(ctx: click.Context, log_level: str):
     ctx_dict["log_level"] = log_level
 
 
+cli.add_command(a2a_command, name="a2a")
 cli.add_command(configure_command, name="configure")
 cli.add_command(eval_command, name="eval")
 cli.add_command(info_command, name="info")

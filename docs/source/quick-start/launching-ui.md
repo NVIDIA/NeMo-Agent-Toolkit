@@ -71,15 +71,16 @@ curl --request POST \
   --url http://localhost:8000/generate \
   --header 'Content-Type: application/json' \
   --data '{
-    "input_message": "Is 4 + 4 greater than the current hour of the day?",
-    "use_knowledge_base": true
+    "input_message": "Is 4 + 4 greater than the current hour of the day?"
 }'
 ```
 
 Running this command will produce the following expected output:
+
 :::note
 The response depends on the current time of day that the command is run.
 :::
+
 ```bash
 {
   "value": "No, 8 is less than the current hour of the day (4)."
@@ -104,19 +105,24 @@ npm run dev
 ```
 
 After the web development server starts, open a web browser and navigate to [`http://localhost:3000/`](http://localhost:3000/).
-Port `3001` is an alternative port if port `3000` (default) is in use.
 
 ![NeMo Agent toolkit Web User Interface](../_static/ui_home_page.png)
 
-:::important
-Workflows requiring human input or interaction (such as human-in-the-loop workflows, OAuth authentication, or interactive prompts) must use WebSocket connections. HTTP requests are the default method of communication, but human-in-the-loop functionality is not supported through HTTP. Ensure that `WebSocket` mode is enabled in the UI by navigating to the top-right corner and selecting the `WebSocket` option in the arrow pop-out.
+:::{important}
+Workflows requiring human input or interaction (such as human-in-the-loop workflows, OAuth authentication, or interactive prompts) must use WebSocket connections. HTTP requests are the default method of communication, but human-in-the-loop functionality is not supported through HTTP.
 :::
+
+To enable WebSocket mode:
+
+1. Open the panel on the top right of the webpage
+2. Toggle the **WebSocket** button to ON
+3. You will see a notification that says "websocket connected" when successfully connected
 
 ### Connect the User Interface to the NeMo Agent Toolkit Server Using HTTP API
 
 Configure the settings by selecting the *Settings* icon located on the bottom left corner of the home page.
 
-![NeMo Agent toolkit Web UI Settings](../_static/ui_generate_example_settings.png)
+![NeMo Agent toolkit Web UI Settings](../_static/ui_settings_example.png)
 
 #### Settings Options
 
@@ -135,6 +141,8 @@ Configure the settings by selecting the *Settings* icon located on the bottom le
 
 **WebSocket Configuration:**
 
+The WebSocket path defaults to `websocket`.
+
 - `WebSocket Schema`: Select schema for real-time connections:
   - **Chat Completions — Streaming** - Streaming chat over WebSocket (recommended for intermediate results)
   - **Chat Completions — Non-Streaming** - Non-streaming chat over WebSocket
@@ -142,7 +150,7 @@ Configure the settings by selecting the *Settings* icon located on the bottom le
   - **Generate — Non-Streaming** - Non-streaming generation over WebSocket
 
 :::note
-For intermediate results streaming, use **Chat Completions — Streaming** (`/chat/stream`) or **Generate — Streaming** (`/generate/stream`).
+For intermediate results streaming, use **Chat Completions — Streaming** or **Generate — Streaming**.
 :::
 
 ### Simple Calculator Example Conversation
@@ -150,4 +158,4 @@ For intermediate results streaming, use **Chat Completions — Streaming** (`/ch
 Interact with the chat interface by prompting the Agent with the
 message: `Is 4 + 4 greater than the current hour of the day?`
 
-![NeMo Agent Toolkit Web UI Workflow Result](../_static/ui_generate_example.png)
+![NeMo Agent Toolkit Web UI Workflow Result](../_static/ui_simple_calculator_example.png)

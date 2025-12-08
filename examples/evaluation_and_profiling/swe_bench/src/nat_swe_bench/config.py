@@ -20,6 +20,7 @@ from pydantic import Field
 from pydantic import Tag
 
 from nat.data_models.common import BaseModelRegistryTag
+from nat.data_models.common import SerializableSecretStr
 from nat.data_models.common import TypedBaseModel
 from nat.data_models.component_ref import FunctionRef
 from nat.data_models.component_ref import LLMRef
@@ -34,7 +35,7 @@ class SweBenchPredictorFullConfig(SweBenchPredictorBaseConfig, name="full"):
     llm_name: LLMRef = "nim_llm"
     tool_names: list[FunctionRef] = []
     # Temporary, key needs to be removed and read from the environment
-    openai_api_key: str = Field(default="")  # OpenAI API key field
+    openai_api_key: SerializableSecretStr = Field(default="")  # OpenAI API key field
 
 
 class SweBenchPredictorGoldConfig(SweBenchPredictorBaseConfig, name="gold"):

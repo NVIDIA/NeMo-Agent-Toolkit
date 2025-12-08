@@ -21,7 +21,7 @@ dependencies = [
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
   # Keep sorted!!!
   "nvidia-nat~=1.4",
-  "zep-cloud~=2.2.0",
+  "zep-cloud~=3.0",
 ]
 requires-python = ">=3.11,<3.14"
 description = "Subpackage for Zep integration in NeMo Agent toolkit"

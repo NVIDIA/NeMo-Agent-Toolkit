@@ -43,7 +43,6 @@ async def langchain_research(tool_config: LangChainResearchConfig, builder: Buil
     from pydantic import Field
 
     api_token = os.getenv("NVIDIA_API_KEY")
-    os.environ["NVIDIA_API_KEY"] = api_token
 
     if not api_token:
         raise ValueError(

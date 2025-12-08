@@ -19,6 +19,7 @@ from typing import TypeVar
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
+from nat.data_models.common import get_secret_value
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
@@ -79,7 +80,8 @@ async def azure_openai_crewai(llm_config: AzureOpenAIModelConfig, _builder: Buil
 
     # https://docs.crewai.com/en/concepts/llms#azure
 
-    api_key = llm_config.api_key or os.environ.get("AZURE_OPENAI_API_KEY") or os.environ.get("AZURE_API_KEY")
+    api_key = get_secret_value(llm_config.api_key) if llm_config.api_key else os.environ.get(
+        "AZURE_OPENAI_API_KEY") or os.environ.get("AZURE_API_KEY")
     if api_key is None:
         raise ValueError("Azure API key is not set")
     os.environ["AZURE_API_KEY"] = api_key
@@ -96,11 +98,13 @@ async def azure_openai_crewai(llm_config: AzureOpenAIModelConfig, _builder: Buil
 
     client = LLM(
         **llm_config.model_dump(
-            exclude={"type", "api_key", "azure_endpoint", "azure_deployment", "thinking", "api_type"},
+            exclude={"type", "api_key", "azure_endpoint", "azure_deployment", "thinking", "api_type", "api_version"},
             by_alias=True,
             exclude_none=True,
+            exclude_unset=True,
         ),
         model=model,
+        api_version=llm_config.api_version,
     )
 
     yield _patch_llm_based_on_config(client, llm_config)
@@ -120,9 +124,12 @@ async def nim_crewai(llm_config: NIMModelConfig, _builder: Builder):
             os.environ["NVIDIA_NIM_API_KEY"] = nvidia_api_key
 
     client = LLM(
-        **llm_config.model_dump(exclude={"type", "model_name", "thinking", "api_type"},
-                                by_alias=True,
-                                exclude_none=True),
+        **llm_config.model_dump(
+            exclude={"type", "model_name", "thinking", "api_type"},
+            by_alias=True,
+            exclude_none=True,
+            exclude_unset=True,
+        ),
         model=f"nvidia_nim/{llm_config.model_name}",
     )
 
@@ -136,7 +143,8 @@ async def openai_crewai(llm_config: OpenAIModelConfig, _builder: Builder):
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.CREWAI)
 
-    client = LLM(**llm_config.model_dump(exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True))
+    client = LLM(**llm_config.model_dump(
+        exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True, exclude_unset=True))
 
     yield _patch_llm_based_on_config(client, llm_config)
 
@@ -148,6 +156,7 @@ async def litellm_crewai(llm_config: LiteLlmModelConfig, _builder: Builder):
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.CREWAI)
 
-    client = LLM(**llm_config.model_dump(exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True))
+    client = LLM(**llm_config.model_dump(
+        exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True, exclude_unset=True))
 
     yield _patch_llm_based_on_config(client, llm_config)

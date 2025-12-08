@@ -14,30 +14,32 @@
 # limitations under the License.
 
 from pydantic import Field
-from pydantic import SecretStr
-from pydantic import field_serializer
+from pydantic import field_validator
 
 from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_object_store
+from nat.data_models.common import OptionalSecretStr
 from nat.data_models.object_store import ObjectStoreBaseConfig
 
 
 class RedisObjectStoreClientConfig(ObjectStoreBaseConfig, name="redis"):
     """
-    Object store that stores objects in a Redis database.
+    Object store that stores objects in a Redis database with optional TTL.
     """
 
     host: str = Field(default="localhost", description="The host of the Redis server")
     db: int = Field(default=0, description="The Redis logical database number")
     port: int = Field(default=6379, description="The port of the Redis server")
     bucket_name: str = Field(description="The name of the bucket to use for the object store")
-    password: SecretStr | None = Field(default=None, description="The password for the Redis server")
+    password: OptionalSecretStr = Field(default=None, description="The password for the Redis server")
+    ttl: int | None = Field(default=None, description="TTL in seconds for objects (None = no expiration)")
 
-    @field_serializer('password')
-    def dump_secret(self, v: SecretStr | None) -> str | None:
-        if v is None:
-            return None
-        return v.get_secret_value()
+    @field_validator("ttl")
+    @classmethod
+    def validate_ttl(cls, v: int | None) -> int | None:
+        if v is not None and v <= 0:
+            raise ValueError("TTL must be a positive integer greater than 0")
+        return v
 
 
 @register_object_store(config_type=RedisObjectStoreClientConfig)

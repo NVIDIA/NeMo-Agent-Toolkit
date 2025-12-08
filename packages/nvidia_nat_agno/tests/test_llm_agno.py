@@ -17,6 +17,7 @@ import os
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
+import pydantic
 import pytest
 
 from nat.builder.builder import Builder
@@ -189,7 +190,7 @@ class TestOpenAIAgno:
     async def test_openai_agno_with_additional_params(self, mock_openai_chat, openai_config, mock_builder):
         """Test that openai_agno passes additional params to OpenAIChat."""
         # Add additional parameters to the config
-        openai_config.api_key = "test-api-key"
+        openai_config.api_key = pydantic.SecretStr("test-api-key")
         openai_config.temperature = 0.7
         # OpenAIModelConfig doesn't have max_tokens field, removing
 

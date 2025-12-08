@@ -64,6 +64,8 @@ from nat.data_models.logging import LoggingBaseConfig
 from nat.data_models.logging import LoggingMethodConfigT
 from nat.data_models.memory import MemoryBaseConfig
 from nat.data_models.memory import MemoryBaseConfigT
+from nat.data_models.middleware import MiddlewareBaseConfig
+from nat.data_models.middleware import MiddlewareBaseConfigT
 from nat.data_models.object_store import ObjectStoreBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfigT
 from nat.data_models.registry_handler import RegistryHandlerBaseConfig
@@ -76,6 +78,7 @@ from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfigT
 from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
 from nat.memory.interfaces import MemoryEditor
+from nat.middleware.middleware import Middleware
 from nat.object_store.interfaces import ObjectStore
 from nat.observability.exporter.base_exporter import BaseExporter
 from nat.registry_handlers.registry_handler_base import AbstractRegistryHandler
@@ -89,6 +92,7 @@ EvaluatorBuildCallableT = Callable[[EvaluatorBaseConfigT, EvalBuilder], AsyncIte
 FrontEndBuildCallableT = Callable[[FrontEndConfigT, Config], AsyncIterator[FrontEndBase]]
 FunctionBuildCallableT = Callable[[FunctionConfigT, Builder], AsyncIterator[FunctionInfo | Callable | FunctionBase]]
 FunctionGroupBuildCallableT = Callable[[FunctionGroupConfigT, Builder], AsyncIterator[FunctionGroup]]
+MiddlewareBuildCallableT = Callable[[MiddlewareBaseConfigT, Builder], AsyncIterator[Middleware]]
 TTCStrategyBuildCallableT = Callable[[TTCStrategyBaseConfigT, Builder], AsyncIterator[StrategyBase]]
 LLMClientBuildCallableT = Callable[[LLMBaseConfigT, Builder], AsyncIterator[typing.Any]]
 LLMProviderBuildCallableT = Callable[[LLMBaseConfigT, Builder], AsyncIterator[LLMProviderInfo]]
@@ -111,6 +115,7 @@ FrontEndRegisteredCallableT = Callable[[FrontEndConfigT, Config], AbstractAsyncC
 FunctionRegisteredCallableT = Callable[[FunctionConfigT, Builder],
                                        AbstractAsyncContextManager[FunctionInfo | Callable | FunctionBase]]
 FunctionGroupRegisteredCallableT = Callable[[FunctionGroupConfigT, Builder], AbstractAsyncContextManager[FunctionGroup]]
+MiddlewareRegisteredCallableT = Callable[[MiddlewareBaseConfigT, Builder], AbstractAsyncContextManager[Middleware]]
 TTCStrategyRegisterCallableT = Callable[[TTCStrategyBaseConfigT, Builder], AbstractAsyncContextManager[StrategyBase]]
 LLMClientRegisteredCallableT = Callable[[LLMBaseConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
 LLMProviderRegisteredCallableT = Callable[[LLMBaseConfigT, Builder], AbstractAsyncContextManager[LLMProviderInfo]]
@@ -179,6 +184,8 @@ class RegisteredFunctionInfo(RegisteredInfo[FunctionBaseConfig]):
     and a description.
     """
 
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
+
     build_fn: FunctionRegisteredCallableT = Field(repr=False)
     framework_wrappers: list[str] = Field(default_factory=list)
 
@@ -191,6 +198,15 @@ class RegisteredFunctionGroupInfo(RegisteredInfo[FunctionGroupBaseConfig]):
 
     build_fn: FunctionGroupRegisteredCallableT = Field(repr=False)
     framework_wrappers: list[str] = Field(default_factory=list)
+
+
+class RegisteredMiddlewareInfo(RegisteredInfo[MiddlewareBaseConfig]):
+    """
+    Represents registered middleware. Middleware provides middleware-style wrapping of
+    calls with preprocessing and postprocessing logic.
+    """
+
+    build_fn: MiddlewareRegisteredCallableT = Field(repr=False)
 
 
 class RegisteredLLMProviderInfo(RegisteredInfo[LLMBaseConfig]):
@@ -330,6 +346,9 @@ class TypeRegistry:
 
         # Function Groups
         self._registered_function_groups: dict[type[FunctionGroupBaseConfig], RegisteredFunctionGroupInfo] = {}
+
+        # Middleware
+        self._registered_middleware: dict[type[MiddlewareBaseConfig], RegisteredMiddlewareInfo] = {}
 
         # LLMs
         self._registered_llm_provider_infos: dict[type[LLMBaseConfig], RegisteredLLMProviderInfo] = {}
@@ -539,6 +558,49 @@ class TypeRegistry:
             list[RegisteredInfo[FunctionGroupBaseConfig]]: List of all registered function groups
         """
         return list(self._registered_function_groups.values())
+
+    def register_middleware(self, registration: RegisteredMiddlewareInfo):
+        """Register middleware with the type registry.
+
+        Args:
+            registration: The middleware registration information
+
+        Raises:
+            ValueError: If middleware with the same config type is already registered
+        """
+        if (registration.config_type in self._registered_middleware):
+            raise ValueError(f"Middleware with the same config type `{registration.config_type}` has already been "
+                             "registered.")
+
+        self._registered_middleware[registration.config_type] = registration
+
+        self._registration_changed()
+
+    def get_middleware(self, config_type: type[MiddlewareBaseConfig]) -> RegisteredMiddlewareInfo:
+        """Get registered middleware by its config type.
+
+        Args:
+            config_type: The middleware configuration type
+
+        Returns:
+            RegisteredMiddlewareInfo: The registered middleware information
+
+        Raises:
+            KeyError: If no middleware is registered for the given config type
+        """
+        try:
+            return self._registered_middleware[config_type]
+        except KeyError as err:
+            raise KeyError(f"Could not find registered middleware for config `{config_type}`. "
+                           f"Registered configs: {set(self._registered_middleware.keys())}") from err
+
+    def get_registered_middleware(self) -> list[RegisteredInfo[MiddlewareBaseConfig]]:
+        """Get all registered middleware.
+
+        Returns:
+            list[RegisteredInfo[MiddlewareBaseConfig]]: List of all registered middleware
+        """
+        return list(self._registered_middleware.values())
 
     def register_llm_provider(self, info: RegisteredLLMProviderInfo):
 
@@ -912,6 +974,9 @@ class TypeRegistry:
         if component_type == ComponentEnum.TTC_STRATEGY:
             return self._registered_ttc_strategies
 
+        if component_type == ComponentEnum.MIDDLEWARE:
+            return self._registered_middleware
+
         raise ValueError(f"Supplied an unsupported component type {component_type}")
 
     def get_registered_types_by_component_type(self, component_type: ComponentEnum) -> list[str]:
@@ -1037,6 +1102,9 @@ class TypeRegistry:
 
         if issubclass(cls, TTCStrategyBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_ttc_strategies())
+
+        if issubclass(cls, MiddlewareBaseConfig):
+            return self._do_compute_annotation(cls, self.get_registered_middleware())
 
         raise ValueError(f"Supplied an unsupported component type {cls}")
 

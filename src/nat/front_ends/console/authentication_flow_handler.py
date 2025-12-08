@@ -95,7 +95,7 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
         try:
             client = AsyncOAuth2Client(
                 client_id=cfg.client_id,
-                client_secret=cfg.client_secret,
+                client_secret=cfg.client_secret.get_secret_value(),
                 redirect_uri=cfg.redirect_uri,
                 scope=" ".join(cfg.scopes) if cfg.scopes else None,
                 token_endpoint=cfg.token_url,

@@ -52,6 +52,8 @@ NeMo Agent toolkit was previously known as <!-- vale off -->AgentIQ<!-- vale on 
 
 - [**Full MCP Support:**](./workflows/mcp/index.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use NeMo Agent toolkit as an [MCP client](./workflows/mcp/mcp-client.md) to connect to and use tools served by remote MCP servers. You can also use NeMo Agent toolkit as an [MCP server](./workflows/mcp/mcp-server.md) to publish tools via MCP.
 
+- [**A2A Protocol Support:**](./workflows/a2a/index.md) Compatible with [Agent-to-Agent (A2A) Protocol](https://a2aproject.org/). You can use NeMo Agent toolkit as an [A2A client](./workflows/a2a/a2a-client.md) to connect to and delegate tasks to remote A2A agents. You can also use NeMo Agent toolkit as an [A2A server](./workflows/a2a/a2a-server.md) to publish workflows as discoverable A2A agents.
+
 ## FAQ
 For frequently asked questions, refer to [FAQ](./resources/faq.md).
 
@@ -78,15 +80,23 @@ Tutorials <./tutorials/index.md>
 :hidden:
 :caption: Manage Workflows
 
-About Workflows <./workflows/about/index.md>
+About Workflows <./workflows/about.md>
 ./workflows/run-workflows.md
 Workflow Configuration <./workflows/workflow-configuration.md>
+ReAct Agent <./workflows/react-agent/index.md>
+Reasoning Agent <./workflows/reasoning-agent/index.md>
+ReWOO Agent <./workflows/rewoo-agent/index.md>
+Responses API and Agent <./workflows/responses-api-and-agent/index.md>
+Router Agent <./workflows/router-agent/index.md>
+Sequential Executor <./workflows/sequential-executor/index.md>
+Tool Calling Agent <./workflows/tool-calling-agent/index.md>
 ./workflows/llms/index.md
 ./workflows/embedders.md
 ./workflows/retrievers.md
 Functions <./workflows/functions/index.md>
 ./workflows/function-groups.md
 ./workflows/mcp/index.md
+./workflows/a2a/index.md
 Evaluate Workflows <./workflows/evaluate.md>
 Add Unit Tests for Tools <./workflows/add-unit-tests-for-tools.md>
 Profiling Workflows <./workflows/profiler.md>
@@ -121,6 +131,7 @@ Adding an Authentication Provider <./extend/adding-an-authentication-provider.md
 Integrating AWS Bedrock Models <./extend/integrating-aws-bedrock-models.md>
 Cursor Rules Developer Guide <./extend/cursor-rules-developer-guide.md>
 Adding a Telemetry Exporter <./extend/telemetry-exporters.md>
+Adding a Custom MCP Server Worker <./extend/mcp-server.md>
 ```
 
 ```{toctree}
@@ -137,6 +148,7 @@ Command Line Interface (CLI) <./reference/cli.md>
 Cursor Rules Reference <./reference/cursor-rules-reference.md>
 Evaluation <./reference/evaluate.md>
 Evaluation Endpoints <./reference/evaluate-api.md>
+Middleware <./reference/middleware.md>
 Optimizer <./reference/optimizer.md>
 Test Time Compute <./reference/test-time-compute.md>
 Troubleshooting <./troubleshooting.md>
@@ -147,6 +159,7 @@ Troubleshooting <./troubleshooting.md>
 :caption: Resources
 
 FAQ <./resources/faq.md>
+Security Considerations <./resources/security-considerations.md>
 Code of Conduct <./resources/code-of-conduct.md>
 Migration Guide <./resources/migration-guide.md>
 Contributing <./resources/contributing.md>

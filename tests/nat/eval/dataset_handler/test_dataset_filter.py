@@ -102,3 +102,91 @@ def test_apply_filters_combined(sample_df, combined_filter):
     assert len(filtered_df) == 3, "Only three rows should remain"
     assert "iproute2_99" not in filtered_df["instance_id"].values, "Instance 'iproute2_99' should be removed"
     assert set(filtered_df["repo"]) == {"iproute2", "vxlan"}, "Only repo 'iproute2' and 'vxlan' should remain"
+
+
+def test_wildcard_pattern_allowlist(sample_df):
+    """Test that wildcard patterns work correctly in allowlist filters."""
+    filter_config = EvalFilterConfig(allowlist=EvalFilterEntryConfig(field={"instance_id": ["iproute2_*"]}),
+                                     denylist=None)
+    dataset_filter = DatasetFilter(filter_config)
+    filtered_df = dataset_filter.apply_filters(sample_df)
+
+    assert len(filtered_df) == 2, "Only two rows should remain"
+    assert set(filtered_df["instance_id"]) == {"iproute2_101", "iproute2_99"}, "Only iproute2 instances should remain"
+
+
+def test_wildcard_pattern_denylist(sample_df):
+    """Test that wildcard patterns work correctly in denylist filters."""
+    filter_config = EvalFilterConfig(allowlist=None, denylist=EvalFilterEntryConfig(field={"instance_id": ["vxlan_*"]}))
+    dataset_filter = DatasetFilter(filter_config)
+    filtered_df = dataset_filter.apply_filters(sample_df)
+
+    assert len(filtered_df) == 3, "Three rows should remain"
+    assert "vxlan_101" not in filtered_df["instance_id"].values, "vxlan_101 should be removed"
+    assert "vxlan_102" not in filtered_df["instance_id"].values, "vxlan_102 should be removed"
+
+
+def test_wildcard_pattern_question_mark(sample_df):
+    """Test that '?' wildcard matches a single character."""
+    filter_config = EvalFilterConfig(allowlist=EvalFilterEntryConfig(field={"instance_id": ["iproute2_?0?"]}),
+                                     denylist=None)
+    dataset_filter = DatasetFilter(filter_config)
+    filtered_df = dataset_filter.apply_filters(sample_df)
+
+    assert len(filtered_df) == 1, "Only one row should remain"
+    assert filtered_df.iloc[0]["instance_id"] == "iproute2_101", "Only iproute2_101 should match"
+
+
+def test_wildcard_pattern_character_set(sample_df):
+    """Test that character sets [abc] work in wildcard patterns."""
+    filter_config = EvalFilterConfig(allowlist=EvalFilterEntryConfig(field={"instance_id": ["*_10[12]"]}),
+                                     denylist=None)
+    dataset_filter = DatasetFilter(filter_config)
+    filtered_df = dataset_filter.apply_filters(sample_df)
+
+    assert len(filtered_df) == 4, "Four rows should remain"
+    assert set(filtered_df["instance_id"]) == {"iproute2_101", "frr_101", "vxlan_101", "vxlan_102"}
+
+
+def test_mixed_wildcard_and_exact_allowlist(sample_df):
+    """Test that wildcard patterns and exact values can be mixed in the same filter."""
+    filter_config = EvalFilterConfig(allowlist=EvalFilterEntryConfig(field={"instance_id": ["iproute2_*", "frr_101"]}),
+                                     denylist=None)
+    dataset_filter = DatasetFilter(filter_config)
+    filtered_df = dataset_filter.apply_filters(sample_df)
+
+    assert len(filtered_df) == 3, "Three rows should remain"
+    assert set(filtered_df["instance_id"]) == {"iproute2_101", "iproute2_99", "frr_101"}
+
+
+def test_mixed_wildcard_and_exact_denylist(sample_df):
+    """Test that wildcard patterns and exact values work together in denylist."""
+    filter_config = EvalFilterConfig(allowlist=None,
+                                     denylist=EvalFilterEntryConfig(field={"instance_id": ["vxlan_*", "frr_101"]}))
+    dataset_filter = DatasetFilter(filter_config)
+    filtered_df = dataset_filter.apply_filters(sample_df)
+
+    # Should remove vxlan_101, vxlan_102, and frr_101
+    assert len(filtered_df) == 2, "Two rows should remain"
+    assert set(filtered_df["instance_id"]) == {"iproute2_101", "iproute2_99"}
+
+
+def test_wildcard_pattern_with_numeric_values(sample_df):
+    """Test that wildcard patterns work with numeric column values converted to strings."""
+    filter_config = EvalFilterConfig(allowlist=EvalFilterEntryConfig(field={"version": ["?"]}), denylist=None)
+    dataset_filter = DatasetFilter(filter_config)
+    filtered_df = dataset_filter.apply_filters(sample_df)
+
+    assert len(filtered_df) == 5, "All rows should remain (all have single-digit versions)"
+    assert set(filtered_df["version"]) == {1, 2, 4}
+
+
+def test_no_wildcard_pattern_exact_match_performance(sample_df):
+    """Test that exact matches still work when no wildcard patterns are present."""
+    filter_config = EvalFilterConfig(
+        allowlist=EvalFilterEntryConfig(field={"instance_id": ["iproute2_101", "frr_101"]}), denylist=None)
+    dataset_filter = DatasetFilter(filter_config)
+    filtered_df = dataset_filter.apply_filters(sample_df)
+
+    assert len(filtered_df) == 2, "Two rows should remain"
+    assert set(filtered_df["instance_id"]) == {"iproute2_101", "frr_101"}

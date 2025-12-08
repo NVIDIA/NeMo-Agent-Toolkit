@@ -28,7 +28,13 @@ async def azure_openai_llama_index(embedder_config: AzureOpenAIEmbedderModelConf
 
     from llama_index.embeddings.azure_openai import AzureOpenAIEmbedding
 
-    client = AzureOpenAIEmbedding(**embedder_config.model_dump(exclude={"type"}, by_alias=True, exclude_none=True))
+    client = AzureOpenAIEmbedding(
+        **embedder_config.model_dump(exclude={"type", "api_version"},
+                                     by_alias=True,
+                                     exclude_none=True,
+                                     exclude_unset=True),
+        api_version=embedder_config.api_version,
+    )
 
     if isinstance(embedder_config, RetryMixin):
         client = patch_with_retry(client,
@@ -45,7 +51,10 @@ async def nim_llama_index(embedder_config: NIMEmbedderModelConfig, _builder: Bui
     from llama_index.embeddings.nvidia import NVIDIAEmbedding  # pylint: disable=no-name-in-module
 
     client = NVIDIAEmbedding(
-        **embedder_config.model_dump(exclude={"type", "model_name"}, by_alias=True, exclude_none=True),
+        **embedder_config.model_dump(exclude={"type", "model_name"},
+                                     by_alias=True,
+                                     exclude_none=True,
+                                     exclude_unset=True),
         model=embedder_config.model_name,
     )
 
@@ -63,7 +72,8 @@ async def openai_llama_index(embedder_config: OpenAIEmbedderModelConfig, _builde
 
     from llama_index.embeddings.openai import OpenAIEmbedding
 
-    client = OpenAIEmbedding(**embedder_config.model_dump(exclude={"type"}, by_alias=True, exclude_none=True))
+    client = OpenAIEmbedding(
+        **embedder_config.model_dump(exclude={"type"}, by_alias=True, exclude_none=True, exclude_unset=True))
 
     if isinstance(embedder_config, RetryMixin):
         client = patch_with_retry(client,

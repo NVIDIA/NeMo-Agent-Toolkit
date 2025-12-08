@@ -74,5 +74,6 @@ def test_config_yaml_loads_and_has_keys() -> None:
             "opensearch_url:",
             "index_on_startup:",
             "data_dir:",
+            "embedding_dim:",
     ]:
         assert key in text, f"Missing key: {key}"

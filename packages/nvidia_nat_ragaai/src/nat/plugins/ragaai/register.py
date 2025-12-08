@@ -19,6 +19,8 @@ from pydantic import Field
 
 from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_telemetry_exporter
+from nat.data_models.common import SerializableSecretStr
+from nat.data_models.common import get_secret_value
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from nat.observability.mixin.batch_config_mixin import BatchConfigMixin
 from nat.observability.mixin.collector_config_mixin import CollectorConfigMixin
@@ -29,8 +31,8 @@ logger = logging.getLogger(__name__)
 class CatalystTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="catalyst"):
     """A telemetry exporter to transmit traces to RagaAI catalyst."""
     endpoint: str = Field(description="The RagaAI Catalyst endpoint", default="https://catalyst.raga.ai/api")
-    access_key: str = Field(description="The RagaAI Catalyst API access key", default="")
-    secret_key: str = Field(description="The RagaAI Catalyst API secret key", default="")
+    access_key: SerializableSecretStr = Field(description="The RagaAI Catalyst API access key", default="")
+    secret_key: SerializableSecretStr = Field(description="The RagaAI Catalyst API secret key", default="")
     dataset: str | None = Field(description="The RagaAI Catalyst dataset name", default=None)
     tracer_type: str = Field(description="The RagaAI Catalyst tracer type", default="agentic/nemo-framework")
 
@@ -49,8 +51,8 @@ async def catalyst_telemetry_exporter(config: CatalystTelemetryExporter, builder
 
         from nat.plugins.ragaai.ragaai_catalyst_exporter import RagaAICatalystExporter
 
-        access_key = config.access_key or os.environ.get("CATALYST_ACCESS_KEY")
-        secret_key = config.secret_key or os.environ.get("CATALYST_SECRET_KEY")
+        access_key = get_secret_value(config.access_key) if config.access_key else os.environ.get("CATALYST_ACCESS_KEY")
+        secret_key = get_secret_value(config.secret_key) if config.secret_key else os.environ.get("CATALYST_SECRET_KEY")
         endpoint = config.endpoint or os.environ.get("CATALYST_ENDPOINT")
 
         assert endpoint is not None, "catalyst endpoint is not set"

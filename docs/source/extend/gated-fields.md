@@ -67,32 +67,10 @@ class AzureOnlyMixin(
 
 ## Built-in Gated Mixins
 
-- {py:class}`~nat.data_models.temperature_mixin.TemperatureMixin`
-  - Field: `temperature` in [0, 1]
-  - Default when supported: `0.0`
-  - Not supported on GPT-5 models
-
-- {py:class}`~nat.data_models.top_p_mixin.TopPMixin`
-  - Field: `top_p` in [0, 1]
-  - Default when supported: `1.0`
-  - Not supported on GPT-5 models
-
 - {py:class}`~nat.data_models.thinking_mixin.ThinkingMixin`
   - Field: `thinking: bool | None`
   - Default when supported: `None` (use model default)
   - Only currently supported on Nemotron models
-
-### Example: Integrating into a Provider Configuration
-
-```python
-from pydantic import BaseModel, Field
-from nat.data_models.temperature_mixin import TemperatureMixin
-from nat.data_models.top_p_mixin import TopPMixin
-
-class MyProviderConfig(BaseModel, TemperatureMixin, TopPMixin):
-    model_name: str = Field(...)
-    # temperature and top_p are now validated and defaulted based on model support
-```
 
 ## Best Practices
 

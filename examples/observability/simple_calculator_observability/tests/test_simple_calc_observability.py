@@ -28,6 +28,8 @@ from nat.runtime.loader import load_config
 from nat.test.utils import run_workflow
 
 if typing.TYPE_CHECKING:
+    import galileo.log_streams
+    import galileo.projects
     import langsmith.client
     from weave.trace.weave_client import WeaveClient
 
@@ -72,6 +74,29 @@ def fixture_weave_project_name() -> str:
 @pytest.fixture(name="weave_query")
 def fixture_weave_query(weave_attribute_key: str, weave_identifier: str) -> dict:
     return {"$expr": {"$eq": [{"$getField": f"attributes.{weave_attribute_key}"}, {"$literal": weave_identifier}]}}
+
+
+@pytest.fixture(name="aiq_compatibility_span_prefix")
+def aiq_compatibility_span_prefix_fixture():
+    """
+    The values of the SpanAttributes are defined on import based upon the NAT_SPAN_PREFIX environment variable.
+    Setting the environment variable after the fact has no impact.
+    """
+    from nat.data_models import span
+
+    orig_span_prefix = span._SPAN_PREFIX
+
+    orig_enum_values = {}
+    for enum_item in span.SpanAttributes:
+        enum_value = enum_item.value
+        if enum_value.startswith(f"{orig_span_prefix}."):
+            orig_enum_values[enum_item.name] = enum_value
+            enum_item._value_ = enum_value.replace(f"{orig_span_prefix}.", "aiq.", 1)
+    yield
+
+    span._SPAN_PREFIX = orig_span_prefix
+    for (enum_item_name, enum_value) in orig_enum_values.items():
+        span.SpanAttributes[enum_item_name]._value_ = enum_value
 
 
 @pytest.fixture(name="weave_client")
@@ -171,17 +196,76 @@ async def test_langsmith_full_workflow(config_dir: Path,
 
     await run_workflow(config=config, question=question, expected_answer=expected_answer)
 
-    done = False
     runlist = []
     deadline = time.time() + 10
-    while not done and time.time() < deadline:
+    while len(runlist) == 0 and time.time() < deadline:
         # Wait for traces to be ingested
         await asyncio.sleep(0.5)
         runs = langsmith_client.list_runs(project_name=langsmith_project_name, is_root=True)
         runlist = [run for run in runs]
-        if len(runlist) > 0:
-            done = True
 
-    assert done, "Timed out waiting for LangSmith run to be ingested"
     # Since we have a newly created project, the above workflow should have created exactly one root run
     assert len(runlist) == 1
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("galileo_api_key")
+async def test_galileo_full_workflow(config_dir: Path,
+                                     galileo_project: "galileo.projects.Project",
+                                     galileo_log_stream: "galileo.log_streams.LogStream",
+                                     question: str,
+                                     expected_answer: str):
+    config_file = config_dir / "config-galileo.yml"
+    config = load_config(config_file)
+    config.general.telemetry.tracing["galileo"].project = galileo_project.name
+    config.general.telemetry.tracing["galileo"].logstream = galileo_log_stream.name
+
+    await run_workflow(config=config, question=question, expected_answer=expected_answer)
+
+    import galileo.search
+
+    sessions = []
+    deadline = time.time() + 10
+    while len(sessions) == 0 and time.time() < deadline:
+        # Wait for traces to be ingested
+        await asyncio.sleep(0.5)
+        results = galileo.search.get_sessions(project_id=galileo_project.id, log_stream_id=galileo_log_stream.id)
+        sessions = results.records or []
+
+    assert len(sessions) == 1
+
+    traces = galileo.search.get_traces(project_id=galileo_project.id, log_stream_id=galileo_log_stream.id)
+    assert len(traces.records) == 1
+
+    spans = galileo.search.get_spans(project_id=galileo_project.id, log_stream_id=galileo_log_stream.id)
+    assert len(spans.records) > 1
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("catalyst_keys", "aiq_compatibility_span_prefix")
+async def test_catalyst_full_workflow(config_dir: Path,
+                                      catalyst_project_name,
+                                      catalyst_dataset_name,
+                                      question: str,
+                                      expected_answer: str):
+    config_file = config_dir / "config-catalyst.yml"
+    config = load_config(config_file)
+    config.general.telemetry.tracing["catalyst"].project = catalyst_project_name
+    config.general.telemetry.tracing["catalyst"].dataset = catalyst_dataset_name
+
+    await run_workflow(config=config, question=question, expected_answer=expected_answer)
+
+    from ragaai_catalyst import Dataset
+    ds = Dataset(catalyst_project_name)
+
+    dataset_found = False
+
+    # Allow some time for the traces to be uploaded
+    await asyncio.sleep(5)
+    deadline = time.time() + 10
+    while not dataset_found and time.time() < deadline:
+        dataset_found = catalyst_dataset_name in ds.list_datasets()
+        if not dataset_found:
+            await asyncio.sleep(0.5)
+
+    assert dataset_found

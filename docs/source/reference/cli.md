@@ -27,6 +27,13 @@ throughout the remainder of this document.
 
 ```
 nat
+├── a2a
+│   ├── client
+│   │   ├── call
+│   │   ├── discover
+│   │   ├── get_info
+│   │   └── get_skills
+│   └── serve
 ├── configure
 │   └── channel
 │       ├── add
@@ -74,6 +81,73 @@ nat
     ├── delete
     └── reinstall
 ```
+
+## A2A
+
+The `nat a2a` command group provides utilities for working with Agent-to-Agent (A2A) communication. These commands allow you to serve workflows as A2A agents and interact with remote A2A agents from the command line.
+
+For comprehensive A2A documentation, see:
+- [A2A Server](../workflows/a2a/a2a-server.md) - Publishing workflows as A2A servers
+- [A2A Client](../workflows/a2a/a2a-client.md) - Using A2A clients in workflows
+- [A2A CLI Utilities](../workflows/a2a/a2a-cli.md) - Command-line tools for A2A
+
+### Serve
+
+The `nat a2a serve` command (equivalent to `nat start a2a`) starts an A2A server that exposes your workflow as an A2A agent. This allows other A2A-compatible systems to discover and interact with your workflow using the Agent-to-Agent protocol.
+
+The `nat a2a serve --help` utility provides a brief description of each option:
+
+```console
+$ nat a2a serve --help
+Usage: nat a2a serve [OPTIONS]
+
+  Run a NAT workflow using the a2a front end.
+
+Options:
+  --config_file FILE         A JSON/YAML file that sets the parameters for the
+                             workflow.  [required]
+  --override <TEXT TEXT>...  Override config values using dot notation (e.g.,
+                             --override llms.nim_llm.temperature 0.7)
+  --name TEXT                Name of the A2A agent
+  --description TEXT         Description of the A2A agent
+  --host TEXT                Host to bind the server to (default: localhost)
+  --port INTEGER             Port to bind the server to (default: 10000)
+  --help                     Show this message and exit.
+```
+
+For example, to start an A2A server with a specific workflow:
+
+```bash
+nat a2a serve --config_file examples/getting_started/simple_calculator/configs/config.yml \
+              --name "Calculator Agent" \
+              --description "A calculator agent for mathematical operations"
+```
+
+This will start an A2A server on the default host (localhost) and port (10000).
+
+### Client
+
+The `nat a2a client` command group provides utilities for interacting with A2A agents directly from the command line. These commands are useful for discovering agent capabilities and testing A2A connectivity.
+
+The `nat a2a client --help` utility provides an overview of the available commands:
+
+```console
+$ nat a2a client --help
+Usage: nat a2a client [OPTIONS] COMMAND [ARGS]...
+
+  A2A client commands.
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  call       Call the agent with a message.
+  discover   Discover A2A agent and display AgentCard information.
+  get_info   Get agent metadata and information.
+  get_skills Get agent skills and capabilities.
+```
+
+For detailed usage examples and command options, refer to [A2A CLI Utilities](../workflows/a2a/a2a-cli.md).
 
 ## Start
 

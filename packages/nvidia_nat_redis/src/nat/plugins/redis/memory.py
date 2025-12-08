@@ -14,10 +14,11 @@
 # limitations under the License.
 
 from pydantic import Field
-from pydantic import SecretStr
 
 from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_memory
+from nat.data_models.common import OptionalSecretStr
+from nat.data_models.common import get_secret_value
 from nat.data_models.component_ref import EmbedderRef
 from nat.data_models.memory import MemoryBaseConfig
 
@@ -26,7 +27,7 @@ class RedisMemoryClientConfig(MemoryBaseConfig, name="redis_memory"):
     host: str = Field(default="localhost", description="Redis server host")
     db: int = Field(default=0, description="Redis DB")
     port: int = Field(default=6379, description="Redis server port")
-    password: SecretStr | None = Field(default=None, description="Password for the Redis server")
+    password: OptionalSecretStr = Field(default=None, description="Password for the Redis server")
     key_prefix: str = Field(default="nat", description="Key prefix to use for redis keys")
     embedder: EmbedderRef = Field(description=("Instance name of the memory client instance from the workflow "
                                                "configuration object."))
@@ -42,14 +43,10 @@ async def redis_memory_client(config: RedisMemoryClientConfig, builder: Builder)
 
     from .schema import ensure_index_exists
 
-    redis_password = None
-    if config.password is not None:
-        redis_password = config.password.get_secret_value()
-
     redis_client = redis.Redis(host=config.host,
                                port=config.port,
                                db=config.db,
-                               password=redis_password,
+                               password=get_secret_value(config.password),
                                decode_responses=True,
                                socket_timeout=5.0,
                                socket_connect_timeout=5.0)

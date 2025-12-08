@@ -46,9 +46,12 @@ async def azure_openai_adk(config: AzureOpenAIModelConfig, _builder: Builder):
         },
         by_alias=True,
         exclude_none=True,
+        exclude_unset=True,
     )
     if config.azure_endpoint:
         config_dict["api_base"] = config.azure_endpoint
+
+    config_dict["api_version"] = config.api_version
 
     yield LiteLlm(f"azure/{config.azure_deployment}", **config_dict)
 
@@ -63,6 +66,7 @@ async def litellm_adk(litellm_config: LiteLlmModelConfig, _builder: Builder):
         exclude={"type", "max_retries", "thinking", "api_type"},
         by_alias=True,
         exclude_none=True,
+        exclude_unset=True,
     ))
 
 
@@ -90,6 +94,7 @@ async def nim_adk(config: NIMModelConfig, _builder: Builder):
         exclude={"type", "max_retries", "thinking", "model_name", "model", "base_url", "api_type"},
         by_alias=True,
         exclude_none=True,
+        exclude_unset=True,
     )
     if config.base_url:
         config_dict["api_base"] = config.base_url
@@ -113,6 +118,7 @@ async def openai_adk(config: OpenAIModelConfig, _builder: Builder):
         exclude={"type", "max_retries", "thinking", "model_name", "model", "base_url", "api_type"},
         by_alias=True,
         exclude_none=True,
+        exclude_unset=True,
     )
     if config.base_url:
         config_dict["api_base"] = config.base_url

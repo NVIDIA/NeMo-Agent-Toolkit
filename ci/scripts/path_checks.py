@@ -81,6 +81,10 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/getting_started/simple_calculator/data/simple_calculator.json",
     ),
     (
+        r"^examples/A2A/math_assistant_a2a/README.md",
+        r"^examples/getting_started/simple_calculator/configs/config.yml",
+    ),
+    (
         r"^examples/notebooks/launchables/GPU_Cluster_Sizing_with_NeMo_Agent_Toolkit.ipynb",
         r"^examples/evaluation_and_profiling/simple_calculator_eval/configs/config-sizing-calc.yml",
     ),
@@ -114,6 +118,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "Input/Observation",
     "input/output",
     "inputs/outputs",
+    "Input/output",
     "JavaScript/TypeScript",
     "JSON/YAML",
     "LangChain/LangGraph",
@@ -149,7 +154,8 @@ ALLOWLISTED_WORDS: set[str] = {
     "nvidia/([Ll]lama|[Nn][Vv]-).*",
     "mistralai/[Mm]ixtral.*",
     "microsoft/[Pp]hi.*",
-    "ssmits/[Qq]wen.*",  #
+    "ssmits/[Qq]wen.*",
+    "deepseek-ai/deepseek-.*",  #
     # MIME types
     "(application|text|image|video|audio|model|dataset|token|other)/.*",  #
     # Time zones
@@ -171,6 +177,11 @@ IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
     (
         r"^examples/frameworks/haystack_deep_research_agent/README.md",
         r"^examples/frameworks/haystack_deep_research_agent/data/bedrock-ug.pdf",
+    ),
+    # ignore external repository paths
+    (
+        r"^examples/A2A/currency_agent_a2a/README.md",
+        r"^samples/python/agents/langgraph",
     ),
     # ignore generated files
     (

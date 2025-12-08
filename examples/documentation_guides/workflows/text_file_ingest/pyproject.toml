@@ -11,7 +11,7 @@ name = "text_file_ingest"
 dynamic = ["version"]
 dependencies = [
     "nvidia-nat[langchain]~=1.4",
-    "bs4==0.0.2",
+    "beautifulsoup4~=4.13",
     "usearch~=2.21.0",
 ]
 requires-python = ">=3.11,<3.14"

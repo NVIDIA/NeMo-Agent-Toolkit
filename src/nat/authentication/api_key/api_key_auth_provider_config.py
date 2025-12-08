@@ -19,12 +19,14 @@ import string
 
 from pydantic import Field
 from pydantic import field_validator
+from pydantic import model_validator
 
 from nat.authentication.exceptions.api_key_exceptions import APIKeyFieldError
 from nat.authentication.exceptions.api_key_exceptions import HeaderNameFieldError
 from nat.authentication.exceptions.api_key_exceptions import HeaderPrefixFieldError
 from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.authentication import HeaderAuthScheme
+from nat.data_models.common import SerializableSecretStr
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +39,9 @@ class APIKeyAuthProviderConfig(AuthProviderBaseConfig, name="api_key"):
     API Key authentication configuration model.
     """
 
-    raw_key: str = Field(description=("Raw API token or credential to be injected into the request parameter. "
-                                      "Used for 'bearer','x-api-key','custom', and other schemes. "))
+    raw_key: SerializableSecretStr = Field(
+        description=("Raw API token or credential to be injected into the request parameter. "
+                     "Used for 'bearer','x-api-key','custom', and other schemes. "))
 
     auth_scheme: HeaderAuthScheme = Field(default=HeaderAuthScheme.BEARER,
                                           description=("The HTTP authentication scheme to use. "
@@ -53,7 +56,7 @@ class APIKeyAuthProviderConfig(AuthProviderBaseConfig, name="api_key"):
 
     @field_validator('raw_key')
     @classmethod
-    def validate_raw_key(cls, value: str) -> str:
+    def validate_raw_key(cls, value: SerializableSecretStr) -> SerializableSecretStr:
         if not value:
             raise APIKeyFieldError('value_missing', 'raw_key field value is required.')
 
@@ -63,11 +66,12 @@ class APIKeyAuthProviderConfig(AuthProviderBaseConfig, name="api_key"):
                 'raw_key field value must be at least 8 characters long for security. '
                 f'Got: {len(value)} characters.')
 
-        if len(value.strip()) != len(value):
+        str_value = value.get_secret_value()
+        if len(str_value.strip()) != len(value):
             raise APIKeyFieldError('whitespace_found',
                                    'raw_key field value cannot have leading or trailing whitespace.')
 
-        if any(c in string.whitespace for c in value):
+        if any(c in string.whitespace for c in str_value):
             raise APIKeyFieldError('contains_whitespace', 'raw_key must not contain any '
                                    'whitespace characters.')
 
@@ -75,9 +79,10 @@ class APIKeyAuthProviderConfig(AuthProviderBaseConfig, name="api_key"):
 
     @field_validator('custom_header_name')
     @classmethod
-    def validate_custom_header_name(cls, value: str) -> str:
-        if not value:
-            raise HeaderNameFieldError('value_missing', 'custom_header_name is required.')
+    def validate_custom_header_name(cls, value: str | None) -> str | None:
+        # Only validate format if value is provided (required check is in model_validator)
+        if value is None:
+            return value
 
         if value != value.strip():
             raise HeaderNameFieldError('whitespace_found',
@@ -96,9 +101,10 @@ class APIKeyAuthProviderConfig(AuthProviderBaseConfig, name="api_key"):
 
     @field_validator('custom_header_prefix')
     @classmethod
-    def validate_custom_header_prefix(cls, value: str) -> str:
-        if not value:
-            raise HeaderPrefixFieldError('value_missing', 'custom_header_prefix is required.')
+    def validate_custom_header_prefix(cls, value: str | None) -> str | None:
+        # Only validate format if value is provided (required check is in model_validator)
+        if value is None:
+            return value
 
         if value != value.strip():
             raise HeaderPrefixFieldError(
@@ -122,3 +128,15 @@ class APIKeyAuthProviderConfig(AuthProviderBaseConfig, name="api_key"):
                                    'required after construction.')
 
         return value
+
+    @model_validator(mode='after')
+    def validate_custom_scheme_requirements(self) -> 'APIKeyAuthProviderConfig':
+        """Validate that custom_header_name and custom_header_prefix are provided when using CUSTOM scheme."""
+        if self.auth_scheme == HeaderAuthScheme.CUSTOM:
+            if not self.custom_header_name:
+                raise HeaderNameFieldError('value_missing',
+                                           'custom_header_name is required when auth_scheme is CUSTOM.')
+            if not self.custom_header_prefix:
+                raise HeaderPrefixFieldError('value_missing',
+                                             'custom_header_prefix is required when auth_scheme is CUSTOM.')
+        return self

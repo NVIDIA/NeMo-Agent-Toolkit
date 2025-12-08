@@ -28,12 +28,22 @@ logger = logging.getLogger(__name__)
 
 class RedisObjectStore(ObjectStore):
     """
-    Implementation of ObjectStore that stores objects in Redis.
+    Implementation of ObjectStore that stores objects in Redis with optional TTL.
 
     Each object is stored as a single binary value at key "nat/object_store/{bucket_name}/{object_key}".
+    When TTL is configured, keys will automatically expire after the specified duration in seconds.
     """
 
-    def __init__(self, *, bucket_name: str, host: str, port: int, db: int, password: str | None = None):
+    def __init__(
+        self,
+        *,
+        bucket_name: str,
+        host: str,
+        port: int,
+        db: int,
+        password: str | None = None,
+        ttl: int | None = None,
+    ):
 
         super().__init__()
 
@@ -42,6 +52,7 @@ class RedisObjectStore(ObjectStore):
         self._port = port
         self._db = db
         self._password = password
+        self._ttl = ttl
         self._client: redis.Redis | None = None
 
     async def __aenter__(self) -> "RedisObjectStore":
@@ -88,7 +99,7 @@ class RedisObjectStore(ObjectStore):
 
         item_json = item.model_dump_json()
         # Redis SET with NX ensures we do not overwrite existing keys
-        if not await self._client.set(full_key, item_json, nx=True):
+        if not await self._client.set(full_key, item_json, nx=True, ex=self._ttl):
             raise KeyAlreadyExistsError(key=key,
                                         additional_message=f"Redis bucket {self._bucket_name} already has key {key}")
 
@@ -100,7 +111,7 @@ class RedisObjectStore(ObjectStore):
 
         full_key = self._make_key(key)
         item_json = item.model_dump_json()
-        await self._client.set(full_key, item_json)
+        await self._client.set(full_key, item_json, ex=self._ttl)
 
     @override
     async def get_object(self, key: str) -> ObjectStoreItem:

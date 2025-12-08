@@ -25,6 +25,7 @@ from nat.cli.register_workflow import register_function
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
 from nat.profiler.decorators.function_tracking import track_function
+from nat.data_models.optimizable import OptimizableMixin
 
 # flake8: noqa
 # Import any tools which need to be automatically registered here
@@ -43,7 +44,7 @@ from .classification_evaluator import register_classification_evaluator
 from .prompts import ALERT_TRIAGE_AGENT_PROMPT
 
 
-class AlertTriageAgentWorkflowConfig(FunctionBaseConfig, name="alert_triage_agent"):
+class AlertTriageAgentWorkflowConfig(FunctionBaseConfig, OptimizableMixin, name="alert_triage_agent"):
     """
     Configuration for the Alert Triage Agent workflow. This agent orchestrates multiple diagnostic tools
     to analyze and triage alerts by:
@@ -54,7 +55,7 @@ class AlertTriageAgentWorkflowConfig(FunctionBaseConfig, name="alert_triage_agen
     """
     tool_names: list[str] = []
     llm_name: LLMRef
-    offline_mode: bool = Field(default=True, description="Whether to run in offline model")
+    offline_mode: bool = Field(default=True, description="Whether to run in offline mode")
     offline_data_path: str | None = Field(
         default="examples/advanced_agents/alert_triage_agent/data/offline_data.csv",
         description="Path to the main offline dataset in CSV format containing alerts and their simulated environments")

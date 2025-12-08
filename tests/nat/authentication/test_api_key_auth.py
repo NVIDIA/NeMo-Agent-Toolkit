@@ -56,8 +56,10 @@ def make_config(
 # APIKeyAuthProviderConfig – validation tests
 # --------------------------------------------------------------------------- #
 def test_config_valid_bearer():
-    cfg = make_config()
-    assert cfg.raw_key == "superSecretAPIKey"
+    expected_key = "superSecretAPIKey"
+    cfg = make_config(raw_key=expected_key)
+    assert str(cfg.raw_key) != expected_key
+    assert cfg.raw_key.get_secret_value() == expected_key
     assert cfg.auth_scheme is HeaderAuthScheme.BEARER
 
 
@@ -114,7 +116,7 @@ async def test_construct_header_bearer(monkeypatch: pytest.MonkeyPatch):
 
         assert cred.header_name == "Authorization"
         assert cred.scheme == "Bearer"
-        assert cred.token.get_secret_value() == cfg.raw_key
+        assert cred.token.get_secret_value() == cfg.raw_key.get_secret_value()
 
 
 async def test_construct_header_x_api_key():
@@ -136,7 +138,7 @@ async def test_construct_header_x_api_key():
 
         assert cred.scheme == "X-API-Key"
         assert cred.header_name == ""  # per implementation
-        assert cred.token.get_secret_value() == cfg.raw_key
+        assert cred.token.get_secret_value() == cfg.raw_key.get_secret_value()
 
 
 async def test_construct_header_custom():
@@ -158,4 +160,4 @@ async def test_construct_header_custom():
 
         assert cred.header_name == "X-Custom"
         assert cred.scheme == "Token"
-        assert cred.token.get_secret_value() == cfg.raw_key
+        assert cred.token.get_secret_value() == cfg.raw_key.get_secret_value()

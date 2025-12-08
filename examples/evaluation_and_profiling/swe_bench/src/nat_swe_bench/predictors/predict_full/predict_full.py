@@ -62,7 +62,7 @@ class SweBenchPredictor(SweBenchPredictorBase):
     def __init__(self, config: SweBenchWorkflowConfig, builder: Builder):
         super().__init__(config, builder)
         self.git_tool = None
-        self.openai_client = OpenAI(api_key=config.predictor.openai_api_key)
+        self.openai_client = OpenAI(api_key=config.predictor.openai_api_key.get_secret_value())
 
     def _parse_ast(self, file_path: str):
         """Parse AST of a Python file and extract symbols and imports."""

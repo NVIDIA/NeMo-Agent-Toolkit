@@ -19,7 +19,11 @@
 
 DOCKER_COMMAND=${DOCKER_COMMAND:-"docker"}
 SANDBOX_NAME=${1:-'local-sandbox'}
-NUM_THREADS=10
+
+# UWSGI_CHEAPER sets the number of initial uWSGI worker processes
+# UWSGI_PROCESSES sets the maximum number of uWSGI worker processes
+UWSGI_CHEAPER=${UWSGI_CHEAPER:-5}
+UWSGI_PROCESSES=${UWSGI_PROCESSES:-10}
 
 # Get the output_data directory path for mounting
 # Priority: command line argument > environment variable > default path (current directory)
@@ -37,14 +41,16 @@ fi
 # Check if the Docker image already exists
 if ! ${DOCKER_COMMAND} images ${SANDBOX_NAME} | grep -q "${SANDBOX_NAME}"; then
     echo "Docker image not found locally. Building ${SANDBOX_NAME}..."
-    ${DOCKER_COMMAND} build --tag=${SANDBOX_NAME} --build-arg="UWSGI_PROCESSES=$((${NUM_THREADS} * 10))" --build-arg="UWSGI_CHEAPER=${NUM_THREADS}" -f Dockerfile.sandbox .
+    ${DOCKER_COMMAND} build --tag=${SANDBOX_NAME} \
+        --build-arg="UWSGI_PROCESSES=${UWSGI_PROCESSES}" \
+        --build-arg="UWSGI_CHEAPER=${UWSGI_CHEAPER}" \
+        -f Dockerfile.sandbox .
 else
     echo "Using existing Docker image: ${SANDBOX_NAME}"
 fi
 
 # Mount the output_data directory directly so files created in container appear in the local directory
-${DOCKER_COMMAND} run --rm --name=local-sandbox \
+${DOCKER_COMMAND} run --rm -ti --name=local-sandbox \
   --network=host \
   -v "${OUTPUT_DATA_PATH}:/workspace" \
-  -w /workspace \
   ${SANDBOX_NAME}

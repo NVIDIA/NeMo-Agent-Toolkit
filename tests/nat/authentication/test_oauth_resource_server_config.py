@@ -218,7 +218,7 @@ def test_introspection_endpoint_valid(base_config: OAuth2ResourceServerConfig, v
     )
     assert cfg.introspection_endpoint == value
     assert cfg.client_id == "client-abc"
-    assert cfg.client_secret == "secret-xyz"
+    assert cfg.client_secret.get_secret_value() == "secret-xyz"
 
 
 @pytest.mark.parametrize(
@@ -302,9 +302,12 @@ def test_client_id_invalid_with_introspection_when_counterpart_missing(base_conf
         "secret-xyz",  # fine when introspection not set
     ],
 )
-def test_client_secret_valid_without_introspection(base_config: OAuth2ResourceServerConfig, value):
+def test_client_secret_valid_without_introspection(base_config: OAuth2ResourceServerConfig, value: str | None):
     cfg = _build_from(base_config, client_secret=value, introspection_endpoint=None, client_id=None)
-    assert cfg.client_secret == value
+    if value is None:
+        assert cfg.client_secret is None
+    else:
+        assert cfg.client_secret.get_secret_value() == value
 
 
 @pytest.mark.parametrize(

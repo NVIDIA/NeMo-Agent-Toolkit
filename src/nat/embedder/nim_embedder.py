@@ -23,6 +23,7 @@ from pydantic import Field
 from nat.builder.builder import Builder
 from nat.builder.embedder import EmbedderProviderInfo
 from nat.cli.register_workflow import register_embedder_provider
+from nat.data_models.common import OptionalSecretStr
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 
@@ -41,7 +42,7 @@ TruncationOption = typing.Annotated[str, AfterValidator(option_in_allowed_values
 class NIMEmbedderModelConfig(EmbedderBaseConfig, RetryMixin, name="nim"):
     """A NVIDIA Inference Microservice (NIM) embedder provider to be used with an embedder client."""
 
-    api_key: str | None = Field(default=None, description="NVIDIA API key to interact with hosted NIM.")
+    api_key: OptionalSecretStr = Field(default=None, description="NVIDIA API key to interact with hosted NIM.")
     base_url: str | None = Field(default=None, description="Base url to the hosted NIM.")
     model_name: str = Field(validation_alias=AliasChoices("model_name", "model"),
                             serialization_alias="model",

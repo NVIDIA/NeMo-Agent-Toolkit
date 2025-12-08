@@ -37,6 +37,7 @@ from nat.cli.register_workflow import register_function_group
 from nat.cli.register_workflow import register_llm_client
 from nat.cli.register_workflow import register_llm_provider
 from nat.cli.register_workflow import register_memory
+from nat.cli.register_workflow import register_middleware
 from nat.cli.register_workflow import register_object_store
 from nat.cli.register_workflow import register_retriever_client
 from nat.cli.register_workflow import register_retriever_provider
@@ -51,6 +52,7 @@ from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
+from nat.data_models.middleware import MiddlewareBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfig
 from nat.data_models.retriever import RetrieverBaseConfig
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
@@ -1644,3 +1646,81 @@ async def test_integration_error_logging_with_workflow_failure(caplog_fixture):
     # Should include the original error
     assert "Original error:" in log_text
     assert "Function initialization failed" in log_text
+
+
+# Function Middleware Tests
+
+
+class TMiddlewareConfig(MiddlewareBaseConfig, name="test_middleware"):
+    raise_error: bool = False
+
+
+@register_middleware(config_type=TMiddlewareConfig)
+async def register_test_middleware(config: TMiddlewareConfig, b: Builder):
+    from nat.middleware.function_middleware import FunctionMiddleware
+
+    class TestMiddleware(FunctionMiddleware):
+
+        def __init__(self, raise_error: bool = False):
+            super().__init__()
+            self.raise_error = raise_error
+
+    if config.raise_error:
+        raise ValueError("Middleware initialization failed")
+
+    yield TestMiddleware(raise_error=config.raise_error)
+
+
+async def test_add_middleware():
+
+    async with WorkflowBuilder() as builder:
+        await builder.add_middleware("middleware_name", TMiddlewareConfig())
+
+        with pytest.raises(ValueError):
+            await builder.add_middleware("middleware_name2", TMiddlewareConfig(raise_error=True))
+
+        # Try and add the same name
+        with pytest.raises(ValueError):
+            await builder.add_middleware("middleware_name", TMiddlewareConfig())
+
+
+async def test_get_middleware():
+
+    async with WorkflowBuilder() as builder:
+        config = TMiddlewareConfig()
+
+        middleware = await builder.add_middleware("middleware_name", config)
+
+        assert middleware == await builder.get_middleware("middleware_name")
+
+        with pytest.raises(ValueError):
+            await builder.get_middleware("middleware_name_not_exist")
+
+
+async def test_get_middleware_config():
+
+    async with WorkflowBuilder() as builder:
+        config = TMiddlewareConfig()
+
+        await builder.add_middleware("middleware_name", config)
+
+        assert builder.get_middleware_config("middleware_name") == config
+
+        with pytest.raises(ValueError):
+            builder.get_middleware_config("middleware_name_not_exist")
+
+
+async def test_get_middlewares_batch():
+    """Test getting multiple middlewares at once."""
+
+    async with WorkflowBuilder() as builder:
+        config1 = TMiddlewareConfig()
+        config2 = TMiddlewareConfig()
+
+        await builder.add_middleware("middleware1", config1)
+        await builder.add_middleware("middleware2", config2)
+
+        middleware = await builder.get_middleware_list(["middleware1", "middleware2"])
+
+        assert len(middleware) == 2
+        assert all(i is not None for i in middleware)

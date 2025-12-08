@@ -20,6 +20,7 @@ from pydantic import Field
 from nat.builder.builder import Builder
 from nat.builder.embedder import EmbedderProviderInfo
 from nat.cli.register_workflow import register_embedder_provider
+from nat.data_models.common import OptionalSecretStr
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 
@@ -29,7 +30,7 @@ class OpenAIEmbedderModelConfig(EmbedderBaseConfig, RetryMixin, name="openai"):
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")
 
-    api_key: str | None = Field(default=None, description="OpenAI API key to interact with hosted model.")
+    api_key: OptionalSecretStr = Field(default=None, description="OpenAI API key to interact with hosted model.")
     base_url: str | None = Field(default=None, description="Base url to the hosted model.")
     model_name: str = Field(validation_alias=AliasChoices("model_name", "model"),
                             serialization_alias="model",

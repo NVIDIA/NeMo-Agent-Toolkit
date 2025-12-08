@@ -24,6 +24,7 @@ import aioboto3
 from botocore.exceptions import NoCredentialsError
 from tqdm import tqdm
 
+from nat.data_models.common import get_secret_value
 from nat.data_models.evaluate import EvalOutputConfig
 
 logger = logging.getLogger(__name__)
@@ -90,8 +91,8 @@ class OutputUploader:
                     "s3",
                     endpoint_url=endpoint_url,
                     region_name=region_name,
-                    aws_access_key_id=self.s3_config.access_key,
-                    aws_secret_access_key=self.s3_config.secret_key,
+                    aws_access_key_id=get_secret_value(self.s3_config.access_key),
+                    aws_secret_access_key=get_secret_value(self.s3_config.secret_key),
             ) as s3_client:
                 with tqdm(total=len(file_entries), desc="Uploading files to S3") as pbar:
                     upload_tasks = [

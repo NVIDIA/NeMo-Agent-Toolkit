@@ -30,11 +30,14 @@ uv sync --all-groups --all-extras
 ```bash
 make -C docs
 
-# verify
-firefox docs/build/html/index.html
+# preview with local server (open http://localhost:8000 in your browser)
+python -m http.server --directory docs/build/html 8000
+
 ```
 <!-- path-check-skip-next-line -->
 Outputs to `docs/build/docs/html`
+
+**Note**: When viewing documentation locally, the version switcher in the navigation bar will redirect to the production documentation site (`https://docs.nvidia.com/nemo/agent-toolkit/`) when selecting a different version. This is expected behavior, as the version switcher uses absolute URLs to ensure proper page path preservation in production.
 
 ## Contributing
 Refer to the [Contributing to NeMo Agent toolkit](./source/resources/contributing.md) guide.

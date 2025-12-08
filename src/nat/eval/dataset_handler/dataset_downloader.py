@@ -19,6 +19,7 @@ import boto3
 import requests
 from botocore.exceptions import NoCredentialsError
 
+from nat.data_models.common import get_secret_value
 from nat.data_models.dataset_handler import EvalDatasetConfig
 
 logger = logging.getLogger(__name__)
@@ -46,8 +47,8 @@ class DatasetDownloader:
             try:
                 self._s3_client = boto3.client("s3",
                                                endpoint_url=self.s3_config.endpoint_url,
-                                               aws_access_key_id=self.s3_config.access_key,
-                                               aws_secret_access_key=self.s3_config.secret_key)
+                                               aws_access_key_id=get_secret_value(self.s3_config.access_key),
+                                               aws_secret_access_key=get_secret_value(self.s3_config.secret_key))
             except NoCredentialsError as e:
                 logger.error("AWS credentials not available: %s", e)
                 raise

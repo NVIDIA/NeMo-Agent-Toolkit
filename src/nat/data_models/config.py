@@ -43,6 +43,7 @@ from .common import TypedBaseModel
 from .embedder import EmbedderBaseConfig
 from .llm import LLMBaseConfig
 from .memory import MemoryBaseConfig
+from .middleware import FunctionMiddlewareBaseConfig
 from .object_store import ObjectStoreBaseConfig
 from .retriever import RetrieverBaseConfig
 
@@ -86,6 +87,8 @@ def _process_validation_error(err: ValidationError, handler: ValidatorFunctionWr
                 registered_keys = GlobalTypeRegistry.get().get_registered_front_ends()
             elif (info.field_name == "ttc_strategies"):
                 registered_keys = GlobalTypeRegistry.get().get_registered_ttc_strategies()
+            elif (info.field_name == "middleware"):
+                registered_keys = GlobalTypeRegistry.get().get_registered_middleware()
 
             else:
                 assert False, f"Unknown field name {info.field_name} in validator"
@@ -253,6 +256,9 @@ class Config(HashableBaseModel):
     # Function Groups Configuration
     function_groups: dict[str, FunctionGroupBaseConfig] = Field(default_factory=dict)
 
+    # Middleware Configuration
+    middleware: dict[str, FunctionMiddlewareBaseConfig] = Field(default_factory=dict)
+
     # LLMs Configuration
     llms: dict[str, LLMBaseConfig] = Field(default_factory=dict)
 
@@ -303,6 +309,7 @@ class Config(HashableBaseModel):
 
     @field_validator("functions",
                      "function_groups",
+                     "middleware",
                      "llms",
                      "embedders",
                      "memory",
@@ -348,6 +355,10 @@ class Config(HashableBaseModel):
                                         typing.Annotated[type_registry.compute_annotation(FunctionGroupBaseConfig),
                                                          Discriminator(TypedBaseModel.discriminator)]]
 
+        MiddlewareAnnotation = dict[str,
+                                    typing.Annotated[type_registry.compute_annotation(FunctionMiddlewareBaseConfig),
+                                                     Discriminator(TypedBaseModel.discriminator)]]
+
         MemoryAnnotation = dict[str,
                                 typing.Annotated[type_registry.compute_annotation(MemoryBaseConfig),
                                                  Discriminator(TypedBaseModel.discriminator)]]
@@ -391,6 +402,11 @@ class Config(HashableBaseModel):
         function_groups_field = cls.model_fields.get("function_groups")
         if function_groups_field is not None and function_groups_field.annotation != FunctionGroupsAnnotation:
             function_groups_field.annotation = FunctionGroupsAnnotation
+            should_rebuild = True
+
+        middleware_field = cls.model_fields.get("middleware")
+        if (middleware_field is not None and middleware_field.annotation != MiddlewareAnnotation):
+            middleware_field.annotation = MiddlewareAnnotation
             should_rebuild = True
 
         memory_field = cls.model_fields.get("memory")
