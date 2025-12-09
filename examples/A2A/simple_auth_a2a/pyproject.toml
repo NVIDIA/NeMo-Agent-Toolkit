@@ -1,0 +1,28 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+[tool.setuptools]
+packages = ["nat_simple_auth_a2a"]
+
+[tool.setuptools_scm]
+git_describe_command = "git describe --long --first-parent"
+root = "../../.."
+
+[project]
+name = "nat_simple_auth_a2a"
+dynamic = ["version"]
+dependencies = [
+    "nvidia-nat[a2a]~=1.4",
+    "uvicorn~=0.34.0",
+]
+requires-python = ">=3.11,<3.14"
+description = "Simple protected A2A server example for testing NAT CLI authentication"
+keywords = ["ai", "a2a", "authentication", "testing"]
+classifiers = ["Programming Language :: Python"]
+
+[tool.uv.sources]
+nvidia-nat = { path = "../../..", editable = true }
+
+[project.scripts]
+nat-simple-protected-server = "nat_simple_auth_a2a.scripts.simple_protected_server:main"
