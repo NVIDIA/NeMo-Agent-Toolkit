@@ -230,7 +230,27 @@ Refer to the [Get Started](../../get-started/installing.md) guide to quickly beg
 
 ## Documentation
 
-All NeMo Agent toolkit documentation should be written in Markdown format. The documentation located under the `docs/source` directory is included in the documentation builds, refer to `docs/README.md` for information on how to build the documentation. In addition to this, each example should contain a `README.md` file that describes the example.
+All NeMo Agent toolkit documentation should be written in Markdown format.
+
+The documentation located under the `docs/source` directory is included in the documentation builds, and is built using [Sphinx](https://www.sphinx-doc.org/en/master/) with the [MyST parser](https://myst-parser.readthedocs.io/en/latest/). Refer to `docs/README.md` for information on how to build the documentation.
+
+In addition to this, each example should contain a `README.md` file that describes the example. This documentation is typically read using the GitHub browser interface or locally in a user's IDE. Example documentation should avoid any non-standard Markdown extensions to ensure compatibility.
+
+### Documentation Categories
+
+The documentation in the `docs/source` directory is organized into the following categories:
+* **Get Started** (`get-started`) - introductory documentation to help users get started with NeMo Agent toolkit.
+  * **Tutorials** (`get-started/tutorials`) - step-by-step guides to help users learn how to use the toolkit.
+* **Build Workflows** (`build-workflows`) - documentation on how to build workflows and workflow configuration. This includes information on the types of components (for example LLMs, and agents, etc.) that can be used as part of a workflow. However documentation of specific component implementations (for example ReAct Agent, and the Code Execution tool) should be located in the Components category.
+* **Run Workflows** (`run-workflows`) - documentation on how to run workflows, including observing workflows and publishing workflows with MPC and A2A protocols.
+* **Improve Workflows** (`improve-workflows`) - documentation on how to improve workflows such as evaluation, and optimization guides.
+* **Components** (`components`) - documentation on specific component implementations such as agents, tools, and connectors.
+* **Extend NeMo Agent Toolkit** (`extend`) - documentation on how to write custom components, along with how to test those components. The documentation here should help users extend the toolkit to meet their needs, and while there is some overlap, this documentation should not focus on contributing to the core NeMo Agent toolkit library.
+* **Reference** (`reference`) - This documentation should be limited to documenting the Python and REST APIs.
+* **Resources** (`resources`) - documentation for the project as a whole such as contributing guidelines, code of conduct, licensing, and FAQs.
+  * **Contributing** (`resources/contributing`) - documentation on how to contribute to the NeMo Agent toolkit project including setting up a development environment, and running tests.
+
+When adding new documentation, ensure that it is added to the appropriate category and sub-category.
 
 ### Checks
 All documentation is checked using [Vale](https://vale.sh/). In documentation the name of a command, variable, class, or function should be surrounded by backticks. For example referring `nat` should always be surrounded by backticks. Vale will not perform a check against anything surrounded by backticks or by a code block.
