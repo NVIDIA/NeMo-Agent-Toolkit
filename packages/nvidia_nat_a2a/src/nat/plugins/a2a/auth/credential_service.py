@@ -289,7 +289,7 @@ class A2ACredentialService(CredentialService):
         provider_type = type(self._auth_provider).__name__
 
         # OAuth2/OIDC schemes require OAuth2 providers
-        if isinstance(scheme.root, (OAuth2SecurityScheme, OpenIdConnectSecurityScheme)):
+        if isinstance(scheme.root, OAuth2SecurityScheme | OpenIdConnectSecurityScheme):
             return "OAuth2" in provider_type
 
         # API Key schemes (can be in header, query, or cookie)
@@ -329,7 +329,7 @@ class A2ACredentialService(CredentialService):
             return False
 
         # Check for OAuth2 or OIDC schemes
-        if isinstance(scheme_def.root, (OAuth2SecurityScheme, OpenIdConnectSecurityScheme)):
+        if isinstance(scheme_def.root, OAuth2SecurityScheme | OpenIdConnectSecurityScheme):
             return True
 
         # Check for HTTP Bearer scheme

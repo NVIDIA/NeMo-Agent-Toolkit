@@ -71,7 +71,7 @@ class A2AClientFunctionGroup(FunctionGroup):
         base_url = str(config.url)
 
         # Resolve auth provider if configured
-        auth_provider: "AuthProviderBase | None" = None
+        auth_provider: AuthProviderBase | None = None
         if config.auth_provider:
             try:
                 auth_provider = await self._builder.get_auth_provider(config.auth_provider)

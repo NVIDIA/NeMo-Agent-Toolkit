@@ -608,11 +608,7 @@ def a2a_client_call(url: str,
         builder = None
         try:
             # Validate auth options
-            auth_methods = sum([
-                bool(bearer_token or bearer_token_env),
-                bool(auth_config),
-                bool(auth_json)
-            ])
+            auth_methods = sum([bool(bearer_token or bearer_token_env), bool(auth_config), bool(auth_json)])
 
             if auth_methods > 1:
                 click.echo("[ERROR] Use only one authentication method", err=True)
@@ -669,6 +665,7 @@ def a2a_client_call(url: str,
             if builder:
                 # Auth was configured, use existing builder
                 from datetime import timedelta
+
                 from nat.plugins.a2a.client.client_config import A2AClientConfig
 
                 config = A2AClientConfig(

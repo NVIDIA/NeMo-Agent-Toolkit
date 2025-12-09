@@ -60,7 +60,7 @@ class A2ABaseClient:
         agent_card_path: str = "/.well-known/agent-card.json",
         task_timeout: timedelta = timedelta(seconds=300),
         streaming: bool = True,
-        auth_provider: "AuthProviderBase | None" = None,
+        auth_provider: AuthProviderBase | None = None,
         default_user_id: str | None = None,
     ):
         self._base_url = base_url
