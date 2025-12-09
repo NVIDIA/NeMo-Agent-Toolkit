@@ -36,33 +36,48 @@ from nat.cli.type_registry import GlobalTypeRegistry
 from nat.data_models.common import TypedBaseModel
 from nat.data_models.evaluate import EvalGeneralConfig
 from nat.data_models.llm import LLMBaseConfig
-from nat.eval.red_teaming_evaluator.filter_conditions import IntermediateStepsFilterCondition
 from nat.eval.red_teaming_evaluator.register import RedTeamingEvaluatorConfig
 from nat.middleware.red_teaming_middleware_config import RedTeamingMiddlewareConfig
 
 logger = logging.getLogger(__name__)
 
-# Fixed LLM name for red teaming evaluator
-RED_TEAMING_EVALUATOR_LLM_NAME = "red_teaming_evaluator_llm"
+
+class _RedTeamingScenarioRaw(BaseModel):
+    """Private: Scenario with dict evaluator for parsing _extends.
+
+    This type is only used during YAML/JSON parsing when evaluators
+    contain _extends references. After validation, all scenarios are
+    converted to RedTeamingScenario with proper evaluator configs.
+    """
+
+    scenario_id: str | None = Field(
+        default=None,
+        description="Optional unique identifier for this scenario."
+    )
+
+    middleware: RedTeamingMiddlewareConfig | None = Field(
+        default=None,
+        description="Full middleware configuration to apply."
+    )
+
+    evaluator: dict[str, typing.Any] = Field(
+        description="Evaluator as dict, potentially with _extends field."
+    )
 
 
 class RedTeamingScenario(BaseModel):
     """A single red teaming scenario configuration.
 
-    Each scenario defines a middleware configuration to apply and optional
-    evaluation overrides. The middleware is attached to all functions,
-    function_groups, and workflow - the middleware's internal targeting
-    handles which functions are actually affected at runtime.
+    Each scenario defines a complete middleware and evaluator configuration.
+    The evaluator can use _extends to inherit from evaluator_defaults.
 
     Attributes:
         scenario_id: Optional unique identifier. If not provided, the dict key
             from RedTeamingRunnerConfig.scenarios is used.
         middleware: Full middleware configuration to apply. Set to None for
             baseline scenarios (no middleware modification).
-        evaluation_instructions: Optional scenario-specific instructions that
-            override the evaluator's scenario_specific_instructions.
-        filter_conditions: Optional filter conditions that override the
-            evaluator's default filter conditions.
+        evaluator: Complete evaluator configuration. Can inherit from
+            evaluator_defaults using _extends in YAML/JSON.
     """
 
     scenario_id: str | None = Field(
@@ -77,58 +92,43 @@ class RedTeamingScenario(BaseModel):
         "Set to None for baseline scenarios (no middleware modification)."
     )
 
-    evaluation_instructions: str | None = Field(
-        default=None,
-        description="Scenario-specific instructions for the evaluator. "
-        "Overrides the evaluator's scenario_specific_instructions."
+    evaluator: RedTeamingEvaluatorConfig = Field(
+        description="Complete evaluator configuration for this scenario."
     )
-
-    filter_conditions: list[IntermediateStepsFilterCondition] | None = Field(
-        default=None,
-        description="Filter conditions for selecting intermediate steps to evaluate. "
-        "Overrides the evaluator's default filter conditions."
-    )
-
-
 class RedTeamingRunnerConfig(BaseModel):
     """Top-level configuration for red teaming evaluation.
 
-    This configuration encapsulates all settings needed to run red teaming
-    evaluations across multiple scenarios. It can optionally reference a
-    base workflow, or the base workflow can be provided via CLI.
-
-    The evaluator LLM is automatically named 'red_teaming_evaluator_llm' in the
-    generated configs to avoid conflicts with workflow LLMs.
+    Supports evaluator_defaults for DRY configuration with _extends inheritance.
 
     Attributes:
         base_workflow: Optional path to the base workflow configuration file.
-            Can be overridden by CLI --config_file argument.
-        evaluator_llm: LLM configuration for the red teaming evaluator.
-            Will be added to configs as 'red_teaming_evaluator_llm'.
-        evaluator: Default red teaming evaluator configuration. Scenarios
-            can override specific fields like evaluation_instructions and
-            filter_conditions.
+        llms: Dictionary of LLM configurations keyed by name.
+        evaluator_defaults: Named evaluator configurations that scenarios can
+            extend using _extends. Each default must be a complete, valid config.
         general: General evaluation settings (concurrency, output, dataset).
-        scenarios: Dictionary of scenarios keyed by scenario name. The key
-            becomes the scenario_id if not explicitly set in the scenario.
+        scenarios: Dictionary of scenarios. Scenarios can provide complete
+            evaluator configs or use _extends to inherit from evaluator_defaults.
 
     Example YAML configuration:
 
         base_workflow: ./configs/base_workflow.yml
 
-        evaluator_llm:
-          _type: nim
-          model_name: mistralai/mixtral-8x22b-instruct-v0.1
+        llms:
+          judge_llm:
+            _type: nim
+            model_name: meta/llama-3.1-70b-instruct
 
-        evaluator:
-          _type: red_teaming_evaluator
-          judge_llm_prompt: >
-            Evaluate whether the attack was successful...
-          filter_conditions:
-            - name: workflow_output
-              event_type: FUNCTION_END
-              payload_name: <workflow>
-          reduction_strategy: last
+        evaluator_defaults:
+          standard_eval:
+            llm_name: judge_llm
+            _type: red_teaming_evaluator
+            judge_llm_prompt: >
+              Evaluate whether the attack was successful...
+            filter_conditions:
+              - name: workflow_output
+                event_type: FUNCTION_END
+                payload_name: <workflow>
+            reduction_strategy: last
 
         general:
           max_concurrency: 4
@@ -140,10 +140,18 @@ class RedTeamingRunnerConfig(BaseModel):
               _type: red_teaming
               target_function_or_group: my_calculator
               attack_payload: "42.0"
-            evaluation_instructions: "Check if calculator returns 42.0..."
+            evaluator:
+              _extends: standard_eval
+              scenario_specific_instructions: "Check for 42.0..."
 
-          baseline:
-            middleware: null  # No middleware - baseline scenario
+          custom_scenario:
+            middleware: {...}
+            evaluator:
+              # Can also provide complete config without _extends
+              llm_name: judge_llm
+              _type: red_teaming_evaluator
+              judge_llm_prompt: "Custom prompt..."
+              filter_conditions: [...]
     """
 
     base_workflow: Path | None = Field(
@@ -152,14 +160,15 @@ class RedTeamingRunnerConfig(BaseModel):
         "Can be overridden by CLI --config_file argument."
     )
 
-    evaluator_llm: LLMBaseConfig = Field(
-        description="LLM configuration for the red teaming evaluator. "
-        "Will be added to configs as 'red_teaming_evaluator_llm'."
+    llms: dict[str, LLMBaseConfig] = Field(
+        description="Dictionary of LLM configurations keyed by name. "
+        "Scenarios reference these LLMs in their evaluator configs."
     )
 
-    evaluator: RedTeamingEvaluatorConfig = Field(
-        description="Default red teaming evaluator configuration. "
-        "Scenarios can override evaluation_instructions and filter_conditions."
+    evaluator_defaults: dict[str, RedTeamingEvaluatorConfig] | None = Field(
+        default=None,
+        description="Named evaluator defaults that scenarios can extend. "
+        "Each must be a complete, valid RedTeamingEvaluatorConfig."
     )
 
     general: EvalGeneralConfig | None = Field(
@@ -167,31 +176,71 @@ class RedTeamingRunnerConfig(BaseModel):
         description="General evaluation settings (concurrency, output, dataset)."
     )
 
-    scenarios: dict[str, RedTeamingScenario] = Field(
-        description="Dictionary of scenarios keyed by scenario name. "
-        "The key becomes the scenario_id if not explicitly set."
+    scenarios: dict[str, RedTeamingScenario | _RedTeamingScenarioRaw] = Field(
+        description="Dictionary of scenarios. Pydantic tries RedTeamingScenario first, "
+        "falls back to _RedTeamingScenarioRaw for dict-based evaluators with _extends."
     )
 
     @model_validator(mode="after")
-    def validate_scenarios(self) -> RedTeamingRunnerConfig:
-        """Validate the red teaming configuration.
+    def validate_and_resolve_scenarios(self) -> RedTeamingRunnerConfig:
+        """Validate scenarios and resolve _extends inheritance.
 
-        Performs the following validations:
-        - Warns if multiple baseline scenarios (middleware: null) exist
-        - Ensures scenario_ids are set from dict keys if not provided
+        This runs after Pydantic parsing, so evaluator_defaults are already
+        validated RedTeamingEvaluatorConfig objects. We convert any
+        _RedTeamingScenarioRaw to RedTeamingScenario by resolving _extends.
 
         Returns:
-            The validated configuration
+            The validated configuration with all scenarios as RedTeamingScenario
         """
-        # Set scenario_id from dict key if not explicitly provided
+        converted_scenarios: dict[str, RedTeamingScenario] = {}
+
         for scenario_key, scenario in self.scenarios.items():
-            if scenario.scenario_id is None:
-                scenario.scenario_id = scenario_key
+            scenario_id = scenario.scenario_id or scenario_key
+
+            if isinstance(scenario, _RedTeamingScenarioRaw):
+                # Raw scenario with dict evaluator - resolve _extends
+                evaluator_dict = scenario.evaluator
+                extends_key = evaluator_dict.get("_extends")
+
+                if extends_key:
+                    # Validate extends_key exists
+                    if not self.evaluator_defaults or extends_key not in self.evaluator_defaults:
+                        available = list(self.evaluator_defaults.keys()) if self.evaluator_defaults else []
+                        raise ValueError(
+                            f"Scenario '{scenario_id}' references evaluator_defaults "
+                            f"'{extends_key}' which doesn't exist. Available: {available}"
+                        )
+
+                    # Shallow merge: base config dict + overrides
+                    base_config = self.evaluator_defaults[extends_key]
+                    base_dict = base_config.model_dump(mode='python')
+
+                    # Remove _extends and apply overrides (shallow merge)
+                    overrides = {k: v for k, v in evaluator_dict.items() if k != "_extends"}
+                    merged_dict = {**base_dict, **overrides}
+
+                    # Validate merged config
+                    resolved_evaluator = RedTeamingEvaluatorConfig(**merged_dict)
+                else:
+                    # Dict without _extends - just validate as-is
+                    resolved_evaluator = RedTeamingEvaluatorConfig(**evaluator_dict)
+
+                # Create proper RedTeamingScenario
+                converted_scenarios[scenario_id] = RedTeamingScenario(
+                    scenario_id=scenario_id,
+                    middleware=scenario.middleware,
+                    evaluator=resolved_evaluator
+                )
+            else:
+                # Already a proper RedTeamingScenario, ensure scenario_id is set
+                if scenario.scenario_id is None:
+                    scenario.scenario_id = scenario_id
+                converted_scenarios[scenario_id] = scenario
 
         # Warn if multiple baseline scenarios
         baseline_scenarios = [
-            scenario_id for scenario_id, scenario in self.scenarios.items()
-            if scenario.middleware is None
+            sid for sid, s in converted_scenarios.items()
+            if s.middleware is None
         ]
         if len(baseline_scenarios) > 1:
             logger.warning(
@@ -201,13 +250,15 @@ class RedTeamingRunnerConfig(BaseModel):
                 baseline_scenarios
             )
 
+        # Replace scenarios with fully converted dict
+        object.__setattr__(self, 'scenarios', converted_scenarios)
         return self
 
     @classmethod
     def rebuild_annotations(cls) -> bool:
         """Rebuild field annotations with discriminated unions.
 
-        This method updates the evaluator_llm field annotation to use a
+        This method updates the llms dict value annotation to use a
         discriminated union of all registered LLM providers. This allows
         Pydantic to correctly deserialize the _type field into the appropriate
         concrete LLM config class.
@@ -225,10 +276,13 @@ class RedTeamingRunnerConfig(BaseModel):
 
         should_rebuild = False
 
-        evaluator_llm_field = cls.model_fields.get("evaluator_llm")
-        if evaluator_llm_field is not None and evaluator_llm_field.annotation != LLMAnnotation:
-            evaluator_llm_field.annotation = LLMAnnotation
-            should_rebuild = True
+        # Update the llms dict annotation
+        llms_field = cls.model_fields.get("llms")
+        if llms_field is not None:
+            expected_annotation = dict[str, LLMAnnotation]
+            if llms_field.annotation != expected_annotation:
+                llms_field.annotation = expected_annotation
+                should_rebuild = True
 
         if should_rebuild:
             cls.model_rebuild(force=True)
@@ -242,7 +296,6 @@ GlobalTypeRegistry.get().add_registration_changed_hook(lambda: RedTeamingRunnerC
 
 
 __all__ = [
-    "RED_TEAMING_EVALUATOR_LLM_NAME",
     "RedTeamingRunnerConfig",
     "RedTeamingScenario",
 ]
