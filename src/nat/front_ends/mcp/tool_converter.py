@@ -25,13 +25,12 @@ from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
-from nat.builder.context import ContextState
 from nat.builder.function import Function
 from nat.builder.function_base import FunctionBase
 
 if TYPE_CHECKING:
-    from nat.builder.workflow import Workflow
     from nat.front_ends.mcp.memory_profiler import MemoryProfiler
+    from nat.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
 
@@ -73,20 +72,19 @@ def is_field_optional(field: FieldInfo) -> tuple[bool, Any]:
 
 def create_function_wrapper(
     function_name: str,
-    function: FunctionBase,
+    session_manager: 'SessionManager',
     schema: type[BaseModel],
-    is_workflow: bool = False,
-    workflow: 'Workflow | None' = None,
     memory_profiler: 'MemoryProfiler | None' = None,
 ):
-    """Create a wrapper function that exposes the actual parameters of a NAT Function as an MCP tool.
+    """Create a wrapper function that exposes a NAT Function as an MCP tool using SessionManager.
+
+    Here SessionManager.run() which is used to create a Runner that
+    automatically handles observability (emits intermediate step events, starts exporters, etc).
 
     Args:
         function_name (str): The name of the function/tool
-        function (FunctionBase): The NAT Function object
+        session_manager (SessionManager): SessionManager wrapping the function/workflow
         schema (type[BaseModel]): The input schema of the function
-        is_workflow (bool): Whether the function is a Workflow
-        workflow (Workflow | None): The parent workflow for observability context
         memory_profiler: Optional memory profiler to track requests
 
     Returns:
@@ -137,7 +135,10 @@ def create_function_wrapper(
     def create_wrapper():
 
         async def wrapper_with_ctx(**kwargs):
-            """Internal wrapper that will be called by MCP."""
+            """Internal wrapper that will be called by MCP.
+
+            Uses SessionManager.run() which creates a Runner that automatically handles observability.
+            """
             # MCP will add a ctx parameter, extract it
             ctx = kwargs.get("ctx")
 
@@ -151,56 +152,27 @@ def create_function_wrapper(
                 await ctx.report_progress(0, 100)
 
             try:
-                # Helper function to wrap function calls with observability
-                async def call_with_observability(func_call):
-                    # Use workflow's observability context (workflow should always be available)
-                    if not workflow:
-                        logger.error("Missing workflow context for function %s - observability will not be available",
-                                     function_name)
-                        raise RuntimeError("Workflow context is required for observability")
-
-                    logger.debug("Starting observability context for function %s", function_name)
-                    context_state = ContextState.get()
-                    async with workflow.exporter_manager.start(context_state=context_state):
-                        return await func_call()
-
-                # Special handling for ChatRequest
+                # Prepare input payload
                 if is_chat_request:
                     from nat.data_models.api_server import ChatRequest
-
                     # Create a chat request from the query string
                     query = kwargs.get("query", "")
-                    chat_request = ChatRequest.from_string(query)
-
-                    # Special handling for Workflow objects
-                    if is_workflow:
-                        # Workflows have a run method that is an async context manager
-                        # that returns a Runner
-                        async with function.run(chat_request) as runner:
-                            # Get the result from the runner
-                            result = await runner.result(to_type=str)
-                    else:
-                        # Regular functions use ainvoke
-                        result = await call_with_observability(lambda: function.ainvoke(chat_request, to_type=str))
+                    payload = ChatRequest.from_string(query)
                 else:
-                    # Regular handling
                     # Strip sentinel values so Pydantic can apply defaults/factories
                     cleaned_kwargs = {k: v for k, v in kwargs.items() if v is not _USE_PYDANTIC_DEFAULT}
-
                     # Always validate with the declared schema
-                    # This handles defaults, factories, nested models, validators, etc.
-                    model_input = schema.model_validate(cleaned_kwargs)
+                    payload = schema.model_validate(cleaned_kwargs)
 
-                    # Call the NAT function with the parameters - special handling for Workflow
-                    if is_workflow:
-                        # Workflows expect the model instance directly
-                        async with function.run(model_input) as runner:
-                            # Get the result from the runner
-                            result = await runner.result(to_type=str)
-                    else:
-                        # Regular function call - unpack the validated model
-                        result = await call_with_observability(lambda: function.acall_invoke(**model_input.model_dump())
-                                                               )
+                # Use SessionManager.run() pattern - this automatically handles all observability
+                # The Runner created by session_manager.run() will:
+                # 1. Start the exporter manager
+                # 2. Emit WORKFLOW_START/FUNCTION_START events
+                # 3. Execute the function/workflow
+                # 4. Emit WORKFLOW_END/FUNCTION_END events
+                # 5. Stop the exporter manager
+                async with session_manager.run(payload) as runner:
+                    result = await runner.result(to_type=str)
 
                 # Report completion
                 if ctx:
@@ -284,38 +256,31 @@ def get_function_description(function: FunctionBase) -> str:
 
 def register_function_with_mcp(mcp: FastMCP,
                                function_name: str,
-                               function: FunctionBase,
-                               workflow: 'Workflow | None' = None,
+                               session_manager: 'SessionManager',
                                memory_profiler: 'MemoryProfiler | None' = None) -> None:
-    """Register a NAT Function as an MCP tool.
+    """Register a NAT Function as an MCP tool using SessionManager.
+
+    Each function is wrapped in a SessionManager
+    so that all calls go through Runner that automatically handles observability.
 
     Args:
         mcp: The FastMCP instance
         function_name: The name to register the function under
-        function: The NAT Function to register
-        workflow: The parent workflow for observability context (if available)
+        session_manager: SessionManager wrapping the function/workflow
         memory_profiler: Optional memory profiler to track requests
     """
     logger.info("Registering function %s with MCP", function_name)
 
-    # Get the input schema from the function
-    input_schema = function.input_schema
+    # Get the workflow from the session manager
+    workflow = session_manager.workflow
+
+    # Get the input schema from the workflow
+    input_schema = workflow.input_schema
     logger.info("Function %s has input schema: %s", function_name, input_schema)
 
-    # Check if we're dealing with a Workflow
-    from nat.builder.workflow import Workflow
-    is_workflow = isinstance(function, Workflow)
-    if is_workflow:
-        logger.info("Function %s is a Workflow", function_name)
-
     # Get function description
-    function_description = get_function_description(function)
+    function_description = get_function_description(workflow)
 
     # Create and register the wrapper function with MCP
-    wrapper_func = create_function_wrapper(function_name,
-                                           function,
-                                           input_schema,
-                                           is_workflow,
-                                           workflow,
-                                           memory_profiler)
+    wrapper_func = create_function_wrapper(function_name, session_manager, input_schema, memory_profiler)
     mcp.tool(name=function_name, description=function_description)(wrapper_func)
