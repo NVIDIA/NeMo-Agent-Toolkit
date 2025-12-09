@@ -60,7 +60,7 @@ class SendEmailParams(BaseModel):
 
     recipient_email: str = Field(..., description="The recipient's email address")
     content: str = Field(..., description="The email content")
-    cc: str = Field("", description="Optional CC email address")
+    cc: str | None = Field(None, description="Optional CC email address")
 
 
 class UpdateCustomerInfoParams(BaseModel):
@@ -90,13 +90,13 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
         with open(customers_file) as f:
             customers_data = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError) as e:
-        raise RuntimeError(f"Failed to load customers data from {customers_file}: {e}") from e
+        raise RuntimeError("Failed to load customers data") from e
 
     try:
         with open(products_file) as f:
             products_data = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError) as e:
-        raise RuntimeError(f"Failed to load products data from {products_file}: {e}") from e
+        raise RuntimeError("Failed to load products data") from e
 
     group = FunctionGroup(config=_config)
 
@@ -207,7 +207,7 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
             "message": "Email sent successfully",
             "email_details": {
                 "to": params.recipient_email,
-                "cc": params.cc if params.cc else "None",
+                "cc": params.cc or "None",
                 "content": params.content,
                 "timestamp": "2024-11-25T10:00:00Z",
             },

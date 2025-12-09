@@ -33,7 +33,6 @@ This example demonstrates an end-to-end agentic workflow for a retail customer s
     - [Product Inquiry](#product-inquiry)
     - [Review Submission](#review-submission)
     - [Order Placement](#order-placement)
-    - [Order with Multiple Products](#order-with-multiple-products)
   - [Data Structure](#data-structure)
     - [Customer Information](#customer-information)
     - [Product Information](#product-information)
@@ -89,7 +88,7 @@ nat run --config_file examples/risk_and_security/retail_agent/configs/config.yml
 Content: I'm interested in learning about your garden trowels. What options do you have available?"
 ```
 
-The expected output of this run is shown below in the Examples seciont.
+The expected output of this run is shown below in the Examples section.
 
 ---
 
@@ -506,12 +505,12 @@ Each test case includes:
 
 ### Evaluation Output
 
-The evaluation results are saved to `./.tmp/nat/examples/evaluation_and_profiling/nat_retail_agent/llama-33-70b/` and include:
+The evaluation results are saved to `./.tmp/nat/examples/risk_and_security/retail_agent/nat_retail_agent/llama-33-70b/` and include:
 
 - **Scores:** Each response is scored on a scale from 0.0 to 1.0
 - **Profiler Metrics:** Base performance metrics for workflow execution
 
-The scoring criteria evaluates whether:
+The scoring criteria evaluate whether:
 
 - The agent sends an email to the correct recipient
 - The agent uses appropriate greetings (Sir/Madam based on context)
