@@ -25,6 +25,7 @@ Follow these rules when working with any documentation in the NeMo Agent toolkit
 - **Capitalization**: [capitalization.mdc](mdc:AgentIQ/.cursor/rules/documentation/capitalization.mdc) - Title case, sentence case, and proper noun guidelines
 - **Lists and Tables**: [lists-and-tables.mdc](mdc:AgentIQ/.cursor/rules/documentation/lists-and-tables.mdc) - Structured content formatting and organization
 - **Numbers and Dates**: [numbers-and-dates.mdc](mdc:AgentIQ/.cursor/rules/documentation/numbers-and-dates.mdc) - Numerical content and date formatting standards
+- **Categories**: [categories.mdc](mdc:AgentIQ/.cursor/rules/documentation/categories.mdc) - Documentation category placement guidelines
 
 ## Documentation Standards
 
