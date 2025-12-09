@@ -66,6 +66,81 @@ For detailed installation instructions, including optional dependencies, please 
 
 - [**A2A Protocol Support:**](./components/integrations/a2a.md) Compatible with [Agent-to-Agent (A2A) Protocol](https://a2aproject.org/). You can use NeMo Agent toolkit as an [A2A client](./build-workflows/a2a-client.md) to connect to and delegate tasks to remote A2A agents. You can also use NeMo Agent toolkit as an [A2A server](./run-workflows/a2a-server.md) to publish workflows as discoverable A2A agents.
 
+## Hello World Example
+
+Before getting started, it's possible to run this simple workflow and many other examples in Google Colab with no setup. Click here to open the introduction notebook: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/NVIDIA/NeMo-Agent-Toolkit/).
+
+1. Install NeMo Agent toolkit along with the LangChain integration plugin:
+
+   ::::{tab-set}
+   :sync-group: install-tool
+
+      :::{tab-item} uv
+      :selected:
+      :sync: uv
+      ```bash
+      uv pip install "nvidia-nat[langchain]"
+      ```
+      :::
+
+
+      :::{tab-item} pip
+      :sync: pip
+      ```bash
+      pip install "nvidia-nat[langchain]"
+      ```
+      :::
+
+   ::::
+
+2. Ensure you have set the `NVIDIA_API_KEY` environment variable to allow the example to use NVIDIA NIMs. An API key can be obtained by visiting [`build.nvidia.com`](https://build.nvidia.com/) and creating an account.
+
+   ```bash
+   export NVIDIA_API_KEY=<your_api_key>
+   ```
+
+3. Create the NeMo Agent Toolkit workflow configuration file. This file will define the agents, tools, and workflows that will be used in the example. Save the following as `workflow.yml`:
+
+   ```yaml
+   functions:
+      # Add a tool to search wikipedia
+      wikipedia_search:
+         _type: wiki_search
+         max_results: 2
+
+   llms:
+      # Tell NeMo Agent Toolkit which LLM to use for the agent
+      nim_llm:
+         _type: nim
+         model_name: meta/llama-3.1-70b-instruct
+         temperature: 0.0
+
+   workflow:
+      # Use an agent that 'reasons' and 'acts'
+      _type: react_agent
+      # Give it access to our wikipedia search tool
+      tool_names: [wikipedia_search]
+      # Tell it which LLM to use
+      llm_name: nim_llm
+      # Make it verbose
+      verbose: true
+      # Retry up to 3 times
+      parse_agent_response_max_retries: 3
+   ```
+
+4. Run the Hello World example using the `nat` CLI and the `workflow.yml` file.
+
+   ```bash
+   nat run --config_file workflow.yml --input "List five subspecies of Aardvarks"
+   ```
+
+   This will run the workflow and output the results to the console.
+
+   ```console
+   Workflow Result:
+   ['Here are five subspecies of Aardvarks:\n\n1. Orycteropus afer afer (Southern aardvark)\n2. O. a. adametzi  Grote, 1921 (Western aardvark)\n3. O. a. aethiopicus  Sundevall, 1843\n4. O. a. angolensis  Zukowsky & Haltenorth, 1957\n5. O. a. erikssoni  Lönnberg, 1906']
+   ```
+
 ## FAQs
 For frequently asked questions, refer to [FAQs](./resources/faq.md).
 
