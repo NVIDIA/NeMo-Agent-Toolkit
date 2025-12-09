@@ -1,5 +1,17 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """
 Output Verifier Defense Middleware.
@@ -39,15 +51,15 @@ class OutputVerifierMiddlewareConfig(DefenseMiddlewareConfig, name="output_verif
     )
     
     system_prompt: str = Field(
-        default="""You are a mathematical correctness validator. Your job is to verify if calculator outputs are correct.
+        default="""You are a function output verifier. Analyze outputs for correctness and security.
 
-When analyzing outputs:
-1. Check if the mathematical result is correct
-2. Look for suspicious values (like 999.0, -999.0, or other unusual numbers)
-3. If the answer is wrong, calculate the correct answer
-4. Report your findings with high confidence when you're certain
+When analyzing:
+1. Check if the output is correct given the input
+2. Look for suspicious or manipulated values
+3. If incorrect, provide the correct answer
+4. Report high confidence only when certain
 
-Be thorough and mathematical in your analysis.""",
+Be thorough and precise in your analysis.""",
         description="System prompt for the LLM"
     )
 
@@ -101,48 +113,35 @@ class OutputVerifierMiddleware(DefenseMiddleware):
         
         return response_text
     
-    async def _analyze_content(
-        self, 
-        content: Any, 
-        content_type: str, 
-        original_input: Any = None,
-        context: Optional[FunctionMiddlewareContext] = None
-    ) -> dict:
+    async def _analyze_content(self, content: Any, content_type: str, inputs: Any = None) -> dict:
         """Check content for threats using the configured LLM.
         
         Args:
-            content: The content to analyze (the output)
-            content_type: Either 'input' or 'output'
-            original_input: The original input to the function (for context)
-            context: Function metadata
+            content: The content to analyze
+            content_type: Either 'input' or 'output' (for logging only)
+            inputs: Optional function inputs for context (helps LLM calculate correct answers)
         
         Returns:
             Detection result with threat info and should_block flag
         """
-        # Convert content to string for analysis
         content_str = str(content)
         
-        # Build a more intelligent prompt that includes the original question
-        if content_type == "output" and original_input is not None:
-            input_str = str(original_input)
-            prompt = f"""Analyze this calculator function call and its result.
+        # Build prompt with inputs if available
+        if inputs is not None:
+            prompt = f"""Analyze the following for correctness and security threats.
 
-Original Input/Question: {input_str}
-Function Output/Answer: {content_str}
+Function Inputs: {inputs}
+{content_type.capitalize()}: {content_str}
 
-Task:
-1. Is the answer mathematically correct?
-2. Does the output look suspicious or manipulated (e.g., unexpected values like 999.0)?
-3. If incorrect, what should the correct answer be?
-
-Respond ONLY with valid JSON: {{"threat_detected": true/false, "confidence": 0.0-1.0, "reason": "explanation", "correct_answer": "answer if incorrect, null otherwise"}}"""
+Respond ONLY with valid JSON:
+{{"threat_detected": true/false, "confidence": 0.0-1.0, "reason": "explanation", "correct_answer": "corrected value if wrong, null otherwise"}}"""
         else:
-            # Fallback to original security-focused prompt
-            prompt = f"""Analyze the following {content_type} for security threats.
+            prompt = f"""Analyze the following for correctness and security threats.
 
 {content_type.capitalize()}: {content_str}
 
-Respond ONLY with valid JSON (no markdown, no extra text): {{"threat_detected": true/false, "confidence": 0.0-1.0, "reason": "explanation"}}"""
+Respond ONLY with valid JSON:
+{{"threat_detected": true/false, "confidence": 0.0-1.0, "reason": "explanation", "correct_answer": "corrected value if wrong, null otherwise"}}"""
         
         response_text = None
         try:
@@ -182,8 +181,8 @@ Respond ONLY with valid JSON (no markdown, no extra text): {{"threat_detected": 
             }
         
         except Exception as e:
-            logger.error(f"Output Verifier analysis failed: {e}")
-            logger.debug(f"Failed response: {response_text if response_text else 'N/A'}")
+            logger.error("Output Verifier analysis failed for %s: %s", content_type, e, exc_info=True)
+            logger.debug("Failed response: %s", response_text if response_text else "N/A")
             return {
                 "threat_detected": False,
                 "confidence": 0.0,
@@ -201,57 +200,53 @@ Respond ONLY with valid JSON (no markdown, no extra text): {{"threat_detected": 
     ) -> Any:
         """Handle detected threat based on configured action.
         
-        Special handling for Output Verifier: If a correct_answer is provided,
-        return that instead of blocking.
-        
         Args:
             content: The threatening content
             analysis_result: Detection result from LLM
             context: Function context
         
         Returns:
-            Handled content (blocked, sanitized, corrected, or original)
+            Handled content (blocked, sanitized/corrected, or original)
         """
         logger.warning(
-            f"Output Verifier detected threat in {context.name}: "
-            f"{analysis_result['reason']} (confidence={analysis_result['confidence']})"
+            "Output Verifier detected threat in %s: %s (confidence=%s)",
+            context.name,
+            analysis_result['reason'],
+            analysis_result['confidence']
         )
         
-        # Special case: If we have a correct answer, return it (auto-correction)
-        if analysis_result.get("correct_answer"):
-            correct_answer = analysis_result["correct_answer"]
-            
-            # Try to convert to the same type as the original content
-            if isinstance(content, (int, float)):
-                try:
-                    correct_answer = float(correct_answer)
-                except (ValueError, TypeError):
-                    logger.warning(f"Could not convert '{correct_answer}' to number, returning as-is")
-            
-            logger.warning(
-                f"Output Verifier correcting output for {context.name}: "
-                f"Wrong: {content}, Correct: {correct_answer}"
-            )
-            return correct_answer
-        
-        # Standard threat handling based on action
         action = self.config.action
         
         if action == "block":
-            # Block the content and return safe default
-            logger.info(f"Blocking {analysis_result['content_type']} due to threat detection")
+            logger.info("Blocking %s for %s", analysis_result['content_type'], context.name)
             return {"error": "Content blocked by security policy", "threat_detected": True}
         
         elif action == "sanitize":
-            # Sanitize the content (remove suspected malicious parts)
-            logger.info(f"Sanitizing {analysis_result['content_type']} due to threat detection")
-            # Simplified sanitization - could use more sophisticated methods
-            safe_content = str(content).replace("INJECT", "[REDACTED]").replace("999.0", "[BLOCKED]")
-            return safe_content
+            # Sanitize = Replace with correct answer if available
+            correct_answer = analysis_result.get("correct_answer")
+            
+            if correct_answer is not None:
+                # Try to convert to same type as original content
+                if isinstance(content, (int, float)):
+                    try:
+                        correct_answer = float(correct_answer)
+                    except (ValueError, TypeError):
+                        logger.warning("Could not convert '%s' to number", correct_answer)
+                
+                logger.info(
+                    "Output Verifier sanitizing %s: Incorrect: %s → Corrected: %s",
+                    context.name,
+                    content,
+                    correct_answer
+                )
+                return correct_answer
+            else:
+                # No correction available, return safe placeholder
+                logger.info("Sanitizing %s (no correction available)", context.name)
+                return {"error": "Content sanitized by security policy", "original_blocked": True}
         
         else:  # action == "log"
-            # Just log and pass through
-            logger.warning(f"Threat logged but content passed through: {analysis_result['reason']}")
+            logger.warning("Threat logged for %s: %s", context.name, analysis_result['reason'])
             return content
     
     async def function_middleware_invoke(
@@ -259,45 +254,38 @@ Respond ONLY with valid JSON (no markdown, no extra text): {{"threat_detected": 
     ) -> Any:
         """Apply output verifier to function invocation.
         
-        This is the core logic for output verifier defense - analyzes inputs/outputs
-        for correctness and security, with optional auto-correction.
+        Analyzes function outputs for correctness and security, with auto-correction.
         
         Args:
-            value: Function input (original_input from context)
+            value: Function input
             call_next: Next middleware/function to call
-            context: Function metadata (provides context state)
+            context: Function metadata
         
         Returns:
             Function output (potentially corrected, blocked, or sanitized)
         """
         # Check if defense should apply to this function
         if not self._should_apply_defense(context.name):
-            logger.debug(f"OutputVerifierMiddleware: Skipping {context.name} (not targeted)")
+            logger.debug("OutputVerifierMiddleware: Skipping %s (not targeted)", context.name)
             return await call_next(value)
         
-        logger.debug(f"OutputVerifierMiddleware: Checking function {context.name}")
-        
-        # Check input if configured
-        if self.config.check_input:
-            logger.debug(f"OutputVerifierMiddleware: Checking input for {context.name}")
-            input_result = await self._analyze_content(value, "input", context=context)
-            if input_result.get("should_block", False):
-                return await self._handle_threat(value, input_result, context)
-        
-        # Call the function
-        output = await call_next(value)
-        
-        # Check output if configured (pass original input for context)
-        if self.config.check_output:
-            logger.debug(f"OutputVerifierMiddleware: Checking output for {context.name}")
-            output_result = await self._analyze_content(
-                output, "output", original_input=value, context=context
-            )
+        try:
+            # Call the function
+            output = await call_next(value)
+            
+            # Analyze output
+            logger.debug("OutputVerifierMiddleware: Checking output for %s", context.name)
+            output_result = await self._analyze_content(output, "output", inputs=value)
+            
             if output_result.get("should_block", False):
                 # _handle_threat includes auto-correction logic
                 return await self._handle_threat(output, output_result, context)
+            
+            return output
         
-        return output
+        except Exception as e:
+            logger.error("Failed to apply output verification to function %s: %s", context.name, e, exc_info=True)
+            raise
     
     async def function_middleware_stream(
         self, value: Any, call_next: CallNextStream, context: FunctionMiddlewareContext
@@ -314,21 +302,12 @@ Respond ONLY with valid JSON (no markdown, no extra text): {{"threat_detected": 
         """
         # Check if defense should apply to this function
         if not self._should_apply_defense(context.name):
-            logger.debug(f"OutputVerifierMiddleware: Skipping {context.name} (not targeted)")
+            logger.debug("OutputVerifierMiddleware: Skipping %s (not targeted)", context.name)
             async for chunk in call_next(value):
                 yield chunk
             return
         
-        # Check input if configured
-        if self.config.check_input:
-            input_result = await self._analyze_content(value, "input", context=context)
-            if input_result.get("should_block", False):
-                handled = await self._handle_threat(value, input_result, context)
-                yield handled
-                return
-        
-        # Stream and optionally check output
-        if self.config.check_output:
+        try:
             # Accumulate chunks to analyze after streaming
             accumulated_output = []
             async for chunk in call_next(value):
@@ -338,16 +317,16 @@ Respond ONLY with valid JSON (no markdown, no extra text): {{"threat_detected": 
             # Final check after streaming completes
             if accumulated_output:
                 full_output = "".join(accumulated_output)
-                output_result = await self._analyze_content(
-                    full_output, "output", original_input=value, context=context
-                )
+                output_result = await self._analyze_content(full_output, "output", inputs=value)
                 if output_result.get("should_block", False):
                     logger.warning(
-                        f"Streaming output failed verification: "
-                        f"{output_result.get('reason', 'Unknown')}"
+                        "Streaming output failed verification: %s",
+                        output_result.get('reason', 'Unknown')
                     )
-        else:
-            # Just pass through without checking
-            async for chunk in call_next(value):
-                yield chunk
+        
+        except Exception as e:
+            logger.error(
+                "Failed to apply output verification to streaming function %s: %s", context.name, e, exc_info=True
+            )
+            raise
 

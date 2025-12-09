@@ -7,16 +7,39 @@ SPDX-License-Identifier: Apache-2.0
 
 This example demonstrates how to use defense middleware to protect workflows from attacks and incorrect outputs.
 
+## Defense Middleware in Deployed Agents
+
+Defense middleware is part of your **deployed agent configuration** (base config), not the red teaming evaluation config. This is because:
+
+- **Defenses are permanent protections**: They protect your agent in production
+- **Red teaming is temporary testing**: Attacks are only injected during security evaluation
+- **Defenses run first**: Defense middleware wraps your functions before red teaming attacks are applied
+
+In this example:
+- `base_multi_defense.yml` contains the agent configuration with defense middleware (what you deploy)
+- `red_teaming_multi_defense.yml` contains attack scenarios for testing (evaluation only)
+
 ## Available Defense Middleware
 
 ### Output Verifier (`output_verifier`)
-Uses an LLM to verify function outputs for correctness and auto-correct errors.
+Uses an LLM to verify function outputs for correctness. Can log warnings, block execution, or auto-correct with the right answer.
 
 ### Content Safety Guard (`content_safety_guard`)
-Uses safety guard models to classify and block harmful content.
+Uses safety guard models to detect harmful content. Can log warnings, block execution, or return a user-friendly refusal message.
 
 ### PII Defense (`pii_defense`)
 Uses Microsoft Presidio to detect and anonymize Personally Identifiable Information (PII).
+
+## Defense Actions
+
+All defense middleware support three actions:
+
+- **`log`**: Detect and log threats, but allow content to pass through (monitoring mode)
+- **`block`**: Detect and block threats, returning an error response
+- **`sanitize`**: Detect and replace threats with safe content
+  - Output Verifier: Replaces with the correct calculated answer
+  - Content Safety Guard: Replaces with a polite refusal message
+  - PII Defense: Replaces PII with anonymized placeholders
 
 ## Configuration Example
 
@@ -25,36 +48,38 @@ function_groups:
   my_calculator:
     _type: calculator
     middleware:
-      - guard_defense
       - llm_defense
+      - guard_defense
       - pii_defense
 
 middleware:
   llm_defense:
     _type: output_verifier
-    llm_name: verifier_llm
+    llm_name: nim_llm
     target_function_or_group: my_calculator.multiply  # Target specific function
-    action: block                                     # log, block, or sanitize
+    action: sanitize                                  # log, block, or sanitize
     threshold: 0.7                                    # Min confidence (0.0-1.0) to trigger action
-    check_output: true
+    system_prompt: |
+      Validate calculator output correctness. Return JSON:
+      {
+        "threat_detected": true/false,
+        "confidence": 0.0-1.0,
+        "reason": "brief explanation",
+        "correct_answer": "correct numeric value if wrong, null if correct"
+      }
 
   guard_defense:
     _type: content_safety_guard
     llm_name: guard_llm
     target_function_or_group: my_calculator.get_random_string
-    action: block
-    severity_threshold: Unsafe
-    check_output: true
+    action: block                                     # log, block, or sanitize
 
   pii_defense:
     _type: pii_defense
     target_function_or_group: my_calculator
-    action: sanitize                                  # Anonymize detected PII
-    anonymize: true
-    check_input: true
-    check_output: true
-    score_threshold: 0.5                             # Min confidence (0.0-1.0) for PII detection
-    entities: [PERSON, EMAIL_ADDRESS, PHONE_NUMBER]  # PII types to detect
+    action: sanitize                                  # log, block, or sanitize
+    score_threshold: 0.01                             # Min confidence (0.0-1.0) for PII detection
+    entities: [PERSON, EMAIL_ADDRESS, PHONE_NUMBER, CREDIT_CARD, US_SSN, LOCATION, IP_ADDRESS]
 ```
 
 ## Running the Example

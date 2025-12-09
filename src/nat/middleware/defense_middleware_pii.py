@@ -1,5 +1,17 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """
 PII Defense Middleware using Microsoft Presidio.
@@ -99,7 +111,7 @@ class PIIDefenseMiddleware(DefenseMiddleware):
         )
         
         # Log ALL detections before filtering
-        logger.info(f"PII Defense raw detections: {[(r.entity_type, r.score, text[r.start:r.end]) for r in all_results]}")
+        logger.debug("PII Defense raw detections: %s", [(r.entity_type, r.score, text[r.start:r.end]) for r in all_results])
         
         # Filter by score threshold
         results = [r for r in all_results if r.score >= self.config.score_threshold]
@@ -173,14 +185,14 @@ class PIIDefenseMiddleware(DefenseMiddleware):
             entities_str = ", ".join([f"{k}({len(v)})" for k, v in analysis_result["entities"].items()])
             
             if self.config.action == "block":
-                logger.error(f"PII Defense blocking output of {context.name}: {entities_str}")
+                logger.error("PII Defense blocking output of %s: %s", context.name, entities_str)
                 raise ValueError(f"PII detected in output: {entities_str}. Output blocked.")
             elif self.config.action == "sanitize":
-                logger.warning(f"PII Defense detected PII in output of {context.name}: {entities_str}")
-                logger.info(f"PII Defense anonymizing output for {context.name}")
+                logger.warning("PII Defense detected PII in output of %s: %s", context.name, entities_str)
+                logger.info("PII Defense anonymizing output for %s", context.name)
                 result = analysis_result["anonymized_text"]
             else:  # action == "log"
-                logger.warning(f"PII Defense detected PII in output of {context.name}: {entities_str}")
+                logger.warning("PII Defense detected PII in output of %s: %s", context.name, entities_str)
                 # No modification, just log
 
         return result
@@ -222,16 +234,16 @@ class PIIDefenseMiddleware(DefenseMiddleware):
                 entities_str = ", ".join([f"{k}({len(v)})" for k, v in analysis_result["entities"].items()])
                 
                 if self.config.action == "block":
-                    logger.error(f"PII Defense blocking output of {context.name}: {entities_str}")
+                    logger.error("PII Defense blocking output of %s: %s", context.name, entities_str)
                     raise ValueError(f"PII detected in output: {entities_str}. Output blocked.")
                 elif self.config.action == "sanitize":
-                    logger.warning(f"PII Defense detected PII in output of {context.name}: {entities_str}")
-                    logger.info(f"PII Defense anonymizing output for {context.name}")
+                    logger.warning("PII Defense detected PII in output of %s: %s", context.name, entities_str)
+                    logger.info("PII Defense anonymizing output for %s", context.name)
                     # Yield the anonymized text as a single chunk
                     yield analysis_result["anonymized_text"]
                     return
                 else:  # action == "log"
-                    logger.warning(f"PII Defense detected PII in output of {context.name}: {entities_str}")
+                    logger.warning("PII Defense detected PII in output of %s: %s", context.name, entities_str)
                     # No modification, just log
 
         # Yield original chunks (no PII detected)

@@ -24,7 +24,7 @@ from nat.data_models.function import FunctionGroupBaseConfig
 
 
 class CalculatorToolConfig(FunctionGroupBaseConfig, name="calculator"):
-    include: list[str] = Field(default_factory=lambda: ["add", "subtract", "multiply", "divide", "compare"],
+    include: list[str] = Field(default_factory=lambda: ["add", "subtract", "multiply", "divide", "compare", "get_random_string"],
                                description="The list of functions to include in the calculator function group.")
 
 
@@ -82,11 +82,17 @@ async def calculator(_config: CalculatorToolConfig, _builder: Builder) -> AsyncG
         if a < b:
             return f"{a} is less than {b}"
         return f"{a} is equal to {b}"
+    
+    async def _get_random_string(request: dict) -> str:
+        """Get a random string for testing purposes."""
+        # Return static output for predictable testing
+        return "Have a wonderful day!"
 
     group.add_function(name="add", fn=_add, description=_add.__doc__)
     group.add_function(name="subtract", fn=_subtract, description=_subtract.__doc__)
     group.add_function(name="multiply", fn=_multiply, description=_multiply.__doc__)
     group.add_function(name="divide", fn=_divide, description=_divide.__doc__)
     group.add_function(name="compare", fn=_compare, description=_compare.__doc__)
+    group.add_function(name="get_random_string", fn=_get_random_string, description=_get_random_string.__doc__)
 
     yield group

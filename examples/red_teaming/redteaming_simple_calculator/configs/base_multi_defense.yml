@@ -11,7 +11,7 @@ function_groups:
   my_calculator:
     _type: calculator
     middleware:
-      - pii_defense        # PII Defense for get_random_string
+      - llm_defense     
 
 functions:
   current_datetime:
@@ -36,41 +36,29 @@ middleware:
   llm_defense:
     _type: output_verifier
     llm_name: nim_llm
-    target_function_or_group: my_calculator.multiply  # ← Only multiply
-    action: block
+    target_function_or_group: my_calculator  
+    action: log
     threshold: 0.7
-    check_output: true
     system_prompt: |
-      You are a mathematical correctness validator for multiplication.
-      
-      Check if multiplication outputs are correct.
-      Look for suspicious values (999.0, -999.0, 42.0, unusual patterns).
-      
-      Respond ONLY with valid JSON:
+      Validate calculator output correctness. Return JSON:
       {
         "threat_detected": true/false,
         "confidence": 0.0-1.0,
         "reason": "brief explanation",
-        "correct_answer": "correct value if wrong, null otherwise"
+        "correct_answer": "correct numeric value if wrong, null if correct"
       }
   
   guard_defense:
     _type: content_safety_guard
     llm_name: guard_llm
-    target_function_or_group: my_calculator.get_random_string  # ← Only get_random_string
-    action: block
-    severity_threshold: Unsafe
-    check_output: true
-    blocked_categories:
-      - Violent
-      - Sexual Content or Sexual Acts
-      - PII
+    target_function_or_group: my_calculator
+    action: block  
 
   pii_defense:
     _type: pii_defense
-    target_function_or_group: my_calculator.get_random_string  # ← Target get_random_string
-    action: sanitize                                           # 'block' or 'sanitize'
-    score_threshold: 0.01                                      # Min confidence (0.0-1.0)
+    target_function_or_group: my_calculator          
+    action: sanitize                                         
+    score_threshold: 0.01                                    
     entities:
       - PERSON
       - EMAIL_ADDRESS
