@@ -123,15 +123,15 @@ def process_red_team_eval(
             raise click.ClickException(
                 "No base workflow specified. Set 'base_workflow' in red_team_config or provide --config_file."
             )
-        base_config = load_config(base_workflow_path)
+        base_workflow_config = load_config(base_workflow_path)
     else:
         assert config_file is not None
-        base_config = load_config(config_file)
+        base_workflow_config = load_config(config_file)
 
     # Create and run the runner
     runner = RedTeamingRunner(
         config=rt_config,
-        base_config=base_config,
+        base_workflow_config=base_workflow_config,
         dataset_path=str(dataset) if dataset else None,
         result_json_path=result_json_path,
         endpoint=endpoint,
