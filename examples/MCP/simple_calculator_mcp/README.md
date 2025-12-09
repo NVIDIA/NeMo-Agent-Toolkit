@@ -99,7 +99,7 @@ nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-clie
 ```bash
 nat serve --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml
 ```
-2. Follow the instructions in the [Launching the UI](../../../docs/source/quick-start/launching-ui.md) guide to launch the UI
+2. Follow the instructions in the [Launching the UI](../../../docs/source/quick-start/launching-ui.md) guide to launch the UI.
 
 3. Connect to the UI at `http://localhost:3000`. You can view the MCP tools available to the workflow by clicking on the MCP tab in the side panel.
 
