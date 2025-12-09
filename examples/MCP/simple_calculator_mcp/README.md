@@ -93,3 +93,20 @@ This starts an MCP server on port 9901 with endpoint `/mcp` and uses `streamable
 ```bash
 nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
+
+### Inspect the MCP tools available to the workflow using the UI
+1. Start the workflow using the FastAPI frontend:
+```bash
+nat serve --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml
+```
+2. Follow the instructions in the [Launching the UI](../../../docs/source/quick-start/launching-ui.md) guide to launch the UI
+
+3. Connect to the UI at `http://localhost:3000`. You can view the MCP tools available to the workflow by clicking on the MCP tab in the side panel.
+
+![MCP Side Panel](../../../docs/source/_static/mcp_side_panel.png)
+![MCP Tools](../../../docs/source/_static/mcp_tools.png)
+
+4. Send the input to the workflow using the UI:
+```text
+Is the product of 2 * 4 greater than the current hour of the day?
+```
