@@ -100,7 +100,7 @@ Detailed installation instructions, including the full list of optional dependen
 
 ## 🌟 Hello World Example
 
-Before getting started, it's possible to run this simple workflow and many other examples in Google Colab with no setup. Click here to open the introduction notebook in a new tab: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/NVIDIA/NeMo-Agent-Toolkit/).
+Before getting started, it's possible to run this simple workflow and many other examples in Google Colab with no setup. Click here to open the introduction notebook: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/NVIDIA/NeMo-Agent-Toolkit/).
 
 1. Ensure you have set the `NVIDIA_API_KEY` environment variable to allow the example to use NVIDIA NIMs. An API key can be obtained by visiting [`build.nvidia.com`](https://build.nvidia.com/) and creating an account.
 
