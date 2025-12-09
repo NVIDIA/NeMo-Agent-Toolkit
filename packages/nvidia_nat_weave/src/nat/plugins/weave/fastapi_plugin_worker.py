@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import logging
 
 from fastapi import FastAPI
@@ -21,6 +22,7 @@ from fastapi import Request
 
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
+from nat.runtime.session import SessionManager
 from nat.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
@@ -58,8 +60,7 @@ class WeaveFastAPIPluginWorker(FastApiFrontEndPluginWorker):
         # Find Weave telemetry exporter configuration
         weave_config = None
         for exporter_config in builder._telemetry_exporters.values():
-            if hasattr(exporter_config.config, 'project') and \
-               exporter_config.config.__class__.__name__ == 'WeaveTelemetryExporter':
+            if exporter_config.config.__class__.__name__ == 'WeaveTelemetryExporter':
                 weave_config = exporter_config.config
                 break
 
@@ -68,32 +69,39 @@ class WeaveFastAPIPluginWorker(FastApiFrontEndPluginWorker):
             return
 
         try:
+            session_manager = SessionManager(await builder.build())
+
+            # Get the weave project name from the configuration
+            entity = weave_config.entity
+            project = weave_config.project
+            weave_project = f"{entity}/{project}" if entity else project
 
             async def add_chat_feedback(request: Request, payload: dict):
                 """Add reaction feedback for an assistant message via observability trace ID."""
-                import weave
 
-                # Get the weave project name from the configuration
-                entity = weave_config.entity if hasattr(weave_config, 'entity') else None
-                project = weave_config.project
-                weave_project = f"{entity}/{project}" if entity else project
+                async with session_manager.session(http_connection=request,
+                                                   user_authentication_callback=self._http_flow_handler.authenticate):
+                    # Extract parameters from payload
+                    observability_trace_id = payload.get('observability_trace_id')
+                    reaction_type = payload.get('reaction_type')
 
-                # Extract parameters from payload
-                observability_trace_id = payload.get('observability_trace_id')
-                reaction_type = payload.get('reaction_type')
+                    if not observability_trace_id or not reaction_type:
+                        raise HTTPException(status_code=400,
+                                            detail="observability_trace_id and reaction_type are required")
 
-                if not observability_trace_id or not reaction_type:
-                    raise HTTPException(status_code=400, detail="observability_trace_id and reaction_type are required")
+                    def add_weave_feedback():
+                        import weave
 
-                # Add feedback directly
-                try:
-                    client = weave.init(weave_project)
-                    call = client.get_call(observability_trace_id)
-                    call.feedback.add_reaction(reaction_type)
-                    return {"message": f"Added reaction '{reaction_type}' to call {observability_trace_id}"}
-                except Exception as e:
-                    logger.error("Failed to add feedback to Weave: %s", e)
-                    raise HTTPException(status_code=500, detail=f"Failed to add feedback: {str(e)}") from e
+                        client = weave.init(weave_project)
+                        call = client.get_call(observability_trace_id)
+                        call.feedback.add_reaction(reaction_type)
+
+                    try:
+                        await asyncio.to_thread(add_weave_feedback)
+                        return {"message": f"Added reaction '{reaction_type}' to call {observability_trace_id}"}
+                    except Exception as e:
+                        logger.error("Failed to add feedback to Weave: %s", e)
+                        raise HTTPException(status_code=500, detail=f"Failed to add feedback: {str(e)}") from e
 
             app.add_api_route(
                 path="/feedback",
