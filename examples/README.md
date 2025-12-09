@@ -53,7 +53,7 @@ The examples in the NeMo-Agent-Toolkit-Examples repository are community contrib
 
 ## Installation and Setup
 
-To run the examples, install the NeMo Agent toolkit from source, if you haven't already done so, by following the instructions in [Install From Source](../docs/source/get-started/installing.md#install-from-source).
+To run the examples, install the NeMo Agent toolkit from source, if you haven't already done so, by following the instructions in [Install From Source](../docs/source/get-started/installation.md#install-from-source).
 
 ## Example Categories
 

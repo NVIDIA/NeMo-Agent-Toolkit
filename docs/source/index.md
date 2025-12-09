@@ -44,7 +44,7 @@ NVIDIA NeMo Agent toolkit is a flexible, lightweight, and unifying library that 
 
 ::::
 
-For detailed installation instructions, including optional dependencies, please refer to the [Install Guide](./get-started/installing.md).
+For detailed installation instructions, including optional dependencies, please refer to the [Install Guide](./get-started/installation.md).
 
 ## Key Features
 
@@ -88,8 +88,8 @@ About <self>
 :hidden:
 :caption: Get Started
 
-Install <./get-started/installing.md>
-Quick Start Guide <./get-started/quick-start.md>
+Installation <./get-started/installation.md>
+Quick Start <./get-started/quick-start.md>
 Tutorials <./get-started/tutorials/index.md>
 Release Notes <./get-started/release-notes.md>
 ```

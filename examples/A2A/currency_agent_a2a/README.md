@@ -51,7 +51,7 @@ flowchart LR
 
 ### Prerequisites
 
-Follow the instructions in the [Install Guide](../../../docs/source/get-started/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+Follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 
 ### Set Up External A2A Server
 

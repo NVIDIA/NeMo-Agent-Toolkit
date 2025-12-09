@@ -226,7 +226,7 @@ Review the unassigned issues and choose an issue that you are comfortable contri
 
 ## Developing with NeMo Agent toolkit
 
-Refer to the [Get Started](../../get-started/installing.md) guide to quickly begin development.
+Refer to the [Get Started](../../get-started/installation.md) guide to quickly begin development.
 
 ## Documentation
 

@@ -129,7 +129,7 @@ Configuration files can also reference base configurations in other directories 
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/get-started/installing.md#install-from-source) to create the development environment and install the NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install the NeMo Agent toolkit.
 
 ### Install this Workflow
 

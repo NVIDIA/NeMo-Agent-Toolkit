@@ -130,7 +130,7 @@ process of discovering useful components and development of NeMo Agent toolkit b
 
 The last option for distribution is through source code. Since each NeMo Agent toolkit package is a pip installable Python package,
 each can be installed directly from source. Examples of this installation path are provided in the
-[Get Started](../get-started/installing.md) guide.
+[Get Started](../get-started/installation.md) guide.
 
 ## Summary
 

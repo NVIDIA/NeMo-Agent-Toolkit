@@ -42,7 +42,7 @@ A minimal example showcasing a Strands agent that answers questions about Strand
 
 ## Prerequisites
 
-- NVIDIA NeMo Agent Toolkit installed. See the [Install Guide](../../../docs/source/get-started/installing.md#install-from-source).
+- NVIDIA NeMo Agent Toolkit installed. See the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source).
 - API keys as required by your chosen models.
 
 ## Installation and Setup

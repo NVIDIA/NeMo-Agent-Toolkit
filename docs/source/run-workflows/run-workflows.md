@@ -33,7 +33,7 @@ A workflow is defined by a YAML configuration file that specifies the tools and 
 
 ## Prerequisites
 
-Ensure that you have followed the instructions in the [Install Guide](../get-started/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+Ensure that you have followed the instructions in the [Install Guide](../get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 
 The examples in this document utilize the `examples/getting_started/simple_web_query` workflow, install it by running the following commands from the root directory of the NeMo Agent toolkit library:
 ```bash

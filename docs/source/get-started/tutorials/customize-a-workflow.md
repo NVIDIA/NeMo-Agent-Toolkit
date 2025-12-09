@@ -20,7 +20,7 @@ This tutorial demonstrates how to customize a workflow with NeMo Agent toolkit.
 
 ## Prerequisites
 
-1. Set up your environment by following the instructions in the [Install From Source](../installing.md#install-from-source) section of the install guide.
+1. Set up your environment by following the instructions in the [Install From Source](../installation.md#install-from-source) section of the install guide.
 1. Install NVIDIA NeMo Agent toolkit and the Simple example workflow.
     ```bash
     uv pip install -e .

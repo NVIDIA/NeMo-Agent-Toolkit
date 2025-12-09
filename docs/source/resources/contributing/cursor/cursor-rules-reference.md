@@ -77,7 +77,7 @@ Help me set up NeMo Agent toolkit development environment with all required depe
 - Dependency management
 - Initial configuration steps
 
-**Related Documentation**: [Installation Guide](../../../get-started/installing.md)
+**Related Documentation**: [Installation Guide](../../../get-started/installation.md)
 
 ---
 
@@ -93,7 +93,7 @@ Install NeMo Agent toolkit with all plugins and verify the installation is worki
 
 
 
-**Related Documentation**: [Installation Guide](../../../get-started/installing.md)
+**Related Documentation**: [Installation Guide](../../../get-started/installation.md)
 
 ---
 
