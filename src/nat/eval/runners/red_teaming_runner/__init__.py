@@ -13,14 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nat.eval.runners.red_teaming_runner.config import RED_TEAMING_EVALUATOR_LLM_NAME
+from nat.eval.runners.red_teaming_runner.runner import RedTeamingRunner
 from nat.eval.runners.red_teaming_runner.config import RedTeamingRunnerConfig
 from nat.eval.runners.red_teaming_runner.config import RedTeamingScenario
-from nat.eval.runners.red_teaming_runner.runner import RedTeamingRunner
 
 __all__ = [
-    "RED_TEAMING_EVALUATOR_LLM_NAME",
-    "RedTeamingRunnerConfig",
     "RedTeamingRunner",
+    "RedTeamingRunnerConfig",
     "RedTeamingScenario",
 ]

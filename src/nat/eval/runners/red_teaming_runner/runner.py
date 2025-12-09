@@ -35,7 +35,6 @@ from nat.eval.evaluator.evaluator_model import EvalOutput
 from nat.eval.red_teaming_evaluator.register import RedTeamingEvaluatorConfig
 from nat.eval.runners.config import MultiEvaluationRunConfig
 from nat.eval.runners.multi_eval_runner import MultiEvaluationRunner
-from nat.eval.runners.red_teaming_runner.config import RED_TEAMING_EVALUATOR_LLM_NAME
 from nat.eval.runners.red_teaming_runner.config import RedTeamingRunnerConfig
 from nat.eval.runners.red_teaming_runner.config import RedTeamingScenario
 from nat.middleware.red_teaming_middleware_config import RedTeamingMiddlewareConfig
@@ -56,7 +55,7 @@ class RedTeamingRunner:
     Example usage:
         runner = RedTeamingRunner(
             config=rt_config,
-            base_config=base_config,
+            base_workflow_config=base_workflow_config,
             dataset_path="/path/to/dataset.json",
         )
         results = await runner.run()
@@ -65,7 +64,7 @@ class RedTeamingRunner:
     def __init__(
         self,
         config: RedTeamingRunnerConfig | None,
-        base_config: Config,
+        base_workflow_config: Config,
         dataset_path: str | None = None,
         result_json_path: str = "$",
         endpoint: str | None = None,
@@ -76,9 +75,9 @@ class RedTeamingRunner:
         """Initialize the RedTeamingRunner.
 
         Args:
-            config: Red teaming configuration with scenarios. If None, the base_config
+            config: Red teaming configuration with scenarios. If None, the base_workflow_config
                 is used as a single pre-configured scenario.
-            base_config: The base workflow configuration to transform for each scenario.
+            base_workflow_config: The base workflow configuration to transform for each scenario.
             dataset_path: Optional dataset path (overrides config dataset).
             result_json_path: JSON path to extract the result from the workflow.
             endpoint: Optional endpoint URL for running the workflow.
@@ -87,7 +86,7 @@ class RedTeamingRunner:
             overrides: Config overrides using dot notation (path, value) tuples.
         """
         self.config = config
-        self.base_config = base_config
+        self.base_workflow_config = base_workflow_config
         self.dataset_path = dataset_path
         self.result_json_path = result_json_path
         self.endpoint = endpoint
@@ -95,7 +94,7 @@ class RedTeamingRunner:
         self.reps = reps
         self.overrides = overrides
 
-        self._scenario_configs: dict[str, Config] | None = None
+        self._generated_workflow_configs: dict[str, Config] | None = None
         self._base_output_dir: Path | None = None
 
     async def run(self) -> dict[str, EvaluationRunOutput]:
@@ -107,20 +106,20 @@ class RedTeamingRunner:
         Raises:
             ValueError: If configuration validation fails.
         """
-        # Generate scenario configs
-        scenario_configs = self.generate_workflow_configs()
+        # Generate workflow configs for each scenario
+        generated_workflow_configs = self.generate_workflow_configs()
 
-        # Apply overrides to all scenario configs
-        scenario_configs = self._apply_overrides_to_all(scenario_configs)
+        # Apply overrides to all scenario workflow configs
+        generated_workflow_configs = self._apply_overrides_to_all(generated_workflow_configs)
 
         # Setup output directory
-        base_output_dir = self.setup_output_directory(scenario_configs)
+        base_output_dir = self.setup_output_directory(generated_workflow_configs)
 
         # Save configs
-        self.save_configs(base_output_dir, scenario_configs)
+        self.save_configs(base_output_dir, generated_workflow_configs)
 
         # Build evaluation configs
-        eval_configs = self._build_evaluation_configs(base_output_dir, scenario_configs)
+        eval_configs = self._build_evaluation_configs(base_output_dir, generated_workflow_configs)
 
         # Run evaluation
         multi_eval_config = MultiEvaluationRunConfig(configs=eval_configs)
@@ -142,7 +141,7 @@ class RedTeamingRunner:
     def generate_workflow_configs(self) -> dict[str, Config]:
         """Generate workflow configurations for each scenario.
 
-        If config is None, returns the base_config as a single scenario
+        If config is None, returns the base_workflow_config as a single scenario
         after validating it has the required red teaming components.
 
         Returns:
@@ -152,30 +151,47 @@ class RedTeamingRunner:
             ValueError: If validation fails.
         """
         if self.config is None:
-            # No red_team_config - use base_config directly as single scenario
-            self._validate_base_config_for_direct_use(self.base_config)
-            return {"single_scenario": self.base_config}
+            # No red_team_config - use base_workflow_config directly as single scenario
+            self._validate_base_config_for_direct_use(self.base_workflow_config)
+            return {"single_scenario": self.base_workflow_config}
 
-        # Warn about other evaluators in base config
-        self._warn_about_other_evaluators(self.base_config)
+        # Warn about other evaluators in base workflow config
+        self._warn_about_other_evaluators(self.base_workflow_config)
 
         # Validate: dataset must be defined somewhere
-        self._validate_dataset_exists(self.base_config, self.dataset_path)
+        self._validate_dataset_exists(self.base_workflow_config, self.dataset_path)
 
-        scenario_configs: dict[str, Config] = {}
+        generated_workflow_configs: dict[str, Config] = {}
+
+        # Collect all unique LLM names referenced by scenario evaluators
+        required_llm_names: set[str] = set()
+        for scenario in self.config.scenarios.values():
+            if scenario.evaluator:
+                required_llm_names.add(scenario.evaluator.llm_name)
 
         for scenario_key, scenario in self.config.scenarios.items():
             scenario_id = scenario.scenario_id or scenario_key
-            logger.info("Generating config for scenario: %s", scenario_id)
+            logger.info("Generating workflow config for scenario: %s", scenario_id)
 
-            # Deep copy the base config
-            config_dict = self.base_config.model_dump(mode='python', exclude_unset=False)
+            # Deep copy the base workflow config
+            base_workflow_config_dict = self.base_workflow_config.model_dump(mode='python', exclude_unset=False)
 
-            # Add evaluator LLM with fixed name
-            config_dict["llms"][RED_TEAMING_EVALUATOR_LLM_NAME] = (
-                self.config.evaluator_llm.model_dump(mode='python')
-            )
-            logger.debug("Added evaluator LLM as '%s'", RED_TEAMING_EVALUATOR_LLM_NAME)
+            # Add only the LLMs that are actually used by scenarios
+            for llm_name in required_llm_names:
+                if llm_name not in self.config.llms:
+                    raise ValueError(
+                        f"Scenario '{scenario_id}' references LLM '{llm_name}' "
+                        f"but it's not defined in the llms dict"
+                    )
+                # Check if LLM name already exists in base workflow config
+                if llm_name in base_workflow_config_dict.get("llms", {}):
+                    raise ValueError(
+                        f"LLM '{llm_name}' from red teaming config conflicts with "
+                        f"an existing LLM in the base workflow config. "
+                        f"Please use a different name for the red teaming evaluator LLM."
+                    )
+                base_workflow_config_dict["llms"][llm_name] = self.config.llms[llm_name].model_dump(mode='python')
+                logger.debug("Added evaluator LLM: '%s'", llm_name)
 
             # Apply middleware if not a baseline scenario
             if scenario.middleware is not None:
@@ -183,42 +199,42 @@ class RedTeamingRunner:
                 middleware_config = scenario.middleware.model_dump(mode='python')
 
                 # Add middleware to the middleware section
-                if "middleware" not in config_dict:
-                    config_dict["middleware"] = {}
-                config_dict["middleware"][middleware_name] = middleware_config
+                if "middleware" not in base_workflow_config_dict:
+                    base_workflow_config_dict["middleware"] = {}
+                base_workflow_config_dict["middleware"][middleware_name] = middleware_config
 
                 # Attach middleware to ALL functions, function_groups, and workflow
-                self._attach_middleware_everywhere(config_dict, middleware_name)
+                self._attach_middleware_everywhere(base_workflow_config_dict, middleware_name)
                 logger.debug("Attached middleware '%s' to all components", middleware_name)
 
             # Inject evaluator config
-            self._inject_evaluator_config(config_dict, scenario)
+            self._inject_evaluator_config(base_workflow_config_dict, scenario)
 
             # Merge general eval settings if provided
             if self.config.general is not None:
-                self._merge_general_config(config_dict, self.config.general)
+                self._merge_general_config(base_workflow_config_dict, self.config.general)
 
-            # Reconstruct config from dict
-            scenario_configs[scenario_id] = Config(**config_dict)
-            logger.info("Generated config for scenario '%s'", scenario_id)
+            # Reconstruct workflow config from dict
+            generated_workflow_configs[scenario_id] = Config(**base_workflow_config_dict)
+            logger.info("Generated workflow config for scenario '%s'", scenario_id)
 
-        return scenario_configs
+        return generated_workflow_configs
 
-    def setup_output_directory(self, scenario_configs: dict[str, Config]) -> Path:
+    def setup_output_directory(self, generated_workflow_configs: dict[str, Config]) -> Path:
         """Set up the base output directory.
 
         If the directory already exists, creates a new directory with a timestamp
         and unique identifier suffix.
 
         Args:
-            scenario_configs: The generated scenario configurations.
+            generated_workflow_configs: The generated workflow configs per scenario.
 
         Returns:
             The base output directory path.
         """
-        # Determine base output directory from first scenario
-        first_scenario = next(iter(scenario_configs.values()))
-        base_output_dir = first_scenario.eval.general.output_dir
+        # Determine base output directory from first scenario workflow config
+        first_scenario_workflow_config = next(iter(generated_workflow_configs.values()))
+        base_output_dir = first_scenario_workflow_config.eval.general.output_dir
 
         if base_output_dir.exists():
             # Generate a unique directory name with timestamp and 4-digit UID
@@ -242,33 +258,33 @@ class RedTeamingRunner:
     def save_configs(
         self,
         base_output_dir: Path,
-        scenario_configs: dict[str, Config],
+        generated_workflow_configs: dict[str, Config],
     ) -> None:
-        """Save base config, red team config, and scenario configs to disk.
+        """Save base workflow config, red team config, and scenario workflow configs to disk.
 
         Args:
             base_output_dir: The base output directory.
-            scenario_configs: The generated scenario configurations.
+            generated_workflow_configs: The generated workflow configs per scenario.
         """
-        # Save base config
-        with open(base_output_dir / "base_config.yml", 'w', encoding='utf-8') as f:
-            yaml.safe_dump(self.base_config.model_dump(mode='json'), f, default_flow_style=False)
+        # Save base workflow config
+        with open(base_output_dir / "base_workflow_config.yml", 'w', encoding='utf-8') as f:
+            yaml.safe_dump(self.base_workflow_config.model_dump(mode='json'), f, default_flow_style=False)
 
         # Save red team config if present
         if self.config:
             with open(base_output_dir / "red_team_config.yml", 'w', encoding='utf-8') as f:
                 yaml.safe_dump(self.config.model_dump(mode='json'), f, default_flow_style=False)
 
-        # Save scenario configs
-        for scenario_id, scenario_config in scenario_configs.items():
+        # Save scenario workflow configs
+        for scenario_id, workflow_config in generated_workflow_configs.items():
             scenario_output_dir = base_output_dir / scenario_id
             scenario_output_dir.mkdir(parents=True, exist_ok=True)
-            with open(scenario_output_dir / "scenario_config.yml", 'w', encoding='utf-8') as f:
-                yaml.safe_dump(scenario_config.model_dump(mode='json'), f, default_flow_style=False)
+            with open(scenario_output_dir / "workflow_config.yml", 'w', encoding='utf-8') as f:
+                yaml.safe_dump(workflow_config.model_dump(mode='json'), f, default_flow_style=False)
 
     def _apply_overrides_to_all(
         self,
-        scenario_configs: dict[str, Config],
+        generated_workflow_configs: dict[str, Config],
     ) -> dict[str, Config]:
         """Apply CLI overrides to all scenario configs.
 
@@ -279,14 +295,14 @@ class RedTeamingRunner:
             The modified scenario configurations.
         """
         if not self.overrides:
-            return scenario_configs
+            return generated_workflow_configs
 
         result = {}
-        for scenario_id, config in scenario_configs.items():
-            config_dict = config.model_dump(mode='json')
+        for scenario_id, config in generated_workflow_configs.items():
+            scenario_config_dict = config.model_dump(mode='json')
             for path, value in self.overrides:
-                self._update_config_value(config_dict, path, value)
-            result[scenario_id] = Config(**config_dict)
+                self._update_config_value(scenario_config_dict, path, value)
+            result[scenario_id] = Config(**scenario_config_dict)
         return result
 
     def _build_evaluation_configs(
@@ -333,7 +349,7 @@ class RedTeamingRunner:
 
         return eval_configs
 
-    def _validate_base_config_for_direct_use(self, config: Config) -> None:
+    def _validate_base_config_for_direct_use(self, base_workflow_config: Config) -> None:
         """Validate that a workflow config is compatible with red teaming.
 
         A workflow config is compatible if it contains:
@@ -344,7 +360,7 @@ class RedTeamingRunner:
         of a RedTeamingRunnerConfig.
 
         Args:
-            config: The workflow configuration to validate.
+            base_workflow_config: The workflow configuration to validate.
 
         Raises:
             ValueError: If the config is not red-team compatible.
@@ -353,8 +369,8 @@ class RedTeamingRunner:
 
         # Check for red teaming middleware
         has_red_teaming_middleware = False
-        if config.middleware:
-            for middleware_name, middleware_config in config.middleware.items():
+        if base_workflow_config.middleware:
+            for middleware_name, middleware_config in base_workflow_config.middleware.items():
                 if isinstance(middleware_config, RedTeamingMiddlewareConfig):
                     has_red_teaming_middleware = True
                     logger.debug("Found red teaming middleware: %s", middleware_name)
@@ -362,9 +378,9 @@ class RedTeamingRunner:
 
         if not has_red_teaming_middleware:
             middleware_types = []
-            if config.middleware:
+            if base_workflow_config.middleware:
                 middleware_types = [
-                    type(m).__name__ for m in config.middleware.values()
+                    type(m).__name__ for m in base_workflow_config.middleware.values()
                 ]
             errors.append(
                 f"Config must contain at least one middleware of type RedTeamingMiddleware "
@@ -373,8 +389,8 @@ class RedTeamingRunner:
 
         # Check for red teaming evaluator
         has_red_teaming_evaluator = False
-        if config.eval and config.eval.evaluators:
-            for evaluator_name, evaluator_config in config.eval.evaluators.items():
+        if base_workflow_config.eval and base_workflow_config.eval.evaluators:
+            for evaluator_name, evaluator_config in base_workflow_config.eval.evaluators.items():
                 if isinstance(evaluator_config, RedTeamingEvaluatorConfig):
                     has_red_teaming_evaluator = True
                     logger.debug("Found red teaming evaluator: %s", evaluator_name)
@@ -387,10 +403,10 @@ class RedTeamingRunner:
 
         if not has_red_teaming_evaluator:
             evaluator_types = []
-            if config.eval and config.eval.evaluators:
+            if base_workflow_config.eval and base_workflow_config.eval.evaluators:
                 evaluator_types = [
                     getattr(e, 'type', type(e).__name__)
-                    for e in config.eval.evaluators.values()
+                    for e in base_workflow_config.eval.evaluators.values()
                 ]
             errors.append(
                 f"Config must contain at least one evaluator of type red_teaming_evaluator. "
@@ -405,17 +421,17 @@ class RedTeamingRunner:
 
         logger.info("Workflow config validated for red teaming")
 
-    def _warn_about_other_evaluators(self, base_config: Config) -> None:
-        """Warn if the base config contains other evaluators.
+    def _warn_about_other_evaluators(self, base_workflow_config: Config) -> None:
+        """Warn if the base workflow config contains other evaluators.
 
         Red teaming evaluation is potentially incompatible with other evaluators
         due to its adversarial nature.
 
         Args:
-            base_config: The base workflow configuration to validate.
+            base_workflow_config: The base workflow configuration to validate.
         """
-        if base_config.eval and base_config.eval.evaluators:
-            other_evaluators = list(base_config.eval.evaluators.keys())
+        if base_workflow_config.eval and base_workflow_config.eval.evaluators:
+            other_evaluators = list(base_workflow_config.eval.evaluators.keys())
             if other_evaluators:
                 warnings.warn(
                     f"Base workflow config contains other evaluators: {other_evaluators}. "
@@ -427,7 +443,7 @@ class RedTeamingRunner:
 
     def _validate_dataset_exists(
         self,
-        base_config: Config,
+        base_workflow_config: Config,
         dataset_path: str | None,
     ) -> None:
         """Validate that a dataset is defined somewhere.
@@ -435,10 +451,10 @@ class RedTeamingRunner:
         Dataset can be defined in:
         - CLI --dataset argument (dataset_path)
         - RedTeamingRunnerConfig.general.dataset
-        - base_config.eval.general.dataset
+        - base_workflow_config.eval.general.dataset
 
         Args:
-            base_config: The base workflow configuration.
+            base_workflow_config: The base workflow configuration.
             dataset_path: Optional dataset path from CLI.
 
         Raises:
@@ -452,62 +468,62 @@ class RedTeamingRunner:
         if self.config and self.config.general and self.config.general.dataset:
             return
 
-        # Check base_config.eval.general.dataset
-        if (base_config.eval and
-            base_config.eval.general and
-            base_config.eval.general.dataset):
+        # Check base_workflow_config.eval.general.dataset
+        if (base_workflow_config.eval and
+            base_workflow_config.eval.general and
+            base_workflow_config.eval.general.dataset):
             return
 
         raise ValueError(
             "No dataset defined. Please provide a dataset via:\n"
             "  - CLI: --dataset <path>\n"
             "  - RedTeamingRunnerConfig: general.dataset\n"
-            "  - Base workflow: eval.general.dataset"
+            "  - Base workflow config: eval.general.dataset"
         )
 
     def _merge_general_config(
         self,
-        config_dict: dict[str, typing.Any],
+        base_workflow_config_dict: dict[str, typing.Any],
         general: EvalGeneralConfig,
     ) -> None:
-        """Merge general eval settings into the config dict.
+        """Merge general eval settings into the base workflow config dict.
 
         This performs a union of the base workflow's eval.general with the
         RedTeamingRunnerConfig.general, where RedTeamingRunnerConfig values
         take precedence. Only explicitly set values override base values.
 
         Args:
-            config_dict: The configuration dictionary to modify (in place).
+            base_workflow_config_dict: The configuration dictionary to modify (in place).
             general: The EvalGeneralConfig from RedTeamingRunnerConfig.
         """
         # Ensure eval.general exists
-        if "eval" not in config_dict:
-            config_dict["eval"] = {}
-        if "general" not in config_dict["eval"]:
-            config_dict["eval"]["general"] = {}
+        if "eval" not in base_workflow_config_dict:
+            base_workflow_config_dict["eval"] = {}
+        if "general" not in base_workflow_config_dict["eval"]:
+            base_workflow_config_dict["eval"]["general"] = {}
 
         # Get the new general config as dict, excluding unset values
         # This ensures we only override values that were explicitly set
         general_dict = general.model_dump(mode='python', exclude_unset=False)
 
         # Log which fields are being overridden
-        existing_general = config_dict["eval"]["general"]
+        existing_general = base_workflow_config_dict["eval"]["general"]
         overridden_fields = [
             key for key in general_dict.keys()
             if key in existing_general and existing_general[key] != general_dict[key]
         ]
         if overridden_fields:
             logger.info(
-                "Merging RedTeamingRunnerConfig.general into base config. "
+                "Merging RedTeamingRunnerConfig.general into base workflow config. "
                 "Overriding fields: %s", overridden_fields
             )
 
-        # Merge: base config values as defaults, RedTeamingRunnerConfig values override
-        config_dict["eval"]["general"].update(general_dict)
+        # Merge: base workflow config values as defaults, RedTeamingRunnerConfig values override
+        base_workflow_config_dict["eval"]["general"].update(general_dict)
 
     def _attach_middleware_everywhere(
         self,
-        config_dict: dict[str, typing.Any],
+        base_workflow_config_dict: dict[str, typing.Any],
         middleware_name: str,
     ) -> None:
         """Attach middleware to all functions, function_groups, and workflow.
@@ -516,88 +532,81 @@ class RedTeamingRunner:
         activation - this just ensures the middleware is registered everywhere.
 
         Args:
-            config_dict: The configuration dictionary to modify (in place).
+            base_workflow_config_dict: The configuration dictionary to modify (in place).
             middleware_name: Name of the middleware to attach.
         """
         # Attach to all functions
-        if "functions" in config_dict:
-            for func_config in config_dict["functions"].values():
+        if "functions" in base_workflow_config_dict:
+            for func_config in base_workflow_config_dict["functions"].values():
                 if "middleware" not in func_config:
                     func_config["middleware"] = []
                 if middleware_name not in func_config["middleware"]:
                     func_config["middleware"].append(middleware_name)
 
         # Attach to all function_groups
-        if "function_groups" in config_dict:
-            for group_config in config_dict["function_groups"].values():
+        if "function_groups" in base_workflow_config_dict:
+            for group_config in base_workflow_config_dict["function_groups"].values():
                 if "middleware" not in group_config:
                     group_config["middleware"] = []
                 if middleware_name not in group_config["middleware"]:
                     group_config["middleware"].append(middleware_name)
 
         # Attach to workflow
-        if "workflow" in config_dict:
-            if "middleware" not in config_dict["workflow"]:
-                config_dict["workflow"]["middleware"] = []
-            if middleware_name not in config_dict["workflow"]["middleware"]:
-                config_dict["workflow"]["middleware"].append(middleware_name)
+        if "workflow" in base_workflow_config_dict:
+            if "middleware" not in base_workflow_config_dict["workflow"]:
+                base_workflow_config_dict["workflow"]["middleware"] = []
+            if middleware_name not in base_workflow_config_dict["workflow"]["middleware"]:
+                base_workflow_config_dict["workflow"]["middleware"].append(middleware_name)
 
     def _inject_evaluator_config(
         self,
-        config_dict: dict[str, typing.Any],
+        base_workflow_config_dict: dict[str, typing.Any],
         scenario: RedTeamingScenario,
     ) -> None:
         """Inject the evaluator configuration into the workflow config.
 
-        Creates a red_teaming_evaluator in the eval section with:
-        - Base evaluator config from RedTeamingRunnerConfig
-        - Fixed LLM name 'red_teaming_evaluator_llm'
-        - Scenario-specific overrides for evaluation_instructions and filter_conditions
+        Creates a red_teaming_evaluator in the eval section using the complete
+        evaluator configuration from the scenario.
 
         Args:
-            config_dict: The configuration dictionary to modify (in place).
-            scenario: The scenario containing potential overrides.
+            base_workflow_config_dict: The configuration dictionary to modify (in place).
+            scenario: The scenario containing the complete evaluator config.
         """
         if self.config is None:
             return
 
         # Ensure eval section exists
-        if "eval" not in config_dict:
-            config_dict["eval"] = {}
-        if "evaluators" not in config_dict["eval"]:
-            config_dict["eval"]["evaluators"] = {}
+        if "eval" not in base_workflow_config_dict:
+            base_workflow_config_dict["eval"] = {}
+        if "evaluators" not in base_workflow_config_dict["eval"]:
+            base_workflow_config_dict["eval"]["evaluators"] = {}
 
-        # Build evaluator config from base
-        evaluator_dict = self.config.evaluator.model_dump(mode='python', exclude_unset=False)
+        # Use the complete evaluator config from the scenario
+        evaluator_dict = scenario.evaluator.model_dump(mode='python', exclude_unset=False)
 
-        # Force the LLM name to the fixed value
-        evaluator_dict["llm_name"] = RED_TEAMING_EVALUATOR_LLM_NAME
-
-        # Apply scenario-specific overrides
-        if scenario.evaluation_instructions is not None:
-            evaluator_dict["scenario_specific_instructions"] = scenario.evaluation_instructions
-            logger.debug("Applied scenario evaluation_instructions override")
-
-        if scenario.filter_conditions is not None:
-            evaluator_dict["filter_conditions"] = [
-                fc.model_dump(mode='python') for fc in scenario.filter_conditions
-            ]
-            logger.debug("Applied scenario filter_conditions override")
+        # Validate that the referenced LLM exists
+        llm_name = evaluator_dict.get("llm_name")
+        if llm_name and llm_name not in base_workflow_config_dict.get("llms", {}):
+            raise ValueError(
+                f"Evaluator references LLM '{llm_name}' but it's not in the config. "
+                f"Available LLMs: {list(base_workflow_config_dict.get('llms', {}).keys())}"
+            )
 
         # Add evaluator to config
-        config_dict["eval"]["evaluators"]["red_teaming_evaluator"] = evaluator_dict
+        base_workflow_config_dict["eval"]["evaluators"]["red_teaming_evaluator"] = evaluator_dict
+        logger.debug("Added complete evaluator config for scenario")
 
-    def _update_config_value(self, config_dict: dict[str, typing.Any], path: str, value: typing.Any) -> None:
-        """Update a single value in the config dictionary at the specified path.
+    def _update_config_value(self, scenario_config_dict: dict[str, typing.Any], path: str, value: typing.Any) -> None:
+        """Update a single value in the scenario config dictionary at the specified path.
 
         Args:
-            config_dict: The configuration dictionary to update.
+            scenario_config_dict: The scenario configuration dictionary to update.
             path: The path to the value to update.
             value: The new value to set at the specified path.
         """
 
         parts = path.split('.')
-        current = config_dict
+        current = scenario_config_dict
         # Navigate through nested dictionaries until reaching the parent of target
         for part in parts[:-1]:
             current = current[part]
