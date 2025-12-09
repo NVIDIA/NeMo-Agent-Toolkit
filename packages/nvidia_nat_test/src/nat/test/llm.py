@@ -213,8 +213,8 @@ async def test_llm_agno(config: MockLLMConfig, builder: Builder):
     yield AgnoTestLLM()
 
 
-@register_llm_client(config_type=TestLLMConfig, wrapper_type=LLMFrameworkEnum.ADK)
-async def test_llm_adk(config: TestLLMConfig, builder: Builder):
+@register_llm_client(config_type=MockLLMConfig, wrapper_type=LLMFrameworkEnum.ADK)
+async def test_llm_adk(config: MockLLMConfig, builder: Builder):
     """LLM client for Google ADK."""
 
     try:
