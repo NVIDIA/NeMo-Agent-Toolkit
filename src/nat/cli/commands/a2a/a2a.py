@@ -236,12 +236,99 @@ def a2a_client_discover(url: str, json_output: bool, verbose: bool, save: str | 
         logger.error(f"Error in discover command: {e}", exc_info=True)
 
 
-async def get_a2a_function_group(url: str, timeout: int = 30):
-    """Load A2A client as a function group.
+async def _create_bearer_token_auth(
+    builder,
+    bearer_token: str | None,
+    bearer_token_env: str | None,
+):
+    """Create bearer token auth configuration for CLI usage."""
+    import os
+
+    from pydantic import SecretStr
+
+    from nat.authentication.api_key.api_key_auth_provider_config import APIKeyAuthProviderConfig
+    from nat.data_models.authentication import HeaderAuthScheme
+
+    # Get token from env var or direct input
+    if bearer_token_env:
+        token_value = os.getenv(bearer_token_env)
+        if not token_value:
+            raise ValueError(f"Environment variable '{bearer_token_env}' not found or empty")
+    elif bearer_token:
+        token_value = bearer_token
+    else:
+        raise ValueError("No bearer token provided")
+
+    # Create API key auth config with Bearer scheme
+    auth_config = APIKeyAuthProviderConfig(
+        raw_key=SecretStr(token_value),
+        auth_scheme=HeaderAuthScheme.BEARER,
+    )
+
+    auth_provider_name = "bearer_token_cli"
+    await builder.add_auth_provider(auth_provider_name, auth_config)
+    return auth_provider_name
+
+
+async def _load_auth_from_config(
+    builder,
+    config_path: str,
+    auth_provider_name: str,
+):
+    """Load auth provider from auth-only config file.
+
+    Parses only the authentication section from YAML file.
+    No other workflow sections are required.
+    """
+    import yaml
+
+    with open(config_path) as f:
+        config_data = yaml.safe_load(f)
+
+    # Extract just the authentication section
+    if 'authentication' not in config_data:
+        raise ValueError("Config file must contain 'authentication' section")
+
+    auth_configs = config_data['authentication']
+    if auth_provider_name not in auth_configs:
+        raise ValueError(f"Auth provider '{auth_provider_name}' not found in config")
+
+    auth_config_dict = auth_configs[auth_provider_name]
+
+    # Add the auth provider to builder
+    await builder.add_auth_provider(auth_provider_name, auth_config_dict)
+    return auth_provider_name
+
+
+async def _create_auth_from_json(
+    builder,
+    auth_json: str,
+):
+    """Create auth provider from inline JSON config."""
+    auth_config_dict = json.loads(auth_json)
+
+    if '_type' not in auth_config_dict:
+        raise ValueError("Auth JSON must contain '_type' field")
+
+    # Add the auth provider to builder
+    auth_provider_name = "auth_json_cli"
+    await builder.add_auth_provider(auth_provider_name, auth_config_dict)
+    return auth_provider_name
+
+
+async def get_a2a_function_group(
+    url: str,
+    timeout: int = 30,
+    auth_provider_name: str | None = None,
+    user_id: str | None = None,
+):
+    """Load A2A client as a function group with optional authentication.
 
     Args:
         url: A2A agent URL
         timeout: Timeout in seconds
+        auth_provider_name: Optional auth provider name (from builder)
+        user_id: Optional user ID for authentication
 
     Returns:
         Tuple of (builder, group, functions dict) or (None, None, None) if failed
@@ -255,8 +342,13 @@ async def get_a2a_function_group(url: str, timeout: int = 30):
         builder = WorkflowBuilder()
         await builder.__aenter__()
 
-        # Create A2A config
-        config = A2AClientConfig(url=url, task_timeout=timedelta(seconds=timeout))
+        # Create A2A config with optional auth
+        config = A2AClientConfig(
+            url=url,
+            task_timeout=timedelta(seconds=timeout),
+            auth_provider=auth_provider_name,
+            default_user_id=user_id,
+        )
 
         # Add function group
         group = await builder.add_function_group("a2a_client", config)
@@ -453,17 +545,34 @@ def a2a_client_get_skills(url: str, json_output: bool, timeout: int):
 @click.option('--context-id', help='Optional context ID for maintaining context')
 @click.option('--json-output', is_flag=True, help='Output as JSON')
 @click.option('--timeout', default=30, show_default=True, help='Timeout in seconds')
+@click.option('--bearer-token', help='Bearer token for authentication')
+@click.option('--bearer-token-env', help='Environment variable containing bearer token')
+@click.option('--auth-config', type=click.Path(exists=True), help='Auth-only config file (YAML)')
+@click.option('--auth-provider', help='Auth provider name from config')
+@click.option('--auth-json', help='Inline auth provider config as JSON')
+@click.option('--user-id', help='User ID for authentication (optional)')
 def a2a_client_call(url: str,
                     message: str,
                     task_id: str | None,
                     context_id: str | None,
                     json_output: bool,
-                    timeout: int):
+                    timeout: int,
+                    bearer_token: str | None,
+                    bearer_token_env: str | None,
+                    auth_config: str | None,
+                    auth_provider: str | None,
+                    auth_json: str | None,
+                    user_id: str | None):
     """Call an A2A agent with a message and get a response.
 
     This command connects to an A2A agent, sends a message, and displays the response.
     Use this for one-off queries or testing. For complex workflows with multiple agents
     and tools, create a NAT workflow instead.
+
+    Authentication is optional. If the agent requires authentication, use one of:
+    - --bearer-token or --bearer-token-env for simple token auth
+    - --auth-config and --auth-provider for config-based auth
+    - --auth-json for inline JSON auth configuration
 
     Args:
         url: A2A agent URL (e.g., http://localhost:9999)
@@ -472,21 +581,109 @@ def a2a_client_call(url: str,
         context_id: Optional context ID for maintaining context
         json_output: Output as JSON instead of formatted display
         timeout: Timeout in seconds for agent connection
+        bearer_token: Bearer token for authentication
+        bearer_token_env: Environment variable containing bearer token
+        auth_config: Path to auth-only config file (YAML)
+        auth_provider: Auth provider name from config
+        auth_json: Inline auth provider config as JSON
+        user_id: User ID for authentication
 
     Examples:
-        nat a2a client call --url http://localhost:9999 --message "What's the USD to EUR rate?"
-        nat a2a client call --url http://localhost:9999 --message "Convert 100 USD to GBP" --json-output
-        nat a2a client call --url http://localhost:9999 --message "Continue our discussion" --task-id task_123
+        # Public agent (no auth)
+        nat a2a client call --url http://localhost:9999 --message "Hello"
+
+        # Bearer token auth
+        nat a2a client call --url http://localhost:9999 --message "Hello" --bearer-token "sk-abc123"
+
+        # Config-based auth
+        nat a2a client call --url http://localhost:9999 --message "Hello" \
+            --auth-config auth.yml --auth-provider my_oauth --user-id alice
+
+        # Inline JSON auth
+        nat a2a client call --url http://localhost:9999 --message "Hello" \
+            --auth-json '{"_type": "api_key", "raw_key": "sk-abc123", "auth_scheme": "Bearer"}'
     """
 
     async def run():
         builder = None
         try:
-            # Load A2A function group
-            start_time = time.time()
-            builder, group, fns = await get_a2a_function_group(url, timeout=timeout)
-            if not builder:
+            # Validate auth options
+            auth_methods = sum([
+                bool(bearer_token or bearer_token_env),
+                bool(auth_config),
+                bool(auth_json)
+            ])
+
+            if auth_methods > 1:
+                click.echo("[ERROR] Use only one authentication method", err=True)
                 return
+
+            if auth_provider and not auth_config:
+                click.echo("[ERROR] --auth-provider requires --auth-config", err=True)
+                return
+
+            # Setup authentication if provided
+            auth_provider_name = None
+            if bearer_token or bearer_token_env:
+                # Bearer token auth
+                from nat.builder.workflow_builder import WorkflowBuilder
+                builder = WorkflowBuilder()
+                await builder.__aenter__()
+
+                try:
+                    auth_provider_name = await _create_bearer_token_auth(builder, bearer_token, bearer_token_env)
+                except Exception as e:
+                    click.echo(f"[ERROR] Failed to configure bearer token authentication: {e}", err=True)
+                    return
+
+            elif auth_config:
+                # Config-based auth
+                from nat.builder.workflow_builder import WorkflowBuilder
+                builder = WorkflowBuilder()
+                await builder.__aenter__()
+
+                try:
+                    if not auth_provider:
+                        click.echo("[ERROR] --auth-provider is required with --auth-config", err=True)
+                        return
+                    auth_provider_name = await _load_auth_from_config(builder, auth_config, auth_provider)
+                except Exception as e:
+                    click.echo(f"[ERROR] Failed to load auth from config: {e}", err=True)
+                    return
+
+            elif auth_json:
+                # Inline JSON auth
+                from nat.builder.workflow_builder import WorkflowBuilder
+                builder = WorkflowBuilder()
+                await builder.__aenter__()
+
+                try:
+                    auth_provider_name = await _create_auth_from_json(builder, auth_json)
+                except Exception as e:
+                    click.echo(f"[ERROR] Failed to parse auth JSON: {e}", err=True)
+                    return
+
+            # Load A2A function group (with or without auth)
+            start_time = time.time()
+
+            if builder:
+                # Auth was configured, use existing builder
+                from datetime import timedelta
+                from nat.plugins.a2a.client.client_config import A2AClientConfig
+
+                config = A2AClientConfig(
+                    url=url,
+                    task_timeout=timedelta(seconds=timeout),
+                    auth_provider=auth_provider_name,
+                    default_user_id=user_id,
+                )
+                group = await builder.add_function_group("a2a_client", config)
+                fns = await group.get_accessible_functions()
+            else:
+                # No auth, use helper function
+                builder, group, fns = await get_a2a_function_group(url, timeout=timeout)
+                if not builder:
+                    return
 
             # Get the call function
             fn = fns.get("a2a_client.call")
