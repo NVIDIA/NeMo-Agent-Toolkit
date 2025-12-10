@@ -13,10 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-general:
-  per_user_workflow_timeout: 1
-  per_user_workflow_cleanup_interval: 1
-
 llms:
   nim_llm:
     _type: nim
