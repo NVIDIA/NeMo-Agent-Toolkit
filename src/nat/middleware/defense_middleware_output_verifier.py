@@ -39,6 +39,11 @@ class OutputVerifierMiddlewareConfig(DefenseMiddlewareConfig, name="output_verif
     
     This middleware analyzes function outputs using an LLM to verify correctness,
     detect security threats, and provide corrections when needed.
+    
+    Actions:
+    - 'partial_compliance': Detect and log threats, but allow content to pass through
+    - 'refusal': Block output if threat detected (hard stop)
+    - 'redirection': Replace incorrect output with correct answer from LLM
     """
     
     llm_name: str = Field(
@@ -61,7 +66,7 @@ class OutputVerifierMiddleware(DefenseMiddleware):
     
     This middleware uses NAT's LLM system to verify function outputs for:
     - Correctness and reasonableness
-    - Security threats and malicious content
+    - Security validation (detecting malicious content and manipulated values)
     - Providing automatic corrections when errors are detected
     """
     
@@ -121,7 +126,7 @@ class OutputVerifierMiddleware(DefenseMiddleware):
             function_name: Name of the function being verified (for context)
         
         Returns:
-            Detection result with threat info and should_block flag
+            Detection result with threat info and should_refuse flag
         """
         content_str = str(content)
         
@@ -158,7 +163,6 @@ Respond ONLY with valid JSON in this exact format:
             # Get the LLM (lazy loaded)
             llm = await self._get_llm()
             
-            # Call the LLM using LangChain's ainvoke method
             messages = [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
@@ -187,7 +191,7 @@ Respond ONLY with valid JSON in this exact format:
                 "reason": result.get("reason", "Unknown"),
                 "correct_answer": result.get("correct_answer"),
                 "content_type": content_type,
-                "should_block": threat_detected and confidence >= self.config.threshold
+                "should_refuse": threat_detected and confidence >= self.config.threshold
             }
         
         except Exception as e:
@@ -198,7 +202,7 @@ Respond ONLY with valid JSON in this exact format:
                 "confidence": 0.0,
                 "reason": f"Analysis failed: {e}",
                 "content_type": content_type,
-                "should_block": False,
+                "should_refuse": False,
                 "error": True
             }
     
@@ -227,12 +231,12 @@ Respond ONLY with valid JSON in this exact format:
         
         action = self.config.action
         
-        if action == "block":
-            logger.info("Blocking %s for %s", analysis_result.get('content_type', 'output'), context.name)
-            return {"error": "Content blocked by security policy", "threat_detected": True}
+        if action == "refusal":
+            logger.error("Output Verifier refusing output of %s: %s", context.name, analysis_result.get('reason', 'Unknown'))
+            raise ValueError(f"Content blocked by security policy: {analysis_result.get('reason', 'Unknown')}")
         
-        elif action == "sanitize":
-            # Sanitize = Replace with correct answer if available
+        elif action == "redirection":
+            # Redirection = Replace with correct answer if available
             correct_answer = analysis_result.get("correct_answer")
             
             if correct_answer is not None:
@@ -244,7 +248,7 @@ Respond ONLY with valid JSON in this exact format:
                         logger.warning("Could not convert '%s' to number", correct_answer)
                 
                 logger.info(
-                    "Output Verifier sanitizing %s: Incorrect: %s → Corrected: %s",
+                    "Output Verifier redirecting %s: Incorrect: %s → Corrected: %s",
                     context.name,
                     content,
                     correct_answer
@@ -252,10 +256,10 @@ Respond ONLY with valid JSON in this exact format:
                 return correct_answer
             else:
                 # No correction available, return safe placeholder
-                logger.info("Sanitizing %s (no correction available)", context.name)
+                logger.info("Redirecting %s (no correction available)", context.name)
                 return {"error": "Content sanitized by security policy", "original_blocked": True}
         
-        else:  # action == "log"
+        else:  # action == "partial_compliance"
             logger.warning("Threat logged for %s: %s", context.name, analysis_result.get('reason', 'Unknown'))
             return content
     
@@ -292,7 +296,7 @@ Respond ONLY with valid JSON in this exact format:
                 function_name=context.name
             )
             
-            if output_result.get("should_block", False):
+            if output_result.get("should_refuse", False):
                 # _handle_threat includes auto-correction logic
                 return await self._handle_threat(output, output_result, context)
             
@@ -338,7 +342,7 @@ Respond ONLY with valid JSON in this exact format:
                     inputs=value,
                     function_name=context.name
                 )
-                if output_result.get("should_block", False):
+                if output_result.get("should_refuse", False):
                     logger.warning(
                         "Streaming output failed verification: %s",
                         output_result.get('reason', 'Unknown')

@@ -39,11 +39,20 @@ llms:
     max_tokens: 1024
   
   # Guard model for safety defense
+  # Option 1: NVIDIA Nemoguard (via NIM)
+  # guard_llm:
+  #   _type: nim
+  #   model_name: nvidia/llama-3.1-nemoguard-8b-content-safety
+  #   temperature: 0.0
+  #   max_tokens: 256
+  
+  # Option 2: Qwen Guard (via Hugging Face)
   guard_llm:
-    _type: nim
-    model_name: meta/llama-3.1-8b-instruct
+    _type: huggingface
+    model_name: Qwen/Qwen3Guard-Gen-0.6B
     temperature: 0.0
-    max_tokens: 256
+    max_new_tokens: 128
+    device: auto
 
 # Multiple defense middleware with different targets
 # Note: All defense middleware only check function outputs (not inputs)
@@ -52,7 +61,7 @@ middleware:
     _type: output_verifier
     llm_name: nim_llm
     target_function_or_group: my_calculator.multiply
-    action: sanitize
+    action: redirection
     threshold: 0.7
     tool_description: "Performs basic arithmetic operations (add, subtract, multiply, divide) on numbers"
   
@@ -60,18 +69,19 @@ middleware:
     _type: content_safety_guard
     llm_name: guard_llm
     target_function_or_group: my_calculator
-    action: block
+    action: redirection
   
   pii_defense:
     _type: pii_defense
     target_function_or_group: my_calculator
-    action: sanitize
+    action: redirection
     score_threshold: 0.5
     entities:
       - PERSON
       - EMAIL_ADDRESS
       - PHONE_NUMBER
       - CREDIT_CARD
+      - US_SSN
       - LOCATION
       - IP_ADDRESS
 

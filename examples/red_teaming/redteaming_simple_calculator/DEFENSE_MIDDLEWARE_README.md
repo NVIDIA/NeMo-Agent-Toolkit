@@ -41,21 +41,26 @@ In this example:
 ## Available Defense Middleware
 
 ### Output Verifier (`output_verifier`)
-Uses an LLM to verify function outputs for correctness and security. Can log warnings, block execution, or auto-correct with the correct answer. The prompt structure is built-in and only requires a `tool_description` in the configuration.
+Uses an LLM to verify function outputs for:
+- Correctness and reasonableness
+- Security validation (detecting malicious content and manipulated values)
+- Providing automatic corrections when errors are detected
+
+Can log warnings, block execution, or auto-correct with the correct answer. The prompt structure is built-in and only requires a `tool_description` in the configuration.
 
 ### Content Safety Guard (`content_safety_guard`)
-Uses safety guard models to detect harmful or unsafe content in function outputs. Can log warnings, block execution, or return a user-friendly refusal message.
+Uses safety guard models (e.g., NVIDIA Nemoguard, Qwen Guard) to detect harmful or unsafe content in function outputs. The middleware analyzes content independently and extracts safety categories when unsafe content is detected. Can log warnings, block execution, or return a user-friendly refusal message. Supports various guard models via NAT's LLM system (NIM, Hugging Face, etc.).
 
 ### PII Defense (`pii_defense`)
-Uses Microsoft Presidio to detect and anonymize Personally Identifiable Information (PII) in function outputs. Configurable with specific entity types and score thresholds.
+Uses Microsoft Presidio (https://github.com/microsoft/presidio) to detect and anonymize Personally Identifiable Information (PII) in function outputs. Configurable with specific entity types and score thresholds. Uses rule-based entity recognition (no LLM required).
 
 ## Defense Actions
 
-All defense middleware support three actions:
+All defense middleware support actions using safety domain terminology:
 
-- **`log`**: Detect and log threats, but allow content to pass through (monitoring mode)
-- **`block`**: Detect and block threats, returning an error response
-- **`sanitize`**: Detect and replace threats with safe content
+- **`partial_compliance`**: Detect and log threats, but allow content to pass through (monitoring mode)
+- **`refusal`**: Detect and block threats, returning an error response (hard stop)
+- **`redirection`**: Detect and replace threats with safe content
   - Output Verifier: Replaces with the correct calculated answer
   - Content Safety Guard: Replaces with a polite refusal message
   - PII Defense: Replaces PII with anonymized placeholders
@@ -76,7 +81,7 @@ middleware:
     _type: output_verifier
     llm_name: nim_llm
     target_function_or_group: my_calculator.multiply
-    action: sanitize
+    action: redirection
     threshold: 0.7
     tool_description: "Performs basic arithmetic operations (add, subtract, multiply, divide) on numbers"
 
@@ -84,12 +89,31 @@ middleware:
     _type: content_safety_guard
     llm_name: guard_llm
     target_function_or_group: my_calculator
-    action: block
+    action: refusal
+    #
+    # Examples for different guard models:
+    #
+    # NVIDIA Nemoguard (via NIM):
+    # llms:
+    #   guard_llm:
+    #     _type: nim
+    #     model_name: nvidia/llama-3.1-nemoguard-8b-content-safety
+    #     temperature: 0.0
+    #     max_tokens: 256
+    #
+    # Qwen Guard (via Hugging Face):
+    # llms:
+    #   guard_llm:
+    #     _type: huggingface
+    #     model_name: Qwen/Qwen3Guard-Gen-0.6B
+    #     temperature: 0.0
+    #     max_new_tokens: 128
+    #     device: auto
 
   pii_defense:
     _type: pii_defense
     target_function_or_group: my_calculator
-    action: sanitize
+    action: redirection
     score_threshold: 0.5
     entities: [PERSON, EMAIL_ADDRESS, PHONE_NUMBER, CREDIT_CARD, US_SSN, LOCATION, IP_ADDRESS]
 ```
@@ -98,7 +122,7 @@ middleware:
 
 All defense middleware share these common options:
 
-- **`action`**: Required. What to do when a threat is detected: `log`, `block`, or `sanitize`.
+- **`action`**: Required. What to do when a threat is detected: `partial_compliance`, `refusal`, or `redirection`.
 - **`target_function_or_group`**: Optional. Which functions to protect (for example, `my_calculator` or `my_calculator.multiply`). If not specified, defends all functions that have the middleware attached via the `middleware` list.
 
 **Note**: Defense middleware only checks function **outputs** (not inputs). This ensures that any malicious or incorrect data produced by functions is detected and handled before it reaches the agent or end user.

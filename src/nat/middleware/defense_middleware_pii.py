@@ -23,6 +23,8 @@ in function outputs using Microsoft Presidio.
 import logging
 from typing import Any, AsyncIterator, List, Optional
 
+from presidio_analyzer import AnalyzerEngine
+from presidio_anonymizer import AnonymizerEngine
 from presidio_anonymizer.entities import OperatorConfig
 from pydantic import Field
 
@@ -36,8 +38,14 @@ logger = logging.getLogger(__name__)
 class PIIDefenseMiddlewareConfig(DefenseMiddlewareConfig, name="pii_defense"):
     """Configuration for PII Defense Middleware using Microsoft Presidio.
 
-    Detects PII in function outputs. Actions: 'log', 'block', or 'sanitize'.
-    Uses Presidio's rule-based entity recognition (no LLM required).
+    Detects PII in function outputs. Uses Presidio's rule-based entity recognition (no LLM required).
+    
+    See https://github.com/microsoft/presidio for more information about Presidio.
+    
+    Actions:
+    - 'partial_compliance': Detect and log PII, but allow content to pass through
+    - 'refusal': Block output if PII detected (hard stop)
+    - 'redirection': Replace PII with anonymized placeholders (e.g., <EMAIL_ADDRESS>)
     """
 
     llm_name: Optional[str] = Field(
@@ -57,9 +65,9 @@ class PIIDefenseMiddlewareConfig(DefenseMiddlewareConfig, name="pii_defense"):
 class PIIDefenseMiddleware(DefenseMiddleware):
     """PII Defense Middleware using Microsoft Presidio.
 
-    Detects PII in function outputs and takes action:
-    - 'block': Raises an error if PII is detected
-    - 'sanitize': Replaces PII with placeholders (e.g., <EMAIL_ADDRESS>)
+    Detects PII in function outputs using Presidio's rule-based entity recognition.
+    
+    See https://github.com/microsoft/presidio for more information about Presidio.
     """
 
     def __init__(self, config: PIIDefenseMiddlewareConfig, builder):
@@ -183,14 +191,14 @@ class PIIDefenseMiddleware(DefenseMiddleware):
             entities = analysis_result.get("entities", {})
             entities_str = ", ".join([f"{k}({len(v)})" for k, v in entities.items()])
             
-            if self.config.action == "block":
-                logger.error("PII Defense blocking output of %s: %s", context.name, entities_str)
+            if self.config.action == "refusal":
+                logger.error("PII Defense refusing output of %s: %s", context.name, entities_str)
                 raise ValueError(f"PII detected in output: {entities_str}. Output blocked.")
-            elif self.config.action == "sanitize":
+            elif self.config.action == "redirection":
                 logger.warning("PII Defense detected PII in output of %s: %s", context.name, entities_str)
                 logger.info("PII Defense anonymizing output for %s", context.name)
                 result = analysis_result.get("anonymized_text", result)
-            else:  # action == "log"
+            else:  # action == "partial_compliance"
                 logger.warning("PII Defense detected PII in output of %s: %s", context.name, entities_str)
                 # No modification, just log
 
@@ -233,17 +241,17 @@ class PIIDefenseMiddleware(DefenseMiddleware):
                 entities = analysis_result.get("entities", {})
                 entities_str = ", ".join([f"{k}({len(v)})" for k, v in entities.items()])
                 
-                if self.config.action == "block":
-                    logger.error("PII Defense blocking output of %s: %s", context.name, entities_str)
+                if self.config.action == "refusal":
+                    logger.error("PII Defense refusing output of %s: %s", context.name, entities_str)
                     raise ValueError(f"PII detected in output: {entities_str}. Output blocked.")
-                elif self.config.action == "sanitize":
+                elif self.config.action == "redirection":
                     logger.warning("PII Defense detected PII in output of %s: %s", context.name, entities_str)
                     logger.info("PII Defense anonymizing output for %s", context.name)
                     # Yield the anonymized text as a single chunk
                     anonymized = analysis_result.get("anonymized_text", output_text)
                     yield anonymized
                     return
-                else:  # action == "log"
+                else:  # action == "partial_compliance"
                     logger.warning("PII Defense detected PII in output of %s: %s", context.name, entities_str)
                     # No modification, just log
 

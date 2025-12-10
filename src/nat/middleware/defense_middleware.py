@@ -35,11 +35,20 @@ logger = logging.getLogger(__name__)
 
 class DefenseMiddlewareConfig(FunctionMiddlewareBaseConfig):
     """Base configuration for defense middleware.
+    
+    Actions use safety domain terminology:
+    - 'partial_compliance': Comply with user request with warning (monitoring mode)
+    - 'refusal': Refuse user request (hard refusal)
+    - 'redirection': Redirect user request to a safe place; provide a safer response
     """
     
-    action: str = Field(
-        default="log",
-        description="Action to take when threat detected: 'log', 'block', or 'sanitize'"
+    action: Literal["partial_compliance", "refusal", "redirection"] = Field(
+        default="partial_compliance",
+        description=(
+            "Action to take when threat detected. "
+            "Options: 'partial_compliance' (log with warning), 'refusal' (block), "
+            "'redirection' (sanitize/replace with safe content)"
+        )
     )
     
     llm_wrapper_type: Union[LLMFrameworkEnum, str] = Field(

@@ -20,6 +20,7 @@ This middleware uses guard models to classify content as safe or harmful
 with simple Yes/No answers.
 """
 
+import json
 import logging
 import re
 from typing import Any, AsyncIterator, Optional
@@ -39,9 +40,9 @@ class ContentSafetyGuardMiddlewareConfig(DefenseMiddlewareConfig, name="content_
     This middleware uses guard models to classify content as safe or harmful.
     
     Actions:
-    - 'log': Pass through with warning
-    - 'block': Return error dict (hard stop)
-    - 'sanitize': Return polite refusal message (user-friendly)
+    - 'partial_compliance': Log warning but allow content through
+    - 'refusal': Raise ValueError to block content (hard stop)
+    - 'redirection': Replace content with polite refusal message
     """
     
     llm_name: str = Field(
@@ -50,11 +51,11 @@ class ContentSafetyGuardMiddlewareConfig(DefenseMiddlewareConfig, name="content_
 
 
 class ContentSafetyGuardMiddleware(DefenseMiddleware):
-    """Safety guard middleware using guard models for Yes/No classification.
+    """Safety guard middleware using guard models to classify content as safe or unsafe.
     
-    This middleware asks a guard model: "Is this content harmful?"
-    - Yes = block
-    - No = allow
+    This middleware analyzes content using guard models (e.g., NVIDIA Nemoguard, Qwen Guard)
+    that return "Safe" or "Unsafe" classifications. The middleware extracts safety categories
+    when unsafe content is detected.
     """
     
     def __init__(self, config: ContentSafetyGuardMiddlewareConfig, builder):
@@ -75,26 +76,95 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
             self._llm = await self._get_llm_for_defense(self.config.llm_name)
         return self._llm
     
-    def _parse_guard_response(self, response_text: str) -> dict:
-        """Parse guard model response - simple Yes/No classification.
+    def _extract_unsafe_categories(self, response_text: str, is_safe: bool) -> list[str]:
+        """Extract safety categories only if content is unsafe.
         
-        Expected response:
-        - "Yes" = content is harmful/unsafe (should block)
-        - "No" = content is safe (should pass)
+        Supports both JSON and text formats:
+        - JSON: {"Safety Categories": "Category1, Category2"} or {"Categories": ["Category1", "Category2"]}
+        - Text: Categories: Category1, Category2
         
-        Also detects implicit refusals where model refuses to engage.
+        Args:
+            response_text: Raw response from guard model
+            is_safe: Whether the content was detected as safe
         
         Returns:
-            Dictionary with is_safe boolean and raw response
+            List of category strings if unsafe, empty list otherwise or on parsing error
         """
-        # Strip markdown formatting
+        if is_safe:
+            return []
+        
+        try:
+            categories = []
+            
+            # Try parsing as JSON first (for Nemoguard)
+            try:
+                json_data = json.loads(response_text)
+                # Look for common category field names
+                category_field = None
+                for field in ["Safety Categories", "Categories", "Category", "safety_categories", "categories"]:
+                    if field in json_data:
+                        category_field = json_data[field]
+                        break
+                
+                if category_field:
+                    if isinstance(category_field, str):
+                        # Split by comma if it's a comma-separated string
+                        categories = [cat.strip() for cat in category_field.split(",")]
+                    elif isinstance(category_field, list):
+                        categories = [str(cat).strip() for cat in category_field]
+            except (json.JSONDecodeError, ValueError, AttributeError):
+                # Not JSON, try text parsing (for Qwen Guard)
+                # Look for "Categories:" or "Category:" followed by text
+                category_patterns = [
+                    r'Categories?:\s*([^\n]+)',  # Categories: Violent
+                    r'Categories?\s*=\s*([^\n]+)',  # Categories = Violent
+                    r'"Safety Categories":\s*"([^"]+)"',  # JSON-like in text
+                ]
+                
+                for pattern in category_patterns:
+                    match = re.search(pattern, response_text, re.IGNORECASE)
+                    if match:
+                        category_text = match.group(1).strip()
+                        # Split by comma if comma-separated
+                        categories = [cat.strip() for cat in category_text.split(",")]
+                        break
+            
+            return categories
+        except Exception:
+            # If any error occurs during category extraction, return empty list
+            logger.debug("Failed to extract categories from guard response, returning empty list")
+            return []
+    
+    def _parse_guard_response(self, response_text: str) -> dict:
+        """Parse guard model response.
+        
+        Searches for "Safe" or "Unsafe" keywords anywhere in the response (case-insensitive).
+        Works with any guard model format that includes these keywords:
+        - JSON: {"User Safety": "unsafe", "Safety Categories": "..."}
+        - Structured text: Safety: Unsafe\nCategories: Violent
+        - Plain text: Any text containing "Unsafe" or "Safe"
+        
+        Also extracts safety categories from both formats:
+        - JSON: Extracts "Safety Categories" field
+        - Text: Extracts text after "Categories:" or "Category:"
+        
+        If neither keyword is found, falls back to implicit refusal detection.
+        Prioritizes "Unsafe" if both keywords are present.
+        
+        Args:
+            response_text: Raw response from guard model
+        
+        Returns:
+            Dictionary with is_safe boolean, categories list, and raw response
+        """
         cleaned_text = re.sub(r'[*_]+', '', response_text).strip()
         response_lower = cleaned_text.lower()
         
-        # Check for explicit Yes (harmful) or No (safe)
-        if cleaned_text.lower().startswith("yes"):
+        # Search for "Unsafe" or "Safe" anywhere in the response (case-insensitive)
+        # Prioritize "Unsafe" if both are present
+        if re.search(r'\bunsafe\b', response_lower):
             is_safe = False
-        elif cleaned_text.lower().startswith("no"):
+        elif re.search(r'\bsafe\b', response_lower):
             is_safe = True
         else:
             # Detect implicit refusals (model refuses = harmful content detected)
@@ -110,26 +180,29 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
             else:
                 is_safe = True  # Default to safe if unclear
         
+        # Extract categories only if unsafe
+        categories = self._extract_unsafe_categories(response_text, is_safe)
+        
         return {
             "is_safe": is_safe,
+            "categories": categories,
             "raw_response": response_text
         }
     
-    def _should_block(self, parsed_result: dict) -> bool:
-        """Determine if content should be blocked.
+    def _should_refuse(self, parsed_result: dict) -> bool:
+        """Determine if content should be refused.
         
         Args:
             parsed_result: Result from _parse_guard_response
             
         Returns:
-            True if content should be blocked
+            True if content should be refused
         """
         return not parsed_result.get("is_safe", True)
     
     async def _analyze_content(
         self, 
         content: Any, 
-        content_type: str, 
         original_input: Any = None,
         context: Optional[FunctionMiddlewareContext] = None
     ) -> dict:
@@ -137,37 +210,21 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
         
         Args:
             content: The content to analyze
-            content_type: Either 'input' or 'output'
             original_input: The original input to the function (for context)
             context: Function metadata
         
         Returns:
-            Safety classification result with should_block flag
+            Safety classification result with should_refuse flag
         """
         try:
             # Get the guard model LLM
             llm = await self._get_llm()
             
-            # Prepare simple prompt - just ask if content is harmful
             content_str = str(content)
             
-            if content_type == "output" and original_input is not None:
-                prompt = f"""Is this AI response harmful or dangerous?
-
-User Question: {str(original_input)}
-AI Response: {content_str}
-
-Answer Yes or No."""
-            else:
-                prompt = f"""Is this content harmful or dangerous?
-
-Content: {content_str}
-
-Answer Yes or No."""
-            
-            messages = [{"role": "user", "content": prompt}]
-            
-            # Call the guard model
+            # Call the guard model using messages format to ensure chat template is applied
+            # Format matches: messages = [{"role": "user", "content": prompt}]
+            messages = [{"role": "user", "content": content_str}]
             response = await llm.ainvoke(messages)
             
             # Extract text from response
@@ -176,22 +233,20 @@ Answer Yes or No."""
             elif isinstance(response, str):
                 response_text = response.strip()
             else:
-                response_text = str(response).strip()
-            
+                response_text = str(response).strip()            
             # Parse the guard model response
+
             parsed = self._parse_guard_response(response_text)
-            parsed["content_type"] = content_type
-            parsed["should_block"] = self._should_block(parsed)
+            parsed["should_refuse"] = self._should_refuse(parsed)
             
             return parsed
         
         except Exception as e:
-            logger.error("Content Safety Guard analysis failed for %s: %s", content_type, e, exc_info=True)
+            logger.error("Content Safety Guard analysis failed: %s", e, exc_info=True)
             return {
                 "safety": "Safe",
                 "refusal": "No",
-                "content_type": content_type,
-                "should_block": False,
+                "should_refuse": False,
                 "error": True,
                 "error_message": str(e)
             }
@@ -214,21 +269,21 @@ Answer Yes or No."""
         """
         action = self.config.action
         
+        categories = analysis_result.get("categories", [])
         logger.warning(
-            "Content Safety Guard detected unsafe content in %s",
-            context.name
+            "Content Safety Guard detected unsafe content in %s (categories: %s)",
+            context.name,
+            ", ".join(categories) if categories else "none"
         )
         
-        if action == "block":
-            return {
-                "error": "Content blocked by safety policy",
-                "safety_violation": True
-            }
+        if action == "refusal":
+            logger.error("Content Safety Guard refusing output of %s", context.name)
+            raise ValueError("Content blocked by safety policy")
         
-        elif action == "sanitize":
+        elif action == "redirection":
             return "I'm sorry, I cannot help you with that request."
         
-        else:  # action == "log"
+        else:  # action == "partial_compliance"
             logger.warning("Safety violation logged but content passed through")
             return content
     
@@ -261,14 +316,14 @@ Answer Yes or No."""
         # Check output
         logger.debug("ContentSafetyGuardMiddleware: Checking output for %s", context.name)
         output_result = await self._analyze_content(
-            output, "output", original_input=value, context=context
+            output, original_input=value, context=context
         )
-        if output_result.get("should_block", False):
-                logger.warning(
-                    "ContentSafetyGuardMiddleware: Blocking output for %s (unsafe content detected)",
-                    context.name
-                )
-                return await self._handle_threat(output, output_result, context)
+        if output_result.get("should_refuse", False):
+            logger.warning(
+                "ContentSafetyGuardMiddleware: Blocking output for %s (unsafe content detected)",
+                context.name
+            )
+            return await self._handle_threat(output, output_result, context)
         
         return output
     
@@ -303,9 +358,9 @@ Answer Yes or No."""
         if accumulated_output:
             full_output = "".join(accumulated_output)
             output_result = await self._analyze_content(
-                full_output, "output", original_input=value, context=context
+                full_output, original_input=value, context=context
             )
-            if output_result.get("should_block", False):
+            if output_result.get("should_refuse", False):
                 logger.warning(
                     "Streaming output violated safety policy (unsafe content detected)"
                 )
