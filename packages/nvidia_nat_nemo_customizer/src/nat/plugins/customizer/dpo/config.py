@@ -181,6 +181,20 @@ class DPOSpecificHyperparameters(BaseModel):
         description="KL penalty coefficient for reference policy regularization.",
     )
 
+    preference_loss_weight: float = Field(default=1.0,
+                                          ge=0.0,
+                                          description="Scales the contribution of the preference loss")
+
+    preference_average_log_probs: bool = Field(
+        default=False,
+        description="If True, use average log probabilities over sequence length "
+        "when computing preference loss. If False, use sum of log probabilities.",
+    )
+
+    sft_loss_weight: float = Field(default=0.0,
+                                   ge=0.0,
+                                   description="Scales the contribution of the supervised fine-tuning (SFT) loss. ")
+
 
 class NeMoCustomizerHyperparameters(BaseModel):
     """
@@ -227,7 +241,7 @@ class NIMDeploymentConfig(BaseModel):
     """
 
     image_name: str = Field(
-        default="nvcr.io/nim/meta/llama-3.2-1b-instruct",
+        default="nvcr.io/nim/meta/llama-3.1-8b-instruct",
         description="NIM container image name.",
     )
     image_tag: str = Field(

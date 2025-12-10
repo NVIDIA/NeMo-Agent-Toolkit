@@ -45,6 +45,7 @@ from nat.data_models.finetuning import TrajectoryCollection
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepCategory
 from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import TTCEventData
 from nat.eval.config import EvaluationRunOutput
 from nat.eval.evaluator.evaluator_model import EvalInputItem
@@ -440,9 +441,21 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
             logger.warning("Step has no data field, skipping: %s", step.payload.UUID)
             return None
 
-        # Validate that we have TTCEventData (or compatible dict)
+        # Validate that we have TTCEventData (or compatible dict/StreamEventData)
+        # NOTE: When IntermediateStepPayload is serialized/deserialized, TTCEventData
+        # becomes StreamEventData because the data field is typed as StreamEventData.
+        # The TTC fields are preserved as extra fields due to extra="allow".
         if isinstance(data, TTCEventData):
             ttc_data = data
+        elif isinstance(data, StreamEventData):
+            # TTCEventData may have been deserialized as StreamEventData
+            # Try to construct TTCEventData from the model dump
+            try:
+                data_dict = data.model_dump()
+                ttc_data = TTCEventData(**data_dict)
+            except Exception as e:
+                logger.warning("Failed to parse TTCEventData from StreamEventData: %s", e)
+                return None
         elif isinstance(data, dict):
             # Try to parse as TTCEventData
             try:

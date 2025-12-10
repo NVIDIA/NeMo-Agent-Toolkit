@@ -22,6 +22,7 @@ from typing import Literal
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
+from pydantic import SerializeAsAny
 from pydantic import model_validator
 
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -163,7 +164,7 @@ class IntermediateStepPayload(BaseModel):
     name: str | None = None
     tags: list[str] | None = None
     metadata: dict[str, typing.Any] | TraceMetadata | None = None
-    data: StreamEventData | None = None
+    data: SerializeAsAny[StreamEventData] | None = None
     usage_info: UsageInfo | None = None
     UUID: str = Field(default_factory=lambda: str(uuid.uuid4()))
 
