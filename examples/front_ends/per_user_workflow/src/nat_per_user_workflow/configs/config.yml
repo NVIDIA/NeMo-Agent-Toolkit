@@ -18,12 +18,10 @@ general:
   per_user_workflow_cleanup_interval: 5
 
 functions:
-  # Per-user notepad - each user gets their own notepad
   notepad:
     _type: per_user_notepad
     max_notes: 50
 
-  # Per-user preferences - each user gets their own preferences
   preferences:
     _type: per_user_preferences
     default_preferences:
@@ -31,7 +29,6 @@ functions:
       language: "en"
       notifications: "enabled"
 
-# Per-user workflow - each user gets their own workflow instance
 workflow:
   _type: per_user_assistant
   notepad_name: notepad

@@ -5357,6 +5357,16 @@ requires-dist = [
 ]
 
 [[package]]
+name = "nat-per-user-workflow"
+source = { editable = "examples/front_ends/per_user_workflow" }
+dependencies = [
+    { name = "nvidia-nat" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "nvidia-nat", editable = "." }]
+
+[[package]]
 name = "nat-plot-charts"
 source = { editable = "examples/custom_functions/plot_charts" }
 dependencies = [
@@ -5949,6 +5959,7 @@ examples = [
     { name = "nat-haystack-deep-research-agent" },
     { name = "nat-math-assistant-a2a" },
     { name = "nat-multi-frameworks" },
+    { name = "nat-per-user-workflow" },
     { name = "nat-plot-charts" },
     { name = "nat-por-to-jiratickets" },
     { name = "nat-profiler-agent" },
@@ -6104,6 +6115,7 @@ requires-dist = [
     { name = "nat-haystack-deep-research-agent", marker = "extra == 'examples'", editable = "examples/frameworks/haystack_deep_research_agent" },
     { name = "nat-math-assistant-a2a", marker = "extra == 'examples'", editable = "examples/A2A/math_assistant_a2a" },
     { name = "nat-multi-frameworks", marker = "extra == 'examples'", editable = "examples/frameworks/multi_frameworks" },
+    { name = "nat-per-user-workflow", marker = "extra == 'examples'", editable = "examples/front_ends/per_user_workflow" },
     { name = "nat-plot-charts", marker = "extra == 'examples'", editable = "examples/custom_functions/plot_charts" },
     { name = "nat-por-to-jiratickets", marker = "extra == 'examples'", editable = "examples/HITL/por_to_jiratickets" },
     { name = "nat-profiler-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/profiler_agent" },

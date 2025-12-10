@@ -151,6 +151,132 @@ class ConfiguredMiddleware:
     instance: Middleware
 
 
+def _log_build_failure(component_name: str,
+                       component_type: str,
+                       completed_components: list[tuple[str, str]],
+                       remaining_components: list[tuple[str, str]],
+                       original_error: Exception) -> None:
+    """
+        Common method to log comprehensive build failure information.
+
+        Args:
+            component_name (str): The name of the component that failed to build
+            component_type (str): The type of the component that failed to build
+            completed_components (list[tuple[str, str]]): List of (name, type) tuples for successfully built components
+            remaining_components (list[tuple[str, str]]): List of (name, type) tuples for components still to be built
+            original_error (Exception): The original exception that caused the failure
+        """
+    logger.error("Failed to initialize component %s (%s)", component_name, component_type)
+
+    if completed_components:
+        logger.error("Successfully built components:")
+        for name, comp_type in completed_components:
+            logger.error("- %s (%s)", name, comp_type)
+    else:
+        logger.error("No components were successfully built before this failure")
+
+    if remaining_components:
+        logger.error("Remaining components to build:")
+        for name, comp_type in remaining_components:
+            logger.error("- %s (%s)", name, comp_type)
+    else:
+        logger.error("No remaining components to build")
+
+    logger.error("Original error: %s", original_error, exc_info=True)
+
+
+async def _build_function_impl(
+    *,
+    name: str,
+    config: FunctionBaseConfig,
+    registry: TypeRegistry,
+    exit_stack: AsyncExitStack,
+    inner_builder: 'ChildBuilder',
+    llms: dict[str, LLMProviderInfo],
+    dependencies: dict[str, FunctionDependencies],
+    middleware_instances: list[FunctionMiddleware],
+) -> ConfiguredFunction:
+    """
+    Helper for core function building logic.
+
+    Args:
+        name: The function name
+        config: The function configuration
+        registry: Type registry to look up the function registration
+        exit_stack: Async exit stack for context management
+        inner_builder: ChildBuilder instance for dependency tracking
+        llms: Dictionary of LLM instances
+        dependencies: Dictionary to store function dependencies
+        middleware_instances: Pre-resolved middleware instances
+    """
+    registration = registry.get_function(type(config))
+
+    function_frameworks = detect_llm_frameworks_in_build_fn(registration)
+    build_fn = chain_wrapped_build_fn(registration.build_fn, llms, function_frameworks)
+
+    build_result = await exit_stack.enter_async_context(build_fn(config, inner_builder))
+
+    dependencies[name] = inner_builder.dependencies
+
+    # If the build result is a function, wrap it in a FunctionInfo
+    if inspect.isfunction(build_result):
+        build_result = FunctionInfo.from_fn(build_result)
+
+    if isinstance(build_result, FunctionInfo):
+        build_result = LambdaFunction.from_info(config=config, info=build_result, instance_name=name)
+
+    if not isinstance(build_result, Function):
+        raise ValueError("Expected a function, FunctionInfo object, or FunctionBase object to be "
+                         f"returned from the function builder. Got {type(build_result)}")
+
+    build_result.configure_middleware(middleware_instances)
+
+    return ConfiguredFunction(config=config, instance=build_result)
+
+
+async def _build_function_group_impl(
+    *,
+    name: str,
+    config: FunctionGroupBaseConfig,
+    registry: TypeRegistry,
+    exit_stack: AsyncExitStack,
+    inner_builder: 'ChildBuilder',
+    llms: dict[str, LLMProviderInfo],
+    dependencies: dict[str, FunctionDependencies],
+    middleware_instances: list[FunctionMiddleware],
+) -> ConfiguredFunctionGroup:
+    """
+    Core function group building logic shared between WorkflowBuilder and PerUserWorkflowBuilder.
+
+    Args:
+        name: The function group name
+        config: The function group configuration
+        registry: Type registry to look up the function group registration
+        exit_stack: Async exit stack for context management
+        inner_builder: ChildBuilder instance for dependency tracking
+        llms: Dictionary of LLM instances
+        dependencies: Dictionary to store function group dependencies
+        middleware_instances: Pre-resolved middleware instances
+    """
+    registration = registry.get_function_group(type(config))
+
+    function_frameworks = detect_llm_frameworks_in_build_fn(registration)
+    build_fn = chain_wrapped_build_fn(registration.build_fn, llms, function_frameworks)
+
+    build_result = await exit_stack.enter_async_context(build_fn(config, inner_builder))
+
+    dependencies[name] = inner_builder.dependencies
+
+    if not isinstance(build_result, FunctionGroup):
+        raise ValueError("Expected a FunctionGroup object to be returned from the function group builder. "
+                         f"Got {type(build_result)}")
+
+    build_result.configure_middleware(middleware_instances)
+    build_result.set_instance_name(name)
+
+    return ConfiguredFunctionGroup(config=config, instance=build_result)
+
+
 async def _build_function_impl(
     *,
     name: str,
@@ -1157,40 +1283,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         exporter = await self._get_exit_stack().enter_async_context(exporter_context_manager)
         self._telemetry_exporters[name] = ConfiguredTelemetryExporter(config=config, instance=exporter)
 
-    @staticmethod
-    def log_build_failure(component_name: str,
-                          component_type: str,
-                          completed_components: list[tuple[str, str]],
-                          remaining_components: list[tuple[str, str]],
-                          original_error: Exception) -> None:
-        """
-        Common method to log comprehensive build failure information.
-
-        Args:
-            component_name (str): The name of the component that failed to build
-            component_type (str): The type of the component that failed to build
-            completed_components (list[tuple[str, str]]): List of (name, type) tuples for successfully built components
-            remaining_components (list[tuple[str, str]]): List of (name, type) tuples for components still to be built
-            original_error (Exception): The original exception that caused the failure
-        """
-        logger.error("Failed to initialize component %s (%s)", component_name, component_type)
-
-        if completed_components:
-            logger.error("Successfully built components:")
-            for name, comp_type in completed_components:
-                logger.error("- %s (%s)", name, comp_type)
-        else:
-            logger.error("No components were successfully built before this failure")
-
-        if remaining_components:
-            logger.error("Remaining components to build:")
-            for name, comp_type in remaining_components:
-                logger.error("- %s (%s)", name, comp_type)
-        else:
-            logger.error("No remaining components to build")
-
-        logger.error("Original error: %s", original_error, exc_info=True)
-
     async def populate_builder(self, config: Config, skip_workflow: bool = False):
         """
         Populate the builder with components and optionally set up the workflow.
@@ -1271,11 +1363,11 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                         (str(component_instance.name), component_instance.component_group.value))
 
             except Exception as e:
-                WorkflowBuilder.log_build_failure(str(component_instance.name),
-                                                  component_instance.component_group.value,
-                                                  self.completed_components,
-                                                  self.remaining_components,
-                                                  e)
+                _log_build_failure(str(component_instance.name),
+                                   component_instance.component_group.value,
+                                   self.completed_components,
+                                   self.remaining_components,
+                                   e)
                 raise
 
         # Instantiate the workflow
@@ -1290,11 +1382,11 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                     await self.set_workflow(config.workflow)
                     self.completed_components.append((WORKFLOW_COMPONENT_NAME, "workflow"))
             except Exception as e:
-                WorkflowBuilder.log_build_failure(WORKFLOW_COMPONENT_NAME,
-                                                  "workflow",
-                                                  self.completed_components,
-                                                  self.remaining_components,
-                                                  e)
+                _log_build_failure(WORKFLOW_COMPONENT_NAME,
+                                   "workflow",
+                                   self.completed_components,
+                                   self.remaining_components,
+                                   e)
                 raise
 
         # Check if any shared components have dependencies on per-user components
@@ -1832,11 +1924,11 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
                         continue
 
             except Exception as e:
-                WorkflowBuilder.log_build_failure(str(component_instance.name),
-                                                  component_instance.component_group.value,
-                                                  self.completed_components,
-                                                  self.remaining_components,
-                                                  e)
+                _log_build_failure(str(component_instance.name),
+                                   component_instance.component_group.value,
+                                   self.completed_components,
+                                   self.remaining_components,
+                                   e)
                 raise
 
         if not skip_workflow:
@@ -1847,11 +1939,11 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
                     await self.set_workflow(config.workflow)
                     self.completed_components.append((WORKFLOW_COMPONENT_NAME, "workflow"))
             except Exception as e:
-                WorkflowBuilder.log_build_failure(WORKFLOW_COMPONENT_NAME,
-                                                  "workflow",
-                                                  self.completed_components,
-                                                  self.remaining_components,
-                                                  e)
+                _log_build_failure(WORKFLOW_COMPONENT_NAME,
+                                   "workflow",
+                                   self.completed_components,
+                                   self.remaining_components,
+                                   e)
                 raise
 
     async def build(self, entry_function: str | None = None) -> Workflow:

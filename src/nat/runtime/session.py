@@ -297,7 +297,7 @@ class SessionManager:
                 try:
                     cleaned = await self._cleanup_inactive_per_user_builders()
                     if cleaned > 0:
-                        logger.debug(f"Cleaned up {cleaned} inactive per-user builder(s)")
+                        logger.info(f"Cleaned up {cleaned} inactive per-user builder(s)")
                 except Exception as e:
                     logger.error(f"Error during periodic cleanup: {e}", exc_info=True)
 
@@ -418,22 +418,28 @@ class SessionManager:
         if isinstance(http_connection, Request):
             self.set_metadata_from_http_request(http_connection)
 
-        if user_id is None and self._is_workflow_per_user:
-            user_id = self._get_user_id_from_context()
-            if user_id is None:
-                raise ValueError("user_id is required for per-user workflow but could not be extracted from context. "
-                                 "Ensure 'nat-session' cookie is set or pass user_id explicitly.")
-
         builder_info: PerUserBuilderInfo | None = None
 
-        if self._is_workflow_per_user and user_id is not None:
+        if self._is_workflow_per_user:
+            # Resolve user_id: explicit param > context > default
+            if user_id is None:
+                user_id = self._get_user_id_from_context()
+            if user_id is None:
+                user_id = self._config.general.default_user_id
+                if user_id:
+                    logger.info(f"Using default_user_id='{user_id}' for per-user workflow")
+            if user_id is None:
+                raise ValueError("user_id is required for per-user workflow but could not be determined. "
+                                 "Ensure 'nat-session' cookie is set, pass user_id explicitly, or set "
+                                 "'general.default_user_id' in config.")
+
+            # Get or create per-user builder
             logger.debug(f"Getting or creating per-user builder for user {user_id}")
             _, workflow = await self._get_or_create_per_user_builder(user_id)
             builder_info = self._per_user_builders[user_id]
             async with builder_info.lock:
                 builder_info.ref_count += 1
                 logger.debug(f"Incremented ref_count for user {user_id} to {builder_info.ref_count}")
-
         else:
             workflow = self._shared_workflow
 
