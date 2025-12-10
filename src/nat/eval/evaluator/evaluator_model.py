@@ -19,7 +19,7 @@ import typing
 from typing import Generic
 from typing import TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, SerializeAsAny
 
 from nat.data_models.intermediate_step import IntermediateStep
 
@@ -59,4 +59,4 @@ EvaluatorTemplateItem = TypeVar('EvaluatorTemplateItem', bound=EvalOutputItem)
 
 class EvalOutput(BaseModel, Generic[EvaluatorTemplateItem]):
     average_score: typing.Any  # float or any serializable type
-    eval_output_items: list[EvaluatorTemplateItem]
+    eval_output_items: list[SerializeAsAny[EvalOutputItem]]

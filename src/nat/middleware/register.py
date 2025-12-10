@@ -57,7 +57,8 @@ async def red_teaming_middleware(config: RedTeamingMiddlewareConfig, builder):
                                target_function_or_group=config.target_function_or_group,
                                payload_placement=config.payload_placement,
                                target_location=config.target_location,
-                               target_field=config.target_field)
+                               target_field=config.target_field,
+                               target_field_resolution_strategy=config.target_field_resolution_strategy)
 
 @register_middleware(config_type=ContentSafetyGuardMiddlewareConfig)
 async def content_safety_guard_middleware(config: ContentSafetyGuardMiddlewareConfig, builder):
@@ -100,4 +101,3 @@ async def pii_defense_middleware(config: PIIDefenseMiddlewareConfig, builder):
     """
     # Pass the builder and config, Presidio will be loaded lazily
     yield PIIDefenseMiddleware(config=config, builder=builder)
-
