@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 # NVIDIA NeMo Agent Toolkit Release Notes
-This section contains the release notes for [NeMo Agent toolkit](../index.md).
+This section contains the release notes for [NeMo Agent toolkit](./index.md).
 
 ## Release 1.3.1
 ### Summary

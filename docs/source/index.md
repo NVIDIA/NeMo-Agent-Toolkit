@@ -156,7 +156,9 @@ NeMo Agent toolkit was previously known as <!-- vale off -->AgentIQ<!-- vale on 
 
 ```{toctree}
 :hidden:
-About <self>
+:caption: About NeMo Agent Toolkit
+Overview <self>
+Release Notes <./release-notes.md>
 ```
 
 ```{toctree}
@@ -166,7 +168,6 @@ About <self>
 Installation <./get-started/installation.md>
 Quick Start <./get-started/quick-start.md>
 Tutorials <./get-started/tutorials/index.md>
-Release Notes <./get-started/release-notes.md>
 ```
 
 ```{toctree}
