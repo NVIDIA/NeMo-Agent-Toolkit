@@ -114,6 +114,17 @@ class RedTeamingMiddlewareConfig(FunctionMiddlewareBaseConfig, name="red_teaming
         ),
     )
 
+    target_field_resolution_strategy: Literal["random", "first", "last", "all", "error"] = Field(
+        default="error",
+        description=(
+            "Strategy to resolve multiple field matches: "
+            "'random': Choose a random field match, "
+            "'first': Choose the first field match, "
+            "'last': Choose the last field match, "
+            "'all': Choose all field matches, "
+            "'error': Raise an error if multiple field matches are found."
+        ),
+    )
 
 __all__ = ["RedTeamingMiddlewareConfig"]
 
