@@ -26,21 +26,24 @@ NVIDIA NeMo Agent toolkit is a flexible, lightweight, and unifying library that 
 ::::{tab-set}
 :sync-group: install-tool
 
-   :::{tab-item} uv
-   :selected:
-   :sync: uv
-   ```bash
-   uv pip install nvidia-nat
-   ```
-   :::
+:::{tab-item} uv
+:selected:
+:sync: uv
 
+```bash
+uv pip install nvidia-nat
+```
 
-   :::{tab-item} pip
-   :sync: pip
-   ```bash
-   pip install nvidia-nat
-   ```
-   :::
+:::
+
+:::{tab-item} pip
+:sync: pip
+
+```bash
+pip install nvidia-nat
+```
+
+:::
 
 ::::
 
@@ -75,21 +78,24 @@ Before getting started, it's possible to run this simple workflow and many other
    ::::{tab-set}
    :sync-group: install-tool
 
-      :::{tab-item} uv
-      :selected:
-      :sync: uv
-      ```bash
-      uv pip install "nvidia-nat[langchain]"
-      ```
-      :::
+   :::{tab-item} uv
+   :selected:
+   :sync: uv
 
+   ```bash
+   uv pip install "nvidia-nat[langchain]"
+   ```
 
-      :::{tab-item} pip
-      :sync: pip
-      ```bash
-      pip install "nvidia-nat[langchain]"
-      ```
-      :::
+   :::
+
+   :::{tab-item} pip
+   :sync: pip
+
+   ```bash
+   pip install "nvidia-nat[langchain]"
+   ```
+
+   :::
 
    ::::
 
@@ -103,29 +109,29 @@ Before getting started, it's possible to run this simple workflow and many other
 
    ```yaml
    functions:
-      # Add a tool to search wikipedia
-      wikipedia_search:
-         _type: wiki_search
-         max_results: 2
+     # Add a tool to search wikipedia
+     wikipedia_search:
+       _type: wiki_search
+       max_results: 2
 
    llms:
-      # Tell NeMo Agent Toolkit which LLM to use for the agent
-      nim_llm:
-         _type: nim
-         model_name: meta/llama-3.1-70b-instruct
-         temperature: 0.0
+     # Tell NeMo Agent Toolkit which LLM to use for the agent
+     nim_llm:
+       _type: nim
+       model_name: meta/llama-3.1-70b-instruct
+       temperature: 0.0
 
    workflow:
-      # Use an agent that 'reasons' and 'acts'
-      _type: react_agent
-      # Give it access to our wikipedia search tool
-      tool_names: [wikipedia_search]
-      # Tell it which LLM to use
-      llm_name: nim_llm
-      # Make it verbose
-      verbose: true
-      # Retry up to 3 times
-      parse_agent_response_max_retries: 3
+     # Use an agent that 'reasons' and 'acts'
+     _type: react_agent
+     # Give it access to our wikipedia search tool
+     tool_names: [wikipedia_search]
+     # Tell it which LLM to use
+     llm_name: nim_llm
+     # Make it verbose
+     verbose: true
+     # Retry up to 3 times
+     parse_agent_response_max_retries: 3
    ```
 
 4. Run the Hello World example using the `nat` CLI and the `workflow.yml` file.
@@ -142,17 +148,16 @@ Before getting started, it's possible to run this simple workflow and many other
    ```
 
 ## FAQs
+
 For frequently asked questions, refer to [FAQs](./resources/faq.md).
 
 ## Feedback
 
 We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues) if you have any feedback or feature requests.
 
-
 :::{note}
 NeMo Agent toolkit was previously known as <!-- vale off -->AgentIQ<!-- vale on -->, however the API has not changed and is fully compatible with previous releases. Users should update their dependencies to depend on `nvidia-nat` instead of `aiqtoolkit` or `agentiq`. The transitional packages named `aiqtoolkit` and `agentiq` are available for backwards compatibility, but will be removed in the future.
 :::
-
 
 ```{toctree}
 :hidden:
@@ -174,7 +179,7 @@ Tutorials <./get-started/tutorials/index.md>
 :hidden:
 :caption: Build
 
-Overview <./build-workflows/about-workflows.md>
+Overview <./build-workflows/overview.md>
 Workflow Configuration <./build-workflows/workflow-configuration.md>
 ./build-workflows/functions-and-function-groups/index.md
 ./build-workflows/llms/index.md
@@ -191,7 +196,7 @@ A2A <./build-workflows/a2a-client.md>
 :hidden:
 :caption: Run
 
-Overview <./run-workflows/run-workflows.md>
+Overview <./run-workflows/overview.md>
 ./run-workflows/observe/observe.md
 API Server and User Interface <./run-workflows/launching-ui.md>
 MCP Server <./run-workflows/mcp-server.md>
@@ -252,6 +257,7 @@ Contributing <./resources/contributing/index.md>
 ```
 
 <!-- This role is needed at the index to set the default backtick role -->
+
 ```{eval-rst}
 .. role:: py(code)
    :language: python

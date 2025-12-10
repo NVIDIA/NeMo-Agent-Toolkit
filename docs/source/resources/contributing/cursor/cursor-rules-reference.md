@@ -27,11 +27,13 @@ This document provides a comprehensive reference for all available Cursor rules 
 **Purpose**: Overarching standards for all source, test, documentation, and CI files.
 
 **Prompt**:
+
 ```
 Create a new Python function with proper type hints, docstrings, and formatting that follows NeMo Agent toolkit coding standards.
 ```
 
 **Capabilities**:
+
 - Project structure guidelines
 - Code formatting standards
 - Type hint requirements
@@ -47,11 +49,13 @@ Create a new Python function with proper type hints, docstrings, and formatting 
 **Purpose**: Guidelines for creating and managing cursor rules themselves.
 
 **Prompt**:
+
 ```
 Create a new Cursor rule for creating a new NeMo Agent workflow
 ```
 
 **Capabilities**:
+
 - Rule file naming conventions
 - Directory structure for rules
 - Documentation standards for rules
@@ -67,11 +71,13 @@ Create a new Cursor rule for creating a new NeMo Agent workflow
 **Purpose**: Guidance for NeMo Agent toolkit installation, setup, and environment configuration.
 
 **Prompt**:
+
 ```
 Help me set up NeMo Agent toolkit development environment with all required dependencies and configurations.
 ```
 
 **Capabilities**:
+
 - Installation troubleshooting
 - Environment setup guidance
 - Dependency management
@@ -87,11 +93,10 @@ Help me set up NeMo Agent toolkit development environment with all required depe
 **Purpose**: Detailed installation procedures and setup guidance.
 
 **Prompt**:
+
 ```
 Install NeMo Agent toolkit with all plugins and verify the installation is working correctly.
 ```
-
-
 
 **Related Documentation**: [Installation Guide](../../../get-started/installation.md)
 
@@ -105,11 +110,13 @@ Install NeMo Agent toolkit with all plugins and verify the installation is worki
 **Purpose**: Guidance for all NeMo Agent CLI commands, operations, and functionality.
 
 **Prompt**:
+
 ```
 Show me how to use CLI commands to manage workflows
 ```
 
 **Capabilities**:
+
 - CLI command reference
 - Common usage patterns
 - Error troubleshooting
@@ -125,11 +132,10 @@ Show me how to use CLI commands to manage workflows
 **Purpose**: Creating, reinstalling, and deleting NeMo Agent workflows.
 
 **Prompt**:
+
 ```
 Create a workflow named demo_workflow in examples directory with description "Demo workflow for testing features".
 ```
-
-
 
 **Related Documentation**: [CLI Reference - Workflow Commands](../../../reference/cli/index.md#workflow)
 
@@ -141,15 +147,15 @@ Create a workflow named demo_workflow in examples directory with description "De
 **Purpose**: Running, serving, and executing NeMo Agent workflows.
 
 **Prompt**:
+
 ```
 Run my workflow locally for testing and then serve it as an API endpoint on port 8080.
 ```
 
-
-
 **Related Documentation**:
+
 - [CLI Reference - Run Commands](../../../reference/cli/index.md#run)
-- [Running Workflows](../../../run-workflows/run-workflows.md)
+- [Running Workflows](../../../run-workflows/overview.md)
 
 ---
 
@@ -159,11 +165,13 @@ Run my workflow locally for testing and then serve it as an API endpoint on port
 **Purpose**: Evaluating workflow performance and quality.
 
 **Prompt**:
+
 ```
 Evaluate my workflow performance using a test dataset with accuracy and precision metrics.
 ```
 
 **Related Documentation**:
+
 - [CLI Reference - Evaluation Commands](../../../reference/cli/index.md#evaluation)
 - [Workflow Evaluation](../../../improve-workflows/evaluate.md)
 
@@ -175,6 +183,7 @@ Evaluate my workflow performance using a test dataset with accuracy and precisio
 **Purpose**: Getting information about NeMo Agent components and system status.
 
 **Prompt**:
+
 ```
 Show me system information and list all available NeMo Agent components with their details.
 ```
@@ -191,13 +200,15 @@ Show me system information and list all available NeMo Agent components with the
 **Purpose**: Guidance for NeMo Agent workflows, functions, and tools.
 
 **Capabilities**:
+
 - Workflow architecture patterns
 - Function and tool integration
 - Best practices for workflow design
 - Documentation references
 
 **Related Documentation**:
-- [Workflow Overview](../../../build-workflows/about-workflows.md)
+
+- [Workflow Overview](../../../build-workflows/overview.md)
 - [Functions Overview](../../../build-workflows/functions-and-function-groups/functions.md)
 
 ---
@@ -208,11 +219,13 @@ Show me system information and list all available NeMo Agent components with the
 **Purpose**: Implementing, adding, creating, or modifying functions within NeMo Agent workflows.
 
 **Prompt**:
+
 ```
 Add a text processing function to my workflow that splits text into sentences and counts words.
 ```
 
 **Related Documentation**:
+
 - [Writing Custom Functions](../../../extend/custom-components/custom-functions/functions.md)
 - [Functions Overview](../../../build-workflows/functions-and-function-groups/functions.md)
 
@@ -224,6 +237,7 @@ Add a text processing function to my workflow that splits text into sentences an
 **Purpose**: Adding, integrating, implementing, or configuring tools for NeMo Agent workflows.
 
 **Prompt**:
+
 ```
 Integrate a web search tool into my workflow that can fetch and process search results from the internet.
 ```
@@ -240,6 +254,7 @@ Integrate a web search tool into my workflow that can fetch and process search r
 **Purpose**: Guidelines for integrating or selecting ReAct, Tool-Calling, Reasoning, or ReWOO agents within NeMo Agent workflows.
 
 **Prompt**:
+
 ```
 Integrate ReAct agent to the workflow
 ```
@@ -251,29 +266,31 @@ Integrate ReAct agent to the workflow
 ## Quick Reference
 
 <!-- path-check-skip-begin -->
-| Rule Category | Cursor Rule file | Primary Use Case |
-|---------------|---------|------------------|
-| Foundation | `general` | Code quality and standards |
-| Foundation | `cursor-rules` | Managing cursor rules |
-| Setup | `nat-setup/general` | Environment setup |
-| Setup | `nat-setup/nat-toolkit-installation` | Installation procedures |
-| CLI | `nat-cli/general` | General CLI usage |
-| CLI | `nat-cli/nat-workflow` | Workflow management |
-| CLI | `nat-cli/nat-run-serve` | Running and serving |
-| CLI | `nat-cli/nat-eval` | Performance evaluation |
-| CLI | `nat-cli/nat-info` | System information |
-| Workflow | `nat-workflows/general` | Workflow design |
-| Workflow | `nat-workflows/add-functions` | Function development |
-| Workflow | `nat-workflows/add-tools` | Tool integration |
-| Agents | `nat-agents/general` | Agent selection & integration |
+
+| Rule Category | Cursor Rule file                     | Primary Use Case              |
+| ------------- | ------------------------------------ | ----------------------------- |
+| Foundation    | `general`                            | Code quality and standards    |
+| Foundation    | `cursor-rules`                       | Managing cursor rules         |
+| Setup         | `nat-setup/general`                  | Environment setup             |
+| Setup         | `nat-setup/nat-toolkit-installation` | Installation procedures       |
+| CLI           | `nat-cli/general`                    | General CLI usage             |
+| CLI           | `nat-cli/nat-workflow`               | Workflow management           |
+| CLI           | `nat-cli/nat-run-serve`              | Running and serving           |
+| CLI           | `nat-cli/nat-eval`                   | Performance evaluation        |
+| CLI           | `nat-cli/nat-info`                   | System information            |
+| Workflow      | `nat-workflows/general`              | Workflow design               |
+| Workflow      | `nat-workflows/add-functions`        | Function development          |
+| Workflow      | `nat-workflows/add-tools`            | Tool integration              |
+| Agents        | `nat-agents/general`                 | Agent selection & integration |
+
 <!-- path-check-skip-end -->
 
 ## Usage Tips
 
-* **Copy Exact Prompts**: Use the provided prompts exactly as shown for best results
-* **Customize for Your Needs**: Modify prompts with specific project details
-* **Chain Rules**: Use multiple rules together for complex development tasks
-* **Reference Documentation**: Follow the "Related Documentation" links for deeper understanding
-* **Test Incrementally**: Apply one rule at a time and test the results
+- **Copy Exact Prompts**: Use the provided prompts exactly as shown for best results
+- **Customize for Your Needs**: Modify prompts with specific project details
+- **Chain Rules**: Use multiple rules together for complex development tasks
+- **Reference Documentation**: Follow the "Related Documentation" links for deeper understanding
+- **Test Incrementally**: Apply one rule at a time and test the results
 
 For tutorials and examples on using these rules, see [Build a Demo Agent Workflow Using Cursor Rules for NeMo Agent Toolkit](../../../get-started/tutorials/build-a-demo-agent-workflow-using-cursor-rules.md).

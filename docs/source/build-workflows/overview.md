@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# About NVIDIA NeMo Agent Toolkit Workflows
+# Overview of NVIDIA NeMo Agent Toolkit Workflows
 
 Workflows are the core of the NeMo Agent toolkit because they define which agentic tools and models are used to perform a given task or series of tasks.
 
@@ -24,6 +24,7 @@ Workflows are the core of the NeMo Agent toolkit because they define which agent
 The workflow configuration file is a YAML file that specifies the tools and models to use in a workflow, along with general configuration settings. This section examines the configuration of the `examples/getting_started/simple_web_query` workflow to show how they are organized.
 
 `examples/getting_started/simple_web_query/configs/config.yml`:
+
 ```yaml
 functions:
   webpage_query:
@@ -65,7 +66,9 @@ The `webpage_query` tool uses the `nv-embedqa-e5-v5` embedder, which is defined 
 For details on workflow configuration, including sections not utilized in the above example, refer to the [Workflow Configuration](./workflow-configuration.md) document.
 
 ## Using Agents With Workflows
+
 There are several different agents that use large language models (LLMs) to reason and determine the actions to take and inputs to use for those actions. After executing those actions, the agent uses the LLM to determine if more actions are required. The following are agents and an executor offered by NeMo Agent toolkit:
+
 - [ReAct Agent](../components/agents/react-agent/index.md)
 - [Reasoning Agent](../components/agents/reasoning-agent/index.md)
 - [ReWOO Agent](../components/agents/rewoo-agent/index.md)
@@ -73,4 +76,3 @@ There are several different agents that use large language models (LLMs) to reas
 - [Router Agent](../components/agents/router-agent/index.md)
 - [Sequential Executor](../components/agents/sequential-executor/index.md)
 - [Tool Calling Agent](../components/agents/tool-calling-agent/index.md)
-
