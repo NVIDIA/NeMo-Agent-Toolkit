@@ -299,7 +299,7 @@ class NeMoCustomizerTrainerAdapterConfig(TrainerAdapterConfig, name="nemo_custom
     # === Namespace and Dataset ===
     namespace: str = Field(description="Namespace for organizing resources (datasets, models, deployments).", )
     dataset_name: str = Field(
-        default="nat-dpo-dataset",
+        default="nat-dpo",
         description="Name for the training dataset. Must be unique within namespace.",
     )
     dataset_output_dir: str | None = Field(
