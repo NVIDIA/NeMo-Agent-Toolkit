@@ -705,43 +705,79 @@ async def per_user_mcp_client_function_group(config: PerUserMCPClientConfig, _bu
 
     group = PerUserMCPFunctionGroup(config=config)
 
-    async with client:
-        # Expose the live MCP client on the function group instance so other components (e.g., HTTP endpoints)
-        # can reuse the already-established session instead of creating a new client per request.
-        group.mcp_client = client
-        group.mcp_client_server_name = client.server_name
-        group.mcp_client_transport = client.transport
-        group.user_id = user_id
+    # Use a dedicated lifetime task to ensure the MCP client context is entered and exited
+    # in the same asyncio task, avoiding anyio cancel scope issues during cleanup.
+    # This mirrors the pattern used in _create_session_client for session-based MCP clients.
+    ready = asyncio.Event()
+    stop_event = asyncio.Event()
+    init_error: Exception | None = None
 
-        all_tools = await client.get_tools()
-        tool_overrides = mcp_apply_tool_alias_and_description(all_tools, config.tool_overrides)
+    async def _lifetime():
+        """
+        Create a lifetime task to respect task boundaries and ensure the
+        cancel scope is entered and exited in the same task.
+        """
+        nonlocal init_error
+        try:
+            async with client:
+                # Expose the live MCP client on the function group instance so other components
+                # (e.g., HTTP endpoints) can reuse the already-established session.
+                group.mcp_client = client
+                group.mcp_client_server_name = client.server_name
+                group.mcp_client_transport = client.transport
+                group.user_id = user_id
 
-        # Add each tool as a function to the group
-        for tool_name, tool in all_tools.items():
-            # Get override if it exists
-            override = tool_overrides.get(tool_name)
+                all_tools = await client.get_tools()
+                tool_overrides = mcp_apply_tool_alias_and_description(all_tools, config.tool_overrides)
 
-            # Use override values or defaults
-            function_name = override.alias if override and override.alias else tool_name
-            description = override.description if override and override.description else tool.description
+                # Add each tool as a function to the group
+                for tool_name, tool in all_tools.items():
+                    # Get override if it exists
+                    override = tool_overrides.get(tool_name)
 
-            # Create the tool function according to configuration
-            tool_fn = mcp_per_user_tool_function(tool, client)
+                    # Use override values or defaults
+                    function_name = override.alias if override and override.alias else tool_name
+                    description = override.description if override and override.description else tool.description
 
-            input_schema = tool_fn.input_schema
-            # Convert NoneType sentinel to None for FunctionGroup.add_function signature
-            if input_schema is type(None):  # noqa: E721
-                input_schema = None
+                    # Create the tool function according to configuration
+                    tool_fn = mcp_per_user_tool_function(tool, client)
 
-            # Add to group
-            logger.info("Adding tool %s to group", function_name)
-            group.add_function(name=function_name,
-                               description=description,
-                               fn=tool_fn.single_fn,
-                               input_schema=input_schema,
-                               converters=tool_fn.converters)
+                    input_schema = tool_fn.input_schema
+                    # Convert NoneType sentinel to None for FunctionGroup.add_function signature
+                    if input_schema is type(None):  # noqa: E721
+                        input_schema = None
 
+                    # Add to group
+                    logger.info("Adding tool %s to group", function_name)
+                    group.add_function(name=function_name,
+                                       description=description,
+                                       fn=tool_fn.single_fn,
+                                       input_schema=input_schema,
+                                       converters=tool_fn.converters)
+
+                ready.set()
+                await stop_event.wait()
+        except Exception as e:
+            init_error = e
+            ready.set()  # Ensure we don't hang the waiter
+            raise
+
+    task = asyncio.create_task(_lifetime(), name=f"mcp-per-user-{user_id}")
+
+    try:
+        timeout = config.tool_call_timeout.total_seconds() if config.tool_call_timeout else 300
+        await asyncio.wait_for(ready.wait(), timeout=timeout)
+        if init_error:
+            raise init_error
         yield group
+    finally:
+        stop_event.set()
+        # Wait for the lifetime task to complete cleanup
+        try:
+            await task
+        except Exception:
+            # Errors during cleanup are logged but not re-raised
+            logger.debug("MCP client cleanup completed with exception for user %s", user_id)
 
 
 def mcp_apply_tool_alias_and_description(
