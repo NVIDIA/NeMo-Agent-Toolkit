@@ -4,12 +4,7 @@ This example demonstrates a minimal protected A2A server for testing NeMo Agent 
 
 ## Overview
 
-This server provides:
-- ✅ Simple Bearer token authentication
-- ✅ Proper A2A `securitySchemes` configuration
-- ✅ Public agent card discovery
-- ✅ Protected agent operations
-- ✅ Clear test commands printed on startup
+This server provides simple Bearer token authentication for the NAT a2a client call command.
 
 ## Installation
 
@@ -21,11 +16,11 @@ uv pip install -e examples/A2A/simple_auth_a2a
 
 ## Quick Start
 
-### 1. Start the Protected Server
+### Start the Protected Server
 
 ```bash
 export SIMPLE_PROTECTED_SERVER_HOST=localhost
-export SIMPLE_PROTECTED_SERVER_PORT=8000
+export SIMPLE_PROTECTED_SERVER_PORT=10001
 export TEST_BEARER_TOKEN=test-token-12345
 
 python examples/A2A/simple_auth_a2a/src/nat_simple_auth_a2a/scripts/simple_protected_server.py
@@ -33,7 +28,13 @@ python examples/A2A/simple_auth_a2a/src/nat_simple_auth_a2a/scripts/simple_prote
 
 The server will start on `http://${SIMPLE_PROTECTED_SERVER_HOST}:${SIMPLE_PROTECTED_SERVER_PORT}` and print test commands.
 
-### 2. Test NAT CLI Authentication
+### Discover the Agent Card
+The agent card is public and can be discovered without authentication.
+```bash
+nat a2a client discover --url http://${SIMPLE_PROTECTED_SERVER_HOST}:${SIMPLE_PROTECTED_SERVER_PORT}
+```
+
+### Test NAT CLI Authentication
 
 #### Test 1: No Authentication (Should FAIL with 401)
 
@@ -58,7 +59,7 @@ nat a2a client call --url http://${SIMPLE_PROTECTED_SERVER_HOST}:${SIMPLE_PROTEC
 ```bash
 nat a2a client call --url http://${SIMPLE_PROTECTED_SERVER_HOST}:${SIMPLE_PROTECTED_SERVER_PORT} \
   --message "Hello" \
-  --bearer-token "test-token-12345"
+  --bearer-token $TEST_BEARER_TOKEN
 ```
 
 **Expected:** `✅ Authentication successful! You said: Hello`
@@ -66,10 +67,9 @@ nat a2a client call --url http://${SIMPLE_PROTECTED_SERVER_HOST}:${SIMPLE_PROTEC
 #### Test 4: Token from Environment Variable
 
 ```bash
-export MY_TOKEN="test-token-12345"
 nat a2a client call --url http://${SIMPLE_PROTECTED_SERVER_HOST}:${SIMPLE_PROTECTED_SERVER_PORT} \
   --message "Hello" \
-  --bearer-token-env MY_TOKEN
+  --bearer-token-env TEST_BEARER_TOKEN
 ```
 
 #### Test 5: Config-Based Authentication
@@ -89,32 +89,29 @@ nat a2a client call --url http://${SIMPLE_PROTECTED_SERVER_HOST}:${SIMPLE_PROTEC
   --auth-json '{"_type": "api_key", "raw_key": "test-token-12345", "auth_scheme": "BEARER"}'
 ```
 
-
 ## Architecture
 
 ### Agent Card Security Configuration
 
-The server uses the modern `securitySchemes` format:
+The server uses the `bearer_auth` security scheme:
 
-```python
-securitySchemes={
-    "bearer_auth": SecurityScheme(
-        root=HTTPAuthSecurityScheme(
-            type="http",
-            scheme="bearer",
-            description="Bearer token authentication"
-        )
-    )
-},
-security=[{"bearer_auth": []}]  # Required for all operations
+```json
+{
+  "securitySchemes": {
+    "bearer_auth": {
+      "type": "http",
+      "scheme": "bearer"
+    }
+  }
+}
 ```
 
 ### Authentication Flow
 
 ```mermaid
 sequenceDiagram
-    participant CLI as NAT CLI
-    participant Agent as Protected Agent
+    participant CLI as nat a2a client command
+    participant Agent as protected A2A agent
 
     CLI->>Agent: GET /.well-known/agent.json (public)
     Agent-->>CLI: AgentCard with securitySchemes

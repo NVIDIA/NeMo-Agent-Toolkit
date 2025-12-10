@@ -281,6 +281,10 @@ async def _load_auth_from_config(
     No other workflow sections are required.
     """
     import yaml
+    from pydantic import TypeAdapter
+
+    from nat.cli.type_registry import GlobalTypeRegistry
+    from nat.data_models.authentication import AuthProviderBaseConfig
 
     with open(config_path) as f:
         config_data = yaml.safe_load(f)
@@ -295,8 +299,12 @@ async def _load_auth_from_config(
 
     auth_config_dict = auth_configs[auth_provider_name]
 
+    # Parse the dictionary into the proper AuthProviderBaseConfig subclass
+    auth_union_type = GlobalTypeRegistry.get().compute_annotation(AuthProviderBaseConfig)
+    auth_config = TypeAdapter(auth_union_type).validate_python(auth_config_dict)
+
     # Add the auth provider to builder
-    await builder.add_auth_provider(auth_provider_name, auth_config_dict)
+    await builder.add_auth_provider(auth_provider_name, auth_config)
     return auth_provider_name
 
 
@@ -305,14 +313,23 @@ async def _create_auth_from_json(
     auth_json: str,
 ):
     """Create auth provider from inline JSON config."""
+    from pydantic import TypeAdapter
+
+    from nat.cli.type_registry import GlobalTypeRegistry
+    from nat.data_models.authentication import AuthProviderBaseConfig
+
     auth_config_dict = json.loads(auth_json)
 
     if '_type' not in auth_config_dict:
         raise ValueError("Auth JSON must contain '_type' field")
 
+    # Parse the dictionary into the proper AuthProviderBaseConfig subclass
+    auth_union_type = GlobalTypeRegistry.get().compute_annotation(AuthProviderBaseConfig)
+    auth_config = TypeAdapter(auth_union_type).validate_python(auth_config_dict)
+
     # Add the auth provider to builder
     auth_provider_name = "auth_json_cli"
-    await builder.add_auth_provider(auth_provider_name, auth_config_dict)
+    await builder.add_auth_provider(auth_provider_name, auth_config)
     return auth_provider_name
 
 

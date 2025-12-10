@@ -57,7 +57,8 @@ class SimpleBearerAuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         """Validate Bearer token on all requests except public agent card."""
         # Allow public agent card discovery (follows A2A spec)
-        if request.url.path == "/.well-known/agent.json":
+        # Support both current and deprecated paths
+        if request.url.path in ("/.well-known/agent-card.json", "/.well-known/agent.json"):
             logger.info("✓ Public access to agent card")
             return await call_next(request)
 
@@ -97,14 +98,22 @@ class SimpleAgentExecutor(AgentExecutor):
 
         # Create response
         response_text = f"✅ Authentication successful! You said: {user_input}"
-        message = new_agent_text_message(response_text)
+        message = new_agent_text_message(
+            response_text,
+            context_id=context.context_id,
+            task_id=context.task_id,
+        )
 
         # Send response
-        await event_queue.send_message(message)
+        await event_queue.enqueue_event(message)
         logger.info("Sent response to authenticated user")
 
+    async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:
+        """Cancel method - not supported for this simple agent."""
+        raise Exception("cancel not supported")
 
-def create_agent_card(host: str = "localhost", port: int = 8000) -> AgentCard:
+
+def create_agent_card(host: str = "localhost", port: int = 10001) -> AgentCard:
     """
     Create agent card with Bearer auth requirement.
 
@@ -183,7 +192,7 @@ async def main():
     logger.info("🔒 Simple Protected A2A Server Starting")
     logger.info("=" * 60)
     logger.info(f"URL: http://{host}:{port}/")
-    logger.info(f"Agent Card: http://{host}:{port}/.well-known/agent.json")
+    logger.info(f"Agent Card: http://{host}:{port}/.well-known/agent-card.json")
     logger.info(f"Valid Bearer Token: {VALID_TOKEN}")
     logger.info("=" * 60)
     logger.info("")

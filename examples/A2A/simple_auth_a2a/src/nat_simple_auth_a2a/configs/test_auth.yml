@@ -17,4 +17,4 @@ authentication:
   test_bearer:
     _type: api_key
     raw_key: "test-token-12345"
-    auth_scheme: BEARER
+    auth_scheme: Bearer
