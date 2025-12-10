@@ -274,6 +274,37 @@ nat a2a client discover --url http://localhost:10000
 nat a2a client call --url http://localhost:10000 --message "Your query here"
 ```
 
+### Discover Agent
+
+The `discover` command connects to an A2A agent and displays its Agent Card, which contains information about capabilities, skills, and configuration.
+
+**Basic usage:**
+```bash
+nat a2a client discover --url $A2A_SERVER_URL
+```
+
+**Output example:**
+![Agent Card](../_static/a2a_agent_card.png)
+
+### Call Agent
+
+Call an A2A agent with a message and get a response. This is useful for quick testing and one-off queries.
+
+**Usage:**
+```bash
+nat a2a client call --url $A2A_SERVER_URL --message "What is 2 + 2?"
+```
+
+**Output example:**
+```text
+Query: What is 2 + 2?
+
+The sum of 2 and 2 is 4.
+
+(0.85s)
+```
+
+
 ## Troubleshooting
 
 ### Connection Issues
