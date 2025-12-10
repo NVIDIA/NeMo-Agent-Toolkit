@@ -380,7 +380,6 @@ class NeMoCustomizerTrainerAdapter(TrainerAdapter):
         interval = poll_interval or self.adapter_config.poll_interval_seconds
 
         last_status: str | None = None
-        last_progress: float | None = None
 
         while True:
             status = await self.status(ref)
@@ -393,9 +392,8 @@ class NeMoCustomizerTrainerAdapter(TrainerAdapter):
 
             # Log when progress changes
             current_progress = status.progress
-            if current_progress is not None and current_progress != last_progress:
-                logger.info(f"Job {ref.run_id}: Progress {current_progress:.1f}%")
-                last_progress = current_progress
+            #if current_progress is not None and current_progress != last_progress:
+            logger.info(f"Job {ref.run_id}: Progress {current_progress:.1f}%")
 
             if status.status in (
                     TrainingStatusEnum.COMPLETED,
@@ -414,7 +412,7 @@ class NeMoCustomizerTrainerAdapter(TrainerAdapter):
             await asyncio.sleep(interval)
 
     async def _deploy_model(self, ref: TrainingJobRef) -> None:
-        """Deploy the trained model."""
+        """Deploy the trained model and wait until deployment is ready."""
         output_model = self._job_output_models.get(ref.run_id)
         if not output_model:
             logger.warning(f"No output model found for run {ref.run_id}, skipping deployment")
@@ -439,20 +437,94 @@ class NeMoCustomizerTrainerAdapter(TrainerAdapter):
             )
 
             # Create model deployment
-            deployment_name = deploy_config.deployment_name or f"nat-deployment-{ref.run_id}"
-            deployment = self.entity_client.deployment.model_deployments.create(
+            deployment_name = (deploy_config.deployment_name or f"nat-deployment-{ref.run_id}")
+            self.entity_client.deployment.model_deployments.create(
                 name=deployment_name,
                 namespace=namespace,
                 description=deploy_config.description,
                 config=f"{dep_config.namespace}/{dep_config.name}",
             )
 
-            logger.info(f"Created deployment \n\n {deployment.model_dump_json(indent=3)} \n\n for "
-                        f"model {output_model}")
+            logger.info(f"Created deployment '{deployment_name}' for model {output_model}")
+
+            # Wait for deployment to be ready
+            await self._wait_for_deployment_ready(namespace, deployment_name)
 
         except Exception as e:
             logger.error(f"Failed to deploy model: {e}")
             raise
+
+    async def _wait_for_deployment_ready(
+        self,
+        namespace: str,
+        deployment_name: str,
+        poll_interval: float | None = None,
+        timeout: float | None = None,
+    ) -> None:
+        """
+        Wait for a model deployment to become ready.
+
+        Args:
+            namespace: Namespace of the deployment
+            deployment_name: Name of the deployment
+            poll_interval: Seconds between status checks (default: adapter config poll_interval_seconds)
+            timeout: Maximum seconds to wait (default: adapter config deployment_timeout_seconds)
+        """
+        interval = poll_interval or self.adapter_config.poll_interval_seconds
+        max_wait = timeout or self.adapter_config.deployment_timeout_seconds
+
+        logger.info(f"Waiting for deployment '{deployment_name}' to be ready...")
+
+        last_status: str | None = None
+        elapsed = 0.0
+
+        while elapsed < max_wait:
+            try:
+                # Get all deployments and find ours
+                deployments = self.entity_client.deployment.model_deployments.list().data
+                deployment = None
+                for dep in deployments:
+                    if dep.name == deployment_name and dep.namespace == namespace:
+                        deployment = dep
+                        break
+
+                if deployment is None:
+                    logger.warning(f"Deployment '{deployment_name}' not found in namespace '{namespace}'")
+                    await asyncio.sleep(interval)
+                    elapsed += interval
+                    continue
+
+                # Check status
+                status_details = getattr(deployment, "status_details", None)
+                current_status = status_details.status if status_details else "unknown"
+                description = status_details.description if status_details else ""
+
+                # Log status changes
+                if current_status != last_status:
+                    logger.info(f"Deployment '{deployment_name}': Status -> '{current_status}'")
+                    if description:
+                        logger.info(f"Deployment '{deployment_name}': {description.strip()}")
+                    last_status = current_status
+
+                # Check if ready
+                if current_status.lower() == "ready":
+                    logger.info(f"Deployment '{deployment_name}' is ready!")
+                    return
+
+                # Check for failure states
+                if current_status.lower() in ("failed", "error"):
+                    raise RuntimeError(
+                        f"Deployment '{deployment_name}' failed with status '{current_status}': {description}")
+
+            except RuntimeError:
+                raise
+            except Exception as e:
+                logger.warning(f"Error checking deployment status: {e}")
+
+            await asyncio.sleep(interval)
+            elapsed += interval
+
+        raise TimeoutError(f"Deployment '{deployment_name}' did not become ready within {max_wait} seconds")
 
     def log_progress(self, ref: TrainingJobRef, metrics: dict[str, Any], output_dir: str | None = None) -> None:
         """Log training progress to file."""

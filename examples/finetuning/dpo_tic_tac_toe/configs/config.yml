@@ -20,8 +20,9 @@ llms:
   # LLM for the trained player
   # Uses vLLM or any OpenAI-compatible endpoint
   training_llm:
-    _type: nim
-    model_name: meta/llama-3.3-70b-instruct
+    _type: openai
+    model_name: default/meta-llama-3.1-8b-instruct-nat-dpo-all_weights
+    base_url: https://nim.aire.nvidia.com/v1
 
 functions:
   # === Trained player functions (uses LLM) ===

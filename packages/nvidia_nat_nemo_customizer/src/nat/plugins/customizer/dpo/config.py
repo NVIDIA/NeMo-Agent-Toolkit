@@ -347,6 +347,12 @@ class NeMoCustomizerTrainerAdapterConfig(TrainerAdapterConfig, name="nemo_custom
         gt=0.0,
         description="Interval in seconds between job status checks.",
     )
+    deployment_timeout_seconds: float = Field(
+        default=1800.0,
+        gt=0.0,
+        description="Maximum time in seconds to wait for deployment to be ready. "
+        "Default is 30 minutes (1800 seconds).",
+    )
 
     @model_validator(mode="after")
     def validate_config(self) -> "NeMoCustomizerTrainerAdapterConfig":
