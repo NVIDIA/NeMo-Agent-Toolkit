@@ -202,6 +202,7 @@ A2A Server <./run-workflows/a2a-server.md>
 :hidden:
 :caption: Improve Workflows
 
+Overview <./improve-workflows/overview.md>
 Evaluate Workflows <./improve-workflows/evaluate.md>
 Profiling and Performance Monitoring <./improve-workflows/profiler.md>
 Optimizer Guide <./improve-workflows/optimizer.md>
