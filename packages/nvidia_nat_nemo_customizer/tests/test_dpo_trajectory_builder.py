@@ -25,16 +25,59 @@ import pytest
 from nat.data_models.finetuning import DPOItem
 from nat.data_models.finetuning import Trajectory
 from nat.data_models.finetuning import TrajectoryCollection
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import TTCEventData
+from nat.data_models.invocation_node import InvocationNode
 from nat.eval.evaluator.evaluator_model import EvalInput
 from nat.eval.evaluator.evaluator_model import EvalInputItem
 from nat.plugins.customizer.dpo.trajectory_builder import CandidateStep
 from nat.plugins.customizer.dpo.trajectory_builder import DPOTrajectoryBuilder
 from nat.plugins.customizer.dpo.trajectory_builder import PreferencePair
 
-from .conftest import create_candidate_ttc_data
-from .conftest import create_intermediate_step
+
+# Helper functions (inline to avoid import path issues)
+def create_candidate_ttc_data(
+    turn_id: str,
+    candidate_index: int,
+    score: float,
+    prompt: str | list[dict[str, str]] = "Test prompt",
+    response: str = "Test response",
+) -> TTCEventData:
+    """Helper function to create TTCEventData for a candidate."""
+    return TTCEventData(
+        turn_id=turn_id,
+        turn_index=0,
+        candidate_index=candidate_index,
+        score=score,
+        input=prompt,
+        output=response,
+    )
+
+
+def create_intermediate_step(
+    step_name: str,
+    ttc_data: TTCEventData,
+    metadata: dict | None = None,
+    step_type: IntermediateStepType = IntermediateStepType.TTC_END,
+) -> IntermediateStep:
+    """Helper function to create an intermediate step with TTCEventData."""
+    payload = IntermediateStepPayload(
+        event_type=step_type,
+        UUID=f"test-uuid-{ttc_data.candidate_index or 0}",
+        name=step_name,
+        data=ttc_data,
+        metadata=metadata or {},
+    )
+    return IntermediateStep(
+        parent_id="root",
+        function_ancestry=InvocationNode(
+            function_id="test-function-id",
+            function_name="test_function",
+        ),
+        payload=payload,
+    )
 
 
 class TestCandidateStep:
