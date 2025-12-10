@@ -25,16 +25,6 @@ authentication:
   mcp_oauth2_jira:
     _type: mcp_oauth2
     server_url: ${CORPORATE_MCP_JIRA_URL}
-    # The difference is when the OAuth authentication happens:
-    # Non-per-user workflow (nat run or nat serve with react_agent):
-    # Authentication happens during startup, before the main server binds to port 8000
-    # The ConsoleAuthenticationFlowHandler starts its temporary server on port 8000, completes OAuth, then stops it
-    # Then the main server starts on port 8000 — no conflict
-    # Per-user workflow (nat serve with per_user_react_agent):
-    # Main server starts on port 8000 first (line 20 in your log: "Uvicorn running on http://localhost:8000")
-    # Authentication happens per-request when a user (user-alice) makes their first API call
-    # The MCPAuthenticationFlowHandler then tries to start another server on port 8000 → conflict
-    # The fundamental issue is that per-user auth happens lazily at request time, after the main server is already running. The auth handler shouldn't be trying to spawn its own server in this scenario — it should reuse the existing FastAPI server's routes instead.
     redirect_uri: ${NAT_REDIRECT_URI:-http://localhost:8001/auth/redirect}
     default_user_id: ${NAT_USER_ID}
     allow_default_user_id_for_tool_calls: ${ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS:-true}
