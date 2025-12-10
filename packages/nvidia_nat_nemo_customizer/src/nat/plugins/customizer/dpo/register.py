@@ -22,13 +22,16 @@ with NAT's finetuning harness:
 """
 
 from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_trainer
 from nat.cli.register_workflow import register_trainer_adapter
 from nat.cli.register_workflow import register_trajectory_builder
 
 from .config import DPOTrajectoryBuilderConfig
 from .config import NeMoCustomizerTrainerAdapterConfig
-from .dpo_trajectory_builder import DPOTrajectoryBuilder
+from .config import NeMoCustomizerTrainerConfig
+from .trainer import NeMoCustomizerTrainer
 from .trainer_adapter import NeMoCustomizerTrainerAdapter
+from .trajectory_builder import DPOTrajectoryBuilder
 
 
 @register_trajectory_builder(config_type=DPOTrajectoryBuilderConfig)
@@ -117,3 +120,41 @@ async def nemo_customizer_trainer_adapter(config: NeMoCustomizerTrainerAdapterCo
         A configured NeMoCustomizerTrainerAdapter instance.
     """
     yield NeMoCustomizerTrainerAdapter(adapter_config=config)
+
+
+@register_trainer(config_type=NeMoCustomizerTrainerConfig)
+async def nemo_customizer_trainer(config: NeMoCustomizerTrainerConfig, builder: Builder):
+    """
+    Register the NeMo Customizer trainer.
+
+    This trainer orchestrates DPO data collection and training job submission.
+    Unlike epoch-based trainers, it:
+    1. Runs the trajectory builder multiple times (num_runs) to collect data
+    2. Aggregates all trajectories into a single dataset
+    3. Submits the dataset to NeMo Customizer for training
+    4. Monitors the training job until completion
+
+    Example YAML configuration:
+    ```yaml
+    trainers:
+      nemo_dpo:
+        _type: nemo_customizer_trainer
+        num_runs: 5
+        wait_for_completion: true
+        deduplicate_pairs: true
+        max_pairs: 10000
+
+    finetuning:
+      enabled: true
+      trainer: nemo_dpo
+      # ... other finetuning config
+    ```
+
+    Args:
+        config: The trainer configuration.
+        builder: The NAT workflow builder (for accessing other components).
+
+    Yields:
+        A configured NeMoCustomizerTrainer instance.
+    """
+    yield NeMoCustomizerTrainer(trainer_config=config)

@@ -27,6 +27,7 @@ from pydantic import Field
 from pydantic import model_validator
 
 from nat.data_models.finetuning import TrainerAdapterConfig
+from nat.data_models.finetuning import TrainerConfig
 from nat.data_models.finetuning import TrajectoryBuilderConfig
 
 
@@ -102,6 +103,68 @@ class DPOTrajectoryBuilderConfig(TrajectoryBuilderConfig, name="dpo_traj_builder
         if self.max_pairs_per_turn is not None and self.max_pairs_per_turn < 1:
             raise ValueError("max_pairs_per_turn must be at least 1 if specified")
         return self
+
+
+# =============================================================================
+# NeMo Customizer Trainer Configuration
+# =============================================================================
+
+
+class NeMoCustomizerTrainerConfig(TrainerConfig, name="nemo_customizer_trainer"):
+    """
+    Configuration for the NeMo Customizer Trainer.
+
+    This trainer orchestrates DPO data collection and training job submission.
+    Unlike epoch-based trainers, it runs the trajectory builder multiple times
+    to collect data, then submits a single training job to NeMo Customizer.
+
+    Example YAML configuration:
+    ```yaml
+    trainers:
+      nemo_dpo:
+        _type: nemo_customizer_trainer
+        num_runs: 5
+        wait_for_completion: true
+        deduplicate_pairs: true
+        max_pairs: 10000
+    ```
+    """
+
+    # === Data Collection ===
+    num_runs: int = Field(
+        default=1,
+        ge=1,
+        description="Number of times to run the trajectory builder to collect data. "
+        "Each run generates preference pairs from the evaluation dataset. "
+        "Multiple runs can increase dataset diversity.",
+    )
+
+    continue_on_collection_error: bool = Field(
+        default=False,
+        description="If True, continue with remaining runs if one fails. "
+        "If False, stop immediately on first error.",
+    )
+
+    # === Data Processing ===
+    deduplicate_pairs: bool = Field(
+        default=True,
+        description="If True, remove duplicate DPO pairs based on prompt+responses. "
+        "Useful when multiple runs may generate the same pairs.",
+    )
+
+    max_pairs: int | None = Field(
+        default=None,
+        ge=1,
+        description="Maximum number of DPO pairs to include in training. "
+        "If None, use all collected pairs. If set, randomly samples pairs.",
+    )
+
+    # === Training Job ===
+    wait_for_completion: bool = Field(
+        default=True,
+        description="If True, wait for the NeMo Customizer training job to complete. "
+        "If False, submit the job and return immediately.",
+    )
 
 
 # =============================================================================

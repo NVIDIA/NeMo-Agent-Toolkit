@@ -29,9 +29,9 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import TTCEventData
 from nat.eval.evaluator.evaluator_model import EvalInput
 from nat.eval.evaluator.evaluator_model import EvalInputItem
-from nat.plugins.customizer.dpo.dpo_trajectory_builder import CandidateStep
-from nat.plugins.customizer.dpo.dpo_trajectory_builder import DPOTrajectoryBuilder
-from nat.plugins.customizer.dpo.dpo_trajectory_builder import PreferencePair
+from nat.plugins.customizer.dpo.trajectory_builder import CandidateStep
+from nat.plugins.customizer.dpo.trajectory_builder import DPOTrajectoryBuilder
+from nat.plugins.customizer.dpo.trajectory_builder import PreferencePair
 
 from .conftest import create_candidate_ttc_data
 from .conftest import create_intermediate_step

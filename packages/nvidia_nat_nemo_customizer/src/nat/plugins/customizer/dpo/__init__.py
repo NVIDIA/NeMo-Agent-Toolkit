@@ -24,14 +24,18 @@ from .config import DPOSpecificHyperparameters
 from .config import DPOTrajectoryBuilderConfig
 from .config import NeMoCustomizerHyperparameters
 from .config import NeMoCustomizerTrainerAdapterConfig
+from .config import NeMoCustomizerTrainerConfig
 from .config import NIMDeploymentConfig
-from .dpo_trajectory_builder import DPOTrajectoryBuilder
+from .trainer import NeMoCustomizerTrainer
 from .trainer_adapter import NeMoCustomizerTrainerAdapter
+from .trajectory_builder import DPOTrajectoryBuilder
 
 __all__ = [
     # Trajectory Builder
     "DPOTrajectoryBuilderConfig",
-    "DPOTrajectoryBuilder",  # TrainerAdapter
+    "DPOTrajectoryBuilder",  # Trainer
+    "NeMoCustomizerTrainerConfig",
+    "NeMoCustomizerTrainer",  # TrainerAdapter
     "NeMoCustomizerTrainerAdapterConfig",
     "NeMoCustomizerTrainerAdapter",
     "NeMoCustomizerHyperparameters",

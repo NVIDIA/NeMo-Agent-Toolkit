@@ -51,7 +51,7 @@ def dpo_config():
 @pytest.fixture
 def dpo_builder(dpo_config):
     """Create a DPO trajectory builder instance."""
-    from nat.plugins.customizer.dpo.dpo_trajectory_builder import DPOTrajectoryBuilder
+    from nat.plugins.customizer.dpo.trajectory_builder import DPOTrajectoryBuilder
 
     return DPOTrajectoryBuilder(trajectory_builder_config=dpo_config)
 

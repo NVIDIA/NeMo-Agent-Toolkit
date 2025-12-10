@@ -12,9 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Tests for NeMo Customizer TrainerAdapter."""
+"""Tests for NeMo Customizer TrainerAdapter and Trainer."""
 
 import json
+import uuid
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -22,15 +23,21 @@ from unittest.mock import patch
 import pytest
 
 from nat.data_models.finetuning import DPOItem
+from nat.data_models.finetuning import FinetuneConfig
+from nat.data_models.finetuning import FinetuneRunConfig
 from nat.data_models.finetuning import OpenAIMessage
+from nat.data_models.finetuning import RewardFunctionConfig
 from nat.data_models.finetuning import TrainingJobRef
+from nat.data_models.finetuning import TrainingJobStatus
 from nat.data_models.finetuning import TrainingStatusEnum
 from nat.data_models.finetuning import Trajectory
 from nat.data_models.finetuning import TrajectoryCollection
 from nat.plugins.customizer.dpo.config import DPOSpecificHyperparameters
 from nat.plugins.customizer.dpo.config import NeMoCustomizerHyperparameters
 from nat.plugins.customizer.dpo.config import NeMoCustomizerTrainerAdapterConfig
+from nat.plugins.customizer.dpo.config import NeMoCustomizerTrainerConfig
 from nat.plugins.customizer.dpo.config import NIMDeploymentConfig
+from nat.plugins.customizer.dpo.trainer import NeMoCustomizerTrainer
 from nat.plugins.customizer.dpo.trainer_adapter import NeMoCustomizerTrainerAdapter
 
 # =============================================================================
@@ -568,3 +575,547 @@ class TestTrainerAdapterIntegration:
             assert "prompt" in first_line
             assert "chosen_response" in first_line
             assert "rejected_response" in first_line
+
+
+# =============================================================================
+# Trainer Configuration Tests
+# =============================================================================
+
+
+class TestNeMoCustomizerTrainerConfig:
+    """Tests for NeMo Customizer Trainer configuration."""
+
+    def test_default_values(self):
+        """Test default trainer config values."""
+        config = NeMoCustomizerTrainerConfig(reward=RewardFunctionConfig(name="test_reward"))
+
+        assert config.num_runs == 1
+        assert config.continue_on_collection_error is False
+        assert config.deduplicate_pairs is True
+        assert config.max_pairs is None
+        assert config.wait_for_completion is True
+
+    def test_custom_values(self):
+        """Test custom trainer config values."""
+        config = NeMoCustomizerTrainerConfig(
+            reward=RewardFunctionConfig(name="test_reward"),
+            num_runs=5,
+            continue_on_collection_error=True,
+            deduplicate_pairs=False,
+            max_pairs=1000,
+            wait_for_completion=False,
+        )
+
+        assert config.num_runs == 5
+        assert config.continue_on_collection_error is True
+        assert config.deduplicate_pairs is False
+        assert config.max_pairs == 1000
+        assert config.wait_for_completion is False
+
+    def test_invalid_num_runs(self):
+        """Test invalid num_runs raises error."""
+        with pytest.raises(ValueError):
+            NeMoCustomizerTrainerConfig(
+                reward=RewardFunctionConfig(name="test_reward"),
+                num_runs=0,
+            )
+
+    def test_invalid_max_pairs(self):
+        """Test invalid max_pairs raises error."""
+        with pytest.raises(ValueError):
+            NeMoCustomizerTrainerConfig(
+                reward=RewardFunctionConfig(name="test_reward"),
+                max_pairs=0,
+            )
+
+    def test_config_name(self):
+        """Test config is registered with correct name."""
+        assert NeMoCustomizerTrainerConfig._typed_model_name == "nemo_customizer_trainer"
+
+
+# =============================================================================
+# Trainer Tests
+# =============================================================================
+
+
+class TestNeMoCustomizerTrainer:
+    """Tests for NeMo Customizer Trainer."""
+
+    @pytest.fixture
+    def trainer_config(self):
+        """Create test trainer configuration."""
+        return NeMoCustomizerTrainerConfig(
+            reward=RewardFunctionConfig(name="test_reward"),
+            num_runs=3,
+        )
+
+    @pytest.fixture
+    def finetune_config(self, tmp_path):
+        """Create test finetune configuration."""
+        config_file = tmp_path / "config.yml"
+        config_file.write_text("test: config")
+
+        dataset_file = tmp_path / "dataset.jsonl"
+        dataset_file.write_text('{"input": "test"}')
+
+        run_config = FinetuneRunConfig(
+            config_file=config_file,
+            target_functions=["test_function"],
+            dataset=str(dataset_file),
+            result_json_path="$.result",
+        )
+
+        return FinetuneConfig(
+            run_configuration=run_config,
+            reward_function=RewardFunctionConfig(name="test_reward"),
+            output_dir=tmp_path / "output",
+        )
+
+    @pytest.fixture
+    def trainer(self, trainer_config):
+        """Create trainer instance."""
+        return NeMoCustomizerTrainer(trainer_config=trainer_config)
+
+    @pytest.fixture
+    def sample_dpo_trajectories(self):
+        """Create sample trajectories with DPO items."""
+        dpo_item = DPOItem(
+            prompt=[
+                OpenAIMessage(role="system", content="You are helpful."),
+                OpenAIMessage(role="user", content="What is 2+2?"),
+            ],
+            chosen_response="The answer is 4.",
+            rejected_response="I don't know.",
+        )
+
+        trajectory = Trajectory(
+            episode=[dpo_item],
+            reward=0.5,
+            metadata={"example_id": "ex_1"},
+        )
+
+        return [[trajectory]]
+
+    def test_trainer_initialization(self, trainer, trainer_config):
+        """Test that trainer initializes with correct configuration."""
+        assert trainer.trainer_config == trainer_config
+        assert trainer._job_ref is None
+        assert trainer._run_id is None
+        assert trainer._all_trajectories == []
+        assert trainer._run_metrics == []
+
+    async def test_trainer_initialize(self, trainer, finetune_config):
+        """Test trainer initialization process."""
+        mock_builder = MagicMock()
+        mock_builder.initialize = AsyncMock()
+        mock_adapter = MagicMock()
+        mock_adapter.initialize = AsyncMock()
+
+        await trainer.bind_components(mock_builder, mock_adapter)
+
+        with patch.object(uuid, "uuid4", return_value=MagicMock(hex="abcd1234")):
+            await trainer.initialize(finetune_config)
+
+        assert trainer.run_config == finetune_config
+        assert trainer._run_id.startswith("nemo_dpo_")
+        assert trainer._run_id == "nemo_dpo_abcd1234"
+        mock_builder.initialize.assert_called_once_with(finetune_config)
+        mock_adapter.initialize.assert_called_once_with(finetune_config)
+
+    async def test_trainer_initialize_no_curriculum(self, trainer, finetune_config):
+        """Test curriculum learning is disabled for DPO."""
+        mock_builder = MagicMock()
+        mock_builder.initialize = AsyncMock()
+        mock_adapter = MagicMock()
+        mock_adapter.initialize = AsyncMock()
+
+        await trainer.bind_components(mock_builder, mock_adapter)
+        await trainer.initialize(finetune_config)
+
+        assert trainer.curriculum_config is None
+        assert trainer._curriculum_state["current_percentile"] == 1.0
+
+    async def test_run_epoch_collects_trajectories(self, trainer, finetune_config, sample_dpo_trajectories):
+        """Test running epoch collects trajectories."""
+        trajectory_collection = TrajectoryCollection(
+            trajectories=sample_dpo_trajectories,
+            run_id="test_run",
+        )
+
+        mock_builder = MagicMock()
+        mock_builder.initialize = AsyncMock()
+        mock_builder.start_run = AsyncMock()
+        mock_builder.finalize = AsyncMock(return_value=trajectory_collection)
+
+        mock_adapter = MagicMock()
+        mock_adapter.initialize = AsyncMock()
+
+        await trainer.bind_components(mock_builder, mock_adapter)
+        await trainer.initialize(finetune_config)
+
+        result = await trainer.run_epoch(epoch=0, run_id="test_run")
+
+        assert result is None  # No job submitted per-run
+        assert len(trainer._all_trajectories) == 1
+        assert len(trainer._run_metrics) == 1
+        mock_builder.start_run.assert_called_once()
+        mock_builder.finalize.assert_called_once()
+
+    async def test_run_epoch_empty_trajectories(self, trainer, finetune_config):
+        """Test running epoch with no trajectories."""
+        empty_collection = TrajectoryCollection(
+            trajectories=[],
+            run_id="test_run",
+        )
+
+        mock_builder = MagicMock()
+        mock_builder.initialize = AsyncMock()
+        mock_builder.start_run = AsyncMock()
+        mock_builder.finalize = AsyncMock(return_value=empty_collection)
+
+        mock_adapter = MagicMock()
+        mock_adapter.initialize = AsyncMock()
+
+        await trainer.bind_components(mock_builder, mock_adapter)
+        await trainer.initialize(finetune_config)
+
+        result = await trainer.run_epoch(epoch=0, run_id="test_run")
+
+        assert result is None
+        assert len(trainer._all_trajectories) == 0
+
+    async def test_run_multiple_collection_runs(self, trainer, finetune_config, sample_dpo_trajectories):
+        """Test running multiple data collection runs."""
+        trajectory_collection = TrajectoryCollection(
+            trajectories=sample_dpo_trajectories,
+            run_id="test_run",
+        )
+
+        mock_builder = MagicMock()
+        mock_builder.initialize = AsyncMock()
+        mock_builder.start_run = AsyncMock()
+        mock_builder.finalize = AsyncMock(return_value=trajectory_collection)
+
+        mock_adapter = MagicMock()
+        mock_adapter.initialize = AsyncMock()
+
+        mock_job_ref = TrainingJobRef(
+            run_id="test_run",
+            backend="nemo-customizer",
+            metadata={"job_id": "job-123"},
+        )
+        mock_adapter.submit = AsyncMock(return_value=mock_job_ref)
+
+        mock_status = TrainingJobStatus(
+            run_id="test_run",
+            backend="nemo-customizer",
+            status=TrainingStatusEnum.COMPLETED,
+        )
+        mock_adapter.wait_until_complete = AsyncMock(return_value=mock_status)
+
+        await trainer.bind_components(mock_builder, mock_adapter)
+        await trainer.initialize(finetune_config)
+
+        statuses = await trainer.run(num_epochs=3)
+
+        assert len(statuses) == 1
+        assert statuses[0].status == TrainingStatusEnum.COMPLETED
+        assert mock_builder.start_run.call_count == 3  # 3 runs
+        assert mock_adapter.submit.call_count == 1  # Single submission
+
+    async def test_run_no_wait_for_completion(self, trainer_config, finetune_config, sample_dpo_trajectories):
+        """Test running without waiting for completion."""
+        trainer_config.wait_for_completion = False
+        trainer = NeMoCustomizerTrainer(trainer_config=trainer_config)
+
+        trajectory_collection = TrajectoryCollection(
+            trajectories=sample_dpo_trajectories,
+            run_id="test_run",
+        )
+
+        mock_builder = MagicMock()
+        mock_builder.initialize = AsyncMock()
+        mock_builder.start_run = AsyncMock()
+        mock_builder.finalize = AsyncMock(return_value=trajectory_collection)
+
+        mock_adapter = MagicMock()
+        mock_adapter.initialize = AsyncMock()
+
+        mock_job_ref = TrainingJobRef(
+            run_id="test_run",
+            backend="nemo-customizer",
+            metadata={"job_id": "job-123"},
+        )
+        mock_adapter.submit = AsyncMock(return_value=mock_job_ref)
+
+        await trainer.bind_components(mock_builder, mock_adapter)
+        await trainer.initialize(finetune_config)
+
+        statuses = await trainer.run(num_epochs=1)
+
+        assert len(statuses) == 1
+        assert statuses[0].status == TrainingStatusEnum.RUNNING
+        mock_adapter.wait_until_complete.assert_not_called()
+
+    async def test_run_collection_error_stops(self, trainer, finetune_config):
+        """Test collection error stops by default."""
+        mock_builder = MagicMock()
+        mock_builder.initialize = AsyncMock()
+        mock_builder.start_run = AsyncMock(side_effect=Exception("Test error"))
+
+        mock_adapter = MagicMock()
+        mock_adapter.initialize = AsyncMock()
+
+        await trainer.bind_components(mock_builder, mock_adapter)
+        await trainer.initialize(finetune_config)
+
+        statuses = await trainer.run(num_epochs=3)
+
+        assert len(statuses) == 1
+        assert statuses[0].status == TrainingStatusEnum.FAILED
+        assert "Test error" in statuses[0].message
+
+    async def test_run_collection_error_continues(self, trainer_config, finetune_config, sample_dpo_trajectories):
+        """Test collection error continues when configured."""
+        trainer_config.continue_on_collection_error = True
+        trainer_config.num_runs = 3
+        trainer = NeMoCustomizerTrainer(trainer_config=trainer_config)
+
+        trajectory_collection = TrajectoryCollection(
+            trajectories=sample_dpo_trajectories,
+            run_id="test_run",
+        )
+
+        call_count = [0]
+
+        async def finalize_side_effect(*args, **kwargs):
+            call_count[0] += 1
+            if call_count[0] == 2:
+                raise Exception("Run 2 failed")
+            return trajectory_collection
+
+        mock_builder = MagicMock()
+        mock_builder.initialize = AsyncMock()
+        mock_builder.start_run = AsyncMock()
+        mock_builder.finalize = AsyncMock(side_effect=finalize_side_effect)
+
+        mock_adapter = MagicMock()
+        mock_adapter.initialize = AsyncMock()
+
+        mock_job_ref = TrainingJobRef(
+            run_id="test_run",
+            backend="nemo-customizer",
+            metadata={"job_id": "job-123"},
+        )
+        mock_adapter.submit = AsyncMock(return_value=mock_job_ref)
+
+        mock_status = TrainingJobStatus(
+            run_id="test_run",
+            backend="nemo-customizer",
+            status=TrainingStatusEnum.COMPLETED,
+        )
+        mock_adapter.wait_until_complete = AsyncMock(return_value=mock_status)
+
+        await trainer.bind_components(mock_builder, mock_adapter)
+        await trainer.initialize(finetune_config)
+
+        statuses = await trainer.run(num_epochs=3)
+
+        # Should complete despite error in run 2
+        assert statuses[0].status == TrainingStatusEnum.COMPLETED
+        assert mock_builder.start_run.call_count == 3
+
+    async def test_run_no_trajectories_fails(self, trainer, finetune_config):
+        """Test run fails when no trajectories collected."""
+        empty_collection = TrajectoryCollection(
+            trajectories=[],
+            run_id="test_run",
+        )
+
+        mock_builder = MagicMock()
+        mock_builder.initialize = AsyncMock()
+        mock_builder.start_run = AsyncMock()
+        mock_builder.finalize = AsyncMock(return_value=empty_collection)
+
+        mock_adapter = MagicMock()
+        mock_adapter.initialize = AsyncMock()
+
+        await trainer.bind_components(mock_builder, mock_adapter)
+        await trainer.initialize(finetune_config)
+
+        statuses = await trainer.run(num_epochs=3)
+
+        assert len(statuses) == 1
+        assert statuses[0].status == TrainingStatusEnum.FAILED
+        assert "No trajectories collected" in statuses[0].message
+
+    def test_deduplicate_trajectories(self, trainer, sample_dpo_trajectories):
+        """Test trajectory deduplication."""
+        # Create duplicate trajectories
+        dpo_item1 = DPOItem(
+            prompt="Same prompt",
+            chosen_response="Same chosen",
+            rejected_response="Same rejected",
+        )
+        dpo_item2 = DPOItem(
+            prompt="Same prompt",
+            chosen_response="Same chosen",
+            rejected_response="Same rejected",
+        )
+        dpo_item3 = DPOItem(
+            prompt="Different prompt",
+            chosen_response="Different chosen",
+            rejected_response="Different rejected",
+        )
+
+        trajectories = [
+            [Trajectory(episode=[dpo_item1], reward=0.5, metadata={})],
+            [Trajectory(episode=[dpo_item2], reward=0.5, metadata={})],
+            [Trajectory(episode=[dpo_item3], reward=0.7, metadata={})],
+        ]
+
+        collection = TrajectoryCollection(
+            trajectories=trajectories,
+            run_id="test_run",
+        )
+
+        result = trainer._deduplicate_trajectories(collection)
+
+        # Should remove duplicate
+        assert len(result.trajectories) == 2
+
+    def test_sample_trajectories(self, trainer):
+        """Test trajectory sampling."""
+        trajectories = [[
+            Trajectory(
+                episode=[DPOItem(
+                    prompt=f"prompt_{i}",
+                    chosen_response="chosen",
+                    rejected_response="rejected",
+                )],
+                reward=0.5,
+                metadata={},
+            )
+        ] for i in range(10)]
+
+        collection = TrajectoryCollection(
+            trajectories=trajectories,
+            run_id="test_run",
+        )
+
+        result = trainer._sample_trajectories(collection, max_pairs=5)
+
+        assert len(result.trajectories) == 5
+
+    def test_sample_trajectories_below_limit(self, trainer):
+        """Test sampling returns unchanged when below limit."""
+        trajectories = [[
+            Trajectory(
+                episode=[DPOItem(
+                    prompt=f"prompt_{i}",
+                    chosen_response="chosen",
+                    rejected_response="rejected",
+                )],
+                reward=0.5,
+                metadata={},
+            )
+        ] for i in range(3)]
+
+        collection = TrajectoryCollection(
+            trajectories=trajectories,
+            run_id="test_run",
+        )
+
+        result = trainer._sample_trajectories(collection, max_pairs=10)
+
+        assert result == collection
+
+    async def test_get_metrics(self, trainer, finetune_config):
+        """Test getting metrics."""
+        mock_builder = MagicMock()
+        mock_builder.initialize = AsyncMock()
+        mock_adapter = MagicMock()
+        mock_adapter.initialize = AsyncMock()
+
+        mock_status = TrainingJobStatus(
+            run_id="test_run",
+            backend="nemo-customizer",
+            status=TrainingStatusEnum.RUNNING,
+            progress=50.0,
+        )
+        mock_adapter.status = AsyncMock(return_value=mock_status)
+
+        await trainer.bind_components(mock_builder, mock_adapter)
+        await trainer.initialize(finetune_config)
+
+        trainer._run_metrics = [
+            {
+                "run_number": 0, "num_trajectories": 10, "num_dpo_pairs": 20
+            },
+            {
+                "run_number": 1, "num_trajectories": 15, "num_dpo_pairs": 30
+            },
+        ]
+        trainer._job_ref = TrainingJobRef(
+            run_id="test_run",
+            backend="nemo-customizer",
+            metadata={"job_id": "job-123"},
+        )
+
+        metrics = await trainer.get_metrics("test_run")
+
+        assert metrics["run_id"] == "test_run"
+        assert metrics["num_collection_runs"] == 2
+        assert len(metrics["collection_runs"]) == 2
+        assert metrics["training_job"]["status"] == "running"
+
+    def test_log_progress(self, trainer, finetune_config, tmp_path):
+        """Test logging progress to file."""
+        trainer.run_config = finetune_config
+        trainer._run_id = "test_run"
+
+        metrics = {
+            "num_trajectories": 10,
+            "num_dpo_pairs": 20,
+            "avg_reward": 0.75,
+        }
+
+        trainer.log_progress(epoch=0, metrics=metrics, output_dir=str(tmp_path))
+
+        assert (tmp_path / "data_collection_progress.jsonl").exists()
+        assert (tmp_path / "collection_history.json").exists()
+
+        with open(tmp_path / "data_collection_progress.jsonl") as f:
+            log_entry = json.loads(f.readline())
+            assert log_entry["run_number"] == 0
+            assert log_entry["num_dpo_pairs"] == 20
+
+    async def test_cleanup(self, trainer, finetune_config):
+        """Test cleanup clears data."""
+        eval_task = MagicMock()
+        eval_task.done.return_value = False
+        eval_task.cancel = MagicMock()
+
+        mock_builder = MagicMock()
+        mock_builder.initialize = AsyncMock()
+        mock_builder.evaluation_runs = {"run1": eval_task}
+
+        mock_adapter = MagicMock()
+        mock_adapter.initialize = AsyncMock()
+
+        await trainer.bind_components(mock_builder, mock_adapter)
+        await trainer.initialize(finetune_config)
+
+        trainer._all_trajectories = [[MagicMock()]]
+        trainer._run_metrics = [{"test": "data"}]
+
+        await trainer.cleanup()
+
+        assert trainer._all_trajectories == []
+        assert trainer._run_metrics == []
+        eval_task.cancel.assert_called_once()
+
+    async def test_run_not_initialized_raises(self, trainer):
+        """Test run raises error if not initialized."""
+        with pytest.raises(RuntimeError, match="not initialized"):
+            await trainer.run(num_epochs=1)
