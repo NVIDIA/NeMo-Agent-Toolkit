@@ -85,7 +85,7 @@ User Bob (has a separate MCP client instance):
 curl -X POST http://localhost:8000/generate \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=user-bob" \
-  -d '{"messages": [{"role": "user", "content": "What competitions are active?"}]}'
+  -d '{"messages": [{"role": "user", "content": "Search for titanic datasets"}]}'
 ```
 
 Each user identified by their `nat-session` cookie gets their own workflow instance and MCP client.
