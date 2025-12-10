@@ -310,7 +310,7 @@ class NeMoCustomizerTrainerAdapterConfig(TrainerAdapterConfig, name="nemo_custom
 
     # === Prompt Formatting ===
     use_full_message_history: bool = Field(
-        default=True,
+        default=False,
         description="If True, include full message history in prompt field as list of messages. "
         "If False, use only the last message content as a string. "
         "Full history format: [{\"role\": \"system\", \"content\": \"...\"}, ...]. "

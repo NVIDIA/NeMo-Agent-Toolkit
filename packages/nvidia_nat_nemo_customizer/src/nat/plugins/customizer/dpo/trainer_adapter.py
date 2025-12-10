@@ -388,8 +388,23 @@ class NeMoCustomizerTrainerAdapter(TrainerAdapter):
         """Wait for training job to complete."""
         interval = poll_interval or self.adapter_config.poll_interval_seconds
 
+        last_status: str | None = None
+        last_progress: float | None = None
+
         while True:
             status = await self.status(ref)
+
+            # Log when status changes
+            current_status = status.status.value
+            if current_status != last_status:
+                logger.info(f"Job {ref.run_id}: Status -> '{current_status}'")
+                last_status = current_status
+
+            # Log when progress changes
+            current_progress = status.progress
+            if current_progress is not None and current_progress != last_progress:
+                logger.info(f"Job {ref.run_id}: Progress {current_progress:.1f}%")
+                last_progress = current_progress
 
             if status.status in (
                     TrainingStatusEnum.COMPLETED,
