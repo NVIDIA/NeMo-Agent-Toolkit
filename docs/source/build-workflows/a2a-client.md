@@ -21,7 +21,7 @@ limitations under the License.
 
 You can create a workflow that connects to remote A2A agents and provides a function interface for interacting with their capabilities.
 
-This guide covers how to use NeMo Agent toolkit as an A2A client. For information on publishing workflows as A2A servers, refer to [A2A Server](../run-workflows/a2a-server.md). For CLI utilities, refer to [A2A CLI](../run-workflows/a2a-cli.md).
+This guide covers how to use NeMo Agent toolkit as an A2A client. For information on publishing workflows as A2A servers, refer to [A2A Server](../run-workflows/a2a-server.md). For CLI utilities, refer to [A2A CLI](../reference/cli/a2a-cli.md).
 
 ## Installation
 
@@ -262,7 +262,7 @@ The following examples demonstrate A2A client usage:
 
 ## CLI Utilities
 
-The A2A client includes CLI utilities for testing and debugging. For complete CLI documentation, refer to [A2A CLI](../run-workflows/a2a-cli.md).
+The A2A client includes CLI utilities for testing and debugging. For complete CLI documentation, refer to [A2A CLI](../reference/cli/a2a-cli.md).
 
 **Quick reference:**
 
@@ -297,5 +297,5 @@ The A2A client is built on the official [A2A Python SDK](https://github.com/a2ap
 ## Related Documentation
 
 - [A2A Server Guide](../run-workflows/a2a-server.md) - Publishing NAT workflows as A2A agents
-- [A2A CLI Guide](../run-workflows/a2a-cli.md) - CLI utilities for testing and debugging
+- [A2A CLI Guide](../reference/cli/a2a-cli.md) - CLI utilities for testing and debugging
 - [Function Groups](./functions-and-function-groups//function-groups.md) - Understanding NAT function groups

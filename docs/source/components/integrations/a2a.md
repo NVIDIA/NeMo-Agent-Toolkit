@@ -20,7 +20,7 @@ limitations under the License.
 NVIDIA NeMo Agent toolkit [Agent-to-Agent Protocol (A2A)](https://a2aproject.org/) integration includes:
 * An [A2A client](../../build-workflows/a2a-client.md) to connect to and interact with remote A2A agents.
 * An [A2A server](../../run-workflows/a2a-server.md) to publish NAT workflows as A2A agents that can be discovered and invoked by other A2A clients.
-* [CLI utilities](../../run-workflows/a2a-cli.md) for testing, debugging, and interacting with A2A agents.
+* [CLI utilities](../../reference/cli/a2a-cli.md) for testing, debugging, and interacting with A2A agents.
 
 **Note:** A2A functionality requires the `nvidia-nat-a2a` package. Install it with `uv pip install "nvidia-nat[a2a]"`.
 
@@ -60,7 +60,7 @@ The following examples demonstrate A2A integration:
 
 - [Connecting to Remote Agents](../../build-workflows/a2a-client.md)
 - [Publishing NAT Workflows](../../run-workflows/a2a-server.md)
-- [CLI Utilities](../../run-workflows/a2a-cli.md)
+- [CLI Utilities](../../reference/cli/a2a-cli.md)
 
 
 ## Protocol Compliance

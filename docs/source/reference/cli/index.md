@@ -87,8 +87,8 @@ nat
 The `nat a2a` command group provides utilities for working with Agent-to-Agent (A2A) communication. These commands allow you to serve workflows as A2A agents and interact with remote A2A agents from the command line.
 
 For comprehensive A2A documentation, see:
-- [A2A Server](./a2a-server.md) - Publishing workflows as A2A servers
-- [A2A Client](../build-workflows/a2a-client.md) - Using A2A clients in workflows
+- [A2A Server](../../run-workflows/a2a-server.md) - Publishing workflows as A2A servers
+- [A2A Client](../../build-workflows/a2a-client.md) - Using A2A clients in workflows
 - [A2A CLI Utilities](./a2a-cli.md) - Command-line tools for A2A
 
 ### Serve
@@ -511,7 +511,7 @@ The Swagger API docs will be available at: [http://localhost:8000/docs](http://l
 ## Evaluation
 The `nat eval` command provides access a set of evaluators designed to assessing the accuracy of NeMo Agent toolkit workflows as
 well as instrumenting their performance characteristics. Please reference
-[Evaluating NeMo Agent toolkit Workflows](../improve-workflows/evaluate.md) for a detailed overview of the
+[Evaluating NeMo Agent toolkit Workflows](../../improve-workflows/evaluate.md) for a detailed overview of the
 suite of evaluation capabilities.
 
 The `nat eval --help` utility provides a brief overview of the command and its available options.
@@ -549,7 +549,7 @@ Options:
 
 ## Optimize
 
-The `nat optimize` command provides automated hyperparameter tuning and prompt engineering for NeMo Agent toolkit workflows. It intelligently searches for the best combination of parameters based on the evaluation metrics you specify. The optimizer uses [Optuna](https://optuna.org/) for numerical hyperparameter optimization and a genetic algorithm (GA) for prompt optimization. Please reference the [NeMo Agent toolkit Optimizer Guide](../improve-workflows/optimizer.md) for a comprehensive overview of the optimizer capabilities and configuration.
+The `nat optimize` command provides automated hyperparameter tuning and prompt engineering for NeMo Agent toolkit workflows. It intelligently searches for the best combination of parameters based on the evaluation metrics you specify. The optimizer uses [Optuna](https://optuna.org/) for numerical hyperparameter optimization and a genetic algorithm (GA) for prompt optimization. Please reference the [NeMo Agent toolkit Optimizer Guide](../../improve-workflows/optimizer.md) for a comprehensive overview of the optimizer capabilities and configuration.
 
 The `nat optimize --help` utility provides a brief overview of the command and its available options:
 
@@ -600,7 +600,7 @@ nat optimize --config_file configs/my_workflow_optimizer.yml
 
 ## GPU Cluster Sizing
 
-The `nat sizing calc` command estimates GPU requirements and produces performance plots for a workflow. You can run it online (collect metrics by executing the workflow) or offline (estimate from previously collected metrics). For a full guide, see [GPU Cluster Sizing](../improve-workflows/sizing-calc.md).
+The `nat sizing calc` command estimates GPU requirements and produces performance plots for a workflow. You can run it online (collect metrics by executing the workflow) or offline (estimate from previously collected metrics). For a full guide, see [GPU Cluster Sizing](../../improve-workflows/sizing-calc.md).
 
 The `nat sizing calc --help` utility provides a brief overview of the command and its available options:
 
@@ -758,7 +758,7 @@ Options:
 Also, a configuration file will be generated when you run the `nat workflow create` command. To launch the new workflow from the CLI
 (e.g. using `nat run` or `nat serve`), you will need a configuration file that maps to these component
 configuration objects. For more information on configuration objects, refer to
-[Workflow Configuration](../build-workflows/workflow-configuration.md).
+[Workflow Configuration](../../build-workflows/workflow-configuration.md).
 
 ### Reinstall
 
@@ -1111,7 +1111,7 @@ Commands:
   s3     S3 object store operations.
 ```
 
-The listed commands are dependent on the first-party object store plugins installed. See [Object Store](../build-workflows/object-store.md) for more details.
+The listed commands are dependent on the first-party object store plugins installed. See [Object Store](../../build-workflows/object-store.md) for more details.
 
 ### MySQL Object Store
 

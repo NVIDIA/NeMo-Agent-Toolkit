@@ -27,7 +27,7 @@ This tutorial demonstrates how to customize a workflow with NeMo Agent toolkit.
     uv pip install -e examples/getting_started/simple_web_query
     ```
 
-This tutorial assumes familiarity with [workflows](../../build-workflows/about-workflows.md) and the [command line interface](../../run-workflows/cli.md).
+This tutorial assumes familiarity with [workflows](../../build-workflows/about-workflows.md) and the [command line interface](../../reference/cli/index.md).
 
 ## Customizing the `examples/getting_started/simple_web_query` Workflow
 

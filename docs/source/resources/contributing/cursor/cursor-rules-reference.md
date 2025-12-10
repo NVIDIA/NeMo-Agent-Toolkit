@@ -115,7 +115,7 @@ Show me how to use CLI commands to manage workflows
 - Error troubleshooting
 - Best practices for CLI operations
 
-**Related Documentation**: [CLI Reference](../../../run-workflows/cli.md)
+**Related Documentation**: [CLI Reference](../../../reference/cli/index.md)
 
 ---
 
@@ -131,7 +131,7 @@ Create a workflow named demo_workflow in examples directory with description "De
 
 
 
-**Related Documentation**: [CLI Reference - Workflow Commands](../../../run-workflows/cli.md#workflow)
+**Related Documentation**: [CLI Reference - Workflow Commands](../../../reference/cli/index.md#workflow)
 
 ---
 
@@ -148,7 +148,7 @@ Run my workflow locally for testing and then serve it as an API endpoint on port
 
 
 **Related Documentation**:
-- [CLI Reference - Run Commands](../../../run-workflows/cli.md#run)
+- [CLI Reference - Run Commands](../../../reference/cli/index.md#run)
 - [Running Workflows](../../../run-workflows/run-workflows.md)
 
 ---
@@ -164,7 +164,7 @@ Evaluate my workflow performance using a test dataset with accuracy and precisio
 ```
 
 **Related Documentation**:
-- [CLI Reference - Evaluation Commands](../../../run-workflows/cli.md#evaluation)
+- [CLI Reference - Evaluation Commands](../../../reference/cli/index.md#evaluation)
 - [Workflow Evaluation](../../../improve-workflows/evaluate.md)
 
 ---
@@ -179,7 +179,7 @@ Evaluate my workflow performance using a test dataset with accuracy and precisio
 Show me system information and list all available NeMo Agent components with their details.
 ```
 
-**Related Documentation**: [CLI Reference - Info Commands](../../../run-workflows/cli.md#information-commands)
+**Related Documentation**: [CLI Reference - Info Commands](../../../reference/cli/index.md#information-commands)
 
 ---
 

@@ -19,10 +19,10 @@ limitations under the License.
 
 The NVIDIA NeMo Agent toolkit provides command-line utilities for testing, debugging, and interacting with A2A agents. These tools are useful for development, testing, and troubleshooting A2A integrations.
 
-This guide covers the A2A CLI utilities. For information on using A2A clients in workflows, refer to [A2A Client](../build-workflows/a2a-client.md). For publishing workflows as A2A servers, refer to [A2A Server](../run-workflows/a2a-server.md).
+This guide covers the A2A CLI utilities. For information on using A2A clients in workflows, refer to [A2A Client](../../build-workflows/a2a-client.md). For publishing workflows as A2A servers, refer to [A2A Server](../../run-workflows/a2a-server.md).
 
 :::{note}
-**Read First**: This guide assumes familiarity with A2A concepts. Please read [A2A Client](../build-workflows/a2a-client.md) first for foundational understanding.
+**Read First**: This guide assumes familiarity with A2A concepts. Please read [A2A Client](../../build-workflows/a2a-client.md) first for foundational understanding.
 :::
 
 ## Installation
@@ -37,7 +37,7 @@ uv pip install "nvidia-nat[a2a]"
 
 The A2A CLI provides the following commands:
 
-- `nat a2a serve` - Start an A2A server (see [A2A Server](./a2a-server.md))
+- `nat a2a serve` - Start an A2A server (see [A2A Server](../../run-workflows/a2a-server.md))
 - `nat a2a client discover` - Discover and inspect A2A agents
 - `nat a2a client get_info` - Get agent metadata
 - `nat a2a client get_skills` - List agent skills
@@ -46,7 +46,7 @@ The A2A CLI provides the following commands:
 ## Discovery Commands
 
 ### Start A2A Server
-To run the discovery commands, you need to start an A2A server first. See [A2A Server](./a2a-server.md) for more information.
+To run the discovery commands, you need to start an A2A server first. See [A2A Server](../../run-workflows/a2a-server.md) for more information.
 
 ```bash
 nat a2a serve --config_file examples/getting_started/simple_calculator/configs/config.yml\
@@ -67,7 +67,7 @@ nat a2a client discover --url $A2A_SERVER_URL
 ```
 
 **Output example:**
-![Agent Card](../_static/a2a_agent_card.png)
+![Agent Card](../../_static/a2a_agent_card.png)
 
 
 ## Agent Information Commands
@@ -157,5 +157,5 @@ The A2A CLI utilities provide a quick and convenient way to interact with A2A ag
 
 ## Related Documentation
 
-- [A2A Client Guide](../build-workflows/a2a-client.md) - Using A2A agents in workflows
-- [A2A Server Guide](./a2a-server.md) - Publishing workflows as A2A agents
+- [A2A Client Guide](../../build-workflows/a2a-client.md) - Using A2A agents in workflows
+- [A2A Server Guide](../../run-workflows/a2a-server.md) - Publishing workflows as A2A agents
