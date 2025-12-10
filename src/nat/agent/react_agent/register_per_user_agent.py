@@ -36,7 +36,7 @@ class PerUserReActAgentWorkflowConfig(ReActAgentWorkflowConfig, name="per_user_r
 
 
 @register_per_user_function(config_type=PerUserReActAgentWorkflowConfig,
-                            input_type=ChatRequest,
+                            input_type=ChatRequestOrMessage,
                             single_output_type=ChatResponse,
                             framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def per_user_react_agent_workflow(config: PerUserReActAgentWorkflowConfig, builder: Builder):

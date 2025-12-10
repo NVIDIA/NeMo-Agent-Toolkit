@@ -13,32 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This config file shows how to use the MCP server to get the current date and time.
-# Here the workflow acts as a MCP client and connects to the MCP server running
-# on the specified URL. streamable-http is the recommended transport for HTTP-based
-# connections, but sse is also supported for backwards compatibility.
-
-# This config file shows -
-# 1. how to use a local MCP server to get the current date and time using stdio transport.
-# 2. how to access a remote MCP server using streamable-http transport for math operations.
-#
-# Terminal 1: Start server
-# export CORPORATE_MCP_JIRA_URL="https://your-jira-mcp-url"
-# nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira-per-user.yml
-
-# # Terminal 2: Test requests
-# # User Alice
-# curl -X POST http://localhost:8000/generate \
-#   -H "Content-Type: application/json" \
-#   -H "Cookie: nat-session=user-alice" \
-#   -d '{"messages": [{"role": "user", "content": "What is status of JIRA-123?"}]}'
-
-# # User Bob (should have separate MCP client)
-# curl -X POST http://localhost:8000/generate \
-#   -H "Content-Type: application/json" \
-#   -H "Cookie: nat-session=user-bob" \
-#   -d '{"messages": [{"role": "user", "content": "What is status of JIRA-456?"}]}'
-
 function_groups:
   mcp_jira:
     _type: per_user_mcp_client
