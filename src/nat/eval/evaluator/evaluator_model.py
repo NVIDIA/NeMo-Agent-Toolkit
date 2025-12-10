@@ -13,13 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import annotations
-
 import typing
-from typing import Generic
-from typing import TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, SerializeAsAny
 
 from nat.data_models.intermediate_step import IntermediateStep
 
@@ -32,7 +28,7 @@ class EvalInputItem(BaseModel):
     trajectory: list[IntermediateStep] = []  # populated by the workflow
     full_dataset_entry: typing.Any
 
-    def copy_with_updates(self, **updates) -> EvalInputItem:
+    def copy_with_updates(self, **updates) -> "EvalInputItem":
         """
         Copy EvalInputItem with optional field updates.
         """
@@ -55,8 +51,7 @@ class EvalOutputItem(BaseModel):
     score: typing.Any  # float or any serializable type
     reasoning: typing.Any
 
-EvaluatorTemplateItem = TypeVar('EvaluatorTemplateItem', bound=EvalOutputItem)
 
-class EvalOutput(BaseModel, Generic[EvaluatorTemplateItem]):
+class EvalOutput(BaseModel):
     average_score: typing.Any  # float or any serializable type
-    eval_output_items: list[EvaluatorTemplateItem]
+    eval_output_items: list[SerializeAsAny[EvalOutputItem]]
