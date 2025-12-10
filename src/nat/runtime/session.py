@@ -59,6 +59,7 @@ class PerUserBuilderInfo(BaseModel):
 
     builder: typing.Any = Field(description="The per-user workflow builder instance")
     workflow: typing.Any = Field(description="The cached per-user workflow instance")
+    semaphore: typing.Any = Field(description="Per-user semaphore for concurrency control")
     last_activity: datetime = Field(default_factory=datetime.now,
                                     description="The timestamp of the last access to this builder")
     ref_count: int = Field(default=0, ge=0, description="The reference count of this builder")
@@ -76,11 +77,21 @@ class Session:
     - Created for each request via SessionManager.session()
     - Automatically manages ref_count for per-user builder tracking
     - Cleans up context variables on exit
+
+    Concurrency:
+    - Each session has its own semaphore for concurrency control
+    - For per-user workflows: each user has an independent concurrency limit
+    - For shared workflows: all sessions share the SessionManager's semaphore
     """
 
-    def __init__(self, session_manager: "SessionManager", workflow: Workflow, user_id: str | None = None):
+    def __init__(self,
+                 session_manager: "SessionManager",
+                 workflow: Workflow,
+                 semaphore: asyncio.Semaphore | nullcontext,
+                 user_id: str | None = None):
         self._session_manager = session_manager
         self._workflow = workflow
+        self._semaphore = semaphore
         self._user_id = user_id
 
     @property
@@ -107,8 +118,7 @@ class Session:
         Yields:
             Runner instance for the workflow execution
         """
-        async with self._session_manager._semaphore:
-
+        async with self._semaphore:
             async with self._workflow.run(message, runtime_type=runtime_type) as runner:
                 yield runner
 
@@ -373,8 +383,15 @@ class SessionManager:
                 await builder.populate_builder(self._config)
                 workflow = await builder.build(entry_function=self._entry_function)
 
+                # Create per-user semaphore for concurrency control
+                if self._max_concurrency > 0:
+                    per_user_semaphore = asyncio.Semaphore(self._max_concurrency)
+                else:
+                    per_user_semaphore = nullcontext()
+
                 builder_info = PerUserBuilderInfo(builder=builder,
                                                   workflow=workflow,
+                                                  semaphore=per_user_semaphore,
                                                   last_activity=datetime.now(),
                                                   ref_count=0,
                                                   lock=asyncio.Lock())
@@ -440,11 +457,15 @@ class SessionManager:
             async with builder_info.lock:
                 builder_info.ref_count += 1
                 logger.debug(f"Incremented ref_count for user {user_id} to {builder_info.ref_count}")
+            # Use per-user semaphore for concurrency control
+            semaphore = builder_info.semaphore
         else:
             workflow = self._shared_workflow
+            # Use shared semaphore for concurrency control
+            semaphore = self._semaphore
 
         try:
-            session = Session(session_manager=self, user_id=user_id, workflow=workflow)
+            session = Session(session_manager=self, user_id=user_id, workflow=workflow, semaphore=semaphore)
 
             yield session
 
