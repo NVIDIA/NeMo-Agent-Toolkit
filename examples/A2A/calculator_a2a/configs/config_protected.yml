@@ -1,0 +1,88 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Protected Calculator A2A Configuration
+# This configuration adds OAuth2 authentication to the calculator agent.
+#
+# Prerequisites:
+# 1. OAuth2 server running (for example, simple_auth OAuth server)
+# 2. Calculator registered as a resource server
+# 3. OAuth2 server configured with required scopes
+#
+# Start the protected calculator:
+#   nat a2a serve --config examples/A2A/calculator_a2a/configs/config_protected.yml
+
+workflow:
+  type: react
+  llm:
+    _type: nvidia_nim
+    model: meta/llama-3.1-8b-instruct
+
+# Calculator functions
+function_groups:
+  - _type: basic_calculator
+    name: calculator
+
+# Protected A2A Frontend
+front_ends:
+  - _type: a2a
+    name: "Protected Calculator"
+    description: "OAuth2-protected calculator agent for secure arithmetic operations"
+    version: "1.0.0"
+    port: 8001
+    host: localhost
+
+    capabilities:
+      streaming: true
+      push_notifications: false
+
+    # OAuth2 Resource Server Protection
+    # When configured, the agent requires valid OAuth2 Bearer tokens
+    server_auth:
+      # Issuer URL - OAuth2 authorization server
+      issuer_url: http://localhost:5001
+
+      # Required scopes to access this agent
+      scopes:
+        - calculator:execute
+
+      # Expected audience (optional but recommended)
+      audience: calculator-a2a
+
+      # Option 1: JWT validation via JWKS URI
+      jwks_uri: http://localhost:5001/.well-known/jwks.json
+
+      # Option 2: OIDC discovery (alternative to jwks_uri)
+      # Automatically discovers JWKS and introspection endpoints
+      # discovery_url: http://localhost:5001/.well-known/openid-configuration
+
+      # Option 3: Opaque token validation via introspection
+      # Required for non-JWT tokens
+      # introspection_endpoint: http://localhost:5001/oauth/introspect
+      # client_id: calculator-server
+      # client_secret: ${CALCULATOR_SERVER_SECRET}
+
+# Notes:
+# 1. The agent card will automatically include OAuth2 security schemes
+# 2. All requests except /.well-known/agent.json require authentication
+# 3. Tokens are validated using NAT's BearerTokenValidator
+# 4. Supports both JWT (via JWKS) and opaque tokens (via introspection)
+#
+# Example OAuth2 client configuration (for math assistant):
+#
+# authentication:
+#   calculator_oauth:
+#     _type: oauth2_auth_code_flow
+#     client_id: ${MATH_ASSISTANT_CLIENT_ID}
+#     client_secret: ${MATH_ASSISTANT_CLIENT_SECRET}
+#     authorization_url: http://localhost:5001/oauth/authorize
+#     token_url: http://localhost:5001/oauth/token
+#     redirect_uri: http://localhost:8000/auth/redirect
+#     scopes:
+#       - calculator:execute
+#
+# a2a_clients:
+#   calculator:
+#     _type: a2a_client
+#     url: http://localhost:8001
+#     auth_provider: calculator_oauth

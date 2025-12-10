@@ -141,5 +141,5 @@ sequenceDiagram
 
 ## References
 
-- [A2A Protocol Specification](https://github.com/NVIDIA/a2a)
+- [A2A Protocol Specification](https://a2a-protocol.org/latest/specification/)
 - [NAT Authentication Documentation](../../../docs/source/reference/api-authentication.md)
