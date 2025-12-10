@@ -122,6 +122,21 @@ class EpisodeItem(BaseModel):
             raise ValueError("logprobs must be provided for assistant role.")
         return self
 
+class OpenAIMessage(BaseModel):
+    """
+    A message in the OpenAI chat format.
+    """
+    role: str = Field(description="The role of the message (e.g., 'user', 'assistant').")
+    content: str = Field(description="The content of the message.")
+
+class DPOItem(BaseModel):
+    """
+    A single step in an episode for DPO training.
+    """
+    prompt: list[OpenAIMessage] | str = Field(description="The prompt messages leading to the response.")
+    chosen_response: str = Field(description="The response chosen as better by the reward model.")
+    rejected_response: str = Field(description="The response rejected as worse by the reward model.")
+
 
 class Trajectory(BaseModel):
     """

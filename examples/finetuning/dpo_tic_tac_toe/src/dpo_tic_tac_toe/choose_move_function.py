@@ -39,11 +39,13 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.component_ref import LLMRef
+from nat.data_models.finetuning import OpenAIMessage
 from nat.data_models.function import FunctionBaseConfig
 
 from .core import available_moves
 from .core import board_to_str
 from .llm_agents import build_player_chain
+from .llm_agents import get_system_prompt
 from .llm_agents import make_random_move
 from .llm_agents import parse_move_any
 
@@ -63,7 +65,9 @@ class ChooseMoveOutput(BaseModel):
     row: int = Field(description="0-based row index of the move")
     col: int = Field(description="0-based column index of the move")
     raw_response: str = Field(description="Raw LLM response text")
-    prompt: str = Field(description="Board state string (last user input)")
+    messages: list[OpenAIMessage] = Field(
+        description="Full conversation history (system, user, assistant messages) that produced this response"
+    )
 
 
 class ChooseMoveConfig(FunctionBaseConfig, name="choose_move"):
@@ -107,6 +111,41 @@ async def choose_move_function(config: ChooseMoveConfig, builder: Builder):
     max_retries = config.max_retries
     use_random = llm is None
 
+    def _get_message_content(msg) -> str:
+        """Extract string content from a LangChain message."""
+        content = msg.content
+        if isinstance(content, str):
+            return content
+        # Handle list content (multi-part messages)
+        if isinstance(content, list):
+            return " ".join(str(part) for part in content)
+        return str(content)
+
+    def _build_openai_messages(
+        player_symbol: str,
+        langchain_messages: list,
+    ) -> list[OpenAIMessage]:
+        """
+        Convert LangChain messages to OpenAIMessage format with system prompt.
+
+        Args:
+            player_symbol: The player symbol ('X' or 'O')
+            langchain_messages: List of LangChain messages (HumanMessage, AIMessage)
+
+        Returns:
+            List of OpenAIMessage objects including system prompt
+        """
+        result = [OpenAIMessage(role="system", content=get_system_prompt(player_symbol))]
+
+        for msg in langchain_messages:
+            content = _get_message_content(msg)
+            if isinstance(msg, HumanMessage):
+                result.append(OpenAIMessage(role="user", content=content))
+            elif isinstance(msg, AIMessage):
+                result.append(OpenAIMessage(role="assistant", content=content))
+
+        return result
+
     async def _choose_move(input_data: ChooseMoveInput) -> ChooseMoveOutput:
         """
         Generate a single move for the given board state.
@@ -115,7 +154,7 @@ async def choose_move_function(config: ChooseMoveConfig, builder: Builder):
             input_data: Board state and player symbol
 
         Returns:
-            ChooseMoveOutput with row, col, raw_response, and prompt
+            ChooseMoveOutput with row, col, raw_response, and messages
         """
 
         board_list = input_data.board
@@ -128,7 +167,14 @@ async def choose_move_function(config: ChooseMoveConfig, builder: Builder):
         # === Random mode: generate a random legal move ===
         if use_random:
             row, col, raw_response = make_random_move(board)
-            return ChooseMoveOutput(row=row, col=col, raw_response=raw_response, prompt=board_str)
+            # Build messages list with system prompt and user board state
+            openai_messages = [
+                OpenAIMessage(role="system", content=get_system_prompt(player_symbol)),
+                OpenAIMessage(role="user", content=board_str),
+            ]
+            return ChooseMoveOutput(
+                row=row, col=col, raw_response=raw_response, messages=openai_messages
+            )
 
         # === LLM mode: use the LLM to generate a move ===
         # Build chain for this player symbol
@@ -139,40 +185,41 @@ async def choose_move_function(config: ChooseMoveConfig, builder: Builder):
         if not legal_moves:
             raise RuntimeError("No available moves; game should be over.")
 
-        # Conversation history for retries
-        messages: list = []
+        # Conversation history for retries (LangChain format)
+        langchain_messages: list = []
 
         for attempt in range(max_retries + 1):
             current_board_str = board_to_str(board)
 
             if attempt > 0:
                 # Add retry message with available moves hint
-                messages.append(
+                langchain_messages.append(
                     HumanMessage(content=f"You made an invalid move. You have "
                                  f"{max_retries - attempt + 1} attempts left.\n"
                                  f"Available moves are: "
                                  f"{', '.join(f'({r+1},{c+1})' for r, c in legal_moves)}\n"
                                  f"Current board:\n{current_board_str}"))
             else:
-                messages.append(HumanMessage(content=current_board_str))
+                langchain_messages.append(HumanMessage(content=current_board_str))
 
             # Invoke the LLM
-            raw_response = await chain.ainvoke({"messages": messages})
+            raw_response = await chain.ainvoke({"messages": langchain_messages})
             text = str(raw_response)
 
             # Add AI response to history
-            messages.append(AIMessage(content=text))
+            langchain_messages.append(AIMessage(content=text))
 
             # Parse the move
             move = parse_move_any(text)
 
             if move is not None and move in legal_moves:
-                # Use the board string as the prompt (last user input)
+                # Convert to OpenAIMessage format
+                openai_messages = _build_openai_messages(player_symbol, langchain_messages)
                 return ChooseMoveOutput(
                     row=move[0],
                     col=move[1],
                     raw_response=text,
-                    prompt=current_board_str,
+                    messages=openai_messages,
                 )
 
             logger.debug(f"[WARN] Invalid move on attempt {attempt + 1}: '{text}'. "

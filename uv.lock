@@ -24,6 +24,7 @@ members = [
     "nvidia-nat-mcp",
     "nvidia-nat-mem0ai",
     "nvidia-nat-mysql",
+    "nvidia-nat-nemo-customizer",
     "nvidia-nat-openpipe-art",
     "nvidia-nat-opentelemetry",
     "nvidia-nat-phoenix",
@@ -5732,6 +5733,22 @@ wheels = [
 ]
 
 [[package]]
+name = "nemo-microservices"
+version = "1.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "distro" },
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "sniffio" },
+    { name = "typing-extensions" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/32/27/31bd9fce8243b8db045e7cb77a2fbdbe3fcb8e9567f5e31ce89100ea43b7/nemo_microservices-1.4.0-py3-none-any.whl", hash = "sha256:ed0cb67baa6692176490c764aba973a2892e2b86247e2cd0834cf41f9a086f4f", size = 1191580, upload-time = "2025-11-14T02:30:30.845Z" },
+]
+
+[[package]]
 name = "nest-asyncio"
 version = "1.6.0"
 source = { registry = "https://pypi.org/simple" }
@@ -6036,6 +6053,9 @@ mem0ai = [
 mysql = [
     { name = "nvidia-nat-mysql" },
 ]
+nemo-customizer = [
+    { name = "nvidia-nat-nemo-customizer" },
+]
 nvidia-haystack = [
     { name = "nvidia-haystack" },
 ]
@@ -6185,6 +6205,7 @@ requires-dist = [
     { name = "nvidia-nat-mcp", marker = "extra == 'mcp'", editable = "packages/nvidia_nat_mcp" },
     { name = "nvidia-nat-mem0ai", marker = "extra == 'mem0ai'", editable = "packages/nvidia_nat_mem0ai" },
     { name = "nvidia-nat-mysql", marker = "extra == 'mysql'", editable = "packages/nvidia_nat_mysql" },
+    { name = "nvidia-nat-nemo-customizer", marker = "extra == 'nemo-customizer'", editable = "packages/nvidia_nat_nemo_customizer" },
     { name = "nvidia-nat-openpipe-art", marker = "extra == 'openpipe-art'", editable = "packages/nvidia_nat_openpipe_art" },
     { name = "nvidia-nat-opentelemetry", marker = "extra == 'opentelemetry'", editable = "packages/nvidia_nat_opentelemetry" },
     { name = "nvidia-nat-opentelemetry", marker = "extra == 'telemetry'", editable = "packages/nvidia_nat_opentelemetry" },
@@ -6221,7 +6242,7 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.38" },
     { name = "wikipedia", specifier = "~=1.4" },
 ]
-provides-extras = ["all", "adk", "agno", "crewai", "data-flywheel", "ingestion", "langchain", "llama-index", "mcp", "mem0ai", "opentelemetry", "phoenix", "profiling", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "strands", "telemetry", "test", "vanna", "weave", "zep-cloud", "openpipe-art", "examples", "gunicorn", "async-endpoints", "nvidia-haystack", "litellm", "openai"]
+provides-extras = ["all", "adk", "agno", "crewai", "data-flywheel", "ingestion", "langchain", "llama-index", "mcp", "mem0ai", "opentelemetry", "phoenix", "profiling", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "strands", "telemetry", "test", "vanna", "weave", "zep-cloud", "openpipe-art", "nemo-customizer", "examples", "gunicorn", "async-endpoints", "nvidia-haystack", "litellm", "openai"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -6484,6 +6505,20 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "aiomysql", specifier = ">=0.2.0" },
+    { name = "nvidia-nat", editable = "." },
+]
+
+[[package]]
+name = "nvidia-nat-nemo-customizer"
+source = { editable = "packages/nvidia_nat_nemo_customizer" }
+dependencies = [
+    { name = "nemo-microservices" },
+    { name = "nvidia-nat" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nemo-microservices", specifier = "==1.4.0" },
     { name = "nvidia-nat", editable = "." },
 ]
 

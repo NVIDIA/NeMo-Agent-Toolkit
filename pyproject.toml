@@ -103,6 +103,7 @@ vanna = ["nvidia-nat-vanna"]
 weave = ["nvidia-nat-weave"]
 zep-cloud = ["nvidia-nat-zep-cloud"]
 openpipe-art = ["nvidia-nat-openpipe-art"]
+nemo-customizer = ["nvidia-nat-nemo-customizer"]
 
 examples = [
   "nat_adk_demo",
@@ -202,6 +203,7 @@ nvidia-nat-vanna = { workspace = true }
 nvidia-nat-weave = { workspace = true }
 nvidia-nat-zep-cloud = { workspace = true }
 nvidia-nat-openpipe-art = { workspace = true }
+nvidia-nat-nemo-customizer = { workspace = true }
 
 # All examples here
 nat_adk_demo = { path = "examples/frameworks/adk_demo", editable = true }

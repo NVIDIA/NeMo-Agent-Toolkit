@@ -37,9 +37,13 @@ from nat.data_models.component_ref import TTCStrategyRef
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import TTCEventData
+from nat.data_models.finetuning import DPOItem
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
 from nat.experimental.test_time_compute.models.ttc_item import TTCItem
+
+from .choose_move_function import ChooseMoveOutput
 
 logger = logging.getLogger(__name__)
 
@@ -159,45 +163,54 @@ async def ttc_move_selector_function(config: TTCMoveSelectorConfig, builder: Bui
             move_id = f"{turn_id}_move_{idx}"
             is_selected = item is selected_item
 
-            # Extract move data including prompt
+            # Extract move data including messages
             move_output = item.output
-            if hasattr(move_output, "row"):
-                row, col = move_output.row, move_output.col
-                raw_response = move_output.raw_response
-                prompt = move_output.prompt
-            else:
-                row, col = move_output["row"], move_output["col"]
-                raw_response = move_output["raw_response"]
-                prompt = move_output["prompt"]
+
+            if not isinstance(move_output, ChooseMoveOutput):
+                # Attempt to cast or raise error
+                if isinstance(move_output, dict):
+                    move_output = ChooseMoveOutput(**move_output)
+                else:
+                    raise TypeError(f"Expected ChooseMoveOutput, got {type(move_output)}")
+
+            row, col = move_output.row, move_output.col
+            raw_response = move_output.raw_response
 
             step_uuid = str(uuid.uuid4())[:8]
 
             # Write CUSTOM_START
             step_manager.push_intermediate_step(
                 IntermediateStepPayload(
-                    event_type=IntermediateStepType.CUSTOM_START,
+                    event_type=IntermediateStepType.TTC_START,
                     name="dpo_candidate_move",
+                    data=TTCEventData(
+                        turn_id=turn_id,
+                        turn_index=turn_index,
+                        candidate_index=idx,
+                    ),
                     metadata={
-                        "turn_id": turn_id,
                         "move_id": move_id,
-                        "turn_index": turn_index,
-                        "candidate_index": idx,
                     },
                     UUID=step_uuid,
                 ))
 
-            # Write CUSTOM_END with full move data including prompt
+            # Write CUSTOM_END with full move data including messages
             step_manager.push_intermediate_step(
                 IntermediateStepPayload(
-                    event_type=IntermediateStepType.CUSTOM_END,
+                    event_type=IntermediateStepType.TTC_END,
                     name="dpo_candidate_move",
+                    data=TTCEventData(
+                        turn_id=turn_id,
+                        turn_index=turn_index,
+                        candidate_index=idx,
+                        input=move_output.messages,
+                        output=raw_response
+                    ),
                     metadata={
-                        "turn_id": turn_id,
                         "move_id": move_id,
                         "turn_index": turn_index,
                         "candidate_index": idx,
                         "board_state_before": board,
-                        "prompt": prompt,  # Full prompt in OpenAI chat format
                         "move": {
                             "row": row, "col": col
                         },
@@ -212,14 +225,9 @@ async def ttc_move_selector_function(config: TTCMoveSelectorConfig, builder: Bui
 
         # Extract selected move data
         selected_output = selected_item.output
-        if hasattr(selected_output, "row"):
-            selected_row = selected_output.row
-            selected_col = selected_output.col
-            selected_raw = selected_output.raw_response
-        else:
-            selected_row = selected_output["row"]
-            selected_col = selected_output["col"]
-            selected_raw = selected_output["raw_response"]
+        selected_row = selected_output.row
+        selected_col = selected_output.col
+        selected_raw = selected_output.raw_response
 
         return TTCMoveSelectorOutput(
             row=selected_row,
