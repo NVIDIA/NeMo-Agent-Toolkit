@@ -89,7 +89,7 @@ The `nat a2a` command group provides utilities for working with Agent-to-Agent (
 For comprehensive A2A documentation, see:
 - [A2A Server](./a2a-server.md) - Publishing workflows as A2A servers
 - [A2A Client](../build-workflows/a2a-client.md) - Using A2A clients in workflows
-- [A2A CLI Utilities](../run-workflows/a2a-cli.md) - Command-line tools for A2A
+- [A2A CLI Utilities](./a2a-cli.md) - Command-line tools for A2A
 
 ### Serve
 
@@ -1202,4 +1202,11 @@ The `nat object-store <type> <bucket_name> delete --help` utility provides an ov
 Usage: nat object-store <type> [type-options] <bucket_name> delete [OPTIONS] KEYS...
 
   Delete files from an object store.
+```
+
+## Related Documentation
+```{toctree}
+:titlesonly:
+
+A2A CLI tools  <./a2a-cli.md>
 ```

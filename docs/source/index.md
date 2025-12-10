@@ -193,12 +193,10 @@ Middleware <./build-workflows/middleware.md>
 :caption: Run Workflows
 
 Run Workflows <./run-workflows/run-workflows.md>
-Command Line Interface (CLI) <./run-workflows/cli.md>
 ./run-workflows/observe/observe.md
 API Server and User Interface <./run-workflows/launching-ui.md>
 MCP Server <./run-workflows/mcp-server.md>
 A2A Server <./run-workflows/a2a-server.md>
-A2A CLI <./run-workflows/a2a-cli.md>
 ```
 
 ```{toctree}
@@ -238,6 +236,7 @@ Custom Components <./extend/custom-components/index.md>
 
 Python API <./api/index.rst>
 ./reference/rest-api/index.md
+Command Line Interface (CLI) <./reference/cli/index.md>
 ```
 
 ```{toctree}
