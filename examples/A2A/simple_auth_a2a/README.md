@@ -77,7 +77,7 @@ nat a2a client call --url http://${SIMPLE_PROTECTED_SERVER_HOST}:${SIMPLE_PROTEC
 ```bash
 nat a2a client call --url http://${SIMPLE_PROTECTED_SERVER_HOST}:${SIMPLE_PROTECTED_SERVER_PORT} \
   --message "Hello" \
-  --auth-config examples/A2A/simple_auth_a2a/src/nat_simple_auth_a2a/configs/test_auth.yml \
+  --auth-config examples/A2A/simple_auth_a2a/configs/auth_only.yml \
   --auth-provider test_bearer
 ```
 
