@@ -184,8 +184,7 @@ Memory Module <./build-workflows/memory.md>
 Object Store <./build-workflows/object-store.md>
 MCP <./build-workflows/mcp.md>
 A2A <./build-workflows/a2a-client.md>
-Interactive Workflows <./build-workflows/interactive-workflows.md>
-Middleware <./build-workflows/middleware.md>
+./build-workflows/advanced/index.md
 ```
 
 ```{toctree}
