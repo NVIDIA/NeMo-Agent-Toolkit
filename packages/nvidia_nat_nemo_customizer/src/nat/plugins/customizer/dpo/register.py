@@ -95,8 +95,8 @@ async def nemo_customizer_trainer_adapter(config: NeMoCustomizerTrainerAdapterCo
     trainer_adapters:
       nemo_customizer:
         _type: nemo_customizer_trainer_adapter
-        entity_host: https://nmp.aire.nvidia.com
-        datastore_host: https://datastore.aire.nvidia.com
+        entity_host: https://nmp.example.com
+        datastore_host: https://datastore.example.com
         namespace: my-project
         customization_config: meta/llama-3.2-1b-instruct@v1.0.0+A100
         hyperparameters:

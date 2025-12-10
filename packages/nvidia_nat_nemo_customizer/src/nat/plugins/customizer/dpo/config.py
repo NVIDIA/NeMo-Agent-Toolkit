@@ -261,8 +261,8 @@ class NeMoCustomizerTrainerAdapterConfig(TrainerAdapterConfig, name="nemo_custom
     trainer_adapters:
       nemo_customizer:
         _type: nemo_customizer_trainer_adapter
-        entity_host: https://nmp.aire.nvidia.com
-        datastore_host: https://datastore.aire.nvidia.com
+        entity_host: https://nmp.example.com
+        datastore_host: https://datastore.example.com
         namespace: my-project
         customization_config: meta/llama-3.2-1b-instruct@v1.0.0+A100
         hyperparameters:
@@ -275,8 +275,8 @@ class NeMoCustomizerTrainerAdapterConfig(TrainerAdapterConfig, name="nemo_custom
     """
 
     # === Endpoint Configuration ===
-    entity_host: str = Field(description="Base URL for NeMo Entity Store (e.g., https://nmp.aire.nvidia.com).", )
-    datastore_host: str = Field(description="Base URL for NeMo Datastore (e.g., https://datastore.aire.nvidia.com).", )
+    entity_host: str = Field(description="Base URL for NeMo Entity Store (e.g., https://nmp.example.com).", )
+    datastore_host: str = Field(description="Base URL for NeMo Datastore (e.g., https://datastore.example.com).", )
     hf_token: str = Field(
         default="",
         description="HuggingFace token for datastore authentication. Can be empty if not required.",
