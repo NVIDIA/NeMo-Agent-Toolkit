@@ -297,7 +297,7 @@ class SessionManager:
                 try:
                     cleaned = await self._cleanup_inactive_per_user_builders()
                     if cleaned > 0:
-                        logger.debug(f"Cleaned up {cleaned} inactive per-user builder(s)")
+                        logger.info(f"Cleaned up {cleaned} inactive per-user builder(s)")
                 except Exception as e:
                     logger.error(f"Error during periodic cleanup: {e}", exc_info=True)
 
