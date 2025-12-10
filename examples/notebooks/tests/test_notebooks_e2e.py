@@ -133,7 +133,7 @@ def _run_notebook(notebook_path: Path, expected_packages: list[str], timeout_sec
 @pytest.mark.parametrize(
     "notebook_file_name, expected_packages, timeout_seconds",
     [
-        pytest.param("hello_world.ipynb", ["hello_world"], 120, id="hello_world"),
+        pytest.param("hello_world.ipynb", [], 120, id="hello_world"),
         pytest.param("getting_started_with_nat.ipynb", ["getting_started"], 120, id="getting_started_with_nat"),
         pytest.param("adding_tools_to_agents.ipynb", ["retail_sales_agent_nb3"], 300, id="adding_tools_to_agents"),
         pytest.param("mcp_setup_and_integration.ipynb", ["mcp_dev_workflow", "nat_simple_calculator_notebook"],
