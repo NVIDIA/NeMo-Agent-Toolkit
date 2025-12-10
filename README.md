@@ -41,7 +41,7 @@ limitations under the License.
 
 ## 🔥 New Features
 
-- [**Automatic Hyperparameter Tuning:**](docs/source/improve-workflows/optimizer.md) Automatically tune the hyperparameters of your agents, tools, and workflows to maximize performance, minimize cost, and increase accuracy.
+- [**Automatic Hyperparameter Tuning:**](docs/source/improve-workflows/optimizer.md) Automatically tune the parameters and prompts of your agents, tools, and workflows to maximize performance, minimize cost, and increase accuracy.
 
 - [**Google ADK Support:**](./docs/source/components/integrations/frameworks.md#adk-google-agent-development-kit) Users of Google's Agent Development Kit (ADK) framework are now supported in NeMo Agent Toolkit.
 
