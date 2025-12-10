@@ -21,7 +21,7 @@ llms:
   # Uses vLLM or any OpenAI-compatible endpoint
   training_llm:
     _type: nim
-    model_name: meta/llama-3.1-8b-instruct
+    model_name: meta/llama-3.3-70b-instruct
 
 functions:
   # === Trained player functions (uses LLM) ===
@@ -82,7 +82,7 @@ workflow:
 
 eval:
   general:
-    max_concurrency: 1
+    max_concurrency: 8
     output_dir: .tmp/nat/dpo_tic_tac_toe/eval
     dataset:
       _type: json
@@ -109,22 +109,49 @@ trajectory_builders:
     min_score_diff: 0.01
     # Maximum pairs per turn (None = unlimited)
     max_pairs_per_turn: 5
-    # Field mappings (match the ttc_move_selector_function.py output)
-    turn_id_key: turn_id
-    score_key: score
-    prompt_key: prompt
-    response_key: raw_llm_response
-    candidate_index_key: candidate_index
     # Reward computation
     reward_from_score_diff: true
 
+trainer_adapters:
+  nemo_customizer_trainer_adapter:
+    _type: nemo_customizer_trainer_adapter
+    # Base URL for NeMo Customizer
+    entity_host: https://nmp.aire.nvidia.com
+    # Base URL for NeMo MS Datastore
+    datastore_host: https://datastore.aire.nvidia.com
+    # Namespace to run training, and store datasets and models
+    namespace: nat-dpo-test
+    customization_config: meta/llama-3.1-8b-instruct@v1.0.0+A100
+    dataset_output_dir: .tmp/output/datasets  # Files saved here
+    hyperparameters:
+      training_type: dpo
+      # Epochs on remote server for training job
+      epochs: 5
+      batch_size: 8
+    use_full_message_history: false
+    deploy_on_completion: true
+    deployment_config:
+      image_name: nvcr.io/nim/meta/llama-3.1-8b-instruct
+      image_tag: latest
+      gpu: 2
+      deployment_name: nat_dpo_tic_tac_toe_model
+      description: Fine-tuned agent model by the NeMo Agent Toolkit
+
+
+trainers:
+  nemo_customizer_trainer:
+    _type: nemo_customizer_trainer
+    num_runs: 1
+    continue_on_collection_error: true
+    deduplicate_pairs: true
+    wait_for_completion: true
+
 # Finetuning configuration (requires a trainer adapter to be implemented)
 finetuning:
-  enabled: false  # Set to true when trainer adapter is available
+  enabled: true  # Set to true when trainer adapter is available
+  trainer: nemo_customizer_trainer
   trajectory_builder: dpo_builder
-  # trainer_adapter: <your_dpo_trainer_adapter>
-  # trainer: <your_dpo_trainer>
-  reward_function:
-    name: game_outcome
-  num_epochs: 10
-  output_dir: .tmp/nat/dpo_tic_tac_toe/finetuning
+  trainer_adapter: nemo_customizer_trainer_adapter
+  output_dir: ./.tmp/nat/finetuning/dpo_tic_tac_toe
+
+

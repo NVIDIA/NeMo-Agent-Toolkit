@@ -209,7 +209,7 @@ class NeMoCustomizerTrainerAdapter(TrainerAdapter):
         Returns:
             Repository ID for the created dataset
         """
-        dataset_name = f"{self.adapter_config.dataset_name}-{run_id}"
+        dataset_name = f"{self.adapter_config.dataset_name}"
         repo_id = f"{self.adapter_config.namespace}/{dataset_name}"
 
         # Create dataset repo in datastore
