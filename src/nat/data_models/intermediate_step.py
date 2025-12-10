@@ -91,6 +91,7 @@ class TTCEventData(StreamEventData):
     turn_id: str | None = None
     turn_index: int | None = None
     candidate_index: int | None = None
+    score: float | None = None
 
 
 class UsageInfo(BaseModel):

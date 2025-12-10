@@ -142,7 +142,7 @@ class Trajectory(BaseModel):
     """
     A trajectory is a sequence of states, actions, and rewards.
     """
-    episode: list[EpisodeItem] = Field(description="A list of steps in the episode.")
+    episode: list[EpisodeItem] | list[DPOItem] = Field(description="A list of steps in the episode.")
     reward: float = Field(description="The total reward for the episode.")
     shaped_rewards: list[float] | None = Field(description="The shaped rewards for each step in the episode.",
                                                default=None)

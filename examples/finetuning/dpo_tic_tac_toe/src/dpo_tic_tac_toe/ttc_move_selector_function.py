@@ -204,7 +204,8 @@ async def ttc_move_selector_function(config: TTCMoveSelectorConfig, builder: Bui
                         turn_index=turn_index,
                         candidate_index=idx,
                         input=move_output.messages,
-                        output=raw_response
+                        output=raw_response,
+                        score=item.score,
                     ),
                     metadata={
                         "move_id": move_id,
@@ -215,7 +216,6 @@ async def ttc_move_selector_function(config: TTCMoveSelectorConfig, builder: Bui
                             "row": row, "col": col
                         },
                         "raw_llm_response": raw_response,
-                        "score": item.score,
                         "is_selected": is_selected,
                         "player_symbol": player_symbol,
                         "player_value": player_value,
