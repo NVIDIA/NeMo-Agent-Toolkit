@@ -19,13 +19,25 @@ This plugin provides trajectory builders and trainer adapters for
 finetuning workflows using NeMo Customizer backend.
 
 Available components:
-- DPO Trajectory Builder: Collects preference pairs from scored candidates
+- DPO Trajectory Builder: Collects preference pairs from scored TTC candidates
+- NeMo Customizer TrainerAdapter: Submits DPO/SFT jobs to NeMo Customizer
 """
 
+from .dpo import DPOSpecificHyperparameters
 from .dpo import DPOTrajectoryBuilder
 from .dpo import DPOTrajectoryBuilderConfig
+from .dpo import NeMoCustomizerHyperparameters
+from .dpo import NeMoCustomizerTrainerAdapter
+from .dpo import NeMoCustomizerTrainerAdapterConfig
+from .dpo import NIMDeploymentConfig
 
 __all__ = [
+    # Trajectory Builder
     "DPOTrajectoryBuilder",
-    "DPOTrajectoryBuilderConfig",
+    "DPOTrajectoryBuilderConfig",  # TrainerAdapter
+    "NeMoCustomizerTrainerAdapter",
+    "NeMoCustomizerTrainerAdapterConfig",
+    "NeMoCustomizerHyperparameters",
+    "DPOSpecificHyperparameters",
+    "NIMDeploymentConfig",
 ]

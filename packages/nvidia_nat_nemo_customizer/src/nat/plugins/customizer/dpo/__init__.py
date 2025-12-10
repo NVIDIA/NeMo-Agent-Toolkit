@@ -13,16 +13,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-DPO (Direct Preference Optimization) Trajectory Builder for NAT.
+DPO (Direct Preference Optimization) components for NAT.
 
-This module provides a trajectory builder that collects preference data from
-workflows that produce scored candidate intermediate steps.
+This module provides:
+- DPO Trajectory Builder: Collects preference data from scored TTC intermediate steps
+- NeMo Customizer TrainerAdapter: Submits DPO training jobs to NeMo Customizer
 """
 
+from .config import DPOSpecificHyperparameters
 from .config import DPOTrajectoryBuilderConfig
+from .config import NeMoCustomizerHyperparameters
+from .config import NeMoCustomizerTrainerAdapterConfig
+from .config import NIMDeploymentConfig
 from .dpo_trajectory_builder import DPOTrajectoryBuilder
+from .trainer_adapter import NeMoCustomizerTrainerAdapter
 
 __all__ = [
+    # Trajectory Builder
     "DPOTrajectoryBuilderConfig",
-    "DPOTrajectoryBuilder",
+    "DPOTrajectoryBuilder",  # TrainerAdapter
+    "NeMoCustomizerTrainerAdapterConfig",
+    "NeMoCustomizerTrainerAdapter",
+    "NeMoCustomizerHyperparameters",
+    "DPOSpecificHyperparameters",
+    "NIMDeploymentConfig",
 ]

@@ -13,15 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Configuration classes for the DPO Trajectory Builder.
+Configuration classes for DPO training with NeMo Customizer.
 
-This module provides configuration for collecting preference data from workflows
-that produce scored TTC (Test-Time Compute) intermediate steps with TTCEventData.
+This module provides configuration for:
+1. DPO Trajectory Builder - collecting preference data from workflows
+2. NeMo Customizer TrainerAdapter - submitting DPO training jobs
 """
 
+from typing import Literal
+
+from pydantic import BaseModel
 from pydantic import Field
 from pydantic import model_validator
 
+from nat.data_models.finetuning import TrainerAdapterConfig
 from nat.data_models.finetuning import TrajectoryBuilderConfig
 
 
@@ -96,4 +101,180 @@ class DPOTrajectoryBuilderConfig(TrajectoryBuilderConfig, name="dpo_traj_builder
         """Validate configuration consistency."""
         if self.max_pairs_per_turn is not None and self.max_pairs_per_turn < 1:
             raise ValueError("max_pairs_per_turn must be at least 1 if specified")
+        return self
+
+
+# =============================================================================
+# NeMo Customizer TrainerAdapter Configuration
+# =============================================================================
+
+
+class DPOSpecificHyperparameters(BaseModel):
+    """DPO-specific hyperparameters for NeMo Customizer."""
+
+    ref_policy_kl_penalty: float = Field(
+        default=0.1,
+        ge=0.0,
+        description="KL penalty coefficient for reference policy regularization.",
+    )
+
+
+class NeMoCustomizerHyperparameters(BaseModel):
+    """
+    Hyperparameters for NeMo Customizer training jobs.
+
+    These map to the `hyperparameters` argument in
+    `client.customization.jobs.create()`.
+    """
+
+    training_type: Literal["sft", "dpo"] = Field(
+        default="dpo",
+        description="Type of training: 'sft' for supervised fine-tuning, 'dpo' for direct preference optimization.",
+    )
+    finetuning_type: Literal["lora", "all_weights"] = Field(
+        default="all_weights",
+        description="Type of finetuning: 'lora' for LoRA adapters, 'all_weights' for full model.",
+    )
+    epochs: int = Field(
+        default=3,
+        ge=1,
+        description="Number of training epochs.",
+    )
+    batch_size: int = Field(
+        default=4,
+        ge=1,
+        description="Training batch size.",
+    )
+    learning_rate: float = Field(
+        default=5e-5,
+        gt=0.0,
+        description="Learning rate for optimizer.",
+    )
+    dpo: DPOSpecificHyperparameters = Field(
+        default_factory=DPOSpecificHyperparameters,
+        description="DPO-specific hyperparameters.",
+    )
+
+
+class NIMDeploymentConfig(BaseModel):
+    """
+    Configuration for NIM deployment after training.
+
+    These settings are used when `deploy_on_completion` is True.
+    """
+
+    image_name: str = Field(
+        default="nvcr.io/nim/meta/llama-3.2-1b-instruct",
+        description="NIM container image name.",
+    )
+    image_tag: str = Field(
+        default="latest",
+        description="NIM container image tag.",
+    )
+    gpu: int = Field(
+        default=1,
+        ge=1,
+        description="Number of GPUs for deployment.",
+    )
+    deployment_name: str | None = Field(
+        default=None,
+        description="Name for the deployment. If None, auto-generated from model name.",
+    )
+    description: str = Field(
+        default="Fine-tuned model deployment",
+        description="Description for the deployment.",
+    )
+
+
+class NeMoCustomizerTrainerAdapterConfig(TrainerAdapterConfig, name="nemo_customizer_trainer_adapter"):
+    """
+    Configuration for the NeMo Customizer TrainerAdapter.
+
+    This adapter submits DPO/SFT training jobs to NeMo Customizer and
+    optionally deploys the trained model.
+
+    Example YAML configuration:
+    ```yaml
+    trainer_adapters:
+      nemo_customizer:
+        _type: nemo_customizer_trainer_adapter
+        entity_host: https://nmp.aire.nvidia.com
+        datastore_host: https://datastore.aire.nvidia.com
+        namespace: my-project
+        customization_config: meta/llama-3.2-1b-instruct@v1.0.0+A100
+        hyperparameters:
+          training_type: dpo
+          epochs: 5
+          batch_size: 8
+        use_full_message_history: true
+        deploy_on_completion: true
+    ```
+    """
+
+    # === Endpoint Configuration ===
+    entity_host: str = Field(description="Base URL for NeMo Entity Store (e.g., https://nmp.aire.nvidia.com).", )
+    datastore_host: str = Field(description="Base URL for NeMo Datastore (e.g., https://datastore.aire.nvidia.com).", )
+    hf_token: str = Field(
+        default="",
+        description="HuggingFace token for datastore authentication. Can be empty if not required.",
+    )
+
+    # === Namespace and Dataset ===
+    namespace: str = Field(description="Namespace for organizing resources (datasets, models, deployments).", )
+    dataset_name: str = Field(
+        default="nat-dpo-dataset",
+        description="Name for the training dataset. Must be unique within namespace.",
+    )
+    dataset_output_dir: str | None = Field(
+        default=None,
+        description="Directory to save dataset JSONL files locally before upload. "
+        "If None, uses a temporary directory that is deleted after upload. "
+        "If specified, creates the directory if it doesn't exist and preserves files.",
+    )
+    create_namespace_if_missing: bool = Field(
+        default=True,
+        description="If True, create namespace in entity store and datastore if it doesn't exist.",
+    )
+
+    # === Customization Job Configuration ===
+    customization_config: str = Field(description="Model configuration string for customization job "
+                                      "(e.g., 'meta/llama-3.2-1b-instruct@v1.0.0+A100'). "
+                                      "Available configs can be listed via the NeMo Customizer API.", )
+    hyperparameters: NeMoCustomizerHyperparameters = Field(
+        default_factory=NeMoCustomizerHyperparameters,
+        description="Hyperparameters for the training job.",
+    )
+
+    # === Prompt Formatting ===
+    use_full_message_history: bool = Field(
+        default=True,
+        description="If True, include full message history in prompt field as list of messages. "
+        "If False, use only the last message content as a string. "
+        "Full history format: [{\"role\": \"system\", \"content\": \"...\"}, ...]. "
+        "Last message format: \"<content string>\".",
+    )
+
+    # === Deployment Configuration ===
+    deploy_on_completion: bool = Field(
+        default=False,
+        description="If True, automatically deploy the trained model after job completion.",
+    )
+    deployment_config: NIMDeploymentConfig = Field(
+        default_factory=NIMDeploymentConfig,
+        description="Configuration for model deployment (used when deploy_on_completion=True).",
+    )
+
+    # === Polling Configuration ===
+    poll_interval_seconds: float = Field(
+        default=30.0,
+        gt=0.0,
+        description="Interval in seconds between job status checks.",
+    )
+
+    @model_validator(mode="after")
+    def validate_config(self) -> "NeMoCustomizerTrainerAdapterConfig":
+        """Validate configuration consistency."""
+        # Ensure hosts don't have trailing slashes
+        self.entity_host = self.entity_host.rstrip("/")
+        self.datastore_host = self.datastore_host.rstrip("/")
         return self
