@@ -225,7 +225,7 @@ Sharing Components <./components/sharing-components.md>
 
 ```{toctree}
 :hidden:
-:caption: Extend NeMo Agent Toolkit
+:caption: Extend
 
 Plugins <./extend/plugins.md>
 Custom Components <./extend/custom-components/index.md>
