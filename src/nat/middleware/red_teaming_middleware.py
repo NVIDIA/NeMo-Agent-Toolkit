@@ -33,7 +33,7 @@ import re
 from collections.abc import AsyncIterator
 from typing import Any
 from typing import Literal
-
+from jsonpath_ng import jsonpath, parse
 from pydantic import BaseModel
 
 from nat.middleware.function_middleware import CallNext
@@ -86,6 +86,7 @@ class RedTeamingMiddleware(FunctionMiddleware):
         payload_placement: Literal["replace", "append_start", "append_middle", "append_end"] = "append_end",
         target_location: Literal["input", "output"] = "input",
         target_field: str | None = None,
+        target_field_resolution_strategy: Literal["random", "first", "last", "all", "error"] = "error",
     ) -> None:
         """Initialize red teaming middleware.
 
@@ -102,6 +103,7 @@ class RedTeamingMiddleware(FunctionMiddleware):
         self._payload_placement = payload_placement
         self._target_location = target_location
         self._target_field = target_field
+        self._target_field_resolution_strategy = target_field_resolution_strategy
 
         logger.info(
             "RedTeamingMiddleware initialized: payload=%s, target=%s, placement=%s, location=%s, field=%s",
@@ -251,16 +253,15 @@ class RedTeamingMiddleware(FunctionMiddleware):
 
         return closest_match.end()
 
-    def _apply_payload(
-        self, original_value: list | str | int | float, attack_payload: str, payload_placement: str, value_type: type | None = None
+    def _apply_payload_to_simple_type(
+        self, original_value: list | str | int | float, attack_payload: str, payload_placement: str
     ) -> Any:
-        """Apply the attack payload to a value based on the payload placement.
+        """Apply the attack payload to simple types (str, int, float) value.
 
         Args:
             original_value: The original value to attack
             attack_payload: The payload to inject
             payload_placement: How to apply the payload
-            value_type: The expected type of the value (for validation)
 
         Returns:
             The modified value with attack applied
@@ -269,14 +270,7 @@ class RedTeamingMiddleware(FunctionMiddleware):
             ValueError: If attack cannot be applied due to type mismatch
         """
         # Determine actual type from value if not provided
-        if value_type is None:
-            value_type = type(original_value)
-
-        # Handle cases where original_value is a list. Replace a random index.
-        if isinstance(original_value, list):
-            index = random.randint(0, len(original_value) - 1)
-            original_value[index] = self._apply_payload(original_value[index], attack_payload, payload_placement)
-            return original_value
+        value_type = type(original_value)
 
         # Handle string attacks
         if value_type is str or isinstance(original_value, str):
@@ -295,7 +289,7 @@ class RedTeamingMiddleware(FunctionMiddleware):
                 raise ValueError(f"Unknown payload placement: {payload_placement}")
 
         # Handle int/float attacks
-        if value_type in (int, float) or isinstance(original_value, (int, float)):
+        if isinstance(original_value, (int, float)):
             # For numbers, only replace is allowed
             if payload_placement != "replace":
                 logger.warning(
@@ -369,29 +363,70 @@ class RedTeamingMiddleware(FunctionMiddleware):
         # Set the final field
         current[field_path[-1]] = new_field_value
 
-    def _apply_payload_to_schema(self,value: Any,
-                                schema: type[BaseModel] | type[None] | None, context: FunctionMiddlewareContext, is_nested_path: bool = False) -> Any:
-        schema = context.single_output_schema
-        field_value, field_path = self._find_field_in_value(value, schema, is_nested_path)
 
-        # Apply attack to the field value
-        attacked_value = self._apply_payload(field_value, self._attack_payload, self._payload_placement)
+    def _resolve_multiple_field_matches(self, matches):
+        if self._target_field_resolution_strategy == "error":
+            raise ValueError(f"Multiple matches found for target_field: {self._target_field}")
+        elif self._target_field_resolution_strategy == "random":
+            return [random.choice(matches)]
+        elif self._target_field_resolution_strategy == "first":
+            return [matches[0]]
+        elif self._target_field_resolution_strategy == "last":
+            return [matches[-1]]
+        elif self._target_field_resolution_strategy == "all":
+            return matches
+        else:
+            raise ValueError(f"Unknown target_field_resolution_strategy: {self._target_field_resolution_strategy}")
 
-        # Reconstruct the output with the attacked field
-        modified_value = self._set_field_in_value(value, field_path, attacked_value)
+    def _apply_payload_to_complex_type(self, value: list | dict | BaseModel) -> list | dict | BaseModel:
+        if self._target_field is None:
+            raise ValueError(f"When attempting to apply payload to complex type, target_field is required")
+        else:
+            jsonpath_expr = parse(self._target_field)
+            matches = jsonpath_expr.find(value)
+            if len(matches) == 0:
+                raise ValueError(f"No matches found for target_field: {self._target_field} in value: {value}")
+            if len(matches) > 1:
+                matches = self._resolve_multiple_field_matches(matches)
+            else:
+                matches = [matches[0]]
+            modified_values = [self._apply_payload_to_simple_type(
+                match.value, self._attack_payload, self._payload_placement) for match in matches]
+            for match, modified_value in zip(matches, modified_values):
+                match.full_path.update(value, modified_value)
+            return value
 
-        logger.info(
-            "Red teaming Middleware: Attacking %s of function '%s' "
-            "(placement=%s, field=%s, original=%s, payload=%s, modified=%s)",
-            self._target_location,
-            context.name,
-            self._payload_placement,
-            self._target_field or "direct",
-            field_value,
-            self._attack_payload,
-            attacked_value,
-        )
-        return modified_value
+    def _apply_payload_to_function_value(self, value: Any) -> Any:
+        if isinstance(value, list | dict | BaseModel):
+            return self._apply_payload_to_complex_type(value)
+        elif isinstance(value, str | int | float):
+            return self._apply_payload_to_simple_type(value, self._attack_payload, self._payload_placement)
+        else:
+            raise ValueError(f"Unsupported function input/output type: {type(value).__name__}")
+
+    # def _apply_payload_to_schema_old(self,value: Any,
+    #                             schema: type[BaseModel] | type[None] | None, context: FunctionMiddlewareContext, is_nested_path: bool = False) -> Any:
+    #     schema = context.single_output_schema
+    #     field_value, field_path = self._find_field_in_value(value, schema, is_nested_path)
+
+    #     # Apply attack to the field value
+    #     attacked_value = self._apply_payload(field_value, self._attack_payload, self._payload_placement)
+
+    #     # Reconstruct the output with the attacked field
+    #     modified_value = self._set_field_in_value(value, field_path, attacked_value)
+
+    #     logger.info(
+    #         "Red teaming Middleware: Attacking %s of function '%s' "
+    #         "(placement=%s, field=%s, original=%s, payload=%s, modified=%s)",
+    #         self._target_location,
+    #         context.name,
+    #         self._payload_placement,
+    #         self._target_field or "direct",
+    #         field_value,
+    #         self._attack_payload,
+    #         attacked_value,
+    #     )
+    #     return modified_value
     async def function_middleware_invoke(
         self, value: Any, call_next: CallNext, context: FunctionMiddlewareContext
     ) -> Any:
@@ -417,7 +452,7 @@ class RedTeamingMiddleware(FunctionMiddleware):
             if self._target_location == "input":
                 # Attack the input before calling the function
                 schema = context.input_schema
-                modified_input = self._apply_payload_to_schema(value, schema, context, is_nested_path)
+                modified_input = self._apply_payload_to_function_value(value)
                 # Call next with modified input
                 return await call_next(modified_input)
 
@@ -425,7 +460,7 @@ class RedTeamingMiddleware(FunctionMiddleware):
                 # Call function first, then attack the output
                 output = await call_next(value)
                 schema = context.single_output_schema
-                modified_output = self._apply_payload_to_schema(output, schema, context, is_nested_path)
+                modified_output = self._apply_payload_to_function_value(output, schema, context, is_nested_path)
 
                 return modified_output
 
@@ -450,6 +485,7 @@ class RedTeamingMiddleware(FunctionMiddleware):
         Yields:
             Chunks from the stream (potentially modified)
         """
+        raise NotImplementedError("Red Teaming Middleware does not currently support interception of streaming functions.")
         # Check if we should attack this function
         if not self._should_apply_payload(context.name):
             logger.debug("Skipping function %s (not targeted)", context.name)
@@ -464,7 +500,7 @@ class RedTeamingMiddleware(FunctionMiddleware):
             if self._target_location == "input":
                 # Attack input before streaming (same as non-streaming)
                 schema = context.input_schema
-                modified_input = self._apply_payload_to_schema(value, schema, context, is_nested_path)
+                modified_input = self._apply_payload_to_function_value(value, schema, context, is_nested_path)
                 # Stream with modified input
                 async for chunk in call_next(modified_input):
                     yield chunk
@@ -481,7 +517,7 @@ class RedTeamingMiddleware(FunctionMiddleware):
 
                 # Yield the attack payload first
                 yield self._attack_payload
-
+            
                 # Then yield all chunks from the stream
                 async for chunk in call_next(value):
                     yield chunk

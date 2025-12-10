@@ -504,7 +504,7 @@ class RedTeamingRunner:
 
         # Get the new general config as dict, excluding unset values
         # This ensures we only override values that were explicitly set
-        general_dict = general.model_dump(mode='python', exclude_unset=False)
+        general_dict = general.model_dump(mode='python', exclude_unset=True)
 
         # Log which fields are being overridden
         existing_general = base_workflow_config_dict["eval"]["general"]
@@ -512,6 +512,11 @@ class RedTeamingRunner:
             key for key in general_dict.keys()
             if key in existing_general and existing_general[key] != general_dict[key]
         ]
+        print("OVERRIDDEN FIELDS: ", overridden_fields)
+        print("GENERAL DICT: ", general_dict)
+        print("EXISTING GENERAL: ", existing_general)
+        existing_general.update(general_dict)
+
         if overridden_fields:
             logger.info(
                 "Merging RedTeamingRunnerConfig.general into base workflow config. "
@@ -519,7 +524,7 @@ class RedTeamingRunner:
             )
 
         # Merge: base workflow config values as defaults, RedTeamingRunnerConfig values override
-        base_workflow_config_dict["eval"]["general"].update(general_dict)
+        base_workflow_config_dict["eval"]["general"] = existing_general
 
     def _attach_middleware_everywhere(
         self,
