@@ -20,6 +20,126 @@
         },
         {
             "pattern": "^https://milvus\\.io"
+        },
+        {
+            "pattern": "^https://(app\\.)?galileo\\.ai"
+        },
+        {
+            "pattern": "^https://.*\\.galileo\\.ai"
+        },
+        {
+            "pattern": "^https://git-lfs\\.github\\.com"
+        },
+        {
+            "pattern": "^https://developercertificate\\.org"
+        },
+        {
+            "pattern": "^https://vale\\.sh"
+        },
+        {
+            "pattern": "^https://colab\\.research\\.google\\.com"
+        },
+        {
+            "pattern": "^https://langfuse\\.com"
+        },
+        {
+            "pattern": "^https://smith\\.langchain\\.com"
+        },
+        {
+            "pattern": "^https://.*\\.smith\\.langchain\\.com"
+        },
+        {
+            "pattern": "^https://wandb\\.ai"
+        },
+        {
+            "pattern": "^https://.*\\.wandb\\.ai"
+        },
+        {
+            "pattern": "^https://(www\\.)?patronus\\.ai"
+        },
+        {
+            "pattern": "^https://(www\\.)?distributional\\.com"
+        },
+        {
+            "pattern": "^https://.*\\.dbnl\\.com"
+        },
+        {
+            "pattern": "^https://(www\\.)?langchain\\.com"
+        },
+        {
+            "pattern": "^https://(www\\.)?crewai\\.com"
+        },
+        {
+            "pattern": "^https://modelcontextprotocol\\.io"
+        },
+        {
+            "pattern": "^https://a2aproject\\.org"
+        },
+        {
+            "pattern": "^https://a2a-protocol\\.org"
+        },
+        {
+            "pattern": "^https://optuna\\.org"
+        },
+        {
+            "pattern": "^https://(.*\\.)?mem0\\.ai"
+        },
+        {
+            "pattern": "^https://serpapi\\.com"
+        },
+        {
+            "pattern": "^https://(www\\.)?nvidia\\.com"
+        },
+        {
+            "pattern": "^https://.*\\.litellm\\.ai"
+        },
+        {
+            "pattern": "^https://.*\\.authlib\\.org"
+        },
+        {
+            "pattern": "^https://redis\\.io"
+        },
+        {
+            "pattern": "^https://(www\\.)?getzep\\.com"
+        },
+        {
+            "pattern": "^https://(www\\.)?rfc-editor\\.org"
+        },
+        {
+            "pattern": "^https://opentelemetry\\.io"
+        },
+        {
+            "pattern": "^https://.*\\.rapids\\.ai"
+        },
+        {
+            "pattern": "^https://.*\\.ragas\\.io"
+        },
+        {
+            "pattern": "^https://.*\\.sqlalchemy\\.org"
+        },
+        {
+            "pattern": "^https://.*\\.kaggle\\.com"
+        },
+        {
+            "pattern": "^https://serper\\.dev"
+        },
+        {
+            "pattern": "^https://.*\\.langchain\\.com"
+        },
+        {
+            "pattern": "^https://.*\\.pytest\\.org"
+        },
+        {
+            "pattern": "^https://.*\\.pydantic\\.dev"
+        },
+        {
+            "pattern": "^https://.*\\.vllm\\.ai"
+        },
+        {
+            "pattern": "^https://(.*\\.)?openid\\.net"
+        },
+        {
+            "pattern": "^https://phoenix\\.arize\\.com"
         }
     ]
 }

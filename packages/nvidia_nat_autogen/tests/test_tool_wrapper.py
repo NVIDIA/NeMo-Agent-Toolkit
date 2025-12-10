@@ -15,7 +15,7 @@
 """Test tool_wrapper.py file """
 
 import inspect
-import types
+import typing
 from dataclasses import dataclass
 from unittest.mock import AsyncMock
 from unittest.mock import Mock
@@ -53,15 +53,15 @@ class TestResolveType:
         """Test resolving Union types."""
         union_type = str | None
         result = resolve_type(union_type)
-        # For typing.Union, returns the original unchanged since it only handles types.UnionType
-        assert result == union_type
+        # Should return str (the non-None type)
+        assert result is str
 
     def test_resolve_pep604_union(self):
         """Test resolving PEP 604 union types (str | None)."""
         union_type = str | None
         result = resolve_type(union_type)
         # Should return str (the non-None type)
-        assert result == union_type
+        assert result is str
 
     def test_resolve_non_union_type(self):
         """Test resolving non-union types."""
@@ -72,9 +72,10 @@ class TestResolveType:
         """Test resolving union with multiple non-None types."""
         union_type = str | int | None
         result = resolve_type(union_type)
-        # For typing.Union, the function returns the original type unchanged
-        # since it only handles types.UnionType (PEP 604 style)
-        assert result == union_type
+        # Should return Union[str, int] (the non-None types)
+        # Compare the args of the union to verify it contains str and int
+        result_args = typing.get_args(result)
+        assert set(result_args) == {str, int}
 
     def test_resolve_all_none_union(self):
         """Test resolving union with only None types."""
@@ -248,13 +249,6 @@ class TestNatFunctionDecorator:
         def test_func():
             pass
 
-        # When input_schema is None, no signature should be set
-        input_schema = None
-
-        if input_schema is not None:
-            # This block should not execute
-            pytest.fail("Should not process None input_schema")
-
         # Function should remain unchanged when no schema
         original_signature = inspect.signature(test_func)
         assert original_signature is not None
@@ -280,17 +274,5 @@ class TestTypeResolution:
 
         optional_str = str | None
         result = resolve_type(optional_str)
-        # For typing.Union (which Optional[str] is), returns the original unchanged
-        assert result == optional_str
-
-    def test_union_type_detection(self):
-        """Test union type detection."""
-        union_type = str | int | None
-        origin = types.UnionType if hasattr(types, 'UnionType') else type(union_type)
-
-        # Test that we can detect union types
-        assert origin is not None
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+        # Should return str (the non-None type)
+        assert result is str

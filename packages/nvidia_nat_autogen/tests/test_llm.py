@@ -137,7 +137,7 @@ class TestConfigValidation:
         """Test OpenAI model config creation."""
         config = OpenAIModelConfig(model_name="gpt-4", api_key="test-key", base_url="https://api.openai.com/v1")
         assert config.model_name == "gpt-4"
-        assert config.api_key == "test-key"
+        assert config.api_key.get_secret_value() == "test-key"
         assert config.base_url == "https://api.openai.com/v1"
 
     def test_azure_config_creation(self):
@@ -148,7 +148,7 @@ class TestConfigValidation:
                                         api_version="2023-12-01-preview")
         assert config.azure_deployment == "test-deployment"
         assert config.azure_endpoint == "https://test.openai.azure.com/"
-        assert config.api_key == "test-key"
+        assert config.api_key.get_secret_value() == "test-key"
         assert config.api_version == "2023-12-01-preview"
 
     def test_nim_config_creation(self):
@@ -158,7 +158,7 @@ class TestConfigValidation:
                                 api_key="test-key")
         assert config.model_name == "llama-3.1-70b"
         assert config.base_url == "https://nim.api.nvidia.com/v1"
-        assert config.api_key == "test-key"
+        assert config.api_key.get_secret_value() == "test-key"
 
 
 class TestAutoGenIntegration:
@@ -168,7 +168,7 @@ class TestAutoGenIntegration:
         """Test the general pattern of client instantiation."""
         # Test that we can create basic configurations without errors
         config = OpenAIModelConfig(api_key="test-key", model_name="gpt-4")
-        assert config.api_key == "test-key"
+        assert config.api_key.get_secret_value() == "test-key"
         assert config.model_name == "gpt-4"
 
     def test_model_info_requirements(self):
@@ -179,7 +179,7 @@ class TestAutoGenIntegration:
                                         azure_endpoint="https://test.openai.azure.com",
                                         api_version="2024-02-01")
         assert config.azure_deployment == "gpt-4"
-        assert config.api_key == "test-key"
+        assert config.api_key.get_secret_value() == "test-key"
 
 
 class TestThinkingInjector:

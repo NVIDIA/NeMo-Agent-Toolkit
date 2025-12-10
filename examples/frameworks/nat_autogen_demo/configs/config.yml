@@ -14,10 +14,6 @@
 # limitations under the License.
 
 general:
-  front_end:
-    _type: console
-    cors:
-      allow_origins: ["*"]
   telemetry:
     logging:
       console:

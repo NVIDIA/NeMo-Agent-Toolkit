@@ -67,7 +67,7 @@ class _ResponseChooser:
 
 
 @register_llm_provider(config_type=MockLLMConfig)
-async def test_llm_provider(config: MockLLMConfig, builder: Builder):
+async def test_llm_provider(config: MockLLMConfig, builder: Builder) -> AsyncGenerator[LLMProviderInfo, None]:
     """Register the `nat_test_llm` provider for the NAT registry."""
     yield LLMProviderInfo(config=config, description="Test LLM provider")
 

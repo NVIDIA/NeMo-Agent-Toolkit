@@ -15,8 +15,10 @@
 """Tool wrapper for AutoGen integration with NAT."""
 
 import logging
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator
+from collections.abc import Callable
 from dataclasses import is_dataclass
+
 # PythonType not available in AutoGen 0.7.4, using Any instead
 from typing import Any
 
@@ -43,6 +45,8 @@ def resolve_type(t: Any) -> Any:
         Any: The resolved type.
     """
     resolved = DecomposedType(t)
+    if resolved.is_optional:
+        return resolved.get_optional_type().type
     return resolved.type
 
 
@@ -141,7 +145,6 @@ def autogen_tool_wrapper(
                                           annotation=resolved_type,
                                           default=default))
                     annotations[param_name] = resolved_type
-            if input_schema is not None:
                 func_to_wrap.__signature__ = inspect.Signature(parameters=params)
                 func_to_wrap.__annotations__ = annotations
 

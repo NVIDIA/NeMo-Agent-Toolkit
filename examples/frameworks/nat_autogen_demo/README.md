@@ -102,11 +102,6 @@ Workflow Result:
 ['New York weather: Sunny, around 25°C (77°F).\nCurrent local time in New York: 5:34 PM EDT (UTC−4) on October 7, 2025.\n\nAPPROVE']
 --------------------------------------------------
 
---------------------------------------------------
-Workflow Result:
-['New York weather: Sunny, around 25°C (77°F).\nCurrent local time in New York: 5:34 PM EDT (UTC−4) on October 7, 2025.\n\nAPPROVE']
---------------------------------------------------
-
 ```
 
 ## Architecture

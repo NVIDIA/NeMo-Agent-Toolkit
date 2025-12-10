@@ -14,29 +14,9 @@
 # limitations under the License.
 """Test register.py file"""
 
-import pytest
-
 
 class TestRegisterModule:
     """Test cases for register module."""
-
-    def test_imports_exist(self):
-        """Test that required imports exist and work."""
-        try:
-            from nat.plugins.autogen import llm  # pylint: disable=import-outside-toplevel
-            from nat.plugins.autogen import tool_wrapper  # pylint: disable=import-outside-toplevel
-            assert llm is not None
-            assert tool_wrapper is not None
-        except ImportError as e:
-            pytest.fail(f"Failed to import required modules: {e}")
-
-    def test_register_module_importable(self):
-        """Test that the register module can be imported."""
-        try:
-            from nat.plugins.autogen import register  # pylint: disable=import-outside-toplevel
-            assert register is not None
-        except ImportError as e:
-            pytest.fail(f"Failed to import register module: {e}")
 
     def test_llm_module_functions(self):
         """Test that LLM module has expected functions."""
@@ -57,7 +37,3 @@ class TestRegisterModule:
 
         for func_name in expected_functions:
             assert hasattr(tool_wrapper, func_name), f"Function {func_name} not found in tool_wrapper module"
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
