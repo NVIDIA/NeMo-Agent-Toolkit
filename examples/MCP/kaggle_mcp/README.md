@@ -61,6 +61,35 @@ Example queries:
 - "What is the titanic dataset about?"
 - "What competitions are currently active?"
 
+### Per-User Mode (Multi-User Server)
+
+For multi-user deployments where each user needs their own isolated workflow and MCP client instance, use the per-user configuration:
+
+```bash
+export KAGGLE_BEARER_TOKEN="your_kaggle_api_key_here"
+nat serve --config_file examples/MCP/kaggle_mcp/configs/config-per-user.yml
+```
+
+Test requests with different users:
+
+User Alice:
+```bash
+curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -H "Cookie: nat-session=user-alice" \
+  -d '{"messages": [{"role": "user", "content": "Search for titanic datasets"}]}'
+```
+
+User Bob (has a separate MCP client instance):
+```bash
+curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -H "Cookie: nat-session=user-bob" \
+  -d '{"messages": [{"role": "user", "content": "What competitions are active?"}]}'
+```
+
+Each user identified by their `nat-session` cookie gets their own workflow instance and MCP client.
+
 ## Configuration Details
 
 ### MCP Client Setup
