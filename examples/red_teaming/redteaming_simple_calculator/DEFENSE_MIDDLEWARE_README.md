@@ -1,6 +1,18 @@
 <!--
 SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 -->
 
 # Defense Middleware Example
@@ -13,7 +25,14 @@ Defense middleware is part of your **deployed agent configuration** (base config
 
 - **Defenses are permanent protections**: They protect your agent in production
 - **Red teaming is temporary testing**: Attacks are only injected during security evaluation
-- **Defenses run first**: Defense middleware wraps your functions before red teaming attacks are applied
+- **Defenses wrap other middleware**: Since defense middleware is configured in the base workflow, it appears first in the middleware list for each function, which means it wraps other middleware (like red teaming middleware). This ensures defenses check outputs after any attacks are applied, providing the final security layer.
+
+**Middleware Execution Order**: When multiple middleware are applied to a function, they execute in the order they appear in the `middleware` list. Since defense middleware is configured in the base workflow, it runs first (outermost layer), wrapping other middleware. This means:
+1. Defense middleware wraps the function
+2. Red teaming middleware (if present) wraps inside the defense middleware
+3. Function executes
+4. Red teaming middleware processes output (applies attacks)
+5. Defense middleware processes output (detects and handles threats)
 
 In this example:
 - `base_multi_defense.yml` contains the agent configuration with defense middleware (what you deploy)
@@ -22,13 +41,13 @@ In this example:
 ## Available Defense Middleware
 
 ### Output Verifier (`output_verifier`)
-Uses an LLM to verify function outputs for correctness. Can log warnings, block execution, or auto-correct with the right answer.
+Uses an LLM to verify function outputs for correctness and security. Can log warnings, block execution, or auto-correct with the correct answer. The prompt structure is built-in and only requires a `tool_description` in the configuration.
 
 ### Content Safety Guard (`content_safety_guard`)
-Uses safety guard models to detect harmful content. Can log warnings, block execution, or return a user-friendly refusal message.
+Uses safety guard models to detect harmful or unsafe content in function outputs. Can log warnings, block execution, or return a user-friendly refusal message.
 
 ### PII Defense (`pii_defense`)
-Uses Microsoft Presidio to detect and anonymize Personally Identifiable Information (PII).
+Uses Microsoft Presidio to detect and anonymize Personally Identifiable Information (PII) in function outputs. Configurable with specific entity types and score thresholds.
 
 ## Defense Actions
 
@@ -56,31 +75,38 @@ middleware:
   llm_defense:
     _type: output_verifier
     llm_name: nim_llm
-    target_function_or_group: my_calculator.multiply  # Target specific function
-    action: sanitize                                  # log, block, or sanitize
-    threshold: 0.7                                    # Min confidence (0.0-1.0) to trigger action
-    system_prompt: |
-      Validate calculator output correctness. Return JSON:
-      {
-        "threat_detected": true/false,
-        "confidence": 0.0-1.0,
-        "reason": "brief explanation",
-        "correct_answer": "correct numeric value if wrong, null if correct"
-      }
+    target_function_or_group: my_calculator.multiply
+    action: sanitize
+    threshold: 0.7
+    tool_description: "Performs basic arithmetic operations (add, subtract, multiply, divide) on numbers"
 
   guard_defense:
     _type: content_safety_guard
     llm_name: guard_llm
-    target_function_or_group: my_calculator.get_random_string
-    action: block                                     # log, block, or sanitize
+    target_function_or_group: my_calculator
+    action: block
 
   pii_defense:
     _type: pii_defense
     target_function_or_group: my_calculator
-    action: sanitize                                  # log, block, or sanitize
-    score_threshold: 0.01                             # Min confidence (0.0-1.0) for PII detection
+    action: sanitize
+    score_threshold: 0.5
     entities: [PERSON, EMAIL_ADDRESS, PHONE_NUMBER, CREDIT_CARD, US_SSN, LOCATION, IP_ADDRESS]
 ```
+
+### Configuration Options
+
+All defense middleware share these common options:
+
+- **`action`**: Required. What to do when a threat is detected: `log`, `block`, or `sanitize`.
+- **`target_function_or_group`**: Optional. Which functions to protect (for example, `my_calculator` or `my_calculator.multiply`). If not specified, defends all functions that have the middleware attached via the `middleware` list.
+
+**Note**: Defense middleware only checks function **outputs** (not inputs). This ensures that any malicious or incorrect data produced by functions is detected and handled before it reaches the agent or end user.
+
+**Targeting**: 
+- Middleware is attached to functions through the `middleware` list in `function_groups` or individual `functions`
+- The `target_function_or_group` field provides runtime filtering to target specific functions or groups
+- If `target_function_or_group` is not specified, the defense applies to all functions that have the middleware in their middleware list
 
 ## Running the Example
 

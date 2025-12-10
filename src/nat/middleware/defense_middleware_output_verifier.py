@@ -50,17 +50,9 @@ class OutputVerifierMiddlewareConfig(DefenseMiddlewareConfig, name="output_verif
         description="Confidence threshold for threat detection (0.0-1.0)"
     )
     
-    system_prompt: str = Field(
-        default="""You are a function output verifier. Analyze outputs for correctness and security.
-
-When analyzing:
-1. Check if the output is correct given the input
-2. Look for suspicious or manipulated values
-3. If incorrect, provide the correct answer
-4. Report high confidence only when certain
-
-Be thorough and precise in your analysis.""",
-        description="System prompt for the LLM"
+    tool_description: Optional[str] = Field(
+        default=None,
+        description="Description of what the tool/function does (optional, helps LLM verify correctness)"
     )
 
 
@@ -68,7 +60,7 @@ class OutputVerifierMiddleware(DefenseMiddleware):
     """Verification middleware using an LLM for correctness and security.
     
     This middleware uses NAT's LLM system to verify function outputs for:
-    - Mathematical correctness
+    - Correctness and reasonableness
     - Security threats and malicious content
     - Providing automatic corrections when errors are detected
     """
@@ -113,35 +105,53 @@ class OutputVerifierMiddleware(DefenseMiddleware):
         
         return response_text
     
-    async def _analyze_content(self, content: Any, content_type: str, inputs: Any = None) -> dict:
+    async def _analyze_content(
+        self, 
+        content: Any, 
+        content_type: str, 
+        inputs: Any = None,
+        function_name: str | None = None
+    ) -> dict:
         """Check content for threats using the configured LLM.
         
         Args:
             content: The content to analyze
             content_type: Either 'input' or 'output' (for logging only)
             inputs: Optional function inputs for context (helps LLM calculate correct answers)
+            function_name: Name of the function being verified (for context)
         
         Returns:
             Detection result with threat info and should_block flag
         """
         content_str = str(content)
         
-        # Build prompt with inputs if available
+        # Build structured system prompt
+        system_prompt = """You are a function output verifier that validates correctness and detects security threats.
+
+Your task:
+1. Verify if the output is correct and reasonable given the function name and inputs
+2. Detect suspicious or manipulated values (extreme values, unexpected types, malicious content)
+3. If incorrect, provide the correct output
+4. Only report high confidence when certain
+
+Respond ONLY with valid JSON in this exact format:
+{"threat_detected": true/false, "confidence": 0.0-1.0, "reason": "brief explanation", "correct_answer": "correct value if wrong, null if correct"}"""
+        
+        # Build user prompt with function context
+        user_prompt_parts = []
+        
+        if function_name:
+            user_prompt_parts.append(f"Function: {function_name}")
+        
+        if self.config.tool_description:
+            user_prompt_parts.append(f"Description: {self.config.tool_description}")
+        
         if inputs is not None:
-            prompt = f"""Analyze the following for correctness and security threats.
-
-Function Inputs: {inputs}
-{content_type.capitalize()}: {content_str}
-
-Respond ONLY with valid JSON:
-{{"threat_detected": true/false, "confidence": 0.0-1.0, "reason": "explanation", "correct_answer": "corrected value if wrong, null otherwise"}}"""
-        else:
-            prompt = f"""Analyze the following for correctness and security threats.
-
-{content_type.capitalize()}: {content_str}
-
-Respond ONLY with valid JSON:
-{{"threat_detected": true/false, "confidence": 0.0-1.0, "reason": "explanation", "correct_answer": "corrected value if wrong, null otherwise"}}"""
+            user_prompt_parts.append(f"Inputs: {inputs}")
+        
+        user_prompt_parts.append(f"{content_type.capitalize()}: {content_str}")
+        
+        prompt = "\n".join(user_prompt_parts)
         
         response_text = None
         try:
@@ -150,7 +160,7 @@ Respond ONLY with valid JSON:
             
             # Call the LLM using LangChain's ainvoke method
             messages = [
-                {"role": "system", "content": self.config.system_prompt},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
             ]
             
@@ -211,14 +221,14 @@ Respond ONLY with valid JSON:
         logger.warning(
             "Output Verifier detected threat in %s: %s (confidence=%s)",
             context.name,
-            analysis_result['reason'],
-            analysis_result['confidence']
+            analysis_result.get('reason', 'Unknown'),
+            analysis_result.get('confidence', 0.0)
         )
         
         action = self.config.action
         
         if action == "block":
-            logger.info("Blocking %s for %s", analysis_result['content_type'], context.name)
+            logger.info("Blocking %s for %s", analysis_result.get('content_type', 'output'), context.name)
             return {"error": "Content blocked by security policy", "threat_detected": True}
         
         elif action == "sanitize":
@@ -246,7 +256,7 @@ Respond ONLY with valid JSON:
                 return {"error": "Content sanitized by security policy", "original_blocked": True}
         
         else:  # action == "log"
-            logger.warning("Threat logged for %s: %s", context.name, analysis_result['reason'])
+            logger.warning("Threat logged for %s: %s", context.name, analysis_result.get('reason', 'Unknown'))
             return content
     
     async def function_middleware_invoke(
@@ -273,9 +283,14 @@ Respond ONLY with valid JSON:
             # Call the function
             output = await call_next(value)
             
-            # Analyze output
+            # Check the output directly
             logger.debug("OutputVerifierMiddleware: Checking output for %s", context.name)
-            output_result = await self._analyze_content(output, "output", inputs=value)
+            output_result = await self._analyze_content(
+                output, 
+                "output", 
+                inputs=value,
+                function_name=context.name
+            )
             
             if output_result.get("should_block", False):
                 # _handle_threat includes auto-correction logic
@@ -317,7 +332,12 @@ Respond ONLY with valid JSON:
             # Final check after streaming completes
             if accumulated_output:
                 full_output = "".join(accumulated_output)
-                output_result = await self._analyze_content(full_output, "output", inputs=value)
+                output_result = await self._analyze_content(
+                    full_output, 
+                    "output", 
+                    inputs=value,
+                    function_name=context.name
+                )
                 if output_result.get("should_block", False):
                     logger.warning(
                         "Streaming output failed verification: %s",

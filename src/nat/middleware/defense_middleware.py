@@ -22,9 +22,9 @@ core logic based on its specific defense strategy (LLM-based, rule-based, etc.).
 """
 
 import logging
-from typing import Any, Optional, Union
+from typing import Any, Literal, Optional, Union
 
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.middleware import FunctionMiddlewareBaseConfig
@@ -35,24 +35,11 @@ logger = logging.getLogger(__name__)
 
 class DefenseMiddlewareConfig(FunctionMiddlewareBaseConfig):
     """Base configuration for defense middleware.
-    
-    Provides common configuration fields that most defense middleware share.
-    Not all fields are required - subclasses can override or add their own.
     """
     
     action: str = Field(
         default="log",
         description="Action to take when threat detected: 'log', 'block', or 'sanitize'"
-    )
-    
-    check_input: bool = Field(
-        default=False,
-        description="Check function input for threats"
-    )
-    
-    check_output: bool = Field(
-        default=True,
-        description="Check function output for threats"
     )
     
     llm_wrapper_type: Union[LLMFrameworkEnum, str] = Field(
@@ -110,8 +97,7 @@ class DefenseMiddleware(FunctionMiddleware):
         
         logger.info(
             f"{self.__class__.__name__} initialized: "
-            f"action={config.action}, check_input={config.check_input}, "
-            f"check_output={config.check_output}, target={config.target_function_or_group}"
+            f"action={config.action}, target={config.target_function_or_group}"
         )
     
     def _should_apply_defense(self, context_name: str) -> bool:

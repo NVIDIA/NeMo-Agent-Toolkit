@@ -124,7 +124,7 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
         Returns:
             True if content should be blocked
         """
-        return not parsed_result["is_safe"]
+        return not parsed_result.get("is_safe", True)
     
     async def _analyze_content(
         self, 
@@ -255,23 +255,15 @@ Answer Yes or No."""
         
         logger.debug("ContentSafetyGuardMiddleware: Applying defense to %s", context.name)
         
-        # Check input if configured
-        if self.config.check_input:
-            logger.debug("ContentSafetyGuardMiddleware: Checking input for %s", context.name)
-            input_result = await self._analyze_content(value, "input", context=context)
-            if input_result["should_block"]:
-                return await self._handle_threat(value, input_result, context)
-        
-        # Call the function (modified_input would be in context if needed)
+        # Call the function
         output = await call_next(value)
         
-        # Check output if configured (pass original input for context)
-        if self.config.check_output:
-            logger.debug("ContentSafetyGuardMiddleware: Checking output for %s", context.name)
-            output_result = await self._analyze_content(
-                output, "output", original_input=value, context=context
-            )
-            if output_result["should_block"]:
+        # Check output
+        logger.debug("ContentSafetyGuardMiddleware: Checking output for %s", context.name)
+        output_result = await self._analyze_content(
+            output, "output", original_input=value, context=context
+        )
+        if output_result.get("should_block", False):
                 logger.warning(
                     "ContentSafetyGuardMiddleware: Blocking output for %s (unsafe content detected)",
                     context.name
@@ -300,34 +292,21 @@ Answer Yes or No."""
                 yield chunk
             return
         
-        # Check input if configured
-        if self.config.check_input:
-            input_result = await self._analyze_content(value, "input", context=context)
-            if input_result["should_block"]:
-                handled = await self._handle_threat(value, input_result, context)
-                yield handled
-                return
+        # Stream and check output
+        # Accumulate chunks to analyze after streaming
+        accumulated_output = []
+        async for chunk in call_next(value):
+            accumulated_output.append(str(chunk))
+            yield chunk
         
-        # Stream and optionally check output
-        if self.config.check_output:
-            # Accumulate chunks to analyze after streaming
-            accumulated_output = []
-            async for chunk in call_next(value):
-                accumulated_output.append(str(chunk))
-                yield chunk
-            
-            # Final check after streaming completes
-            if accumulated_output:
-                full_output = "".join(accumulated_output)
-                output_result = await self._analyze_content(
-                    full_output, "output", original_input=value, context=context
+        # Final check after streaming completes
+        if accumulated_output:
+            full_output = "".join(accumulated_output)
+            output_result = await self._analyze_content(
+                full_output, "output", original_input=value, context=context
+            )
+            if output_result.get("should_block", False):
+                logger.warning(
+                    "Streaming output violated safety policy (unsafe content detected)"
                 )
-                if output_result["should_block"]:
-                    logger.warning(
-                        "Streaming output violated safety policy (unsafe content detected)"
-                    )
-        else:
-            # Just pass through without checking
-            async for chunk in call_next(value):
-                yield chunk
 

@@ -23,8 +23,6 @@ in function outputs using Microsoft Presidio.
 import logging
 from typing import Any, AsyncIterator, List, Optional
 
-from presidio_analyzer import AnalyzerEngine
-from presidio_anonymizer import AnonymizerEngine
 from presidio_anonymizer.entities import OperatorConfig
 from pydantic import Field
 
@@ -181,8 +179,9 @@ class PIIDefenseMiddleware(DefenseMiddleware):
         output_text = str(result)
         analysis_result = self._analyze_text(output_text)
 
-        if analysis_result["pii_detected"]:
-            entities_str = ", ".join([f"{k}({len(v)})" for k, v in analysis_result["entities"].items()])
+        if analysis_result.get("pii_detected", False):
+            entities = analysis_result.get("entities", {})
+            entities_str = ", ".join([f"{k}({len(v)})" for k, v in entities.items()])
             
             if self.config.action == "block":
                 logger.error("PII Defense blocking output of %s: %s", context.name, entities_str)
@@ -190,7 +189,7 @@ class PIIDefenseMiddleware(DefenseMiddleware):
             elif self.config.action == "sanitize":
                 logger.warning("PII Defense detected PII in output of %s: %s", context.name, entities_str)
                 logger.info("PII Defense anonymizing output for %s", context.name)
-                result = analysis_result["anonymized_text"]
+                result = analysis_result.get("anonymized_text", result)
             else:  # action == "log"
                 logger.warning("PII Defense detected PII in output of %s: %s", context.name, entities_str)
                 # No modification, just log
@@ -230,8 +229,9 @@ class PIIDefenseMiddleware(DefenseMiddleware):
             output_text = "".join(str(chunk) for chunk in collected_chunks)
             analysis_result = self._analyze_text(output_text)
 
-            if analysis_result["pii_detected"]:
-                entities_str = ", ".join([f"{k}({len(v)})" for k, v in analysis_result["entities"].items()])
+            if analysis_result.get("pii_detected", False):
+                entities = analysis_result.get("entities", {})
+                entities_str = ", ".join([f"{k}({len(v)})" for k, v in entities.items()])
                 
                 if self.config.action == "block":
                     logger.error("PII Defense blocking output of %s: %s", context.name, entities_str)
@@ -240,7 +240,8 @@ class PIIDefenseMiddleware(DefenseMiddleware):
                     logger.warning("PII Defense detected PII in output of %s: %s", context.name, entities_str)
                     logger.info("PII Defense anonymizing output for %s", context.name)
                     # Yield the anonymized text as a single chunk
-                    yield analysis_result["anonymized_text"]
+                    anonymized = analysis_result.get("anonymized_text", output_text)
+                    yield anonymized
                     return
                 else:  # action == "log"
                     logger.warning("PII Defense detected PII in output of %s: %s", context.name, entities_str)
