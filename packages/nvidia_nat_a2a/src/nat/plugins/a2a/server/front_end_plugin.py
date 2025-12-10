@@ -70,8 +70,21 @@ class A2AFrontEndPlugin(FrontEndBase[A2AFrontEndConfig]):
                             self.front_end_config.host,
                             self.front_end_config.port)
 
-                # Build the ASGI app and run with uvicorn
+                # Build the ASGI app
                 app = a2a_server.build()
+
+                # Add OAuth2 validation middleware if configured
+                if self.front_end_config.server_auth:
+                    from nat.plugins.a2a.server.oauth_middleware import OAuth2ValidationMiddleware
+
+                    app.add_middleware(OAuth2ValidationMiddleware, config=self.front_end_config.server_auth)
+                    logger.info(
+                        "OAuth2 token validation enabled for A2A server (issuer=%s, scopes=%s)",
+                        self.front_end_config.server_auth.issuer_url,
+                        self.front_end_config.server_auth.scopes,
+                    )
+
+                # Run with uvicorn
                 config = uvicorn.Config(
                     app,
                     host=self.front_end_config.host,
