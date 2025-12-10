@@ -16,8 +16,7 @@
 Configuration classes for the DPO Trajectory Builder.
 
 This module provides configuration for collecting preference data from workflows
-that produce scored candidate intermediate steps (e.g., dpo_candidate_move steps
-from the DPO Tic-Tac-Toe example).
+that produce scored TTC (Test-Time Compute) intermediate steps with TTCEventData.
 """
 
 from pydantic import Field
@@ -30,16 +29,20 @@ class DPOTrajectoryBuilderConfig(TrajectoryBuilderConfig, name="dpo_traj_builder
     """
     Configuration for the DPO (Direct Preference Optimization) Trajectory Builder.
 
-    This builder collects preference pairs from workflows that produce scored
-    candidate intermediate steps, such as the DPO Tic-Tac-Toe example. It groups
-    candidates by turn_id and creates preference pairs based on score differences.
+    This builder collects preference pairs from workflows that produce TTC_END
+    intermediate steps with TTCEventData. It uses the structured TTCEventData
+    model to extract turn_id, candidate_index, score, input (prompt), and
+    output (response) - no dictionary key configuration needed.
+
+    The builder groups candidates by turn_id and creates preference pairs based
+    on score differences.
 
     Example YAML configuration:
     ```yaml
     trajectory_builders:
       dpo_builder:
         _type: dpo_traj_builder
-        custom_step_name: dpo_candidate_move
+        ttc_step_name: dpo_candidate_move
         exhaustive_pairs: true
         min_score_diff: 0.05
         max_pairs_per_turn: 5
@@ -47,86 +50,45 @@ class DPOTrajectoryBuilderConfig(TrajectoryBuilderConfig, name="dpo_traj_builder
     """
 
     # === Step Filtering ===
-    custom_step_name: str = Field(
+    ttc_step_name: str = Field(
         default="dpo_candidate_move",
-        description="Name of the CUSTOM intermediate step to collect. "
-        "The builder filters for steps with this name.",
+        description="Name of the TTC intermediate step to collect. "
+        "The builder filters for TTC_END events with this name.",
     )
 
     # === Pair Generation Modes ===
     exhaustive_pairs: bool = Field(
         default=True,
-        description="If True, generate all pairwise comparisons where score(A) > score(B). "
-        "If False, only generate best vs worst pair per turn.",
+        description="If True, generate all pairwise comparisons where "
+        "score(A) > score(B). If False, only generate best vs worst pair.",
     )
 
     min_score_diff: float = Field(
         default=0.0,
         ge=0.0,
-        description="Minimum score difference required to create a preference pair. "
-        "Pairs with smaller differences are filtered out to avoid trivial comparisons.",
+        description="Minimum score difference required to create a preference "
+        "pair. Pairs with smaller differences are filtered out.",
     )
 
     max_pairs_per_turn: int | None = Field(
         default=None,
         ge=1,
         description="Maximum number of preference pairs to generate per turn. "
-        "If None, no limit is applied. Pairs are sorted by score difference (highest first).",
-    )
-
-    # === Prompt Formatting ===
-    include_system_prompt: bool = Field(
-        default=False,
-        description="Whether to prepend the system prompt to the episode. "
-        "If True, looks for system_prompt in intermediate step metadata.",
-    )
-
-    system_prompt_key: str = Field(
-        default="system_prompt",
-        description="Metadata key for the system prompt in intermediate steps.",
-    )
-
-    # === Field Mappings (for flexibility with different workflows) ===
-    turn_id_key: str = Field(
-        default="turn_id",
-        description="Metadata key for the turn identifier. "
-        "Candidates with the same turn_id compete for the same prompt.",
-    )
-
-    score_key: str = Field(
-        default="score",
-        description="Metadata key for the candidate score. "
-        "Higher scores indicate better candidates.",
-    )
-
-    prompt_key: str = Field(
-        default="prompt",
-        description="Metadata key for the input prompt. "
-        "This is the input that produced the candidate response.",
-    )
-
-    response_key: str = Field(
-        default="raw_llm_response",
-        description="Metadata key for the model response/completion.",
-    )
-
-    candidate_index_key: str = Field(
-        default="candidate_index",
-        description="Metadata key for the candidate index within a turn.",
+        "If None, no limit. Pairs sorted by score difference (highest first).",
     )
 
     # === Reward Computation ===
     reward_from_score_diff: bool = Field(
         default=True,
-        description="If True, compute trajectory reward as score difference (chosen - rejected). "
-        "If False, use chosen score directly as reward.",
+        description="If True, compute trajectory reward as score difference "
+        "(chosen - rejected). If False, use chosen score directly as reward.",
     )
 
     # === Validation ===
     require_multiple_candidates: bool = Field(
         default=True,
-        description="If True, skip turns with only one candidate (no preference signal). "
-        "If False, include single-candidate turns with a dummy rejected response.",
+        description="If True, skip turns with only one candidate (no preference "
+        "signal). If False, include single-candidate turns.",
     )
 
     @model_validator(mode="after")

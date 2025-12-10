@@ -80,6 +80,7 @@ class StreamEventData(BaseModel):
     chunk: typing.Any | None = None
     payload: typing.Any | None = None  # Raw generation payload for downstream processing
 
+
 class TTCEventData(StreamEventData):
     """
     TTCEventData is a data model that represents the data field in a TTC event.

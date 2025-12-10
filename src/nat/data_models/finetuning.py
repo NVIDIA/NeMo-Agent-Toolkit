@@ -122,12 +122,14 @@ class EpisodeItem(BaseModel):
             raise ValueError("logprobs must be provided for assistant role.")
         return self
 
+
 class OpenAIMessage(BaseModel):
     """
     A message in the OpenAI chat format.
     """
     role: str = Field(description="The role of the message (e.g., 'user', 'assistant').")
     content: str = Field(description="The content of the message.")
+
 
 class DPOItem(BaseModel):
     """

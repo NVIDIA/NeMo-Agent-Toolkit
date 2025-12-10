@@ -16,15 +16,15 @@
 DPO (Direct Preference Optimization) Trajectory Builder.
 
 This module provides a trajectory builder that collects preference data from
-workflows that produce scored candidate intermediate steps (e.g., dpo_candidate_move
-steps from the DPO Tic-Tac-Toe example).
+workflows that produce TTC_END intermediate steps with TTCEventData.
 
 The builder:
 1. Runs evaluation to collect intermediate steps
-2. Filters for CUSTOM steps with the configured name
-3. Groups candidates by turn_id
-4. Generates preference pairs based on score differences
-5. Builds trajectories in NAT's format for DPO training
+2. Filters for TTC_END steps with the configured name
+3. Extracts data from TTCEventData (turn_id, candidate_index, score, input, output)
+4. Groups candidates by turn_id
+5. Generates preference pairs based on score differences
+6. Builds trajectories with DPOItem episodes for DPO training
 """
 
 from __future__ import annotations
@@ -38,13 +38,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from nat.data_models.finetuning import EpisodeItem
-from nat.data_models.finetuning import EpisodeItemRole
+from nat.data_models.finetuning import DPOItem
+from nat.data_models.finetuning import OpenAIMessage
 from nat.data_models.finetuning import Trajectory
 from nat.data_models.finetuning import TrajectoryCollection
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepCategory
 from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import TTCEventData
 from nat.eval.config import EvaluationRunOutput
 from nat.eval.evaluator.evaluator_model import EvalInputItem
 from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
@@ -52,6 +53,9 @@ from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 from .config import DPOTrajectoryBuilderConfig
 
 logger = logging.getLogger(__name__)
+
+# Type alias for prompt which can be string or list of OpenAI messages
+PromptType = list[OpenAIMessage] | str
 
 # =============================================================================
 # Data Classes
@@ -61,7 +65,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CandidateStep:
     """
-    Parsed candidate from an intermediate step.
+    Parsed candidate from a TTC intermediate step.
 
     Represents a single candidate response that was generated and scored
     for a particular turn in the workflow.
@@ -76,17 +80,14 @@ class CandidateStep:
     candidate_index: int
     """Index of this candidate within the turn."""
 
-    prompt: str
-    """Input prompt that produced this response."""
+    prompt: PromptType
+    """Input prompt that produced this response (string or list of OpenAIMessage)."""
 
     response: str
     """Model's response/completion."""
 
     score: float
     """Score assigned to this candidate (higher is better)."""
-
-    is_selected: bool
-    """Whether this candidate was selected as the final response."""
 
     raw_metadata: dict[str, Any] = field(default_factory=dict)
     """Original metadata from the intermediate step."""
@@ -107,7 +108,7 @@ class PreferencePair:
     turn_id: str
     """Identifier for the turn."""
 
-    prompt: str
+    prompt: PromptType
     """Input prompt (same for both responses)."""
 
     chosen_response: str
@@ -144,22 +145,24 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
     """
     Trajectory builder for DPO (Direct Preference Optimization) training.
 
-    This builder collects preference pairs from workflows that produce scored
-    candidate intermediate steps. It groups candidates by turn_id and creates
-    preference pairs based on score differences.
+    This builder collects preference pairs from workflows that produce TTC_END
+    intermediate steps with TTCEventData. It uses the structured data model
+    to extract turn_id, candidate_index, score, input (prompt), and output.
 
     Key features:
-    - Flexible field mapping for different workflow formats
+    - Uses TTCEventData model directly (no brittle dictionary key configuration)
+    - Supports prompts as strings or list of OpenAIMessage
     - Exhaustive or best-vs-worst pair generation modes
     - Configurable score difference filtering
     - Grouping by example for curriculum learning
+    - Builds trajectories with DPOItem episodes
 
     Example workflow integration:
     ```yaml
     trajectory_builders:
       dpo_builder:
         _type: dpo_traj_builder
-        custom_step_name: dpo_candidate_move
+        ttc_step_name: dpo_candidate_move
         exhaustive_pairs: true
         min_score_diff: 0.05
     ```
@@ -200,7 +203,7 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
         logger.info("Starting DPO evaluation run: %s", run_id)
         logger.info(
             "Configuration: step_name=%s, exhaustive=%s, min_diff=%.3f",
-            self.config.custom_step_name,
+            self.config.ttc_step_name,
             self.config.exhaustive_pairs,
             self.config.min_score_diff,
         )
@@ -221,13 +224,13 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
 
     async def finalize(self, run_id: str, meta: dict | None = None) -> TrajectoryCollection:
         """
-        Wait for evaluation, collect CUSTOM steps, and build DPO trajectories.
+        Wait for evaluation, collect TTC steps, and build DPO trajectories.
 
         This method:
         1. Waits for the evaluation run to complete
-        2. Collects and groups candidates by turn_id
+        2. Collects and groups candidates by turn_id using TTCEventData
         3. Generates preference pairs
-        4. Builds trajectories in NAT's format
+        4. Builds trajectories with DPOItem episodes
         5. Groups trajectories by example for curriculum learning
 
         Args:
@@ -277,7 +280,7 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
             del self.evaluation_runs[run_id]
             return TrajectoryCollection(trajectories=[], run_id=run_id)
 
-        # Step 3: Build trajectories
+        # Step 3: Build trajectories with DPOItem episodes
         trajectories = self._build_trajectories(pairs)
         self._metrics["total_trajectories"] = len(trajectories)
 
@@ -325,7 +328,7 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
             output_dir: Optional output directory override.
         """
         # Use default output directory if not provided
-        out_dir = Path(output_dir) if output_dir else Path("./.tmp/nat/finetuning/dpo_trajectory_builder")
+        out_dir = (Path(output_dir) if output_dir else Path("./.tmp/nat/finetuning/dpo_trajectory_builder"))
         out_dir.mkdir(parents=True, exist_ok=True)
 
         # Create log file
@@ -336,7 +339,7 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
             "timestamp": datetime.now().isoformat(),
             "run_id": run_id,
             "config": {
-                "custom_step_name": self.config.custom_step_name,
+                "ttc_step_name": self.config.ttc_step_name,
                 "exhaustive_pairs": self.config.exhaustive_pairs,
                 "min_score_diff": self.config.min_score_diff,
                 "max_pairs_per_turn": self.config.max_pairs_per_turn,
@@ -361,12 +364,12 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
 
     def _collect_candidates(self, eval_result: EvaluationRunOutput) -> dict[str, list[CandidateStep]]:
         """
-        Extract CUSTOM intermediate steps and group by turn_id.
+        Extract TTC_END intermediate steps and group by turn_id.
 
         This method:
         1. Iterates through all evaluation input items
-        2. Filters for CUSTOM_END steps with the configured name
-        3. Parses metadata into CandidateStep objects
+        2. Filters for TTC_END steps with the configured name
+        3. Extracts data from TTCEventData model directly
         4. Groups candidates by (example_id, turn_id)
 
         Args:
@@ -381,17 +384,17 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
         input_items_map: dict[str, EvalInputItem] = {item.id: item for item in eval_result.eval_input.eval_input_items}
 
         for example_id, input_item in input_items_map.items():
-            # Filter for CUSTOM_END steps with matching name
+            # Filter for TTC_END steps with matching name
             for step in input_item.trajectory:
                 if not self._is_target_step(step):
                     continue
 
-                # Parse candidate from step metadata
+                # Parse candidate from TTCEventData
                 candidate = self._parse_candidate(example_id, step)
                 if candidate is None:
                     continue
 
-                self._metrics["total_candidates"] = self._metrics.get("total_candidates", 0) + 1
+                self._metrics["total_candidates"] = (self._metrics.get("total_candidates", 0) + 1)
 
                 # Group by (example_id, turn_id)
                 turn_key = f"{example_id}::{candidate.turn_id}"
@@ -409,21 +412,20 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
 
     def _is_target_step(self, step: IntermediateStep) -> bool:
         """
-        Check if an intermediate step is a target CUSTOM step.
+        Check if an intermediate step is a target TTC step.
 
         Args:
             step: The intermediate step to check.
 
         Returns:
-            True if this is a CUSTOM_END step with the configured name.
+            True if this is a TTC_END step with the configured name.
         """
-        return (step.event_category == IntermediateStepCategory.CUSTOM
-                and step.event_type == IntermediateStepType.CUSTOM_END
-                and step.payload.name == self.config.custom_step_name)
+        return (step.event_category == IntermediateStepCategory.TTC and step.event_type == IntermediateStepType.TTC_END
+                and step.payload.name == self.config.ttc_step_name)
 
     def _parse_candidate(self, example_id: str, step: IntermediateStep) -> CandidateStep | None:
         """
-        Parse a CandidateStep from an intermediate step.
+        Parse a CandidateStep from a TTC intermediate step using TTCEventData.
 
         Args:
             example_id: The example ID this step belongs to.
@@ -432,58 +434,117 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
         Returns:
             CandidateStep if parsing succeeds, None otherwise.
         """
-        metadata = step.payload.metadata
-        if metadata is None:
-            logger.warning("Step has no metadata, skipping: %s", step.payload.UUID)
+        # Get TTCEventData from step.payload.data
+        data = step.payload.data
+        if data is None:
+            logger.warning("Step has no data field, skipping: %s", step.payload.UUID)
             return None
 
-        # Handle both dict and TraceMetadata types
-        if hasattr(metadata, "model_dump"):
-            metadata = metadata.model_dump()
+        # Validate that we have TTCEventData (or compatible dict)
+        if isinstance(data, TTCEventData):
+            ttc_data = data
+        elif isinstance(data, dict):
+            # Try to parse as TTCEventData
+            try:
+                ttc_data = TTCEventData(**data)
+            except Exception as e:
+                logger.warning("Failed to parse TTCEventData from dict: %s", e)
+                return None
+        else:
+            logger.warning("Unexpected data type %s, expected TTCEventData", type(data))
+            return None
 
-        # Extract required fields using configured keys
+        # Extract required fields from TTCEventData
         try:
-            turn_id = metadata.get(self.config.turn_id_key)
+            turn_id = ttc_data.turn_id
             if turn_id is None:
                 logger.warning(
-                    "Step missing turn_id key '%s', skipping: %s",
-                    self.config.turn_id_key,
+                    "TTCEventData missing turn_id, skipping: %s",
                     step.payload.UUID,
                 )
                 return None
 
-            score = metadata.get(self.config.score_key)
+            score = ttc_data.score
             if score is None:
                 logger.warning(
-                    "Step missing score key '%s', skipping: %s",
-                    self.config.score_key,
+                    "TTCEventData missing score, skipping: %s",
                     step.payload.UUID,
                 )
                 return None
 
-            prompt = metadata.get(self.config.prompt_key, "")
-            response = metadata.get(self.config.response_key, "")
-            candidate_index = metadata.get(self.config.candidate_index_key, 0)
-            is_selected = metadata.get("is_selected", False)
+            candidate_index = ttc_data.candidate_index or 0
+
+            # Get prompt from TTCEventData.input
+            # This can be a string or list of OpenAIMessage
+            prompt = self._extract_prompt(ttc_data.input)
+
+            # Get response from TTCEventData.output
+            response = str(ttc_data.output) if ttc_data.output else ""
+
+            # Get raw metadata for additional context
+            raw_metadata = {}
+            if step.payload.metadata:
+                if hasattr(step.payload.metadata, "model_dump"):
+                    raw_metadata = step.payload.metadata.model_dump()
+                elif isinstance(step.payload.metadata, dict):
+                    raw_metadata = step.payload.metadata
 
             return CandidateStep(
                 example_id=str(example_id),
                 turn_id=str(turn_id),
                 candidate_index=int(candidate_index),
-                prompt=str(prompt),
-                response=str(response),
+                prompt=prompt,
+                response=response,
                 score=float(score),
-                is_selected=bool(is_selected),
-                raw_metadata=metadata,
+                raw_metadata=raw_metadata,
             )
 
-        except (KeyError, TypeError, ValueError) as e:
+        except (TypeError, ValueError) as e:
             logger.warning(
                 "Failed to parse candidate from step %s: %s",
                 step.payload.UUID,
                 e,
             )
             return None
+
+    def _extract_prompt(self, input_data: Any) -> PromptType:
+        """
+        Extract prompt from TTCEventData.input.
+
+        Handles both string prompts and list of OpenAIMessage.
+
+        Args:
+            input_data: The input field from TTCEventData.
+
+        Returns:
+            String prompt or list of OpenAIMessage.
+        """
+        if input_data is None:
+            return ""
+
+        if isinstance(input_data, str):
+            return input_data
+
+        if isinstance(input_data, list):
+            # Try to convert to list of OpenAIMessage
+            messages: list[OpenAIMessage] = []
+            for item in input_data:
+                if isinstance(item, OpenAIMessage):
+                    messages.append(item)
+                elif isinstance(item, dict):
+                    # Try to parse as OpenAIMessage
+                    try:
+                        messages.append(OpenAIMessage(**item))
+                    except Exception:
+                        # If parsing fails, convert entire input to string
+                        return str(input_data)
+                else:
+                    # Unknown type, convert to string
+                    return str(input_data)
+            return messages
+
+        # Fallback: convert to string
+        return str(input_data)
 
     def _generate_preference_pairs(self, candidates_by_turn: dict[str, list[CandidateStep]]) -> list[PreferencePair]:
         """
@@ -560,8 +621,6 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
                         chosen_index=chosen.candidate_index,
                         rejected_index=rejected.candidate_index,
                         metadata={
-                            "chosen_is_selected": chosen.is_selected,
-                            "rejected_is_selected": rejected.is_selected,
                             "chosen_raw_metadata": chosen.raw_metadata,
                             "rejected_raw_metadata": rejected.raw_metadata,
                         },
@@ -611,8 +670,6 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
                 chosen_index=chosen.candidate_index,
                 rejected_index=rejected.candidate_index,
                 metadata={
-                    "chosen_is_selected": chosen.is_selected,
-                    "rejected_is_selected": rejected.is_selected,
                     "num_candidates": len(sorted_candidates),
                 },
             )
@@ -620,66 +677,28 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
 
     def _build_trajectories(self, pairs: list[PreferencePair]) -> list[Trajectory]:
         """
-        Convert preference pairs to Trajectory format.
+        Convert preference pairs to Trajectory format with DPOItem episodes.
 
         Each trajectory contains:
-        - episode: [user_prompt, assistant_chosen_response]
+        - episode: [DPOItem] with prompt, chosen_response, rejected_response
         - reward: score_diff (if reward_from_score_diff) or chosen_score
-        - metadata: Contains rejected_response and pair information
-
-        The rejected response is stored in metadata because NAT's Trajectory
-        format represents a single rollout. DPO training backends should extract
-        the rejected response from metadata.
+        - metadata: Contains pair information for tracking
 
         Args:
             pairs: List of preference pairs.
 
         Returns:
-            List of trajectories.
+            List of trajectories with DPOItem episodes.
         """
         trajectories: list[Trajectory] = []
 
         for pair in pairs:
-            # Build episode items
-            episode: list[EpisodeItem] = []
-
-            # Optionally add system prompt
-            if self.config.include_system_prompt:
-                system_prompt = pair.metadata.get(
-                    self.config.system_prompt_key,
-                    pair.metadata.get("chosen_raw_metadata", {}).get(self.config.system_prompt_key),
-                )
-                if system_prompt:
-                    episode.append(
-                        EpisodeItem(
-                            role=EpisodeItemRole.SYSTEM,
-                            content=str(system_prompt),
-                            logprobs=None,
-                            metadata=None,
-                        ))
-
-            # Add user prompt
-            episode.append(EpisodeItem(
-                role=EpisodeItemRole.USER,
-                content=pair.prompt,
-                logprobs=None,
-                metadata=None,
-            ))
-
-            # Add chosen assistant response
-            # Note: We use an empty dict for logprobs to satisfy EpisodeItem validation
-            # DPO training doesn't require logprobs from the data (it computes them)
-            episode.append(
-                EpisodeItem(
-                    role=EpisodeItemRole.ASSISTANT,
-                    content=pair.chosen_response,
-                    logprobs={},  # Empty dict satisfies validation
-                    metadata={
-                        "dpo_chosen": True,
-                        "score": pair.chosen_score,
-                        "candidate_index": pair.chosen_index,
-                    },
-                ))
+            # Create DPOItem from preference pair
+            dpo_item = DPOItem(
+                prompt=pair.prompt,
+                chosen_response=pair.chosen_response,
+                rejected_response=pair.rejected_response,
+            )
 
             # Compute reward
             if self.config.reward_from_score_diff:
@@ -687,23 +706,21 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
             else:
                 reward = pair.chosen_score
 
-            # Build trajectory with rejected response in metadata
+            # Build trajectory with DPOItem episode
             trajectory = Trajectory(
-                episode=episode,
+                episode=[dpo_item],
                 reward=reward,
                 shaped_rewards=None,
                 metadata={
                     # DPO-specific fields
                     "dpo_type": "preference_pair",
-                    "rejected_response": pair.rejected_response,
-                    "rejected_score": pair.rejected_score,
-                    "rejected_index": pair.rejected_index,
                     "score_diff": pair.score_diff,  # Tracking fields
                     "example_id": pair.example_id,
                     "turn_id": pair.turn_id,
-                    "prompt": pair.prompt,
                     "chosen_score": pair.chosen_score,
-                    "chosen_index": pair.chosen_index,  # Additional metadata
+                    "rejected_score": pair.rejected_score,
+                    "chosen_index": pair.chosen_index,
+                    "rejected_index": pair.rejected_index,  # Additional metadata
                     **pair.metadata,
                 },
             )

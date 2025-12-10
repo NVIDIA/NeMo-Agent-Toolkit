@@ -37,32 +37,24 @@ Example:
 """
 
 # Re-export main clients for convenience
-from .customizer import (
-    AsyncCustomizerClient,
-    CustomizerAPIError,
-    CustomizerClient,
-)
-from .deployment import (
-    AsyncDeploymentClient,
-    DeploymentAPIError,
-    DeploymentClient,
-)
-from .entity_store import (
-    AsyncEntityStoreClient,
-    EntityStoreAPIError,
-    EntityStoreClient,
-)
+from .customizer import AsyncCustomizerClient
+from .customizer import CustomizerAPIError
+from .customizer import CustomizerClient
+from .deployment import AsyncDeploymentClient
+from .deployment import DeploymentAPIError
+from .deployment import DeploymentClient
+from .entity_store import AsyncEntityStoreClient
+from .entity_store import EntityStoreAPIError
+from .entity_store import EntityStoreClient
 
 __all__ = [
     # Customizer API
     "CustomizerClient",
     "AsyncCustomizerClient",
-    "CustomizerAPIError",
-    # Deployment Management API
+    "CustomizerAPIError",  # Deployment Management API
     "DeploymentClient",
     "AsyncDeploymentClient",
-    "DeploymentAPIError",
-    # Entity Store API
+    "DeploymentAPIError",  # Entity Store API
     "EntityStoreClient",
     "AsyncEntityStoreClient",
     "EntityStoreAPIError",

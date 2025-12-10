@@ -66,8 +66,7 @@ class ChooseMoveOutput(BaseModel):
     col: int = Field(description="0-based column index of the move")
     raw_response: str = Field(description="Raw LLM response text")
     messages: list[OpenAIMessage] = Field(
-        description="Full conversation history (system, user, assistant messages) that produced this response"
-    )
+        description="Full conversation history (system, user, assistant messages) that produced this response")
 
 
 class ChooseMoveConfig(FunctionBaseConfig, name="choose_move"):
@@ -172,9 +171,7 @@ async def choose_move_function(config: ChooseMoveConfig, builder: Builder):
                 OpenAIMessage(role="system", content=get_system_prompt(player_symbol)),
                 OpenAIMessage(role="user", content=board_str),
             ]
-            return ChooseMoveOutput(
-                row=row, col=col, raw_response=raw_response, messages=openai_messages
-            )
+            return ChooseMoveOutput(row=row, col=col, raw_response=raw_response, messages=openai_messages)
 
         # === LLM mode: use the LLM to generate a move ===
         # Build chain for this player symbol

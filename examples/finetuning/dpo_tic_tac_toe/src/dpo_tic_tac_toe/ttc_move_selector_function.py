@@ -38,7 +38,6 @@ from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import TTCEventData
-from nat.data_models.finetuning import DPOItem
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
 from nat.experimental.test_time_compute.models.ttc_item import TTCItem

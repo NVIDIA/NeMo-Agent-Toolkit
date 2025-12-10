@@ -22,17 +22,18 @@ from unittest.mock import patch
 
 import pytest
 
-from nat.data_models.finetuning import EpisodeItemRole
+from nat.data_models.finetuning import DPOItem
 from nat.data_models.finetuning import Trajectory
 from nat.data_models.finetuning import TrajectoryCollection
 from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import TTCEventData
 from nat.eval.evaluator.evaluator_model import EvalInput
 from nat.eval.evaluator.evaluator_model import EvalInputItem
 from nat.plugins.customizer.dpo.dpo_trajectory_builder import CandidateStep
 from nat.plugins.customizer.dpo.dpo_trajectory_builder import DPOTrajectoryBuilder
 from nat.plugins.customizer.dpo.dpo_trajectory_builder import PreferencePair
 
-from .conftest import create_candidate_metadata
+from .conftest import create_candidate_ttc_data
 from .conftest import create_intermediate_step
 
 
@@ -48,7 +49,6 @@ class TestCandidateStep:
             prompt="Test prompt",
             response="Test response",
             score=0.85,
-            is_selected=True,
             raw_metadata={"key": "value"},
         )
 
@@ -58,7 +58,6 @@ class TestCandidateStep:
         assert candidate.prompt == "Test prompt"
         assert candidate.response == "Test response"
         assert candidate.score == 0.85
-        assert candidate.is_selected is True
         assert candidate.raw_metadata == {"key": "value"}
 
     def test_candidate_step_default_metadata(self):
@@ -70,10 +69,30 @@ class TestCandidateStep:
             prompt="Test",
             response="Response",
             score=0.5,
-            is_selected=False,
         )
 
         assert candidate.raw_metadata == {}
+
+    def test_candidate_step_with_openai_messages(self):
+        """Test CandidateStep with OpenAI message list as prompt."""
+        from nat.data_models.finetuning import OpenAIMessage
+
+        messages = [
+            OpenAIMessage(role="system", content="You are helpful."),
+            OpenAIMessage(role="user", content="Hello"),
+        ]
+
+        candidate = CandidateStep(
+            example_id="ex_1",
+            turn_id="turn_0",
+            candidate_index=0,
+            prompt=messages,
+            response="Hi there!",
+            score=0.8,
+        )
+
+        assert isinstance(candidate.prompt, list)
+        assert len(candidate.prompt) == 2
 
 
 class TestPreferencePair:
@@ -197,28 +216,24 @@ class TestDPOTrajectoryBuilder:
             await dpo_builder.finalize(run_id="unknown_run")
 
     async def test_finalize_with_trajectories(self, dpo_builder, mock_eval_result):
-        """Test finalizing and building trajectories from evaluation results."""
+        """Test finalizing and building trajectories from eval results."""
 
-        # Create a completed task using async function
         async def return_result():
             return mock_eval_result
 
         task = asyncio.create_task(return_result())
-        await asyncio.sleep(0)  # Let task complete
+        await asyncio.sleep(0)
         dpo_builder.evaluation_runs["test_run"] = task
 
         collection = await dpo_builder.finalize(run_id="test_run", meta={})
 
         assert isinstance(collection, TrajectoryCollection)
         assert collection.run_id == "test_run"
-        # Should have trajectories (3 candidates = 3 pairs in exhaustive mode)
         assert len(collection.trajectories) > 0
-        # Verify cleanup
         assert "test_run" not in dpo_builder.evaluation_runs
 
     async def test_finalize_empty_result(self, dpo_builder):
         """Test finalizing when no candidates found."""
-        # Create eval result with no matching steps
         mock_output = MagicMock()
         mock_output.eval_input.eval_input_items = []
 
@@ -255,50 +270,45 @@ class TestDPOTrajectoryBuilder:
     # =========================================================================
 
     def test_is_target_step_matching(self, dpo_builder):
-        """Test identifying matching CUSTOM steps."""
+        """Test identifying matching TTC_END steps."""
+        ttc_data = create_candidate_ttc_data("t0", 0, 0.5, "prompt", "response")
         step = create_intermediate_step(
             "dpo_candidate_move",
-            {
-                "turn_id": "t0", "score": 0.5
-            },
-            IntermediateStepType.CUSTOM_END,
+            ttc_data,
+            step_type=IntermediateStepType.TTC_END,
         )
 
         assert dpo_builder._is_target_step(step) is True
 
     def test_is_target_step_wrong_name(self, dpo_builder):
         """Test rejecting steps with wrong name."""
+        ttc_data = create_candidate_ttc_data("t0", 0, 0.5, "prompt", "response")
         step = create_intermediate_step(
             "other_step",
-            {
-                "turn_id": "t0", "score": 0.5
-            },
-            IntermediateStepType.CUSTOM_END,
+            ttc_data,
+            step_type=IntermediateStepType.TTC_END,
         )
 
         assert dpo_builder._is_target_step(step) is False
 
     def test_is_target_step_wrong_category(self, dpo_builder):
-        """Test rejecting steps with wrong category (via different event_type)."""
-        # Category is derived from event_type, so we use LLM_END which gives LLM category
+        """Test rejecting steps with wrong category."""
+        ttc_data = create_candidate_ttc_data("t0", 0, 0.5, "prompt", "response")
         step = create_intermediate_step(
             "dpo_candidate_move",
-            {
-                "turn_id": "t0", "score": 0.5
-            },
-            IntermediateStepType.LLM_END,  # This gives category=LLM, not CUSTOM
+            ttc_data,
+            step_type=IntermediateStepType.LLM_END,
         )
 
         assert dpo_builder._is_target_step(step) is False
 
     def test_is_target_step_wrong_type(self, dpo_builder):
-        """Test rejecting steps with wrong type."""
+        """Test rejecting steps with wrong type (START instead of END)."""
+        ttc_data = create_candidate_ttc_data("t0", 0, 0.5, "prompt", "response")
         step = create_intermediate_step(
             "dpo_candidate_move",
-            {
-                "turn_id": "t0", "score": 0.5
-            },
-            IntermediateStepType.CUSTOM_START,  # Wrong type (START instead of END)
+            ttc_data,
+            step_type=IntermediateStepType.TTC_START,
         )
 
         assert dpo_builder._is_target_step(step) is False
@@ -308,9 +318,9 @@ class TestDPOTrajectoryBuilder:
     # =========================================================================
 
     def test_parse_candidate_success(self, dpo_builder):
-        """Test successfully parsing a candidate from a step."""
-        metadata = create_candidate_metadata("turn_0", 0, 0.85, "Test prompt", "Test response", True)
-        step = create_intermediate_step("dpo_candidate_move", metadata)
+        """Test successfully parsing a candidate from a TTC step."""
+        ttc_data = create_candidate_ttc_data("turn_0", 0, 0.85, "Test prompt", "Test response")
+        step = create_intermediate_step("dpo_candidate_move", ttc_data)
 
         candidate = dpo_builder._parse_candidate("ex_1", step)
 
@@ -321,12 +331,16 @@ class TestDPOTrajectoryBuilder:
         assert candidate.score == 0.85
         assert candidate.prompt == "Test prompt"
         assert candidate.response == "Test response"
-        assert candidate.is_selected is True
 
     def test_parse_candidate_missing_turn_id(self, dpo_builder):
         """Test parsing fails when turn_id is missing."""
-        metadata = {"score": 0.5, "prompt": "test"}  # No turn_id
-        step = create_intermediate_step("dpo_candidate_move", metadata)
+        ttc_data = TTCEventData(
+            turn_id=None,  # Missing turn_id
+            score=0.5,
+            input="test",
+            output="response",
+        )
+        step = create_intermediate_step("dpo_candidate_move", ttc_data)
 
         candidate = dpo_builder._parse_candidate("ex_1", step)
 
@@ -334,33 +348,82 @@ class TestDPOTrajectoryBuilder:
 
     def test_parse_candidate_missing_score(self, dpo_builder):
         """Test parsing fails when score is missing."""
-        metadata = {"turn_id": "t0", "prompt": "test"}  # No score
-        step = create_intermediate_step("dpo_candidate_move", metadata)
+        ttc_data = TTCEventData(
+            turn_id="t0",
+            score=None,  # Missing score
+            input="test",
+            output="response",
+        )
+        step = create_intermediate_step("dpo_candidate_move", ttc_data)
 
         candidate = dpo_builder._parse_candidate("ex_1", step)
 
         assert candidate is None
 
-    def test_parse_candidate_no_metadata(self, dpo_builder):
-        """Test parsing fails when metadata is None."""
-        step = create_intermediate_step("dpo_candidate_move", {})
-        step.payload.metadata = None
+    def test_parse_candidate_no_data(self, dpo_builder):
+        """Test parsing fails when data is None."""
+        ttc_data = create_candidate_ttc_data("t0", 0, 0.5)
+        step = create_intermediate_step("dpo_candidate_move", ttc_data)
+        step.payload.data = None
 
         candidate = dpo_builder._parse_candidate("ex_1", step)
 
         assert candidate is None
 
-    def test_parse_candidate_with_trace_metadata(self, dpo_builder):
-        """Test parsing with TraceMetadata (has model_dump)."""
-        metadata = MagicMock()
-        metadata.model_dump.return_value = create_candidate_metadata("turn_0", 1, 0.7, "Prompt", "Response")
-        step = create_intermediate_step("dpo_candidate_move", {})
-        step.payload.metadata = metadata
+    def test_parse_candidate_with_openai_messages(self, dpo_builder):
+        """Test parsing candidate with OpenAI message list as input."""
+        messages = [
+            {
+                "role": "system", "content": "You are helpful."
+            },
+            {
+                "role": "user", "content": "Hello"
+            },
+        ]
+        ttc_data = TTCEventData(
+            turn_id="turn_0",
+            candidate_index=0,
+            score=0.8,
+            input=messages,
+            output="Hi there!",
+        )
+        step = create_intermediate_step("dpo_candidate_move", ttc_data)
 
         candidate = dpo_builder._parse_candidate("ex_1", step)
 
         assert candidate is not None
-        assert candidate.turn_id == "turn_0"
+        assert isinstance(candidate.prompt, list)
+        assert len(candidate.prompt) == 2
+        assert candidate.prompt[0].role == "system"
+
+    # =========================================================================
+    # _extract_prompt tests
+    # =========================================================================
+
+    def test_extract_prompt_string(self, dpo_builder):
+        """Test extracting string prompt."""
+        result = dpo_builder._extract_prompt("simple prompt")
+        assert result == "simple prompt"
+
+    def test_extract_prompt_none(self, dpo_builder):
+        """Test extracting None returns empty string."""
+        result = dpo_builder._extract_prompt(None)
+        assert result == ""
+
+    def test_extract_prompt_openai_messages(self, dpo_builder):
+        """Test extracting OpenAI message list."""
+        messages = [
+            {
+                "role": "system", "content": "System"
+            },
+            {
+                "role": "user", "content": "User"
+            },
+        ]
+        result = dpo_builder._extract_prompt(messages)
+
+        assert isinstance(result, list)
+        assert len(result) == 2
 
     # =========================================================================
     # _collect_candidates tests
@@ -370,34 +433,26 @@ class TestDPOTrajectoryBuilder:
         """Test collecting and grouping candidates by turn."""
         candidates_by_turn = dpo_builder._collect_candidates(mock_eval_result)
 
-        # Should have one turn key: "example_1::turn_0"
         assert len(candidates_by_turn) == 1
         turn_key = list(candidates_by_turn.keys())[0]
         assert "example_1" in turn_key
         assert "turn_0" in turn_key
-
-        # Should have 3 candidates for this turn
         assert len(candidates_by_turn[turn_key]) == 3
 
     def test_collect_candidates_multi_turn(self, dpo_builder, mock_multi_turn_eval_result):
         """Test collecting candidates from multiple turns."""
         candidates_by_turn = dpo_builder._collect_candidates(mock_multi_turn_eval_result)
 
-        # Should have two turn keys
         assert len(candidates_by_turn) == 2
 
     def test_collect_candidates_filters_non_target_steps(self, dpo_builder):
         """Test that non-target steps are filtered out."""
-        # Create steps with different names
+        ttc_data1 = create_candidate_ttc_data("turn_0", 0, 0.9)
+        ttc_data2 = create_candidate_ttc_data("turn_0", 1, 0.7)
+
         steps = [
-            create_intermediate_step(
-                "dpo_candidate_move",
-                create_candidate_metadata("turn_0", 0, 0.9),
-            ),
-            create_intermediate_step(
-                "other_step",  # Should be filtered
-                create_candidate_metadata("turn_0", 1, 0.7),
-            ),
+            create_intermediate_step("dpo_candidate_move", ttc_data1),
+            create_intermediate_step("other_step", ttc_data2),
         ]
 
         input_item = EvalInputItem(
@@ -413,7 +468,6 @@ class TestDPOTrajectoryBuilder:
 
         candidates_by_turn = dpo_builder._collect_candidates(mock_output)
 
-        # Should only have 1 candidate (the other was filtered)
         total_candidates = sum(len(c) for c in candidates_by_turn.values())
         assert total_candidates == 1
 
@@ -421,19 +475,17 @@ class TestDPOTrajectoryBuilder:
     # _generate_preference_pairs tests
     # =========================================================================
 
-    def test_generate_exhaustive_pairs(self, dpo_builder, sample_candidates):
+    def test_generate_exhaustive_pairs(self, dpo_builder, sample_ttc_data):
         """Test exhaustive pair generation (all pairwise comparisons)."""
-        # Create candidates dict
         candidates = [
             CandidateStep(
                 example_id="ex_1",
                 turn_id="turn_0",
                 candidate_index=i,
-                prompt=c["prompt"],
-                response=c["raw_llm_response"],
-                score=c["score"],
-                is_selected=c["is_selected"],
-            ) for i, c in enumerate(sample_candidates)
+                prompt=str(data.input),
+                response=str(data.output),
+                score=data.score,
+            ) for i, data in enumerate(sample_ttc_data)
         ]
 
         candidates_by_turn = {"ex_1::turn_0": candidates}
@@ -446,7 +498,7 @@ class TestDPOTrajectoryBuilder:
         for i in range(len(pairs) - 1):
             assert pairs[i].score_diff >= pairs[i + 1].score_diff
 
-    def test_generate_best_vs_worst_pairs(self, dpo_config, sample_candidates):
+    def test_generate_best_vs_worst_pairs(self, dpo_config, sample_ttc_data):
         """Test best vs worst pair generation."""
         dpo_config.exhaustive_pairs = False
         builder = DPOTrajectoryBuilder(dpo_config)
@@ -456,20 +508,18 @@ class TestDPOTrajectoryBuilder:
                 example_id="ex_1",
                 turn_id="turn_0",
                 candidate_index=i,
-                prompt=c["prompt"],
-                response=c["raw_llm_response"],
-                score=c["score"],
-                is_selected=c["is_selected"],
-            ) for i, c in enumerate(sample_candidates)
+                prompt=str(data.input),
+                response=str(data.output),
+                score=data.score,
+            ) for i, data in enumerate(sample_ttc_data)
         ]
 
         candidates_by_turn = {"ex_1::turn_0": candidates}
         pairs = builder._generate_preference_pairs(candidates_by_turn)
 
-        # Should have exactly 1 pair (best vs worst)
         assert len(pairs) == 1
-        assert pairs[0].chosen_score == 0.9  # Best
-        assert pairs[0].rejected_score == 0.5  # Worst
+        assert pairs[0].chosen_score == 0.9
+        assert pairs[0].rejected_score == 0.5
 
     def test_generate_pairs_min_score_diff_filter(self, dpo_config):
         """Test that pairs below min_score_diff are filtered."""
@@ -477,16 +527,14 @@ class TestDPOTrajectoryBuilder:
         builder = DPOTrajectoryBuilder(dpo_config)
 
         candidates = [
-            CandidateStep("ex_1", "t0", 0, "p", "r1", 0.6, False),
-            CandidateStep("ex_1", "t0", 1, "p", "r2", 0.5, False),  # diff = 0.1 < 0.3
-            CandidateStep("ex_1", "t0", 2, "p", "r3", 0.2, False),  # diff = 0.4 > 0.3
+            CandidateStep("ex_1", "t0", 0, "p", "r1", 0.6),
+            CandidateStep("ex_1", "t0", 1, "p", "r2", 0.5),
+            CandidateStep("ex_1", "t0", 2, "p", "r3", 0.2),
         ]
 
         candidates_by_turn = {"ex_1::t0": candidates}
         pairs = builder._generate_preference_pairs(candidates_by_turn)
 
-        # Only pairs with diff >= 0.3 should remain
-        # (0.6, 0.2) = 0.4, (0.5, 0.2) = 0.3
         assert len(pairs) == 2
         for pair in pairs:
             assert pair.score_diff >= 0.3
@@ -497,21 +545,20 @@ class TestDPOTrajectoryBuilder:
         builder = DPOTrajectoryBuilder(dpo_config)
 
         candidates = [
-            CandidateStep("ex_1", "t0", 0, "p", "r1", 0.9, False),
-            CandidateStep("ex_1", "t0", 1, "p", "r2", 0.7, False),
-            CandidateStep("ex_1", "t0", 2, "p", "r3", 0.5, False),
-            CandidateStep("ex_1", "t0", 3, "p", "r4", 0.3, False),
+            CandidateStep("ex_1", "t0", 0, "p", "r1", 0.9),
+            CandidateStep("ex_1", "t0", 1, "p", "r2", 0.7),
+            CandidateStep("ex_1", "t0", 2, "p", "r3", 0.5),
+            CandidateStep("ex_1", "t0", 3, "p", "r4", 0.3),
         ]
 
         candidates_by_turn = {"ex_1::t0": candidates}
         pairs = builder._generate_preference_pairs(candidates_by_turn)
 
-        # Should be limited to 2 pairs (highest score diffs)
         assert len(pairs) == 2
 
     def test_generate_pairs_single_candidate_skip(self, dpo_builder):
         """Test that single candidate turns are skipped."""
-        candidates = [CandidateStep("ex_1", "t0", 0, "p", "r1", 0.9, True)]
+        candidates = [CandidateStep("ex_1", "t0", 0, "p", "r1", 0.9)]
 
         candidates_by_turn = {"ex_1::t0": candidates}
         pairs = dpo_builder._generate_preference_pairs(candidates_by_turn)
@@ -524,10 +571,9 @@ class TestDPOTrajectoryBuilder:
         dpo_config.require_multiple_candidates = False
         builder = DPOTrajectoryBuilder(dpo_config)
 
-        candidates = [CandidateStep("ex_1", "t0", 0, "p", "r1", 0.9, True)]
+        candidates = [CandidateStep("ex_1", "t0", 0, "p", "r1", 0.9)]
 
         candidates_by_turn = {"ex_1::t0": candidates}
-        # Will still be 0 since we need at least 2 for a pair
         pairs = builder._generate_preference_pairs(candidates_by_turn)
 
         assert len(pairs) == 0
@@ -558,22 +604,21 @@ class TestDPOTrajectoryBuilder:
         assert len(trajectories) == 1
         traj = trajectories[0]
 
-        # Check trajectory structure
         assert isinstance(traj, Trajectory)
-        assert len(traj.episode) == 2  # user + assistant
+        assert len(traj.episode) == 1
 
-        # Check episode items
-        assert traj.episode[0].role == EpisodeItemRole.USER
-        assert traj.episode[0].content == "Test prompt"
-        assert traj.episode[1].role == EpisodeItemRole.ASSISTANT
-        assert traj.episode[1].content == "Good response"
+        # Check DPOItem
+        dpo_item = traj.episode[0]
+        assert isinstance(dpo_item, DPOItem)
+        assert dpo_item.prompt == "Test prompt"
+        assert dpo_item.chosen_response == "Good response"
+        assert dpo_item.rejected_response == "Bad response"
 
         # Check reward (score_diff by default)
         assert traj.reward == 0.4
 
         # Check metadata
         assert traj.metadata["dpo_type"] == "preference_pair"
-        assert traj.metadata["rejected_response"] == "Bad response"
         assert traj.metadata["score_diff"] == 0.4
 
     def test_build_trajectories_reward_from_chosen_score(self, dpo_config):
@@ -596,37 +641,37 @@ class TestDPOTrajectoryBuilder:
 
         trajectories = builder._build_trajectories(pairs)
 
-        assert trajectories[0].reward == 0.9  # Chosen score, not diff
+        assert trajectories[0].reward == 0.9
 
-    def test_build_trajectories_with_system_prompt(self, dpo_config):
-        """Test building trajectories with system prompt included."""
-        dpo_config.include_system_prompt = True
-        builder = DPOTrajectoryBuilder(dpo_config)
+    def test_build_trajectories_with_openai_messages(self, dpo_builder):
+        """Test building trajectories with OpenAI message prompt."""
+        from nat.data_models.finetuning import OpenAIMessage
+
+        messages = [
+            OpenAIMessage(role="system", content="You are helpful."),
+            OpenAIMessage(role="user", content="Hello"),
+        ]
 
         pairs = [
             PreferencePair(
-                "ex_1",
-                "t0",
-                "user prompt",
-                "chosen",
-                "rejected",
-                0.9,
-                0.5,
-                0.4,
-                0,
-                1,
-                metadata={"chosen_raw_metadata": {
-                    "system_prompt": "You are helpful."
-                }},
+                example_id="ex_1",
+                turn_id="t0",
+                prompt=messages,
+                chosen_response="Good response",
+                rejected_response="Bad response",
+                chosen_score=0.9,
+                rejected_score=0.5,
+                score_diff=0.4,
+                chosen_index=0,
+                rejected_index=1,
             )
         ]
 
-        trajectories = builder._build_trajectories(pairs)
+        trajectories = dpo_builder._build_trajectories(pairs)
 
-        # Should have 3 items: system, user, assistant
-        assert len(trajectories[0].episode) == 3
-        assert trajectories[0].episode[0].role == EpisodeItemRole.SYSTEM
-        assert trajectories[0].episode[0].content == "You are helpful."
+        dpo_item = trajectories[0].episode[0]
+        assert isinstance(dpo_item.prompt, list)
+        assert len(dpo_item.prompt) == 2
 
     # =========================================================================
     # _group_by_example tests
@@ -642,8 +687,7 @@ class TestDPOTrajectoryBuilder:
 
         grouped = dpo_builder._group_by_example(trajectories)
 
-        assert len(grouped) == 2  # Two examples
-        # Find groups
+        assert len(grouped) == 2
         ex1_group = next(g for g in grouped if g[0].metadata["example_id"] == "ex_1")
         ex2_group = next(g for g in grouped if g[0].metadata["example_id"] == "ex_2")
 
@@ -659,7 +703,6 @@ class TestDPOTrajectoryBuilder:
         grouped = dpo_builder._group_by_example(trajectories)
 
         assert len(grouped) == 1
-        # The trajectory should be in a group
 
     # =========================================================================
     # log_progress tests
@@ -681,24 +724,21 @@ class TestDPOTrajectoryBuilder:
             output_dir=str(output_dir),
         )
 
-        # Check log file was created
         log_file = output_dir / "dpo_trajectory_builder_test_run.jsonl"
         assert log_file.exists()
 
-        # Verify log content
         with open(log_file) as f:
             log_entry = json.loads(f.readline())
             assert log_entry["run_id"] == "test_run"
             assert log_entry["custom_metric"] == 42
             assert log_entry["total_pairs"] == 10
             assert "config" in log_entry
-            assert log_entry["config"]["custom_step_name"] == "dpo_candidate_move"
+            assert log_entry["config"]["ttc_step_name"] == "dpo_candidate_move"
 
     def test_log_progress_default_output_dir(self, dpo_builder):
         """Test log_progress with default output directory."""
         dpo_builder._metrics = {}
 
-        # Should not raise
         dpo_builder.log_progress(run_id="test_run", metrics={})
 
     def test_log_progress_appends_to_file(self, dpo_builder, tmp_path):
@@ -706,11 +746,9 @@ class TestDPOTrajectoryBuilder:
         dpo_builder._metrics = {"total_pairs": 5}
         output_dir = tmp_path / "logs"
 
-        # Log twice
         dpo_builder.log_progress(run_id="test_run", metrics={"epoch": 1}, output_dir=str(output_dir))
         dpo_builder.log_progress(run_id="test_run", metrics={"epoch": 2}, output_dir=str(output_dir))
 
-        # Check file has two lines
         log_file = output_dir / "dpo_trajectory_builder_test_run.jsonl"
         with open(log_file) as f:
             lines = f.readlines()
@@ -723,30 +761,26 @@ class TestDPOTrajectoryBuilderIntegration:
     async def test_full_pipeline(self, dpo_builder, mock_eval_result):
         """Test the complete pipeline from start_run to finalize."""
 
-        # Mock run_eval to return our mock result
         async def mock_run_eval():
             return mock_eval_result
 
         dpo_builder.run_eval = mock_run_eval
 
-        # Start run
         await dpo_builder.start_run(run_id="integration_test")
         assert "integration_test" in dpo_builder.evaluation_runs
 
-        # Finalize
         collection = await dpo_builder.finalize(run_id="integration_test")
 
-        # Verify results
         assert isinstance(collection, TrajectoryCollection)
         assert collection.run_id == "integration_test"
         assert len(collection.trajectories) > 0
 
-        # Verify trajectories have correct structure
+        # Verify trajectories have DPOItem episodes
         for group in collection.trajectories:
             for traj in group:
                 assert traj.metadata.get("dpo_type") == "preference_pair"
-                assert "rejected_response" in traj.metadata
-                assert len(traj.episode) >= 2
+                assert len(traj.episode) == 1
+                assert isinstance(traj.episode[0], DPOItem)
 
     async def test_multi_turn_pipeline(self, dpo_builder, mock_multi_turn_eval_result):
         """Test pipeline with multiple turns."""
@@ -759,11 +793,8 @@ class TestDPOTrajectoryBuilderIntegration:
         await dpo_builder.start_run(run_id="multi_turn_test")
         collection = await dpo_builder.finalize(run_id="multi_turn_test")
 
-        # Should have trajectories from multiple turns
         total_trajectories = sum(len(g) for g in collection.trajectories)
         assert total_trajectories > 0
-
-        # Check metrics
         assert dpo_builder._metrics["total_turns"] == 2
 
     async def test_pipeline_with_custom_config(self, dpo_config):
@@ -774,14 +805,13 @@ class TestDPOTrajectoryBuilderIntegration:
 
         builder = DPOTrajectoryBuilder(dpo_config)
 
-        # Create test data with clear score differences
-        candidates_metadata = [
-            create_candidate_metadata("turn_0", 0, 0.9, "Prompt", "Best"),
-            create_candidate_metadata("turn_0", 1, 0.5, "Prompt", "Worst"),
-            create_candidate_metadata("turn_0", 2, 0.7, "Prompt", "Middle"),
+        ttc_data_list = [
+            create_candidate_ttc_data("turn_0", 0, 0.9, "Prompt", "Best"),
+            create_candidate_ttc_data("turn_0", 1, 0.5, "Prompt", "Worst"),
+            create_candidate_ttc_data("turn_0", 2, 0.7, "Prompt", "Middle"),
         ]
 
-        steps = [create_intermediate_step("dpo_candidate_move", m) for m in candidates_metadata]
+        steps = [create_intermediate_step("dpo_candidate_move", ttc_data) for ttc_data in ttc_data_list]
 
         input_item = EvalInputItem(
             id="ex_1",
@@ -802,11 +832,9 @@ class TestDPOTrajectoryBuilderIntegration:
         await builder.start_run(run_id="custom_config_test")
         collection = await builder.finalize(run_id="custom_config_test")
 
-        # With best-vs-worst and max_pairs_per_turn=1, should have 1 pair
         total_trajectories = sum(len(g) for g in collection.trajectories)
         assert total_trajectories == 1
 
-        # The pair should be best (0.9) vs worst (0.5)
         traj = collection.trajectories[0][0]
         assert traj.metadata["chosen_score"] == 0.9
         assert traj.metadata["rejected_score"] == 0.5
