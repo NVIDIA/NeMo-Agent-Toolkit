@@ -1,0 +1,604 @@
+# SPDX-License-Identifier: Apache-2.0
+# Compatible with the current Dynamo runtime (Python)
+
+import argparse
+import asyncio
+import logging
+import time
+import uuid
+import json
+import csv
+import os
+from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
+import jinja2
+
+import uvloop
+from pydantic import BaseModel
+from transformers import AutoTokenizer
+
+from dynamo.runtime import DistributedRuntime, dynamo_worker
+from dynamo.runtime.logging import configure_dynamo_logging
+
+configure_dynamo_logging()
+logger = logging.getLogger(__name__)
+
+
+# ----------------------- request / response models ----------------------- #
+class Message(BaseModel):
+    role: str
+    # Allow None or structured content for assistant tool-calls and tool messages
+    content: Any | None = None
+    # Optional fields for tool and assistant messages
+    name: Optional[str] = None
+    tool_call_id: Optional[str] = None
+    tool_calls: Optional[List[Dict[str, Any]]] = None
+
+
+class StreamOptions(BaseModel):
+    include_usage: Optional[bool] = False
+
+
+class PrefixHints(BaseModel):
+    prefix_id: str
+    total_requests: int           # same value on every call for this prefix
+    osl: str                      # LOW | MEDIUM | HIGH  (output sequence length)
+    iat: str                      # LOW | MEDIUM | HIGH  (inter-arrival time)
+
+
+class ChatCompletionRequest(BaseModel):
+    model: Optional[str] = "Qwen/Qwen2.5-0.5B-Instruct"
+    messages: List[Message]
+    max_tokens: Optional[int] = 1024
+    temperature: Optional[float] = 0.6
+    top_p: Optional[float] = 0.999
+    top_k: Optional[int] = 1
+    ignore_eos: Optional[bool] = False
+
+    # Passed through from frontend
+    stream: Optional[bool] = False
+    stream_options: Optional[StreamOptions] = None
+    prefix_hints: Optional[PrefixHints] = None
+
+    # Native tool-calling support (pass-through to engine)
+    tools: Optional[List[Dict[str, Any]]] = None
+    tool_choice: Optional[Any] = None
+    parallel_tool_calls: Optional[bool] = None
+
+
+class RouterRequest(BaseModel):
+    tokens: List[int]
+    prefix_id: str
+    reuse_budget: int = 0             # remaining *after this request*
+    expected_osl: Optional[str] = None
+    interarrival: Optional[str] = None
+
+
+class RouterFeedbackRequest(BaseModel):
+    decision_id: str
+    latency_ms: float
+    success: Optional[bool] = True
+    tokens_in: Optional[int] = None
+    tokens_out: Optional[int] = None
+    finish_reason: Optional[str] = None
+
+
+# -------------------------- processor handler -------------------------- #
+class ProcessorRequestHandler:
+    def __init__(
+        self,
+        runtime: DistributedRuntime,
+        model_name: str = "Qwen/Qwen2.5-0.5B-Instruct",
+        enable_router: bool = True,
+    ):
+        self.runtime = runtime
+        self.model_name = model_name
+        self.enable_router = enable_router
+
+        self.tokenizer: Optional[AutoTokenizer] = None
+        self.router_pick_client = None
+        self.router_feedback_client = None
+        self.engine_client = None
+
+        # Prefix-level state: {prefix_id: {"total": int, "processed": int}}
+        self._prefix_state: Dict[str, Dict[str, int]] = {}
+        self._prefix_lock = asyncio.Lock()
+
+        # CSV metrics logging
+        self._metrics_lock = asyncio.Lock()
+        # Allow override with env; default to local file
+        self._metrics_csv_path = os.environ.get("PROCESSOR_METRICS_CSV", "processor_requests.csv")
+        # Cap number of rows to avoid unbounded growth
+        try:
+            self._metrics_log_cap = int(os.environ.get("PROCESSOR_METRICS_MAX_ROWS", "2048"))
+        except Exception:
+            self._metrics_log_cap = 2048
+        self._metrics_written_count = 0
+
+        # Initialize Jinja2 environment and compile the tool-aware prompt template
+        self._tools_prompt_env = jinja2.Environment(trim_blocks=True, lstrip_blocks=True)
+        # Provide tojson filter and a raise_exception helper
+        self._tools_prompt_env.filters["tojson"] = lambda v, indent=None: json.dumps(v, indent=indent)
+
+        def _raise_exception(msg: str):  # pragma: no cover - template guard
+            raise ValueError(msg)
+
+        self._tools_prompt_env.globals["raise_exception"] = _raise_exception
+
+        self._tools_prompt = self._tools_prompt_env.from_string(
+            """
+            {{- bos_token }}
+            {%- if custom_tools is defined %}
+                {%- set tools = custom_tools %}
+            {%- endif %}
+            {%- if not tools_in_user_message is defined %}
+                {#- Llama 3.1 doesn't pass all tests if the tools are in the system prompt #}
+                {%- set tools_in_user_message = true %}
+            {%- endif %}
+            {%- if not date_string is defined %}
+                {%- if strftime_now is defined %}
+                    {%- set date_string = strftime_now("%d %b %Y") %}
+                {%- else %}
+                    {%- set date_string = "26 Jul 2024" %}
+                {%- endif %}
+            {%- endif %}
+            {%- if not tools is defined %}
+                {%- set tools = none %}
+            {%- endif %}
+            
+            {#- This block extracts the system message, so we can slot it into the right place. #}
+            {%- if messages[0]['role'] == 'system' %}
+                {%- if messages[0]['content'] is string %}
+                    {%- set system_message = messages[0]['content']|trim %}
+                {%- else %}
+                    {%- set system_message = messages[0]['content'][0]['text']|trim %}
+                {%- endif %}
+                {%- set messages = messages[1:] %}
+            {%- else %}
+                {%- if tools is not none %}
+                    {%- set system_message = (
+                        "You are a helpful assistant with tool calling capabilities. "
+                        + "Only reply with a tool call if the function exists in the library provided by the user. "
+                        + "If it doesn't exist, just reply directly in natural language. "
+                        + "When you receive a tool call response, use the output to format an answer to the original user question."
+                    ) %}
+                {%- else %}
+                    {%- set system_message = "" %}
+                {%- endif %}
+            {%- endif %}
+            
+            {#- System message #}
+            {{- "<|start_header_id|>system<|end_header_id|>\n\n" }}
+            {%- if tools is not none %}
+                {{- "Environment: ipython\n" }}
+            {%- endif %}
+            {{- "Cutting Knowledge Date: December 2023\n" }}
+            {{- "Today Date: " + date_string + "\n\n" }}
+            {%- if tools is not none and not tools_in_user_message %}
+                {{- "You have access to the following functions. " }}
+                {{- "To call a function, please respond with JSON for a function call. " }}
+                {{- 'Respond in the format {"name": function name, ' }}
+                {{- '"parameters": dictionary of argument name and its value}. ' }}
+                {{- "Do not use variables.\n\n" }}
+                {%- for t in tools %}
+                    {{- t | tojson(indent=4) }}
+                    {{- "\n\n" }}
+                {%- endfor %}
+            {%- endif %}
+            {{- system_message }}
+            {{- "<|eot_id|>" }}
+            
+            {#- Custom tools are passed in a user message with some extra guidance #}
+            {%- if tools_in_user_message and not tools is none %}
+                {#- Extract the first user message so we can plug it in here #}
+                {%- if messages | length != 0 %}
+                    {%- if messages[0]['content'] is string %}
+                        {%- set first_user_message = messages[0]['content']|trim %}
+                    {%- else %}
+                        {%- set first_user_message =
+                            messages[0]['content']
+                            | selectattr('type', 'equalto', 'text')
+                            | map(attribute='text')
+                            | map('trim')
+                            | join('\\n')
+                        %}
+                    {%- endif %}
+                    {%- set messages = messages[1:] %}
+                {%- else %}
+                    {{- raise_exception("Cannot put tools in the first user message when there's no first user message!") }}
+                {%- endif %}
+                {{- '<|start_header_id|>user<|end_header_id|>\n\n' -}}
+                {{- "Given the following functions, please respond with a JSON for a function call " }}
+                {{- "with its proper arguments that best answers the given prompt.\n\n" }}
+                {{- 'Respond in the format {"name": function name, ' }}
+                {{- '"parameters": dictionary of argument name and its value}. ' }}
+                {{- "Do not use variables.\n\n" }}
+                {%- for t in tools %}
+                    {{- t | tojson(indent=4) }}
+                    {{- "\n\n" }}
+                {%- endfor %}
+                {{- first_user_message + "<|eot_id|>"}}
+            {%- endif %}
+            
+            {%- for message in messages %}
+                {%- if not (message.role == 'ipython' or message.role == 'tool' or 'tool_calls' in message) %}
+                    {{- '<|start_header_id|>' + message['role'] + '<|end_header_id|>\n\n' }}
+                    {%- if message['content'] is string %}
+                        {{- message['content'] | trim}}
+                    {%- else %}
+                        {%- for content in message['content'] %}
+                            {%- if content['type'] == 'text' %}
+                                {{- content['text'] | trim }}
+                            {%- endif %}
+                        {%- endfor %}
+                    {%- endif %}
+                    {{- '<|eot_id|>' }}
+                {%- elif 'tool_calls' in message %}
+                    {%- if not message.tool_calls|length == 1 %}
+                        {{- raise_exception("This model only supports single tool-calls at once!") }}
+                    {%- endif %}
+                    {%- set tool_call = message.tool_calls[0].function %}
+                    {{- '<|start_header_id|>assistant<|end_header_id|>\n\n' -}}
+                    {{- '{"name": "' + tool_call.name + '", ' }}
+                    {{- '"parameters": ' }}
+                    {{- tool_call.arguments | tojson }}
+                    {{- "}" }}
+                    {{- "<|eot_id|>" }}
+                {%- elif message.role == "tool" or message.role == "ipython" %}
+                    {{- "<|start_header_id|>ipython<|end_header_id|>\n\n" }}
+                    {%- if message.content is string %}
+                        {{- { "output": message.content } | tojson }}
+                    {%- else %}
+                        {%- for content in message['content']  %}
+                            {%- if content['type']  == 'text' %}
+                                {{- { "output": content['text']  } | tojson }}
+                            {%- endif %}
+                        {%- endfor %}
+                    {%- endif %}
+                    {{- "<|eot_id|>" }}
+                {%- endif %}
+            {%- endfor %}
+            {%- if add_generation_prompt %}
+                {{- '<|start_header_id|>assistant<|end_header_id|>\n\n' }}
+            {%- endif %}
+            """
+        )
+
+    # ---- init ----
+    async def initialize(self):
+        logger.info(f"Loading tokenizer for {self.model_name}")
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+
+        if self.enable_router:
+            ns = self.runtime.namespace("dynamo").component("router")
+            self.router_pick_client = await ns.endpoint("find_worker").client()
+            self.router_feedback_client = await ns.endpoint("feedback").client()
+            logger.info("Router clients initialized")
+
+        # engine client
+        self.engine_client = (
+            await self.runtime.namespace("dynamo")
+            .component("backend")
+            .endpoint("generate")
+            .client()
+        )
+        logger.info("Processor initialized successfully")
+
+        # Initialize metrics CSV with header if file doesn't exist
+        try:
+            csv_dir = os.path.dirname(self._metrics_csv_path)
+            if csv_dir and not os.path.exists(csv_dir):
+                os.makedirs(csv_dir, exist_ok=True)
+            async with self._metrics_lock:
+                if not os.path.exists(self._metrics_csv_path):
+                    with open(self._metrics_csv_path, "w", newline="") as f:
+                        writer = csv.writer(f)
+                        writer.writerow(["num_tokens", "latency_ms", "latency_ms_per_token"])
+                        self._metrics_written_count = 0
+                else:
+                    # Count existing data rows (exclude header)
+                    try:
+                        with open(self._metrics_csv_path, "r", newline="") as f:
+                            # subtract header if present
+                            lines = sum(1 for _ in f)
+                            self._metrics_written_count = max(lines - 1, 0)
+                    except Exception:
+                        self._metrics_written_count = 0
+        except Exception as e:
+            logger.warning("Failed to initialize metrics CSV %s: %s", self._metrics_csv_path, e)
+
+    # ---- helpers ----
+    def _render_prompt(self, messages: List[Message], tools: Optional[List[Dict[str, Any]]]) -> str:
+        # Include tool-related fields so the template can branch correctly
+        message_dicts: List[Dict[str, Any]] = []
+        for m in messages:
+            md: Dict[str, Any] = {"role": m.role, "content": m.content}
+            if m.name is not None:
+                md["name"] = m.name
+            if m.tool_call_id is not None:
+                md["tool_call_id"] = m.tool_call_id
+            if m.tool_calls is not None:
+                md["tool_calls"] = m.tool_calls
+            message_dicts.append(md)
+        if tools:
+            bos = getattr(self.tokenizer, "bos_token", "") or ""
+
+            def _strftime_now(fmt: str) -> str:
+                return time.strftime(fmt)
+            try:
+                return self._tools_prompt.render(
+                    bos_token=bos,
+                    messages=message_dicts,
+                    tools=tools,
+                    tools_in_user_message=True,
+                    add_generation_prompt=True,
+                    strftime_now=_strftime_now,
+                )
+            except Exception as e:
+                logger.warning("Tool-aware template failed: %s; falling back to chat template", e)
+        if getattr(self.tokenizer, "chat_template", None):
+            try:
+                return self.tokenizer.apply_chat_template(
+                    message_dicts, tokenize=False, add_generation_prompt=True
+                )
+            except Exception as e:
+                logger.warning("Chat template failed: %s, using simple format", e)
+        return "\n".join(f"{m.role}: {m.content}" for m in messages) + "\nassistant:"
+
+    def tokenize(self, text: str) -> List[int]:
+        if not self.tokenizer:
+            raise RuntimeError("Tokenizer not initialized")
+        return self.tokenizer.encode(text, add_special_tokens=True)
+
+    def detokenize(self, token_ids: List[int]) -> str:
+        if not self.tokenizer:
+            raise RuntimeError("Tokenizer not initialized")
+        return self.tokenizer.decode(token_ids, skip_special_tokens=True)
+
+    async def _update_prefix_state(self, hints: PrefixHints) -> Tuple[int, str, str]:
+        """Updates prefix counters and returns (remaining_after, osl, iat)."""
+        pid = hints.prefix_id
+        total = max(1, int(hints.total_requests))
+        osl = (hints.osl or "MEDIUM").strip().upper()
+        if osl not in ("LOW", "MEDIUM", "HIGH"):
+            osl = "MEDIUM"
+        iat = (hints.iat or "MEDIUM").strip().upper()
+        if iat not in ("LOW", "MEDIUM", "HIGH"):
+            iat = "MEDIUM"
+
+        async with self._prefix_lock:
+            s = self._prefix_state.get(pid)
+            if s is None:
+                s = {"total": total, "processed": 0}
+                self._prefix_state[pid] = s
+            else:
+                s["total"] = max(s["total"], total)
+            s["processed"] += 1
+            remaining_after = max(s["total"] - s["processed"], 0)
+            if remaining_after == 0:
+                # Drop state immediately when finished
+                self._prefix_state.pop(pid, None)
+        return remaining_after, osl, iat
+
+    async def _pick_worker(
+        self, token_ids: List[int], prefix_id: str, reuse_budget: int, osl: str, iat: str
+    ) -> Tuple[Optional[int], Optional[str]]:
+        if not self.router_pick_client:
+            return None, None
+
+        req = RouterRequest(
+            tokens=token_ids,
+            prefix_id=prefix_id,
+            reuse_budget=max(int(reuse_budget), 0),
+            expected_osl=osl,
+            interarrival=iat,
+        )
+        stream = await self.router_pick_client.generate(req.model_dump())
+
+        worker_id: Optional[int] = None
+        decision_id: Optional[str] = None
+        async for chunk in stream:
+            data = chunk.data()
+            if "error" in data:
+                logger.error("Router error: %s", data['error'])
+                break
+            wid = data.get("worker_id", -1)
+            if wid == -1:
+                break
+            worker_id = int(wid)
+            decision_id = data.get("decision_id")
+            break
+
+        if worker_id is None:
+            logger.warning("Router stream ended without worker_id; falling back to engine load balancing.")
+        return worker_id, decision_id
+
+    async def _send_feedback_safely(
+        self, decision_id: Optional[str], latency_ms: float, success: bool,
+        tokens_in: int, tokens_out: int, finish_reason: Optional[str]
+    ):
+        if not decision_id or not self.router_feedback_client:
+            return
+        try:
+            fb = RouterFeedbackRequest(
+                decision_id=decision_id,
+                latency_ms=float(latency_ms),
+                success=bool(success),
+                tokens_in=int(tokens_in),
+                tokens_out=int(tokens_out),
+                finish_reason=finish_reason or "",
+            )
+            stream = await self.router_feedback_client.generate(fb.model_dump())
+            async for _ in stream:
+                pass
+        except Exception as e:
+            logger.exception("Failed to send router feedback: %s", e)
+
+    async def _stream_from_engine(
+        self,
+        token_ids: List[int],
+        model: str,
+        temperature: float,
+        top_p: float,
+        top_k: int,
+        ignore_eos: bool,
+        max_tokens: int,
+        prefix_id: str,
+        reuse_budget: int,
+        osl: str,
+        iat: str,
+        tool_payload: Optional[Dict[str, Any]] = None,
+    ) -> AsyncIterator[Dict[str, Any]]:
+        """Streaming generator: yields {'delta': str} tokens and finally {'finish_reason': <str>}."""
+        worker_id, decision_id = await self._pick_worker(token_ids, prefix_id, reuse_budget, osl, iat)
+        engine_request: Dict[str, Any] = {
+            "token_ids": token_ids,
+            "sampling_options": {"temperature": temperature, "top_p": top_p, "top_k": top_k},
+            "stop_conditions": {"max_tokens": max_tokens, "ignore_eos": ignore_eos},
+            "model": model,
+        }
+        # Forward tool-calling parameters to the engine if provided
+        if tool_payload:
+            engine_request.update(tool_payload)
+        if worker_id is not None:
+            stream = await self.engine_client.direct(engine_request, worker_id)
+        else:
+            stream = await self.engine_client.generate(engine_request)
+
+        t0 = time.perf_counter()
+        all_tokens: List[int] = []
+        text_so_far: str = ""
+        finish_reason: Optional[str] = None
+
+        try:
+            async for chunk in stream:
+                data = chunk.data()
+                if "error" in data:
+                    latency_ms = (time.perf_counter() - t0) * 1000.0
+                    await self._send_feedback_safely(
+                        decision_id, latency_ms, False, len(token_ids), len(all_tokens), "error"
+                    )
+                    yield {"error": data["error"]}
+                    return
+
+                if "token_ids" in data and isinstance(data["token_ids"], list):
+                    for tid in data["token_ids"]:
+                        all_tokens.append(tid)
+                        new_text = self.detokenize(all_tokens) if all_tokens else ""
+                        if len(new_text) > len(text_so_far):
+                            piece = new_text[len(text_so_far):]
+                            text_so_far = new_text
+                            if piece:
+                                yield {"delta": piece}
+
+                # Forward tool_calls if emitted by the engine
+                if isinstance(data.get("tool_calls"), list):
+                    yield {"tool_calls": data["tool_calls"]}
+
+                if "finish_reason" in data and data["finish_reason"] is not None:
+                    finish_reason = data["finish_reason"]
+                    latency_ms = (time.perf_counter() - t0) * 1000.0
+                    await self._send_feedback_safely(
+                        decision_id, latency_ms, True, len(token_ids), len(all_tokens), finish_reason
+                    )
+                    # Persist per-request metrics to CSV (concurrency-safe)
+                    await self._log_request_metrics(num_tokens=len(all_tokens), latency_ms=latency_ms)
+                    yield {"finish_reason": finish_reason}
+                    return
+        except Exception as e:
+            latency_ms = (time.perf_counter() - t0) * 1000.0
+            await self._send_feedback_safely(
+                decision_id, latency_ms, False, len(token_ids), len(all_tokens), "exception"
+            )
+            logger.exception("Engine stream exception: %s", e)
+            yield {"error": str(e)}
+            return
+
+    # ---- main generation ----
+    async def generate(self, raw: Dict[str, Any]):
+        """Processor endpoint: always yields a stream of dicts."""
+        chat_req = ChatCompletionRequest(**raw)
+        logger.info("Chat completion request was %s with %d messages", chat_req.model, len(chat_req.messages))
+        hints = chat_req.prefix_hints or PrefixHints(
+            prefix_id=f"auto-{uuid.uuid4().hex}", total_requests=1, osl="MEDIUM", iat="MEDIUM"
+        )
+
+        # Update prefix state and compute reuse_budget := remaining AFTER this request
+        reuse_budget, osl, iat = await self._update_prefix_state(hints)
+
+        # Build input text for the model (tool-aware when provided)
+        messages = chat_req.messages.copy()
+        text = self._render_prompt(messages, chat_req.tools)
+        tokens = self.tokenize(text)
+
+        # Build tool payload if the caller provided tool-calling parameters
+        tool_payload: Dict[str, Any] = {}
+        if chat_req.tools is not None:
+            tool_payload["tools"] = [t for t in chat_req.tools]
+        if chat_req.tool_choice is not None:
+            tool_payload["tool_choice"] = chat_req.tool_choice
+        if chat_req.parallel_tool_calls is not None:
+            tool_payload["parallel_tool_calls"] = bool(chat_req.parallel_tool_calls)
+
+        # Stream from engine (frontend can aggregate if non-streaming)
+        async for resp in self._stream_from_engine(
+            tokens,
+            chat_req.model,
+            chat_req.temperature,
+            chat_req.top_p,
+            chat_req.top_k,
+            chat_req.ignore_eos,
+            chat_req.max_tokens,
+            hints.prefix_id,
+            reuse_budget,
+            osl,
+            iat,
+            tool_payload if tool_payload else None,
+        ):
+            yield resp
+
+    async def _log_request_metrics(self, *, num_tokens: int, latency_ms: float):
+        """Append a CSV line with (num_tokens, latency_ms, latency_ms_per_token).
+        Uses an asyncio lock for concurrency safety across concurrent requests.
+        """
+        # Guard against divide-by-zero
+        denom = max(1, int(num_tokens))
+        latency_per_token = float(latency_ms) / float(denom)
+        try:
+            async with self._metrics_lock:
+                # Respect cap if configured
+                if self._metrics_log_cap is not None and self._metrics_written_count >= self._metrics_log_cap:
+                    return
+                with open(self._metrics_csv_path, "a", newline="") as f:
+                    writer = csv.writer(f)
+                    writer.writerow([int(num_tokens), f"{latency_ms:.3f}", f"{latency_per_token:.6f}"])
+                    self._metrics_written_count += 1
+        except Exception as e:
+            logger.warning("Failed to write metrics CSV %s: %s", self._metrics_csv_path, e)
+
+
+# -------------------------- worker entry point -------------------------- #
+def parse_args():
+    p = argparse.ArgumentParser()
+    p.add_argument("--model", type=str, default="nvidia/Llama-3.1-Nemotron-Nano-8B-v1")
+    p.add_argument("--enable-router", action="store_true", default=True)
+    return p.parse_args()
+
+
+@dynamo_worker(static=False)
+async def worker(runtime: DistributedRuntime):
+    args = parse_args()
+    component = runtime.namespace("dynamo").component("processor")
+    await component.create_service()
+
+    handler = ProcessorRequestHandler(
+        runtime, model_name=args.model, enable_router=args.enable_router
+    )
+    await handler.initialize()
+    await component.endpoint("process").serve_endpoint(handler.generate)
+
+
+if __name__ == "__main__":
+    uvloop.install()
+    asyncio.run(worker())  # pylint: disable=no-value-for-parameter
