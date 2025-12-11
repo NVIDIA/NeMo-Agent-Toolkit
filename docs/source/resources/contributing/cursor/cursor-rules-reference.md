@@ -267,20 +267,20 @@ Integrate ReAct agent to the workflow
 
 <!-- path-check-skip-begin -->
 
-| Rule Category | Cursor Rule file                     | Primary Use Case              |
-| ------------- | ------------------------------------ | ----------------------------- |
-| Foundation    | `general`                            | Code quality and standards    |
-| Foundation    | `cursor-rules`                       | Managing cursor rules         |
-| Setup         | `nat-setup/general`                  | Environment setup             |
-| Setup         | `nat-setup/nat-toolkit-installation` | Installation procedures       |
-| CLI           | `nat-cli/general`                    | General CLI usage             |
-| CLI           | `nat-cli/nat-workflow`               | Workflow management           |
-| CLI           | `nat-cli/nat-run-serve`              | Running and serving           |
-| CLI           | `nat-cli/nat-eval`                   | Performance evaluation        |
-| CLI           | `nat-cli/nat-info`                   | System information            |
-| Workflow      | `nat-workflows/general`              | Workflow design               |
-| Workflow      | `nat-workflows/add-functions`        | Function development          |
-| Workflow      | `nat-workflows/add-tools`            | Tool integration              |
+| Rule Category | Cursor Rule file                     | Primary Use Case                |
+| ------------- | ------------------------------------ | ------------------------------- |
+| Foundation    | `general`                            | Code quality and standards      |
+| Foundation    | `cursor-rules`                       | Managing cursor rules           |
+| Setup         | `nat-setup/general`                  | Environment setup               |
+| Setup         | `nat-setup/nat-toolkit-installation` | Installation procedures         |
+| CLI           | `nat-cli/general`                    | General CLI usage               |
+| CLI           | `nat-cli/nat-workflow`               | Workflow management             |
+| CLI           | `nat-cli/nat-run-serve`              | Running and serving             |
+| CLI           | `nat-cli/nat-eval`                   | Performance evaluation          |
+| CLI           | `nat-cli/nat-info`                   | System information              |
+| Workflow      | `nat-workflows/general`              | Workflow design                 |
+| Workflow      | `nat-workflows/add-functions`        | Function development            |
+| Workflow      | `nat-workflows/add-tools`            | Tool integration                |
 | Agents        | `nat-agents/general`                 | Agent selection and integration |
 
 <!-- path-check-skip-end -->
