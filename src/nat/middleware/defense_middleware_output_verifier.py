@@ -44,6 +44,8 @@ class OutputVerifierMiddlewareConfig(DefenseMiddlewareConfig, name="output_verif
     - 'partial_compliance': Detect and log threats, but allow content to pass through
     - 'refusal': Block output if threat detected (hard stop)
     - 'redirection': Replace incorrect output with correct answer from LLM
+    
+    Note: Only output analysis is currently supported (target_location='output').
     """
     
     llm_name: str = Field(
@@ -68,6 +70,8 @@ class OutputVerifierMiddleware(DefenseMiddleware):
     - Correctness and reasonableness
     - Security validation (detecting malicious content and manipulated values)
     - Providing automatic corrections when errors are detected
+    
+    Only output analysis is currently supported (target_location='output').
     """
     
     def __init__(self, config: OutputVerifierMiddlewareConfig, builder):
@@ -80,6 +84,14 @@ class OutputVerifierMiddleware(DefenseMiddleware):
         super().__init__(config, builder)
         # Store config with correct type for linter
         self.config: OutputVerifierMiddlewareConfig = config
+        
+        # Output Verifier only supports output analysis
+        if config.target_location == "input":
+            raise ValueError(
+                "OutputVerifierMiddleware only supports target_location='output'. "
+                "Input analysis is not yet supported."
+            )
+        
         self._llm = None  # Lazy loaded LLM
     
     async def _get_llm(self):
@@ -287,18 +299,32 @@ Respond ONLY with valid JSON in this exact format:
             # Call the function
             output = await call_next(value)
             
-            # Check the output directly
-            logger.debug("OutputVerifierMiddleware: Checking output for %s", context.name)
+            # Extract field from output if target_field is specified
+            content_to_analyze, field_info = self._extract_field_from_value(output)
+            
+            # Check the output (either extracted field or entire output)
+            logger.debug(
+                "OutputVerifierMiddleware: Checking %s for %s",
+                f"field '{self.config.target_field}'" if field_info else "output",
+                context.name
+            )
             output_result = await self._analyze_content(
-                output, 
+                content_to_analyze, 
                 "output", 
                 inputs=value,
                 function_name=context.name
             )
             
             if output_result.get("should_refuse", False):
-                # _handle_threat includes auto-correction logic
-                return await self._handle_threat(output, output_result, context)
+                # Handle threat - get sanitized/corrected value
+                sanitized_content = await self._handle_threat(content_to_analyze, output_result, context)
+                
+                # If field was extracted, apply sanitized value back to original structure
+                if field_info is not None:
+                    return self._apply_field_result_to_value(output, field_info, sanitized_content)
+                else:
+                    # No field extraction - return sanitized content directly
+                    return sanitized_content
             
             return output
         

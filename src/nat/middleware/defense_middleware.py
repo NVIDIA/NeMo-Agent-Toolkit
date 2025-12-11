@@ -22,8 +22,9 @@ core logic based on its specific defense strategy (LLM-based, rule-based, etc.).
 """
 
 import logging
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal, Optional, Union, cast
 
+from jsonpath_ng import parse
 from pydantic import BaseModel, Field
 
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -64,6 +65,34 @@ class DefenseMiddlewareConfig(FunctionMiddlewareBaseConfig):
                     "Examples: 'my_calculator', 'my_calculator.divide', 'llm_agent.generate'"
     )
 
+    target_location: Literal["output"] = Field(
+        default="output",
+        description=(
+            "Whether to analyze function input or output. "
+            "Currently only 'output' is supported (analyze after function call). "
+            "Input analysis is not yet supported."
+        )
+    )
+    
+    target_field: Optional[str] = Field(
+        default=None,
+        description=(
+            "Optional JSONPath expression to target specific fields within complex types (dict/list/BaseModel). "
+            "If None and value is complex type, defense applies to entire value. "
+            "If None and value is simple type (str/int/float), defense applies directly. "
+            "Examples: '$.result', '[0]', '$.data.message', 'numbers[0]'"
+        )
+    )
+    
+    target_field_resolution_strategy: Literal["error", "first", "last", "random", "all"] = Field(
+        default="error",
+        description=(
+            "Strategy for handling multiple JSONPath matches when target_field is specified. "
+            "Options: 'error' (raise error if multiple matches), 'first' (use first match), "
+            "'last' (use last match), 'random' (use random match), 'all' (analyze all matches)"
+        )
+    )
+    
 
 class DefenseMiddleware(FunctionMiddleware):
     """Utility base class for defense middleware.
@@ -161,6 +190,183 @@ class DefenseMiddleware(FunctionMiddleware):
             llm_name, 
             wrapper_type=wrapper_type
         )
+    
+    def _resolve_multiple_field_matches(self, matches):
+        """Resolve multiple JSONPath matches based on resolution strategy.
+        
+        Args:
+            matches: List of JSONPath match objects
+        
+        Returns:
+            List of matches based on resolution strategy
+        """
+        strategy = self.config.target_field_resolution_strategy
+        
+        if strategy == "error":
+            raise ValueError(f"Multiple matches found for target_field: {self.config.target_field}")
+        elif strategy == "first":
+            return [matches[0]]
+        elif strategy == "last":
+            return [matches[-1]]
+        elif strategy == "random":
+            import random
+            return [random.choice(matches)]
+        elif strategy == "all":
+            return matches
+        else:
+            raise ValueError(f"Unknown target_field_resolution_strategy: {strategy}")
+    
+    def _extract_field_from_value(self, value: Any) -> tuple[Any, Optional[dict]]:
+        """Extract field(s) from value using JSONPath if target_field is specified.
+        
+        Args:
+            value: The value to extract fields from (can be simple or complex type)
+        
+        Returns:
+            Tuple of (content_to_analyze, field_info_dict)
+            - content_to_analyze: The extracted field value(s) or original value if no targeting
+            - field_info_dict: Dict with 'target_field', 'matches', 'original_value' if field was extracted, None otherwise
+        """
+        # If no target_field specified, analyze entire value
+        if self.config.target_field is None:
+            return value, None
+        
+        # If value is simple type, target_field doesn't apply (analyze entire value)
+        if isinstance(value, (str, int, float, bool)):
+            logger.debug(
+                "target_field '%s' specified but value is simple type (%s). "
+                "Analyzing entire value instead.",
+                self.config.target_field,
+                type(value).__name__
+            )
+            return value, None
+        
+        # For complex types, extract field using JSONPath
+        if not isinstance(value, (dict, list, BaseModel)):
+            logger.warning(
+                "target_field '%s' specified but value type '%s' is not supported for field extraction. "
+                "Analyzing entire value instead.",
+                self.config.target_field,
+                type(value).__name__
+            )
+            return value, None
+        
+        # Convert BaseModel to dict for JSONPath processing
+        original_type = type(value)
+        is_basemodel = isinstance(value, BaseModel)
+        if is_basemodel:
+            value_dict = value.model_dump()
+        else:
+            value_dict = value
+        
+        # Parse JSONPath and find matches
+        try:
+            jsonpath_expr = parse(self.config.target_field)
+            matches = jsonpath_expr.find(value_dict)
+            
+            if len(matches) == 0:
+                logger.warning(
+                    "No matches found for target_field '%s' in value. Analyzing entire value instead.",
+                    self.config.target_field
+                )
+                return value, None
+            
+            # Resolve multiple matches based on strategy
+            if len(matches) > 1:
+                matches = self._resolve_multiple_field_matches(matches)
+            
+            # Extract field values
+            if len(matches) == 1:
+                # Single match - return the value directly
+                extracted_value = matches[0].value
+            else:
+                # Multiple matches (strategy="all") - return list of values
+                extracted_value = [match.value for match in matches]
+            
+            field_info = {
+                "target_field": self.config.target_field,
+                "matches": matches,
+                "original_value": value,
+                "is_basemodel": is_basemodel,
+                "original_type": original_type
+            }
+            
+            logger.debug(
+                "Extracted field '%s' from value: %s -> %s",
+                self.config.target_field,
+                value,
+                extracted_value
+            )
+            
+            return extracted_value, field_info
+            
+        except Exception as e:
+            logger.warning(
+                "Failed to extract field '%s' from value: %s. Analyzing entire value instead.",
+                self.config.target_field,
+                e
+            )
+            return value, None
+    
+    def _apply_field_result_to_value(self, original_value: Any, field_info: dict, analysis_result: Any) -> Any:
+        """Apply analysis result back to original value if field was extracted.
+        
+        This is used when defense needs to modify the value based on field analysis.
+        For example, if analyzing $.result and need to replace it with sanitized value.
+        
+        Args:
+            original_value: The original complex value
+            field_info: Field info dict from _extract_field_from_value (None if no field extraction)
+            analysis_result: The result from defense analysis (could be sanitized value)
+        
+        Returns:
+            Modified value with field updated, or original value if no field extraction
+        """
+        if field_info is None:
+            # No field extraction - return analysis result directly
+            return analysis_result
+        
+        # Reconstruct value with updated field
+        matches = field_info["matches"]
+        is_basemodel = field_info["is_basemodel"]
+        original_type = field_info["original_type"]
+        
+        # Get the dict representation
+        if is_basemodel:
+            value_dict = original_value.model_dump()
+        else:
+            # Create a copy to avoid modifying original
+            if isinstance(original_value, dict):
+                value_dict = original_value.copy()
+            elif isinstance(original_value, list):
+                value_dict = list(original_value)
+            else:
+                value_dict = original_value
+        
+        # Update field(s) with analysis result
+        if len(matches) == 1:
+            # Single match - update single field
+            matches[0].full_path.update(value_dict, analysis_result)
+        else:
+            # Multiple matches - update all fields (analysis_result should be a list)
+            if isinstance(analysis_result, list) and len(analysis_result) == len(matches):
+                for match, result_value in zip(matches, analysis_result):
+                    match.full_path.update(value_dict, result_value)
+            else:
+                logger.warning(
+                    "Cannot apply analysis result to multiple fields: "
+                    "expected list of %d values, got %s",
+                    len(matches),
+                    type(analysis_result).__name__
+                )
+                return original_value
+        
+        # Reconstruct BaseModel if original was BaseModel
+        if is_basemodel:
+            assert isinstance(value_dict, dict)
+            return cast(type[BaseModel], original_type)(**value_dict)
+        
+        return value_dict
 
 
 __all__ = ["DefenseMiddleware", "DefenseMiddlewareConfig"]

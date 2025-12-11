@@ -23,7 +23,7 @@ function_groups:
   my_calculator:
     _type: calculator
     middleware:
-      - llm_defense     
+      - llm_defense
       - guard_defense
       - pii_defense
 
@@ -70,11 +70,13 @@ middleware:
     llm_name: guard_llm
     target_function_or_group: my_calculator
     action: redirection
+    target_location: output #optional 
   
   pii_defense:
     _type: pii_defense
     target_function_or_group: my_calculator
     action: redirection
+    target_location: output #optional 
     score_threshold: 0.5
     entities:
       - PERSON

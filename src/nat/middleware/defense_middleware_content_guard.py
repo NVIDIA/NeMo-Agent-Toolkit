@@ -43,6 +43,8 @@ class ContentSafetyGuardMiddlewareConfig(DefenseMiddlewareConfig, name="content_
     - 'partial_compliance': Log warning but allow content through
     - 'refusal': Raise ValueError to block content (hard stop)
     - 'redirection': Replace content with polite refusal message
+    
+    Note: Only output analysis is currently supported (target_location='output').
     """
     
     llm_name: str = Field(
@@ -56,6 +58,8 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
     This middleware analyzes content using guard models (e.g., NVIDIA Nemoguard, Qwen Guard)
     that return "Safe" or "Unsafe" classifications. The middleware extracts safety categories
     when unsafe content is detected.
+    
+    Only output analysis is currently supported (target_location='output').
     """
     
     def __init__(self, config: ContentSafetyGuardMiddlewareConfig, builder):
@@ -69,6 +73,13 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
         # Store config with correct type for linter
         self.config: ContentSafetyGuardMiddlewareConfig = config
         self._llm = None  # Lazy loaded LLM
+        
+        # Content Safety Guard only supports output analysis
+        if config.target_location == "input":
+            raise ValueError(
+                "ContentSafetyGuardMiddleware only supports target_location='output'. "
+                "Input analysis is not yet supported."
+            )
     
     async def _get_llm(self):
         """Lazy load the guard model LLM when first needed."""
@@ -287,6 +298,63 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
             logger.warning("Safety violation logged but content passed through")
             return content
     
+    async def _process_content_safety_detection(
+        self,
+        value: Any,
+        location: str,
+        context: FunctionMiddlewareContext,
+        original_input: Any = None,
+    ) -> Any:
+        """Process content safety detection and handling for a given value.
+        
+        This is a common helper method that handles:
+        - Field extraction (if target_field is specified)
+        - Content safety analysis
+        - Threat handling (refusal, redirection, partial_compliance)
+        - Applying sanitized value back to original structure
+        
+        Args:
+            value: The value to analyze (input or output)
+            location: Either "input" or "output" (for logging)
+            context: Function context metadata
+            original_input: Original function input (for output analysis context)
+            
+        Returns:
+            The value after content safety handling (may be unchanged, sanitized, or raise exception)
+        """
+        # Extract field from value if target_field is specified
+        content_to_analyze, field_info = self._extract_field_from_value(value)
+        
+        # Check content (either extracted field or entire value)
+        logger.debug(
+            "ContentSafetyGuardMiddleware: Checking %s %s for %s",
+            f"field '{self.config.target_field}'" if field_info else "entire",
+            location,
+            context.name
+        )
+        analysis_result = await self._analyze_content(
+            content_to_analyze, original_input=original_input, context=context
+        )
+        
+        if not analysis_result.get("should_refuse", False):
+            # Content is safe, return original value
+            return value
+        
+        # Unsafe content detected - handle based on action
+        logger.warning(
+            "ContentSafetyGuardMiddleware: Blocking %s for %s (unsafe content detected)",
+            location,
+            context.name
+        )
+        sanitized_content = await self._handle_threat(content_to_analyze, analysis_result, context)
+        
+        # If field was extracted, apply sanitized value back to original structure
+        if field_info is not None:
+            return self._apply_field_result_to_value(value, field_info, sanitized_content)
+        else:
+            # No field extraction - return sanitized content directly
+            return sanitized_content
+    
     async def function_middleware_invoke(
         self, value: Any, call_next: CallNext, context: FunctionMiddlewareContext
     ) -> Any:
@@ -313,17 +381,10 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
         # Call the function
         output = await call_next(value)
         
-        # Check output
-        logger.debug("ContentSafetyGuardMiddleware: Checking output for %s", context.name)
-        output_result = await self._analyze_content(
-            output, original_input=value, context=context
+        # Handle output analysis (only output is supported)
+        output = await self._process_content_safety_detection(
+            output, "output", context, original_input=value
         )
-        if output_result.get("should_refuse", False):
-            logger.warning(
-                "ContentSafetyGuardMiddleware: Blocking output for %s (unsafe content detected)",
-                context.name
-            )
-            return await self._handle_threat(output, output_result, context)
         
         return output
     
@@ -346,8 +407,8 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
             async for chunk in call_next(value):
                 yield chunk
             return
-        
-        # Stream and check output
+
+        # Stream and check output (only output is supported)
         # Accumulate chunks to analyze after streaming
         accumulated_output = []
         async for chunk in call_next(value):
@@ -357,11 +418,8 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
         # Final check after streaming completes
         if accumulated_output:
             full_output = "".join(accumulated_output)
-            output_result = await self._analyze_content(
-                full_output, original_input=value, context=context
+            # Use helper method for consistency (though it will raise if refusal)
+            await self._process_content_safety_detection(
+                full_output, "output", context, original_input=value
             )
-            if output_result.get("should_refuse", False):
-                logger.warning(
-                    "Streaming output violated safety policy (unsafe content detected)"
-                )
 
