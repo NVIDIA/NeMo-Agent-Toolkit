@@ -76,10 +76,8 @@ The Milvus retriever provider is defined by the {py:class}`~nat.retriever.milvus
 * `vector_field` - Name of the field to compare with the vector generated from the query.
 * `description` - If present it will be used as the tool description.
 
-<!-- TODO: Remove redundant sections -->
-## Usage
-### Configuration
-Retrievers are configured similarly to other NeMo Agent toolkit components, such as Functions and LLMs. Each Retriever provider (e.g., Milvus) has a Pydantic config object which defines its configurable parameters and type. These parameters can then be configured in the config file under the `retrievers` section.
+### Configuration Examples
+Retrievers are configured similarly to other NeMo Agent toolkit components, such as Functions and LLMs. Each Retriever provider (e.g., Milvus) has a Pydantic config object which defines its configurable parameters and type.
 
 Below is an example config object for the NeMo Retriever:
 ```python
@@ -99,6 +97,7 @@ nvidia_api_key: str | None = Field(
     default=None,
 )
 ```
+
 This retriever can be easily configured in the config file such as in the below example:
 ```yaml
 retrievers:
