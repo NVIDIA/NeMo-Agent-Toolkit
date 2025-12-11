@@ -20,6 +20,7 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepState
 from nat.data_models.intermediate_step import IntermediateStepType
+from nat.finetuning.utils.parsers import adk_parser
 from nat.finetuning.utils.parsers import langchain_parser
 from nat.finetuning.utils.parsers import llama_index_parser
 
@@ -65,6 +66,8 @@ def parse_to_openai_messages(steps: list[IntermediateStep]) -> list[dict]:
             parsed_msg = langchain_parser.parse_to_openai_message(message=message)
         elif message.framework == LLMFrameworkEnum.LLAMA_INDEX:
             parsed_msg = llama_index_parser.parse_to_openai_message(message=message)
+        elif message.framework == LLMFrameworkEnum.ADK:
+            parsed_msg = adk_parser.parse_to_openai_message(message=message)
         else:
             if message.framework is not None:
                 logger.warning(f"Unsupported framework: {message.framework} for message {message}")
@@ -107,11 +110,12 @@ def _validate_message_sequence(messages: list[dict]) -> list[dict]:
     Validate and fix the message sequence to follow OpenAI's expected format.
 
     Rules:
-    1. System messages can only appear at the beginning
-    2. After system messages, must alternate between user/tool and assistant
-    3. Cannot have consecutive user messages or consecutive assistant messages
-    4. If first non-system messages are not user messages, they will be
-       concatenated into a single user message (with a warning)
+
+    - System messages can only appear at the beginning
+    - After system messages, must alternate between user/tool and assistant
+    - Cannot have consecutive user messages or consecutive assistant messages
+    - If first non-system messages are not user messages, they will be
+      concatenated into a single user message (with a warning)
 
     Args:
         messages: List of parsed OpenAI messages
@@ -120,7 +124,7 @@ def _validate_message_sequence(messages: list[dict]) -> list[dict]:
         list[dict]: The validated (and potentially fixed) message list
 
     Raises:
-        ValueError: If the message sequence is invalid
+        ValueError: If the message sequence is invalid.
     """
     if not messages:
         return messages

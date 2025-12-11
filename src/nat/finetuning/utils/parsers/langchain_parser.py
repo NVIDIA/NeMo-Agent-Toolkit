@@ -14,8 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
-
 from langchain_core.messages import AIMessage
 from langchain_core.messages import AIMessageChunk
 from langchain_core.messages import BaseMessage
@@ -26,6 +24,12 @@ from langchain_core.messages import ToolMessage
 
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepType
+from nat.finetuning.utils.parsers.common import extract_content
+from nat.finetuning.utils.parsers.common import parse_generic_message
+
+# Re-export for backwards compatibility and internal use
+_extract_content = extract_content
+_parse_generic_message = parse_generic_message
 
 
 def parse_to_openai_message(message: IntermediateStep) -> dict | list[dict]:
@@ -261,46 +265,3 @@ def _parse_dict_message(msg_dict: dict) -> dict:
             result[field] = msg_dict[field]
 
     return result
-
-
-def _parse_generic_message(message: IntermediateStep) -> dict:
-    """Parse messages that don't fit standard patterns."""
-    result = {"role": "user"}  # Default to user role
-
-    # Try to extract content from various fields
-    if message.data:
-        if message.data.output:
-            result["content"] = _extract_content(message.data.output)
-        elif message.data.input:
-            result["content"] = _extract_content(message.data.input)
-        elif message.data.chunk:
-            result["content"] = _extract_content(message.data.chunk)
-        else:
-            result["content"] = ""
-    else:
-        result["content"] = ""
-
-    return result
-
-
-def _extract_content(data) -> str:
-    """Extract string content from various data formats."""
-    if isinstance(data, str):
-        return data
-    elif isinstance(data, dict):
-        # Try common content fields
-        for key in ["content", "text", "message", "output"]:
-            if key in data:
-                return str(data[key])
-        # Fallback to JSON representation
-        return json.dumps(data)
-    elif isinstance(data, list):
-        # Join list items if they're strings
-        if all(isinstance(item, str) for item in data):
-            return "\n".join(data)
-        # Otherwise convert to JSON
-        return json.dumps(data)
-    elif hasattr(data, 'content'):
-        return str(data.content)
-    else:
-        return str(data)
