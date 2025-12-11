@@ -24,7 +24,6 @@ import logging
 from collections.abc import AsyncIterator
 from typing import Any
 
-from presidio_anonymizer.entities import OperatorConfig
 from pydantic import Field
 
 from nat.middleware.defense_middleware import DefenseMiddleware
@@ -41,7 +40,7 @@ class PIIDefenseMiddlewareConfig(DefenseMiddlewareConfig, name="pii_defense"):
 
     Detects PII in function outputs using Presidio's rule-based entity recognition (no LLM required).
 
-    See https://github.com/microsoft/presidio for more information about Presidio.
+    See <https://github.com/microsoft/presidio> for more information about Presidio.
 
     Actions:
     - 'partial_compliance': Detect and log PII, but allow content to pass through
@@ -71,7 +70,7 @@ class PIIDefenseMiddleware(DefenseMiddleware):
     Detects PII in function outputs using Presidio's rule-based entity recognition.
     Only output analysis is currently supported (target_location='output').
 
-    See https://github.com/microsoft/presidio for more information about Presidio.
+    See <https://github.com/microsoft/presidio> for more information about Presidio.
     """
 
     def __init__(self, config: PIIDefenseMiddlewareConfig, builder):
@@ -103,11 +102,11 @@ class PIIDefenseMiddleware(DefenseMiddleware):
                 self._analyzer = AnalyzerEngine()
                 self._anonymizer = AnonymizerEngine()
                 logger.info("Presidio engines loaded successfully")
-            except ImportError:
+            except ImportError as err:
                 raise ImportError(
                     "Microsoft Presidio is not installed. "
                     "Install it with: pip install presidio-analyzer presidio-anonymizer"
-                )
+                ) from err
 
     def _analyze_text(self, text: str) -> dict:
         """Analyze text for PII entities using Presidio.
@@ -119,6 +118,7 @@ class PIIDefenseMiddleware(DefenseMiddleware):
             Dictionary with detection results and anonymized text
         """
         self._lazy_load_presidio()
+        from presidio_anonymizer.entities import OperatorConfig
 
         # Analyze for PII with NO score threshold first (to see everything)
         all_results = self._analyzer.analyze(

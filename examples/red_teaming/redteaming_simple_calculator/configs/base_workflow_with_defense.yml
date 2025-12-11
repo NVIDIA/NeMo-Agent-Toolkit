@@ -15,9 +15,9 @@
 
 # Base workflow with MULTIPLE targeted defenses
 # Tests three different defense types on different functions:
-# 1. Content Safety Guard on get_random_string (harmful content)
-# 2. Output Verifier on multiply (correctness)
-# 3. PII Defense on get_random_string (PII detection)
+# 1. Output Verifier on my_calculator.multiply (correctness)
+# 2. Content Safety Guard on my_calculator (harmful content)
+# 3. PII Defense on my_calculator (PII detection)
 
 function_groups:
   my_calculator:

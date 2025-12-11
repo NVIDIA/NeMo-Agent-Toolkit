@@ -96,8 +96,9 @@ class HuggingFaceModel:
                     tokenize=False,
                     add_generation_prompt=True
                 )
-            except:
+            except (ValueError, TypeError, KeyError, AttributeError) as e:
                 # Fallback: just use the last message content
+                logger.debug("Chat template application failed: %s, using fallback", e)
                 last_msg = messages[-1]
                 text = last_msg.get("content", str(last_msg)) if isinstance(last_msg, dict) else str(last_msg)
         else:
@@ -229,10 +230,10 @@ async def huggingface_provider(config: HuggingFaceConfig, builder: Builder):
     try:
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
-    except ImportError:
+    except ImportError as err:
         raise ImportError(
             "transformers and torch required. Install: pip install transformers torch accelerate"
-        )
+        ) from err
     
     # Load model if not cached
     if config.model_name not in _model_cache:

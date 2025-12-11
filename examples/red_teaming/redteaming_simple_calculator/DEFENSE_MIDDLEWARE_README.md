@@ -57,7 +57,7 @@ pip install "nvidia-nat[huggingface]"
 ```
 
 ### PII Defense (`pii_defense`)
-Uses Microsoft Presidio (https://github.com/microsoft/presidio) to detect and anonymize Personally Identifiable Information (PII) in function outputs. Configurable with specific entity types and score thresholds. Uses rule-based entity recognition (no LLM required).
+Uses Microsoft Presidio (<https://github.com/microsoft/presidio>) to detect and anonymize Personally Identifiable Information (PII) in function outputs. Configurable with specific entity types and score thresholds. Uses rule-based entity recognition (no LLM required).
 
 ## Defense Actions
 
