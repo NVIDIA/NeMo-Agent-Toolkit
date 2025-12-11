@@ -65,7 +65,7 @@ Replace `<YOUR_API_KEY>` with your actual NVIDIA API key.
 
 
 ## NeMo Agent Toolkit Packages
-Once a NeMo Agent toolkit workflow is ready for deployment to production, the deployed workflow will need to declare a dependency on the `nvidia-nat` package, along with the needed plugins. When declaring a dependency on NeMo Agent toolkit it is recommended to use the first two digits of the version number. For example if the version is `1.0.0` then the dependency would be `1.0`.
+Once a NeMo Agent toolkit workflow is ready for deployment to production, the deployed workflow will need to declare a dependency on the `nvidia-nat` package, along with the needed plugins. When declaring a dependency on NeMo Agent toolkit, we recommend using the first two digits of the version number. For example if the version is `1.0.0`, then the dependency would be `1.0`.
 
 For more information on the available plugins, refer to [Framework Integrations](./installation.md#framework-integrations).
 
