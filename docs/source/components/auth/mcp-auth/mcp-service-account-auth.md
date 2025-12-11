@@ -344,5 +344,5 @@ Verify all environment variables are set in your CI/CD platform.
 ## See Also
 
 - [MCP Authentication](./index.md) - OAuth2 interactive authentication for user-facing workflows
-- [MCP Client](../../../build-workflows/mcp.md) - Connecting to MCP servers
+- [MCP Client](../../../build-workflows/mcp-client.md) - Connecting to MCP servers
 - MCP Service Account Authentication Example: `examples/MCP/service_account_auth_mcp/README.md`

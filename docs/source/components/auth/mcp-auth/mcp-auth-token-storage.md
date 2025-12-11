@@ -197,7 +197,7 @@ Then configure your custom storage in the MCP provider initialization.
 
 ## Related Documentation
 
-- [MCP Client Configuration](../../../build-workflows/mcp.md)
+- [MCP Client Configuration](../../../build-workflows/mcp-client.md)
 - [Object Store Documentation](../../../build-workflows/object-store.md)
 - [Authentication API Reference](../api-authentication.md)
 - [Extending Object Stores](../../../extend/custom-components/object-store.md)

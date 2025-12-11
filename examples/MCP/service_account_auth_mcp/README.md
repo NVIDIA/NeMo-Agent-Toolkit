@@ -216,4 +216,4 @@ For detailed configuration options and authentication patterns, refer to the [MC
 
 - [MCP Service Account Authentication](../../../docs/source/components/auth/mcp-auth/mcp-service-account-auth.md) - Complete configuration reference and authentication patterns
 - [MCP Authentication](../../../docs/source/components/auth/mcp-auth/index.md) - OAuth2 interactive authentication for user-facing workflows
-- [MCP Client](../../../docs/source/build-workflows/mcp.md) - MCP client configuration guide
+- [MCP Client](../../../docs/source/build-workflows/mcp-client.md) - MCP client configuration guide

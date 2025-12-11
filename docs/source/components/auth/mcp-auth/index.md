@@ -239,7 +239,7 @@ MCP client CLI can be used to display and call MCP tools on a remote MCP server.
 ```bash
 nat mcp client tool list --url http://example.com/mcp --auth
 ```
-This will use the `mcp_oauth2` authentication provider to authenticate the user. For more information, refer to [MCP Client](../../../build-workflows/mcp.md).
+This will use the `mcp_oauth2` authentication provider to authenticate the user. For more information, refer to [MCP Client](../../../build-workflows/mcp-client.md).
 
 ## Security Considerations
 
@@ -273,7 +273,7 @@ Tool calls may fail if one of the following happens:
 ## Related Documentation
 - [Secure Token Storage](./mcp-auth-token-storage.md) - Learn about configuring secure token storage for MCP authentication
 - [Service Account Authentication](./mcp-service-account-auth.md) - Learn about using service accounts for headless MCP authentication
-- [MCP Client](../../../build-workflows/mcp.md) - Connect to and use tools from remote MCP servers
+- [MCP Client](../../../build-workflows/mcp-client.md) - Connect to and use tools from remote MCP servers
 - [Object Store Documentation](../../../build-workflows/object-store.md) - Configure object stores for persistent token storage
 
 ```{toctree}

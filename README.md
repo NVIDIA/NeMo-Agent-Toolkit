@@ -67,7 +67,7 @@ limitations under the License.
 
 - 💬 [**User Interface:**](./docs/source/run-workflows/launching-ui.md) Use the NeMo Agent Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
 
-- 🔗 [**Full MCP Support:**](./docs/source/build-workflows/mcp.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use NeMo Agent Toolkit as an [MCP client](./docs/source/build-workflows/mcp.md) to connect to and use tools served by remote MCP servers. You can also use NeMo Agent Toolkit as an [MCP server](./docs/source/run-workflows/mcp-server.md) to publish tools via MCP.
+- 🔗 [**Full MCP Support:**](./docs/source/build-workflows/mcp-client.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use NeMo Agent Toolkit as an [MCP client](./docs/source/build-workflows/mcp-client.md) to connect to and use tools served by remote MCP servers. You can also use NeMo Agent Toolkit as an [MCP server](./docs/source/run-workflows/mcp-server.md) to publish tools via MCP.
 
 With NeMo Agent Toolkit, you can move quickly, experiment freely, and ensure reliability across all your agent-driven projects.
 
