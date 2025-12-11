@@ -239,6 +239,7 @@ In addition to this, each example should contain a `README.md` file that describ
 ### Documentation Categories
 
 The documentation in the `docs/source` directory is organized into the following categories. When adding new documentation, ensure that it is added to the appropriate category and sub-category:
+
 * **About** (`about`) - This should be limited to an overview, key features, concepts, and release notes documents.
 * **Get Started** (`get-started`) - Introductory documentation to help users get started with NeMo Agent toolkit.
   * **Tutorials** (`get-started/tutorials`) - Step-by-step guides to help users learn how to use the toolkit to execute specific use cases.
@@ -250,8 +251,6 @@ The documentation in the `docs/source` directory is organized into the following
 * **Reference** (`reference`) - This documentation should be limited to documenting the Python API, REST API, and CLI.
 * **Resources** (`resources`) - Documentation for the project as a whole such as contributing guidelines, code of conduct, licensing, and FAQs.
   * **Contributing** (`resources/contributing`) - Documentation on how to contribute to the NeMo Agent toolkit project including setting up a development environment and running tests.
-
-When adding new documentation, ensure that it is added to the appropriate category and sub-category.
 
 ### Checks
 All documentation is checked using [Vale](https://vale.sh/). In documentation the name of a command, variable, class, or function should be surrounded by backticks. For example referring `nat` should always be surrounded by backticks. Vale will not perform a check against anything surrounded by backticks or by a code block.
