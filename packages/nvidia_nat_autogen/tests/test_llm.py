@@ -91,9 +91,8 @@ class TestPatchAutoGenClient:
         mock_patched_client = Mock()
         mock_patch_thinking.return_value = mock_patched_client
 
-        # Create a mock thinking config that has a non-None thinking_system_prompt
-        thinking_config = Mock(spec=MockThinkingConfig)
-        thinking_config.thinking_system_prompt = "Think step by step"
+        # Create a real thinking config instance
+        thinking_config = MockThinkingConfig(thinking_system_prompt="Think step by step")
 
         result = _patch_autogen_client_based_on_config(mock_client, thinking_config)
 

@@ -335,7 +335,7 @@ class TestLLMCallMonkeyPatch:
         """Test model name fallback when _raw_config fails.
 
         Args:
-            mock_logger (Mock): Mock for the logger.
+            mock_get (Mock): Mock for Context.get method.
         """
         # Setup mocks
         mock_context = Mock()

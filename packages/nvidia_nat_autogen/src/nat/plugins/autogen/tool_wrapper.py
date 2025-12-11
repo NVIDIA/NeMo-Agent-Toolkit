@@ -150,10 +150,7 @@ def autogen_tool_wrapper(
 
             return func_to_wrap
 
-        # If func is None, return the decorator itself to be applied later
-        if func is None:
-            return decorator
-        # Otherwise, apply the decorator to the provided function
+        # Apply the decorator to the provided function
         return decorator(func)
 
     if fn.has_streaming_output and not fn.has_single_output:

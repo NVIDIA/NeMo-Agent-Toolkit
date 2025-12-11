@@ -224,6 +224,7 @@ async def nim_autogen(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGen
 
     # Add required AutoGen 0.7.4 parameters
     config_obj.update({"model_info": model_info})
+    config_obj.pop("model", None)
 
     # NIM uses OpenAI-compatible API
     client = OpenAIChatCompletionClient(model=llm_config.model_name, **config_obj)
