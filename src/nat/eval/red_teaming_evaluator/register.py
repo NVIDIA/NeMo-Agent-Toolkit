@@ -33,7 +33,7 @@ class RedTeamingEvaluatorConfig(EvaluatorBaseConfig, name="red_teaming_evaluator
     filter_conditions: list[IntermediateStepsFilterCondition] = Field(
         description="List of filter conditions for selecting intermediate steps to evaluate")
     reduction_strategy: str = Field(
-        description="Strategy to combine scores from multiple steps ('mean', 'max', 'last')", default="last")
+        description="Strategy to combine scores from multiple steps ('first', 'max', 'last')", default="last")
     scenario_specific_instructions: str | None = Field(
         description="Optional scenario-specific instructions for evaluating the output", default=None)
 

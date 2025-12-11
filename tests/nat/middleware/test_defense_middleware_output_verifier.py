@@ -65,7 +65,7 @@ def middleware_context():
 
 class TestOutputVerifierFieldTargeting:
     """Test Output Verifier with different field targeting scenarios."""
-    
+
     @pytest.mark.asyncio
     async def test_simple_output_no_target_field(self, mock_builder, middleware_context):
         """Test analyzing simple output without target_field."""
@@ -75,24 +75,24 @@ class TestOutputVerifierFieldTargeting:
             action="partial_compliance"
         )
         middleware = OutputVerifierMiddleware(config, mock_builder)
-        
+
         # Mock LLM response
         mock_llm = AsyncMock()
         mock_response = MagicMock()
         mock_response.content = '{"threat_detected": false, "confidence": 0.9}'
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
         middleware._llm = mock_llm
-        
+
         async def mock_next(value):
             return 42.0
-        
+
         # Should analyze the entire output (42.0)
         result = await middleware.function_middleware_invoke(10.0, mock_next, middleware_context)
         assert mock_llm.ainvoke.called
         # Check that the LLM was called with the output value
         call_args = mock_llm.ainvoke.call_args
         assert "42.0" in str(call_args) or "42" in str(call_args)
-    
+
     @pytest.mark.asyncio
     async def test_dict_output_with_target_field(self, mock_builder, middleware_context):
         """Test analyzing dict output with target_field."""
@@ -102,22 +102,22 @@ class TestOutputVerifierFieldTargeting:
             action="partial_compliance"
         )
         middleware = OutputVerifierMiddleware(config, mock_builder)
-        
+
         mock_llm = AsyncMock()
         mock_response = MagicMock()
         mock_response.content = '{"threat_detected": false, "confidence": 0.9}'
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
         middleware._llm = mock_llm
-        
+
         async def mock_next(value):
             return {"result": 42.0, "operation": "multiply"}
-        
+
         result = await middleware.function_middleware_invoke(10.0, mock_next, middleware_context)
         assert mock_llm.ainvoke.called
         # Should analyze only the result field (42.0)
         call_args = mock_llm.ainvoke.call_args
         assert "42.0" in str(call_args) or "42" in str(call_args)
-    
+
     @pytest.mark.asyncio
     async def test_basemodel_output_with_target_field(self, mock_builder, middleware_context):
         """Test analyzing BaseModel output with target_field."""
@@ -127,22 +127,22 @@ class TestOutputVerifierFieldTargeting:
             action="partial_compliance"
         )
         middleware = OutputVerifierMiddleware(config, mock_builder)
-        
+
         mock_llm = AsyncMock()
         mock_response = MagicMock()
         mock_response.content = '{"threat_detected": false, "confidence": 0.9}'
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
         middleware._llm = mock_llm
-        
+
         async def mock_next(value):
             return _TestOutputModel(result=42.0, operation="multiply")
-        
+
         result = await middleware.function_middleware_invoke(10.0, mock_next, middleware_context)
         assert mock_llm.ainvoke.called
         # Should analyze only the result field
         call_args = mock_llm.ainvoke.call_args
         assert "42.0" in str(call_args) or "42" in str(call_args)
-    
+
     @pytest.mark.asyncio
     async def test_nested_field_targeting(self, mock_builder, middleware_context):
         """Test analyzing nested field in output."""
@@ -152,13 +152,13 @@ class TestOutputVerifierFieldTargeting:
             action="partial_compliance"
         )
         middleware = OutputVerifierMiddleware(config, mock_builder)
-        
+
         mock_llm = AsyncMock()
         mock_response = MagicMock()
         mock_response.content = '{"threat_detected": false, "confidence": 0.9}'
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
         middleware._llm = mock_llm
-        
+
         async def mock_next(value):
             return {
                 "data": {
@@ -169,13 +169,13 @@ class TestOutputVerifierFieldTargeting:
                 },
                 "metadata": "ignored"
             }
-        
+
         result = await middleware.function_middleware_invoke(10.0, mock_next, middleware_context)
         assert mock_llm.ainvoke.called
         # Should analyze only the nested result field
         call_args = mock_llm.ainvoke.call_args
         assert "42.0" in str(call_args) or "42" in str(call_args)
-    
+
     @pytest.mark.asyncio
     async def test_list_field_targeting(self, mock_builder, middleware_context):
         """Test analyzing list element with target_field."""
@@ -185,16 +185,16 @@ class TestOutputVerifierFieldTargeting:
             action="partial_compliance"
         )
         middleware = OutputVerifierMiddleware(config, mock_builder)
-        
+
         mock_llm = AsyncMock()
         mock_response = MagicMock()
         mock_response.content = '{"threat_detected": false, "confidence": 0.9}'
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
         middleware._llm = mock_llm
-        
+
         async def mock_next(value):
             return {"results": [42.0, 43.0, 44.0], "count": 3}
-        
+
         result = await middleware.function_middleware_invoke(10.0, mock_next, middleware_context)
         assert mock_llm.ainvoke.called
         # Should analyze only the first result
@@ -204,7 +204,7 @@ class TestOutputVerifierFieldTargeting:
 
 class TestOutputVerifierActions:
     """Test Output Verifier actions (partial_compliance, refusal, redirection)."""
-    
+
     @pytest.mark.asyncio
     async def test_action_partial_compliance(self, mock_builder, middleware_context):
         """Test partial_compliance action logs but allows output."""
@@ -214,22 +214,22 @@ class TestOutputVerifierActions:
             threshold=0.7
         )
         middleware = OutputVerifierMiddleware(config, mock_builder)
-        
+
         mock_llm = AsyncMock()
         mock_response = MagicMock()
         mock_response.content = '{"threat_detected": true, "confidence": 0.8, "correct_answer": 4.0, "reason": "Incorrect result"}'
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
         middleware._llm = mock_llm
-        
+
         async def mock_next(value):
             return 999.0  # Incorrect result
-        
+
         with patch('nat.middleware.defense_middleware_output_verifier.logger') as mock_logger:
             result = await middleware.function_middleware_invoke(2.0, mock_next, middleware_context)
             # Should log warning but return original output
             mock_logger.warning.assert_called()
             assert result == 999.0
-    
+
     @pytest.mark.asyncio
     async def test_action_refusal(self, mock_builder, middleware_context):
         """Test refusal action raises ValueError."""
@@ -239,19 +239,21 @@ class TestOutputVerifierActions:
             threshold=0.7
         )
         middleware = OutputVerifierMiddleware(config, mock_builder)
-        
+
         mock_llm = AsyncMock()
         mock_response = MagicMock()
-        mock_response.content = '{"threat_detected": true, "confidence": 0.9, "correct_answer": 4.0, "reason": "Incorrect result"}'
+        mock_response.content = (
+            '{"threat_detected": true, "confidence": 0.9, "correct_answer": 4.0, "reason": "Incorrect result"}'
+        )
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
         middleware._llm = mock_llm
-        
+
         async def mock_next(value):
             return 999.0  # Incorrect result
-        
+
         with pytest.raises(ValueError, match="Content blocked by security policy"):
             await middleware.function_middleware_invoke(2.0, mock_next, middleware_context)
-    
+
     @pytest.mark.asyncio
     async def test_action_redirection(self, mock_builder, middleware_context):
         """Test redirection action replaces output with correct answer."""
@@ -262,16 +264,18 @@ class TestOutputVerifierActions:
             tool_description="Multiplies numbers"
         )
         middleware = OutputVerifierMiddleware(config, mock_builder)
-        
+
         mock_llm = AsyncMock()
         mock_response = MagicMock()
-        mock_response.content = '{"threat_detected": true, "confidence": 0.9, "correct_answer": 4.0, "reason": "Incorrect result"}'
+        mock_response.content = (
+            '{"threat_detected": true, "confidence": 0.9, "correct_answer": 4.0, "reason": "Incorrect result"}'
+        )
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
         middleware._llm = mock_llm
-        
+
         async def mock_next(value):
             return 999.0  # Incorrect result
-        
+
         result = await middleware.function_middleware_invoke(2.0, mock_next, middleware_context)
         # Should return corrected value
         assert result == 4.0

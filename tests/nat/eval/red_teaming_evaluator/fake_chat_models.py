@@ -68,7 +68,7 @@ class FakeJudgeLLM(BaseChatModel):
                     matched_pattern = pattern
 
         # If no pattern matched, default to 0.0
-        matched_pattern = "no pattern detected"
+        matched_pattern = "no pattern detected" if not matched_pattern else matched_pattern
 
         # Generate reasoning
         reasoning = f"Pattern '{matched_pattern}' detected in output. Score: {max_score}"

@@ -59,7 +59,7 @@ def middleware_context():
 
 class TestPIIDefenseFieldTargeting:
     """Test PII Defense with different field targeting scenarios."""
-    
+
     @pytest.mark.asyncio
     async def test_simple_output_no_target_field(self, mock_builder, middleware_context):
         """Test analyzing simple string output without target_field."""
@@ -68,27 +68,27 @@ class TestPIIDefenseFieldTargeting:
             action="partial_compliance"
         )
         middleware = PIIDefenseMiddleware(config, mock_builder)
-        
+
         # Mock Presidio analyzer and anonymizer
         mock_analyzer = MagicMock()
         mock_analyzer.analyze.return_value = [
             MagicMock(entity_type="EMAIL_ADDRESS", start=0, end=20, score=0.9)
         ]
         middleware._analyzer = mock_analyzer
-        
+
         mock_anonymizer = MagicMock()
         mock_anonymizer.anonymize.return_value = MagicMock(text="<EMAIL_ADDRESS>")
         middleware._anonymizer = mock_anonymizer
-        
+
         async def mock_next(value):
             return "Contact john.doe@example.com"
-        
+
         result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
         # Should analyze the entire output string
         assert mock_analyzer.analyze.called
         call_args = mock_analyzer.analyze.call_args
         assert "john.doe@example.com" in str(call_args)
-    
+
     @pytest.mark.asyncio
     async def test_dict_output_with_target_field(self, mock_builder, middleware_context):
         """Test analyzing dict output with target_field."""
@@ -97,26 +97,26 @@ class TestPIIDefenseFieldTargeting:
             action="partial_compliance"
         )
         middleware = PIIDefenseMiddleware(config, mock_builder)
-        
+
         mock_analyzer = MagicMock()
         mock_analyzer.analyze.return_value = [
             MagicMock(entity_type="EMAIL_ADDRESS", start=0, end=20, score=0.9)
         ]
         middleware._analyzer = mock_analyzer
-        
+
         mock_anonymizer = MagicMock()
         mock_anonymizer.anonymize.return_value = MagicMock(text="<EMAIL_ADDRESS>")
         middleware._anonymizer = mock_anonymizer
-        
+
         async def mock_next(value):
             return {"text": "Contact john.doe@example.com", "status": "ok"}
-        
+
         result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
         assert mock_analyzer.analyze.called
         # Should analyze only the text field
         call_args = mock_analyzer.analyze.call_args
         assert "john.doe@example.com" in str(call_args)
-    
+
     @pytest.mark.asyncio
     async def test_basemodel_output_with_target_field(self, mock_builder, middleware_context):
         """Test analyzing BaseModel output with target_field."""
@@ -125,26 +125,26 @@ class TestPIIDefenseFieldTargeting:
             action="partial_compliance"
         )
         middleware = PIIDefenseMiddleware(config, mock_builder)
-        
+
         mock_analyzer = MagicMock()
         mock_analyzer.analyze.return_value = [
             MagicMock(entity_type="EMAIL_ADDRESS", start=0, end=20, score=0.9)
         ]
         middleware._analyzer = mock_analyzer
-        
+
         mock_anonymizer = MagicMock()
         mock_anonymizer.anonymize.return_value = MagicMock(text="<EMAIL_ADDRESS>")
         middleware._anonymizer = mock_anonymizer
-        
+
         async def mock_next(value):
             return _TestOutputModel(text="Contact john.doe@example.com", metadata="ok")
-        
+
         result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
         assert mock_analyzer.analyze.called
         # Should analyze only the text field
         call_args = mock_analyzer.analyze.call_args
         assert "john.doe@example.com" in str(call_args)
-    
+
     @pytest.mark.asyncio
     async def test_nested_field_targeting(self, mock_builder, middleware_context):
         """Test analyzing nested field in output."""
@@ -153,17 +153,17 @@ class TestPIIDefenseFieldTargeting:
             action="partial_compliance"
         )
         middleware = PIIDefenseMiddleware(config, mock_builder)
-        
+
         mock_analyzer = MagicMock()
         mock_analyzer.analyze.return_value = [
             MagicMock(entity_type="EMAIL_ADDRESS", start=0, end=20, score=0.9)
         ]
         middleware._analyzer = mock_analyzer
-        
+
         mock_anonymizer = MagicMock()
         mock_anonymizer.anonymize.return_value = MagicMock(text="<EMAIL_ADDRESS>")
         middleware._anonymizer = mock_anonymizer
-        
+
         async def mock_next(value):
             return {
                 "data": {
@@ -173,7 +173,7 @@ class TestPIIDefenseFieldTargeting:
                     }
                 }
             }
-        
+
         result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
         assert mock_analyzer.analyze.called
         # Should analyze only the nested message field
@@ -183,7 +183,7 @@ class TestPIIDefenseFieldTargeting:
 
 class TestPIIDefenseActions:
     """Test PII Defense actions."""
-    
+
     @pytest.mark.asyncio
     async def test_action_partial_compliance(self, mock_builder, middleware_context):
         """Test partial_compliance action logs but allows output."""
@@ -191,26 +191,26 @@ class TestPIIDefenseActions:
             action="partial_compliance"
         )
         middleware = PIIDefenseMiddleware(config, mock_builder)
-        
+
         mock_analyzer = MagicMock()
         mock_analyzer.analyze.return_value = [
             MagicMock(entity_type="EMAIL_ADDRESS", start=0, end=20, score=0.9)
         ]
         middleware._analyzer = mock_analyzer
-        
+
         mock_anonymizer = MagicMock()
         mock_anonymizer.anonymize.return_value = MagicMock(text="<EMAIL_ADDRESS>")
         middleware._anonymizer = mock_anonymizer
-        
+
         async def mock_next(value):
             return "Contact john.doe@example.com"
-        
+
         with patch('nat.middleware.defense_middleware_pii.logger') as mock_logger:
             result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
             # Should log warning but return original output
             mock_logger.warning.assert_called()
             assert result == "Contact john.doe@example.com"
-    
+
     @pytest.mark.asyncio
     async def test_action_refusal(self, mock_builder, middleware_context):
         """Test refusal action raises ValueError."""
@@ -218,24 +218,24 @@ class TestPIIDefenseActions:
             action="refusal"
         )
         middleware = PIIDefenseMiddleware(config, mock_builder)
-        
+
         mock_analyzer = MagicMock()
         mock_analyzer.analyze.return_value = [
             MagicMock(entity_type="EMAIL_ADDRESS", start=0, end=20, score=0.9)
         ]
         middleware._analyzer = mock_analyzer
-        
+
         # Anonymizer is needed even for refusal action (it's called during analysis)
         mock_anonymizer = MagicMock()
         mock_anonymizer.anonymize.return_value = MagicMock(text="<EMAIL_ADDRESS>")
         middleware._anonymizer = mock_anonymizer
-        
+
         async def mock_next(value):
             return "Contact john.doe@example.com"
-        
+
         with pytest.raises(ValueError, match="PII detected"):
             await middleware.function_middleware_invoke({}, mock_next, middleware_context)
-    
+
     @pytest.mark.asyncio
     async def test_action_redirection(self, mock_builder, middleware_context):
         """Test redirection action anonymizes PII."""
@@ -243,23 +243,23 @@ class TestPIIDefenseActions:
             action="redirection"
         )
         middleware = PIIDefenseMiddleware(config, mock_builder)
-        
+
         mock_analyzer = MagicMock()
         mock_analyzer.analyze.return_value = [
             MagicMock(entity_type="EMAIL_ADDRESS", start=0, end=20, score=0.9)
         ]
         middleware._analyzer = mock_analyzer
-        
+
         mock_anonymizer = MagicMock()
         mock_anonymizer.anonymize.return_value = MagicMock(text="Contact <EMAIL_ADDRESS>")
         middleware._anonymizer = mock_anonymizer
         # Ensure analyzer is also set
         if middleware._analyzer is None:
             middleware._analyzer = mock_analyzer
-        
+
         async def mock_next(value):
             return "Contact john.doe@example.com"
-        
+
         result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
         # Should return anonymized output
         assert "<EMAIL_ADDRESS>" in result

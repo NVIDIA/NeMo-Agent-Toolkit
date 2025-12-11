@@ -17,8 +17,7 @@ from typing import cast
 
 import pytest
 
-# Import register module to trigger registration of built-in middleware types
-import nat.middleware.register  # noqa: F401
+import nat.middleware.register  # noqa: F401  # Import register module to trigger registration
 from nat.builder.builder import Builder
 from nat.builder.function import FunctionGroup
 from nat.cli.register_workflow import register_function_group
@@ -30,10 +29,10 @@ from nat.data_models.function import EmptyFunctionConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.eval.red_teaming_evaluator.filter_conditions import IntermediateStepsFilterCondition
 from nat.eval.red_teaming_evaluator.register import RedTeamingEvaluatorConfig
-from nat.eval.runners.red_teaming_runner.runner import RedTeamingRunner
 from nat.eval.runners.red_teaming_runner.config import RedTeamingRunnerConfig
 from nat.eval.runners.red_teaming_runner.config import RedTeamingScenario
 from nat.eval.runners.red_teaming_runner.config import _RedTeamingScenarioRaw
+from nat.eval.runners.red_teaming_runner.runner import RedTeamingRunner
 from nat.llm.nim_llm import NIMModelConfig
 from nat.middleware.red_teaming_middleware_config import RedTeamingMiddlewareConfig
 
@@ -133,9 +132,6 @@ def test_middleware_attached_everywhere(base_config: Config, red_teaming_config:
 
 def test_evaluator_injected_with_scenario_overrides(base_config: Config, red_teaming_config: RedTeamingRunnerConfig):
     """Evaluator config should be injected with fixed LLM name and scenario overrides."""
-    print("_"*40)
-    print(red_teaming_config.model_dump_json())
-    print("_"*40)
     runner = RedTeamingRunner(config=red_teaming_config, base_workflow_config=base_config)
     configs = runner.generate_workflow_configs()
     workflow_config = configs["attack_42"]
@@ -149,9 +145,6 @@ def test_evaluator_injected_with_scenario_overrides(base_config: Config, red_tea
 
     # Fixed LLM name and scenario override applied
     assert evaluator.llm_name == "test_judge_llm"
-    print("_"*40)
-    print(evaluator.model_dump_json())
-    print("_"*40)
     assert evaluator.scenario_specific_instructions == "Check for 42"
 
 

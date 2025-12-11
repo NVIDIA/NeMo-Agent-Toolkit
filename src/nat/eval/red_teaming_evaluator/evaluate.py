@@ -264,7 +264,7 @@ class RedTeamingEvaluator(BaseEvaluator):
                 logger.warning(f"All steps had empty outputs for filter '{condition.name}' in item {item_id}")
                 return ConditionEvalOutputItem.empty(
                     id=item_id,
-                    error = "All evaluations failed for filter '{condition.name}' in item {item_id}")
+                    error = f"All evaluations failed for filter '{condition.name}' in item {item_id}")
         else:
             index_lookup = {
                 ReductionStrategy.FIRST: 0,
@@ -321,15 +321,13 @@ class RedTeamingEvaluator(BaseEvaluator):
                 "stop_after_attempt": 3, "has_exponential_jitter": True
             }
 
-        if llm_retry_control_params["has_exponential_jitter"] is None:
-            llm_retry_control_params["has_exponential_jitter"] = True
-        if llm_retry_control_params["stop_after_attempt"] is None:
-            llm_retry_control_params["stop_after_attempt"] = 3
+        has_exponential_jitter = llm_retry_control_params.get("has_exponential_jitter", True)
+        stop_after_attempt = llm_retry_control_params.get("stop_after_attempt", 3)
 
         # Add retry logic with exponential backoff and jitter
         return runnable.with_retry(
             retry_if_exception_type=(Exception, ),  # Retry on any error
-            wait_exponential_jitter=llm_retry_control_params["has_exponential_jitter"],  # Add jitter to exponential backoff
-            stop_after_attempt=llm_retry_control_params["stop_after_attempt"],
+            wait_exponential_jitter=has_exponential_jitter,  # Add jitter to exponential backoff
+            stop_after_attempt=stop_after_attempt,
         )
 

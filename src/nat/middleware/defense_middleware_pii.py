@@ -21,15 +21,16 @@ in function outputs using Microsoft Presidio.
 """
 
 import logging
-from typing import Any, AsyncIterator, List, Optional
+from collections.abc import AsyncIterator
+from typing import Any
 
-from presidio_analyzer import AnalyzerEngine
-from presidio_anonymizer import AnonymizerEngine
 from presidio_anonymizer.entities import OperatorConfig
 from pydantic import Field
 
-from nat.middleware.defense_middleware import DefenseMiddleware, DefenseMiddlewareConfig
-from nat.middleware.function_middleware import CallNext, CallNextStream
+from nat.middleware.defense_middleware import DefenseMiddleware
+from nat.middleware.defense_middleware import DefenseMiddlewareConfig
+from nat.middleware.function_middleware import CallNext
+from nat.middleware.function_middleware import CallNextStream
 from nat.middleware.middleware import FunctionMiddlewareContext
 
 logger = logging.getLogger(__name__)
@@ -39,22 +40,22 @@ class PIIDefenseMiddlewareConfig(DefenseMiddlewareConfig, name="pii_defense"):
     """Configuration for PII Defense Middleware using Microsoft Presidio.
 
     Detects PII in function outputs using Presidio's rule-based entity recognition (no LLM required).
-    
+
     See https://github.com/microsoft/presidio for more information about Presidio.
-    
+
     Actions:
     - 'partial_compliance': Detect and log PII, but allow content to pass through
     - 'refusal': Block content if PII detected (hard stop)
     - 'redirection': Replace PII with anonymized placeholders (e.g., <EMAIL_ADDRESS>)
-    
+
     Note: Only output analysis is currently supported (target_location='output').
     """
 
-    llm_name: Optional[str] = Field(
+    llm_name: str | None = Field(
         default=None,
         description="Not used for PII defense (Presidio is rule-based)"
     )
-    entities: List[str] = Field(
+    entities: list[str] = Field(
         default=["PERSON", "EMAIL_ADDRESS", "PHONE_NUMBER", "CREDIT_CARD", "US_SSN", "LOCATION", "IP_ADDRESS"],
         description="List of PII entities to detect"
     )
@@ -69,7 +70,7 @@ class PIIDefenseMiddleware(DefenseMiddleware):
 
     Detects PII in function outputs using Presidio's rule-based entity recognition.
     Only output analysis is currently supported (target_location='output').
-    
+
     See https://github.com/microsoft/presidio for more information about Presidio.
     """
 
@@ -125,10 +126,13 @@ class PIIDefenseMiddleware(DefenseMiddleware):
             entities=self.config.entities,
             language="en"
         )
-        
+
         # Log ALL detections before filtering
-        logger.debug("PII Defense raw detections: %s", [(r.entity_type, r.score, text[r.start:r.end]) for r in all_results])
-        
+        logger.debug(
+            "PII Defense raw detections: %s",
+            [(r.entity_type, r.score, text[r.start:r.end]) for r in all_results]
+        )
+
         # Filter by score threshold
         results = [r for r in all_results if r.score >= self.config.score_threshold]
 
@@ -152,10 +156,10 @@ class PIIDefenseMiddleware(DefenseMiddleware):
             operators = {}
             for result in results:
                 operators[result.entity_type] = OperatorConfig(
-                    "replace", 
+                    "replace",
                     {"new_value": f"<{result.entity_type}>"}
                 )
-            
+
             anonymized_text = self._anonymizer.anonymize(
                 text=text,
                 analyzer_results=results,
@@ -176,18 +180,18 @@ class PIIDefenseMiddleware(DefenseMiddleware):
         context: FunctionMiddlewareContext,
     ) -> tuple[Any, bool, str]:
         """Process PII detection and sanitization for a given value.
-        
+
         This is a common helper method that handles:
         - Field extraction (if target_field is specified)
         - PII analysis
         - Action handling (refusal, redirection, partial_compliance)
         - Applying sanitized value back to original structure
-        
+
         Args:
             value: The value to analyze (input or output)
             location: Either "input" or "output" (for logging)
             context: Function context metadata
-            
+
         Returns:
             Tuple of (sanitized_value, should_block, entities_str)
             - sanitized_value: The value after PII handling (may be unchanged)
@@ -196,27 +200,27 @@ class PIIDefenseMiddleware(DefenseMiddleware):
         """
         # Extract field from value if target_field is specified
         content_to_analyze, field_info = self._extract_field_from_value(value)
-        
+
         # Analyze for PII (convert to string for Presidio)
         content_text = str(content_to_analyze)
         analysis_result = self._analyze_text(content_text)
-        
+
         if not analysis_result.get("pii_detected", False):
             return value, False, ""
-        
+
         # PII detected - handle based on action
         entities = analysis_result.get("entities", {})
         entities_str = ", ".join([f"{k}({len(v)})" for k, v in entities.items()])
-        
+
         if self.config.action == "refusal":
             logger.error("PII Defense refusing %s of %s: %s", location, context.name, entities_str)
             return value, True, entities_str  # Signal to block
-        
+
         elif self.config.action == "redirection":
             logger.warning("PII Defense detected PII in %s of %s: %s", location, context.name, entities_str)
             logger.info("PII Defense anonymizing %s for %s", location, context.name)
             anonymized_content = analysis_result.get("anonymized_text", content_text)
-            
+
             # Convert anonymized_text back to original type if needed
             sanitized_value = anonymized_content
             if isinstance(content_to_analyze, (int, float)):
@@ -229,14 +233,14 @@ class PIIDefenseMiddleware(DefenseMiddleware):
                         type(content_to_analyze).__name__
                     )
                     sanitized_value = anonymized_content
-            
+
             # If field was extracted, apply sanitized value back to original structure
             if field_info is not None:
                 return self._apply_field_result_to_value(value, field_info, sanitized_value), False, entities_str
             else:
                 # No field extraction - return sanitized content directly
                 return sanitized_value, False, entities_str
-        
+
         else:  # action == "partial_compliance"
             logger.warning("PII Defense detected PII in %s of %s: %s", location, context.name, entities_str)
             return value, False, entities_str  # No modification, just log
@@ -306,10 +310,10 @@ class PIIDefenseMiddleware(DefenseMiddleware):
             # For streaming, we need to reconstruct the full output value
             output_value = "".join(str(chunk) for chunk in collected_chunks)
             sanitized_output, should_block, entities_str = self._process_pii_detection(output_value, "output", context)
-            
+
             if should_block:
                 raise ValueError(f"PII detected in output: {entities_str}. Output blocked.")
-            
+
             # If sanitized (redirection), yield as single chunk
             if sanitized_output != output_value:
                 yield sanitized_output

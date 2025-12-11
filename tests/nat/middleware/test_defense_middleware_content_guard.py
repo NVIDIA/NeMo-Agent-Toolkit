@@ -60,7 +60,7 @@ def middleware_context():
 
 class TestContentSafetyGuardFieldTargeting:
     """Test Content Safety Guard with different field targeting scenarios."""
-    
+
     @pytest.mark.asyncio
     async def test_simple_output_no_target_field(self, mock_builder, middleware_context):
         """Test analyzing simple string output without target_field."""
@@ -70,22 +70,22 @@ class TestContentSafetyGuardFieldTargeting:
             action="partial_compliance"
         )
         middleware = ContentSafetyGuardMiddleware(config, mock_builder)
-        
+
         mock_llm = AsyncMock()
         mock_response = MagicMock()
         mock_response.content = "Safe"
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
         middleware._llm = mock_llm
-        
+
         async def mock_next(value):
             return "Hello world"
-        
+
         result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
         assert mock_llm.ainvoke.called
         # Should analyze the entire output string
         call_args = mock_llm.ainvoke.call_args
         assert "Hello world" in str(call_args)
-    
+
     @pytest.mark.asyncio
     async def test_dict_output_with_target_field(self, mock_builder, middleware_context):
         """Test analyzing dict output with target_field."""
@@ -95,22 +95,22 @@ class TestContentSafetyGuardFieldTargeting:
             action="partial_compliance"
         )
         middleware = ContentSafetyGuardMiddleware(config, mock_builder)
-        
+
         mock_llm = AsyncMock()
         mock_response = MagicMock()
         mock_response.content = "Safe"
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
         middleware._llm = mock_llm
-        
+
         async def mock_next(value):
             return {"message": "Hello world", "status": "ok"}
-        
+
         result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
         assert mock_llm.ainvoke.called
         # Should analyze only the message field
         call_args = mock_llm.ainvoke.call_args
         assert "Hello world" in str(call_args)
-    
+
     @pytest.mark.asyncio
     async def test_basemodel_output_with_target_field(self, mock_builder, middleware_context):
         """Test analyzing BaseModel output with target_field."""
@@ -120,23 +120,23 @@ class TestContentSafetyGuardFieldTargeting:
             action="partial_compliance"
         )
         middleware = ContentSafetyGuardMiddleware(config, mock_builder)
-        
+
         mock_llm = AsyncMock()
         mock_response = MagicMock()
         mock_response.content = "Unsafe"
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
         middleware._llm = mock_llm
-        
+
         async def mock_next(value):
             return _TestOutputModel(message="harmful content", status="ok")
-        
+
         with patch('nat.middleware.defense_middleware_content_guard.logger') as mock_logger:
             result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
             assert mock_llm.ainvoke.called
             # Should analyze only the message field
             call_args = mock_llm.ainvoke.call_args
             assert "harmful content" in str(call_args)
-    
+
     @pytest.mark.asyncio
     async def test_nested_field_targeting(self, mock_builder, middleware_context):
         """Test analyzing nested field in output."""
@@ -146,13 +146,13 @@ class TestContentSafetyGuardFieldTargeting:
             action="partial_compliance"
         )
         middleware = ContentSafetyGuardMiddleware(config, mock_builder)
-        
+
         mock_llm = AsyncMock()
         mock_response = MagicMock()
         mock_response.content = "Safe"
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
         middleware._llm = mock_llm
-        
+
         async def mock_next(value):
             return {
                 "data": {
@@ -162,7 +162,7 @@ class TestContentSafetyGuardFieldTargeting:
                     }
                 }
             }
-        
+
         result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
         assert mock_llm.ainvoke.called
         # Should analyze only the nested text field
@@ -172,7 +172,7 @@ class TestContentSafetyGuardFieldTargeting:
 
 class TestContentSafetyGuardActions:
     """Test Content Safety Guard actions."""
-    
+
     @pytest.mark.asyncio
     async def test_action_partial_compliance(self, mock_builder, middleware_context):
         """Test partial_compliance action logs but allows output."""
@@ -181,22 +181,22 @@ class TestContentSafetyGuardActions:
             action="partial_compliance"
         )
         middleware = ContentSafetyGuardMiddleware(config, mock_builder)
-        
+
         mock_llm = AsyncMock()
         mock_response = MagicMock()
         mock_response.content = "Unsafe"
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
         middleware._llm = mock_llm
-        
+
         async def mock_next(value):
             return "harmful content"
-        
+
         with patch('nat.middleware.defense_middleware_content_guard.logger') as mock_logger:
             result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
             # Should log warning but return original output
             mock_logger.warning.assert_called()
             assert result == "harmful content"
-    
+
     @pytest.mark.asyncio
     async def test_action_refusal(self, mock_builder, middleware_context):
         """Test refusal action raises ValueError."""
@@ -205,19 +205,19 @@ class TestContentSafetyGuardActions:
             action="refusal"
         )
         middleware = ContentSafetyGuardMiddleware(config, mock_builder)
-        
+
         mock_llm = AsyncMock()
         mock_response = MagicMock()
         mock_response.content = "Unsafe"
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
         middleware._llm = mock_llm
-        
+
         async def mock_next(value):
             return "harmful content"
-        
+
         with pytest.raises(ValueError, match="Content blocked by safety policy"):
             await middleware.function_middleware_invoke({}, mock_next, middleware_context)
-    
+
     @pytest.mark.asyncio
     async def test_action_redirection(self, mock_builder, middleware_context):
         """Test redirection action replaces output with safe message."""
@@ -226,16 +226,16 @@ class TestContentSafetyGuardActions:
             action="redirection"
         )
         middleware = ContentSafetyGuardMiddleware(config, mock_builder)
-        
+
         mock_llm = AsyncMock()
         mock_response = MagicMock()
         mock_response.content = "Unsafe"
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
         middleware._llm = mock_llm
-        
+
         async def mock_next(value):
             return "harmful content"
-        
+
         result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
         # Should return safe refusal message
         assert "cannot" in result.lower() or "sorry" in result.lower() or "cannot assist" in result.lower()

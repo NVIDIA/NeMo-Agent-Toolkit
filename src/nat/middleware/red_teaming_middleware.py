@@ -135,11 +135,15 @@ class RedTeamingMiddleware(FunctionMiddleware):
             return True
 
         target = self._target_function_or_group
+
         # Group targeting - match if context starts with the group name
         # Handle both "group.function" and just "function" in context
         if "." in context_name and "." not in target:
             context_group = context_name.split(".", 1)[0]
             return context_group == target
+
+        if context_name == "<workflow>":
+            return target in {"<workflow>", "workflow"}
 
         # If context has no dot, match if it equals the target exactly
         return context_name == target
@@ -240,7 +244,17 @@ class RedTeamingMiddleware(FunctionMiddleware):
 
     def _apply_payload_to_complex_type(self, value: list | dict | BaseModel) -> list | dict | BaseModel:
         if self._target_field is None:
-            raise ValueError("When attempting to apply payload to complex type, target_field is required")
+            if isinstance(value, BaseModel):
+                value_details = value.model_dump_json()
+            else:
+                value_details = ""
+            additional_info = (
+                "Additional info: A pydantic BaseModel with fields:" + value_details if value_details else "")
+            raise ValueError(
+                "Applying an attack payload to complex type, requires a target_field. \n"
+                f"Input value: {value}.: {value_details}. {additional_info} \n"
+                "A target field can be specified in the middleware configuration as a jsonpath."
+                             )
 
         # Convert BaseModel to dict for jsonpath processing
         original_type = type(value)
