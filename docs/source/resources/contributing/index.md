@@ -239,14 +239,15 @@ In addition to this, each example should contain a `README.md` file that describ
 ### Documentation Categories
 
 The documentation in the `docs/source` directory is organized into the following categories:
+* **About** (`about`) - This should be limited to an overview, key features, concepts and release notes documents.
 * **Get Started** (`get-started`) - introductory documentation to help users get started with NeMo Agent toolkit.
   * **Tutorials** (`get-started/tutorials`) - step-by-step guides to help users learn how to use the toolkit.
-* **Build Workflows** (`build-workflows`) - documentation on how to build workflows and workflow configuration. This includes information on the types of components (for example LLMs, and agents, etc.) that can be used as part of a workflow. However documentation of specific component implementations (for example ReAct Agent, and the Code Execution tool) should be located in the Components category. Information about adding a remote MCP tool or A2A agent should be located here, however serving a workflow via MCP or A2A protocols should be located in the Run Workflows category.
-* **Run Workflows** (`run-workflows`) - documentation on how to run workflows, including observing workflows and publishing workflows with MPC and A2A protocols.
-* **Improve Workflows** (`improve-workflows`) - documentation on how to improve workflows such as evaluation, and optimization guides.
+* **Build** (`build-workflows`) - documentation on how to build workflows and workflow configuration. This includes information on the types of components (for example LLMs, and agents, etc.) that can be used as part of a workflow. However documentation of specific component implementations (for example ReAct Agent, and the Code Execution tool) should be located in the Components category. Information about adding a remote MCP tool or A2A agent should be located here, however serving a workflow via MCP or A2A protocols should be located in the Run category.
+* **Run** (`run-workflows`) - documentation on how to run workflows, including observing workflows and publishing workflows with MPC and A2A protocols.
+* **Improve** (`improve-workflows`) - documentation on how to improve workflows such as evaluation, and optimization guides.
 * **Components** (`components`) - documentation on specific component implementations such as agents, tools, and connectors.
-* **Extend NeMo Agent Toolkit** (`extend`) - documentation on how to write custom components, along with how to test those components. The documentation here should help users extend the toolkit to meet their needs, and while there is some overlap, this documentation should not focus on contributing to the core NeMo Agent toolkit library.
-* **Reference** (`reference`) - This documentation should be limited to documenting the Python and REST APIs.
+* **Extend** (`extend`) - documentation on how to write custom components, along with how to test those components. The documentation here should help users extend the toolkit to meet their needs, and while there is some overlap, this documentation should not focus on contributing to the core NeMo Agent toolkit library.
+* **Reference** (`reference`) - This documentation should be limited to documenting the Python API, REST API and CLI.
 * **Resources** (`resources`) - documentation for the project as a whole such as contributing guidelines, code of conduct, licensing, and FAQs.
   * **Contributing** (`resources/contributing`) - documentation on how to contribute to the NeMo Agent toolkit project including setting up a development environment, and running tests.
 

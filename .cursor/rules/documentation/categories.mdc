@@ -12,18 +12,26 @@ When adding new documentation, place it in the appropriate category within the `
 
 | Category          | Directory                | Purpose                                                 |
 | ----------------- | ------------------------ | ------------------------------------------------------- |
+| About             | `about`                  | Overview, key features, concepts, release notes         |
 | Get Started       | `get-started`            | Introductory documentation for new users                |
 | Tutorials         | `get-started/tutorials`  | Step-by-step learning guides                            |
-| Build Workflows   | `build-workflows`        | Workflow creation, configuration, MCP tools, A2A agents |
-| Run Workflows     | `run-workflows`          | Execution, observability, serving via MCP and A2A       |
-| Improve Workflows | `improve-workflows`      | Evaluation and optimization                             |
+| Build             | `build-workflows`        | Workflow creation, configuration, MCP tools, A2A agents |
+| Run               | `run-workflows`          | Execution, observability, serving via MCP and A2A       |
+| Improve           | `improve-workflows`      | Evaluation and optimization                             |
 | Components        | `components`             | Specific implementations (agents, tools, connectors)    |
 | Extend            | `extend`                 | Custom component development and testing                |
-| Reference         | `reference`              | Python and REST API documentation only                  |
+| Reference         | `reference`              | Python API, REST API, and CLI documentation only        |
 | Resources         | `resources`              | Project information (contributing, licensing, FAQs)     |
 | Contributing      | `resources/contributing` | Development environment and contribution guides         |
 
 ## Category Details
+
+### About (`about`)
+Documentation limited to:
+- Overview of NeMo Agent toolkit
+- Key features
+- Core concepts
+- Release notes
 
 ### Get Started (`get-started`)
 
@@ -31,20 +39,20 @@ Introductory documentation to help users get started with NeMo Agent toolkit. In
 
 **Tutorials** (`get-started/tutorials`): Step-by-step guides to help users learn how to use the toolkit.
 
-### Build Workflows (`build-workflows`)
+### Build (`build-workflows`)
 
 Documentation on how to build workflows and workflow configuration. Includes information on component types (LLMs, agents) that can be used in workflows, and adding remote MCP tools or A2A agents to workflows.
 
 **Note**: Documentation for specific component implementations belongs in the Components category, not here.
 
-### Run Workflows (`run-workflows`)
+### Run (`run-workflows`)
 
 Documentation on how to run workflows, including:
 
 - Observing workflows
 - Serving workflows via MCP and A2A protocols
 
-### Improve Workflows (`improve-workflows`)
+### Improve (`improve-workflows`)
 
 Documentation on workflow improvement:
 
@@ -74,6 +82,7 @@ Limited to API documentation:
 
 - Python API reference
 - REST API reference
+- CLI reference
 
 ### Resources (`resources`)
 
