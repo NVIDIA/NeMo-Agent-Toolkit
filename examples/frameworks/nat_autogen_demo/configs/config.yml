@@ -19,11 +19,6 @@ general:
       console:
         _type: console
         level: debug
-    tracing:
-      otelcollector:
-        _type: otelcollector
-        endpoint: ${OTEL_ENDPOINT:-http://localhost:6006/v1/traces}
-        project: nat_autogen_demo
 
 llms:
   openai_llm:

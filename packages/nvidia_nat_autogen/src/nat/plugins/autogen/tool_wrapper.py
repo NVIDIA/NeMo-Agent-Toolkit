@@ -145,7 +145,7 @@ def autogen_tool_wrapper(
                                           annotation=resolved_type,
                                           default=default))
                     annotations[param_name] = resolved_type
-                func_to_wrap.__signature__ = inspect.Signature(parameters=params)
+                setattr(func_to_wrap, "__signature__", inspect.Signature(parameters=params))
                 func_to_wrap.__annotations__ = annotations
 
             return func_to_wrap
