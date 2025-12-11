@@ -1,0 +1,428 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""
+Content Safety Guard Middleware.
+
+This middleware uses guard models to classify content as safe or harmful
+with simple Yes/No answers.
+"""
+
+import json
+import logging
+import re
+from collections.abc import AsyncIterator
+from typing import Any
+
+from pydantic import Field
+
+from nat.middleware.defense_middleware import DefenseMiddleware
+from nat.middleware.defense_middleware import DefenseMiddlewareConfig
+from nat.middleware.function_middleware import CallNext
+from nat.middleware.function_middleware import CallNextStream
+from nat.middleware.middleware import FunctionMiddlewareContext
+
+logger = logging.getLogger(__name__)
+
+
+class ContentSafetyGuardMiddlewareConfig(DefenseMiddlewareConfig, name="content_safety_guard"):
+    """Configuration for Content Safety Guard middleware.
+
+    This middleware uses guard models to classify content as safe or harmful.
+
+    Actions:
+    - 'partial_compliance': Log warning but allow content through
+    - 'refusal': Raise ValueError to block content (hard stop)
+    - 'redirection': Replace content with polite refusal message
+
+    Note: Only output analysis is currently supported (target_location='output').
+    """
+
+    llm_name: str = Field(
+        description="Name of the guard model LLM (must be defined in llms section)"
+    )
+
+
+class ContentSafetyGuardMiddleware(DefenseMiddleware):
+    """Safety guard middleware using guard models to classify content as safe or unsafe.
+
+    This middleware analyzes content using guard models (e.g., NVIDIA Nemoguard, Qwen Guard)
+    that return "Safe" or "Unsafe" classifications. The middleware extracts safety categories
+    when unsafe content is detected.
+
+    Only output analysis is currently supported (target_location='output').
+    """
+
+    def __init__(self, config: ContentSafetyGuardMiddlewareConfig, builder):
+        """Initialize content safety guard middleware.
+
+        Args:
+            config: Configuration for content safety guard middleware
+            builder: Builder instance for loading LLMs
+        """
+        super().__init__(config, builder)
+        # Store config with correct type for linter
+        self.config: ContentSafetyGuardMiddlewareConfig = config
+        self._llm = None  # Lazy loaded LLM
+
+        # Content Safety Guard only supports output analysis
+        if config.target_location == "input":
+            raise ValueError(
+                "ContentSafetyGuardMiddleware only supports target_location='output'. "
+                "Input analysis is not yet supported."
+            )
+
+    async def _get_llm(self):
+        """Lazy load the guard model LLM when first needed."""
+        if self._llm is None:
+            self._llm = await self._get_llm_for_defense(self.config.llm_name)
+        return self._llm
+
+    def _extract_unsafe_categories(self, response_text: str, is_safe: bool) -> list[str]:
+        """Extract safety categories only if content is unsafe.
+
+        Supports both JSON and text formats:
+        - JSON: {"Safety Categories": "Category1, Category2"} or {"Categories": ["Category1", "Category2"]}
+        - Text: Categories: Category1, Category2
+
+        Args:
+            response_text: Raw response from guard model
+            is_safe: Whether the content was detected as safe
+
+        Returns:
+            List of category strings if unsafe, empty list otherwise or on parsing error
+        """
+        if is_safe:
+            return []
+
+        try:
+            categories = []
+
+            # Try parsing as JSON first (for Nemoguard)
+            try:
+                json_data = json.loads(response_text)
+                # Look for common category field names
+                category_field = None
+                for field in ["Safety Categories", "Categories", "Category", "safety_categories", "categories"]:
+                    if field in json_data:
+                        category_field = json_data[field]
+                        break
+
+                if category_field:
+                    if isinstance(category_field, str):
+                        # Split by comma if it's a comma-separated string
+                        categories = [cat.strip() for cat in category_field.split(",")]
+                    elif isinstance(category_field, list):
+                        categories = [str(cat).strip() for cat in category_field]
+            except (json.JSONDecodeError, ValueError, AttributeError):
+                # Not JSON, try text parsing (for Qwen Guard)
+                # Look for "Categories:" or "Category:" followed by text
+                category_patterns = [
+                    r'Categories?:\s*([^\n]+)',  # Categories: Violent
+                    r'Categories?\s*=\s*([^\n]+)',  # Categories = Violent
+                    r'"Safety Categories":\s*"([^"]+)"',  # JSON-like in text
+                ]
+
+                for pattern in category_patterns:
+                    match = re.search(pattern, response_text, re.IGNORECASE)
+                    if match:
+                        category_text = match.group(1).strip()
+                        # Split by comma if comma-separated
+                        categories = [cat.strip() for cat in category_text.split(",")]
+                        break
+
+            return categories
+        except Exception:
+            # If any error occurs during category extraction, return empty list
+            logger.debug("Failed to extract categories from guard response, returning empty list")
+            return []
+
+    def _parse_guard_response(self, response_text: str) -> dict:
+        """Parse guard model response.
+
+        Searches for "Safe" or "Unsafe" keywords anywhere in the response (case-insensitive).
+        Works with any guard model format that includes these keywords:
+        - JSON: {"User Safety": "unsafe", "Safety Categories": "..."}
+        - Structured text: Safety: Unsafe\nCategories: Violent
+        - Plain text: Any text containing "Unsafe" or "Safe"
+
+        Also extracts safety categories from both formats:
+        - JSON: Extracts "Safety Categories" field
+        - Text: Extracts text after "Categories:" or "Category:"
+
+        If neither keyword is found, falls back to implicit refusal detection.
+        Prioritizes "Unsafe" if both keywords are present.
+
+        Args:
+            response_text: Raw response from guard model
+
+        Returns:
+            Dictionary with is_safe boolean, categories list, and raw response
+        """
+        cleaned_text = re.sub(r'[*_]+', '', response_text).strip()
+        response_lower = cleaned_text.lower()
+
+        # Search for "Unsafe" or "Safe" anywhere in the response (case-insensitive)
+        # Prioritize "Unsafe" if both are present
+        if re.search(r'\bunsafe\b', response_lower):
+            is_safe = False
+        elif re.search(r'\bsafe\b', response_lower):
+            is_safe = True
+        else:
+            # Detect implicit refusals (model refuses = harmful content detected)
+            refusal_indicators = [
+                "i cannot", "i can't", "i won't", "i will not",
+                "i'm unable", "i am unable", "i refuse",
+                "cannot provide", "can't provide", "won't provide",
+                "illegal", "harmful", "dangerous", "inappropriate"
+            ]
+
+            if any(indicator in response_lower for indicator in refusal_indicators):
+                is_safe = False  # Model refused = harmful detected
+            else:
+                is_safe = True  # Default to safe if unclear
+
+        # Extract categories only if unsafe
+        categories = self._extract_unsafe_categories(response_text, is_safe)
+
+        return {
+            "is_safe": is_safe,
+            "categories": categories,
+            "raw_response": response_text
+        }
+
+    def _should_refuse(self, parsed_result: dict) -> bool:
+        """Determine if content should be refused.
+
+        Args:
+            parsed_result: Result from _parse_guard_response
+
+        Returns:
+            True if content should be refused
+        """
+        return not parsed_result.get("is_safe", True)
+
+    async def _analyze_content(
+        self,
+        content: Any,
+        original_input: Any = None,
+        context: FunctionMiddlewareContext | None = None
+    ) -> dict:
+        """Check content safety using guard model.
+
+        Args:
+            content: The content to analyze
+            original_input: The original input to the function (for context)
+            context: Function metadata
+
+        Returns:
+            Safety classification result with should_refuse flag
+        """
+        try:
+            # Get the guard model LLM
+            llm = await self._get_llm()
+
+            content_str = str(content)
+
+            # Call the guard model using messages format to ensure chat template is applied
+            # Format matches: messages = [{"role": "user", "content": prompt}]
+            messages = [{"role": "user", "content": content_str}]
+            response = await llm.ainvoke(messages)
+
+            # Extract text from response
+            if hasattr(response, 'content'):
+                response_text = response.content.strip()
+            elif isinstance(response, str):
+                response_text = response.strip()
+            else:
+                response_text = str(response).strip()
+            # Parse the guard model response
+
+            parsed = self._parse_guard_response(response_text)
+            parsed["should_refuse"] = self._should_refuse(parsed)
+
+            return parsed
+
+        except Exception as e:
+            logger.error("Content Safety Guard analysis failed: %s", e, exc_info=True)
+            return {
+                "safety": "Safe",
+                "refusal": "No",
+                "should_refuse": False,
+                "error": True,
+                "error_message": str(e)
+            }
+
+    async def _handle_threat(
+        self,
+        content: Any,
+        analysis_result: dict,
+        context: FunctionMiddlewareContext
+    ) -> Any:
+        """Handle unsafe content based on configured action.
+
+        Args:
+            content: The unsafe content
+            analysis_result: Safety classification result
+            context: Function context
+
+        Returns:
+            Handled content (blocked, sanitized, or original)
+        """
+        action = self.config.action
+
+        categories = analysis_result.get("categories", [])
+        logger.warning(
+            "Content Safety Guard detected unsafe content in %s (categories: %s)",
+            context.name,
+            ", ".join(categories) if categories else "none"
+        )
+
+        if action == "refusal":
+            logger.error("Content Safety Guard refusing output of %s", context.name)
+            raise ValueError("Content blocked by safety policy")
+
+        elif action == "redirection":
+            return "I'm sorry, I cannot help you with that request."
+
+        else:  # action == "partial_compliance"
+            logger.warning("Safety violation logged but content passed through")
+            return content
+
+    async def _process_content_safety_detection(
+        self,
+        value: Any,
+        location: str,
+        context: FunctionMiddlewareContext,
+        original_input: Any = None,
+    ) -> Any:
+        """Process content safety detection and handling for a given value.
+
+        This is a common helper method that handles:
+        - Field extraction (if target_field is specified)
+        - Content safety analysis
+        - Threat handling (refusal, redirection, partial_compliance)
+        - Applying sanitized value back to original structure
+
+        Args:
+            value: The value to analyze (input or output)
+            location: Either "input" or "output" (for logging)
+            context: Function context metadata
+            original_input: Original function input (for output analysis context)
+
+        Returns:
+            The value after content safety handling (may be unchanged, sanitized, or raise exception)
+        """
+        # Extract field from value if target_field is specified
+        content_to_analyze, field_info = self._extract_field_from_value(value)
+
+        # Check content (either extracted field or entire value)
+        logger.debug(
+            "ContentSafetyGuardMiddleware: Checking %s %s for %s",
+            f"field '{self.config.target_field}'" if field_info else "entire",
+            location,
+            context.name
+        )
+        analysis_result = await self._analyze_content(
+            content_to_analyze, original_input=original_input, context=context
+        )
+
+        if not analysis_result.get("should_refuse", False):
+            # Content is safe, return original value
+            return value
+
+        # Unsafe content detected - handle based on action
+        logger.warning(
+            "ContentSafetyGuardMiddleware: Blocking %s for %s (unsafe content detected)",
+            location,
+            context.name
+        )
+        sanitized_content = await self._handle_threat(content_to_analyze, analysis_result, context)
+
+        # If field was extracted, apply sanitized value back to original structure
+        if field_info is not None:
+            return self._apply_field_result_to_value(value, field_info, sanitized_content)
+        else:
+            # No field extraction - return sanitized content directly
+            return sanitized_content
+
+    async def function_middleware_invoke(
+        self, value: Any, call_next: CallNext, context: FunctionMiddlewareContext
+    ) -> Any:
+        """Apply content safety guard check to function invocation.
+
+        This is the core logic for content safety guard defense - each defense implements
+        its own invoke/stream based on its specific strategy.
+
+        Args:
+            value: Function input (original_input from context)
+            call_next: Next middleware/function to call
+            context: Function metadata (provides context state)
+
+        Returns:
+            Function output (potentially blocked or sanitized)
+        """
+        # Check if defense should apply to this function
+        if not self._should_apply_defense(context.name):
+            logger.debug("ContentSafetyGuardMiddleware: Skipping %s (not targeted)", context.name)
+            return await call_next(value)
+
+        logger.debug("ContentSafetyGuardMiddleware: Applying defense to %s", context.name)
+
+        # Call the function
+        output = await call_next(value)
+
+        # Handle output analysis (only output is supported)
+        output = await self._process_content_safety_detection(
+            output, "output", context, original_input=value
+        )
+
+        return output
+
+    async def function_middleware_stream(
+        self, value: Any, call_next: CallNextStream, context: FunctionMiddlewareContext
+    ) -> AsyncIterator[Any]:
+        """Apply content safety guard check to streaming function.
+
+        Args:
+            value: Function input
+            call_next: Next middleware/function to call
+            context: Function metadata
+
+        Yields:
+            Function output chunks (potentially blocked or sanitized)
+        """
+        # Check if defense should apply to this function
+        if not self._should_apply_defense(context.name):
+            logger.debug("ContentSafetyGuardMiddleware: Skipping %s (not targeted)", context.name)
+            async for chunk in call_next(value):
+                yield chunk
+            return
+
+        # Stream and check output (only output is supported)
+        # Accumulate chunks to analyze after streaming
+        accumulated_output = []
+        async for chunk in call_next(value):
+            accumulated_output.append(str(chunk))
+            yield chunk
+
+        # Final check after streaming completes
+        if accumulated_output:
+            full_output = "".join(accumulated_output)
+            # Use helper method for consistency (though it will raise if refusal)
+            await self._process_content_safety_detection(
+                full_output, "output", context, original_input=value
+            )
+
