@@ -23,7 +23,7 @@ This guide will walk you through running and evaluating existing workflows. If y
 Depending on which workflows you are running, you may need to obtain API keys from the respective services. Most NeMo Agent toolkit workflows require an NVIDIA API key defined with the `NVIDIA_API_KEY` environment variable. An API key can be obtained by creating an account on [`build.nvidia.com`](https://build.nvidia.com/).
 
 ### Optional OpenAI API Key
-Some workflows may also require an OpenAI API key. Visit [OpenAI](https://openai.com/) and create an account. Navigate to your account settings to obtain your OpenAI API key. Copy the key and set it as an environment variable using the following command:
+Some workflows may also require an OpenAI API key. Create an account on [OpenAI](https://openai.com/). Navigate to your account settings to obtain your OpenAI API key. Copy the key and set it as an environment variable using the following command:
 
 ```bash
 export OPENAI_API_KEY="<YOUR_OPENAI_API_KEY>"
