@@ -68,7 +68,7 @@ It also takes advantage of:
 - **Shared Configuration**: All functions use the same `object_store` reference and function descriptions
 - **Shared Resources**: All functions share the same object store client connection
 
-See [Function Groups](../../../docs/source/build-workflows/functions-and-function-groups/function-groups.md) for more information on the benefits of Function Groups compared to Functions, including code and configuration comparisons when using Function Groups.
+Refer to [Function Groups](../../../docs/source/build-workflows/functions-and-function-groups/function-groups.md) for more information on the benefits of Function Groups compared to Functions, including code and configuration comparisons when using Function Groups.
 
 ### Configuration Structure
 
