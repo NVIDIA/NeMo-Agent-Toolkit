@@ -293,4 +293,4 @@ Integrate ReAct agent to the workflow
 - **Reference Documentation**: Follow the "Related Documentation" links for deeper understanding
 - **Test Incrementally**: Apply one rule at a time and test the results
 
-For tutorials and examples on using these rules, see [Build a Demo Agent Workflow Using Cursor Rules for NeMo Agent Toolkit](../../../get-started/tutorials/build-a-demo-agent-workflow-using-cursor-rules.md).
+For tutorials and examples on using these rules, refer to [Build a Demo Agent Workflow Using Cursor Rules for NeMo Agent Toolkit](../../../get-started/tutorials/build-a-demo-agent-workflow-using-cursor-rules.md).
