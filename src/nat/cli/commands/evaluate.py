@@ -100,7 +100,7 @@ def write_tabular_output(eval_run_output: EvaluationRunOutput):
 
     click.echo("")
     click.echo(click.style("=== EVALUATION SUMMARY ===", fg="bright_blue", bold=True))
-    click.echo(f"Workflow Status: {workflow_status}")
+    click.echo(f"Workflow Status: {workflow_status} (workflow_output.json)")
     click.echo(f"Total Runtime: {total_runtime:.2f}s")
 
     # Include profiler stats if available
@@ -113,9 +113,10 @@ def write_tabular_output(eval_run_output: EvaluationRunOutput):
             llm_metrics = profiler_results.llm_latency_ci
             click.echo(f"LLM Latency (p95): {llm_metrics.p95:.2f}s")
 
+    # Build the evaluation results table
     if not eval_run_output.evaluation_results:
         return
-    # Build the evaluation results table
+
     click.echo("")
     click.echo("Per evaluator results:")
 
@@ -135,7 +136,7 @@ def write_tabular_output(eval_run_output: EvaluationRunOutput):
         # Add output file if available
         output_file = None
         for file_path in eval_run_output.evaluator_output_files:
-            if evaluator_name in file_path.name:
+            if file_path.stem.startswith(f"{evaluator_name}_") or file_path.stem == evaluator_name:
                 output_file = file_path.name
                 break
         row.append(output_file if output_file else "N/A")
