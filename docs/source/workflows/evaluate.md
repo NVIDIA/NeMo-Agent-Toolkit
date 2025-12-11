@@ -242,6 +242,25 @@ eval:
 ```
 This setting reduces the number of concurrent requests to avoid overwhelming the LLM endpoint.
 
+## Summary Output
+The `nat eval` command writes a summary of the evaluation results to the console. The summary includes the workflow status, total runtime, and the average score for each evaluator.
+Sample summary output:
+```text
+=== EVALUATION SUMMARY ===
+Workflow Status: COMPLETED
+Total Runtime: 28.96s
+Workflow Runtime (p95): 7.77s
+LLM Latency (p95): 1.64s
+
+Per evaluator results:
+| Evaluator           |   Avg Score | Output File                     |
+|---------------------|-------------|---------------------------------|
+| relevance           |        1    | relevance_output.json           |
+| groundedness        |        1    | groundedness_output.json        |
+| accuracy            |        0.55 | accuracy_output.json            |
+| trajectory_accuracy |        0.9  | trajectory_accuracy_output.json |
+```
+
 ## Workflow Output
 The `nat eval` command runs the workflow on all the entries in the `dataset`. The output of these runs is stored in `workflow_output.json` under the `output_dir` specified in the configuration file.
 
