@@ -69,7 +69,7 @@ Once a NeMo Agent toolkit workflow is ready for deployment to production, the de
 
 For more information on the available plugins, refer to [Framework Integrations](./installation.md#framework-integrations).
 
-Example dependency for NeMo Agent toolkit using the LangChain/LangGraph plugin for projects using a `pyproject.toml` file:
+Example of a dependency for NeMo Agent toolkit using the LangChain/LangGraph plugin for projects using a `pyproject.toml` file:
 ```toml
 dependencies = [
 "nvidia-nat[langchain]~=1.0",
