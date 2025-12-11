@@ -238,7 +238,7 @@ In addition to this, each example should contain a `README.md` file that describ
 
 ### Documentation Categories
 
-The documentation in the `docs/source` directory is organized into the following categories:
+The documentation in the `docs/source` directory is organized into the following categories. When adding new documentation, ensure that it is added to the appropriate category and sub-category:
 * **About** (`about`) - This should be limited to an overview, key features, concepts, and release notes documents.
 * **Get Started** (`get-started`) - Introductory documentation to help users get started with NeMo Agent toolkit.
   * **Tutorials** (`get-started/tutorials`) - Step-by-step guides to help users learn how to use the toolkit to execute specific use cases.
