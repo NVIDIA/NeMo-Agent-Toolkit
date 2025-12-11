@@ -281,7 +281,7 @@ Integrate ReAct agent to the workflow
 | Workflow      | `nat-workflows/general`              | Workflow design               |
 | Workflow      | `nat-workflows/add-functions`        | Function development          |
 | Workflow      | `nat-workflows/add-tools`            | Tool integration              |
-| Agents        | `nat-agents/general`                 | Agent selection & integration |
+| Agents        | `nat-agents/general`                 | Agent selection and integration |
 
 <!-- path-check-skip-end -->
 
