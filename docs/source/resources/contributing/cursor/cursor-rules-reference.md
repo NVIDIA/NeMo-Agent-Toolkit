@@ -155,7 +155,7 @@ Run my workflow locally for testing and then serve it as an API endpoint on port
 **Related Documentation**:
 
 - [CLI Reference - Run Commands](../../../reference/cli.md#run)
-- [Running Workflows](../../../run-workflows/overview.md)
+- [Running Workflows](../../../run-workflows/about.md)
 
 ---
 
@@ -208,7 +208,7 @@ Show me system information and list all available NeMo Agent components with the
 
 **Related Documentation**:
 
-- [Workflow Overview](../../../build-workflows/overview.md)
+- [Workflow Overview](../../../build-workflows/about.md)
 - [Functions Overview](../../../build-workflows/functions-and-function-groups/functions.md)
 
 ---
