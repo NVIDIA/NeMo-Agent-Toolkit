@@ -15,23 +15,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-<!--
-SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-SPDX-License-Identifier: Apache-2.0
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
 # Evaluating NVIDIA NeMo Agent Toolkit Workflows
 
 :::{warning}
@@ -258,6 +241,27 @@ eval:
     max_concurrency: 2
 ```
 This setting reduces the number of concurrent requests to avoid overwhelming the LLM endpoint.
+
+## Summary Output
+
+The `nat eval` command writes a summary of the evaluation results to the console. The summary includes the workflow status, total runtime, and the average score for each evaluator.
+Sample summary output:
+
+```text
+=== EVALUATION SUMMARY ===
+Workflow Status: COMPLETED
+Total Runtime: 28.96s
+Workflow Runtime (p95): 7.77s
+LLM Latency (p95): 1.64s
+
+Per evaluator results:
+| Evaluator           |   Avg Score | Output File                     |
+|---------------------|-------------|---------------------------------|
+| relevance           |        1    | relevance_output.json           |
+| groundedness        |        1    | groundedness_output.json        |
+| accuracy            |        0.55 | accuracy_output.json            |
+| trajectory_accuracy |        0.9  | trajectory_accuracy_output.json |
+```
 
 ## Workflow Output
 The `nat eval` command runs the workflow on all the entries in the `dataset`. The output of these runs is stored in `workflow_output.json` under the `output_dir` specified in the configuration file.
