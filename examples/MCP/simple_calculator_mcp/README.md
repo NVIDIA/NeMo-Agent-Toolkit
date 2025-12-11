@@ -42,7 +42,7 @@ uv pip install -e examples/MCP/simple_calculator_mcp
 You can run the simple calculator workflow using Remote MCP tools. In this case, the workflow acts as a MCP client and connects to the MCP server running on the specified URL. Details are provided in the [MCP Client Guide](../../../docs/source/build-workflows/mcp.md).
 
 ### NeMo Agent toolkit as an MCP Server
-You can publish the simple calculator tools via MCP using the `nat mcp serve` command. Details are provided in the [MCP Server Guide](../../../docs/source/run-workflows/mcp-server.md).
+You can publish the simple calculator tools using MCP using the `nat mcp serve` command. Details are provided in the [MCP Server Guide](../../../docs/source/run-workflows/mcp-server.md).
 
 
 ### MCP Client Configuration
