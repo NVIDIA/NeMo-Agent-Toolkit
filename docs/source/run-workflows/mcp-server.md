@@ -19,7 +19,7 @@ limitations under the License.
 
 Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. You can read more about MCP [here](https://modelcontextprotocol.io/introduction).
 
-This guide will cover how to use NeMo Agent toolkit as an MCP Server to publish tools using MCP. For more information on how to use NeMo Agent toolkit as an MCP Host with one or more MCP Clients, refer to the [MCP Client](../build-workflows/mcp.md) documentation.
+This guide will cover how to use NeMo Agent toolkit as an MCP Server to publish tools using MCP. For more information on how to use NeMo Agent toolkit as an MCP Host with one or more MCP Clients, refer to [MCP Client](../build-workflows/mcp.md).
 
 ## MCP Server Usage
 
@@ -380,7 +380,7 @@ This is useful for health checks and monitoring.
 
 ### Authentication Limitations
 - The `nat mcp serve` command currently starts an MCP server without built-in authentication. Server-side authentication is planned for a future release.
-- NeMo Agent toolkit workflows can still connect to protected third-party MCP servers through the MCP client auth provider. See the [MCP Authentication](../components/auth/mcp-auth/index.md) documentation for more information.
+- NeMo Agent toolkit workflows can still connect to protected third-party MCP servers through the MCP client auth provider. Refer to [MCP Authentication](../components/auth/mcp-auth/index.md) for more information.
 
 ### Local Development
 For local development, you can use `localhost` or `127.0.0.1` as the host (default). This limits access to your local machine only.

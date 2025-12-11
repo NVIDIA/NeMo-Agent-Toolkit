@@ -80,7 +80,7 @@ Evaluate the Simple LangSmith-Documentation agent's accuracy using different con
 
 #### Basic Evaluation
 
-The configuration files specified below contain configurations for the NeMo Agent Toolkit `evaluation` and `profiler` capabilities. For detailed information about evaluation configuration and output files, refer to the [evaluation guide](../../../docs/source/improve-workflows/evaluate.md). For profiling configuration and metrics, see the [profiling guide](../../../docs/source/improve-workflows/profiler.md).
+The configuration files specified below contain configurations for the NeMo Agent Toolkit `evaluation` and `profiler` capabilities. For detailed information about evaluation configuration and output files, refer to the [evaluation guide](../../../docs/source/improve-workflows/evaluate.md). For profiling configuration and metrics, refer to the [profiling guide](../../../docs/source/improve-workflows/profiler.md).
 
 ```bash
 nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml

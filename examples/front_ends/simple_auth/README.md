@@ -146,7 +146,7 @@ handles authentication.
 
 Open the NeMo Agent Toolkit UI in your browser at http://localhost:3000.
 
-By default, the UI is configured to connect to your agent's API endpoint at `http://localhost:8000` and the WebSocket URL at `ws://localhost:8000/websocket`. These default values can be changed using environment variables. See the [Launching the UI](../../../docs/source/run-workflows/launching-ui.md) guide for environment variable configuration details.
+By default, the UI is configured to connect to your agent's API endpoint at `http://localhost:8000` and the WebSocket URL at `ws://localhost:8000/websocket`. These default values can be changed using environment variables. Refer to [Launching the UI](../../../docs/source/run-workflows/launching-ui.md) for environment variable configuration details.
 
 > [!IMPORTANT]
 > In your chat window, ensure that `WebSocket` mode is enabled by navigating to the top-right corner and selecting the `WebSocket` option in the arrow pop-out. This is required for the OAuth 2.0 authentication flow to work properly.

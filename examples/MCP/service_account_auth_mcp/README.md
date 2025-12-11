@@ -182,7 +182,7 @@ When using service account authentication:
 
 ## Troubleshooting
 
-For common issues and solutions, see the [Troubleshooting section](../../../docs/source/components/auth/mcp-auth/mcp-service-account-auth.md#troubleshooting) in the Service Account Authentication documentation.
+For common issues and solutions, refer to the [Troubleshooting section](../../../docs/source/components/auth/mcp-auth/mcp-service-account-auth.md#troubleshooting) in the Service Account Authentication documentation.
 
 ## Adapting This Example
 
