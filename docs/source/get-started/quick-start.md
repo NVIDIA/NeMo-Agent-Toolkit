@@ -77,7 +77,7 @@ dependencies = [
 ]
 ```
 
-Alternately for projects using a `requirements.txt` file:
+For projects using a `requirements.txt` file:
 ```
 nvidia-nat[langchain]==1.0.*
 ```
