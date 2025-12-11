@@ -74,5 +74,5 @@ For information about writing functions, refer to the [Writing Custom Functions]
 
 ## Function Groups
 
-Function groups are collections of related functions that can share configuration, context, and resources, for more information, refer to the [Function Groups](./function-groups.md) document.
+Function groups are collections of related functions that can share configuration, context, and resources. For more information, refer to the [Function Groups](./function-groups.md) document.
 
