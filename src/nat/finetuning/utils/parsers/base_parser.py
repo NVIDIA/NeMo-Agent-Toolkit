@@ -110,11 +110,12 @@ def _validate_message_sequence(messages: list[dict]) -> list[dict]:
     Validate and fix the message sequence to follow OpenAI's expected format.
 
     Rules:
-    1. System messages can only appear at the beginning
-    2. After system messages, must alternate between user/tool and assistant
-    3. Cannot have consecutive user messages or consecutive assistant messages
-    4. If first non-system messages are not user messages, they will be
-       concatenated into a single user message (with a warning)
+
+    - System messages can only appear at the beginning
+    - After system messages, must alternate between user/tool and assistant
+    - Cannot have consecutive user messages or consecutive assistant messages
+    - If first non-system messages are not user messages, they will be
+      concatenated into a single user message (with a warning)
 
     Args:
         messages: List of parsed OpenAI messages
@@ -123,7 +124,7 @@ def _validate_message_sequence(messages: list[dict]) -> list[dict]:
         list[dict]: The validated (and potentially fixed) message list
 
     Raises:
-        ValueError: If the message sequence is invalid
+        ValueError: If the message sequence is invalid.
     """
     if not messages:
         return messages

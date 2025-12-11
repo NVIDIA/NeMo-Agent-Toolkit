@@ -98,15 +98,17 @@ class ARTTrainerAdapter(TrainerAdapter):
     async def _validate_episode_order(self, traj: Trajectory):
         """
         Checks all EpisodeItem in traj.episode to validate:
-            1. Every EpisodeItem.role is  EpisodeItemRole.USER, SYSTEM, or ASSISTANT
-            2. The first EpisodeItem.role is SYSTEM or USER
-            3. The last EpisodeItem.role is ASSISTANT
-            4. No two consecutive EpisodeItem.role are the same, except for SYSTEM
+
+        - Every EpisodeItem.role is EpisodeItemRole.USER, SYSTEM, or ASSISTANT
+        - The first EpisodeItem.role is SYSTEM or USER
+        - The last EpisodeItem.role is ASSISTANT
+        - No two consecutive EpisodeItem.role are the same, except for SYSTEM
+
         Args:
             traj: Trajectory to validate
 
         Raises:
-            ValueError: If any of the above conditions are not met
+            ValueError: If any of the above conditions are not met.
         """
         if not traj.episode:
             raise ValueError("Trajectory episode is empty.")
@@ -124,14 +126,16 @@ class ARTTrainerAdapter(TrainerAdapter):
     async def _construct_trajectory_groups(self, trajectory_lists: list[list[Trajectory]]) -> list[art.TrajectoryGroup]:
         """
         Convert list of lists of NAT Trajectory to list of ART TrajectoryGroup.
+
         Args:
-            trajectory_lists: List of lists of NAT Trajectory (each inner list contains trajectories for one example)
+            trajectory_lists: List of lists of NAT Trajectory (each inner list
+                contains trajectories for one example).
 
         Returns:
-            List of ART TrajectoryGroup
+            List of ART TrajectoryGroup.
 
         Raises:
-            ValueError: If any trajectory is invalid
+            ValueError: If any trajectory is invalid.
         """
 
         from openai.types.chat.chat_completion import Choice
@@ -198,11 +202,12 @@ class ARTTrainerAdapter(TrainerAdapter):
     async def submit(self, trajectories: TrajectoryCollection) -> TrainingJobRef:
         """
         Submit trajectories to ART backend for training.
+
         Args:
-            trajectories: TrajectoryCollection with list of lists of NAT Trajectory
+            trajectories: TrajectoryCollection with list of lists of NAT Trajectory.
 
         Returns:
-            TrainingJobRef: Reference to the submitted training job
+            TrainingJobRef: Reference to the submitted training job.
         """
 
         trajectory_groups = await self._construct_trajectory_groups(trajectories.trajectories)

@@ -44,6 +44,7 @@ class TrajectoryBuilder(ABC):
     async def run_eval(self) -> EvaluationRunOutput:
         """
         Run NAT Evaluation to generate episode items for trajectory building.
+
         Returns:
             EvaluationRunOutput: The output of the evaluation run.
         """

@@ -56,6 +56,7 @@ class ARTTrajectoryBuilder(TrajectoryBuilder):
     async def start_run(self, run_id: str, meta: dict | None = None) -> None:
         """
         Start multiple evaluation runs to collect trajectories.
+
         Args:
             run_id (str): The ID of the run.
             meta (dict): Metadata for the run.
@@ -98,9 +99,11 @@ class ARTTrajectoryBuilder(TrajectoryBuilder):
         """
         Waits for all evaluation runs to finalize and builds trajectories from
         the episode items, grouping them by example ID.
+
         Args:
             run_id (str): The ID of the run.
             meta (dict): Metadata for the run.
+
         Returns:
             TrajectoryCollection: The collection of built trajectories grouped by example.
         """

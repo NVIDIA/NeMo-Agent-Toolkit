@@ -93,6 +93,17 @@ class NATFunctionAgentTool(AgentTool):
 
     async def stream(self, tool_use: ToolUse, _invocation_state: dict[str, Any],
                      **_kwargs: Any) -> AsyncGenerator[Any, None]:
+        """
+        Stream tool execution results.
+
+        Args:
+            tool_use: The tool use request from the agent.
+            _invocation_state: State dictionary for the invocation.
+            _kwargs: Additional keyword arguments (unused).
+
+        Yields:
+            ToolStreamEvent or ToolResultEvent with the tool execution results.
+        """
         from strands.types._events import ToolResultEvent  # type: ignore
         from strands.types._events import ToolStreamEvent
 
