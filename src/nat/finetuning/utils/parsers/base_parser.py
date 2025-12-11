@@ -20,6 +20,7 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepState
 from nat.data_models.intermediate_step import IntermediateStepType
+from nat.finetuning.utils.parsers import adk_parser
 from nat.finetuning.utils.parsers import langchain_parser
 from nat.finetuning.utils.parsers import llama_index_parser
 
@@ -65,6 +66,8 @@ def parse_to_openai_messages(steps: list[IntermediateStep]) -> list[dict]:
             parsed_msg = langchain_parser.parse_to_openai_message(message=message)
         elif message.framework == LLMFrameworkEnum.LLAMA_INDEX:
             parsed_msg = llama_index_parser.parse_to_openai_message(message=message)
+        elif message.framework == LLMFrameworkEnum.ADK:
+            parsed_msg = adk_parser.parse_to_openai_message(message=message)
         else:
             if message.framework is not None:
                 logger.warning(f"Unsupported framework: {message.framework} for message {message}")
