@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from pydantic import BaseModel
@@ -74,12 +74,7 @@ async def test_attack_nested_input_field():
         request=RequestData(query="What is AI?", context="Tech support"),
     )
 
-    received_input = None
-
-    async def mock_call_next(value):
-        nonlocal received_input
-        received_input = value
-        return NestedOutput(result="Answer", metadata={})
+    mock_call_next = AsyncMock(return_value=NestedOutput(result="Answer", metadata={}))
 
     context = FunctionMiddlewareContext(
         name="test_function",
@@ -92,6 +87,8 @@ async def test_attack_nested_input_field():
 
     await middleware.function_middleware_invoke(input_value, mock_call_next, context)
 
+    mock_call_next.assert_called_once()
+    received_input = mock_call_next.call_args.args[0]
     assert received_input.user.email == "INJECTED"
     assert received_input.user.name == "Alice"
     assert received_input.request.query == "What is AI?"
@@ -109,8 +106,7 @@ async def test_attack_input_with_output_passthrough():
     input_value = LLMInput(prompt="Hello world", system_message="Be helpful", temperature=0.7)
     expected_output = LLMOutput(response="Hi there!", confidence=0.95)
 
-    async def mock_call_next(value):
-        return expected_output
+    mock_call_next = AsyncMock(return_value=expected_output)
 
     context = FunctionMiddlewareContext(
         name="llm.generate",
@@ -123,6 +119,7 @@ async def test_attack_input_with_output_passthrough():
 
     result = await middleware.function_middleware_invoke(input_value, mock_call_next, context)
 
+    mock_call_next.assert_called_once()
     assert result.response == "Hi there!"
     assert result.confidence == 0.95
 
@@ -141,12 +138,7 @@ async def test_attack_deeply_nested_jsonpath():
         request=RequestData(query="Help me", context="Customer service"),
     )
 
-    received_input = None
-
-    async def mock_call_next(value):
-        nonlocal received_input
-        received_input = value
-        return NestedOutput(result="Done", metadata={"status": "ok"})
+    mock_call_next = AsyncMock(return_value=NestedOutput(result="Done", metadata={"status": "ok"}))
 
     context = FunctionMiddlewareContext(
         name="service.handle",
@@ -159,6 +151,8 @@ async def test_attack_deeply_nested_jsonpath():
 
     await middleware.function_middleware_invoke(input_value, mock_call_next, context)
 
+    mock_call_next.assert_called_once()
+    received_input = mock_call_next.call_args.args[0]
     assert received_input.request.context == "Customer service [CONTEXT INJECTED]"
     assert received_input.request.query == "Help me"
 
@@ -172,9 +166,7 @@ async def test_attack_nested_output_field():
     )
 
     input_value = LLMInput(prompt="Hello", system_message="Be nice", temperature=0.5)
-
-    async def mock_call_next(value):
-        return LLMOutput(response="Original response", confidence=0.9)
+    mock_call_next = AsyncMock(return_value=LLMOutput(response="Original response", confidence=0.9))
 
     context = FunctionMiddlewareContext(
         name="llm.chat",
@@ -187,6 +179,7 @@ async def test_attack_nested_output_field():
 
     result = await middleware.function_middleware_invoke(input_value, mock_call_next, context)
 
+    mock_call_next.assert_called_once()
     assert result.response == "MALICIOUS RESPONSE"
     assert result.confidence == 0.9
 
@@ -205,12 +198,7 @@ async def test_attack_output_preserves_input():
         request=RequestData(query="Question", context="Context"),
     )
 
-    received_input = None
-
-    async def mock_call_next(value):
-        nonlocal received_input
-        received_input = value
-        return NestedOutput(result="Success", metadata={"key": "value"})
+    mock_call_next = AsyncMock(return_value=NestedOutput(result="Success", metadata={"key": "value"}))
 
     context = FunctionMiddlewareContext(
         name="processor.run",
@@ -224,6 +212,8 @@ async def test_attack_output_preserves_input():
     result = await middleware.function_middleware_invoke(input_value, mock_call_next, context)
 
     # Input should be unchanged
+    mock_call_next.assert_called_once()
+    received_input = mock_call_next.call_args.args[0]
     assert received_input.user.name == "Carol"
     assert received_input.user.email == "carol@test.com"
     # Output should be modified
@@ -241,13 +231,7 @@ async def test_target_function_filtering():
     )
 
     input_value = LLMInput(prompt="Original", system_message="System", temperature=0.5)
-
-    received_input = None
-
-    async def mock_call_next(value):
-        nonlocal received_input
-        received_input = value
-        return LLMOutput(response="Response", confidence=0.8)
+    mock_call_next = AsyncMock(return_value=LLMOutput(response="Response", confidence=0.8))
 
     context = FunctionMiddlewareContext(
         name="llm.generate",
@@ -261,6 +245,8 @@ async def test_target_function_filtering():
     await middleware.function_middleware_invoke(input_value, mock_call_next, context)
 
     # Input should NOT be modified since function is not targeted
+    mock_call_next.assert_called_once()
+    received_input = mock_call_next.call_args.args[0]
     assert received_input.prompt == "Original"
 
 
@@ -275,13 +261,7 @@ async def test_multiple_field_matches_with_all_strategy():
     )
 
     input_value = MultiFieldModel(messages=["first", "second", "third"])
-
-    received_input = None
-
-    async def mock_call_next(value):
-        nonlocal received_input
-        received_input = value
-        return {"status": "ok"}
+    mock_call_next = AsyncMock(return_value={"status": "ok"})
 
     context = FunctionMiddlewareContext(
         name="processor.batch",
@@ -294,6 +274,8 @@ async def test_multiple_field_matches_with_all_strategy():
 
     await middleware.function_middleware_invoke(input_value, mock_call_next, context)
 
+    mock_call_next.assert_called_once()
+    received_input = mock_call_next.call_args.args[0]
     assert received_input.messages == ["INJECTED", "INJECTED", "INJECTED"]
 
 
@@ -308,13 +290,7 @@ async def test_multiple_field_matches_with_first_strategy():
     )
 
     input_value = MultiFieldModel(messages=["first", "second", "third"])
-
-    received_input = None
-
-    async def mock_call_next(value):
-        nonlocal received_input
-        received_input = value
-        return {"status": "ok"}
+    mock_call_next = AsyncMock(return_value={"status": "ok"})
 
     context = FunctionMiddlewareContext(
         name="processor.batch",
@@ -327,6 +303,8 @@ async def test_multiple_field_matches_with_first_strategy():
 
     await middleware.function_middleware_invoke(input_value, mock_call_next, context)
 
+    mock_call_next.assert_called_once()
+    received_input = mock_call_next.call_args.args[0]
     assert received_input.messages == ["INJECTED", "second", "third"]
 
 
@@ -341,9 +319,7 @@ async def test_multiple_field_matches_with_error_strategy():
     )
 
     input_value = MultiFieldModel(messages=["first", "second", "third"])
-
-    async def mock_call_next(value):
-        return {"status": "ok"}
+    mock_call_next = AsyncMock(return_value={"status": "ok"})
 
     context = FunctionMiddlewareContext(
         name="processor.batch",
