@@ -25,6 +25,7 @@ members = [
     "nvidia-nat-mcp",
     "nvidia-nat-mem0ai",
     "nvidia-nat-mysql",
+    "nvidia-nat-openpipe-art",
     "nvidia-nat-opentelemetry",
     "nvidia-nat-phoenix",
     "nvidia-nat-profiling",
@@ -38,7 +39,11 @@ members = [
     "nvidia-nat-weave",
     "nvidia-nat-zep-cloud",
 ]
-overrides = [{ name = "tenacity", specifier = ">=9.1.2,<10.0.0" }]
+overrides = [
+    { name = "litellm", specifier = "==1.74.9" },
+    { name = "openai", specifier = ">=1.106,<2.dev0" },
+    { name = "tenacity", specifier = ">=9.1.2,<10.0.0" },
+]
 
 [[package]]
 name = "a2a-sdk"
@@ -5399,6 +5404,19 @@ requires-dist = [
 ]
 
 [[package]]
+name = "nat-rl-with-openpipe-art"
+source = { editable = "examples/finetuning/rl_with_openpipe_art" }
+dependencies = [
+    { name = "nvidia-nat", extra = ["langchain", "openpipe-art"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
+    { name = "nvidia-nat", extras = ["openpipe-art"], editable = "." },
+]
+
+[[package]]
 name = "nat-router-agent"
 source = { editable = "examples/control_flow/router_agent" }
 dependencies = [
@@ -5952,6 +5970,7 @@ examples = [
     { name = "nat-plot-charts" },
     { name = "nat-por-to-jiratickets" },
     { name = "nat-profiler-agent" },
+    { name = "nat-rl-with-openpipe-art" },
     { name = "nat-router-agent" },
     { name = "nat-semantic-kernel-demo" },
     { name = "nat-sequential-executor" },
@@ -6000,6 +6019,9 @@ nvidia-haystack = [
 ]
 openai = [
     { name = "openai" },
+]
+openpipe-art = [
+    { name = "nvidia-nat-openpipe-art" },
 ]
 opentelemetry = [
     { name = "nvidia-nat-opentelemetry" },
@@ -6107,6 +6129,7 @@ requires-dist = [
     { name = "nat-plot-charts", marker = "extra == 'examples'", editable = "examples/custom_functions/plot_charts" },
     { name = "nat-por-to-jiratickets", marker = "extra == 'examples'", editable = "examples/HITL/por_to_jiratickets" },
     { name = "nat-profiler-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/profiler_agent" },
+    { name = "nat-rl-with-openpipe-art", marker = "extra == 'examples'", editable = "examples/finetuning/rl_with_openpipe_art" },
     { name = "nat-router-agent", marker = "extra == 'examples'", editable = "examples/control_flow/router_agent" },
     { name = "nat-semantic-kernel-demo", marker = "extra == 'examples'", editable = "examples/frameworks/semantic_kernel_demo" },
     { name = "nat-sequential-executor", marker = "extra == 'examples'", editable = "examples/control_flow/sequential_executor" },
@@ -6143,6 +6166,7 @@ requires-dist = [
     { name = "nvidia-nat-mcp", marker = "extra == 'mcp'", editable = "packages/nvidia_nat_mcp" },
     { name = "nvidia-nat-mem0ai", marker = "extra == 'mem0ai'", editable = "packages/nvidia_nat_mem0ai" },
     { name = "nvidia-nat-mysql", marker = "extra == 'mysql'", editable = "packages/nvidia_nat_mysql" },
+    { name = "nvidia-nat-openpipe-art", marker = "extra == 'openpipe-art'", editable = "packages/nvidia_nat_openpipe_art" },
     { name = "nvidia-nat-opentelemetry", marker = "extra == 'opentelemetry'", editable = "packages/nvidia_nat_opentelemetry" },
     { name = "nvidia-nat-opentelemetry", marker = "extra == 'telemetry'", editable = "packages/nvidia_nat_opentelemetry" },
     { name = "nvidia-nat-phoenix", marker = "extra == 'phoenix'", editable = "packages/nvidia_nat_phoenix" },
@@ -6178,7 +6202,7 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.38" },
     { name = "wikipedia", specifier = "~=1.4" },
 ]
-provides-extras = ["all", "a2a", "adk", "agno", "crewai", "data-flywheel", "ingestion", "langchain", "llama-index", "mcp", "mem0ai", "opentelemetry", "phoenix", "profiling", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "strands", "telemetry", "test", "vanna", "weave", "zep-cloud", "examples", "gunicorn", "async-endpoints", "nvidia-haystack", "litellm", "openai"]
+provides-extras = ["all", "a2a", "adk", "agno", "crewai", "data-flywheel", "ingestion", "langchain", "llama-index", "mcp", "mem0ai", "opentelemetry", "phoenix", "profiling", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "strands", "telemetry", "test", "vanna", "weave", "zep-cloud", "openpipe-art", "examples", "gunicorn", "async-endpoints", "nvidia-haystack", "litellm", "openai"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -6456,6 +6480,22 @@ dependencies = [
 requires-dist = [
     { name = "aiomysql", specifier = ">=0.2.0" },
     { name = "nvidia-nat", editable = "." },
+]
+
+[[package]]
+name = "nvidia-nat-openpipe-art"
+source = { editable = "packages/nvidia_nat_openpipe_art" }
+dependencies = [
+    { name = "matplotlib" },
+    { name = "nvidia-nat" },
+    { name = "openpipe-art" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "matplotlib", specifier = "~=3.9" },
+    { name = "nvidia-nat", editable = "." },
+    { name = "openpipe-art", specifier = "==0.5.1" },
 ]
 
 [[package]]
@@ -7047,6 +7087,21 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/0b/68/81c8a0b90334ff11e4f285e4934c57f30bea3ef0c0b9f99b65e7b80fae3b/openinference_semantic_conventions-0.1.25.tar.gz", hash = "sha256:f0a8c2cfbd00195d1f362b4803518341e80867d446c2959bf1743f1894fce31d", size = 12767, upload-time = "2025-11-05T01:37:45.89Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fd/3d/dd14ee2eb8a3f3054249562e76b253a1545c76adbbfd43a294f71acde5c3/openinference_semantic_conventions-0.1.25-py3-none-any.whl", hash = "sha256:3814240f3bd61f05d9562b761de70ee793d55b03bca1634edf57d7a2735af238", size = 10395, upload-time = "2025-11-05T01:37:43.697Z" },
+]
+
+[[package]]
+name = "openpipe-art"
+version = "0.5.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "litellm" },
+    { name = "openai" },
+    { name = "typer" },
+    { name = "weave" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0d/cb/44ec1546b29b67299042812249659337e4e9357710ea228cb08b3fbe8b03/openpipe_art-0.5.1.tar.gz", hash = "sha256:dc9a51cc912d6e7f2e84f6787fefc852d136a9352cc881ffbc7b3821cd16422d", size = 7978357, upload-time = "2025-10-22T15:58:37.951Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ed/8c/dc0752a523b0635f1bec5eb84b2c669774681356d535441693d250d554db/openpipe_art-0.5.1-py3-none-any.whl", hash = "sha256:a3e04520166b13c25b1761f57f65faa732b35b6393d540cc22ffc13af6043337", size = 166998, upload-time = "2025-10-22T15:58:36.221Z" },
 ]
 
 [[package]]
