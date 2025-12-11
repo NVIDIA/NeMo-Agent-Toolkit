@@ -23,8 +23,8 @@ from nat.data_models.invocation_node import InvocationNode
 from nat.eval.red_teaming_evaluator.filter_conditions import IntermediateStepsFilterCondition
 
 
-@pytest.fixture
-def create_intermediate_step():
+@pytest.fixture(name="create_intermediate_step")
+def fixture_create_intermediate_step():
     """
     Factory fixture to create an IntermediateStep with customizable parameters.
 
@@ -65,8 +65,8 @@ def create_intermediate_step():
     return _create_step
 
 
-@pytest.fixture
-def sample_trajectory(create_intermediate_step):
+@pytest.fixture(name="sample_trajectory")
+def fixture_sample_trajectory(create_intermediate_step):
     """
     Fixture that creates a sample trajectory with various event types and names.
 
@@ -92,8 +92,8 @@ def sample_trajectory(create_intermediate_step):
     ]
 
 
-@pytest.fixture
-def trajectory_with_none_names(create_intermediate_step):
+@pytest.fixture(name="trajectory_with_none_names")
+def fixture_trajectory_with_none_names(create_intermediate_step):
     """
     Fixture that creates a trajectory with some steps having None names.
     """

@@ -17,6 +17,7 @@
 
 from pathlib import Path
 
+from pydantic import ValidationError
 import pytest
 
 from nat.data_models.evaluate import EvalGeneralConfig
@@ -283,7 +284,7 @@ class TestRedTeamingRunnerConfigValidationErrors:
             },
         )
 
-        with pytest.raises(Exception):  # Pydantic ValidationError
+        with pytest.raises(ValidationError):  # Pydantic ValidationError
             RedTeamingRunnerConfig(
                 llms={"judge_llm": NIMModelConfig(model_name="test-model")},
                 scenarios={"invalid_scenario": scenario_raw},
