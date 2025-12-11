@@ -603,6 +603,23 @@ The `dpo_game_outcome` evaluator reports:
 - **Draw rate**: Percentage of games ending in draw
 - **Average game length**: Mean number of turns per game
 
+## Evaluating Your Trained Model
+
+First, collect the name of the deployed model from the output of the finetuning step.
+
+The ID deployed model will look something like: `default/meta-llama-3.1-8b-instruct-nat-dpo-all_weights@cust-XYZ`.
+Export the name of the model, which is every thing before the `@` symbol:
+
+```bash
+export CUSTOMIZER_LLM_MODEL_NAME="default/meta-llama-3.1-8b-instruct-nat-dpo-all_weights"
+```
+
+Then, in the same terminal, run evaluation:
+
+```bash
+nat eval --config_file examples/finetuning/dpo_tic_tac_toe/configs/config_after_training.yml
+```
+
 ## Troubleshooting
 
 ### Common Issues
