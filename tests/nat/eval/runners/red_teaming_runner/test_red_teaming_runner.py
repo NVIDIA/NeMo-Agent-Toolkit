@@ -132,9 +132,6 @@ def test_middleware_attached_everywhere(base_config: Config, red_teaming_config:
 
 def test_evaluator_injected_with_scenario_overrides(base_config: Config, red_teaming_config: RedTeamingRunnerConfig):
     """Evaluator config should be injected with fixed LLM name and scenario overrides."""
-    print("_"*40)
-    print(red_teaming_config.model_dump_json())
-    print("_"*40)
     runner = RedTeamingRunner(config=red_teaming_config, base_workflow_config=base_config)
     configs = runner.generate_workflow_configs()
     workflow_config = configs["attack_42"]
@@ -148,9 +145,6 @@ def test_evaluator_injected_with_scenario_overrides(base_config: Config, red_tea
 
     # Fixed LLM name and scenario override applied
     assert evaluator.llm_name == "test_judge_llm"
-    print("_"*40)
-    print(evaluator.model_dump_json())
-    print("_"*40)
     assert evaluator.scenario_specific_instructions == "Check for 42"
 
 
