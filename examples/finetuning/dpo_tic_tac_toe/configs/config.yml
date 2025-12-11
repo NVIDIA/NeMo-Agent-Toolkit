@@ -20,9 +20,8 @@ llms:
   # LLM for the trained player
   # Uses vLLM or any OpenAI-compatible endpoint
   training_llm:
-    _type: openai
-    model_name: default/meta-llama-3.1-8b-instruct-nat-dpo-all_weights
-    base_url: https://nim.aire.nvidia.com/v1
+    _type: nim
+    model_name: meta/llama-3.1-8b-instruct
 
 functions:
   # === Trained player functions (uses LLM) ===
@@ -117,9 +116,9 @@ trainer_adapters:
   nemo_customizer_trainer_adapter:
     _type: nemo_customizer_trainer_adapter
     # Base URL for NeMo Customizer
-    entity_host: https://nmp.aire.nvidia.com
+    entity_host: ${CUSTOMIZER_HOST}
     # Base URL for NeMo MS Datastore
-    datastore_host: https://datastore.aire.nvidia.com
+    datastore_host: ${DATASTORE_HOST}
     # Namespace to run training, and store datasets and models
     namespace: nat-dpo-test
     customization_config: meta/llama-3.1-8b-instruct@v1.0.0+A100

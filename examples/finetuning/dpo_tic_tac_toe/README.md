@@ -101,7 +101,12 @@ export NGC_API_KEY="your-ngc-api-key"
 export HF_TOKEN="your-hf-token"
 
 # OpenAI-compatible API key for inference
-export OPENAI_API_KEY="your-api-key"
+export OPENAI_API_KEY="unused-default-key"
+
+# NeMo Customizer service endpoints
+export CUSTOMIZER_HOST="https://your-nmp-host"
+export DATASTORE_HOST="https://your-datastore-host"
+export CUSTOMIZER_NIM_URL="https://your-nim-deployment-host"
 ```
 
 ## Architecture
@@ -389,8 +394,8 @@ trainer_adapters:
     _type: nemo_customizer_trainer_adapter
 
     # === NeMo Service Endpoints ===
-    entity_host: https://nmp.example.com
-    datastore_host: https://datastore.example.com
+    entity_host: ${CUSTOMIZER_HOST}
+    datastore_host: ${DATASTORE_HOST}
 
     # === Namespace and Dataset ===
     namespace: nat-dpo-test
