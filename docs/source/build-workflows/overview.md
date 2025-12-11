@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Overview of NVIDIA NeMo Agent Toolkit Workflows
+# About Building Workflows with NVIDIA NeMo Agent Toolkit
 
 Workflows are the core of the NeMo Agent toolkit because they define which agentic tools and models are used to perform a given task or series of tasks.
 
