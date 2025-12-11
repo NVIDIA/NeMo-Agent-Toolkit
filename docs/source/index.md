@@ -177,9 +177,9 @@ Tutorials <./get-started/tutorials/index.md>
 
 ```{toctree}
 :hidden:
-:caption: Build
+:caption: Build Workflows
 
-Overview <./build-workflows/overview.md>
+About <./build-workflows/about-workflows.md>
 Workflow Configuration <./build-workflows/workflow-configuration.md>
 ./build-workflows/functions-and-function-groups/index.md
 ./build-workflows/llms/index.md
@@ -194,9 +194,9 @@ A2A <./build-workflows/a2a-client.md>
 
 ```{toctree}
 :hidden:
-:caption: Run
+:caption: Run Workflows
 
-Overview <./run-workflows/overview.md>
+About <./run-workflows/run-workflows.md>
 ./run-workflows/observe/observe.md
 API Server and User Interface <./run-workflows/launching-ui.md>
 MCP Server <./run-workflows/mcp-server.md>
@@ -205,9 +205,9 @@ A2A Server <./run-workflows/a2a-server.md>
 
 ```{toctree}
 :hidden:
-:caption: Improve
+:caption: Improve Workflows
 
-Overview <./improve-workflows/overview.md>
+About <./improve-workflows/overview.md>
 Evaluate Workflows <./improve-workflows/evaluate.md>
 Profiling and Performance Monitoring <./improve-workflows/profiler.md>
 Optimizer Guide <./improve-workflows/optimizer.md>
