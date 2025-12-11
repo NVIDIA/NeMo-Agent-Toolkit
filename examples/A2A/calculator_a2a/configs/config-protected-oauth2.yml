@@ -12,24 +12,14 @@
 # Start the protected calculator:
 #   nat a2a serve --config examples/A2A/calculator_a2a/configs/config_protected.yml
 
-workflow:
-  type: react
-  llm:
-    _type: nvidia_nim
-    model: meta/llama-3.1-8b-instruct
-
-# Calculator functions
-function_groups:
-  - _type: basic_calculator
-    name: calculator
-
 # Protected A2A Frontend
-front_ends:
-  - _type: a2a
+general:
+  front_end:
+    _type: a2a
     name: "Protected Calculator"
     description: "OAuth2-protected calculator agent for secure arithmetic operations"
     version: "1.0.0"
-    port: 8001
+    port: 10000
     host: localhost
 
     capabilities:
@@ -86,3 +76,25 @@ front_ends:
 #     _type: a2a_client
 #     url: http://localhost:8001
 #     auth_provider: calculator_oauth
+
+function_groups:
+  calculator:
+    _type: calculator
+
+functions:
+  current_datetime:
+    _type: current_datetime
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.0
+    max_tokens: 1024
+
+workflow:
+  _type: react_agent
+  tool_names: [calculator, current_datetime]
+  llm_name: nim_llm
+  verbose: true
+  parse_agent_response_max_retries: 3

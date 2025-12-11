@@ -78,7 +78,7 @@ class OAuth2ValidationMiddleware(BaseHTTPMiddleware):
             HTTP response (either error or result from next handler)
         """
         # Public: Agent card discovery (per A2A spec)
-        if request.url.path == "/.well-known/agent.json":
+        if request.url.path == "/.well-known/agent-card.json":
             logger.debug("Public access to agent card discovery")
             return await call_next(request)
 
