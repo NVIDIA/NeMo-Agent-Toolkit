@@ -29,6 +29,7 @@ dependencies = [
   "nvidia-nat-mcp",
   "nvidia-nat-mem0ai",
   "nvidia-nat-mysql",
+  "nvidia-nat-nemo-customizer",
   "nvidia-nat-openpipe-art",
   "nvidia-nat-opentelemetry",
   "nvidia-nat-phoenix",
@@ -76,6 +77,7 @@ nvidia-nat-llama-index = { workspace = true }
 nvidia-nat-mcp = { workspace = true }
 nvidia-nat-mem0ai = { workspace = true }
 nvidia-nat-mysql = { workspace = true }
+nvidia-nat-nemo-customizer = { workspace = true }
 nvidia-nat-openpipe-art = { workspace = true }
 nvidia-nat-opentelemetry = { workspace = true }
 nvidia-nat-phoenix = { workspace = true }
