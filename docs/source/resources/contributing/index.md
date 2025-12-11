@@ -239,7 +239,7 @@ In addition to this, each example should contain a `README.md` file that describ
 ### Documentation Categories
 
 The documentation in the `docs/source` directory is organized into the following categories:
-* **About** (`about`) - This should be limited to an overview, key features, concepts and release notes documents.
+* **About** (`about`) - This should be limited to an overview, key features, concepts, and release notes documents.
 * **Get Started** (`get-started`) - introductory documentation to help users get started with NeMo Agent toolkit.
   * **Tutorials** (`get-started/tutorials`) - step-by-step guides to help users learn how to use the toolkit.
 * **Build** (`build-workflows`) - documentation on how to build workflows and workflow configuration. This includes information on the types of components (for example LLMs, and agents, etc.) that can be used as part of a workflow. However documentation of specific component implementations (for example ReAct Agent, and the Code Execution tool) should be located in the Components category. Information about adding a remote MCP tool or A2A agent should be located here, however serving a workflow via MCP or A2A protocols should be located in the Run category.
