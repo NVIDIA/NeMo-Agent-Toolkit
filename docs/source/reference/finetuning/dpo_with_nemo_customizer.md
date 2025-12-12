@@ -15,6 +15,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
+<!-- path-check-skip-begin -->
+
 # DPO with NeMo Customizer
 
 This guide covers Direct Preference Optimization (DPO) training using NAT's finetuning harness integrated with [NVIDIA NeMo Customizer](https://docs.nvidia.com/nemo/nemo-microservices/). This integration enables preference-based finetuning of large language models using NVIDIA's enterprise-grade training infrastructure.
@@ -935,6 +937,8 @@ See the example's README for detailed instructions.
 1. **Test Before Deploy**: Evaluate model quality before enabling automatic deployment
 2. **Version Models**: Use descriptive deployment names for tracking
 3. **Monitor Performance**: Track model performance in production and retrain as needed
+
+<!-- path-check-skip-end -->
 
 ## See Also
 

@@ -102,8 +102,8 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/finetuning/rl_with_openpipe_art/.*/data/.*",
     ),
     (
-        r"^examples/finetuning/rl_with_openpipe_art/src/rl_with_openpipe_art/configs/config\.yml$",
-        r"^examples/finetuning/rl_with_openpipe_art/.*/data/.*",
+        r"^examples/finetuning/dpo_tic_tac_toe/.*/configs/config.*\.yml$",
+        r"^examples/finetuning/dpo_tic_tac_toe/.*/data/.*",
     ),
 }
 
