@@ -305,9 +305,7 @@ class SessionManager:
             except TimeoutError:
                 # Timeout means it's time to run cleanup
                 try:
-                    cleaned = await self._cleanup_inactive_per_user_builders()
-                    if cleaned > 0:
-                        logger.info(f"Cleaned up {cleaned} inactive per-user builder(s)")
+                    await self._cleanup_inactive_per_user_builders()
                 except Exception as e:
                     logger.exception(f"Error during periodic cleanup: {e}")
 
@@ -332,7 +330,8 @@ class SessionManager:
         for user_id, builder_info in builders_to_cleanup:
             try:
                 await builder_info.builder.__aexit__(None, None, None)
-                logger.debug(f"Successfully cleaned up per-user builder for user {user_id}")
+                logger.info(f"Cleaned up inactive per-user builder for user={user_id} "
+                            f"(remaining users: {len(self._per_user_builders)})")
             except Exception as e:
                 logger.exception(f"Error cleaning up per-user builder for user {user_id}: {e}")
 
@@ -396,7 +395,8 @@ class SessionManager:
                                                   ref_count=0,
                                                   lock=asyncio.Lock())
                 self._per_user_builders[user_id] = builder_info
-                logger.debug(f"Created per-user builder for user={user_id}, entry_function={self._entry_function}")
+                logger.info(
+                    f"Created per-user builder for user={user_id} (total users: {len(self._per_user_builders)})")
                 return builder_info.builder, builder_info.workflow
             except Exception as e:
                 logger.exception(f"Error creating per-user builder for user {user_id}: {e}")
