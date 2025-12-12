@@ -105,8 +105,20 @@ class HuggingFaceModel:
             text = str(messages)
         return text
     
-    async def ainvoke(self, messages):
+    def invoke(self, messages, **kwargs):
+        """Synchronous invoke - wraps async version."""
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        return loop.run_until_complete(self.ainvoke(messages, **kwargs))
+    
+    async def ainvoke(self, messages, **kwargs):
         """Generate response - matches LangChain interface."""
+        from langchain_core.messages import AIMessage
+        
         # Convert messages to text
         text = self._prepare_text(messages)
         
@@ -127,22 +139,35 @@ class HuggingFaceModel:
         output_ids = generated_ids[0][len(model_inputs.input_ids[0]):].tolist()
         content = self.tokenizer.decode(output_ids, skip_special_tokens=True)
         
-        # Return object with content attribute (matches LangChain interface)
-        class Response:
-            def __init__(self, text):
-                self.content = text
-        
-        return Response(content)
+        # Return AIMessage (matches LangChain interface)
+        return AIMessage(content=content)
     
-    async def astream(self, messages):
+    def stream(self, messages, **kwargs):
+        """Synchronous stream - wraps async version."""
+        import asyncio
+        from collections.abc import Iterator
+        
+        async def _collect():
+            chunks = []
+            async for chunk in self.astream(messages, **kwargs):
+                chunks.append(chunk)
+            return chunks
+        
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        
+        chunks = loop.run_until_complete(_collect())
+        for chunk in chunks:
+            yield chunk
+    
+    async def astream(self, messages, **kwargs):
         """Stream response token by token - matches LangChain streaming interface."""
+        from langchain_core.messages import AIMessageChunk
         import asyncio
         from threading import Thread
-        
-        # Chunk class for LangChain compatibility
-        class Chunk:
-            def __init__(self, text):
-                self.content = text
         
         try:
             from transformers import TextIteratorStreamer
@@ -150,7 +175,7 @@ class HuggingFaceModel:
             # Fallback: if TextIteratorStreamer not available, yield full response
             logger.debug("TextIteratorStreamer not available, falling back to non-streaming")
             response = await self.ainvoke(messages)
-            yield Chunk(response.content)
+            yield AIMessageChunk(content=response.content)
             return
         
         # Convert messages to text
@@ -184,10 +209,20 @@ class HuggingFaceModel:
                 await asyncio.sleep(0)
                 
                 # Return chunk in LangChain format
-                yield Chunk(token_text)
+                yield AIMessageChunk(content=token_text)
         finally:
             # Ensure thread completes
             thread.join()
+    
+    def bind_tools(self, tools, **kwargs):
+        """Bind tools to the LLM. Returns self to maintain fluent interface."""
+        # HuggingFace models don't support tool calling, but we return self for compatibility
+        return self
+    
+    def bind(self, **kwargs):
+        """Bind additional parameters to the LLM. Returns self to maintain fluent interface."""
+        # HuggingFace models don't support parameter binding, but we return self for compatibility
+        return self
 
 
 async def _cleanup_model(model_name: str) -> None:
@@ -212,8 +247,8 @@ async def _cleanup_model(model_name: str) -> None:
             del _model_cache[model_name]
             
             logger.debug("Model cleaned up: %s", model_name)
-    except Exception as e:
-        logger.exception("Error cleaning up HuggingFace model '%s': %s", model_name, e)
+    except Exception:
+        logger.exception("Error cleaning up HuggingFace model '%s'", model_name)
 
 
 @register_llm_provider(config_type=HuggingFaceConfig)

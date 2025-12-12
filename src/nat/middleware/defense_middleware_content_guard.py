@@ -63,6 +63,12 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
     when unsafe content is detected.
 
     Only output analysis is currently supported (target_location='output').
+
+    Streaming Behavior:
+    - For 'refusal' and 'redirection' actions: Chunks are buffered and checked before yielding
+      to prevent unsafe content from being streamed to clients.
+    - For 'partial_compliance' action: Chunks are yielded immediately; violations are logged
+      but content passes through.
     """
 
     def __init__(self, config: ContentSafetyGuardMiddlewareConfig, builder):
@@ -396,6 +402,10 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
     ) -> AsyncIterator[Any]:
         """Apply content safety guard check to streaming function.
 
+        For refusal and redirection actions, chunks are buffered and checked before yielding
+        to prevent unsafe content from being streamed. For partial_compliance, chunks are
+        yielded immediately and violations are logged.
+
         Args:
             value: Function input
             call_next: Next middleware/function to call
@@ -411,18 +421,36 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
                 yield chunk
             return
 
-        # Stream and check output (only output is supported)
-        # Accumulate chunks to analyze after streaming
-        accumulated_output = []
-        async for chunk in call_next(value):
-            accumulated_output.append(str(chunk))
-            yield chunk
+        # For refusal and redirection, buffer chunks before yielding to prevent unsafe content exposure
+        # For partial_compliance, yield immediately (logging only)
+        buffer_chunks = self.config.action in ("refusal", "redirection")
 
-        # Final check after streaming completes
-        if accumulated_output:
-            full_output = "".join(accumulated_output)
-            # Use helper method for consistency (though it will raise if refusal)
-            await self._process_content_safety_detection(
+        accumulated_chunks = []
+        async for chunk in call_next(value):
+            if buffer_chunks:
+                # Buffer chunks for safety check before yielding
+                accumulated_chunks.append(chunk)
+            else:
+                # partial_compliance: yield immediately (violations will be logged)
+                yield chunk
+
+        # Safety check for buffered content (refusal/redirection only)
+        if accumulated_chunks:
+            full_output = "".join(str(chunk) for chunk in accumulated_chunks)
+            # Process safety detection:
+            # - For refusal: raises ValueError (no chunks yielded)
+            # - For redirection: returns replacement message string
+            # - For safe content: returns original value
+            processed_output = await self._process_content_safety_detection(
                 full_output, "output", context, original_input=value
             )
+
+            # Yield processed content
+            if isinstance(processed_output, str):
+                # For redirection, yield the replacement message
+                yield processed_output
+            else:
+                # For safe content, yield original chunks
+                for chunk in accumulated_chunks:
+                    yield chunk
 

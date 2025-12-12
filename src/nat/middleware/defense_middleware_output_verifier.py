@@ -75,6 +75,12 @@ class OutputVerifierMiddleware(DefenseMiddleware):
     - Providing automatic corrections when errors are detected
 
     Only output analysis is currently supported (target_location='output').
+
+    Streaming Behavior:
+    - For 'refusal' and 'redirection' actions: Chunks are buffered and checked before yielding
+      to prevent incorrect content from being streamed to clients.
+    - For 'partial_compliance' action: Chunks are yielded immediately; violations are logged
+      but content passes through.
     """
 
     def __init__(self, config: OutputVerifierMiddlewareConfig, builder):
@@ -345,6 +351,10 @@ Respond ONLY with valid JSON in this exact format:
     ) -> AsyncIterator[Any]:
         """Apply output verifier to streaming function.
 
+        For refusal and redirection actions, chunks are buffered and checked before yielding
+        to prevent incorrect content from being streamed. For partial_compliance, chunks are
+        yielded immediately and violations are logged.
+
         Args:
             value: Function input
             call_next: Next middleware/function to call
@@ -361,26 +371,53 @@ Respond ONLY with valid JSON in this exact format:
             return
 
         try:
-            # Accumulate chunks to analyze after streaming
-            accumulated_output = []
-            async for chunk in call_next(value):
-                accumulated_output.append(str(chunk))
-                yield chunk
+            # For refusal and redirection, buffer chunks before yielding to prevent incorrect content exposure
+            # For partial_compliance, yield immediately (logging only)
+            buffer_chunks = self.config.action in ("refusal", "redirection")
 
-            # Final check after streaming completes
-            if accumulated_output:
-                full_output = "".join(accumulated_output)
+            accumulated_chunks = []
+            async for chunk in call_next(value):
+                if buffer_chunks:
+                    # Buffer chunks for verification check before yielding
+                    accumulated_chunks.append(chunk)
+                else:
+                    # partial_compliance: yield immediately (violations will be logged)
+                    yield chunk
+
+            # Verification check for buffered content (refusal/redirection only)
+            if accumulated_chunks:
+                full_output = "".join(str(chunk) for chunk in accumulated_chunks)
+                # Extract field from output if target_field is specified
+                content_to_analyze, field_info = self._extract_field_from_value(full_output)
+
                 output_result = await self._analyze_content(
-                    full_output,
+                    content_to_analyze,
                     "output",
                     inputs=value,
                     function_name=context.name
                 )
+
                 if output_result.get("should_refuse", False):
-                    logger.warning(
-                        "Streaming output failed verification: %s",
-                        output_result.get('reason', 'Unknown')
-                    )
+                    # Handle threat - get sanitized/corrected value
+                    sanitized_content = await self._handle_threat(content_to_analyze, output_result, context)
+
+                    # If field was extracted, apply sanitized value back to original structure
+                    if field_info is not None:
+                        processed_output = self._apply_field_result_to_value(full_output, field_info, sanitized_content)
+                    else:
+                        processed_output = sanitized_content
+
+                    # Yield processed content
+                    if isinstance(processed_output, str):
+                        yield processed_output
+                    else:
+                        # For safe content or if sanitized is not a string, yield original chunks
+                        for chunk in accumulated_chunks:
+                            yield chunk
+                else:
+                    # Content verified as correct, yield original chunks
+                    for chunk in accumulated_chunks:
+                        yield chunk
 
         except Exception as e:
             logger.error(

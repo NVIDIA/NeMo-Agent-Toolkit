@@ -71,6 +71,12 @@ class PIIDefenseMiddleware(DefenseMiddleware):
     Only output analysis is currently supported (target_location='output').
 
     See <https://github.com/microsoft/presidio> for more information about Presidio.
+
+    Streaming Behavior:
+    - For 'refusal' and 'redirection' actions: Chunks are buffered and checked before yielding
+      to prevent PII from being streamed to clients.
+    - For 'partial_compliance' action: Chunks are yielded immediately; violations are logged
+      but content passes through.
     """
 
     def __init__(self, config: PIIDefenseMiddlewareConfig, builder):
@@ -193,9 +199,9 @@ class PIIDefenseMiddleware(DefenseMiddleware):
             context: Function context metadata
 
         Returns:
-            Tuple of (sanitized_value, should_block, entities_str)
+            Tuple of (sanitized_value, should_refuse, entities_str)
             - sanitized_value: The value after PII handling (may be unchanged)
-            - should_block: True if refusal action should block (caller should raise error)
+            - should_refuse: True if refusal action should refuse (caller should raise error)
             - entities_str: String representation of detected entities (for error messages)
         """
         # Extract field from value if target_field is specified
@@ -214,7 +220,7 @@ class PIIDefenseMiddleware(DefenseMiddleware):
 
         if self.config.action == "refusal":
             logger.error("PII Defense refusing %s of %s: %s", location, context.name, entities_str)
-            return value, True, entities_str  # Signal to block
+            return value, True, entities_str  # Signal to refuse
 
         elif self.config.action == "redirection":
             logger.warning("PII Defense detected PII in %s of %s: %s", location, context.name, entities_str)
@@ -222,24 +228,24 @@ class PIIDefenseMiddleware(DefenseMiddleware):
             anonymized_content = analysis_result.get("anonymized_text", content_text)
 
             # Convert anonymized_text back to original type if needed
-            sanitized_value = anonymized_content
+            redirected_value = anonymized_content
             if isinstance(content_to_analyze, (int, float)):
                 try:
-                    sanitized_value = type(content_to_analyze)(anonymized_content)
+                    redirected_value = type(content_to_analyze)(anonymized_content)
                 except (ValueError, TypeError):
                     logger.warning(
                         "Could not convert anonymized text '%s' to %s",
                         anonymized_content,
                         type(content_to_analyze).__name__
                     )
-                    sanitized_value = anonymized_content
+                    redirected_value = anonymized_content
 
-            # If field was extracted, apply sanitized value back to original structure
+            # If field was extracted, apply redirected value back to original structure
             if field_info is not None:
-                return self._apply_field_result_to_value(value, field_info, sanitized_value), False, entities_str
+                return self._apply_field_result_to_value(value, field_info, redirected_value), False, entities_str
             else:
-                # No field extraction - return sanitized content directly
-                return sanitized_value, False, entities_str
+                # No field extraction - return redirected content directly
+                return redirected_value, False, entities_str
 
         else:  # action == "partial_compliance"
             logger.warning("PII Defense detected PII in %s of %s: %s", location, context.name, entities_str)
@@ -269,9 +275,9 @@ class PIIDefenseMiddleware(DefenseMiddleware):
         result = await call_next(value)
 
         # Handle output analysis (only output is supported)
-        sanitized_output, should_block, entities_str = self._process_pii_detection(result, "output", context)
-        if should_block:
-            raise ValueError(f"PII detected in output: {entities_str}. Output blocked.")
+        sanitized_output, should_refuse, entities_str = self._process_pii_detection(result, "output", context)
+        if should_refuse:
+            raise ValueError(f"PII detected in output: {entities_str}. Output refused.")
         result = sanitized_output
 
         return result
@@ -284,7 +290,11 @@ class PIIDefenseMiddleware(DefenseMiddleware):
     ) -> AsyncIterator[Any]:
         """Intercept streaming calls to detect and anonymize PII in inputs or outputs.
 
-        Note: PII detection requires full text, so we collect all chunks before analyzing.
+        For refusal and redirection actions, chunks are buffered and checked before yielding
+        to prevent PII from being streamed. For partial_compliance, chunks are yielded immediately
+        and violations are logged.
+
+        Note: PII detection requires full text, so chunks are collected before analyzing.
 
         Args:
             value: The input value to the function
@@ -300,26 +310,34 @@ class PIIDefenseMiddleware(DefenseMiddleware):
                 yield chunk
             return
 
-        # Collect all chunks for output PII analysis (only output is supported)
+        # For refusal and redirection, buffer chunks before yielding to prevent PII exposure
+        # For partial_compliance, yield immediately (violations will be logged)
+        buffer_chunks = self.config.action in ("refusal", "redirection")
+
         collected_chunks = []
         async for chunk in call_next(value):
-            collected_chunks.append(chunk)
+            if buffer_chunks:
+                # Buffer chunks for PII check before yielding
+                collected_chunks.append(chunk)
+            else:
+                # partial_compliance: yield immediately (violations will be logged)
+                yield chunk
 
-        # Handle output analysis
+        # PII analysis for buffered content (refusal/redirection only)
         if collected_chunks:
             # For streaming, we need to reconstruct the full output value
             output_value = "".join(str(chunk) for chunk in collected_chunks)
-            sanitized_output, should_block, entities_str = self._process_pii_detection(output_value, "output", context)
+            sanitized_output, should_refuse, entities_str = self._process_pii_detection(output_value, "output", context)
 
-            if should_block:
-                raise ValueError(f"PII detected in output: {entities_str}. Output blocked.")
+            if should_refuse:
+                raise ValueError(f"PII detected in output: {entities_str}. Output refused.")
 
-            # If sanitized (redirection), yield as single chunk
+            # Yield processed content
             if sanitized_output != output_value:
+                # If redirected (redirection), yield as single chunk
                 yield sanitized_output
-                return
-
-        # Yield original chunks (no PII detected)
-        for chunk in collected_chunks:
-            yield chunk
+            else:
+                # No PII detected or no sanitization needed, yield original chunks
+                for chunk in collected_chunks:
+                    yield chunk
 

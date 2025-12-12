@@ -25,6 +25,12 @@ from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 
+try:
+    from nat.llm.huggingface_llm import HuggingFaceConfig
+    HAS_HUGGINGFACE = True
+except ImportError:
+    HAS_HUGGINGFACE = False
+
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
@@ -138,3 +144,32 @@ async def test_azure_openai_react_e2e(test_data_dir: str):
 
     config_file = os.path.join(test_data_dir, "azure_openai_e2e.yaml")
     await run_workflow(config_file=config_file, question="What is 1+2?", expected_answer="3")
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not HAS_HUGGINGFACE, reason="HuggingFace dependencies (transformers, torch) not installed")
+async def test_huggingface_langchain_agent():
+    """
+    Test HuggingFace LLM with LangChain/LangGraph agent.
+    Requires transformers and torch to be installed (optional dependencies).
+    Uses a small model for testing. Set HUGGINGFACE_MODEL_NAME environment variable to override.
+    """
+    prompt = ChatPromptTemplate.from_messages([("system", "You are a helpful AI assistant."), ("human", "{input}")])
+
+    # Use a small, fast model for testing, or allow override via env var
+    model_name = os.environ.get("HUGGINGFACE_MODEL_NAME", "gpt2")
+    llm_config = HuggingFaceConfig(model_name=model_name, temperature=0.0, max_new_tokens=50)  # type: ignore[misc]
+
+    async with WorkflowBuilder() as builder:
+        await builder.add_llm("huggingface_llm", llm_config)
+        llm = await builder.get_llm("huggingface_llm", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+
+        # Test direct usage (like your examples) - invoke the prompt then the LLM
+        prompt_result = await prompt.ainvoke({"input": "What is 1+2?"})
+        response = await llm.ainvoke(prompt_result.to_messages())
+        
+        assert isinstance(response, AIMessage)
+        assert response.content is not None
+        assert isinstance(response.content, str)
+        # For small models like gpt2, we just verify we got a response
+        assert len(response.content) > 0

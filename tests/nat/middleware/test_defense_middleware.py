@@ -69,8 +69,8 @@ class _TestDefenseMiddleware(DefenseMiddleware):
         self._last_field_info = None
 
 
-@pytest.fixture
-def mock_builder():
+@pytest.fixture(name="mock_builder")
+def fixture_mock_builder():
     """Create a mock builder."""
     return MagicMock()
 
@@ -80,8 +80,8 @@ class _TestInput(BaseModel):
     value: float
 
 
-@pytest.fixture
-def middleware_context():
+@pytest.fixture(name="middleware_context")
+def fixture_middleware_context():
     """Create a test FunctionMiddlewareContext."""
     return FunctionMiddlewareContext(
         name="my_calculator.multiply",
