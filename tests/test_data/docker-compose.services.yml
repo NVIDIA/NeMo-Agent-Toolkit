@@ -201,9 +201,6 @@ services:
     privileged: true
     ports:
       - "2000:2000"
-    environment:
-      - PISTON_RUN_TIMEOUT=30000
-      - PISTON_RUN_CPU_TIME=30000
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:2000/api/v2/runtimes')"]
       interval: 30s
