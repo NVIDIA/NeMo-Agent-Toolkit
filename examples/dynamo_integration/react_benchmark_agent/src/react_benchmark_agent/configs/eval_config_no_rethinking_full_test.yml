@@ -57,7 +57,7 @@ function_groups:
 
 llms:
   dynamo_llm:
-    _type: openai
+    _type: dynamo
     model_name: llama-3.3-70b
     base_url: http://localhost:8099/v1
     api_key: dummy
@@ -66,9 +66,8 @@ llms:
     temperature: 0.0
     max_tokens: 8192
     stop: ["Observation:", "\nThought:"]  # CRITICAL: Prevent LLM from hallucinating observations
-    # Dynamic prefix headers - automatically generates unique prefix ID per request
-    enable_dynamic_prefix: true
-    prefix_template: "react-benchmark-{uuid}"  # Optional: template for prefix IDs
+    # Dynamo prefix headers for KV cache optimization (enabled when prefix_template is set)
+    prefix_template: "react-benchmark-{uuid}"  # Template for prefix IDs ({uuid} replaced per request)
     prefix_total_requests: 10  # 1 for independent questions, higher for conversations
     prefix_osl: MEDIUM  # Output Sequence Length: LOW | MEDIUM | HIGH
     prefix_iat: MEDIUM  # Inter-Arrival Time: LOW | MEDIUM | HIGH
@@ -83,7 +82,7 @@ llms:
     #     step: 0.05
   
   eval_llm:
-    _type: openai
+    _type: dynamo
     model_name: llama-3.3-70b
     base_url: http://localhost:8099/v1
     api_key: dummy

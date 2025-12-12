@@ -6,16 +6,16 @@
 
 This set of examples is intended to grow over time as the synergies between NAT and [Dynamo](https://github.com/ai-dynamo/dynamo) evolve. In the first set of examples, we will analyze the performance (throughput and latency) of NAT agents requests to Dynamo and seek out key optimizations. Agentic LLM requests have predictable patterns with respect to conversation length, system prompts, and tool-calling. We aim to codesign our inference servers to provide better performance in a repeatable, mock, decision-only evaluation harness. The harness uses the Banking data subset and mock tools from the [Galileo Agent Leaderboard v2](https://huggingface.co/datasets/galileo-ai/agent-leaderboard-v2) benchmark to simulate agentic tool selection quality (TSQ).
 
-Most of these examples can be tested using a managed LLM service, like an NVIDIA NIM model endpoint, for inference. However, the core analysis wwould require hosting the LLM endpoints on your own GPU cluster.
+Most of these examples could be tested using a managed LLM service, like an NVIDIA NIM model endpoint, for inference. However, the intended analysis analysis would require hosting the LLM endpoints on your own GPU cluster using Dynamo.
 
 
 ### Key Features
 
 - **Decision-Only Tool Calling**: Tool stubs capture intent without executing banking operations
-- **Dynamo Backend**: Fast LLM inference with KV cache optimization (default method) Thompson Sampling router (new implementation)
-- **Self-Evaluation Loop**: Agent can re-evaluate and retry tool selection for improved quality
-- **Comprehensive Metrics and Visualizations**: TSQ scores, token throughput, latency analysis. Visualized in A/B scatterplots.
-- **NAT Framework**: Full integration with NeMo Agent Toolkit evaluators and profiler
+- **Dynamo Backend**: Fast LLM inference with KV cache optimization (default Dynamo method) and a preditive Thompson sampling router (new implementation)
+- **Self-Evaluation Loop**: Agent can re-evaluate and retry tool selection for improved quality. Parameterization accuracy has been excluded.
+- **Comprehensive Metrics and Visualizations**: TSQ scores, token throughput, latency analysis. Visualized in A/B scatterplots and histograms for analysis.
+- **NAT Framework**: Full integration with NeMo Agent Toolkit evaluators, optimizer, and profiler
 
 ## Quick Start
 
@@ -25,21 +25,29 @@ cd /path/to/NeMo-Agent-Toolkit
 uv venv "${HOME}/.venvs/nat_dynamo_eval" --python 3.13
 source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 uv pip install -e ".[langchain]"
-uv pip install matplotlib
-uv pip install scipy
+uv pip install matplotlib scipy
+
 
 # 2. Install the workflow package
-cd examples/dynamo_integration/react_benchmark_agent
+cd examples/dynamo_integration/react_benchmark_agent # NeMo-Agent-Toolkit/examples/dynamo_integration/react_benchmark_agent
 uv pip install -e .
 
 # 3. Download the dataset (requires HuggingFace account)
-cd examples/dynamo_integration
+cd ../ # NeMo-Agent-Toolkit/examples/dynamo_integration
 export HF_TOKEN=<your_huggingface_token>
+export HF_HOME=<your-user-path/.cache/huggingface>
 python scripts/download_agent_leaderboard_v2.py --domains banking
 
 # 4. Start Dynamo backend (see Dynamo README for details)
-cd /path/to/NeMo-Agent-Toolkit/external/dynamo
-bash start_dynamo_unified.sh
+cd ../../external/dynamo # NeMo-Agent-Toolkit/external/dynamo
+bash start_dynamo_unified.sh # wait ~5 minutes for the server to start
+
+# Requirements for start_dynamo_unified.sh:
+#   - Docker with NVIDIA Container Toolkit (nvidia-docker)
+#   - 4x NVIDIA GPUs (default: device IDs 4,5,6,7, configurable via WORKER_GPUS)
+#   - Model weights: either local path or HF_TOKEN to download Llama-3.3-70B-Instruct
+#   - Ports available: 8099 (HTTP API), 2389 (ETCD), 4232 (NATS)
+#   - curl and jq for health checks
 
 # Note: To customize GPU workers and tensor parallelism, edit the configuration
 # variables at the top of external/dynamo/start_dynamo_unified.sh:
@@ -49,18 +57,35 @@ bash start_dynamo_unified.sh
 #   LOCAL_MODEL_DIR="..."  # Path to your local model weights
 
 # 5. Run evaluation
-cd /path/to/NeMo-Agent-Toolkit
+cd ../../ # NeMo-Agent-Toolkit/
 nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs/eval_config_no_rethinking_full_test.yml
 ```
 
-After running this this end-to-end evaluation, you will have confirmed functional model services on Dynamo, dataset access, and agent execution. From here, we recommend that users visualize their baseline performance via the available scripts:
+After running this end-to-end evaluation, you will have confirmed functional model services on Dynamo, dataset access, and agent execution.
+
+### Understanding Evaluation Artifacts
+
+The `nat eval` command generates the following artifacts in the job output directory (for example, `outputs/dynamo_evals/banking_data_eval_full_test/jobs/job_<uuid>/`):
+
+| File | Description |
+|------|-------------|
+| `workflow_output.json` | Raw workflow execution results for each scenario, including generated answers and trajectories |
+| `tool_selection_quality_output.json` | TSQ evaluation scores per scenario, with detailed tool-by-tool scoring breakdowns |
+| `inference_optimization.json` | Summary statistics for inference performance optimization |
+| `standardized_data_all.csv` | Profiler data in CSV format containing per-LLM-call timing metrics (TTFT, ITL, duration, token counts) |
+| `all_requests_profiler_traces.json` | Comprehensive profiler traces with full event-level detail for debugging and deep analysis |
+
+### Visualizing Baseline Performance
+
+Use these scripts to analyze and visualize your evaluation results:
 
 | Script | Example Usage | Optional Flags | Outcome |
 |--------|---------------|----------------|---------|
-| `throughput_analysis.py` | `python scripts/throughput_analysis.py ./react_benchmark_agent/outputs/dynamo_evals/jobs/job_*/standardized_data_all.csv` | None | Calculates TTFT, ITL, and tokens/sec statistics from profiler CSV. Outputs: `tokens_per_second_analysis.csv` (per-LLM-call metrics) and `inter_token_latency_distribution.csv` (raw ITL data) |
-| `plot_throughput_vs_tsq_per_request.py` | `python scripts/plot_throughput_vs_tsq_per_request.py ./react_benchmark_agent/outputs/dynamo_evals/<experiment_output_dir_name>` | `--output DIR` (if user prefers custom output), `--color-by PARAM` (color by hyperparameter) | Generates scatter plots of TTFT, ITL, throughput vs TSQ scores. Reads from `standardized_data_all.csv` and `tool_selection_quality_output.json`. Supports multi-experiment comparison |
-| `run_concurrency_benchmark.sh` | `bash scripts/run_concurrency_benchmark.sh` | Interactive prompts for benchmark name | Runs evaluations at multiple concurrency levels (16, 32) by default. Outputs `benchmark_results.csv`, `benchmark_report.md`, and `analysis_N.txt` for each concurrency experiment |
-| `create_test_subset.py` | `python scripts/create_test_subset.py` | `--num-scenarios N` (default: 3), `--input-file PATH`, `--output-file PATH` | Creates smaller dataset subset for quick end-to-end validation testing |
+| `throughput_analysis.py` | `python scripts/throughput_analysis.py ./react_benchmark_agent/outputs/dynamo_evals/banking_data_eval_full_test/jobs/job_<uuid>/standardized_data_all.csv` | None | Calculates TTFT, ITL, and tokens/sec statistics from profiler CSV. Outputs: `tokens_per_second_analysis.csv` and `inter_token_latency_distribution.csv` |
+| `plot_throughput_vs_tsq_per_request.py` | `python scripts/plot_throughput_vs_tsq_per_request.py ./react_benchmark_agent/outputs/dynamo_evals/banking_data_eval_full_test/jobs/` | `--output DIR`, `--color-by PARAM` | Generates scatter plots of TTFT, ITL, throughput vs TSQ scores. Pass the `jobs/` directory (not individual job dirs). Defaults to multi-experiment comparison. For single experiment, move job to a nested directory. |
+| `plot_throughput_histograms_per_request.py` | `python scripts/plot_throughput_histograms_per_request.py ./react_benchmark_agent/outputs/dynamo_evals/banking_data_eval_full_test/jobs/` | `--output DIR` | Generates histograms showing distribution of TTFT, ITL, throughput (100 bins each), plus Total Tokens (50 bins), LLM Calls (25 bins), Duration (25 bins). |
+| `run_concurrency_benchmark.sh` | `bash scripts/run_concurrency_benchmark.sh` | Interactive prompts | Runs evaluations at multiple concurrency levels. Outputs `benchmark_results.csv`, `benchmark_report.md`, and `analysis_*.txt` |
+| `create_test_subset.py` | `python scripts/create_test_subset.py --num-scenarios 3` | `--input-file PATH`, `--output-file PATH` | Creates smaller dataset subset for quick end-to-end validation testing |
 
 
 ## Documentation

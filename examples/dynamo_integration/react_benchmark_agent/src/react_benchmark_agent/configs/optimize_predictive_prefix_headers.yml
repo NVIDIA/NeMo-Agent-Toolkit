@@ -136,7 +136,7 @@ llms:
   # Uses custom dynamo_openai type that has proper schema definitions
   # for prefix parameters, making them discoverable by the NAT optimizer.
   dynamo_llm:
-    _type: dynamo_openai  # Custom type with optimizable prefix fields
+    _type: dynamo
     model_name: llama-3.3-70b
     base_url: http://localhost:8099/v1
     api_key: dummy
@@ -179,7 +179,7 @@ llms:
 
   # Secondary LLM for self-evaluation (not optimized)
   eval_llm:
-    _type: openai
+    _type: dynamo
     model_name: llama-3.3-70b
     base_url: http://localhost:8099/v1
     api_key: dummy

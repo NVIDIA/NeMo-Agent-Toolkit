@@ -27,6 +27,8 @@ from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
+from nat.llm.dynamo_llm import create_httpx_client_with_dynamo_hooks
+from nat.llm.dynamo_llm import DynamoModelConfig
 from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
@@ -191,6 +193,57 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
                                 exclude_none=True,
                                 exclude_unset=True,
                             ))
+
+    yield _patch_llm_based_on_config(client, llm_config)
+
+
+@register_llm_client(config_type=DynamoModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+async def dynamo_langchain(llm_config: DynamoModelConfig, _builder: Builder):
+    """
+    Create a LangChain ChatOpenAI client for Dynamo with automatic prefix header injection.
+
+    This client injects Dynamo prefix headers at the HTTP transport level using httpx event hooks,
+    enabling KV cache optimization and request routing.
+    """
+    from langchain_openai import ChatOpenAI
+
+    # Build config dict excluding Dynamo-specific and NAT-specific fields
+    config_dict = llm_config.model_dump(
+        exclude={"type", "thinking", "api_type", "name",
+                 "prefix_template", "prefix_total_requests", "prefix_osl", "prefix_iat", "request_timeout"},
+        by_alias=True,
+        exclude_none=True,
+        exclude_unset=True,
+    )
+
+    # If prefix_template is set, create a custom httpx client with Dynamo hooks
+    if llm_config.prefix_template is not None:
+        http_async_client = create_httpx_client_with_dynamo_hooks(
+            prefix_template=llm_config.prefix_template,
+            total_requests=llm_config.prefix_total_requests,
+            osl=llm_config.prefix_osl,
+            iat=llm_config.prefix_iat,
+            timeout=llm_config.request_timeout,
+        )
+        config_dict["http_async_client"] = http_async_client
+        logger.info(
+            "Dynamo prefix headers enabled: template=%s, total_requests=%d, osl=%s, iat=%s",
+            llm_config.prefix_template,
+            llm_config.prefix_total_requests,
+            llm_config.prefix_osl,
+            llm_config.prefix_iat,
+        )
+
+    # Create the ChatOpenAI client
+    if llm_config.api_type == APITypeEnum.RESPONSES:
+        client = ChatOpenAI(
+            stream_usage=True,
+            use_responses_api=True,
+            use_previous_response_id=True,
+            **config_dict
+        )
+    else:
+        client = ChatOpenAI(stream_usage=True, **config_dict)
 
     yield _patch_llm_based_on_config(client, llm_config)
 

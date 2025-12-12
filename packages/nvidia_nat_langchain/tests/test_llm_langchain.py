@@ -24,9 +24,11 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.llm import APITypeEnum
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
+from nat.llm.dynamo_llm import DynamoModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 from nat.plugins.langchain.llm import aws_bedrock_langchain
+from nat.plugins.langchain.llm import dynamo_langchain
 from nat.plugins.langchain.llm import nim_langchain
 from nat.plugins.langchain.llm import openai_langchain
 
@@ -161,6 +163,130 @@ class TestBedrockLangChain:
 
 
 # ---------------------------------------------------------------------------
+# Dynamo → LangChain wrapper tests
+# ---------------------------------------------------------------------------
+
+
+class TestDynamoLangChain:
+    """Tests for the dynamo_langchain wrapper."""
+
+    @pytest.fixture
+    def mock_builder(self):
+        return MagicMock(spec=Builder)
+
+    @pytest.fixture
+    def dynamo_cfg_no_prefix(self):
+        """Dynamo config without prefix template (no header injection)."""
+        return DynamoModelConfig(
+            model_name="test-model",
+            base_url="http://localhost:8000/v1",
+        )
+
+    @pytest.fixture
+    def dynamo_cfg_with_prefix(self):
+        """Dynamo config with prefix template (enables header injection)."""
+        return DynamoModelConfig(
+            model_name="test-model",
+            base_url="http://localhost:8000/v1",
+            prefix_template="session-{uuid}",
+            prefix_total_requests=15,
+            prefix_osl="HIGH",
+            prefix_iat="LOW",
+            request_timeout=300.0,
+        )
+
+    @pytest.fixture
+    def dynamo_cfg_responses_api(self):
+        """Dynamo config with RESPONSES API type."""
+        return DynamoModelConfig(
+            model_name="test-model",
+            base_url="http://localhost:8000/v1",
+            api_type=APITypeEnum.RESPONSES,
+            prefix_template="session-{uuid}",
+        )
+
+    @patch("langchain_openai.ChatOpenAI")
+    async def test_basic_creation_without_prefix(self, mock_chat, dynamo_cfg_no_prefix, mock_builder):
+        """Wrapper should create ChatOpenAI without custom httpx client when no prefix template."""
+        async with dynamo_langchain(dynamo_cfg_no_prefix, mock_builder) as client:
+            mock_chat.assert_called_once()
+            kwargs = mock_chat.call_args.kwargs
+
+            assert kwargs["model"] == "test-model"
+            assert kwargs["base_url"] == "http://localhost:8000/v1"
+            assert kwargs["stream_usage"] is True
+            # Should NOT have custom httpx client
+            assert "http_async_client" not in kwargs
+            assert client is mock_chat.return_value
+
+    @patch("nat.plugins.langchain.llm.create_httpx_client_with_dynamo_hooks")
+    @patch("langchain_openai.ChatOpenAI")
+    async def test_creation_with_prefix_template(
+        self, mock_chat, mock_create_client, dynamo_cfg_with_prefix, mock_builder
+    ):
+        """Wrapper should create ChatOpenAI with custom httpx client when prefix template is set."""
+        mock_httpx_client = MagicMock()
+        mock_create_client.return_value = mock_httpx_client
+
+        async with dynamo_langchain(dynamo_cfg_with_prefix, mock_builder) as client:
+            # Verify httpx client was created with correct parameters
+            mock_create_client.assert_called_once_with(
+                prefix_template="session-{uuid}",
+                total_requests=15,
+                osl="HIGH",
+                iat="LOW",
+                timeout=300.0,
+            )
+
+            # Verify ChatOpenAI was called with the custom httpx client
+            mock_chat.assert_called_once()
+            kwargs = mock_chat.call_args.kwargs
+
+            assert kwargs["model"] == "test-model"
+            assert kwargs["http_async_client"] is mock_httpx_client
+            assert client is mock_chat.return_value
+
+    @patch("langchain_openai.ChatOpenAI")
+    async def test_responses_api_branch(self, mock_chat, dynamo_cfg_responses_api, mock_builder):
+        """When APIType==RESPONSES, special flags should be added."""
+        async with dynamo_langchain(dynamo_cfg_responses_api, mock_builder):
+            pass
+
+        kwargs = mock_chat.call_args.kwargs
+        assert kwargs["use_responses_api"] is True
+        assert kwargs["use_previous_response_id"] is True
+        assert kwargs["stream_usage"] is True
+
+    @patch("langchain_openai.ChatOpenAI")
+    async def test_excludes_dynamo_specific_fields(self, mock_chat, dynamo_cfg_with_prefix, mock_builder):
+        """Dynamo-specific fields should be excluded from ChatOpenAI kwargs.
+
+        DynamoModelConfig has fields (prefix_template, prefix_total_requests, prefix_osl,
+        prefix_iat, request_timeout) that are only used internally by NAT to configure
+        the custom httpx client for Dynamo header injection. These fields must NOT be
+        passed to ChatOpenAI because:
+
+        1. ChatOpenAI doesn't understand them and would error or ignore them
+        2. They configure NAT's header injection behavior, not the LLM client itself
+
+        This test ensures the `exclude` set in model_dump() properly filters these fields.
+        If someone accidentally removes a field from the exclude set, this test will fail.
+        """
+        with patch("nat.plugins.langchain.llm.create_httpx_client_with_dynamo_hooks"):
+            async with dynamo_langchain(dynamo_cfg_with_prefix, mock_builder):
+                pass
+
+        kwargs = mock_chat.call_args.kwargs
+
+        # These Dynamo-specific fields should NOT be passed to ChatOpenAI
+        assert "prefix_template" not in kwargs
+        assert "prefix_total_requests" not in kwargs
+        assert "prefix_osl" not in kwargs
+        assert "prefix_iat" not in kwargs
+        assert "request_timeout" not in kwargs
+
+
+# ---------------------------------------------------------------------------
 # Registration decorator sanity check
 # ---------------------------------------------------------------------------
 
@@ -175,8 +301,10 @@ def test_decorator_registration(mock_global_registry):
         (NIMModelConfig, LLMFrameworkEnum.LANGCHAIN): nim_langchain,
         (OpenAIModelConfig, LLMFrameworkEnum.LANGCHAIN): openai_langchain,
         (AWSBedrockModelConfig, LLMFrameworkEnum.LANGCHAIN): aws_bedrock_langchain,
+        (DynamoModelConfig, LLMFrameworkEnum.LANGCHAIN): dynamo_langchain,
     }
 
     assert registry._llm_client_map[(NIMModelConfig, LLMFrameworkEnum.LANGCHAIN)] is nim_langchain
     assert registry._llm_client_map[(OpenAIModelConfig, LLMFrameworkEnum.LANGCHAIN)] is openai_langchain
     assert registry._llm_client_map[(AWSBedrockModelConfig, LLMFrameworkEnum.LANGCHAIN)] is aws_bedrock_langchain
+    assert registry._llm_client_map[(DynamoModelConfig, LLMFrameworkEnum.LANGCHAIN)] is dynamo_langchain

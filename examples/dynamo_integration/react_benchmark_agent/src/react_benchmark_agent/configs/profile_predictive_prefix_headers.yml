@@ -133,7 +133,7 @@ function_groups:
 
 llms:
   dynamo_llm:
-    _type: openai
+    _type: dynamo
     model_name: llama-3.3-70b
     base_url: http://localhost:8099/v1
     api_key: dummy
@@ -154,7 +154,7 @@ llms:
     #     step: 0.05
   
   eval_llm:
-    _type: openai
+    _type: dynamo
     model_name: llama-3.3-70b
     base_url: http://localhost:8099/v1
     api_key: dummy

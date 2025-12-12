@@ -38,7 +38,7 @@ DYNAMO_INTEGRATION_DIR="$( cd "$SCRIPT_DIR/.." && pwd )"
 # Go up to NeMo-Agent-Toolkit root
 PROJECT_ROOT="$( cd "$DYNAMO_INTEGRATION_DIR/../.." && pwd )"
 # Config and output paths are in react_benchmark_agent subdirectory
-CONFIG_FILE="${DYNAMO_INTEGRATION_DIR}/react_benchmark_agent/configs/eval_config_banking_full_test.yml"
+CONFIG_FILE="${DYNAMO_INTEGRATION_DIR}/react_benchmark_agent/configs/eval_config_rethinking_full_test.yml"
 ANALYSIS_SCRIPT="${SCRIPT_DIR}/throughput_analysis.py"
 OUTPUT_BASE="${DYNAMO_INTEGRATION_DIR}/react_benchmark_agent/outputs"
 

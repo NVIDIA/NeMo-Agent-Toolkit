@@ -131,28 +131,28 @@ function_groups:
 
 llms:
   dynamo_llm:
-    _type: openai
+    _type: dynamo
     model_name: llama-3.3-70b
     base_url: http://localhost:8099/v1
     api_key: dummy
     temperature: 0.0
     max_tokens: 8192
     stop: ["Observation:", "\nThought:"]
-    enable_dynamic_prefix: true
+    # Dynamo prefix headers for KV cache optimization (enabled when prefix_template is set)
     prefix_template: "react-benchmark-{uuid}"
     prefix_total_requests: 10
     prefix_osl: MEDIUM
     prefix_iat: MEDIUM
-    # Enable parameter optimization for this LLM
-    optimizable_params: [temperature]
-    search_space:
-      temperature:
-        low: 0.0
-        high: 0.25
-        step: 0.05
+    # # Enable parameter optimization for this LLM
+    # optimizable_params: [temperature]
+    # search_space:
+    #   temperature:
+    #     low: 0.0
+    #     high: 0.25
+    #     step: 0.05
   
   eval_llm:
-    _type: openai
+    _type: dynamo
     model_name: llama-3.3-70b
     base_url: http://localhost:8099/v1
     api_key: dummy

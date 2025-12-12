@@ -123,7 +123,7 @@ function_groups:
 llms:
   # Primary LLM for agent execution and planning
   dynamo_llm:
-    _type: openai
+    _type: dynamo
     model_name: llama-3.3-70b
     base_url: http://localhost:8099/v1
     api_key: dummy
@@ -139,7 +139,7 @@ llms:
 
   # Second LLM instance with higher temperature for diverse plan generation
   dynamo_llm_creative:
-    _type: openai
+    _type: dynamo
     model_name: llama-3.3-70b
     base_url: http://localhost:8099/v1
     api_key: dummy
@@ -154,7 +154,7 @@ llms:
 
   # Third LLM instance with medium temperature
   dynamo_llm_balanced:
-    _type: openai
+    _type: dynamo
     model_name: llama-3.3-70b
     base_url: http://localhost:8099/v1
     api_key: dummy
@@ -169,7 +169,7 @@ llms:
 
   # LLM for scoring plans (lower temperature for consistent evaluation)
   scoring_llm:
-    _type: openai
+    _type: dynamo
     model_name: llama-3.3-70b
     base_url: http://localhost:8099/v1
     api_key: dummy
@@ -178,7 +178,7 @@ llms:
 
   # LLM for TSQ evaluation
   eval_llm:
-    _type: openai
+    _type: dynamo
     model_name: llama-3.3-70b
     base_url: http://localhost:8099/v1
     api_key: dummy
