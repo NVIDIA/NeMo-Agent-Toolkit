@@ -195,6 +195,22 @@ services:
       retries: 3
       start_period: 40s
 
+  piston:
+    build: ./piston
+    container_name: test-piston
+    privileged: true
+    ports:
+      - "2000:2000"
+    environment:
+      - PISTON_RUN_TIMEOUT=30000
+      - PISTON_RUN_CPU_TIME=30000
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:2000/api/v2/runtimes')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
   opensearch:
     image: opensearchproject/opensearch:2.11.1
     container_name: test-opensearch
