@@ -43,16 +43,15 @@ class DPOTrajectoryBuilderConfig(TrajectoryBuilderConfig, name="dpo_traj_builder
     The builder groups candidates by turn_id and creates preference pairs based
     on score differences.
 
-    Example YAML configuration:
-    ```yaml
-    trajectory_builders:
-      dpo_builder:
-        _type: dpo_traj_builder
-        ttc_step_name: dpo_candidate_move
-        exhaustive_pairs: true
-        min_score_diff: 0.05
-        max_pairs_per_turn: 5
-    ```
+    Example YAML configuration::
+
+        trajectory_builders:
+          dpo_builder:
+            _type: dpo_traj_builder
+            ttc_step_name: dpo_candidate_move
+            exhaustive_pairs: true
+            min_score_diff: 0.05
+            max_pairs_per_turn: 5
     """
 
     # === Step Filtering ===
@@ -118,16 +117,15 @@ class NeMoCustomizerTrainerConfig(TrainerConfig, name="nemo_customizer_trainer")
     Unlike epoch-based trainers, it runs the trajectory builder multiple times
     to collect data, then submits a single training job to NeMo Customizer.
 
-    Example YAML configuration:
-    ```yaml
-    trainers:
-      nemo_dpo:
-        _type: nemo_customizer_trainer
-        num_runs: 5
-        wait_for_completion: true
-        deduplicate_pairs: true
-        max_pairs: 10000
-    ```
+    Example YAML configuration::
+
+        trainers:
+          nemo_dpo:
+            _type: nemo_customizer_trainer
+            num_runs: 5
+            wait_for_completion: true
+            deduplicate_pairs: true
+            max_pairs: 10000
     """
 
     # === Data Collection ===
@@ -270,22 +268,21 @@ class NeMoCustomizerTrainerAdapterConfig(TrainerAdapterConfig, name="nemo_custom
     This adapter submits DPO/SFT training jobs to NeMo Customizer and
     optionally deploys the trained model.
 
-    Example YAML configuration:
-    ```yaml
-    trainer_adapters:
-      nemo_customizer:
-        _type: nemo_customizer_trainer_adapter
-        entity_host: https://nmp.example.com
-        datastore_host: https://datastore.example.com
-        namespace: my-project
-        customization_config: meta/llama-3.2-1b-instruct@v1.0.0+A100
-        hyperparameters:
-          training_type: dpo
-          epochs: 5
-          batch_size: 8
-        use_full_message_history: true
-        deploy_on_completion: true
-    ```
+    Example YAML configuration::
+
+        trainer_adapters:
+          nemo_customizer:
+            _type: nemo_customizer_trainer_adapter
+            entity_host: https://nmp.example.com
+            datastore_host: https://datastore.example.com
+            namespace: my-project
+            customization_config: meta/llama-3.2-1b-instruct@v1.0.0+A100
+            hyperparameters:
+              training_type: dpo
+              epochs: 5
+              batch_size: 8
+            use_full_message_history: true
+            deploy_on_completion: true
     """
 
     # === Endpoint Configuration ===

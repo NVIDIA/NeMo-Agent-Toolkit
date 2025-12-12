@@ -148,7 +148,7 @@ export CUSTOMIZER_NIM_URL="https://your-nim-deployment-host"
 │  │          │           (LLM-based or random)                           │   │
 │  │          │                                                           │   │
 │  │          ├── 2. SCORE: board_position_scorer                         │   │
-│  │          │       └── Alpha-beta minimax evaluation                   │   │
+│  │          │       └── Alpha-beta Minimax evaluation                   │   │
 │  │          │                                                           │   │
 │  │          ├── 3. SELECT: best_of_n_selection                          │   │
 │  │          │       └── Choose highest-scoring move                     │   │
@@ -190,11 +190,11 @@ export CUSTOMIZER_NIM_URL="https://your-nim-deployment-host"
 
 ## How Move Scoring Works
 
-The scoring system uses **game-theoretic position evaluation** combining heuristic features with alpha-beta minimax search. This provides accurate move scoring without requiring an LLM judge.
+The scoring system uses **game-theoretic position evaluation** combining heuristic features with alpha-beta Minimax search. This provides accurate move scoring without requiring an LLM judge.
 
 ### Alpha-Beta Pruning Algorithm
 
-Alpha-beta pruning is an optimization of the minimax algorithm that eliminates branches that cannot possibly affect the final decision. It maintains two values:
+Alpha-beta pruning is an optimization of the Minimax algorithm that eliminates branches that cannot possibly affect the final decision. It maintains two values:
 
 - **Alpha (α)**: The best value that the maximizer (current player) can guarantee
 - **Beta (β)**: The best value that the minimizer (opponent) can guarantee
@@ -402,7 +402,7 @@ trajectory_builders:
 | `exhaustive_pairs` | All pairs vs best/worst only | `true` |
 | `min_score_diff` | Minimum score difference | `0.0` |
 | `max_pairs_per_turn` | Max pairs per turn | `null` (unlimited) |
-| `reward_from_score_diff` | Reward = score_diff vs chosen_score | `true` |
+| `reward_from_score_diff` | Reward = `score_diff` vs `chosen_score` | `true` |
 | `require_multiple_candidates` | Skip single-candidate turns | `true` |
 
 ### NeMo Customizer Trainer Adapter

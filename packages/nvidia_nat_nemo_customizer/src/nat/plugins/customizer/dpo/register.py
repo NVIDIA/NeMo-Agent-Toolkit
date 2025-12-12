@@ -49,21 +49,20 @@ async def dpo_trajectory_builder(config: DPOTrajectoryBuilderConfig, builder: Bu
     4. Generates preference pairs based on score differences
     5. Builds trajectories with DPOItem episodes
 
-    Example YAML configuration:
-    ```yaml
-    trajectory_builders:
-      dpo_builder:
-        _type: dpo_traj_builder
-        ttc_step_name: dpo_candidate_move
-        exhaustive_pairs: true
-        min_score_diff: 0.05
-        max_pairs_per_turn: 5
+    Example YAML configuration::
 
-    finetuning:
-      enabled: true
-      trajectory_builder: dpo_builder
-      # ... other finetuning config
-    ```
+        trajectory_builders:
+          dpo_builder:
+            _type: dpo_traj_builder
+            ttc_step_name: dpo_candidate_move
+            exhaustive_pairs: true
+            min_score_diff: 0.05
+            max_pairs_per_turn: 5
+
+        finetuning:
+          enabled: true
+          trajectory_builder: dpo_builder
+          # ... other finetuning config
 
     Args:
         config: The trajectory builder configuration.
@@ -90,27 +89,26 @@ async def nemo_customizer_trainer_adapter(config: NeMoCustomizerTrainerAdapterCo
     4. Monitors job progress and status
     5. Optionally deploys trained models
 
-    Example YAML configuration:
-    ```yaml
-    trainer_adapters:
-      nemo_customizer:
-        _type: nemo_customizer_trainer_adapter
-        entity_host: https://nmp.example.com
-        datastore_host: https://datastore.example.com
-        namespace: my-project
-        customization_config: meta/llama-3.2-1b-instruct@v1.0.0+A100
-        hyperparameters:
-          training_type: dpo
-          epochs: 5
-          batch_size: 8
-        use_full_message_history: true
-        deploy_on_completion: true
+    Example YAML configuration::
 
-    finetuning:
-      enabled: true
-      trainer_adapter: nemo_customizer
-      # ... other finetuning config
-    ```
+        trainer_adapters:
+          nemo_customizer:
+            _type: nemo_customizer_trainer_adapter
+            entity_host: https://nmp.example.com
+            datastore_host: https://datastore.example.com
+            namespace: my-project
+            customization_config: meta/llama-3.2-1b-instruct@v1.0.0+A100
+            hyperparameters:
+              training_type: dpo
+              epochs: 5
+              batch_size: 8
+            use_full_message_history: true
+            deploy_on_completion: true
+
+        finetuning:
+          enabled: true
+          trainer_adapter: nemo_customizer
+          # ... other finetuning config
 
     Args:
         config: The trainer adapter configuration.
@@ -134,21 +132,20 @@ async def nemo_customizer_trainer(config: NeMoCustomizerTrainerConfig, builder: 
     3. Submits the dataset to NeMo Customizer for training
     4. Monitors the training job until completion
 
-    Example YAML configuration:
-    ```yaml
-    trainers:
-      nemo_dpo:
-        _type: nemo_customizer_trainer
-        num_runs: 5
-        wait_for_completion: true
-        deduplicate_pairs: true
-        max_pairs: 10000
+    Example YAML configuration::
 
-    finetuning:
-      enabled: true
-      trainer: nemo_dpo
-      # ... other finetuning config
-    ```
+        trainers:
+          nemo_dpo:
+            _type: nemo_customizer_trainer
+            num_runs: 5
+            wait_for_completion: true
+            deduplicate_pairs: true
+            max_pairs: 10000
+
+        finetuning:
+          enabled: true
+          trainer: nemo_dpo
+          # ... other finetuning config
 
     Args:
         config: The trainer configuration.

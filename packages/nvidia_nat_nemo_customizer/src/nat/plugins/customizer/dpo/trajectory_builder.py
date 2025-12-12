@@ -158,15 +158,14 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
     - Grouping by example for curriculum learning
     - Builds trajectories with DPOItem episodes
 
-    Example workflow integration:
-    ```yaml
-    trajectory_builders:
-      dpo_builder:
-        _type: dpo_traj_builder
-        ttc_step_name: dpo_candidate_move
-        exhaustive_pairs: true
-        min_score_diff: 0.05
-    ```
+    Example workflow integration::
+
+        trajectory_builders:
+          dpo_builder:
+            _type: dpo_traj_builder
+            ttc_step_name: dpo_candidate_move
+            exhaustive_pairs: true
+            min_score_diff: 0.05
     """
 
     def __init__(self, trajectory_builder_config: DPOTrajectoryBuilderConfig):

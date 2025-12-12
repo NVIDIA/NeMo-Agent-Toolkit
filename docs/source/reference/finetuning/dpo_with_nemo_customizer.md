@@ -726,14 +726,14 @@ INFO - Training completed with status: completed
 
 The trainer adapter converts DPO pairs to JSONL format:
 
-### Standard Format (use_full_message_history: false)
+### Standard Format `(use_full_message_history: false)`
 
 ```json
 {"prompt": "What's the best move in this position?", "chosen_response": "I'll play X in the center because...", "rejected_response": "I'll play X in the corner because..."}
 {"prompt": "How should I respond to this attack?", "chosen_response": "I should defend by...", "rejected_response": "I should attack by..."}
 ```
 
-### Full Message History Format (use_full_message_history: true)
+### Full Message History Format `(use_full_message_history: true)`
 
 ```json
 {"prompt": [{"role": "system", "content": "You are a chess expert."}, {"role": "user", "content": "What's the best move?"}], "chosen_response": "I recommend Nf3 because...", "rejected_response": "I recommend a4 because..."}
@@ -946,4 +946,4 @@ See the example's README for detailed instructions.
 - [Extending the Finetuning Harness](extending.md) - Creating custom components
 - [OpenPipe ART Integration](rl_with_openpipe.md) - Alternative RL training with ART
 - [Custom Evaluators](../../extend/custom-evaluator.md) - Creating reward functions
-- [NeMo Customizer Documentation](https://docs.nvidia.com/nemo/nemo-microservices/) - Official NeMo documentation
+- [NeMo Customizer Documentation](https://docs.nvidia.com/nemo/microservices/latest/fine-tune/index.html) - Official NeMo Customizer documentation
