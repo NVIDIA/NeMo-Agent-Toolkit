@@ -34,7 +34,7 @@ The finetuning harness is built on four foundational principles:
 |-----------|-------------|
 | **Decoupled Architecture** | Training logic is separated from backends, allowing you to use any RL framework (OpenPipe ART, NeMo Aligner, custom implementations) |
 | **In-Situ Training** | Train agents with the same workflow you run in production, without moving to a different development environment.|
-| **Flexible Targeting** | Finetune specific functions or or entire workflows, enabling targeted improvements in complex agentic systems. |
+| **Flexible Targeting** | Finetune specific functions or entire workflows, enabling targeted improvements in complex agentic systems. |
 | **Composable Components** | Three pluggable components (TrajectoryBuilder, TrainerAdapter, Trainer) can be mixed, matched, and customized |
 
 ## Architecture
