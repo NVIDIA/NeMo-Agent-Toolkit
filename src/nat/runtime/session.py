@@ -42,7 +42,7 @@ from nat.data_models.interactive import InteractionPrompt
 from nat.data_models.runtime_enum import RuntimeTypeEnum
 
 if typing.TYPE_CHECKING:
-    from nat.builder.workflow_builder import PerUserWorkflowBuilder
+    from nat.builder.per_user_workflow_builder import PerUserWorkflowBuilder
     from nat.builder.workflow_builder import WorkflowBuilder
 
 logger = logging.getLogger(__name__)
@@ -364,7 +364,7 @@ class SessionManager:
             return None
 
     async def _get_or_create_per_user_builder(self, user_id: str) -> tuple["PerUserWorkflowBuilder", Workflow]:
-        from nat.builder.workflow_builder import PerUserWorkflowBuilder
+        from nat.builder.per_user_workflow_builder import PerUserWorkflowBuilder
 
         async with self._per_user_builders_lock:
             if user_id in self._per_user_builders:

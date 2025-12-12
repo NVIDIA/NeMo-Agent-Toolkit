@@ -20,7 +20,7 @@ from pydantic import Field
 from nat.builder.builder import Builder
 from nat.builder.component_utils import WORKFLOW_COMPONENT_NAME
 from nat.builder.function_info import FunctionInfo
-from nat.builder.workflow_builder import PerUserWorkflowBuilder
+from nat.builder.per_user_workflow_builder import PerUserWorkflowBuilder
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.cli.register_workflow import register_function
 from nat.cli.register_workflow import register_per_user_function
