@@ -19,7 +19,8 @@ limitations under the License.
 
 # DPO with NeMo Customizer
 
-This guide covers Direct Preference Optimization (DPO) training using NAT's finetuning harness integrated with [NVIDIA NeMo Customizer](https://docs.nvidia.com/nemo/nemo-microservices/). This integration enables preference-based finetuning of large language models using NVIDIA's enterprise-grade training infrastructure.
+This guide covers Direct Preference Optimization (DPO) training using NAT's finetuning harness integrated with [NVIDIA NeMo Customizer](https://docs.nvidia.com/nemo/microservices/latest/fine-tune/index.html). 
+This integration enables preference-based finetuning of large language models using NVIDIA's enterprise-grade training infrastructure.
 
 ## Understanding DPO
 
@@ -394,7 +395,7 @@ trainer_adapters:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `customization_config` | `str` | **required** | Model configuration string (e.g., `meta/llama-3.1-8b-instruct@v1.0.0+A100`). Available configs can be listed via NeMo Customizer API. |
+| `customization_config` | `str` | **required** | Model configuration string (e.g., `meta/llama-3.1-8b-instruct@v1.0.0+A100`). Available `configs` can be listed via NeMo Customizer API. |
 
 #### Hyperparameters
 
@@ -849,7 +850,7 @@ trainer_adapters:
 
 3. **Check candidate scores**: If all candidates have same score, no pairs can be created
 
-4. **Review min_score_diff**: Lower threshold if filtering too aggressively:
+4. **Review `min_score_diff`**: Lower threshold if filtering too aggressively:
    ```yaml
    trajectory_builders:
      dpo_builder:

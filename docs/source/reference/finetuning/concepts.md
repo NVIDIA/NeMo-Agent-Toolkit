@@ -315,32 +315,8 @@ class ARTTrainerAdapter(TrainerAdapter):
         # Return job reference
 ```
 
-### 2. In-Situ Training
 
-Unlike traditional offline training approaches, the finetuning harness supports **in-situ training**:
-
-```
-Traditional Offline Training:
-1. Collect large dataset offline
-2. Train model on dataset
-3. Deploy trained model
-4. Repeat from step 1 if needed
-
-In-Situ Training:
-1. Deploy model
-2. Collect trajectories during operation
-3. Train model incrementally
-4. Model improves while deployed
-5. Continue from step 2
-```
-
-Benefits of in-situ training:
-- Training data reflects actual use cases and edge conditions
-- Model improves continuously without service interruption
-- Feedback loops are tighter (hours instead of weeks)
-- Adapts to distribution shift naturally
-
-### 3. Composable Components
+### 2. Composable Components
 
 The harness uses a **three-component architecture** that separates concerns:
 
@@ -381,7 +357,7 @@ A **trajectory** in NAT represents a complete interaction sequence:
 
 ```python
 class Trajectory(BaseModel):
-    episode: list[EpisodeItem]  # The sequence of messages/actions
+    episode: list[EpisodeItem] | list[DPOItem]  # The sequence of messages/actions
     reward: float               # The outcome reward for this trajectory
     shaped_rewards: list[float] | None  # Optional step-wise rewards
     metadata: dict | None       # Additional context
@@ -409,6 +385,31 @@ The role can be:
 | `TOOL` | Tool/function call result |
 | `FUNCTION` | Function call (legacy format) |
 | `ENVIRONMENT` | Environment state or feedback |
+
+
+### `DPO` Items
+
+For `DPO` training, a trajectory consists of preferred and rejected responses:
+
+```python
+class DPOItem(BaseModel):
+    """
+    A single step in an episode for DPO training.
+    """
+    prompt: list[OpenAIMessage] | str = Field(description="The prompt messages leading to the response.")
+    chosen_response: str = Field(description="The response chosen as better by the reward model.")
+    rejected_response: str = Field(description="The response rejected as worse by the reward model.")
+```
+The `OpenAIMessage` type is the standard message format used in OpenAI-compatible chat APIs. It consists of:
+
+```python
+class OpenAIMessage(BaseModel):
+    """
+    A message in the OpenAI chat format.
+    """
+    role: str = Field(description="The role of the message (e.g., 'user', 'assistant').")
+    content: str = Field(description="The content of the message.")
+```
 
 ### Trajectory Collections
 
