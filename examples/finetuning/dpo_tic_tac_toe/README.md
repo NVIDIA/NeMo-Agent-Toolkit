@@ -134,7 +134,7 @@ export CUSTOMIZER_NIM_URL="https://your-nim-deployment-host"
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                         DPO Tic-Tac-Toe Pipeline                            │
 │                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
 │  │                    1. DATA COLLECTION PHASE                          │   │
 │  │                                                                      │   │
 │  │  workflow (dpo_tic_tac_toe)                                          │   │
@@ -156,10 +156,10 @@ export CUSTOMIZER_NIM_URL="https://your-nim-deployment-host"
 │  │          └── 4. RECORD: Emit CUSTOM intermediate steps               │   │
 │  │                  └── All candidates with scores                      │   │
 │  │                                                                      │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
 │                                    │                                        │
 │                                    ▼                                        │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
 │  │                    2. TRAJECTORY BUILDING PHASE                      │   │
 │  │                                                                      │   │
 │  │  dpo_traj_builder                                                    │   │
@@ -169,10 +169,10 @@ export CUSTOMIZER_NIM_URL="https://your-nim-deployment-host"
 │  │    ├── Generate preference pairs based on scores                     │   │
 │  │    └── Output: List of DPO trajectories                              │   │
 │  │                                                                      │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
 │                                    │                                        │
 │                                    ▼                                        │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
 │  │                    3. TRAINING PHASE                                 │   │
 │  │                                                                      │   │
 │  │  nemo_customizer_trainer_adapter                                     │   │
@@ -183,7 +183,7 @@ export CUSTOMIZER_NIM_URL="https://your-nim-deployment-host"
 │  │    ├── Poll until training completes                                 │   │
 │  │    └── (Optional) Deploy trained model as NIM                        │   │
 │  │                                                                      │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -564,18 +564,6 @@ curl -X GET "https://your-nmp-host/v1/customization/jobs/{job_id}" \
   -H "Authorization: Bearer $NGC_API_KEY"
 ```
 
-### Step 5: Use the Trained Model
-
-After training and deployment, update your config to use the new model:
-
-```yaml
-llms:
-  training_llm:
-    _type: openai
-    model_name: default/nat_dpo_tic_tac_toe_model
-    base_url: https://nim.example.com/v1
-```
-
 ## Understanding the Output
 
 ### Intermediate Step Structure
@@ -626,7 +614,7 @@ The `dpo_game_outcome` evaluator reports:
 
 First, collect the name of the deployed model from the output of the finetuning step.
 
-The ID deployed model will look something like: `default/meta-llama-3.1-8b-instruct-nat-dpo-all_weights@cust-XYZ`.
+The ID of the deployed model will look something like: `default/meta-llama-3.1-8b-instruct-nat-dpo-all_weights@cust-XYZ`.
 Export the name of the model, which is every thing before the `@` symbol:
 
 ```bash
@@ -719,6 +707,6 @@ logging.getLogger("nat.plugins.customizer").setLevel(logging.DEBUG)
 
 ## See Also
 
-- [Finetuning Concepts](../../../docs/source/reference/finetuning/concepts.md) - NAT finetuning architecture
-- [Test Time Compute](../../../docs/source/reference/test-time-compute.md) - TTC pipeline reference
+- [Finetuning Concepts](../../../docs/source/improve-workflows/finetuning/concepts.md) - NAT finetuning architecture
+- [Test Time Compute](../../../docs/source/improve-workflows/test-time-compute.md) - TTC pipeline reference
 - [RL with OpenPipe ART](../rl_with_openpipe_art/) - Alternative RL-based finetuning example
