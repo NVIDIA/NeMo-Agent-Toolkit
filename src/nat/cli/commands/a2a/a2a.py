@@ -625,8 +625,8 @@ def a2a_client_call(url: str,
         # Set up authentication callback for CLI workflows
         # This is needed for A2A clients that authenticate during build
         try:
-            from nat.plugins.a2a.auth.auth_flow_handler import A2AAuthenticationFlowHandler
             from nat.builder.context import Context
+            from nat.plugins.a2a.auth.auth_flow_handler import A2AAuthenticationFlowHandler
 
             # Create and set the auth handler early so it's available during workflow building
             auth_handler = A2AAuthenticationFlowHandler()
