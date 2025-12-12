@@ -40,6 +40,7 @@ nat
 │       ├── remove
 │       └── update
 ├── eval
+├── finetune
 ├── info
 │   ├── channels
 │   └── components
@@ -87,9 +88,8 @@ nat
 The `nat a2a` command group provides utilities for working with Agent-to-Agent (A2A) communication. These commands allow you to serve workflows as A2A agents and interact with remote A2A agents from the command line.
 
 For comprehensive A2A documentation, see:
-- [A2A Server](../workflows/a2a/a2a-server.md) - Publishing workflows as A2A servers
-- [A2A Client](../workflows/a2a/a2a-client.md) - Using A2A clients in workflows
-- [A2A CLI Utilities](../workflows/a2a/a2a-cli.md) - Command-line tools for A2A
+- [A2A Server](../run-workflows/a2a-server.md) - Publishing workflows as A2A servers
+- [A2A Client](../build-workflows/a2a-client.md) - Using A2A clients in workflows
 
 ### Serve
 
@@ -146,8 +146,6 @@ Commands:
   get_info   Get agent metadata and information.
   get_skills Get agent skills and capabilities.
 ```
-
-For detailed usage examples and command options, refer to [A2A CLI Utilities](../workflows/a2a/a2a-cli.md).
 
 ## Start
 
@@ -511,7 +509,7 @@ The Swagger API docs will be available at: [http://localhost:8000/docs](http://l
 ## Evaluation
 The `nat eval` command provides access a set of evaluators designed to assessing the accuracy of NeMo Agent toolkit workflows as
 well as instrumenting their performance characteristics. Please reference
-[Evaluating NeMo Agent toolkit Workflows](../workflows/evaluate.md) for a detailed overview of the
+[Evaluating NeMo Agent toolkit Workflows](../improve-workflows/evaluate.md) for a detailed overview of the
 suite of evaluation capabilities.
 
 The `nat eval --help` utility provides a brief overview of the command and its available options.
@@ -547,9 +545,118 @@ Options:
   --help                      Show this message and exit.
 ```
 
+## Finetune
+
+:::{warning}
+**Experimental Feature**: The Finetuning Harness is experimental and may change in future releases. Future versions may introduce breaking changes without notice.
+:::
+
+The `nat finetune` command provides access to the finetuning harness for **in-situ reinforcement learning** of agentic LLM workflows. This enables iterative improvement of agents through experience, allowing models to learn from their interactions with environments, tools, and users.
+
+The finetuning process:
+1. Loads the configuration with finetuning settings
+2. Initializes the finetuning runner
+3. Runs evaluation to collect trajectories
+4. Submits trajectories for training
+5. Monitors training progress
+
+For detailed information on finetuning concepts, configuration, and extending the harness, see the [Finetuning Harness](../improve-workflows/finetuning/index.md) documentation.
+
+The `nat finetune --help` utility provides a brief overview of the command and its available options:
+
+```console
+$ nat finetune --help
+Usage: nat finetune [OPTIONS]
+
+  Run finetuning on a workflow using collected trajectories.
+
+Options:
+  --config_file FILE              Path to the configuration file containing
+                                  finetuning settings  [required]
+  --dataset FILE                  A json file with questions and ground truth
+                                  answers. This will override the dataset path
+                                  in the config file.
+  --result_json_path TEXT         A JSON path to extract the result from the
+                                  workflow. Use this when the workflow returns
+                                  multiple objects or a dictionary. For
+                                  example, '$.output' will extract the 'output'
+                                  field from the result.  [default: $]
+  --endpoint TEXT                 Use endpoint for running the workflow.
+                                  Example: http://localhost:8000/generate
+  --endpoint_timeout INTEGER      HTTP response timeout in seconds. Only
+                                  relevant if endpoint is specified.
+                                  [default: 300]
+  -o, --override <TEXT TEXT>...   Override config values (e.g., -o
+                                  finetuning.num_epochs 5)
+  --validation_dataset FILE       Validation dataset file path for periodic
+                                  validation
+  --validation_interval INTEGER   Run validation every N epochs  [default: 5]
+  --validation_config_file FILE   Optional separate config file for validation
+                                  runs
+  --help                          Show this message and exit.
+```
+
+### Options Description
+
+- **`--config_file`**: The main configuration file containing both the workflow configuration and finetuning settings. The file must include a `finetuning` section that defines the training parameters, trajectory builder, trainer adapter, and reward function.
+
+- **`--dataset`**: Path to a JSON file containing the training dataset with questions and ground truth answers. If provided, this will override the dataset path specified in the configuration file.
+
+- **`--result_json_path`**: A JSON path expression to extract the relevant result from the workflow output. This is useful when your workflow returns complex objects or dictionaries. The default value `$` uses the entire output.
+
+- **`--endpoint`**: Instead of running the workflow locally, you can specify an HTTP endpoint where the workflow is deployed. This is useful for distributed training scenarios.
+
+- **`--endpoint_timeout`**: When using the `--endpoint` option, this sets the maximum time (in seconds) to wait for a response from the remote service.
+
+- **`-o, --override`**: Override configuration values using dot notation. Multiple overrides can be specified.
+
+- **`--validation_dataset`**: Path to a separate validation dataset for periodic evaluation during training. This helps monitor generalization and detect overfitting.
+
+- **`--validation_interval`**: How often (in epochs) to run validation. Default is every 5 epochs.
+
+- **`--validation_config_file`**: An optional separate configuration file for validation runs. If not specified, the main config file is used for both training and validation.
+
+### Examples
+
+Basic finetuning with a configuration file:
+
+<!-- path-check-skip-begin -->
+```bash
+nat finetune --config_file=configs/finetune.yml
+```
+<!-- path-check-skip-end -->
+
+Override the number of training epochs:
+
+<!-- path-check-skip-begin -->
+```bash
+nat finetune --config_file=configs/finetune.yml -o finetuning.num_epochs 20
+```
+<!-- path-check-skip-end -->
+
+Run finetuning with validation monitoring:
+
+<!-- path-check-skip-begin -->
+```bash
+nat finetune --config_file=configs/finetune.yml \
+    --validation_dataset=data/validation.json \
+    --validation_interval=3
+```
+<!-- path-check-skip-end -->
+
+Use a remote endpoint for workflow execution:
+
+<!-- path-check-skip-begin -->
+```bash
+nat finetune --config_file=configs/finetune.yml \
+    --endpoint=http://localhost:8000/generate \
+    --endpoint_timeout=600
+```
+<!-- path-check-skip-end -->
+
 ## Optimize
 
-The `nat optimize` command provides automated hyperparameter tuning and prompt engineering for NeMo Agent toolkit workflows. It intelligently searches for the best combination of parameters based on the evaluation metrics you specify. The optimizer uses [Optuna](https://optuna.org/) for numerical hyperparameter optimization and a genetic algorithm (GA) for prompt optimization. Please reference the [NeMo Agent toolkit Optimizer Guide](../reference/optimizer.md) for a comprehensive overview of the optimizer capabilities and configuration.
+The `nat optimize` command provides automated hyperparameter tuning and prompt engineering for NeMo Agent toolkit workflows. It intelligently searches for the best combination of parameters based on the evaluation metrics you specify. The optimizer uses [Optuna](https://optuna.org/) for numerical hyperparameter optimization and a genetic algorithm (GA) for prompt optimization. Please reference the [NeMo Agent toolkit Optimizer Guide](../improve-workflows/optimizer.md) for a comprehensive overview of the optimizer capabilities and configuration.
 
 The `nat optimize --help` utility provides a brief overview of the command and its available options:
 
@@ -600,7 +707,7 @@ nat optimize --config_file configs/my_workflow_optimizer.yml
 
 ## GPU Cluster Sizing
 
-The `nat sizing calc` command estimates GPU requirements and produces performance plots for a workflow. You can run it online (collect metrics by executing the workflow) or offline (estimate from previously collected metrics). For a full guide, see [GPU Cluster Sizing](../workflows/sizing-calc.md).
+The `nat sizing calc` command estimates GPU requirements and produces performance plots for a workflow. You can run it online (collect metrics by executing the workflow) or offline (estimate from previously collected metrics). For a full guide, see [GPU Cluster Sizing](../improve-workflows/sizing-calc.md).
 
 The `nat sizing calc --help` utility provides a brief overview of the command and its available options:
 
@@ -758,7 +865,7 @@ Options:
 Also, a configuration file will be generated when you run the `nat workflow create` command. To launch the new workflow from the CLI
 (e.g. using `nat run` or `nat serve`), you will need a configuration file that maps to these component
 configuration objects. For more information on configuration objects, refer to
-[Workflow Configuration](../workflows/workflow-configuration.md).
+[Workflow Configuration](../build-workflows/workflow-configuration.md).
 
 ### Reinstall
 
@@ -1111,7 +1218,7 @@ Commands:
   s3     S3 object store operations.
 ```
 
-The listed commands are dependent on the first-party object store plugins installed. See [Object Store](../store-and-retrieve/object-store.md) for more details.
+The listed commands are dependent on the first-party object store plugins installed. See [Object Store](../build-workflows/object-store.md) for more details.
 
 ### MySQL Object Store
 
