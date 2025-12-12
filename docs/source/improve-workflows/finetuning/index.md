@@ -28,12 +28,13 @@ The NeMo Agent Toolkit provides a powerful finetuning harness designed for **in-
 
 ## Overview
 
-The finetuning harness is built on three foundational principles:
+The finetuning harness is built on four foundational principles:
 
 | Principle | Description |
 |-----------|-------------|
 | **Decoupled Architecture** | Training logic is separated from backends, allowing you to use any RL framework (OpenPipe ART, NeMo Aligner, custom implementations) |
-| **In-Situ Training** | Agents learn from trajectories collected during actual workflow execution, not offline datasets |
+| **In-Situ Training** | Train agents with the same workflow you run in production, without moving to a different development environment.|
+| **Flexible Targeting** | Finetune specific functions or entire workflows, enabling targeted improvements in complex agentic systems. |
 | **Composable Components** | Three pluggable components (TrajectoryBuilder, TrainerAdapter, Trainer) can be mixed, matched, and customized |
 
 ## Architecture
