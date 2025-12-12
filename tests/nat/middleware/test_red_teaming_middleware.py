@@ -60,7 +60,67 @@ class MultiFieldModel(BaseModel):
     messages: list[str]
 
 
-@pytest.mark.asyncio
+async def test_simple_output_replace_strategy():
+    """Test simple string input/output with replace strategy on output."""
+    middleware = RedTeamingMiddleware(
+        attack_payload="REPLACED",
+        payload_placement="replace",
+        target_location="output",
+    )
+
+    mock_call_next = AsyncMock(return_value="original output")
+
+    context = FunctionMiddlewareContext(
+        name="simple_function",
+        config=MagicMock(),
+        description="Simple function",
+        input_schema=None,
+        single_output_schema=None,
+        stream_output_schema=None,
+    )
+
+    result = await middleware.function_middleware_invoke("hello", mock_call_next, context)
+
+    mock_call_next.assert_called_once_with("hello")
+    assert result == "REPLACED"
+
+
+@pytest.mark.parametrize(
+    "call_limit,expected_results",
+    [
+        (None, ["REPLACED", "REPLACED", "REPLACED"]),
+        (1, ["REPLACED", "second output", "third output"]),
+        (2, ["REPLACED", "REPLACED", "third output"]),
+    ],
+)
+async def test_call_limit(call_limit, expected_results):
+    """Test that call_limit controls how many times the payload is applied."""
+    middleware = RedTeamingMiddleware(
+        attack_payload="REPLACED",
+        payload_placement="replace",
+        target_location="output",
+        call_limit=call_limit,
+    )
+
+    context = FunctionMiddlewareContext(
+        name="simple_function",
+        config=MagicMock(),
+        description="Simple function",
+        input_schema=None,
+        single_output_schema=None,
+        stream_output_schema=None,
+    )
+
+    outputs = ["first output", "second output", "third output"]
+    results = []
+    for i, output in enumerate(outputs):
+        mock_call_next = AsyncMock(return_value=output)
+        result = await middleware.function_middleware_invoke(f"input{i}", mock_call_next, context)
+        results.append(result)
+
+    assert results == expected_results
+
+
 async def test_attack_nested_input_field():
     """Attack a nested field in input via function_middleware_invoke."""
     middleware = RedTeamingMiddleware(
@@ -95,7 +155,6 @@ async def test_attack_nested_input_field():
     assert received_input.request.query == "What is AI?"
 
 
-@pytest.mark.asyncio
 async def test_attack_input_with_output_passthrough():
     """Verify output is unchanged when attacking input."""
     middleware = RedTeamingMiddleware(
@@ -126,7 +185,6 @@ async def test_attack_input_with_output_passthrough():
     assert result.confidence == 0.95
 
 
-@pytest.mark.asyncio
 async def test_attack_deeply_nested_jsonpath():
     """Attack a deeply nested field using jsonpath."""
     middleware = RedTeamingMiddleware(
@@ -159,8 +217,6 @@ async def test_attack_deeply_nested_jsonpath():
     assert received_input.request.context == "Customer service [CONTEXT INJECTED]"
     assert received_input.request.query == "Help me"
 
-
-@pytest.mark.asyncio
 async def test_attack_nested_output_field():
     """Attack a field in the output via function_middleware_invoke."""
     middleware = RedTeamingMiddleware(
@@ -189,7 +245,6 @@ async def test_attack_nested_output_field():
     assert result.confidence == 0.9
 
 
-@pytest.mark.asyncio
 async def test_attack_output_preserves_input():
     """Verify input is passed unchanged when attacking output."""
     middleware = RedTeamingMiddleware(
@@ -226,7 +281,6 @@ async def test_attack_output_preserves_input():
     assert result.result == "Success APPENDED"
 
 
-@pytest.mark.asyncio
 async def test_target_function_filtering():
     """Middleware skips non-targeted functions."""
     middleware = RedTeamingMiddleware(
@@ -257,7 +311,6 @@ async def test_target_function_filtering():
     assert received_input.prompt == "Original"
 
 
-@pytest.mark.asyncio
 async def test_multiple_field_matches_with_all_strategy():
     """Test resolution strategy 'all' modifies all matching fields."""
     middleware = RedTeamingMiddleware(
@@ -287,7 +340,6 @@ async def test_multiple_field_matches_with_all_strategy():
     assert received_input.messages == ["INJECTED", "INJECTED", "INJECTED"]
 
 
-@pytest.mark.asyncio
 async def test_multiple_field_matches_with_first_strategy():
     """Test resolution strategy 'first' modifies only the first match."""
     middleware = RedTeamingMiddleware(
@@ -317,7 +369,6 @@ async def test_multiple_field_matches_with_first_strategy():
     assert received_input.messages == ["INJECTED", "second", "third"]
 
 
-@pytest.mark.asyncio
 async def test_multiple_field_matches_with_error_strategy():
     """Test resolution strategy 'error' raises ValueError on multiple matches."""
     middleware = RedTeamingMiddleware(
