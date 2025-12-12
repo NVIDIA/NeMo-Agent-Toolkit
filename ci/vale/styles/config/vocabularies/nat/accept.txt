@@ -144,7 +144,7 @@ pytest
 [Rr]epo
 [Rr]etarget(ed?)
 [Rr]eusability
-[Ro]llout(s?)
+[Rr]ollout(s?)
 [Rr]untime(s?)
 [Ss]andboxing
 [Ss]erializable
@@ -152,6 +152,7 @@ pytest
 [Ss]ubclassing
 [Ss]ubcard(s?)
 [Ss]ubgraph(s?)
+[Ss]ubsampl(e|ing)
 [Ss]ubpackage(s?)
 [Ss]ubword(s?)
 [Ss]uperset(s?)

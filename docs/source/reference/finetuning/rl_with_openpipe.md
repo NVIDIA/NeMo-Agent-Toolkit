@@ -284,7 +284,7 @@ The `ARTTrajectoryBuilder` collects training trajectories through NAT's evaluati
 
 4. **Grouping for GRPO**: Trajectories are organized as `list[list[Trajectory]]` where each inner list contains all generations for a single example. This structure enables group-relative policy optimization.
 
-### ARTTrainerAdapter
+### The `ARTTrainerAdapter` Class
 
 The `ARTTrainerAdapter` converts NAT trajectories to ART's format and manages training:
 
@@ -348,7 +348,7 @@ The `ARTTrainerAdapter` converts NAT trajectories to ART's format and manages tr
 
 4. **Async Training**: Training is submitted as an async task, allowing the trainer to monitor progress without blocking.
 
-### ARTTrainer
+### The `ARTTrainer` Class
 
 The `ARTTrainer` orchestrates the complete training loop:
 
