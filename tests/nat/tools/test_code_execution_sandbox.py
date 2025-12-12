@@ -291,10 +291,8 @@ def run_workflow_code(config_path: Path,
 
     return response.json()
 
-def _test_code_execution(code_block_key: str,
-              sandbox_type: str,
-              config_path: Path,
-              sandbox_config: dict[str, Any]):
+
+def _test_code_execution(code_block_key: str, sandbox_type: str, config_path: Path, sandbox_config: dict[str, Any]):
     """Test simple print statement execution."""
 
     code_block = CODE_BLOCKS[code_block_key]
@@ -315,6 +313,7 @@ def _test_code_execution(code_block_key: str,
     assert expected_output in result["stdout"], f"Expected output not found in stdout: {result}"
     assert result["stderr"] == ""
 
+
 @pytest.mark.slow
 @pytest.mark.integration
 @pytest.mark.parametrize("code_block_key",
@@ -334,8 +333,9 @@ def test_local_code_execution(code_block_key: str,
                               sandbox_type: str,
                               local_sandbox_workflow: Path,
                               sandbox_config: dict[str, Any]):
-    
+
     _test_code_execution(code_block_key, sandbox_type, local_sandbox_workflow, sandbox_config)
+
 
 @pytest.mark.slow
 @pytest.mark.integration
@@ -349,10 +349,7 @@ def test_local_code_execution(code_block_key: str,
                              "persistence_creation",
                              "json_persistence"
                          ])
-def test_piston_code_execution(
-    code_block_key: str,
-              piston_sandbox_workflow: Path,
-              sandbox_config: dict[str, Any]):
+def test_piston_code_execution(code_block_key: str, piston_sandbox_workflow: Path, sandbox_config: dict[str, Any]):
     _test_code_execution(code_block_key, "piston_workflow", piston_sandbox_workflow, sandbox_config)
 
 
