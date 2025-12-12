@@ -104,6 +104,7 @@ vanna = ["nvidia-nat-vanna"]
 weave = ["nvidia-nat-weave"]
 zep-cloud = ["nvidia-nat-zep-cloud"]
 openpipe-art = ["nvidia-nat-openpipe-art"]
+nemo-customizer = ["nvidia-nat-nemo-customizer"]
 
 examples = [
   "nat_adk_demo",
@@ -112,6 +113,7 @@ examples = [
   "nat_alert_triage_agent",
   "nat_automated_description_generation",
   "nat_currency_agent_a2a",
+  "nat_dpo_tic_tac_toe",
   "nat_email_phishing_analyzer",
   "nat_multi_frameworks",
   "nat_plot_charts",
@@ -206,11 +208,13 @@ nvidia-nat-vanna = { workspace = true }
 nvidia-nat-weave = { workspace = true }
 nvidia-nat-zep-cloud = { workspace = true }
 nvidia-nat-openpipe-art = { workspace = true }
+nvidia-nat-nemo-customizer = { workspace = true }
 
 # All examples here
 nat_adk_demo = { path = "examples/frameworks/adk_demo", editable = true }
 nat_agno_personal_finance = { path = "examples/frameworks/agno_personal_finance", editable = true }
 nat_currency_agent_a2a = { path = "examples/A2A/currency_agent_a2a", editable = true }
+nat_dpo_tic_tac_toe = { path = "examples/finetuning/dpo_tic_tac_toe", editable = true }
 nat_haystack_deep_research_agent = { path = "examples/frameworks/haystack_deep_research_agent", editable = true }
 nat_alert_triage_agent = { path = "examples/advanced_agents/alert_triage_agent", editable = true }
 nat_automated_description_generation = { path = "examples/custom_functions/automated_description_generation", editable = true }
