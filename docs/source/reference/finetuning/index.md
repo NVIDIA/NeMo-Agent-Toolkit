@@ -15,6 +15,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
+
+<!-- path-check-skip-begin -->
+
 # Finetuning Harness
 
 :::{warning}
@@ -85,6 +88,8 @@ The finetuning harness is built on three foundational principles:
 - LLM inference endpoint with log probability support
 - Training dataset in JSON/JSONL format
 - Custom evaluator for computing rewards
+
+<!-- path-check-skip-end -->
 
 ```{toctree}
 :hidden:

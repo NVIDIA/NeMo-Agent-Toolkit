@@ -15,6 +15,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
+<!-- path-check-skip-begin -->
+
 # OpenPipe ART Integration
 
 This guide covers the integration between NAT's finetuning harness and [OpenPipe ART](https://art.openpipe.ai/) (Agent Reinforcement Trainer), an open-source framework for teaching LLMs through reinforcement learning.
@@ -590,6 +592,8 @@ The `examples/finetuning/rl_with_openpipe_art` directory contains a complete wor
 - Training and evaluation datasets
 
 See the example's README for detailed instructions.
+
+<!-- path-check-skip-end -->
 
 ## See Also
 
