@@ -129,7 +129,7 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
             Customer information including id, name, email, past orders, total orders, total spent, and past reviews.
         """
         for customer in customers_data:
-            if customer["id"].lower() == customer_id.lower():
+            if customer["id"] == customer_id:
                 return customer
 
         return {
@@ -147,8 +147,7 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
             Product information including id, name, description, price, stock, and reviews.
         """
         for product in products_data:
-            if (product["id"].lower() == product_identifier.lower()
-                    or product["name"].lower() == product_identifier.lower()):
+            if product["id"] == product_identifier or product["name"].lower() == product_identifier.lower():
                 return product
 
         return {"error": f"No product found with identifier: {product_identifier}"}
