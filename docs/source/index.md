@@ -242,6 +242,7 @@ Custom Components <./extend/custom-components/index.md>
 Python API <./api/index.rst>
 ./reference/rest-api/index.md
 Command Line Interface (CLI) <./reference/cli.md>
+Finetuning <./reference/finetuning/index.md>
 ```
 
 ```{toctree}

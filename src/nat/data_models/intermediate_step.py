@@ -75,6 +75,7 @@ class StreamEventData(BaseModel):
     input: typing.Any | None = None
     output: typing.Any | None = None
     chunk: typing.Any | None = None
+    payload: typing.Any | None = None  # Raw generation payload for downstream processing
 
 
 class UsageInfo(BaseModel):
