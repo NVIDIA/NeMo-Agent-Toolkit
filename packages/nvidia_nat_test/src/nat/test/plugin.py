@@ -855,6 +855,7 @@ def _ensure_piston_python_installed(piston_url: str, python_version: str):
                              timeout=60)
     response.raise_for_status()
 
+
 @pytest.fixture(name="piston_url", scope="session")
 def piston_url_fixture(fail_missing: bool) -> str:
     """
@@ -862,7 +863,6 @@ def piston_url_fixture(fail_missing: bool) -> str:
 
     The public piston server limits usage to five requests per minute.
     """
-    import requests
     url = os.environ.get("NAT_CI_PISTON_URL", "http://localhost:2000/api/v2")
     url = url.rstrip('/')
 
