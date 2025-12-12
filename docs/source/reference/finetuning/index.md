@@ -98,5 +98,4 @@ The finetuning harness is built on three foundational principles:
 Concepts <./concepts.md>
 Extending <./extending.md>
 OpenPipe ART <./rl_with_openpipe.md>
-NeMo Customizer <./dpo_with_nemo_customizer.md>
 ```

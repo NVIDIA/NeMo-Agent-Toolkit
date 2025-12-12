@@ -719,7 +719,6 @@ logging.getLogger("nat.plugins.customizer").setLevel(logging.DEBUG)
 
 ## See Also
 
-- [DPO with NeMo Customizer Guide](../../../docs/source/reference/finetuning/dpo_with_nemo_customizer.md) - Comprehensive DPO documentation
 - [Finetuning Concepts](../../../docs/source/reference/finetuning/concepts.md) - NAT finetuning architecture
 - [Test Time Compute](../../../docs/source/reference/test-time-compute.md) - TTC pipeline reference
 - [RL with OpenPipe ART](../rl_with_openpipe_art/) - Alternative RL-based finetuning example
