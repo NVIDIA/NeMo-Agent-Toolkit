@@ -34,7 +34,8 @@ from .dpo import NIMDeploymentConfig
 __all__ = [
     # Trajectory Builder
     "DPOTrajectoryBuilder",
-    "DPOTrajectoryBuilderConfig",  # TrainerAdapter
+    "DPOTrajectoryBuilderConfig",  #
+    # TrainerAdapter
     "NeMoCustomizerTrainerAdapter",
     "NeMoCustomizerTrainerAdapterConfig",
     "NeMoCustomizerHyperparameters",
