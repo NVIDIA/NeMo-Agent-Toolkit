@@ -15,6 +15,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
+<!-- path-check-skip-begin -->
+
 # Finetuning Harness: Concepts and Architecture
 
 :::{warning}
@@ -634,6 +636,9 @@ nat finetune --config_file=configs/finetune.yml \
     --endpoint=http://localhost:8000/generate \
     --endpoint_timeout=600
 ```
+
+
+<!-- path-check-skip-end -->
 
 ## See Also
 

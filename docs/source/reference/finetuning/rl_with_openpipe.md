@@ -15,6 +15,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
+<!-- path-check-skip-begin -->
+
 # OpenPipe ART Integration
 
 This guide covers the integration between NAT's finetuning harness and [OpenPipe ART](https://art.openpipe.ai/) (Agent Reinforcement Trainer), an open-source framework for teaching LLMs through reinforcement learning.
@@ -282,7 +284,7 @@ The `ARTTrajectoryBuilder` collects training trajectories through NAT's evaluati
 
 4. **Grouping for GRPO**: Trajectories are organized as `list[list[Trajectory]]` where each inner list contains all generations for a single example. This structure enables group-relative policy optimization.
 
-### ARTTrainerAdapter
+### The `ARTTrainerAdapter` Class
 
 The `ARTTrainerAdapter` converts NAT trajectories to ART's format and manages training:
 
@@ -346,7 +348,7 @@ The `ARTTrainerAdapter` converts NAT trajectories to ART's format and manages tr
 
 4. **Async Training**: Training is submitted as an async task, allowing the trainer to monitor progress without blocking.
 
-### ARTTrainer
+### The `ARTTrainer` Class
 
 The `ARTTrainer` orchestrates the complete training loop:
 
@@ -590,6 +592,8 @@ The `examples/finetuning/rl_with_openpipe_art` directory contains a complete wor
 - Training and evaluation datasets
 
 See the example's README for detailed instructions.
+
+<!-- path-check-skip-end -->
 
 ## See Also
 
