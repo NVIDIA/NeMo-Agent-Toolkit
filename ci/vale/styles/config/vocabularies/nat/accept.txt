@@ -41,6 +41,7 @@ CPython
 cuDF
 cuML
 CuPy
+[Cc]ustomizer
 CVE(s?)
 [Cc]yber
 [Cc]ybersecurity
@@ -48,6 +49,7 @@ Cython
 Dask
 Databricks
 Datadog
+[Dd]atastore
 DB(s?)
 [Dd]enylist
 [Dd]eserialize
@@ -116,6 +118,7 @@ NAT's
 NVIDIA
 Nemotron
 OAuth
+Ollama
 URIs
 OTel
 onboarding
