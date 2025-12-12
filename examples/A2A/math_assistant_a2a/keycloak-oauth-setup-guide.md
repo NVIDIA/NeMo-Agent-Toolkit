@@ -263,6 +263,7 @@ echo "Client ID: ${CALCULATOR_CLIENT_ID}"
 echo "Client Secret: ${CALCULATOR_CLIENT_SECRET:0:10}..."
 ```
 
+
 ## Step 5: Start the Protected Calculator Server
 
 ```bash
@@ -297,7 +298,6 @@ nat run --config_file examples/A2A/math_assistant_a2a/configs/config-a2a-auth-ca
 5. **Workflow continues** and calls the calculator
 6. **Response returned** successfully
 
-
 ## Cleanup
 
 To stop and remove Keycloak:
@@ -313,134 +313,6 @@ To restart with clean state:
 docker rm -f keycloak
 # Then run the start command again
 ```
-
-## Verification and Testing
-
-### Verify JWKS Endpoint Works
-
-```bash
-curl http://localhost:8080/realms/master/protocol/openid-connect/certs | python3 -m json.tool
-```
-
-You should see public keys in JSON format (RSA keys used to verify JWT signatures).
-
-### Step 2: Verify Token Has Correct Scopes
-
-Before running the full workflow, verify that tokens include the custom scope:
-
-1. In Keycloak Admin Console, go to **Clients** → `math-assistant-client`
-2. Click the **Client scopes** tab
-3. Click **Evaluate** (top of page)
-4. Select a user (for example, `admin`)
-5. Click **Generated access token**
-6. Search for `"scope":` in the token JSON
-7. **Verify it includes:** `calculator_a2a:execute`
-
-**Example of correct token scope:**
-```json
-{
-  "scope": "email profile calculator_a2a:execute",
-  ...
-}
-```
-
-**If the scope is missing**, return to Step 2.4 and verify the mapper is configured correctly.
-
-### Check Token Contents
-
-After a successful OAuth flow, you can decode the JWT token at [jwt.io](https://jwt.io) to see:
-- `iss`: Should be `http://localhost:8080/realms/master`
-- `aud`: Should include your server URL
-- `scope` or `scp`: Should include `calculator_a2a:execute`
-- `exp`: Expiration timestamp
-- `sub`: User subject/ID
-
-## Troubleshooting
-
-### "Token is not active" Error
-
-**Cause:** Token validation failing on the resource server.
-
-**Check:**
-1. JWKS URI is correct and accessible
-2. Token `iss` matches the `issuer_url` in server config
-3. Token `aud` matches the `audience` in server config (if set)
-4. Token hasn't expired
-5. Clock skew isn't too large between client/server
-
-### "invalid_client" Error
-
-**Cause:** Client credentials are wrong or client isn't registered.
-
-**Fix:**
-1. Verify client exists in Keycloak
-2. Check `CALCULATOR_CLIENT_ID` and `CALCULATOR_CLIENT_SECRET` are set correctly
-3. Make sure redirect URI matches exactly
-
-### "invalid_scope" Error During Authorization
-
-**Cause:** Requested scope not allowed for client.
-
-**Fix:**
-1. Go to Keycloak → Clients → `math-assistant-client` → Client scopes
-2. Make sure `calculator_a2a:execute` is added as a default or optional scope
-3. Verify the scope exists in **Client scopes** (left sidebar)
-
-### Token Missing `calculator_a2a:execute` Scope
-
-**Symptoms:**
-- Token validation succeeds but server rejects with "missing required scopes"
-- Token has `"scope": "email profile"` but not `calculator_a2a:execute`
-
-**Cause:** Scope mapper not configured correctly.
-
-**Fix:**
-1. Go to **Client scopes** → `calculator_a2a:execute` → **Mappers** tab
-2. Verify mapper exists with:
-   - Token Claim Name: `scope`
-   - Claim value: `calculator_a2a:execute`
-   - Add to access token: `On` ✅
-3. Go to **Clients** → `math-assistant-client` → **Client scopes** tab
-4. Ensure `calculator_a2a:execute` is in **Assigned default client scopes** (not just optional)
-5. Use **Evaluate** tab to test token generation
-6. Clear cached tokens and re-authenticate to get a fresh token
-
-### Audience Mismatch
-
-**Symptoms:**
-- Error: "JWT audience does not contain required audience"
-- Token has `"aud": ["master-realm", "account"]` but server expects server URL
-
-**Temporary Fix:**
-Comment out audience validation in `config-protected-oauth2.yml`:
-```yaml
-# audience: http://localhost:10000
-```
-
-**Proper Fix:**
-Add an Audience mapper to `calculator_a2a:execute` client scope:
-1. Go to **Client scopes** → `calculator_a2a:execute` → **Mappers**
-2. Add mapper → **Audience**
-3. Configure:
-   - Included Custom Audience: `http://localhost:10000`
-   - Add to access token: `On`
-
-### Browser Doesn't Open
-
-**Cause:** NAT can't detect or open the browser.
-
-**Workaround:**
-1. Look for the authorization URL in the console output
-2. Copy and paste it into your browser manually
-
-## Key Components
-
-1. **Authorization Server (Keycloak)**: Issues and validates tokens, manages user authentication
-2. **Client (Math Assistant)**: Requests tokens on behalf of users, includes tokens in API calls
-3. **Resource Server (Calculator)**: Validates tokens and protects API endpoints
-4. **Scopes**: Define permissions (for example, `calculator_a2a:execute`)
-5. **JWT**: Self-contained token with claims (issuer, audience, scopes, expiration)
-6. **JWKS**: Public keys used to verify JWT signatures without calling auth server
 
 ## Production Considerations
 
@@ -469,40 +341,6 @@ This setup is for **development and testing only**. For production:
    - Don't use the `master` realm for applications
    - Create dedicated realms per environment (dev, staging, prod)
    - Configure proper user management and authentication policies
-
-### Deployment
-
-1. **Keycloak in Production**
-   - Use clustered deployment for high availability
-   - Configure database backend (PostgreSQL, MySQL)
-   - Set up proper logging and monitoring
-   - Follow [Keycloak production guide](https://www.keycloak.org/server/configuration-production)
-
-2. **Network Configuration**
-   - Use proper DNS names (not `localhost`)
-   - Configure firewalls and security groups
-   - Set up load balancers
-   - Implement rate limiting
-
-3. **Monitoring**
-   - Track OAuth flows and failures
-   - Monitor token usage and expiration
-   - Alert on authentication failures
-   - Log security events
-
-### Compliance
-
-1. **Data Protection**
-   - Implement proper consent management
-   - Handle user data according to GDPR/CCPA
-   - Secure token storage
-   - Implement proper audit logging
-
-2. **Best Practices**
-   - Follow OAuth 2.1 security best practices
-   - Use PKCE for all clients
-   - Implement proper CORS policies
-   - Validate all inputs and tokens
 
 ## References
 
