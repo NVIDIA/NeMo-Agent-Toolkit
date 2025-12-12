@@ -114,154 +114,8 @@ class ProcessorRequestHandler:
             self._metrics_log_cap = 2048
         self._metrics_written_count = 0
 
-        # Initialize Jinja2 environment and compile the tool-aware prompt template
-        self._tools_prompt_env = jinja2.Environment(trim_blocks=True, lstrip_blocks=True)
-        # Provide tojson filter and a raise_exception helper
-        self._tools_prompt_env.filters["tojson"] = lambda v, indent=None: json.dumps(v, indent=indent)
-
         def _raise_exception(msg: str):  # pragma: no cover - template guard
             raise ValueError(msg)
-
-        self._tools_prompt_env.globals["raise_exception"] = _raise_exception
-
-        self._tools_prompt = self._tools_prompt_env.from_string(
-            """
-            {{- bos_token }}
-            {%- if custom_tools is defined %}
-                {%- set tools = custom_tools %}
-            {%- endif %}
-            {%- if not tools_in_user_message is defined %}
-                {#- Llama 3.1 doesn't pass all tests if the tools are in the system prompt #}
-                {%- set tools_in_user_message = true %}
-            {%- endif %}
-            {%- if not date_string is defined %}
-                {%- if strftime_now is defined %}
-                    {%- set date_string = strftime_now("%d %b %Y") %}
-                {%- else %}
-                    {%- set date_string = "26 Jul 2024" %}
-                {%- endif %}
-            {%- endif %}
-            {%- if not tools is defined %}
-                {%- set tools = none %}
-            {%- endif %}
-            
-            {#- This block extracts the system message, so we can slot it into the right place. #}
-            {%- if messages[0]['role'] == 'system' %}
-                {%- if messages[0]['content'] is string %}
-                    {%- set system_message = messages[0]['content']|trim %}
-                {%- else %}
-                    {%- set system_message = messages[0]['content'][0]['text']|trim %}
-                {%- endif %}
-                {%- set messages = messages[1:] %}
-            {%- else %}
-                {%- if tools is not none %}
-                    {%- set system_message = (
-                        "You are a helpful assistant with tool calling capabilities. "
-                        + "Only reply with a tool call if the function exists in the library provided by the user. "
-                        + "If it doesn't exist, just reply directly in natural language. "
-                        + "When you receive a tool call response, use the output to format an answer to the original user question."
-                    ) %}
-                {%- else %}
-                    {%- set system_message = "" %}
-                {%- endif %}
-            {%- endif %}
-            
-            {#- System message #}
-            {{- "<|start_header_id|>system<|end_header_id|>\n\n" }}
-            {%- if tools is not none %}
-                {{- "Environment: ipython\n" }}
-            {%- endif %}
-            {{- "Cutting Knowledge Date: December 2023\n" }}
-            {{- "Today Date: " + date_string + "\n\n" }}
-            {%- if tools is not none and not tools_in_user_message %}
-                {{- "You have access to the following functions. " }}
-                {{- "To call a function, please respond with JSON for a function call. " }}
-                {{- 'Respond in the format {"name": function name, ' }}
-                {{- '"parameters": dictionary of argument name and its value}. ' }}
-                {{- "Do not use variables.\n\n" }}
-                {%- for t in tools %}
-                    {{- t | tojson(indent=4) }}
-                    {{- "\n\n" }}
-                {%- endfor %}
-            {%- endif %}
-            {{- system_message }}
-            {{- "<|eot_id|>" }}
-            
-            {#- Custom tools are passed in a user message with some extra guidance #}
-            {%- if tools_in_user_message and not tools is none %}
-                {#- Extract the first user message so we can plug it in here #}
-                {%- if messages | length != 0 %}
-                    {%- if messages[0]['content'] is string %}
-                        {%- set first_user_message = messages[0]['content']|trim %}
-                    {%- else %}
-                        {%- set first_user_message =
-                            messages[0]['content']
-                            | selectattr('type', 'equalto', 'text')
-                            | map(attribute='text')
-                            | map('trim')
-                            | join('\\n')
-                        %}
-                    {%- endif %}
-                    {%- set messages = messages[1:] %}
-                {%- else %}
-                    {{- raise_exception("Cannot put tools in the first user message when there's no first user message!") }}
-                {%- endif %}
-                {{- '<|start_header_id|>user<|end_header_id|>\n\n' -}}
-                {{- "Given the following functions, please respond with a JSON for a function call " }}
-                {{- "with its proper arguments that best answers the given prompt.\n\n" }}
-                {{- 'Respond in the format {"name": function name, ' }}
-                {{- '"parameters": dictionary of argument name and its value}. ' }}
-                {{- "Do not use variables.\n\n" }}
-                {%- for t in tools %}
-                    {{- t | tojson(indent=4) }}
-                    {{- "\n\n" }}
-                {%- endfor %}
-                {{- first_user_message + "<|eot_id|>"}}
-            {%- endif %}
-            
-            {%- for message in messages %}
-                {%- if not (message.role == 'ipython' or message.role == 'tool' or 'tool_calls' in message) %}
-                    {{- '<|start_header_id|>' + message['role'] + '<|end_header_id|>\n\n' }}
-                    {%- if message['content'] is string %}
-                        {{- message['content'] | trim}}
-                    {%- else %}
-                        {%- for content in message['content'] %}
-                            {%- if content['type'] == 'text' %}
-                                {{- content['text'] | trim }}
-                            {%- endif %}
-                        {%- endfor %}
-                    {%- endif %}
-                    {{- '<|eot_id|>' }}
-                {%- elif 'tool_calls' in message %}
-                    {%- if not message.tool_calls|length == 1 %}
-                        {{- raise_exception("This model only supports single tool-calls at once!") }}
-                    {%- endif %}
-                    {%- set tool_call = message.tool_calls[0].function %}
-                    {{- '<|start_header_id|>assistant<|end_header_id|>\n\n' -}}
-                    {{- '{"name": "' + tool_call.name + '", ' }}
-                    {{- '"parameters": ' }}
-                    {{- tool_call.arguments | tojson }}
-                    {{- "}" }}
-                    {{- "<|eot_id|>" }}
-                {%- elif message.role == "tool" or message.role == "ipython" %}
-                    {{- "<|start_header_id|>ipython<|end_header_id|>\n\n" }}
-                    {%- if message.content is string %}
-                        {{- { "output": message.content } | tojson }}
-                    {%- else %}
-                        {%- for content in message['content']  %}
-                            {%- if content['type']  == 'text' %}
-                                {{- { "output": content['text']  } | tojson }}
-                            {%- endif %}
-                        {%- endfor %}
-                    {%- endif %}
-                    {{- "<|eot_id|>" }}
-                {%- endif %}
-            {%- endfor %}
-            {%- if add_generation_prompt %}
-                {{- '<|start_header_id|>assistant<|end_header_id|>\n\n' }}
-            {%- endif %}
-            """
-        )
 
     # ---- init ----
     async def initialize(self):
@@ -309,41 +163,16 @@ class ProcessorRequestHandler:
             logger.warning("Failed to initialize metrics CSV %s: %s", self._metrics_csv_path, e)
 
     # ---- helpers ----
-    def _render_prompt(self, messages: List[Message], tools: Optional[List[Dict[str, Any]]]) -> str:
-        # Include tool-related fields so the template can branch correctly
-        message_dicts: List[Dict[str, Any]] = []
-        for m in messages:
-            md: Dict[str, Any] = {"role": m.role, "content": m.content}
-            if m.name is not None:
-                md["name"] = m.name
-            if m.tool_call_id is not None:
-                md["tool_call_id"] = m.tool_call_id
-            if m.tool_calls is not None:
-                md["tool_calls"] = m.tool_calls
-            message_dicts.append(md)
-        if tools:
-            bos = getattr(self.tokenizer, "bos_token", "") or ""
-
-            def _strftime_now(fmt: str) -> str:
-                return time.strftime(fmt)
-            try:
-                return self._tools_prompt.render(
-                    bos_token=bos,
-                    messages=message_dicts,
-                    tools=tools,
-                    tools_in_user_message=True,
-                    add_generation_prompt=True,
-                    strftime_now=_strftime_now,
-                )
-            except Exception as e:
-                logger.warning("Tool-aware template failed: %s; falling back to chat template", e)
+    def _render_prompt(self, messages: List[Message]) -> str:
+        message_dicts = [{"role": m.role, "content": m.content} for m in messages]
         if getattr(self.tokenizer, "chat_template", None):
             try:
                 return self.tokenizer.apply_chat_template(
                     message_dicts, tokenize=False, add_generation_prompt=True
                 )
             except Exception as e:
-                logger.warning("Chat template failed: %s, using simple format", e)
+                logger.warning(f"Chat template failed: {e}, using simple format")
+
         return "\n".join(f"{m.role}: {m.content}" for m in messages) + "\nassistant:"
 
     def tokenize(self, text: str) -> List[int]:
@@ -448,7 +277,6 @@ class ProcessorRequestHandler:
         reuse_budget: int,
         osl: str,
         iat: str,
-        tool_payload: Optional[Dict[str, Any]] = None,
     ) -> AsyncIterator[Dict[str, Any]]:
         """Streaming generator: yields {'delta': str} tokens and finally {'finish_reason': <str>}."""
         worker_id, decision_id = await self._pick_worker(token_ids, prefix_id, reuse_budget, osl, iat)
@@ -458,9 +286,7 @@ class ProcessorRequestHandler:
             "stop_conditions": {"max_tokens": max_tokens, "ignore_eos": ignore_eos},
             "model": model,
         }
-        # Forward tool-calling parameters to the engine if provided
-        if tool_payload:
-            engine_request.update(tool_payload)
+
         if worker_id is not None:
             stream = await self.engine_client.direct(engine_request, worker_id)
         else:
@@ -492,10 +318,6 @@ class ProcessorRequestHandler:
                             if piece:
                                 yield {"delta": piece}
 
-                # Forward tool_calls if emitted by the engine
-                if isinstance(data.get("tool_calls"), list):
-                    yield {"tool_calls": data["tool_calls"]}
-
                 if "finish_reason" in data and data["finish_reason"] is not None:
                     finish_reason = data["finish_reason"]
                     latency_ms = (time.perf_counter() - t0) * 1000.0
@@ -506,6 +328,7 @@ class ProcessorRequestHandler:
                     await self._log_request_metrics(num_tokens=len(all_tokens), latency_ms=latency_ms)
                     yield {"finish_reason": finish_reason}
                     return
+
         except Exception as e:
             latency_ms = (time.perf_counter() - t0) * 1000.0
             await self._send_feedback_safely(
@@ -527,19 +350,10 @@ class ProcessorRequestHandler:
         # Update prefix state and compute reuse_budget := remaining AFTER this request
         reuse_budget, osl, iat = await self._update_prefix_state(hints)
 
-        # Build input text for the model (tool-aware when provided)
+        # Build input text for the model
         messages = chat_req.messages.copy()
-        text = self._render_prompt(messages, chat_req.tools)
+        text = self._render_prompt(messages)
         tokens = self.tokenize(text)
-
-        # Build tool payload if the caller provided tool-calling parameters
-        tool_payload: Dict[str, Any] = {}
-        if chat_req.tools is not None:
-            tool_payload["tools"] = [t for t in chat_req.tools]
-        if chat_req.tool_choice is not None:
-            tool_payload["tool_choice"] = chat_req.tool_choice
-        if chat_req.parallel_tool_calls is not None:
-            tool_payload["parallel_tool_calls"] = bool(chat_req.parallel_tool_calls)
 
         # Stream from engine (frontend can aggregate if non-streaming)
         async for resp in self._stream_from_engine(
@@ -553,8 +367,7 @@ class ProcessorRequestHandler:
             hints.prefix_id,
             reuse_budget,
             osl,
-            iat,
-            tool_payload if tool_payload else None,
+            iat
         ):
             yield resp
 

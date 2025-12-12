@@ -78,18 +78,7 @@ class FrontendRequestHandler:
         self.processor_client = None
         self.app = None
         self.tokenizers: Dict[str, AutoTokenizer] = {}
-        # Model name mapping: served_name -> actual_model_path
-        # Can be configured via FRONTEND_MODEL_MAPPING env var (JSON format)
-        # Example: FRONTEND_MODEL_MAPPING='{"llama-3.1-8b": "/path/to/model"}'
-        self.model_mapping: Dict[str, str] = {}
-        model_mapping_str = os.environ.get("FRONTEND_MODEL_MAPPING", "{}")
-        try:
-            self.model_mapping = json.loads(model_mapping_str)
-            logger.info("Frontend model mapping: %s", self.model_mapping)
-        except Exception as e:
-            logger.warning("Failed to parse FRONTEND_MODEL_MAPPING: %s", e)
         # Regex to find one or more JSON objects optionally separated by semicolons
-        self._tool_json_regex = re.compile(r'{[^{}]*(?:{[^{}]*}[^{}]*)*}(?:\s*;\s*{[^{}]*(?:{[^{}]*}[^{}]*)*})*', re.DOTALL)
 
         # Throughput (requests/sec) tracking
         self._tps_lock = asyncio.Lock()
@@ -130,15 +119,12 @@ class FrontendRequestHandler:
 
     # ----- helpers -----
     def _get_tokenizer(self, model: str) -> AutoTokenizer:
-        # Map served model name to actual model path if configured
-        actual_model = self.model_mapping.get(model, model)
-        
-        tok = self.tokenizers.get(actual_model)
+        tok = self.tokenizers.get(model)
         if tok is None:
-            tok = AutoTokenizer.from_pretrained(actual_model)
+            tok = AutoTokenizer.from_pretrained(model)
             if tok.pad_token is None:
                 tok.pad_token = tok.eos_token
-            self.tokenizers[actual_model] = tok
+            self.tokenizers[model] = tok
         return tok
 
     def _messages_to_text(self, messages: List[Dict[str, str]], tokenizer) -> str:
@@ -177,6 +163,11 @@ class FrontendRequestHandler:
             - Streaming: returns SSE 'chat.completion.chunk' events, then [DONE].
             - Passes per-prefix hints (ID/Total/OSL/IAT) to the processor.
             """
+
+            # No support for tool calling. Raise error if request.tools
+            if request.tools:
+                raise HTTPException(status_code=400, detail="Tool calling is not supported by this frontend.")
+
             try:
                 # Convert to dict once; we may augment it with prefix hints
                 req_dict: Dict[str, Any] = request.model_dump()
@@ -205,7 +196,7 @@ class FrontendRequestHandler:
                     "iat": iat,
                 }
 
-                # Build the processor payload (includes stream fields and any tool-calling params)
+                # Build the processor payload (includes stream fields)
                 processor_req: Dict[str, Any] = dict(req_dict)
 
                 # Fast path: non-streaming -> JSON response
@@ -213,7 +204,6 @@ class FrontendRequestHandler:
                     processor_stream = await self.processor_client.generate(processor_req)
                     full_text = ""
                     finish_reason = "stop"
-                    collected_tool_calls: List[Dict[str, Any]] = []
 
                     async for chunk in processor_stream:
                         data = chunk.data()
@@ -228,21 +218,6 @@ class FrontendRequestHandler:
                             full_text += data["text"]
                         elif isinstance(data.get("content"), str):
                             full_text = data["content"]
-                        # Tool-calls pass-through from processor/engine
-                        if isinstance(data.get("tool_calls"), list):
-                            collected_tool_calls.extend(data["tool_calls"])  # type: ignore[arg-type]
-                        if "finish_reason" in data and data["finish_reason"] is not None:
-                            finish_reason = data["finish_reason"]
-
-                    # Normalize any explicit tool_calls the processor/engine emitted
-                    if collected_tool_calls:
-                        collected_tool_calls = self._normalize_tool_calls(collected_tool_calls)
-
-                    # If the backend didn't surface tool_calls explicitly, try to parse from text
-                    if not collected_tool_calls and (request.tools is not None and len(request.tools) > 0):
-                        parsed_calls = self._extract_tool_calls_from_text(full_text)
-                        if parsed_calls:
-                            collected_tool_calls = parsed_calls
 
                     tok = self._get_tokenizer(request.model)
                     prompt_text = self._messages_to_text(processor_req["messages"], tok)
@@ -250,15 +225,7 @@ class FrontendRequestHandler:
                     completion_tokens = len(tok.encode(full_text, add_special_tokens=False))
 
                     message_payload: Dict[str, Any]
-                    if collected_tool_calls:
-                        message_payload = {
-                            "role": "assistant",
-                            "content": None,
-                            "tool_calls": collected_tool_calls,
-                        }
-                        finish_reason = "tool_calls"
-                    else:
-                        message_payload = {"role": "assistant", "content": full_text}
+                    message_payload = {"role": "assistant", "content": full_text}
 
                     # Count completed request
                     await self._inc_tps()
@@ -323,11 +290,6 @@ class FrontendRequestHandler:
                     processor_stream = await self.processor_client.generate(processor_req)
                     full_text = ""
                     finish_reason: Optional[str] = None
-                    saw_tool_calls = False
-                    # Incremental tool-call parsing state
-                    incremental_tool_mode = bool(request.tools)
-                    tool_buffer = ""
-                    tool_calls_emitted = False
 
                     try:
                         async for chunk in processor_stream:
@@ -351,29 +313,11 @@ class FrontendRequestHandler:
 
                             if piece:
                                 full_text += piece
-                                # If tools requested, try to parse incremental tool-calls
-                                if incremental_tool_mode and not tool_calls_emitted:
-                                    tool_buffer += piece
-                                    calls, remainder, found = self._extract_tool_calls_incremental(tool_buffer)
-                                    if found and calls:
-                                        # Normalize then emit one tool_calls delta
-                                        calls = self._normalize_tool_calls(calls)
-                                        saw_tool_calls = True
-                                        tool_calls_emitted = True
-                                        yield sse_packet(make_chunk(delta={"tool_calls": calls}, finish_reason=None))
-                                        tool_buffer = remainder
-                                    # Suppress normal content deltas while parsing tool JSON
-                                else:
-                                    yield sse_packet(make_chunk(delta={"content": piece}, finish_reason=None))
-
-                            # Tool-calls pass-through
-                            if isinstance(data.get("tool_calls"), list):
-                                saw_tool_calls = True
-                                delta_obj = {"tool_calls": self._normalize_tool_calls(data["tool_calls"])}
-                                yield sse_packet(make_chunk(delta=delta_obj, finish_reason=None))
+                                yield sse_packet(make_chunk(delta={"content": piece}, finish_reason=None))
 
                             if "finish_reason" in data and data["finish_reason"] is not None:
                                 finish_reason = data["finish_reason"]
+
                     except HTTPException:
                         raise
                     except Exception as e:
@@ -383,7 +327,7 @@ class FrontendRequestHandler:
                         return
 
                     # 3) Final finish chunk
-                    final_reason = finish_reason or ("tool_calls" if saw_tool_calls else "stop")
+                    final_reason = finish_reason if finish_reason else "stop"
                     yield sse_packet(make_chunk(delta={}, finish_reason=final_reason))
 
                     # 4) Optional usage chunk
@@ -429,171 +373,6 @@ class FrontendRequestHandler:
         @self.app.get("/health")
         async def health():
             return {"status": "healthy"}
-
-    # ----------------- tool call parsing (non-streaming) -----------------
-    def _extract_tool_calls_from_text(self, model_output: str) -> List[Dict[str, Any]]:
-        """
-        Parse Llama-style JSON tool calls from a full assistant message.
-        Supports multiple JSON objects separated by semicolons.
-        Returns OpenAI-compatible tool_calls list or empty list.
-        """
-        try:
-            if not model_output or ('{' not in model_output):
-                return []
-            m = self._tool_json_regex.search(model_output)
-            if not m:
-                return []
-            json_str = m.group(0)
-            objects = [s.strip() for s in json_str.split(';') if s.strip()]
-            tool_calls: List[Dict[str, Any]] = []
-            for obj_str in objects:
-                try:
-                    obj = json.loads(obj_str)
-                except Exception:
-                    # If surrounding tokens exist (like special tags), try to trim to braces window
-                    left = obj_str.find('{')
-                    right = obj_str.rfind('}')
-                    if left != -1 and right != -1 and right > left:
-                        try:
-                            obj = json.loads(obj_str[left:right + 1])
-                        except Exception:
-                            continue
-                    else:
-                        continue
-                name = obj.get("name")
-                raw_args = obj.get("arguments", obj.get("parameters"))
-                if not name or raw_args is None:
-                    continue
-                # Coerce args to a dict (handles double-encoded strings)
-                args_dict = self._coerce_args_to_dict(raw_args)
-                try:
-                    args_str = json.dumps(args_dict, ensure_ascii=False)
-                except Exception:
-                    args_str = str(args_dict)
-                tool_calls.append({
-                    "id": f"chatcmpl-tool-{uuid.uuid4().hex}",
-                    "type": "function",
-                    "function": {"name": name, "arguments": args_str},
-                    # Add LangChain-friendly fields as well
-                    "name": name,
-                    "args": args_dict,
-                })
-            # Final pass to normalize shapes in case downstream expects both
-            return self._normalize_tool_calls(tool_calls)
-        except Exception as e:
-            logger.exception("Tool-call parsing failed: %s", e)
-            return []
-
-    def _normalize_tool_calls(self, tool_calls: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """
-        Ensure each tool call includes both OpenAI fields (function.arguments as string)
-        and LangChain-friendly fields (name, args as dict).
-        """
-        normalized: List[Dict[str, Any]] = []
-        for tc in tool_calls:
-            tc = dict(tc)  # shallow copy
-            name = tc.get("name")
-            args_obj: Any = tc.get("args")
-            fn = tc.get("function") or {}
-            fn_name = fn.get("name") if isinstance(fn, dict) else None
-            fn_args = fn.get("arguments") if isinstance(fn, dict) else None
-
-            if not name and fn_name:
-                name = fn_name
-
-            # Derive args dict (handle nested/double-encoded JSON strings)
-            candidate = args_obj if args_obj is not None else fn_args
-            args_obj = self._coerce_args_to_dict(candidate)
-
-            # Ensure OpenAI shape present with arguments as string
-            if isinstance(fn, dict):
-                fn = dict(fn)
-                try:
-                    fn["arguments"] = json.dumps(args_obj, ensure_ascii=False)
-                except Exception:
-                    fn["arguments"] = str(args_obj)
-                if name and not fn.get("name"):
-                    fn["name"] = name
-                tc["function"] = fn
-
-            if name:
-                tc["name"] = name
-            tc["args"] = args_obj
-            normalized.append(tc)
-        return normalized
-
-    def _coerce_args_to_dict(self, value: Any) -> Dict[str, Any]:
-        """
-        Convert a possibly nested/double-encoded JSON string into a dict.
-        Repeatedly json.loads while the value is a string; stop when dict/list
-        or parsing fails. If final is dict -> return; if list -> wrap; else {}.
-        """
-        if isinstance(value, dict):
-            return value
-        cur = value
-        for _ in range(3):  # cap nesting depth
-            if isinstance(cur, str):
-                s = cur.strip()
-                # quick check for likely JSON object/array
-                if (s.startswith('{') and s.endswith('}')) or (s.startswith('[') and s.endswith(']')):
-                    try:
-                        cur = json.loads(s)
-                        continue
-                    except Exception:
-                        break
-                else:
-                    break
-            break
-        if isinstance(cur, dict):
-            return cur
-        if isinstance(cur, list):
-            return {"items": cur}
-        return {}
-
-    # Incremental tool-call extraction from growing buffer (balanced braces; semicolon-separated)
-    def _extract_tool_calls_incremental(self, buffer: str) -> tuple[list[Dict[str, Any]], str, bool]:
-        calls: list[Dict[str, Any]] = []
-        idx = 0
-        n = len(buffer)
-        found_any = False
-        while idx < n:
-            # find next '{'
-            start = buffer.find('{', idx)
-            if start == -1:
-                break
-            brace = 0
-            i = start
-            end = -1
-            while i < n:
-                ch = buffer[i]
-                if ch == '{':
-                    brace += 1
-                elif ch == '}':
-                    brace -= 1
-                    if brace == 0:
-                        end = i
-                        break
-                i += 1
-            if end == -1:
-                # incomplete JSON, keep remainder
-                break
-            candidate = buffer[start:end + 1]
-            try:
-                obj = json.loads(candidate)
-                name = obj.get("name")
-                raw_args = obj.get("arguments", obj.get("parameters"))
-                if name is not None and raw_args is not None:
-                    calls.append({"name": name, "args": self._coerce_args_to_dict(raw_args)})
-                    found_any = True
-            except Exception:
-                # ignore malformed candidate
-                pass
-            # Move past this object; allow optional semicolon separators
-            idx = end + 1
-            while idx < n and buffer[idx] in (' ', '\n', '\r', '\t', ';'):
-                idx += 1
-        remainder = buffer[idx:] if idx < n else ""
-        return calls, remainder, found_any
 
     async def run_server(self, host: str = "0.0.0.0", port: int = 8099):
         config = uvicorn.Config(self.app, host=host, port=port, log_level="info")

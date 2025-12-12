@@ -21,7 +21,7 @@ import csv
 import numpy as np
 from pydantic import BaseModel
 
-from dynamo.llm import KvIndexer, OverlapScores, WorkerStats
+from dynamo.llm import KvIndexer, KvMetricsAggregator, OverlapScores, AggregatedMetrics
 from dynamo.runtime import DistributedRuntime, dynamo_worker
 from dynamo.runtime.logging import configure_dynamo_logging
 
@@ -141,6 +141,7 @@ class WorkloadAwareRouter:
         # clients / helpers (initialized later)
         self.engine_client = None
         self.indexer: Optional[KvIndexer] = None
+        self.metrics: Optional[KvMetricsAggregator] = None
 
         # concurrency primitives
         self._init_lock = threading.Lock()
@@ -258,6 +259,7 @@ class WorkloadAwareRouter:
         await self.engine_client.wait_for_instances()
 
         self.indexer = KvIndexer(engine, self.block_size)
+        self.metrics = KvMetricsAggregator(engine)
 
         self._initialize_bandits()
         self._initialize_contextual()
@@ -437,7 +439,7 @@ class WorkloadAwareRouter:
     def _feature_vector(
         self,
         wid: int,
-        metrics: Optional[Dict[str, Any]],
+        metrics: Optional[AggregatedMetrics],
         scores: "OverlapScores",
         last_w: Optional[int],
         reuse_after: int,
@@ -447,11 +449,11 @@ class WorkloadAwareRouter:
     ) -> np.ndarray:
         gpu = 0.0
         queue = 0.0
-        if metrics and isinstance(metrics, dict) and "endpoints" in metrics:
-            for ep in metrics["endpoints"]:
-                if ep.get("worker_id") == wid:
-                    gpu = float(ep.get("gpu_cache_usage_perc", 0.0))
-                    queue = float(ep.get("num_requests_waiting", 0.0))
+        if metrics and getattr(metrics, "endpoints", None):
+            for ep in metrics.endpoints:
+                if ep.worker_id == wid:
+                    gpu = float(getattr(ep, "gpu_cache_usage_perc", 0.0))
+                    queue = float(getattr(ep, "num_requests_waiting", 0.0))
                     break
         inv_load = 1.0 / (1.0 + self.gpu_penalty_weight * max(0.0, gpu) +
                           self.queue_penalty_weight * max(0.0, queue))
@@ -478,14 +480,14 @@ class WorkloadAwareRouter:
             reuse_norm,
         ], dtype=np.float64)
 
-    def _load_score(self, wid: int, metrics: Optional[Dict[str, Any]], job_cost_total: float) -> float:
+    def _load_score(self, wid: int, metrics: Optional[AggregatedMetrics], job_cost_total: float) -> float:
         gpu = 0.0
         queue = 0.0
-        if metrics and isinstance(metrics, dict) and "endpoints" in metrics:
-            for ep in metrics["endpoints"]:
-                if ep.get("worker_id") == wid:
-                    gpu = float(ep.get("gpu_cache_usage_perc", 0.0))
-                    queue = float(ep.get("num_requests_waiting", 0.0))
+        if metrics and getattr(metrics, "endpoints", None):
+            for ep in metrics.endpoints:
+                if ep.worker_id == wid:
+                    gpu = float(getattr(ep, "gpu_cache_usage_perc", 0.0))
+                    queue = float(getattr(ep, "num_requests_waiting", 0.0))
                     break
         _, work_out = self._worker_outstanding(wid)
         penalty = (
@@ -511,7 +513,7 @@ class WorkloadAwareRouter:
         self,
         worker_ids,
         req: RouterRequest,
-        metrics: Optional[Dict[str, Any]],
+        metrics: AggregatedMetrics,
         scores: OverlapScores,
     ) -> Tuple[int, Dict[str, float], Dict[int, Dict[str, float]], List[float], List[float]]:
         osl = self._norm_level(req.expected_osl, "MEDIUM")
@@ -706,8 +708,7 @@ class WorkloadAwareRouter:
         now = time.time()
         self._sweep_pending(now)
 
-        # Metrics aggregation API changed - using None for now (router works without it)
-        metrics = None  # TODO: Replace with proper metrics query when API is available
+        metrics = await self.metrics.get_metrics()
         if self.router_type == "kv_load":
             wid, _ = self._get_underloaded(metrics)
             yield RouterResponse(worker_id=wid, prefix_hit_rate=0.0).model_dump()
@@ -905,11 +906,11 @@ class WorkloadAwareRouter:
         return
 
     # --------------------- helpers --------------------- #
-    def _get_underloaded(self, metrics: Optional[Dict[str, Any]]):
-        if not metrics or not metrics.get("endpoints"):
+    def _get_underloaded(self, metrics: Optional[AggregatedMetrics]):
+        if not metrics or not metrics.endpoints:
             wid = int(random.choice(self.engine_client.instance_ids()))
             return wid, 0.0
-        loads = {ep.get("worker_id"): ep.get("gpu_cache_usage_perc", 0.0) for ep in metrics["endpoints"]}
+        loads = {ep.worker_id: getattr(ep, "gpu_cache_usage_perc", 0.0) for ep in metrics.endpoints}
         min_val = min(loads.values())
         candidates = [wid for wid, v in loads.items() if v == min_val]
         return random.choice(candidates), min_val
