@@ -180,33 +180,38 @@ The retail agent has access to the following tools:
 
 ### Retail Tools Function Group
 
-1. **`get_customer_info`** - Looks up customer by email address
+1. **`get_customer_by_email`** - Searches for a customer by their email address
 
-   - Input: ``email`` (string)
+   - Input: `email` (string)
    - Output: Customer object with id, name, past orders, total orders, total spent, and past reviews
 
-2. **`get_product_info`** - Retrieves single product details
+2. **`get_customer_by_id`** - Looks up a customer by their unique customer ID
 
-   - Input: ``product_id`` or ``product_name`` (string)
+   - Input: customer_id (string, for example CUST001)
+   - Output: Customer object with id, name, email, past orders, total orders, total spent, and past reviews
+
+3. **`get_product_info`** - Retrieves single product details
+
+   - Input: `product_id` or `product_name` (string)
    - Output: Product object with id, name, description, price, stock, and reviews
 
-3. **`get_all_products`** - Lists all products for comparison
+4. **`get_all_products`** - Lists all products for comparison
 
    - Input: None
    - Output: List of all products with basic information
 
-4. **`write_review`** - Mock function to add a review
+5. **`write_review`** - Mock function to add a review
 
-   - Input: ``customer_email`` (string), ``product_name`` (string), rating (integer 1-5), ``review_text`` (string)
+   - Input: `customer_email` (string), `product_name` (string), rating (integer 1-5), `review_text` (string)
    - Output: Success message (mock - no actual database update)
 
-5. **`send_email`** - Mock function to send email response
+6. **`send_email`** - Mock function to send email response
 
-   - Input: ``recipient_email`` (string), content (string), cc (optional string)
+   - Input: `recipient_email` (string), content (string), cc (optional string)
    - Output: Success message with email details (mock - no actual email sent)
 
-6. **`update_customer_info`** - Mock function to update customer order information
-   - Input: ``customer_email`` (string), ``product_name`` (string), quantity (integer)
+7. **`update_customer_info`** - Mock function to update customer order information
+   - Input: customer_email (string), product_name (string), quantity (integer)
    - Output: Success message with updated order details (mock - no actual database update)
 
 ---
@@ -331,10 +336,9 @@ Content: I'd like to write a review for the Premium Garden Trowel I purchased. I
 **Expected Output:**
 The agent will:
 
-1. Look up the customer information using `get_customer_info`
-2. Verify the product exists using `get_product_info`
-3. Submit the review using `write_review`
-4. Send a confirmation email using `send_email`
+1. Verify the product exists using `get_product_info`
+2. Submit the review using `write_review`
+3. Send a confirmation email using `send_email`
 
 The output logs will be similar to these:
 
@@ -399,10 +403,9 @@ Content: I would like to order 2 Ergonomic Watering Cans. Can you process this o
 **Expected Output:**
 The agent will:
 
-1. Look up customer information using `get_customer_info`
-2. Check product details and stock using `get_product_info`
-3. Update customer order information using `update_customer_info`
-4. Send order confirmation using `send_email`
+1. Check product details and stock using `get_product_info`
+2. Update customer order information using `update_customer_info`
+3. Send order confirmation using `send_email`
 
 The output of the run:
 

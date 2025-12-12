@@ -36,7 +36,8 @@ class RetailToolsConfig(FunctionGroupBaseConfig, name="retail_tools"):
     )
     include: list[str] = Field(
         default_factory=lambda: [
-            "get_customer_info",
+            "get_customer_by_email",
+            "get_customer_by_id",
             "get_product_info",
             "get_all_products",
             "write_review",
@@ -100,8 +101,8 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
 
     group = FunctionGroup(config=_config)
 
-    async def _get_customer_info(email: str) -> dict[str, Any]:
-        """Look up customer information by email address.
+    async def _get_customer_by_email(email: str) -> dict[str, Any]:
+        """Search for a customer by their email address.
 
         Args:
             email: The customer's email address.
@@ -116,6 +117,24 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
         return {
             "error": f"No customer found with email: {email}",
             "message": "This appears to be a new customer. They have no purchase history.",
+        }
+
+    async def _get_customer_by_id(customer_id: str) -> dict[str, Any]:
+        """Look up a customer by their unique customer ID.
+
+        Args:
+            customer_id: The customer's unique identifier (for example CUST001).
+
+        Returns:
+            Customer information including id, name, email, past orders, total orders, total spent, and past reviews.
+        """
+        for customer in customers_data:
+            if customer["id"].lower() == customer_id.lower():
+                return customer
+
+        return {
+            "error": f"No customer found with ID: {customer_id}",
+            "message": "Please verify the customer ID is correct.",
         }
 
     async def _get_product_info(product_identifier: str) -> dict[str, Any]:
@@ -150,6 +169,7 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
             "average_rating": (sum(r["rating"]
                                    for r in p["reviews"]) / len(p["reviews"]) if p["reviews"] else "No ratings yet"),
             "review_count": len(p["reviews"]),
+            "review_texts": [r["review"] for r in p["reviews"]],
         } for p in products_data]
 
     async def _write_review(params: WriteReviewParams) -> dict[str, Any]:
@@ -162,7 +182,7 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
             Success confirmation with review details.
         """
         # Check if customer exists
-        customer = await _get_customer_info(params.customer_email)
+        customer = await _get_customer_by_email(params.customer_email)
         if "error" in customer:
             return {
                 "error": "Customer not found",
@@ -218,7 +238,7 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
             Success confirmation with updated order details.
         """
         # Check if customer exists
-        customer = await _get_customer_info(params.customer_email)
+        customer = await _get_customer_by_email(params.customer_email)
         if "error" in customer:
             return {
                 "error": "Customer not found",
@@ -259,7 +279,10 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
         }
 
     # Add functions to the group
-    group.add_function(name="get_customer_info", fn=_get_customer_info, description=_get_customer_info.__doc__)
+    group.add_function(name="get_customer_by_email",
+                       fn=_get_customer_by_email,
+                       description=_get_customer_by_email.__doc__)
+    group.add_function(name="get_customer_by_id", fn=_get_customer_by_id, description=_get_customer_by_id.__doc__)
     group.add_function(name="get_product_info", fn=_get_product_info, description=_get_product_info.__doc__)
     group.add_function(name="get_all_products", fn=_get_all_products, description=_get_all_products.__doc__)
     group.add_function(name="write_review", fn=_write_review, description=_write_review.__doc__)
