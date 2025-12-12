@@ -102,8 +102,11 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
     A Dynamo LLM provider with automatic prefix header injection for KV cache optimization.
 
     This is a specialized OpenAI-compatible LLM that sends Dynamo prefix headers
-    for optimal KV cache management and request routing. The prefix routing parameters
+    for optimal KV cache management and request routing. Prefix headers are enabled
+    by default using the template "nat-dynamo-{uuid}". The prefix routing parameters
     (prefix_total_requests, prefix_osl, prefix_iat) are optimizable via the NAT optimizer.
+
+    To disable prefix headers, set prefix_template to null/None in your config.
     """
 
     # =========================================================================
@@ -111,10 +114,10 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
     # =========================================================================
 
     prefix_template: str | None = Field(
-        default=None,
-        description="Template for prefix ID (e.g., 'session-{uuid}'). "
-                    "The {uuid} placeholder will be replaced with a unique ID. "
-                    "Set to enable dynamic prefix headers for Dynamo.",
+        default="nat-dynamo-{uuid}",
+        description="Template for prefix ID. The {uuid} placeholder will be replaced with a unique ID. "
+                    "Prefix headers are sent by default for KV cache optimization. "
+                    "Set to null/None to disable prefix header injection.",
     )
 
     prefix_total_requests: int = OptimizableField(

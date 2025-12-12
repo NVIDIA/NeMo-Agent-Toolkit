@@ -140,7 +140,7 @@ llms:
     temperature: 0.0
     max_tokens: 8192
     stop: ["Observation:", "\nThought:"]
-    enable_dynamic_prefix: true
+    # Note: Setting prefix_template enables dynamic prefix headers
     prefix_template: "react-benchmark-{uuid}"
     prefix_total_requests: 10 # 6
     prefix_osl: MEDIUM # HIGH

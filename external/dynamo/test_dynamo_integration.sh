@@ -36,8 +36,8 @@ DYNAMO_PORT="${DYNAMO_PORT:-8099}"
 # Get script location and derive paths
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 EXAMPLE_DIR="$SCRIPT_DIR"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-CONFIG_DIR="$EXAMPLE_DIR/configs"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+CONFIG_DIR="$REPO_ROOT/examples/dynamo_integration/react_benchmark_agent/configs"
 
 # Track failures
 declare -a FAILURES=()
@@ -97,12 +97,13 @@ if curl -s "http://localhost:$DYNAMO_PORT/health" > /dev/null 2>&1; then
 else
     echo "✗ Dynamo frontend is not responding on port $DYNAMO_PORT"
     echo "  Please start Dynamo according to setup instructions in:"
-    echo "  $EXAMPLE_DIR/README.md (see 'Start Dynamo Backend' section)"
-    echo "  Or see DISAGG_FIX.md for disaggregated setup"
+    echo "  $SCRIPT_DIR/README.md"
     echo ""
     echo "  For quick reference:"
-    echo "    cd $EXAMPLE_DIR"
-    echo "    source ./start_dynamo_custom.sh > ./startup_output.txt"
+    echo "    cd $SCRIPT_DIR"
+    echo "    bash start_dynamo_unified.sh"
+    echo "  Or with Thompson Sampling router:"
+    echo "    bash start_dynamo_unified_thompson_hints.sh"
     FAILURES+=("Dynamo frontend not responding on port $DYNAMO_PORT")
 fi
 echo ""

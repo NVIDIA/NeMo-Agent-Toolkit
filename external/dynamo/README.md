@@ -1,5 +1,7 @@
 # Dynamo Backend Setup Guide
 
+> ⚠️ **EXPERIMENTAL**: The NeMo Agent Toolkit and Dynamo integration is experimental and under active development. APIs, configurations, and features may change without notice.
+
 This guide covers setting up, running, and configuring the NVIDIA Dynamo backend for the React Benchmark Agent evaluations.
 
 ## Table of Contents
@@ -193,6 +195,9 @@ watch -n 1 nvidia-smi
 # Verify Dynamo is running
 curl -sv http://localhost:8099/health
 # Expected: HTTP/1.1 200 OK
+
+# when testing is complete, shut down the containers with:
+bash stop_dynamo.sh
 ```
 
 **Components started:**
@@ -200,7 +205,7 @@ curl -sv http://localhost:8099/health
 - NATS container (`nats-dynamo`) on port 4232
 - Dynamo container (`dynamo-sglang`) with unified worker on GPUs 4,5,6,7 (TP=4)
 
-**Startup time**: ~90-120 seconds for 70B model
+**Startup time**: ~5 minutes seconds for 70B model
 
 ### Option 2: Unified + Thompson Sampling Router (Production)
 
@@ -217,6 +222,9 @@ watch -n 1 nvidia-smi
 
 # Verify
 curl -sv http://localhost:8099/health
+
+# when testing is complete, shut down the containers with:
+bash stop_dynamo.sh
 ```
 
 **Additional features:**
@@ -245,6 +253,9 @@ watch -n 1 nvidia-smi
 
 # Verify
 curl -sv http://localhost:8099/health
+
+# when testing is complete, shut down the containers with:
+bash stop_dynamo.sh
 ```
 
 **Components started:**
@@ -254,7 +265,7 @@ curl -sv http://localhost:8099/health
 - Decode Worker on GPUs 6,7 (TP=2)
 - Dynamo Frontend on port 8099
 
-**Startup time**: ~2-3 minutes (both workers must initialize)
+**Startup time**: ~5 minutes (both workers must initialize)
 
 **Note**: Disaggregated mode uses NIXL for KV cache transfer between workers.
 
@@ -289,7 +300,7 @@ bash test_dynamo_integration.sh
 ```
 
 **Environment variables** (optional):
-- `DYNAMO_BACKEND` - Backend type: `sglang` or `vllm` (default: `sglang`)
+- `DYNAMO_BACKEND` - Backend type: `sglang` # vllm and tensorRT still need to be developed
 - `DYNAMO_MODEL` - Model name (default: `llama-3.3-70b`)
 - `DYNAMO_PORT` - Frontend port (default: `8099`)
 
@@ -387,13 +398,10 @@ An integration test script validates your Dynamo setup with NAT:
 cd /path/to/NeMo-Agent-Toolkit/external/dynamo
 
 # Activate NAT environment first
-source /path/to/your/venv/bin/activate
+source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 
 # Run tests (do NOT use 'source')
 ./test_dynamo_integration.sh
-
-# Or with custom backend/model
-DYNAMO_BACKEND=vllm DYNAMO_MODEL=llama-3.1-8b ./test_dynamo_integration.sh
 
 # Show help
 ./test_dynamo_integration.sh --help
@@ -519,29 +527,32 @@ Prefix headers help the router:
 
 ### Configuration
 
-Enable in your eval config:
+Use the `dynamo` LLM type in your eval config. Prefix headers are sent by default:
 
 ```yaml
 llms:
   dynamo_llm:
-    _type: openai
+    _type: dynamo
     model_name: llama-3.3-70b
     base_url: http://localhost:8099/v1
     api_key: dummy
     
-    # Enable dynamic prefix generation
-    enable_dynamic_prefix: true
-    prefix_template: "react-benchmark-{uuid}"  # Optional custom template
+    # Prefix headers are enabled by default with template "nat-dynamo-{uuid}"
+    # Optional: customize the template or routing hints
+    # prefix_template: "react-benchmark-{uuid}"  # Custom template
+    # prefix_template: null  # Set to null to disable prefix headers entirely
     prefix_total_requests: 10  # Expected requests per prefix
     prefix_osl: MEDIUM         # Output Sequence Length: LOW | MEDIUM | HIGH
     prefix_iat: MEDIUM         # Inter-Arrival Time: LOW | MEDIUM | HIGH
 ```
 
+> **Note**: The `dynamo` LLM type automatically sends prefix headers using the default template `nat-dynamo-{uuid}`. To disable prefix headers entirely, set `prefix_template: null` in your config.
+
 ### Header Details
 
 | Header | Description | Values |
 |--------|-------------|--------|
-| `x-prefix-id` | Unique identifier for request group | UUID-based string |
+| `x-prefix-id` | Unique identifier for request group | UUID-based string (null to disable all extra headers) |
 | `x-prefix-total-requests` | Expected total requests for this prefix | Integer (1 for independent queries) |
 | `x-prefix-osl` | Output Sequence Length hint | LOW (~50 tokens), MEDIUM (~200), HIGH (~500+) |
 | `x-prefix-iat` | Inter-Arrival Time hint | LOW (rapid), MEDIUM (normal), HIGH (long delays) |
@@ -550,13 +561,13 @@ llms:
 
 #### Independent Queries (Evaluation)
 
-Each question is independent, needs unique prefix:
+Each question is independent, uses default prefix template:
 
 ```yaml
 llms:
   eval_llm:
-    enable_dynamic_prefix: true
-    prefix_template: "eval-{uuid}"
+    _type: dynamo
+    # prefix_template defaults to "nat-dynamo-{uuid}"
     prefix_total_requests: 1
     prefix_osl: MEDIUM
     prefix_iat: LOW  # Eval runs many queries quickly
@@ -569,8 +580,8 @@ Related requests should share a prefix:
 ```yaml
 llms:
   chat_llm:
-    enable_dynamic_prefix: true
-    prefix_template: "chat-{uuid}"
+    _type: dynamo
+    prefix_template: "chat-{uuid}"  # Optional: custom template
     prefix_total_requests: 8  # Average conversation length
     prefix_osl: MEDIUM
     prefix_iat: HIGH  # Users take time to type
@@ -583,8 +594,8 @@ ReAct agents make multiple related calls:
 ```yaml
 llms:
   agent_llm:
-    enable_dynamic_prefix: true
-    prefix_template: "agent-{uuid}"
+    _type: dynamo
+    prefix_template: "agent-{uuid}"  # Optional: custom template
     prefix_total_requests: 5  # Typical tool call sequence
     prefix_osl: LOW   # Tool calls produce short responses
     prefix_iat: LOW   # Agent runs tool calls rapidly
@@ -592,8 +603,8 @@ llms:
 
 ### How It Works
 
-1. **NAT Config** specifies `enable_dynamic_prefix: true`
-2. **LangChain Wrapper** generates unique UUID per request
+1. **NAT Config** uses `_type: dynamo` (prefix headers enabled by default)
+2. **Dynamo LLM Provider** generates unique UUID per request using the template
 3. **Headers injected** into HTTP request:
    ```
    x-prefix-id: react-benchmark-a1b2c3d4e5f6g7h8
@@ -608,26 +619,6 @@ llms:
    - Worker affinity for related requests
    - Load balancing across workers
    - Workload hints (OSL/IAT)
-
-### Debugging Prefix Headers
-
-Enable debug logging:
-
-```python
-import logging
-logging.getLogger("nat.plugins.langchain.dynamo_prefix_headers").setLevel(logging.DEBUG)
-```
-
-Output:
-```
-DEBUG: Injected Dynamo prefix headers: prefix_id=nat-req-a1b2c3d4, osl=MEDIUM, iat=MEDIUM
-```
-
-Check router metrics CSV (if enabled):
-```bash
-cat router_metrics.csv
-# Shows prefix_id, chosen_worker, overlap, etc.
-```
 
 ---
 
@@ -718,7 +709,7 @@ ss -tlnp | grep 8099
 
 ```bash
 # Check ETCD health
-curl http://localhost:2389/health  # or 2379 for disaggregated
+curl http://localhost:2379/health 
 
 # Check ETCD logs
 docker logs etcd-dynamo
@@ -734,16 +725,6 @@ docker ps | grep nats-dynamo
 docker logs nats-dynamo
 ```
 
-### Out of Memory
-
-**Symptom**: Container crashes, GPU memory exhausted
-
-**Fix**: Reduce memory fraction or use smaller model
-```bash
-# In startup script, find and reduce:
---mem-fraction-static 0.7  # Default is 0.8
-```
-
 ### Tokenizer Mismatch (Disaggregated Mode)
 
 **Symptom**: `KeyError: 'token_ids'` or tokenizer errors
@@ -752,21 +733,7 @@ docker logs nats-dynamo
 ```bash
 bash stop_dynamo.sh
 # Wait a few seconds
-bash start_dynamo_disagg.sh
-```
-
-### Terminal Closes After Running Script
-
-**Cause**: Using `source` instead of `bash`
-
-**Fix**: Always run scripts directly:
-```bash
-# CORRECT
 bash start_dynamo_unified.sh
-./test_dynamo_integration.sh
-
-# INCORRECT - will close your terminal
-source test_dynamo_integration.sh
 ```
 
 ### Slow Model Loading
@@ -833,25 +800,15 @@ external/dynamo/                                # Dynamo backend
 | `nat run --config_file examples/dynamo_integration/react_benchmark_agent/configs/config_dynamo_e2e_test.yml --input "..."` | Quick NAT validation |
 | `nat run --config_file examples/dynamo_integration/react_benchmark_agent/configs/config_dynamo_prefix_e2e_test.yml --input "..."` | Test with prefix headers |
 
-### Ports
-
-| Service | Unified Port | Disaggregated Port |
-|---------|--------------|-------------------|
-| Frontend API | 8099 | 8099 |
-| ETCD | 2389 | 2379 |
-| NATS | 4232 | 4222 |
-
 ### Containers
 
 | Container | Description |
 |-----------|-------------|
 | `dynamo-sglang` | Standard Dynamo worker |
-| `dynamo-sglang-thompson` | Thompson Sampling router version |
 | `etcd-dynamo` | Service discovery and metadata |
 | `nats-dynamo` | Message queue for prefill requests |
 
 ### Related Documentation
 
-- **[React Benchmark Agent](../../examples/dynamo_integration/react_benchmark_agent/README.md)** - Main example README
-- **[Evaluations Guide](../../examples/dynamo_integration/react_benchmark_agent/EVALUATIONS.md)** - Running and analyzing evaluations
-- **[Architecture](../../examples/dynamo_integration/react_benchmark_agent/ARCHITECTURE.md)** - System diagrams
+- **[React Benchmark Agent](../../examples/dynamo_integration/react_benchmark_agent/README.md)** - Complete evaluation guide
+- **[Architecture](../../examples/dynamo_integration/ARCHITECTURE.md)** - System diagrams

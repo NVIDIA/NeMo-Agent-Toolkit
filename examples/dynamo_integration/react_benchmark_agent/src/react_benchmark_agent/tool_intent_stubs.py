@@ -20,7 +20,8 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import field_validator
 
-from nat.builder.function_info import FunctionInfo
+# NOTE: FunctionInfo import unused since register_tool_stubs_from_schemas is commented out
+# from nat.builder.function_info import FunctionInfo
 
 logger = logging.getLogger(__name__)
 
@@ -55,14 +56,15 @@ def set_current_scenario_id(scenario_id: str) -> contextvars.Token:
     return token
 
 
-def reset_scenario_id(token: contextvars.Token) -> None:
-    """
-    Reset the scenario ID to its previous value.
-    
-    Args:
-        token: Token returned from set_current_scenario_id
-    """
-    _current_scenario_id.reset(token)
+# NOTE: Unused - commenting out for now
+# def reset_scenario_id(token: contextvars.Token) -> None:
+#     """
+#     Reset the scenario ID to its previous value.
+#     
+#     Args:
+#         token: Token returned from set_current_scenario_id
+#     """
+#     _current_scenario_id.reset(token)
 
 
 def get_current_scenario_id() -> str:
@@ -162,62 +164,69 @@ def clear_global_intents(scenario_id: str = "current") -> None:
         logger.debug("Cleared global intents for scenario %s", scenario_id)
 
 
-def cleanup_all_intents() -> int:
-    """
-    Clear ALL intents from the global registry across all scenarios.
-    
-    This should be called between evaluation runs to prevent memory accumulation
-    and ensure clean state for new evaluations.
-    
-    Returns:
-        Number of scenarios that were cleared
-    
-    Example:
-        >>> # Call at the start of an evaluation run
-        >>> from react_benchmark_agent.tool_intent_stubs import cleanup_all_intents
-        >>> cleared = cleanup_all_intents()
-        >>> print(f"Cleared {cleared} scenarios from intent registry")
-    """
-    global _GLOBAL_INTENT_REGISTRY
-    num_scenarios = len(_GLOBAL_INTENT_REGISTRY)
-    _GLOBAL_INTENT_REGISTRY.clear()
-    logger.info("Cleared all intents from global registry (%d scenarios)", num_scenarios)
-    return num_scenarios
+# =============================================================================
+# NOTE: The following utility functions are unused and commented out for now.
+# They may be useful for debugging or future enhancements.
+# =============================================================================
+
+# def cleanup_all_intents() -> int:
+#     """
+#     Clear ALL intents from the global registry across all scenarios.
+#     
+#     This should be called between evaluation runs to prevent memory accumulation
+#     and ensure clean state for new evaluations.
+#     
+#     Returns:
+#         Number of scenarios that were cleared
+#     
+#     Example:
+#         >>> # Call at the start of an evaluation run
+#         >>> from react_benchmark_agent.tool_intent_stubs import cleanup_all_intents
+#         >>> cleared = cleanup_all_intents()
+#         >>> print(f"Cleared {cleared} scenarios from intent registry")
+#     """
+#     global _GLOBAL_INTENT_REGISTRY
+#     num_scenarios = len(_GLOBAL_INTENT_REGISTRY)
+#     _GLOBAL_INTENT_REGISTRY.clear()
+#     logger.info("Cleared all intents from global registry (%d scenarios)", num_scenarios)
+#     return num_scenarios
 
 
-def get_all_scenario_ids() -> list[str]:
-    """
-    Get all scenario IDs currently in the global registry.
-    
-    Useful for debugging and monitoring intent accumulation.
-    
-    Returns:
-        List of scenario IDs with registered intents
-    """
-    return list(_GLOBAL_INTENT_REGISTRY.keys())
+# def get_all_scenario_ids() -> list[str]:
+#     """
+#     Get all scenario IDs currently in the global registry.
+#     
+#     Useful for debugging and monitoring intent accumulation.
+#     
+#     Returns:
+#         List of scenario IDs with registered intents
+#     """
+#     return list(_GLOBAL_INTENT_REGISTRY.keys())
 
 
-def get_registry_stats() -> dict[str, Any]:
-    """
-    Get statistics about the global intent registry.
-    
-    Useful for monitoring memory usage and debugging.
-    
-    Returns:
-        Dictionary with registry statistics:
-        - num_scenarios: Number of scenarios tracked
-        - total_intents: Total number of intents across all scenarios
-        - intents_per_scenario: Dict mapping scenario_id to intent count
-    """
-    intents_per_scenario = {
-        scenario_id: len(intents) 
-        for scenario_id, intents in _GLOBAL_INTENT_REGISTRY.items()
-    }
-    return {
-        "num_scenarios": len(_GLOBAL_INTENT_REGISTRY),
-        "total_intents": sum(intents_per_scenario.values()),
-        "intents_per_scenario": intents_per_scenario,
-    }
+# def get_registry_stats() -> dict[str, Any]:
+#     """
+#     Get statistics about the global intent registry.
+#     
+#     Useful for monitoring memory usage and debugging.
+#     
+#     Returns:
+#         Dictionary with registry statistics:
+#         - num_scenarios: Number of scenarios tracked
+#         - total_intents: Total number of intents across all scenarios
+#         - intents_per_scenario: Dict mapping scenario_id to intent count
+#     """
+#     intents_per_scenario = {
+#         scenario_id: len(intents) 
+#         for scenario_id, intents in _GLOBAL_INTENT_REGISTRY.items()
+#     }
+#     return {
+#         "num_scenarios": len(_GLOBAL_INTENT_REGISTRY),
+#         "total_intents": sum(intents_per_scenario.values()),
+#         "intents_per_scenario": intents_per_scenario,
+#     }
+
+# =============================================================================
 
 
 class PermissiveToolInput(BaseModel):
@@ -344,46 +353,47 @@ def _generate_mock_response(response_schema: dict[str, Any]) -> dict[str, Any]:
     return mock_response
 
 
-def register_tool_stubs_from_schemas(
-    tool_schemas: list[dict[str, Any]], intent_buffer: ToolIntentBuffer
-) -> dict[str, FunctionInfo]:
-    """
-    Register tool stubs from a list of tool schemas.
-    
-    Args:
-        tool_schemas: List of tool schemas from the dataset
-        intent_buffer: Shared buffer to record tool intents
-    
-    Returns:
-        Dictionary mapping tool names to FunctionInfo objects
-    """
-    registered_stubs = {}
-
-    for tool_schema in tool_schemas:
-        tool_name = tool_schema.get("title", "")
-        if not tool_name:
-            logger.warning("Skipping tool with no title: %s", tool_schema)
-            continue
-
-        try:
-            stub_fn, custom_input_schema, description = create_tool_stub_function(tool_schema, intent_buffer)
-            
-            # Use FunctionInfo constructor directly with custom input_schema to bypass auto-generation
-            # This prevents NAT from creating its own validation schema from function signatures
-            function_info = FunctionInfo(
-                single_fn=stub_fn,
-                stream_fn=None,
-                input_schema=custom_input_schema,
-                single_output_schema=str,  # All stubs return strings
-                stream_output_schema=None,
-                description=description
-            )
-            registered_stubs[tool_name] = function_info
-            logger.info("Registered tool stub: %s", tool_name)
-        except Exception as e:
-            logger.exception("Failed to register tool stub for %s: %s", tool_name, e)
-            continue
-
-    logger.info("Registered %d tool stubs", len(registered_stubs))
-    return registered_stubs
+# NOTE: Unused - banking_tools.py uses create_tool_stub_function directly with FunctionGroup
+# def register_tool_stubs_from_schemas(
+#     tool_schemas: list[dict[str, Any]], intent_buffer: ToolIntentBuffer
+# ) -> dict[str, FunctionInfo]:
+#     """
+#     Register tool stubs from a list of tool schemas.
+#     
+#     Args:
+#         tool_schemas: List of tool schemas from the dataset
+#         intent_buffer: Shared buffer to record tool intents
+#     
+#     Returns:
+#         Dictionary mapping tool names to FunctionInfo objects
+#     """
+#     registered_stubs = {}
+#
+#     for tool_schema in tool_schemas:
+#         tool_name = tool_schema.get("title", "")
+#         if not tool_name:
+#             logger.warning("Skipping tool with no title: %s", tool_schema)
+#             continue
+#
+#         try:
+#             stub_fn, custom_input_schema, description = create_tool_stub_function(tool_schema, intent_buffer)
+#             
+#             # Use FunctionInfo constructor directly with custom input_schema to bypass auto-generation
+#             # This prevents NAT from creating its own validation schema from function signatures
+#             function_info = FunctionInfo(
+#                 single_fn=stub_fn,
+#                 stream_fn=None,
+#                 input_schema=custom_input_schema,
+#                 single_output_schema=str,  # All stubs return strings
+#                 stream_output_schema=None,
+#                 description=description
+#             )
+#             registered_stubs[tool_name] = function_info
+#             logger.info("Registered tool stub: %s", tool_name)
+#         except Exception as e:
+#             logger.exception("Failed to register tool stub for %s: %s", tool_name, e)
+#             continue
+#
+#     logger.info("Registered %d tool stubs", len(registered_stubs))
+#     return registered_stubs
 

@@ -145,16 +145,13 @@ llms:
     stop: ["Observation:", "\nThought:"]
     
     # Dynamo prefix configuration
-    enable_dynamic_prefix: true
+    # Note: Setting prefix_template enables dynamic prefix headers
     prefix_template: "react-benchmark-{uuid}"
-    
     # OPTIMIZABLE: Total expected requests per conversation/prefix
     # Default search space: low=1, high=20, step=5
     prefix_total_requests: 10
-    
     # OPTIMIZABLE: Output Sequence Length hint (LOW | MEDIUM | HIGH)
     prefix_osl: MEDIUM
-    
     # OPTIMIZABLE: Inter-Arrival Time hint (LOW | MEDIUM | HIGH)
     prefix_iat: MEDIUM
     

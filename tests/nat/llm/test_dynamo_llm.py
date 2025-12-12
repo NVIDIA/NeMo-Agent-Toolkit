@@ -41,7 +41,7 @@ class TestDynamoModelConfig:
         config = DynamoModelConfig(model_name="test-model")
 
         assert config.model_name == "test-model"
-        assert config.prefix_template is None
+        assert config.prefix_template == "nat-dynamo-{uuid}"  # Enabled by default
         assert config.prefix_total_requests == 10
         assert config.prefix_osl == "MEDIUM"
         assert config.prefix_iat == "MEDIUM"
@@ -63,6 +63,15 @@ class TestDynamoModelConfig:
         assert config.prefix_osl == "HIGH"
         assert config.prefix_iat == "LOW"
         assert config.request_timeout == 300.0
+
+    def test_disable_prefix_headers(self):
+        """Test that prefix headers can be disabled by setting prefix_template to None."""
+        config = DynamoModelConfig(
+            model_name="test-model",
+            prefix_template=None,  # Explicitly disable prefix headers
+        )
+
+        assert config.prefix_template is None
 
     def test_prefix_total_requests_validation(self):
         """Test that prefix_total_requests validates bounds."""

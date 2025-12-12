@@ -15,6 +15,3 @@ from .self_evaluating_agent_with_feedback import self_evaluating_agent_with_feed
 # Import custom evaluators
 from .evaluators import action_completion_evaluator_function
 from .evaluators import tsq_evaluator_function
-
-# Import custom Dynamo-aware LLM config with optimizable prefix parameters
-from .dynamo_llm_config import dynamo_openai_llm

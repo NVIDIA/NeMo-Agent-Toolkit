@@ -24,7 +24,7 @@
 # To stop all components: bash stop_dynamo.sh
 
 # Configuration Variables
-CONTAINER_NAME="dynamo-sglang-thompson"
+CONTAINER_NAME="dynamo-sglang"
 WORKER_GPUS="4,5,6,7"
 TP_SIZE=4
 HTTP_PORT=8099

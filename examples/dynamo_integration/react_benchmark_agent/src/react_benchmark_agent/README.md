@@ -33,11 +33,10 @@ This document details the source code implementation of the React Benchmark Agen
 │  Entry point that imports and registers all components:                      │
 │  • react_benchmark_agent_function  (from react_benchmark_agent.py)           │
 │  • banking_tools_group_function    (from banking_tools.py)                   │
-│  • self_evaluating_agent_function  (from self_evaluating_agent.py)           │
+│  • self_evaluating_agent_function  (from self_evaluating_agent_with_feedback)│
 │  • self_evaluating_agent_with_feedback_function                              │
 │  • tsq_evaluator_function          (from evaluators/)                        │
 │  • action_completion_evaluator_function                                      │
-│  • dynamo_openai_llm               (from dynamo_llm_config.py)               │
 └─────────────────────────────────────────────────────────────────────────────┘
                                         │
                     ┌───────────────────┼───────────────────┐
@@ -85,15 +84,15 @@ from .react_benchmark_agent import react_benchmark_agent_function
 # Banking tools function group
 from .banking_tools import banking_tools_group_function
 
-# Self-evaluation wrappers
-from .self_evaluating_agent import self_evaluating_agent_function
+# Self-evaluation wrappers (both modes from unified module)
+from .self_evaluating_agent_with_feedback import self_evaluating_agent_function
 from .self_evaluating_agent_with_feedback import self_evaluating_agent_with_feedback_function
 
 # Custom evaluators
 from .evaluators import tsq_evaluator_function, action_completion_evaluator_function
 
-# Custom Dynamo-aware LLM config with optimizable prefix parameters
-from .dynamo_llm_config import dynamo_openai_llm
+# Note: LLM configuration uses NAT core's 'dynamo' type (_type: dynamo)
+# which provides prefix parameters with OptimizableField support.
 ```
 
 ---
@@ -113,7 +112,7 @@ This is the baseline deployment that runs a ReAct agent directly without self-ev
 | `workflow._type: react_agent` | NAT core | Built-in ReAct agent |
 | `function_groups.banking_tools._type: banking_tools_group` | `banking_tools.py` | `BankingToolsGroupConfig` |
 | `evaluators.tool_selection_quality._type: tsq_evaluator` | `evaluators/tsq_evaluator.py` | `TSQEvaluatorConfig` |
-| `llms.dynamo_llm._type: openai` | NAT core | Standard OpenAI LLM |
+| `llms.dynamo_llm._type: dynamo` | NAT core | Dynamo LLM with prefix headers |
 
 #### Data Flow
 
@@ -327,18 +326,21 @@ This configuration enables NAT's optimizer to tune Dynamo router parameters for 
 
 | Config Section | Source File | Component |
 |----------------|-------------|-----------|
-| `llms.dynamo_llm._type: dynamo_openai` | `dynamo_llm_config.py` | Custom LLM with optimizable fields |
-| `llms.dynamo_llm.optimizable_params` | `dynamo_llm_config.py` | Fields to optimize |
-| `llms.dynamo_llm.search_space` | `dynamo_llm_config.py` | Parameter search ranges |
+| `llms.dynamo_llm._type: dynamo` | NAT core (`nat.llm.dynamo_llm`) | Dynamo LLM with optimizable prefix fields |
+| `llms.dynamo_llm.optimizable_params` | NAT core | Fields to optimize |
+| `llms.dynamo_llm.search_space` | NAT core | Parameter search ranges |
 | `evaluators.avg_llm_latency._type: avg_llm_latency` | NAT core | Runtime performance metric |
 | `optimizer.eval_metrics` | NAT core | Metrics to minimize |
 
 #### Optimizable Parameters
 
-**`dynamo_llm_config.py`** (lines 54-100)
+**NAT Core `DynamoModelConfig`** (`src/nat/llm/dynamo_llm.py`)
 ```python
-class DynamoLLMConfig(OpenAIModelConfig, name="dynamo_openai"):
-    """OpenAI-compatible LLM config with Dynamo prefix optimization support."""
+class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
+    """Dynamo LLM with automatic prefix header injection for KV cache optimization."""
+    
+    # Prefix template (set to null to disable headers)
+    prefix_template: str | None = Field(default="nat-dynamo-{uuid}")
     
     # OPTIMIZABLE: Total expected requests per conversation/prefix
     prefix_total_requests: int = OptimizableField(
@@ -446,7 +448,9 @@ outputs/dynamo_evals/<job_id>/
 | `banking_tools.py` | Banking tool stubs | `banking_tools_group` |
 | `tool_intent_stubs.py` | Intent capture system | N/A (infrastructure) |
 | `self_evaluating_agent_with_feedback.py` | Self-eval wrapper (unified) | `self_evaluating_agent`, `self_evaluating_agent_with_feedback` |
-| `dynamo_llm_config.py` | Optimizable LLM config | `dynamo_openai` |
+
+> **Note**: LLM configuration uses NAT core's `dynamo` type (`_type: dynamo`) which provides 
+> prefix parameters with `OptimizableField` support. No custom LLM config is needed.
 
 ### Evaluators
 
@@ -459,8 +463,7 @@ outputs/dynamo_evals/<job_id>/
 
 | File | Purpose | Status |
 |------|---------|--------|
-| `dynamic_tool_loader.py` | Dynamic tool registration | See deprecation notes |
-| `prefix_utils.py` | Prefix ID management examples | See deprecation notes |
+| `prefix_utils.py` | Prefix ID management examples | **To be removed** - imports from non-existent module |
 
 ---
 
@@ -519,83 +522,3 @@ evaluators:
     llm_name: eval_llm      # Optional: for semantic goal matching
     strict_mode: false      # Allow semantic matching
 ```
-
----
-
-## Deprecation Analysis & Recommendations
-
-### Files to Consider Consolidating
-
-#### `dynamic_tool_loader.py` - Likely Unused
-
-**Current State:**
-- Provides `DynamicToolLoader` class for registering tools from dataset entries
-- Not imported in `register.py`
-- Not used in any configuration file
-
-**Issue:** 
-- `banking_tools.py` already handles tool registration via function groups
-- `DynamicToolLoader` appears to be an alternative approach that was superseded
-
-**Recommendation:** 
-- Verify no external usage
-- If unused, remove or move to `examples/` directory
-
----
-
-#### `prefix_utils.py` - Example/Documentation Code
-
-**Current State:**
-- Contains example functions for managing Dynamo prefix IDs
-- Re-exports functions from `nat.plugins.langchain.dynamo_prefix_headers`
-
-**Issue:**
-- Functions like `run_question_with_prefix()` are illustrative examples
-- `generate_benchmark_prefix()` duplicates logic in `dynamo_llm_config.py`
-
-**Recommendation:**
-- Move to `examples/` subdirectory
-- Or convert to unit tests demonstrating usage patterns
-
----
-
-#### ✅ Type Hints Consistency - RESOLVED
-
-**Status:** COMPLETED
-
-Standardized all type hints to Python 3.9+ style (`list[dict]`, `dict[str, Any]`).
-Removed `from typing import Dict` import from `tool_intent_stubs.py`.
-
----
-
-### Summary of Recommended Changes
-
-| Priority | File | Action | Status |
-|----------|------|--------|--------|
-| Low | `dynamic_tool_loader.py` | Remove if unused | Pending |
-| Low | `prefix_utils.py` | Move to examples/ | Pending |
-
----
-
-## Quick Reference
-
-### Running Standard Evaluation
-```bash
-nat eval --config_file configs/eval_config_no_rethinking_full_test.yml
-```
-
-### Running with Self-Evaluation
-```bash
-nat eval --config_file configs/eval_config_rethinking_full_test.yml
-```
-
-### Running Optimization
-```bash
-nat optimize --config_file configs/optimize_predictive_prefix_headers.yml
-```
-
-### Running with Profiling
-```bash
-nat eval --config_file configs/profile_predictive_prefix_headers.yml
-```
-

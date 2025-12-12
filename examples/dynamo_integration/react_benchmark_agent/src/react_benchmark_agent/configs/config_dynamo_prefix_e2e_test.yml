@@ -39,7 +39,7 @@ llms:
     # ===== DYNAMIC PREFIX CONFIGURATION =====
     # Automatically generates unique prefix ID per request
     # Format: "react-agent-{uuid}" where uuid is 16 hex chars
-    enable_dynamic_prefix: true
+    # Note: Setting prefix_template enables dynamic prefix headers
     prefix_template: "react-agent-{uuid}"
     prefix_total_requests: 1  # 1 for independent queries, higher for conversations
     prefix_osl: MEDIUM  # Output Sequence Length: LOW | MEDIUM | HIGH

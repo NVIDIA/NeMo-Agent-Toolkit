@@ -27,9 +27,9 @@ IMAGE="nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.6.1"
 SHM_SIZE="16g"
 
 # Infrastructure ports (changed to avoid conflicts with other users)
-ETCD_CLIENT_PORT=2389
+ETCD_CLIENT_PORT=2379
 ETCD_PEER_PORT=2390
-NATS_PORT=4232
+NATS_PORT=4222
 
 # Local paths
 LOCAL_MODEL_DIR="/raid/bbednarski/models/Llama-3.3-70B-Instruct"
@@ -396,12 +396,11 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo "NAT Integration Test:"
     echo "========================================================="
     echo ""
-    echo "cd /raid/bbednarski/NeMo-Agent-Toolkit"
-    echo "source /home/nfs/bbednarski/.venvs/nat_dynamo_eval2/bin/activate"
-    echo "export HF_HOME=~/.cache/huggingface"
+    echo "cd /path/to/NeMo-Agent-Toolkit"
+    echo "source .venv/bin/activate"
     echo ""
     echo "nat run \\"
-    echo "  --config_file examples/dynamo_integration/react_benchmark_agent/src/react_benchmark_agent/configs/config_dynamo_e2e_test.yml \\"
+    echo "  --config_file examples/dynamo_integration/react_benchmark_agent/configs/config_dynamo_e2e_test.yml \\"
     echo "  --input 'Hello'"
     echo ""
     echo "========================================================="

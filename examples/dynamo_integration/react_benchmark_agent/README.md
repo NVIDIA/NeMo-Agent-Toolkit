@@ -2,8 +2,7 @@
 
 This guide walks through the complete process of running decision-only evaluations using the `react_benchmark_agent`: downloading data, configuring evaluations, running experiments, and analyzing results.
 
-Currently this agent supports evaluation exculsivly for the [Galileo Agent Leaderboard v2](https://huggingface.co/datasets/galileo-ai/agent-leaderboard-v2).
-However, we plan to extend the set of evaluation tool sets and benchmarks and will update this document accordingly.
+Currently this agent supports evaluation exculsivly for the [Galileo Agent Leaderboard v2](https://huggingface.co/datasets/galileo-ai/agent-leaderboard-v2). However, we plan to extend the set of evaluation tool sets and benchmarks and will update this document accordingly.
 
 ## Table of Contents
 
@@ -71,7 +70,7 @@ export HF_TOKEN=<your_huggingface_token>
 Before running evaluations, ensure Dynamo is running:
 
 ```bash
-cd /path/to/NeMo-Agent-Toolkit/external/dynamo
+cd ../../../external/dynamo/ # NeMo-Agent-Toolkit/external/dynamo
 bash start_dynamo_unified.sh
 bash test_dynamo_integration.sh
 ```
@@ -91,7 +90,7 @@ See [Dynamo Setup Guide](../../../external/dynamo/README.md) for detailed config
 ### Download and Preprocess
 
 ```bash
-cd /path/to/NeMo-Agent-Toolkit/examples/dynamo_integration
+cd ../../examples/dynamo_integration # NeMo-Agent-Toolkit/examples/dynamo_integration
 source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 export HF_TOKEN=<your_huggingface_token>
 
@@ -105,10 +104,10 @@ python scripts/download_agent_leaderboard_v2.py --domains banking
 
 ### Create Test Subsets
 
-The minimal test config (`eval_config_no_rethinking_minimal_test.yml`) requires a test subset file. This configuration can be used for quick end-to-end tests, without running the entire dataset through `nat eval`. Create it with:
+The minimal test config (`eval_config_no_rethinking_minimal_test.yml`) requires a test subset. This configuration can be used for quick end-to-end tests, without running the entire dataset through `nat eval`. Create it with:
 
 ```bash
-cd /path/to/NeMo-Agent-Toolkit/examples/dynamo_integration
+# cd /path/to/NeMo-Agent-Toolkit/examples/dynamo_integration
 
 # 3-scenario subset for quick testing (required by eval_config_no_rethinking_minimal_test.yml)
 python scripts/create_test_subset.py \
@@ -151,8 +150,41 @@ Each scenario in the dataset contains:
 | `eval_config_rethinking_full_test.yml` | Self-evaluation loop | 100 scenarios | Quality optimization |
 | `profile_predictive_prefix_headers.yml` | Profiler + self-eval | 100 scenarios | Performance analysis |
 | `optimize_predictive_prefix_headers.yml` | Prefix header optimization | 100 scenarios | Dynamo Predictive KV-Aware Cache router tuning |
+| `config_dynamo_e2e_test.yml` | LangChain + Dynamo integration | Single query | Framework integration test |
+| `config_dynamo_prefix_e2e_test.yml` | LangChain + Dynamo with prefix headers | Single query | KV cache optimization test |
+| `config_dynamo_adk_e2e_test.yml` | Google ADK + Dynamo integration | Single query | ADK framework integration test |
 
 All config files are located in `react_benchmark_agent/configs/`.
+
+### Framework Integration Tests
+
+The Dynamo LLM provider supports multiple agent frameworks. Each framework has a dedicated e2e test configuration to verify the integration works correctly.
+
+#### Why Test ADK + Dynamo Integration?
+
+Google ADK (Agent Development Kit) is an increasingly popular framework for building AI agents. Testing the Dynamo + ADK integration is important because:
+
+1. **Different header injection mechanism**: ADK uses LiteLLM under the hood, which requires passing headers via `extra_headers` at client initialization time, unlike LangChain which uses httpx event hooks for per-request injection.
+
+2. **Conversation-level prefix ID consistency**: All requests from the same ADK client instance share the same prefix ID, which is ideal for KV cache optimization in multi-turn conversations.
+
+3. **Provider prefix requirements**: LiteLLM requires model names to be prefixed with the provider (for example, `openai/llama-3.3-70b`) for custom endpoints, which differs from LangChain's direct model name usage.
+
+#### Running ADK Integration Test
+
+```bash
+# Install ADK demo package (required for ADK workflow)
+cd ../../ # /path/to/NeMo-Agent-Toolkit
+pip install -e './examples/frameworks/adk_demo' # may need to use --no-deps depending on working branch version
+
+# Run the ADK + Dynamo integration test (basic I/O)
+nat run --config_file examples/dynamo_integration/react_benchmark_agent/configs/config_dynamo_adk_e2e_test.yml \
+    --input "Hello! What is 2+2?"
+```
+
+**Expected output**: The Dynamo prefix headers should be logged, and all LLM calls within the conversation will share the same prefix ID (for example, `adk-dynamo-test-7a31631c0ec24857`).
+
+> **Note**: The ADK e2e test is configured for **basic I/O testing only** (no tool calling). This is because ADK with LiteLLM requires OpenAI-style function calling support from the model endpoint, which vanilla llama models served via vLLM/Dynamo don't support out of the box. For tool-calling workflows with Dynamo, use the LangChain + ReAct agent configs (for example, `config_dynamo_prefix_e2e_test.yml`) which parse tool calls from text output.
 
 ### Key Configuration Sections
 
@@ -161,7 +193,7 @@ All config files are located in `react_benchmark_agent/configs/`.
 ```yaml
 llms:
   dynamo_llm:
-    _type: openai
+    _type: dynamo
     model_name: llama-3.3-70b
     base_url: http://localhost:8099/v1
     api_key: dummy
@@ -169,19 +201,27 @@ llms:
     max_tokens: 8192
     stop: ["Observation:", "\nThought:"]  # CRITICAL: Prevents observation hallucination
     
-    # Dynamic prefix headers (used by Thompson Sampling router)
-    enable_dynamic_prefix: true
-    prefix_template: "react-benchmark-{uuid}"
+    # Optional: Customize prefix headers (sent by default with "nat-dynamo-{uuid}")
+    # prefix_template: "react-benchmark-{uuid}"  # Custom template
     prefix_total_requests: 10
     prefix_osl: MEDIUM  # Output Sequence Length: LOW | MEDIUM | HIGH
     prefix_iat: MEDIUM  # Inter-Arrival Time: LOW | MEDIUM | HIGH
 ```
 
-> **Note**: The `enable_dynamic_prefix` and related prefix settings are used when running with the custom Predictive KVCache-Aware Thompson Sampling router (see [Dynamo Setup Guide](../../../external/dynamo/README.md)). These headers help the router make optimal routing decisions based on workload characteristics.
+> **Note**: The `dynamo` LLM type automatically sends prefix headers for KV cache optimization. Headers are enabled by default using the template `nat-dynamo-{uuid}`. You can customize the template with `prefix_template` or disable headers entirely by setting `prefix_template: null`. These headers help the Predictive KVCache-Aware Thompson Sampling router make optimal routing decisions (see [Dynamo Setup Guide](../../../external/dynamo/README.md)).
 
-#### Banking Tools Function Group
+#### Decision-Only Tool Configuration
+
+For TSQ evaluation, tools must be configured in decision-only mode:
 
 ```yaml
+functions:
+  react_benchmark_agent:
+    _type: react_benchmark_agent
+    prefix: "Agent:"
+    decision_only: true
+    canned_response_template: "Successfully executed {tool_name}. Operation completed."
+
 function_groups:
   banking_tools:
     _type: banking_tools_group
@@ -194,6 +234,8 @@ function_groups:
       # ... all 20 banking tools
     ]
 ```
+
+> **Note**: The `decision_only: true` setting is required for TSQ evaluation. It makes tools return canned responses instead of executing real banking operations. The `canned_response_template` defines the response format (for example, "Successfully executed {tool_name}"). This allows evaluation of tool *selection* without needing actual backend services.
 
 #### Workflow Configuration
 
@@ -249,7 +291,7 @@ eval:
 
 ```bash
 curl http://localhost:8099/health
-# Expected: HTTP 200 OK
+# Expected: HTTP 200 OK, else check dynamo runtime
 ```
 
 If Dynamo isn't running, see [Dynamo Setup Guide](../../../external/dynamo/README.md).
@@ -265,13 +307,13 @@ If Dynamo isn't running, see [Dynamo Setup Guide](../../../external/dynamo/READM
 > ```
 
 ```bash
-cd /path/to/NeMo-Agent-Toolkit
+# cd /path/to/NeMo-Agent-Toolkit
 source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 
 nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs/eval_config_no_rethinking_minimal_test.yml
 ```
 
-**Runtime**: ~2-3 minutes  
+**Runtime**: <1 minute  
 **Expected TSQ**: 0.3 - 0.6
 
 ### Run Full Evaluation (100 scenarios)
@@ -512,10 +554,10 @@ f1_score  = 2 × (0.667 × 0.500) / (0.667 + 0.500) = 0.571
 After evaluation, analyze token generation performance:
 
 ```bash
-cd /path/to/NeMo-Agent-Toolkit/examples/dynamo_integration
+cd examples/dynamo_integration # /path/to/NeMo-Agent-Toolkit/examples/dynamo_integration
 
 python scripts/throughput_analysis.py \
-  react_benchmark_agent/outputs/dynamo_evals/<job_id>/standardized_data_all.csv
+  react_benchmark_agent/outputs/dynamo_evals/<workflow_output_dir>/<job_id>/standardized_data_all.csv
 ```
 
 **Output metrics:**
@@ -559,24 +601,22 @@ Dataset Overview:
 Generate scatter plots comparing throughput metrics against TSQ scores:
 
 ```bash
-cd /path/to/NeMo-Agent-Toolkit/examples/dynamo_integration
+# cd /path/to/NeMo-Agent-Toolkit/examples/dynamo_integration
 
-python scripts/plot_throughput_vs_tsq_per_request.py \
-  react_benchmark_agent/outputs/dynamo_evals/jobs
-
-# Or with custom output directory
-python scripts/plot_throughput_vs_tsq_per_request.py \
-  react_benchmark_agent/outputs/dynamo_evals/jobs \
-  --output ./my_analysis_plots
+python scripts/plot_throughput_histograms_per_request.py \
+  react_benchmark_agent/outputs/dynamo_evals/<workflow-output-dir>/jobs
 ```
 
 **Generated plots:**
-- `ttft_vs_tsq.png` - Mean Time To First Token vs TSQ
-- `itl_vs_tsq.png` - Mean Inter-Token Latency vs TSQ
-- `tps_vs_tsq.png` - Mean Per-Request Throughput vs TSQ
-- `aggregate_tps_vs_tsq.png` - Aggregate Throughput vs TSQ
-- `summary_throughput_vs_tsq.png` - Multi-panel summary
-- `throughput_vs_tsq_data.csv` - Raw data for further analysis
+- `ttft_histogram.png` - Time To First Token distribution
+- `itl_histogram.png` - Inter-Token Latency distribution
+- `tps_histogram.png` - Tokens Per Second distribution
+- `total_tokens_histogram.png` - Total tokens per request distribution
+- `llm_calls_histogram.png` - LLM calls per request distribution
+- `total_duration_histogram.png` - Request duration distribution
+- `summary_throughput_histograms.png` - Multi-panel summary
+- `throughput_histogram_data.csv` - Aggregated histogram data
+- `throughput_histogram_per_llm_call_data.csv` - Per-LLM-call data
 
 ---
 
@@ -594,9 +634,9 @@ The `scripts/run_concurrency_benchmark.sh` script automates performance testing 
 ### Running the Benchmark
 
 ```bash
-cd /path/to/NeMo-Agent-Toolkit/examples/dynamo_integration
+# cd /path/to/NeMo-Agent-Toolkit/examples/dynamo_integration
 
-./scripts/run_concurrency_benchmark.sh
+./scripts/run_concurrency_benchmark.sh # could take ~30 minutes to run
 # When prompted, enter a unique name (e.g., "baseline_v1")
 ```
 
@@ -606,8 +646,8 @@ cd /path/to/NeMo-Agent-Toolkit/examples/dynamo_integration
 react_benchmark_agent/outputs/benchmarks/<name>_<timestamp>/
 ├── benchmark_results.csv          # Machine-readable CSV
 ├── benchmark_report.md            # Human-readable markdown
-├── analysis_2.txt                 # Detailed analysis for concurrency=2
-├── analysis_4.txt                 # Detailed analysis for concurrency=4
+├── analysis_16.txt                 # Detailed analysis for concurrency=16
+├── analysis_32.txt                 # Detailed analysis for concurrency=32
 └── ...
 ```
 
@@ -620,39 +660,6 @@ itl_mean_ms,itl_median_ms,itl_p90_ms,itl_p95_ms,
 throughput_mean_toks,throughput_median_toks,...
 ```
 
-### Comparing Configurations
-
-```bash
-# Run baseline benchmark
-./scripts/run_concurrency_benchmark.sh  # Enter: "baseline_v1"
-
-# Make changes to Dynamo config or code
-
-# Run comparison benchmark
-./scripts/run_concurrency_benchmark.sh  # Enter: "optimized_v1"
-
-# Compare results
-diff react_benchmark_agent/outputs/benchmarks/baseline_v1_*/benchmark_results.csv \
-     react_benchmark_agent/outputs/benchmarks/optimized_v1_*/benchmark_results.csv
-```
-
-### Analyzing Results with Python
-
-```python
-import pandas as pd
-import matplotlib.pyplot as plt
-
-# Load results
-df = pd.read_csv('react_benchmark_agent/outputs/benchmarks/my_benchmark_*/benchmark_results.csv')
-
-# Plot throughput vs concurrency
-plt.plot(df['concurrency'], df['throughput_mean_toks'])
-plt.xlabel('Concurrency')
-plt.ylabel('Throughput (tok/s)')
-plt.title('Throughput vs Concurrency')
-plt.show()
-```
-
 ### Expected Runtime
 
 - Each eval run: 15-30 minutes (depends on dataset size)
@@ -661,7 +668,7 @@ plt.show()
 
 ### Customization
 
-Edit `scripts/run_concurrency_benchmark.sh` to change concurrency levels:
+Edit `scripts/run_concurrency_benchmark.sh` to change concurrency levels, for example:
 
 ```bash
 # Change concurrency levels (around line 66)
@@ -702,7 +709,28 @@ workflow:
 
 **Symptom**: `actual_tool_calls: 0`
 
-**Fix**: Check logs for "Tool stub executed" - if missing, tools aren't running
+**Cause**: Tools aren't being executed or tool stubs aren't configured for decision-only mode.
+
+**Fix**: 
+1. Check logs for "Tool stub executed" - if missing, tools aren't running
+2. Ensure your function and function_groups configs have `decision_only: true` and a `canned_response_template`:
+
+```yaml
+functions:
+  react_benchmark_agent:
+    _type: react_benchmark_agent
+    prefix: "Agent:"
+    decision_only: true
+    canned_response_template: "Successfully executed {tool_name}. Operation completed."
+
+function_groups:
+  banking_tools:
+    _type: banking_tools_group
+    tools_json_path: ./examples/dynamo_integration/data/raw/banking/tools.json
+    decision_only: true
+```
+
+Both `decision_only: true` settings are required. The `canned_response_template` defines the mock response format returned by tools. See [Decision-Only Tool Configuration](#decision-only-tool-configuration) for details.
 
 ### Module Not Found
 
@@ -761,6 +789,83 @@ bash start_dynamo_unified.sh
 ```
 
 See [Dynamo Setup Guide](../../../external/dynamo/README.md) for detailed troubleshooting.
+
+---
+
+## Quick Reference
+
+All commands should be run from the NeMo-Agent-Toolkit repository root.
+
+### End-to-End Tests (Workflow Runs)
+
+```bash
+# Basic Dynamo connectivity test
+nat run --config_file examples/dynamo_integration/react_benchmark_agent/configs/config_dynamo_e2e_test.yml \
+  --input "What time is it?"
+
+# Dynamo with prefix headers (for KV cache optimization)
+nat run --config_file examples/dynamo_integration/react_benchmark_agent/configs/config_dynamo_prefix_e2e_test.yml \
+  --input "What time is it?"
+
+# ADK + Dynamo integration test
+nat run --config_file examples/dynamo_integration/react_benchmark_agent/configs/config_dynamo_adk_e2e_test.yml \
+  --input "Hello! What is 2+2?"
+```
+
+### Evaluations
+
+```bash
+# Quick validation (3 scenarios, ~1 minute)
+nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs/eval_config_no_rethinking_minimal_test.yml
+
+# Full evaluation without self-evaluation (100 scenarios, ~5-10 min)
+nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs/eval_config_no_rethinking_full_test.yml
+
+# Full evaluation with self-evaluation loop (100 scenarios, ~45 min)
+nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs/eval_config_rethinking_full_test.yml
+```
+
+### Optimization
+
+```bash
+# Optimize Dynamo prefix header parameters for the Predictive KV-Aware Thompson Sampling router
+# 
+# Parameters optimized:
+#   - prefix_total_requests: Expected requests per prefix (search space: 1-20, step 5)
+#   - prefix_osl: Output Sequence Length hint (LOW | MEDIUM | HIGH)
+#   - prefix_iat: Inter-Arrival Time hint (LOW | MEDIUM | HIGH)
+#
+# Objectives (multi-objective optimization, all minimized):
+#   - avg_llm_latency (70% weight) - Primary: reduce LLM response time
+#   - avg_workflow_runtime (20% weight) - Secondary: reduce total task time
+#   - avg_num_llm_calls (10% weight) - Tertiary: improve efficiency
+#
+# Uses grid search over the parameter space to find optimal routing hints.
+# WARNING: this run could use MANY tokens - be mindful and run at your own risk.
+nat optimize --config_file examples/dynamo_integration/react_benchmark_agent/configs/optimize_predictive_prefix_headers.yml
+```
+
+### Profiling
+
+```bash
+# Profile with comprehensive LLM and workflow metrics
+#
+# Metrics collected:
+#   - TTFT (Time To First Token) - measures prompt processing latency
+#   - ITL (Inter-Token Latency) - measures token generation speed
+#   - Throughput (tokens/second) - measures generation efficiency
+#   - Token usage patterns and forecasting
+#   - Bottleneck analysis with nested call stacks
+#   - Concurrency spike detection
+#
+# Output: standardized_data_all.csv for Pareto optimality analysis
+# Use with: python scripts/throughput_analysis.py <output_dir>/standardized_data_all.csv
+#
+# The Pareto analysis identifies configurations that are optimal trade-offs
+# between latency, throughput, and quality (TSQ). No single point dominates
+# all others across all objectives - these form the Pareto frontier.
+nat profile --config_file examples/dynamo_integration/react_benchmark_agent/configs/profile_predictive_prefix_headers.yml
+```
 
 ---
 
