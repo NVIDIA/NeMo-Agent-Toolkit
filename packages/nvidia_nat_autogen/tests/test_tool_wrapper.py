@@ -88,8 +88,8 @@ class TestResolveType:
 class TestAutoGenToolWrapper:
     """Test cases for autogen_tool_wrapper function."""
 
-    @pytest.fixture
-    def mock_function(self):
+    @pytest.fixture(name="mock_function")
+    def fixture_mock_function(self):
         """Create a mock NAT function."""
         mock_fn = Mock(spec=Function)
         mock_fn.description = "Test function description"
@@ -100,8 +100,8 @@ class TestAutoGenToolWrapper:
         mock_fn.acall_stream = AsyncMock()
         return mock_fn
 
-    @pytest.fixture
-    def mock_builder(self):
+    @pytest.fixture(name="mock_builder")
+    def fixture_mock_builder(self):
         """Create a mock builder."""
         return Mock(spec=Builder)
 

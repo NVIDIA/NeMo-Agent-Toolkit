@@ -41,7 +41,8 @@ class MockRetryConfig(LLMBaseConfig, RetryMixin):
 class MockThinkingConfig(LLMBaseConfig, ThinkingMixin):
     """Mock config with thinking mixin."""
 
-    thinking_system_prompt: str = "Think step by step"
+    model_name: str = "nvidia/nvidia-nemotron-test"  # Match pattern for thinking support
+    thinking: bool | None = True  # Enable thinking to get system prompt
 
 
 class MockCombinedConfig(LLMBaseConfig, RetryMixin, ThinkingMixin):
@@ -50,7 +51,8 @@ class MockCombinedConfig(LLMBaseConfig, RetryMixin, ThinkingMixin):
     num_retries: int = 3
     retry_on_status_codes: list = [500, 502, 503]
     retry_on_errors: list[Any] | None = ["timeout"]
-    thinking_system_prompt: str = "Think step by step"
+    model_name: str = "nvidia/nvidia-nemotron-test"  # Match pattern for thinking support
+    thinking: bool | None = True  # Enable thinking to get system prompt
 
 
 class TestPatchAutoGenClient:
@@ -92,7 +94,7 @@ class TestPatchAutoGenClient:
         mock_patch_thinking.return_value = mock_patched_client
 
         # Create a real thinking config instance
-        thinking_config = MockThinkingConfig(thinking_system_prompt="Think step by step")
+        thinking_config = MockThinkingConfig()
 
         result = _patch_autogen_client_based_on_config(mock_client, thinking_config)
 
