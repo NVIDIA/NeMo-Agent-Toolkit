@@ -29,34 +29,53 @@ import pytest
 import requests
 
 CODE_BLOCKS = {
-        "hello_world": {"code": "print('Hello, World!')", "expected_output": "Hello, World!"},
-        "simple_addition": {"code": """
+    "hello_world": {
+        "code": "print('Hello, World!')", "expected_output": "Hello, World!"
+    },
+    "simple_addition": {
+        "code": """
          result = 2 + 3
          print(f'Result: {result}')
-         """, "expected_output": "Result: 5"},
-        "numpy_mean": {"code": """
+         """,
+        "expected_output": "Result: 5"
+    },
+    "numpy_mean": {
+        "code":
+            """
          import numpy as np
          arr = np.array([1, 2, 3, 4, 5])
          print(f'Array: {arr}')
          print(f'Mean: {np.mean(arr)}')
          """,
-         "expected_output": "Mean: 3.0"},
-        "pandas_operations": {"code": """
+        "expected_output":
+            "Mean: 3.0"
+    },
+    "pandas_operations": {
+        "code":
+            """
          import pandas as pd
          df = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})
          print(df)
          print(f'Sum of column A: {df["A"].sum()}')
          """,
-         "expected_output": "Sum of column A: 6"},
-        "plotly_import": {"code": """
+        "expected_output":
+            "Sum of column A: 6"
+    },
+    "plotly_import": {
+        "code":
+            """
          import plotly.graph_objects as go
          print('Plotly imported successfully')
          fig = go.Figure()
          fig.add_trace(go.Scatter(x=[1, 2, 3], y=[4, 5, 6]))
          print('Plot created successfully')
          """,
-         "expected_output": "Plot created successfully"},
-        "file_operations": {"code": """
+        "expected_output":
+            "Plot created successfully"
+    },
+    "file_operations": {
+        "code":
+            """
          import os
          print(f'Current directory: {os.getcwd()}')
          with open('test_file.txt', 'w') as f:
@@ -67,8 +86,12 @@ CODE_BLOCKS = {
          os.remove('test_file.txt')
          print('File operations completed')
          """,
-         "expected_output": "File operations completed"},
-        "persistence_creation": {"code": """
+        "expected_output":
+            "File operations completed"
+    },
+    "persistence_creation": {
+        "code":
+            """
          import os
          import pandas as pd
          import numpy as np
@@ -92,8 +115,12 @@ CODE_BLOCKS = {
              if 'persistence_test' in file:
                  print('  -', file)
          """,
-         "expected_output": "persistence_test.npy"},
-        "persistence_readback": {"code": """
+        "expected_output":
+            "persistence_test.npy"
+    },
+    "persistence_readback": {
+        "code":
+            """
          import pandas as pd
          import numpy as np
 
@@ -115,8 +142,12 @@ CODE_BLOCKS = {
 
          print('\\n=== File persistence test PASSED! ===')
          """,
-         "expected_output": "File persistence test PASSED!"},
-         "json_persistence": {"code": """
+        "expected_output":
+            "File persistence test PASSED!"
+    },
+    "json_persistence": {
+        "code":
+            """
          import json
          import os
 
@@ -150,8 +181,11 @@ CODE_BLOCKS = {
          print(f'Metrics: {loaded_data["metrics"]}')
          print('JSON persistence test completed!')
          """,
-         "expected_output": "JSON persistence test completed!"}
+        "expected_output":
+            "JSON persistence test completed!"
+    }
 }
+
 
 @pytest.fixture(name="local_sandbox_url", scope="session", autouse=True)
 def sandbox_url_fixture(local_sandbox_url: str) -> str:
@@ -260,19 +294,18 @@ def run_workflow_code(config_path: Path,
 
 @pytest.mark.slow
 @pytest.mark.integration
-@pytest.mark.parametrize(
-    "code_block_key",
-[
-        "hello_world",
-        "simple_addition",
-        "numpy_mean",
-        "pandas_operations",
-        "plotly_import",
-        "file_operations",
-        "persistence_creation",
-        "persistence_readback",
-        "json_persistence"
-    ])
+@pytest.mark.parametrize("code_block_key",
+                         [
+                             "hello_world",
+                             "simple_addition",
+                             "numpy_mean",
+                             "pandas_operations",
+                             "plotly_import",
+                             "file_operations",
+                             "persistence_creation",
+                             "persistence_readback",
+                             "json_persistence"
+                         ])
 @pytest.mark.parametrize("sandbox_type", ["local", "local_workflow", "piston_workflow"])
 def test_code(code_block_key: str,
               sandbox_type: str,
