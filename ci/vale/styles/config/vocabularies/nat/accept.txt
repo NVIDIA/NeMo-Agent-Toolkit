@@ -62,8 +62,8 @@ etcd
 [Ee]xfiltration
 [Ee]xplainability
 Faiss
-[F]finetuning
-[F]finetunable
+[Ff]inetuning
+[Ff]inetunable
 Gantt
 [Gg]eneratable
 GitHub
