@@ -106,14 +106,14 @@ class OAuth2ValidationMiddleware(BaseHTTPMiddleware):
             return JSONResponse({"error": "invalid_token", "message": "Token is not active"}, status_code=403)
 
         # Attach token info to request state for potential use by handlers
-        request.state.oauth_user = result.sub
+        request.state.oauth_user = result.subject
         request.state.oauth_scopes = result.scopes or []
         request.state.oauth_client_id = result.client_id
         request.state.oauth_token_info = result
 
         logger.debug(
             "Token validated successfully (user=%s, scopes=%s, client=%s)",
-            result.sub,
+            result.subject,
             result.scopes,
             result.client_id,
         )

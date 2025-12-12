@@ -35,12 +35,12 @@ general:
       # Keycloak issuer URL
       issuer_url: http://localhost:8080/realms/master
 
-      # Required scopes
-      scopes:
-        - calculator_a2a:execute
+      # Required scopes (commented out for initial testing)
+      # scopes:
+      #   - calculator_a2a:execute
 
-      # Expected audience (optional)
-      audience: http://localhost:10000
+      # Expected audience (commented out for initial testing)
+      # audience: http://localhost:10000
 
       # JWT validation via JWKS URI (Keycloak provides this!)
       jwks_uri: http://localhost:8080/realms/master/protocol/openid-connect/certs
