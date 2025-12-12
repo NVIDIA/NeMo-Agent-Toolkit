@@ -163,6 +163,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "mistralai/[Mm]ixtral.*",
     "microsoft/[Pp]hi.*",
     "ssmits/[Qq]wen.*",
+    "Qwen/Qwen.*",
     "deepseek-ai/deepseek-.*",  #
     # MIME types
     "(application|text|image|video|audio|model|dataset|token|other)/.*",  #
