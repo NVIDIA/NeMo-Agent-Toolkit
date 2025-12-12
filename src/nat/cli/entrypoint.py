@@ -39,6 +39,7 @@ from .commands.info.info import info_command
 from .commands.mcp.mcp import mcp_command
 from .commands.object_store.object_store import object_store_command
 from .commands.optimize import optimizer_command
+from .commands.red_teaming.red_teaming import red_team_command
 from .commands.registry.registry import registry_command
 from .commands.sizing.sizing import sizing
 from .commands.start import start_command
@@ -105,6 +106,7 @@ def cli(ctx: click.Context, log_level: str):
 cli.add_command(configure_command, name="configure")
 cli.add_command(eval_command, name="eval")
 cli.add_command(info_command, name="info")
+cli.add_command(red_team_command, name="red-team")
 cli.add_command(registry_command, name="registry")
 cli.add_command(start_command, name="start")
 cli.add_command(uninstall_command, name="uninstall")

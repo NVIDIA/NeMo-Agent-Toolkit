@@ -133,7 +133,6 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
             return
 
         logger.info(f"Building middleware for function '{self.instance_name}' in order of: {middleware_tuple}")
-
         context = FunctionMiddlewareContext(name=self.instance_name,
                                             config=self.config,
                                             description=self.description,
@@ -747,6 +746,9 @@ class FunctionGroup:
     def set_instance_name(self, instance_name: str):
         """
         Sets the instance name for the function group.
+        Also updates all child function instance names to match the new group instance name,
+        preserving each function's suffix. This ensures naming consistency and prevents
+        mismatched names when the workflow builder assigns an instance name to the function group.
 
         Parameters
         ----------
@@ -754,6 +756,11 @@ class FunctionGroup:
             The instance name to set for the function group.
         """
         self._instance_name = instance_name
+        for func in self._functions.values():
+            current_instance_name = func.instance_name
+            suffix = current_instance_name.split('.')[-1]
+            new_instance_name = f"{instance_name}.{suffix}"
+            func.instance_name = new_instance_name
 
     @property
     def instance_name(self) -> str:
