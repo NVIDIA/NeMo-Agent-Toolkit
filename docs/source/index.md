@@ -152,6 +152,7 @@ Middleware <./reference/middleware.md>
 Optimizer <./reference/optimizer.md>
 Test Time Compute <./reference/test-time-compute.md>
 Troubleshooting <./troubleshooting.md>
+Finetuning <./reference/finetuning/index.md>
 ```
 
 ```{toctree}

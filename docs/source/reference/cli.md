@@ -40,6 +40,7 @@ nat
 │       ├── remove
 │       └── update
 ├── eval
+├── finetune
 ├── info
 │   ├── channels
 │   └── components
@@ -546,6 +547,115 @@ Options:
                               [default: 1]
   --help                      Show this message and exit.
 ```
+
+## Finetune
+
+:::{warning}
+**Experimental Feature**: The Finetuning Harness is experimental and may change in future releases. Future versions may introduce breaking changes without notice.
+:::
+
+The `nat finetune` command provides access to the finetuning harness for **in-situ reinforcement learning** of agentic LLM workflows. This enables iterative improvement of agents through experience, allowing models to learn from their interactions with environments, tools, and users.
+
+The finetuning process:
+1. Loads the configuration with finetuning settings
+2. Initializes the finetuning runner
+3. Runs evaluation to collect trajectories
+4. Submits trajectories for training
+5. Monitors training progress
+
+For detailed information on finetuning concepts, configuration, and extending the harness, see the [Finetuning Harness](../reference/finetuning/index.md) documentation.
+
+The `nat finetune --help` utility provides a brief overview of the command and its available options:
+
+```console
+$ nat finetune --help
+Usage: nat finetune [OPTIONS]
+
+  Run finetuning on a workflow using collected trajectories.
+
+Options:
+  --config_file FILE              Path to the configuration file containing
+                                  finetuning settings  [required]
+  --dataset FILE                  A json file with questions and ground truth
+                                  answers. This will override the dataset path
+                                  in the config file.
+  --result_json_path TEXT         A JSON path to extract the result from the
+                                  workflow. Use this when the workflow returns
+                                  multiple objects or a dictionary. For
+                                  example, '$.output' will extract the 'output'
+                                  field from the result.  [default: $]
+  --endpoint TEXT                 Use endpoint for running the workflow.
+                                  Example: http://localhost:8000/generate
+  --endpoint_timeout INTEGER      HTTP response timeout in seconds. Only
+                                  relevant if endpoint is specified.
+                                  [default: 300]
+  -o, --override <TEXT TEXT>...   Override config values (e.g., -o
+                                  finetuning.num_epochs 5)
+  --validation_dataset FILE       Validation dataset file path for periodic
+                                  validation
+  --validation_interval INTEGER   Run validation every N epochs  [default: 5]
+  --validation_config_file FILE   Optional separate config file for validation
+                                  runs
+  --help                          Show this message and exit.
+```
+
+### Options Description
+
+- **`--config_file`**: The main configuration file containing both the workflow configuration and finetuning settings. The file must include a `finetuning` section that defines the training parameters, trajectory builder, trainer adapter, and reward function.
+
+- **`--dataset`**: Path to a JSON file containing the training dataset with questions and ground truth answers. If provided, this will override the dataset path specified in the configuration file.
+
+- **`--result_json_path`**: A JSON path expression to extract the relevant result from the workflow output. This is useful when your workflow returns complex objects or dictionaries. The default value `$` uses the entire output.
+
+- **`--endpoint`**: Instead of running the workflow locally, you can specify an HTTP endpoint where the workflow is deployed. This is useful for distributed training scenarios.
+
+- **`--endpoint_timeout`**: When using the `--endpoint` option, this sets the maximum time (in seconds) to wait for a response from the remote service.
+
+- **`-o, --override`**: Override configuration values using dot notation. Multiple overrides can be specified.
+
+- **`--validation_dataset`**: Path to a separate validation dataset for periodic evaluation during training. This helps monitor generalization and detect overfitting.
+
+- **`--validation_interval`**: How often (in epochs) to run validation. Default is every 5 epochs.
+
+- **`--validation_config_file`**: An optional separate configuration file for validation runs. If not specified, the main config file is used for both training and validation.
+
+### Examples
+
+Basic finetuning with a configuration file:
+
+<!-- path-check-skip-begin -->
+```bash
+nat finetune --config_file=configs/finetune.yml
+```
+<!-- path-check-skip-end -->
+
+Override the number of training epochs:
+
+<!-- path-check-skip-begin -->
+```bash
+nat finetune --config_file=configs/finetune.yml -o finetuning.num_epochs 20
+```
+<!-- path-check-skip-end -->
+
+Run finetuning with validation monitoring:
+
+<!-- path-check-skip-begin -->
+```bash
+nat finetune --config_file=configs/finetune.yml \
+    --validation_dataset=data/validation.json \
+    --validation_interval=3
+```
+<!-- path-check-skip-end -->
+
+Use a remote endpoint for workflow execution:
+
+<!-- path-check-skip-begin -->
+```bash
+nat finetune --config_file=configs/finetune.yml \
+    --endpoint=http://localhost:8000/generate \
+    --endpoint_timeout=600
+```
+<!-- path-check-skip-end -->
 
 ## Optimize
 

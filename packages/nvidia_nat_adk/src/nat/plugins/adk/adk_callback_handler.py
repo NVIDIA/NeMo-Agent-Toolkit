@@ -261,7 +261,7 @@ class ADKProfilerHandler(BaseProfilerCallback):
                 event_type=IntermediateStepType.LLM_START,
                 framework=LLMFrameworkEnum.ADK,
                 name=model_name,
-                data=StreamEventData(input=model_input),
+                data=StreamEventData(input=model_input, payload=kwargs.get("messages", [])),
                 metadata=TraceMetadata(chat_inputs=copy.deepcopy(kwargs.get("messages", []))),
                 usage_info=UsageInfo(
                     token_usage=TokenUsageBaseModel(),
@@ -279,9 +279,13 @@ class ADKProfilerHandler(BaseProfilerCallback):
                 raise RuntimeError("Original LLM function is None - instrumentation may not have been set up correctly")
             output = await original_func(*args, **kwargs)
 
+            choice_dump = None
             model_output = []
             try:
                 for choice in output.choices:
+                    if not choice_dump:
+                        choice_dump = choice.model_dump() if hasattr(
+                            choice, "model_dump") else getattr(choice, "__dict__", {}) or {}
                     msg = choice.message
                     model_output.append(msg.content or "")
             except Exception as _e:
@@ -317,7 +321,7 @@ class ADKProfilerHandler(BaseProfilerCallback):
                 span_event_timestamp=now,
                 framework=LLMFrameworkEnum.ADK,
                 name=model_name,
-                data=StreamEventData(input=model_input, output=model_output),
+                data=StreamEventData(input=model_input, output=model_output, payload=choice_dump),
                 metadata=TraceMetadata(chat_responses=chat_resp),
                 usage_info=UsageInfo(
                     token_usage=TokenUsageBaseModel(**usage_payload),
