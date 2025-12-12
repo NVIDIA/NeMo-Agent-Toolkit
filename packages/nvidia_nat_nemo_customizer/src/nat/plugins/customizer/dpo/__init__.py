@@ -33,9 +33,11 @@ from .trajectory_builder import DPOTrajectoryBuilder
 __all__ = [
     # Trajectory Builder
     "DPOTrajectoryBuilderConfig",
-    "DPOTrajectoryBuilder",  # Trainer
+    "DPOTrajectoryBuilder",  #
+    # Trainer
     "NeMoCustomizerTrainerConfig",
-    "NeMoCustomizerTrainer",  # TrainerAdapter
+    "NeMoCustomizerTrainer",  #
+    # TrainerAdapter
     "NeMoCustomizerTrainerAdapterConfig",
     "NeMoCustomizerTrainerAdapter",
     "NeMoCustomizerHyperparameters",
