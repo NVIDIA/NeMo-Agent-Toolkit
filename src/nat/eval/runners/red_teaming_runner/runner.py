@@ -512,9 +512,6 @@ class RedTeamingRunner:
             key for key in general_dict.keys()
             if key in existing_general and existing_general[key] != general_dict[key]
         ]
-        print("OVERRIDDEN FIELDS: ", overridden_fields)
-        print("GENERAL DICT: ", general_dict)
-        print("EXISTING GENERAL: ", existing_general)
         existing_general.update(general_dict)
 
         if overridden_fields:
@@ -823,6 +820,7 @@ class RedTeamingRunner:
                             "reasoning": condition_result.reasoning,
                             "evaluated_output": evaluated_output,
                             "error_message": condition_result.error_message,
+                            "tags": self.config.scenarios[scenario_id].tags if self.config is not None else [],
                         }
                         flat_results.append(flat_record)
 

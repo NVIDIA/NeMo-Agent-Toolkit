@@ -88,6 +88,7 @@ class RedTeamingMiddleware(FunctionMiddleware):
         target_location: Literal["input", "output"] = "input",
         target_field: str | None = None,
         target_field_resolution_strategy: Literal["random", "first", "last", "all", "error"] = "error",
+        call_limit: int | None = None,
     ) -> None:
         """Initialize red teaming middleware.
 
@@ -103,6 +104,9 @@ class RedTeamingMiddleware(FunctionMiddleware):
                 - last: Choose the last field match
                 - all: Choose all field matches
                 - error: Raise an error if multiple field matches are found.
+            call_limit: Maximum number of times the middleware will apply a payload.
+                       A middleware might be called but not apply a payload. Such cases
+                       do not count towards the max_calls.
         """
         super().__init__(is_final=False)
         self._attack_payload = attack_payload
@@ -111,7 +115,8 @@ class RedTeamingMiddleware(FunctionMiddleware):
         self._target_location = target_location
         self._target_field = target_field
         self._target_field_resolution_strategy = target_field_resolution_strategy
-
+        self._call_count: int = 0  # Count the number of times the middleware has applied a payload
+        self._call_limit = call_limit
         logger.info(
             "RedTeamingMiddleware initialized: payload=%s, target=%s, placement=%s, location=%s, field=%s",
             attack_payload,
@@ -284,12 +289,18 @@ class RedTeamingMiddleware(FunctionMiddleware):
         return value_to_modify
 
     def _apply_payload_to_function_value(self, value: Any) -> Any:
+        if self._call_limit is not None and self._call_count >= self._call_limit:
+            logger.warning("Call limit reached for red teaming middleware. "
+                           "Not applying attack payload to value: %s", value)
+            return value
         if isinstance(value, list | dict | BaseModel):
-            return self._apply_payload_to_complex_type(value)
+            modified_value = self._apply_payload_to_complex_type(value)
         elif isinstance(value, str | int | float):
-            return self._apply_payload_to_simple_type(value, self._attack_payload, self._payload_placement)
+            modified_value = self._apply_payload_to_simple_type(value, self._attack_payload, self._payload_placement)
         else:
             raise ValueError(f"Unsupported function input/output type: {type(value).__name__}")
+        self._call_count += 1
+        return modified_value
 
     async def function_middleware_invoke(
         self, value: Any, call_next: CallNext, context: FunctionMiddlewareContext

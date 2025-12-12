@@ -52,4 +52,5 @@ async def red_teaming_middleware(config: RedTeamingMiddlewareConfig, builder):
                                payload_placement=config.payload_placement,
                                target_location=config.target_location,
                                target_field=config.target_field,
-                               target_field_resolution_strategy=config.target_field_resolution_strategy)
+                               target_field_resolution_strategy=config.target_field_resolution_strategy,
+                               call_limit=config.call_limit)

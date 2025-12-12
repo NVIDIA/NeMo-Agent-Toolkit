@@ -64,6 +64,11 @@ class _RedTeamingScenarioRaw(BaseModel):
         description="Evaluator as dict, potentially with _extends field."
     )
 
+    tags: list[str] = Field(
+        default=[],
+        description="Tags for bookkeeping and categorization of scenarios."
+    )
+
 
 class RedTeamingScenario(BaseModel):
     """A single red teaming scenario configuration.
@@ -94,6 +99,11 @@ class RedTeamingScenario(BaseModel):
 
     evaluator: RedTeamingEvaluatorConfig = Field(
         description="Complete evaluator configuration for this scenario."
+    )
+
+    tags: list[str] = Field(
+        default=[],
+        description="Tags for bookkeeping and categorization of scenarios."
     )
 class RedTeamingRunnerConfig(BaseModel):
     """Top-level configuration for red teaming evaluation.
@@ -145,6 +155,7 @@ class RedTeamingRunnerConfig(BaseModel):
               scenario_specific_instructions: "Check for 42.0..."
 
           custom_scenario:
+            tags: [category_1, category_2]
             middleware: {...}
             evaluator:
               # Can also provide complete config without _extends
@@ -196,6 +207,7 @@ class RedTeamingRunnerConfig(BaseModel):
 
         for scenario_key, scenario in self.scenarios.items():
             scenario_id = scenario.scenario_id or scenario_key
+            scenario.scenario_id = scenario_id
 
             if isinstance(scenario, _RedTeamingScenarioRaw):
                 # Raw scenario with dict evaluator - resolve _extends
@@ -208,7 +220,9 @@ class RedTeamingRunnerConfig(BaseModel):
                         available = list(self.evaluator_defaults.keys()) if self.evaluator_defaults else []
                         raise ValueError(
                             f"Scenario '{scenario_id}' references evaluator_defaults "
-                            f"'{extends_key}' which doesn't exist. Available: {available}"
+                            f"'{extends_key}' which doesn't exist. Available: {available}."
+                            f"If attempting to extend a default evaluator, make sure the required default evaluator is"
+                            "defined in the evaluator_defaults section."
                         )
 
                     # Shallow merge: base config dict + overrides
@@ -220,17 +234,12 @@ class RedTeamingRunnerConfig(BaseModel):
                     merged_dict = {**base_dict, **overrides}
 
                     # Validate merged config
-                    resolved_evaluator = RedTeamingEvaluatorConfig(**merged_dict)
-                else:
-                    # Dict without _extends - just validate as-is
-                    resolved_evaluator = RedTeamingEvaluatorConfig(**evaluator_dict)
+                    evaluator_dict = merged_dict
 
+                scenario_dict = scenario.model_dump(mode='python')
+                scenario_dict['evaluator'] = evaluator_dict
                 # Create proper RedTeamingScenario
-                converted_scenarios[scenario_id] = RedTeamingScenario(
-                    scenario_id=scenario_id,
-                    middleware=scenario.middleware,
-                    evaluator=resolved_evaluator
-                )
+                converted_scenarios[scenario_id] = RedTeamingScenario(**scenario_dict)
             else:
                 # Already a proper RedTeamingScenario, ensure scenario_id is set
                 if scenario.scenario_id is None:

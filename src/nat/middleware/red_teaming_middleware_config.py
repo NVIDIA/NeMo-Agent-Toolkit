@@ -126,5 +126,11 @@ class RedTeamingMiddlewareConfig(FunctionMiddlewareBaseConfig, name="red_teaming
         ),
     )
 
+    call_limit: int | None = Field(
+        default=None,
+        description="Maximum number of times the middleware will apply a payload. "
+        "A middleware might be called but not apply a payload. Such cases do not count towards the call limit.",
+    )
+
 __all__ = ["RedTeamingMiddlewareConfig"]
 
