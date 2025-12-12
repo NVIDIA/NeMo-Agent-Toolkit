@@ -5300,7 +5300,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "numpy", specifier = ">=1.24.0" },
+    { name = "numpy", marker = "python_full_version < '3.12'", specifier = "~=1.26" },
+    { name = "numpy", marker = "python_full_version >= '3.12'", specifier = "~=2.3" },
     { name = "nvidia-nat", extras = ["langchain"], editable = "." },
 ]
 
@@ -6536,7 +6537,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "nemo-microservices", specifier = "==1.4.0" },
+    { name = "nemo-microservices", specifier = "~=1.4" },
     { name = "nvidia-nat", editable = "." },
 ]
 
