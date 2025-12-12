@@ -15,8 +15,8 @@
 
 
 general:
-  per_user_workflow_timeout: 30
-  per_user_workflow_cleanup_interval: 5
+  per_user_workflow_timeout: 1800 # 30 minutes
+  per_user_workflow_cleanup_interval: 300 # 5 minutes
 
 functions:
   notepad:

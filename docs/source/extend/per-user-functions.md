@@ -83,7 +83,7 @@ async def my_per_user_function(config: MyPerUserFunctionConfig, builder: Builder
 
 ### Required Schema Parameters
 
-Unlike the regular `@register_function` decorator, `@register_per_user_function` requires explicit schema definitions because per-user functions are instantiated lazily. The schemas enable OpenAPI documentation generation without requiring a concrete function instance at startup.
+Unlike the regular `@register_function` decorator, `@register_per_user_function` requires explicit schema definitions because per-user functions are instantiated lazily. The schemas enable documentation generation without requiring a concrete function instance at startup.
 
 
 ### Schema Type Flexibility

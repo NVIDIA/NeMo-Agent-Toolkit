@@ -20,6 +20,6 @@ with NAT's plugin system.
 """
 
 # Import to trigger registration
-from nat_per_user_workflow.per_user_functions import per_user_notepad  # noqa: F401
-from nat_per_user_workflow.per_user_functions import per_user_preferences  # noqa: F401
-from nat_per_user_workflow.per_user_workflow import per_user_assistant_workflow  # noqa: F401
+from nat_per_user_workflow.per_user_functions import per_user_notepad
+from nat_per_user_workflow.per_user_functions import per_user_preferences
+from nat_per_user_workflow.per_user_workflow import per_user_assistant_workflow
