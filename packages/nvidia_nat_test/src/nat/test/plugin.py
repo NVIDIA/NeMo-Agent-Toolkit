@@ -838,6 +838,23 @@ def sandbox_config_fixture(local_sandbox_url: str) -> dict[str, typing.Any]:
     }
 
 
+def _ensure_piston_python_installed(piston_url: str, python_version: str):
+    import requests
+    response = requests.get(f"{piston_url}/runtimes", timeout=30)
+    response.raise_for_status()
+    runtimes = response.json()
+    for runtime in runtimes:
+        if runtime["language"] == "python" and runtime["version"] == python_version:
+            return
+
+    # Install the required python version
+    response = requests.post(f"{piston_url}/packages",
+                             json={
+                                 "language": "python", "version": python_version
+                             },
+                             timeout=60)
+    response.raise_for_status()
+
 @pytest.fixture(name="piston_url", scope="session")
 def piston_url_fixture(fail_missing: bool) -> str:
     """
@@ -846,10 +863,13 @@ def piston_url_fixture(fail_missing: bool) -> str:
     The public piston server limits usage to five requests per minute.
     """
     import requests
-    url = os.environ.get("NAT_CI_PISTON_URL", "https://emkc.org/api/v2/piston")
+    url = os.environ.get("NAT_CI_PISTON_URL", "http://localhost:2000/api/v2")
+    url = url.rstrip('/')
+
+    # This is the version of Python used in `src/nat/tool/code_execution/code_sandbox.py`
+    python_version = os.environ.get("NAT_CI_PISTON_PYTHON_VERSION", "3.10.0")
     try:
-        response = requests.get(f"{url.rstrip('/')}/runtimes", timeout=30)
-        response.raise_for_status()
+        _ensure_piston_python_installed(url, python_version)
         return url
     except Exception:
         reason = (f"Piston server is not running at {url}. "
