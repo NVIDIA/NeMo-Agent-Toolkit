@@ -15,10 +15,9 @@
 
 import typing
 
-from pydantic import BaseModel
+from pydantic import BaseModel, SerializeAsAny
 
 from nat.data_models.intermediate_step import IntermediateStep
-
 
 class EvalInputItem(BaseModel):
     id: typing.Any
@@ -55,4 +54,4 @@ class EvalOutputItem(BaseModel):
 
 class EvalOutput(BaseModel):
     average_score: typing.Any  # float or any serializable type
-    eval_output_items: list[EvalOutputItem]
+    eval_output_items: list[SerializeAsAny[EvalOutputItem]]

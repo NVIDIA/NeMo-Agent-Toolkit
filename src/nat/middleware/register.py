@@ -19,6 +19,8 @@ from __future__ import annotations
 from nat.cli.register_workflow import register_middleware
 from nat.middleware.cache_middleware import CacheMiddleware
 from nat.middleware.cache_middleware import CacheMiddlewareConfig
+from nat.middleware.red_teaming_middleware import RedTeamingMiddleware
+from nat.middleware.red_teaming_middleware_config import RedTeamingMiddlewareConfig
 
 
 @register_middleware(config_type=CacheMiddlewareConfig)
@@ -33,3 +35,22 @@ async def cache_middleware(config: CacheMiddlewareConfig, builder):
         A configured cache middleware instance
     """
     yield CacheMiddleware(enabled_mode=config.enabled_mode, similarity_threshold=config.similarity_threshold)
+
+@register_middleware(config_type=RedTeamingMiddlewareConfig)
+async def red_teaming_middleware(config: RedTeamingMiddlewareConfig, builder):
+    """Build a red teaming middleware from configuration.
+
+    Args:
+        config: The red teaming middleware configuration
+        builder: The workflow builder (unused but required by component pattern)
+
+    Yields:
+        A configured red teaming middleware instance
+    """
+    yield RedTeamingMiddleware(attack_payload=config.attack_payload,
+                               target_function_or_group=config.target_function_or_group,
+                               payload_placement=config.payload_placement,
+                               target_location=config.target_location,
+                               target_field=config.target_field,
+                               target_field_resolution_strategy=config.target_field_resolution_strategy,
+                               call_limit=config.call_limit)
