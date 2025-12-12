@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Test LLM for AutoGen"""
+"""Test LLM for AutoGen."""
 
 from typing import Any
 from unittest.mock import Mock
@@ -117,6 +117,17 @@ class TestPatchAutoGenClient:
         config.num_retries = 3
         config.retry_on_status_codes = [500, 502]
         config.retry_on_errors = ["timeout"]
+
+        mock_client = Mock()
+        result = _patch_autogen_client_based_on_config(mock_client, config)
+
+        # Verify retry is applied first, then thinking
+        mock_patch_retry.assert_called_once_with(mock_client,
+                                                 retries=3,
+                                                 retry_codes=[500, 502],
+                                                 retry_on_messages=["timeout"])
+        mock_patch_thinking.assert_called_once()
+        assert result == mock_final_client
 
 
 class TestConfigValidation:
@@ -330,8 +341,7 @@ class TestAutoGenThinkingInjector:
         # Since AutoGenThinkingInjector is defined inside the function,
         # we test through the integration pattern
         mock_client = Mock()
-        thinking_config = Mock(spec=MockThinkingConfig)
-        thinking_config.thinking_system_prompt = "Think carefully"
+        thinking_config = MockThinkingConfig()
 
         with patch('nat.plugins.autogen.llm.patch_with_thinking') as mock_patch:
             _patch_autogen_client_based_on_config(mock_client, thinking_config)
@@ -471,9 +481,8 @@ class TestMixinCombinations:
         """Test patching with only thinking mixin."""
         mock_client = Mock()
 
-        # Create a mock config that mimics ThinkingMixin behavior
-        config = Mock(spec=ThinkingMixin)
-        config.thinking_system_prompt = "Analyze this step by step"
+        # Create a real config with thinking mixin
+        config = MockThinkingConfig()
 
         with patch('nat.plugins.autogen.llm.patch_with_retry') as mock_patch_retry:
             with patch('nat.plugins.autogen.llm.patch_with_thinking') as mock_patch_thinking:
@@ -490,9 +499,14 @@ class TestMixinCombinations:
         """Test that thinking mixin with None prompt is skipped."""
         mock_client = Mock()
 
-        # Create a mock config with None prompt
-        config = Mock(spec=ThinkingMixin)
-        config.thinking_system_prompt = None
+        # Create a real config with thinking disabled (None prompt)
+        class ThinkingDisabledConfig(LLMBaseConfig, ThinkingMixin):
+            """Config with thinking mixin but disabled."""
+            model_name: str = "nvidia/nvidia-nemotron-test"
+            thinking: bool | None = None  # Disabled - returns None prompt
+
+        config = ThinkingDisabledConfig()
+        assert config.thinking_system_prompt is None  # Verify precondition
 
         with patch('nat.plugins.autogen.llm.patch_with_thinking') as mock_patch_thinking:
             result = _patch_autogen_client_based_on_config(mock_client, config)
