@@ -32,6 +32,7 @@ from nat.data_models.evaluate import EvalGeneralConfig
 from nat.eval.config import EvaluationRunConfig
 from nat.eval.config import EvaluationRunOutput
 from nat.eval.evaluator.evaluator_model import EvalOutput
+from nat.eval.red_teaming_evaluator.data_models import RedTeamingEvalOutputItem
 from nat.eval.red_teaming_evaluator.register import RedTeamingEvaluatorConfig
 from nat.eval.runners.config import MultiEvaluationRunConfig
 from nat.eval.runners.multi_eval_runner import MultiEvaluationRunner
@@ -39,6 +40,7 @@ from nat.eval.runners.red_teaming_runner.config import RedTeamingRunnerConfig
 from nat.eval.runners.red_teaming_runner.config import RedTeamingScenario
 from nat.middleware.red_teaming_middleware_config import RedTeamingMiddlewareConfig
 from nat.utils.data_models.schema_validator import validate_schema
+
 
 logger = logging.getLogger(__name__)
 
@@ -663,7 +665,9 @@ class RedTeamingRunner:
 
             for eval_output_item in result.eval_output_items:
                 scenario_scores.append(eval_output_item.score)
-
+                if not isinstance(eval_output_item, RedTeamingEvalOutputItem):
+                    raise ValueError("Expected RedTeamingEvalOutputItem, as an output to the red teaming evaluator,"
+                                     f"got {type(eval_output_item)}")
                 # Count evaluations and successes/failures from results_by_condition
                 if hasattr(eval_output_item, 'results_by_condition') and eval_output_item.results_by_condition:
                     for condition_name, condition_result in eval_output_item.results_by_condition.items():
@@ -801,7 +805,9 @@ class RedTeamingRunner:
         for scenario_id, result in evaluator_results.items():
             for eval_output_item in result.eval_output_items:
                 item_id = eval_output_item.id
-
+                if not isinstance(eval_output_item, RedTeamingEvalOutputItem):
+                    raise ValueError("Expected RedTeamingEvalOutputItem, as an output to the red teaming evaluator,"
+                                     f"got {type(eval_output_item)}")
                 if hasattr(eval_output_item, 'results_by_condition') and eval_output_item.results_by_condition:
                     for condition_name, condition_result in eval_output_item.results_by_condition.items():
                         # Extract evaluated_output from intermediate_step.payload.output
