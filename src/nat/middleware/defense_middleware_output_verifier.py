@@ -267,11 +267,22 @@ Respond ONLY with valid JSON in this exact format:
 
             if correct_answer is not None:
                 # Try to convert to same type as original content
+                # Handle both numeric types and string representations of numbers (for streaming)
                 if isinstance(content, (int, float)):
                     try:
                         correct_answer = float(correct_answer)
                     except (ValueError, TypeError):
                         logger.warning("Could not convert '%s' to number", correct_answer)
+                elif isinstance(content, str):
+                    # In streaming mode, content is a string - try to parse as number if possible
+                    try:
+                        # Check if content string represents a number
+                        float(content)
+                        # If so, convert correct_answer to float to preserve numeric type
+                        correct_answer = float(correct_answer)
+                    except (ValueError, TypeError):
+                        # Not a numeric string, keep correct_answer as-is
+                        pass
 
                 logger.info(
                     "Output Verifier redirecting %s: Incorrect: %s → Corrected: %s",
@@ -288,6 +299,67 @@ Respond ONLY with valid JSON in this exact format:
         else:  # action == "partial_compliance"
             logger.warning("Threat logged for %s: %s", context.name, analysis_result.get('reason', 'Unknown'))
             return content
+
+    async def _process_output_verification(
+        self,
+        value: Any,
+        location: str,
+        context: FunctionMiddlewareContext,
+        inputs: Any = None,
+    ) -> Any:
+        """Process output verification and handling for a given value.
+
+        This is a common helper method that handles:
+        - Field extraction (if target_field is specified)
+        - Output verification analysis
+        - Threat handling (refusal, redirection, partial_compliance)
+        - Applying corrected value back to original structure
+
+        Args:
+            value: The value to analyze (input or output)
+            location: Either "input" or "output" (for logging)
+            context: Function context metadata
+            inputs: Original function inputs (for analysis context)
+
+        Returns:
+            The value after output verification handling (may be unchanged, corrected, or raise exception)
+        """
+        # Extract field from value if target_field is specified
+        content_to_analyze, field_info = self._extract_field_from_value(value)
+
+        # Check the output (either extracted field or entire value)
+        logger.info(
+            "OutputVerifierMiddleware: Checking %s %s for %s",
+            f"field '{self.config.target_field}'" if field_info else "entire",
+            location,
+            context.name
+        )
+        output_result = await self._analyze_content(
+            content_to_analyze,
+            location,
+            inputs=inputs,
+            function_name=context.name
+        )
+
+        if not output_result.get("should_refuse", False):
+            # Content verified as correct, return original value
+            logger.info(
+                "OutputVerifierMiddleware: Verified %s of %s as correct (confidence=%s)",
+                location,
+                context.name,
+                output_result.get('confidence', 'N/A')
+            )
+            return value
+
+        # Threat detected - handle based on action
+        sanitized_content = await self._handle_threat(content_to_analyze, output_result, context)
+
+        # If field was extracted, apply sanitized value back to original structure
+        if field_info is not None:
+            return self._apply_field_result_to_value(value, field_info, sanitized_content)
+        else:
+            # No field extraction - return sanitized content directly
+            return sanitized_content
 
     async def function_middleware_invoke(
         self, value: Any, call_next: CallNext, context: FunctionMiddlewareContext
@@ -313,32 +385,10 @@ Respond ONLY with valid JSON in this exact format:
             # Call the function
             output = await call_next(value)
 
-            # Extract field from output if target_field is specified
-            content_to_analyze, field_info = self._extract_field_from_value(output)
-
-            # Check the output (either extracted field or entire output)
-            logger.debug(
-                "OutputVerifierMiddleware: Checking %s for %s",
-                f"field '{self.config.target_field}'" if field_info else "output",
-                context.name
+            # Process output verification (handles field extraction, analysis, and application)
+            output = await self._process_output_verification(
+                output, "output", context, inputs=value
             )
-            output_result = await self._analyze_content(
-                content_to_analyze,
-                "output",
-                inputs=value,
-                function_name=context.name
-            )
-
-            if output_result.get("should_refuse", False):
-                # Handle threat - get sanitized/corrected value
-                sanitized_content = await self._handle_threat(content_to_analyze, output_result, context)
-
-                # If field was extracted, apply sanitized value back to original structure
-                if field_info is not None:
-                    return self._apply_field_result_to_value(output, field_info, sanitized_content)
-                else:
-                    # No field extraction - return sanitized content directly
-                    return sanitized_content
 
             return output
 
@@ -351,9 +401,8 @@ Respond ONLY with valid JSON in this exact format:
     ) -> AsyncIterator[Any]:
         """Apply output verifier to streaming function.
 
-        For refusal and redirection actions, chunks are buffered and checked before yielding
-        to prevent incorrect content from being streamed. For partial_compliance, chunks are
-        yielded immediately and violations are logged.
+        All chunks are buffered, the full output is analyzed, and then the result
+        is yielded (or blocked/redirected if incorrect content is detected).
 
         Args:
             value: Function input
@@ -371,53 +420,27 @@ Respond ONLY with valid JSON in this exact format:
             return
 
         try:
-            # For refusal and redirection, buffer chunks before yielding to prevent incorrect content exposure
-            # For partial_compliance, yield immediately (logging only)
-            buffer_chunks = self.config.action in ("refusal", "redirection")
-
+            # Buffer all chunks to analyze the full output
             accumulated_chunks = []
             async for chunk in call_next(value):
-                if buffer_chunks:
-                    # Buffer chunks for verification check before yielding
-                    accumulated_chunks.append(chunk)
-                else:
-                    # partial_compliance: yield immediately (violations will be logged)
+                accumulated_chunks.append(chunk)
+
+            full_output_str = "".join(chunk if isinstance(chunk, str) else str(chunk) for chunk in accumulated_chunks)
+            
+            # Process output verification (handles field extraction, analysis, and application)
+            processed_output = await self._process_output_verification(
+                full_output_str, "output", context, inputs=value
+            )
+
+            # Yield processed content
+            processed_str = str(processed_output)
+            if processed_str != full_output_str:
+                # If redirected/corrected, yield as single chunk (preserve original type)
+                yield processed_output
+            else:
+                # For safe content, yield original chunks
+                for chunk in accumulated_chunks:
                     yield chunk
-
-            # Verification check for buffered content (refusal/redirection only)
-            if accumulated_chunks:
-                full_output = "".join(str(chunk) for chunk in accumulated_chunks)
-                # Extract field from output if target_field is specified
-                content_to_analyze, field_info = self._extract_field_from_value(full_output)
-
-                output_result = await self._analyze_content(
-                    content_to_analyze,
-                    "output",
-                    inputs=value,
-                    function_name=context.name
-                )
-
-                if output_result.get("should_refuse", False):
-                    # Handle threat - get sanitized/corrected value
-                    sanitized_content = await self._handle_threat(content_to_analyze, output_result, context)
-
-                    # If field was extracted, apply sanitized value back to original structure
-                    if field_info is not None:
-                        processed_output = self._apply_field_result_to_value(full_output, field_info, sanitized_content)
-                    else:
-                        processed_output = sanitized_content
-
-                    # Yield processed content
-                    if isinstance(processed_output, str):
-                        yield processed_output
-                    else:
-                        # For safe content or if sanitized is not a string, yield original chunks
-                        for chunk in accumulated_chunks:
-                            yield chunk
-                else:
-                    # Content verified as correct, yield original chunks
-                    for chunk in accumulated_chunks:
-                        yield chunk
 
         except Exception as e:
             logger.error(

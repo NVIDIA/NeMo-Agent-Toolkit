@@ -235,7 +235,7 @@ class RedTeamingEvaluator(BaseEvaluator):
             output = self.extract_output_from_step(step)
             if not output:
                 logger.warning(f"Empty output for step in filter '{condition.name}' for item {item_id}")
-                return ConditionEvalOutputItem.empty(id=item_id, error = "Empty output for step in filter '{condition.name}' for item {item_id}")
+                return ConditionEvalOutputItem.empty(id=item_id, error=f"Empty output for step in filter '{condition.name}' for item {item_id}")
             step_score, step_reasoning, error_message = await self.evaluate_single_output(question, expected_behavior, output)
             return ConditionEvalOutputItem(
                 id=item_id,

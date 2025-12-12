@@ -57,8 +57,8 @@ def fixture_middleware_context():
     )
 
 
-class TestPIIDefenseFieldTargeting:
-    """Test PII Defense with different field targeting scenarios."""
+class TestPIIDefenseInvoke:
+    """Test PII Defense invoke behavior."""
 
     @pytest.mark.asyncio
     async def test_simple_output_no_target_field(self, mock_builder, middleware_context):
@@ -180,9 +180,99 @@ class TestPIIDefenseFieldTargeting:
         call_args = mock_analyzer.analyze.call_args
         assert "john.doe@example.com" in str(call_args)
 
+    @pytest.mark.asyncio
+    async def test_complex_nested_structure_with_field_targeting(self, mock_builder, middleware_context):
+        """Test field targeting on complex nested structure with lists and dicts."""
+        config = PIIDefenseMiddlewareConfig(
+            target_field="$.results[0].user.email",
+            action="redirection"  # Use redirection to verify anonymization works
+        )
+        middleware = PIIDefenseMiddleware(config, mock_builder)
 
-class TestPIIDefenseActions:
-    """Test PII Defense actions."""
+        mock_analyzer = MagicMock()
+        mock_analyzer.analyze.return_value = [
+            MagicMock(entity_type="EMAIL_ADDRESS", start=0, end=20, score=0.9)
+        ]
+        middleware._analyzer = mock_analyzer
+
+        mock_anonymizer = MagicMock()
+        mock_anonymizer.anonymize.return_value = MagicMock(text="<EMAIL_ADDRESS>")
+        middleware._anonymizer = mock_anonymizer
+
+        async def mock_next(_value):
+            return {
+                "results": [
+                    {
+                        "user": {
+                            "email": "john.doe@example.com",
+                            "id": 123
+                        },
+                        "metadata": {"ignored": True}
+                    },
+                    {
+                        "user": {
+                            "email": "jane.smith@example.com",
+                            "id": 456
+                        }
+                    }
+                ],
+                "total": 2
+            }
+
+        result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+        assert mock_analyzer.analyze.called
+        # Should analyze only the first result's user email
+        call_args = mock_analyzer.analyze.call_args
+        assert "john.doe@example.com" in str(call_args)
+        # Verify structure is preserved and email is anonymized
+        assert result["results"][0]["user"]["email"] == "<EMAIL_ADDRESS>"
+        assert result["results"][1]["user"]["email"] == "jane.smith@example.com"
+        assert result["total"] == 2
+
+    @pytest.mark.asyncio
+    async def test_field_resolution_strategy_all(self, mock_builder, middleware_context):
+        """Test field resolution strategy 'all' analyzes all matching fields."""
+        config = PIIDefenseMiddlewareConfig(
+            target_field="$.items[*].email",
+            target_field_resolution_strategy="all",
+            action="partial_compliance"
+        )
+        middleware = PIIDefenseMiddleware(config, mock_builder)
+
+        mock_analyzer = MagicMock()
+        mock_analyzer.analyze.return_value = [
+            MagicMock(entity_type="EMAIL_ADDRESS", start=0, end=20, score=0.9)
+        ]
+        middleware._analyzer = mock_analyzer
+
+        mock_anonymizer = MagicMock()
+        mock_anonymizer.anonymize.return_value = MagicMock(text="<EMAIL_ADDRESS>")
+        middleware._anonymizer = mock_anonymizer
+
+        async def mock_next(_value):
+            return {
+                "items": [
+                    {"email": "first@example.com", "id": 1},
+                    {"email": "second@example.com", "id": 2},
+                    {"email": "third@example.com", "id": 3}
+                ]
+            }
+
+        with patch('nat.middleware.defense_middleware_pii.logger'):
+            result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+            assert mock_analyzer.analyze.called
+            
+            # call_args is a unittest.mock._Call object
+            # Presidio's analyze method signature: analyze(text=..., language='en', entities=...)
+            call_args = mock_analyzer.analyze.call_args
+            # Extract text from kwargs (Presidio uses keyword arguments)
+            text_analyzed = call_args.kwargs.get('text', '') if call_args.kwargs else (call_args.args[0] if call_args.args else '')
+            
+            # When strategy="all", extracted_value is a list: ["first@example.com", "second@example.com", "third@example.com"]
+            # This gets converted to string for Presidio analysis
+            assert "first@example.com" in text_analyzed, f"Expected 'first@example.com' in analyzed text: {text_analyzed}"
+            assert "second@example.com" in text_analyzed, f"Expected 'second@example.com' in analyzed text: {text_analyzed}"
+            assert "third@example.com" in text_analyzed, f"Expected 'third@example.com' in analyzed text: {text_analyzed}"
 
     @pytest.mark.asyncio
     async def test_action_partial_compliance(self, mock_builder, middleware_context):
@@ -264,10 +354,6 @@ class TestPIIDefenseActions:
         assert "<EMAIL_ADDRESS>" in result
         assert "john.doe@example.com" not in result
 
-
-class TestPIIDefenseEntityTypes:
-    """Test PII Defense with different entity types."""
-
     @pytest.mark.asyncio
     async def test_multiple_entity_types(self, mock_builder, middleware_context):
         """Test detecting multiple PII entity types."""
@@ -321,19 +407,15 @@ class TestPIIDefenseEntityTypes:
         assert mock_analyzer.analyze.called
         assert result == "Safe content with no PII"
 
-
-class TestPIIDefenseTargeting:
-    """Test PII Defense targeting configuration."""
-
     @pytest.mark.asyncio
-    async def test_target_function_or_group_none(self, mock_builder, middleware_context):
-        """Test that None target applies to all functions."""
+    async def test_targeting_configuration(self, mock_builder, middleware_context):
+        """Test targeting configuration (function/group targeting and target_location)."""
+        # Test None target applies to all functions
         config = PIIDefenseMiddlewareConfig(
             target_function_or_group=None,
             action="partial_compliance"
         )
         middleware = PIIDefenseMiddleware(config, mock_builder)
-
         mock_analyzer = MagicMock()
         mock_analyzer.analyze.return_value = []
         middleware._analyzer = mock_analyzer
@@ -346,53 +428,36 @@ class TestPIIDefenseTargeting:
         assert mock_analyzer.analyze.called
         assert result == "content"
 
-    @pytest.mark.asyncio
-    async def test_target_function_or_group_valid(self, mock_builder, middleware_context):
-        """Test targeting a valid function."""
+        # Test specific function targeting
         config = PIIDefenseMiddlewareConfig(
             target_function_or_group="my_calculator.get_random_string",
             action="partial_compliance"
         )
         middleware = PIIDefenseMiddleware(config, mock_builder)
-
-        mock_analyzer = MagicMock()
-        mock_analyzer.analyze.return_value = []
         middleware._analyzer = mock_analyzer
         middleware._anonymizer = MagicMock()
-
-        async def mock_next(_value):
-            return "content"
+        mock_analyzer.analyze.reset_mock()
 
         result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
         assert mock_analyzer.analyze.called
         assert result == "content"
 
-    @pytest.mark.asyncio
-    async def test_target_function_or_group_non_existent(self, mock_builder, middleware_context):
-        """Test targeting a non-existent function skips defense."""
+        # Test non-targeted function skips defense
         config = PIIDefenseMiddlewareConfig(
             target_function_or_group="calculator.invalid_func",
             action="partial_compliance"
         )
         middleware = PIIDefenseMiddleware(config, mock_builder)
+        mock_analyzer.analyze.reset_mock()
 
-        mock_analyzer = MagicMock()
-        mock_analyzer.analyze.return_value = []
-        middleware._analyzer = mock_analyzer
-        middleware._anonymizer = MagicMock()
-
-        async def mock_next(_value):
-            return "content"
-
-        # Should NOT apply to non-targeted function
         result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
         assert not mock_analyzer.analyze.called  # Defense should not run
         assert result == "content"
 
     @pytest.mark.asyncio
-    async def test_target_location_input_error(self, mock_builder):
-        """Test that target_location='input' raises ValidationError at config creation."""
-        # Pydantic validates at config creation time, so we can't create a config with "input"
+    async def test_target_location_validation(self, mock_builder, middleware_context):
+        """Test target_location validation and default behavior."""
+        # Test that target_location='input' raises ValidationError
         from pydantic import ValidationError
         with pytest.raises(ValidationError, match="Input should be 'output'"):
             PIIDefenseMiddlewareConfig(
@@ -400,37 +465,18 @@ class TestPIIDefenseTargeting:
                 action="partial_compliance"
             )
 
-    @pytest.mark.asyncio
-    async def test_target_location_default_output(self, mock_builder, middleware_context):
-        """Test that default target_location is 'output'."""
+        # Test default is 'output'
         config = PIIDefenseMiddlewareConfig(
             action="partial_compliance"
         )
-        # target_location not specified, should default to "output"
         assert config.target_location == "output"
 
-        middleware = PIIDefenseMiddleware(config, mock_builder)
-        mock_analyzer = MagicMock()
-        mock_analyzer.analyze.return_value = []
-        middleware._analyzer = mock_analyzer
-        middleware._anonymizer = MagicMock()
-
-        async def mock_next(_value):
-            return "content"
-
-        result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
-        assert mock_analyzer.analyze.called
-        assert result == "content"
-
-    @pytest.mark.asyncio
-    async def test_target_location_explicit_output(self, mock_builder, middleware_context):
-        """Test that explicit target_location='output' works."""
+        # Test explicit 'output' works
         config = PIIDefenseMiddlewareConfig(
             target_location="output",
             action="partial_compliance"
         )
         middleware = PIIDefenseMiddleware(config, mock_builder)
-
         mock_analyzer = MagicMock()
         mock_analyzer.analyze.return_value = []
         middleware._analyzer = mock_analyzer
@@ -443,49 +489,178 @@ class TestPIIDefenseTargeting:
         assert mock_analyzer.analyze.called
         assert result == "content"
 
-
-class TestPIIDefenseSimpleOutputs:
-    """Test PII Defense with simple output formats."""
-
     @pytest.mark.asyncio
-    async def test_simple_string_output(self, mock_builder, middleware_context):
-        """Test analyzing simple string output."""
+    async def test_non_string_output_converts_to_string(self, mock_builder, middleware_context):
+        """Test that non-string outputs (int, float, dict, list) are converted to strings for analysis."""
         config = PIIDefenseMiddlewareConfig(
             target_field=None,
             action="partial_compliance"
         )
         middleware = PIIDefenseMiddleware(config, mock_builder)
 
+        # Test int
         mock_analyzer = MagicMock()
         mock_analyzer.analyze.return_value = []
         middleware._analyzer = mock_analyzer
         middleware._anonymizer = MagicMock()
 
-        async def mock_next(_value):
-            return "simple string output"
-
-        result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
-        assert mock_analyzer.analyze.called
-        assert result == "simple string output"
-
-    @pytest.mark.asyncio
-    async def test_simple_int_output(self, mock_builder, middleware_context):
-        """Test analyzing simple int output."""
-        config = PIIDefenseMiddlewareConfig(
-            target_field=None,
-            action="partial_compliance"
-        )
-        middleware = PIIDefenseMiddleware(config, mock_builder)
-
-        mock_analyzer = MagicMock()
-        mock_analyzer.analyze.return_value = []
-        middleware._analyzer = mock_analyzer
-        middleware._anonymizer = MagicMock()
-
-        async def mock_next(_value):
+        async def mock_next_int(_value):
             return 42
 
-        result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke({}, mock_next_int, middleware_context)
         assert mock_analyzer.analyze.called
+        call_args = mock_analyzer.analyze.call_args
+        # Verify int was converted to string for Presidio analysis
+        assert "42" in str(call_args) or '"42"' in str(call_args)
         assert result == 42
+
+        # Test float
+        mock_analyzer.analyze.reset_mock()
+        async def mock_next_float(_value):
+            return 3.14
+
+        result = await middleware.function_middleware_invoke({}, mock_next_float, middleware_context)
+        assert mock_analyzer.analyze.called
+        call_args = mock_analyzer.analyze.call_args
+        assert "3.14" in str(call_args) or '"3.14"' in str(call_args)
+        assert result == 3.14
+
+        # Test dict
+        mock_analyzer.analyze.reset_mock()
+        async def mock_next_dict(_value):
+            return {"key": "value"}
+
+        result = await middleware.function_middleware_invoke({}, mock_next_dict, middleware_context)
+        assert mock_analyzer.analyze.called
+        call_args = mock_analyzer.analyze.call_args
+        # Dict should be converted to string representation
+        assert "key" in str(call_args) or "value" in str(call_args)
+        assert result == {"key": "value"}
+
+
+class TestPIIDefenseStreaming:
+    """Test PII Defense streaming behavior."""
+
+    @pytest.mark.asyncio
+    async def test_streaming_no_pii_detected(self, mock_builder, middleware_context):
+        """Test streaming with no PII yields original chunks."""
+        config = PIIDefenseMiddlewareConfig(
+            action="redirection"
+        )
+        middleware = PIIDefenseMiddleware(config, mock_builder)
+
+        mock_analyzer = MagicMock()
+        mock_analyzer.analyze.return_value = []
+        middleware._analyzer = mock_analyzer
+        middleware._anonymizer = MagicMock()
+
+        async def mock_stream(_value):
+            yield "Hello "
+            yield "world"
+
+        chunks = []
+        async for chunk in middleware.function_middleware_stream({}, mock_stream, middleware_context):
+            chunks.append(chunk)
+
+        assert chunks == ["Hello ", "world"]
+        assert mock_analyzer.analyze.called
+
+    @pytest.mark.asyncio
+    async def test_streaming_refusal_action(self, mock_builder, middleware_context):
+        """Test streaming refusal action raises exception."""
+        config = PIIDefenseMiddlewareConfig(
+            action="refusal"
+        )
+        middleware = PIIDefenseMiddleware(config, mock_builder)
+
+        mock_analyzer = MagicMock()
+        mock_analyzer.analyze.return_value = [
+            MagicMock(entity_type="EMAIL_ADDRESS", start=0, end=20, score=0.9)
+        ]
+        middleware._analyzer = mock_analyzer
+        middleware._anonymizer = MagicMock()
+
+        async def mock_stream(_value):
+            yield "Contact "
+            yield "john.doe@example.com"
+
+        with pytest.raises(ValueError, match="PII detected in output"):
+            async for _ in middleware.function_middleware_stream({}, mock_stream, middleware_context):
+                pass
+
+    @pytest.mark.asyncio
+    async def test_streaming_redirection_action(self, mock_builder, middleware_context):
+        """Test streaming redirection action yields anonymized content."""
+        config = PIIDefenseMiddlewareConfig(
+            action="redirection"
+        )
+        middleware = PIIDefenseMiddleware(config, mock_builder)
+
+        mock_analyzer = MagicMock()
+        mock_analyzer.analyze.return_value = [
+            MagicMock(entity_type="EMAIL_ADDRESS", start=0, end=20, score=0.9)
+        ]
+        middleware._analyzer = mock_analyzer
+
+        mock_anonymizer = MagicMock()
+        mock_anonymizer.anonymize.return_value = MagicMock(text="Contact <EMAIL_ADDRESS>")
+        middleware._anonymizer = mock_anonymizer
+
+        async def mock_stream(_value):
+            yield "Contact "
+            yield "john.doe@example.com"
+
+        chunks = []
+        async for chunk in middleware.function_middleware_stream({}, mock_stream, middleware_context):
+            chunks.append(chunk)
+
+        assert len(chunks) == 1
+        assert chunks[0] == "Contact <EMAIL_ADDRESS>"
+
+    @pytest.mark.asyncio
+    async def test_streaming_partial_compliance(self, mock_builder, middleware_context):
+        """Test streaming partial_compliance yields original chunks."""
+        config = PIIDefenseMiddlewareConfig(
+            action="partial_compliance"
+        )
+        middleware = PIIDefenseMiddleware(config, mock_builder)
+
+        mock_analyzer = MagicMock()
+        mock_analyzer.analyze.return_value = [
+            MagicMock(entity_type="EMAIL_ADDRESS", start=0, end=20, score=0.9)
+        ]
+        middleware._analyzer = mock_analyzer
+        middleware._anonymizer = MagicMock()
+
+        async def mock_stream(_value):
+            yield "Contact "
+            yield "john.doe@example.com"
+
+        with patch('nat.middleware.defense_middleware_pii.logger') as mock_logger:
+            chunks = []
+            async for chunk in middleware.function_middleware_stream({}, mock_stream, middleware_context):
+                chunks.append(chunk)
+
+            assert chunks == ["Contact ", "john.doe@example.com"]
+            mock_logger.warning.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_streaming_skips_when_not_targeted(self, mock_builder, middleware_context):
+        """Test streaming skips when function not targeted."""
+        config = PIIDefenseMiddlewareConfig(
+            target_function_or_group="other_function",
+            action="refusal"
+        )
+        middleware = PIIDefenseMiddleware(config, mock_builder)
+
+        async def mock_stream(_value):
+            yield "chunk1"
+            yield "chunk2"
+
+        chunks = []
+        async for chunk in middleware.function_middleware_stream({}, mock_stream, middleware_context):
+            chunks.append(chunk)
+
+        assert chunks == ["chunk1", "chunk2"]
+        assert middleware._analyzer is None
 

@@ -334,8 +334,7 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
         # Extract field from value if target_field is specified
         content_to_analyze, field_info = self._extract_field_from_value(value)
 
-        # Check content (either extracted field or entire value)
-        logger.debug(
+        logger.info(
             "ContentSafetyGuardMiddleware: Checking %s %s for %s",
             f"field '{self.config.target_field}'" if field_info else "entire",
             location,
@@ -347,6 +346,11 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
 
         if not analysis_result.get("should_refuse", False):
             # Content is safe, return original value
+            logger.info(
+                "ContentSafetyGuardMiddleware: Verified %s of %s as safe",
+                location,
+                context.name
+            )
             return value
 
         # Unsafe content detected - handle based on action
@@ -385,26 +389,30 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
             logger.debug("ContentSafetyGuardMiddleware: Skipping %s (not targeted)", context.name)
             return await call_next(value)
 
-        logger.debug("ContentSafetyGuardMiddleware: Applying defense to %s", context.name)
+        try:
+            # Call the function
+            output = await call_next(value)
 
-        # Call the function
-        output = await call_next(value)
+            # Handle output analysis (only output is supported)
+            output = await self._process_content_safety_detection(
+                output, "output", context, original_input=value
+            )
 
-        # Handle output analysis (only output is supported)
-        output = await self._process_content_safety_detection(
-            output, "output", context, original_input=value
-        )
+            return output
 
-        return output
+        except Exception as e:
+            logger.error(
+                "Failed to apply content safety guard to function %s: %s", context.name, e, exc_info=True
+            )
+            raise
 
     async def function_middleware_stream(
         self, value: Any, call_next: CallNextStream, context: FunctionMiddlewareContext
     ) -> AsyncIterator[Any]:
         """Apply content safety guard check to streaming function.
 
-        For refusal and redirection actions, chunks are buffered and checked before yielding
-        to prevent unsafe content from being streamed. For partial_compliance, chunks are
-        yielded immediately and violations are logged.
+        All chunks are buffered, the full output is analyzed, and then the result
+        is yielded (or blocked/redirected if unsafe content is detected).
 
         Args:
             value: Function input
@@ -421,36 +429,32 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
                 yield chunk
             return
 
-        # For refusal and redirection, buffer chunks before yielding to prevent unsafe content exposure
-        # For partial_compliance, yield immediately (logging only)
-        buffer_chunks = self.config.action in ("refusal", "redirection")
-
-        accumulated_chunks = []
-        async for chunk in call_next(value):
-            if buffer_chunks:
-                # Buffer chunks for safety check before yielding
+        try:
+            # Buffer all chunks to analyze the full output
+            accumulated_chunks = []
+            async for chunk in call_next(value):
                 accumulated_chunks.append(chunk)
-            else:
-                # partial_compliance: yield immediately (violations will be logged)
-                yield chunk
 
-        # Safety check for buffered content (refusal/redirection only)
-        if accumulated_chunks:
-            full_output = "".join(str(chunk) for chunk in accumulated_chunks)
-            # Process safety detection:
-            # - For refusal: raises ValueError (no chunks yielded)
-            # - For redirection: returns replacement message string
-            # - For safe content: returns original value
+            # Join chunks efficiently (only convert to string if needed)
+            full_output = "".join(chunk if isinstance(chunk, str) else str(chunk) for chunk in accumulated_chunks)
+    
             processed_output = await self._process_content_safety_detection(
                 full_output, "output", context, original_input=value
             )
 
             # Yield processed content
-            if isinstance(processed_output, str):
+            processed_str = str(processed_output)
+            if processed_str != full_output:
                 # For redirection, yield the replacement message
                 yield processed_output
             else:
                 # For safe content, yield original chunks
                 for chunk in accumulated_chunks:
                     yield chunk
+
+        except Exception as e:
+            logger.error(
+                "Failed to apply content safety guard to streaming function %s: %s", context.name, e, exc_info=True
+            )
+            raise
 

@@ -22,6 +22,7 @@ core logic based on its specific defense strategy (LLM-based, rule-based, etc.).
 """
 
 import logging
+import random
 from typing import Any
 from typing import Literal
 from typing import cast
@@ -217,7 +218,6 @@ class DefenseMiddleware(FunctionMiddleware):
         elif strategy == "last":
             return [matches[-1]]
         elif strategy == "random":
-            import random
             return [random.choice(matches)]
         elif strategy == "all":
             return matches
