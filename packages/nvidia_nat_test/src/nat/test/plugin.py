@@ -862,11 +862,7 @@ def piston_url_fixture(fail_missing: bool) -> str:
                 return url
 
         # Install the required python version
-        response = requests.post(f"{url}/packages",
-                                json={
-                                    "language": "python", "version": python_version
-                                },
-                                timeout=60)
+        response = requests.post(f"{url}/packages", json={"language": "python", "version": python_version}, timeout=60)
         response.raise_for_status()
 
         return url
