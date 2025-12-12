@@ -22,6 +22,7 @@ from typing import Literal
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
+from pydantic import SerializeAsAny
 from pydantic import model_validator
 
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -37,6 +38,7 @@ class IntermediateStepCategory(str, Enum):
     FUNCTION = "FUNCTION"
     CUSTOM = "CUSTOM"
     SPAN = "SPAN"
+    TTC = "TTC"
 
 
 class IntermediateStepType(str, Enum):
@@ -49,6 +51,8 @@ class IntermediateStepType(str, Enum):
     WORKFLOW_END = "WORKFLOW_END"
     TASK_START = "TASK_START"
     TASK_END = "TASK_END"
+    TTC_START = "TTC_START"
+    TTC_END = "TTC_END"
     FUNCTION_START = "FUNCTION_START"
     FUNCTION_END = "FUNCTION_END"
     CUSTOM_START = "CUSTOM_START"
@@ -76,6 +80,20 @@ class StreamEventData(BaseModel):
     output: typing.Any | None = None
     chunk: typing.Any | None = None
     payload: typing.Any | None = None  # Raw generation payload for downstream processing
+
+
+class TTCEventData(StreamEventData):
+    """
+    TTCEventData is a data model that represents the data field in a TTC event.
+    """
+
+    # Allow extra fields in the model_config to support derived models
+    model_config = ConfigDict(extra="allow")
+
+    turn_id: str | None = None
+    turn_index: int | None = None
+    candidate_index: int | None = None
+    score: float | None = None
 
 
 class UsageInfo(BaseModel):
@@ -146,7 +164,7 @@ class IntermediateStepPayload(BaseModel):
     name: str | None = None
     tags: list[str] | None = None
     metadata: dict[str, typing.Any] | TraceMetadata | None = None
-    data: StreamEventData | None = None
+    data: SerializeAsAny[StreamEventData] | None = None
     usage_info: UsageInfo | None = None
     UUID: str = Field(default_factory=lambda: str(uuid.uuid4()))
 
@@ -171,6 +189,10 @@ class IntermediateStepPayload(BaseModel):
                 return IntermediateStepCategory.TASK
             case IntermediateStepType.TASK_END:
                 return IntermediateStepCategory.TASK
+            case IntermediateStepType.TTC_START:
+                return IntermediateStepCategory.TTC
+            case IntermediateStepType.TTC_END:
+                return IntermediateStepCategory.TTC
             case IntermediateStepType.FUNCTION_START:
                 return IntermediateStepCategory.FUNCTION
             case IntermediateStepType.FUNCTION_END:
@@ -197,6 +219,10 @@ class IntermediateStepPayload(BaseModel):
                 return IntermediateStepState.END
             case IntermediateStepType.LLM_NEW_TOKEN:
                 return IntermediateStepState.CHUNK
+            case IntermediateStepType.TTC_START:
+                return IntermediateStepState.START
+            case IntermediateStepType.TTC_END:
+                return IntermediateStepState.END
             case IntermediateStepType.TOOL_START:
                 return IntermediateStepState.START
             case IntermediateStepType.TOOL_END:

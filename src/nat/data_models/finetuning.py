@@ -123,11 +123,28 @@ class EpisodeItem(BaseModel):
         return self
 
 
+class OpenAIMessage(BaseModel):
+    """
+    A message in the OpenAI chat format.
+    """
+    role: str = Field(description="The role of the message (e.g., 'user', 'assistant').")
+    content: str = Field(description="The content of the message.")
+
+
+class DPOItem(BaseModel):
+    """
+    A single step in an episode for DPO training.
+    """
+    prompt: list[OpenAIMessage] | str = Field(description="The prompt messages leading to the response.")
+    chosen_response: str = Field(description="The response chosen as better by the reward model.")
+    rejected_response: str = Field(description="The response rejected as worse by the reward model.")
+
+
 class Trajectory(BaseModel):
     """
     A trajectory is a sequence of states, actions, and rewards.
     """
-    episode: list[EpisodeItem] = Field(description="A list of steps in the episode.")
+    episode: list[EpisodeItem] | list[DPOItem] = Field(description="A list of steps in the episode.")
     reward: float = Field(description="The total reward for the episode.")
     shaped_rewards: list[float] | None = Field(description="The shaped rewards for each step in the episode.",
                                                default=None)
@@ -230,7 +247,7 @@ class FinetuneConfig(BaseModel):
     @model_validator(mode="before")
     def validate_finetuning_enabled(cls, values: dict[str, Any]) -> dict[str, Any]:
         if values.get("enabled", False):
-            required_fields = ["trainer", "trajectory_builder", "trainer_adapter", "reward_function"]
+            required_fields = ["trainer", "trajectory_builder", "trainer_adapter"]
             missing_fields = [field for field in required_fields if values.get(field) is None]
             if missing_fields:
                 raise ValueError(f"When fine-tuning is enabled, the following fields must be set: "
