@@ -761,7 +761,7 @@ curl http://localhost:7623/health
 
 ## Further Reading
 
-- [NAT Finetuning Concepts](../../../docs/source/reference/finetuning/concepts.md)
-- [NAT Finetuning Extension Guide](../../../docs/source/reference/finetuning/extending.md)
-- [OpenPipe ART Integration](../../../docs/source/reference/finetuning/rl_with_openpipe.md)
+- [NAT Finetuning Concepts](../../../docs/source/improve-workflows/finetuning/concepts.md)
+- [NAT Finetuning Extension Guide](../../../docs/source/extend/custom-components/finetuning.md)
+- [OpenPipe ART Integration](../../../docs/source/improve-workflows/finetuning/rl_with_openpipe.md)
 - [OpenPipe ART Documentation](https://art.openpipe.ai/)
