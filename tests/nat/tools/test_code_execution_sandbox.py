@@ -303,15 +303,16 @@ def _test_code_execution(code_block_key: str, sandbox_type: str, config_path: Pa
 
     if sandbox_type == "local":
         result = run_sandbox_code(sandbox_config, code)
+        result_value = result
     else:
 
         result = run_workflow_code(config_path=config_path, code=code)
-        result = result["value"]
+        result_value = result["value"]
 
-    assert "process_status" in result, f"Sandbox execution failed: {result}"
-    assert result["process_status"] == "completed", f"Sandbox execution did not complete: {result}"
-    assert expected_output in result["stdout"], f"Expected output not found in stdout: {result}"
-    assert result["stderr"] == ""
+    assert "process_status" in result_value, f"Sandbox execution failed: {result}"
+    assert result_value["process_status"] == "completed", f"Sandbox execution did not complete: {result}"
+    assert expected_output in result_value["stdout"], f"Expected output not found in stdout: {result}"
+    assert result_value["stderr"] == ""
 
 
 @pytest.mark.slow
