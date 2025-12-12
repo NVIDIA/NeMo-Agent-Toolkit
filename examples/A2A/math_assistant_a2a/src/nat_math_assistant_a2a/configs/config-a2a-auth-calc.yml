@@ -40,18 +40,22 @@ function_groups:
   logic_evaluator:
     _type: logic_evaluator
 
+
 authentication:
   calculator_oauth:
     _type: oauth2_auth_code_flow
-    client_id: ${CALCULATOR_CLIENT_ID}
-    client_secret: ${CALCULATOR_CLIENT_SECRET}
+    client_id: ${CALCULATOR_CLIENT_ID:-"math-assistant-client"}
+    client_secret: ${CALCULATOR_CLIENT_SECRET:"kSJHTNznZf19oB38kWasdwxFUH0ovp0w"}
     redirect_uri: http://localhost:8000/auth/redirect
-    authorization_url: http://localhost:5001/oauth/authorize
-    token_url: http://localhost:5001/oauth/token
+
+    # Keycloak endpoints
+    authorization_url: http://localhost:8080/realms/master/protocol/openid-connect/auth
+    token_url: http://localhost:8080/realms/master/protocol/openid-connect/token
+
     token_endpoint_auth_method: client_secret_post
     use_pkce: false
     scopes:
-      - calculator:execute
+      - calculator_a2a:execute
 
 llms:
   nim_llm:

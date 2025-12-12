@@ -5,14 +5,18 @@
 # This configuration adds OAuth2 authentication to the calculator agent.
 #
 # Prerequisites:
-# 1. OAuth2 server running (for example, simple_auth OAuth server)
+# 1. Keycloak server running
 # 2. Calculator registered as a resource server
 # 3. OAuth2 server configured with required scopes
 #
 # Start the protected calculator:
-#   nat a2a serve --config examples/A2A/calculator_a2a/configs/config_protected.yml
+#   nat a2a serve --config examples/A2A/calculator_a2a/configs/config-protected-oauth2.yml
 
 # Protected A2A Frontend
+# Notes:
+# 1. The agent card will automatically include OAuth2 security schemes
+# 2. All requests except /.well-known/agent-card.json require authentication
+# 3. Tokens are validated using NAT's BearerTokenValidator
 general:
   front_end:
     _type: a2a
@@ -27,55 +31,22 @@ general:
       push_notifications: false
 
     # OAuth2 Resource Server Protection
-    # When configured, the agent requires valid OAuth2 Bearer tokens
     server_auth:
-      # Issuer URL - OAuth2 authorization server
-      issuer_url: http://localhost:5001
+      # Keycloak issuer URL
+      issuer_url: http://localhost:8080/realms/master
 
-      # Required scopes to access this agent
+      # Required scopes
       scopes:
-        - calculator:execute
+        - calculator_a2a:execute
 
-      # Expected audience (optional but recommended)
-      audience: calculator-a2a
+      # Expected audience (optional)
+      audience: http://localhost:10000
 
-      # Option 1: JWT validation via JWKS URI
-      jwks_uri: http://localhost:5001/.well-known/jwks.json
+      # JWT validation via JWKS URI (Keycloak provides this!)
+      jwks_uri: http://localhost:8080/realms/master/protocol/openid-connect/certs
 
-      # Option 2: OIDC discovery (alternative to jwks_uri)
-      # Automatically discovers JWKS and introspection endpoints
-      # discovery_url: http://localhost:5001/.well-known/openid-configuration
 
-      # Option 3: Opaque token validation via introspection
-      # Required for non-JWT tokens
-      # introspection_endpoint: http://localhost:5001/oauth/introspect
-      # client_id: calculator-server
-      # client_secret: ${CALCULATOR_SERVER_SECRET}
 
-# Notes:
-# 1. The agent card will automatically include OAuth2 security schemes
-# 2. All requests except /.well-known/agent.json require authentication
-# 3. Tokens are validated using NAT's BearerTokenValidator
-# 4. Supports both JWT (via JWKS) and opaque tokens (via introspection)
-#
-# Example OAuth2 client configuration (for math assistant):
-#
-# authentication:
-#   calculator_oauth:
-#     _type: oauth2_auth_code_flow
-#     client_id: ${MATH_ASSISTANT_CLIENT_ID}
-#     client_secret: ${MATH_ASSISTANT_CLIENT_SECRET}
-#     authorization_url: http://localhost:5001/oauth/authorize
-#     token_url: http://localhost:5001/oauth/token
-#     redirect_uri: http://localhost:8000/auth/redirect
-#     scopes:
-#       - calculator:execute
-#
-# a2a_clients:
-#   calculator:
-#     _type: a2a_client
-#     url: http://localhost:8001
-#     auth_provider: calculator_oauth
 
 function_groups:
   calculator:
