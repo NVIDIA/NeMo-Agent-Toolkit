@@ -262,7 +262,7 @@ dev = [
   "nbconvert", # Version determined by jupyter
   "nbsphinx~=0.9",
   "nvidia-nat_test",
-  "nvidia-sphinx-theme>=0.0.7",
+  "nvidia-sphinx-theme>=0.0.9",
   "pre-commit>=4.0,<5.0",
   "pytest_httpserver==1.1.*",
   "pytest-asyncio==0.24.*",
@@ -275,6 +275,7 @@ dev = [
   "sphinx~=8.2",
   "sphinx-autoapi>=3.6",
   "sphinx-copybutton>=0.5",
+  "sphinx_design~=0.6",
   "sphinx-mermaid",
   "tomlkit~=0.13.2",
   "twine~=6.0",
