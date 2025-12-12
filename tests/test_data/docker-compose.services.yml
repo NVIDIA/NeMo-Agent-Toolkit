@@ -198,7 +198,7 @@ services:
   piston:
     build: ./piston
     container_name: test-piston
-    privileged: true
+    privileged: true # Required by Piston
     ports:
       - "2000:2000"
     healthcheck:
