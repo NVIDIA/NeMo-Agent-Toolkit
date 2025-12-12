@@ -270,6 +270,201 @@ async def test_workflow_builder_validates_shared_depends_on_per_user():
             pass
 
 
+async def test_workflow_builder_validates_shared_fn_depends_on_per_user_function_group():
+    """Test that WorkflowBuilder._validate_dependencies() catches shared function->per-user function_group."""
+    import typing
+
+    from nat.builder.function import FunctionGroup
+    from nat.cli.register_workflow import register_per_user_function_group
+
+    class SharedFnDependsOnPerUserFGConfig(FunctionBaseConfig, name="shared_fn_depends_per_user_fg"):
+        fg_name: str
+
+    class PerUserFGForFnTestConfig(FunctionGroupBaseConfig, name="per_user_fg_for_fn_test"):
+        pass
+
+    @register_per_user_function_group(config_type=PerUserFGForFnTestConfig)
+    async def per_user_fg_for_fn_test(config: PerUserFGForFnTestConfig, builder: Builder):
+
+        class TestGroup(FunctionGroup):
+
+            async def get_accessible_functions(
+                self,
+                filter_fn: typing.Callable[[typing.Sequence[str]], typing.Awaitable[typing.Sequence[str]]]
+                | None = None,
+            ) -> dict[str, typing.Any]:
+                return {}
+
+        yield TestGroup(config=config)
+
+    @register_function(config_type=SharedFnDependsOnPerUserFGConfig)
+    async def shared_fn_depends_per_user_fg(config: SharedFnDependsOnPerUserFGConfig, b: Builder):
+        _ = await b.get_function_group(config.fg_name)
+
+        async def _impl(inp: str) -> str:
+            return f"result: {inp}"
+
+        yield FunctionInfo.from_fn(_impl)
+
+    config = Config(function_groups={
+        "per_user_fg": PerUserFGForFnTestConfig(),
+    },
+                    functions={
+                        "shared_fn": SharedFnDependsOnPerUserFGConfig(fg_name="per_user_fg"),
+                        WORKFLOW_COMPONENT_NAME: SharedWorkflowConfig(),
+                    },
+                    workflow=SharedWorkflowConfig())
+
+    # Building should fail - either with validation error or when trying to get per-user function_group
+    with pytest.raises(ValueError):
+        async with WorkflowBuilder.from_config(config) as _:
+            pass
+
+
+async def test_workflow_builder_validates_shared_fg_depends_on_per_user_function():
+    """Test that WorkflowBuilder._validate_dependencies() catches shared function_group->per-user function."""
+    import typing
+
+    from nat.builder.function import FunctionGroup
+    from nat.cli.register_workflow import register_function_group
+
+    class SharedFGDependsOnPerUserFnConfig(FunctionGroupBaseConfig, name="shared_fg_depends_per_user_fn"):
+        fn_name: str
+
+    @register_function_group(config_type=SharedFGDependsOnPerUserFnConfig)
+    async def shared_fg_depends_per_user_fn(config: SharedFGDependsOnPerUserFnConfig, builder: Builder):
+        _ = await builder.get_function(config.fn_name)
+
+        class TestGroup(FunctionGroup):
+
+            async def get_accessible_functions(
+                self,
+                filter_fn: typing.Callable[[typing.Sequence[str]], typing.Awaitable[typing.Sequence[str]]]
+                | None = None,
+            ) -> dict[str, typing.Any]:
+                return {}
+
+        yield TestGroup(config=config)
+
+    config = Config(function_groups={
+        "shared_fg": SharedFGDependsOnPerUserFnConfig(fn_name="per_user_fn"),
+    },
+                    functions={
+                        "per_user_fn": PerUserFunctionConfig(),
+                        WORKFLOW_COMPONENT_NAME: SharedWorkflowConfig(),
+                    },
+                    workflow=SharedWorkflowConfig())
+
+    # Building should fail - either with validation error or when trying to get per-user function
+    with pytest.raises(ValueError):
+        async with WorkflowBuilder.from_config(config) as _:
+            pass
+
+
+async def test_workflow_builder_validates_shared_fg_depends_on_per_user_fg():
+    """Test that WorkflowBuilder._validate_dependencies() catches shared function_group->per-user function_group."""
+    import typing
+
+    from nat.builder.function import FunctionGroup
+    from nat.cli.register_workflow import register_function_group
+    from nat.cli.register_workflow import register_per_user_function_group
+
+    class SharedFGDependsOnPerUserFGConfig(FunctionGroupBaseConfig, name="shared_fg_depends_per_user_fg"):
+        other_fg_name: str
+
+    class PerUserFGForFGTestConfig(FunctionGroupBaseConfig, name="per_user_fg_for_fg_test"):
+        pass
+
+    @register_per_user_function_group(config_type=PerUserFGForFGTestConfig)
+    async def per_user_fg_for_fg_test(config: PerUserFGForFGTestConfig, builder: Builder):
+
+        class TestGroup(FunctionGroup):
+
+            async def get_accessible_functions(
+                self,
+                filter_fn: typing.Callable[[typing.Sequence[str]], typing.Awaitable[typing.Sequence[str]]]
+                | None = None,
+            ) -> dict[str, typing.Any]:
+                return {}
+
+        yield TestGroup(config=config)
+
+    @register_function_group(config_type=SharedFGDependsOnPerUserFGConfig)
+    async def shared_fg_depends_per_user_fg(config: SharedFGDependsOnPerUserFGConfig, builder: Builder):
+        _ = await builder.get_function_group(config.other_fg_name)
+
+        class TestGroup(FunctionGroup):
+
+            async def get_accessible_functions(
+                self,
+                filter_fn: typing.Callable[[typing.Sequence[str]], typing.Awaitable[typing.Sequence[str]]]
+                | None = None,
+            ) -> dict[str, typing.Any]:
+                return {}
+
+        yield TestGroup(config=config)
+
+    config = Config(function_groups={
+        "per_user_fg": PerUserFGForFGTestConfig(),
+        "shared_fg": SharedFGDependsOnPerUserFGConfig(other_fg_name="per_user_fg"),
+    },
+                    functions={WORKFLOW_COMPONENT_NAME: SharedWorkflowConfig()},
+                    workflow=SharedWorkflowConfig())
+
+    # Building should fail - either with validation error or when trying to get per-user function_group
+    with pytest.raises(ValueError):
+        async with WorkflowBuilder.from_config(config) as _:
+            pass
+
+
+async def test_workflow_builder_validates_shared_workflow_depends_on_per_user_fg():
+    """Test that WorkflowBuilder._validate_dependencies() catches shared workflow->per-user function_group."""
+    import typing
+
+    from nat.builder.function import FunctionGroup
+    from nat.cli.register_workflow import register_per_user_function_group
+
+    class PerUserFGForWorkflowTestConfig(FunctionGroupBaseConfig, name="per_user_fg_for_workflow_test"):
+        pass
+
+    class SharedWorkflowDependsOnPerUserFGConfig(FunctionBaseConfig, name="shared_wf_depends_per_user_fg"):
+        fg_name: str
+
+    @register_per_user_function_group(config_type=PerUserFGForWorkflowTestConfig)
+    async def per_user_fg_for_wf_test(config: PerUserFGForWorkflowTestConfig, builder: Builder):
+
+        class TestGroup(FunctionGroup):
+
+            async def get_accessible_functions(
+                self,
+                filter_fn: typing.Callable[[typing.Sequence[str]], typing.Awaitable[typing.Sequence[str]]]
+                | None = None,
+            ) -> dict[str, typing.Any]:
+                return {}
+
+        yield TestGroup(config=config)
+
+    @register_function(config_type=SharedWorkflowDependsOnPerUserFGConfig)
+    async def shared_wf_depends_per_user_fg(config: SharedWorkflowDependsOnPerUserFGConfig, b: Builder):
+        _ = await b.get_function_group(config.fg_name)
+
+        async def _impl(inp: str) -> str:
+            return f"result: {inp}"
+
+        yield FunctionInfo.from_fn(_impl)
+
+    config = Config(function_groups={
+        "per_user_fg": PerUserFGForWorkflowTestConfig(),
+    },
+                    functions={WORKFLOW_COMPONENT_NAME: SharedWorkflowDependsOnPerUserFGConfig(fg_name="per_user_fg")},
+                    workflow=SharedWorkflowDependsOnPerUserFGConfig(fg_name="per_user_fg"))
+
+    # Building should fail - either with validation error or when trying to get per-user function_group
+    with pytest.raises(ValueError):
+        async with WorkflowBuilder.from_config(config) as _:
+            pass
+
+
 async def test_per_user_workflow_builder_initialization():
     """Test PerUserWorkflowBuilder can be initialized."""
 

@@ -1308,7 +1308,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         at shared builder initialization time.
         """
 
-        # Check shared functions do not depend on per-user functions
+        # Check shared functions do not depend on per-user functions or function_groups
         for fn_name, fn_deps in self.function_dependencies.items():
             if fn_name == WORKFLOW_COMPONENT_NAME:
                 continue
@@ -1323,6 +1323,34 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                         dep_registration = self._registry.get_function(type(dep_config))
                         if dep_registration.is_per_user:
                             raise ValueError(f"Function `{fn_name}` depends on per-user function `{dep_fn_name}`")
+
+                for dep_fg_name in fn_deps.function_groups:
+                    dep_config = config.function_groups.get(dep_fg_name)
+                    if dep_config is not None:
+                        dep_registration = self._registry.get_function_group(type(dep_config))
+                        if dep_registration.is_per_user:
+                            raise ValueError(f"Function `{fn_name}` depends on per-user function_group `{dep_fg_name}`")
+
+        # Check shared function_groups do not depend on per-user functions or function_groups
+        for fg_name, fg_deps in self.function_group_dependencies.items():
+            fg_config = self.get_function_group_config(fg_name)
+            fg_registration = self._registry.get_function_group(type(fg_config))
+
+            if not fg_registration.is_per_user:
+                for dep_fn_name in fg_deps.functions:
+                    dep_config = config.functions.get(dep_fn_name)
+                    if dep_config is not None:
+                        dep_registration = self._registry.get_function(type(dep_config))
+                        if dep_registration.is_per_user:
+                            raise ValueError(f"FunctionGroup `{fg_name}` depends on per-user function `{dep_fn_name}`")
+
+                for dep_fg_name in fg_deps.function_groups:
+                    dep_config = config.function_groups.get(dep_fg_name)
+                    if dep_config is not None:
+                        dep_registration = self._registry.get_function_group(type(dep_config))
+                        if dep_registration.is_per_user:
+                            raise ValueError(
+                                f"FunctionGroup `{fg_name}` depends on per-user function_group `{dep_fg_name}`")
 
         if self._workflow is not None:
             workflow_config = self.get_workflow_config()
@@ -1342,6 +1370,14 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                             dep_registration = self._registry.get_function(type(dep_config))
                             if dep_registration.is_per_user:
                                 raise ValueError(f"Shared Workflow depends on per-user function `{dep_fn_name}`")
+
+                for dep_fg_name in workflow_deps.function_groups:
+                    if dep_fg_name in config.function_groups:
+                        dep_config = config.function_groups[dep_fg_name]
+                        if dep_config is not None:
+                            dep_registration = self._registry.get_function_group(type(dep_config))
+                            if dep_registration.is_per_user:
+                                raise ValueError(f"Shared Workflow depends on per-user function_group `{dep_fg_name}`")
 
     @classmethod
     @asynccontextmanager
