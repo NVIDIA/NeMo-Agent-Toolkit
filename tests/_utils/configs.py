@@ -15,6 +15,9 @@
 
 from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.embedder import EmbedderBaseConfig
+from nat.data_models.finetuning import TrainerAdapterConfig
+from nat.data_models.finetuning import TrainerConfig
+from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
@@ -61,4 +64,16 @@ class RegistryHandlerTestConfig(RegistryHandlerBaseConfig, name="test_registry_h
 
 
 class AuthenticationProviderTestConfig(AuthProviderBaseConfig, name="test_authentication"):
+    pass
+
+
+class TrainerTestConfig(TrainerConfig, name="test_trainer"):
+    pass
+
+
+class TrainerAdapterTestConfig(TrainerAdapterConfig, name="test_trainer_adapter"):
+    pass
+
+
+class TrajectoryBuilderTestConfig(TrajectoryBuilderConfig, name="test_trajectory_builder"):
     pass

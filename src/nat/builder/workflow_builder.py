@@ -54,10 +54,16 @@ from nat.data_models.component_ref import MemoryRef
 from nat.data_models.component_ref import MiddlewareRef
 from nat.data_models.component_ref import ObjectStoreRef
 from nat.data_models.component_ref import RetrieverRef
+from nat.data_models.component_ref import TrainerAdapterRef
+from nat.data_models.component_ref import TrainerRef
+from nat.data_models.component_ref import TrajectoryBuilderRef
 from nat.data_models.component_ref import TTCStrategyRef
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
 from nat.data_models.embedder import EmbedderBaseConfig
+from nat.data_models.finetuning import TrainerAdapterConfig
+from nat.data_models.finetuning import TrainerConfig
+from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.function_dependencies import FunctionDependencies
@@ -72,6 +78,9 @@ from nat.experimental.decorators.experimental_warning_decorator import experimen
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
 from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
+from nat.finetuning.interfaces.finetuning_runner import Trainer
+from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
+from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 from nat.memory.interfaces import MemoryEditor
 from nat.middleware.function_middleware import FunctionMiddleware
 from nat.middleware.middleware import Middleware
@@ -151,6 +160,24 @@ class ConfiguredMiddleware:
     instance: Middleware
 
 
+@dataclasses.dataclass
+class ConfiguredTrainer:
+    config: TrainerConfig
+    instance: Trainer
+
+
+@dataclasses.dataclass
+class ConfiguredTrainerAdapter:
+    config: TrainerAdapterConfig
+    instance: TrainerAdapter
+
+
+@dataclasses.dataclass
+class ConfiguredTrajectoryBuilder:
+    config: TrajectoryBuilderConfig
+    instance: TrajectoryBuilder
+
+
 class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
     def __init__(self, *, general_config: GeneralConfig | None = None, registry: TypeRegistry | None = None):
@@ -181,6 +208,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         self._retrievers: dict[str, ConfiguredRetriever] = {}
         self._ttc_strategies: dict[str, ConfiguredTTCStrategy] = {}
         self._middleware: dict[str, ConfiguredMiddleware] = {}
+        self._trainers: dict[str, ConfiguredTrainer] = {}
+        self._trainer_adapters: dict[str, ConfiguredTrainerAdapter] = {}
+        self._trajectory_builders: dict[str, ConfiguredTrajectoryBuilder] = {}
 
         self._context_state = ContextState.get()
 
@@ -345,6 +375,18 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                         ttc_strategies={
                             k: v.config
                             for k, v in self._ttc_strategies.items()
+                        },
+                        trainers={
+                            k: v.config
+                            for k, v in self._trainers.items()
+                        },
+                        trainer_adapters={
+                            k: v.config
+                            for k, v in self._trainer_adapters.items()
+                        },
+                        trajectory_builders={
+                            k: v.config
+                            for k, v in self._trajectory_builders.items()
                         })
         if (entry_function is None):
             entry_fn_obj = self.get_workflow()
@@ -945,6 +987,114 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         return self._retrievers[retriever_name].config
 
     @override
+    @experimental(feature_name="Finetuning")
+    async def add_trainer(self, name: str | TrainerRef, config: TrainerConfig) -> Trainer:
+        if (name in self._trainers):
+            raise ValueError(f"Trainer '{name}' already exists in the list of trainers")
+
+        try:
+            trainer_info = self._registry.get_trainer(type(config))
+
+            info_obj = await self._get_exit_stack().enter_async_context(trainer_info.build_fn(config, self))
+
+            self._trainers[name] = ConfiguredTrainer(config=config, instance=info_obj)
+
+            return info_obj
+
+        except Exception as e:
+            logger.error("Error adding trainer `%s` with config `%s`: %s", name, config, e)
+            raise
+
+    @override
+    @experimental(feature_name="Finetuning")
+    async def add_trainer_adapter(self, name: str | TrainerAdapterRef, config: TrainerAdapterConfig) -> TrainerAdapter:
+        if (name in self._trainer_adapters):
+            raise ValueError(f"Trainer adapter '{name}' already exists in the list of trainer adapters")
+
+        try:
+            trainer_adapter_info = self._registry.get_trainer_adapter(type(config))
+
+            info_obj = await self._get_exit_stack().enter_async_context(trainer_adapter_info.build_fn(config, self))
+
+            self._trainer_adapters[name] = ConfiguredTrainerAdapter(config=config, instance=info_obj)
+
+            return info_obj
+
+        except Exception as e:
+            logger.error("Error adding trainer adapter `%s` with config `%s`: %s", name, config, e)
+            raise
+
+    @override
+    @experimental(feature_name="Finetuning")
+    async def add_trajectory_builder(self, name: str | TrajectoryBuilderRef,
+                                     config: TrajectoryBuilderConfig) -> TrajectoryBuilder:
+        if (name in self._trajectory_builders):
+            raise ValueError(f"Trajectory builder '{name}' already exists in the list of trajectory builders")
+
+        try:
+            trajectory_builder_info = self._registry.get_trajectory_builder(type(config))
+
+            info_obj = await self._get_exit_stack().enter_async_context(trajectory_builder_info.build_fn(config, self))
+
+            self._trajectory_builders[name] = ConfiguredTrajectoryBuilder(config=config, instance=info_obj)
+
+            return info_obj
+
+        except Exception as e:
+            logger.error("Error adding trajectory builder `%s` with config `%s`: %s", name, config, e)
+            raise
+
+    @override
+    async def get_trainer(self,
+                          trainer_name: str | TrainerRef,
+                          trajectory_builder: TrajectoryBuilder,
+                          trainer_adapter: TrainerAdapter) -> Trainer:
+
+        if trainer_name not in self._trainers:
+            raise ValueError(f"Trainer '{trainer_name}' not found")
+
+        trainer_instance = self._trainers[trainer_name].instance
+        await trainer_instance.bind_components(trainer_adapter=trainer_adapter, trajectory_builder=trajectory_builder)
+
+        return trainer_instance
+
+    @override
+    async def get_trainer_config(self, trainer_name: str | TrainerRef) -> TrainerConfig:
+        if trainer_name not in self._trainers:
+            raise ValueError(f"Trainer '{trainer_name}' not found")
+
+        return self._trainers[trainer_name].config
+
+    @override
+    async def get_trainer_adapter_config(self, trainer_adapter_name: str | TrainerAdapterRef) -> TrainerAdapterConfig:
+        if trainer_adapter_name not in self._trainer_adapters:
+            raise ValueError(f"Trainer adapter '{trainer_adapter_name}' not found")
+
+        return self._trainer_adapters[trainer_adapter_name].config
+
+    @override
+    async def get_trajectory_builder_config(
+            self, trajectory_builder_name: str | TrajectoryBuilderRef) -> (TrajectoryBuilderConfig):
+        if trajectory_builder_name not in self._trajectory_builders:
+            raise ValueError(f"Trajectory builder '{trajectory_builder_name}' not found")
+
+        return self._trajectory_builders[trajectory_builder_name].config
+
+    @override
+    async def get_trainer_adapter(self, trainer_adapter_name: str | TrainerAdapterRef) -> TrainerAdapter:
+        if trainer_adapter_name not in self._trainer_adapters:
+            raise ValueError(f"Trainer adapter '{trainer_adapter_name}' not found")
+
+        return self._trainer_adapters[trainer_adapter_name].instance
+
+    @override
+    async def get_trajectory_builder(self, trajectory_builder_name: str | TrajectoryBuilderRef) -> TrajectoryBuilder:
+        if trajectory_builder_name not in self._trajectory_builders:
+            raise ValueError(f"Trajectory builder '{trajectory_builder_name}' not found")
+
+        return self._trajectory_builders[trajectory_builder_name].instance
+
+    @override
     @experimental(feature_name="TTC")
     async def add_ttc_strategy(self, name: str | TTCStrategyRef, config: TTCStrategyBaseConfig) -> None:
         if (name in self._ttc_strategies):
@@ -1237,6 +1387,17 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                 elif component_instance.component_group == ComponentGroup.AUTHENTICATION:
                     await self.add_auth_provider(component_instance.name,
                                                  cast(AuthProviderBaseConfig, component_instance.config))
+
+                elif component_instance.component_group == ComponentGroup.TRAINERS:
+                    await self.add_trainer(component_instance.name, cast(TrainerConfig, component_instance.config))
+
+                elif component_instance.component_group == ComponentGroup.TRAINER_ADAPTERS:
+                    await self.add_trainer_adapter(component_instance.name,
+                                                   cast(TrainerAdapterConfig, component_instance.config))
+
+                elif component_instance.component_group == ComponentGroup.TRAJECTORY_BUILDERS:
+                    await self.add_trajectory_builder(component_instance.name,
+                                                      cast(TrajectoryBuilderConfig, component_instance.config))
                 else:
                     raise ValueError(f"Unknown component group {component_instance.component_group}")
 
@@ -1426,6 +1587,50 @@ class ChildBuilder(Builder):
     @override
     def get_object_store_config(self, object_store_name: str) -> ObjectStoreBaseConfig:
         return self._workflow_builder.get_object_store_config(object_store_name)
+
+    @override
+    @experimental(feature_name="Finetuning")
+    async def add_trainer(self, name: str | TrainerRef, config: TrainerConfig) -> Trainer:
+        return await self._workflow_builder.add_trainer(name, config)
+
+    @override
+    @experimental(feature_name="Finetuning")
+    async def add_trainer_adapter(self, name: str | TrainerAdapterRef, config: TrainerAdapterConfig) -> TrainerAdapter:
+        return await self._workflow_builder.add_trainer_adapter(name, config)
+
+    @override
+    @experimental(feature_name="Finetuning")
+    async def add_trajectory_builder(self, name: str | TrajectoryBuilderRef,
+                                     config: TrajectoryBuilderConfig) -> TrajectoryBuilder:
+        return await self._workflow_builder.add_trajectory_builder(name, config)
+
+    @override
+    async def get_trainer(self,
+                          trainer_name: str | TrainerRef,
+                          trajectory_builder: TrajectoryBuilder,
+                          trainer_adapter: TrainerAdapter) -> Trainer:
+        return await self._workflow_builder.get_trainer(trainer_name, trajectory_builder, trainer_adapter)
+
+    @override
+    async def get_trainer_config(self, trainer_name: str | TrainerRef) -> TrainerConfig:
+        return await self._workflow_builder.get_trainer_config(trainer_name)
+
+    @override
+    async def get_trainer_adapter_config(self, trainer_adapter_name: str | TrainerAdapterRef) -> TrainerAdapterConfig:
+        return await self._workflow_builder.get_trainer_adapter_config(trainer_adapter_name)
+
+    @override
+    async def get_trajectory_builder_config(
+            self, trajectory_builder_name: str | TrajectoryBuilderRef) -> (TrajectoryBuilderConfig):
+        return await self._workflow_builder.get_trajectory_builder_config(trajectory_builder_name)
+
+    @override
+    async def get_trainer_adapter(self, trainer_adapter_name: str | TrainerAdapterRef) -> TrainerAdapter:
+        return await self._workflow_builder.get_trainer_adapter(trainer_adapter_name)
+
+    @override
+    async def get_trajectory_builder(self, trajectory_builder_name: str | TrajectoryBuilderRef) -> TrajectoryBuilder:
+        return await self._workflow_builder.get_trajectory_builder(trajectory_builder_name)
 
     @override
     @experimental(feature_name="TTC")

@@ -97,6 +97,14 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^docs/source/workflows/mcp/.*\.md$",
         r"^ghcr\.io/github/github-mcp-server",
     ),
+    (
+        r"^examples/finetuning/rl_with_openpipe_art/.*/configs/config.*\.yml$",
+        r"^examples/finetuning/rl_with_openpipe_art/.*/data/.*",
+    ),
+    (
+        r"^examples/finetuning/rl_with_openpipe_art/src/rl_with_openpipe_art/configs/config\.yml$",
+        r"^examples/finetuning/rl_with_openpipe_art/.*/data/.*",
+    ),
 }
 
 ALLOWLISTED_WORDS: set[str] = {
@@ -155,6 +163,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "mistralai/[Mm]ixtral.*",
     "microsoft/[Pp]hi.*",
     "ssmits/[Qq]wen.*",
+    "Qwen/Qwen.*",
     "deepseek-ai/deepseek-.*",  #
     # MIME types
     "(application|text|image|video|audio|model|dataset|token|other)/.*",  #

@@ -36,6 +36,7 @@ from nat.utils.log_levels import LOG_LEVELS
 from .commands.a2a.a2a import a2a_command
 from .commands.configure.configure import configure_command
 from .commands.evaluate import eval_command
+from .commands.finetune import finetune_command
 from .commands.info.info import info_command
 from .commands.mcp.mcp import mcp_command
 from .commands.object_store.object_store import object_store_command
@@ -107,6 +108,7 @@ def cli(ctx: click.Context, log_level: str):
 cli.add_command(a2a_command, name="a2a")
 cli.add_command(configure_command, name="configure")
 cli.add_command(eval_command, name="eval")
+cli.add_command(finetune_command, name="finetune")
 cli.add_command(info_command, name="info")
 cli.add_command(red_team_command, name="red-team")
 cli.add_command(registry_command, name="registry")
