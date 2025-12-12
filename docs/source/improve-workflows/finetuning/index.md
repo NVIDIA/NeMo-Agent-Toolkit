@@ -65,7 +65,7 @@ The finetuning harness is built on three foundational principles:
 | Guide | Description |
 |-------|-------------|
 | [Concepts](concepts.md) | Core concepts, RL fundamentals, curriculum learning, and architecture details |
-| [Extending](extending.md) | How to implement custom TrajectoryBuilders, TrainerAdapters, and Trainers |
+| [Extending](../../extend/custom-components/finetuning.md) | How to implement custom TrajectoryBuilders, TrainerAdapters, and Trainers |
 | [OpenPipe ART](rl_with_openpipe.md) | Using the OpenPipe ART backend for GRPO training |
 
 ## Supported Backends
@@ -96,6 +96,5 @@ The finetuning harness is built on three foundational principles:
 :caption: Finetuning
 
 Concepts <./concepts.md>
-Extending <./extending.md>
 OpenPipe ART <./rl_with_openpipe.md>
 ```

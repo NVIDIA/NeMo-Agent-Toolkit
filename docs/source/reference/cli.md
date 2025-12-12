@@ -560,7 +560,7 @@ The finetuning process:
 4. Submits trajectories for training
 5. Monitors training progress
 
-For detailed information on finetuning concepts, configuration, and extending the harness, see the [Finetuning Harness](../reference/finetuning/index.md) documentation.
+For detailed information on finetuning concepts, configuration, and extending the harness, see the [Finetuning Harness](../improve-workflows/finetuning/index.md) documentation.
 
 The `nat finetune --help` utility provides a brief overview of the command and its available options:
 

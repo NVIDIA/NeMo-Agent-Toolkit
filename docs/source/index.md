@@ -213,6 +213,7 @@ Profiling and Performance Monitoring <./improve-workflows/profiler.md>
 Optimizer Guide <./improve-workflows/optimizer.md>
 Sizing Calculator <./improve-workflows/sizing-calc.md>
 Test Time Compute <./improve-workflows/test-time-compute.md>
+Finetuning <./improve-workflows/finetuning/index.md>
 ```
 
 ```{toctree}
@@ -242,7 +243,6 @@ Custom Components <./extend/custom-components/index.md>
 Python API <./api/index.rst>
 ./reference/rest-api/index.md
 Command Line Interface (CLI) <./reference/cli.md>
-Finetuning <./reference/finetuning/index.md>
 ```
 
 ```{toctree}

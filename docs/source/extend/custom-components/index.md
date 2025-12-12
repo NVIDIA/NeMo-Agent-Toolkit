@@ -31,4 +31,5 @@ Memory Provider <./memory.md>
 Object Store Provider <./object-store.md>
 Telemetry Exporter <./telemetry-exporters.md>
 Gated Fields <./gated-fields.md>
+Finetuning Harness <./finetuning.md>
 ```

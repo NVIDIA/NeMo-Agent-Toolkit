@@ -642,6 +642,6 @@ nat finetune --config_file=configs/finetune.yml \
 
 ## See Also
 
-- [Extending the Finetuning Harness](extending.md) - Creating custom components
+- [Extending the Finetuning Harness](../../extend/custom-components/finetuning.md) - Creating custom components
 - [OpenPipe ART Integration](rl_with_openpipe.md) - Using the ART backend
 - [Evaluating Workflows](../evaluate.md) - Understanding evaluators for rewards
