@@ -943,8 +943,8 @@ See the example's README for detailed instructions.
 
 ## See Also
 
-- [Finetuning Concepts](../../../../concepts.md) - Core concepts and RL fundamentals
-- [Extending the Finetuning Harness](extending.md) - Creating custom components
+- [Finetuning Concepts](concepts.md) - Core concepts and RL fundamentals
+- [Extending the Finetuning Harness](../../extend/custom-components/finetuning.md) - Creating custom components
 - [OpenPipe ART Integration](rl_with_openpipe.md) - Alternative RL training with ART
-- [Custom Evaluators](../../extend/custom-evaluator.md) - Creating reward functions
+- [Custom Evaluators](../../extend/custom-components/custom-evaluator.md) - Creating reward functions
 - [NeMo Customizer Documentation](https://docs.nvidia.com/nemo/microservices/latest/fine-tune/index.html) - Official NeMo Customizer documentation
