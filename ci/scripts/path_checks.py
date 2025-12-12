@@ -98,12 +98,8 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^ghcr\.io/github/github-mcp-server",
     ),
     (
-        r"^examples/finetuning/rl_with_openpipe_art/.*/configs/config.yml",
-        r"^examples/finetuning/rl_with_openpipe_art/.*/data/",
-    ),
-    (
-        r"^examples/finetuning/rl_with_openpipe_art/.*/configs/config.yml",
-        r"^examples/finetuning/rl_with_openpipe_art/data/",
+        r"^examples/finetuning/rl_with_openpipe_art/.*/configs/config.*\.yml$",
+        r"^examples/finetuning/rl_with_openpipe_art/.*/data/.*",
     ),
 }
 

@@ -15,6 +15,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
+<!-- path-check-skip-begin -->
+
 # Extending the Finetuning Harness
 
 This guide covers how to create custom components for the NAT finetuning harness. You'll learn about the three core interfaces, how to implement them, and best practices for creating robust, reusable components.
@@ -554,6 +556,8 @@ finetuning:
     increment_percentile: 0.2
     expansion_interval: 5
 ```
+
+<!-- path-check-skip-end -->
 
 ## See Also
 

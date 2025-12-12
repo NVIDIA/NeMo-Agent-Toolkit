@@ -62,6 +62,8 @@ etcd
 [Ee]xfiltration
 [Ee]xplainability
 Faiss
+[Ff]inetune(d?)
+[Ff]inetune(r|rs|ing)
 [Ff]inetuning
 [Ff]inetunable
 Gantt
@@ -101,6 +103,7 @@ Milvus
 MLflow
 MLOps
 Morpheus
+Minimax
 [Mm]ultimodal
 [Nn]amespac(e|ed|es|ing)
 NeMo
@@ -109,6 +112,7 @@ NIC
 NIM(s?)
 npm
 NumPy
+NAT's
 NVIDIA
 Nemotron
 OAuth
@@ -140,6 +144,7 @@ pytest
 [Rr]epo
 [Rr]etarget(ed?)
 [Rr]eusability
+[Ro]llout(s?)
 [Rr]untime(s?)
 [Ss]andboxing
 [Ss]erializable
