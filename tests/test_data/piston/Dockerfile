@@ -20,3 +20,7 @@ FROM ghcr.io/engineer-man/piston:latest
 # Work-around for https://github.com/engineer-man/piston/issues/730
 RUN mkdir /piston
 
+ARG PISTON_RUN_TIMEOUT
+ARG PISTON_RUN_CPU_TIME
+ENV PISTON_RUN_TIMEOUT=${PISTON_RUN_TIMEOUT}
+ENV PISTON_RUN_CPU_TIME=${PISTON_RUN_CPU_TIME}
