@@ -116,7 +116,7 @@ workflow:
 
 ## Installation and Setup
 
-Before running this example, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install the NeMo Agent toolkit.
+Before running this example, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install the NeMo Agent toolkit.
 
 ### Install this Workflow
 
