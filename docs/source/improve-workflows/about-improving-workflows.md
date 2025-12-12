@@ -24,3 +24,4 @@ NeMo Agent toolkit offers a variety of tools and techniques to improve workflows
 - [Optimizer Guide](./optimizer.md) - Automatically tune the parameters and prompts of your agents, tools, and workflows to maximize performance, minimize cost, and increase accuracy.
 - [Sizing Calculator](./sizing-calc.md) - Using the sizing calculator to estimate GPU cluster size requirements.
 - [Test Time Compute](./test-time-compute.md) - Use composable pre-built or customizable strategies to scale agent execution at runtime and improve performance.
+- [Finetuning Harness](./finetuning/index.md) - Leverage the finetuning harness for finetuning of agentic LLM workflows to iteratively improve agents through experience.
