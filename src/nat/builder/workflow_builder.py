@@ -39,6 +39,7 @@ from nat.builder.function import FunctionGroup
 from nat.builder.function import LambdaFunction
 from nat.builder.function_info import FunctionInfo
 from nat.builder.llm import LLMProviderInfo
+from nat.builder.per_user_workflow_builder import PerUserWorkflowBuilder
 from nat.builder.retriever import RetrieverProviderInfo
 from nat.builder.workflow import Workflow
 from nat.cli.type_registry import GlobalTypeRegistry
