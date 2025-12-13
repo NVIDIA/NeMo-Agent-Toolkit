@@ -24,6 +24,7 @@ from uuid import uuid4
 from pydantic import BaseModel
 from tqdm import tqdm
 
+from nat.builder.context import ContextState
 from nat.data_models.evaluate import EvalConfig
 from nat.data_models.evaluate import JobEvictionPolicy
 from nat.data_models.runtime_enum import RuntimeTypeEnum
@@ -38,7 +39,6 @@ from nat.eval.usage_stats import UsageStatsItem
 from nat.eval.usage_stats import UsageStatsLLM
 from nat.eval.utils.output_uploader import OutputUploader
 from nat.eval.utils.weave_eval import WeaveEvaluationIntegration
-from nat.builder.context import ContextState
 from nat.profiler.data_models import ProfilerResults
 from nat.runtime.session import SessionManager
 
@@ -219,11 +219,13 @@ class EvaluationRun:
                     else:
                         m = jsonpath_expr.find(base_output)
                         if (not m):
-                            raise RuntimeError(f"Failed to extract output using jsonpath: {self.config.result_json_path}")
+                            raise RuntimeError(
+                                f"Failed to extract output using jsonpath: {self.config.result_json_path}")
                         if (len(m) > 1):
-                            logger.warning("Multiple matches found for jsonpath at row '%s'. Matches: %s. Using the first",
-                                           base_output,
-                                           m)
+                            logger.warning(
+                                "Multiple matches found for jsonpath at row '%s'. Matches: %s. Using the first",
+                                base_output,
+                                m)
                         output = m[0].value
 
                     item.output_obj = output
@@ -537,26 +539,32 @@ class EvaluationRun:
 
             with self.eval_trace_context.evaluation_context():
                 # Run workflow
-                if self.config.endpoint:
-                    await self.run_workflow_remote()
-                elif not self.config.skip_workflow:
-                    if session_manager is None:
-                        session_manager = await SessionManager.create(
-                            config=config,
-                            shared_builder=eval_workflow,
-                            max_concurrency=self.eval_config.general.max_concurrency)
-                    await self.run_workflow_local(session_manager)
+                local_session_manager: SessionManager | None = None
+                try:
+                    if self.config.endpoint:
+                        await self.run_workflow_remote()
+                    elif not self.config.skip_workflow:
+                        if session_manager is None:
+                            session_manager = await SessionManager.create(
+                                config=config,
+                                shared_builder=eval_workflow,
+                                max_concurrency=self.eval_config.general.max_concurrency)
+                            local_session_manager = session_manager
+                        await self.run_workflow_local(session_manager)
 
-                # Pre-evaluation process the workflow output
-                self.eval_input = dataset_handler.pre_eval_process_eval_input(self.eval_input)
+                    # Pre-evaluation process the workflow output
+                    self.eval_input = dataset_handler.pre_eval_process_eval_input(self.eval_input)
 
-                # Evaluate
-                evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
-                await self.run_evaluators(evaluators)
+                    # Evaluate
+                    evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
+                    await self.run_evaluators(evaluators)
 
-                # Wait for all trace export tasks to complete (local workflows only)
-                if session_manager and not self.config.endpoint:
-                    await self.wait_for_all_export_tasks_local(session_manager, timeout=self.config.export_timeout)
+                    # Wait for all trace export tasks to complete (local workflows only)
+                    if session_manager and not self.config.endpoint:
+                        await self.wait_for_all_export_tasks_local(session_manager, timeout=self.config.export_timeout)
+                finally:
+                    if local_session_manager is not None:
+                        await local_session_manager.shutdown()
 
         # Profile the workflow
         profiler_results = await self.profile_workflow()

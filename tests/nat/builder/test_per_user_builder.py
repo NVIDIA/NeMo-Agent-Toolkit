@@ -96,11 +96,11 @@ class PerUserCounterWorkflowConfig(FunctionBaseConfig, name="per_user_counter_wo
 
 # Register all test components
 @pytest.fixture(scope="module", autouse=True)
-async def _register_components():
+async def register_components():
 
     # Register shared function
     @register_function(config_type=SharedFunctionConfig)
-    async def build_shared_fn(config: SharedFunctionConfig, b: Builder):
+    async def build_shared_fn(_config: SharedFunctionConfig, _b: Builder):
 
         async def _impl(inp: str) -> str:
             return f"shared: {inp}"
@@ -111,7 +111,7 @@ async def _register_components():
     @register_per_user_function(config_type=PerUserFunctionConfig,
                                 input_type=PerUserInputSchema,
                                 single_output_type=PerUserOutputSchema)
-    async def build_per_user_fn(config: PerUserFunctionConfig, b: Builder):
+    async def build_per_user_fn(_config: PerUserFunctionConfig, _b: Builder):
 
         async def _impl(inp: PerUserInputSchema) -> PerUserOutputSchema:
             return PerUserOutputSchema(result=f"per-user: {inp.message}")
@@ -122,7 +122,7 @@ async def _register_components():
     @register_per_user_function(config_type=PerUserFunctionBConfig,
                                 input_type=PerUserInputSchema,
                                 single_output_type=PerUserOutputSchema)
-    async def build_per_user_fn_b(config: PerUserFunctionBConfig, b: Builder):
+    async def build_per_user_fn_b(_config: PerUserFunctionBConfig, _b: Builder):
 
         async def _impl(inp: PerUserInputSchema) -> PerUserOutputSchema:
             return PerUserOutputSchema(result=f"per-user-b: {inp.message}")
@@ -148,7 +148,7 @@ async def _register_components():
     @register_per_user_function(config_type=PerUserWorkflowConfig,
                                 input_type=PerUserInputSchema,
                                 single_output_type=PerUserOutputSchema)
-    async def build_per_user_workflow(config: PerUserWorkflowConfig, b: Builder):
+    async def build_per_user_workflow(_config: PerUserWorkflowConfig, _b: Builder):
 
         async def _impl(inp: PerUserInputSchema) -> PerUserOutputSchema:
             return PerUserOutputSchema(result=f"per-user-workflow: {inp.message}")
@@ -157,7 +157,7 @@ async def _register_components():
 
     # Register shared workflow
     @register_function(config_type=SharedWorkflowConfig)
-    async def build_shared_workflow(config: SharedWorkflowConfig, b: Builder):
+    async def build_shared_workflow(_config: SharedWorkflowConfig, _b: Builder):
 
         async def _impl(inp: PerUserInputSchema) -> PerUserOutputSchema:
             return PerUserOutputSchema(result=f"shared-workflow: {inp.message}")
@@ -168,7 +168,7 @@ async def _register_components():
     @register_per_user_function(config_type=PerUserCounterConfig,
                                 input_type=CounterInput,
                                 single_output_type=CounterOutput)
-    async def per_user_counter(config: PerUserCounterConfig, builder: Builder):
+    async def per_user_counter(config: PerUserCounterConfig, _builder: Builder):
         # This state is unique per user!
         counter_state = {"count": config.initial_value}
 
@@ -1045,8 +1045,7 @@ async def test_per_user_builder_builds_per_user_function_groups():
             # Should be able to get it
             fg = await per_user_builder.get_function_group("test_fg")
             assert fg is not None
-            assert hasattr(fg, 'prefix')
-            assert getattr(fg, 'prefix') == "user_specific"
+            assert fg.prefix == "user_specific"
 
 
 async def test_per_user_builder_function_groups_expose_functions():

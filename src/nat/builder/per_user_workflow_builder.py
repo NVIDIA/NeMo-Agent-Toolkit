@@ -516,7 +516,8 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
         build_sequence = build_dependency_sequence(config)
 
         if not skip_workflow:
-            self.remaining_components.append((WORKFLOW_COMPONENT_NAME, "workflow"))
+            if (WORKFLOW_COMPONENT_NAME, "workflow") not in self.remaining_components:
+                self.remaining_components.append((WORKFLOW_COMPONENT_NAME, "workflow"))
 
         # Filter to only per-user functions and function groups and build them in dependency order
         for component_instance in build_sequence:
@@ -604,16 +605,26 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
             # Use specified function (could be per-user or shared)
             entry_fn_obj = await self.get_function(entry_function)
 
-        # Collect all functions (per-user + shared)
+        # Collect function names that are included by function groups (shared + per-user)
+        # These will be skipped when populating function_configs and all_functions
+        included_functions: set[str] = set()
+        for configured_fg in self._shared_builder._function_groups.values():
+            included_functions.update((await configured_fg.instance.get_included_functions()).keys())
+        for configured_fg in self._per_user_function_groups.values():
+            included_functions.update((await configured_fg.instance.get_included_functions()).keys())
+
+        # Collect all functions (per-user + shared), excluding those already in function groups
         all_functions = {}
 
-        # Add shared functions
+        # Add shared functions (skip those included by function groups)
         for name, configured_fn in self._shared_builder._functions.items():
-            all_functions[name] = configured_fn.instance
+            if name not in included_functions:
+                all_functions[name] = configured_fn.instance
 
-        # Override with per-user functions
+        # Override with per-user functions (skip those included by function groups)
         for name, configured_fn in self._per_user_functions.items():
-            all_functions[name] = configured_fn.instance
+            if name not in included_functions:
+                all_functions[name] = configured_fn.instance
 
         # Collect all function groups (shared + per-user)
         all_function_groups = {}
@@ -624,12 +635,14 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
         for name, configured_fg in self._per_user_function_groups.items():
             all_function_groups[name] = configured_fg.instance
 
-        # Build function configs (per-user + shared)
+        # Build function configs (per-user + shared), excluding those already in function groups
         function_configs = {}
         for name, configured_fn in self._shared_builder._functions.items():
-            function_configs[name] = configured_fn.config
+            if name not in included_functions:
+                function_configs[name] = configured_fn.config
         for name, configured_fn in self._per_user_functions.items():
-            function_configs[name] = configured_fn.config
+            if name not in included_functions:
+                function_configs[name] = configured_fn.config
 
         # Build function group configs (shared + per-user)
         function_group_configs = {}
