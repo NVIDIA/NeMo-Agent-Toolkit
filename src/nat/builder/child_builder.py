@@ -128,9 +128,13 @@ class ChildBuilder(Builder):
             if isinstance(self._workflow_builder, WorkflowBuilder):
                 function_groups = self._workflow_builder._function_groups
             elif isinstance(self._workflow_builder, PerUserWorkflowBuilder):
-                function_groups = self._workflow_builder._per_user_function_groups
+                # Per-user components can have dependencies on both shared and per-user function groups
+                function_groups = {
+                    **self._workflow_builder._shared_builder._function_groups,
+                    **self._workflow_builder._per_user_function_groups
+                }
             else:
-                raise ValueError("Invalid workflow builder type")
+                raise TypeError(f"Invalid workflow builder type: {type(self._workflow_builder)}")
             if tool_name in function_groups:
                 self._dependencies.add_function_group(tool_name)
             else:
