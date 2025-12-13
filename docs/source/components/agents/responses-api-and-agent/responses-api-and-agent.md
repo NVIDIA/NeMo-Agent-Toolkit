@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 # Configure the Responses API and Agent
-Configure the Responses API and agent with a LLM client and through the agent graph.
+Configure the Responses API and [agent](../index.md) with a LLM client and through the agent graph.
 
 ## Requirements
 

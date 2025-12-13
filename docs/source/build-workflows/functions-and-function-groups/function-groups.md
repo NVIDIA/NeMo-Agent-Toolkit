@@ -403,7 +403,7 @@ Function groups provide different levels of access control. Understanding these 
 
 - Workflow Builder Tools (Agent-Accessible)
 
-    Functions that are not in the `exclude` list can be wrapped as tools for agents. This makes them:
+    Functions that are not in the `exclude` list can be wrapped as tools for [agents](../../components/agents/index.md). This makes them:
     - Available to AI agents
     - Discoverable in tool lists
     - Callable by agent frameworks
