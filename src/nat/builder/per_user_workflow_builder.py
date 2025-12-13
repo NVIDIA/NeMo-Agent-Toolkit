@@ -148,7 +148,7 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
         for middleware_name in middleware_names:
             middleware_obj = await self._shared_builder.get_middleware(middleware_name)
             if not isinstance(middleware_obj, FunctionMiddleware):
-                raise TypeError(f"Middleware `{middleware_name}` is not a FunctionMiddleware and cannot be used"
+                raise TypeError(f"Middleware `{middleware_name}` is not a FunctionMiddleware and cannot be used "
                                 f"with {component_type}s. "
                                 f"Only FunctionMiddleware types support function-specific wrapping.")
             middleware_instances.append(middleware_obj)
