@@ -17,7 +17,7 @@ limitations under the License.
 
 # Plugin System in NVIDIA NeMo Agent Toolkit
 
-NeMo Agent toolkit has a very extensible plugin system that allows you to add new tools, agents, workflows and more to the library. The plugin system is designed to be easy to use and allow developers to extend the library to their needs.
+NeMo Agent toolkit has a very extensible plugin system that allows you to add new tools, [agents](../components/agents/index.md), workflows and more to the library. The plugin system is designed to be easy to use and allow developers to extend the library to their needs.
 
 The plugin system is designed around two main concepts:
 

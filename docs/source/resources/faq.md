@@ -19,7 +19,7 @@ limitations under the License.
 NVIDIA NeMo Agent toolkit frequently asked questions (FAQs).
 
 ## Do I Need to Rewrite All of my Existing Code to Use NeMo Agent Toolkit?
-No, NeMo Agent toolkit is **100% opt in.** While we encourage users to wrap (decorate) every tool and agent to get the most out of the profiler, you have the freedom to integrate to whatever level you want - tool level, agent level, or entire workflow level. You have the freedom to start small and where you believe you’ll see the most value and expand from there.
+No, NeMo Agent toolkit is **100% opt in.** While we encourage users to wrap (decorate) every tool and [agent](../components/agents/index.md) to get the most out of the profiler, you have the freedom to integrate to whatever level you want - tool level, agent level, or entire workflow level. You have the freedom to start small and where you believe you'll see the most value and expand from there.
 
 ## Is NeMo Agent Toolkit another LLM or Agentic Framework?
 No, NeMo Agent toolkit is designed to work alongside, not replace, your existing agentic frameworks — whether they are enterprise-grade systems or simple Python-based agents.

@@ -31,7 +31,7 @@ When building applications with NeMo Agent Toolkit, it's helpful to be aware of 
 
 ### Tool Abuse and Misuse
 
-Agentic systems can act with significant autonomy, which means understanding potential failure modes is important. Large Language Models (LLMs) can make mistakes or can be manipulated to take unintended actions. When agents have access to powerful tools, these mistakes can result in:
+Agentic systems can act with significant autonomy, which means understanding potential failure modes is important. Large Language Models (LLMs) can make mistakes or can be manipulated to take unintended actions. When [agents](../components/agents/index.md) have access to powerful tools, these mistakes can result in:
 
 - **Unauthorized data access**: Agents reading files or database records they should not access
 - **Data modification or deletion**: Agents writing, updating, or deleting data inappropriately
