@@ -51,7 +51,7 @@ This example demonstrates an end-to-end agentic workflow for a retail customer s
 ## Key Features
 
 - **Email Processing:** Processes customer emails to understand intent (product inquiry, review submission, or order placement).
-- **Customer Management:** Retrieves customer information including purchase history, total orders, and past reviews.
+- **Customer Management:** Retrieves customer information including purchase history and total orders.
 - **Product Catalog:** Access to a comprehensive gardening equipment catalog with descriptions, pricing, stock levels, and reviews.
 - **Order Processing:** Handles order placement with stock validation.
 - **Review System:** Accepts and processes product reviews from existing customers.
@@ -123,15 +123,7 @@ Customers are stored in `data/customers.json` with the following structure:
     }
   ],
   "total_orders": 3,
-  "total_spent": 245.5,
-  "past_reviews": [
-    {
-      "product_id": "PROD001",
-      "product_name": "Premium Garden Trowel",
-      "rating": 5,
-      "review": "Excellent tool! Very durable and comfortable to use."
-    }
-  ]
+  "total_spent": 245.5
 }
 ```
 
@@ -183,12 +175,12 @@ The retail agent has access to the following tools:
 1. **`get_customer_by_email`** - Searches for a customer by their email address
 
    - Input: `email` (string)
-   - Output: Customer object with id, name, past orders, total orders, total spent, and past reviews
+   - Output: Customer object with id, name, past orders, total orders and total spent
 
 2. **`get_customer_by_id`** - Looks up a customer by their unique customer ID
 
    - Input: customer_id (string, for example CUST001)
-   - Output: Customer object with id, name, email, past orders, total orders, total spent, and past reviews
+   - Output: Customer object with id, name, email, past orders, total orders and total spent
 
 3. **`get_product_info`** - Retrieves single product details
 

@@ -108,7 +108,7 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
             email: The customer's email address.
 
         Returns:
-            Customer information including id, name, past orders, total orders, total spent, and past reviews.
+            Customer information including id, name, past orders, total orders and total spent.
         """
         for customer in customers_data:
             if customer["email"].lower() == email.lower():
@@ -126,7 +126,7 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
             customer_id: The customer's unique identifier (for example CUST001).
 
         Returns:
-            Customer information including id, name, email, past orders, total orders, total spent, and past reviews.
+            Customer information including id, name, email, past orders, total orders and total spent.
         """
         for customer in customers_data:
             if customer["id"] == customer_id:
