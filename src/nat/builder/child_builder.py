@@ -15,7 +15,6 @@
 
 import typing
 from collections.abc import Sequence
-from typing import override
 
 from nat.authentication.interfaces import AuthProviderBase
 from nat.builder.builder import Builder
@@ -55,6 +54,7 @@ from nat.memory.interfaces import MemoryEditor
 from nat.middleware.middleware import Middleware
 from nat.object_store.interfaces import ObjectStore
 from nat.retriever.interface import Retriever
+from nat.utils.type_utils import override
 
 
 class ChildBuilder(Builder):

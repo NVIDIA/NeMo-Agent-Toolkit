@@ -154,8 +154,8 @@ class RegisteredInfo(BaseModel, typing.Generic[TypedBaseModelT]):
 
     is_per_user: bool = Field(default=False,
                               description="Whether the component is per-user. Default to False. If True, "
-                              "each user will have their own separate instance of the component. The per-user"
-                              "component instance will be lazily built on user's first invocation. If False, the"
+                              "each user will have their own separate instance of the component. The per-user "
+                              "component instance will be lazily built on user's first invocation. If False, the "
                               "component instance will be shared across all users.")
 
     @computed_field
