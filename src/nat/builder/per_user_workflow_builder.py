@@ -25,13 +25,13 @@ from typing import cast
 from nat.authentication.interfaces import AuthProviderBase
 from nat.builder.builder import Builder
 from nat.builder.builder import UserManagerHolder
+from nat.builder.child_builder import ChildBuilder
 from nat.builder.component_utils import WORKFLOW_COMPONENT_NAME
 from nat.builder.component_utils import build_dependency_sequence
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function import Function
 from nat.builder.function import FunctionGroup
 from nat.builder.workflow import Workflow
-from nat.builder.workflow_builder import ChildBuilder
 from nat.builder.workflow_builder import ConfiguredFunction
 from nat.builder.workflow_builder import ConfiguredFunctionGroup
 from nat.builder.workflow_builder import WorkflowBuilder
