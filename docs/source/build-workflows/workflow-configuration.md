@@ -92,7 +92,13 @@ See the [Embedders](./embedders.md) documentation for more information.
 
 This section ties the previous sections together by defining the tools and LLM models to use. The `tool_names` section lists the tool names from the `functions` section, while the `llm_name` section specifies the LLM model to use.
 
-The `_type` value refers to the workflow type, in our example we are using a `react_agent` workflow. You can also use the workflow type, `tool_calling_agent`. The parameters for each are specified by the {py:class}`~nat.agent.react_agent.register.ReActAgentWorkflowConfig` and {py:class}`~nat.agent.tool_calling_agent.register.ToolCallAgentWorkflowConfig` classes respectively.
+The `_type` value refers to the workflow type, in our example we are using a `react_agent` workflow. While the choice of workflow type is commonly an [agent](../components/agents/index.md), this can be any registered NeMo Agent toolkit function.
+
+:::{note}
+In NeMo Agent toolkit, an agent is a special type of function.
+:::
+
+The parameters for the `react_agent` workflow are specified by the {py:class}`~nat.agent.react_agent.register.ReActAgentWorkflowConfig` class.
 
 ### `general`
 This section contains general configuration settings for NeMo Agent toolkit which are not specific to any workflow. The parameters for this section are specified by the {py:class}`~nat.data_models.config.GeneralConfig` class.
