@@ -211,15 +211,13 @@ async def litellm_langchain(llm_config: LiteLlmModelConfig, _builder: Builder):
 
 @register_llm_client(config_type=HuggingFaceConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 async def huggingface_langchain(llm_config: HuggingFaceConfig, _builder: Builder):
-    
+
     from nat.llm.huggingface_llm import get_huggingface_model
-    
+
     model_wrapper = get_huggingface_model(llm_config.model_name, llm_config)
-    
+
     if model_wrapper is None:
-        raise ValueError(
-            f"HuggingFace model '{llm_config.model_name}' not loaded. "
-            "The provider should have loaded it first."
-        )
-    
+        raise ValueError(f"HuggingFace model '{llm_config.model_name}' not loaded. "
+                         "The provider should have loaded it first.")
+
     yield _patch_llm_based_on_config(model_wrapper, llm_config)

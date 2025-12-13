@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Red teaming CLI command."""
 
 from __future__ import annotations
@@ -26,11 +25,7 @@ import click
 logger = logging.getLogger(__name__)
 
 
-@click.group(
-    name=__name__,
-    invoke_without_command=True,
-    help="Run red teaming evaluation with multiple scenarios."
-)
+@click.group(name=__name__, invoke_without_command=True, help="Run red teaming evaluation with multiple scenarios.")
 @click.option(
     "--red_team_config",
     type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=Path),
@@ -42,21 +37,21 @@ logger = logging.getLogger(__name__)
     type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=Path),
     required=False,
     help="A JSON/YAML file that sets the parameters for the base workflow. "
-         "Overrides base_workflow in red_team_config if both are provided.",
+    "Overrides base_workflow in red_team_config if both are provided.",
 )
 @click.option(
     "--dataset",
     type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=Path),
     required=False,
     help="A JSON file with questions and ground truth answers. "
-         "Overrides the dataset path in the config file.",
+    "Overrides the dataset path in the config file.",
 )
 @click.option(
     "--result_json_path",
     type=str,
     default="$",
     help="A JSON path to extract the result from the workflow. "
-         "For example, '$.output' extracts the 'output' field.",
+    "For example, '$.output' extracts the 'output' field.",
 )
 @click.option(
     "--endpoint",
@@ -81,7 +76,7 @@ logger = logging.getLogger(__name__)
     type=(str, str),
     multiple=True,
     help="Override config values for the base workflow config using dot notation "
-         "(e.g., --override llms.nim_llm.temperature 0.7)",
+    "(e.g., --override llms.nim_llm.temperature 0.7)",
 )
 @click.pass_context
 def red_team_command(ctx, **kwargs) -> None:
@@ -110,9 +105,7 @@ def process_red_team_eval(
 
     # Must have at least one of these
     if red_team_config is None and config_file is None:
-        raise click.ClickException(
-            "Either --red_team_config or --config_file must be provided."
-        )
+        raise click.ClickException("Either --red_team_config or --config_file must be provided.")
 
     # Load configs
     rt_config = None
@@ -121,8 +114,7 @@ def process_red_team_eval(
         base_workflow_path = config_file or rt_config.base_workflow
         if base_workflow_path is None:
             raise click.ClickException(
-                "No base workflow specified. Set 'base_workflow' in red_team_config or provide --config_file."
-            )
+                "No base workflow specified. Set 'base_workflow' in red_team_config or provide --config_file.")
         base_workflow_config = load_config(base_workflow_path)
     else:
         assert config_file is not None
@@ -141,7 +133,6 @@ def process_red_team_eval(
     )
 
     try:
-        result = asyncio.run(runner.run())
+        asyncio.run(runner.run())
     except ValueError as e:
         raise click.ClickException(str(e)) from e
-

@@ -84,14 +84,12 @@ class _TestInput(BaseModel):
 @pytest.fixture(name="middleware_context")
 def fixture_middleware_context():
     """Create a test FunctionMiddlewareContext."""
-    return FunctionMiddlewareContext(
-        name="my_calculator.multiply",
-        config=MagicMock(),
-        description="Test function",
-        input_schema=_TestInput,
-        single_output_schema=_TestOutputModel,
-        stream_output_schema=type(None)
-    )
+    return FunctionMiddlewareContext(name="my_calculator.multiply",
+                                     config=MagicMock(),
+                                     description="Test function",
+                                     input_schema=_TestInput,
+                                     single_output_schema=_TestOutputModel,
+                                     stream_output_schema=type(None))
 
 
 class TestDefenseMiddlewareTargeting:
@@ -246,10 +244,7 @@ class TestDefenseMiddlewareFieldResolutionStrategy:
 
     def test_resolution_strategy_error(self, mock_builder):
         """Test error strategy raises ValueError on multiple matches."""
-        config = DefenseMiddlewareConfig(
-            target_field="$.result",
-            target_field_resolution_strategy="error"
-        )
+        config = DefenseMiddlewareConfig(target_field="$.result", target_field_resolution_strategy="error")
         middleware = _TestDefenseMiddleware(config, mock_builder)
 
         # Create mock matches
@@ -264,10 +259,7 @@ class TestDefenseMiddlewareFieldResolutionStrategy:
 
     def test_resolution_strategy_first(self, mock_builder):
         """Test first strategy returns first match."""
-        config = DefenseMiddlewareConfig(
-            target_field="$.result",
-            target_field_resolution_strategy="first"
-        )
+        config = DefenseMiddlewareConfig(target_field="$.result", target_field_resolution_strategy="first")
         middleware = _TestDefenseMiddleware(config, mock_builder)
 
         match1 = MagicMock()
@@ -282,10 +274,7 @@ class TestDefenseMiddlewareFieldResolutionStrategy:
 
     def test_resolution_strategy_last(self, mock_builder):
         """Test last strategy returns last match."""
-        config = DefenseMiddlewareConfig(
-            target_field="$.result",
-            target_field_resolution_strategy="last"
-        )
+        config = DefenseMiddlewareConfig(target_field="$.result", target_field_resolution_strategy="last")
         middleware = _TestDefenseMiddleware(config, mock_builder)
 
         match1 = MagicMock()
@@ -300,10 +289,7 @@ class TestDefenseMiddlewareFieldResolutionStrategy:
 
     def test_resolution_strategy_random(self, mock_builder):
         """Test random strategy returns one random match."""
-        config = DefenseMiddlewareConfig(
-            target_field="$.result",
-            target_field_resolution_strategy="random"
-        )
+        config = DefenseMiddlewareConfig(target_field="$.result", target_field_resolution_strategy="random")
         middleware = _TestDefenseMiddleware(config, mock_builder)
 
         match1 = MagicMock()
@@ -318,10 +304,7 @@ class TestDefenseMiddlewareFieldResolutionStrategy:
 
     def test_resolution_strategy_all(self, mock_builder):
         """Test all strategy returns all matches."""
-        config = DefenseMiddlewareConfig(
-            target_field="$.result",
-            target_field_resolution_strategy="all"
-        )
+        config = DefenseMiddlewareConfig(target_field="$.result", target_field_resolution_strategy="all")
         middleware = _TestDefenseMiddleware(config, mock_builder)
 
         match1 = MagicMock()
@@ -365,10 +348,7 @@ class TestDefenseMiddlewareFieldApplication:
 
     def test_apply_result_multiple_matches_all_strategy(self, mock_builder):
         """Test applying result to multiple matches with all strategy."""
-        config = DefenseMiddlewareConfig(
-            target_field="$.results[*]",
-            target_field_resolution_strategy="all"
-        )
+        config = DefenseMiddlewareConfig(target_field="$.results[*]", target_field_resolution_strategy="all")
         middleware = _TestDefenseMiddleware(config, mock_builder)
 
         original_value = {"results": [42.0, 43.0], "operation": "multiply"}
@@ -429,7 +409,8 @@ class TestDefenseMiddlewareFieldApplication:
         # When no field_info, should return sanitized_result directly
         # Note: _apply_field_result_to_value expects field_info to be dict or None
         # Passing None is valid - it means no field extraction was done
-        result = middleware._apply_field_result_to_value(original_value, None, sanitized_result)  # type: ignore[arg-type]
+        result = middleware._apply_field_result_to_value(original_value, None,
+                                                         sanitized_result)  # type: ignore[arg-type]
 
         assert result == sanitized_result
 
@@ -440,23 +421,18 @@ class TestDefenseMiddlewareEndToEnd:
     @pytest.mark.asyncio
     async def test_extract_nested_output_field(self, mock_builder):
         """Test extracting nested field from output in actual invoke scenario."""
-        config = DefenseMiddlewareConfig(
-            target_field="$.result",
-            target_function_or_group="my_calculator.multiply"
-        )
+        config = DefenseMiddlewareConfig(target_field="$.result", target_function_or_group="my_calculator.multiply")
         middleware = _TestDefenseMiddleware(config, mock_builder)
 
         output_value = _TestOutputModel(result=42.0, operation="multiply", message="Success")
         mock_call_next = AsyncMock(return_value=output_value)
 
-        context = FunctionMiddlewareContext(
-            name="my_calculator.multiply",
-            config=MagicMock(),
-            description="Multiply",
-            input_schema=_TestInput,
-            single_output_schema=_TestOutputModel,
-            stream_output_schema=type(None)
-        )
+        context = FunctionMiddlewareContext(name="my_calculator.multiply",
+                                            config=MagicMock(),
+                                            description="Multiply",
+                                            input_schema=_TestInput,
+                                            single_output_schema=_TestOutputModel,
+                                            stream_output_schema=type(None))
 
         await middleware.function_middleware_invoke(10.0, mock_call_next, context)
 
@@ -468,30 +444,23 @@ class TestDefenseMiddlewareEndToEnd:
     @pytest.mark.asyncio
     async def test_extract_deeply_nested_field(self, mock_builder):
         """Test extracting deeply nested field using JSONPath."""
+
         class NestedOutput(BaseModel):
             data: dict
             status: str
 
-        config = DefenseMiddlewareConfig(
-            target_field="$.data.message.text",
-            target_function_or_group="service.process"
-        )
+        config = DefenseMiddlewareConfig(target_field="$.data.message.text", target_function_or_group="service.process")
         middleware = _TestDefenseMiddleware(config, mock_builder)
 
-        output_value = NestedOutput(
-            data={"message": {"text": "Hello world", "metadata": "ignored"}},
-            status="ok"
-        )
+        output_value = NestedOutput(data={"message": {"text": "Hello world", "metadata": "ignored"}}, status="ok")
         mock_call_next = AsyncMock(return_value=output_value)
 
-        context = FunctionMiddlewareContext(
-            name="service.process",
-            config=MagicMock(),
-            description="Process",
-            input_schema=_TestInput,
-            single_output_schema=NestedOutput,
-            stream_output_schema=type(None)
-        )
+        context = FunctionMiddlewareContext(name="service.process",
+                                            config=MagicMock(),
+                                            description="Process",
+                                            input_schema=_TestInput,
+                                            single_output_schema=NestedOutput,
+                                            stream_output_schema=type(None))
 
         await middleware.function_middleware_invoke({}, mock_call_next, context)
 
@@ -502,23 +471,18 @@ class TestDefenseMiddlewareEndToEnd:
     @pytest.mark.asyncio
     async def test_target_function_filtering(self, mock_builder):
         """Test that defense skips non-targeted functions."""
-        config = DefenseMiddlewareConfig(
-            target_field="$.result",
-            target_function_or_group="other_function"
-        )
+        config = DefenseMiddlewareConfig(target_field="$.result", target_function_or_group="other_function")
         middleware = _TestDefenseMiddleware(config, mock_builder)
 
         output_value = _TestOutputModel(result=42.0, operation="multiply", message="Success")
         mock_call_next = AsyncMock(return_value=output_value)
 
-        context = FunctionMiddlewareContext(
-            name="my_calculator.multiply",
-            config=MagicMock(),
-            description="Multiply",
-            input_schema=_TestInput,
-            single_output_schema=_TestOutputModel,
-            stream_output_schema=type(None)
-        )
+        context = FunctionMiddlewareContext(name="my_calculator.multiply",
+                                            config=MagicMock(),
+                                            description="Multiply",
+                                            input_schema=_TestInput,
+                                            single_output_schema=_TestOutputModel,
+                                            stream_output_schema=type(None))
 
         await middleware.function_middleware_invoke(10.0, mock_call_next, context)
 
@@ -529,28 +493,25 @@ class TestDefenseMiddlewareEndToEnd:
     @pytest.mark.asyncio
     async def test_multiple_field_matches_with_all_strategy(self, mock_builder):
         """Test resolution strategy 'all' extracts all matching fields."""
+
         class MultiFieldOutput(BaseModel):
             results: list[float]
             status: str
 
-        config = DefenseMiddlewareConfig(
-            target_field="$.results[*]",
-            target_field_resolution_strategy="all",
-            target_function_or_group="processor.batch"
-        )
+        config = DefenseMiddlewareConfig(target_field="$.results[*]",
+                                         target_field_resolution_strategy="all",
+                                         target_function_or_group="processor.batch")
         middleware = _TestDefenseMiddleware(config, mock_builder)
 
         output_value = MultiFieldOutput(results=[10.0, 20.0, 30.0], status="ok")
         mock_call_next = AsyncMock(return_value=output_value)
 
-        context = FunctionMiddlewareContext(
-            name="processor.batch",
-            config=MagicMock(),
-            description="Batch process",
-            input_schema=_TestInput,
-            single_output_schema=MultiFieldOutput,
-            stream_output_schema=type(None)
-        )
+        context = FunctionMiddlewareContext(name="processor.batch",
+                                            config=MagicMock(),
+                                            description="Batch process",
+                                            input_schema=_TestInput,
+                                            single_output_schema=MultiFieldOutput,
+                                            stream_output_schema=type(None))
 
         await middleware.function_middleware_invoke({}, mock_call_next, context)
 
@@ -562,28 +523,25 @@ class TestDefenseMiddlewareEndToEnd:
     @pytest.mark.asyncio
     async def test_multiple_field_matches_with_first_strategy(self, mock_builder):
         """Test resolution strategy 'first' extracts only first match."""
+
         class MultiFieldOutput(BaseModel):
             results: list[float]
             status: str
 
-        config = DefenseMiddlewareConfig(
-            target_field="$.results[*]",
-            target_field_resolution_strategy="first",
-            target_function_or_group="processor.batch"
-        )
+        config = DefenseMiddlewareConfig(target_field="$.results[*]",
+                                         target_field_resolution_strategy="first",
+                                         target_function_or_group="processor.batch")
         middleware = _TestDefenseMiddleware(config, mock_builder)
 
         output_value = MultiFieldOutput(results=[10.0, 20.0, 30.0], status="ok")
         mock_call_next = AsyncMock(return_value=output_value)
 
-        context = FunctionMiddlewareContext(
-            name="processor.batch",
-            config=MagicMock(),
-            description="Batch process",
-            input_schema=_TestInput,
-            single_output_schema=MultiFieldOutput,
-            stream_output_schema=type(None)
-        )
+        context = FunctionMiddlewareContext(name="processor.batch",
+                                            config=MagicMock(),
+                                            description="Batch process",
+                                            input_schema=_TestInput,
+                                            single_output_schema=MultiFieldOutput,
+                                            stream_output_schema=type(None))
 
         await middleware.function_middleware_invoke({}, mock_call_next, context)
 
@@ -595,28 +553,25 @@ class TestDefenseMiddlewareEndToEnd:
     @pytest.mark.asyncio
     async def test_multiple_field_matches_with_error_strategy(self, mock_builder):
         """Test resolution strategy 'error' logs warning and analyzes entire value on multiple matches."""
+
         class MultiFieldOutput(BaseModel):
             results: list[float]
             status: str
 
-        config = DefenseMiddlewareConfig(
-            target_field="$.results[*]",
-            target_field_resolution_strategy="error",
-            target_function_or_group="processor.batch"
-        )
+        config = DefenseMiddlewareConfig(target_field="$.results[*]",
+                                         target_field_resolution_strategy="error",
+                                         target_function_or_group="processor.batch")
         middleware = _TestDefenseMiddleware(config, mock_builder)
 
         output_value = MultiFieldOutput(results=[10.0, 20.0, 30.0], status="ok")
         mock_call_next = AsyncMock(return_value=output_value)
 
-        context = FunctionMiddlewareContext(
-            name="processor.batch",
-            config=MagicMock(),
-            description="Batch process",
-            input_schema=_TestInput,
-            single_output_schema=MultiFieldOutput,
-            stream_output_schema=type(None)
-        )
+        context = FunctionMiddlewareContext(name="processor.batch",
+                                            config=MagicMock(),
+                                            description="Batch process",
+                                            input_schema=_TestInput,
+                                            single_output_schema=MultiFieldOutput,
+                                            stream_output_schema=type(None))
 
         # Defense middleware catches ValueError and analyzes entire value instead
         # (unlike red teaming which raises the error)
@@ -629,27 +584,21 @@ class TestDefenseMiddlewareEndToEnd:
     @pytest.mark.asyncio
     async def test_extract_simple_type_no_target_field(self, mock_builder):
         """Test that simple types without target_field extract entire value."""
-        config = DefenseMiddlewareConfig(
-            target_field=None,
-            target_function_or_group="simple_function"
-        )
+        config = DefenseMiddlewareConfig(target_field=None, target_function_or_group="simple_function")
         middleware = _TestDefenseMiddleware(config, mock_builder)
 
         output_value = "simple string output"
         mock_call_next = AsyncMock(return_value=output_value)
 
-        context = FunctionMiddlewareContext(
-            name="simple_function",
-            config=MagicMock(),
-            description="Simple function",
-            input_schema=_TestInput,
-            single_output_schema=str,
-            stream_output_schema=type(None)
-        )
+        context = FunctionMiddlewareContext(name="simple_function",
+                                            config=MagicMock(),
+                                            description="Simple function",
+                                            input_schema=_TestInput,
+                                            single_output_schema=str,
+                                            stream_output_schema=type(None))
 
         await middleware.function_middleware_invoke({}, mock_call_next, context)
 
         # Should extract entire value when no target_field
         assert middleware._last_extracted_content == "simple string output"
         assert middleware._last_field_info is None
-

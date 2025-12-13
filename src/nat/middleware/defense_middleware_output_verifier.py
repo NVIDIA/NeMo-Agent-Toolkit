@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 Output Verifier Defense Middleware.
 
@@ -51,19 +50,12 @@ class OutputVerifierMiddlewareConfig(DefenseMiddlewareConfig, name="output_verif
     Note: Only output analysis is currently supported (target_location='output').
     """
 
-    llm_name: str = Field(
-        description="Name of the LLM to use for verification (must be defined in llms section)"
-    )
+    llm_name: str = Field(description="Name of the LLM to use for verification (must be defined in llms section)")
 
-    threshold: float = Field(
-        default=0.7,
-        description="Confidence threshold for threat detection (0.0-1.0)"
-    )
+    threshold: float = Field(default=0.7, description="Confidence threshold for threat detection (0.0-1.0)")
 
     tool_description: str | None = Field(
-        default=None,
-        description="Description of what the tool/function does (optional, helps LLM verify correctness)"
-    )
+        default=None, description="Description of what the tool/function does (optional, helps LLM verify correctness)")
 
 
 class OutputVerifierMiddleware(DefenseMiddleware):
@@ -96,10 +88,8 @@ class OutputVerifierMiddleware(DefenseMiddleware):
 
         # Output Verifier only supports output analysis
         if config.target_location == "input":
-            raise ValueError(
-                "OutputVerifierMiddleware only supports target_location='output'. "
-                "Input analysis is not yet supported."
-            )
+            raise ValueError("OutputVerifierMiddleware only supports target_location='output'. "
+                             "Input analysis is not yet supported.")
 
         self._llm = None  # Lazy loaded LLM
 
@@ -131,13 +121,11 @@ class OutputVerifierMiddleware(DefenseMiddleware):
 
         return response_text
 
-    async def _analyze_content(
-        self,
-        content: Any,
-        content_type: str,
-        inputs: Any = None,
-        function_name: str | None = None
-    ) -> dict:
+    async def _analyze_content(self,
+                               content: Any,
+                               content_type: str,
+                               inputs: Any = None,
+                               function_name: str | None = None) -> dict:
         """Check content for threats using the configured LLM.
 
         Args:
@@ -185,10 +173,7 @@ Respond ONLY with valid JSON in this exact format:
             # Get the LLM (lazy loaded)
             llm = await self._get_llm()
 
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
-            ]
+            messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": prompt}]
 
             response = await llm.ainvoke(messages)
 
@@ -231,12 +216,7 @@ Respond ONLY with valid JSON in this exact format:
                 "error": True
             }
 
-    async def _handle_threat(
-        self,
-        content: Any,
-        analysis_result: dict,
-        context: FunctionMiddlewareContext
-    ) -> Any:
+    async def _handle_threat(self, content: Any, analysis_result: dict, context: FunctionMiddlewareContext) -> Any:
         """Handle detected threat based on configured action.
 
         Args:
@@ -247,21 +227,17 @@ Respond ONLY with valid JSON in this exact format:
         Returns:
             Handled content (blocked, sanitized/corrected, or original)
         """
-        logger.warning(
-            "Output Verifier detected threat in %s: %s (confidence=%s)",
-            context.name,
-            analysis_result.get('reason', 'Unknown'),
-            analysis_result.get('confidence', 0.0)
-        )
+        logger.warning("Output Verifier detected threat in %s: %s (confidence=%s)",
+                       context.name,
+                       analysis_result.get('reason', 'Unknown'),
+                       analysis_result.get('confidence', 0.0))
 
         action = self.config.action
 
         if action == "refusal":
-            logger.error(
-                "Output Verifier refusing output of %s: %s",
-                context.name,
-                analysis_result.get('reason', 'Unknown')
-            )
+            logger.error("Output Verifier refusing output of %s: %s",
+                         context.name,
+                         analysis_result.get('reason', 'Unknown'))
             raise ValueError(f"Content blocked by security policy: {analysis_result.get('reason', 'Unknown')}")
 
         elif action == "redirection":
@@ -271,7 +247,7 @@ Respond ONLY with valid JSON in this exact format:
             if correct_answer is not None:
                 # Try to convert to same type as original content
                 # Handle both numeric types and string representations of numbers (for streaming)
-                if isinstance(content, (int, float)):
+                if isinstance(content, int | float):
                     try:
                         correct_answer = float(correct_answer)
                     except (ValueError, TypeError):
@@ -287,12 +263,10 @@ Respond ONLY with valid JSON in this exact format:
                         # Not a numeric string, keep correct_answer as-is
                         pass
 
-                logger.info(
-                    "Output Verifier redirecting %s: Incorrect: %s → Corrected: %s",
-                    context.name,
-                    content,
-                    correct_answer
-                )
+                logger.info("Output Verifier redirecting %s: Incorrect: %s → Corrected: %s",
+                            context.name,
+                            content,
+                            correct_answer)
                 return correct_answer
             else:
                 # No correction available, return safe placeholder
@@ -331,27 +305,21 @@ Respond ONLY with valid JSON in this exact format:
         content_to_analyze, field_info = self._extract_field_from_value(value)
 
         # Check the output (either extracted field or entire value)
-        logger.info(
-            "OutputVerifierMiddleware: Checking %s %s for %s",
-            f"field '{self.config.target_field}'" if field_info else "entire",
-            location,
-            context.name
-        )
-        output_result = await self._analyze_content(
-            content_to_analyze,
-            location,
-            inputs=inputs,
-            function_name=context.name
-        )
+        logger.info("OutputVerifierMiddleware: Checking %s %s for %s",
+                    f"field '{self.config.target_field}'" if field_info else "entire",
+                    location,
+                    context.name)
+        output_result = await self._analyze_content(content_to_analyze,
+                                                    location,
+                                                    inputs=inputs,
+                                                    function_name=context.name)
 
         if not output_result.get("should_refuse", False):
             # Content verified as correct, return original value
-            logger.info(
-                "OutputVerifierMiddleware: Verified %s of %s as correct (confidence=%s)",
-                location,
-                context.name,
-                output_result.get('confidence', 'N/A')
-            )
+            logger.info("OutputVerifierMiddleware: Verified %s of %s as correct (confidence=%s)",
+                        location,
+                        context.name,
+                        output_result.get('confidence', 'N/A'))
             return value
 
         # Threat detected - handle based on action
@@ -364,9 +332,8 @@ Respond ONLY with valid JSON in this exact format:
             # No field extraction - return sanitized content directly
             return sanitized_content
 
-    async def function_middleware_invoke(
-        self, value: Any, call_next: CallNext, context: FunctionMiddlewareContext
-    ) -> Any:
+    async def function_middleware_invoke(self, value: Any, call_next: CallNext,
+                                         context: FunctionMiddlewareContext) -> Any:
         """Apply output verifier to function invocation.
 
         Analyzes function outputs for correctness and security, with auto-correction.
@@ -389,9 +356,7 @@ Respond ONLY with valid JSON in this exact format:
             output = await call_next(value)
 
             # Process output verification (handles field extraction, analysis, and application)
-            output = await self._process_output_verification(
-                output, "output", context, inputs=value
-            )
+            output = await self._process_output_verification(output, "output", context, inputs=value)
 
             return output
 
@@ -403,9 +368,10 @@ Respond ONLY with valid JSON in this exact format:
             )
             raise
 
-    async def function_middleware_stream(
-        self, value: Any, call_next: CallNextStream, context: FunctionMiddlewareContext
-    ) -> AsyncIterator[Any]:
+    async def function_middleware_stream(self,
+                                         value: Any,
+                                         call_next: CallNextStream,
+                                         context: FunctionMiddlewareContext) -> AsyncIterator[Any]:
         """Apply output verifier to streaming function.
 
         For 'refusal' and 'redirection' actions: Chunks are buffered and checked before yielding.
@@ -439,11 +405,9 @@ Respond ONLY with valid JSON in this exact format:
                     accumulated_chunks.append(chunk)
 
             full_output_str = "".join(chunk if isinstance(chunk, str) else str(chunk) for chunk in accumulated_chunks)
-            
+
             # Process output verification (handles field extraction, analysis, and application)
-            processed_output = await self._process_output_verification(
-                full_output_str, "output", context, inputs=value
-            )
+            processed_output = await self._process_output_verification(full_output_str, "output", context, inputs=value)
 
             processed_str = str(processed_output)
             if self.config.action == "redirection" and processed_str != full_output_str:
@@ -463,4 +427,3 @@ Respond ONLY with valid JSON in this exact format:
                 exc_info=True,
             )
             raise
-

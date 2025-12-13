@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 Base Defense Middleware.
 
@@ -63,34 +62,26 @@ class DefenseMiddlewareConfig(FunctionMiddlewareBaseConfig):
 
     action: Literal["partial_compliance", "refusal", "redirection"] = Field(
         default="partial_compliance",
-        description=(
-            "Action to take when threat detected. "
-            "Options: 'partial_compliance' (log with warning), 'refusal' (block), "
-            "'redirection' (sanitize/replace with safe content)"
-        )
-    )
+        description=("Action to take when threat detected. "
+                     "Options: 'partial_compliance' (log with warning), 'refusal' (block), "
+                     "'redirection' (sanitize/replace with safe content)"))
 
     llm_wrapper_type: LLMFrameworkEnum | str = Field(
         default=LLMFrameworkEnum.LANGCHAIN,
         description="Framework wrapper type for LLM (langchain, llama_index, crewai, etc.). "
-                    "Only needed for LLM-based defenses."
-    )
+        "Only needed for LLM-based defenses.")
 
     target_function_or_group: str | None = Field(
         default=None,
         description="Optional function or function group to target. "
-                    "If None, defense applies to all functions. "
-                    "Examples: 'my_calculator', 'my_calculator.divide', 'llm_agent.generate'"
-    )
+        "If None, defense applies to all functions. "
+        "Examples: 'my_calculator', 'my_calculator.divide', 'llm_agent.generate'")
 
     target_location: Literal["output"] = Field(
         default="output",
-        description=(
-            "Whether to analyze function input or output. "
-            "Currently only 'output' is supported (analyze after function call). "
-            "Input analysis is not yet supported."
-        )
-    )
+        description=("Whether to analyze function input or output. "
+                     "Currently only 'output' is supported (analyze after function call). "
+                     "Input analysis is not yet supported."))
 
     target_field: str | None = Field(
         default=None,
@@ -98,18 +89,13 @@ class DefenseMiddlewareConfig(FunctionMiddlewareBaseConfig):
             "Optional JSONPath expression to target specific fields within complex types (dict/list/BaseModel). "
             "If None and value is complex type, defense applies to entire value. "
             "If None and value is simple type (str/int/float), defense applies directly. "
-            "Examples: '$.result', '[0]', '$.data.message', 'numbers[0]'"
-        )
-    )
+            "Examples: '$.result', '[0]', '$.data.message', 'numbers[0]'"))
 
     target_field_resolution_strategy: Literal["error", "first", "last", "random", "all"] = Field(
         default="error",
-        description=(
-            "Strategy for handling multiple JSONPath matches when target_field is specified. "
-            "Options: 'error' (raise error if multiple matches), 'first' (use first match), "
-            "'last' (use last match), 'random' (use random match), 'all' (analyze all matches)"
-        )
-    )
+        description=("Strategy for handling multiple JSONPath matches when target_field is specified. "
+                     "Options: 'error' (raise error if multiple matches), 'first' (use first match), "
+                     "'last' (use last match), 'random' (use random match), 'all' (analyze all matches)"))
 
 
 class DefenseMiddleware(FunctionMiddleware):
@@ -151,10 +137,8 @@ class DefenseMiddleware(FunctionMiddleware):
         self.config = config
         self.builder = builder
 
-        logger.info(
-            f"{self.__class__.__name__} initialized: "
-            f"action={config.action}, target={config.target_function_or_group}"
-        )
+        logger.info(f"{self.__class__.__name__} initialized: "
+                    f"action={config.action}, target={config.target_function_or_group}")
 
     def _should_apply_defense(self, context_name: str) -> bool:
         """Check if defense should be applied to this function based on targeting configuration.
@@ -209,10 +193,7 @@ class DefenseMiddleware(FunctionMiddleware):
         if wrapper_type is None:
             wrapper_type = self.config.llm_wrapper_type
 
-        return await self.builder.get_llm(
-            llm_name,
-            wrapper_type=wrapper_type
-        )
+        return await self.builder.get_llm(llm_name, wrapper_type=wrapper_type)
 
     def _resolve_multiple_field_matches(self, matches):
         """Resolve multiple JSONPath matches based on resolution strategy.
@@ -255,23 +236,21 @@ class DefenseMiddleware(FunctionMiddleware):
             return value, None
 
         # If value is simple type, target_field doesn't apply (analyze entire value)
-        if isinstance(value, (str, int, float, bool)):
+        if isinstance(value, str | int | float | bool):
             logger.debug(
                 "target_field '%s' specified but value is simple type (%s). "
                 "Analyzing entire value instead.",
                 self.config.target_field,
-                type(value).__name__
-            )
+                type(value).__name__)
             return value, None
 
         # For complex types, extract field using JSONPath
-        if not isinstance(value, (dict, list, BaseModel)):
+        if not isinstance(value, dict | list | BaseModel):
             logger.warning(
                 "target_field '%s' specified but value type '%s' is not supported for field extraction. "
                 "Analyzing entire value instead.",
                 self.config.target_field,
-                type(value).__name__
-            )
+                type(value).__name__)
             return value, None
 
         # Convert BaseModel to dict for JSONPath processing
@@ -288,10 +267,8 @@ class DefenseMiddleware(FunctionMiddleware):
             matches = jsonpath_expr.find(value_dict)
 
             if len(matches) == 0:
-                logger.warning(
-                    "No matches found for target_field '%s' in value. Analyzing entire value instead.",
-                    self.config.target_field
-                )
+                logger.warning("No matches found for target_field '%s' in value. Analyzing entire value instead.",
+                               self.config.target_field)
                 return value, None
 
             # Resolve multiple matches based on strategy
@@ -314,21 +291,14 @@ class DefenseMiddleware(FunctionMiddleware):
                 "original_type": original_type
             }
 
-            logger.debug(
-                "Extracted field '%s' from value: %s -> %s",
-                self.config.target_field,
-                value,
-                extracted_value
-            )
+            logger.debug("Extracted field '%s' from value: %s -> %s", self.config.target_field, value, extracted_value)
 
             return extracted_value, field_info
 
         except Exception as e:  # noqa: BLE001 - jsonpath-ng may raise multiple exception types; fallback is intentional.
-            logger.warning(
-                "Failed to extract field '%s' from value: %s. Analyzing entire value instead.",
-                self.config.target_field,
-                e
-            )
+            logger.warning("Failed to extract field '%s' from value: %s. Analyzing entire value instead.",
+                           self.config.target_field,
+                           e)
             return value, None
 
     def _apply_field_result_to_value(self, original_value: Any, field_info: dict, analysis_result: Any) -> Any:
@@ -374,12 +344,10 @@ class DefenseMiddleware(FunctionMiddleware):
             for match, result_value in zip(matches, analysis_result, strict=True):
                 match.full_path.update(value_dict, result_value)
         else:
-            logger.warning(
-                "Cannot apply analysis result to multiple fields: "
-                "expected list of %d values, got %s",
-                len(matches),
-                type(analysis_result).__name__
-            )
+            logger.warning("Cannot apply analysis result to multiple fields: "
+                           "expected list of %d values, got %s",
+                           len(matches),
+                           type(analysis_result).__name__)
             return original_value
 
         # Reconstruct BaseModel if original was BaseModel

@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 Content Safety Guard Middleware.
 
@@ -50,9 +49,7 @@ class ContentSafetyGuardMiddlewareConfig(DefenseMiddlewareConfig, name="content_
     Note: Only output analysis is currently supported (target_location='output').
     """
 
-    llm_name: str = Field(
-        description="Name of the guard model LLM (must be defined in llms section)"
-    )
+    llm_name: str = Field(description="Name of the guard model LLM (must be defined in llms section)")
 
 
 class ContentSafetyGuardMiddleware(DefenseMiddleware):
@@ -85,10 +82,8 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
 
         # Content Safety Guard only supports output analysis
         if config.target_location == "input":
-            raise ValueError(
-                "ContentSafetyGuardMiddleware only supports target_location='output'. "
-                "Input analysis is not yet supported."
-            )
+            raise ValueError("ContentSafetyGuardMiddleware only supports target_location='output'. "
+                             "Input analysis is not yet supported.")
 
     async def _get_llm(self):
         """Lazy load the guard model LLM when first needed."""
@@ -189,10 +184,20 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
         else:
             # Detect implicit refusals (model refuses = harmful content detected)
             refusal_indicators = [
-                "i cannot", "i can't", "i won't", "i will not",
-                "i'm unable", "i am unable", "i refuse",
-                "cannot provide", "can't provide", "won't provide",
-                "illegal", "harmful", "dangerous", "inappropriate"
+                "i cannot",
+                "i can't",
+                "i won't",
+                "i will not",
+                "i'm unable",
+                "i am unable",
+                "i refuse",
+                "cannot provide",
+                "can't provide",
+                "won't provide",
+                "illegal",
+                "harmful",
+                "dangerous",
+                "inappropriate"
             ]
 
             if any(indicator in response_lower for indicator in refusal_indicators):
@@ -203,11 +208,7 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
         # Extract categories only if unsafe
         categories = self._extract_unsafe_categories(response_text, is_safe)
 
-        return {
-            "is_safe": is_safe,
-            "categories": categories,
-            "raw_response": response_text
-        }
+        return {"is_safe": is_safe, "categories": categories, "raw_response": response_text}
 
     def _should_refuse(self, parsed_result: dict) -> bool:
         """Determine if content should be refused.
@@ -220,12 +221,10 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
         """
         return not parsed_result.get("is_safe", True)
 
-    async def _analyze_content(
-        self,
-        content: Any,
-        original_input: Any = None,
-        context: FunctionMiddlewareContext | None = None
-    ) -> dict:
+    async def _analyze_content(self,
+                               content: Any,
+                               original_input: Any = None,
+                               context: FunctionMiddlewareContext | None = None) -> dict:
         """Check content safety using guard model.
 
         Args:
@@ -263,20 +262,9 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
 
         except Exception as e:
             logger.exception("Content Safety Guard analysis failed: %s", e)
-            return {
-                "safety": "Safe",
-                "refusal": "No",
-                "should_refuse": False,
-                "error": True,
-                "error_message": str(e)
-            }
+            return {"safety": "Safe", "refusal": "No", "should_refuse": False, "error": True, "error_message": str(e)}
 
-    async def _handle_threat(
-        self,
-        content: Any,
-        analysis_result: dict,
-        context: FunctionMiddlewareContext
-    ) -> Any:
+    async def _handle_threat(self, content: Any, analysis_result: dict, context: FunctionMiddlewareContext) -> Any:
         """Handle unsafe content based on configured action.
 
         Args:
@@ -290,11 +278,9 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
         action = self.config.action
 
         categories = analysis_result.get("categories", [])
-        logger.warning(
-            "Content Safety Guard detected unsafe content in %s (categories: %s)",
-            context.name,
-            ", ".join(categories) if categories else "none"
-        )
+        logger.warning("Content Safety Guard detected unsafe content in %s (categories: %s)",
+                       context.name,
+                       ", ".join(categories) if categories else "none")
 
         if action == "refusal":
             logger.error("Content Safety Guard refusing output of %s", context.name)
@@ -334,31 +320,23 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
         # Extract field from value if target_field is specified
         content_to_analyze, field_info = self._extract_field_from_value(value)
 
-        logger.info(
-            "ContentSafetyGuardMiddleware: Checking %s %s for %s",
-            f"field '{self.config.target_field}'" if field_info else "entire",
-            location,
-            context.name
-        )
-        analysis_result = await self._analyze_content(
-            content_to_analyze, original_input=original_input, context=context
-        )
+        logger.info("ContentSafetyGuardMiddleware: Checking %s %s for %s",
+                    f"field '{self.config.target_field}'" if field_info else "entire",
+                    location,
+                    context.name)
+        analysis_result = await self._analyze_content(content_to_analyze,
+                                                      original_input=original_input,
+                                                      context=context)
 
         if not analysis_result.get("should_refuse", False):
             # Content is safe, return original value
-            logger.info(
-                "ContentSafetyGuardMiddleware: Verified %s of %s as safe",
-                location,
-                context.name
-            )
+            logger.info("ContentSafetyGuardMiddleware: Verified %s of %s as safe", location, context.name)
             return value
 
         # Unsafe content detected - handle based on action
-        logger.warning(
-            "ContentSafetyGuardMiddleware: Blocking %s for %s (unsafe content detected)",
-            location,
-            context.name
-        )
+        logger.warning("ContentSafetyGuardMiddleware: Blocking %s for %s (unsafe content detected)",
+                       location,
+                       context.name)
         sanitized_content = await self._handle_threat(content_to_analyze, analysis_result, context)
 
         # If field was extracted, apply sanitized value back to original structure
@@ -368,9 +346,8 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
             # No field extraction - return sanitized content directly
             return sanitized_content
 
-    async def function_middleware_invoke(
-        self, value: Any, call_next: CallNext, context: FunctionMiddlewareContext
-    ) -> Any:
+    async def function_middleware_invoke(self, value: Any, call_next: CallNext,
+                                         context: FunctionMiddlewareContext) -> Any:
         """Apply content safety guard check to function invocation.
 
         This is the core logic for content safety guard defense - each defense implements
@@ -394,21 +371,18 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
             output = await call_next(value)
 
             # Handle output analysis (only output is supported)
-            output = await self._process_content_safety_detection(
-                output, "output", context, original_input=value
-            )
+            output = await self._process_content_safety_detection(output, "output", context, original_input=value)
 
             return output
 
         except Exception as e:
-            logger.error(
-                "Failed to apply content safety guard to function %s: %s", context.name, e, exc_info=True
-            )
+            logger.error("Failed to apply content safety guard to function %s: %s", context.name, e, exc_info=True)
             raise
 
-    async def function_middleware_stream(
-        self, value: Any, call_next: CallNextStream, context: FunctionMiddlewareContext
-    ) -> AsyncIterator[Any]:
+    async def function_middleware_stream(self,
+                                         value: Any,
+                                         call_next: CallNextStream,
+                                         context: FunctionMiddlewareContext) -> AsyncIterator[Any]:
         """Apply content safety guard check to streaming function.
 
         For 'refusal' and 'redirection' actions: Chunks are buffered and checked before yielding.
@@ -443,10 +417,11 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
 
             # Join chunks efficiently (only convert to string if needed)
             full_output = "".join(chunk if isinstance(chunk, str) else str(chunk) for chunk in accumulated_chunks)
-    
-            processed_output = await self._process_content_safety_detection(
-                full_output, "output", context, original_input=value
-            )
+
+            processed_output = await self._process_content_safety_detection(full_output,
+                                                                            "output",
+                                                                            context,
+                                                                            original_input=value)
 
             processed_str = str(processed_output)
             if self.config.action == "redirection" and processed_str != full_output:
@@ -466,4 +441,3 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
                 exc_info=True,
             )
             raise
-

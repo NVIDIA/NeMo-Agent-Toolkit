@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 PII Defense Middleware using Microsoft Presidio.
 
@@ -50,26 +49,17 @@ class PIIDefenseMiddlewareConfig(DefenseMiddlewareConfig, name="pii_defense"):
     Note: Only output analysis is currently supported (target_location='output').
     """
 
-    llm_name: str | None = Field(
-        default=None,
-        description="Not used for PII defense (Presidio is rule-based)"
-    )
-    entities: list[str] = Field(
-        default_factory=lambda: [
-            "PERSON",
-            "EMAIL_ADDRESS",
-            "PHONE_NUMBER",
-            "CREDIT_CARD",
-            "US_SSN",
-            "LOCATION",
-            "IP_ADDRESS",
-        ],
-        description="List of PII entities to detect"
-    )
-    score_threshold: float = Field(
-        default=0.01,
-        description="Minimum confidence score (0.0-1.0) for PII detection"
-    )
+    llm_name: str | None = Field(default=None, description="Not used for PII defense (Presidio is rule-based)")
+    entities: list[str] = Field(default_factory=lambda: [
+        "PERSON",
+        "EMAIL_ADDRESS",
+        "PHONE_NUMBER",
+        "CREDIT_CARD",
+        "US_SSN",
+        "LOCATION",
+        "IP_ADDRESS", ],
+                                description="List of PII entities to detect")
+    score_threshold: float = Field(default=0.01, description="Minimum confidence score (0.0-1.0) for PII detection")
 
 
 class PIIDefenseMiddleware(DefenseMiddleware):
@@ -95,16 +85,12 @@ class PIIDefenseMiddleware(DefenseMiddleware):
 
         # PII Defense only supports output analysis
         if config.target_location == "input":
-            raise ValueError(
-                "PIIDefenseMiddleware only supports target_location='output'. "
-                "Input analysis is not yet supported."
-            )
+            raise ValueError("PIIDefenseMiddleware only supports target_location='output'. "
+                             "Input analysis is not yet supported.")
 
-        logger.info(
-            f"PIIDefenseMiddleware initialized: "
-            f"action={config.action}, entities={config.entities}, "
-            f"score_threshold={config.score_threshold}, target={config.target_function_or_group}"
-        )
+        logger.info(f"PIIDefenseMiddleware initialized: "
+                    f"action={config.action}, entities={config.entities}, "
+                    f"score_threshold={config.score_threshold}, target={config.target_function_or_group}")
 
     def _lazy_load_presidio(self):
         """Lazy load Presidio components when first needed."""
@@ -117,10 +103,8 @@ class PIIDefenseMiddleware(DefenseMiddleware):
                 self._anonymizer = AnonymizerEngine()
                 logger.info("Presidio engines loaded successfully")
             except ImportError as err:
-                raise ImportError(
-                    "Microsoft Presidio is not installed. "
-                    "Install it with: pip install presidio-analyzer presidio-anonymizer"
-                ) from err
+                raise ImportError("Microsoft Presidio is not installed. "
+                                  "Install it with: pip install presidio-analyzer presidio-anonymizer") from err
 
     def _analyze_content(self, text: str) -> dict:
         """Analyze content for PII entities using Presidio.
@@ -135,17 +119,10 @@ class PIIDefenseMiddleware(DefenseMiddleware):
         from presidio_anonymizer.entities import OperatorConfig
 
         # Analyze for PII with NO score threshold first (to see everything)
-        all_results = self._analyzer.analyze(
-            text=text,
-            entities=self.config.entities,
-            language="en"
-        )
+        all_results = self._analyzer.analyze(text=text, entities=self.config.entities, language="en")
 
         # Log ALL detections before filtering (without PII text for privacy)
-        logger.debug(
-            "PII Defense raw detections: %s",
-            [(r.entity_type, r.score, r.start, r.end) for r in all_results]
-        )
+        logger.debug("PII Defense raw detections: %s", [(r.entity_type, r.score, r.start, r.end) for r in all_results])
 
         # Filter by score threshold
         results = [r for r in all_results if r.score >= self.config.score_threshold]
@@ -156,11 +133,7 @@ class PIIDefenseMiddleware(DefenseMiddleware):
             entity_type = result.entity_type
             if entity_type not in detected_entities:
                 detected_entities[entity_type] = []
-            detected_entities[entity_type].append({
-                "score": result.score,
-                "start": result.start,
-                "end": result.end
-            })
+            detected_entities[entity_type].append({"score": result.score, "start": result.start, "end": result.end})
 
         # Generate anonymized version (used when action='sanitize')
         anonymized_text = text
@@ -168,16 +141,9 @@ class PIIDefenseMiddleware(DefenseMiddleware):
             # Use custom replacement operators for each entity type
             operators = {}
             for result in results:
-                operators[result.entity_type] = OperatorConfig(
-                    "replace",
-                    {"new_value": f"<{result.entity_type}>"}
-                )
+                operators[result.entity_type] = OperatorConfig("replace", {"new_value": f"<{result.entity_type}>"})
 
-            anonymized_text = self._anonymizer.anonymize(
-                text=text,
-                analyzer_results=results,
-                operators=operators
-            ).text
+            anonymized_text = self._anonymizer.anonymize(text=text, analyzer_results=results, operators=operators).text
 
         return {
             "pii_detected": len(results) > 0,
@@ -211,22 +177,16 @@ class PIIDefenseMiddleware(DefenseMiddleware):
         # Extract field from value if target_field is specified
         content_to_analyze, field_info = self._extract_field_from_value(value)
 
-        logger.info(
-            "PIIDefenseMiddleware: Checking %s %s for %s",
-            f"field '{self.config.target_field}'" if field_info else "entire",
-            location,
-            context.name
-        )
+        logger.info("PIIDefenseMiddleware: Checking %s %s for %s",
+                    f"field '{self.config.target_field}'" if field_info else "entire",
+                    location,
+                    context.name)
         # Analyze for PII (convert to string for Presidio)
         content_text = str(content_to_analyze)
         analysis_result = self._analyze_content(content_text)
 
         if not analysis_result.get("pii_detected", False):
-            logger.info(
-                "PIIDefenseMiddleware: Verified %s of %s: No PII detected",
-                location,
-                context.name
-            )
+            logger.info("PIIDefenseMiddleware: Verified %s of %s: No PII detected", location, context.name)
             return value
 
         # PII detected - handle based on action
@@ -274,15 +234,13 @@ class PIIDefenseMiddleware(DefenseMiddleware):
 
             # Convert anonymized_text back to original type if needed
             redirected_value = anonymized_content
-            if isinstance(content, (int, float)):
+            if isinstance(content, int | float):
                 try:
                     redirected_value = type(content)(anonymized_content)
                 except (ValueError, TypeError):
-                    logger.warning(
-                        "Could not convert anonymized text '%s' to %s",
-                        anonymized_content,
-                        type(content).__name__
-                    )
+                    logger.warning("Could not convert anonymized text '%s' to %s",
+                                   anonymized_content,
+                                   type(content).__name__)
                     redirected_value = anonymized_content
 
             return redirected_value
@@ -389,4 +347,3 @@ class PIIDefenseMiddleware(DefenseMiddleware):
                 exc_info=True,
             )
             raise
-
