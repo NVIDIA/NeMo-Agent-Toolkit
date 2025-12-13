@@ -52,8 +52,8 @@ class MockWorkflow:
         self.single_output_schema = MockOutputSchema
         self.streaming_output_schema = MockOutputSchema
 
-    async def run(self, message, runtime_type=RuntimeTypeEnum.RUN_OR_SERVE):
-        """Mock async context manager for run."""
+    def run(self, message, runtime_type=RuntimeTypeEnum.RUN_OR_SERVE):
+        """Return an async context manager for run."""
         runner = MagicMock()
         runner.result = AsyncMock(return_value=MockOutputSchema(response="test"))
 
@@ -323,7 +323,7 @@ class TestSessionManagerRun:
                             entry_function=None,
                             shared_workflow=None)
 
-        with pytest.raises(ValueError, match="Cannot use SessionManager.run\\(\\) with per-user workflows"):
+        with pytest.raises(ValueError, match=r"Cannot use SessionManager.run\(\) with per-user workflows"):
             async with sm.run("test message"):
                 pass
 

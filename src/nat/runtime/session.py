@@ -306,8 +306,8 @@ class SessionManager:
                 # Timeout means it's time to run cleanup
                 try:
                     await self._cleanup_inactive_per_user_builders()
-                except Exception as e:
-                    logger.exception(f"Error during periodic cleanup: {e}")
+                except Exception:
+                    logger.exception("Error during periodic cleanup")
 
         logger.debug("Periodic cleanup task shutting down")
 
@@ -332,8 +332,8 @@ class SessionManager:
                 await builder_info.builder.__aexit__(None, None, None)
                 logger.info(f"Cleaned up inactive per-user builder for user={user_id} "
                             f"(remaining users: {len(self._per_user_builders)})")
-            except Exception as e:
-                logger.exception(f"Error cleaning up per-user builder for user {user_id}: {e}")
+            except Exception:
+                logger.exception(f"Error cleaning up per-user builder for user {user_id}")
 
         return len(builders_to_cleanup)
 
@@ -398,12 +398,12 @@ class SessionManager:
                 logger.info(
                     f"Created per-user builder for user={user_id} (total users: {len(self._per_user_builders)})")
                 return builder_info.builder, builder_info.workflow
-            except Exception as e:
-                logger.exception(f"Error creating per-user builder for user {user_id}: {e}")
+            except Exception:
+                logger.exception(f"Error creating per-user builder for user {user_id}")
                 try:
                     await builder.__aexit__(None, None, None)
-                except Exception as cleanup_error:
-                    logger.error(f"Error during builder cleanup after failed creation: {cleanup_error}", exc_info=True)
+                except Exception:
+                    logger.exception("Error during builder cleanup after failed creation")
                 raise
 
     @asynccontextmanager
@@ -516,8 +516,8 @@ class SessionManager:
                     logger.debug(f"Cleaning up per-user builder for user {user_id}")
                     try:
                         await builder_info.builder.__aexit__(None, None, None)
-                    except Exception as e:
-                        logger.exception(f"Error cleaning up builder for user {user_id}: {e}")
+                    except Exception:
+                        logger.exception(f"Error cleaning up builder for user {user_id}")
                 self._per_user_builders.clear()
 
     def set_metadata_from_http_request(self, request: Request) -> None:
