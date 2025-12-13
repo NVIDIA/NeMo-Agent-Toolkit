@@ -460,8 +460,12 @@ def test_build_dependency_sequence(nested_nat_config: Config):
 async def test_load_hierarchial_workflow(nested_nat_config: Config):
 
     # Validate nested workflow instantiation
-    async with WorkflowBuilder.from_config(config=nested_nat_config) as workflow:
-        assert SessionManager(await workflow.build(), max_concurrency=1)
+    async with WorkflowBuilder.from_config(config=nested_nat_config) as builder:
+        workflow = await builder.build()
+        assert SessionManager(config=nested_nat_config,
+                              shared_builder=builder,
+                              shared_workflow=workflow,
+                              max_concurrency=1)
 
 
 def test_finetuning_component_dependencies():

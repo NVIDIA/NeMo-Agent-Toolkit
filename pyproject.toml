@@ -129,6 +129,7 @@ examples = [
   "nat_service_account_auth_mcp",
   "nat_simple_auth",
   "nat_simple_auth_mcp",
+  "nat_per_user_workflow",
   "nat_simple_web_query",
   "nat_simple_web_query_eval",
   "nat_simple_calculator",
@@ -238,6 +239,7 @@ nat_sequential_executor = { path = "examples/control_flow/sequential_executor", 
 nat_service_account_auth_mcp = { path = "examples/MCP/service_account_auth_mcp", editable = true }
 nat_simple_auth = { path = "examples/front_ends/simple_auth", editable = true }
 nat_simple_auth_mcp = { path = "examples/MCP/simple_auth_mcp", editable = true }
+nat_per_user_workflow = { path = "examples/front_ends/per_user_workflow", editable = true }
 nat_simple_calculator = { path = "examples/getting_started/simple_calculator", editable = true }
 nat_math_assistant_a2a = { path = "examples/A2A/math_assistant_a2a", editable = true }
 nat_simple_calculator_custom_routes = { path = "examples/front_ends/simple_calculator_custom_routes", editable = true }

@@ -56,14 +56,15 @@ class TestA2AServerFunctionality:
         # Verify function objects are preserved
         assert functions["calculator.add"].description == "Add two or more numbers together"
 
-    async def test_agent_executor_creation(self, mock_workflow_with_functions, a2a_server_config):
+    async def test_agent_executor_creation(self, mock_workflow_with_functions, mock_workflow_builder,
+                                           a2a_server_config):
         """Test agent executor is created correctly.
 
         Verifies that the worker creates a valid agent executor
         that can handle A2A protocol requests.
         """
         worker = A2AFrontEndPluginWorker(a2a_server_config)
-        executor = worker.create_agent_executor(mock_workflow_with_functions)
+        executor = worker.create_agent_executor(mock_workflow_with_functions, mock_workflow_builder)
 
         # Verify executor is created
         assert executor is not None
@@ -72,7 +73,7 @@ class TestA2AServerFunctionality:
         assert hasattr(executor, 'session_manager')
         assert executor.session_manager is not None
 
-    async def test_a2a_server_creation(self, mock_workflow_with_functions, a2a_server_config):
+    async def test_a2a_server_creation(self, mock_workflow_with_functions, mock_workflow_builder, a2a_server_config):
         """Test A2A server is created correctly.
 
         Verifies that the worker can create a complete A2A server
@@ -82,7 +83,7 @@ class TestA2AServerFunctionality:
 
         # Create agent card and executor
         agent_card = await worker.create_agent_card(mock_workflow_with_functions)
-        executor = worker.create_agent_executor(mock_workflow_with_functions)
+        executor = worker.create_agent_executor(mock_workflow_with_functions, mock_workflow_builder)
 
         # Create A2A server
         server = worker.create_a2a_server(agent_card, executor)

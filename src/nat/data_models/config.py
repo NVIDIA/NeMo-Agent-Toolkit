@@ -16,6 +16,7 @@
 import logging
 import sys
 import typing
+from datetime import timedelta
 
 from pydantic import BaseModel
 from pydantic import ConfigDict
@@ -213,6 +214,21 @@ class GeneralConfig(BaseModel):
     """
 
     telemetry: TelemetryConfig = TelemetryConfig()
+
+    default_user_id: str = Field(
+        default="default_user_id",
+        description="Default user ID for per-user workflows when "
+        "no session is available (for example, when using 'nat run'). This value identifies "
+        "the workflow instances. For multi-user deployments with 'nat serve', the 'nat-session' "
+        "cookie overrides this value. Must be a non-empty string when used as a fallback user ID.")
+    per_user_workflow_timeout: timedelta = Field(
+        default=timedelta(minutes=30),
+        description="Time after which inactive per-user workflows are cleaned up. "
+        "Only applies when workflow is per-user. Defaults to 30 minutes.")
+    per_user_workflow_cleanup_interval: timedelta = Field(
+        default=timedelta(minutes=5),
+        description="Interval for running cleanup of inactive per-user workflows. "
+        "Only applies when workflow is per-user. Defaults to 5 minutes.")
 
     # FrontEnd Configuration
     front_end: FrontEndBaseConfig = FastApiFrontEndConfig()
