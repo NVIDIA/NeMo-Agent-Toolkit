@@ -26,6 +26,9 @@ from _utils.configs import MemoryTestConfig
 from _utils.configs import ObjectStoreTestConfig
 from _utils.configs import PerUserFunctionTestConfig
 from _utils.configs import RegistryHandlerTestConfig
+from _utils.configs import TrainerAdapterTestConfig
+from _utils.configs import TrainerTestConfig
+from _utils.configs import TrajectoryBuilderTestConfig
 from nat.builder.builder import Builder
 from nat.builder.embedder import EmbedderProviderInfo
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -41,6 +44,9 @@ from nat.cli.register_workflow import register_object_store
 from nat.cli.register_workflow import register_per_user_function
 from nat.cli.register_workflow import register_registry_handler
 from nat.cli.register_workflow import register_tool_wrapper
+from nat.cli.register_workflow import register_trainer
+from nat.cli.register_workflow import register_trainer_adapter
+from nat.cli.register_workflow import register_trajectory_builder
 from nat.cli.type_registry import TypeRegistry
 from nat.memory.interfaces import MemoryEditor
 from nat.memory.models import MemoryItem
@@ -247,6 +253,63 @@ def test_register_registry_handler(registry: TypeRegistry):
     assert registry_handler_info.local_name == RegistryHandlerTestConfig.static_type()
     assert registry_handler_info.config_type is RegistryHandlerTestConfig
     assert registry_handler_info.build_fn is build_fn
+
+
+def test_register_trainer(registry: TypeRegistry):
+    """Test registration of trainer components"""
+    with pytest.raises(KeyError):
+        registry.get_trainer(TrainerTestConfig)
+
+    @register_trainer(config_type=TrainerTestConfig)
+    async def build_fn(config: TrainerTestConfig, builder: Builder):
+        # For test purposes, just yield a mock object
+        from unittest.mock import MagicMock
+        mock_trainer = MagicMock()
+        yield mock_trainer
+
+    trainer_info = registry.get_trainer(TrainerTestConfig)
+    assert trainer_info.full_type == TrainerTestConfig.static_full_type()
+    assert trainer_info.local_name == TrainerTestConfig.static_type()
+    assert trainer_info.config_type is TrainerTestConfig
+    assert trainer_info.build_fn is build_fn
+
+
+def test_register_trainer_adapter(registry: TypeRegistry):
+    """Test registration of trainer adapter components"""
+    with pytest.raises(KeyError):
+        registry.get_trainer_adapter(TrainerAdapterTestConfig)
+
+    @register_trainer_adapter(config_type=TrainerAdapterTestConfig)
+    async def build_fn(config: TrainerAdapterTestConfig, builder: Builder):
+        # For test purposes, just yield a mock object
+        from unittest.mock import MagicMock
+        mock_adapter = MagicMock()
+        yield mock_adapter
+
+    trainer_adapter_info = registry.get_trainer_adapter(TrainerAdapterTestConfig)
+    assert trainer_adapter_info.full_type == TrainerAdapterTestConfig.static_full_type()
+    assert trainer_adapter_info.local_name == TrainerAdapterTestConfig.static_type()
+    assert trainer_adapter_info.config_type is TrainerAdapterTestConfig
+    assert trainer_adapter_info.build_fn is build_fn
+
+
+def test_register_trajectory_builder(registry: TypeRegistry):
+    """Test registration of trajectory builder components"""
+    with pytest.raises(KeyError):
+        registry.get_trajectory_builder(TrajectoryBuilderTestConfig)
+
+    @register_trajectory_builder(config_type=TrajectoryBuilderTestConfig)
+    async def build_fn(config: TrajectoryBuilderTestConfig, builder: Builder):
+        # For test purposes, just yield a mock object
+        from unittest.mock import MagicMock
+        mock_builder = MagicMock()
+        yield mock_builder
+
+    trajectory_builder_info = registry.get_trajectory_builder(TrajectoryBuilderTestConfig)
+    assert trajectory_builder_info.full_type == TrajectoryBuilderTestConfig.static_full_type()
+    assert trajectory_builder_info.local_name == TrajectoryBuilderTestConfig.static_type()
+    assert trajectory_builder_info.config_type is TrajectoryBuilderTestConfig
+    assert trajectory_builder_info.build_fn is build_fn
 
 
 def test_register_per_user_function_with_single_output(registry: TypeRegistry):

@@ -57,6 +57,9 @@ from nat.cli.type_registry import TeleExporterRegisteredCallableT
 from nat.cli.type_registry import TelemetryExporterBuildCallableT
 from nat.cli.type_registry import TelemetryExporterConfigT
 from nat.cli.type_registry import ToolWrapperBuildCallableT
+from nat.cli.type_registry import TrainerAdapterBuildCallableT
+from nat.cli.type_registry import TrainerBuildCallableT
+from nat.cli.type_registry import TrajectoryBuilderBuildCallableT
 from nat.cli.type_registry import TTCStrategyBuildCallableT
 from nat.cli.type_registry import TTCStrategyRegisterCallableT
 from nat.data_models.authentication import AuthProviderBaseConfigT
@@ -64,6 +67,9 @@ from nat.data_models.component import ComponentEnum
 from nat.data_models.discovery_metadata import DiscoveryMetadata
 from nat.data_models.embedder import EmbedderBaseConfigT
 from nat.data_models.evaluator import EvaluatorBaseConfigT
+from nat.data_models.finetuning import TrainerAdapterConfigT
+from nat.data_models.finetuning import TrainerConfigT
+from nat.data_models.finetuning import TrajectoryBuilderConfigT
 from nat.data_models.front_end import FrontEndConfigT
 from nat.data_models.function import FunctionConfigT
 from nat.data_models.function import FunctionGroupConfigT
@@ -575,6 +581,76 @@ def register_ttc_strategy(config_type: type[TTCStrategyRegisterCallableT]):
         return context_manager_fn
 
     return register_ttc_strategy_inner
+
+
+def register_trainer(config_type: type[TrainerConfigT]):
+
+    def register_trainer_inner(fn: TrainerBuildCallableT[TrainerConfigT]) -> TrainerBuildCallableT[TrainerConfigT]:
+        from .type_registry import GlobalTypeRegistry
+        from .type_registry import RegisteredTrainerInfo
+
+        context_manager_fn = asynccontextmanager(fn)
+
+        discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
+                                                                component_type=ComponentEnum.TRAINER)
+
+        GlobalTypeRegistry.get().register_trainer(
+            RegisteredTrainerInfo(full_type=config_type.full_type,
+                                  config_type=config_type,
+                                  build_fn=context_manager_fn,
+                                  discovery_metadata=discovery_metadata))
+
+        return context_manager_fn
+
+    return register_trainer_inner
+
+
+def register_trainer_adapter(config_type: type[TrainerAdapterConfigT]):
+
+    def register_trainer_adapter_inner(
+            fn: TrainerAdapterBuildCallableT[TrainerAdapterConfigT]
+    ) -> TrainerAdapterBuildCallableT[TrainerAdapterConfigT]:
+        from .type_registry import GlobalTypeRegistry
+        from .type_registry import RegisteredTrainerAdapterInfo
+
+        context_manager_fn = asynccontextmanager(fn)
+
+        discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
+                                                                component_type=ComponentEnum.TRAINER_ADAPTER)
+
+        GlobalTypeRegistry.get().register_trainer_adapter(
+            RegisteredTrainerAdapterInfo(full_type=config_type.full_type,
+                                         config_type=config_type,
+                                         build_fn=context_manager_fn,
+                                         discovery_metadata=discovery_metadata))
+
+        return context_manager_fn
+
+    return register_trainer_adapter_inner
+
+
+def register_trajectory_builder(config_type: type[TrajectoryBuilderConfigT]):
+
+    def register_trajectory_builder_inner(
+        fn: TrajectoryBuilderBuildCallableT[TrajectoryBuilderConfigT]
+    ) -> TrajectoryBuilderBuildCallableT[TrajectoryBuilderConfigT]:
+        from .type_registry import GlobalTypeRegistry
+        from .type_registry import RegisteredTrajectoryBuilderInfo
+
+        context_manager_fn = asynccontextmanager(fn)
+
+        discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
+                                                                component_type=ComponentEnum.TRAJECTORY_BUILDER)
+
+        GlobalTypeRegistry.get().register_trajectory_builder(
+            RegisteredTrajectoryBuilderInfo(full_type=config_type.full_type,
+                                            config_type=config_type,
+                                            build_fn=context_manager_fn,
+                                            discovery_metadata=discovery_metadata))
+
+        return context_manager_fn
+
+    return register_trajectory_builder_inner
 
 
 def register_retriever_provider(config_type: type[RetrieverBaseConfigT]):

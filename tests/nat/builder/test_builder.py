@@ -45,10 +45,16 @@ from nat.cli.register_workflow import register_retriever_client
 from nat.cli.register_workflow import register_retriever_provider
 from nat.cli.register_workflow import register_telemetry_exporter
 from nat.cli.register_workflow import register_tool_wrapper
+from nat.cli.register_workflow import register_trainer
+from nat.cli.register_workflow import register_trainer_adapter
+from nat.cli.register_workflow import register_trajectory_builder
 from nat.cli.register_workflow import register_ttc_strategy
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
 from nat.data_models.embedder import EmbedderBaseConfig
+from nat.data_models.finetuning import TrainerAdapterConfig
+from nat.data_models.finetuning import TrainerConfig
+from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.intermediate_step import IntermediateStep
@@ -62,6 +68,9 @@ from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
 from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
+from nat.finetuning.interfaces.finetuning_runner import Trainer
+from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
+from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 from nat.memory.interfaces import MemoryEditor
 from nat.memory.models import MemoryItem
 from nat.object_store.in_memory_object_store import InMemoryObjectStore
@@ -108,6 +117,18 @@ class TObjectStoreConfig(ObjectStoreBaseConfig, name="test_object_store"):
 
 
 class TTTCStrategyConfig(TTCStrategyBaseConfig, name="test_ttc_strategy"):
+    raise_error: bool = False
+
+
+class TTrainerConfig(TrainerConfig, name="test_trainer"):
+    raise_error: bool = False
+
+
+class TTrainerAdapterConfig(TrainerAdapterConfig, name="test_trainer_adapter"):
+    raise_error: bool = False
+
+
+class TTrajectoryBuilderConfig(TrajectoryBuilderConfig, name="test_trajectory_builder"):
     raise_error: bool = False
 
 
@@ -286,6 +307,33 @@ async def _register():
                 return StageTypeEnum.SCORING
 
         yield DummyTTCStrategy(config)
+
+    @register_trainer(config_type=TTrainerConfig)
+    async def register_trainer_test(config: TTrainerConfig, _builder: Builder):
+
+        if config.raise_error:
+            raise ValueError("Error")
+
+        mock_trainer = MagicMock(spec=Trainer)
+        yield mock_trainer
+
+    @register_trainer_adapter(config_type=TTrainerAdapterConfig)
+    async def register_trainer_adapter_test(config: TTrainerAdapterConfig, _builder: Builder):
+
+        if config.raise_error:
+            raise ValueError("Error")
+
+        mock_adapter = MagicMock(spec=TrainerAdapter)
+        yield mock_adapter
+
+    @register_trajectory_builder(config_type=TTrajectoryBuilderConfig)
+    async def register_trajectory_builder_test(config: TTrajectoryBuilderConfig, _builder: Builder):
+
+        if config.raise_error:
+            raise ValueError("Error")
+
+        mock_builder = MagicMock(spec=TrajectoryBuilder)
+        yield mock_builder
 
     # Function Group registrations
     @register_function_group(config_type=IncludesFunctionGroupConfig)
@@ -892,6 +940,130 @@ async def test_get_ttc_strategy_and_config():
             )
 
 
+async def test_add_trainer():
+
+    async with WorkflowBuilder() as builder:
+        await builder.add_trainer("trainer_name", TTrainerConfig())
+
+        with pytest.raises(ValueError):
+            await builder.add_trainer("trainer_name2", TTrainerConfig(raise_error=True))
+
+        # Try and add the same name
+        with pytest.raises(ValueError):
+            await builder.add_trainer("trainer_name", TTrainerConfig())
+
+
+async def test_get_trainer():
+
+    async with WorkflowBuilder() as builder:
+        config = TTrainerConfig()
+
+        await builder.add_trainer("trainer_name", config)
+        await builder.add_trainer_adapter("adapter_name", TTrainerAdapterConfig())
+        await builder.add_trajectory_builder("trajectory_builder_name", TTrajectoryBuilderConfig())
+
+        trainer_adapter = await builder.get_trainer_adapter("adapter_name")
+        trajectory_builder = await builder.get_trajectory_builder("trajectory_builder_name")
+
+        trainer = await builder.get_trainer("trainer_name", trajectory_builder, trainer_adapter)
+
+        assert trainer is not None
+
+        with pytest.raises(ValueError):
+            await builder.get_trainer("trainer_name_not_exist", trajectory_builder, trainer_adapter)
+
+
+async def test_get_trainer_config():
+
+    async with WorkflowBuilder() as builder:
+        config = TTrainerConfig()
+
+        await builder.add_trainer("trainer_name", config)
+
+        assert await builder.get_trainer_config("trainer_name") == config
+
+        with pytest.raises(ValueError):
+            await builder.get_trainer_config("trainer_name_not_exist")
+
+
+async def test_add_trainer_adapter():
+
+    async with WorkflowBuilder() as builder:
+        await builder.add_trainer_adapter("adapter_name", TTrainerAdapterConfig())
+
+        with pytest.raises(ValueError):
+            await builder.add_trainer_adapter("adapter_name2", TTrainerAdapterConfig(raise_error=True))
+
+        # Try and add the same name
+        with pytest.raises(ValueError):
+            await builder.add_trainer_adapter("adapter_name", TTrainerAdapterConfig())
+
+
+async def test_get_trainer_adapter():
+
+    async with WorkflowBuilder() as builder:
+        config = TTrainerAdapterConfig()
+
+        adapter = await builder.add_trainer_adapter("adapter_name", config)
+
+        assert adapter == await builder.get_trainer_adapter("adapter_name")
+
+        with pytest.raises(ValueError):
+            await builder.get_trainer_adapter("adapter_name_not_exist")
+
+
+async def test_get_trainer_adapter_config():
+
+    async with WorkflowBuilder() as builder:
+        config = TTrainerAdapterConfig()
+
+        await builder.add_trainer_adapter("adapter_name", config)
+
+        assert await builder.get_trainer_adapter_config("adapter_name") == config
+
+        with pytest.raises(ValueError):
+            await builder.get_trainer_adapter_config("adapter_name_not_exist")
+
+
+async def test_add_trajectory_builder():
+
+    async with WorkflowBuilder() as builder:
+        await builder.add_trajectory_builder("trajectory_builder_name", TTrajectoryBuilderConfig())
+
+        with pytest.raises(ValueError):
+            await builder.add_trajectory_builder("trajectory_builder_name2", TTrajectoryBuilderConfig(raise_error=True))
+
+        # Try and add the same name
+        with pytest.raises(ValueError):
+            await builder.add_trajectory_builder("trajectory_builder_name", TTrajectoryBuilderConfig())
+
+
+async def test_get_trajectory_builder():
+
+    async with WorkflowBuilder() as builder:
+        config = TTrajectoryBuilderConfig()
+
+        trajectory_builder = await builder.add_trajectory_builder("trajectory_builder_name", config)
+
+        assert trajectory_builder == await builder.get_trajectory_builder("trajectory_builder_name")
+
+        with pytest.raises(ValueError):
+            await builder.get_trajectory_builder("trajectory_builder_name_not_exist")
+
+
+async def test_get_trajectory_builder_config():
+
+    async with WorkflowBuilder() as builder:
+        config = TTrajectoryBuilderConfig()
+
+        await builder.add_trajectory_builder("trajectory_builder_name", config)
+
+        assert await builder.get_trajectory_builder_config("trajectory_builder_name") == config
+
+        with pytest.raises(ValueError):
+            await builder.get_trajectory_builder_config("trajectory_builder_name_not_exist")
+
+
 async def test_built_config():
 
     general_config = GeneralConfig()
@@ -903,6 +1075,9 @@ async def test_built_config():
     retriever_config = TRetrieverProviderConfig()
     object_store_config = TObjectStoreConfig()
     ttc_config = TTTCStrategyConfig()
+    trainer_config = TTrainerConfig()
+    trainer_adapter_config = TTrainerAdapterConfig()
+    trajectory_builder_config = TTrajectoryBuilderConfig()
 
     async with WorkflowBuilder(general_config=general_config) as builder:
 
@@ -922,6 +1097,12 @@ async def test_built_config():
 
         await builder.add_ttc_strategy("ttc_strategy", ttc_config)
 
+        await builder.add_trainer("trainer1", trainer_config)
+
+        await builder.add_trainer_adapter("trainer_adapter1", trainer_adapter_config)
+
+        await builder.add_trajectory_builder("trajectory_builder1", trajectory_builder_config)
+
         workflow = await builder.build()
 
         workflow_config = workflow.config
@@ -935,6 +1116,9 @@ async def test_built_config():
         assert workflow_config.retrievers == {"retriever1": retriever_config}
         assert workflow_config.object_stores == {"object_store1": object_store_config}
         assert workflow_config.ttc_strategies == {"ttc_strategy": ttc_config}
+        assert workflow_config.trainers == {"trainer1": trainer_config}
+        assert workflow_config.trainer_adapters == {"trainer_adapter1": trainer_adapter_config}
+        assert workflow_config.trajectory_builders == {"trajectory_builder1": trajectory_builder_config}
 
 
 # Function Group Tests

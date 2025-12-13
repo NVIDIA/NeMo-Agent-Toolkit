@@ -49,7 +49,7 @@ limitations under the License.
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 
 ### Install this Workflow:
 
@@ -60,7 +60,7 @@ uv pip install -e examples/evaluation_and_profiling/email_phishing_analyzer
 ```
 
 ### Set Up API Keys
-If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
@@ -76,7 +76,7 @@ Run the following command from the root of the NeMo Agent toolkit repo to execut
 nat run --config_file examples/evaluation_and_profiling/email_phishing_analyzer/configs/config.yml --input "Dear [Customer], Thank you for your purchase on [Date]. We have processed a refund of $[Amount] to your account. Please provide your account and routing numbers so we can complete the transaction. Thank you, [Your Company]"
 ```
 
-The configuration file specified above contains configurations for the NeMo Agent Toolkit `evaluation` and `profiler` capabilities. Additional documentation for evaluation configuration can be found in the [evaluation guide](../../../docs/source/workflows/evaluate.md). Furthermore, similar documentation for profiling configuration can be found in the [profiling guide](../../../docs/source/workflows/profiler.md).
+The configuration file specified above contains configurations for the NeMo Agent Toolkit `evaluation` and `profiler` capabilities. Additional documentation for evaluation configuration can be found in the [evaluation guide](../../../docs/source/improve-workflows/evaluate.md). Furthermore, similar documentation for profiling configuration can be found in the [profiling guide](../../../docs/source/improve-workflows/profiler.md).
 
 **Expected Workflow Output**
 ```console
@@ -131,7 +131,7 @@ Workflow Result:
 ## Optimization
 
 This example includes an optimization configuration that uses the NeMo Agent toolkit Optimizer to tune the workflow. For detailed information 
-about the NeMo Agent Toolkit Optimizer, refer to the [Optimizer Documentation](../../../docs/source/reference/optimizer.md).
+about the NeMo Agent Toolkit Optimizer, refer to the [Optimizer Documentation](../../../docs/source/improve-workflows/optimizer.md).
 
 ### What Is Being Optimized
 - **Tool parameters**: The `email_phishing_analyzer` exposes one optimizable field in its config:
@@ -273,7 +273,7 @@ Results are written to the path specified by `optimizer.output_path`. Expect art
 #### Understanding the Pareto Visualizations
 
 For a detailed guide on interpreting the output of the optimization process, including the 
-Pareto visualizations, refer to the [Optimizer Output Analysis](../../../docs/source/reference/optimizer.md#understanding-the-output) section in the 
+Pareto visualizations, refer to the [Optimizer Output Analysis](../../../docs/source/improve-workflows/optimizer.md#understanding-the-output) section in the 
 NeMo Agent toolkit documentation.
 
 ---
