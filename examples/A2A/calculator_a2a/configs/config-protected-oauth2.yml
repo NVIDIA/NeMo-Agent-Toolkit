@@ -1,13 +1,20 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 # Protected Calculator A2A Configuration
 # This configuration adds OAuth2 authentication to the calculator agent.
-#
-# Prerequisites:
-# 1. Keycloak server running
-# 2. Calculator registered as a resource server
-# 3. OAuth2 server configured with required scopes
 #
 # Start the protected calculator:
 #   nat a2a serve --config examples/A2A/calculator_a2a/configs/config-protected-oauth2.yml
@@ -44,9 +51,6 @@ general:
 
       # JWT validation via JWKS URI (Keycloak provides this!)
       jwks_uri: http://localhost:8080/realms/master/protocol/openid-connect/certs
-
-
-
 
 function_groups:
   calculator:
