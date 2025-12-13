@@ -23,7 +23,7 @@ This guide will cover how to use NeMo Agent toolkit as an MCP Server to publish 
 
 ## MCP Server Usage
 
-The `nat mcp serve` command can be used to start an MCP server that publishes the functions from your workflow as MCP tools.
+The `nat mcp serve` command can be used to start an MCP server that publishes the [functions](../build-workflows/functions-and-function-groups/functions.md) from your workflow as MCP tools.
 
 To start an MCP server publishing all tools from your workflow, run the following command:
 

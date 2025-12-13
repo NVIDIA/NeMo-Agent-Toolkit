@@ -46,7 +46,7 @@ nat a2a serve --config_file examples/getting_started/simple_calculator/configs/c
 This command:
 1. Loads the workflow configuration
 2. Starts an A2A server on `http://localhost:10000` (default)
-3. Publishes the workflow as an A2A agent with functions as skills
+3. Publishes the workflow as an A2A agent with [functions](../build-workflows/functions-and-function-groups/functions.md) as skills
 4. Exposes an Agent Card at `http://localhost:10000/.well-known/agent-card.json`
 
 ### Server Options

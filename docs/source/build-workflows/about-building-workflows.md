@@ -57,7 +57,7 @@ workflow:
 
 This workflow configuration is divided into four sections: `functions`, `llms`, `embedders`, and `workflow`. The `functions` section contains the tools used in the workflow, while `llms` and `embedders` define the models used in the workflow, and lastly the `workflow` section ties the other sections together and defines the workflow itself.
 
-The workflow itself is typically an agent, however any NeMo Agent toolkit function can be used as a workflow. Refer to the [Agents](../components/agents/index.md) documentation for more details on the agents that are included in NeMo Agent toolkit.
+The workflow itself is typically an agent, however any NeMo Agent toolkit [function](./functions-and-function-groups/functions.md) can be used as a workflow. Refer to the [Agents](../components/agents/index.md) documentation for more details on the agents that are included in NeMo Agent toolkit.
 
 In this workflow, the `webpage_query` tool queries the LangSmith User Guide, and the `current_datetime` tool gets the current date and time. The `description` entry instructs the LLM when and how to use the tool. In this case, the workflow explicitly defines `description` for the `webpage_query` tool.
 
