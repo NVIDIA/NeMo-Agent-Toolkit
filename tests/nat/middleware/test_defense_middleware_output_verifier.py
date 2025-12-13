@@ -182,7 +182,7 @@ class TestOutputVerifierInvoke:
         """Test analyzing list element with target_field."""
         config = OutputVerifierMiddlewareConfig(
             llm_name="test_llm",
-            target_field="results[0]",
+            target_field="$.results[0]",
             action="partial_compliance"
         )
         middleware = OutputVerifierMiddleware(config, mock_builder)
@@ -293,6 +293,15 @@ class TestOutputVerifierInvoke:
             assert "1.0" in user_content or "1" in user_content, f"Expected '1.0' in content: {user_content}"
             assert "2.0" in user_content or "2" in user_content, f"Expected '2.0' in content: {user_content}"
             assert "3.0" in user_content or "3" in user_content, f"Expected '3.0' in content: {user_content}"
+            
+            # For partial_compliance action, result should be unchanged (original structure)
+            assert result == {
+                "items": [
+                    {"result": 1.0, "id": 1},
+                    {"result": 2.0, "id": 2},
+                    {"result": 3.0, "id": 3}
+                ]
+            }
 
     @pytest.mark.asyncio
     async def test_action_partial_compliance(self, mock_builder, middleware_context):

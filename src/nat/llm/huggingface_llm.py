@@ -18,6 +18,7 @@ HuggingFace Transformers LLM Provider - Local in-process model execution.
 """
 
 import logging
+from collections.abc import AsyncIterator
 from typing import Any
 
 from pydantic import Field
@@ -252,7 +253,10 @@ async def _cleanup_model(model_name: str) -> None:
 
 
 @register_llm_provider(config_type=HuggingFaceConfig)
-async def huggingface_provider(config: HuggingFaceConfig, builder: Builder):
+async def huggingface_provider(
+    config: HuggingFaceConfig,
+    builder: Builder,  # noqa: ARG001 - kept for provider interface, currently unused
+) -> AsyncIterator[LLMProviderInfo]:
     """HuggingFace model provider - loads models locally for in-process execution.
     
     Args:

@@ -262,6 +262,15 @@ class TestPIIDefenseInvoke:
             result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
             assert mock_analyzer.analyze.called
             
+            # For partial_compliance, middleware should return original structure unchanged
+            assert result == {
+                "items": [
+                    {"email": "first@example.com", "id": 1},
+                    {"email": "second@example.com", "id": 2},
+                    {"email": "third@example.com", "id": 3}
+                ]
+            }
+            
             # call_args is a unittest.mock._Call object
             # Presidio's analyze method signature: analyze(text=..., language='en', entities=...)
             call_args = mock_analyzer.analyze.call_args

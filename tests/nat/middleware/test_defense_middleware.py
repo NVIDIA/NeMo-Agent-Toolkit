@@ -25,6 +25,7 @@ from pydantic import BaseModel
 
 from nat.middleware.defense_middleware import DefenseMiddleware
 from nat.middleware.defense_middleware import DefenseMiddlewareConfig
+from nat.middleware.defense_middleware import MultipleTargetFieldMatchesError
 from nat.middleware.middleware import FunctionMiddlewareContext
 
 
@@ -208,7 +209,7 @@ class TestDefenseMiddlewareFieldExtraction:
 
     def test_extract_list_field(self, mock_builder):
         """Test extracting field from list element."""
-        config = DefenseMiddlewareConfig(target_field="numbers[0]")
+        config = DefenseMiddlewareConfig(target_field="$.numbers[0]")
         middleware = _TestDefenseMiddleware(config, mock_builder)
 
         value = {"numbers": [10, 20, 30], "operation": "sum"}
@@ -258,7 +259,7 @@ class TestDefenseMiddlewareFieldResolutionStrategy:
         match2.value = "second"
         matches = [match1, match2]
 
-        with pytest.raises(ValueError, match="Multiple matches found"):
+        with pytest.raises(MultipleTargetFieldMatchesError, match="Multiple matches found"):
             middleware._resolve_multiple_field_matches(matches)
 
     def test_resolution_strategy_first(self, mock_builder):

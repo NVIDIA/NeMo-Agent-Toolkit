@@ -22,7 +22,7 @@ core logic based on its specific defense strategy (LLM-based, rule-based, etc.).
 """
 
 import logging
-import random
+import secrets
 from typing import Any
 from typing import Literal
 from typing import cast
@@ -36,6 +36,20 @@ from nat.data_models.middleware import FunctionMiddlewareBaseConfig
 from nat.middleware.function_middleware import FunctionMiddleware
 
 logger = logging.getLogger(__name__)
+
+
+class MultipleTargetFieldMatchesError(ValueError):
+    """Raised when a JSONPath matches multiple fields and strategy='error'."""
+
+    def __init__(self, target_field: str | None) -> None:
+        super().__init__(f"Multiple matches found for target_field={target_field!r}")
+
+
+class UnknownTargetFieldResolutionStrategyError(ValueError):
+    """Raised when an unknown target_field_resolution_strategy is configured."""
+
+    def __init__(self, strategy: str) -> None:
+        super().__init__(f"Unknown target_field_resolution_strategy={strategy!r}")
 
 
 class DefenseMiddlewareConfig(FunctionMiddlewareBaseConfig):
@@ -212,17 +226,17 @@ class DefenseMiddleware(FunctionMiddleware):
         strategy = self.config.target_field_resolution_strategy
 
         if strategy == "error":
-            raise ValueError(f"Multiple matches found for target_field: {self.config.target_field}")
+            raise MultipleTargetFieldMatchesError(self.config.target_field)
         elif strategy == "first":
             return [matches[0]]
         elif strategy == "last":
             return [matches[-1]]
         elif strategy == "random":
-            return [random.choice(matches)]
+            return [secrets.choice(matches)]
         elif strategy == "all":
             return matches
         else:
-            raise ValueError(f"Unknown target_field_resolution_strategy: {strategy}")
+            raise UnknownTargetFieldResolutionStrategyError(strategy)
 
     def _extract_field_from_value(self, value: Any) -> tuple[Any, dict | None]:
         """Extract field(s) from value using JSONPath if target_field is specified.
@@ -309,7 +323,7 @@ class DefenseMiddleware(FunctionMiddleware):
 
             return extracted_value, field_info
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - jsonpath-ng may raise multiple exception types; fallback is intentional.
             logger.warning(
                 "Failed to extract field '%s' from value: %s. Analyzing entire value instead.",
                 self.config.target_field,
@@ -357,7 +371,7 @@ class DefenseMiddleware(FunctionMiddleware):
             matches[0].full_path.update(value_dict, analysis_result)
         # Multiple matches - update all fields (analysis_result should be a list)
         elif isinstance(analysis_result, list) and len(analysis_result) == len(matches):
-            for match, result_value in zip(matches, analysis_result):
+            for match, result_value in zip(matches, analysis_result, strict=True):
                 match.full_path.update(value_dict, result_value)
         else:
             logger.warning(

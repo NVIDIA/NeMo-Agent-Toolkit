@@ -315,7 +315,7 @@ class PIIDefenseMiddleware(DefenseMiddleware):
             return result
 
         except Exception as e:
-            logger.error("Failed to apply PII defense to function %s: %s", context.name, e, exc_info=True)
+            logger.exception("Failed to apply PII defense to function %s: %s", context.name, e)
             raise
 
     async def function_middleware_stream(
@@ -326,10 +326,8 @@ class PIIDefenseMiddleware(DefenseMiddleware):
     ) -> AsyncIterator[Any]:
         """Intercept streaming calls to detect and anonymize PII in inputs or outputs.
 
-        All chunks are buffered, the full output is analyzed for PII, and then the result
-        is yielded (or blocked/redirected if PII is detected).
-
-        Note: PII detection requires full text, so chunks are collected before analyzing.
+        For 'refusal' and 'redirection' actions: Chunks are buffered and checked before yielding.
+        For 'partial_compliance' action: Chunks are yielded immediately; violations are logged.
 
         Args:
             value: The input value to the function
@@ -347,26 +345,33 @@ class PIIDefenseMiddleware(DefenseMiddleware):
             return
 
         try:
-            # Buffer all chunks to analyze the full output
-            accumulated_chunks = []
+            buffer_chunks = self.config.action in ("refusal", "redirection")
+            accumulated_chunks: list[Any] = []
+
             async for chunk in call_next(value):
-                accumulated_chunks.append(chunk)
+                if buffer_chunks:
+                    accumulated_chunks.append(chunk)
+                else:
+                    # partial_compliance: stream through, but still accumulate for analysis/logging
+                    yield chunk
+                    accumulated_chunks.append(chunk)
 
             # Analyze the full output for PII
             full_output = "".join(chunk if isinstance(chunk, str) else str(chunk) for chunk in accumulated_chunks)
             processed_output = self._process_pii_detection(full_output, "output", context)
 
-            # Yield processed content
             processed_str = str(processed_output)
-            if processed_str != full_output:
-                # If redirected (redirection), yield as single chunk (preserve original type)
+            if self.config.action == "redirection" and processed_str != full_output:
+                # Redirected: yield replacement once (and stop).
                 yield processed_output
-            else:
-                # No PII detected or no sanitization needed, yield original chunks
+                return
+
+            if buffer_chunks:
+                # refusal: would have raised; safe content: preserve chunking
                 for chunk in accumulated_chunks:
                     yield chunk
 
         except Exception as e:
-            logger.error("Failed to apply PII defense to streaming function %s: %s", context.name, e, exc_info=True)
+            logger.exception("Failed to apply PII defense to streaming function %s: %s", context.name, e)
             raise
 

@@ -164,7 +164,6 @@ async def test_huggingface_langchain_agent():
         await builder.add_llm("huggingface_llm", llm_config)
         llm = await builder.get_llm("huggingface_llm", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
-        # Test direct usage (like your examples) - invoke the prompt then the LLM
         prompt_result = await prompt.ainvoke({"input": "What is 1+2?"})
         response = await llm.ainvoke(prompt_result.to_messages())
         

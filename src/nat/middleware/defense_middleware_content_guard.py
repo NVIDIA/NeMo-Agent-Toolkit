@@ -262,7 +262,7 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
             return parsed
 
         except Exception as e:
-            logger.error("Content Safety Guard analysis failed: %s", e, exc_info=True)
+            logger.exception("Content Safety Guard analysis failed: %s", e)
             return {
                 "safety": "Safe",
                 "refusal": "No",
@@ -411,8 +411,8 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
     ) -> AsyncIterator[Any]:
         """Apply content safety guard check to streaming function.
 
-        All chunks are buffered, the full output is analyzed, and then the result
-        is yielded (or blocked/redirected if unsafe content is detected).
+        For 'refusal' and 'redirection' actions: Chunks are buffered and checked before yielding.
+        For 'partial_compliance' action: Chunks are yielded immediately; violations are logged.
 
         Args:
             value: Function input
@@ -430,10 +430,16 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
             return
 
         try:
-            # Buffer all chunks to analyze the full output
-            accumulated_chunks = []
+            buffer_chunks = self.config.action in ("refusal", "redirection")
+            accumulated_chunks: list[Any] = []
+
             async for chunk in call_next(value):
-                accumulated_chunks.append(chunk)
+                if buffer_chunks:
+                    accumulated_chunks.append(chunk)
+                else:
+                    # partial_compliance: stream through, but still accumulate for analysis/logging
+                    yield chunk
+                    accumulated_chunks.append(chunk)
 
             # Join chunks efficiently (only convert to string if needed)
             full_output = "".join(chunk if isinstance(chunk, str) else str(chunk) for chunk in accumulated_chunks)
@@ -442,19 +448,20 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
                 full_output, "output", context, original_input=value
             )
 
-            # Yield processed content
             processed_str = str(processed_output)
-            if processed_str != full_output:
-                # For redirection, yield the replacement message
+            if self.config.action == "redirection" and processed_str != full_output:
+                # Redirected: yield replacement once (and stop).
                 yield processed_output
-            else:
-                # For safe content, yield original chunks
+                return
+
+            if buffer_chunks:
+                # refusal: would have raised; safe content: preserve chunking
                 for chunk in accumulated_chunks:
                     yield chunk
 
         except Exception as e:
-            logger.error(
-                "Failed to apply content safety guard to streaming function %s: %s", context.name, e, exc_info=True
+            logger.exception(
+                "Failed to apply content safety guard to streaming function %s: %s", context.name, e
             )
             raise
 

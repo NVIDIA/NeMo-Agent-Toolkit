@@ -217,8 +217,11 @@ Respond ONLY with valid JSON in this exact format:
             }
 
         except Exception as e:
-            logger.error("Output Verifier analysis failed for %s: %s", content_type, e, exc_info=True)
-            logger.debug("Failed response: %s", response_text if response_text else "N/A")
+            logger.exception("Output Verifier analysis failed for %s: %s", content_type, e)
+            logger.debug(
+                "Output Verifier failed response length: %s",
+                len(response_text) if response_text else 0,
+            )
             return {
                 "threat_detected": False,
                 "confidence": 0.0,
@@ -393,7 +396,7 @@ Respond ONLY with valid JSON in this exact format:
             return output
 
         except Exception as e:
-            logger.error("Failed to apply output verification to function %s: %s", context.name, e, exc_info=True)
+            logger.exception("Failed to apply output verification to function %s: %s", context.name, e)
             raise
 
     async def function_middleware_stream(
@@ -401,8 +404,8 @@ Respond ONLY with valid JSON in this exact format:
     ) -> AsyncIterator[Any]:
         """Apply output verifier to streaming function.
 
-        All chunks are buffered, the full output is analyzed, and then the result
-        is yielded (or blocked/redirected if incorrect content is detected).
+        For 'refusal' and 'redirection' actions: Chunks are buffered and checked before yielding.
+        For 'partial_compliance' action: Chunks are yielded immediately; violations are logged.
 
         Args:
             value: Function input
@@ -420,10 +423,16 @@ Respond ONLY with valid JSON in this exact format:
             return
 
         try:
-            # Buffer all chunks to analyze the full output
-            accumulated_chunks = []
+            buffer_chunks = self.config.action in ("refusal", "redirection")
+            accumulated_chunks: list[Any] = []
+
             async for chunk in call_next(value):
-                accumulated_chunks.append(chunk)
+                if buffer_chunks:
+                    accumulated_chunks.append(chunk)
+                else:
+                    # partial_compliance: stream through, but still accumulate for analysis/logging
+                    yield chunk
+                    accumulated_chunks.append(chunk)
 
             full_output_str = "".join(chunk if isinstance(chunk, str) else str(chunk) for chunk in accumulated_chunks)
             
@@ -432,19 +441,20 @@ Respond ONLY with valid JSON in this exact format:
                 full_output_str, "output", context, inputs=value
             )
 
-            # Yield processed content
             processed_str = str(processed_output)
-            if processed_str != full_output_str:
-                # If redirected/corrected, yield as single chunk (preserve original type)
+            if self.config.action == "redirection" and processed_str != full_output_str:
+                # Redirected/corrected: yield replacement once (and stop).
                 yield processed_output
-            else:
-                # For safe content, yield original chunks
+                return
+
+            if buffer_chunks:
+                # refusal: would have raised; safe content: preserve chunking
                 for chunk in accumulated_chunks:
                     yield chunk
 
         except Exception as e:
-            logger.error(
-                "Failed to apply output verification to streaming function %s: %s", context.name, e, exc_info=True
+            logger.exception(
+                "Failed to apply output verification to streaming function %s: %s", context.name, e
             )
             raise
 
