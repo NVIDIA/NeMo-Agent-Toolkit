@@ -46,9 +46,15 @@ from nat.data_models.component_ref import FunctionGroupRef
 from nat.data_models.component_ref import FunctionRef
 from nat.data_models.component_ref import MiddlewareRef
 from nat.data_models.component_ref import RetrieverRef
+from nat.data_models.component_ref import TrainerAdapterRef
+from nat.data_models.component_ref import TrainerRef
+from nat.data_models.component_ref import TrajectoryBuilderRef
 from nat.data_models.component_ref import TTCStrategyRef
 from nat.data_models.config import Config
 from nat.data_models.embedder import EmbedderBaseConfig
+from nat.data_models.finetuning import TrainerAdapterConfig
+from nat.data_models.finetuning import TrainerConfig
+from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.function_dependencies import FunctionDependencies
@@ -62,6 +68,9 @@ from nat.experimental.decorators.experimental_warning_decorator import experimen
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
 from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
+from nat.finetuning.interfaces.finetuning_runner import Trainer
+from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
+from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 from nat.memory.interfaces import MemoryEditor
 from nat.middleware.function_middleware import FunctionMiddleware
 from nat.middleware.middleware import Middleware
@@ -498,6 +507,50 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
     @override
     def get_middleware_config(self, middleware_name: str | MiddlewareRef) -> MiddlewareBaseConfig:
         return self._shared_builder.get_middleware_config(middleware_name)
+
+    @experimental(feature_name="Finetuning")
+    @override
+    async def add_trainer(self, name: str | TrainerRef, config: TrainerConfig) -> Trainer:
+        return await self._shared_builder.add_trainer(name, config)
+
+    @experimental(feature_name="Finetuning")
+    @override
+    async def add_trainer_adapter(self, name: str | TrainerAdapterRef, config: TrainerAdapterConfig) -> TrainerAdapter:
+        return await self._shared_builder.add_trainer_adapter(name, config)
+
+    @experimental(feature_name="Finetuning")
+    @override
+    async def add_trajectory_builder(self, name: str | TrajectoryBuilderRef,
+                                     config: TrajectoryBuilderConfig) -> TrajectoryBuilder:
+        return await self._shared_builder.add_trajectory_builder(name, config)
+
+    @override
+    async def get_trainer(self,
+                          trainer_name: str | TrainerRef,
+                          trajectory_builder: TrajectoryBuilder,
+                          trainer_adapter: TrainerAdapter) -> Trainer:
+        return await self._shared_builder.get_trainer(trainer_name, trajectory_builder, trainer_adapter)
+
+    @override
+    async def get_trainer_adapter(self, trainer_adapter_name: str | TrainerAdapterRef) -> TrainerAdapter:
+        return await self._shared_builder.get_trainer_adapter(trainer_adapter_name)
+
+    @override
+    async def get_trajectory_builder(self, trajectory_builder_name: str | TrajectoryBuilderRef) -> TrajectoryBuilder:
+        return await self._shared_builder.get_trajectory_builder(trajectory_builder_name)
+
+    @override
+    async def get_trainer_config(self, trainer_name: str | TrainerRef) -> TrainerConfig:
+        return await self._shared_builder.get_trainer_config(trainer_name)
+
+    @override
+    async def get_trainer_adapter_config(self, trainer_adapter_name: str | TrainerAdapterRef) -> TrainerAdapterConfig:
+        return await self._shared_builder.get_trainer_adapter_config(trainer_adapter_name)
+
+    @override
+    async def get_trajectory_builder_config(
+            self, trajectory_builder_name: str | TrajectoryBuilderRef) -> TrajectoryBuilderConfig:
+        return await self._shared_builder.get_trajectory_builder_config(trajectory_builder_name)
 
     async def populate_builder(self, config: Config, skip_workflow: bool = False):
         """
