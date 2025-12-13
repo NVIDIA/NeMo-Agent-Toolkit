@@ -16,7 +16,8 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
 
 import pytest
 from pydantic import BaseModel
@@ -216,6 +217,7 @@ async def test_attack_deeply_nested_jsonpath():
     received_input = mock_call_next.call_args.args[0]
     assert received_input.request.context == "Customer service [CONTEXT INJECTED]"
     assert received_input.request.query == "Help me"
+
 
 async def test_attack_nested_output_field():
     """Attack a field in the output via function_middleware_invoke."""

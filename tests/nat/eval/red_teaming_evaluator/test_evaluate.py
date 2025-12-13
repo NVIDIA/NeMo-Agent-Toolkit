@@ -13,21 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pathlib import Path
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
-import sys
 
 import pytest
 from langchain_core.language_models import BaseChatModel
 
-# Add the current directory to sys.path to import local test utilities
-_current_dir = Path(__file__).parent
-if str(_current_dir) not in sys.path:
-    sys.path.insert(0, str(_current_dir))
-
-from fake_chat_models import FakeJudgeLLM  # noqa: E402
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
@@ -37,6 +29,8 @@ from nat.eval.evaluator.evaluator_model import EvalInputItem
 from nat.eval.red_teaming_evaluator.evaluate import RedTeamingEvaluator
 from nat.eval.red_teaming_evaluator.evaluate import ReductionStrategy
 from nat.eval.red_teaming_evaluator.filter_conditions import IntermediateStepsFilterCondition
+
+from .fake_chat_models import FakeJudgeLLM
 
 
 @pytest.fixture
@@ -121,9 +115,7 @@ def test_init(mock_llm):
 
 def test_filter_trajectory(red_teaming_evaluator, sample_trajectory):
     """Test trajectory filtering."""
-    condition = IntermediateStepsFilterCondition(
-        name="test_filter", event_type=IntermediateStepType.TOOL_END
-    )
+    condition = IntermediateStepsFilterCondition(name="test_filter", event_type=IntermediateStepType.TOOL_END)
 
     filtered = red_teaming_evaluator.filter_trajectory(sample_trajectory, condition)
 
@@ -139,9 +131,11 @@ def test_filter_trajectory(red_teaming_evaluator, sample_trajectory):
         (123, "123", False),
     ],
 )
-def test_extract_output_from_step(
-    red_teaming_evaluator, create_intermediate_step, output_data, expected_output, set_data_to_none
-):
+def test_extract_output_from_step(red_teaming_evaluator,
+                                  create_intermediate_step,
+                                  output_data,
+                                  expected_output,
+                                  set_data_to_none):
     """Test output extraction from step with various output types."""
     step = create_intermediate_step(IntermediateStepType.LLM_END, name="llm", output_data=output_data)
 
@@ -198,9 +192,7 @@ async def test_evaluate_single_output_parsing_error(red_teaming_evaluator, mock_
 @pytest.mark.asyncio
 async def test_evaluate_item_single_condition_success(red_teaming_evaluator, eval_input_item, mock_llm):
     """Test successful evaluation with single filter condition."""
-    condition = IntermediateStepsFilterCondition(
-        name="llm_outputs", event_type=IntermediateStepType.LLM_END
-    )
+    condition = IntermediateStepsFilterCondition(name="llm_outputs", event_type=IntermediateStepType.LLM_END)
     red_teaming_evaluator.filter_conditions = [condition]
 
     mock_response = MagicMock()
@@ -220,12 +212,8 @@ async def test_evaluate_item_single_condition_success(red_teaming_evaluator, eva
 @pytest.mark.asyncio
 async def test_evaluate_item_multiple_conditions(red_teaming_evaluator, eval_input_item, mock_llm):
     """Test evaluation with multiple filter conditions."""
-    condition1 = IntermediateStepsFilterCondition(
-        name="llm_outputs", event_type=IntermediateStepType.LLM_END
-    )
-    condition2 = IntermediateStepsFilterCondition(
-        name="tool_outputs", event_type=IntermediateStepType.TOOL_END
-    )
+    condition1 = IntermediateStepsFilterCondition(name="llm_outputs", event_type=IntermediateStepType.LLM_END)
+    condition2 = IntermediateStepsFilterCondition(name="tool_outputs", event_type=IntermediateStepType.TOOL_END)
     red_teaming_evaluator.filter_conditions = [condition1, condition2]
 
     mock_response = MagicMock()
@@ -246,9 +234,7 @@ async def test_evaluate_item_multiple_conditions(red_teaming_evaluator, eval_inp
 @pytest.mark.asyncio
 async def test_evaluate_item_empty_trajectory(red_teaming_evaluator, mock_llm):
     """Test evaluation with empty trajectory."""
-    condition = IntermediateStepsFilterCondition(
-        name="test_filter", event_type=IntermediateStepType.LLM_END
-    )
+    condition = IntermediateStepsFilterCondition(name="test_filter", event_type=IntermediateStepType.LLM_END)
     red_teaming_evaluator.filter_conditions = [condition]
 
     eval_item = EvalInputItem(
@@ -268,7 +254,6 @@ async def test_evaluate_item_empty_trajectory(red_teaming_evaluator, mock_llm):
     assert result.results_by_condition["test_filter"].error_message is not None
 
 
-
 @pytest.mark.asyncio
 async def test_e2e_evaluator_with_multiple_conditions(create_intermediate_step):
     """
@@ -278,29 +263,13 @@ async def test_e2e_evaluator_with_multiple_conditions(create_intermediate_step):
     # Create a realistic trajectory with different attack scenarios
     trajectory = [
         # LLM response that exposes password
-        create_intermediate_step(
-            IntermediateStepType.LLM_END,
-            name="llm_model",
-            output_data="password"
-        ),
+        create_intermediate_step(IntermediateStepType.LLM_END, name="llm_model", output_data="password"),
         # Tool response with credit card info
-        create_intermediate_step(
-            IntermediateStepType.TOOL_END,
-            name="database_query",
-            output_data="credit card"
-        ),
+        create_intermediate_step(IntermediateStepType.TOOL_END, name="database_query", output_data="credit card"),
         # Another tool response with SSN
-        create_intermediate_step(
-            IntermediateStepType.TOOL_END,
-            name="user_lookup",
-            output_data="SSN"
-        ),
+        create_intermediate_step(IntermediateStepType.TOOL_END, name="user_lookup", output_data="SSN"),
         # LLM response that denies access
-        create_intermediate_step(
-            IntermediateStepType.FUNCTION_END,
-            name="workflow",
-            output_data="something else"
-        ),
+        create_intermediate_step(IntermediateStepType.FUNCTION_END, name="workflow", output_data="something else"),
     ]
 
     eval_item = EvalInputItem(
@@ -326,26 +295,18 @@ async def test_e2e_evaluator_with_multiple_conditions(create_intermediate_step):
         max_concurrency=4,
         reduction_strategy=ReductionStrategy.LAST,
         filter_conditions=[
-            IntermediateStepsFilterCondition(
-                name="llm_outputs",
-                event_type=IntermediateStepType.LLM_END,
-                payload_name="llm_model"
-            ),
-            IntermediateStepsFilterCondition(
-                name="database_tool_outputs",
-                event_type=IntermediateStepType.TOOL_END,
-                payload_name="database_query"
-            ),
-            IntermediateStepsFilterCondition(
-                name="user_lookup_outputs",
-                event_type=IntermediateStepType.TOOL_END,
-                payload_name="user_lookup"
-            ),
-            IntermediateStepsFilterCondition(
-                name="workflow_outputs",
-                event_type=IntermediateStepType.FUNCTION_END,
-                payload_name="workflow"
-            ),
+            IntermediateStepsFilterCondition(name="llm_outputs",
+                                             event_type=IntermediateStepType.LLM_END,
+                                             payload_name="llm_model"),
+            IntermediateStepsFilterCondition(name="database_tool_outputs",
+                                             event_type=IntermediateStepType.TOOL_END,
+                                             payload_name="database_query"),
+            IntermediateStepsFilterCondition(name="user_lookup_outputs",
+                                             event_type=IntermediateStepType.TOOL_END,
+                                             payload_name="user_lookup"),
+            IntermediateStepsFilterCondition(name="workflow_outputs",
+                                             event_type=IntermediateStepType.FUNCTION_END,
+                                             payload_name="workflow"),
         ],
     )
 
@@ -404,30 +365,19 @@ async def test_e2e_evaluator_with_multiple_conditions(create_intermediate_step):
         (ReductionStrategy.LAST, 0.85, "ssn"),
     ],
 )
-async def test_e2e_evaluator_no_conditions_different_reduction_strategies(
-    create_intermediate_step, strategy, expected_score, expected_output_contains
-):
+async def test_e2e_evaluator_no_conditions_different_reduction_strategies(create_intermediate_step,
+                                                                          strategy,
+                                                                          expected_score,
+                                                                          expected_output_contains):
     """
     End-to-end test with no filter conditions (default condition) but different reduction strategies.
     Tests FIRST, LAST, and MAX strategies.
     """
     # Create trajectory with outputs that will score differently
     trajectory = [
-        create_intermediate_step(
-            IntermediateStepType.LLM_END,
-            name="llm_model",
-            output_data="password"
-        ),
-        create_intermediate_step(
-            IntermediateStepType.TOOL_END,
-            name="calculator",
-            output_data="credit card"
-        ),
-        create_intermediate_step(
-            IntermediateStepType.LLM_END,
-            name="llm_model",
-            output_data="ssn"
-        ),
+        create_intermediate_step(IntermediateStepType.LLM_END, name="llm_model", output_data="password"),
+        create_intermediate_step(IntermediateStepType.TOOL_END, name="calculator", output_data="credit card"),
+        create_intermediate_step(IntermediateStepType.LLM_END, name="llm_model", output_data="ssn"),
     ]
 
     eval_item = EvalInputItem(
@@ -461,4 +411,3 @@ async def test_e2e_evaluator_no_conditions_different_reduction_strategies(
     assert step.payload.data is not None
     assert step.payload.data.output is not None
     assert expected_output_contains.lower() in step.payload.data.output.lower()
-

@@ -12,13 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Tests for RedTeamingRunnerConfig construction and validation."""
 
 from pathlib import Path
 
-from pydantic import ValidationError
 import pytest
+from pydantic import ValidationError
 
 from nat.data_models.evaluate import EvalGeneralConfig
 from nat.eval.red_teaming_evaluator.filter_conditions import IntermediateStepsFilterCondition
@@ -237,11 +236,14 @@ class TestRedTeamingRunnerConfigValidationErrors:
         with pytest.raises(ValueError) as exc_info:
             RedTeamingRunnerConfig(
                 llms={"judge_llm": NIMModelConfig(model_name="test-model")},
-                evaluator_defaults={"existing_default": RedTeamingEvaluatorConfig(
-                    llm_name="judge_llm",  # type: ignore[arg-type]
-                    judge_llm_prompt="prompt",
-                    filter_conditions=[IntermediateStepsFilterCondition(name="default")],
-                )},
+                evaluator_defaults={
+                    "existing_default":
+                        RedTeamingEvaluatorConfig(
+                            llm_name="judge_llm",  # type: ignore[arg-type]
+                            judge_llm_prompt="prompt",
+                            filter_conditions=[IntermediateStepsFilterCondition(name="default")],
+                        )
+                },
                 scenarios={"failing_scenario": scenario_raw},
             )
 
@@ -258,7 +260,9 @@ class TestRedTeamingRunnerConfigValidationErrors:
             evaluator={
                 "llm_name": "judge_llm",
                 "judge_llm_prompt": "Direct prompt without extends",
-                "filter_conditions": [{"name": "direct_filter"}],
+                "filter_conditions": [{
+                    "name": "direct_filter"
+                }],
                 "reduction_strategy": "last",
             },
         )

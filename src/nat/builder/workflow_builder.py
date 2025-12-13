@@ -435,7 +435,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         # Resolve middleware names from config to middleware instances
         # Only FunctionMiddleware types can be used with functions
         middleware_instances = []
-        
+
         for middleware_name in config.middleware:
             if middleware_name not in self._middleware:
                 raise ValueError(f"Middleware `{middleware_name}` not found for function `{name}`. "
@@ -501,7 +501,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             middleware_instances.append(middleware_obj)
         # set the instance name for the function group based on the workflow-provided name
         build_result.set_instance_name(name)
-    
+
         # Configure middleware for the function group
         build_result.configure_middleware(middleware_instances)
 

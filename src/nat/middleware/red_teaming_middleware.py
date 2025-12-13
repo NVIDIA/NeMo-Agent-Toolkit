@@ -30,15 +30,14 @@ from __future__ import annotations
 import logging
 import random
 import re
-from collections.abc import AsyncIterator
 from typing import Any
 from typing import Literal
 from typing import cast
-from jsonpath_ng import jsonpath, parse
+
+from jsonpath_ng import parse
 from pydantic import BaseModel
 
 from nat.middleware.function_middleware import CallNext
-from nat.middleware.function_middleware import CallNextStream
 from nat.middleware.function_middleware import FunctionMiddleware
 from nat.middleware.function_middleware import FunctionMiddlewareContext
 
@@ -177,9 +176,10 @@ class RedTeamingMiddleware(FunctionMiddleware):
 
         return closest_match.end()
 
-    def _apply_payload_to_simple_type(
-        self, original_value: list | str | int | float, attack_payload: str, payload_placement: str
-    ) -> Any:
+    def _apply_payload_to_simple_type(self,
+                                      original_value: list | str | int | float,
+                                      attack_payload: str,
+                                      payload_placement: str) -> Any:
         """Apply the attack payload to simple types (str, int, float) value.
 
         Args:
@@ -213,7 +213,7 @@ class RedTeamingMiddleware(FunctionMiddleware):
                 raise ValueError(f"Unknown payload placement: {payload_placement}")
 
         # Handle int/float attacks
-        if isinstance(original_value, (int, float)):
+        if isinstance(original_value, int | float):
             # For numbers, only replace is allowed
             if payload_placement != "replace":
                 logger.warning(
@@ -229,9 +229,7 @@ class RedTeamingMiddleware(FunctionMiddleware):
                     return int(attack_payload)
                 return float(attack_payload)
             except (ValueError, TypeError) as e:
-                raise ValueError(
-                    f"Cannot convert attack payload '{attack_payload}' to {value_type.__name__}"
-                ) from e
+                raise ValueError(f"Cannot convert attack payload '{attack_payload}' to {value_type.__name__}") from e
 
     def _resolve_multiple_field_matches(self, matches):
         if self._target_field_resolution_strategy == "error":
@@ -253,13 +251,11 @@ class RedTeamingMiddleware(FunctionMiddleware):
                 value_details = value.model_dump_json()
             else:
                 value_details = ""
-            additional_info = (
-                "Additional info: A pydantic BaseModel with fields:" + value_details if value_details else "")
-            raise ValueError(
-                "Applying an attack payload to complex type, requires a target_field. \n"
-                f"Input value: {value}.: {value_details}. {additional_info} \n"
-                "A target field can be specified in the middleware configuration as a jsonpath."
-                             )
+            additional_info = ("Additional info: A pydantic BaseModel with fields:" +
+                               value_details if value_details else "")
+            raise ValueError("Applying an attack payload to complex type, requires a target_field. \n"
+                             f"Input value: {value}.: {value_details}. {additional_info} \n"
+                             "A target field can be specified in the middleware configuration as a jsonpath.")
 
         # Convert BaseModel to dict for jsonpath processing
         original_type = type(value)
@@ -277,8 +273,10 @@ class RedTeamingMiddleware(FunctionMiddleware):
             matches = self._resolve_multiple_field_matches(matches)
         else:
             matches = [matches[0]]
-        modified_values = [self._apply_payload_to_simple_type(
-            match.value, self._attack_payload, self._payload_placement) for match in matches]
+        modified_values = [
+            self._apply_payload_to_simple_type(match.value, self._attack_payload, self._payload_placement)
+            for match in matches
+        ]
         for match, modified_value in zip(matches, modified_values):
             match.full_path.update(value_to_modify, modified_value)
 
@@ -291,7 +289,8 @@ class RedTeamingMiddleware(FunctionMiddleware):
     def _apply_payload_to_function_value(self, value: Any) -> Any:
         if self._call_limit is not None and self._call_count >= self._call_limit:
             logger.warning("Call limit reached for red teaming middleware. "
-                           "Not applying attack payload to value: %s", value)
+                           "Not applying attack payload to value: %s",
+                           value)
             return value
         if isinstance(value, list | dict | BaseModel):
             modified_value = self._apply_payload_to_complex_type(value)
@@ -302,9 +301,8 @@ class RedTeamingMiddleware(FunctionMiddleware):
         self._call_count += 1
         return modified_value
 
-    async def function_middleware_invoke(
-        self, value: Any, call_next: CallNext, context: FunctionMiddlewareContext
-    ) -> Any:
+    async def function_middleware_invoke(self, value: Any, call_next: CallNext,
+                                         context: FunctionMiddlewareContext) -> Any:
         """Invoke middleware for single-output functions.
 
         Args:
@@ -340,5 +338,5 @@ class RedTeamingMiddleware(FunctionMiddleware):
             logger.error("Failed to apply red team attack to function %s: %s", context.name, e, exc_info=True)
             raise
 
-__all__ = ["RedTeamingMiddleware"]
 
+__all__ = ["RedTeamingMiddleware"]
