@@ -7,8 +7,8 @@
 #   - ETCD (metadata and worker discovery)
 #   - NATS (message queue for prefill requests)
 #   - Dynamo Frontend (HTTP API with built-in processor + router)
-#   - Prefill Worker (GPUs 4,5, TP=2)
-#   - Decode Worker (GPUs 6,7, TP=2)
+#   - Prefill Worker (GPUs 0,1, TP=2)
+#   - Decode Worker (GPUs 2,3, TP=2)
 #
 # Frontend: Port 8099 (HTTP API)
 # ETCD: localhost:2379 (container: etcd-dynamo)
@@ -17,23 +17,32 @@
 #
 # To stop all components: bash stop_dynamo_disagg.sh
 
-# Configuration Variables
+# Configuration Variables (can be overridden via environment variables)
 CONTAINER_NAME="dynamo-sglang"
-PREFILL_GPUS="4,5"
-DECODE_GPUS="6,7"
-TP_SIZE=2
-HTTP_PORT=8099
+PREFILL_GPUS="${DYNAMO_PREFILL_GPUS:-0,1}"
+DECODE_GPUS="${DYNAMO_DECODE_GPUS:-2,3}"
+TP_SIZE="${DYNAMO_TP_SIZE:-2}"
+HTTP_PORT="${DYNAMO_HTTP_PORT:-8099}"
 MODEL="/workspace/models/Llama-3.3-70B-Instruct"
-SERVED_MODEL_NAME="llama-3.3-70b"
+SERVED_MODEL_NAME="${DYNAMO_MODEL_NAME:-llama-3.3-70b}"
 IMAGE="nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.6.1"
-SHM_SIZE="16g"
+SHM_SIZE="${DYNAMO_SHM_SIZE:-16g}"
 
 # Disaggregation configuration
-DISAGG_BOOTSTRAP_PORT=12345
-DISAGG_TRANSFER_BACKEND="nixl"  # Options: nixl, nccl, gloo
+DISAGG_BOOTSTRAP_PORT="${DYNAMO_DISAGG_BOOTSTRAP_PORT:-12345}"
+DISAGG_TRANSFER_BACKEND="${DYNAMO_DISAGG_TRANSFER_BACKEND:-nixl}"  # Options: nixl, nccl, gloo
 
-# Local paths
-LOCAL_MODEL_DIR="/raid/bbednarski/models/Llama-3.3-70B-Instruct"
+# Local paths - DYNAMO_MODEL_DIR must be set or script will error
+if [ -z "${DYNAMO_MODEL_DIR}" ]; then
+    echo "ERROR: DYNAMO_MODEL_DIR environment variable must be set"
+    echo ""
+    echo "Example:"
+    echo "  export DYNAMO_MODEL_DIR=\"/path/to/your/models/Llama-3.3-70B-Instruct\""
+    echo ""
+    echo "Then run this script again."
+    exit 1
+fi
+LOCAL_MODEL_DIR="${DYNAMO_MODEL_DIR}"
 
 echo "========================================================="
 echo "Dynamo SGLang FULL STACK (DISAGGREGATED MODE)"
@@ -177,7 +186,7 @@ echo ""
 echo "Starting Dynamo container with disaggregated SGLang server..."
 docker run -d \
   --name $CONTAINER_NAME \
-  --gpus '"device=4,5,6,7"' \
+  --gpus "\"device=${PREFILL_GPUS},${DECODE_GPUS}\"" \
   --network host \
   --ipc=host \
   --shm-size=$SHM_SIZE \
@@ -431,12 +440,12 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo "NAT Integration Test:"
     echo "========================================================="
     echo ""
-    echo "cd /raid/bbednarski/NeMo-Agent-Toolkit"
-    echo "source /home/nfs/bbednarski/.venvs/nat_dynamo_eval2/bin/activate"
+    echo "cd /path/to/NeMo-Agent-Toolkit"
+    echo "source /path/to/your/venv/bin/activate"
     echo "export HF_HOME=~/.cache/huggingface"
     echo ""
     echo "nat run \\"
-    echo "  --config_file examples/dynamo_integration/react_benchmark_agent/src/react_benchmark_agent/configs/config_dynamo_e2e_test.yml \\"
+    echo "  --config_file examples/dynamo_integration/react_benchmark_agent/configs/config_dynamo_e2e_test.yml \\"
     echo "  --input 'Hello'"
     echo ""
     echo "========================================================="

@@ -190,10 +190,10 @@ workflow:
 
 eval:
   general:
-    max_concurrency: 36
+    max_concurrency: 4
     
     output:
-      dir: ./examples/dynamo_integration/react_benchmark_agent/outputs/dynamo_evals/unified_thompson_concurrency_36_self_eval/
+      dir: ./examples/dynamo_integration/react_benchmark_agent/outputs/dynamo_evals/unified_predictive_router_4_self_eval/
       cleanup: false
       job_management:
         append_job_id_to_output_dir: true
@@ -234,7 +234,7 @@ eval:
 # =============================================================================
 optimizer:
   # Output directory for optimization results
-  output_path: ./examples/dynamo_integration/react_benchmark_agent/outputs/dynamo_evals/unified_thompson_concurrency_36_self_eval/optimizer_results/
+  output_path: ./examples/dynamo_integration/react_benchmark_agent/outputs/dynamo_evals/unified_predictive_router_4_self_eval/optimizer_results/
   
   # Number of repetitions per parameter set for stable evaluation
   reps_per_param_set: 1

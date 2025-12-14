@@ -33,6 +33,11 @@ import matplotlib.cm as cm
 import numpy as np
 import pandas as pd
 
+# Maximum TTFT value to display in histograms (milliseconds)
+MAX_TTFT_MS = 500
+# Bin width for TTFT histograms (milliseconds) - ensures good resolution in visible range
+TTFT_BIN_WIDTH_MS = 5
+
 
 def get_job_label(job_dir_name: str) -> str:
     """Extract short label from job directory name (first 7 chars)."""
@@ -493,6 +498,13 @@ def create_histogram_plots(df: pd.DataFrame, output_dir: Path,
             plt.close()
             continue
         
+        # For TTFT metrics, use fixed bin width to ensure good resolution in visible range
+        if metric_col in ('ttft_ms', 'median_ttft_ms'):
+            max_val = metric_data.max()
+            bins_to_use = np.arange(0, max_val + TTFT_BIN_WIDTH_MS, TTFT_BIN_WIDTH_MS)
+        else:
+            bins_to_use = num_bins
+        
         # Collect per-job statistics for the legend table
         job_stats = {}
         
@@ -502,7 +514,7 @@ def create_histogram_plots(df: pd.DataFrame, output_dir: Path,
                 job_df = data_df[data_df['job_name'] == job]
                 job_data = job_df[metric_col].dropna()
                 if len(job_data) > 0:
-                    ax.hist(job_data, bins=num_bins, alpha=0.5,
+                    ax.hist(job_data, bins=bins_to_use, alpha=0.5,
                            color=job_colors[job], edgecolor='none')
                     # Add median line for this job (dotted, same color)
                     median_j = job_data.median()
@@ -518,7 +530,7 @@ def create_histogram_plots(df: pd.DataFrame, output_dir: Path,
                         'p90': job_data.quantile(0.90),
                     }
         else:
-            ax.hist(metric_data, bins=num_bins, alpha=0.7, color='steelblue', 
+            ax.hist(metric_data, bins=bins_to_use, alpha=0.7, color='steelblue', 
                    edgecolor='darkblue', linewidth=0.5)
             # Add median line for single job
             median_val = metric_data.median()
@@ -540,10 +552,18 @@ def create_histogram_plots(df: pd.DataFrame, output_dir: Path,
         ax.set_xlabel(x_label, fontsize=12)
         ax.set_ylabel('Count', fontsize=12)
         data_type = 'Per-LLM-Call' if data_source == 'llm_call' else 'Per-Request'
-        ax.set_title(f'{x_label} Distribution\n({data_type}, n={len(metric_data)}, bins={num_bins})', 
+        if metric_col in ('ttft_ms', 'median_ttft_ms'):
+            bins_info = f'bin_width={TTFT_BIN_WIDTH_MS}ms, xlim={MAX_TTFT_MS}ms'
+        else:
+            bins_info = f'bins={num_bins}'
+        ax.set_title(f'{x_label} Distribution\n({data_type}, n={len(metric_data)}, {bins_info})', 
                     fontsize=14)
         
         ax.grid(True, alpha=0.3, axis='y')
+        
+        # Apply x-axis limit for TTFT metrics
+        if metric_col in ('ttft_ms', 'median_ttft_ms'):
+            ax.set_xlim(0, MAX_TTFT_MS)
         
         # Add stats box for single job only (multi-job uses table legend)
         if not multi_job and job_stats:
@@ -652,6 +672,13 @@ def create_summary_histogram_plot(df: pd.DataFrame, output_dir: Path,
             ax.set_visible(False)
             continue
         
+        # For TTFT metrics, use fixed bin width to ensure good resolution in visible range
+        if metric_col in ('ttft_ms', 'median_ttft_ms'):
+            max_val = metric_data.max()
+            bins_to_use = np.arange(0, max_val + TTFT_BIN_WIDTH_MS, TTFT_BIN_WIDTH_MS)
+        else:
+            bins_to_use = num_bins
+        
         # Collect per-job statistics
         job_stats_summary = {}
         
@@ -661,7 +688,7 @@ def create_summary_histogram_plot(df: pd.DataFrame, output_dir: Path,
                 job_df = data_df[data_df['job_name'] == job]
                 job_data = job_df[metric_col].dropna()
                 if len(job_data) > 0:
-                    ax.hist(job_data, bins=num_bins, alpha=0.5,
+                    ax.hist(job_data, bins=bins_to_use, alpha=0.5,
                            color=job_colors[job], edgecolor='none')
                     # Add median line for this job (dotted, same color)
                     median_j = job_data.median()
@@ -677,7 +704,7 @@ def create_summary_histogram_plot(df: pd.DataFrame, output_dir: Path,
                         'p90': job_data.quantile(0.90),
                     }
         else:
-            ax.hist(metric_data, bins=num_bins, alpha=0.7, color='steelblue', 
+            ax.hist(metric_data, bins=bins_to_use, alpha=0.7, color='steelblue', 
                    edgecolor='none')
             median_val = metric_data.median()
             ax.axvline(x=median_val, color='steelblue', linestyle=':', 
@@ -686,6 +713,10 @@ def create_summary_histogram_plot(df: pd.DataFrame, output_dir: Path,
         ax.set_xlabel(label, fontsize=10)
         ax.set_ylabel('Count', fontsize=10)
         ax.grid(True, alpha=0.3, axis='y')
+        
+        # Apply x-axis limit for TTFT metrics
+        if metric_col in ('ttft_ms', 'median_ttft_ms'):
+            ax.set_xlim(0, MAX_TTFT_MS)
         
         # Add table-style legend for multi-job, or simple stats box for single job
         if multi_job and job_stats_summary:

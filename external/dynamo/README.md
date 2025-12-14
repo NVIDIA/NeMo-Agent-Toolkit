@@ -103,10 +103,10 @@ Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimizat
         ▼                                                             ▼
 ┌─────────────────────────────┐                      ┌─────────────────────────────┐
 │    UNIFIED WORKER           │         OR           │    DISAGGREGATED WORKERS    │
-│    (GPUs 4,5,6,7, TP=4)     │                      │                             │
+│    (GPUs 0,1,2,3, TP=4)     │                      │                             │
 │                             │                      │  ┌────────────────────────┐ │
 │  ┌───────────────────────┐  │                      │  │   PREFILL WORKER       │ │
-│  │  SGLang Engine        │  │                      │  │   (GPUs 4,5, TP=2)     │ │
+│  │  SGLang Engine        │  │                      │  │   (GPUs 0,1, TP=2)     │ │
 │  │  ─────────────────    │  │                      │  │   • Initial KV compute │ │
 │  │  • Model: Llama-3.3-70B  │                      │  │   • Sends KV via NIXL  │ │
 │  │  • KV Cache Management│  │                      │  └───────────┬────────────┘ │
@@ -116,7 +116,7 @@ Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimizat
 │                             │                      │              ▼              │
 │  All operations in one      │                      │  ┌────────────────────────┐ │
 │  worker                     │                      │  │   DECODE WORKER        │ │
-│                             │                      │  │   (GPUs 6,7, TP=2)     │ │
+│                             │                      │  │   (GPUs 2,3, TP=2)     │ │
 │                             │                      │  │   • Token generation   │ │
 │                             │                      │  │   • Streaming output   │ │
 │                             │                      │  └────────────────────────┘ │
@@ -153,24 +153,118 @@ Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimizat
 
 ## Prerequisites
 
-1. **Docker** installed and running
-2. **NVIDIA GPU(s)** with CUDA support
-3. **nvidia-docker** or NVIDIA Container Toolkit
-4. **Llama-3.3-70B-Instruct** model downloaded locally
+### Hardware Requirements
+
+| Component | Minimum | Recommended |
+|-----------|---------|-------------|
+| **GPU Architecture** | NVIDIA Hopper (H100) or Blackwell (B200) | B200 for optimal performance |
+| **GPU Count** | 4 GPUs for unified mode | 8 GPUs for disaggregated mode |
+| **GPU Memory** | 80GB per GPU (H100) | 192GB per GPU (B200) |
+| **System RAM** | 256GB | 512GB+ |
+
+> **Note**: The Llama-3.3-70B-Instruct model requires approximately 140GB of GPU memory when loaded with TP=4 (tensor parallelism across 4 GPUs). Ensure your GPU configuration has sufficient aggregate memory.
+
+### Software Requirements
+
+1. **Docker** installed and running (version 24.0+)
+2. **NVIDIA Driver** with CUDA 12.0+ support
+4. **Hugging Face CLI** for model downloads (optional, if model not already downloaded)
+5. **Llama-3.3-70B-Instruct** model downloaded locally
+
+### Environment Setup
+
+Before running the Dynamo scripts, configure the following environment variables. See `env.example` for a complete list of all available options.
+
+```bash
+# Copy and customize the example environment file
+cp env.example .env
+
+# Edit with your settings
+vi .env
+
+# Source the environment before running scripts
+source .env
+```
+
+Or set variables directly:
+
+```bash
+# Required: Set your model directory path
+export DYNAMO_MODEL_DIR="/path/to/your/models/Llama-3.3-70B-Instruct"
+
+# Optional: Set repository directory (for Thompson Sampling router)
+export DYNAMO_REPO_DIR="/path/to/NeMo-Agent-Toolkit"
+
+# Optional: Configure GPU devices (default: 0,1,2,3)
+export DYNAMO_GPU_DEVICES="0,1,2,3"
+```
 
 ### Download Model (if needed)
 
 ```bash
-# Using Hugging Face CLI
+# Set your desired model directory
+export DYNAMO_MODEL_DIR="${HOME}/models/Llama-3.3-70B-Instruct"
+
+# Create the directory
+mkdir -p "$(dirname "$DYNAMO_MODEL_DIR")"
+
+# Download using Hugging Face CLI
+# Note: Requires Hugging Face account with Llama access approval
+pip install huggingface_hub
+huggingface-cli login  # Enter your HF token
+
 huggingface-cli download meta-llama/Llama-3.3-70B-Instruct \
-  --local-dir /raid/bbednarski/models/Llama-3.3-70B-Instruct
+  --local-dir "$DYNAMO_MODEL_DIR"
 ```
+
+> **Access Note**: The Llama-3.3-70B-Instruct model requires approval from Meta. Request access at [huggingface.co/meta-llama/Llama-3.3-70B-Instruct](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct) before downloading.
 
 ### Verify GPU Access
 
 ```bash
+# Check NVIDIA driver and GPU availability
 nvidia-smi
-# Should show available GPUs
+
+# Expected output should show:
+# - At least 4 GPUs (H100 or B200)
+# - CUDA version 12.0+
+# - Sufficient free memory per GPU
+```
+
+Example output for an 8x H100 system:
+
+```
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.65.06              Driver Version: 580.65.06      CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA B200                    On  |   00000000:1B:00.0 Off |                    0 |
+| N/A   29C    P0            139W / 1000W |       0MiB / 183359MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   1  NVIDIA B200                    On  |   00000000:43:00.0 Off |                    0 |
+| N/A   29C    P0            138W / 1000W |       0MiB / 183359MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   2  NVIDIA B200                    On  |   00000000:52:00.0 Off |                    0 |
+| N/A   33C    P0            142W / 1000W |       0MiB / 183359MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   3  NVIDIA B200                    On  |   00000000:61:00.0 Off |                    0 |
+| N/A   34C    P0            143W / 1000W |       0MiB / 183359MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+...
+```
+
+### Verify Docker and NVIDIA Container Toolkit
+
+```bash
+# Verify Docker is running
+docker info
 ```
 
 ---
@@ -203,7 +297,7 @@ bash stop_dynamo.sh
 **Components started:**
 - ETCD container (`etcd-dynamo`) on port 2389
 - NATS container (`nats-dynamo`) on port 4232
-- Dynamo container (`dynamo-sglang`) with unified worker on GPUs 4,5,6,7 (TP=4)
+- Dynamo container (`dynamo-sglang`) with unified worker on GPUs 0,1,2,3 (TP=4)
 
 **Startup time**: ~5 minutes seconds for 70B model
 
@@ -261,8 +355,8 @@ bash stop_dynamo.sh
 **Components started:**
 - ETCD container on port 2379
 - NATS container on port 4222
-- Prefill Worker on GPUs 4,5 (TP=2)
-- Decode Worker on GPUs 6,7 (TP=2)
+- Prefill Worker on GPUs 0,1 (TP=2)
+- Decode Worker on GPUs 2,3 (TP=2)
 - Dynamo Frontend on port 8099
 
 **Startup time**: ~5 minutes (both workers must initialize)
@@ -624,57 +718,102 @@ llms:
 
 ## Configuration Reference
 
+### Environment Variables
+
+The startup scripts support configuration through environment variables. Set these before running the scripts:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DYNAMO_MODEL_DIR` | Local path to the model directory | (required) |
+| `DYNAMO_REPO_DIR` | Path to NeMo-Agent-Toolkit repository | Auto-detected |
+| `DYNAMO_GPU_DEVICES` | Comma-separated GPU device IDs | `0,1,2,3` |
+| `DYNAMO_HTTP_PORT` | Frontend HTTP port | `8099` |
+| `DYNAMO_ETCD_PORT` | ETCD client port | `2389` |
+| `DYNAMO_NATS_PORT` | NATS messaging port | `4232` |
+
+Example configuration:
+
+```bash
+# Configure environment before running scripts
+export DYNAMO_MODEL_DIR="/path/to/models/Llama-3.3-70B-Instruct"
+export DYNAMO_GPU_DEVICES="0,1,2,3"
+export DYNAMO_HTTP_PORT="8099"
+
+# Then start Dynamo
+bash start_dynamo_unified.sh
+```
+
 ### Script Variables
 
-Each startup script has configurable variables at the top:
+Each startup script also has configurable variables at the top that can be edited directly:
 
 ```bash
 # start_dynamo_unified.sh
 CONTAINER_NAME="dynamo-sglang"
-WORKER_GPUS="4,5,6,7"
+WORKER_GPUS="${DYNAMO_GPU_DEVICES:-0,1,2,3}"    # Override with env var or edit default
 TP_SIZE=4
-HTTP_PORT=8099
+HTTP_PORT="${DYNAMO_HTTP_PORT:-8099}"
 MODEL="/workspace/models/Llama-3.3-70B-Instruct"
 SERVED_MODEL_NAME="llama-3.3-70b"
 IMAGE="nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.6.1"
 SHM_SIZE="16g"
 
 # Infrastructure ports (non-default to avoid conflicts)
-ETCD_CLIENT_PORT=2389
-NATS_PORT=4232
+ETCD_CLIENT_PORT="${DYNAMO_ETCD_PORT:-2389}"
+NATS_PORT="${DYNAMO_NATS_PORT:-4232}"
 
-# Local paths
-LOCAL_MODEL_DIR="/raid/bbednarski/models/Llama-3.3-70B-Instruct"
+# Local paths - MUST be set via environment variable or edited here
+LOCAL_MODEL_DIR="${DYNAMO_MODEL_DIR:?Error: DYNAMO_MODEL_DIR environment variable must be set}"
 ```
 
 ### Customizing GPU Assignment
 
-Edit the script to change GPU assignment:
+Option 1: Use environment variable (recommended):
 
 ```bash
-# For different GPUs
+export DYNAMO_GPU_DEVICES="0,1,2,3"
+bash start_dynamo_unified.sh
+```
+
+Option 2: Edit the script directly:
+
+```bash
+# In the script, change:
 WORKER_GPUS="0,1,2,3"
 
-# In docker run command
+# The docker run command will use:
 --gpus '"device=0,1,2,3"'
 ```
 
 ### Customizing Model
 
+For a different model, update both the model directory and served name:
+
 ```bash
-# Different model
+# Set environment variable for model path
+export DYNAMO_MODEL_DIR="${HOME}/models/Llama-3.1-8B-Instruct"
+
+# Edit script variables for model metadata
 MODEL="/workspace/models/Llama-3.1-8B-Instruct"
 SERVED_MODEL_NAME="llama-3.1-8b"
-LOCAL_MODEL_DIR="/raid/your-username/models/Llama-3.1-8B-Instruct"
+TP_SIZE=2  # Smaller models may need fewer GPUs
 ```
 
 ### Customizing Ports
 
-```bash
-# Different frontend port
-HTTP_PORT=8080
+Option 1: Use environment variables:
 
-# Different infrastructure ports
+```bash
+export DYNAMO_HTTP_PORT="8080"
+export DYNAMO_ETCD_PORT="2379"
+export DYNAMO_NATS_PORT="4222"
+bash start_dynamo_unified.sh
+```
+
+Option 2: Edit script directly:
+
+```bash
+HTTP_PORT=8080
 ETCD_CLIENT_PORT=2379
 NATS_PORT=4222
 ```
@@ -768,6 +907,7 @@ watch -n 1 nvidia-smi
 external/dynamo/                                # Dynamo backend
 │
 ├── 📄 README.md                                # This file - Dynamo setup guide
+├── 📄 env.example                              # Example environment variables
 ├── 🔧 start_dynamo_unified.sh                  # Start Dynamo (unified mode)
 ├── 🔧 start_dynamo_unified_thompson_hints.sh   # Start with Thompson router
 ├── 🔧 start_dynamo_disagg.sh                   # Start Dynamo (disaggregated)

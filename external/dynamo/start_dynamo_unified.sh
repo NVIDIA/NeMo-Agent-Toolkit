@@ -7,7 +7,7 @@
 #   - ETCD (metadata and worker discovery)
 #   - NATS (message queue for requests)
 #   - Dynamo Frontend (HTTP API with built-in processor + router)
-#   - Unified Worker (GPUs 4,5,6,7, TP=4, no disaggregation)
+#   - Unified Worker (GPUs 0,1,2,3, TP=4, no disaggregation)
 #
 # Frontend: Port 8099 (HTTP API)
 # ETCD: localhost:2389 (container: etcd-dynamo) - non-default port to avoid conflicts
@@ -16,23 +16,32 @@
 #
 # To stop all components: bash stop_dynamo.sh
 
-# Configuration Variables
+# Configuration Variables (can be overridden via environment variables)
 CONTAINER_NAME="dynamo-sglang"
-WORKER_GPUS="4,5,6,7"
-TP_SIZE=4
-HTTP_PORT=8099
+WORKER_GPUS="${DYNAMO_GPU_DEVICES:-0,1,2,3}"
+TP_SIZE="${DYNAMO_TP_SIZE:-4}"
+HTTP_PORT="${DYNAMO_HTTP_PORT:-8099}"
 MODEL="/workspace/models/Llama-3.3-70B-Instruct"
-SERVED_MODEL_NAME="llama-3.3-70b"
+SERVED_MODEL_NAME="${DYNAMO_MODEL_NAME:-llama-3.3-70b}"
 IMAGE="nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.6.1"
-SHM_SIZE="16g"
+SHM_SIZE="${DYNAMO_SHM_SIZE:-16g}"
 
-# Infrastructure ports (changed to avoid conflicts with other users)
-ETCD_CLIENT_PORT=2379
-ETCD_PEER_PORT=2390
-NATS_PORT=4222
+# Infrastructure ports (can be overridden via environment variables)
+ETCD_CLIENT_PORT="${DYNAMO_ETCD_PORT:-2379}"
+ETCD_PEER_PORT="${DYNAMO_ETCD_PEER_PORT:-2390}"
+NATS_PORT="${DYNAMO_NATS_PORT:-4222}"
 
-# Local paths
-LOCAL_MODEL_DIR="/raid/bbednarski/models/Llama-3.3-70B-Instruct"
+# Local paths - DYNAMO_MODEL_DIR must be set or script will error
+if [ -z "${DYNAMO_MODEL_DIR}" ]; then
+    echo "ERROR: DYNAMO_MODEL_DIR environment variable must be set"
+    echo ""
+    echo "Example:"
+    echo "  export DYNAMO_MODEL_DIR=\"/path/to/your/models/Llama-3.3-70B-Instruct\""
+    echo ""
+    echo "Then run this script again."
+    exit 1
+fi
+LOCAL_MODEL_DIR="${DYNAMO_MODEL_DIR}"
 
 echo "========================================================="
 echo "Dynamo SGLang FULL STACK (UNIFIED MODE)"
@@ -177,7 +186,7 @@ echo ""
 echo "Starting Dynamo container with unified SGLang worker + frontend..."
 docker run -d \
   --name $CONTAINER_NAME \
-  --gpus '"device=4,5,6,7"' \
+  --gpus "\"device=${WORKER_GPUS}\"" \
   --network host \
   --ipc=host \
   --shm-size=$SHM_SIZE \

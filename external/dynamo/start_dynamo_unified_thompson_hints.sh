@@ -9,7 +9,7 @@
 #   - Custom Dynamo Frontend with prefix hints support
 #   - Custom Router with Thompson Sampling (LinTS + Beta bandits)
 #   - Custom Processor with workload-aware routing
-#   - Unified Worker (GPUs 4,5,6,7, TP=4, no disaggregation)
+#   - Unified Worker (GPUs 0,1,2,3, TP=4, no disaggregation)
 #
 # Frontend: Port 8099 (HTTP API with prefix hint headers)
 # ETCD: localhost:2379 (container: etcd-dynamo)
@@ -23,19 +23,31 @@
 #
 # To stop all components: bash stop_dynamo.sh
 
-# Configuration Variables
+# Configuration Variables (can be overridden via environment variables)
 CONTAINER_NAME="dynamo-sglang"
-WORKER_GPUS="4,5,6,7"
-TP_SIZE=4
-HTTP_PORT=8099
+WORKER_GPUS="${DYNAMO_GPU_DEVICES:-0,1,2,3}"
+TP_SIZE="${DYNAMO_TP_SIZE:-4}"
+HTTP_PORT="${DYNAMO_HTTP_PORT:-8099}"
 MODEL="/workspace/models/Llama-3.3-70B-Instruct"
-SERVED_MODEL_NAME="llama-3.3-70b"
+SERVED_MODEL_NAME="${DYNAMO_MODEL_NAME:-llama-3.3-70b}"
 IMAGE="nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.6.1"
-SHM_SIZE="16g"
+SHM_SIZE="${DYNAMO_SHM_SIZE:-16g}"
 
-# Local paths
-LOCAL_MODEL_DIR="/raid/bbednarski/models/Llama-3.3-70B-Instruct"
-LOCAL_REPO_DIR="/raid/bbednarski/NeMo-Agent-Toolkit"
+# Local paths - DYNAMO_MODEL_DIR must be set or script will error
+if [ -z "${DYNAMO_MODEL_DIR}" ]; then
+    echo "ERROR: DYNAMO_MODEL_DIR environment variable must be set"
+    echo ""
+    echo "Example:"
+    echo "  export DYNAMO_MODEL_DIR=\"/path/to/your/models/Llama-3.3-70B-Instruct\""
+    echo ""
+    echo "Then run this script again."
+    exit 1
+fi
+LOCAL_MODEL_DIR="${DYNAMO_MODEL_DIR}"
+
+# Repository directory - auto-detect from script location or use env var
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOCAL_REPO_DIR="${DYNAMO_REPO_DIR:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 CUSTOM_DYNAMO_DIR="$LOCAL_REPO_DIR/external/dynamo/generalized"
 
 echo "========================================================="
@@ -200,7 +212,7 @@ echo ""
 echo "Starting Dynamo container with custom Thompson Sampling components..."
 docker run -d \
   --name $CONTAINER_NAME \
-  --gpus '"device=4,5,6,7"' \
+  --gpus "\"device=${WORKER_GPUS}\"" \
   --network host \
   --ipc=host \
   --shm-size=$SHM_SIZE \
