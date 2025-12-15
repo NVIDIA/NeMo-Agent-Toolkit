@@ -86,6 +86,7 @@ Jama
 Jira
 jsonlines
 [Kk]aggle
+[Kk]eycloak
 Langfuse
 LangChain
 LangGraph
