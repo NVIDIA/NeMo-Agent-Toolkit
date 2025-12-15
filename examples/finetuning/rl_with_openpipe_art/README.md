@@ -205,7 +205,7 @@ cd examples/finetuning/rl_with_openpipe_art
 nat eval --config_file=src/rl_with_openpipe_art/configs/config_pre_train.yml --reps 3
 ```
 
-This runs 24 games (12 as X, 12 as O) and reports the win percentage.
+This runs 72 games (12 as X, 12 as O, 3 times each) and reports the win percentage.
 
 Record this baseline score for comparison after training.
 
