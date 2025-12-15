@@ -215,7 +215,7 @@ For detailed authentication setup and configuration, see:
 
 ### Best Practices
 
-- **Use HTTPS in production**: Always use TLS/SSL for production deployments
+- **Use HTTPS in production**: Always use TLS or SSL for production deployments
 - **Configure token validation**: Set appropriate issuer, audience, and required scopes
 - **Short-lived tokens**: Configure authorization server to issue short-lived access tokens
 - **Monitor access**: Track authentication events and token usage patterns
