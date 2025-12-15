@@ -58,6 +58,10 @@ class _RedTeamingScenarioRaw(BaseModel):
 
     tags: list[str] = Field(default=[], description="Tags for bookkeeping and categorization of scenarios.")
 
+    scenario_group: str = Field(
+        default="default_scenario_group",
+        description="Group name for grouping similar scenarios together for plotting and analysis.")
+
 
 class RedTeamingScenario(BaseModel):
     """A single red teaming scenario configuration.
@@ -86,6 +90,10 @@ class RedTeamingScenario(BaseModel):
     evaluator: RedTeamingEvaluatorConfig = Field(description="Complete evaluator configuration for this scenario.")
 
     tags: list[str] = Field(default=[], description="Tags for bookkeeping and categorization of scenarios.")
+
+    scenario_group: str = Field(
+        default="default_scenario_group",
+        description="Group name for grouping similar scenarios together for plotting and analysis.")
 
 
 class RedTeamingRunnerConfig(BaseModel):
