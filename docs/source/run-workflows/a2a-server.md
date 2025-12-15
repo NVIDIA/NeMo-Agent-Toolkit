@@ -199,7 +199,26 @@ nat a2a serve --config_file config.yml --port 11000
 
 ## Security Considerations
 
-**Coming Soon**: Server-side authentication is in progress and will be available shortly.
+### Authentication
+
+A2A servers can be protected using OAuth2 authentication with JWT token validation. The server validates incoming tokens by checking:
+
+- **Token signature**: Verified using JWKS from the authorization server
+- **Issuer validation**: Ensures token was issued by the expected authorization server
+- **Expiration**: Rejects expired tokens
+- **Scopes**: Validates required scopes are present in the token
+- **Audience**: Ensures token is intended for this specific server
+
+For detailed authentication setup and configuration, see:
+- [A2A Authentication Documentation](../components/auth/a2a-auth.md)
+- OAuth2 Keycloak Setup: `examples/A2A/math_assistant_a2a/oauth2-keycloak-setup.md`
+
+### Best Practices
+
+- **Use HTTPS in production**: Always use TLS/SSL for production deployments
+- **Configure token validation**: Set appropriate issuer, audience, and required scopes
+- **Short-lived tokens**: Configure authorization server to issue short-lived access tokens
+- **Monitor access**: Track authentication events and token usage patterns
 
 ## Protocol Compliance
 
@@ -208,3 +227,4 @@ The A2A server is built on the official [A2A Python SDK](https://github.com/a2ap
 ## Related Documentation
 
 - [A2A Client Guide](../build-workflows/a2a-client.md) - Connecting to remote A2A agents
+- [A2A Authentication](../components/auth/a2a-auth.md) - OAuth2 authentication for A2A servers

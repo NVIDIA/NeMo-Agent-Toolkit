@@ -16,7 +16,9 @@ limitations under the License.
 
 # Keycloak OAuth2 Setup Guide for NAT A2A
 
-This guide walks through setting up Keycloak as an OAuth2 authorization server for testing OAuth2-protected A2A servers in NAT.
+This guide provides hands-on instructions for setting up Keycloak as an OAuth2 authorization server for testing OAuth2-protected A2A servers in NAT.
+
+For architectural overview and authentication concepts, see the [A2A Authentication Documentation](../../../docs/source/components/auth/a2a-auth.md).
 
 ## What You'll Build
 

@@ -107,8 +107,12 @@ For comprehensive examples demonstrating different capabilities (basic calculati
 
 ## OAuth2 Protected Setup
 
-For production scenarios requiring authentication, see the [OAuth2 Keycloak Setup Guide](oauth2-keycloak-setup.md) which demonstrates:
+For production scenarios requiring authentication:
 
+- **Architecture and Concepts**: [A2A Authentication Documentation](../../../docs/source/components/auth/a2a-auth.md)
+- **Hands-on Setup Guide**: [OAuth2 Keycloak Setup Guide](oauth2-keycloak-setup.md)
+
+The OAuth2 setup demonstrates:
 - End-to-end OAuth2 authorization code flow
 - Protected A2A server with JWT token validation
 - Keycloak integration for testing secure A2A communication
