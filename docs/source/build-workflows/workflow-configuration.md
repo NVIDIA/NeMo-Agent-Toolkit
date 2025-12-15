@@ -27,7 +27,7 @@ Each NeMo Agent toolkit [tool](./functions-and-function-groups/functions.md#agen
 - `FunctionRef`: Refers to a registered function by its instance name in the `functions` section configuration object.
 - `LLMRef`: Refers to a registered LLM by its instance name in the `llms` section of the configuration object.
 - `EmbedderRef`: Refers to a registered embedder by its instance name in the `embedders` section of the configuration object.
-- `RetrieverRef`: Refers to a registered retriever by its instance name in the `retrievers` section of the configuration object.
+- `RetrieverRef`: Refers to a registered [retriever](./retrievers.md) by its instance name in the `retrievers` section of the configuration object.
 - `MemoryRef`: Refers to a registered memory by its instance name in the `memory` section of the configuration object.
 
 

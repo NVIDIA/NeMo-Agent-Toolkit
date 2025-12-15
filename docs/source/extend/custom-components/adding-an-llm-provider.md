@@ -32,7 +32,7 @@ nat info components -t llm_client -q openai
 
 ## Provider Types
 
-In NeMo Agent toolkit, there are three provider types: `llm`, `embedder`, and `retreiver`. The three provider types are defined by their respective base configuration classes: {class}`nat.data_models.llm.LLMBaseConfig`, {class}`nat.data_models.embedder.EmbedderBaseConfig`, and {class}`nat.data_models.retriever.RetrieverBaseConfig`. This guide focuses on adding an LLM provider. However, the process for adding an embedder or retriever provider is similar.
+In NeMo Agent toolkit, there are three provider types: `llm`, `embedder`, and `retreiver`. The three provider types are defined by their respective base configuration classes: {class}`nat.data_models.llm.LLMBaseConfig`, {class}`nat.data_models.embedder.EmbedderBaseConfig`, and {class}`nat.data_models.retriever.RetrieverBaseConfig`. This guide focuses on adding an LLM provider. However, the process for adding an [embedder](../../build-workflows/embedders.md) or [retriever](../../build-workflows/retrievers.md) provider is similar.
 
 
 ## Defining an LLM Provider
