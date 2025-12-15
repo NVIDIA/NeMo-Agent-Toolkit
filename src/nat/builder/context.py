@@ -69,6 +69,7 @@ class ContextState(metaclass=Singleton):
     def __init__(self):
         self.conversation_id: ContextVar[str | None] = ContextVar("conversation_id", default=None)
         self.user_message_id: ContextVar[str | None] = ContextVar("user_message_id", default=None)
+        self.user_id: ContextVar[str | None] = ContextVar("user_id", default=None)
         self.workflow_run_id: ContextVar[str | None] = ContextVar("workflow_run_id", default=None)
         self.workflow_trace_id: ContextVar[int | None] = ContextVar("workflow_trace_id", default=None)
         self.input_message: ContextVar[typing.Any] = ContextVar("input_message", default=None)
@@ -201,6 +202,13 @@ class Context:
         This property retrieves the user message ID which is the unique identifier for the current user message.
         """
         return self._context_state.user_message_id.get()
+
+    @property
+    def user_id(self) -> str | None:
+        """
+        This property retrieves the user ID which is the unique identifier for the current user.
+        """
+        return self._context_state.user_id.get()
 
     @property
     def workflow_run_id(self) -> str | None:

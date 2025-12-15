@@ -5300,7 +5300,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "numpy", specifier = ">=1.24.0" },
+    { name = "numpy", marker = "python_full_version < '3.12'", specifier = "~=1.26" },
+    { name = "numpy", marker = "python_full_version >= '3.12'", specifier = "~=2.3" },
     { name = "nvidia-nat", extras = ["langchain"], editable = "." },
 ]
 
@@ -5376,6 +5377,16 @@ requires-dist = [
     { name = "markdown-it-py", specifier = "~=3.0" },
     { name = "nvidia-nat", extras = ["langchain", "llama-index", "nvidia-haystack", "openai"], editable = "." },
 ]
+
+[[package]]
+name = "nat-per-user-workflow"
+source = { editable = "examples/front_ends/per_user_workflow" }
+dependencies = [
+    { name = "nvidia-nat" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "nvidia-nat", editable = "." }]
 
 [[package]]
 name = "nat-plot-charts"
@@ -6000,6 +6011,7 @@ examples = [
     { name = "nat-haystack-deep-research-agent" },
     { name = "nat-math-assistant-a2a" },
     { name = "nat-multi-frameworks" },
+    { name = "nat-per-user-workflow" },
     { name = "nat-plot-charts" },
     { name = "nat-por-to-jiratickets" },
     { name = "nat-profiler-agent" },
@@ -6164,6 +6176,7 @@ requires-dist = [
     { name = "nat-haystack-deep-research-agent", marker = "extra == 'examples'", editable = "examples/frameworks/haystack_deep_research_agent" },
     { name = "nat-math-assistant-a2a", marker = "extra == 'examples'", editable = "examples/A2A/math_assistant_a2a" },
     { name = "nat-multi-frameworks", marker = "extra == 'examples'", editable = "examples/frameworks/multi_frameworks" },
+    { name = "nat-per-user-workflow", marker = "extra == 'examples'", editable = "examples/front_ends/per_user_workflow" },
     { name = "nat-plot-charts", marker = "extra == 'examples'", editable = "examples/custom_functions/plot_charts" },
     { name = "nat-por-to-jiratickets", marker = "extra == 'examples'", editable = "examples/HITL/por_to_jiratickets" },
     { name = "nat-profiler-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/profiler_agent" },
@@ -6536,7 +6549,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "nemo-microservices", specifier = "==1.4.0" },
+    { name = "nemo-microservices", specifier = "~=1.4" },
     { name = "nvidia-nat", editable = "." },
 ]
 

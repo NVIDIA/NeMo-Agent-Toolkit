@@ -22,6 +22,7 @@ limitations under the License.
 
 Functions <./custom-functions/functions.md>
 Function Groups <./custom-functions/function-groups.md>
+Writing Per-User Functions <./custom-functions/per-user-functions.md>
 Authentication Provider <./adding-an-authentication-provider.md>
 LLM Provider <./adding-an-llm-provider.md>
 Retriever <./adding-a-retriever.md>

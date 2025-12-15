@@ -171,12 +171,15 @@ class MCPFrontEndPluginWorkerBase(ABC):
             if isinstance(function, Workflow):
                 # Already a workflow, use it directly
                 logger.info("Function %s is a Workflow, using directly", function_name)
-                session_managers[function_name] = SessionManager(function)
+                session_managers[function_name] = await SessionManager.create(config=self.full_config,
+                                                                              shared_builder=builder,
+                                                                              entry_function=function_name)
             else:
                 # Regular function - build a workflow with this function as entry point
                 logger.info("Function %s is a regular function, building entry workflow", function_name)
-                entry_workflow = await builder.build(entry_function=function_name)
-                session_managers[function_name] = SessionManager(entry_workflow)
+                session_managers[function_name] = await SessionManager.create(config=self.full_config,
+                                                                              shared_builder=builder,
+                                                                              entry_function=function_name)
 
         # Register each function with MCP, passing SessionManager for observability
         for function_name, session_manager in session_managers.items():
