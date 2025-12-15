@@ -80,9 +80,9 @@ class MCPServerConfig(BaseModel):
         return self
 
 
-class MCPClientConfig(FunctionGroupBaseConfig, name="mcp_client"):
+class MCPClientBaseConfig(FunctionGroupBaseConfig):
     """
-    Configuration for connecting to an MCP server as a client and exposing selected tools.
+    Base configuration shared by MCP client variants.
     """
     server: MCPServerConfig = Field(..., description="Server connection details (transport, url/command, etc.)")
     tool_call_timeout: timedelta = Field(
@@ -114,6 +114,19 @@ class MCPClientConfig(FunctionGroupBaseConfig, name="mcp_client"):
             calculator_multiply:
               description: "Multiply two numbers"  # alias defaults to original name
         """)
+
+    @model_validator(mode="after")
+    def _validate_reconnect_backoff(self) -> "MCPClientBaseConfig":
+        """Validate reconnect backoff values."""
+        if self.reconnect_max_backoff < self.reconnect_initial_backoff:
+            raise ValueError("reconnect_max_backoff must be greater than or equal to reconnect_initial_backoff")
+        return self
+
+
+class MCPClientConfig(MCPClientBaseConfig, name="mcp_client"):
+    """
+    Configuration for connecting to an MCP server as a client and exposing selected tools.
+    """
     session_aware_tools: bool = Field(default=True,
                                       description="Session-aware tools are created if True. Defaults to True.")
     max_sessions: int = Field(default=100,
@@ -123,9 +136,11 @@ class MCPClientConfig(FunctionGroupBaseConfig, name="mcp_client"):
         default=timedelta(hours=1),
         description="Time after which inactive sessions are cleaned up. Defaults to 1 hour.")
 
-    @model_validator(mode="after")
-    def _validate_reconnect_backoff(self) -> "MCPClientConfig":
-        """Validate reconnect backoff values."""
-        if self.reconnect_max_backoff < self.reconnect_initial_backoff:
-            raise ValueError("reconnect_max_backoff must be greater than or equal to reconnect_initial_backoff")
-        return self
+
+class PerUserMCPClientConfig(MCPClientBaseConfig, name="per_user_mcp_client"):
+    """
+    MCP Client configuration for per-user workflows that are registered with @register_per_user_function,
+
+    and each user gets their own MCP client instance.
+    """
+    pass
