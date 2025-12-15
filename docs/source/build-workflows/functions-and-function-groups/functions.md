@@ -26,6 +26,12 @@ In NeMo Agent toolkit, functions are a core abstraction that offer type-safe, as
 * Unified interfaces to improve composability
 * Support for both streaming and non-streaming (single) outputs
 
+## Agents and Tools
+
+In an [agentic](../../components/agents/index.md) workflow, a set of [tools](https://developer.nvidia.com/blog/introduction-to-llm-agents/#tools) are made available to the agent to use to perform a given task.
+
+In NeMo Agent toolkit, both agents and tools are implemented as functions, because of this, an agent can be used as a tool in another workflow allowing for multi-agent workflows (refer to the `examples/agents/mixture_of_agents` example for more details).
+
 ## Included Functions
 For a complete list of functions run the following command:
 
