@@ -67,7 +67,11 @@ def plot_score_boxplot(
         x_label = x
 
     # Parse box_color to create fill color with opacity
-    box_fill_color = box_color.replace("rgb", "rgba").replace(")", f", {box_fill_opacity})")
+    # Parse box_color to create fill color with opacity
+    if box_color.startswith("rgb(") and not box_color.startswith("rgba("):
+        box_fill_color = box_color.replace("rgb(", "rgba(").replace(")", f", {box_fill_opacity})")
+    else:
+        box_fill_color = box_color  # Use as-is if already rgba or different format
 
     # Use go.Box directly for explicit control over data
     fig = go.Figure()
@@ -109,7 +113,7 @@ def plot_score_boxplot(
             ))
 
     # Add mean lines and annotations for each box
-    for x_pos, mean_val, label in means:
+    for x_pos, mean_val, _label in means:
         # Add dotted horizontal line at the mean (spanning exact box width)
         fig.add_shape(
             type="line",
@@ -195,7 +199,7 @@ def plot_success_rate_bar(
         go.Bar(
             x=x_labels,
             y=success_rates,
-            text=[f"{rate:.1f}%<br>({count})" for rate, count in zip(success_rates, counts)],
+            text=[f"{rate:.1f}%<br>({count})" for rate, count in zip(success_rates, counts, strict=True)],
             textposition="outside",
             marker_color=bar_color,
             hovertemplate="%{x}<br>Attack Success Rate: %{y:.1f}%<br>Count: %{text}<extra></extra>",
@@ -575,7 +579,7 @@ def save_combined_html(
     html_parts.append(_render_summary_html(summary))
 
     # Add each plot with its title (or section header)
-    for i, (filename, title, fig) in enumerate(plots):
+    for _filename, title, fig in plots:
         if fig is None:
             # This is a section header
             html_parts.append(f"""
@@ -606,7 +610,7 @@ def save_combined_html(
 
 
 def generate_and_save_report(
-    flat_results: list[dict[str, Any]],
+    flat_results: list[dict[str, Any]] | pd.DataFrame,
     output_dir: Path,
     summary: dict[str, Any] | None = None,
 ) -> Path | None:
@@ -626,19 +630,23 @@ def generate_and_save_report(
         Path to the combined HTML report.
     """
     report_path = output_dir / "report.html"
-    if not flat_results:
+    is_df_empty = isinstance(flat_results, pd.DataFrame) and flat_results.empty
+    if is_df_empty or (isinstance(flat_results, list) and not flat_results):
         logger.warning("No results to plot")
         return None
 
     # Convert to DataFrame
-    df = pd.DataFrame(flat_results)
+    if isinstance(flat_results, pd.DataFrame):
+        df = flat_results
+    else:
+        df = pd.DataFrame(flat_results)
 
     # Drop rows with error_message (failed evaluations)
     if "error_message" in df.columns:
         error_count = int(df["error_message"].notna().sum())
         if error_count > 0:
             logger.info("Dropping %d rows with error_message from plotting", error_count)
-            df = pd.DataFrame(df[df["error_message"].isna()])
+            df = df[df["error_message"].isna()]
 
     if df.empty:
         logger.warning("No valid results to plot after filtering errors")

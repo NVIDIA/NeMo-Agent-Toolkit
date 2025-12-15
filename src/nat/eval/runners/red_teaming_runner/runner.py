@@ -141,7 +141,7 @@ class RedTeamingRunner:
         results_file = self._save_flat_results(flat_results, base_output_dir)
 
         # Generate and save plots
-        report_path = generate_and_save_report(flat_results, base_output_dir, summary=summary)
+        report_path = generate_and_save_report(df, base_output_dir, summary=summary)
 
         self._log_results_summary(summary, base_output_dir, results_file, report_path)
         return results
@@ -768,8 +768,6 @@ class RedTeamingRunner:
                 mean_val = data.get('mean_score', 0.0)
                 max_val = data.get('max_score', 0.0)
                 min_val = data.get('min_score', 0.0)
-                row = (f"  {scenario_id:<{scenario_col_width}}  |  "
-                       f"{mean_val:>8.4f}  |  {max_val:>8.4f}  |  {min_val:>8.4f}")
                 asr_val = data.get('attack_success_rate', 0.0)
                 row = (f"  {scenario_id:<{scenario_col_width}}  |  "
                        f"{mean_val:>8.4f}  |  {max_val:>8.4f}  |  {min_val:>8.4f}  |  {asr_val:>7.2%}")
