@@ -112,7 +112,6 @@ curl -X POST http://localhost:8000/generate \
 
 ```bash
 # List notes as User 2 (should be empty - isolated from User 1)
-```bash
 curl -X POST http://localhost:8000/generate \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=bob" \

@@ -42,7 +42,7 @@ from nat.data_models.interactive import InteractionPrompt
 from nat.data_models.runtime_enum import RuntimeTypeEnum
 
 if typing.TYPE_CHECKING:
-    from nat.builder.workflow_builder import PerUserWorkflowBuilder
+    from nat.builder.per_user_workflow_builder import PerUserWorkflowBuilder
     from nat.builder.workflow_builder import WorkflowBuilder
 
 logger = logging.getLogger(__name__)
@@ -59,6 +59,7 @@ class PerUserBuilderInfo(BaseModel):
 
     builder: typing.Any = Field(description="The per-user workflow builder instance")
     workflow: typing.Any = Field(description="The cached per-user workflow instance")
+    semaphore: typing.Any = Field(description="Per-user semaphore for concurrency control")
     last_activity: datetime = Field(default_factory=datetime.now,
                                     description="The timestamp of the last access to this builder")
     ref_count: int = Field(default=0, ge=0, description="The reference count of this builder")
@@ -76,11 +77,21 @@ class Session:
     - Created for each request via SessionManager.session()
     - Automatically manages ref_count for per-user builder tracking
     - Cleans up context variables on exit
+
+    Concurrency:
+    - Each session has its own semaphore for concurrency control
+    - For per-user workflows: each user has an independent concurrency limit
+    - For shared workflows: all sessions share the SessionManager's semaphore
     """
 
-    def __init__(self, session_manager: "SessionManager", workflow: Workflow, user_id: str | None = None):
+    def __init__(self,
+                 session_manager: "SessionManager",
+                 workflow: Workflow,
+                 semaphore: asyncio.Semaphore | nullcontext,
+                 user_id: str | None = None):
         self._session_manager = session_manager
         self._workflow = workflow
+        self._semaphore = semaphore
         self._user_id = user_id
 
     @property
@@ -107,8 +118,7 @@ class Session:
         Yields:
             Runner instance for the workflow execution
         """
-        async with self._session_manager._semaphore:
-
+        async with self._semaphore:
             async with self._workflow.run(message, runtime_type=runtime_type) as runner:
                 yield runner
 
@@ -295,11 +305,9 @@ class SessionManager:
             except TimeoutError:
                 # Timeout means it's time to run cleanup
                 try:
-                    cleaned = await self._cleanup_inactive_per_user_builders()
-                    if cleaned > 0:
-                        logger.info(f"Cleaned up {cleaned} inactive per-user builder(s)")
-                except Exception as e:
-                    logger.error(f"Error during periodic cleanup: {e}", exc_info=True)
+                    await self._cleanup_inactive_per_user_builders()
+                except Exception:
+                    logger.exception("Error during periodic cleanup")
 
         logger.debug("Periodic cleanup task shutting down")
 
@@ -322,9 +330,10 @@ class SessionManager:
         for user_id, builder_info in builders_to_cleanup:
             try:
                 await builder_info.builder.__aexit__(None, None, None)
-                logger.debug(f"Successfully cleaned up per-user builder for user {user_id}")
-            except Exception as e:
-                logger.error(f"Error cleaning up per-user builder for user {user_id}: {e}", exc_info=True)
+                logger.info(f"Cleaned up inactive per-user builder for user={user_id} "
+                            f"(remaining users: {len(self._per_user_builders)})")
+            except Exception:
+                logger.exception(f"Error cleaning up per-user builder for user {user_id}")
 
         return len(builders_to_cleanup)
 
@@ -354,7 +363,7 @@ class SessionManager:
             return None
 
     async def _get_or_create_per_user_builder(self, user_id: str) -> tuple["PerUserWorkflowBuilder", Workflow]:
-        from nat.builder.workflow_builder import PerUserWorkflowBuilder
+        from nat.builder.per_user_workflow_builder import PerUserWorkflowBuilder
 
         async with self._per_user_builders_lock:
             if user_id in self._per_user_builders:
@@ -373,21 +382,29 @@ class SessionManager:
                 await builder.populate_builder(self._config)
                 workflow = await builder.build(entry_function=self._entry_function)
 
+                # Create per-user semaphore for concurrency control
+                if self._max_concurrency > 0:
+                    per_user_semaphore = asyncio.Semaphore(self._max_concurrency)
+                else:
+                    per_user_semaphore = nullcontext()
+
                 builder_info = PerUserBuilderInfo(builder=builder,
                                                   workflow=workflow,
+                                                  semaphore=per_user_semaphore,
                                                   last_activity=datetime.now(),
                                                   ref_count=0,
                                                   lock=asyncio.Lock())
                 self._per_user_builders[user_id] = builder_info
-                logger.debug(f"Created per-user builder for user={user_id}, entry_function={self._entry_function}")
+                logger.info(
+                    f"Created per-user builder for user={user_id} (total users: {len(self._per_user_builders)})")
                 return builder_info.builder, builder_info.workflow
-            except Exception as e:
-                logger.error(f"Error creating per-user builder for user {user_id}: {e}", exc_info=True)
+            except Exception:
+                logger.exception(f"Error creating per-user builder for user {user_id}")
                 try:
                     await builder.__aexit__(None, None, None)
-                except Exception as cleanup_error:
-                    logger.error(f"Error during builder cleanup after failed creation: {cleanup_error}", exc_info=True)
-                raise e
+                except Exception:
+                    logger.exception("Error during builder cleanup after failed creation")
+                raise
 
     @asynccontextmanager
     async def session(self,
@@ -440,11 +457,15 @@ class SessionManager:
             async with builder_info.lock:
                 builder_info.ref_count += 1
                 logger.debug(f"Incremented ref_count for user {user_id} to {builder_info.ref_count}")
+            # Use per-user semaphore for concurrency control
+            semaphore = builder_info.semaphore
         else:
             workflow = self._shared_workflow
+            # Use shared semaphore for concurrency control
+            semaphore = self._semaphore
 
         try:
-            session = Session(session_manager=self, user_id=user_id, workflow=workflow)
+            session = Session(session_manager=self, user_id=user_id, workflow=workflow, semaphore=semaphore)
 
             yield session
 
@@ -495,8 +516,8 @@ class SessionManager:
                     logger.debug(f"Cleaning up per-user builder for user {user_id}")
                     try:
                         await builder_info.builder.__aexit__(None, None, None)
-                    except Exception as e:
-                        logger.error(f"Error cleaning up builder for user {user_id}: {e}")
+                    except Exception:
+                        logger.exception(f"Error cleaning up builder for user {user_id}")
                 self._per_user_builders.clear()
 
     def set_metadata_from_http_request(self, request: Request) -> None:

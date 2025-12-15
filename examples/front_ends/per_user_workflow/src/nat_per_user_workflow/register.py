@@ -12,14 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-Registration module for the per-user workflow example.
 
-This module imports all per-user functions and workflows to register them
-with NAT's plugin system.
-"""
+# flake8: noqa
 
-# Import to trigger registration
-from nat_per_user_workflow.per_user_functions import per_user_notepad  # noqa: F401
-from nat_per_user_workflow.per_user_functions import per_user_preferences  # noqa: F401
-from nat_per_user_workflow.per_user_workflow import per_user_assistant_workflow  # noqa: F401
+# Import any tools which need to be automatically registered here
+from . import per_user_functions
+from . import per_user_workflow

@@ -24,7 +24,6 @@ import pytest
 from pydantic import BaseModel
 
 from nat.builder.context import ContextState
-from nat.builder.workflow_builder import PerUserWorkflowBuilder  # noqa: F401
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
 from nat.data_models.runtime_enum import RuntimeTypeEnum
@@ -53,8 +52,8 @@ class MockWorkflow:
         self.single_output_schema = MockOutputSchema
         self.streaming_output_schema = MockOutputSchema
 
-    async def run(self, message, runtime_type=RuntimeTypeEnum.RUN_OR_SERVE):
-        """Mock async context manager for run."""
+    def run(self, message, runtime_type=RuntimeTypeEnum.RUN_OR_SERVE):
+        """Return an async context manager for run."""
         runner = MagicMock()
         runner.result = AsyncMock(return_value=MockOutputSchema(response="test"))
 
@@ -139,11 +138,13 @@ class TestPerUserBuilderInfo:
         """Test PerUserBuilderInfo can be created with required fields."""
         builder = MockPerUserWorkflowBuilder("user1", MockWorkflowBuilder())
         workflow = MockWorkflow()
+        semaphore = asyncio.Semaphore(8)
 
-        info = PerUserBuilderInfo(builder=builder, workflow=workflow)
+        info = PerUserBuilderInfo(builder=builder, workflow=workflow, semaphore=semaphore)
 
         assert info.builder == builder
         assert info.workflow == workflow
+        assert info.semaphore == semaphore
         assert info.ref_count == 0
         assert isinstance(info.last_activity, datetime)
         assert isinstance(info.lock, asyncio.Lock)
@@ -151,7 +152,8 @@ class TestPerUserBuilderInfo:
     def test_per_user_builder_info_ref_count_default(self):
         """Test ref_count defaults to 0."""
         info = PerUserBuilderInfo(builder=MockPerUserWorkflowBuilder("user1", MockWorkflowBuilder()),
-                                  workflow=MockWorkflow())
+                                  workflow=MockWorkflow(),
+                                  semaphore=asyncio.Semaphore(8))
         assert info.ref_count == 0
 
     def test_per_user_builder_info_ref_count_validation(self):
@@ -159,6 +161,7 @@ class TestPerUserBuilderInfo:
         with pytest.raises(ValueError):
             PerUserBuilderInfo(builder=MockPerUserWorkflowBuilder("user1", MockWorkflowBuilder()),
                                workflow=MockWorkflow(),
+                               semaphore=asyncio.Semaphore(8),
                                ref_count=-1)
 
 
@@ -169,19 +172,38 @@ class TestSession:
         """Test Session exposes correct properties."""
         mock_workflow = MockWorkflow()
         mock_session_manager = MagicMock(spec=SessionManager)
-        mock_session_manager._semaphore = asyncio.Semaphore(8)
+        semaphore = asyncio.Semaphore(8)
 
-        session = Session(session_manager=mock_session_manager, workflow=mock_workflow, user_id="user123")
+        session = Session(session_manager=mock_session_manager,
+                          workflow=mock_workflow,
+                          semaphore=semaphore,
+                          user_id="user123")
 
         assert session.user_id == "user123"
         assert session.workflow == mock_workflow
         assert session.session_manager == mock_session_manager
+        assert session._semaphore == semaphore
 
     def test_session_without_user_id(self):
         """Test Session works without user_id (shared workflow)."""
-        session = Session(session_manager=MagicMock(), workflow=MockWorkflow(), user_id=None)
+        session = Session(session_manager=MagicMock(),
+                          workflow=MockWorkflow(),
+                          semaphore=asyncio.Semaphore(8),
+                          user_id=None)
 
         assert session.user_id is None
+
+    def test_session_with_different_semaphores(self):
+        """Test different sessions can have different semaphores for concurrency isolation."""
+        semaphore1 = asyncio.Semaphore(4)
+        semaphore2 = asyncio.Semaphore(8)
+
+        session1 = Session(session_manager=MagicMock(), workflow=MockWorkflow(), semaphore=semaphore1, user_id="user1")
+        session2 = Session(session_manager=MagicMock(), workflow=MockWorkflow(), semaphore=semaphore2, user_id="user2")
+
+        assert session1._semaphore is not session2._semaphore
+        assert session1._semaphore == semaphore1
+        assert session2._semaphore == semaphore2
 
 
 class TestSessionManagerInit:
@@ -301,7 +323,7 @@ class TestSessionManagerRun:
                             entry_function=None,
                             shared_workflow=None)
 
-        with pytest.raises(ValueError, match="Cannot use SessionManager.run\\(\\) with per-user workflows"):
+        with pytest.raises(ValueError, match=r"Cannot use SessionManager.run\(\) with per-user workflows"):
             async with sm.run("test message"):
                 pass
 
@@ -325,6 +347,8 @@ class TestSessionManagerSession:
             assert isinstance(session, Session)
             assert session.workflow == shared_workflow
             assert session.user_id is None
+            # Shared workflow uses SessionManager's semaphore
+            assert session._semaphore is sm._semaphore
 
     @patch('nat.cli.type_registry.GlobalTypeRegistry')
     @pytest.mark.asyncio
@@ -341,7 +365,7 @@ class TestSessionManagerSession:
             async with sm.session():
                 pass
 
-    @patch('nat.builder.workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
+    @patch('nat.builder.per_user_workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
     @patch('nat.cli.type_registry.GlobalTypeRegistry')
     @pytest.mark.asyncio
     async def test_session_per_user_with_explicit_user_id(self, mock_registry):
@@ -359,7 +383,7 @@ class TestSessionManagerSession:
             # Builder should be cached
             assert "user123" in sm._per_user_builders
 
-    @patch('nat.builder.workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
+    @patch('nat.builder.per_user_workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
     @patch('nat.cli.type_registry.GlobalTypeRegistry')
     @pytest.mark.asyncio
     async def test_session_per_user_increments_ref_count(self, mock_registry):
@@ -378,7 +402,7 @@ class TestSessionManagerSession:
         # After exit, ref_count should be decremented
         assert sm._per_user_builders["user123"].ref_count == 0
 
-    @patch('nat.builder.workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
+    @patch('nat.builder.per_user_workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
     @patch('nat.cli.type_registry.GlobalTypeRegistry')
     @pytest.mark.asyncio
     async def test_session_per_user_reuses_cached_builder(self, mock_registry):
@@ -425,7 +449,7 @@ class TestSessionManagerSession:
 class TestSessionManagerCleanup:
     """Tests for SessionManager per-user builder cleanup."""
 
-    @patch('nat.builder.workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
+    @patch('nat.builder.per_user_workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
     @patch('nat.cli.type_registry.GlobalTypeRegistry')
     @pytest.mark.asyncio
     async def test_cleanup_inactive_builders(self, mock_registry):
@@ -453,7 +477,7 @@ class TestSessionManagerCleanup:
         assert cleaned == 1
         assert "user123" not in sm._per_user_builders
 
-    @patch('nat.builder.workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
+    @patch('nat.builder.per_user_workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
     @patch('nat.cli.type_registry.GlobalTypeRegistry')
     @pytest.mark.asyncio
     async def test_cleanup_skips_active_builders(self, mock_registry):
@@ -517,7 +541,7 @@ class TestSessionManagerContextExtraction:
 class TestPerUserWorkflowIntegration:
     """Integration tests for complete per-user workflow flow."""
 
-    @patch('nat.builder.workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
+    @patch('nat.builder.per_user_workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
     @patch('nat.cli.type_registry.GlobalTypeRegistry')
     @pytest.mark.asyncio
     async def test_multiple_users_isolated_builders(self, mock_registry):
@@ -548,7 +572,34 @@ class TestPerUserWorkflowIntegration:
         assert sm._per_user_builders["user1"].ref_count == 0
         assert sm._per_user_builders["user2"].ref_count == 0
 
-    @patch('nat.builder.workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
+    @patch('nat.builder.per_user_workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
+    @patch('nat.cli.type_registry.GlobalTypeRegistry')
+    @pytest.mark.asyncio
+    async def test_multiple_users_isolated_semaphores(self, mock_registry):
+        """Test multiple users get isolated semaphores for concurrency control."""
+        mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=True)
+
+        sm = SessionManager(config=create_mock_config(),
+                            shared_builder=MockWorkflowBuilder(),
+                            entry_function=None,
+                            shared_workflow=None,
+                            max_concurrency=4)
+
+        async with sm.session(user_id="user1") as session1:
+            async with sm.session(user_id="user2") as session2:
+                # Each user should have their own semaphore
+                semaphore1 = sm._per_user_builders["user1"].semaphore
+                semaphore2 = sm._per_user_builders["user2"].semaphore
+
+                assert semaphore1 is not semaphore2
+                assert isinstance(semaphore1, asyncio.Semaphore)
+                assert isinstance(semaphore2, asyncio.Semaphore)
+
+                # Sessions should use the per-user semaphores
+                assert session1._semaphore is semaphore1
+                assert session2._semaphore is semaphore2
+
+    @patch('nat.builder.per_user_workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
     @patch('nat.cli.type_registry.GlobalTypeRegistry')
     @pytest.mark.asyncio
     async def test_concurrent_sessions_same_user(self, mock_registry):
@@ -607,7 +658,7 @@ class TestSessionManagerEntryFunction:
 
         assert sm._entry_function is None
 
-    @patch('nat.builder.workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
+    @patch('nat.builder.per_user_workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
     @patch('nat.cli.type_registry.GlobalTypeRegistry')
     @pytest.mark.asyncio
     async def test_per_user_builder_uses_entry_function(self, mock_registry):
@@ -638,7 +689,7 @@ class TestSessionManagerEntryFunction:
         finally:
             MockPerUserWorkflowBuilder.build = original_build
 
-    @patch('nat.builder.workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
+    @patch('nat.builder.per_user_workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
     @patch('nat.cli.type_registry.GlobalTypeRegistry')
     @pytest.mark.asyncio
     async def test_different_entry_functions_create_separate_caches(self, mock_registry):
@@ -759,7 +810,7 @@ class TestSessionManagerCreate:
 class TestSessionManagerShutdown:
     """Tests for SessionManager.shutdown() method."""
 
-    @patch('nat.builder.workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
+    @patch('nat.builder.per_user_workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
     @patch('nat.cli.type_registry.GlobalTypeRegistry')
     @pytest.mark.asyncio
     async def test_shutdown_stops_cleanup_task(self, mock_registry):
@@ -778,7 +829,7 @@ class TestSessionManagerShutdown:
         await asyncio.sleep(0.1)
         assert cleanup_task.done() or cleanup_task.cancelled()
 
-    @patch('nat.builder.workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
+    @patch('nat.builder.per_user_workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
     @patch('nat.cli.type_registry.GlobalTypeRegistry')
     @pytest.mark.asyncio
     async def test_shutdown_cleans_up_all_per_user_builders(self, mock_registry):
@@ -826,7 +877,7 @@ class TestSessionManagerShutdown:
 class TestMultipleSessionManagersSharedBuilder:
     """Tests for multiple SessionManagers sharing a WorkflowBuilder."""
 
-    @patch('nat.builder.workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
+    @patch('nat.builder.per_user_workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
     @patch('nat.cli.type_registry.GlobalTypeRegistry')
     @pytest.mark.asyncio
     async def test_multiple_session_managers_share_builder(self, mock_registry):
@@ -887,7 +938,7 @@ class TestMultipleSessionManagersSharedBuilder:
         # Different workflow instances
         assert sm_default._shared_workflow is not sm_eval._shared_workflow
 
-    @patch('nat.builder.workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
+    @patch('nat.builder.per_user_workflow_builder.PerUserWorkflowBuilder', MockPerUserWorkflowBuilder)
     @patch('nat.cli.type_registry.GlobalTypeRegistry')
     @pytest.mark.asyncio
     async def test_per_user_with_custom_entry_function(self, mock_registry):

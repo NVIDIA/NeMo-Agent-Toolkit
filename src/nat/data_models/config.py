@@ -217,10 +217,10 @@ class GeneralConfig(BaseModel):
 
     default_user_id: str = Field(
         default="default_user_id",
-        description="Default user ID for per-user workflows when"
-        "no session is available (for example, when using 'nat run'). This value identifies"
-        "the workflow instance.s For multi-user deployments with 'nat serve', the 'nat-session'"
-        "cookie overrides this value.")
+        description="Default user ID for per-user workflows when "
+        "no session is available (for example, when using 'nat run'). This value identifies "
+        "the workflow instances. For multi-user deployments with 'nat serve', the 'nat-session' "
+        "cookie overrides this value. Must be a non-empty string when used as a fallback user ID.")
     per_user_workflow_timeout: timedelta = Field(
         default=timedelta(minutes=30),
         description="Time after which inactive per-user workflows are cleaned up. "

@@ -85,6 +85,12 @@ logger = logging.getLogger(__name__)
     multiple=True,
     help="Override config values using dot notation (e.g., --override llms.nim_llm.temperature 0.7)",
 )
+@click.option(
+    "--user_id",
+    type=str,
+    default=None,
+    help="User ID to use for workflow session.",
+)
 @click.pass_context
 def eval_command(ctx, **kwargs) -> None:
     """ Evaluate datasets with the specified mechanism"""
@@ -171,6 +177,7 @@ def process_nat_eval(
     endpoint_timeout: int,
     reps: int,
     override: tuple[tuple[str, str], ...],
+    user_id: str | None,
 ):
     """
     Process the eval command and execute the evaluation. Here the config_file, if provided, is checked for its existence
@@ -198,5 +205,6 @@ def process_nat_eval(
         endpoint_timeout=endpoint_timeout,
         reps=reps,
         override=override,
+        user_id=user_id,
     )
     asyncio.run(run_and_evaluate(config))

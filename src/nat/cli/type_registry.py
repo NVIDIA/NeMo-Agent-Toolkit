@@ -154,8 +154,8 @@ class RegisteredInfo(BaseModel, typing.Generic[TypedBaseModelT]):
 
     is_per_user: bool = Field(default=False,
                               description="Whether the component is per-user. Default to False. If True, "
-                              "each user will have their own separate instance of the component. The per-user"
-                              "component instance will be lazily built on user's first invocation. If False, the"
+                              "each user will have their own separate instance of the component. The per-user "
+                              "component instance will be lazily built on user's first invocation. If False, the "
                               "component instance will be shared across all users.")
 
     @computed_field
@@ -238,15 +238,15 @@ class RegisteredFunctionInfo(RegisteredInfo[FunctionBaseConfig]):
     # Declared schemas for per-user functions which are lazy-loaded. Must be provided if is_per_user is True.
     per_user_function_input_schema: type[BaseModel] | type[None] | None = Field(
         default=None,
-        description="Declared input schema for per-user functions. Must be provided if is_per_user"
+        description="Declared input schema for per-user functions. Must be provided if is_per_user "
         "is True. This is for enabling OpenAPI documentation generation without a concrete function instance.")
     per_user_function_single_output_schema: type[BaseModel] | type[None] | None = Field(
         default=None,
-        description="Declared single output schema for per-user functions. Must be provided if is_per_user"
+        description="Declared single output schema for per-user functions. Must be provided if is_per_user "
         "is True. This is for enabling OpenAPI documentation generation without a concrete function instance.")
     per_user_function_streaming_output_schema: type[BaseModel] | type[None] | None = Field(
         default=None,
-        description="Declared streaming output schema for per-user functions. Must be provided if is_per_user"
+        description="Declared streaming output schema for per-user functions. Must be provided if is_per_user "
         "is True. This is for enabling OpenAPI documentation generation without a concrete function instance.")
 
     @model_validator(mode="after")
