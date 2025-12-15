@@ -93,6 +93,10 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^docs/source/workflows/mcp/.*\.md$",
         r"^ghcr\.io/github/github-mcp-server",
     ),
+    (
+        r"^examples/risk_and_security/retail_agent/.*configs/",
+        r"^examples/risk_and_security/retail_agent/.*data/",
+    ),
 }
 
 ALLOWLISTED_WORDS: set[str] = {

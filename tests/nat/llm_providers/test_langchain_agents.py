@@ -166,7 +166,7 @@ async def test_huggingface_langchain_agent():
 
         prompt_result = await prompt.ainvoke({"input": "What is 1+2?"})
         response = await llm.ainvoke(prompt_result.to_messages())
-        
+
         assert isinstance(response, AIMessage)
         assert response.content is not None
         assert isinstance(response.content, str)

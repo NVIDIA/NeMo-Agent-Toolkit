@@ -62,6 +62,7 @@ async def red_teaming_middleware(config: RedTeamingMiddlewareConfig, builder):
                                target_field_resolution_strategy=config.target_field_resolution_strategy,
                                call_limit=config.call_limit)
 
+
 @register_middleware(config_type=ContentSafetyGuardMiddlewareConfig)
 async def content_safety_guard_middleware(config: ContentSafetyGuardMiddlewareConfig, builder):
     """Build a Content Safety Guard middleware from configuration.
@@ -76,6 +77,7 @@ async def content_safety_guard_middleware(config: ContentSafetyGuardMiddlewareCo
     # Pass the builder and config, LLM will be loaded lazily
     yield ContentSafetyGuardMiddleware(config=config, builder=builder)
 
+
 @register_middleware(config_type=OutputVerifierMiddlewareConfig)
 async def output_verifier_middleware(config: OutputVerifierMiddlewareConfig, builder):
     """Build an Output Verifier middleware from configuration.
@@ -89,6 +91,7 @@ async def output_verifier_middleware(config: OutputVerifierMiddlewareConfig, bui
     """
     # Pass the builder and config, LLM will be loaded lazily
     yield OutputVerifierMiddleware(config=config, builder=builder)
+
 
 @register_middleware(config_type=PIIDefenseMiddlewareConfig)
 async def pii_defense_middleware(config: PIIDefenseMiddlewareConfig, builder):
