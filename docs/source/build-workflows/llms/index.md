@@ -17,6 +17,8 @@ limitations under the License.
 
 # LLMs
 
+[Large language models (LLMs)](https://www.nvidia.com/en-us/glossary/large-language-models/)  are deep learning algorithms that can recognize, summarize, translate, predict, and generate content using very large datasets.
+
 ## Supported LLM Providers
 
 NVIDIA NeMo Agent toolkit supports the following LLM providers:
