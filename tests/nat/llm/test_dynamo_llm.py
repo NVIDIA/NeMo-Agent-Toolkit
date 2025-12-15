@@ -20,11 +20,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from nat.llm.dynamo_llm import clear_dynamo_prefix_id
 from nat.llm.dynamo_llm import create_httpx_client_with_dynamo_hooks
 from nat.llm.dynamo_llm import DynamoModelConfig
-from nat.llm.dynamo_llm import get_dynamo_prefix_id
-from nat.llm.dynamo_llm import set_dynamo_prefix_id
+from nat.llm.dynamo_llm import DynamoPrefixContext
 from nat.llm.dynamo_llm import _create_dynamo_request_hook
 
 
@@ -129,47 +127,99 @@ class TestDynamoModelConfig:
         assert config.temperature == 0.7
         assert config.top_p == 0.9
 
+    def test_get_dynamo_field_names(self):
+        """Test that get_dynamo_field_names returns the correct field set."""
+        field_names = DynamoModelConfig.get_dynamo_field_names()
+
+        expected = frozenset({
+            "prefix_template",
+            "prefix_total_requests",
+            "prefix_osl",
+            "prefix_iat",
+            "request_timeout",
+        })
+
+        assert field_names == expected
+        assert isinstance(field_names, frozenset)  # Ensure immutability
+
 
 # ---------------------------------------------------------------------------
 # Context Variable Tests
 # ---------------------------------------------------------------------------
 
 
-class TestDynamoPrefixIdContext:
-    """Tests for Dynamo prefix ID context variable functions."""
+class TestDynamoPrefixContext:
+    """Tests for DynamoPrefixContext singleton class."""
 
     def test_set_and_get_prefix_id(self):
         """Test setting and getting prefix ID."""
         # Ensure clean state
-        clear_dynamo_prefix_id()
-        assert get_dynamo_prefix_id() is None
+        DynamoPrefixContext.clear()
+        assert DynamoPrefixContext.get() is None
 
         # Set and get
-        set_dynamo_prefix_id("test-prefix-123")
-        assert get_dynamo_prefix_id() == "test-prefix-123"
+        DynamoPrefixContext.set("test-prefix-123")
+        assert DynamoPrefixContext.get() == "test-prefix-123"
 
         # Clean up
-        clear_dynamo_prefix_id()
+        DynamoPrefixContext.clear()
 
     def test_clear_prefix_id(self):
         """Test clearing prefix ID."""
-        set_dynamo_prefix_id("test-prefix-456")
-        assert get_dynamo_prefix_id() == "test-prefix-456"
+        DynamoPrefixContext.set("test-prefix-456")
+        assert DynamoPrefixContext.get() == "test-prefix-456"
 
-        clear_dynamo_prefix_id()
-        assert get_dynamo_prefix_id() is None
+        DynamoPrefixContext.clear()
+        assert DynamoPrefixContext.get() is None
 
     def test_overwrite_prefix_id(self):
         """Test that setting a new prefix ID overwrites the old one."""
-        clear_dynamo_prefix_id()
+        DynamoPrefixContext.clear()
 
-        set_dynamo_prefix_id("first-prefix")
-        assert get_dynamo_prefix_id() == "first-prefix"
+        DynamoPrefixContext.set("first-prefix")
+        assert DynamoPrefixContext.get() == "first-prefix"
 
-        set_dynamo_prefix_id("second-prefix")
-        assert get_dynamo_prefix_id() == "second-prefix"
+        DynamoPrefixContext.set("second-prefix")
+        assert DynamoPrefixContext.get() == "second-prefix"
 
-        clear_dynamo_prefix_id()
+        DynamoPrefixContext.clear()
+
+    def test_scope_context_manager(self):
+        """Test the scope context manager for automatic cleanup."""
+        DynamoPrefixContext.clear()
+        assert DynamoPrefixContext.get() is None
+
+        with DynamoPrefixContext.scope("scoped-prefix-789"):
+            assert DynamoPrefixContext.get() == "scoped-prefix-789"
+
+        # Should be cleared after exiting context
+        assert DynamoPrefixContext.get() is None
+
+    def test_scope_context_manager_cleanup_on_exception(self):
+        """Test that scope context manager clears prefix ID even on exception."""
+        DynamoPrefixContext.clear()
+
+        with pytest.raises(ValueError):
+            with DynamoPrefixContext.scope("error-prefix"):
+                assert DynamoPrefixContext.get() == "error-prefix"
+                raise ValueError("Test exception")
+
+        # Should still be cleared after exception
+        assert DynamoPrefixContext.get() is None
+
+    def test_scope_nested_replaces_then_clears(self):
+        """Test that nested scopes work but outer scope is lost after inner exits."""
+        DynamoPrefixContext.clear()
+
+        with DynamoPrefixContext.scope("outer"):
+            assert DynamoPrefixContext.get() == "outer"
+            with DynamoPrefixContext.scope("inner"):
+                assert DynamoPrefixContext.get() == "inner"
+            # After inner scope exits, it clears - outer value is lost
+            assert DynamoPrefixContext.get() is None
+
+        # Still None after outer exits
+        assert DynamoPrefixContext.get() is None
 
 
 # ---------------------------------------------------------------------------
@@ -183,9 +233,9 @@ class TestDynamoRequestHook:
     @pytest.fixture(autouse=True)
     def clean_context(self):
         """Ensure clean context before and after each test."""
-        clear_dynamo_prefix_id()
+        DynamoPrefixContext.clear()
         yield
-        clear_dynamo_prefix_id()
+        DynamoPrefixContext.clear()
 
     @pytest.mark.asyncio
     async def test_hook_injects_headers(self):
@@ -220,7 +270,7 @@ class TestDynamoRequestHook:
         )
 
         # Set context prefix ID
-        set_dynamo_prefix_id("context-prefix-abc")
+        DynamoPrefixContext.set("context-prefix-abc")
 
         mock_request = MagicMock()
         mock_request.headers = {}
@@ -312,6 +362,23 @@ class TestDynamoRequestHook:
         assert mock_request.headers["x-prefix-osl"] == "LOW"
         assert mock_request.headers["x-prefix-iat"] == "HIGH"
 
+    @pytest.mark.asyncio
+    async def test_hook_template_without_uuid_placeholder(self):
+        """Test that a template without {uuid} placeholder uses template as-is."""
+        hook = _create_dynamo_request_hook(
+            prefix_template="static-prefix-no-uuid",
+            total_requests=10,
+            osl="MEDIUM",
+            iat="MEDIUM",
+        )
+
+        mock_request = MagicMock()
+        mock_request.headers = {}
+        await hook(mock_request)
+
+        # Template used as-is when no {uuid} placeholder
+        assert mock_request.headers["x-prefix-id"] == "static-prefix-no-uuid"
+
 
 # ---------------------------------------------------------------------------
 # HTTPX Client Creation Tests
@@ -358,4 +425,21 @@ class TestCreateHttpxClient:
         )
 
         assert client.timeout.connect == 600.0
+
+
+# ---------------------------------------------------------------------------
+# Provider Registration Tests
+# ---------------------------------------------------------------------------
+
+
+class TestDynamoLLMProvider:
+    """Tests for the dynamo_llm provider registration."""
+
+    def test_dynamo_model_config_type_name(self):
+        """Test that DynamoModelConfig has the correct type name."""
+        assert DynamoModelConfig.static_type() == "dynamo"
+
+    def test_dynamo_model_config_full_type(self):
+        """Test that DynamoModelConfig has the correct full type."""
+        assert DynamoModelConfig.static_full_type() == "nat.llm/dynamo"
 

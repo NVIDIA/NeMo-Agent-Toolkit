@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,8 +42,13 @@ Dynamo Prefix Parameters:
 
 import logging
 import uuid
+from contextlib import contextmanager
 from contextvars import ContextVar
-from typing import Literal
+from collections.abc import Callable, Coroutine
+from typing import TYPE_CHECKING, Any, Iterator, Literal
+
+if TYPE_CHECKING:
+    import httpx
 
 from pydantic import Field
 
@@ -59,37 +64,85 @@ logger = logging.getLogger(__name__)
 PrefixLevel = Literal["LOW", "MEDIUM", "HIGH"]
 
 # =============================================================================
-# CONTEXT VARIABLE FOR SHARING PREFIX ID ACROSS LLM CALLS
+# CONTEXT MANAGEMENT FOR DYNAMO PREFIX ID
 # =============================================================================
-# This allows evaluation code to set a prefix ID that persists across all LLM
-# calls for a single evaluation question (multi-turn conversation).
-
-_current_prefix_id: ContextVar[str | None] = ContextVar('dynamo_prefix_id', default=None)
 
 
-def set_dynamo_prefix_id(prefix_id: str) -> None:
+class DynamoPrefixContext:
     """
-    Set the Dynamo prefix ID for the current context.
+    Singleton class for managing Dynamo prefix IDs across LLM calls.
 
-    Call this at the start of each evaluation question to ensure all LLM calls
-    for that question share the same prefix ID (enabling KV cache reuse).
+    This allows evaluation code to set a prefix ID that persists across all LLM
+    calls for a single evaluation question (multi-turn conversation).
 
-    Args:
-        prefix_id: The unique prefix ID (e.g., "eval-q001-abc123")
+    Usage:
+        from nat.llm.dynamo_llm import DynamoPrefixContext
+
+        # Set prefix ID at the start of each evaluation question
+        DynamoPrefixContext.set("eval-q001-abc123")
+
+        # ... perform LLM calls ...
+
+        # Clear when done
+        DynamoPrefixContext.clear()
+
+        # Or use as a context manager
+        with DynamoPrefixContext.scope("eval-q001-abc123"):
+            # ... perform LLM calls ...
     """
-    _current_prefix_id.set(prefix_id)
-    logger.debug("Set Dynamo prefix ID: %s", prefix_id)
 
+    _current_prefix_id: ContextVar[str | None] = ContextVar('dynamo_prefix_id', default=None)
 
-def clear_dynamo_prefix_id() -> None:
-    """Clear the current Dynamo prefix ID context."""
-    _current_prefix_id.set(None)
-    logger.debug("Cleared Dynamo prefix ID")
+    @classmethod
+    def set(cls, prefix_id: str) -> None:
+        """
+        Set the Dynamo prefix ID for the current context.
 
+        Call this at the start of each evaluation question to ensure all LLM calls
+        for that question share the same prefix ID (enabling KV cache reuse).
 
-def get_dynamo_prefix_id() -> str | None:
-    """Get the current Dynamo prefix ID from context, if any."""
-    return _current_prefix_id.get()
+        Args:
+            prefix_id: The unique prefix ID (e.g., "eval-q001-abc123")
+        """
+        cls._current_prefix_id.set(prefix_id)
+        logger.debug("Set Dynamo prefix ID: %s", prefix_id)
+
+    @classmethod
+    def clear(cls) -> None:
+        """Clear the current Dynamo prefix ID context."""
+        cls._current_prefix_id.set(None)
+        logger.debug("Cleared Dynamo prefix ID")
+
+    @classmethod
+    def get(cls) -> str | None:
+        """Get the current Dynamo prefix ID from context, if any."""
+        return cls._current_prefix_id.get()
+
+    @classmethod
+    @contextmanager
+    def scope(cls, prefix_id: str) -> Iterator[None]:
+        """
+        Context manager for scoped prefix ID usage.
+
+        Automatically sets the prefix ID on entry and clears it on exit,
+        ensuring proper cleanup even if exceptions occur.
+
+        Args:
+            prefix_id: The unique prefix ID for this scope
+
+        Yields:
+            None
+
+        Usage:
+            with DynamoPrefixContext.scope("eval-q001"):
+                # All LLM calls here will use "eval-q001" prefix
+                await llm.ainvoke(...)
+        """
+        cls.set(prefix_id)
+        try:
+            yield
+        finally:
+            cls.clear()
 
 
 # =============================================================================
@@ -160,6 +213,35 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
         description="HTTP request timeout in seconds for LLM requests.",
     )
 
+    # =========================================================================
+    # UTILITY METHODS
+    # =========================================================================
+
+    @staticmethod
+    def get_dynamo_field_names() -> frozenset[str]:
+        """
+        Get the set of Dynamo-specific field names for model_dump exclusion.
+
+        Use this when building config dicts for framework clients to exclude
+        Dynamo-specific parameters that should not be passed to the underlying client.
+
+        Returns:
+            A frozenset of Dynamo-specific field names.
+
+        Example:
+            config_dict = config.model_dump(
+                exclude={"type", "thinking", *DynamoModelConfig.get_dynamo_field_names()},
+                ...
+            )
+        """
+        return frozenset({
+            "prefix_template",
+            "prefix_total_requests",
+            "prefix_osl",
+            "prefix_iat",
+            "request_timeout",
+        })
+
 
 # =============================================================================
 # HTTPX EVENT HOOK FOR HEADER INJECTION
@@ -171,7 +253,7 @@ def _create_dynamo_request_hook(
     total_requests: int,
     osl: str,
     iat: str,
-):
+) -> Callable[["httpx.Request"], Coroutine[Any, Any, None]]:
     """
     Create an httpx event hook that injects Dynamo prefix headers into requests.
 
@@ -205,7 +287,7 @@ def _create_dynamo_request_hook(
     async def on_request(request):
         """Inject Dynamo prefix headers before each request."""
         # Check context variable first (allows per-question override in batch evaluation)
-        context_prefix_id = get_dynamo_prefix_id()
+        context_prefix_id = DynamoPrefixContext.get()
 
         if context_prefix_id:
             prefix_id = context_prefix_id
@@ -235,7 +317,7 @@ def create_httpx_client_with_dynamo_hooks(
     osl: str,
     iat: str,
     timeout: float = 600.0,
-):
+) -> "httpx.AsyncClient":
     """
     Create an httpx.AsyncClient with Dynamo prefix header injection.
 

@@ -25,19 +25,19 @@ class TestSelfEvaluatingAgentConfig:
 
     def test_config_file_exists(self):
         """Verify the self-evaluation config file exists."""
-        config_path = CONFIGS_DIR / "eval_config_with_feedback.yml"
+        config_path = CONFIGS_DIR / "eval_config_rethinking_full_test.yml"
         assert config_path.exists(), f"Config file not found: {config_path}"
 
     def test_profile_config_file_exists(self):
         """Verify the profile config with feedback exists."""
-        config_path = CONFIGS_DIR / "profile_config_with_feedback.yml"
+        config_path = CONFIGS_DIR / "profile_rethinking_full_test.yml"
         assert config_path.exists(), f"Config file not found: {config_path}"
 
     def test_config_contains_self_evaluating_agent(self):
         """Verify the config defines a self_evaluating_agent workflow."""
         import yaml
 
-        config_path = CONFIGS_DIR / "eval_config_with_feedback.yml"
+        config_path = CONFIGS_DIR / "eval_config_rethinking_full_test.yml"
         with open(config_path) as f:
             config = yaml.safe_load(f)
 
@@ -50,7 +50,7 @@ class TestSelfEvaluatingAgentConfig:
         """Verify the config has all required self-evaluation parameters."""
         import yaml
 
-        config_path = CONFIGS_DIR / "eval_config_with_feedback.yml"
+        config_path = CONFIGS_DIR / "eval_config_rethinking_full_test.yml"
         with open(config_path) as f:
             config = yaml.safe_load(f)
 
@@ -64,7 +64,7 @@ class TestSelfEvaluatingAgentConfig:
         """Verify max_retries is within acceptable range (0-10)."""
         import yaml
 
-        config_path = CONFIGS_DIR / "eval_config_with_feedback.yml"
+        config_path = CONFIGS_DIR / "eval_config_rethinking_full_test.yml"
         with open(config_path) as f:
             config = yaml.safe_load(f)
 
@@ -75,7 +75,7 @@ class TestSelfEvaluatingAgentConfig:
         """Verify confidence threshold is within acceptable range (0.0-1.0)."""
         import yaml
 
-        config_path = CONFIGS_DIR / "eval_config_with_feedback.yml"
+        config_path = CONFIGS_DIR / "eval_config_rethinking_full_test.yml"
         with open(config_path) as f:
             config = yaml.safe_load(f)
 
@@ -88,17 +88,17 @@ class TestSelfEvaluatingAgentModule:
 
     def test_module_imports(self):
         """Verify the self-evaluating agent module can be imported."""
-        from react_benchmark_agent import self_evaluating_agent  # noqa: F401
+        from react_benchmark_agent import self_evaluating_agent_with_feedback  # noqa: F401
 
     def test_module_with_feedback_imports(self):
         """Verify the self-evaluating agent with feedback module can be imported."""
         from react_benchmark_agent import self_evaluating_agent_with_feedback  # noqa: F401
 
     def test_config_class_exists(self):
-        """Verify the SelfEvaluatingAgentConfig class exists."""
-        from react_benchmark_agent.self_evaluating_agent import SelfEvaluatingAgentConfig
+        """Verify the SelfEvaluatingAgentWithFeedbackConfig class exists."""
+        from react_benchmark_agent.self_evaluating_agent_with_feedback import SelfEvaluatingAgentWithFeedbackConfig
 
-        assert SelfEvaluatingAgentConfig is not None
+        assert SelfEvaluatingAgentWithFeedbackConfig is not None
 
     def test_config_with_feedback_class_exists(self):
         """Verify the SelfEvaluatingAgentWithFeedbackConfig class exists."""
@@ -341,7 +341,7 @@ class TestSelfEvaluatingAgentWithNIM:
         import yaml
 
         # Load the base config
-        config_path = CONFIGS_DIR / "eval_config_with_feedback.yml"
+        config_path = CONFIGS_DIR / "eval_config_rethinking_full_test.yml"
         with open(config_path) as f:
             config = yaml.safe_load(f)
 
