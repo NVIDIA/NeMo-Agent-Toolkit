@@ -17,7 +17,7 @@ limitations under the License.
 
 # Agent-to-Agent (A2A) Authentication for NeMo Agent Toolkit
 
-NeMo Agent toolkit provides OAuth2 authentication capabilities for A2A protocol, enabling secure agent-to-agent communication. A2A authentication is built on OAuth 2.1 Authorization Code Flow with JWT token validation, providing a standards-based approach to protecting A2A servers.
+NVIDIA NeMo Agent Toolkit provides OAuth2 authentication capabilities for A2A protocol, enabling secure agent-to-agent communication. A2A authentication is built on OAuth 2.1 Authorization Code Flow with JWT token validation, providing a standards-based approach to protecting A2A servers.
 
 A2A authentication is `agent card-driven`; clients discover security requirements by fetching the agent's public metadata (agent card) without authentication, then dynamically initiate the appropriate authentication flow. This allows agents to advertise their security requirements upfront, enabling clients to adapt their authentication strategy accordingly.
 
@@ -244,8 +244,3 @@ This example includes:
 - [A2A Protocol Overview](../integrations/a2a.md) - Introduction to Agent-to-Agent protocol
 - [A2A Client](../../build-workflows/a2a-client.md) - Connecting to remote A2A agents
 - [A2A Server](../../run-workflows/a2a-server.md) - Publishing NAT workflows as A2A agents
-
-
-## Examples
-
-- OAuth2 Keycloak Setup: `examples/A2A/math_assistant_a2a/oauth2-keycloak-setup.md`

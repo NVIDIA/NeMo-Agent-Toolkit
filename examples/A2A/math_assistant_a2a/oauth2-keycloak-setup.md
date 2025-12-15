@@ -16,7 +16,7 @@ limitations under the License.
 
 # Keycloak OAuth2 Setup Guide for NAT A2A
 
-This guide provides hands-on instructions for setting up Keycloak as an OAuth2 authorization server for testing OAuth2-protected A2A servers in NAT.
+This guide provides hands-on instructions for setting up Keycloak as an OAuth2 authorization server for testing OAuth2-protected A2A servers in NVIDIA NeMo Agent Toolkit.
 
 For architectural overview and authentication concepts, see the [A2A Authentication Documentation](../../../docs/source/components/auth/a2a-auth.md).
 
@@ -268,7 +268,7 @@ nat a2a serve --config_file examples/A2A/calculator_a2a/configs/config-protected
 ```
 
 You should see:
-```
+```text
 [INFO] OAuth2 token validation enabled for A2A server
 [INFO] Starting A2A server 'Protected Calculator' at http://localhost:10000
 ```
