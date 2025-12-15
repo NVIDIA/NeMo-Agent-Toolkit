@@ -85,6 +85,12 @@ logger = logging.getLogger(__name__)
     multiple=True,
     help="Override config values using dot notation (e.g., --override llms.nim_llm.temperature 0.7)",
 )
+@click.option(
+    "--user_id",
+    type=str,
+    default=None,
+    help="User ID to use for workflow session.",
+)
 @click.pass_context
 def eval_command(ctx, **kwargs) -> None:
     """ Evaluate datasets with the specified mechanism"""
@@ -100,7 +106,7 @@ def write_tabular_output(eval_run_output: EvaluationRunOutput):
 
     click.echo("")
     click.echo(click.style("=== EVALUATION SUMMARY ===", fg="bright_blue", bold=True))
-    click.echo(f"Workflow Status: {workflow_status}")
+    click.echo(f"Workflow Status: {workflow_status} (workflow_output.json)")
     click.echo(f"Total Runtime: {total_runtime:.2f}s")
 
     # Include profiler stats if available
@@ -113,9 +119,10 @@ def write_tabular_output(eval_run_output: EvaluationRunOutput):
             llm_metrics = profiler_results.llm_latency_ci
             click.echo(f"LLM Latency (p95): {llm_metrics.p95:.2f}s")
 
+    # Build the evaluation results table
     if not eval_run_output.evaluation_results:
         return
-    # Build the evaluation results table
+
     click.echo("")
     click.echo("Per evaluator results:")
 
@@ -135,7 +142,7 @@ def write_tabular_output(eval_run_output: EvaluationRunOutput):
         # Add output file if available
         output_file = None
         for file_path in eval_run_output.evaluator_output_files:
-            if evaluator_name in file_path.name:
+            if file_path.stem.startswith(f"{evaluator_name}_") or file_path.stem == evaluator_name:
                 output_file = file_path.name
                 break
         row.append(output_file if output_file else "N/A")
@@ -170,6 +177,7 @@ def process_nat_eval(
     endpoint_timeout: int,
     reps: int,
     override: tuple[tuple[str, str], ...],
+    user_id: str | None,
 ):
     """
     Process the eval command and execute the evaluation. Here the config_file, if provided, is checked for its existence
@@ -197,5 +205,6 @@ def process_nat_eval(
         endpoint_timeout=endpoint_timeout,
         reps=reps,
         override=override,
+        user_id=user_id,
     )
     asyncio.run(run_and_evaluate(config))

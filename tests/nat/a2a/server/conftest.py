@@ -22,6 +22,12 @@ from nat.data_models.config import GeneralConfig
 from nat.plugins.a2a.server.front_end_config import A2AFrontEndConfig
 
 
+@pytest.fixture(name="mock_workflow_builder")
+def fixture_mock_workflow_builder() -> MagicMock:
+    """Mock workflow builder for A2A server testing."""
+    return MagicMock()
+
+
 @pytest.fixture(name="mock_workflow_with_functions")
 def fixture_mock_workflow_with_functions() -> MagicMock:
     """Mock workflow with test functions for A2A server testing."""
