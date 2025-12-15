@@ -199,4 +199,4 @@ function_groups:
 ## References
 
 - [Kaggle MCP Documentation](https://www.kaggle.com/docs/mcp)
-- [NeMo Agent Toolkit MCP Documentation](../../../docs/source/workflows/mcp/index.md)
+- [NeMo Agent Toolkit MCP Documentation](../../../docs/source/build-workflows/mcp-client.md)
