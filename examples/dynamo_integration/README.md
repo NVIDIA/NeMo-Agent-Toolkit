@@ -128,8 +128,8 @@ examples/dynamo_integration/
     │   ├── eval_config_no_rethinking_full_test.yml    # Full dataset evaluation
     │   ├── eval_config_no_rethinking_minimal_test.yml # 3-scenario test
     │   ├── eval_config_rethinking_full_test.yml       # Self-evaluation with feedback
-    │   ├── profile_predictive_prefix_headers.yml      # Profiler + self-evaluation
-    │   ├── optimize_predictive_prefix_headers.yml     # Prefix header optimization
+    │   ├── profile_rethinking_full_test.yml           # Profiler + self-evaluation
+    │   ├── optimize_rethinking_full_test.yml          # Prefix header optimization
     │   ├── config_dynamo_e2e_test.yml                 # Basic Dynamo workflow
     │   ├── config_dynamo_prefix_e2e_test.yml          # Dynamo with prefix headers
     │   └── config_dynamo_adk_e2e_test.yml             # Dynamo with ADK integration

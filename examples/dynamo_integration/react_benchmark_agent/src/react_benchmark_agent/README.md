@@ -318,7 +318,7 @@ def get_global_intents(scenario_id: str = "current") -> list[dict[str, Any]]:
 
 ### 3. Optimization Configuration
 
-**Configuration:** `optimize_predictive_prefix_headers.yml`
+**Configuration:** `optimize_rethinking_full_test.yml`
 
 This configuration enables NAT's optimizer to tune Dynamo router parameters for latency/throughput.
 
@@ -413,7 +413,7 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
 
 ### 4. Profiling Configuration
 
-**Configuration:** `profile_predictive_prefix_headers.yml`
+**Configuration:** `profile_rethinking_full_test.yml`
 
 This configuration enables comprehensive profiling for performance analysis.
 

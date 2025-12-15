@@ -20,7 +20,7 @@
 # - Generating data for throughput analysis scripts
 #
 # Usage:
-#   nat eval --config_file configs/profile_predictive_prefix_headers.yml
+#   nat profile --config_file configs/profile_rethinking_full_test.yml
 #
 # Output: standardized_data_all.csv for use with:
 #   python scripts/throughput_analysis.py <output_dir>/standardized_data_all.csv
@@ -38,26 +38,7 @@ functions:
     _type: react_agent
     llm_name: dynamo_llm
     tool_names: [
-      banking_tools.get_account_balance,
-      banking_tools.get_transaction_history,
-      banking_tools.transfer_funds,
-      banking_tools.get_loan_information,
-      banking_tools.get_credit_card_information,
-      banking_tools.get_mortgage_details,
-      banking_tools.get_savings_account_products,
-      banking_tools.schedule_appointment,
-      banking_tools.check_loan_application_status,
-      banking_tools.find_nearby_locations,
-      banking_tools.get_investment_products,
-      banking_tools.report_lost_stolen_card,
-      banking_tools.update_contact_information,
-      banking_tools.setup_automatic_bill_pay,
-      banking_tools.initiate_transaction_dispute,
-      banking_tools.get_exchange_rates,
-      banking_tools.calculate_loan_payment,
-      banking_tools.manage_account_alerts,
-      banking_tools.check_wire_transfer_status,
-      banking_tools.get_cd_products
+      banking_tools
     ]
     verbose: true
     parse_agent_response_max_retries: 3
@@ -195,7 +176,7 @@ eval:
     max_concurrency: 36
     
     output:
-      dir: ./examples/dynamo_integration/react_benchmark_agent/outputs/dynamo_evals/unified_thompson_concurrency_36_self_profile/
+      dir: ./examples/dynamo_integration/react_benchmark_agent/outputs/dynamo_evals/rethinking_full_test_for_profiling/
       cleanup: false
       job_management:
         append_job_id_to_output_dir: true
@@ -237,39 +218,3 @@ eval:
       tool_weight: 1.0
       parameter_weight: 0.4
       verbose: true
-
-# =============================================================================
-# OPTIMIZER CONFIGURATION
-# =============================================================================
-# Run with: nat optimize --config_file <this_file>
-# 
-# This section allows you to run parameter optimization on the same evaluation
-# dataset and compare performance using the tsq_evaluator metrics.
-# =============================================================================
-optimizer:
-  # Output directory for optimization results
-  output_path: ./examples/dynamo_integration/react_benchmark_agent/outputs/dynamo_evals/unified_thompson_concurrency_36_self_profile/optimizer_results/
-  
-  # Number of repetitions per parameter set for stable evaluation
-  reps_per_param_set: 1
-  
-  # Evaluation metrics to optimize (references the evaluators defined above)
-  eval_metrics:
-    tool_selection_quality:
-      evaluator_name: tool_selection_quality  # References the tsq_evaluator
-      direction: maximize                     # Higher TSQ score is better
-      weight: 1.0
-  
-  # Numeric parameter optimization (Optuna-based)
-  numeric:
-    enabled: true
-    sampler: grid            # Use grid search for systematic comparison
-  
-  # Prompt optimization (Genetic Algorithm) - disabled by default
-  prompt:
-    enabled: false
-    # Uncomment below to enable prompt optimization:
-    # prompt_population_init_function: prompt_init
-    # ga_generations: 3
-    # ga_population_size: 4
-    # ga_parallel_evaluations: 1

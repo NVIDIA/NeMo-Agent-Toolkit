@@ -148,8 +148,8 @@ Each scenario in the dataset contains:
 | `eval_config_no_rethinking_full_test.yml` | Full evaluation | 100 scenarios | Production benchmarks |
 | `eval_config_no_rethinking_minimal_test.yml` | Quick test | 3 scenarios | Validation |
 | `eval_config_rethinking_full_test.yml` | Self-evaluation loop | 100 scenarios | Quality optimization |
-| `profile_predictive_prefix_headers.yml` | Profiler + self-eval | 100 scenarios | Performance analysis |
-| `optimize_predictive_prefix_headers.yml` | Prefix header optimization | 100 scenarios | Dynamo Predictive KV-Aware Cache router tuning |
+| `profile_rethinking_full_test.yml` | Profiler + self-eval | 100 scenarios | Performance analysis |
+| `optimize_rethinking_full_test.yml` | Prefix header optimization | 100 scenarios | Dynamo Predictive KV-Aware Cache router tuning |
 | `config_dynamo_e2e_test.yml` | LangChain + Dynamo integration | Single query | Framework integration test |
 | `config_dynamo_prefix_e2e_test.yml` | LangChain + Dynamo with prefix headers | Single query | KV cache optimization test |
 | `config_dynamo_adk_e2e_test.yml` | Google ADK + Dynamo integration | Single query | ADK framework integration test |
@@ -842,7 +842,7 @@ nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs
 #
 # Uses grid search over the parameter space to find optimal routing hints.
 # WARNING: this run could use MANY tokens - be mindful and run at your own risk.
-nat optimize --config_file examples/dynamo_integration/react_benchmark_agent/configs/optimize_predictive_prefix_headers.yml
+nat optimize --config_file examples/dynamo_integration/react_benchmark_agent/configs/optimize_rethinking_full_test.yml
 ```
 
 ### Profiling
@@ -864,7 +864,7 @@ nat optimize --config_file examples/dynamo_integration/react_benchmark_agent/con
 # The Pareto analysis identifies configurations that are optimal trade-offs
 # between latency, throughput, and quality (TSQ). No single point dominates
 # all others across all objectives - these form the Pareto frontier.
-nat profile --config_file examples/dynamo_integration/react_benchmark_agent/configs/profile_predictive_prefix_headers.yml
+nat profile --config_file examples/dynamo_integration/react_benchmark_agent/configs/profile_rethinking_full_test.yml
 ```
 
 ---

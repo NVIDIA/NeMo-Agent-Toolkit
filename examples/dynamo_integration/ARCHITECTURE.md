@@ -577,8 +577,8 @@ examples/dynamo_integration/                    # Main example directory
     │   ├── eval_config_no_rethinking_full_test.yml   # Full 100-scenario eval
     │   ├── eval_config_no_rethinking_minimal_test.yml # Quick 3-scenario test
     │   ├── eval_config_rethinking_full_test.yml       # Self-evaluation enabled
-    │   ├── profile_predictive_prefix_headers.yml    # Profiler + self-eval
-    │   ├── optimize_predictive_prefix_headers.yml   # Prefix header optimization
+    │   ├── profile_rethinking_full_test.yml         # Profiler + self-eval
+    │   ├── optimize_rethinking_full_test.yml        # Prefix header optimization
     │   ├── config_dynamo_e2e_test.yml           # Basic Dynamo workflow
     │   └── config_dynamo_prefix_e2e_test.yml   # With prefix headers
     │
