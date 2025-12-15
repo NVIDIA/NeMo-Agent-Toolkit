@@ -626,15 +626,15 @@ def a2a_client_call(url: str,
         # This is needed for A2A clients that authenticate during build
         try:
             from nat.builder.context import Context
-            from nat.plugins.a2a.auth.auth_flow_handler import A2AAuthenticationFlowHandler
+            from nat.front_ends.console.authentication_flow_handler import ConsoleAuthenticationFlowHandler
 
             # Create and set the auth handler early so it's available during workflow building
-            auth_handler = A2AAuthenticationFlowHandler()
+            auth_handler = ConsoleAuthenticationFlowHandler()
             Context.get()._context_state.user_auth_callback.set(auth_handler.authenticate)
             logger.debug("CLI authentication callback registered for A2A client call")
         except ImportError:
-            # A2A plugin not installed, skip auth handler setup
-            logger.debug("A2A plugin not available, skipping CLI authentication callback setup")
+            # Console auth handler not available, skip auth handler setup
+            logger.debug("Console authentication handler not available, skipping CLI authentication callback setup")
 
         builder = None
         try:
