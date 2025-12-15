@@ -48,17 +48,10 @@ from nat.plugins.a2a.auth.credential_service import A2ACredentialService
 class MockAuthProvider(AuthProviderBase):
     """Generic mock auth provider for testing."""
 
-    def __init__(self, auth_result: AuthResult | None = None, provider_type_suffix: str = ""):
+    def __init__(self, auth_result: AuthResult | None = None):
         super().__init__(Mock())
         self.auth_result = auth_result
         self.authenticate_called_with = []
-        self._type_suffix = provider_type_suffix
-
-    def __class__(self):
-        # Allow dynamic naming for validation tests
-        if self._type_suffix:
-            type(f"Mock{self._type_suffix}Provider", (), {})
-        return super().__class__
 
     async def authenticate(self, user_id: str | None = None, **kwargs) -> AuthResult:
         self.authenticate_called_with.append(user_id)
