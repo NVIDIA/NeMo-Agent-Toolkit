@@ -67,7 +67,7 @@ The `a2a_client` function group supports the following configuration options:
 | `agent_card_path` | string | Path to agent card endpoint | `/.well-known/agent-card.json` |
 | `task_timeout` | int | Task timeout in seconds | 300 |
 | `include_skills_in_description` | boolean | Embed discovered skills in function description | `true` |
-| `auth_provider` | string | Reference to authentication provider | None |
+| `auth_provider` | string | Reference to [authentication provider](../components/auth/api-authentication.md) | None |
 
 **Note**: You can get the complete list of configuration options and their schemas by running:
 ```bash

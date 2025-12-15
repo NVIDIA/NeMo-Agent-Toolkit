@@ -108,7 +108,7 @@ nat info components -t function_group -q mcp_client
 - `server.command`: Command to run for `stdio` transport, such as `python` or `docker`
 - `server.args`: Arguments for the stdio command
 - `server.env`: Environment variables for the stdio process
-- `server.auth_provider`: Reference to authentication provider for protected MCP servers (only supported with `streamable-http` transport)
+- `server.auth_provider`: Reference to [authentication provider](../components/auth/api-authentication.md) for protected MCP servers (only supported with `streamable-http` transport)
 
 ##### Timeout Configuration
 

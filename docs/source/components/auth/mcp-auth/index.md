@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 # Model Context Protocol (MCP) Authentication for the NVIDIA NeMo Agent Toolkit
-MCP provides authorization capabilities at the transport level, enabling MCP clients to make requests to restricted MCP servers on behalf of resource owners. The NVIDIA NeMo Agent toolkit provides a set of built-in authentication providers for accessing servers that require authentication.
+MCP provides authorization capabilities at the transport level, enabling MCP clients to make requests to restricted MCP servers on behalf of resource owners. The NVIDIA NeMo Agent toolkit provides a set of built-in [authentication providers](../api-authentication.md) for accessing servers that require authentication.
 
 This document covers **interactive OAuth2 authentication** (`mcp_oauth2`) for user-facing workflows. For automated, headless scenarios such as CI/CD pipelines or backend services, see [Service Account Authentication](./mcp-service-account-auth.md).
 

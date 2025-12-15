@@ -620,7 +620,7 @@ async def protected_api(config, builder):
 Middleware is built **before** functions and function groups in the workflow builder. This ensures all middleware is available when functions and function groups are constructed.
 
 Build order:
-1. Authentication providers
+1. [Authentication providers](../../components/auth/api-authentication.md)
 2. [Embedders](../embedders.md)
 3. [LLMs](../llms/index.md)
 4. Memory
