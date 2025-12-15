@@ -105,6 +105,8 @@ reviews:
           digit version (ex: `~=1.0`).
         - Not all packages contain Python code, if they do they should also contain their own set of tests, in a
           `tests/` directory at the same level as the `pyproject.toml` file.
+        - When adding a new package, that new package name (as defined in the `pyproject.toml` file) should 
+          be added as a dependency to the nvidia-nat-all package in `packages/nvidia_nat_all/pyproject.toml`
 
     - path: "tests/**/*.py"
       instructions: >-
