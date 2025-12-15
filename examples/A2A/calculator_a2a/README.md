@@ -70,7 +70,7 @@ This calculator server is designed to be used with an OAuth2-protected client. F
 - Token acquisition and management
 - Complete testing workflow
 
-**See:** `examples/A2A/math_assistant_a2a/keycloak-oauth-setup-guide.md`
+**See:** `examples/A2A/math_assistant_a2a/oauth2-keycloak-setup.md`
 
 ## Architecture
 
@@ -120,6 +120,6 @@ sequenceDiagram
 
 ## References
 
-- [OAuth2 Protected A2A Setup Guide](../math_assistant_a2a/keycloak-oauth-setup-guide.md)
+- [OAuth2 Protected A2A Setup Guide](../math_assistant_a2a/oauth2-keycloak-setup.md)
 - [NAT A2A Documentation](../../../docs/source/workflows/a2a/)
 - [A2A Protocol Specification](https://a2a.org/)

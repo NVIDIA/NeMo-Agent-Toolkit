@@ -285,7 +285,7 @@ You should see:
 export CALCULATOR_CLIENT_ID="math-assistant-client"
 export CALCULATOR_CLIENT_SECRET="<your-client-secret>"
 
-nat run --config_file examples/A2A/math_assistant_a2a/configs/config-a2a-auth-calc.yml \
+nat run --config_file examples/A2A/math_assistant_a2a/configs/config-client-oauth2.yml \
   --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
 
