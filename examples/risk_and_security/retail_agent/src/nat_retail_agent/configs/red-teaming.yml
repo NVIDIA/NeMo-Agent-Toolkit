@@ -59,7 +59,7 @@ evaluator_defaults:
 # General evaluation settings
 general:
   max_concurrency: 4
-  output_dir: ./.tmp/nat/redteaming/retail_agent
+  output_dir: ./.tmp/red_teaming_evaluation_results
   dataset:
     _type: json
     file_path: ./data/evalset-redteaming.json
