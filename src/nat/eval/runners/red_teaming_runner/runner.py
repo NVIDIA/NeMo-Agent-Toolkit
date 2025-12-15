@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Red teaming runner for executing multi-scenario red teaming evaluations."""
 
 from __future__ import annotations
@@ -41,7 +40,6 @@ from nat.eval.runners.red_teaming_runner.config import RedTeamingScenario
 from nat.middleware.red_teaming_middleware_config import RedTeamingMiddlewareConfig
 from nat.utils.data_models.schema_validator import validate_schema
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -64,15 +62,15 @@ class RedTeamingRunner:
     """
 
     def __init__(
-        self,
-        config: RedTeamingRunnerConfig | None,
-        base_workflow_config: Config,
-        dataset_path: str | None = None,
-        result_json_path: str = "$",
-        endpoint: str | None = None,
-        endpoint_timeout: int = 300,
-        reps: int = 1,
-        overrides: tuple[tuple[str, str], ...] = (),
+            self,
+            config: RedTeamingRunnerConfig | None,
+            base_workflow_config: Config,
+            dataset_path: str | None = None,
+            result_json_path: str = "$",
+            endpoint: str | None = None,
+            endpoint_timeout: int = 300,
+            reps: int = 1,
+            overrides: tuple[tuple[str, str], ...] = (),
     ):
         """Initialize the RedTeamingRunner.
 
@@ -181,17 +179,13 @@ class RedTeamingRunner:
             # Add only the LLMs that are actually used by scenarios
             for llm_name in required_llm_names:
                 if llm_name not in self.config.llms:
-                    raise ValueError(
-                        f"Scenario '{scenario_id}' references LLM '{llm_name}' "
-                        f"but it's not defined in the llms dict"
-                    )
+                    raise ValueError(f"Scenario '{scenario_id}' references LLM '{llm_name}' "
+                                     f"but it's not defined in the llms dict")
                 # Check if LLM name already exists in base workflow config
                 if llm_name in base_workflow_config_dict.get("llms", {}):
-                    raise ValueError(
-                        f"LLM '{llm_name}' from red teaming config conflicts with "
-                        f"an existing LLM in the base workflow config. "
-                        f"Please use a different name for the red teaming evaluator LLM."
-                    )
+                    raise ValueError(f"LLM '{llm_name}' from red teaming config conflicts with "
+                                     f"an existing LLM in the base workflow config. "
+                                     f"Please use a different name for the red teaming evaluator LLM.")
                 base_workflow_config_dict["llms"][llm_name] = self.config.llms[llm_name].model_dump(mode='python')
                 logger.debug("Added evaluator LLM: '%s'", llm_name)
 
@@ -245,11 +239,9 @@ class RedTeamingRunner:
             new_dir_name = f"{base_output_dir.name}_{timestamp}_{short_uid}"
             base_output_dir = base_output_dir.parent / new_dir_name
 
-            warnings.warn(
-                f"Output directory already exists. Creating new directory: {base_output_dir}",
-                UserWarning,
-                stacklevel=2
-            )
+            warnings.warn(f"Output directory already exists. Creating new directory: {base_output_dir}",
+                          UserWarning,
+                          stacklevel=2)
 
         base_output_dir.mkdir(parents=True, exist_ok=True)
         logger.info("Created output directory: %s", base_output_dir)
@@ -381,13 +373,9 @@ class RedTeamingRunner:
         if not has_red_teaming_middleware:
             middleware_types = []
             if base_workflow_config.middleware:
-                middleware_types = [
-                    type(m).__name__ for m in base_workflow_config.middleware.values()
-                ]
-            errors.append(
-                f"Config must contain at least one middleware of type RedTeamingMiddleware "
-                f"(or subclass). Found middleware types: {middleware_types or 'none'}"
-            )
+                middleware_types = [type(m).__name__ for m in base_workflow_config.middleware.values()]
+            errors.append(f"Config must contain at least one middleware of type RedTeamingMiddleware "
+                          f"(or subclass). Found middleware types: {middleware_types or 'none'}")
 
         # Check for red teaming evaluator
         has_red_teaming_evaluator = False
@@ -407,19 +395,13 @@ class RedTeamingRunner:
             evaluator_types = []
             if base_workflow_config.eval and base_workflow_config.eval.evaluators:
                 evaluator_types = [
-                    getattr(e, 'type', type(e).__name__)
-                    for e in base_workflow_config.eval.evaluators.values()
+                    getattr(e, 'type', type(e).__name__) for e in base_workflow_config.eval.evaluators.values()
                 ]
-            errors.append(
-                f"Config must contain at least one evaluator of type red_teaming_evaluator. "
-                f"Found evaluator types: {evaluator_types or 'none'}"
-            )
+            errors.append(f"Config must contain at least one evaluator of type red_teaming_evaluator. "
+                          f"Found evaluator types: {evaluator_types or 'none'}")
 
         if errors:
-            raise ValueError(
-                "Workflow config is not red-team compatible:\n- " +
-                "\n- ".join(errors)
-            )
+            raise ValueError("Workflow config is not red-team compatible:\n- " + "\n- ".join(errors))
 
         logger.info("Workflow config validated for red teaming")
 
@@ -440,8 +422,7 @@ class RedTeamingRunner:
                     "Red teaming evaluation is potentially incompatible with other evaluators. "
                     "Please remove them from the base workflow config.",
                     UserWarning,
-                    stacklevel=3
-                )
+                    stacklevel=3)
 
     def _validate_dataset_exists(
         self,
@@ -471,17 +452,14 @@ class RedTeamingRunner:
             return
 
         # Check base_workflow_config.eval.general.dataset
-        if (base_workflow_config.eval and
-            base_workflow_config.eval.general and
-            base_workflow_config.eval.general.dataset):
+        if (base_workflow_config.eval and base_workflow_config.eval.general
+                and base_workflow_config.eval.general.dataset):
             return
 
-        raise ValueError(
-            "No dataset defined. Please provide a dataset via:\n"
-            "  - CLI: --dataset <path>\n"
-            "  - RedTeamingRunnerConfig: general.dataset\n"
-            "  - Base workflow config: eval.general.dataset"
-        )
+        raise ValueError("No dataset defined. Please provide a dataset via:\n"
+                         "  - CLI: --dataset <path>\n"
+                         "  - RedTeamingRunnerConfig: general.dataset\n"
+                         "  - Base workflow config: eval.general.dataset")
 
     def _merge_general_config(
         self,
@@ -511,16 +489,14 @@ class RedTeamingRunner:
         # Log which fields are being overridden
         existing_general = base_workflow_config_dict["eval"]["general"]
         overridden_fields = [
-            key for key in general_dict.keys()
-            if key in existing_general and existing_general[key] != general_dict[key]
+            key for key in general_dict.keys() if key in existing_general and existing_general[key] != general_dict[key]
         ]
         existing_general.update(general_dict)
 
         if overridden_fields:
-            logger.info(
-                "Merging RedTeamingRunnerConfig.general into base workflow config. "
-                "Overriding fields: %s", overridden_fields
-            )
+            logger.info("Merging RedTeamingRunnerConfig.general into base workflow config. "
+                        "Overriding fields: %s",
+                        overridden_fields)
 
         # Merge: base workflow config values as defaults, RedTeamingRunnerConfig values override
         base_workflow_config_dict["eval"]["general"] = existing_general
@@ -591,10 +567,8 @@ class RedTeamingRunner:
         # Validate that the referenced LLM exists
         llm_name = evaluator_dict.get("llm_name")
         if llm_name and llm_name not in base_workflow_config_dict.get("llms", {}):
-            raise ValueError(
-                f"Evaluator references LLM '{llm_name}' but it's not in the config. "
-                f"Available LLMs: {list(base_workflow_config_dict.get('llms', {}).keys())}"
-            )
+            raise ValueError(f"Evaluator references LLM '{llm_name}' but it's not in the config. "
+                             f"Available LLMs: {list(base_workflow_config_dict.get('llms', {}).keys())}")
 
         # Add evaluator to config
         base_workflow_config_dict["eval"]["evaluators"]["red_teaming_evaluator"] = evaluator_dict
@@ -702,12 +676,10 @@ class RedTeamingRunner:
 
         return summary
 
-    def _log_results_summary(
-        self,
-        summary: dict[str, typing.Any],
-        output_dir: Path,
-        results_file: Path | None = None
-    ) -> None:
+    def _log_results_summary(self,
+                             summary: dict[str, typing.Any],
+                             output_dir: Path,
+                             results_file: Path | None = None) -> None:
         """Log a nicely formatted summary of the red teaming evaluation results.
 
         Args:
@@ -768,10 +740,8 @@ class RedTeamingRunner:
                 mean_val = data.get('mean_score', 0.0)
                 max_val = data.get('max_score', 0.0)
                 min_val = data.get('min_score', 0.0)
-                row = (
-                    f"  {scenario_id:<{scenario_col_width}}  |  "
-                    f"{mean_val:>8.4f}  |  {max_val:>8.4f}  |  {min_val:>8.4f}"
-                )
+                row = (f"  {scenario_id:<{scenario_col_width}}  |  "
+                       f"{mean_val:>8.4f}  |  {max_val:>8.4f}  |  {min_val:>8.4f}")
                 lines.append(row)
 
             lines.append("  " + "-" * (scenario_col_width + 45))
@@ -848,7 +818,7 @@ class RedTeamingRunner:
                 f.write(json.dumps(record, default=str) + '\n')
         return output_file
 
+
 __all__ = [
     "RedTeamingRunner",
 ]
-

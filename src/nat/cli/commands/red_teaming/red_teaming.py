@@ -133,6 +133,6 @@ def process_red_team_eval(
     )
 
     try:
-        asyncio.run(runner.run())
+        _ = asyncio.run(runner.run())
     except ValueError as e:
         raise click.ClickException(str(e)) from e

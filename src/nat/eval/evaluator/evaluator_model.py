@@ -15,9 +15,11 @@
 
 import typing
 
-from pydantic import BaseModel, SerializeAsAny
+from pydantic import BaseModel
+from pydantic import SerializeAsAny
 
 from nat.data_models.intermediate_step import IntermediateStep
+
 
 class EvalInputItem(BaseModel):
     id: typing.Any

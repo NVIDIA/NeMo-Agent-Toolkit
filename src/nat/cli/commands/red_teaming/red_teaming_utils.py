@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Utility functions for red team evaluation CLI."""
 
 from __future__ import annotations
@@ -59,23 +58,16 @@ def load_red_teaming_config(config_file: Path) -> RedTeamingRunnerConfig:
         elif config_file.suffix == '.json':
             config_data = json.load(f)
         else:
-            raise ValueError(
-                f"Unsupported file format: {config_file.suffix}. "
-                "Use .yml, .yaml, or .json"
-            )
+            raise ValueError(f"Unsupported file format: {config_file.suffix}. "
+                             "Use .yml, .yaml, or .json")
 
     if not isinstance(config_data, dict):
-        raise ValueError(
-            f"Red teaming config file must contain a dictionary, got {type(config_data)}"
-        )
+        raise ValueError(f"Red teaming config file must contain a dictionary, got {type(config_data)}")
 
     try:
         config = RedTeamingRunnerConfig(**config_data)
     except Exception as e:
         raise ValueError(f"Failed to parse red teaming config: {e}") from e
 
-    logger.info(
-        "Loaded red teaming config with %d scenarios",
-        len(config.scenarios)
-    )
+    logger.info("Loaded red teaming config with %d scenarios", len(config.scenarios))
     return config

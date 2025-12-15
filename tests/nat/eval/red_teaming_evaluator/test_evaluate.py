@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-from pathlib import Path
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -22,22 +20,17 @@ from unittest.mock import patch
 import pytest
 from langchain_core.language_models import BaseChatModel
 
-# Add the current directory to sys.path to import local test utilities
-_current_dir = Path(__file__).parent
-if str(_current_dir) not in sys.path:
-    sys.path.insert(0, str(_current_dir))
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import StreamEventData
+from nat.data_models.invocation_node import InvocationNode
+from nat.eval.evaluator.evaluator_model import EvalInputItem
+from nat.eval.red_teaming_evaluator.evaluate import RedTeamingEvaluator
+from nat.eval.red_teaming_evaluator.evaluate import ReductionStrategy
+from nat.eval.red_teaming_evaluator.filter_conditions import IntermediateStepsFilterCondition
 
-from fake_chat_models import FakeJudgeLLM  # noqa: E402
-
-from nat.data_models.intermediate_step import IntermediateStep  # noqa: E402
-from nat.data_models.intermediate_step import IntermediateStepPayload  # noqa: E402
-from nat.data_models.intermediate_step import IntermediateStepType  # noqa: E402
-from nat.data_models.intermediate_step import StreamEventData  # noqa: E402
-from nat.data_models.invocation_node import InvocationNode  # noqa: E402
-from nat.eval.evaluator.evaluator_model import EvalInputItem  # noqa: E402
-from nat.eval.red_teaming_evaluator.evaluate import RedTeamingEvaluator  # noqa: E402
-from nat.eval.red_teaming_evaluator.evaluate import ReductionStrategy  # noqa: E402
-from nat.eval.red_teaming_evaluator.filter_conditions import IntermediateStepsFilterCondition  # noqa: E402
+from .fake_chat_models import FakeJudgeLLM
 
 
 @pytest.fixture

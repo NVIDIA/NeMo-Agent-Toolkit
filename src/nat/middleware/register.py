@@ -42,6 +42,7 @@ async def cache_middleware(config: CacheMiddlewareConfig, builder):
     """
     yield CacheMiddleware(enabled_mode=config.enabled_mode, similarity_threshold=config.similarity_threshold)
 
+
 @register_middleware(config_type=RedTeamingMiddlewareConfig)
 async def red_teaming_middleware(config: RedTeamingMiddlewareConfig, builder):
     """Build a red teaming middleware from configuration.
