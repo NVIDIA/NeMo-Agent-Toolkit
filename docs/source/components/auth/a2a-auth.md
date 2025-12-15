@@ -19,7 +19,7 @@ limitations under the License.
 
 NeMo Agent toolkit provides OAuth2 authentication capabilities for A2A protocol, enabling secure agent-to-agent communication. A2A authentication is built on OAuth 2.1 Authorization Code Flow with JWT token validation, providing a standards-based approach to protecting A2A servers.
 
-Unlike traditional client-server authentication, A2A authentication is **agent card-driven**. A2A clients first discover security requirements by fetching the agent's public metadata (agent card) without authentication. Based on the discovered security schemes, clients dynamically initiate the appropriate authentication flow. This design allows A2A agents to advertise their security requirements upfront, enabling clients to adapt their authentication strategy accordingly.
+A2A authentication is `agent card-driven`; clients discover security requirements by fetching the agent's public metadata (agent card) without authentication, then dynamically initiate the appropriate authentication flow. This allows agents to advertise their security requirements upfront, enabling clients to adapt their authentication strategy accordingly.
 
 For a complete, hands-on guide to setting up OAuth2 authentication with Keycloak, see `examples/A2A/math_assistant_a2a/oauth2-keycloak-setup.md`.
 
@@ -32,7 +32,7 @@ NeMo Agent toolkit A2A authentication provides the capabilities required for sec
 - **JWT Token Validation**: Server-side token verification using JWKS (JSON Web Key Set)
 - **Custom Scopes**: Resource-specific permissions (for example, `calculator_a2a:execute`)
 - **Audience Validation**: Ensures tokens are intended for the specific A2A server
-- **Dynamic Endpoint Discovery**: Automatic discovery of OAuth2 endpoints from authorization server
+
 
 ## Architecture Overview
 
@@ -237,15 +237,14 @@ The Math Assistant A2A example demonstrates end-to-end OAuth2-protected A2A comm
 This example includes:
 - Complete Keycloak configuration instructions
 - Client and server configuration files
-- Architecture and flow diagrams
 - Testing and verification steps
-- Production deployment considerations
 
 ## Related Documentation
 
+- [A2A Protocol Overview](../integrations/a2a.md) - Introduction to Agent-to-Agent protocol
 - [A2A Client](../../build-workflows/a2a-client.md) - Connecting to remote A2A agents
 - [A2A Server](../../run-workflows/a2a-server.md) - Publishing NAT workflows as A2A agents
-- [A2A Protocol Overview](../integrations/a2a.md) - Introduction to Agent-to-Agent protocol
+
 
 ## Examples
 

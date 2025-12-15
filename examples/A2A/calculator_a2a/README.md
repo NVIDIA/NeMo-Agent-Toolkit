@@ -26,14 +26,14 @@ This example demonstrates an A2A server protected with OAuth2 authentication. It
 
 **Skills:** Basic arithmetic operations (add, subtract, multiply, divide, compare) and current datetime
 
-## Features
+## Authentication Features
 
 - **JWT Token Validation:** Validates access tokens using JWKS from authorization server
 - **Scope Enforcement:** Requires `calculator_a2a:execute` scope (configurable)
 - **Public Agent Card:** Agent card is publicly accessible without authentication
 - **Protected Operations:** All calculator operations require valid authentication
 
-## Quick Start
+## Setup
 
 ### Installation
 
@@ -123,4 +123,3 @@ sequenceDiagram
 - [OAuth2 Protected A2A Setup Guide](../math_assistant_a2a/oauth2-keycloak-setup.md)
 - [NAT A2A Client Documentation](../../../docs/source/build-workflows/a2a-client.md)
 - [NAT A2A Server Documentation](../../../docs/source/run-workflows/a2a-server.md)
-- [A2A Protocol Specification](https://a2a.org/)
