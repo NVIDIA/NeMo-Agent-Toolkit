@@ -14,6 +14,7 @@
 # limitations under the License.
 """Bridge NAT AuthProviderBase to A2A SDK CredentialService."""
 
+import asyncio
 import logging
 
 from a2a.client import ClientCallContext
@@ -65,6 +66,7 @@ class A2ACredentialService(CredentialService):
         self._default_user_id = default_user_id
         self._agent_card = agent_card
         self._cached_auth_result: AuthResult | None = None
+        self._auth_lock = asyncio.Lock()
 
         # Validate provider compatibility with agent's security requirements
         self._validate_provider_compatibility()
@@ -139,6 +141,7 @@ class A2ACredentialService(CredentialService):
         Authenticate and get credentials from NAT auth provider.
 
         Handles token expiration by triggering re-authentication if needed.
+        Uses a lock to prevent concurrent authentication requests and race conditions.
 
         Args:
             user_id: User identifier for authentication
@@ -147,18 +150,27 @@ class A2ACredentialService(CredentialService):
             AuthResult with credentials or None on failure
         """
         try:
-            # Get cached result if available
+            # Fast path: check cache without lock
             auth_result = self._cached_auth_result
+            if auth_result and not auth_result.is_expired():
+                return auth_result
 
-            # Check if we need to authenticate (no cache or expired)
-            if not auth_result or auth_result.is_expired():
+            # Acquire lock to serialize authentication attempts
+            async with self._auth_lock:
+                # Double-check: another coroutine may have refreshed while we waited for lock
+                auth_result = self._cached_auth_result
+                if auth_result and not auth_result.is_expired():
+                    logger.debug("Credentials were refreshed by another coroutine while waiting for lock")
+                    return auth_result
+
+                # Log if we're refreshing expired credentials
                 if auth_result and auth_result.is_expired():
                     logger.info("Cached credentials expired, re-authenticating")
 
                 # Call NAT auth provider (provider is responsible for token refresh/validity)
                 auth_result = await self._auth_provider.authenticate(user_id=user_id)
 
-                # Cache the result
+                # Cache the result while holding the lock
                 self._cached_auth_result = auth_result
 
                 # Warn if provider returned expired credentials (provider bug)
@@ -166,7 +178,7 @@ class A2ACredentialService(CredentialService):
                     logger.warning("Auth provider returned already-expired credentials. "
                                    "This may indicate a bug in the auth provider's token refresh logic.")
 
-            return auth_result
+                return auth_result
 
         except Exception as e:
             logger.error("Authentication failed: %s", e, exc_info=True)
