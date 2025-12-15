@@ -53,7 +53,7 @@ class A2AFrontEndPlugin(FrontEndBase[A2AFrontEndConfig]):
             agent_card = await worker.create_agent_card(workflow)
 
             # Create agent executor adapter
-            agent_executor = worker.create_agent_executor(workflow)
+            agent_executor = worker.create_agent_executor(workflow, builder)
 
             # Create A2A server
             a2a_server = worker.create_a2a_server(agent_card, agent_executor)
