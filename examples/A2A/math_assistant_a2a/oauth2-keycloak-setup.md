@@ -176,7 +176,7 @@ Look for: `Listening on: http://0.0.0.0:8080`
    Keycloak won't include custom scopes in JWT tokens by default. You must configure a mapper to include the scope in the token.
 
    - Still in the `calculator_a2a:execute` client scope, go to the **Mappers** tab
-   - Click **Add mapper** → **By configuration**
+   - Click **Configure a new mapper**
    - Select **Hardcoded claim**
    - Configure the mapper:
      - **Name**: `add-calculator-scope`
@@ -196,10 +196,8 @@ Look for: `Listening on: http://0.0.0.0:8080`
    ```
 
    You should see:
-   - `authorization_endpoint`
-   - `token_endpoint`
-   - `jwks_uri`
-   - `registration_endpoint` (for DCR)
+   - `token_endpoint` - for token exchange
+   - `jwks_uri` - for JWT signature verification
 
 ## Step 3: Register Math Assistant Client
 
@@ -243,11 +241,7 @@ You have two options:
 
 ### Option B: Dynamic Client Registration (DCR)
 
-NAT's OAuth2 provider can use DCR if Keycloak is configured to allow it. By default, Keycloak restricts anonymous DCR. To enable it:
-
-1. Go to **Realm settings** > **Client registration**
-2. Click **Client registration policies** tab
-3. Configure anonymous access or trusted hosts
+NAT's OAuth2 provider can use DCR if Keycloak is configured to allow it. By default, Keycloak restricts anonymous DCR. See [Keycloak documentation](https://www.keycloak.org/documentation/latest/server_admin/#_client_registration) for more details.
 
 **Note:** For testing, manual registration (Option A) is simpler.
 
@@ -299,6 +293,13 @@ nat run --config_file examples/A2A/math_assistant_a2a/configs/config-client-oaut
 4. **Browser redirects** back to `localhost:8000/auth/redirect`
 5. **Workflow continues** and calls the calculator
 6. **Response returned** successfully
+
+Sample output:
+```text
+Workflow Result:
+['No, the product of 2 * 4 is not greater than the current hour of the day.']
+--------------------------------------------------
+```
 
 ## Cleanup
 
