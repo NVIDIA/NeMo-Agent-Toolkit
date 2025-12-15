@@ -20,7 +20,7 @@ limitations under the License.
 
 The NeMo Agent toolkit Profiler Module provides profiling and forecasting capabilities for [workflows](../build-workflows/about-building-workflows.md). The profiler instruments the workflow execution by:
 - Collecting usage statistics in real time (using callbacks).
-- Recording the usage statistics on a per-invocation basis (for example, tokens used, time between calls, and LLM calls).
+- Recording the usage statistics on a per-invocation basis (for example, tokens used, time between calls, and [LLM](../build-workflows/llms/index.md) calls).
 - Storing the data for offline analysis.
 - Forecasting usage metrics using time-series style models (for example, linear, random forest)
 - Computing workflow specific metrics for performance analysis (for example, latency, and throughput).

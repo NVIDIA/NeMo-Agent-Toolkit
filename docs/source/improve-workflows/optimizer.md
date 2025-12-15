@@ -50,7 +50,7 @@ The NeMo Agent toolkit Optimizer solves these problems by:
 Imagine you're building a customer service chatbot. You need to optimize:
 - The system prompt to get the right tone and behavior
 - Model parameters like temperature (creativity vs. consistency)
-- Which LLM to use (balancing cost vs. quality)
+- Which [LLM](../build-workflows/llms/index.md) to use (balancing cost vs. quality)
 - Response length limits
 
 Instead of manually testing hundreds of combinations, the optimizer can find the best settings that maximize customer satisfaction while minimizing response time and cost.

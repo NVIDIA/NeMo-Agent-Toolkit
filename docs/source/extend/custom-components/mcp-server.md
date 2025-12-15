@@ -264,7 +264,7 @@ Your worker has access to configuration through instance variables:
 
 - **`self.full_config`**: Complete NeMo Agent toolkit configuration
   - `general`: General settings including front end config
-  - `llms`: LLM configurations
+  - `llms`: [LLM](../../build-workflows/llms/index.md) configurations
   - `functions`: Function configurations
   - `workflow`: Workflow configuration
 

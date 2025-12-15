@@ -73,7 +73,7 @@ The router agent supports the following required and optional configurations.
 
 * `branches`: A list of available [tools](../../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools), functions, or agents that the router can direct requests to. These branches must be configured in the YAML file.
 
-* `llm_name`: The language model used for request analysis and routing decisions. The LLM must be configured in the YAML file.
+* `llm_name`: The language model used for request analysis and routing decisions. The [LLM](../../../build-workflows/llms/index.md) must be configured in the YAML file.
 
 #### Optional Options
 

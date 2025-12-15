@@ -117,7 +117,7 @@ class TrajectoryBuilder(ABC):
 **Evaluation Runs**: The `run_eval()` method leverages NAT's evaluation system to execute the workflow on your dataset. This handles:
 - Loading the dataset
 - Running the workflow with proper concurrency
-- Capturing intermediate steps (including LLM calls with logprobs)
+- Capturing intermediate steps (including [LLM](../../build-workflows/llms/index.md) calls with logprobs)
 - Computing evaluator scores
 
 **Trajectory Parsing**: The `finalize()` method must convert raw intermediate steps into the `Trajectory` format. This involves:

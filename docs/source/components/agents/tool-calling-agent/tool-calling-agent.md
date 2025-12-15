@@ -69,7 +69,7 @@ functions:
 
 * `tool_names`: A list of [tools](../../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) that the agent can call. The tools must be functions or function groups configured in the YAML file
 
-* `llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file
+* `llm_name`: The [LLM](../../../build-workflows/llms/index.md) the agent should use. The LLM must be configured in the YAML file
 
 * `verbose`: Defaults to False (useful to prevent logging of sensitive data). If set to True, the agent will log input, output, and intermediate steps.
 

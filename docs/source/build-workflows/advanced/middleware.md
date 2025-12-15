@@ -622,7 +622,7 @@ Middleware is built **before** functions and function groups in the workflow bui
 Build order:
 1. Authentication providers
 2. Embedders
-3. LLMs
+3. [LLMs](../llms/index.md)
 4. Memory
 5. Object stores
 6. Retrievers

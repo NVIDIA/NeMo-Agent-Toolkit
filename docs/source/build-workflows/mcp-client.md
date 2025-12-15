@@ -17,7 +17,7 @@ limitations under the License.
 
 # NVIDIA NeMo Agent Toolkit as an MCP Client
 
-Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. You can read more about MCP [here](https://modelcontextprotocol.io/introduction).
+Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to [LLMs](./llms/index.md). You can read more about MCP [here](https://modelcontextprotocol.io/introduction).
 
 You can create a [workflow](./about-building-workflows.md) that uses MCP [tools](./functions-and-function-groups/functions.md#agents-and-tools) as [functions](./functions-and-function-groups/functions.md). In this case, the workflow acts as an MCP host and creates MCP clients to connect to MCP servers and use their tools as functions.
 

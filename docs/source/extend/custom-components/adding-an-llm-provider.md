@@ -17,7 +17,7 @@ limitations under the License.
 
 # Adding an LLM Provider to NVIDIA NeMo Agent Toolkit
 
-In NeMo Agent toolkit the set of configuration parameters needed to interact with an LLM API (provider) is defined separately from the client which is tied to a given framework. To determine which LLM providers are included in the NeMo Agent toolkit installation, run the following command:
+In NeMo Agent toolkit the set of configuration parameters needed to interact with an [LLM](../../build-workflows/llms/index.md) API (provider) is defined separately from the client which is tied to a given framework. To determine which LLM providers are included in the NeMo Agent toolkit installation, run the following command:
 ```bash
 nat info components -t llm_provider
 ```

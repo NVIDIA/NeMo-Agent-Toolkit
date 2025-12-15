@@ -53,7 +53,7 @@ If you encounter rate limiting (`[429] Too Many Requests`) during evaluation, yo
 1. **Reduce concurrency**: Set the `eval.general.max_concurrency` value either in the YAML directly or through the command line with: `--override eval.general.max_concurrency 1`.
 2. **Deploy NIM locally**: Download and deploy NIM on your local machine to avoid rate limitations entirely. To deploy NIM locally:
    - Follow the [NVIDIA NIM deployment guide](https://docs.nvidia.com/nim/large-language-models/latest/getting-started.html) to download and run NIM containers locally
-   - Update your configuration to point to your local NIM endpoint by setting the `base_url` parameter in the LLM configuration:
+   - Update your configuration to point to your local NIM endpoint by setting the `base_url` parameter in the [LLM](../build-workflows/llms/index.md) configuration:
      ```yaml
      llms:
        nim_rag_eval_llm:

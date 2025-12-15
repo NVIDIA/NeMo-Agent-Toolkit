@@ -72,7 +72,7 @@ All function operations are asynchronous. To invoke a function, use one of the f
 - {py:meth}`~nat.builder.function.Function.ainvoke` - For single output operations
 - {py:meth}`~nat.builder.function.Function.astream` - For streaming output operations
 
-Using asynchronous operations allows for better performance and scalability when processing a large number of functions in parallel. In most cases, applications that integrate LLMs are IO bound and can benefit from cooperative multitasking. Asynchronous operations also provide a natural mechanism (using `ContextVar`s) for maintaining application state between multiple function invocations simultaneously.
+Using asynchronous operations allows for better performance and scalability when processing a large number of functions in parallel. In most cases, applications that integrate [LLMs](../llms/index.md) are IO bound and can benefit from cooperative multitasking. Asynchronous operations also provide a natural mechanism (using `ContextVar`s) for maintaining application state between multiple function invocations simultaneously.
 
 
 ## Writing Functions

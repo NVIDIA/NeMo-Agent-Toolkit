@@ -26,7 +26,7 @@ NeMo Agent toolkit integrates with the following frameworks:
 - **ADK**: Google Agent Development Kit for building AI agents
 - **Agno**: A lightweight framework for building AI agents
 - **CrewAI**: A framework for orchestrating role-playing AI agents
-- **LangChain/LangGraph**: A framework for developing applications powered by large language models
+- **LangChain/LangGraph**: A framework for developing applications powered by [large language models](../../build-workflows/llms/index.md)
 - **LlamaIndex**: A data framework for building LLM applications
 - **Semantic Kernel**: Microsoft's SDK for integrating LLMs with conventional programming languages
 - **Strands**: AWS AgentCore runtime for running production agents on Bedrock

@@ -67,7 +67,7 @@ For details on workflow configuration, including sections not utilized in the ab
 
 ## Using Agents With Workflows
 
-There are several different agents that use large language models (LLMs) to reason and determine the actions to take and inputs to use for those actions. After executing those actions, the agent uses the LLM to determine if more actions are required. The following are agents and an executor offered by NeMo Agent toolkit:
+There are several different agents that use [large language models (LLMs)](./llms/index.md) to reason and determine the actions to take and inputs to use for those actions. After executing those actions, the agent uses the LLM to determine if more actions are required. The following are agents and an executor offered by NeMo Agent toolkit:
 
 - [ReAct Agent](../components/agents/react-agent/index.md)
 - [Reasoning Agent](../components/agents/reasoning-agent/index.md)

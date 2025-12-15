@@ -50,7 +50,7 @@ workflow:
 The following are more ways you can configure your config file when using the reasoning agent:
 * `workflow_alias`: Defaults to `None`. The alias of the workflow. Useful when the Reasoning agent is configured as a workflow and need to expose a customized name as a tool.
 
-* `llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file. The LLM must support thinking tags.
+* `llm_name`: The [LLM](../../../build-workflows/llms/index.md) the agent should use. The LLM must be configured in the YAML file. The LLM must support thinking tags.
 
 * `verbose`: Defaults to False (useful to prevent logging of sensitive data). If set to True, the agent will log input, output, and intermediate steps.
 

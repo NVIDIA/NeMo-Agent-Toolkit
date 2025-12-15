@@ -21,7 +21,7 @@ This guide will help you set up your NVIDIA NeMo Agent toolkit development envir
 
 ## Supported LLM APIs
 
-The following LLM API providers are supported:
+The following [LLM](../build-workflows/llms/index.md) API providers are supported:
 
 - NIM (such as Llama-3.1-70b-instruct and Llama-3.3-70b-instruct)
 - OpenAI

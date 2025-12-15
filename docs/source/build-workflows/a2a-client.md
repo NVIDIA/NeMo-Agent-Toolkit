@@ -126,7 +126,7 @@ flowchart TB
 
 **Function**: `agent_name.call(query: str) -> str`
 
-The high-level API provides a natural language interface optimized for LLM-based agents. This is the recommended approach for most use cases.
+The high-level API provides a natural language interface optimized for [LLM](./llms/index.md)-based agents. This is the recommended approach for most use cases.
 
 **When to use:**
 - Standard LLM-based agents (most common)
