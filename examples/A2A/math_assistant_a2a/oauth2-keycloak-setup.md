@@ -241,7 +241,7 @@ You have two options:
 
 ### Option B: Dynamic Client Registration (DCR)
 
-NAT's OAuth2 provider can use DCR if Keycloak is configured to allow it. By default, Keycloak restricts anonymous DCR. See [Keycloak documentation](https://www.keycloak.org/documentation/latest/server_admin/#_client_registration) for more details.
+NAT's OAuth2 provider can use DCR if Keycloak is configured to allow it.See [Keycloak documentation](https://www.keycloak.org/securing-apps/client-registration) for details.
 
 **Note:** For testing, manual registration (Option A) is simpler.
 
