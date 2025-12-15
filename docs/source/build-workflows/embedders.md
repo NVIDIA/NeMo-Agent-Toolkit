@@ -14,6 +14,8 @@ limitations under the License.
 
 # Embedders
 
+An embedder, or embedding model, is a model that converts text into a vector representation.
+
 ## Supported Embedder Providers
 
 NeMo Agent toolkit supports the following embedder providers:
