@@ -45,7 +45,7 @@ authentication:
   calculator_oauth:
     _type: oauth2_auth_code_flow
     client_id: ${CALCULATOR_CLIENT_ID:-"math-assistant-client"}
-    client_secret: ${CALCULATOR_CLIENT_SECRET:"kSJHTNznZf19oB38kWasdwxFUH0ovp0w"}
+    client_secret: ${CALCULATOR_CLIENT_SECRET}
     redirect_uri: http://localhost:8000/auth/redirect
 
     # Keycloak endpoints
