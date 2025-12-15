@@ -24,7 +24,7 @@ This example demonstrates an A2A server protected with OAuth2 authentication. It
 
 **Authentication:** OAuth2 with JWT validation
 
-**Skills:** Basic arithmetic operations (add, subtract, multiply, divide, compare) and current datetime
+**Skills:** Basic arithmetic operations (add, subtract, multiply, divide, compare) and current `datetime`
 
 ## Authentication Features
 

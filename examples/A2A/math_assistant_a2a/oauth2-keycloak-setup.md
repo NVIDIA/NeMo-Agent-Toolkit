@@ -177,7 +177,7 @@ Look for: `Listening on: http://0.0.0.0:8080`
 
    - Still in the `calculator_a2a:execute` client scope, go to the **Mappers** tab
    - Click **Configure a new mapper**
-   - Select **Hardcoded claim**
+   - Select **`Hardcoded` claim**
    - Configure the mapper:
      - **Name**: `add-calculator-scope`
      - **Token Claim Name**: `scope`
@@ -185,7 +185,7 @@ Look for: `Listening on: http://0.0.0.0:8080`
      - **Claim JSON Type**: `String`
      - **Add to ID token**: `Off`
      - **Add to access token**: `On` ✅
-     - **Add to userinfo**: `Off`
+     - **Add to `userinfo`**: `Off`
    - Click **Save**
 
    This ensures `calculator_a2a:execute` appears in the token's `scope` claim.

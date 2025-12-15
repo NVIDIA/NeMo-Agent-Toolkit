@@ -75,7 +75,7 @@ graph TB
 
 2. **A2A Server (Resource Server)**: NAT workflow published via `nat a2a serve` with OAuth2 protection. Validates incoming JWT tokens and enforces access policies.
 
-3. **Authorization Server**: OAuth2 server (such as Keycloak, Auth0, Okta) that authenticates users, issues JWT tokens, and provides public keys for token verification.
+3. **Authorization Server**: OAuth2 server (such as Keycloak) that authenticates users, issues JWT tokens, and provides public keys for token verification.
 
 ## Authentication Flow
 
