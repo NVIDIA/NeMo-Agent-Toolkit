@@ -1,5 +1,18 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """
 Download and transform agent leaderboard v2 dataset from Hugging Face for NAT evaluation framework.
@@ -13,7 +26,6 @@ from typing import Any
 
 from datasets import load_dataset
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -255,7 +267,7 @@ def download_and_transform_v2_dataset(
             logger.info("Saved raw data to %s", raw_dir)
 
         except Exception as e:
-            logger.exception("Failed to load domain %s: %s", domain, e)
+            logger.exception("Failed to load domain: %s", domain)
             continue
 
     # Save combined file
@@ -270,6 +282,8 @@ def download_and_transform_v2_dataset(
 
 if __name__ == "__main__":
     import argparse
+
+    logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser(description="Download and transform agent leaderboard v2 dataset")
     parser.add_argument(

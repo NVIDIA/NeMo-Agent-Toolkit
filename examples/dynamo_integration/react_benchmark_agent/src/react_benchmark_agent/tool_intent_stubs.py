@@ -1,5 +1,18 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 
 """
 Tool Intent Stub System for Decision-Only Evaluation.
@@ -17,11 +30,7 @@ import logging
 from typing import Any
 
 from pydantic import BaseModel
-from pydantic import Field
 from pydantic import field_validator
-
-# NOTE: FunctionInfo import unused since register_tool_stubs_from_schemas is commented out
-# from nat.builder.function_info import FunctionInfo
 
 logger = logging.getLogger(__name__)
 
@@ -56,17 +65,6 @@ def set_current_scenario_id(scenario_id: str) -> contextvars.Token:
     return token
 
 
-# NOTE: Unused - commenting out for now
-# def reset_scenario_id(token: contextvars.Token) -> None:
-#     """
-#     Reset the scenario ID to its previous value.
-#     
-#     Args:
-#         token: Token returned from set_current_scenario_id
-#     """
-#     _current_scenario_id.reset(token)
-
-
 def get_current_scenario_id() -> str:
     """
     Get the current scenario ID for this async context.
@@ -80,61 +78,54 @@ def get_current_scenario_id() -> str:
 class ToolIntentBuffer:
     """
     Shared buffer to store tool intent captures during agent execution.
-    
+
     This is used in decision-only mode to track which tools the agent
     decided to call and with what parameters, without actually executing them.
-    
+
     Uses a global registry so evaluators can access intents across the codebase.
+    The buffer uses the current scenario ID from the contextvar (set via
+    set_current_scenario_id) for both recording and clearing intents.
     """
 
-    def __init__(self, scenario_id: str = "current"):
-        """
-        Initialize a tool intent buffer.
-        
-        Args:
-            scenario_id: Identifier for the current scenario (for multi-scenario tracking)
-        """
-        self.scenario_id = scenario_id
+    def __init__(self) -> None:
+        """Initialize a tool intent buffer."""
         self.intents: list[dict[str, Any]] = []
-        
-        # Initialize global registry entry
-        if scenario_id not in _GLOBAL_INTENT_REGISTRY:
-            _GLOBAL_INTENT_REGISTRY[scenario_id] = []
 
     def record(self, tool_name: str, parameters: dict[str, Any]) -> None:
         """
         Record a tool intent.
-        
+
         Args:
             tool_name: Name of the tool the agent decided to call
             parameters: Parameters the agent provided for the tool call
         """
         intent = {"tool": tool_name, "parameters": parameters}
         self.intents.append(intent)
-        
-        # Store in global registry using thread-local scenario ID for concurrent isolation
+
+        # Store in global registry using contextvar scenario ID for concurrent isolation
         current_scenario = get_current_scenario_id()
         if current_scenario not in _GLOBAL_INTENT_REGISTRY:
             _GLOBAL_INTENT_REGISTRY[current_scenario] = []
         _GLOBAL_INTENT_REGISTRY[current_scenario].append(intent)
-        
+
         logger.debug("Recorded tool intent: %s (scenario: %s)", tool_name, current_scenario)
 
     def get_intents(self) -> list[dict[str, Any]]:
         """
         Get all recorded tool intents.
-        
+
         Returns:
             List of tool intents with format [{"tool": "name", "parameters": {...}}]
         """
         return self.intents.copy()
 
     def clear(self) -> None:
-        """Clear all recorded intents."""
+        """Clear all recorded intents for the current scenario."""
         self.intents.clear()
-        # Also clear from global registry
-        _GLOBAL_INTENT_REGISTRY[self.scenario_id] = []
-        logger.debug("Cleared tool intent buffer for scenario %s", self.scenario_id)
+        # Clear from global registry using contextvar (aligned with record())
+        current_scenario = get_current_scenario_id()
+        _GLOBAL_INTENT_REGISTRY[current_scenario] = []
+        logger.debug("Cleared tool intent buffer for scenario %s", current_scenario)
 
 
 def get_global_intents(scenario_id: str = "current") -> list[dict[str, Any]]:
@@ -162,71 +153,6 @@ def clear_global_intents(scenario_id: str = "current") -> None:
     if scenario_id in _GLOBAL_INTENT_REGISTRY:
         _GLOBAL_INTENT_REGISTRY[scenario_id] = []
         logger.debug("Cleared global intents for scenario %s", scenario_id)
-
-
-# =============================================================================
-# NOTE: The following utility functions are unused and commented out for now.
-# They may be useful for debugging or future enhancements.
-# =============================================================================
-
-# def cleanup_all_intents() -> int:
-#     """
-#     Clear ALL intents from the global registry across all scenarios.
-#     
-#     This should be called between evaluation runs to prevent memory accumulation
-#     and ensure clean state for new evaluations.
-#     
-#     Returns:
-#         Number of scenarios that were cleared
-#     
-#     Example:
-#         >>> # Call at the start of an evaluation run
-#         >>> from react_benchmark_agent.tool_intent_stubs import cleanup_all_intents
-#         >>> cleared = cleanup_all_intents()
-#         >>> print(f"Cleared {cleared} scenarios from intent registry")
-#     """
-#     global _GLOBAL_INTENT_REGISTRY
-#     num_scenarios = len(_GLOBAL_INTENT_REGISTRY)
-#     _GLOBAL_INTENT_REGISTRY.clear()
-#     logger.info("Cleared all intents from global registry (%d scenarios)", num_scenarios)
-#     return num_scenarios
-
-
-# def get_all_scenario_ids() -> list[str]:
-#     """
-#     Get all scenario IDs currently in the global registry.
-#     
-#     Useful for debugging and monitoring intent accumulation.
-#     
-#     Returns:
-#         List of scenario IDs with registered intents
-#     """
-#     return list(_GLOBAL_INTENT_REGISTRY.keys())
-
-
-# def get_registry_stats() -> dict[str, Any]:
-#     """
-#     Get statistics about the global intent registry.
-#     
-#     Useful for monitoring memory usage and debugging.
-#     
-#     Returns:
-#         Dictionary with registry statistics:
-#         - num_scenarios: Number of scenarios tracked
-#         - total_intents: Total number of intents across all scenarios
-#         - intents_per_scenario: Dict mapping scenario_id to intent count
-#     """
-#     intents_per_scenario = {
-#         scenario_id: len(intents) 
-#         for scenario_id, intents in _GLOBAL_INTENT_REGISTRY.items()
-#     }
-#     return {
-#         "num_scenarios": len(_GLOBAL_INTENT_REGISTRY),
-#         "total_intents": sum(intents_per_scenario.values()),
-#         "intents_per_scenario": intents_per_scenario,
-#     }
-
-# =============================================================================
 
 
 class PermissiveToolInput(BaseModel):
@@ -274,8 +200,6 @@ def create_tool_stub_function(
     """
     tool_name = tool_schema.get("title", "unknown_tool")
     tool_description = tool_schema.get("description", "")
-    properties = tool_schema.get("properties", {})
-    required_params = tool_schema.get("required", [])
 
     # Default canned response
     if canned_response is None:
@@ -332,7 +256,6 @@ def _generate_mock_response(response_schema: dict[str, Any]) -> dict[str, Any]:
 
     for prop_name, prop_info in properties.items():
         prop_type = prop_info.get("type", "string")
-        prop_desc = prop_info.get("description", "")
 
         # Generate mock values based on type
         if prop_type == "string":
@@ -351,49 +274,4 @@ def _generate_mock_response(response_schema: dict[str, Any]) -> dict[str, Any]:
             mock_response[prop_name] = None
 
     return mock_response
-
-
-# NOTE: Unused - banking_tools.py uses create_tool_stub_function directly with FunctionGroup
-# def register_tool_stubs_from_schemas(
-#     tool_schemas: list[dict[str, Any]], intent_buffer: ToolIntentBuffer
-# ) -> dict[str, FunctionInfo]:
-#     """
-#     Register tool stubs from a list of tool schemas.
-#     
-#     Args:
-#         tool_schemas: List of tool schemas from the dataset
-#         intent_buffer: Shared buffer to record tool intents
-#     
-#     Returns:
-#         Dictionary mapping tool names to FunctionInfo objects
-#     """
-#     registered_stubs = {}
-#
-#     for tool_schema in tool_schemas:
-#         tool_name = tool_schema.get("title", "")
-#         if not tool_name:
-#             logger.warning("Skipping tool with no title: %s", tool_schema)
-#             continue
-#
-#         try:
-#             stub_fn, custom_input_schema, description = create_tool_stub_function(tool_schema, intent_buffer)
-#             
-#             # Use FunctionInfo constructor directly with custom input_schema to bypass auto-generation
-#             # This prevents NAT from creating its own validation schema from function signatures
-#             function_info = FunctionInfo(
-#                 single_fn=stub_fn,
-#                 stream_fn=None,
-#                 input_schema=custom_input_schema,
-#                 single_output_schema=str,  # All stubs return strings
-#                 stream_output_schema=None,
-#                 description=description
-#             )
-#             registered_stubs[tool_name] = function_info
-#             logger.info("Registered tool stub: %s", tool_name)
-#         except Exception as e:
-#             logger.exception("Failed to register tool stub for %s: %s", tool_name, e)
-#             continue
-#
-#     logger.info("Registered %d tool stubs", len(registered_stubs))
-#     return registered_stubs
 

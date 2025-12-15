@@ -1,8 +1,24 @@
+<!--
+Copyright (c) 2025 NVIDIA Corporation
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
 # Agent Leaderboard v2 - Evaluation Guide
 
 This guide walks through the complete process of running decision-only evaluations using the `react_benchmark_agent`: downloading data, configuring evaluations, running experiments, and analyzing results.
 
-Currently this agent supports evaluation exculsivly for the [Galileo Agent Leaderboard v2](https://huggingface.co/datasets/galileo-ai/agent-leaderboard-v2). However, we plan to extend the set of evaluation tool sets and benchmarks and will update this document accordingly.
+Currently this agent supports evaluation exclusively for the [Galileo Agent Leaderboard v2](https://huggingface.co/datasets/galileo-ai/agent-leaderboard-v2). However, we plan to extend the set of evaluation tool sets and benchmarks and will update this document accordingly.
 
 ## Table of Contents
 
@@ -25,7 +41,7 @@ Currently this agent supports evaluation exculsivly for the [Galileo Agent Leade
 2. **NeMo Agent Toolkit** repository cloned
 3. **Dynamo backend** running on `localhost:8099` (see [Dynamo Setup Guide](../../../external/dynamo/README.md))
 
-> **Note:** For a more abbreviated way to kick off experimentation, see the [Quick Start](../README.md#quick-start) section in the parent README. This document provides a more detailed explainations of the different test patterns and configurations available.
+> **Note:** For a more abbreviated way to kick off experimentation, see the [Quick Start](../README.md#quick-start) section in the parent README. This document provides a more detailed explanations of the different test patterns and configurations available.
 
 ---
 
@@ -225,6 +241,7 @@ functions:
 function_groups:
   banking_tools:
     _type: banking_tools_group
+    # tools.json available after running: /examples/dynamo_integration/scripts/download_agent_leaderboard_v2.py
     tools_json_path: ./examples/dynamo_integration/data/raw/banking/tools.json
     decision_only: true
     include: [
@@ -327,7 +344,7 @@ nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs
 
 ### Expected Output
 
-```
+```text
 ✓ 20/20 banking tool stubs registered
 ✓ Tool stub executed: get_exchange_rates with 3 parameters
 ✓ Tool stub executed: setup_automatic_bill_pay with 8 parameters
@@ -343,7 +360,7 @@ The self-evaluation mechanism allows the agent to evaluate its own tool selectio
 
 ### How It Works
 
-```
+```text
 User Question
     ↓
 [Attempt 1] ReAct Agent executes
@@ -424,7 +441,7 @@ nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs
 
 ### Log Output Example
 
-```
+```text
 ================================================================================
 Attempt 1/6
 ================================================================================
@@ -519,7 +536,7 @@ Results are saved to `react_benchmark_agent/outputs/dynamo_evals/<job_id>/`:
 
 TSQ uses F1 score to balance precision and recall:
 
-```
+```text
 Precision = Correct Tools / Actual Tools Called
 Recall    = Correct Tools / Expected Tools
 F1        = 2 × (Precision × Recall) / (Precision + Recall)
@@ -567,7 +584,7 @@ python scripts/throughput_analysis.py \
 - **Aggregate Throughput**: Total tokens / wall-clock time
 
 **Example output:**
-```
+```text
 ================================================================================
 LLM Performance Analysis Summary
 ================================================================================
@@ -653,7 +670,7 @@ react_benchmark_agent/outputs/benchmarks/<name>_<timestamp>/
 
 ### CSV Format
 
-```csv
+```text
 concurrency,total_llm_calls,total_tokens,total_duration_sec,
 ttft_mean_ms,ttft_median_ms,ttft_p90_ms,ttft_p95_ms,
 itl_mean_ms,itl_median_ms,itl_p90_ms,itl_p95_ms,
@@ -726,6 +743,7 @@ functions:
 function_groups:
   banking_tools:
     _type: banking_tools_group
+    # tools.json available after running: /examples/dynamo_integration/scripts/download_agent_leaderboard_v2.py
     tools_json_path: ./examples/dynamo_integration/data/raw/banking/tools.json
     decision_only: true
 ```

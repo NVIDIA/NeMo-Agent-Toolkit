@@ -1,3 +1,19 @@
+<!--
+Copyright (c) 2025 NVIDIA Corporation
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
 # NVIDIA NeMo Agent Toolkit and Dynamo Integration
 
 > ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent Toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
@@ -8,15 +24,15 @@
 
 This set of examples is intended to grow over time as the synergies between NAT and [Dynamo](https://github.com/ai-dynamo/dynamo) evolve. In the first set of examples, we will analyze the performance (throughput and latency) of NAT agents requests to Dynamo and seek out key optimizations. Agentic LLM requests have predictable patterns with respect to conversation length, system prompts, and tool-calling. We aim to codesign our inference servers to provide better performance in a repeatable, mock, decision-only evaluation harness. The harness uses the Banking data subset and mock tools from the [Galileo Agent Leaderboard v2](https://huggingface.co/datasets/galileo-ai/agent-leaderboard-v2) benchmark to simulate agentic tool selection quality (TSQ).
 
-Most of these examples could be tested using a managed LLM service, like an NVIDIA NIM model endpoint, for inference. However, the intended analysis analysis would require hosting the LLM endpoints on your own GPU cluster using Dynamo.
+Most of these examples could be tested using a managed LLM service, like an NVIDIA NIM model endpoint, for inference. However, the intended analysis would require hosting the LLM endpoints on your own GPU cluster using Dynamo.
 
 
 ### Key Features
 
 - **Decision-Only Tool Calling**: Tool stubs capture intent without executing banking operations
-- **Dynamo Backend**: Fast LLM inference with KV cache optimization (default Dynamo method) and a preditive Thompson sampling router (new implementation)
-- **Self-Evaluation Loop**: Agent can re-evaluate and retry tool selection for improved quality. Parameterization accuracy has been excluded.
-- **Comprehensive Metrics and Visualizations**: TSQ scores, token throughput, latency analysis. Visualized in A/B scatterplots and histograms for analysis.
+- **Dynamo Backend**: Fast LLM inference with KV cache optimization (default Dynamo method) and a predictive Thompson sampling router (new implementation)
+- **Self-Evaluation Loop**: Agent can re-evaluate and retry tool selection for improved quality.
+- **Comprehensive Metrics and Visualizations**: TSQ scores (parameterization accuracy has been excluded), token throughput, latency analysis. Visualized in A/B scatterplots and histograms for analysis.
 - **NAT Framework**: Full integration with NeMo Agent Toolkit evaluators, optimizer, and profiler
 
 ## Quick Start
@@ -100,7 +116,7 @@ Use these scripts to analyze and visualize your evaluation results:
 
 ## Project Structure
 
-```
+```text
 examples/dynamo_integration/
 ├── README.md                          # This file
 ├── ARCHITECTURE.md                    # Architecture diagrams

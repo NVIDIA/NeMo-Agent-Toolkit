@@ -1,6 +1,18 @@
 #!/usr/bin/env python3
-# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """
 Unified plotting script for throughput metrics vs TSQ (Tool Selection Quality) scores.
@@ -10,7 +22,7 @@ This script combines per-request and per-LLM-call analysis with multi-experiment
 Features:
 - Per-LLM-call scatter plots (TTFT, ITL, Throughput) showing every individual LLM call
 - Per-request aggregate metrics (Total Tokens, LLM Calls, Duration)
-- Statistical annotations: median lines, ±2σ bounds, correlation, mean, std
+- Statistical annotations: median lines, +/-2 std bounds, correlation, mean, std
 - Lines of best fit for aggregate metrics
 - Multi-experiment comparison with color coding
 - Optimizer trial parameter matching (e.g., color by temperature)
@@ -92,13 +104,13 @@ def load_optimizer_trials(experiment_dir: Path) -> pd.DataFrame | None:
         print(f"    Loaded optimizer trials: {len(df)} trials with params: {param_names}")
         return df
     
-    except Exception as e:
+    except (OSError, pd.errors.EmptyDataError, pd.errors.ParserError, KeyError) as e:
         print(f"    Warning: Error loading optimizer trials: {e}")
         return None
 
 
 def match_job_to_trial(job_avg_score: float, trials_df: pd.DataFrame, 
-                       tolerance: float = 1e-10) -> dict | None:
+                       tolerance: float = 1e-6) -> dict | None:
     """Match a job's average TSQ score to a trial's value column.
     
     Args:
@@ -218,7 +230,7 @@ def calculate_per_request_throughput_metrics(csv_path: Path) -> tuple[dict[int, 
     
     try:
         df = pd.read_csv(csv_path)
-    except Exception as e:
+    except (OSError, pd.errors.EmptyDataError, pd.errors.ParserError) as e:
         print(f"    Warning: Error reading CSV {csv_path}: {e}")
         return None, None
     
@@ -235,7 +247,7 @@ def calculate_per_request_throughput_metrics(csv_path: Path) -> tuple[dict[int, 
         current_start = None
         llm_call_idx = 0
         
-        for idx, row in example_df.iterrows():
+        for _, row in example_df.iterrows():
             if row['event_type'] == 'LLM_START':
                 current_start = row['event_timestamp']
             
@@ -307,8 +319,8 @@ def calculate_per_request_throughput_metrics(csv_path: Path) -> tuple[dict[int, 
     return metrics_by_example, all_llm_call_data
 
 
-def collect_job_data_from_dir(jobs_dir: Path, experiment_label: str = None,
-                              trials_df: pd.DataFrame = None) -> tuple[list[dict], list[dict]]:
+def collect_job_data_from_dir(jobs_dir: Path, experiment_label: str | None = None,
+                              trials_df: pd.DataFrame | None = None) -> tuple[list[dict], list[dict]]:
     """Collect per-request TSQ scores and throughput metrics from all job directories.
     
     Args:
@@ -444,8 +456,8 @@ def collect_job_data(input_dirs: list[Path]) -> tuple[pd.DataFrame, pd.DataFrame
     return pd.DataFrame(all_data), pd.DataFrame(all_llm_call_data)
 
 
-def create_scatter_plots(df: pd.DataFrame, output_dir: Path, color_by: str = None,
-                         llm_call_df: pd.DataFrame = None):
+def create_scatter_plots(df: pd.DataFrame, output_dir: Path, color_by: str | None = None,
+                         llm_call_df: pd.DataFrame | None = None):
     """Create scatter plots of per-request throughput metrics vs TSQ score.
     
     Args:
@@ -496,7 +508,7 @@ def create_scatter_plots(df: pd.DataFrame, output_dir: Path, color_by: str = Non
         if metric_col not in df.columns:
             continue
             
-        fig, ax = plt.subplots(figsize=(10, 7))
+        _, ax = plt.subplots(figsize=(10, 7))
         
         if use_color_by:
             # Color by the specified column (e.g., temperature)
@@ -554,8 +566,8 @@ def create_scatter_plots(df: pd.DataFrame, output_dir: Path, color_by: str = Non
         print(f"  Saved data: {llm_call_csv_path}")
 
 
-def create_summary_plot(df: pd.DataFrame, output_dir: Path, color_by: str = None,
-                        llm_call_df: pd.DataFrame = None):
+def create_summary_plot(df: pd.DataFrame, output_dir: Path, color_by: str | None = None,
+                        llm_call_df: pd.DataFrame | None = None):
     """Create a multi-panel summary plot.
     
     Top row shows per-LLM-call metrics (TTFT, ITL, Throughput) if llm_call_df is provided,
@@ -617,7 +629,7 @@ def create_summary_plot(df: pd.DataFrame, output_dir: Path, color_by: str = None
     all_metrics = top_row_metrics + bottom_row_metrics
     bottom_row_cols = [m[0] for m in bottom_row_metrics]  # Track which are bottom row
     
-    for ax, (metric_col, label, data_df) in zip(axes, all_metrics):
+    for ax, (metric_col, label, data_df) in zip(axes, all_metrics, strict=True):
         if metric_col not in data_df.columns:
             ax.set_visible(False)
             continue
@@ -671,7 +683,7 @@ def create_summary_plot(df: pd.DataFrame, output_dir: Path, color_by: str = None
             y_data = data_df['tsq_score'].values
             mask = ~(np.isnan(x_data) | np.isnan(y_data))
             if mask.sum() >= 2:
-                slope, intercept, r_value, p_value, std_err = stats.linregress(x_data[mask], y_data[mask])
+                slope, intercept, _r_value, _p_value, _std_err = stats.linregress(x_data[mask], y_data[mask])
                 x_line = np.linspace(x_data[mask].min(), x_data[mask].max(), 100)
                 y_line = slope * x_line + intercept
                 ax.plot(x_line, y_line, color='darkgreen', linestyle='-', linewidth=2, alpha=0.8, zorder=4)
@@ -705,15 +717,15 @@ def create_summary_plot(df: pd.DataFrame, output_dir: Path, color_by: str = None
             if abs(median_val) >= 100:
                 stats_text = (f'n={n_samples}\n'
                               f'r={corr:.2f}\n'
-                              f'μ={mean_val:.1f}\n'
+                              f'mean={mean_val:.1f}\n'
                               f'med={median_val:.1f}\n'
-                              f'σ={std_val:.1f}')
+                              f'std={std_val:.1f}')
             else:
                 stats_text = (f'n={n_samples}\n'
                               f'r={corr:.2f}\n'
-                              f'μ={mean_val:.2f}\n'
+                              f'mean={mean_val:.2f}\n'
                               f'med={median_val:.2f}\n'
-                              f'σ={std_val:.2f}')
+                              f'std={std_val:.2f}')
             
             # Add R² and slope for bottom row (line of best fit info)
             if is_bottom_row:
@@ -774,7 +786,7 @@ Examples:
 Features:
   - Per-LLM-call scatter plots (top row): TTFT, ITL, Throughput for every individual LLM call
   - Per-request aggregates (bottom row): Total Tokens, LLM Calls, Duration with line of best fit
-  - Statistical annotations: median (red solid), ±2σ (red dashed), correlation, mean, std
+  - Statistical annotations: median (red solid), +/-2 std (red dashed), correlation, mean, std
   - Multi-experiment comparison with automatic color coding
   - Optimizer trial parameter matching and coloring
 """

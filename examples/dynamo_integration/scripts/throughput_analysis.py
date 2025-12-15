@@ -1,6 +1,18 @@
 #!/usr/bin/env python3
-# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """
 Calculate completion tokens per second and inter-token latency from NAT profiler CSV output.
@@ -70,7 +82,9 @@ import sys
 from pathlib import Path
 
 
-def calculate_tokens_per_second(csv_path: str):
+def calculate_tokens_per_second(
+    csv_path: str,
+) -> tuple[pd.DataFrame | None, np.ndarray | None, dict[str, float | int] | None]:
     """Calculate tokens/sec and inter-token latency for each LLM call from NEW_TOKEN events.
     
     Returns:
@@ -96,7 +110,7 @@ def calculate_tokens_per_second(csv_path: str):
         llm_call_id = 0
         current_start = None
         
-        for idx, row in example_df.iterrows():
+        for _, row in example_df.iterrows():
             if row['event_type'] == 'LLM_START':
                 current_start = row['event_timestamp']
                 llm_call_id += 1
@@ -173,9 +187,9 @@ def calculate_tokens_per_second(csv_path: str):
     
     # Print summary statistics
     print(f"\n{'='*80}")
-    print(f"LLM Performance Analysis Summary")
+    print("LLM Performance Analysis Summary")
     print(f"{'='*80}")
-    print(f"\nDataset Overview:")
+    print("\nDataset Overview:")
     print(f"  Total LLM Calls:        {len(results_df)}")
     print(f"  Total Tokens Generated: {total_tokens:,}")
     print(f"  Sum of LLM Durations:   {results_df['duration_sec'].sum():.2f}s")
@@ -205,7 +219,7 @@ def calculate_tokens_per_second(csv_path: str):
         # Filter out None values for per-call ITL stats
         call_mean_itls = results_df['mean_itl_sec'].dropna()
         if len(call_mean_itls) > 0:
-            print(f"\n  Per-Call Average ITL:")
+            print("\n  Per-Call Average ITL:")
             print(f"    Mean:   {call_mean_itls.mean()*1000:>8.2f} ms")
             print(f"    Median: {call_mean_itls.median()*1000:>8.2f} ms")
             print(f"    P90:    {call_mean_itls.quantile(0.90)*1000:>8.2f} ms")

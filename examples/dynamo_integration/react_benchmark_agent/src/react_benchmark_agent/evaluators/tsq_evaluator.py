@@ -1,5 +1,18 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 
 """
 Tool Selection Quality (TSQ) Evaluator for Agent Leaderboard benchmarks.
@@ -10,6 +23,7 @@ This evaluator assesses:
 """
 
 import logging
+from collections.abc import AsyncIterator
 from typing import Any
 
 from pydantic import Field
@@ -49,7 +63,9 @@ class TSQEvaluatorConfig(EvaluatorBaseConfig, name="tsq_evaluator"):
 
 
 @register_evaluator(config_type=TSQEvaluatorConfig)
-async def tsq_evaluator_function(config: TSQEvaluatorConfig, builder: EvalBuilder):
+async def tsq_evaluator_function(
+    config: TSQEvaluatorConfig, builder: EvalBuilder
+) -> AsyncIterator[EvaluatorInfo]:
     """
     Register the Tool Selection Quality (TSQ) evaluator.
 
@@ -59,9 +75,8 @@ async def tsq_evaluator_function(config: TSQEvaluatorConfig, builder: EvalBuilde
 
     Final TSQ score = (tool_weight * tool_accuracy) + (parameter_weight * param_accuracy)
     """
-    
-    # Store reference to builder for accessing intent buffer
-    eval_builder = builder
+    # Unused: builder is available if needed for future enhancements
+    del builder
 
     def extract_tool_calls_from_trajectory(trajectory: list[dict[str, Any] | Any]) -> list[dict[str, Any]]:
         """
@@ -85,8 +100,8 @@ async def tsq_evaluator_function(config: TSQEvaluatorConfig, builder: EvalBuilde
             if hasattr(step, "model_dump"):
                 try:
                     step = step.model_dump()
-                except Exception as e:
-                    logger.warning("Failed to convert step to dict: %s", e)
+                except (TypeError, ValueError) as exc:
+                    logger.warning("Failed to convert step to dict: %s", exc)
                     continue
             elif not isinstance(step, dict):
                 logger.warning("Skipping non-dict, non-Pydantic step: %s", type(step))
@@ -260,9 +275,9 @@ async def tsq_evaluator_function(config: TSQEvaluatorConfig, builder: EvalBuilde
                         clear_global_intents(str(item.id))
                     else:
                         logger.warning("No intents found in global registry for item %s", item.id)
-                        
-                except Exception as e:
-                    logger.warning("Failed to retrieve intents from global registry: %s", e)
+
+                except (ImportError, AttributeError, KeyError) as exc:
+                    logger.warning("Failed to retrieve intents from global registry: %s", exc)
 
             # Get expected tool calls from full dataset entry
             full_entry = item.full_dataset_entry if isinstance(item.full_dataset_entry, dict) else {}
@@ -289,12 +304,12 @@ async def tsq_evaluator_function(config: TSQEvaluatorConfig, builder: EvalBuilde
             logger.debug("TSQ evaluation for item %s: score=%.3f", item.id, tsq_score)
             return EvalOutputItem(id=item.id, score=tsq_score, reasoning=reasoning)
 
-        except Exception as e:
-            logger.exception("Error evaluating TSQ for item %s: %s", item.id, e)
+        except Exception:
+            logger.exception("Error evaluating TSQ for item %s", item.id)
             return EvalOutputItem(
                 id=item.id,
                 score=0.0,
-                reasoning={"error": str(e), "tool_selection_accuracy": 0.0, "parameter_usage_accuracy": 0.0},
+                reasoning={"error": "Evaluation failed", "tool_selection_accuracy": 0.0, "parameter_usage_accuracy": 0.0},
             )
 
     async def evaluate_fn(eval_input: EvalInput) -> EvalOutput:

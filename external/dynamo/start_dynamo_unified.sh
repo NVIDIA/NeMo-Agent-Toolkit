@@ -1,6 +1,18 @@
 #!/bin/bash
-# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 # Dynamo SGLang FULL STACK with Unified Worker
 # Architecture: ETCD + NATS + Dynamo Frontend (API) → SGLang Backend Worker (Unified)
@@ -12,8 +24,8 @@
 #   - Unified Worker (GPUs 0,1,2,3, TP=4, no disaggregation)
 #
 # Frontend: Port 8099 (HTTP API)
-# ETCD: localhost:2389 (container: etcd-dynamo) - non-default port to avoid conflicts
-# NATS: localhost:4232 (container: nats-dynamo) - non-default port to avoid conflicts
+# ETCD: localhost:2379 (container: etcd-dynamo) - default port, override with DYNAMO_ETCD_PORT
+# NATS: localhost:4222 (container: nats-dynamo) - default port, override with DYNAMO_NATS_PORT
 # Worker runs in container: dynamo-sglang
 #
 # To stop all components: bash stop_dynamo.sh
@@ -32,6 +44,10 @@ SHM_SIZE="${DYNAMO_SHM_SIZE:-16g}"
 ETCD_CLIENT_PORT="${DYNAMO_ETCD_PORT:-2379}"
 ETCD_PEER_PORT="${DYNAMO_ETCD_PEER_PORT:-2390}"
 NATS_PORT="${DYNAMO_NATS_PORT:-4222}"
+
+# Compute container-internal GPU indices (GPUs are renumbered 0,1,2,... inside the container)
+NUM_GPUS=$(echo "$WORKER_GPUS" | tr ',' '\n' | wc -l)
+CONTAINER_GPU_INDICES=$(seq -s, 0 $((NUM_GPUS - 1)))
 
 # Local paths - DYNAMO_MODEL_DIR must be set or script will error
 if [ -z "${DYNAMO_MODEL_DIR}" ]; then
@@ -262,9 +278,9 @@ docker run -d \
     }
     
     echo '========================================================='
-    echo 'Step 1: Starting Unified Worker (GPUs 0,1,2,3 = Host GPUs $WORKER_GPUS)...'
+    echo 'Step 1: Starting Unified Worker (Host GPUs $WORKER_GPUS -> Container GPUs $CONTAINER_GPU_INDICES)...'
     echo '========================================================='
-    CUDA_VISIBLE_DEVICES=0,1,2,3 \
+    CUDA_VISIBLE_DEVICES=$CONTAINER_GPU_INDICES \
     python3 -m dynamo.sglang \
       --model-path $MODEL \
       --served-model-name $SERVED_MODEL_NAME \

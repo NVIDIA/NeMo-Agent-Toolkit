@@ -1,3 +1,19 @@
+<!--
+Copyright (c) 2025 NVIDIA Corporation
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
 # React Benchmark Agent - Implementation Guide
 
 This document details the source code implementation of the React Benchmark Agent, explaining how the different configuration files map to the underlying components, evaluators, and workflows.
@@ -13,7 +29,6 @@ This document details the source code implementation of the React Benchmark Agen
    - [Profiling Configuration](#4-profiling-configuration)
 4. [Source Code Reference](#source-code-reference)
 5. [Evaluators](#evaluators)
-6. [Deprecation Analysis & Recommendations](#deprecation-analysis--recommendations)
 
 ---
 

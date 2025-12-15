@@ -1,5 +1,18 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 
 """
 Action Completion (AC) Evaluator for Agent Leaderboard benchmarks.
@@ -147,7 +160,7 @@ Was the user goal addressed in the agent's response? Respond with only "YES" or 
             result_text = str(result).strip().upper()
             return "YES" in result_text
         except Exception as e:
-            logger.warning("LLM evaluation failed, falling back to simple check: %s", e)
+            logger.exception("LLM evaluation failed, falling back to simple check")
             return check_goal_completion_simple(response, goal)
 
     async def evaluate_single_item(item: EvalInputItem) -> EvalOutputItem:

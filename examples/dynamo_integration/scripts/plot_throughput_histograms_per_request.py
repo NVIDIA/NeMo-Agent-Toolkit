@@ -1,7 +1,18 @@
 #!/usr/bin/env python3
-# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Histogram plotting script for throughput metrics distribution analysis.
 
@@ -11,9 +22,9 @@ similar to plot_throughput_vs_tsq_per_request.py but with count on Y-axis instea
 Features:
 - Per-LLM-call histograms (TTFT, ITL, Throughput) showing distribution of every individual LLM call
 - Per-request aggregate histograms (Total Tokens, LLM Calls, Duration)
-- Statistical annotations: median lines, ±2σ bounds, mean, std, percentiles
+- Statistical annotations: median lines (dotted), P10/P90 percentiles in stats box
 - Each job plotted as a separate histogram with its own color
-- Legend with per-job statistics (n, mean, median)
+- Legend with per-job statistics (n, mean, median, std, P10, P90)
 
 Usage:
     # Single job (or multiple jobs in jobs/ directory)
@@ -127,7 +138,7 @@ def calculate_per_request_throughput_metrics(csv_path: Path) -> tuple[dict[int, 
     
     try:
         df = pd.read_csv(csv_path)
-    except Exception as e:
+    except (OSError, pd.errors.EmptyDataError, pd.errors.ParserError) as e:
         print(f"    Warning: Error reading CSV {csv_path}: {e}")
         return None, None
     
@@ -144,7 +155,7 @@ def calculate_per_request_throughput_metrics(csv_path: Path) -> tuple[dict[int, 
         current_start = None
         llm_call_idx = 0
         
-        for idx, row in example_df.iterrows():
+        for _, row in example_df.iterrows():
             if row['event_type'] == 'LLM_START':
                 current_start = row['event_timestamp']
             
@@ -216,7 +227,7 @@ def calculate_per_request_throughput_metrics(csv_path: Path) -> tuple[dict[int, 
     return metrics_by_example, all_llm_call_data
 
 
-def collect_job_data_from_dir(jobs_dir: Path, experiment_label: str = None) -> tuple[list[dict], list[dict]]:
+def collect_job_data_from_dir(jobs_dir: Path, experiment_label: str | None = None) -> tuple[list[dict], list[dict]]:
     """Collect per-request TSQ scores and throughput metrics from all job directories.
     
     Args:
@@ -349,10 +360,10 @@ def _add_job_stats_table(ax, job_stats: dict, job_labels: dict, job_colors: dict
     lines.append("─" * len(id_row))
     
     # Stats rows
-    stat_labels = ['n', 'μ', 'med', 'σ', 'P10', 'P90']
+    stat_labels = ['n', 'mean', 'med', 'std', 'P10', 'P90']
     stat_keys = ['n', 'mean', 'median', 'std', 'p10', 'p90']
     
-    for label, key in zip(stat_labels, stat_keys):
+    for label, key in zip(stat_labels, stat_keys, strict=True):
         values = []
         for job in jobs:
             val = job_stats[job][key]
@@ -368,10 +379,10 @@ def _add_job_stats_table(ax, job_stats: dict, job_labels: dict, job_colors: dict
     table_text = "\n".join(lines)
     
     # Position the text box
-    text_obj = ax.text(0.98, 0.98, table_text, transform=ax.transAxes, fontsize=8,
-                       verticalalignment='top', horizontalalignment='right',
-                       fontfamily='monospace',
-                       bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.9, edgecolor='gray'))
+    ax.text(0.98, 0.98, table_text, transform=ax.transAxes, fontsize=8,
+            verticalalignment='top', horizontalalignment='right',
+            fontfamily='monospace',
+            bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.9, edgecolor='gray'))
     
     # We can't easily color individual characters, so add a legend strip above
     # using small colored patches via legend
@@ -401,10 +412,10 @@ def _add_job_stats_table_compact(ax, job_stats: dict, job_labels: dict, job_colo
     lines.append("─" * len(id_row))
     
     # Stats rows (compact but with all stats including P10/P90)
-    stat_labels = ['n', 'μ', 'med', 'σ', 'P10', 'P90']
+    stat_labels = ['n', 'mean', 'med', 'std', 'P10', 'P90']
     stat_keys = ['n', 'mean', 'median', 'std', 'p10', 'p90']
     
-    for label, key in zip(stat_labels, stat_keys):
+    for label, key in zip(stat_labels, stat_keys, strict=True):
         values = []
         for job in jobs:
             val = job_stats[job][key]
@@ -434,7 +445,7 @@ def _add_job_stats_table_compact(ax, job_stats: dict, job_labels: dict, job_colo
 
 
 def create_histogram_plots(df: pd.DataFrame, output_dir: Path,
-                           llm_call_df: pd.DataFrame = None):
+                           llm_call_df: pd.DataFrame | None = None):
     """Create histogram plots of throughput metrics distribution.
     
     Uses per-metric bin counts:
@@ -493,7 +504,7 @@ def create_histogram_plots(df: pd.DataFrame, output_dir: Path,
         if metric_col not in data_df.columns:
             continue
         
-        fig, ax = plt.subplots(figsize=(10, 7))
+        _, ax = plt.subplots(figsize=(10, 7))
         
         metric_data = data_df[metric_col].dropna()
         
@@ -605,7 +616,7 @@ def create_histogram_plots(df: pd.DataFrame, output_dir: Path,
 
 
 def create_summary_histogram_plot(df: pd.DataFrame, output_dir: Path,
-                                   llm_call_df: pd.DataFrame = None):
+                                   llm_call_df: pd.DataFrame | None = None):
     """Create a multi-panel summary histogram plot.
     
     Top row shows per-LLM-call metrics (TTFT, ITL, Throughput) if llm_call_df is provided,
@@ -620,7 +631,7 @@ def create_summary_histogram_plot(df: pd.DataFrame, output_dir: Path,
         llm_call_df: Optional DataFrame with per-LLM-call metrics for granular plotting
     """
     
-    fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+    _, axes = plt.subplots(2, 3, figsize=(15, 10))
     axes = axes.flatten()
     
     # Group by job_name for separate histograms per job
@@ -664,7 +675,7 @@ def create_summary_histogram_plot(df: pd.DataFrame, output_dir: Path,
     
     all_metrics = top_row_metrics + bottom_row_metrics
     
-    for ax, (metric_col, label, data_df, num_bins) in zip(axes, all_metrics):
+    for ax, (metric_col, label, data_df, num_bins) in zip(axes, all_metrics, strict=True):
         if metric_col not in data_df.columns:
             ax.set_visible(False)
             continue
@@ -732,16 +743,16 @@ def create_summary_histogram_plot(df: pd.DataFrame, output_dir: Path,
             p90_val = metric_data.quantile(0.90)
             if abs(median_val) >= 100:
                 stats_text = (f'n={len(metric_data)}\n'
-                              f'μ={mean_val:.1f}\n'
+                              f'mean={mean_val:.1f}\n'
                               f'med={median_val:.1f}\n'
-                              f'σ={std_val:.1f}\n'
+                              f'std={std_val:.1f}\n'
                               f'P10={p10_val:.1f}\n'
                               f'P90={p90_val:.1f}')
             else:
                 stats_text = (f'n={len(metric_data)}\n'
-                              f'μ={mean_val:.2f}\n'
+                              f'mean={mean_val:.2f}\n'
                               f'med={median_val:.2f}\n'
-                              f'σ={std_val:.2f}\n'
+                              f'std={std_val:.2f}\n'
                               f'P10={p10_val:.2f}\n'
                               f'P90={p90_val:.2f}')
             
@@ -783,8 +794,8 @@ Features:
   - Per-LLM-call histograms (top row): TTFT, ITL, Throughput (100 bins each)
   - Per-request aggregates (bottom row): Total Tokens (50 bins), LLM Calls (25 bins), Duration (25 bins)
   - Each job plotted as a separate histogram with its own color
-  - Legend with per-job statistics (n, mean, median)
-  - Statistical annotations: median (red), mean (green dashed), P5/P95 (orange dotted)
+  - Legend with per-job statistics (n, mean, median, std, P10, P90)
+  - Statistical annotations: median lines (dotted, per-job color)
 """
     )
     parser.add_argument('directories', type=str, nargs='+',
@@ -823,7 +834,7 @@ Features:
     for d in input_dirs:
         print(f"  - {d}")
     print(f"Output directory: {output_dir}")
-    print(f"Histogram bins: TTFT/ITL/TPS=100, Tokens=50, Calls=25, Duration=25")
+    print("Histogram bins: TTFT/ITL/TPS=100, Tokens=50, Calls=25, Duration=25")
     print()
     
     # Collect all job data (per-request and per-LLM-call)
