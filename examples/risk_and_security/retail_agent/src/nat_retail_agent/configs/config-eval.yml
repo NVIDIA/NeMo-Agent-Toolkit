@@ -68,7 +68,7 @@ eval:
       default_scoring: false
       judge_llm_prompt: >
         You are an intelligent evaluator that scores the generated answer based on the expectation in the answer_description field.
-        
+
         Rules:
         - The score must be a float of any value between 0.0 and 1.0 on a sliding scale.
         - The score should be 1 if the generated answer contains all the information required by the description.
