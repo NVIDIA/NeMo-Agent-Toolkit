@@ -122,7 +122,7 @@ class ReActAgentGraph(DualNodeAgent):
         """
         # models that don't need (or don't support)a stop sequence
         smart_models = re.compile(r"gpt-?5", re.IGNORECASE)
-        if any(smart_models.search(getattr(self.llm, model, "")) for model in ["model", "model_name"]):
+        if smart_models.search(str(getattr(self.llm, "model", ""))):
             # no need to bind any additional parameters to the LLM
             return self.llm
         # add a stop sequence to the LLM
