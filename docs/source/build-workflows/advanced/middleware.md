@@ -32,7 +32,7 @@ Middleware components are first-class components in NAT, configured in YAML and 
 
 **Middleware Component**: A middleware component that:
 - Is configured in YAML with a `middleware` section
-- Is built by the workflow builder before functions and function groups
+- Is built by the workflow builder before [functions](../functions-and-function-groups/functions.md) and [function groups](../functions-and-function-groups/function-groups.md)
 - Wraps a function's `ainvoke` or `astream` methods
 - Can be applied to individual functions or entire function groups
 - Can preprocess inputs, postprocess outputs, or short-circuit execution

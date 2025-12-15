@@ -43,7 +43,7 @@ JSON metadata describing an A2A agent's capabilities, including:
 - Content types (input/output modes)
 
 ### A2A Client
-A component that connects to remote A2A agents and invokes their skills. In NAT, the `a2a_client` function group provides a function interface for interacting with remote agents.
+A component that connects to remote A2A agents and invokes their skills. In NAT, the `a2a_client` [function group](../../build-workflows/functions-and-function-groups/function-groups.md) provides a function interface for interacting with remote agents.
 
 ### A2A Server
 A service that exposes NAT workflows as A2A agents. The `nat a2a serve` command publishes workflows so they can be discovered and called by other A2A clients.

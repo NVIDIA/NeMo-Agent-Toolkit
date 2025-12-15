@@ -64,7 +64,7 @@ functions:
 The following are more ways you can configure your config file when using the ReAct agent:
 * `workflow_alias`: Defaults to `None`. The alias of the workflow. Useful when the ReAct agent is configured as a workflow and needs to expose a customized name as a tool.
 
-* `tool_names`: A list of [tools](../../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) that the agent can call. The tools must be functions or function groups configured in the YAML file.
+* `tool_names`: A list of [tools](../../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) that the agent can call. The tools must be functions or [function groups](../../../build-workflows/functions-and-function-groups/function-groups.md) configured in the YAML file.
 
 * `llm_name`: The [LLM](../../../build-workflows/llms/index.md) the agent should use. The LLM must be configured in the YAML file.
 

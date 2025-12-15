@@ -37,7 +37,7 @@ uv pip install "nvidia-nat[a2a]"
 
 ## A2A Client Configuration
 
-NeMo Agent toolkit enables workflows to interact with remote A2A agents through function groups.
+NeMo Agent toolkit enables workflows to interact with remote A2A agents through [function groups](./functions-and-function-groups/function-groups.md).
 
 ### Basic Configuration
 

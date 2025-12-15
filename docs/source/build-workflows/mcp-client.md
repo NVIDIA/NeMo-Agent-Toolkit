@@ -37,7 +37,7 @@ NeMo Agent toolkit can access protected MCP servers through the MCP client auth 
 NeMo Agent toolkit enables workflows to use MCP tools as functions. The library handles the MCP server connection, tool discovery, and function registration. This allows the workflow to use MCP tools as regular functions.
 
 Tools served by remote MCP servers can be used as NeMo Agent toolkit functions in one of two ways:
-- `mcp_client`: A flexible configuration using function groups that allows you to connect to an MCP server, dynamically discover the tools it serves, and register them as NeMo Agent toolkit functions.
+- `mcp_client`: A flexible configuration using [function groups](./functions-and-function-groups/function-groups.md) that allows you to connect to an MCP server, dynamically discover the tools it serves, and register them as NeMo Agent toolkit functions.
 - `mcp_tool_wrapper`: A simple configuration that allows you to wrap a single MCP tool as a NeMo Agent toolkit function.
 
 ### `mcp_client` Configuration
