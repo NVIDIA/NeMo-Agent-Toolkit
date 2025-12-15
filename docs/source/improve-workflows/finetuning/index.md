@@ -24,7 +24,7 @@ limitations under the License.
 **Experimental Feature**: The Finetuning Harness is experimental and may change in future releases. Future versions may introduce breaking changes without notice.
 :::
 
-The NeMo Agent Toolkit provides a powerful finetuning harness designed for **in-situ reinforcement learning** of agentic LLM workflows. This enables iterative improvement of [agents](../../components/agents/index.md) through experience, allowing models to learn from their interactions with environments, tools, and users.
+The NeMo Agent Toolkit provides a powerful finetuning harness designed for **in-situ reinforcement learning** of agentic LLM [workflows](../../build-workflows/about-building-workflows.md). This enables iterative improvement of [agents](../../components/agents/index.md) through experience, allowing models to learn from their interactions with environments, tools, and users.
 
 ## Overview
 

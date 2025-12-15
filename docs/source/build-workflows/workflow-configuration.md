@@ -17,7 +17,7 @@ limitations under the License.
 
 # Workflow Configuration
 
-NeMo Agent toolkit workflows are defined by a [YAML configuration file](#workflow-configuration-file), which specifies which entities ([functions](./functions-and-function-groups/functions.md), LLMs, embedders, etc.) to use in the workflow, along with general configuration settings.
+NeMo Agent toolkit [workflows](./about-building-workflows.md) are defined by a [YAML configuration file](#workflow-configuration-file), which specifies which entities ([functions](./functions-and-function-groups/functions.md), LLMs, embedders, etc.) to use in the workflow, along with general configuration settings.
 
 The configuration attributes of each entity in NeMo Agent toolkit is defined by a [Configuration Object](#configuration-object). This object defines both the type and optionally the default value of each attribute. Any attribute without a default value is required to be specified in the configuration file.
 

@@ -17,7 +17,7 @@ limitations under the License.
 
 # About Improving NVIDIA NeMo Agent Toolkit Workflows
 
-NeMo Agent toolkit offers a variety of tools and techniques to improve workflows. This section provides guides on evaluating, profiling, optimizing, and scaling your workflows for better performance and efficiency.
+NeMo Agent toolkit offers a variety of tools and techniques to improve [workflows](../build-workflows/about-building-workflows.md). This section provides guides on evaluating, profiling, optimizing, and scaling your workflows for better performance and efficiency.
 
 - [Evaluating Workflows](./evaluate.md) - Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
 - [Profiling and Performance Monitoring](./profiler.md) - Use the profiler to profile entire workflows down to the tool and [agent](../components/agents/index.md) level, track input/output tokens and timings, and identify bottlenecks.

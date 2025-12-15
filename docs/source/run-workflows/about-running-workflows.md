@@ -17,7 +17,7 @@ limitations under the License.
 
 # About Running NVIDIA NeMo Agent Toolkit Workflows
 
-A workflow is defined by a YAML configuration file that specifies the tools and models to use. NeMo Agent toolkit provides the following ways to run a workflow:
+A [workflow](../build-workflows/about-building-workflows.md) is defined by a YAML configuration file that specifies the tools and models to use. NeMo Agent toolkit provides the following ways to run a workflow:
 - [Using the `nat run` command](#using-the-nat-run-command).
    - This is the simplest and most common way to run a workflow.
 - [Using the `nat serve` command](#using-the-nat-serve-command).

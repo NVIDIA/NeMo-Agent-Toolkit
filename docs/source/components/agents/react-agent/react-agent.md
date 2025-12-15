@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 # Configure the ReAct Agent
-Configure the NVIDIA NeMo Agent toolkit ReAct [agent](../index.md) as a workflow or a function.
+Configure the NVIDIA NeMo Agent toolkit ReAct [agent](../index.md) as a [workflow](../../../build-workflows/about-building-workflows.md) or a function.
 
 ## Requirements
 The ReAct agent requires the `nvidia-nat[langchain]` plugin, which can be installed with one of the following commands.

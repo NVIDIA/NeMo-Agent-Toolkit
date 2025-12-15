@@ -20,7 +20,7 @@ limitations under the License.
 
 In the [Customizing a Workflow](./customize-a-workflow.md) and [Adding Tools to a Workflow](./create-a-new-workflow.md) tutorials, we have been primarily utilizing tools that were included with the NeMo Agent toolkit. This tutorial demonstrates how to create a new tool that can ingest data from local files stored on disk.
 
-For this purpose, create a new empty tool using the `nat workflow create` command. This command automates the setup process by generating the necessary files and directory structure for your new workflow.
+For this purpose, create a new empty tool using the `nat workflow create` command. This command automates the setup process by generating the necessary files and directory structure for your new [workflow](../../build-workflows/about-building-workflows.md).
 ```bash
 nat workflow create --workflow-dir examples text_file_ingest
 ```

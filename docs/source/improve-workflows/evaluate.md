@@ -21,7 +21,7 @@ limitations under the License.
 **Experimental Feature**: The Evaluation API is experimental and may change in future releases. Future versions may introduce breaking changes without notice.
 :::
 
-NeMo Agent toolkit provides a set of evaluators to run and evaluate workflows. In addition to the built-in evaluators, the toolkit provides a plugin system to add custom evaluators.
+NeMo Agent toolkit provides a set of evaluators to run and evaluate [workflows](../build-workflows/about-building-workflows.md). In addition to the built-in evaluators, the toolkit provides a plugin system to add custom evaluators.
 
 ## Prerequisites
 

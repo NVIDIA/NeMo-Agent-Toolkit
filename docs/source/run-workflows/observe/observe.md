@@ -17,7 +17,7 @@ limitations under the License.
 
 # Observe Workflows
 
-The NeMo Agent toolkit uses a flexible, plugin-based observability system that provides comprehensive support for configuring logging, tracing, and metrics for workflows. Users can configure multiple telemetry exporters simultaneously from the available options or create custom integrations. The observability system:
+The NeMo Agent toolkit uses a flexible, plugin-based observability system that provides comprehensive support for configuring logging, tracing, and metrics for [workflows](../../build-workflows/about-building-workflows.md). Users can configure multiple telemetry exporters simultaneously from the available options or create custom integrations. The observability system:
 
 - Uses an event-driven architecture with `IntermediateStepManager` publishing workflow events to a reactive stream
 - Supports multiple concurrent telemetry exporters processing events asynchronously

@@ -16,7 +16,7 @@ limitations under the License.
 -->
 # NVIDIA NeMo Agent Toolkit Optimizer Guide
 
-This document provides a comprehensive overview of how to use the NeMo Agent toolkit Optimizer to tune your NeMo Agent toolkit workflows.
+This document provides a comprehensive overview of how to use the NeMo Agent toolkit Optimizer to tune your NeMo Agent toolkit [workflows](../build-workflows/about-building-workflows.md).
 
 ## Introduction
 

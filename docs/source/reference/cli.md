@@ -20,7 +20,7 @@ limitations under the License.
 ## Overview
 
 While the NeMo Agent toolkit library provides the capability to implement components that come together to form Agentic AI
-workflow, the command line interface (CLI) provides a no code entrypoint to configure settings, access the features of
+[workflow](../build-workflows/about-building-workflows.md), the command line interface (CLI) provides a no code entrypoint to configure settings, access the features of
 pre-built components, and mechanisms to launch workflows from configuration files. This document describes the layout
 and functionality of the NeMo Agent toolkit CLI. To begin, the command hierarchy is depicted below. Each command will be introduced
 throughout the remainder of this document.

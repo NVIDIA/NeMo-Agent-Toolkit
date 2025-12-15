@@ -19,7 +19,7 @@ limitations under the License.
 
 [Agent-to-Agent (A2A) Protocol](https://a2aproject.org/) is an open standard from the Linux Foundation that enables agent-to-agent communication and collaboration. The protocol standardizes how [agents](../components/agents/index.md) discover capabilities, delegate tasks, and exchange information.
 
-You can create a workflow that connects to remote A2A agents and provides a function interface for interacting with their capabilities.
+You can create a [workflow](./about-building-workflows.md) that connects to remote A2A agents and provides a function interface for interacting with their capabilities.
 
 This guide covers how to use NeMo Agent toolkit as an A2A client. For information on publishing workflows as A2A servers, refer to [A2A Server](../run-workflows/a2a-server.md).
 

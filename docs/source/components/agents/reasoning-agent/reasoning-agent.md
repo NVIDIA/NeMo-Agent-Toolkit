@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 # Configure a Reasoning Agent
-Configure the NVIDIA NeMo Agent toolkit reasoning [agent](../index.md) as a workflow or a function. We recommend using the reasoning wrapper with any NVIDIA NeMo Agent toolkit function that could improve performance from task-specific plan generation.
+Configure the NVIDIA NeMo Agent toolkit reasoning [agent](../index.md) as a [workflow](../../../build-workflows/about-building-workflows.md) or a function. We recommend using the reasoning wrapper with any NVIDIA NeMo Agent toolkit function that could improve performance from task-specific plan generation.
 
 ## Requirements
 The reasoning agent requires the `nvidia-nat[langchain]` plugin, which can be installed with one of the following commands.

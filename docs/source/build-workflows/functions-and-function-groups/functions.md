@@ -17,7 +17,7 @@ limitations under the License.
 
 # Functions
 
-Functions (tools) are the main building blocks of NeMo Agent toolkit and define the logic of your workflow.
+Functions (tools) are the main building blocks of NeMo Agent toolkit and define the logic of your [workflow](../about-building-workflows.md).
 
 In NeMo Agent toolkit, functions are a core abstraction that offer type-safe, asynchronous operations with support for both single and streaming outputs. They wrap callable objects (like Python functions or coroutines) and enhance them with:
 
