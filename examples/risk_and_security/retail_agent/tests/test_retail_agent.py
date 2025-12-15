@@ -72,8 +72,7 @@ async def test_product_inquiry(workflow: "Workflow"):
 
     # Check that the agent mentions the trowel product
     assert any(keyword in result_lower for keyword in ["trowel", "garden trowel", "premium garden"]), (
-        f"Expected product information in response, got: {result}"
-    )
+        f"Expected product information in response, got: {result}")
 
 
 @pytest.mark.integration
@@ -82,8 +81,10 @@ async def test_product_inquiry(workflow: "Workflow"):
 async def test_review_submission(workflow: "Workflow"):
     """Test that the agent can handle review submissions from existing customers."""
     email_input = {
-        "from": "john.doe@email.com",
-        "content": "I'd like to write a review for the Premium Garden Trowel I purchased. It's fantastic! I give it 5 stars.",
+        "from":
+            "john.doe@email.com",
+        "content":
+            "I'd like to write a review for the Premium Garden Trowel I purchased. It's fantastic! I give it 5 stars.",
     }
 
     result = await run_retail_agent(workflow, email_input)
@@ -91,8 +92,7 @@ async def test_review_submission(workflow: "Workflow"):
 
     # Check that the agent acknowledges the review submission
     assert any(keyword in result_lower for keyword in ["review", "thank", "submitted", "feedback", "appreciate"]), (
-        f"Expected review acknowledgment in response, got: {result}"
-    )
+        f"Expected review acknowledgment in response, got: {result}")
 
 
 @pytest.mark.integration
@@ -110,8 +110,7 @@ async def test_order_placement(workflow: "Workflow"):
 
     # Check that the agent mentions the order or watering can
     assert any(keyword in result_lower for keyword in ["order", "watering can", "purchase", "total", "price"]), (
-        f"Expected order information in response, got: {result}"
-    )
+        f"Expected order information in response, got: {result}")
 
 
 @pytest.mark.integration
@@ -129,8 +128,7 @@ async def test_customer_history_lookup(workflow: "Workflow"):
 
     # Check that the agent provides customer history information
     assert any(keyword in result_lower for keyword in ["order", "purchase", "history", "bought", "past orders"]), (
-        f"Expected customer history in response, got: {result}"
-    )
+        f"Expected customer history in response, got: {result}")
 
 
 @pytest.mark.integration
@@ -147,6 +145,5 @@ async def test_product_comparison(workflow: "Workflow"):
     result_lower = result.lower()
 
     # Check that the agent provides product information
-    assert any(keyword in result_lower for keyword in ["glove", "price", "option"]), (
-        f"Expected product comparison in response, got: {result}"
-    )
+    assert any(keyword in result_lower
+               for keyword in ["glove", "price", "option"]), (f"Expected product comparison in response, got: {result}")

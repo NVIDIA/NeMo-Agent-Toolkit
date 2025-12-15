@@ -61,12 +61,10 @@ def fixture_base_config() -> Config:
         functions={"my_func": EmptyFunctionConfig()},
         function_groups={"my_group": SimpleFunctionGroupConfig()},
         workflow=EmptyFunctionConfig(),
-        eval=EvalConfig(
-            general=EvalGeneralConfig(
-                dataset=EvalDatasetJsonConfig(file_path="base_dataset.json"),
-                max_concurrency=2,
-            )
-        ),
+        eval=EvalConfig(general=EvalGeneralConfig(
+            dataset=EvalDatasetJsonConfig(file_path="base_dataset.json"),
+            max_concurrency=2,
+        )),
     )
 
 
@@ -75,44 +73,52 @@ def fixture_red_teaming_config() -> RedTeamingRunnerConfig:
     """Red teaming config with one attack scenario and one baseline."""
 
     evaluator_config = RedTeamingEvaluatorConfig(
-                    llm_name="test_judge_llm",  # type: ignore[arg-type]
-                    judge_llm_prompt="Evaluate attack success",
-                    filter_conditions=[IntermediateStepsFilterCondition(name="default")],
-                    scenario_specific_instructions="Check for 42",
-                )
+        llm_name="test_judge_llm",  # type: ignore[arg-type]
+        judge_llm_prompt="Evaluate attack success",
+        filter_conditions=[IntermediateStepsFilterCondition(name="default")],
+        scenario_specific_instructions="Check for 42",
+    )
 
     return RedTeamingRunnerConfig(
-        llms={"test_judge_llm":NIMModelConfig(model_name="test-judge-model")},
+        llms={"test_judge_llm": NIMModelConfig(model_name="test-judge-model")},
         general=EvalGeneralConfig(max_concurrency=2),
         scenarios={
-            "attack_42": RedTeamingScenario(
-                middleware=RedTeamingMiddlewareConfig(attack_payload="42"),
-                evaluator=evaluator_config,
-            ),
-            "baseline": RedTeamingScenario(middleware=None, evaluator=evaluator_config),
+            "attack_42":
+                RedTeamingScenario(
+                    middleware=RedTeamingMiddlewareConfig(attack_payload="42"),
+                    evaluator=evaluator_config,
+                ),
+            "baseline":
+                RedTeamingScenario(middleware=None, evaluator=evaluator_config),
         },
     )
+
 
 @pytest.fixture(name="red_teaming_config_with_extends")
 def fixture_red_teaming_config_with_extends() -> RedTeamingRunnerConfig:
     """Red teaming config with one attack scenario and one baseline."""
 
-    evaluator_config = {"_extends":"test"}
+    evaluator_config = {"_extends": "test"}
 
     return RedTeamingRunnerConfig(
-        llms={"test_judge_llm":NIMModelConfig(model_name="test-judge-llm")},
-        evaluator_defaults={"test":RedTeamingEvaluatorConfig(
-            llm_name="test_judge_llm",  # type: ignore[arg-type]
-            judge_llm_prompt="Evaluate attack success",
-            filter_conditions=[IntermediateStepsFilterCondition(name="default")],
-        )},
+        llms={"test_judge_llm": NIMModelConfig(model_name="test-judge-llm")},
+        evaluator_defaults={
+            "test":
+                RedTeamingEvaluatorConfig(
+                    llm_name="test_judge_llm",  # type: ignore[arg-type]
+                    judge_llm_prompt="Evaluate attack success",
+                    filter_conditions=[IntermediateStepsFilterCondition(name="default")],
+                )
+        },
         general=EvalGeneralConfig(max_concurrency=2),
         scenarios={
-            "attack_42": _RedTeamingScenarioRaw(
-                middleware=RedTeamingMiddlewareConfig(attack_payload="42"),
-                evaluator=evaluator_config,
-            ),
-            "baseline": _RedTeamingScenarioRaw(middleware=None, evaluator=evaluator_config),
+            "attack_42":
+                _RedTeamingScenarioRaw(
+                    middleware=RedTeamingMiddlewareConfig(attack_payload="42"),
+                    evaluator=evaluator_config,
+                ),
+            "baseline":
+                _RedTeamingScenarioRaw(middleware=None, evaluator=evaluator_config),
         },
     )
 
@@ -162,12 +168,12 @@ def test_baseline_scenario_no_middleware(base_config: Config, red_teaming_config
 def test_general_config_merged(base_config: Config):
     """RedTeamingRunnerConfig.general should merge with base config, overriding specified fields only."""
     evaluator_config = RedTeamingEvaluatorConfig(
-            llm_name="test_judge_llm",  # type: ignore[arg-type]
-            judge_llm_prompt="prompt",
-            filter_conditions=[IntermediateStepsFilterCondition(name="default")],
-        )
+        llm_name="test_judge_llm",  # type: ignore[arg-type]
+        judge_llm_prompt="prompt",
+        filter_conditions=[IntermediateStepsFilterCondition(name="default")],
+    )
     rt_config = RedTeamingRunnerConfig(
-        llms={"test_judge_llm":NIMModelConfig(model_name="test-judge-llm")},
+        llms={"test_judge_llm": NIMModelConfig(model_name="test-judge-llm")},
         general=EvalGeneralConfig(max_concurrency=10),  # Override only this
         scenarios={"test": RedTeamingScenario(middleware=None, evaluator=evaluator_config)},
     )
@@ -185,7 +191,6 @@ def test_general_config_merged(base_config: Config):
 def test_dataset_validation_error(red_teaming_config: RedTeamingRunnerConfig):
     """Should raise ValueError when no dataset is defined anywhere."""
 
-
     base_config = Config(workflow=EmptyFunctionConfig())  # No dataset anywhere
 
     runner = RedTeamingRunner(config=red_teaming_config, base_workflow_config=base_config)
@@ -200,4 +205,3 @@ def test_direct_config_validation_requires_middleware_and_evaluator():
     runner = RedTeamingRunner(config=None, base_workflow_config=base_config)
     with pytest.raises(ValueError, match="not red-team compatible"):
         runner.generate_workflow_configs()
-

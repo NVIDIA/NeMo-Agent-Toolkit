@@ -38,6 +38,7 @@ def fixture_create_intermediate_step():
     Returns:
         A function that creates IntermediateStep objects
     """
+
     def _create_step(
         event_type: IntermediateStepType,
         name: str | None = None,
@@ -145,7 +146,7 @@ class TestIntermediateStepsFilterCondition:
         assert len(filtered) == 2, "Should return 2 calculator steps (START and END)"
         assert all(step.payload.name == "calculator" for step in filtered)
         assert all(step.event_type in [IntermediateStepType.TOOL_START, IntermediateStepType.TOOL_END]
-                  for step in filtered)
+                   for step in filtered)
 
     def test_filter_by_event_type_and_payload_name(self, sample_trajectory):
         """Test filtering by both event_type and payload_name."""
@@ -206,7 +207,6 @@ class TestIntermediateStepsFilterCondition:
         assert filtered[0].payload.name == "calculator"
         assert filtered[0].event_type == IntermediateStepType.TOOL_END
 
-
     def test_filter_multiple_tools_same_event_type(self, sample_trajectory):
         """Test filtering multiple tools with the same event type."""
         filter_condition = IntermediateStepsFilterCondition(
@@ -219,7 +219,6 @@ class TestIntermediateStepsFilterCondition:
         assert len(filtered) == 2, "Should return 2 TOOL_START steps"
         assert all(step.event_type == IntermediateStepType.TOOL_START for step in filtered)
         assert set(step.payload.name for step in filtered) == {"calculator", "search_tool"}
-
 
     def test_filter_preserves_order(self, sample_trajectory):
         """Test that filtering preserves the original order of steps."""
@@ -243,4 +242,3 @@ class TestIntermediateStepsFilterCondition:
 
         assert filter_condition.name == "my_custom_filter"
         assert filter_condition.event_type == IntermediateStepType.LLM_END
-

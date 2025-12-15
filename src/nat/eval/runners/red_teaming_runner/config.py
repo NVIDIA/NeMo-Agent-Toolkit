@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Red teaming runner configuration models.
 
 This module provides configuration models for red teaming evaluation workflows.
@@ -50,24 +49,14 @@ class _RedTeamingScenarioRaw(BaseModel):
     converted to RedTeamingScenario with proper evaluator configs.
     """
 
-    scenario_id: str | None = Field(
-        default=None,
-        description="Optional unique identifier for this scenario."
-    )
+    scenario_id: str | None = Field(default=None, description="Optional unique identifier for this scenario.")
 
-    middleware: RedTeamingMiddlewareConfig | None = Field(
-        default=None,
-        description="Full middleware configuration to apply."
-    )
+    middleware: RedTeamingMiddlewareConfig | None = Field(default=None,
+                                                          description="Full middleware configuration to apply.")
 
-    evaluator: dict[str, typing.Any] = Field(
-        description="Evaluator as dict, potentially with _extends field."
-    )
+    evaluator: dict[str, typing.Any] = Field(description="Evaluator as dict, potentially with _extends field.")
 
-    tags: list[str] = Field(
-        default=[],
-        description="Tags for bookkeeping and categorization of scenarios."
-    )
+    tags: list[str] = Field(default=[], description="Tags for bookkeeping and categorization of scenarios.")
 
 
 class RedTeamingScenario(BaseModel):
@@ -85,26 +74,20 @@ class RedTeamingScenario(BaseModel):
             evaluator_defaults using _extends in YAML/JSON.
     """
 
-    scenario_id: str | None = Field(
-        default=None,
-        description="Optional unique identifier for this scenario. "
-        "If not provided, the dict key is used."
-    )
+    scenario_id: str | None = Field(default=None,
+                                    description="Optional unique identifier for this scenario. "
+                                    "If not provided, the dict key is used.")
 
     middleware: RedTeamingMiddlewareConfig | None = Field(
         default=None,
         description="Full middleware configuration to apply. "
-        "Set to None for baseline scenarios (no middleware modification)."
-    )
+        "Set to None for baseline scenarios (no middleware modification).")
 
-    evaluator: RedTeamingEvaluatorConfig = Field(
-        description="Complete evaluator configuration for this scenario."
-    )
+    evaluator: RedTeamingEvaluatorConfig = Field(description="Complete evaluator configuration for this scenario.")
 
-    tags: list[str] = Field(
-        default=[],
-        description="Tags for bookkeeping and categorization of scenarios."
-    )
+    tags: list[str] = Field(default=[], description="Tags for bookkeeping and categorization of scenarios.")
+
+
 class RedTeamingRunnerConfig(BaseModel):
     """Top-level configuration for red teaming evaluation.
 
@@ -165,32 +148,24 @@ class RedTeamingRunnerConfig(BaseModel):
               filter_conditions: [...]
     """
 
-    base_workflow: Path | None = Field(
-        default=None,
-        description="Optional path to the base workflow configuration file. "
-        "Can be overridden by CLI --config_file argument."
-    )
+    base_workflow: Path | None = Field(default=None,
+                                       description="Optional path to the base workflow configuration file. "
+                                       "Can be overridden by CLI --config_file argument.")
 
-    llms: dict[str, LLMBaseConfig] = Field(
-        description="Dictionary of LLM configurations keyed by name. "
-        "Scenarios reference these LLMs in their evaluator configs."
-    )
+    llms: dict[str, LLMBaseConfig] = Field(description="Dictionary of LLM configurations keyed by name. "
+                                           "Scenarios reference these LLMs in their evaluator configs.")
 
     evaluator_defaults: dict[str, RedTeamingEvaluatorConfig] | None = Field(
         default=None,
         description="Named evaluator defaults that scenarios can extend. "
-        "Each must be a complete, valid RedTeamingEvaluatorConfig."
-    )
+        "Each must be a complete, valid RedTeamingEvaluatorConfig.")
 
-    general: EvalGeneralConfig | None = Field(
-        default=None,
-        description="General evaluation settings (concurrency, output, dataset)."
-    )
+    general: EvalGeneralConfig | None = Field(default=None,
+                                              description="General evaluation settings (concurrency, output, dataset).")
 
     scenarios: dict[str, RedTeamingScenario | _RedTeamingScenarioRaw] = Field(
         description="Dictionary of scenarios. Pydantic tries RedTeamingScenario first, "
-        "falls back to _RedTeamingScenarioRaw for dict-based evaluators with _extends."
-    )
+        "falls back to _RedTeamingScenarioRaw for dict-based evaluators with _extends.")
 
     @model_validator(mode="after")
     def validate_and_resolve_scenarios(self) -> RedTeamingRunnerConfig:
@@ -222,8 +197,7 @@ class RedTeamingRunnerConfig(BaseModel):
                             f"Scenario '{scenario_id}' references evaluator_defaults "
                             f"'{extends_key}' which doesn't exist. Available: {available}."
                             f"If attempting to extend a default evaluator, make sure the required default evaluator is"
-                            "defined in the evaluator_defaults section."
-                        )
+                            "defined in the evaluator_defaults section.")
 
                     # Shallow merge: base config dict + overrides
                     base_config = self.evaluator_defaults[extends_key]
@@ -247,17 +221,13 @@ class RedTeamingRunnerConfig(BaseModel):
                 converted_scenarios[scenario_id] = scenario
 
         # Warn if multiple baseline scenarios
-        baseline_scenarios = [
-            sid for sid, s in converted_scenarios.items()
-            if s.middleware is None
-        ]
+        baseline_scenarios = [sid for sid, s in converted_scenarios.items() if s.middleware is None]
         if len(baseline_scenarios) > 1:
             logger.warning(
                 "Found %d baseline scenarios (middleware: null): %s. "
                 "It's recommended to have only one baseline scenario.",
                 len(baseline_scenarios),
-                baseline_scenarios
-            )
+                baseline_scenarios)
 
         # Replace scenarios with fully converted dict
         object.__setattr__(self, 'scenarios', converted_scenarios)
@@ -278,10 +248,8 @@ class RedTeamingRunnerConfig(BaseModel):
         type_registry = GlobalTypeRegistry.get()
 
         # Create discriminated union annotation for LLM configs
-        LLMAnnotation = typing.Annotated[
-            type_registry.compute_annotation(LLMBaseConfig),
-            Discriminator(TypedBaseModel.discriminator)
-        ]
+        LLMAnnotation = typing.Annotated[type_registry.compute_annotation(LLMBaseConfig),
+                                         Discriminator(TypedBaseModel.discriminator)]
 
         should_rebuild = False
 
@@ -303,9 +271,7 @@ class RedTeamingRunnerConfig(BaseModel):
 # Register hook to rebuild annotations when new types are registered
 GlobalTypeRegistry.get().add_registration_changed_hook(lambda: RedTeamingRunnerConfig.rebuild_annotations())
 
-
 __all__ = [
     "RedTeamingRunnerConfig",
     "RedTeamingScenario",
 ]
-

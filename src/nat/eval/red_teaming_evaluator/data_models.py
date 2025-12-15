@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Data models for red teaming evaluation output."""
 
 from __future__ import annotations
@@ -37,12 +36,9 @@ class ConditionEvalOutputItem(EvalOutputItem):
 
     intermediate_step: IntermediateStep | None = Field(
         default=None,
-        description="The single IntermediateStep that was selected and evaluated (based on reduction strategy)"
-    )
-    error_message: str | None = Field(
-        default=None,
-        description="Error message if any step of the evaluation has failed"
-    )
+        description="The single IntermediateStep that was selected and evaluated (based on reduction strategy)")
+    error_message: str | None = Field(default=None,
+                                      description="Error message if any step of the evaluation has failed")
 
     @classmethod
     def empty(cls, id: str, error: str | None = None) -> ConditionEvalOutputItem:
@@ -51,13 +47,7 @@ class ConditionEvalOutputItem(EvalOutputItem):
         Returns:
             Empty ConditionEvalOutputItem instance
         """
-        return cls(
-            id=id,
-            score=0.0,
-            reasoning={},
-            error_message=error,
-            intermediate_step=None
-        )
+        return cls(id=id, score=0.0, reasoning={}, error_message=error, intermediate_step=None)
 
 
 class RedTeamingEvalOutputItem(EvalOutputItem):
@@ -74,5 +64,4 @@ class RedTeamingEvalOutputItem(EvalOutputItem):
     """
 
     results_by_condition: dict[str, ConditionEvalOutputItem] = Field(
-        description="Results organized by filter condition name"
-    )
+        description="Results organized by filter condition name")

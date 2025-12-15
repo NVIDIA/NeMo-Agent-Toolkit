@@ -76,27 +76,22 @@ class RedTeamingMiddlewareConfig(FunctionMiddlewareBaseConfig, name="red_teaming
     """
 
     attack_payload: str = Field(
-        description="The malicious payload to inject (string representation, will be converted for int/float fields)"
-    )
+        description="The malicious payload to inject (string representation, will be converted for int/float fields)")
 
     target_function_or_group: str | None = Field(
         default=None,
-        description=(
-            "Optional function or group to target. "
-            "Format: 'group_name' for entire group, 'group_name.function_name' for specific function. "
-            "If None, attacks all functions this middleware is applied to."
-        ),
+        description=("Optional function or group to target. "
+                     "Format: 'group_name' for entire group, 'group_name.function_name' for specific function. "
+                     "If None, attacks all functions this middleware is applied to."),
     )
 
     payload_placement: Literal["replace", "append_start", "append_middle", "append_end"] = Field(
         default="append_end",
-        description=(
-            "How to apply the attack payload: "
-            "'replace' (replace entire value), "
-            "'append_start' (prepend), "
-            "'append_end' (append), "
-            "'append_middle' (insert at middle sentence)"
-        ),
+        description=("How to apply the attack payload: "
+                     "'replace' (replace entire value), "
+                     "'append_start' (prepend), "
+                     "'append_end' (append), "
+                     "'append_middle' (insert at middle sentence)"),
     )
 
     target_location: Literal["input", "output"] = Field(
@@ -106,24 +101,20 @@ class RedTeamingMiddlewareConfig(FunctionMiddlewareBaseConfig, name="red_teaming
 
     target_field: str | None = Field(
         default=None,
-        description=(
-            "Optional field name or path to target within the input/output schema. "
-            "Use simple name (e.g., 'prompt') to search schema, "
-            "or dotted path (e.g., 'data.response.text') for nested fields. "
-            "If None, operates on the value directly."
-        ),
+        description=("Optional field name or path to target within the input/output schema. "
+                     "Use simple name (e.g., 'prompt') to search schema, "
+                     "or dotted path (e.g., 'data.response.text') for nested fields. "
+                     "If None, operates on the value directly."),
     )
 
     target_field_resolution_strategy: Literal["random", "first", "last", "all", "error"] = Field(
         default="error",
-        description=(
-            "Strategy to resolve multiple field matches: "
-            "'random': Choose a random field match, "
-            "'first': Choose the first field match, "
-            "'last': Choose the last field match, "
-            "'all': Choose all field matches, "
-            "'error': Raise an error if multiple field matches are found."
-        ),
+        description=("Strategy to resolve multiple field matches: "
+                     "'random': Choose a random field match, "
+                     "'first': Choose the first field match, "
+                     "'last': Choose the last field match, "
+                     "'all': Choose all field matches, "
+                     "'error': Raise an error if multiple field matches are found."),
     )
 
     call_limit: int | None = Field(
@@ -132,5 +123,5 @@ class RedTeamingMiddlewareConfig(FunctionMiddlewareBaseConfig, name="red_teaming
         "A middleware might be called but not apply a payload. Such cases do not count towards the call limit.",
     )
 
-__all__ = ["RedTeamingMiddlewareConfig"]
 
+__all__ = ["RedTeamingMiddlewareConfig"]
