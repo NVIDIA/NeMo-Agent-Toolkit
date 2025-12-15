@@ -65,7 +65,7 @@ The model learns to play against a **random opponent**, receiving rewards based 
    ```bash
    # Create a separate virtual environment for ART
    uv venv art-env --python 3.11
-   source ~/.venvs/art-env/bin/activate
+   source ~/art-env/bin/activate
    export HF_TOKEN=<your_huggingface_token>
    # Install OpenPipe ART
    uv pip install openpipe-art[backend]==0.4.11
@@ -173,7 +173,7 @@ In your **ART virtual environment**, start vLLM to serve the base model:
 
 ```bash
 # Activate the ART environment
-source ~/.venvs/art-env/bin/activate
+source ~/art-env/bin/activate
 export HF_TOKEN=<your_huggingface_token>
 # Start vLLM server
 python -m vllm.entrypoints.openai.api_server \
@@ -202,7 +202,7 @@ In a **separate terminal** with your NAT environment activated:
 cd examples/finetuning/rl_with_openpipe_art
 
 # Run the pre-training evaluation
-nat eval --config_file=src/rl_with_openpipe_art/configs/config_pre_train.yml
+nat eval --config_file=src/rl_with_openpipe_art/configs/config_pre_train.yml --reps 3
 ```
 
 This runs 24 games (12 as X, 12 as O) and reports the win percentage.
@@ -223,7 +223,7 @@ In your **ART virtual environment**:
 
 ```bash
 # Activate the ART environment
-source ~/.venvs/art-env/bin/activate
+source ~/art-env/bin/activate
 export HF_TOKEN=<your_huggingface_token>
 
 # Start the ART server
@@ -573,7 +573,7 @@ The ART server continues serving the finetuned model weights. Do not restart it,
 ### 6.2 Run Post-Training Evaluation
 
 ```bash
-nat eval --config_file=src/rl_with_openpipe_art/configs/config_post_train.yml
+nat eval --config_file=src/rl_with_openpipe_art/configs/config_post_train.yml --reps 3
 ```
 
 Compare the post-training win percentage against the pre-training baseline. You should see a notable improvement.
