@@ -65,7 +65,7 @@ The model learns to play against a **random opponent**, receiving rewards based 
    ```bash
    # Create a separate virtual environment for ART
    uv venv art-env --python 3.11
-   source ~/art-env/bin/activate
+   source art-env/bin/activate
    export HF_TOKEN=<your_huggingface_token>
    # Install OpenPipe ART
    uv pip install openpipe-art[backend]==0.4.11
@@ -173,7 +173,7 @@ In your **ART virtual environment**, start vLLM to serve the base model:
 
 ```bash
 # Activate the ART environment
-source ~/art-env/bin/activate
+source art-env/bin/activate
 export HF_TOKEN=<your_huggingface_token>
 # Start vLLM server
 python -m vllm.entrypoints.openai.api_server \
@@ -223,7 +223,7 @@ In your **ART virtual environment**:
 
 ```bash
 # Activate the ART environment
-source ~/art-env/bin/activate
+source art-env/bin/activate
 export HF_TOKEN=<your_huggingface_token>
 
 # Start the ART server
