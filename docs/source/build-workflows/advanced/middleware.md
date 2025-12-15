@@ -26,7 +26,7 @@ Middleware provides a powerful mechanism for adding cross-cutting concerns to fu
 3. **Postprocess** - Process, transform, or augment outputs
 4. **Continue** - Return or yield the final result
 
-Middleware components are first-class components in NAT, configured in YAML and built by the workflow builder, just like retrievers, memory providers, and other components.
+Middleware components are first-class components in NAT, configured in YAML and built by the workflow builder, just like retrievers, [memory](../memory.md) providers, and other components.
 
 ## Key Concepts
 

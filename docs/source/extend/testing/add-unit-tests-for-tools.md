@@ -77,7 +77,7 @@ async def test_tool_error_handling():
 
 ### Testing Tools with Dependencies
 
-For tools that depend on LLMs, memory, retrievers, or other components, use the mocked dependencies context:
+For tools that depend on LLMs, [memory](../../build-workflows/memory.md), retrievers, or other components, use the mocked dependencies context:
 
 ```python
 from nat.test import with_mocked_dependencies
