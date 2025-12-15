@@ -83,10 +83,10 @@ The A2A authentication flow demonstrates how agent card discovery drives the aut
 
 ```mermaid
 sequenceDiagram
-    participant Client as NAT Workflow<br/>(A2A Client)
+    participant Client as A2A Client<br/>(Math Assistant)
     participant Browser as User Browser
     participant AuthServer as Authorization Server<br/>(OAuth2)
-    participant Server as NAT Workflow<br/>(A2A Server)
+    participant Server as Remote A2A Agent<br/>(Calculator)
 
     Note over Client,Server: 1. Discovery Phase (Public - No Auth)
     Client->>Server: GET /.well-known/agent-card.json
