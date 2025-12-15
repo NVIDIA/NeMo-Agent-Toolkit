@@ -624,7 +624,7 @@ Build order:
 2. [Embedders](../embedders.md)
 3. [LLMs](../llms/index.md)
 4. Memory
-5. Object stores
+5. [Object stores](../object-store.md)
 6. Retrievers
 7. TTC strategies
 8. **Middleware** ← Built here

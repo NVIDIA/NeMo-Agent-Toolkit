@@ -1198,7 +1198,7 @@ Options:
 
 ## Object Store Commands
 
-The `nat object-store` command group provides utilities to interact with object stores. This command group is used to
+The `nat object-store` command group provides utilities to interact with [object stores](../build-workflows/object-store.md). This command group is used to
 upload and download files to and from object stores.
 
 The `nat object-store --help` utility provides an overview of its usage:

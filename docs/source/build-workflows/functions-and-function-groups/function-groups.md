@@ -38,7 +38,7 @@ nat info components -t function_group
 
 ### Example: Without Function Groups
 
-Consider three functions that work with an object store. Without function groups, each function needs its own configuration and creates its own connection:
+Consider three functions that work with an [object store](../object-store.md). Without function groups, each function needs its own configuration and creates its own connection:
 
 ```python
 class SaveFileConfig(FunctionBaseConfig, name="save_file"):
