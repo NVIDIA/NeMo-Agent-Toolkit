@@ -66,7 +66,7 @@ The following are more ways you can configure your config file when using the re
 
   Given the following input and a list of available tools, please provide a detailed step-by-step plan that an instruction following system can use to address the input. Ensure the plan includes:
   1. Identifying the key components of the input.
-  2. Determining the most suitable tools for each task.
+  2. Determining the most suitable [tools](../../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) for each task.
   3. Outlining the sequence of actions to be taken.
 
   **Input:**

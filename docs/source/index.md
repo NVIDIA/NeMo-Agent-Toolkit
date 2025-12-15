@@ -19,7 +19,7 @@ limitations under the License.
 
 # NVIDIA NeMo Agent Toolkit Overview
 
-NVIDIA NeMo Agent toolkit is a flexible, lightweight, and unifying library that allows you to easily connect existing enterprise [agents](./components/agents/index.md) to data sources and tools across any framework.
+NVIDIA NeMo Agent toolkit is a flexible, lightweight, and unifying library that allows you to easily connect existing enterprise [agents](./components/agents/index.md) to data sources and [tools](./build-workflows/functions-and-function-groups/functions.md#agents-and-tools) across any framework.
 
 ## Install
 

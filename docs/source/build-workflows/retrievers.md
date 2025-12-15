@@ -74,7 +74,7 @@ The Milvus retriever provider is defined by the {py:class}`~nat.retriever.milvus
 * `output_fields` - A list of fields to return from the data store. If `None`, all fields but the vector are returned.
 * `search_params` - Search parameters to use when performing vector search.
 * `vector_field` - Name of the field to compare with the vector generated from the query.
-* `description` - If present it will be used as the tool description.
+* `description` - If present it will be used as the [tool](./functions-and-function-groups/functions.md#agents-and-tools) description.
 
 ### Configuration Examples
 Retrievers are configured similarly to other NeMo Agent toolkit components, such as Functions and LLMs. Each Retriever provider (e.g., Milvus) has a Pydantic config object which defines its configurable parameters and type.

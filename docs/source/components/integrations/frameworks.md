@@ -45,7 +45,7 @@ The ability to use embedding model providers for vector representations, includi
 The ability to integrate with vector databases and retrieval systems, such as NeMo Retriever and Milvus.
 
 ### Tool Calling Support
-The ability to use framework-specific tool calling mechanisms, allowing agents to invoke functions and tools during execution.
+The ability to use framework-specific [tool](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) calling mechanisms, allowing agents to invoke functions and tools during execution.
 
 ### Profiling Support
 The ability to view workflow execution traces including intermediate steps, LLM calls, and tool calls within the NeMo Agent toolkit profiler.

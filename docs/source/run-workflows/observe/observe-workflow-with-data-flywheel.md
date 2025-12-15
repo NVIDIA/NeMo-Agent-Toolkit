@@ -28,7 +28,7 @@ The Data Flywheel integration currently supports LangChain (as used in LangChain
 - `_type: openai` - OpenAI provider
 - `_type: nim` - NVIDIA NIM provider
 
-The integration captures `LLM_START` events for completions and tool calls when using these specific combinations. Other framework and provider combinations are not currently supported.
+The integration captures `LLM_START` events for completions and [tool](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) calls when using these specific combinations. Other framework and provider combinations are not currently supported.
 
 ## Step 1: Prerequisites
 

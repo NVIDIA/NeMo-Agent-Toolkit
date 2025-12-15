@@ -83,7 +83,7 @@ workflow:
 
 ### Configurable Options
 
-* `tool_list`: **Required**. A list of functions to execute sequentially. Each function's output becomes the input for the next function in the chain.
+* `tool_list`: **Required**. A list of functions ([tools](../../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools)) to execute sequentially. Each function's output becomes the input for the next function in the chain.
 
 * `raise_type_incompatibility`: Defaults to `False`. Whether to raise an exception if the type compatibility check fails. The type compatibility check runs before executing the tool list, based on the type annotations of the functions. When set to `True`, any incompatibility immediately raises an exception. When set to `False`, incompatibilities generate warning messages and the sequential executor continues execution. Set this to `False` when functions in the tool list include custom type converters, as the type compatibility check may fail even though the sequential executor can still execute the tool list.
 

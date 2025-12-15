@@ -227,7 +227,7 @@ eval:
       llm_name: nim_trajectory_eval_llm
 ```
 
-A judge LLM is used to evaluate the trajectory produced by the workflow, taking into account the tools available during execution. It returns a floating-point score between 0 and 1, where 1.0 indicates a perfect trajectory.
+A judge LLM is used to evaluate the trajectory produced by the workflow, taking into account the [tools](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) available during execution. It returns a floating-point score between 0 and 1, where 1.0 indicates a perfect trajectory.
 
 To configure the judge LLM, define it in the `llms` section of the configuration file, and reference it in the evaluator configuration using the `llm_name` key.
 

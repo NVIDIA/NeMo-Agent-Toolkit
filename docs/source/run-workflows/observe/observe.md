@@ -158,7 +158,7 @@ The NeMo Agent toolkit observability system uses a generic, plugin-based archite
 
 #### Event Stream Architecture
 
-- **`IntermediateStepManager`**: Publishes workflow events (`IntermediateStep` objects) to a reactive event stream, tracking function execution boundaries, LLM calls, tool usage, and intermediate operations.
+- **`IntermediateStepManager`**: Publishes workflow events (`IntermediateStep` objects) to a reactive event stream, tracking function execution boundaries, LLM calls, [tool](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) usage, and intermediate operations.
 - **Event Stream**: A reactive stream that broadcasts `IntermediateStep` events to all subscribed telemetry exporters, enabling real-time observability.
 - **Asynchronous Processing**: All telemetry exporters process events asynchronously in background tasks, keeping observability "off the hot path" for optimal performance.
 

@@ -21,7 +21,7 @@ In NeMo Agent toolkit, a workflow defines which [functions](./functions-and-func
 
 ## Understanding the Workflow Configuration File
 
-The workflow configuration file is a YAML file that specifies the tools and models to use in a workflow, along with general configuration settings. This section examines the configuration of the `examples/getting_started/simple_web_query` workflow to show how they are organized.
+The workflow configuration file is a YAML file that specifies the [tools](./functions-and-function-groups/functions.md#agents-and-tools) and models to use in a workflow, along with general configuration settings. This section examines the configuration of the `examples/getting_started/simple_web_query` workflow to show how they are organized.
 
 `examples/getting_started/simple_web_query/configs/config.yml`:
 

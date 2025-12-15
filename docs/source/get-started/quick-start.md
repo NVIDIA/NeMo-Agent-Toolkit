@@ -90,4 +90,4 @@ nvidia-nat[langchain]==1.0.*
 ## Next Steps
 
 - Review the NeMo Agent toolkit [tutorials](./tutorials/index.md) for detailed guidance on using the toolkit.
-- Explore the examples in the `examples` directory to learn how to build custom workflows and tools with NeMo Agent toolkit.
+- Explore the examples in the `examples` directory to learn how to build custom workflows and [tools](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) with NeMo Agent toolkit.

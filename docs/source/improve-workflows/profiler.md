@@ -27,7 +27,7 @@ The NeMo Agent toolkit Profiler Module provides profiling and forecasting capabi
 - Analyzing workflow performance measures such as bottlenecks, latency, and concurrency spikes.
 
 These functionalities will allow NeMo Agent toolkit developers to dynamically stress test their workflows in pre-production phases to receive workflow-specific sizing guidance based on observed latency and throughput of their specific workflows
-At any or every stage in a workflow execution, the NeMo Agent toolkit profiler generates predictions/forecasts about future token and tool usage. Client side forecasting allows for workflow-specific predictions which can be difficult, if not impossible, to achieve server side in order to facilitate inference planning.
+At any or every stage in a workflow execution, the NeMo Agent toolkit profiler generates predictions/forecasts about future token and [tool](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) usage. Client side forecasting allows for workflow-specific predictions which can be difficult, if not impossible, to achieve server side in order to facilitate inference planning.
 Will allow for features such as offline-replay or simulation of workflow runs without the need for deployed infrastructure such as tooling/vector DBs, etc. Will also allow for NeMo Agent toolkit native observability and workflow fingerprinting.
 
 ## Prerequisites

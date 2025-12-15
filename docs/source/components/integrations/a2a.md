@@ -52,7 +52,7 @@ A service that exposes NAT workflows as A2A agents. The `nat a2a serve` command 
 
 The following examples demonstrate A2A integration:
 
-- **Math Assistant A2A** (`examples/A2A/math_assistant_a2a/`) - NAT-to-NAT A2A communication with hybrid tool composition (A2A calculator + MCP time + local logic)
+- **Math Assistant A2A** (`examples/A2A/math_assistant_a2a/`) - NAT-to-NAT A2A communication with hybrid [tool](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) composition (A2A calculator + MCP time + local logic)
 - **Currency Agent A2A** (`examples/A2A/currency_agent_a2a/`) - Connecting to external third-party A2A services (LangGraph-based currency agent)
 
 ## Documentation

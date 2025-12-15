@@ -108,7 +108,7 @@ nat info components -t front_end -q a2a
 When you publish a NAT workflow as an A2A agent:
 
 1. **Workflow becomes an Agent**: The entire workflow is exposed as a single A2A agent
-2. **Functions become Skills**: Each tool (function) in the workflow becomes an A2A skill
+2. **Functions become Skills**: Each [tool](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) (function) in the workflow becomes an A2A skill
 3. **Agent Card is auto-generated**: Metadata is derived from workflow configuration
 4. **Natural language interface**: The agent accepts natural language queries and delegates to appropriate functions
 
