@@ -18,7 +18,8 @@ from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+from pydantic import Field
 
 from nat.builder.builder import Builder
 from nat.builder.function import FunctionGroup
@@ -40,8 +41,7 @@ class RetailToolsConfig(FunctionGroupBaseConfig, name="retail_tools"):
             "get_all_products",
             "write_review",
             "send_email",
-            "update_customer_info",
-        ],
+            "update_customer_info", ],
         description="The list of functions to include in the retail tools function group.",
     )
 
@@ -128,10 +128,8 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
             Product information including id, name, description, price, stock, and reviews.
         """
         for product in products_data:
-            if (
-                product["id"].lower() == product_identifier.lower()
-                or product["name"].lower() == product_identifier.lower()
-            ):
+            if (product["id"].lower() == product_identifier.lower()
+                    or product["name"].lower() == product_identifier.lower()):
                 return product
 
         return {"error": f"No product found with identifier: {product_identifier}"}
@@ -143,20 +141,16 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
             List of all products with their basic information (id, name, description, price, stock).
         """
         del dummy
-        return [
-            {
-                "id": p["id"],
-                "name": p["name"],
-                "description": p["description"],
-                "price": p["price"],
-                "stock": p["stock"],
-                "average_rating": (
-                    sum(r["rating"] for r in p["reviews"]) / len(p["reviews"]) if p["reviews"] else "No ratings yet"
-                ),
-                "review_count": len(p["reviews"]),
-            }
-            for p in products_data
-        ]
+        return [{
+            "id": p["id"],
+            "name": p["name"],
+            "description": p["description"],
+            "price": p["price"],
+            "stock": p["stock"],
+            "average_rating": (sum(r["rating"]
+                                   for r in p["reviews"]) / len(p["reviews"]) if p["reviews"] else "No ratings yet"),
+            "review_count": len(p["reviews"]),
+        } for p in products_data]
 
     async def _write_review(params: WriteReviewParams) -> dict[str, Any]:
         """Submit a product review (mock function - does not persist data).

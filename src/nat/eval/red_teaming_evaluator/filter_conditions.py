@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 from pydantic import BaseModel
 from pydantic import Field
 
@@ -32,13 +33,9 @@ class IntermediateStepsFilterCondition(BaseModel):
 
     name: str = Field(description="Name for this filter condition (used for organizing results)")
     event_type: IntermediateStepType | str | None = Field(
-        default=None,
-        description="Filter steps by event_type (e.g., 'TOOL_END', 'LLM_END', 'FUNCTION_END')"
-    )
-    payload_name: str | None = Field(
-        default=None,
-        description="Filter steps by payload.name (e.g., specific tool or function name)"
-    )
+        default=None, description="Filter steps by event_type (e.g., 'TOOL_END', 'LLM_END', 'FUNCTION_END')")
+    payload_name: str | None = Field(default=None,
+                                     description="Filter steps by payload.name (e.g., specific tool or function name)")
 
     def filter_trajectory(self, trajectory: list[IntermediateStep]) -> list[IntermediateStep]:
         """
@@ -71,6 +68,7 @@ class IntermediateStepsFilterCondition(BaseModel):
                 if step.payload.name is not None and step.payload.name == self.payload_name
             ]
         return filtered_steps
+
     @classmethod
     def default(cls) -> IntermediateStepsFilterCondition:
         # Get the default filter conditions that essentially perform no filtering.

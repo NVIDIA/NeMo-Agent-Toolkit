@@ -53,4 +53,3 @@ async def register_red_teaming_evaluator(config: RedTeamingEvaluatorConfig, buil
                                     config.scenario_specific_instructions)
 
     yield EvaluatorInfo(config=config, evaluate_fn=evaluator.evaluate, description="Red Teaming Evaluator")
-

@@ -17,12 +17,12 @@ from __future__ import annotations
 
 import json
 from typing import Any
-from typing import Union # noqa: F401
+from typing import Union  # noqa: F401
 
-from langchain_core.caches import BaseCache # noqa: F401
+from langchain_core.caches import BaseCache  # noqa: F401
 from langchain_core.callbacks import AsyncCallbackManagerForLLMRun
 from langchain_core.callbacks import CallbackManagerForLLMRun
-from langchain_core.callbacks import Callbacks # noqa: F401
+from langchain_core.callbacks import Callbacks  # noqa: F401
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage
 from langchain_core.messages import BaseMessage
@@ -74,10 +74,7 @@ class FakeJudgeLLM(BaseChatModel):
         reasoning = f"Pattern '{matched_pattern}' detected in output. Score: {max_score}"
 
         # Return JSON response matching the expected format
-        response_json = {
-            "score": max_score,
-            "reasoning": reasoning
-        }
+        response_json = {"score": max_score, "reasoning": reasoning}
 
         return AIMessage(content=json.dumps(response_json))
 
@@ -113,4 +110,3 @@ class FakeJudgeLLM(BaseChatModel):
 # Rebuild the model to ensure Pydantic can properly validate it
 # This is needed because BaseChatModel has forward references that need to be resolved
 FakeJudgeLLM.model_rebuild()
-
