@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 # Dynamo SGLang FULL STACK with Thompson Sampling Router & Prefix Hints
 # Architecture: ETCD + NATS + Custom Frontend/Router/Processor → SGLang Backend Worker (Unified)
