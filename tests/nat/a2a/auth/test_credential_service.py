@@ -364,7 +364,7 @@ def test_provider_validation(provider_name,
         with pytest.raises(ValueError, match="not compatible with agent's security requirements"):
             A2ACredentialService(
                 auth_provider=provider,
-                user_id="test-user",
+                default_user_id="test-user",
                 agent_card=card,
             )
 
@@ -383,7 +383,7 @@ def test_validation_skipped_when_no_schemes(agent_card_config, mock_auth_provide
     card = sample_agent_card(agent_card_config) if agent_card_config is not None else None
     service = A2ACredentialService(
         auth_provider=provider,
-        user_id="test-user",
+        default_user_id="test-user",
         agent_card=card,
     )
 
