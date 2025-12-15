@@ -240,11 +240,11 @@ For workflows that require complete per-user isolation (including separate MCP c
 
 ```mermaid
 flowchart LR
-  U1[User Alice] --> H[MCP Host<br/>NAT Per-User Workflow]
+  U1[User Alice] --> H[MCP Host<br/>FastAPI Server]
   U2[User Bob] --> H
 
-  H --> W1[Workflow Instance<br/>Alice]
-  H --> W2[Workflow Instance<br/>Bob]
+  H --> W1[Per-user Workflow Instance<br/>Alice]
+  H --> W2[Per-user Workflow Instance<br/>Bob]
 
   W1 --> C1[MCP Client<br/>Alice]
   W2 --> C2[MCP Client<br/>Bob]
