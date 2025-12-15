@@ -180,33 +180,33 @@ The retail agent has access to the following tools:
 
 ### Retail Tools Function Group
 
-1. **get_customer_info** - Looks up customer by email address
+1. **`get_customer_info`** - Looks up customer by email address
 
-   - Input: email (string)
+   - Input: ``email`` (string)
    - Output: Customer object with id, name, past orders, total orders, total spent, and past reviews
 
-2. **get_product_info** - Retrieves single product details
+2. **`get_product_info`** - Retrieves single product details
 
-   - Input: product_id or product_name (string)
+   - Input: ``product_id`` or ``product_name`` (string)
    - Output: Product object with id, name, description, price, stock, and reviews
 
-3. **get_all_products** - Lists all products for comparison
+3. **`get_all_products`** - Lists all products for comparison
 
    - Input: None
    - Output: List of all products with basic information
 
-4. **write_review** - Mock function to add a review
+4. **`write_review`** - Mock function to add a review
 
-   - Input: customer_email (string), product_name (string), rating (integer 1-5), review_text (string)
+   - Input: ``customer_email`` (string), ``product_name`` (string), rating (integer 1-5), ``review_text`` (string)
    - Output: Success message (mock - no actual database update)
 
-5. **send_email** - Mock function to send email response
+5. **`send_email`** - Mock function to send email response
 
-   - Input: recipient_email (string), content (string), cc (optional string)
+   - Input: ``recipient_email`` (string), content (string), cc (optional string)
    - Output: Success message with email details (mock - no actual email sent)
 
-6. **update_customer_info** - Mock function to update customer order information
-   - Input: customer_email (string), product_name (string), quantity (integer)
+6. **`update_customer_info`** - Mock function to update customer order information
+   - Input: ``customer_email`` (string), ``product_name`` (string), quantity (integer)
    - Output: Success message with updated order details (mock - no actual database update)
 
 ---
