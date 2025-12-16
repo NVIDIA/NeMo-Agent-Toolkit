@@ -73,10 +73,10 @@ class WebSocketMessageHandler:
         self._flow_handler: FlowHandlerBase | None = None
 
         self._schema_output_mapping: dict[str, type[BaseModel] | type[None]] = {
-            WorkflowSchemaType.GENERATE: self._session_manager.workflow.single_output_schema,
+            WorkflowSchemaType.GENERATE: self._session_manager.get_workflow_single_output_schema(),
             WorkflowSchemaType.CHAT: ChatResponse,
             WorkflowSchemaType.CHAT_STREAM: ChatResponseChunk,
-            WorkflowSchemaType.GENERATE_STREAM: self._session_manager.workflow.streaming_output_schema,
+            WorkflowSchemaType.GENERATE_STREAM: self._session_manager.get_workflow_streaming_output_schema(),
         }
 
     def set_flow_handler(self, flow_handler: FlowHandlerBase) -> None:
@@ -327,7 +327,7 @@ class WebSocketMessageHandler:
                                                      user_authentication_callback=auth_callback) as session:
 
                 async for value in generate_streaming_response(payload,
-                                                               session_manager=session,
+                                                               session=session,
                                                                streaming=True,
                                                                step_adaptor=self._step_adaptor,
                                                                result_type=result_type,

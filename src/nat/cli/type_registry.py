@@ -22,6 +22,7 @@ from contextlib import contextmanager
 from copy import deepcopy
 from functools import cached_property
 from logging import Handler
+from typing import Self
 
 from pydantic import BaseModel
 from pydantic import ConfigDict
@@ -29,6 +30,7 @@ from pydantic import Field
 from pydantic import Tag
 from pydantic import computed_field
 from pydantic import field_validator
+from pydantic import model_validator
 
 from nat.authentication.interfaces import AuthProviderBase
 from nat.builder.builder import Builder
@@ -52,6 +54,12 @@ from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.embedder import EmbedderBaseConfigT
 from nat.data_models.evaluator import EvaluatorBaseConfig
 from nat.data_models.evaluator import EvaluatorBaseConfigT
+from nat.data_models.finetuning import TrainerAdapterConfig
+from nat.data_models.finetuning import TrainerAdapterConfigT
+from nat.data_models.finetuning import TrainerConfig
+from nat.data_models.finetuning import TrainerConfigT
+from nat.data_models.finetuning import TrajectoryBuilderConfig
+from nat.data_models.finetuning import TrajectoryBuilderConfigT
 from nat.data_models.front_end import FrontEndBaseConfig
 from nat.data_models.front_end import FrontEndConfigT
 from nat.data_models.function import FunctionBaseConfig
@@ -77,6 +85,9 @@ from nat.data_models.telemetry_exporter import TelemetryExporterConfigT
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfigT
 from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
+from nat.finetuning.interfaces.finetuning_runner import Trainer
+from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
+from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 from nat.memory.interfaces import MemoryEditor
 from nat.middleware.middleware import Middleware
 from nat.object_store.interfaces import ObjectStore
@@ -89,6 +100,9 @@ AuthProviderBuildCallableT = Callable[[AuthProviderBaseConfigT, Builder], AsyncI
 EmbedderClientBuildCallableT = Callable[[EmbedderBaseConfigT, Builder], AsyncIterator[typing.Any]]
 EmbedderProviderBuildCallableT = Callable[[EmbedderBaseConfigT, Builder], AsyncIterator[EmbedderProviderInfo]]
 EvaluatorBuildCallableT = Callable[[EvaluatorBaseConfigT, EvalBuilder], AsyncIterator[EvaluatorInfo]]
+TrainerBuildCallableT = Callable[[TrainerConfigT, Builder], AsyncIterator[Trainer]]
+TrainerAdapterBuildCallableT = Callable[[TrainerAdapterConfigT, Builder], AsyncIterator[TrainerAdapter]]
+TrajectoryBuilderBuildCallableT = Callable[[TrajectoryBuilderConfigT, Builder], AsyncIterator[TrajectoryBuilder]]
 FrontEndBuildCallableT = Callable[[FrontEndConfigT, Config], AsyncIterator[FrontEndBase]]
 FunctionBuildCallableT = Callable[[FunctionConfigT, Builder], AsyncIterator[FunctionInfo | Callable | FunctionBase]]
 FunctionGroupBuildCallableT = Callable[[FunctionGroupConfigT, Builder], AsyncIterator[FunctionGroup]]
@@ -138,6 +152,12 @@ class RegisteredInfo(BaseModel, typing.Generic[TypedBaseModelT]):
     config_type: type[TypedBaseModelT]
     discovery_metadata: DiscoveryMetadata = DiscoveryMetadata()
 
+    is_per_user: bool = Field(default=False,
+                              description="Whether the component is per-user. Default to False. If True, "
+                              "each user will have their own separate instance of the component. The per-user "
+                              "component instance will be lazily built on user's first invocation. If False, the "
+                              "component instance will be shared across all users.")
+
     @computed_field
     @cached_property
     def module_name(self) -> str:
@@ -169,6 +189,32 @@ class RegisteredLoggingMethod(RegisteredInfo[LoggingBaseConfig]):
     build_fn: LoggingMethodRegisteredCallableT = Field(repr=False)
 
 
+class RegisteredTrainerInfo(RegisteredInfo[TrainerConfig]):
+    """
+    Represents a registered Trainer. Trainers are responsible for fine-tuning LLMs.
+    """
+
+    build_fn: TrainerBuildCallableT = Field(repr=False)
+
+
+class RegisteredTrainerAdapterInfo(RegisteredInfo[TrainerAdapterConfig]):
+    """
+    Represents a registered Trainer Adapter. Trainer Adapters are responsible for adapting the training process to
+    different frameworks.
+    """
+
+    build_fn: TrainerAdapterBuildCallableT = Field(repr=False)
+
+
+class RegisteredTrajectoryBuilderInfo(RegisteredInfo[TrajectoryBuilderConfig]):
+    """
+    Represents a registered Trajectory Builder. Trajectory Builders are responsible for building trajectories for
+    fine-tuning.
+    """
+
+    build_fn: TrajectoryBuilderBuildCallableT = Field(repr=False)
+
+
 class RegisteredFrontEndInfo(RegisteredInfo[FrontEndBaseConfig]):
     """
     Represents a registered front end. Front ends are the entry points to the workflow and are responsible for
@@ -188,6 +234,38 @@ class RegisteredFunctionInfo(RegisteredInfo[FunctionBaseConfig]):
 
     build_fn: FunctionRegisteredCallableT = Field(repr=False)
     framework_wrappers: list[str] = Field(default_factory=list)
+
+    # Declared schemas for per-user functions which are lazy-loaded. Must be provided if is_per_user is True.
+    per_user_function_input_schema: type[BaseModel] | type[None] | None = Field(
+        default=None,
+        description="Declared input schema for per-user functions. Must be provided if is_per_user "
+        "is True. This is for enabling OpenAPI documentation generation without a concrete function instance.")
+    per_user_function_single_output_schema: type[BaseModel] | type[None] | None = Field(
+        default=None,
+        description="Declared single output schema for per-user functions. Must be provided if is_per_user "
+        "is True. This is for enabling OpenAPI documentation generation without a concrete function instance.")
+    per_user_function_streaming_output_schema: type[BaseModel] | type[None] | None = Field(
+        default=None,
+        description="Declared streaming output schema for per-user functions. Must be provided if is_per_user "
+        "is True. This is for enabling OpenAPI documentation generation without a concrete function instance.")
+
+    @model_validator(mode="after")
+    def validate_per_user_function_schema_declaration(self) -> Self:
+        """
+        Validate if the schemas are explicitly declared when is_per_user is True
+        """
+        if self.is_per_user:
+
+            if self.per_user_function_input_schema is None:
+                raise ValueError("per_user_function_input_schema must be provided if is_per_user is True")
+
+            if self.per_user_function_single_output_schema is None and \
+                self.per_user_function_streaming_output_schema is None:
+                raise ValueError(
+                    "per_user_function_single_output_schema or per_user_function_streaming_output_schema must be "
+                    "provided if is_per_user is True")
+
+        return self
 
 
 class RegisteredFunctionGroupInfo(RegisteredInfo[FunctionGroupBaseConfig]):
@@ -393,6 +471,12 @@ class TypeRegistry:
         # TTC Strategies
         self._registered_ttc_strategies: dict[type[TTCStrategyBaseConfig], RegisteredTTCStrategyInfo] = {}
 
+        # Registered training things
+        self._registered_trainer_infos: dict[type[TrainerConfig], RegisteredTrainerInfo] = {}
+        self._registered_trainer_adapter_infos: dict[type[TrainerAdapterConfig], RegisteredTrainerAdapterInfo] = {}
+        self._registered_trajectory_builder_infos: dict[type[TrajectoryBuilderConfig],
+                                                        RegisteredTrajectoryBuilderInfo] = {}
+
         # Packages
         self._registered_packages: dict[str, RegisteredPackage] = {}
 
@@ -470,6 +554,65 @@ class TypeRegistry:
     def get_registered_logging_method(self) -> list[RegisteredInfo[LoggingBaseConfig]]:
 
         return list(self._registered_logging_methods.values())
+
+    def register_trainer(self, registration: RegisteredTrainerInfo):
+
+        if (registration.config_type in self._registered_trainer_infos):
+            raise ValueError(f"A trainer with the same config type `{registration.config_type}` has already "
+                             "been registered.")
+
+        self._registered_trainer_infos[registration.config_type] = registration
+
+        self._registration_changed()
+
+    def register_trainer_adapter(self, registration: RegisteredTrainerAdapterInfo):
+        if (registration.config_type in self._registered_trainer_adapter_infos):
+            raise ValueError(f"A trainer adapter with the same config type `{registration.config_type}` has already "
+                             "been registered.")
+
+        self._registered_trainer_adapter_infos[registration.config_type] = registration
+
+        self._registration_changed()
+
+    def register_trajectory_builder(self, registration: RegisteredTrajectoryBuilderInfo):
+        if (registration.config_type in self._registered_trajectory_builder_infos):
+            raise ValueError(f"A trajectory builder with the same config type `{registration.config_type}` has already "
+                             "been registered.")
+
+        self._registered_trajectory_builder_infos[registration.config_type] = registration
+
+        self._registration_changed()
+
+    def get_trainer(self, config_type: type[TrainerConfig]) -> RegisteredTrainerInfo:
+
+        try:
+            return self._registered_trainer_infos[config_type]
+        except KeyError as err:
+            raise KeyError(f"Could not find a registered trainer for config `{config_type}`. "
+                           f"Registered configs: {set(self._registered_trainer_infos.keys())}") from err
+
+    def get_trainer_adapter(self, config_type: type[TrainerAdapterConfig]) -> RegisteredTrainerAdapterInfo:
+        try:
+            return self._registered_trainer_adapter_infos[config_type]
+        except KeyError as err:
+            raise KeyError(f"Could not find a registered trainer adapter for config `{config_type}`. "
+                           f"Registered configs: {set(self._registered_trainer_adapter_infos.keys())}") from err
+
+    def get_trajectory_builder(self, config_type: type[TrajectoryBuilderConfig]) -> RegisteredTrajectoryBuilderInfo:
+        try:
+            return self._registered_trajectory_builder_infos[config_type]
+        except KeyError as err:
+            raise KeyError(f"Could not find a registered trajectory builder for config `{config_type}`. "
+                           f"Registered configs: {set(self._registered_trajectory_builder_infos.keys())}") from err
+
+    def get_registered_trainers(self) -> list[RegisteredInfo[TrainerConfig]]:
+        return list(self._registered_trainer_infos.values())
+
+    def get_registered_trainer_adapters(self) -> list[RegisteredInfo[TrainerAdapterConfig]]:
+        return list(self._registered_trainer_adapter_infos.values())
+
+    def get_registered_trajectory_builders(self) -> list[RegisteredInfo[TrajectoryBuilderConfig]]:
+        return list(self._registered_trajectory_builder_infos.values())
 
     def register_front_end(self, registration: RegisteredFrontEndInfo):
 
@@ -977,6 +1120,15 @@ class TypeRegistry:
         if component_type == ComponentEnum.MIDDLEWARE:
             return self._registered_middleware
 
+        if component_type == ComponentEnum.TRAINER:
+            return self._registered_trainer_infos
+
+        if component_type == ComponentEnum.TRAJECTORY_BUILDER:
+            return self._registered_trajectory_builder_infos
+
+        if component_type == ComponentEnum.TRAINER_ADAPTER:
+            return self._registered_trainer_adapter_infos
+
         raise ValueError(f"Supplied an unsupported component type {component_type}")
 
     def get_registered_types_by_component_type(self, component_type: ComponentEnum) -> list[str]:
@@ -1105,6 +1257,15 @@ class TypeRegistry:
 
         if issubclass(cls, MiddlewareBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_middleware())
+
+        if issubclass(cls, TrainerConfig):
+            return self._do_compute_annotation(cls, self.get_registered_trainers())
+
+        if issubclass(cls, TrainerAdapterConfig):
+            return self._do_compute_annotation(cls, self.get_registered_trainer_adapters())
+
+        if issubclass(cls, TrajectoryBuilderConfig):
+            return self._do_compute_annotation(cls, self.get_registered_trajectory_builders())
 
         raise ValueError(f"Supplied an unsupported component type {cls}")
 

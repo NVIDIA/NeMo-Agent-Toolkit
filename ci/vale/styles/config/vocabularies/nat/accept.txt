@@ -6,6 +6,7 @@
 [Aa]gno
 AIQ
 API(s?)
+ART
 Arize
 arXiv
 [Aa]sync
@@ -40,6 +41,7 @@ CPython
 cuDF
 cuML
 CuPy
+[Cc]ustomizer
 CVE(s?)
 [Cc]yber
 [Cc]ybersecurity
@@ -47,6 +49,7 @@ Cython
 Dask
 Databricks
 Datadog
+[Dd]atastore
 DB(s?)
 [Dd]enylist
 [Dd]eserialize
@@ -61,6 +64,10 @@ etcd
 [Ee]xfiltration
 [Ee]xplainability
 Faiss
+[Ff]inetune(d?)
+[Ff]inetune(r|rs|ing)
+[Ff]inetuning
+[Ff]inetunable
 Gantt
 [Gg]eneratable
 GitHub
@@ -87,6 +94,8 @@ LangSmith
 [Ll]eaderboard
 # libcudf isn't styled in the way that cuDF is https://docs.rapids.ai/api/libcudf/stable/
 libcudf
+[Ll]earnable
+[Ll]ogprob(s?)
 LLM(s?)
 # https://github.com/logpai/loghub/
 Loghub
@@ -97,6 +106,7 @@ Milvus
 MLflow
 MLOps
 Morpheus
+Minimax
 [Mm]ultimodal
 [Nn]amespac(e|ed|es|ing)
 NeMo
@@ -105,12 +115,15 @@ NIC
 NIM(s?)
 npm
 NumPy
+NAT's
 NVIDIA
 Nemotron
 OAuth
+Ollama
 URIs
 OTel
 onboarding
+OpenPipe
 [Oo]verfitting
 pandas
 [Pp]arallelization
@@ -121,6 +134,7 @@ PCIe
 PDF(s?)
 [Pp]ostprocess
 [Pp]ostprocessing
+[Pp]luggable
 [Pp]reprocess
 [Pp]retrained
 [Pp]rofiler
@@ -134,6 +148,7 @@ pytest
 [Rr]epo
 [Rr]etarget(ed?)
 [Rr]eusability
+[Rr]ollout(s?)
 [Rr]untime(s?)
 [Ss]andboxing
 [Ss]erializable
@@ -141,6 +156,7 @@ pytest
 [Ss]ubclassing
 [Ss]ubcard(s?)
 [Ss]ubgraph(s?)
+[Ss]ubsampl(e|ing)
 [Ss]ubpackage(s?)
 [Ss]ubword(s?)
 [Ss]uperset(s?)

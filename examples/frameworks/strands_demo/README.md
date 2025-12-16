@@ -42,7 +42,7 @@ A minimal example showcasing a Strands agent that answers questions about Strand
 
 ## Prerequisites
 
-- NVIDIA NeMo Agent Toolkit installed. See the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source).
+- NVIDIA NeMo Agent Toolkit installed. See the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source).
 - API keys as required by your chosen models.
 
 ## Installation and Setup
@@ -96,7 +96,7 @@ Workflow Result:
 
 ### 2) Evaluate accuracy and performance (eval_config.yml)
 
-Runs the workflow over a dataset and computes evaluation and performance metrics.  See the evaluation guide and profiling guides in `docs/source/workflows/` for more information.
+Runs the workflow over a dataset and computes evaluation and performance metrics.  Refer to the the [evaluation](../../../docs/source/improve-workflows/evaluate.md) and [profiling](../../../docs/source/improve-workflows/profiler.md) guides in the documentation for more information.
 
 ```bash
 nat eval --config_file examples/frameworks/strands_demo/configs/eval_config.yml

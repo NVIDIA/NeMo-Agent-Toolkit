@@ -55,6 +55,9 @@ SRC_DIR = os.path.join(PROJECT_DIR, "src")
 EXAMPLES_DIR = os.path.join(PROJECT_DIR, "examples")
 sys.path.append(SRC_DIR)
 
+os.environ["PYTHONPATH"] = (f"{SRC_DIR}:{os.environ['PYTHONPATH']}" if "PYTHONPATH" in os.environ else SRC_DIR)
+os.environ.setdefault("DASK_DISTRIBUTED__WORKER__PYTHON", sys.executable)
+
 if typing.TYPE_CHECKING:
     from dask.distributed import LocalCluster
     from sqlalchemy.ext.asyncio import AsyncEngine
@@ -479,6 +482,11 @@ def rag_intermediate_property_adaptor_fixture(rag_intermediate_steps) -> list[li
 def dask_cluster_fixture(fail_missing: bool) -> "LocalCluster":
     """
     Fixture to provide a Dask LocalCluster for tests.
+
+    Uses processes=False (threaded workers) for testing because:
+    1. Tests don't need process isolation
+    2. Avoids import issues with editable installs in worker processes
+    3. Faster startup and teardown for tests
     """
     try:
         from dask.distributed import LocalCluster
@@ -487,7 +495,9 @@ def dask_cluster_fixture(fail_missing: bool) -> "LocalCluster":
             raise
         pytest.skip("Dask is not installed, skipping Dask cluster fixture.")
 
-    cluster = LocalCluster(asynchronous=False, n_workers=1, threads_per_worker=1)
+    # Use threaded workers for tests - this is the standard practice for test suites
+    # as it avoids complexity with module imports and provides faster execution
+    cluster = LocalCluster(asynchronous=False, n_workers=1, threads_per_worker=1, processes=False)
     yield cluster
     cluster.close()
 

@@ -16,6 +16,7 @@
 import logging
 import sys
 import typing
+from datetime import timedelta
 
 from pydantic import BaseModel
 from pydantic import ConfigDict
@@ -27,6 +28,10 @@ from pydantic import ValidatorFunctionWrapHandler
 from pydantic import field_validator
 
 from nat.data_models.evaluate import EvalConfig
+from nat.data_models.finetuning import FinetuneConfig
+from nat.data_models.finetuning import TrainerAdapterConfig
+from nat.data_models.finetuning import TrainerConfig
+from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.front_end import FrontEndBaseConfig
 from nat.data_models.function import EmptyFunctionConfig
 from nat.data_models.function import FunctionBaseConfig
@@ -89,6 +94,12 @@ def _process_validation_error(err: ValidationError, handler: ValidatorFunctionWr
                 registered_keys = GlobalTypeRegistry.get().get_registered_ttc_strategies()
             elif (info.field_name == "middleware"):
                 registered_keys = GlobalTypeRegistry.get().get_registered_middleware()
+            elif (info.field_name == "trainers"):
+                registered_keys = GlobalTypeRegistry.get().get_registered_trainers()
+            elif (info.field_name == "trainer_adapters"):
+                registered_keys = GlobalTypeRegistry.get().get_registered_trainer_adapters()
+            elif (info.field_name == "trajectory_builders"):
+                registered_keys = GlobalTypeRegistry.get().get_registered_trajectory_builders()
 
             else:
                 assert False, f"Unknown field name {info.field_name} in validator"
@@ -204,6 +215,21 @@ class GeneralConfig(BaseModel):
 
     telemetry: TelemetryConfig = TelemetryConfig()
 
+    default_user_id: str = Field(
+        default="default_user_id",
+        description="Default user ID for per-user workflows when "
+        "no session is available (for example, when using 'nat run'). This value identifies "
+        "the workflow instances. For multi-user deployments with 'nat serve', the 'nat-session' "
+        "cookie overrides this value. Must be a non-empty string when used as a fallback user ID.")
+    per_user_workflow_timeout: timedelta = Field(
+        default=timedelta(minutes=30),
+        description="Time after which inactive per-user workflows are cleaned up. "
+        "Only applies when workflow is per-user. Defaults to 30 minutes.")
+    per_user_workflow_cleanup_interval: timedelta = Field(
+        default=timedelta(minutes=5),
+        description="Interval for running cleanup of inactive per-user workflows. "
+        "Only applies when workflow is per-user. Defaults to 5 minutes.")
+
     # FrontEnd Configuration
     front_end: FrontEndBaseConfig = FastApiFrontEndConfig()
 
@@ -289,6 +315,12 @@ class Config(HashableBaseModel):
     # Evaluation Options
     eval: EvalConfig = EvalConfig()
 
+    # Finetuning Options
+    trainers: dict[str, TrainerConfig] = Field(default_factory=dict)
+    trainer_adapters: dict[str, TrainerAdapterConfig] = Field(default_factory=dict)
+    trajectory_builders: dict[str, TrajectoryBuilderConfig] = Field(default_factory=dict)
+    finetuning: FinetuneConfig = FinetuneConfig()
+
     def print_summary(self, stream: typing.TextIO = sys.stdout):
         """Print a summary of the configuration"""
 
@@ -317,6 +349,9 @@ class Config(HashableBaseModel):
                      "workflow",
                      "ttc_strategies",
                      "authentication",
+                     "trainers",
+                     "trainer_adapters",
+                     "trajectory_builders",
                      mode="wrap")
     @classmethod
     def validate_components(cls, value: typing.Any, handler: ValidatorFunctionWrapHandler, info: ValidationInfo):
@@ -377,6 +412,18 @@ class Config(HashableBaseModel):
         WorkflowAnnotation = typing.Annotated[(type_registry.compute_annotation(FunctionBaseConfig)),
                                               Discriminator(TypedBaseModel.discriminator)]
 
+        TrainersAnnotation = dict[str,
+                                  typing.Annotated[type_registry.compute_annotation(TrainerConfig),
+                                                   Discriminator(TypedBaseModel.discriminator)]]
+
+        TrainerAdaptersAnnotation = dict[str,
+                                         typing.Annotated[type_registry.compute_annotation(TrainerAdapterConfig),
+                                                          Discriminator(TypedBaseModel.discriminator)]]
+
+        TrajectoryBuildersAnnotation = dict[str,
+                                            typing.Annotated[type_registry.compute_annotation(TrajectoryBuilderConfig),
+                                                             Discriminator(TypedBaseModel.discriminator)]]
+
         should_rebuild = False
 
         auth_providers_field = cls.model_fields.get("authentication")
@@ -432,6 +479,22 @@ class Config(HashableBaseModel):
         workflow_field = cls.model_fields.get("workflow")
         if workflow_field is not None and workflow_field.annotation != WorkflowAnnotation:
             workflow_field.annotation = WorkflowAnnotation
+            should_rebuild = True
+
+        trainers_field = cls.model_fields.get("trainers")
+        if trainers_field is not None and trainers_field.annotation != TrainersAnnotation:
+            trainers_field.annotation = TrainersAnnotation
+            should_rebuild = True
+
+        trainer_adapters_field = cls.model_fields.get("trainer_adapters")
+        if trainer_adapters_field is not None and trainer_adapters_field.annotation != TrainerAdaptersAnnotation:
+            trainer_adapters_field.annotation = TrainerAdaptersAnnotation
+            should_rebuild = True
+
+        trajectory_builders_field = cls.model_fields.get("trajectory_builders")
+        if (trajectory_builders_field is not None
+                and trajectory_builders_field.annotation != TrajectoryBuildersAnnotation):
+            trajectory_builders_field.annotation = TrajectoryBuildersAnnotation
             should_rebuild = True
 
         if (GeneralConfig.rebuild_annotations()):
