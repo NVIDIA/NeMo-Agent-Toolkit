@@ -623,13 +623,13 @@ Build order:
 1. [Authentication providers](../../components/auth/api-authentication.md)
 2. [Embedders](../embedders.md)
 3. [LLMs](../llms/index.md)
-4. Memory
+4. [Memory](../memory.md)
 5. [Object stores](../object-store.md)
-6. Retrievers
-7. TTC strategies
+6. [Retrievers](../retrievers.md)
+7. [TTC strategies](../../improve-workflows/test-time-compute.md)
 8. **Middleware** ← Built here
-9. Function groups ← Can use middleware
-10. Functions ← Can use middleware
+9. [Function groups](./functions-and-function-groups/function-groups.md) ← Can use middleware
+10. [Functions](./functions-and-function-groups/functions.md) ← Can use middleware
 
 ## Troubleshooting
 
