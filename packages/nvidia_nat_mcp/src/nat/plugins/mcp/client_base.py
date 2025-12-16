@@ -169,8 +169,9 @@ class MCPBaseClient(ABC):
 
         # Convert auth provider to AuthAdapter
         self._auth_provider = auth_provider
-        # Use provided user_id or fall back to auth provider's default_user_id
-        effective_user_id = user_id or (auth_provider.config.default_user_id if auth_provider else None)
+        # Use provided user_id or fall back to auth provider's default_user_id (if available)
+        effective_user_id = user_id or (getattr(auth_provider.config, 'default_user_id', None)
+                                        if auth_provider else None)
         self._httpx_auth = AuthAdapter(auth_provider, effective_user_id) if auth_provider else None
 
         self._tool_call_timeout = tool_call_timeout
