@@ -17,7 +17,7 @@ limitations under the License.
 
 # About Building NVIDIA NeMo Agent Toolkit Workflows
 
-In NeMo Agent toolkit, a workflow defines which [functions](./functions-and-function-groups/functions.md) and [models](./llms/index.md) are used to perform a given task or series of tasks. A workflow definition is specified in a [YAML configuration file](#understanding-the-workflow-configuration-file), and the `workflow` section of the configuration file defines the workflow itself. The `workflow` section specifies a function, typically an [agent](../components/agents/index.md), which will drive the workflow.
+In NeMo Agent toolkit, a workflow defines which [functions](./functions-and-function-groups/functions.md) and [models](./llms/index.md) are used to perform a given task or series of tasks. A workflow definition is specified in a [YAML configuration file](#understanding-the-workflow-configuration-file), and the `workflow` section of the configuration file defines the workflow itself. The `workflow` section specifies a function, typically an [agent](../components/agents/index.md), which will orchestrate the which functions and models are used and how they interact.
 
 ## Understanding the Workflow Configuration File
 
