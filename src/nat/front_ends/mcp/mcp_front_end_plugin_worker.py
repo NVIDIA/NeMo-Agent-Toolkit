@@ -173,7 +173,7 @@ class MCPFrontEndPluginWorkerBase(ABC):
                 logger.info("Function %s is a Workflow, using directly", function_name)
                 session_managers[function_name] = await SessionManager.create(config=self.full_config,
                                                                               shared_builder=builder,
-                                                                              entry_function=function_name)
+                                                                              entry_function=None)
             else:
                 # Regular function - build a workflow with this function as entry point
                 logger.info("Function %s is a regular function, building entry workflow", function_name)
