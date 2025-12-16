@@ -23,9 +23,10 @@ For architectural overview and authentication concepts, see the [A2A Authenticat
 ## What You'll Build
 
 - **Protected A2A Server**: Calculator service that requires OAuth2 authentication
-- **A2A Client**: Math assistant that authenticates and calls the calculator
+- **Per-User A2A Client**: Math assistant with isolated OAuth2 credentials per user
 - **OAuth2 Flow**: Complete authorization code flow with JWT validation
 - **Custom Scopes**: Resource-specific permissions (for example, `calculator_a2a_execute`)
+- **Multi-User Support**: Each user gets their own OAuth2 flow and authentication tokens
 
 This example is designed for **development and testing**. See [Production Considerations](#production-considerations) for deployment guidance.
 
@@ -67,9 +68,10 @@ graph TB
 **Components Overview:**
 
 1. **NAT Math Assistant (Client)**
-   - NAT workflow that needs calculator operations
+   - Per-user NAT workflow using `per_user_react_agent`
+   - Each user gets isolated A2A client instance with separate OAuth2 credentials
    - Uses A2A client plugin to connect to calculator
-   - Handles user authentication flow via browser
+   - Handles user authentication flow through browser
 
 2. **NAT Calculator A2A Server (Resource Server)**
    - Protected A2A server requiring authentication
@@ -77,14 +79,19 @@ graph TB
    - Validates JWT tokens before processing requests
 
 3. **Keycloak (Authorization Server)**
-   - Test Keycloak OAuth2 server for testing OAuth2-protected A2A servers in NAT.
+   - Test OAuth2 server for testing OAuth2-protected A2A servers in NAT
    - Authenticates users and manages consent
    - Provides JWKS endpoint for token verification
+
+**Per-User Architecture:** Each user identified by `nat-session` cookie gets their own:
+- A2A client connection with isolated state
+- OAuth2 authentication flow and tokens
+- Independent calculator session
 
 
 ## A2A OAuth2 Flow
 
-This example demonstrates the A2A protocol with OAuth 2.1 Authorization Code Flow:
+This example demonstrates the A2A protocol with OAuth 2.1 Authorization Code Flow. This flow executes independently for each user session:
 
 ```mermaid
 sequenceDiagram
@@ -120,11 +127,13 @@ sequenceDiagram
     Resource-->>Client: Calculator result
 ```
 
-**Key Steps:**
+**Key Steps (Per User Session):**
 1. **Agent card discovery** - Client fetches public metadata to discover authentication requirements
 2. **Dynamic authentication** - Client initiates OAuth flow based on agent card security schemes
-3. **Token acquisition** - User authenticates via browser, client obtains JWT token
+3. **Token acquisition** - User authenticates through browser, client obtains JWT token
 4. **Authenticated communication** - Client includes token in A2A requests, server validates JWT
+
+**Per-User Isolation:** Each user identified by `nat-session` cookie goes through this flow independently. Tokens and authentication state are isolated per user, enabling secure multi-user deployments.
 
 ## Prerequisites
 
@@ -304,6 +313,39 @@ Workflow Result:
 --------------------------------------------------
 ```
 
+## Step 7: Test Multi-User OAuth2 (Optional)
+
+The per-user architecture allows each user to have their own OAuth2 authentication. Test this with `nat serve`:
+
+```bash
+# Terminal 2: Start the math assistant as a server
+nat serve --config_file examples/A2A/math_assistant_a2a/configs/config-client-oauth2.yml
+```
+
+In separate terminals or browser tabs:
+
+```bash
+# User "alice" - will trigger OAuth2 flow for alice
+curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -H "Cookie: nat-session=alice" \
+  -d '{"messages": [{"role": "user", "content": "Is the sum of 5 and 3 greater than the current hour of the day?"}]}'
+
+# User "hatter" - will trigger separate OAuth2 flow for hatter
+curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -H "Cookie: nat-session=hatter" \
+  -d '{"messages": [{"role": "user", "content": "Is the product of 3 and 2 greater than the current hour of the day?"}]}'
+```
+
+**Expected behavior:**
+- Each new user session triggers its own OAuth2 authorization flow
+- Different users authenticate independently with their own Keycloak credentials
+- Each user maintains separate JWT tokens and calculator sessions
+- User "alice" and "hatter" have completely isolated authentication state
+
+**Note:** The OAuth2 flow will open a browser window for each new user. If you are testing with `curl`, you will need to complete the OAuth2 flow manually in the browser for each user session.
+
 ## Cleanup
 
 To stop and remove Keycloak:
@@ -347,6 +389,23 @@ This setup is for **development and testing only**. For production:
    - Don't use the `master` realm for applications
    - Create dedicated realms per environment (dev, staging, prod)
    - Configure proper user management and authentication policies
+
+### Per-User OAuth2 Considerations
+
+1. **Session Management**
+   - Configure appropriate `per_user_workflow_timeout` for token lifetime
+   - Consider refresh token strategies for long-running user sessions
+   - Implement proper session cleanup to avoid memory leaks
+
+2. **Token Storage**
+   - Each user's OAuth2 tokens are stored in memory per session
+   - Tokens are automatically cleaned up when user sessions expire
+   - Consider persistent token storage for production deployments
+
+3. **Concurrent Users**
+   - Each user maintains independent OAuth2 credentials
+   - Monitor memory usage with many concurrent users
+   - Plan capacity based on expected concurrent user load
 
 ## References
 

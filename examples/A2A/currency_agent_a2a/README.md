@@ -17,13 +17,15 @@ limitations under the License.
 
 # Currency Agent A2A Example
 
-This example demonstrates connecting to a third-party A2A service, the LangGraph-based currency agent, to perform currency conversions and financial queries with time-based context.
+This example demonstrates a per-user workflow connecting to a third-party A2A service, the LangGraph-based currency agent, to perform currency conversions and financial queries with time-based context.
 
 ## Key Features
 
+- **Per-User A2A Client**: Each user gets isolated A2A client connections to external services
 - **External A2A Integration**: Connects to a third-party LangGraph currency agent
 - **Hybrid Tool Architecture**: Combines A2A currency tools with MCP time services
 - **Simple Real-world Use Case**: Currency conversion with historical date context
+- **Multi-User Support**: Demonstrates user isolation with different session cookies
 
 ## Architecture Overview
 
@@ -118,17 +120,65 @@ nat run --config_file examples/A2A/currency_agent_a2a/configs/config.yml \
 
 For comprehensive examples, see [`data/sample_queries.json`](data/sample_queries.json).
 
+## Per-User Workflow Architecture
+
+This example uses a **per-user workflow** pattern because A2A clients are per-user function groups:
+
+**Why Per-User for External Services?**
+- Each user gets isolated connections to the external A2A service
+- Independent session state and request tracking per user
+- Protection against rate limits affecting other users
+- Supports per-user authentication if the external service requires it
+
+**Implementation**:
+The example uses `per_user_react_agent`, which is the per-user version of the ReAct agent:
+- Each user gets their own isolated ReAct agent instance
+- Gets per-user A2A client tools for the external currency service
+- Each user maintains separate connections to the third-party service
+- Built-in support for per-user function groups like A2A clients
+
+**Multi-User Testing**:
+When using `nat serve`, test with different session cookies:
+
+```bash
+# User "alice" queries currency rates
+curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -H "Cookie: nat-session=alice" \
+  -d '{"messages": [{"role": "user", "content": "What is the EUR to USD rate?"}]}'
+
+# User "hatter" queries independently (separate connection)
+curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -H "Cookie: nat-session=hatter" \
+  -d '{"messages": [{"role": "user", "content": "Convert 100 GBP to JPY"}]}'
+```
+
 ## Configuration Details
+
+### Workflow Configuration
+
+The workflow is configured to use the core per-user ReAct agent:
+
+```yaml
+workflow:
+  _type: per_user_react_agent  # Per-user ReAct agent
+  tool_names:
+    - mcp_date_time.get_current_time_mcp_tool
+    - currency_agent  # Per-user A2A client to external service
+  llm_name: nim_llm
+```
 
 ### Tool Composition
 
 The configuration demonstrates two types of tool integration:
 
-1. **A2A Client Tools** (`currency_agent`):
+1. **A2A Client Tools** (`currency_agent`) - **Per-User**:
    - Connects to external LangGraph currency agent
+   - Each user gets isolated connection to the external service
    - Provides currency conversion and exchange rate queries
 
-2. **MCP Client Tools** (`mcp_date_time`):
+2. **MCP Client Tools** (`mcp_date_time`) - **Shared**:
    - Local MCP server for time operations
    - Provides: `get_current_time_mcp_tool` function
 
