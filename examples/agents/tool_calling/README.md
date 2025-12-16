@@ -64,7 +64,7 @@ This architecture enables the Tool Calling agent to make precise tool selections
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 
 ### Install this Workflow
 
@@ -82,7 +82,7 @@ uv pip install -e '.[langchain]'
 
 
 ### Set Up API Keys
-If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
@@ -102,7 +102,7 @@ The Tool Calling Agent can be used as either a workflow or a function, and there
 If you’re looking for an example workflow where the Tool Calling Agent runs as the main workflow, refer to [config.yml](configs/config.yml).
 To see the Tool Calling Agent used as a function within a workflow, alongside the Reasoning Agent, refer to [config-reasoning.yml](configs/config-reasoning.yml).
 This README primarily covers the former case, where the Tool Calling Agent functions as the main workflow, in config.yml.
-For more details, refer to the [ReAct Agent documentation](../../../docs/source/workflows/about/tool-calling-agent.md) and the [Reasoning Agent documentation](../../../docs/source/workflows/about/react-agent.md)
+For more details, refer to the [Tool Calling Agent documentation](../../../docs/source/components/agents/tool-calling-agent/index.md) and the [React Agent documentation](../../../docs/source/components/agents/react-agent/index.md)
 
 Run the following command from the root of the NeMo Agent Toolkit repo to execute this workflow with the specified input:
 

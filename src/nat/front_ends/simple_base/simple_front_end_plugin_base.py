@@ -47,9 +47,11 @@ class SimpleFrontEndPluginBase(FrontEndBase[FrontEndConfigT], ABC):
 
                 click.echo(stream.getvalue())
 
-            workflow = await builder.build()
-            session_manager = SessionManager(workflow)
-            await self.run_workflow(session_manager)
+            session_manager = await SessionManager.create(config=self.full_config, shared_builder=builder)
+            try:
+                await self.run_workflow(session_manager)
+            finally:
+                await session_manager.shutdown()
 
     @abstractmethod
     async def run_workflow(self, session_manager: SessionManager):

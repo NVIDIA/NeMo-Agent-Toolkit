@@ -35,9 +35,15 @@ from nat.data_models.component_ref import MemoryRef
 from nat.data_models.component_ref import MiddlewareRef
 from nat.data_models.component_ref import ObjectStoreRef
 from nat.data_models.component_ref import RetrieverRef
+from nat.data_models.component_ref import TrainerAdapterRef
+from nat.data_models.component_ref import TrainerRef
+from nat.data_models.component_ref import TrajectoryBuilderRef
 from nat.data_models.component_ref import TTCStrategyRef
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.evaluator import EvaluatorBaseConfig
+from nat.data_models.finetuning import TrainerAdapterConfig
+from nat.data_models.finetuning import TrainerConfig
+from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.function_dependencies import FunctionDependencies
@@ -50,6 +56,9 @@ from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.experimental.decorators.experimental_warning_decorator import experimental
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
+from nat.finetuning.interfaces.finetuning_runner import Trainer
+from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
+from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 from nat.memory.interfaces import MemoryEditor
 from nat.middleware.middleware import Middleware
 from nat.object_store.interfaces import ObjectStore
@@ -259,6 +268,50 @@ class Builder(ABC):
 
     @abstractmethod
     async def get_retriever_config(self, retriever_name: str | RetrieverRef) -> RetrieverBaseConfig:
+        pass
+
+    @abstractmethod
+    @experimental(feature_name="Finetuning")
+    async def add_trainer(self, name: str | TrainerRef, config: TrainerConfig) -> Trainer:
+        pass
+
+    @abstractmethod
+    @experimental(feature_name="Finetuning")
+    async def add_trainer_adapter(self, name: str | TrainerAdapterRef, config: TrainerAdapterConfig) -> TrainerAdapter:
+        pass
+
+    @abstractmethod
+    @experimental(feature_name="Finetuning")
+    async def add_trajectory_builder(self, name: str | TrajectoryBuilderRef,
+                                     config: TrajectoryBuilderConfig) -> TrajectoryBuilder:
+        pass
+
+    @abstractmethod
+    async def get_trainer(self,
+                          trainer_name: str | TrainerRef,
+                          trajectory_builder: TrajectoryBuilder,
+                          trainer_adapter: TrainerAdapter) -> Trainer:
+        pass
+
+    @abstractmethod
+    async def get_trainer_adapter(self, trainer_adapter_name: str | TrainerAdapterRef) -> TrainerAdapter:
+        pass
+
+    @abstractmethod
+    async def get_trajectory_builder(self, trajectory_builder_name: str | TrajectoryBuilderRef) -> TrajectoryBuilder:
+        pass
+
+    @abstractmethod
+    async def get_trainer_config(self, trainer_name: str | TrainerRef) -> TrainerConfig:
+        pass
+
+    @abstractmethod
+    async def get_trainer_adapter_config(self, trainer_adapter_name: str | TrainerAdapterRef) -> TrainerAdapterConfig:
+        pass
+
+    @abstractmethod
+    async def get_trajectory_builder_config(
+            self, trajectory_builder_name: str | TrajectoryBuilderRef) -> (TrajectoryBuilderConfig):
         pass
 
     @abstractmethod

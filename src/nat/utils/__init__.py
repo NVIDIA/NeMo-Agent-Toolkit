@@ -70,7 +70,10 @@ async def run_workflow(*,
     session_kwargs = session_kwargs or {}
 
     async with WorkflowBuilder.from_config(config=config) as workflow_builder:
-        session_manager = SessionManager(await workflow_builder.build())
-        async with session_manager.session(**session_kwargs) as session:
-            async with session.run(prompt) as runner:
-                return await runner.result(to_type=to_type)
+        session_manager = await SessionManager.create(config=config, shared_builder=workflow_builder)
+        try:
+            async with session_manager.session(**session_kwargs) as session:
+                async with session.run(prompt) as runner:
+                    return await runner.result(to_type=to_type)
+        finally:
+            await session_manager.shutdown()
