@@ -21,7 +21,7 @@ limitations under the License.
 
 ## 1. Introduction
 
-In this guide we will outline the features NeMo Agent Toolkit's Safety and Security Engine (NASSE) and will demonstrate its capabilities by assessing and improving the safety and security posture of an example Retail Agent.
+In this guide we will outline the features of the NeMo Agent Toolkit Safety and Security Engine (NASSE) and will demonstrate its capabilities by assessing and improving the safety and security posture of an example retail agent.
 
 NASSE is a framework designed to integrate robust safety and security measures directly into the lifecycle of AI agents built with NeMo Agent Toolkit. Its overarching purpose is to provide developers with the tools and methodologies necessary to proactively identify, mitigate, and report potential risks associated with agent deployment. In an era where AI agents are becoming increasingly autonomous and integrated into critical systems, ensuring their safety and security is paramount to prevent misuse, maintain trust, and comply with ethical guidelines and regulations.
 
@@ -36,7 +36,7 @@ Consider a Retail Agent whose primary function is to assist customers with produ
 - **Policy Violations**: Agent actions that contravene established ethical, legal, or operational policies.
 - **Unintended Harmful Behaviors**: Agent actions that, despite benign intentions, result in negative or damaging outcomes.
 
-This README sets the stage for a deeper exploration of NASSE's key features, demonstrating how each component contributes to building more robust, secure, and trustworthy AI agents. This README explains how to:
+This README sets the stage for a deeper exploration of the key features of NASSE, demonstrating how each component contributes to building more robust, secure, and trustworthy AI agents. This README explains how to:
 
 - Instrument agent red teaming workflows for proactive risk discovery
 - Evaluate failure modes
@@ -63,7 +63,7 @@ This README will teach you to do the following:
 
 ## 4. Key Features Overview
 
-NASSE's integrated features allow the user to:
+The integrated features of NASSE allow the user to:
 
 - Inject adversarial strings (attacks) into registered function inputs and outputs of the workflow.
 
@@ -140,7 +140,7 @@ Defense Middleware acts as a critical layer within the agent's workflow, interce
 
 ## 5. Retail Agent Example
 
-This section demonstrates NASSE using a realistic retail customer service agent. We will explain how to perform risk assessment of the retail agent using NASSE's red teaming functionality.
+This section demonstrates NASSE using a realistic retail customer service agent. We will explain how to perform risk assessment of the retail agent using the red teaming functionality of NASSE.
 
 ### 5.1 The Retail Agent
 

@@ -74,7 +74,7 @@ GitHub
 glog
 GPU(s?)
 Grafana
-[Gg]uardrailing
+Guardrailing
 groundedness
 [Gg]ranularities
 [Hh]ashable
@@ -118,7 +118,6 @@ NIM(s?)
 npm
 NumPy
 NAT's
-NASSE's
 NVIDIA
 Nemotron
 OAuth
@@ -173,7 +172,6 @@ Tavily
 [Tt]imestamp(s?)
 [Tt]okenization
 [Tt]okenizer(s?)
-Toolkit's
 triages
 [Uu]ncomment(ed)?
 [Uu]nencrypted
