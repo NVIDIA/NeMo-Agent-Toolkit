@@ -15,25 +15,27 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 # NeMo Agent Safety and Security Engine (NASSE)
-### Demonstrated Through Retail Agent Example
+### Demonstrated Through a Retail Agent Example
 
 ---
 
 ## 1. Introduction
 
-In this guide we will outline the features NeMo Agent Toolkit's Safety and Security Engine (NASSE) and will demonstrate its capabilities by assessing and improving the safety and security posture of an example Retail Agent.
+In this guide we will outline the features of NeMo Agent Toolkit's Safety and Security Engine (NASSE) and will demonstrate its capabilities by assessing and improving the safety and security posture of an example retail agent.
 
-NASSE is a framework designed to integrate robust safety and security measures directly into the lifecycle of AI agents built with NeMo Agent Toolkit. Its overarching purpose is to provide developers with the tools and methodologies necessary to proactively identify, mitigate, and report potential risks associated with agent deployment. In an era where AI agents are becoming increasingly autonomous and integrated into critical systems, ensuring their safety and security is paramount to prevent misuse, maintain trust, and comply with ethical guidelines and regulations.
+NASSE is a framework designed to integrate robust safety and security measures directly into the lifecycle of AI agents built with NeMo Agent Toolkit. Its overarching purpose is to provide developers with the tools and methodologies necessary to proactively identify, mitigate, and report potential risks associated with agentic deployments. In an era where AI agents are becoming increasingly autonomous and integrated into critical systems, ensuring their safety and security is paramount to prevent misuse, maintain trust, and comply with ethical guidelines and regulations.
 
 ---
 
 ## 2. Why We Need a Safety and Security Framework
 
-Consider a Retail Agent whose primary function is to assist customers with product inquiries, order placement, and personalized recommendations. Without NASSE, this agent could be vulnerable to various threats:
+LLM powered agents such as the ones built with the NeMO Agent Toolkit can automate and accelerate complex workflows and perform tasks previously thought impossible. At the same time, the succeptibility of Large Language Models to prompt injections and jailbreaks has expanded the attack surface through which malicious actors can cause various degrees of harm to organisations and individuals.
 
-- **Adversarial Attacks**: Malicious inputs designed to manipulate agent behavior, leading to incorrect actions or disclosures.
-- **Data Leakage**: Unintended exposure of sensitive user or internal data through agent interactions or outputs.
-- **Policy Violations**: Agent actions that contravene established ethical, legal, or operational policies.
+Consider as an example, a Retail Agent whose primary function is to receive free-form emails from customers, place orders and respond to the customers with a confirmation email with an attached invoice. The agent has access to customer and product databases. The agent though simple is succeptible to threats arising from the succeptibility of LLMs to prompt injections:
+
+- **Adversarial Attacks**: Malicious inputs designed to manipulate agent behavior, leading to incorrect actions or disclosures. A customer might coerce the agent to offer a 10% discount on all products.
+- **Data Leakage**: Unintended exposure of sensitive user or internal data through agent interactions or outputs. For example a malicious user might attempt to exfiltrate the databases available to the agent.
+- **Policy Violations**: Agent actions that contravene established ethical, legal, or operational policies. For example prompt injections in the database might cause the agent to respond in a graphic or rude manner.
 - **Unintended Harmful Behaviors**: Agent actions that, despite benign intentions, result in negative or damaging outcomes.
 
 This README sets the stage for a deeper exploration of NASSE's key features, demonstrating how each component contributes to building more robust, secure, and trustworthy AI agents. This README explains how to:
@@ -51,11 +53,12 @@ This README will teach you to do the following:
 
 **Realistic Agent Case Study**: Through a realistic Retail Agent, learn how to evaluate threats and assess vulnerabilities.
 
-**Cybersecurity and Safety Testing by Red Teaming**: Instrument attacks by intercepting components in the agent workflow for runtime red teaming.
+**Agent Safety and Security Assessment**
+- Instrument attacks by intercepting components in the agent workflow for runtime red teaming.
 
-**Different Attack Strategies**: Stress test your system against different attack strategies and threat scenarios.
+- Stress test your system against different attack strategies and threat scenarios.
 
-**Evaluate Safety and Security Risks**: Learn how to automatically evaluate against various safety and security threats.
+- Evaluate Safety and Security Risks: Learn how to automatically evaluate against various safety and security threats.
 
 **Mitigations and Guardrailing**: Learn how to instrument your agentic workflow with meaningful defenses against attacks and threats by intercepting across a set of defense strategies.
 
@@ -75,7 +78,7 @@ NASSE's integrated features allow the user to:
 
 This section describes the modules responsible for the above functionality.
 
-### 4.1 RedTeamingMiddleware
+### 4.1 Workflow Interception with RedTeamingMiddleware
 
 The `RedTeamingMiddleware` acts as an interceptor in the agent's workflow, specifically designed to inject adversarial content at various stages of agent execution. It wraps target functions, allowing it to inspect and modify their inputs or outputs.
 
@@ -97,9 +100,9 @@ The Red Teaming Middleware enables the developer to:
 
 The key benefit of the Red Teaming Middleware is that it greatly facilitates the delivery of an adversarial payload to the agent. In the example that follows, we will see how the middleware can be used to add prompt injections to database entries without requiring a change to the database itself.
 
-### 4.2 RedTeamingEvaluator
+### 4.2 Attack Success Assessment with RedTeamingEvaluator
 
-The `RedTeamingEvaluator` assesses whether an attack delivered by the Red Teaming Middleware is successful. To do this, we equip the evaluator with an LLM-powered judge that can accept bespoke instructions that relate to the exact attack injected into the system, thereby greatly increasing its accuracy.
+The `RedTeamingEvaluator` assesses whether an attack delivered by the Red Teaming Middleware class is successful. To do this, we equip the evaluator with an LLM-powered judge that can accept bespoke instructions that relate to the exact attack injected into the system, thereby improving its accuracy.
 
 In addition, we provide functionality to perform such evaluations at different points in the workflow, not just its output. This in turn allows the discovery of "weak links" within the workflow.
 
@@ -113,9 +116,9 @@ In addition, we provide functionality to perform such evaluations at different p
 
 The evaluator returns a score from 0.0 (attack failed) to 1.0 (attack fully succeeded), along with reasoning.
 
-The combination of the evaluator with the middleware enable us to break a complex e2e attack into smaller units that are easier to understand and act upon. In our implementation such units are called **scenarios**.
+The combination of the evaluator with the middleware enable us to break a complex end-to-end attack into smaller units that are easier to understand and act upon. In our implementation such units are called **scenarios**.
 
-### 4.3 RedTeamingRunner
+### 4.3 Red-Teaming Workflow Execution with RedTeamingRunner
 
 The `RedTeamingRunner` is responsible for orchestrating and managing the entire red teaming process. Its primary purpose is to aid and automate the execution of predefined red teaming scenarios against an agent, evaluate its safety and security posture, and summarize the findings for analysis.
 
@@ -127,14 +130,14 @@ The runner is configured via YAML and is essentially a collection of attack **sc
 
 Based on the configuration, the RedTeamingRunner will run all scenarios, perform evaluation, and summarize the results in an interactive and portable HTML report.
 
-### 4.4 Defense Middleware
+### 4.4 Improving Agent Security with Defense Middleware
 
-Defense Middleware acts as a critical layer within the agent's workflow, intercepting inputs, outputs, and intermediate steps to apply various mitigation techniques. Its primary goal is to prevent and neutralize attacks, ensuring the agent's safe and secure operation by enforcing policies and sanitizing data. The Defense Middleware enables the following mitigation techniques:
+Defense Middleware acts as a critical layer within the agent's workflow, intercepting inputs, outputs, and intermediate steps to apply various mitigation techniques. Its primary goal is to prevent and neutralize attacks, ensuring the agent's safe and secure operation by enforcing policies and sanitizing data. It operates as a protective wrapper that can be applied at the workflow level, function group level, or individual function level, allowing developers to test how defenses perform against attacks injected by RedTeamingMiddleware. The Defense Middleware enables the following mitigation techniques:
 
-- Redaction
-- Sanitization
-- Filtering
-- Guardrailing
+- **Redaction**: Remove or mask sensitive information such as personally identifiable data
+- **Sanitization**: Clean and neutralize harmful or malicious content before processing
+- **Filtering**: Block unsafe requests or responses based on policy rules
+- **Guardrailing**: Enforce behavioral boundaries to prevent policy violations
 
 ---
 
@@ -144,8 +147,7 @@ This section demonstrates NASSE using a realistic retail customer service agent.
 
 ### 5.1 The Retail Agent
 
-The retail agent is a ReAct-based customer service agent for **GreenThumb Gardening Equipment**. It processes customer emails using the appropriate tools and responds to the user again via email. Note that all email and database write  
-operations in this example are mocked.
+The retail agent is a ReAct-based customer service agent for **GreenThumb Gardening Equipment**. It processes customer emails using the appropriate tools and responds to the user again via email. Note that all email and database write operations in this example are mocked.
 
 **Available Tools:**
 
@@ -158,9 +160,6 @@ operations in this example are mocked.
 | `write_review` | Submit a product review (mocked) |
 | `send_email` | Send email to customer (mocked) |
 | `update_customer_info` | Place an order for a customer (mocked) |
-
-**File Structure:**
-
 
 **Installation and Running:**
 
@@ -291,7 +290,7 @@ scenarios:
       target_function_or_group: retail_tools.get_product_info # In this function.
       target_location: output # At the output of the function.
       target_field: description # In this specific field of the output.
-      target_field_resolution_strategy: all  # If many fields match the description inject in all.
+      target_field_resolution_strategy: all  # If many fields match target_field inject in all.
       payload_placement: replace # The field will be replaced by the attack_payload.
       call_limit: 1 # Only inject the first time the target function is called.
 
@@ -379,7 +378,7 @@ scenarios:
   deny_service_1:
     scenario_group: agent_denial_of_service
     # ... payload variant 1
-  
+
   deny_service_2:
     scenario_group: agent_denial_of_service
     # ... payload variant 2
@@ -413,7 +412,7 @@ After identifying vulnerabilities through red teaming, you can add defense middl
 | `content_safety_guard` | Detect harmful, violent, or unsafe content |
 | `output_verifier` | Detect manipulated or incorrect tool outputs |
 
-> **Note**:  
+> **Note**:
 > To use Hugging Face guard models (such as Qwen Guard), install the Hugging Face dependencies:
 >
 > ```bash
@@ -423,7 +422,7 @@ After identifying vulnerabilities through red teaming, you can add defense middl
 > To use the **PII Defense**, install the PII dependencies:
 >
 > ```bash
-> pip install "nvidia-nat[pii-defense]" 
+> pip install "nvidia-nat[pii-defense]"
 > ```
 >
 > The PII Defense uses **[Microsoft Presidio](https://github.com/microsoft/presidio)** for detecting and sanitizing personally identifiable information.
@@ -505,7 +504,7 @@ llms:
     model_name: nvidia/llama-3.1-nemoguard-8b-content-safety
     temperature: 0.0
     max_tokens: 256
-  
+
   # Option 2: Qwen Guard (via Hugging Face)
   # guard_llm:
   #   _type: huggingface
@@ -544,7 +543,7 @@ middleware:
 
 See `configs/config-with-defenses.yml` for a working example with multiple defense layers at both function and workflow levels.
 
-> In this example, using the attached `config-with-defenses.yml`—where all enabled defenses operate in **redirection** mode—and re-running the same red teaming scenarios resulted in the overall attack success score dropping from **0.7 (baseline, no defenses)** to **0.0**. This illustrates how the provided defense configuration fully mitigates the demonstrated attacks while allowing the retail agent workflow to continue operating normally. 
+> In this example, using the attached `config-with-defenses.yml`—where all enabled defenses operate in **redirection** mode—and re-running the same red teaming scenarios resulted in the overall attack success score dropping from **0.7 (baseline, no defenses)** to **0.0**. This illustrates how the provided defense configuration fully mitigates the demonstrated attacks while allowing the retail agent workflow to continue operating normally.
 
 <table>
   <tr>
@@ -558,6 +557,7 @@ See `configs/config-with-defenses.yml` for a working example with multiple defen
     </td>
   </tr>
 </table>
+
 Note to the user - In this release, defense wrapper sits as the topmost layer in the workflow. So the defense layer has visibility to the attacks happening. In future release versions, we plan to enable the ability to add defense instrumentation anywhere in the workflow.
 
 ---
