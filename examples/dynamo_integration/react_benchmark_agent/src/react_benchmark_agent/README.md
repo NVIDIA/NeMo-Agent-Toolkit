@@ -75,7 +75,7 @@ uv pip install -e ".[langchain]"
 # Install visualization dependencies
 uv pip install matplotlib scipy
 
-# Install the react_benchmark_agent workflow package
+# Install the nat_react_benchmark_agent workflow package
 cd examples/dynamo_integration/react_benchmark_agent
 uv pip install -e .
 

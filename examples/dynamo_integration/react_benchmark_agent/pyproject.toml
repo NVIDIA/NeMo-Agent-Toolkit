@@ -9,7 +9,7 @@ git_describe_command = "git describe --long --first-parent"
 root = "../../.."
 
 [project]
-name = "react_benchmark_agent"
+name = "nat_react_benchmark_agent"
 dynamic = ["version"]
 dependencies = [
   "nvidia-nat[langchain]~=1.4",
