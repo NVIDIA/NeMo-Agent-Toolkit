@@ -89,7 +89,7 @@ def mcp_tool_function(tool: MCPToolClient) -> FunctionInfo:
          try:
              if tool_input:
                  # Exclude None values for optional parameters.
-                 # Sourcegraph will use server-side defaults for omitted optional fields.
+                 # MCP server will use server-side defaults for omitted optional fields.
                  args = tool_input.model_dump(exclude_none=True)
                  return await tool.acall(args)
     
