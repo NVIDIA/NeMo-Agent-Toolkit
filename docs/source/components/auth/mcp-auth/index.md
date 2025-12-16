@@ -42,7 +42,7 @@ authentication:
 ```
 Configuration options:
 - `server_url`: The URL of the MCP server that requires authentication.
-- `redirect_uri`: The redirect URI for the OAuth2 flow. This must match the address where your NAT server is accessible from your browser.
+- `redirect_uri`: The redirect URI for the OAuth2 flow. This must match the address where your server is accessible from your browser.
 - `default_user_id`: The user ID for discovering and adding tools to the workflow at startup. The `default_user_id` can be any string and is used as the key to cache the user's information. It defaults to the `server_url` if not provided.
 - `allow_default_user_id_for_tool_calls`: Whether to allow the default user ID for tool calls. This is typically enabled for single-user workflows, for example, a workflow that is launched using the `nat run` CLI command. For multi-user workflows, this should be disabled to avoid accidental tool calls by unauthorized users.
 
@@ -55,7 +55,7 @@ To view all configuration options for the `mcp_oauth2` authentication provider, 
 Some configuration values are commonly provided through environment variables:
 - `NAT_USER_ID`: Used as `default_user_id` to cache the authenticating user during setup and optionally for tool calls. Defaults to the `server_url` if not provided.
 - `ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS`: Controls whether the default user can invoke tools. Defaults to `true` if not provided.
-- `NAT_REDIRECT_URI`: The full redirect URI for OAuth2 callbacks. Defaults to `http://localhost:8000/auth/redirect` if not provided. For remote servers or production deployments, set this to match the address where your NAT server is accessible from your browser. **Note**: If no port is specified in the URI, the server will bind to port 8000 by default.
+- `NAT_REDIRECT_URI`: The full redirect URI for OAuth2 callbacks. Defaults to `http://localhost:8000/auth/redirect` if not provided. For remote servers or production deployments, set this to match the address where your server is accessible from your browser. **Note**: If no port is specified in the URI, the server will bind to port 8000 by default.
 
 Set them for your current shell:
 ```bash
@@ -120,7 +120,7 @@ In this mode, the `default_user_id` is used for authentication during setup and 
 
 ```mermaid
 flowchart LR
-  U[User<br/>default-user-id] --> H[MCP Host<br/>NAT Workflow]
+  U[User<br/>default-user-id] --> H[MCP Host<br/>Workflow]
   H --> C[MCP Client<br/>default-user-id]
   C --> S[MCP Server<br/>Protected Jira Service]
 ```
@@ -141,7 +141,7 @@ In this mode, the workflow is served through a FastAPI frontend. Multiple users 
 
 ```mermaid
 flowchart LR
-  U0[User<br/>default-user-id] --> H2[MCP Host<br/>NAT Workflow]
+  U0[User<br/>default-user-id] --> H2[MCP Host<br/>Workflow]
   U1[User<br/>UI-User-1] --> H2
   U2[User<br/>UI-User-2] --> H2
 
@@ -197,7 +197,7 @@ Set the `NAT_REDIRECT_URI` environment variable to match your remote server's ad
 ```bash
 export NAT_REDIRECT_URI="http://192.168.1.100:8080/auth/redirect"
 ```
-This is an example value for a remote server at `192.168.1.100` running on port `8080`. Replace this with the actual network address where your NAT server is accessible from your browser.
+This is an example value for a remote server at `192.168.1.100` running on port `8080`. Replace this with the actual network address where your server is accessible from your browser.
 
 For production environments using a reverse proxy, specify the public HTTPS URL:
 ```bash
@@ -205,7 +205,7 @@ export NAT_REDIRECT_URI="https://myapp.example.com/auth/redirect"
 ```
 
 :::{important}
-When `redirect_uri` does not include an explicit port, the NAT server will bind to port **8000** by default (not port 80 or 443). For HTTPS redirect URIs, you must use a reverse proxy to handle TLS termination on port 443 and forward requests to the NAT server on port 8000.
+When `redirect_uri` does not include an explicit port, the server will bind to port **8000** by default (not port 80 or 443). For HTTPS redirect URIs, you must use a reverse proxy to handle TLS termination on port 443 and forward requests to the server on port 8000.
 :::
 
 Configure the authentication provider in the workflow configuration:
@@ -219,7 +219,7 @@ authentication:
     allow_default_user_id_for_tool_calls: false
 ```
 
-The `redirect_uri` must match the address where your NAT server is accessible from your browser. The `/auth/redirect` endpoint is automatically registered on the main NAT server for handling OAuth callbacks.
+The `redirect_uri` must match the address where your server is accessible from your browser. The `/auth/redirect` endpoint is automatically registered on the main server for handling OAuth callbacks.
 
 Start the server using the `--host` and `--port` flags that match your `redirect_uri`:
 ```bash
@@ -231,7 +231,7 @@ nat serve --host 0.0.0.0 --port 8000
 ```
 
 :::{note}
-For production deployments with HTTPS, you typically run NAT behind a reverse proxy (such as nginx) that handles TLS termination. In this case, set `NAT_REDIRECT_URI` to your public HTTPS address, and configure the reverse proxy to forward requests to your NAT server's internal address and port.
+For production deployments with HTTPS, you typically run behind a reverse proxy (such as nginx) that handles TLS termination. In this case, set `NAT_REDIRECT_URI` to your public HTTPS address, and configure the reverse proxy to forward requests to your server's internal address and port.
 :::
 
 ## Displaying Protected MCP Tools through the CLI

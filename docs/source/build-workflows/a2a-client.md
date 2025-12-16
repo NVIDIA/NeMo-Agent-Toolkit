@@ -105,7 +105,7 @@ flowchart TB
         AC[Agent Card<br/>Skills & Metadata]
     end
 
-    AC -->|discovers| FG[NAT Function Group<br/>agent_name]
+    AC -->|discovers| FG[Function Group<br/>agent_name]
 
     subgraph "Three-Level API"
         L1["Level 1: High-Level<br/>agent_name.call(query)<br/>Natural language interface"]
@@ -212,7 +212,7 @@ flowchart TB
         AC --> S2
     end
 
-    AC ==>|discovers & maps to| FG[NAT Function Group<br/>dice_agent]
+    AC ==>|discovers & maps to| FG[Function Group<br/>dice_agent]
 
     subgraph "Three-Level API"
         L1["Level 1: High-Level<br/>dice_agent.call(query)<br/>Natural language interface<br/>Skills optionally embedded in description"]
@@ -236,7 +236,7 @@ flowchart TB
 1. Client fetches Agent Card from `{url}/.well-known/agent-card.json`
 2. Parses agent metadata (name, version, description)
 3. Extracts skills with their descriptions and examples
-4. Maps skills to NAT function group with three API levels
+4. Maps skills to a function group with three API levels
 5. Optionally embeds skill details in high-level function description
 
 ## Transport Support
@@ -257,7 +257,7 @@ For most use cases, the high-level `call()` function is sufficient. Use `send_me
 
 The following examples demonstrate A2A client usage:
 
-- Math Assistant A2A Example - NAT-to-NAT A2A communication with hybrid tool composition. See `examples/A2A/math_assistant_a2a/README.md`.
+- Math Assistant A2A Example - A2A communication with hybrid tool composition. See `examples/A2A/math_assistant_a2a/README.md`.
 - Currency Agent A2A Example - Connecting to external third-party A2A services. See `examples/A2A/currency_agent_a2a/README.md`.
 
 ## CLI Utilities
@@ -327,5 +327,5 @@ The A2A client is built on the official [A2A Python SDK](https://github.com/a2ap
 
 ## Related Documentation
 
-- [A2A Server Guide](../run-workflows/a2a-server.md) - Publishing NAT workflows as A2A agents
-- [Function Groups](./functions-and-function-groups//function-groups.md) - Understanding NAT function groups
+- [A2A Server Guide](../run-workflows/a2a-server.md) - Publishing workflows as A2A agents
+- [Function Groups](./functions-and-function-groups//function-groups.md) - Understanding function groups
