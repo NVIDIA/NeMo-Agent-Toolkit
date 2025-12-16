@@ -16,11 +16,11 @@ limitations under the License.
 
 # Math Assistant A2A Example
 
-This example demonstrates a math assistant that connects to a NAT-based calculator server while integrating with local tools, showcasing end-to-end NAT-to-NAT A2A communication with hybrid tool composition.
+This example demonstrates a math assistant that connects to a NeMo Agent toolkit based calculator server while integrating with local tools, showcasing end-to-end  A2A communication with hybrid tool composition.
 
 ## Key Features
 
-- **A2A Protocol Integration**: Connects to a remote NAT calculator workflow via A2A protocol
+- **A2A Protocol Integration**: Connects to a remote calculator workflow via A2A protocol
 - **Hybrid Tool Architecture**: Combines remote A2A tools with local MCP and custom functions
 
 ## Architecture Overview
@@ -35,7 +35,7 @@ flowchart LR
     end
 
     CTA --> AP[A2A Protocol<br/>localhost:10000]
-    AP --> CS[Calculator A2A Server<br/>NAT-based]
+    AP --> CS[Calculator A2A Server]
 
     subgraph "Calculator A2A Server"
         CS --> CA[calculator.add]

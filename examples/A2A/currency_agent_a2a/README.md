@@ -156,4 +156,4 @@ curl http://localhost:11000/.well-known/agent-card.json | jq
 
 ## Related Examples
 
-- [Math Assistant A2A](../math_assistant_a2a/) - NAT-to-NAT A2A with hybrid tools
+- [Math Assistant A2A](../math_assistant_a2a/) - NeMo Agent toolkit A2A with hybrid tools
