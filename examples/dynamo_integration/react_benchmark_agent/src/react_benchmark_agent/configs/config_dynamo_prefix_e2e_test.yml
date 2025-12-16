@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+# <!-- path-check-skip-file -->
 
 # =============================================================================
 # DYNAMO WORKFLOW WITH DYNAMIC PREFIX HEADERS
@@ -32,6 +32,7 @@
 # Usage:
 #   nat run --config_file configs/config_dynamo_prefix_e2e_test.yml --input "What time is it?"
 # =============================================================================
+
 
 functions:
   current_datetime:

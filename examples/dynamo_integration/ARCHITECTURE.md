@@ -468,7 +468,7 @@ For detailed Dynamo backend architecture including:
 - Frontend, Processor, and Router components
 - Unified vs Disaggregated worker modes
 - Thompson Sampling router configuration
-- Infrastructure services (ETCD, NATS)
+- Infrastructure services (`etcd`, `nats`)
 - Dynamic prefix headers for KV cache optimization
 
 **See: [Dynamo Setup Guide](../../external/dynamo/README.md#architecture-overview)**
@@ -564,7 +564,7 @@ For detailed Dynamo backend architecture including:
 ---
 
 ## File Structure
-
+<!-- path-check-skip-begin -->
 ```text
 examples/dynamo_integration/                    # Main example directory
 │
@@ -625,6 +625,7 @@ examples/dynamo_integration/                    # Main example directory
                 ├── benchmark_report.md
                 └── analysis_*.txt
 ```
+<!-- path-check-skip-end -->
 
 For Dynamo backend file structure, see: [Dynamo Setup Guide](../../external/dynamo/README.md#file-structure)
 

@@ -47,16 +47,19 @@ uv pip install matplotlib scipy
 
 
 # 2. Install the workflow package
+# <!-- path-check-skip-next-line -->
 cd examples/dynamo_integration/react_benchmark_agent # NeMo-Agent-Toolkit/examples/dynamo_integration/react_benchmark_agent
 uv pip install -e .
 
 # 3. Download the dataset (requires HuggingFace account)
+# <!-- path-check-skip-next-line -->
 cd ../ # NeMo-Agent-Toolkit/examples/dynamo_integration
 export HF_TOKEN=<your_huggingface_token>
 export HF_HOME=<your-user-path/.cache/huggingface>
 python scripts/download_agent_leaderboard_v2.py --domains banking
 
 # 4. Start Dynamo backend (see Dynamo README for details)
+# <!-- path-check-skip-next-line -->
 cd ../../external/dynamo # NeMo-Agent-Toolkit/external/dynamo
 bash start_dynamo_unified.sh # wait ~5 minutes for the server to start
 
@@ -97,6 +100,7 @@ The `nat eval` command generates the following artifacts in the job output direc
 
 Use these scripts to analyze and visualize your evaluation results:
 
+<!-- path-check-skip-begin -->
 | Script | Example Usage | Optional Flags | Outcome |
 |--------|---------------|----------------|---------|
 | `throughput_analysis.py` | `python scripts/throughput_analysis.py ./react_benchmark_agent/outputs/dynamo_evals/banking_data_eval_full_test/jobs/job_<uuid>/standardized_data_all.csv` | None | Calculates TTFT, ITL, and tokens-per-second statistics from profiler CSV. Outputs: `tokens_per_second_analysis.csv` and `inter_token_latency_distribution.csv` |
@@ -104,7 +108,7 @@ Use these scripts to analyze and visualize your evaluation results:
 | `plot_throughput_histograms_per_request.py` | `python scripts/plot_throughput_histograms_per_request.py ./react_benchmark_agent/outputs/dynamo_evals/banking_data_eval_full_test/jobs/` | `--output DIR` | Generates histograms showing distribution of TTFT, ITL, throughput (100 bins each), plus Total Tokens (50 bins), LLM Calls (25 bins), Duration (25 bins). |
 | `run_concurrency_benchmark.sh` | `bash scripts/run_concurrency_benchmark.sh` | Interactive prompts | Runs evaluations at multiple concurrency levels. Outputs `benchmark_results.csv`, `benchmark_report.md`, and `analysis_*.txt` |
 | `create_test_subset.py` | `python scripts/create_test_subset.py --num-scenarios 3` | `--input-file PATH`, `--output-file PATH` | Creates smaller dataset subset for quick end-to-end validation testing |
-
+<!-- path-check-skip-end -->
 
 ## Documentation
 
@@ -116,6 +120,7 @@ Use these scripts to analyze and visualize your evaluation results:
 
 ## Project Structure
 
+<!-- path-check-skip-begin -->
 ```text
 examples/dynamo_integration/
 ├── README.md                          # This file
@@ -197,6 +202,7 @@ external/dynamo/                       # Dynamo backend (separate location)
     ├── processor.py                   # Request processor
     └── router.py                      # Routing logic
 ```
+<!-- path-check-skip-end -->
 
 ## Configuration Options
 

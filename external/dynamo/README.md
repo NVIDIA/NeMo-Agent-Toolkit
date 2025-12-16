@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+<!-- path-check-skip-file -->
 
 # Dynamo Backend Setup Guide
 
@@ -713,7 +714,7 @@ llms:
 
 ### How It Works
 
-1. **NAT Config** uses `_type: dynamo` (prefix headers enabled by default)
+1. **NAT Configurations** uses `_type: dynamo` (prefix headers enabled by default)
 2. **Dynamo LLM Provider** generates unique UUID per request using the template
 3. **Headers injected** into HTTP request:
    ```text

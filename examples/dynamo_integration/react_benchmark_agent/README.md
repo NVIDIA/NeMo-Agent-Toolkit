@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+<!-- path-check-skip-file -->
 
 # Agent Leaderboard v2 - Evaluation Guide
 
@@ -109,11 +110,13 @@ export HF_TOKEN=<your_huggingface_token>
 
 Before running evaluations, ensure Dynamo is running:
 
+<!-- path-check-skip-begin -->
 ```bash
 cd ../../../external/dynamo/ # NeMo-Agent-Toolkit/external/dynamo
 bash start_dynamo_unified.sh
 bash test_dynamo_integration.sh
 ```
+<!-- path-check-skip-end -->
 
 > **Note:** To customize GPU workers and tensor parallelism, edit the configuration variables at the top of `external/dynamo/start_dynamo_unified.sh`:
 > - `WORKER_GPUS="4,5,6,7"` - GPU device IDs to use (for example, `"0,1"` for first 2 GPUs)
@@ -130,7 +133,7 @@ See [Dynamo Setup Guide](../../../external/dynamo/README.md) for detailed config
 ### Download and Preprocess
 
 ```bash
-cd ../../examples/dynamo_integration # NeMo-Agent-Toolkit/examples/dynamo_integration
+cd ../../../examples/dynamo_integration
 source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 export HF_TOKEN=<your_huggingface_token>
 
