@@ -126,7 +126,7 @@ workflow:
     
     IMPORTANT: This is a tool selection exercise, NOT real execution.
     - Focus on selecting the RIGHT TOOL for each step
-    - Use placeholder/dummy values for required parameters (e.g., "12345", "user@example.com", "2024-01-01")
+    - Use placeholder or dummy values for required parameters (e.g., "12345", "user@example.com", "2024-01-01")
     - Tool responses are simulated - ignore them and focus on selecting the next appropriate tool
     - What matters is YOUR INTENT and TOOL CHOICE, not the data quality
     

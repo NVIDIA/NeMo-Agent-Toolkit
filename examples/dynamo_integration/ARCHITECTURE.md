@@ -573,7 +573,7 @@ examples/dynamo_integration/                    # Main example directory
 │
 ├── 📁 data/                                    # Datasets
 │   ├── agent_leaderboard_v2_banking.json       # 100 banking scenarios
-│   ├── agent_leaderboard_v2_test_subset.json   # 3-scenario test subset, generated with ./scripts/create_test_subset
+│   ├── agent_leaderboard_v2_test_subset.json   # 3-scenario test subset, generated with create_test_subset.py
 │   └── raw/banking/
 │       └── tools.json                          # 20 tool schemas
 │

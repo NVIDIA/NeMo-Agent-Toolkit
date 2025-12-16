@@ -36,9 +36,9 @@
 #   - HIGH   → iat_factor = 0.6 (slow requests, more exploration)
 #
 # prefix_total_requests:
-#   - Integer >= 1: How many requests expected for this prefix/conversation
+#   - Integer >= 1: How many requests expected for this prefix or conversation
 #   - Higher values increase worker stickiness and KV cache locality
-#   - Lower values allow more worker exploration/load balancing
+#   - Lower values allow more worker exploration and load balancing
 #
 # Router Behavior Summary:
 #   - Higher reuse_budget + LOW iat → strong stickiness to same worker
@@ -71,7 +71,7 @@ functions:
       
       IMPORTANT: This is a tool selection exercise, NOT real execution.
       - Focus on selecting the RIGHT TOOL for each step
-      - Use placeholder/dummy values for required parameters (e.g., "12345", "user@example.com", "2024-01-01")
+      - Use placeholder or dummy values for required parameters (e.g., "12345", "user@example.com", "2024-01-01")
       - Tool responses are simulated - ignore them and focus on selecting the next appropriate tool
       - What matters is YOUR INTENT and TOOL CHOICE, not the data quality
       
@@ -142,7 +142,7 @@ llms:
     # Dynamo prefix configuration
     # Note: Setting prefix_template enables dynamic prefix headers
     prefix_template: "react-benchmark-{uuid}"
-    # OPTIMIZABLE: Total expected requests per conversation/prefix
+    # OPTIMIZABLE: Total expected requests per conversation or prefix
     # Default search space: low=1, high=20, step=5
     prefix_total_requests: 10
     # OPTIMIZABLE: Output Sequence Length hint (LOW | MEDIUM | HIGH)

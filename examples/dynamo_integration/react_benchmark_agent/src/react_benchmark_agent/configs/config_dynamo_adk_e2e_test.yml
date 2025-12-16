@@ -50,8 +50,8 @@ llms:
   dynamo_llm:
     _type: dynamo
     # LiteLLM requires provider prefix for custom endpoints
-    # Use "openai/model-name" format for OpenAI-compatible APIs
-    model_name: openai/llama-3.3-70b
+    # Use "openai:model-name" format for OpenAI-compatible APIs
+    model_name: "openai/llama-3.3-70b"
     base_url: http://localhost:8099/v1
     api_key: dummy  # Dynamo doesn't require auth, but LiteLLM needs a value
     temperature: 0.0

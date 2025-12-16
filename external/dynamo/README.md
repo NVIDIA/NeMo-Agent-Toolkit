@@ -42,7 +42,7 @@ Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimizat
 |------|--------|-------------|----------|
 | **Unified** | `start_dynamo_unified.sh` | Single worker, all operations | Development, testing |
 | **Unified + Thompson** | `start_dynamo_unified_thompson_hints.sh` | Unified with predictive KV-aware router | Production, KV optimization |
-| **Disaggregated** | `start_dynamo_disagg.sh` | Separate prefill/decode workers | High-throughput production |
+| **Disaggregated** | `start_dynamo_disagg.sh` | Separate `prefill` and `decode` workers | High-throughput production |
 
 ### Architecture Overview
 
@@ -99,7 +99,7 @@ Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimizat
 │  │  │   1. KV cache overlap│  │    • LinTS for continuous params     │    │  │
 │  │  │   2. Worker affinity │  │    • Beta bandits for discrete       │    │  │
 │  │  │   3. Load balancing  │  │    • Explores vs exploits workers    │    │  │
-│  │  │   4. OSL/IAT hints   │  │    • Learns optimal routing          │    │  │
+│  │  │   4. OSL+IAT hints   │  │    • Learns optimal routing          │    │  │
 │  │  └──────────────────────┘  └──────────────────────────────────────┘    │  │
 │  │                                                                        │  │
 │  │  Routing Decision Factors:                                             │  │
@@ -229,7 +229,7 @@ mkdir -p "$(dirname "$DYNAMO_MODEL_DIR")"
 pip install huggingface_hub
 huggingface-cli login  # Enter your HF token
 
-huggingface-cli download meta-llama/Llama-3.3-70B-Instruct \
+huggingface-cli download "meta-llama/Llama-3.3-70B-Instruct" \
   --local-dir "$DYNAMO_MODEL_DIR"
 ```
 
@@ -258,19 +258,19 @@ Example output for an 8x H100 system:
 |                                         |                        |               MIG M. |
 |=========================================+========================+======================|
 |   0  NVIDIA B200                    On  |   00000000:1B:00.0 Off |                    0 |
-| N/A   29C    P0            139W / 1000W |       0MiB / 183359MiB |      0%      Default |
+| None  29C    P0            139W / 1000W |       0MiB / 183359MiB |      0%      Default |
 |                                         |                        |             Disabled |
 +-----------------------------------------+------------------------+----------------------+
 |   1  NVIDIA B200                    On  |   00000000:43:00.0 Off |                    0 |
-| N/A   29C    P0            138W / 1000W |       0MiB / 183359MiB |      0%      Default |
+| None  29C    P0            138W / 1000W |       0MiB / 183359MiB |      0%      Default |
 |                                         |                        |             Disabled |
 +-----------------------------------------+------------------------+----------------------+
 |   2  NVIDIA B200                    On  |   00000000:52:00.0 Off |                    0 |
-| N/A   33C    P0            142W / 1000W |       0MiB / 183359MiB |      0%      Default |
+| None  33C    P0            142W / 1000W |       0MiB / 183359MiB |      0%      Default |
 |                                         |                        |             Disabled |
 +-----------------------------------------+------------------------+----------------------+
 |   3  NVIDIA B200                    On  |   00000000:61:00.0 Off |                    0 |
-| N/A   34C    P0            143W / 1000W |       0MiB / 183359MiB |      0%      Default |
+| None  34C    P0            143W / 1000W |       0MiB / 183359MiB |      0%      Default |
 |                                         |                        |             Disabled |
 +-----------------------------------------+------------------------+----------------------+
 ...
@@ -304,15 +304,15 @@ watch -n 1 nvidia-smi
 
 # Verify Dynamo is running
 curl -sv http://localhost:8099/health
-# Expected: HTTP/1.1 200 OK
+# Expected: "HTTP/1.1 200 OK"
 
 # when testing is complete, shut down the containers with:
 bash stop_dynamo.sh
 ```
 
 **Components started:**
-- ETCD container (`etcd-dynamo`) on port 2389
-- NATS container (`nats-dynamo`) on port 4232
+- `etcd` container (`etcd-dynamo`) on port 2389
+- `nats` container (`nats-dynamo`) on port 4232
 - Dynamo container (`dynamo-sglang`) with unified worker on GPUs 0,1,2,3 (TP=4)
 
 **Startup time**: ~5 minutes seconds for 70B model
@@ -341,7 +341,7 @@ bash stop_dynamo.sh
 - Custom frontend with prefix hint header support
 - Thompson Sampling router (LinTS + Beta bandits)
 - KV cache overlap optimization
-- Workload-aware routing based on OSL/IAT hints
+- Workload-aware routing based on OSL and IAT hints
 
 **Custom components location:** `generalized/`
 - `frontend.py` - Accepts x-prefix-* headers
@@ -350,7 +350,7 @@ bash stop_dynamo.sh
 
 ### Option 3: Disaggregated Mode (High-Throughput)
 
-Separate prefill and decode workers for maximum throughput. More complex setup.
+Separate `prefill` and `decode` workers for maximum throughput. More complex setup.
 
 ```bash
 cd /path/to/NeMo-Agent-Toolkit/external/dynamo
@@ -369,10 +369,10 @@ bash stop_dynamo.sh
 ```
 
 **Components started:**
-- ETCD container on port 2379
-- NATS container on port 4222
-- Prefill Worker on GPUs 0,1 (TP=2)
-- Decode Worker on GPUs 2,3 (TP=2)
+- `etcd` container on port 2379
+- `nats` container on port 4222
+- `prefill` Worker on GPUs 0,1 (TP=2)
+- `decode` Worker on GPUs 2,3 (TP=2)
 - Dynamo Frontend on port 8099
 
 **Startup time**: ~5 minutes (both workers must initialize)
@@ -410,7 +410,7 @@ bash test_dynamo_integration.sh
 ```
 
 **Environment variables** (optional):
-- `DYNAMO_BACKEND` - Backend type: `sglang` # vllm and tensorRT still need to be developed
+- `DYNAMO_BACKEND` - Backend type: `sglang` # `vllm` and tensorRT still need to be developed
 - `DYNAMO_MODEL` - Model name (default: `llama-3.3-70b`)
 - `DYNAMO_PORT` - Frontend port (default: `8099`)
 
@@ -475,8 +475,8 @@ bash stop_dynamo.sh
 
 **What it stops:**
 - Dynamo container (`dynamo-sglang` or `dynamo-sglang-thompson`)
-- ETCD container (`etcd-dynamo`)
-- NATS container (`nats-dynamo`)
+- `etcd` container (`etcd-dynamo`)
+- `nats` container (`nats-dynamo`)
 
 **Output:**
 ```
@@ -608,10 +608,10 @@ cd /path/to/NeMo-Agent-Toolkit/external/dynamo
 # View container logs
 docker logs -f dynamo-sglang
 
-# View ETCD logs
+# View `etcd` logs
 docker logs -f etcd-dynamo
 
-# View NATS logs
+# View `nats` logs
 docker logs -f nats-dynamo
 
 # GPU utilization
@@ -728,7 +728,7 @@ llms:
    - KV cache overlap with existing prefixes
    - Worker affinity for related requests
    - Load balancing across workers
-   - Workload hints (OSL/IAT)
+   - Workload hints (OSL and IAT)
 
 ---
 
@@ -744,8 +744,8 @@ The startup scripts support configuration through environment variables. Set the
 | `DYNAMO_REPO_DIR` | Path to NeMo-Agent-Toolkit repository | Auto-detected |
 | `DYNAMO_GPU_DEVICES` | Comma-separated GPU device IDs | `0,1,2,3` |
 | `DYNAMO_HTTP_PORT` | Frontend HTTP port | `8099` |
-| `DYNAMO_ETCD_PORT` | ETCD client port | `2389` |
-| `DYNAMO_NATS_PORT` | NATS messaging port | `4232` |
+| `DYNAMO_ETCD_PORT` | `etcd` client port | `2389` |
+| `DYNAMO_NATS_PORT` | `nats` messaging port | `4232` |
 
 Example configuration:
 
@@ -860,23 +860,23 @@ docker ps --format '{{.Names}}'
 ss -tlnp | grep 8099
 ```
 
-### ETCD Connection Issues
+# `etcd` Connection Issues
 
 ```bash
-# Check ETCD health
+# Check `etcd` health
 curl http://localhost:2379/health 
 
-# Check ETCD logs
+# Check `etcd` logs
 docker logs etcd-dynamo
 ```
 
-### NATS Connection Issues
+### `nats` Connection Issues
 
 ```bash
-# Check NATS is running
+# Check `nats` is running
 docker ps | grep nats-dynamo
 
-# Check NATS logs
+# Check `nats` logs
 docker logs nats-dynamo
 ```
 
@@ -884,7 +884,7 @@ docker logs nats-dynamo
 
 **Symptom**: `KeyError: 'token_ids'` or tokenizer errors
 
-**Fix**: Clear ETCD data and restart
+**Fix**: Clear `etcd` data and restart
 ```bash
 bash stop_dynamo.sh
 # Wait a few seconds
@@ -962,7 +962,7 @@ external/dynamo/                                # Dynamo backend
 |-----------|-------------|
 | `dynamo-sglang` | Standard Dynamo worker |
 | `etcd-dynamo` | Service discovery and metadata |
-| `nats-dynamo` | Message queue for prefill requests |
+| `nats-dynamo` | Message queue for `prefill` requests |
 
 ### Related Documentation
 

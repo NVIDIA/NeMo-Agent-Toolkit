@@ -183,7 +183,7 @@ Each scenario in the dataset contains:
 
 ### Available Configurations
 
-| Config File | Description | Dataset | Use Case |
+| Configuration File | Description | Dataset | Use Case |
 |-------------|-------------|---------|----------|
 | `eval_config_no_rethinking_full_test.yml` | Full evaluation | 100 scenarios | Production benchmarks |
 | `eval_config_no_rethinking_minimal_test.yml` | Quick test | 3 scenarios | Validation |
@@ -204,11 +204,11 @@ The Dynamo LLM provider supports multiple agent frameworks. Each framework has a
 
 Google ADK (Agent Development Kit) is an increasingly popular framework for building AI agents. Testing the Dynamo + ADK integration is important because:
 
-1. **Different header injection mechanism**: ADK uses LiteLLM under the hood, which requires passing headers via `extra_headers` at client initialization time, unlike LangChain which uses httpx event hooks for per-request injection.
+1. **Different header injection mechanism**: ADK uses LiteLLM under the hood, which requires passing headers via `extra_headers` at client initialization time, unlike LangChain which uses `httpx` event hooks for per-request injection.
 
 2. **Conversation-level prefix ID consistency**: All requests from the same ADK client instance share the same prefix ID, which is ideal for KV cache optimization in multi-turn conversations.
 
-3. **Provider prefix requirements**: LiteLLM requires model names to be prefixed with the provider (for example, `openai/llama-3.3-70b`) for custom endpoints, which differs from LangChain's direct model name usage.
+3. **Provider prefix requirements**: LiteLLM requires model names to be prefixed with the provider (for example, `openai:llama-3.3-70b`) for custom endpoints, which differs from LangChain's direct model name usage.
 
 #### Running ADK Integration Test
 
@@ -224,7 +224,7 @@ nat run --config_file examples/dynamo_integration/react_benchmark_agent/configs/
 
 **Expected output**: The Dynamo prefix headers should be logged, and all LLM calls within the conversation will share the same prefix ID (for example, `adk-dynamo-test-7a31631c0ec24857`).
 
-> **Note**: The ADK e2e test is configured for **basic I/O testing only** (no tool calling). This is because ADK with LiteLLM requires OpenAI-style function calling support from the model endpoint, which vanilla llama models served via vLLM/Dynamo don't support out of the box. For tool-calling workflows with Dynamo, use the LangChain + ReAct agent configs (for example, `config_dynamo_prefix_e2e_test.yml`) which parse tool calls from text output.
+> **Note**: The ADK e2e test is configured for **basic I/O testing only** (no tool calling). This is because ADK with LiteLLM requires OpenAI-style function calling support from the model endpoint, which vanilla llama models served via vLLM or Dynamo don't support out of the box. For tool-calling workflows with Dynamo, use the LangChain + ReAct agent `configs` (for example, `config_dynamo_prefix_e2e_test.yml`) which parse tool calls from text output.
 
 ### Key Configuration Sections
 
@@ -450,12 +450,12 @@ workflow:
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `wrapped_agent` | FunctionRef | *required* | Reference to underlying ReAct agent |
-| `evaluator_llm` | LLMRef | *required* | LLM for self-evaluation |
-| `max_retries` | int | 2 | Maximum retry attempts (0-5) |
-| `min_confidence_threshold` | float | 0.7 | Minimum confidence to accept (0.0-1.0) |
-| `pass_feedback_to_agent` | bool | false | Pass evaluation feedback on retry |
-| `verbose` | bool | true | Enable detailed logging |
+| `wrapped_agent` | `FunctionRef` | *required* | Reference to underlying ReAct agent |
+| `evaluator_llm` | `LLMRef` | *required* | LLM for self-evaluation |
+| `max_retries` | `int` | 2 | Maximum retry attempts (0-5) |
+| `min_confidence_threshold` | `float` | 0.7 | Minimum confidence to accept (0.0-1.0) |
+| `pass_feedback_to_agent` | `bool` | false | Pass evaluation feedback on retry |
+| `verbose` | `bool` | true | Enable detailed logging |
 
 ### Running with Self-Evaluation
 
@@ -629,11 +629,11 @@ Dataset Overview:
   P95:      11.21 ms
 
 -----------------------Per-Request Throughput (Tokens Per Second)---------------
-  Mean:     89.43 tok/s
-  Median:   89.42 tok/s
+  Mean:     89.43 tok per second
+  Median:   89.42 tok per second
 
 -----------------Aggregate Throughput (All Concurrent Requests)-----------------
-  Aggregate Throughput:   88.37 tok/s
+  Aggregate Throughput:   88.37 tokens per second
 ================================================================================
 ```
 
@@ -754,7 +754,7 @@ workflow:
 
 **Fix**: 
 1. Check logs for "Tool stub executed" - if missing, tools aren't running
-2. Ensure your function and function_groups configs have `decision_only: true` and a `canned_response_template`:
+2. Ensure your `function` and `function_groups` `config` files have `decision_only: true` and a `canned_response_template`:
 
 ```yaml
 functions:
@@ -786,7 +786,7 @@ pip install -e . --force-reinstall
 
 ### File Not Found Errors
 
-**Symptom**: Config paths not resolving
+**Symptom**: Configuration paths not resolving
 
 **Fix**: Run `nat eval` from NAT repository root:
 ```bash

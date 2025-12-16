@@ -57,7 +57,7 @@ This document details the source code implementation of the React Benchmark Agen
                     ┌───────────────────┼───────────────────┐
                     ▼                   ▼                   ▼
            ┌───────────────┐   ┌───────────────┐   ┌───────────────┐
-           │  LLM Configs  │   │   Functions   │   │  Evaluators   │
+           │  LLM `Configs`│   │   Functions   │   │  Evaluators   │
            │───────────────│   │───────────────│   │───────────────│
            │ dynamo_llm    │   │ react_agent   │   │ tsq_evaluator │
            │ eval_llm      │   │ banking_tools │   │ ac_evaluator  │
@@ -122,7 +122,7 @@ This is the baseline deployment that runs a ReAct agent directly without self-ev
 
 #### Configuration → Code Mapping
 
-| Config Section | Source File | Component |
+| `config` Section | Source File | Component |
 |----------------|-------------|-----------|
 | `workflow._type: react_agent` | NAT core | Built-in ReAct agent |
 | `function_groups.banking_tools._type: banking_tools_group` | `banking_tools.py` | `BankingToolsGroupConfig` |
@@ -219,12 +219,12 @@ This advanced deployment wraps the ReAct agent with a self-evaluation loop that:
 
 #### Configuration → Code Mapping
 
-| Config Section | Source File | Component |
+| `config` Section | Source File | Component |
 |----------------|-------------|-----------|
 | `functions.react_workflow._type: react_agent` | NAT core | Inner ReAct agent |
 | `workflow._type: self_evaluating_agent_with_feedback` | `self_evaluating_agent_with_feedback.py` | Self-eval wrapper |
-| `workflow.wrapped_agent: react_workflow` | N/A | Reference to inner agent |
-| `workflow.evaluator_llm: eval_llm` | N/A | LLM for self-evaluation |
+| `workflow.wrapped_agent: react_workflow` | (reference) | Reference to inner agent |
+| `workflow.evaluator_llm: eval_llm` | (reference) | LLM for self-evaluation |
 | `workflow.pass_feedback_to_agent: true` | `self_evaluating_agent_with_feedback.py` | Feedback loop enabled |
 
 #### Data Flow
@@ -335,11 +335,11 @@ def get_global_intents(scenario_id: str = "current") -> list[dict[str, Any]]:
 
 **Configuration:** `optimize_rethinking_full_test.yml`
 
-This configuration enables NAT's optimizer to tune Dynamo router parameters for latency/throughput.
+This configuration enables NAT optimizer to tune Dynamo router parameters for latency and throughput.
 
 #### Configuration → Code Mapping
 
-| Config Section | Source File | Component |
+| `config` Section | Source File | Component |
 |----------------|-------------|-----------|
 | `llms.dynamo_llm._type: dynamo` | NAT core (`nat.llm.dynamo_llm`) | Dynamo LLM with optimizable prefix fields |
 | `llms.dynamo_llm.optimizable_params` | NAT core | Fields to optimize |
@@ -357,7 +357,7 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
     # Prefix template (set to null to disable headers)
     prefix_template: str | None = Field(default="nat-dynamo-{uuid}")
     
-    # OPTIMIZABLE: Total expected requests per conversation/prefix
+    # OPTIMIZABLE: Total expected requests per conversation or prefix
     prefix_total_requests: int = OptimizableField(
         default=10,
         description="Expected requests for this prefix. Higher = more stickiness.",
@@ -434,7 +434,7 @@ This configuration enables comprehensive profiling for performance analysis.
 
 #### Configuration → Code Mapping
 
-| Config Section | Source File | Component |
+| `config` Section | Source File | Component |
 |----------------|-------------|-----------|
 | `eval.general.profiler.compute_llm_metrics: true` | NAT core | TTFT, ITL, throughput metrics |
 | `eval.general.profiler.token_uniqueness_forecast: true` | NAT core | Token pattern analysis |
@@ -457,11 +457,11 @@ outputs/dynamo_evals/<job_id>/
 
 ### Core Components
 
-| File | Purpose | Config Type Name |
+| File | Purpose | `config` Type Name |
 |------|---------|------------------|
 | `react_benchmark_agent.py` | Main agent function | `react_benchmark_agent` |
 | `banking_tools.py` | Banking tool stubs | `banking_tools_group` |
-| `tool_intent_stubs.py` | Intent capture system | N/A (infrastructure) |
+| `tool_intent_stubs.py` | Intent capture system | (infrastructure) |
 | `self_evaluating_agent_with_feedback.py` | Self-eval wrapper (unified) | `self_evaluating_agent`, `self_evaluating_agent_with_feedback` |
 
 > **Note**: LLM configuration uses NAT core's `dynamo` type (`_type: dynamo`) which provides 
@@ -469,7 +469,7 @@ outputs/dynamo_evals/<job_id>/
 
 ### Evaluators
 
-| File | Purpose | Config Type Name |
+| File | Purpose | `config` Type Name |
 |------|---------|------------------|
 | `evaluators/tsq_evaluator.py` | Tool Selection Quality | `tsq_evaluator` |
 | `evaluators/action_completion_evaluator.py` | Action Completion | `action_completion_evaluator` |
@@ -499,7 +499,7 @@ def extract_tool_calls_from_trajectory(trajectory):
     Handles multiple formats:
     - Nested payload structure (profiler format)
     - Flat structure with event_type (legacy)
-    - LangChain action/action_input format
+    - LangChain action + action_input format
     - IntermediateStep Pydantic objects
     """
 
