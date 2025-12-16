@@ -49,12 +49,16 @@ class RedTeamingRunner:
     """Runner for executing red teaming evaluations across multiple scenarios.
 
     This runner encapsulates all the logic for:
+
     - Generating workflow configurations for each scenario
     - Setting up output directories
     - Saving configuration files
     - Running evaluations via MultiEvaluationRunner
 
     Example usage:
+
+    .. code-block:: python
+
         runner = RedTeamingRunner(
             config=rt_config,
             base_workflow_config=base_workflow_config,
@@ -77,8 +81,7 @@ class RedTeamingRunner:
         """Initialize the RedTeamingRunner.
 
         Args:
-            config: Red teaming configuration with scenarios. If None, the base_workflow_config
-                is used as a single pre-configured scenario.
+            config: Red teaming configuration with scenarios (None = use base_workflow_config as single pre-configured scenario).
             base_workflow_config: The base workflow configuration to transform for each scenario.
             dataset_path: Optional dataset path (overrides config dataset).
             result_json_path: JSON path to extract the result from the workflow.
@@ -355,6 +358,7 @@ class RedTeamingRunner:
         """Validate that a workflow config is compatible with red teaming.
 
         A workflow config is compatible if it contains:
+
         - At least one RedTeamingMiddleware (or subclass)
         - At least one red_teaming_evaluator
 
@@ -440,6 +444,7 @@ class RedTeamingRunner:
         """Validate that a dataset is defined somewhere.
 
         Dataset can be defined in:
+
         - CLI --dataset argument (dataset_path)
         - RedTeamingRunnerConfig.general.dataset
         - base_workflow_config.eval.general.dataset

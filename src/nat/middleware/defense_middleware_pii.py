@@ -71,6 +71,7 @@ class PIIDefenseMiddleware(DefenseMiddleware):
     See <https://github.com/microsoft/presidio> for more information about Presidio.
 
     Streaming Behavior:
+
     - For 'refusal' and 'redirection' actions: Chunks are buffered and checked before yielding
       to prevent PII from being streamed to clients.
     - For 'partial_compliance' action: Chunks are yielded immediately; violations are logged

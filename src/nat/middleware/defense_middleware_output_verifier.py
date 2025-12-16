@@ -69,6 +69,7 @@ class OutputVerifierMiddleware(DefenseMiddleware):
     Only output analysis is currently supported (target_location='output').
 
     Streaming Behavior:
+
     - For 'refusal' and 'redirection' actions: Chunks are buffered and checked before yielding
       to prevent incorrect content from being streamed to clients.
     - For 'partial_compliance' action: Chunks are yielded immediately; violations are logged

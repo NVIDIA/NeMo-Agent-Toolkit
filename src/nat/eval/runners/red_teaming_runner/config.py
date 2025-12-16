@@ -70,12 +70,9 @@ class RedTeamingScenario(BaseModel):
     The evaluator can use _extends to inherit from evaluator_defaults.
 
     Attributes:
-        scenario_id: Optional unique identifier. If not provided, the dict key
-            from RedTeamingRunnerConfig.scenarios is used.
-        middleware: Full middleware configuration to apply. Set to None for
-            baseline scenarios (no middleware modification).
-        evaluator: Complete evaluator configuration. Can inherit from
-            evaluator_defaults using _extends in YAML/JSON.
+        scenario_id: Optional unique identifier (uses dict key from RedTeamingRunnerConfig.scenarios if not provided).
+        middleware: Full middleware configuration to apply (None for baseline scenarios with no middleware).
+        evaluator: Complete evaluator configuration (can inherit from evaluator_defaults using _extends in YAML/JSON).
     """
 
     scenario_id: str | None = Field(default=None,
@@ -104,13 +101,13 @@ class RedTeamingRunnerConfig(BaseModel):
     Attributes:
         base_workflow: Optional path to the base workflow configuration file.
         llms: Dictionary of LLM configurations keyed by name.
-        evaluator_defaults: Named evaluator configurations that scenarios can
-            extend using _extends. Each default must be a complete, valid config.
+        evaluator_defaults: Named evaluator configs for scenarios to extend via _extends
         general: General evaluation settings (concurrency, output, dataset).
-        scenarios: Dictionary of scenarios. Scenarios can provide complete
-            evaluator configs or use _extends to inherit from evaluator_defaults.
+        scenarios: Dictionary of scenarios (can provide complete evaluator configs or use _extends).
 
     Example YAML configuration:
+
+    .. code-block:: yaml
 
         base_workflow: ./configs/base_workflow.yml
 

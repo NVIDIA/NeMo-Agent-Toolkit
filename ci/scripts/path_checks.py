@@ -45,6 +45,10 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/observability/simple_calculator_observability",
     ),
     (
+        r"^examples/risk_and_security/retail_agent/",
+        r"^examples/risk_and_security/retail_agent/(src/nat_retail_agent/)?(configs/.*\.yml|data/.*\.json)$",
+    ),
+    (
         r"^examples/documentation_guides/workflows/text_file_ingest/.*/config.yml",
         r"^examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json",
     ),
@@ -121,6 +125,8 @@ ALLOWLISTED_WORDS: set[str] = {
     "edit/score",
     "file/console",
     "files/functions",
+    "filtering/grouping",
+    "harmful/violent",
     "I/O",
     "include/exclude",
     "Input/Observation",
@@ -165,6 +171,8 @@ ALLOWLISTED_WORDS: set[str] = {
     "ssmits/[Qq]wen.*",
     "Qwen/Qwen.*",
     "deepseek-ai/deepseek-.*",  #
+    # URLs in attack payloads or examples
+    r"[a-z0-9\-]+\.(com|org|net|io)/.*",  #
     # MIME types
     "(application|text|image|video|audio|model|dataset|token|other)/.*",  #
     # Time zones
@@ -199,6 +207,15 @@ IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
     (
         r"^docs/",
         r"\.rst$",
+    ),
+    # ignore runtime-relative paths in retail_agent configs
+    (
+        r"^examples/risk_and_security/retail_agent/.*\.yml$",
+        r"^\./configs/.*\.yml$",
+    ),
+    (
+        r"^examples/risk_and_security/retail_agent/.*\.yml$",
+        r"^\./data/.*\.json$",
     )
 }
 

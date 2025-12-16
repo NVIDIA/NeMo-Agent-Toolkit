@@ -102,6 +102,7 @@ class DefenseMiddleware(FunctionMiddleware):
     """Utility base class for defense middleware.
 
     This base class provides:
+
     - Common configuration fields (action, check_input, check_output, llm_wrapper_type)
     - Helper methods for LLM loading (for LLM-based defenses)
     - Access to builder for any resources needed
@@ -109,6 +110,7 @@ class DefenseMiddleware(FunctionMiddleware):
     Unlike an abstract base class, this does NOT enforce a specific pattern.
     Each defense middleware implements its own invoke/stream logic based on
     its specific defense strategy:
+
     - LLM-based analysis (guard models, verifiers)
     - Rule-based detection (regex, signatures)
     - Heuristic-based checks
@@ -118,7 +120,9 @@ class DefenseMiddleware(FunctionMiddleware):
     Each defense owns its core logic, just like red_teaming_middleware does.
 
     LLM Wrapper Types:
+
         The llm_wrapper_type config field supports different framework wrappers:
+
         - langchain (default) - For LangChain/LangGraph-based workflows
         - llama_index - For LlamaIndex-based workflows
         - crewai - For CrewAI-based workflows
@@ -154,6 +158,7 @@ class DefenseMiddleware(FunctionMiddleware):
             True if defense should be applied, False otherwise
 
         Examples:
+
             - target=None → defends all functions and workflow
             - target="my_calculator" → defends all functions in my_calculator group
             - target="my_calculator.divide" → defends only the divide function
@@ -227,9 +232,8 @@ class DefenseMiddleware(FunctionMiddleware):
 
         Returns:
             Tuple of (content_to_analyze, field_info_dict)
-            - content_to_analyze: The extracted field value(s) or original value if no targeting
-            - field_info_dict: Dict with 'target_field', 'matches', 'original_value' if field was extracted,
-              None otherwise
+            - content_to_analyze: Extracted field value(s) or original value if no targeting
+            - field_info_dict: Dict with target_field, matches, original_value or None
         """
         # If no target_field specified, analyze entire value
         if self.config.target_field is None:
