@@ -22,19 +22,26 @@ via the NAT optimizer.
 The implementation uses httpx event hooks to inject headers at the HTTP transport level,
 making it framework-agnostic (works with LangChain, LlamaIndex, etc.).
 
-Dynamo Prefix Parameters:
+Dynamo Prefix Parameters
 -------------------------
-- prefix_osl (Output Sequence Length): Hint for expected response length
+
+prefix_osl (Output Sequence Length)
+    Hint for expected response length:
+
     - LOW: decode_cost=1.0, short responses
     - MEDIUM: decode_cost=2.0, typical responses
     - HIGH: decode_cost=3.0, long responses
 
-- prefix_iat (Inter-Arrival Time): Hint for request pacing
-    - LOW: iat_factor=1.5, rapid bursts → high worker stickiness
-    - MEDIUM: iat_factor=1.0, normal pacing
-    - HIGH: iat_factor=0.6, slow requests → more exploration
+prefix_iat (Inter-Arrival Time)
+    Hint for request pacing:
 
-- prefix_total_requests: Expected requests per conversation
+    - LOW: iat_factor=1.5, rapid bursts -> high worker stickiness
+    - MEDIUM: iat_factor=1.0, normal pacing
+    - HIGH: iat_factor=0.6, slow requests -> more exploration
+
+prefix_total_requests
+    Expected requests per conversation:
+
     - Higher values increase KV cache affinity and worker stickiness
     - Lower values allow more load balancing
 """

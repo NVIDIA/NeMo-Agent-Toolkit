@@ -135,7 +135,8 @@ async def dynamo_adk(config: DynamoModelConfig, _builder: Builder):
     Unlike the LangChain implementation which injects headers per-request via httpx hooks,
     LiteLLM sets headers at initialization time.
 
-    For dynamic prefix IDs (e.g., per-evaluation-question), use the DynamoPrefixContext class:
+    For dynamic prefix IDs (e.g., per-evaluation-question), use the DynamoPrefixContext class::
+
         from nat.llm.dynamo_llm import DynamoPrefixContext
 
         DynamoPrefixContext.set("my-prefix-id")
