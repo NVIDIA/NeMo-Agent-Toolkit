@@ -702,7 +702,43 @@ async def per_user_mcp_client_function_group(config: PerUserMCPClientConfig, _bu
 
     group = PerUserMCPFunctionGroup(config=config)
 
-    async with client:
+    # Use a lifetime task to ensure the client context is entered and exited in the same task.
+    # This avoids anyio's "Attempted to exit cancel scope in a different task" error.
+    ready = asyncio.Event()
+    stop_event = asyncio.Event()
+
+    async def _lifetime():
+        """Lifetime task that owns the client's async context."""
+        try:
+            async with client:
+                ready.set()
+                await stop_event.wait()
+        except Exception:
+            ready.set()  # Ensure we don't hang the waiter
+            raise
+
+    lifetime_task = asyncio.create_task(_lifetime(), name=f"mcp-per-user-{user_id}")
+
+    # Wait for client initialization
+    timeout = config.tool_call_timeout.total_seconds()
+    try:
+        await asyncio.wait_for(ready.wait(), timeout=timeout)
+    except TimeoutError:
+        lifetime_task.cancel()
+        try:
+            await lifetime_task
+        except asyncio.CancelledError:
+            pass
+        raise RuntimeError(f"Per-user MCP client initialization timed out after {timeout}s")
+
+    # Check if initialization failed
+    if lifetime_task.done():
+        try:
+            await lifetime_task
+        except Exception as e:
+            raise RuntimeError(f"Failed to initialize per-user MCP client: {e}") from e
+
+    try:
         # Expose the live MCP client on the function group instance so other components (e.g., HTTP endpoints)
         # can reuse the already-established session instead of creating a new client per request.
         group.mcp_client = client
@@ -739,3 +775,8 @@ async def per_user_mcp_client_function_group(config: PerUserMCPClientConfig, _bu
                                converters=tool_fn.converters)
 
         yield group
+    finally:
+        # Signal the lifetime task to exit and wait for clean shutdown
+        stop_event.set()
+        if not lifetime_task.done():
+            await lifetime_task
