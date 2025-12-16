@@ -17,7 +17,7 @@ limitations under the License.
 
 # Framework Integrations
 
-NVIDIA NeMo Agent toolkit (NAT) provides comprehensive support for multiple agentic frameworks, allowing you to use your preferred development tools while leveraging the capabilities of NAT. This document describes the framework integrations available and their respective levels of support.
+NVIDIA NeMo Agent toolkit provides comprehensive support for multiple agentic frameworks, allowing you to use your preferred development tools while leveraging the capabilities of NeMo Agent toolkit. This document describes the framework integrations available and their respective levels of support.
 
 ## Supported Frameworks
 
