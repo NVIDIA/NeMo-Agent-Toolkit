@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 # Configure the Router Agent
-Configure the NVIDIA NeMo Agent toolkit router agent as a [workflow](../../../build-workflows/about-building-workflows.md) or a function. The router agent workflow consists of two phases: routing and execution.
+Configure the NVIDIA NeMo Agent toolkit router agent as a [workflow](../../../build-workflows/about-building-workflows.md) or a [function](../../../build-workflows/functions-and-function-groups/functions.md). The router agent workflow consists of two phases: routing and execution.
 
 ## Requirements
 The router agent requires the `nvidia-nat[langchain]` plugin to be installed, which can be installed with one of the following commands.
