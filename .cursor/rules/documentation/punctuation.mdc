@@ -1,5 +1,5 @@
 ---
-description: 
+description:
 globs: **/*.md
 alwaysApply: false
 ---
@@ -33,9 +33,9 @@ Use apostrophes for:
 - Possessive pronouns → `yours`, `theirs`
 - Plural nouns → `devices` not `device's`
 - Inanimate objects (use alternative phrasing instead)
-  - **Incorrect**: "NeMo Agent Toolkit's evaluation system can be used..."
-  - **Correct**: "The NeMo Agent Toolkit evaluation system can be used..."
-  - **Also correct**: "The evaluation system included in NeMo Agent Toolkit can be used..."
+  - **Incorrect**: "NeMo Agent toolkit's evaluation system can be used..."
+  - **Correct**: "The NeMo Agent toolkit evaluation system can be used..."
+  - **Also correct**: "The evaluation system included in NeMo Agent toolkit can be used..."
 
 ### Brackets
 
@@ -125,7 +125,7 @@ Use apostrophes for:
   - `History is stained with blood spilled in the name of "civilization."`
 - **Colons and semicolons**: Always outside quotation marks
   - `Three elements of her "Olympic journey": family, commitment, coaching`
-- **Question marks and exclamation points**: 
+- **Question marks and exclamation points**:
   - Inside if they apply to the quotation
   - Outside if they apply to the whole sentence
 
