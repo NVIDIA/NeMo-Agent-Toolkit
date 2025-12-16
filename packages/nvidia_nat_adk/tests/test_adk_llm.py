@@ -188,6 +188,7 @@ class TestDynamoAdk:
         return DynamoModelConfig(
             model_name="test-model",
             base_url="http://localhost:8000/v1",
+            prefix_template=None,
         )
 
     @pytest.fixture

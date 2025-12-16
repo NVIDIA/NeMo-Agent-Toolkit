@@ -15,6 +15,7 @@
 # pylint: disable=unused-argument, not-async-context-manager
 
 import logging
+from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -180,6 +181,7 @@ class TestDynamoLangChain:
         return DynamoModelConfig(
             model_name="test-model",
             base_url="http://localhost:8000/v1",
+            prefix_template=None,
         )
 
     @pytest.fixture
@@ -228,6 +230,7 @@ class TestDynamoLangChain:
                                                  mock_builder):
         """Wrapper should create ChatOpenAI with custom httpx client when prefix template is set."""
         mock_httpx_client = MagicMock()
+        mock_httpx_client.aclose = AsyncMock()  # Make aclose awaitable
         mock_create_client.return_value = mock_httpx_client
 
         async with dynamo_langchain(dynamo_cfg_with_prefix, mock_builder) as client:
@@ -248,9 +251,17 @@ class TestDynamoLangChain:
             assert kwargs["http_async_client"] is mock_httpx_client
             assert client is mock_chat.return_value
 
+        # Verify the httpx client was properly closed
+        mock_httpx_client.aclose.assert_awaited_once()
+
+    @patch("nat.plugins.langchain.llm.create_httpx_client_with_dynamo_hooks")
     @patch("langchain_openai.ChatOpenAI")
-    async def test_responses_api_branch(self, mock_chat, dynamo_cfg_responses_api, mock_builder):
+    async def test_responses_api_branch(self, mock_chat, mock_create_client, dynamo_cfg_responses_api, mock_builder):
         """When APIType==RESPONSES, special flags should be added."""
+        mock_httpx_client = MagicMock()
+        mock_httpx_client.aclose = AsyncMock()  # Make aclose awaitable
+        mock_create_client.return_value = mock_httpx_client
+
         async with dynamo_langchain(dynamo_cfg_responses_api, mock_builder):
             pass
 
@@ -259,8 +270,12 @@ class TestDynamoLangChain:
         assert kwargs["use_previous_response_id"] is True
         assert kwargs["stream_usage"] is True
 
+        # Verify the httpx client was properly closed
+        mock_httpx_client.aclose.assert_awaited_once()
+
+    @patch("nat.plugins.langchain.llm.create_httpx_client_with_dynamo_hooks")
     @patch("langchain_openai.ChatOpenAI")
-    async def test_excludes_dynamo_specific_fields(self, mock_chat, dynamo_cfg_with_prefix, mock_builder):
+    async def test_excludes_dynamo_specific_fields(self, mock_chat, mock_create_client, dynamo_cfg_with_prefix, mock_builder):
         """Dynamo-specific fields should be excluded from ChatOpenAI kwargs.
 
         DynamoModelConfig has fields (prefix_template, prefix_total_requests, prefix_osl,
@@ -274,9 +289,12 @@ class TestDynamoLangChain:
         This test ensures the `exclude` set in model_dump() properly filters these fields.
         If someone accidentally removes a field from the exclude set, this test will fail.
         """
-        with patch("nat.plugins.langchain.llm.create_httpx_client_with_dynamo_hooks"):
-            async with dynamo_langchain(dynamo_cfg_with_prefix, mock_builder):
-                pass
+        mock_httpx_client = MagicMock()
+        mock_httpx_client.aclose = AsyncMock()  # Make aclose awaitable
+        mock_create_client.return_value = mock_httpx_client
+
+        async with dynamo_langchain(dynamo_cfg_with_prefix, mock_builder):
+            pass
 
         kwargs = mock_chat.call_args.kwargs
 
@@ -286,6 +304,9 @@ class TestDynamoLangChain:
         assert "prefix_osl" not in kwargs
         assert "prefix_iat" not in kwargs
         assert "request_timeout" not in kwargs
+
+        # Verify the httpx client was properly closed
+        mock_httpx_client.aclose.assert_awaited_once()
 
 
 # ---------------------------------------------------------------------------
