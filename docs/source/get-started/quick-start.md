@@ -17,7 +17,7 @@ limitations under the License.
 
 # Quick Start with NVIDIA NeMo Agent Toolkit
 
-This guide will walk you through running and evaluating existing [workflows](../build-workflows/about-building-workflows.md). If you have not yet installed the NeMo Agent toolkit, follow the instructions in the [Install Guide](./installation.md) first.
+This guide will walk you through [running](../run-workflows/about-running-workflows.md) and [evaluating](../improve-workflows/evaluate.md) existing [workflows](../build-workflows/about-building-workflows.md). If you have not yet installed the NeMo Agent toolkit, follow the instructions in the [Install Guide](./installation.md) first.
 
 ## Obtaining API Keys
 
