@@ -95,7 +95,7 @@ def mcp_tool_function(tool: MCPToolClient) -> FunctionInfo:
     
              # Also filter None values from kwargs
              kwargs_filtered = {k: v for k, v in kwargs.items() if v is not None}
-             _ = tool.input_schema.model_validate(kwargs)
+             _ = tool.input_schema.model_validate(kwargs_filtered)
              return await tool.acall(kwargs_filtered)
          except Exception as e:
              logger.warning("Error calling tool %s", tool.name, exc_info=True)

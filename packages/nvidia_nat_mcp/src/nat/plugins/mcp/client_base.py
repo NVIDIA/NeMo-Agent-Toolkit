@@ -163,6 +163,7 @@ class MCPBaseClient(ABC):
             raise ValueError("transport must be either 'sse', 'stdio' or 'streamable-http'")
 
         self._exit_stack: AsyncExitStack | None = None
+        self._context_manager = None  # Explicit context manager for proper task isolation
         self._session: ClientSession | None = None  # Main session
         self._connection_established = False
         self._initial_connection = False
@@ -193,26 +194,51 @@ class MCPBaseClient(ABC):
         return self._transport
 
     async def __aenter__(self):
-        if self._exit_stack:
+        if self._context_manager:
             raise RuntimeError("MCPBaseClient already initialized. Use async with to initialize.")
-
-        self._exit_stack = AsyncExitStack()
-
-        # Establish connection with httpx.Auth
-        self._session = await self._exit_stack.enter_async_context(self.connect_to_server())
-
-        self._initial_connection = True
-        self._connection_established = True
-
-        return self
-
+    
+        try:
+            # Instead of using AsyncExitStack, directly manage the context manager.
+            # This ensures entry and exit happen in the same task context, avoiding
+            # anyio's "cancel scope entered in different task" error.
+            self._context_manager = self.connect_to_server()
+            self._session = await self._context_manager.__aenter__()
+            
+            self._initial_connection = True
+            self._connection_established = True
+            
+            return self
+        except Exception:
+            # If initialization fails, clean up the context manager
+            if hasattr(self, '_context_manager') and self._context_manager:
+                try:
+                    await self._context_manager.__aexit__(None, None, None)
+                except Exception:
+                    pass  # Suppress cleanup errors on init failure
+            raise
+    
     async def __aexit__(self, exc_type, exc_value, traceback):
-        if self._exit_stack:
-            # Close session
-            await self._exit_stack.aclose()
-            self._session = None
-            self._exit_stack = None
-
+        if hasattr(self, '_context_manager') and self._context_manager:
+            try:
+                # Exit the context manager directly.
+                # This ensures exit happens in the same task as entry.
+                await self._context_manager.__aexit__(exc_type, exc_value, traceback)
+            except RuntimeError as e:
+                if "cancel scope" in str(e).lower():
+                    # Known issue with MCP SDK's stdio transport crossing task boundaries.
+                    # Log the error but don't crash - the context is still cleaned up.
+                    logger.warning(
+                        "MCP client cleanup: Ignoring cancel scope task mismatch error "
+                        "(upstream MCP SDK issue with anyio context switching): %s", 
+                        e
+                    )
+                else:
+                    # Re-raise other RuntimeErrors
+                    raise
+            finally:
+                self._context_manager = None
+                self._session = None
+    
         self._connection_established = False
         self._tools = None
 
