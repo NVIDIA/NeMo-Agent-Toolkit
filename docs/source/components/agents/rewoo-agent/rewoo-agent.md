@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 # Configure the ReWOO Agent
-Configure the NVIDIA NeMo Agent toolkit ReWOO agent as a [workflow](../../../build-workflows/about-building-workflows.md) or a function. The ReWOO agent workflow is broken down into three phases, planning, execution, and solution.
+Configure the NVIDIA NeMo Agent toolkit ReWOO agent as a [workflow](../../../build-workflows/about-building-workflows.md) or a [function](../../../build-workflows/functions-and-function-groups/functions.md). The ReWOO agent workflow is broken down into three phases, planning, execution, and solution.
 
 ## Requirements
 The ReWOO agent requires the `nvidia-nat[langchain]` plugin to be installed, which can be installed with one of the following commands.
@@ -63,7 +63,7 @@ functions:
 The following are more ways you can configure your config file when using the ReWOO agent:
 * `workflow_alias`: Defaults to `None`. The alias of the workflow. Useful when the ReWOO agent is configured as a workflow and need to expose a customized name as a tool.
 
-* `tool_names`: A list of [tools](../../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) that the agent can call. The tools must be functions or [function groups](../../../build-workflows/functions-and-function-groups/function-groups.md) configured in the YAML file.
+* `tool_names`: A list of [tools](../../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) that the agent can call. The tools must be [functions](../../../build-workflows/functions-and-function-groups/functions.md) or [function groups](../../../build-workflows/functions-and-function-groups/function-groups.md) configured in the YAML file.
 
 * `llm_name`: The [LLM](../../../build-workflows/llms/index.md) the agent should use. The LLM must be configured in the YAML file
 
