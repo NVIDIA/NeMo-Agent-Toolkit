@@ -174,7 +174,7 @@ Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimizat
 | Component | Minimum | Recommended |
 |-----------|---------|-------------|
 | **GPU Architecture** | NVIDIA Hopper (H100) or Blackwell (B200) | B200 for optimal performance |
-| **GPU Count** | 4 GPUs for unified mode | 8 GPUs for disaggregated mode |
+| **GPU Count** | 2 GPUs for small models (2 workers) | 8 GPUs for optimal performance |
 | **GPU Memory** | 80GB per GPU (H100) | 192GB per GPU (B200) |
 | **System RAM** | 256GB | 512GB+ |
 

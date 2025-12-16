@@ -37,9 +37,33 @@ Currently this agent supports evaluation exclusively for the [Galileo Agent Lead
 
 ## Prerequisites
 
+### Software Requirements
+
 1. **Python 3.11, 3.12, or 3.13** installed
 2. **NeMo Agent Toolkit** repository cloned
-3. **Dynamo backend** running on `localhost:8099` (see [Dynamo Setup Guide](../../../external/dynamo/README.md))
+3. **Docker**
+4. **Hugging Face account** with access to Llama-3.3-70B-Instruct model
+
+### Hardware Requirements (Dynamo Backend)
+
+Running these evaluations requires a Dynamo backend with adequate GPU resources. The following are the minimum and recommended specifications:
+
+| Component | Minimum | Recommended |
+|-----------|---------|-------------|
+| **GPU Architecture** | NVIDIA Hopper (H100) or Blackwell (B200) | B200 for optimal performance |
+| **GPU Count** | 4 GPUs (TP=4 for 70B model) | 8 GPUs for optimal performance |
+| **GPU Memory** | 80GB per GPU (H100) | 192GB per GPU (B200) |
+
+> **Note**: The Llama-3.3-70B-Instruct model requires approximately 140GB of GPU memory when loaded with TP=4 (tensor parallelism across 4 GPUs). Ensure your GPU configuration has sufficient aggregate memory.
+
+### Dynamo Backend
+
+The Dynamo backend must be running on `localhost:8099` before executing evaluations. See the [Dynamo Setup Guide](../../../external/dynamo/README.md) for detailed instructions on:
+
+- Starting Dynamo in unified or disaggregated mode
+- Configuring GPU workers and tensor parallelism
+- Setting up the Thompson Sampling router for KV cache optimization
+- Troubleshooting common issues
 
 > **Note:** For a more abbreviated way to kick off experimentation, see the [Quick Start](../README.md#quick-start) section in the parent README. This document provides a more detailed explanations of the different test patterns and configurations available.
 

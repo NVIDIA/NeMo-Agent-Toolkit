@@ -232,10 +232,26 @@ See [Evaluation Guide](react_benchmark_agent/README.md) for complete configurati
 
 ## Requirements
 
-- Python 3.11, 3.12, or 3.13
-- NVIDIA GPU(s) with CUDA support
-- Docker (for Dynamo backend)
-- NeMo Agent Toolkit with LangChain integration
+### Software Requirements
+
+- **Python 3.11, 3.12, or 3.13**
+- **Docker**
+- **NeMo Agent Toolkit** with LangChain integration (`uv pip install -e ".[langchain]"`)
+- **Hugging Face account** with access to Llama-3.3-70B-Instruct model (for dataset download and model weights)
+
+### Hardware Requirements (Dynamo Backend)
+
+These experiments are designed to run against a Dynamo backend for LLM inference. The following GPU resources are required:
+
+| Component | Minimum | Recommended |
+|-----------|---------|-------------|
+| **GPU Architecture** | NVIDIA Hopper (H100) or Blackwell (B200) | B200 for optimal performance |
+| **GPU Count** | 4 GPUs (TP=4 for 70B model) | 8 GPUs for optimal performance |
+| **GPU Memory** | 80GB per GPU (H100) | 192GB per GPU (B200) |
+
+> **Important**: The Llama-3.3-70B-Instruct model requires approximately 140GB of GPU memory when loaded with TP=4. While it is possible to run evaluations against a managed LLM service (such as NVIDIA NIM), the intended performance analysis requires hosting Dynamo on your own GPU cluster to measure latency, throughput, and KV cache optimization metrics.
+
+See the [Dynamo Setup Guide](../../external/dynamo/README.md) for detailed hardware requirements and configuration options
 
 ## Troubleshooting
 
