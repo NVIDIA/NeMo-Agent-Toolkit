@@ -28,10 +28,6 @@ Cursor rules in NeMo Agent toolkit act as an intelligent development that offers
 
 ## Common Prompts
 
-:::{note}
-For optimal Cursor rules experience, avoid using the `Auto` mode for LLM model selection. Instead, manually choose a model from the selection menu, such as `claude-4.5-opus-high`.
-:::
-
 The following are frequently used prompts to begin development:
 
 **Installing NeMo Agent Toolkit:**
