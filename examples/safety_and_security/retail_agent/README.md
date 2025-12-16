@@ -170,7 +170,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
 From the root directory of the NeMo Agent toolkit library, run the following command:
 
 ```bash
-uv pip install -e ./examples/risk_and_security/retail_agent
+uv pip install -e ./examples/safety_and_security/retail_agent
 ```
 
 #### Set Up API Keys
@@ -208,7 +208,7 @@ workflow:
 From the example directory, run a single query:
 
 ```bash
-cd ./examples/risk_and_security/retail_agent
+cd ./examples/safety_and_security/retail_agent
 ```
 
 ```bash
@@ -342,7 +342,7 @@ Workflow Result:
 Run the red teaming evaluation from the example directory:
 
 ```bash
-cd ./examples/risk_and_security/retail_agent
+cd ./examples/safety_and_security/retail_agent
 ```
 
 ```bash
