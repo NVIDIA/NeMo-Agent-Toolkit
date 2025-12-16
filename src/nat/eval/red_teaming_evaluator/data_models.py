@@ -29,8 +29,7 @@ class ConditionEvalOutputItem(EvalOutputItem):
         id: Identifier from the input item
         score: Average score across all filter conditions
         reasoning: Reasoning for given score.
-        intermediate_step: IntermediateStep that was selected and evaluated (based on reduction strategy).
-            The evaluated output can be accessed through intermediate_step.payload.output.
+        intermediate_step: Selected IntermediateStep; access output via intermediate_step.payload.output
         error_message: Error message if any step of the evaluation has failed
     """
 

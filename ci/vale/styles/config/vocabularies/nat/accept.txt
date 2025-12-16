@@ -74,6 +74,7 @@ GitHub
 glog
 GPU(s?)
 Grafana
+[Gg]uardrailing
 groundedness
 [Gg]ranularities
 [Hh]ashable
@@ -85,6 +86,7 @@ isort
 Jama
 Jira
 jsonlines
+JSONPath
 [Kk]aggle
 Langfuse
 LangChain
@@ -100,6 +102,7 @@ LLM(s?)
 Loghub
 Mem0
 [Mm]iddleware
+[Mm]itigation(s?)
 Milvus
 [Mm]ixin(s?)
 MLflow
@@ -115,6 +118,7 @@ NIM(s?)
 npm
 NumPy
 NAT's
+NASSE's
 NVIDIA
 Nemotron
 OAuth
@@ -140,16 +144,19 @@ PDF(s?)
 Pydantic
 PyPI
 pytest
+Qwen
 [Rr]edis
 [Rr]eimplement(ing)?
 [Rr]einstall(s?)
 [Rr]eplatform(ing)?
 [Rr]epo
+[Rr]eputational
 [Rr]etarget(ed?)
 [Rr]eusability
 [Rr]ollout(s?)
 [Rr]untime(s?)
 [Ss]andboxing
+[Ss]anitization
 [Ss]erializable
 [Ss]treamable
 [Ss]ubclassing
@@ -166,6 +173,7 @@ Tavily
 [Tt]imestamp(s?)
 [Tt]okenization
 [Tt]okenizer(s?)
+Toolkit's
 triages
 [Uu]ncomment(ed)?
 [Uu]nencrypted

@@ -201,8 +201,8 @@ class HuggingFaceModel:
 
 async def _cleanup_model(model_name: str) -> None:
     """Clean up a loaded model and free GPU memory.
-    Args:
-        model_name: Name of the model to clean up.
+
+    :param model_name: Name of the model to clean up.
     """
     try:
         if model_name in _model_cache:

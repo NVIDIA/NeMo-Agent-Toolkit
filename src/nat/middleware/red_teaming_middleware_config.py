@@ -32,17 +32,22 @@ class RedTeamingMiddlewareConfig(FunctionMiddlewareBaseConfig, name="red_teaming
     Attributes:
         attack_payload: The malicious payload to inject (can be string, int, or float)
         target_function_or_group: Optional function or group to target.
+
             - If None: attacks all functions this middleware is applied to
             - If no dot (e.g., "my_function"): attacks all functions in that group
             - If has dot (e.g., "my_function_group.function"): attacks only the specific function
-            within the group
+              within the group
+
         payload_placement: How to apply the attack:
+
             - "replace": Replace the entire field value with the payload
             - "append_start": Prepend payload to the field value
             - "append_end": Append payload to the field value
             - "append_middle": Insert payload at middle sentence boundary
+
         target_location: Whether to attack the function's input or output
         target_field: Optional field name or path to target:
+
             - If None: operates on the value directly
             - If simple name (e.g., "prompt"): searches schema for that field
             - If dotted path (e.g., "data.response.text"): navigates nested structure
@@ -69,8 +74,9 @@ class RedTeamingMiddlewareConfig(FunctionMiddlewareBaseConfig, name="red_teaming
             target_field: response.text
 
     Notes:
+
         - For int/float fields, only "replace" mode is supported all other replace modes will
-        fall back to "replace" with a warning.
+          fall back to "replace" with a warning.
         - For streaming outputs, only "append_start" is supported (others pass through)
         - Field search validates against schemas and raises errors for ambiguous matches
     """
