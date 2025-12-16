@@ -17,7 +17,7 @@
 # - https://github.com/rapidsai/ops-bot
 
 auto_merger: true
-branch_checker: false # TODO REMOVE THIS AFTER MERGING EPIC BRANCH
+branch_checker: true
 label_checker: true
 release_drafter: true
 forward_merger: true
