@@ -275,7 +275,11 @@ class TestDynamoLangChain:
 
     @patch("nat.plugins.langchain.llm.create_httpx_client_with_dynamo_hooks")
     @patch("langchain_openai.ChatOpenAI")
-    async def test_excludes_dynamo_specific_fields(self, mock_chat, mock_create_client, dynamo_cfg_with_prefix, mock_builder):
+    async def test_excludes_dynamo_specific_fields(self,
+                                                   mock_chat,
+                                                   mock_create_client,
+                                                   dynamo_cfg_with_prefix,
+                                                   mock_builder):
         """Dynamo-specific fields should be excluded from ChatOpenAI kwargs.
 
         DynamoModelConfig has fields (prefix_template, prefix_total_requests, prefix_osl,
