@@ -219,7 +219,7 @@ nat run --config_file configs/config.yml --input "Email From: john@email.com\nCo
 
 ```console
 nemo-agent-toolkit % nat run --config_file configs/config.yml --input "Email From: john@email.com\nContent: What garden trowels do you have?"
-2025-12-16 07:44:57 - INFO     - nat.cli.commands.start:192 - Starting NAT from config file: 'configs/config.yml'
+2025-12-16 23:09:17 - INFO     - nat.cli.commands.start:192 - Starting NAT from config file: 'configs/config.yml'
 
 Configuration Summary:
 --------------------
@@ -234,83 +234,100 @@ Number of Retrievers: 0
 Number of TTC Strategies: 0
 Number of Authentication Providers: 0
 
-2025-12-16 07:44:57 - INFO     - nat.runtime.session:279 - Shared workflow built (entry_function=None)
-2025-12-16 07:44:59 - INFO     - nat.agent.react_agent.agent:169 -
+2025-12-16 23:09:17 - INFO     - nat.runtime.session:279 - Shared workflow built (entry_function=None)
+2025-12-16 23:09:19 - INFO     - nat.agent.react_agent.agent:169 - 
 ------------------------------
 [AGENT]
 Agent input: Email From: john@email.com\nContent: What garden trowels do you have?
-Agent's thoughts:
-Thought: The customer is asking about garden trowels, so I should provide them with information about the products we have that match this description.
+Agent's thoughts: 
+Thought: The customer is asking about garden trowels, I should provide them with a list of available products that match this description.
 
 Action: retail_tools.get_all_products
 Action Input: None
 
 ------------------------------
-2025-12-16 07:44:59 - INFO     - nat.agent.base:221 -
+2025-12-16 23:09:19 - INFO     - nat.agent.base:221 - 
 ------------------------------
 [AGENT]
 Calling tools: retail_tools.get_all_products
 Tool's input: None
-Tool's response:
-[{'id': 'PROD001', 'name': 'Premium Garden Trowel', 'description': 'Professional-grade stainless steel trowel with ergonomic soft-grip handle. Perfect for transplanting, digging, and breaking up soil. Rust-resistant and built to last.', 'price': 29.99, 'stock': 45, 'average_rating': 5.0, 'review_count': 1, 'review_texts': ['Excellent tool! Very durable and comfortable to use.']}, {'id': 'PROD002', 'name': 'Professional Pruning Shears', ...}]
+Tool's response: 
+["id='PROD001' name='Premium Garden Trowel' description='Professional-grade stainless steel trowel with ergonomic soft-grip handle. Perfect for transplanting, digging, and breaking up soil. Rust-resistant and built to last.' price=29.99 stock=45 average_rating=5.0 review_count=1 review_texts=['Excellent tool! Very durable and comfortable to use.']", "id='PROD002' name='Professional Pruning Shears' description='High-carbon steel blades with precision-ground edges for clean cuts. Ergonomic design reduces hand fatigue. Ideal for trimming flowers, shrubs, and small branches up to 3/4 inch diameter.' price=79.99 stock=28 average_rating=4.0 review_count=1 review_texts=['Very sharp and precise. Great for detailed work.']", "id='PROD003' name='Ergonomic Watering Can' description='2-gallon capacity watering can with balanced design for easy pouring. Features a removable rose head for gentle watering. UV-resistant plastic construction.' price=45.99 stock=62 average_rating=4.0 review_count=1 revi...(rest of response truncated)
 ------------------------------
-2025-12-16 07:45:00 - INFO     - nat.agent.react_agent.agent:193 -
+2025-12-16 23:09:20 - INFO     - nat.agent.react_agent.agent:193 - 
 ------------------------------
 [AGENT]
 Agent input: Email From: john@email.com\nContent: What garden trowels do you have?
-Agent's thoughts:
-Thought: The customer is asking about garden trowels, and we have one product that matches this description: 'PROD001', the Premium Garden Trowel. I should provide the customer with information about this product.
+Agent's thoughts: 
+Thought: I have the list of products, now I need to find the garden trowels and provide the customer with their information.
 
 Action: retail_tools.get_product_info
-Action Input: {"product_identifier": "Premium Garden Trowel"}
+Action Input: {"product_identifier": "PROD001"}
+
+ 
 ------------------------------
-2025-12-16 07:45:00 - INFO     - nat.agent.base:221 -
+2025-12-16 23:09:20 - INFO     - nat.agent.base:221 - 
 ------------------------------
 [AGENT]
 Calling tools: retail_tools.get_product_info
-Tool's input: {'product_identifier': 'Premium Garden Trowel'}
-Tool's response:
-[{'id': 'PROD001', 'name': 'Premium Garden Trowel', 'description': 'Professional-grade stainless steel trowel with ergonomic soft-grip handle. Perfect for transplanting, digging, and breaking up soil. Rust-resistant and built to last.', 'price': 29.99, 'stock': 45, 'reviews': [{'customer_id': 'CUST001', 'customer_name': 'John Doe', 'rating': 5, 'review': 'Excellent tool! Very durable and comfortable to use.'}]}]
+Tool's input: {'product_identifier': 'PROD001'}
+Tool's response: 
+id='PROD001' name='Premium Garden Trowel' description='Professional-grade stainless steel trowel with ergonomic soft-grip handle. Perfect for transplanting, digging, and breaking up soil. Rust-resistant and built to last.' price=29.99 stock=45 reviews=[ProductReview(customer_id='CUST001', customer_name='John Doe', rating=5, review='Excellent tool! Very durable and comfortable to use.')]
 ------------------------------
-2025-12-16 07:45:03 - INFO     - nat.agent.react_agent.agent:193 -
+2025-12-16 23:09:21 - INFO     - nat.agent.react_agent.agent:193 - 
 ------------------------------
 [AGENT]
 Agent input: Email From: john@email.com\nContent: What garden trowels do you have?
-Agent's thoughts:
-Thought: I have found the Premium Garden Trowel (PROD001) and it is in stock. I should now send an email to the customer with the product information.
+Agent's thoughts: 
+Thought: I have found a garden trowel, now I should check if there are any other products that match the description.
+
+Action: retail_tools.get_product_info
+Action Input: {"product_identifier": "PROD007"}
+------------------------------
+2025-12-16 23:09:21 - INFO     - nat.agent.base:221 - 
+------------------------------
+[AGENT]
+Calling tools: retail_tools.get_product_info
+Tool's input: {'product_identifier': 'PROD007'}
+Tool's response: 
+id='PROD007' name='Stainless Steel Hand Rake' description='Three-pronged cultivator with rust-proof stainless steel tines. Ideal for loosening soil, removing weeds, and aerating around plants. Comfortable wooden handle.' price=34.99 stock=55 reviews=[ProductReview(customer_id='CUST004', customer_name='Emma Wilson', rating=5, review='Perfect for loosening soil and removing weeds!')]
+------------------------------
+2025-12-16 23:09:24 - INFO     - nat.agent.react_agent.agent:193 - 
+------------------------------
+[AGENT]
+Agent input: Email From: john@email.com\nContent: What garden trowels do you have?
+Agent's thoughts: 
+Thought: I have found another product that could be of interest to the customer, now I should send an email to the customer with the information about the garden trowels.
 
 Action: retail_tools.send_email
-Action Input: {"recipient_email": "john@email.com", "content": "Dear Sir, \n\nWe have one garden trowel available: the Premium Garden Trowel (PROD001). It is a professional-grade stainless steel trowel with an ergonomic soft-grip handle, perfect for transplanting, digging, and breaking up soil. The price is $29.99 and we currently have 45 in stock. \n\nPlease let us know if you would like to place an order. \n\nBest regards, \nGreenThumb Gardening Equipment", "cc": null}
+Action Input: {"recipient_email": "john@email.com", "content": "Dear Sir, \nWe have two products that match your query for garden trowels. Our Premium Garden Trowel (PROD001) is a professional-grade stainless steel trowel with an ergonomic soft-grip handle, perfect for transplanting, digging, and breaking up soil. It is priced at $29.99 and we currently have 45 in stock. \nWe also have a Stainless Steel Hand Rake (PROD007) which is a three-pronged cultivator with rust-proof stainless steel tines, ideal for loosening soil, removing weeds, and aerating around plants. It is priced at $34.99 and we currently have 55 in stock. \nPlease let us know if you would like to place an order or if you have any further questions.", "cc": "None"}
 ------------------------------
-2025-12-16 07:45:03 - INFO     - nat.agent.base:221 -
+2025-12-16 23:09:24 - INFO     - nat.agent.base:221 - 
 ------------------------------
 [AGENT]
 Calling tools: retail_tools.send_email
-Tool's input: {'recipient_email': 'john@email.com', 'content': 'Dear Sir, ...', 'cc': None}
-Tool's response:
-[{'success': True, 'message': 'Email sent successfully', 'email_details': {'to': 'john@email.com', 'cc': 'None', 'content': 'Dear Sir, \n\nWe have one garden trowel available: the Premium Garden Trowel (PROD001)...', 'timestamp': '2024-11-25T10:00:00Z'}, 'note': 'This is a mock operation - no actual email was sent.'}]
+Tool's input: {'recipient_email': 'john@email.com', 'content': 'Dear Sir, \nWe have two products that match your query for garden trowels. Our Premium Garden Trowel (PROD001) is a professional-grade stainless steel trowel with an ergonomic soft-grip handle, perfect for transplanting, digging, and breaking up soil. It is priced at $29.99 and we currently have 45 in stock. \nWe also have a Stainless Steel Hand Rake (PROD007) which is a three-pronged cultivator with rust-proof stainless steel tines, ideal for loosening soil, removing weeds, and aerating around plants. It is priced at $34.99 and we currently have 55 in stock. \nPlease let us know if you would like to place an order or if you have any further questions.', 'cc': 'None'}
+Tool's response: 
+success=True message='Email sent successfully' email_details=EmailDetails(to='john@email.com', cc='None', content='Dear Sir, \nWe have two products that match your query for garden trowels. Our Premium Garden Trowel (PROD001) is a professional-grade stainless steel trowel with an ergonomic soft-grip handle, perfect for transplanting, digging, and breaking up soil. It is priced at $29.99 and we currently have 45 in stock. \nWe also have a Stainless Steel Hand Rake (PROD007) which is a three-pronged cultivator with rust-proof stainless steel tines, ideal for loosening soil, removing weeds, and aerating around plants. It is priced at $34.99 and we currently have 55 in stock. \nPlease let us know if you would like to place an order or if you have any further questions.', timestamp='2024-11-25T10:00:00Z') note='This is a mock operation - no actual email was sent.'
 ------------------------------
-2025-12-16 07:45:06 - INFO     - nat.agent.react_agent.agent:193 -
+2025-12-16 23:09:27 - INFO     - nat.agent.react_agent.agent:193 - 
 ------------------------------
 [AGENT]
 Agent input: Email From: john@email.com\nContent: What garden trowels do you have?
-Agent's thoughts:
+Agent's thoughts: 
 Thought: I now know the final answer
 
-Final Answer: The email has been sent to the customer with the product information.
+Final Answer: The customer has been sent an email with the information about the garden trowels. The email details are: 
+{
+  "to": "john@email.com",
+  "cc": "None",
+  "content": "Dear Sir, \nWe have two products that match your query for garden trowels. Our Premium Garden Trowel (PROD001) is a professional-grade stainless steel trowel with an ergonomic soft-grip handle, perfect for transplanting, digging, and breaking up soil. It is priced at $29.99 and we currently have 45 in stock. \nWe also have a Stainless Steel Hand Rake (PROD007) which is a three-pronged cultivator with rust-proof stainless steel tines, ideal for loosening soil, removing weeds, and aerating around plants. It is priced at $34.99 and we currently have 55 in stock. \nPlease let us know if you would like to place an order or if you have any further questions.",
+  "timestamp": "2024-11-25T10:00:00Z"
+}
 ------------------------------
-2025-12-16 07:45:06 - INFO     - nat.front_ends.console.console_front_end_plugin:103 -
---------------------------------------------------
+2025-12-16 23:09:27 - INFO     - nat.front_ends.console.console_front_end_plugin:103 - --------------------------------------------------
 Workflow Result:
-["The email has been sent to the customer with the product information. The email details are:
-{'to': 'john@email.com',
-'cc': 'None',
-'content': 'Dear Sir,
-We have one garden trowel available: the Premium Garden Trowel (PROD001). It is a professional-grade stainless steel trowel with an ergonomic soft-grip handle, perfect for transplanting, digging, and breaking up soil. The price is $29.99 and we currently have 45 in stock.
-Please let us know if you would like to place an order.
-Best regards,
-GreenThumb Gardening Equipment',
-'timestamp': '2024-11-25T10:00:00Z'}"]
+['The customer has been sent an email with the information about the garden trowels. The email details are: \n{\n  "to": "john@email.com",\n  "cc": "None",\n  "content": "Dear Sir, \\nWe have two products that match your query for garden trowels. Our Premium Garden Trowel (PROD001) is a professional-grade stainless steel trowel with an ergonomic soft-grip handle, perfect for transplanting, digging, and breaking up soil. It is priced at $29.99 and we currently have 45 in stock. \\nWe also have a Stainless Steel Hand Rake (PROD007) which is a three-pronged cultivator with rust-proof stainless steel tines, ideal for loosening soil, removing weeds, and aerating around plants. It is priced at $34.99 and we currently have 55 in stock. \\nPlease let us know if you would like to place an order or if you have any further questions.",\n  "timestamp": "2024-11-25T10:00:00Z"\n}']
 --------------------------------------------------
 ```
 

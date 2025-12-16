@@ -16,7 +16,6 @@
 import json
 from collections.abc import AsyncGenerator
 from pathlib import Path
-from typing import Any
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -25,6 +24,138 @@ from nat.builder.builder import Builder
 from nat.builder.function import FunctionGroup
 from nat.cli.register_workflow import register_function_group
 from nat.data_models.function import FunctionGroupBaseConfig
+
+# ============================================================================
+# Data Models for Customer Data
+# ============================================================================
+
+
+class PastOrder(BaseModel):
+    """A past order in a customer's order history."""
+
+    product_id: str = Field(..., description="The product ID")
+    product_name: str = Field(..., description="The name of the product")
+    quantity: int = Field(..., description="The quantity ordered")
+    date: str = Field(..., description="The date of the order")
+    total: float = Field(..., description="The total cost of the order")
+
+
+class Customer(BaseModel):
+    """Customer information including order history."""
+
+    id: str = Field(..., description="The unique customer ID")
+    email: str = Field(..., description="The customer's email address")
+    name: str = Field(..., description="The customer's full name")
+    past_orders: list[PastOrder] = Field(default_factory=list, description="List of past orders")
+    total_orders: int = Field(..., description="Total number of orders placed")
+    total_spent: float = Field(..., description="Total amount spent by the customer")
+
+
+# ============================================================================
+# Data Models for Product Data
+# ============================================================================
+
+
+class ProductReview(BaseModel):
+    """A review for a product."""
+
+    customer_id: str = Field(..., description="The ID of the customer who wrote the review")
+    customer_name: str = Field(..., description="The name of the customer who wrote the review")
+    rating: int = Field(..., ge=1, le=5, description="The rating given (1-5)")
+    review: str = Field(..., description="The review text")
+
+
+class Product(BaseModel):
+    """Full product information including reviews."""
+
+    id: str = Field(..., description="The unique product ID")
+    name: str = Field(..., description="The product name")
+    description: str = Field(..., description="The product description")
+    price: float = Field(..., description="The product price")
+    stock: int = Field(..., description="The current stock level")
+    reviews: list[ProductReview] = Field(default_factory=list, description="List of product reviews")
+
+
+class ProductSummary(BaseModel):
+    """Summarized product information returned by get_all_products."""
+
+    id: str = Field(..., description="The unique product ID")
+    name: str = Field(..., description="The product name")
+    description: str = Field(..., description="The product description")
+    price: float = Field(..., description="The product price")
+    stock: int = Field(..., description="The current stock level")
+    average_rating: float | str = Field(..., description="The average rating or 'No ratings yet'")
+    review_count: int = Field(..., description="The number of reviews")
+    review_texts: list[str] = Field(default_factory=list, description="List of review texts")
+
+
+# ============================================================================
+# Response Models for Actions
+# ============================================================================
+
+
+class ReviewDetails(BaseModel):
+    """Details of a submitted review."""
+
+    customer_name: str = Field(..., description="The name of the customer")
+    product_name: str = Field(..., description="The name of the product")
+    rating: int = Field(..., ge=1, le=5, description="The rating given (1-5)")
+    review_text: str = Field(..., description="The review text content")
+
+
+class WriteReviewResponse(BaseModel):
+    """Response from the write_review function."""
+
+    success: bool = Field(..., description="Whether the operation was successful")
+    message: str = Field(..., description="A message describing the result")
+    review: ReviewDetails = Field(..., description="Details of the submitted review")
+    note: str = Field(..., description="A note about the mock operation")
+
+
+class EmailDetails(BaseModel):
+    """Details of a sent email."""
+
+    to: str = Field(..., description="The recipient email address")
+    cc: str = Field(..., description="The CC email address or 'None'")
+    content: str = Field(..., description="The email content")
+    timestamp: str = Field(..., description="The timestamp of the email")
+
+
+class SendEmailResponse(BaseModel):
+    """Response from the send_email function."""
+
+    success: bool = Field(..., description="Whether the operation was successful")
+    message: str = Field(..., description="A message describing the result")
+    email_details: EmailDetails = Field(..., description="Details of the sent email")
+    note: str = Field(..., description="A note about the mock operation")
+
+
+class OrderDetails(BaseModel):
+    """Details of a placed order."""
+
+    customer_name: str = Field(..., description="The name of the customer")
+    customer_email: str = Field(..., description="The email of the customer")
+    product_name: str = Field(..., description="The name of the product")
+    product_id: str = Field(..., description="The ID of the product")
+    quantity: int = Field(..., description="The quantity ordered")
+    unit_price: float = Field(..., description="The unit price of the product")
+    total: float = Field(..., description="The total cost of the order")
+    new_total_orders: int = Field(..., description="The customer's new total order count")
+    new_total_spent: float = Field(..., description="The customer's new total spent amount")
+
+
+class UpdateCustomerInfoResponse(BaseModel):
+    """Response from the update_customer_info function."""
+
+    success: bool = Field(..., description="Whether the operation was successful")
+    message: str = Field(..., description="A message describing the result")
+    order_details: OrderDetails = Field(..., description="Details of the placed order")
+    note: str = Field(..., description="A note about the mock operation")
+
+
+# ============================================================================
+# Configuration
+# ============================================================================
 
 
 class RetailToolsConfig(FunctionGroupBaseConfig, name="retail_tools"):
@@ -83,25 +214,25 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
     Yields:
         FunctionGroup: The configured retail tools function group with customer and product management functions.
     """
-    # Load data files
+    # Load data files as typed Pydantic models
     customers_file = _config.data_dir / "customers.json"
     products_file = _config.data_dir / "products.json"
 
     try:
-        with open(customers_file) as f:
-            customers_data = json.load(f)
+        with open(customers_file, encoding="utf-8") as f:
+            customers_data: list[Customer] = [Customer(**c) for c in json.load(f)]
     except (FileNotFoundError, json.JSONDecodeError) as e:
         raise RuntimeError("Failed to load customers data") from e
 
     try:
-        with open(products_file) as f:
-            products_data = json.load(f)
+        with open(products_file, encoding="utf-8") as f:
+            products_data: list[Product] = [Product(**p) for p in json.load(f)]
     except (FileNotFoundError, json.JSONDecodeError) as e:
         raise RuntimeError("Failed to load products data") from e
 
     group = FunctionGroup(config=_config)
 
-    async def _get_customer_by_email(email: str) -> dict[str, Any]:
+    async def _get_customer_by_email(email: str) -> Customer:
         """Search for a customer by their email address.
 
         Args:
@@ -111,15 +242,15 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
             Customer information including id, name, past orders, total orders and total spent.
         """
         for customer in customers_data:
-            if customer["email"].lower() == email.lower():
+            if customer.email.lower() == email.lower():
                 return customer
 
-        return {
+        raise RuntimeError({
             "error": f"No customer found with email: {email}",
             "message": "This appears to be a new customer. They have no purchase history.",
-        }
+        })
 
-    async def _get_customer_by_id(customer_id: str) -> dict[str, Any]:
+    async def _get_customer_by_id(customer_id: str) -> Customer:
         """Look up a customer by their unique customer ID.
 
         Args:
@@ -129,49 +260,53 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
             Customer information including id, name, email, past orders, total orders and total spent.
         """
         for customer in customers_data:
-            if customer["id"] == customer_id:
+            if customer.id == customer_id:
                 return customer
 
-        return {
+        raise RuntimeError({
             "error": f"No customer found with ID: {customer_id}",
             "message": "Please verify the customer ID is correct.",
-        }
+        })
 
-    async def _get_product_info(product_identifier: str) -> dict[str, Any]:
+    async def _get_product_info(product_identifier: str) -> Product:
         """Retrieve detailed information about a specific product.
 
         Args:
-            product_identifier: Either the product ID (for example PROD001) or product name.
+            product_identifier: Either the product ID (for example PROD001).
 
         Returns:
             Product information including id, name, description, price, stock, and reviews.
         """
         for product in products_data:
-            if product["id"] == product_identifier or product["name"].lower() == product_identifier.lower():
+            if product.id == product_identifier or product.name.lower() == product_identifier.lower():
                 return product
 
-        return {"error": f"No product found with identifier: {product_identifier}"}
+        raise RuntimeError({
+            "error": f"No product found with identifier: {product_identifier}",
+            "message": "Please verify the product identifier is correct.",
+        })
 
-    async def _get_all_products(dummy: str = "") -> list[dict[str, Any]]:
+    async def _get_all_products(dummy: str = "") -> list[ProductSummary]:
         """Retrieve a list of all available products.
 
         Returns:
             List of all products with their basic information (id, name, description, price, stock).
         """
         del dummy
-        return [{
-            "id": p["id"],
-            "name": p["name"],
-            "description": p["description"],
-            "price": p["price"],
-            "stock": p["stock"],
-            "average_rating": (sum(r["rating"]
-                                   for r in p["reviews"]) / len(p["reviews"]) if p["reviews"] else "No ratings yet"),
-            "review_count": len(p["reviews"]),
-            "review_texts": [r["review"] for r in p["reviews"]],
-        } for p in products_data]
+        return [
+            ProductSummary(
+                id=p.id,
+                name=p.name,
+                description=p.description,
+                price=p.price,
+                stock=p.stock,
+                average_rating=(sum(r.rating for r in p.reviews) / len(p.reviews) if p.reviews else "No ratings yet"),
+                review_count=len(p.reviews),
+                review_texts=[r.review for r in p.reviews],
+            ) for p in products_data
+        ]
 
-    async def _write_review(params: WriteReviewParams) -> dict[str, Any]:
+    async def _write_review(params: WriteReviewParams) -> WriteReviewResponse:
         """Submit a product review (mock function - does not persist data).
 
         Args:
@@ -180,33 +315,26 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
         Returns:
             Success confirmation with review details.
         """
-        # Check if customer exists
+        # Check if customer exists (will raise RuntimeError if not found)
         customer = await _get_customer_by_email(params.customer_email)
-        if "error" in customer:
-            return {
-                "error": "Customer not found",
-                "message": "Only existing customers can write reviews.",
-            }
 
-        # Check if product exists
+        # Check if product exists (will raise RuntimeError if not found)
         product = await _get_product_info(params.product_name)
-        if "error" in product:
-            return product
 
         # Mock success response
-        return {
-            "success": True,
-            "message": f"Review submitted successfully for {product['name']}",
-            "review": {
-                "customer_name": customer["name"],
-                "product_name": product["name"],
-                "rating": params.rating,
-                "review_text": params.review_text,
-            },
-            "note": "This is a mock operation - the review was not actually saved to the database.",
-        }
+        return WriteReviewResponse(
+            success=True,
+            message=f"Review submitted successfully for {product.name}",
+            review=ReviewDetails(
+                customer_name=customer.name,
+                product_name=product.name,
+                rating=params.rating,
+                review_text=params.review_text,
+            ),
+            note="This is a mock operation - the review was not actually saved to the database.",
+        )
 
-    async def _send_email(params: SendEmailParams) -> dict[str, Any]:
+    async def _send_email(params: SendEmailParams) -> SendEmailResponse:
         """Send an email to a customer (mock function - no actual email sent).
 
         Args:
@@ -215,19 +343,19 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
         Returns:
             Success confirmation with email details.
         """
-        return {
-            "success": True,
-            "message": "Email sent successfully",
-            "email_details": {
-                "to": params.recipient_email,
-                "cc": params.cc or "None",
-                "content": params.content,
-                "timestamp": "2024-11-25T10:00:00Z",
-            },
-            "note": "This is a mock operation - no actual email was sent.",
-        }
+        return SendEmailResponse(
+            success=True,
+            message="Email sent successfully",
+            email_details=EmailDetails(
+                to=params.recipient_email,
+                cc=params.cc or "None",
+                content=params.content,
+                timestamp="2024-11-25T10:00:00Z",
+            ),
+            note="This is a mock operation - no actual email was sent.",
+        )
 
-    async def _update_customer_info(params: UpdateCustomerInfoParams) -> dict[str, Any]:
+    async def _update_customer_info(params: UpdateCustomerInfoParams) -> UpdateCustomerInfoResponse:
         """Update customer information with a new order (mock function - does not persist data).
 
         Args:
@@ -236,46 +364,39 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
         Returns:
             Success confirmation with updated order details.
         """
-        # Check if customer exists
+        # Check if customer exists (will raise RuntimeError if not found)
         customer = await _get_customer_by_email(params.customer_email)
-        if "error" in customer:
-            return {
-                "error": "Customer not found",
-                "message": "Cannot update information for non-existent customer.",
-            }
 
-        # Check if product exists
+        # Check if product exists (will raise RuntimeError if not found)
         product = await _get_product_info(params.product_name)
-        if "error" in product:
-            return product
 
         # Check stock availability
-        if product["stock"] < params.quantity:
-            return {
+        if product.stock < params.quantity:
+            raise RuntimeError({
                 "error": "Insufficient stock",
-                "message": f"Only {product['stock']} units of {product['name']} are available.",
-            }
+                "message": f"Only {product.stock} units of {product.name} are available.",
+            })
 
         # Calculate order total
-        order_total = product["price"] * params.quantity
+        order_total = product.price * params.quantity
 
         # Mock success response
-        return {
-            "success": True,
-            "message": f"Order placed successfully for {customer['name']}",
-            "order_details": {
-                "customer_name": customer["name"],
-                "customer_email": customer["email"],
-                "product_name": product["name"],
-                "product_id": product["id"],
-                "quantity": params.quantity,
-                "unit_price": product["price"],
-                "total": order_total,
-                "new_total_orders": customer["total_orders"] + 1,
-                "new_total_spent": customer["total_spent"] + order_total,
-            },
-            "note": "This is a mock operation - the order was not actually saved to the database.",
-        }
+        return UpdateCustomerInfoResponse(
+            success=True,
+            message=f"Order placed successfully for {customer.name}",
+            order_details=OrderDetails(
+                customer_name=customer.name,
+                customer_email=customer.email,
+                product_name=product.name,
+                product_id=product.id,
+                quantity=params.quantity,
+                unit_price=product.price,
+                total=order_total,
+                new_total_orders=customer.total_orders + 1,
+                new_total_spent=customer.total_spent + order_total,
+            ),
+            note="This is a mock operation - the order was not actually saved to the database.",
+        )
 
     # Add functions to the group
     group.add_function(name="get_customer_by_email",

@@ -301,6 +301,13 @@ class RedTeamingMiddleware(FunctionMiddleware):
         self._call_count += 1
         return modified_value
 
+    def _apply_payload_to_function_value_with_exception(self, value: Any, context: FunctionMiddlewareContext) -> Any:
+        try:
+            return self._apply_payload_to_function_value(value)
+        except Exception as e:
+            logger.error("Failed to apply red team attack to function %s: %s", context.name, e, exc_info=True)
+            raise
+
     async def function_middleware_invoke(self, value: Any, call_next: CallNext,
                                          context: FunctionMiddlewareContext) -> Any:
         """Invoke middleware for single-output functions.
@@ -318,25 +325,20 @@ class RedTeamingMiddleware(FunctionMiddleware):
             logger.debug("Skipping function %s (not targeted)", context.name)
             return await call_next(value)
 
-        try:
-            if self._target_location == "input":
-                # Attack the input before calling the function
-                modified_input = self._apply_payload_to_function_value(value)
-                # Call next with modified input
-                return await call_next(modified_input)
+        if self._target_location == "input":
+            # Attack the input before calling the function
+            modified_input = self._apply_payload_to_function_value_with_exception(value, context)
+            # Call next with modified input
+            return await call_next(modified_input)
 
-            elif self._target_location == "output":  # target_location == "output"
-                # Call function first, then attack the output
-                output = await call_next(value)
-                modified_output = self._apply_payload_to_function_value(output)
-                return modified_output
-            else:
-                raise ValueError(f"Unknown target_location: {self._target_location}. "
-                                 "Attack payloads can only be applied to function input or output.")
-
-        except Exception as e:
-            logger.error("Failed to apply red team attack to function %s: %s", context.name, e, exc_info=True)
-            raise
+        elif self._target_location == "output":  # target_location == "output"
+            # Call function first, then attack the output
+            output = await call_next(value)
+            modified_output = self._apply_payload_to_function_value_with_exception(output, context)
+            return modified_output
+        else:
+            raise ValueError(f"Unknown target_location: {self._target_location}. "
+                             "Attack payloads can only be applied to function input or output.")
 
 
 __all__ = ["RedTeamingMiddleware"]
