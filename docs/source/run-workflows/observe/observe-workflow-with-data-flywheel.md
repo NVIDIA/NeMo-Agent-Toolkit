@@ -71,7 +71,7 @@ The Data Flywheel integration supports the following core configuration paramete
 
 | Parameter | Description | Required | Example |
 |-----------|-------------|----------|---------|
-| `client_id` | Identifier for your NAT application to distinguish traces between deployments | Yes | `"my_nat_app"` |
+| `client_id` | Identifier for your application to distinguish traces between deployments | Yes | `"my_nat_app"` |
 | `index` | Elasticsearch index name where traces will be stored | Yes | `"flywheel"` |
 | `endpoint` | Elasticsearch endpoint URL | Yes | `"https://elasticsearch.example.com:9200"` |
 | `username` | Elasticsearch username for authentication | No | `"elastic"` |

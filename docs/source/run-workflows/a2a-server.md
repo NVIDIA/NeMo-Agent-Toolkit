@@ -19,7 +19,7 @@ limitations under the License.
 
 [Agent-to-Agent (A2A) Protocol](https://a2aproject.org/) is an open standard from the Linux Foundation that enables agent-to-agent communication and collaboration. You can publish NeMo Agent toolkit [workflows](../build-workflows/about-building-workflows.md) as A2A [agents](../components/agents/index.md) so they can be discovered and called by other A2A clients.
 
-This guide covers how to publish NAT workflows as A2A servers. For information on connecting to remote A2A agents, refer to [A2A Client](../build-workflows/a2a-client.md).
+This guide covers how to publish NeMo Agent toolkit workflows as A2A servers. For information on connecting to remote A2A agents, refer to [A2A Client](../build-workflows/a2a-client.md).
 
 :::{note}
 **Read First**: This guide assumes familiarity with A2A client concepts. Please read [A2A Client](../build-workflows/a2a-client.md) first for foundational understanding.
@@ -105,7 +105,7 @@ nat info components -t front_end -q a2a
 
 ## How Workflows Map to A2A Agents
 
-When you publish a NAT workflow as an A2A agent:
+When you publish a workflow as an A2A agent:
 
 1. **Workflow becomes an Agent**: The entire workflow is exposed as a single A2A agent
 2. **Functions become Skills**: Each [tool](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) (function) in the workflow becomes an A2A skill
@@ -114,7 +114,7 @@ When you publish a NAT workflow as an A2A agent:
 
 ### Example Mapping
 
-**NAT Configuration:**
+**Workflow Configuration:**
 ```yaml
 function_groups:
   calculator:
@@ -154,7 +154,7 @@ export A2A_SERVER_URL=http://localhost:10000
 # Using curl
 curl $A2A_SERVER_URL/.well-known/agent-card.json | jq
 
-# Using NAT CLI
+# Using nat CLI
 nat a2a client discover --url $A2A_SERVER_URL
 ```
 
@@ -182,7 +182,7 @@ The product of 42 and 67 is 2814.0
 
 The following example demonstrates A2A server usage:
 
-- Math Assistant A2A Example - NAT workflow published as an A2A server. See `examples/A2A/math_assistant_a2a/README.md`.
+- Math Assistant A2A Example - NeMo Agent toolkit workflow published as an A2A server. See `examples/A2A/math_assistant_a2a/README.md`.
 
 ## Troubleshooting
 
