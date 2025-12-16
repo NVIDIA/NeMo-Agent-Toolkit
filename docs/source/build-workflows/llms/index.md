@@ -161,8 +161,8 @@ The Dynamo LLM provider is defined by the {py:class}`~nat.llm.dynamo_llm.DynamoM
 * `api_key` - The API key to use for the model
 * `base_url` - The base URL to use for the model
 * `max_retries` - The maximum number of retries for the request
-* `prefix_template` - a template for conversation prefix IDs. Setting to null will disable use of prefix_template, prefix_total_requests, prefix_osl, and prefix_iat
-* `prefix_total_requests` - Expected number of requests for this conversation/prefix
+* `prefix_template` - a template for conversation prefix IDs. Setting to null will disable use of `prefix_template`, `prefix_total_requests`, `prefix_osl`, and `prefix_iat`
+* `prefix_total_requests` - Expected number of requests for this conversation
 * `prefix_osl` - Output sequence length for the Dynamo router
 * `prefix_iat` - Inter-arrival time hint for the Dynamo router
 * `request_timeout` - HTTP request timeout in seconds for Dynamo LLM requests
