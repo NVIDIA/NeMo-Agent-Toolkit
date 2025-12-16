@@ -114,10 +114,10 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
             if customer["email"].lower() == email.lower():
                 return customer
 
-        return {
+        raise RuntimeError({
             "error": f"No customer found with email: {email}",
             "message": "This appears to be a new customer. They have no purchase history.",
-        }
+        })
 
     async def _get_customer_by_id(customer_id: str) -> dict[str, Any]:
         """Look up a customer by their unique customer ID.
@@ -132,10 +132,10 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
             if customer["id"] == customer_id:
                 return customer
 
-        return {
+        raise RuntimeError({
             "error": f"No customer found with ID: {customer_id}",
             "message": "Please verify the customer ID is correct.",
-        }
+        })
 
     async def _get_product_info(product_identifier: str) -> dict[str, Any]:
         """Retrieve detailed information about a specific product.
@@ -150,7 +150,9 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
             if product["id"] == product_identifier or product["name"].lower() == product_identifier.lower():
                 return product
 
-        return {"error": f"No product found with identifier: {product_identifier}"}
+        raise RuntimeError({
+            "error": f"No product found with identifier: {product_identifier}",
+        })
 
     async def _get_all_products(dummy: str = "") -> list[dict[str, Any]]:
         """Retrieve a list of all available products.
@@ -183,15 +185,15 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
         # Check if customer exists
         customer = await _get_customer_by_email(params.customer_email)
         if "error" in customer:
-            return {
+            raise RuntimeError({
                 "error": "Customer not found",
                 "message": "Only existing customers can write reviews.",
-            }
+            })
 
         # Check if product exists
         product = await _get_product_info(params.product_name)
         if "error" in product:
-            return product
+            raise RuntimeError(product)
 
         # Mock success response
         return {
@@ -239,22 +241,22 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
         # Check if customer exists
         customer = await _get_customer_by_email(params.customer_email)
         if "error" in customer:
-            return {
+            raise RuntimeError({
                 "error": "Customer not found",
                 "message": "Cannot update information for non-existent customer.",
-            }
+            })
 
         # Check if product exists
         product = await _get_product_info(params.product_name)
         if "error" in product:
-            return product
+            raise RuntimeError(product)
 
         # Check stock availability
         if product["stock"] < params.quantity:
-            return {
+            raise RuntimeError({
                 "error": "Insufficient stock",
                 "message": f"Only {product['stock']} units of {product['name']} are available.",
-            }
+            })
 
         # Calculate order total
         order_total = product["price"] * params.quantity
