@@ -32,6 +32,10 @@ Use apostrophes for:
 - Possessive form of "it" → use `its`
 - Possessive pronouns → `yours`, `theirs`
 - Plural nouns → `devices` not `device's`
+- Inanimate objects (use alternative phrasing instead)
+  - **Incorrect**: "NeMo Agent Toolkit's evaluation system can be used..."
+  - **Correct**: "The NeMo Agent Toolkit evaluation system can be used..."
+  - **Also correct**: "The evaluation system included in NeMo Agent Toolkit can be used..."
 
 ### Brackets
 
