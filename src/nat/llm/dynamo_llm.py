@@ -86,7 +86,8 @@ class DynamoPrefixContext:
     This allows evaluation code to set a prefix ID that persists across all LLM
     calls for a single evaluation question (multi-turn conversation).
 
-    Usage:
+    Usage::
+
         from nat.llm.dynamo_llm import DynamoPrefixContext
 
         # Set prefix ID at the start of each evaluation question
@@ -228,7 +229,8 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
         Returns:
             A frozenset of Dynamo-specific field names.
 
-        Example:
+        Example::
+
             config_dict = config.model_dump(
                 exclude={"type", "thinking", *DynamoModelConfig.get_dynamo_field_names()},
                 ...
