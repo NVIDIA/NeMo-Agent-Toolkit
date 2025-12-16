@@ -268,8 +268,8 @@ class ProcessorRequestHandler:
             stream = await self.router_feedback_client.generate(fb.model_dump())
             async for _ in stream:
                 pass
-        except Exception as e:
-            logger.exception("Failed to send router feedback: %s", e)
+        except Exception:
+            logger.exception("Failed to send router feedback")
 
     async def _stream_from_engine(
         self,
@@ -354,7 +354,7 @@ class ProcessorRequestHandler:
                                              len(token_ids),
                                              len(all_tokens),
                                              "exception")
-            logger.exception("Engine stream exception: %s", e)
+            logger.exception("Engine stream exception")
             yield {"error": str(e)}
             return
 

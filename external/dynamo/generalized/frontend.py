@@ -106,7 +106,12 @@ class FrontendRequestHandler:
         self._tps_csv_path = os.environ.get("FRONTEND_TPS_CSV", "frontend_throughput.csv")
         self._tps_task = None
 
-    async def initialize(self):
+    async def initialize(self) -> None:
+        """Initialize the frontend handler.
+        
+        Sets up the processor client, FastAPI application, routes, and background
+        TPS tracking task.
+        """
         self.processor_client = (await
                                  self.runtime.namespace("dynamo").component("processor").endpoint("process").client())
         self.app = FastAPI(title="Dynamo")
@@ -382,7 +387,13 @@ class FrontendRequestHandler:
         async def health():
             return {"status": "healthy"}
 
-    async def run_server(self, host: str = "0.0.0.0", port: int = 8099):
+    async def run_server(self, host: str = "0.0.0.0", port: int = 8099) -> None:
+        """Start the FastAPI server.
+        
+        Args:
+            host: Host address to bind to. Defaults to all interfaces.
+            port: Port number to listen on. Defaults to 8099.
+        """
         config = uvicorn.Config(self.app, host=host, port=port, log_level="info")
         server = uvicorn.Server(config)
         logging.info("Starting FastAPI server on %s:%s", host, port)
@@ -419,7 +430,12 @@ class FrontendRequestHandler:
 
 
 @dynamo_worker(static=False)
-async def worker(runtime: DistributedRuntime):
+async def worker(runtime: DistributedRuntime) -> None:
+    """Dynamo worker entry point for the frontend service.
+    
+    Args:
+        runtime: The distributed runtime for inter-service communication.
+    """
     frontend = FrontendRequestHandler(runtime)
     await frontend.initialize()
     await frontend.run_server()
