@@ -405,33 +405,6 @@ open .tmp/nat/redteaming/retail_agent/report.html
 
 After identifying vulnerabilities through red teaming, you can add defense middleware to mitigate attacks. Defense middleware is applied to the base workflow configuration and works with any workflow implementation.
 
-**Running with Defenses:**
-
-```bash
-# Run the agent with defense configuration
-nat run nat_retail_agent --config_file configs/config-with-defenses.yml \
-  --input "Email From: john@email.com\nContent: What garden trowels do you have?"
-```
-
-**Testing Defenses with Red Teaming:**
-
-To evaluate the effectiveness of your defenses, you can either:
-
-**Option 1: Modify the red teaming config** to use the defended workflow as the base:
-
-```yaml
-# In configs/red-teaming.yml, change:
-base_workflow: ./configs/config-with-defenses.yml  # Instead of ./configs/config.yml
-```
-
-Then run:
-
-```bash
-nat red-team --red_team_config configs/red-teaming.yml
-```
-
-This allows you to compare attack success rates before and after adding defenses.
-
 **Available Defense Types:**
 
 | Defense Type | Purpose |
@@ -454,6 +427,33 @@ This allows you to compare attack success rates before and after adding defenses
 > ```
 >
 > The PII Defense uses **[Microsoft Presidio](https://github.com/microsoft/presidio)** for detecting and sanitizing personally identifiable information.
+
+**Running with Defenses:**
+
+```bash
+# Run the agent with defense configuration
+nat run nat_retail_agent --config_file configs/config-with-defenses.yml \
+  --input "Email From: john@email.com\nContent: What garden trowels do you have?"
+```
+
+**Testing Defenses with Red Teaming:**
+
+To evaluate the effectiveness of your defenses, you can either:
+
+**Modify the red teaming config** to use the defended workflow as the base:
+
+```yaml
+# In configs/red-teaming.yml, change:
+base_workflow: ./configs/config-with-defenses.yml  # Instead of ./configs/config.yml
+```
+
+Then run:
+
+```bash
+nat red-team --red_team_config configs/red-teaming.yml
+```
+
+This allows you to compare attack success rates before and after adding defenses.
 
 **Defense Action Modes:**
 
@@ -544,6 +544,20 @@ middleware:
 
 See `configs/config-with-defenses.yml` for a working example with multiple defense layers at both function and workflow levels.
 
+> In this example, using the attached `config-with-defenses.yml`—where all enabled defenses operate in **redirection** mode—and re-running the same red teaming scenarios resulted in the overall attack success score dropping from **0.7 (baseline, no defenses)** to **0.0**. This illustrates how the provided defense configuration fully mitigates the demonstrated attacks while allowing the retail agent workflow to continue operating normally. 
+
+<table>
+  <tr>
+    <td align="center">
+      <b>Before Defenses</b><br/>
+      <img src="../../../docs/source/_static/attack-score.png"/>
+    </td>
+    <td align="center">
+      <b>After Defenses</b><br/>
+      <img src="../../../docs/source/_static/defense-score.png"/>
+    </td>
+  </tr>
+</table>
 Note to the user - In this release, defense wrapper sits as the topmost layer in the workflow. So the defense layer has visibility to the attacks happening. In future release versions, we plan to enable the ability to add defense instrumentation anywhere in the workflow.
 
 ---
