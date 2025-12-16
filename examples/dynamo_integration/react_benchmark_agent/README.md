@@ -15,6 +15,9 @@ limitations under the License.
 -->
 <!-- path-check-skip-file -->
 
+> [!NOTE]
+> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
+
 # Agent Leaderboard v2 - Evaluation Guide
 
 This guide walks through the complete process of running decision-only evaluations using the `react_benchmark_agent`: downloading data, configuring evaluations, running experiments, and analyzing results.
@@ -41,7 +44,7 @@ Currently this agent supports evaluation exclusively for the [Galileo Agent Lead
 ### Software Requirements
 
 1. **Python 3.11, 3.12, or 3.13** installed
-2. **NeMo Agent Toolkit** repository cloned
+2. **NeMo Agent toolkit** repository cloned
 3. **Docker**
 4. **Hugging Face account** with access to Llama-3.3-70B-Instruct model
 

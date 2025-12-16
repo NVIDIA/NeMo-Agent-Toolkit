@@ -16,6 +16,7 @@ limitations under the License.
 
 # NVIDIA NeMo Agent Toolkit and Dynamo Integration
 
+> [!NOTE]
 > ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
 
 ## Overview
@@ -33,7 +34,7 @@ Most of these examples could be tested using a managed LLM service, like an NVID
 - **Dynamo Backend**: Fast LLM inference with KV cache optimization (default Dynamo method) and a predictive Thompson sampling router (new implementation)
 - **Self-Evaluation Loop**: Agent can re-evaluate and retry tool selection for improved quality.
 - **Comprehensive Metrics and Visualizations**: TSQ scores (accuracy of parameters has been excluded), token throughput, latency analysis. Visualized in A/B scatter plots and histograms for analysis.
-- **NAT Framework**: Full integration with NeMo Agent Toolkit evaluators, optimizer, and profiler
+- **NAT Framework**: Full integration with NeMo Agent toolkit evaluators, optimizer, and profiler
 
 ## Quick Start
 
@@ -242,7 +243,7 @@ See [Evaluation Guide](react_benchmark_agent/README.md) for complete configurati
 
 - **Python 3.11, 3.12, or 3.13**
 - **Docker**
-- **NeMo Agent Toolkit** with LangChain integration (`uv pip install -e ".[langchain]"`)
+- **NeMo Agent toolkit** with LangChain integration (`uv pip install -e ".[langchain]"`)
 - **Hugging Face account** with access to Llama-3.3-70B-Instruct model (for dataset download and model weights)
 
 ### Hardware Requirements (Dynamo Backend)

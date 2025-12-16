@@ -17,7 +17,8 @@ limitations under the License.
 
 # Dynamo Backend Setup Guide
 
-> ⚠️ **EXPERIMENTAL**: The NeMo Agent toolkit and Dynamo integration is experimental and under active development. APIs, configurations, and features may change without notice.
+> [!NOTE]
+> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
 
 This guide covers setting up, running, and configuring the NVIDIA Dynamo backend for the React Benchmark Agent evaluations.
 
@@ -179,7 +180,7 @@ Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimizat
 | **GPU Memory** | 80GB per GPU (H100) | 192GB per GPU (B200) |
 | **System RAM** | 256GB | 512GB+ |
 
-> **Note**: The Llama-3.3-70B-Instruct model requires approximately 140GB of GPU memory when loaded with TP=4 (tensor parallelism across 4 GPUs). Ensure your GPU configuration has sufficient aggregate memory.
+> **Note**: The [Llama-3.3-70B-Instruct](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct) model requires approximately 140GB of GPU memory when loaded with TP=4 (tensor parallelism across 4 GPUs). Ensure your GPU configuration has sufficient aggregate memory. If the Llama-3.3-70B-Instruct does not fit into your GPU memory, follow the same steps with The [Llama-3.1-3B-Instruct](https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct) for QA validation.
 
 ### Software Requirements
 
@@ -207,7 +208,7 @@ Or set variables directly:
 
 ```bash
 # Required: Set your model directory path
-export DYNAMO_MODEL_DIR="/path/to/your/models/Llama-3.3-70B-Instruct"
+export DYNAMO_MODEL_DIR="/path/to/your/models/Llama-3.3-70B-Instruct" # or Llama-3.1-3B-Instruct for QA on H100 machines
 
 # Optional: Set repository directory (for Thompson Sampling router)
 export DYNAMO_REPO_DIR="/path/to/NeMo-Agent-Toolkit"
