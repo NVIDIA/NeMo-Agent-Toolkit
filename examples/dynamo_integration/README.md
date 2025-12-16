@@ -16,11 +16,11 @@ limitations under the License.
 
 # NVIDIA NeMo Agent Toolkit and Dynamo Integration
 
-> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent Toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
+> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
 
 ## Overview
 
-**This set of example agents and evaluations demonstrate the capability to integrate NVIDIA NeMo Agent Toolkit (NAT) agents with LLM inference accelerated by NVIDIA Dynamo-hosted LLM endpoints.**
+**This set of example agents and evaluations demonstrate the capability to integrate NVIDIA NeMo Agent toolkit (NAT) agents with LLM inference accelerated by NVIDIA Dynamo-hosted LLM endpoints.**
 
 This set of examples is intended to grow over time as the synergies between NAT and [Dynamo](https://github.com/ai-dynamo/dynamo) evolve. In the first set of examples, we will analyze the performance (throughput and latency) of NAT agents requests to Dynamo and seek out key optimizations. Agentic LLM requests have predictable patterns with respect to conversation length, system prompts, and tool-calling. We aim to co-design our inference servers to provide better performance in a repeatable, mock, decision-only evaluation harness. The harness uses the Banking data subset and mock tools from the [Galileo Agent Leaderboard v2](https://huggingface.co/datasets/galileo-ai/agent-leaderboard-v2) benchmark to simulate agentic tool selection quality (TSQ).
 

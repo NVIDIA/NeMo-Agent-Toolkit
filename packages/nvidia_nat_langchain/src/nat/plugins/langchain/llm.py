@@ -209,7 +209,7 @@ async def dynamo_langchain(llm_config: DynamoModelConfig, _builder: Builder):
 
     # Build config dict excluding Dynamo-specific and NAT-specific fields
     config_dict = llm_config.model_dump(
-        exclude={"type", "thinking", "api_type", "name", *DynamoModelConfig.get_dynamo_field_names()},
+        exclude={"type", "thinking", "api_type", *DynamoModelConfig.get_dynamo_field_names()},
         by_alias=True,
         exclude_none=True,
         exclude_unset=True,

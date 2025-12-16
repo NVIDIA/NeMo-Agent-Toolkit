@@ -336,7 +336,7 @@ class TestSelfEvaluatingAgentWithNIM:
     """
 
     @pytest.fixture(name="nim_self_eval_config")
-    def fixture_nim_self_eval_config(self, nvidia_api_key, tmp_path):  # noqa: ARG002
+    def fixture_nim_self_eval_config(self, nvidia_api_key, tmp_path):
         """Create a test config using NVIDIA NIM API for self-evaluation."""
         import yaml
 

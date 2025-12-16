@@ -28,5 +28,5 @@ from .self_evaluating_agent_with_feedback import self_evaluating_agent_function
 from .self_evaluating_agent_with_feedback import self_evaluating_agent_with_feedback_function
 
 # Import custom evaluators
-from .evaluators import action_completion_evaluator_function
+# from .evaluators import action_completion_evaluator_function # not used in this example, keeping for reference
 from .evaluators import tsq_evaluator_function

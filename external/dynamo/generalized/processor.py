@@ -126,8 +126,8 @@ class ProcessorRequestHandler:
             self._metrics_log_cap = 2048
         self._metrics_written_count = 0
 
-        def _raise_exception(msg: str):  # pragma: no cover - template guard
-            raise ValueError(msg)
+        # def _raise_exception(msg: str):  # pragma: no cover - template guard
+        #     raise ValueError(msg)
 
     # ---- init ----
     async def initialize(self):

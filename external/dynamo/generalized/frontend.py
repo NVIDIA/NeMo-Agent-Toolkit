@@ -89,7 +89,7 @@ class ChatCompletionRequest(BaseModel):
 # ----------------- Frontend handler -----------------
 class FrontendRequestHandler:
 
-    def __init__(self, runtime: DistributedRuntime):
+    def __init__(self, runtime: DistributedRuntime) -> None:
         self.runtime = runtime
         self.processor_client = None
         self.app = None

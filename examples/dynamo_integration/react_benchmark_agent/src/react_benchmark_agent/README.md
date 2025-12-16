@@ -20,21 +20,82 @@ This document details the source code implementation of the React Benchmark Agen
 
 ## Table of Contents
 
-1. [Architecture Overview](#architecture-overview)
-2. [Component Registry](#component-registry)
-3. [Deployment Patterns](#deployment-patterns)
+1. [Prerequisites](#prerequisites)
+2. [Architecture Overview](#architecture-overview)
+3. [Component Registry](#component-registry)
+4. [Deployment Patterns](#deployment-patterns)
    - [Standard Deployment](#1-standard-deployment-no-rethinking)
    - [Self-Evaluation with Feedback](#2-self-evaluation-with-feedback-rethinking)
    - [Optimization Configuration](#3-optimization-configuration)
    - [Profiling Configuration](#4-profiling-configuration)
-4. [Source Code Reference](#source-code-reference)
-5. [Evaluators](#evaluators)
+5. [Source Code Reference](#source-code-reference)
+6. [Evaluators](#evaluators)
+
+---
+
+## Prerequisites
+
+### Minimum Hardware Requirements
+
+|| Component | Minimum | Recommended |
+||-----------|---------|-------------|
+|| **GPU Architecture** | NVIDIA Hopper (H100) or Blackwell (B200) | B200 for optimal performance |
+|| **GPU Count** | 4 GPUs (TP=4 for 70B model) | 8 GPUs for optimal performance |
+|| **GPU Memory** | 80GB per GPU (H100) | 192GB per GPU (B200) |
+|| **System RAM** | 256GB | 512GB+ |
+
+> **Note**: The Llama-3.3-70B-Instruct model requires approximately 140GB of GPU memory when loaded with TP=4 (tensor parallelism across 4 GPUs).
+
+### System Dependencies
+
+1. **Python 3.11, 3.12, or 3.13** installed
+2. **Docker**
+3. **NeMo Agent Toolkit** repository cloned and installed
+4. **Dynamo Backend** running on `localhost:8099`
+   - See [Dynamo Setup Guide](../../../../../external/dynamo/README.md) for installation
+5. **Hugging Face account** with access to Llama-3.3-70B-Instruct model
+
+### Example-Specific Installation Steps
+
+```bash
+# Navigate to NAT repository root
+cd /path/to/NeMo-Agent-Toolkit
+
+# Create virtual environment
+uv venv "${HOME}/.venvs/nat_dynamo_eval" --python 3.13
+source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
+
+# Install NAT with LangChain support
+uv pip install -e ".[langchain]"
+
+# Install visualization dependencies
+uv pip install matplotlib scipy
+
+# Install the react_benchmark_agent workflow package
+cd examples/dynamo_integration/react_benchmark_agent
+uv pip install -e .
+
+# Set up Hugging Face for dataset access
+export HF_HOME=/path/to/local/storage/.cache/huggingface
+export HF_TOKEN=<your_huggingface_token>
+
+# Download the Agent Leaderboard v2 dataset
+cd ../  # Navigate to examples/dynamo_integration
+python scripts/download_agent_leaderboard_v2.py --domains banking
+
+# Start Dynamo backend (in separate terminal)
+cd ../../external/dynamo
+bash start_dynamo_unified.sh
+
+# Verify Dynamo is running
+curl http://localhost:8099/health
+```
 
 ---
 
 ## Architecture Overview
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                        REACT BENCHMARK AGENT ARCHITECTURE                   │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -104,7 +165,7 @@ from .self_evaluating_agent_with_feedback import self_evaluating_agent_function
 from .self_evaluating_agent_with_feedback import self_evaluating_agent_with_feedback_function
 
 # Custom evaluators
-from .evaluators import tsq_evaluator_function, action_completion_evaluator_function
+from .evaluators import tsq_evaluator_function
 
 # Note: LLM configuration uses NAT core's 'dynamo' type (_type: dynamo)
 # which provides prefix parameters with OptimizableField support.
@@ -131,7 +192,7 @@ This is the baseline deployment that runs a ReAct agent directly without self-ev
 
 #### Data Flow
 
-```
+```text
 User Question
      │
      ▼
@@ -229,7 +290,7 @@ This advanced deployment wraps the ReAct agent with a self-evaluation loop that:
 
 #### Data Flow
 
-```
+```text
 User Question
      │
      ▼
@@ -381,7 +442,7 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
 
 #### Optimization Workflow
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         NAT Optimizer                               │
 └─────────────────────────────────────────────────────────────────────┘
@@ -443,7 +504,7 @@ This configuration enables comprehensive profiling for performance analysis.
 
 #### Profiler Output Files
 
-```
+```text
 outputs/dynamo_evals/<job_id>/
 ├── standardized_data_all.csv      # Per-LLM-call metrics (TTFT, tokens, etc.)
 ├── workflow_profiling_report.txt  # Human-readable summary
@@ -473,12 +534,6 @@ outputs/dynamo_evals/<job_id>/
 |------|---------|------------------|
 | `evaluators/tsq_evaluator.py` | Tool Selection Quality | `tsq_evaluator` |
 | `evaluators/action_completion_evaluator.py` | Action Completion | `action_completion_evaluator` |
-
-### Utilities
-
-| File | Purpose | Status |
-|------|---------|--------|
-| `prefix_utils.py` | Prefix ID management examples | **To be removed** - imports from non-existent module |
 
 ---
 

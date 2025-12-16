@@ -16,7 +16,7 @@ limitations under the License.
 
 # Dynamo Backend Setup Guide
 
-> ⚠️ **EXPERIMENTAL**: The NeMo Agent Toolkit and Dynamo integration is experimental and under active development. APIs, configurations, and features may change without notice.
+> ⚠️ **EXPERIMENTAL**: The NeMo Agent toolkit and Dynamo integration is experimental and under active development. APIs, configurations, and features may change without notice.
 
 This guide covers setting up, running, and configuring the NVIDIA Dynamo backend for the React Benchmark Agent evaluations.
 
@@ -46,7 +46,7 @@ Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimizat
 
 ### Architecture Overview
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                     DYNAMO BACKEND ARCHITECTURE                              │
 └──────────────────────────────────────────────────────────────────────────────┘
@@ -860,7 +860,7 @@ docker ps --format '{{.Names}}'
 ss -tlnp | grep 8099
 ```
 
-# `etcd` Connection Issues
+### `etcd` Connection Issues
 
 ```bash
 # Check `etcd` health

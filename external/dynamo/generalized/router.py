@@ -984,7 +984,7 @@ def parse_args():
 
 
 @dynamo_worker(static=False)
-async def worker(runtime: DistributedRuntime):
+async def worker(runtime: DistributedRuntime) -> None:
     args = parse_args()
 
     component = runtime.namespace("dynamo").component("router")
