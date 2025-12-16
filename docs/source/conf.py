@@ -31,22 +31,18 @@ import glob
 import os
 import shutil
 import subprocess
-import textwrap
 import typing
 from pathlib import Path
 
 if typing.TYPE_CHECKING:
     from autoapi._objects import PythonObject
 
-# API builds take about 4 minutes, while the rest of the build process takes about 30 seconds.
-build_api_docs = os.getenv('NAT_DISABLE_API_BUILD', '0') != '1'
-cur_dir = Path(os.path.abspath(__file__)).parent
-
 
 def _build_api_tree() -> Path:
     # Work-around for https://github.com/readthedocs/sphinx-autoapi/issues/298
     # AutoAPI support for implicit namespaces is broken, so we need to manually
 
+    cur_dir = Path(os.path.abspath(__file__)).parent
     docs_dir = cur_dir.parent
     root_dir = docs_dir.parent
     nat_dir = root_dir / "src" / "nat"
@@ -60,7 +56,6 @@ def _build_api_tree() -> Path:
         shutil.rmtree(api_tree.absolute())
 
     os.makedirs(api_tree.absolute())
-
     shutil.copytree(nat_dir, dest_dir)
     dest_plugins_dir = dest_dir / "plugins"
 
@@ -84,6 +79,9 @@ def _build_api_tree() -> Path:
     return api_tree
 
 
+API_TREE = _build_api_tree()
+print(f"API tree built at {API_TREE}")
+
 # -- Project information -----------------------------------------------------
 
 project = 'NVIDIA NeMo Agent Toolkit'
@@ -105,58 +103,38 @@ version = '.'.join(release.split('.')[:2])
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'autoapi.extension',
     'IPython.sphinxext.ipython_console_highlighting',
     'IPython.sphinxext.ipython_directive',
     'myst_parser',
     'nbsphinx',
     'sphinx_copybutton',
-    'sphinx_design',
     'sphinx.ext.doctest',
     'sphinx.ext.graphviz',
     'sphinx.ext.intersphinx',
     "sphinxmermaid"
 ]
 
-if build_api_docs:
-    api_tree = _build_api_tree()
-    print(f"API tree built at {api_tree}")
+autoapi_dirs = [str(API_TREE.absolute())]
 
-    extensions.append('autoapi.extension')
+autoapi_root = "api"
+autoapi_python_class_content = "both"
+autoapi_options = [
+    'members',
+    'undoc-members',
+    'private-members',
+    'show-inheritance',
+    'show-module-summary',
+    'imported-members',
+]
 
-    autoapi_dirs = [str(api_tree.absolute())]
+# set to true once https://github.com/readthedocs/sphinx-autoapi/issues/298 is fixed
+autoapi_python_use_implicit_namespaces = False
 
-    autoapi_root = "api"
-    autoapi_python_class_content = "both"
-    autoapi_options = [
-        'members',
-        'undoc-members',
-        'private-members',
-        'show-inheritance',
-        'show-module-summary',
-        'imported-members',
-    ]
+# Enable this for debugging
+autoapi_keep_files = False
 
-    # set to true once https://github.com/readthedocs/sphinx-autoapi/issues/298 is fixed
-    autoapi_python_use_implicit_namespaces = False
-
-    # Enable this for debugging
-    autoapi_keep_files = os.getenv('NAT_AUTOAPI_KEEP_FILES', '0') == '1'
-
-else:
-    # Create an empty 'api' directory to avoid build errors when API docs are disabled
-    api_stub_path = cur_dir / 'api'
-    api_stub_path.mkdir(exist_ok=True)
-    with open(api_stub_path / "index.rst", "w", encoding="utf-8") as f:
-        index_rst = """
-                   ==========
-                   Python API
-                   ==========
-
-                   Placeholder for API documentation build with NAT_DISABLE_API_BUILD=1.
-                   """
-        f.write(textwrap.dedent(index_rst))
-
-myst_enable_extensions = ["attrs_inline", "colon_fence"]
+myst_enable_extensions = ["colon_fence"]
 
 html_show_sourcelink = False  # Remove 'view source code' from top of page (for html, not python)
 set_type_checking_flag = True  # Enable 'expensive' imports for sphinx_autodoc_typehints
@@ -185,8 +163,8 @@ numpydoc_class_members_toctree = False
 # Ignore example.com/mcp as it is inaccessible when building the docs
 # Once v1.2 is merged into main, remove the ignore for the banner.png
 linkcheck_ignore = [
-    r'http://localhost:\d+',
-    r'https://localhost:\d+',
+    r'http://localhost:\d+/',
+    r'https://localhost:\d+/',
     r'^http://$',
     r'^https://$',
     r'https://(platform\.)?openai.com',
@@ -194,12 +172,8 @@ linkcheck_ignore = [
     r'https://www.mysql.com',
     r'https://api.service.com',
     r'https?://example\.com/mcp/?',
-    r'http://custom-server',
-    r'^\?provider=',
-    r'https://agent\.example\.com'
+    r'http://custom-server'
 ]
-
-templates_path = ['_templates']
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
@@ -258,7 +232,7 @@ html_theme_options = {
     '''
     ],
     "show_nav_level":
-        1,
+        2,
     "switcher": {
         "json_url": "../versions1.json", "version_match": version
     },
@@ -357,23 +331,19 @@ default_role = "py:obj"
 # versions of Pydantic.
 PYDANTIC_DEFAULT_DOCSTRING = "A base class for creating Pydantic models."
 
-if build_api_docs:
 
-    def skip_pydantic_special_attrs(app: object,
-                                    what: str,
-                                    name: str,
-                                    obj: "PythonObject",
-                                    skip: bool,
-                                    options: list[str]) -> bool:
+def skip_pydantic_special_attrs(app: object, what: str, name: str, obj: "PythonObject", skip: bool,
+                                options: list[str]) -> bool:
 
-        if not skip:
-            bases = getattr(obj, 'bases', [])
-            if (not skip and ('pydantic.BaseModel' in bases or 'EndpointBase' in bases)
-                    and PYDANTIC_DEFAULT_DOCSTRING in obj.docstring):
-                obj.docstring = ""
+    if not skip:
+        bases = getattr(obj, 'bases', [])
+        if (not skip and ('pydantic.BaseModel' in bases or 'EndpointBase' in bases)
+                and PYDANTIC_DEFAULT_DOCSTRING in obj.docstring):
+            obj.docstring = ""
 
-        return skip
+    return skip
 
-    def setup(sphinx):
-        # Work-around for for Pydantic docstrings that trigger parsing warnings
-        sphinx.connect("autoapi-skip-member", skip_pydantic_special_attrs)
+
+def setup(sphinx):
+    # Work-around for for Pydantic docstrings that trigger parsing warnings
+    sphinx.connect("autoapi-skip-member", skip_pydantic_special_attrs)

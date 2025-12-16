@@ -208,24 +208,21 @@ class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
                         framework=LLMFrameworkEnum.LLAMA_INDEX,
                         name=model_name,
                         UUID=event_id,
-                        data=StreamEventData(input=self._run_id_to_llm_input.get(event_id),
-                                             output=llm_text_output,
-                                             payload=response),
+                        data=StreamEventData(input=self._run_id_to_llm_input.get(event_id), output=llm_text_output),
                         metadata=TraceMetadata(chat_responses=response.message if response.message else None,
                                                tool_outputs=tool_outputs_list if tool_outputs_list else []),
                         usage_info=UsageInfo(token_usage=self._extract_token_usage(response)))
                     self.step_manager.push_intermediate_step(stats)
 
         elif event_type == CBEventType.FUNCTION_CALL and payload:
-            stats = IntermediateStepPayload(event_type=IntermediateStepType.TOOL_END,
-                                            span_event_timestamp=self._run_id_to_timestamp.get(event_id),
-                                            framework=LLMFrameworkEnum.LLAMA_INDEX,
-                                            name=self._last_tool_map.get(event_id),
-                                            UUID=event_id,
-                                            data=StreamEventData(
-                                                output=copy.deepcopy(payload.get(EventPayload.FUNCTION_OUTPUT)),
-                                                payload=copy.deepcopy(payload.get(EventPayload.FUNCTION_OUTPUT))),
-                                            usage_info=UsageInfo(token_usage=TokenUsageBaseModel()))
+            stats = IntermediateStepPayload(
+                event_type=IntermediateStepType.TOOL_END,
+                span_event_timestamp=self._run_id_to_timestamp.get(event_id),
+                framework=LLMFrameworkEnum.LLAMA_INDEX,
+                name=self._last_tool_map.get(event_id),
+                UUID=event_id,
+                data=StreamEventData(output=copy.deepcopy(payload.get(EventPayload.FUNCTION_OUTPUT))),
+                usage_info=UsageInfo(token_usage=TokenUsageBaseModel()))
 
             self.step_manager.push_intermediate_step(stats)
 

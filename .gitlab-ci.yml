@@ -58,7 +58,6 @@ variables:
   NAT_CI_OAUTH2_PORT: "5000"
   NAT_CI_OPENSEARCH_URL: "http://opensearch:9200"
   NAT_CI_PHOENIX_URL: "http://phoenix:6006"
-  NAT_CI_PISTON_URL: "http://piston:2000/api/v2"
   NAT_CI_REDIS_HOST: "redis"
   UV_CACHE_DIR: .uv-cache
   WORKSPACE_TMP: "${CI_PROJECT_DIR}/.tmp"
@@ -143,7 +142,7 @@ test:python_tests:
       command: ["milvus", "run", "standalone"]
       pull_policy: if-not-present
 
-    - name: $CI_REGISTRY_IMAGE/oauth2_server:20251212
+    - name: $CI_REGISTRY_IMAGE/oauth2_server
       alias: oauth2-server
       pull_policy: if-not-present
       variables:
@@ -157,10 +156,6 @@ test:python_tests:
       variables:
         discovery.type: "single-node"
         plugins.security.disabled: "true"
-
-    - name: $CI_REGISTRY_IMAGE/piston:nat_test_20251212
-      alias: piston
-      pull_policy: if-not-present
 
     - name: langfuse/langfuse-worker:3
       alias: langfuse-worker

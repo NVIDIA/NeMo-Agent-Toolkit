@@ -21,14 +21,12 @@ This example demonstrates how to integrate the NVIDIA NeMo Agent toolkit with [M
 
 ## Prerequisites
 
-Ensure the following prerequisites are met before running the simply calculator workflow.
-
-- **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
-- **Base workflow**: This example builds upon the Getting Started [Simple Calculator](../../getting_started/simple_calculator/) example. Make sure you are familiar with the example before proceeding.
+1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
+2. **Base workflow**: This example builds upon the Getting Started [Simple Calculator](../../getting_started/simple_calculator/) example. Make sure you are familiar with the example before proceeding.
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 
 ### Install this Workflow
 
@@ -41,10 +39,10 @@ uv pip install -e examples/MCP/simple_calculator_mcp
 ## Run the Workflow
 
 ### NeMo Agent toolkit as an MCP Client
-You can run the simple calculator workflow using Remote MCP tools. In this case, the workflow acts as a MCP client and connects to the MCP server running on the specified URL. Details are provided in the [MCP Client Guide](../../../docs/source/build-workflows/mcp-client.md).
+You can run the simple calculator workflow using Remote MCP tools. In this case, the workflow acts as a MCP client and connects to the MCP server running on the specified URL. Details are provided in the [MCP Client Guide](../../../docs/source/workflows/mcp/mcp-client.md).
 
 ### NeMo Agent toolkit as an MCP Server
-You can publish the simple calculator tools using MCP using the `nat mcp serve` command. Details are provided in the [MCP Server Guide](../../../docs/source/run-workflows/mcp-server.md).
+You can publish the simple calculator tools via MCP using the `nat mcp serve` command. Details are provided in the [MCP Server Guide](../../../docs/source/workflows/mcp/mcp-server.md).
 
 
 ### MCP Client Configuration
@@ -89,7 +87,7 @@ To run this example:
 ```bash
 nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml
 ```
-This starts an MCP server on port 9901 with endpoint `/mcp` and uses `streamable-http` transport. Refer to [MCP Server](../../../docs/source/run-workflows/mcp-server.md) for more information.
+This starts an MCP server on port 9901 with endpoint `/mcp` and uses `streamable-http` transport. See the [MCP Server](../../../docs/source/workflows/mcp/mcp-server.md) documentation for more information.
 
 2. Run the workflow:
 ```bash

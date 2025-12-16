@@ -41,9 +41,6 @@ class ComponentEnum(StrEnum):
     RETRIEVER_PROVIDER = "retriever_provider"
     TOOL_WRAPPER = "tool_wrapper"
     TRACING = "tracing"
-    TRAINER = "trainer"
-    TRAJECTORY_BUILDER = "trajectory_builder"
-    TRAINER_ADAPTER = "trainer_adapter"
     UNDEFINED = "undefined"
 
 
@@ -59,9 +56,6 @@ class ComponentGroup(StrEnum):
     MEMORY = "memory"
     OBJECT_STORES = "object_stores"
     RETRIEVERS = "retrievers"
-    TRAINERS = "trainers"
-    TRAINER_ADAPTERS = "trainer_adapters"
-    TRAJECTORY_BUILDERS = "trajectory_builders"
 
 
 # Compatibility aliases with previous releases

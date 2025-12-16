@@ -13,53 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import typing
 import uuid
-from datetime import timedelta
-from unittest.mock import MagicMock
-from unittest.mock import patch
 
 import pytest
 from starlette.requests import Request
 
 from nat.builder.context import ContextState
-from nat.data_models.config import Config
-from nat.data_models.config import GeneralConfig
+from nat.builder.workflow import Workflow
 from nat.runtime.session import SessionManager
 
 
-class _MockWorkflowBuilder:
-    """Mock workflow builder for testing."""
-
-    def __init__(self):
-        self._functions = {}
-        self._function_groups = {}
-        self._llm_providers = {}
-
-    def get_function(self, name):
-        return self._functions.get(name)
-
-    def get_function_group(self, name):
-        return self._function_groups.get(name)
-
-    def get_llm_provider(self, name):
-        return self._llm_providers.get(name)
-
-
-def _create_mock_config() -> Config:
-    """Create a mock config for testing."""
-    config = MagicMock(spec=Config)
-    config.general = MagicMock(spec=GeneralConfig)
-    config.general.per_user_workflow_timeout = timedelta(minutes=30)
-    config.general.per_user_workflow_cleanup_interval = timedelta(minutes=5)
-    config.workflow = MagicMock()
-    return config
-
-
-def _create_mock_function_registration():
-    """Create a mock function registration info."""
-    registration = MagicMock()
-    registration.is_per_user = False
-    return registration
+class _DummyWorkflow:
+    config = None
 
 
 # Build parameter sets at import time to keep test bodies simple
@@ -129,11 +95,9 @@ async def test_session_trace_id_from_headers_parameterized(headers: list[tuple[b
     ctx_state = ContextState.get()
     token = ctx_state.workflow_trace_id.set(None)
     try:
-        with patch("nat.cli.type_registry.GlobalTypeRegistry") as mock_registry:
-            mock_registry.get.return_value.get_function.return_value = _create_mock_function_registration()
-            sm = SessionManager(config=_create_mock_config(), shared_builder=_MockWorkflowBuilder(), max_concurrency=0)
-            sm.set_metadata_from_http_request(request)
-            assert ctx_state.workflow_trace_id.get() == expected_trace_id
+        sm = SessionManager(workflow=typing.cast(Workflow, _DummyWorkflow()), max_concurrency=0)
+        sm.set_metadata_from_http_request(request)
+        assert ctx_state.workflow_trace_id.get() == expected_trace_id
     finally:
         ctx_state.workflow_trace_id.reset(token)
 
@@ -183,13 +147,11 @@ async def test_session_metadata_headers_parameterized(headers: list[tuple[bytes,
     tkn_run = ctx_state.workflow_run_id.set(None)
     tkn_trace = ctx_state.workflow_trace_id.set(None)
     try:
-        with patch("nat.cli.type_registry.GlobalTypeRegistry") as mock_registry:
-            mock_registry.get.return_value.get_function.return_value = _create_mock_function_registration()
-            sm = SessionManager(config=_create_mock_config(), shared_builder=_MockWorkflowBuilder(), max_concurrency=0)
-            sm.set_metadata_from_http_request(request)
-            assert ctx_state.conversation_id.get() == expected_conv
-            assert ctx_state.user_message_id.get() == expected_msg
-            assert ctx_state.workflow_run_id.get() == expected_run
+        sm = SessionManager(workflow=typing.cast(Workflow, _DummyWorkflow()), max_concurrency=0)
+        sm.set_metadata_from_http_request(request)
+        assert ctx_state.conversation_id.get() == expected_conv
+        assert ctx_state.user_message_id.get() == expected_msg
+        assert ctx_state.workflow_run_id.get() == expected_run
     finally:
         ctx_state.conversation_id.reset(tkn_conv)
         ctx_state.user_message_id.reset(tkn_msg)

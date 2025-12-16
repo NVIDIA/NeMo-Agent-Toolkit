@@ -40,7 +40,7 @@ The profiler agent is a tool that allows you to analyze the performance of NeMo 
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md) to create the development environment and install NeMo Agent toolkit.
 
 ### Install this Workflow:
 
@@ -51,7 +51,7 @@ uv pip install -e examples/advanced_agents/profiler_agent
 ```
 
 ### Set Up API Keys
-If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
@@ -84,7 +84,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
    nat serve --config_file=examples/advanced_agents/profiler_agent/configs/config.yml
    ```
 
-4. Launch the NeMo Agent Toolkit User Interface by using the instructions in the [Launching the UI](../../../docs/source/run-workflows/launching-ui.md) guide.
+4. Launch the NeMo Agent Toolkit User Interface by using the instructions in the [Launching the UI](../../../docs/source/quick-start/launching-ui.md) guide.
 
 5. Query the agent with natural language via the UI:
    ```

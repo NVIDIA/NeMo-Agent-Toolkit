@@ -93,22 +93,6 @@ class NATFunctionAgentTool(AgentTool):
 
     async def stream(self, tool_use: ToolUse, _invocation_state: dict[str, Any],
                      **_kwargs: Any) -> AsyncGenerator[Any, None]:
-        """
-        Stream tool events and return the final result.
-
-        Parameters
-        ----------
-            tool_use : ToolUse
-                The tool use request containing tool ID and parameters.
-            _invocation_state : dict[str, Any]
-                Unused parameter for compatibility.
-            _kwargs : Any
-                Unused parameter for compatibility.
-
-        Yields
-        ------
-            Tool events with the last being the tool result.
-        """
         from strands.types._events import ToolResultEvent  # type: ignore
         from strands.types._events import ToolStreamEvent
 

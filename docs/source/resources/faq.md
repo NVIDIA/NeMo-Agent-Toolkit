@@ -15,8 +15,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NVIDIA NeMo Agent Toolkit FAQs
-NVIDIA NeMo Agent toolkit frequently asked questions (FAQs).
+# NVIDIA NeMo Agent Toolkit FAQ
+NVIDIA NeMo Agent toolkit frequently asked questions (FAQ).
 
 ## Do I Need to Rewrite All of my Existing Code to Use NeMo Agent Toolkit?
 No, NeMo Agent toolkit is **100% opt in.** While we encourage users to wrap (decorate) every tool and agent to get the most out of the profiler, you have the freedom to integrate to whatever level you want - tool level, agent level, or entire workflow level. You have the freedom to start small and where you believe you’ll see the most value and expand from there.

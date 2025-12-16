@@ -29,7 +29,6 @@ from nat.front_ends.mcp.tool_converter import create_function_wrapper
 from nat.front_ends.mcp.tool_converter import get_function_description
 from nat.front_ends.mcp.tool_converter import is_field_optional
 from nat.front_ends.mcp.tool_converter import register_function_with_mcp
-from nat.runtime.session import SessionManager
 
 
 # Test schemas
@@ -89,32 +88,6 @@ def create_mock_workflow_with_observability():
     mock_workflow.exporter_manager.start.return_value = async_context_manager
 
     return mock_workflow
-
-
-def create_mock_session_manager(workflow=None, result_value="result"):
-    """Create a mock SessionManager for testing.
-
-    Args:
-        workflow: Optional workflow to attach to the session manager
-        result_value: The value to return from runner.result()
-    """
-    mock_session_manager = MagicMock(spec=SessionManager)
-
-    if workflow is None:
-        workflow = create_mock_workflow_with_observability()
-
-    mock_session_manager.workflow = workflow
-
-    # Create mock runner with async context manager
-    mock_runner = MagicMock()
-    mock_runner.__aenter__ = AsyncMock(return_value=mock_runner)
-    mock_runner.__aexit__ = AsyncMock(return_value=None)
-    mock_runner.result = AsyncMock(return_value=result_value)
-
-    # Make session_manager.run() return the runner
-    mock_session_manager.run = MagicMock(return_value=mock_runner)
-
-    return mock_session_manager
 
 
 class TestIsFieldOptional:
@@ -237,12 +210,12 @@ class TestCreateFunctionWrapper:
     def test_create_wrapper_for_chat_request_function(self):
         """Test creating wrapper for function with ChatRequest schema."""
         # Arrange
-        mock_session_manager = create_mock_session_manager()
+        mock_function = MagicMock(spec=Function)
         function_name = "test_function"
         schema = MockChatRequest
 
         # Act
-        wrapper = create_function_wrapper(function_name, mock_session_manager, schema)
+        wrapper = create_function_wrapper(function_name, mock_function, schema, False, None)
 
         # Assert
         assert callable(wrapper)
@@ -254,12 +227,12 @@ class TestCreateFunctionWrapper:
     def test_create_wrapper_for_regular_function(self):
         """Test creating wrapper for function with regular schema."""
         # Arrange
-        mock_session_manager = create_mock_session_manager()
+        mock_function = MagicMock(spec=Function)
         function_name = "regular_function"
         schema = MockRegularSchema
 
         # Act
-        wrapper = create_function_wrapper(function_name, mock_session_manager, schema)
+        wrapper = create_function_wrapper(function_name, mock_function, schema, False, None)
 
         # Assert
         assert callable(wrapper)
@@ -272,48 +245,49 @@ class TestCreateFunctionWrapper:
     def test_create_wrapper_for_workflow(self):
         """Test creating wrapper for workflow function."""
         # Arrange
-        mock_workflow = create_mock_workflow_with_observability()
-        mock_session_manager = create_mock_session_manager(workflow=mock_workflow)
+        mock_workflow = MagicMock(spec=Workflow)
         function_name = "test_workflow"
         schema = MockChatRequest
 
         # Act
-        wrapper = create_function_wrapper(function_name, mock_session_manager, schema)
+        wrapper = create_function_wrapper(function_name, mock_workflow, schema, True, mock_workflow)
 
         # Assert
         assert callable(wrapper)
         assert wrapper.__name__ == function_name
 
-    async def test_wrapper_execution_with_observability(self):
-        """Test wrapper execution with SessionManager pattern."""
+    @patch('nat.front_ends.mcp.tool_converter.ContextState')
+    async def test_wrapper_execution_with_observability(self, mock_context_state_class):
+        """Test wrapper execution with observability context."""
         # Arrange
-        mock_session_manager = create_mock_session_manager(result_value="result")
+        mock_function = MagicMock(spec=Function)
+        mock_function.acall_invoke = AsyncMock(return_value="result")
 
-        wrapper = create_function_wrapper("test_func", mock_session_manager, MockRegularSchema)
+        mock_workflow = create_mock_workflow_with_observability()
+
+        # Mock ContextState.get()
+        mock_context_state = MagicMock()
+        mock_context_state_class.get.return_value = mock_context_state
+
+        wrapper = create_function_wrapper("test_func", mock_function, MockRegularSchema, False, mock_workflow)
 
         # Act
         result = await wrapper(name="test", age=30)
 
         # Assert
         assert result == "result"
-        # Verify session_manager.run() was called with the validated input
-        mock_session_manager.run.assert_called_once()
-        # Verify runner.result() was called
-        call_args = mock_session_manager.run.call_args
-        assert call_args is not None
+        mock_workflow.exporter_manager.start.assert_called_once_with(context_state=mock_context_state)
+        mock_context_state_class.get.assert_called_once()
 
-    async def test_wrapper_execution_via_session_manager(self):
-        """Test wrapper execution uses SessionManager.run() pattern."""
+    async def test_wrapper_execution_without_workflow_fails(self):
+        """Test wrapper execution fails without workflow context."""
         # Arrange
-        mock_session_manager = create_mock_session_manager(result_value="chat response")
-        wrapper = create_function_wrapper("test_func", mock_session_manager, MockChatRequest)
+        mock_function = MagicMock(spec=Function)
+        wrapper = create_function_wrapper("test_func", mock_function, MockChatRequest, False, None)
 
-        # Act
-        result = await wrapper(query="test")
-
-        # Assert
-        assert result == "chat response"
-        mock_session_manager.run.assert_called_once()
+        # Act & Assert
+        with pytest.raises(RuntimeError, match="Workflow context is required for observability"):
+            await wrapper(query="test")
 
 
 class TestGetFunctionDescription:
@@ -378,12 +352,11 @@ class TestRegisterFunctionWithMcp:
     @patch('nat.front_ends.mcp.tool_converter.get_function_description')
     @patch('nat.front_ends.mcp.tool_converter.logger')
     def test_register_function_with_mcp(self, mock_logger, mock_get_desc, mock_create_wrapper):
-        """Test registering a function with MCP using SessionManager."""
+        """Test registering a regular function with MCP."""
         # Arrange
         mock_mcp = MagicMock()
+        mock_function = MagicMock(spec=Function)
         mock_workflow = MagicMock(spec=Workflow)
-        mock_session_manager = MagicMock(spec=SessionManager)
-        mock_session_manager.workflow = mock_workflow
         function_name = "test_function"
 
         mock_get_desc.return_value = "Test description"
@@ -391,14 +364,16 @@ class TestRegisterFunctionWithMcp:
         mock_create_wrapper.return_value = mock_wrapper
 
         # Act
-        register_function_with_mcp(mock_mcp, function_name, mock_session_manager)
+        register_function_with_mcp(mock_mcp, function_name, mock_function, mock_workflow)
 
-        # Assert - Check that logging happened
+        # Assert - Check that logging happened (actual message order may vary)
         assert mock_logger.info.call_count >= 1
-        mock_get_desc.assert_called_once_with(mock_workflow)
+        mock_get_desc.assert_called_once_with(mock_function)
         mock_create_wrapper.assert_called_once_with(function_name,
-                                                    mock_session_manager,
-                                                    mock_workflow.input_schema,
+                                                    mock_function,
+                                                    mock_function.input_schema,
+                                                    False,
+                                                    mock_workflow,
                                                     None)  # memory_profiler defaults to None
         mock_mcp.tool.assert_called_once_with(name=function_name, description="Test description")
 
@@ -406,12 +381,10 @@ class TestRegisterFunctionWithMcp:
     @patch('nat.front_ends.mcp.tool_converter.get_function_description')
     @patch('nat.front_ends.mcp.tool_converter.logger')
     def test_register_workflow_with_mcp(self, mock_logger, mock_get_desc, mock_create_wrapper):
-        """Test registering a workflow with MCP using SessionManager."""
+        """Test registering a workflow with MCP."""
         # Arrange
         mock_mcp = MagicMock()
         mock_workflow = MagicMock(spec=Workflow)
-        mock_session_manager = MagicMock(spec=SessionManager)
-        mock_session_manager.workflow = mock_workflow
         function_name = "test_workflow"
 
         mock_get_desc.return_value = "Workflow description"
@@ -419,14 +392,16 @@ class TestRegisterFunctionWithMcp:
         mock_create_wrapper.return_value = mock_wrapper
 
         # Act
-        register_function_with_mcp(mock_mcp, function_name, mock_session_manager)
+        register_function_with_mcp(mock_mcp, function_name, mock_workflow, mock_workflow)
 
-        # Assert - Check that logging happened
-        assert mock_logger.info.call_count >= 1
+        # Assert - Check that logging happened (actual message order may vary)
+        assert mock_logger.info.call_count >= 2  # Should log at least twice for workflow
         mock_get_desc.assert_called_once_with(mock_workflow)
         mock_create_wrapper.assert_called_once_with(function_name,
-                                                    mock_session_manager,
+                                                    mock_workflow,
                                                     mock_workflow.input_schema,
+                                                    True,
+                                                    mock_workflow,
                                                     None)  # memory_profiler defaults to None
         mock_mcp.tool.assert_called_once_with(name=function_name, description="Workflow description")
 
@@ -437,11 +412,11 @@ class TestParameterSchemaValidation:
     def test_all_required_parameters(self):
         """Test schema with all required parameters."""
         # Arrange
-        mock_session_manager = create_mock_session_manager()
+        mock_function = MagicMock(spec=Function)
         function_name = "all_required_func"
 
         # Act
-        wrapper = create_function_wrapper(function_name, mock_session_manager, MockAllRequiredSchema)
+        wrapper = create_function_wrapper(function_name, mock_function, MockAllRequiredSchema, False, None)
 
         # Assert
         sig = getattr(wrapper, '__signature__', None)
@@ -458,11 +433,11 @@ class TestParameterSchemaValidation:
     def test_all_optional_parameters(self):
         """Test schema with all optional parameters."""
         # Arrange
-        mock_session_manager = create_mock_session_manager()
+        mock_function = MagicMock(spec=Function)
         function_name = "all_optional_func"
 
         # Act
-        wrapper = create_function_wrapper(function_name, mock_session_manager, MockAllOptionalSchema)
+        wrapper = create_function_wrapper(function_name, mock_function, MockAllOptionalSchema, False, None)
 
         # Assert
         sig = getattr(wrapper, '__signature__', None)
@@ -488,11 +463,11 @@ class TestParameterSchemaValidation:
     def test_mixed_required_and_optional_parameters(self):
         """Test schema with mix of required and optional parameters."""
         # Arrange
-        mock_session_manager = create_mock_session_manager()
+        mock_function = MagicMock(spec=Function)
         function_name = "mixed_func"
 
         # Act
-        wrapper = create_function_wrapper(function_name, mock_session_manager, MockMixedRequiredOptionalSchema)
+        wrapper = create_function_wrapper(function_name, mock_function, MockMixedRequiredOptionalSchema, False, None)
 
         # Assert
         sig = getattr(wrapper, '__signature__', None)
@@ -517,11 +492,11 @@ class TestParameterSchemaValidation:
     def test_optional_with_none_type(self):
         """Test optional parameters with None type (Union types)."""
         # Arrange
-        mock_session_manager = create_mock_session_manager()
+        mock_function = MagicMock(spec=Function)
         function_name = "optional_none_func"
 
         # Act
-        wrapper = create_function_wrapper(function_name, mock_session_manager, MockOptionalTypesSchema)
+        wrapper = create_function_wrapper(function_name, mock_function, MockOptionalTypesSchema, False, None)
 
         # Assert
         sig = getattr(wrapper, '__signature__', None)
@@ -542,11 +517,11 @@ class TestParameterSchemaValidation:
     def test_parameter_annotations_preserved(self):
         """Test that parameter type annotations are preserved."""
         # Arrange
-        mock_session_manager = create_mock_session_manager()
+        mock_function = MagicMock(spec=Function)
         function_name = "annotated_func"
 
         # Act
-        wrapper = create_function_wrapper(function_name, mock_session_manager, MockMixedRequiredOptionalSchema)
+        wrapper = create_function_wrapper(function_name, mock_function, MockMixedRequiredOptionalSchema, False, None)
 
         # Assert
         sig = getattr(wrapper, '__signature__', None)
@@ -561,11 +536,11 @@ class TestParameterSchemaValidation:
     def test_parameter_order_preserved(self):
         """Test that parameter order is preserved in wrapper."""
         # Arrange
-        mock_session_manager = create_mock_session_manager()
+        mock_function = MagicMock(spec=Function)
         function_name = "ordered_func"
 
         # Act
-        wrapper = create_function_wrapper(function_name, mock_session_manager, MockMixedRequiredOptionalSchema)
+        wrapper = create_function_wrapper(function_name, mock_function, MockMixedRequiredOptionalSchema, False, None)
 
         # Assert
         sig = getattr(wrapper, '__signature__', None)
@@ -583,64 +558,97 @@ class TestParameterSchemaValidation:
 class TestIntegrationScenarios:
     """Integration test scenarios combining multiple components."""
 
-    async def test_observability_context_propagation(self):
-        """Test that SessionManager.run() handles observability."""
+    @patch('nat.front_ends.mcp.tool_converter.ContextState')
+    async def test_observability_context_propagation(self, mock_context_state_class):
+        """Test that observability context is properly propagated."""
         # Arrange
-        mock_session_manager = create_mock_session_manager(result_value="result")
+        mock_function = MagicMock(spec=Function)
+        mock_function.acall_invoke = AsyncMock(return_value="result")
+
+        mock_workflow = create_mock_workflow_with_observability()
+
+        # Mock ContextState.get()
+        mock_context_state = MagicMock()
+        mock_context_state_class.get.return_value = mock_context_state
 
         # Create wrapper
-        wrapper = create_function_wrapper("test_func", mock_session_manager, MockRegularSchema)
+        wrapper = create_function_wrapper("test_func", mock_function, MockRegularSchema, False, mock_workflow)
 
         # Act - Execute wrapper
         await wrapper(name="test", age=25)
 
-        # Assert - Check that session_manager.run() was called
-        mock_session_manager.run.assert_called_once()
+        # Assert - Check that observability was started with correct context
+        mock_workflow.exporter_manager.start.assert_called_once_with(context_state=mock_context_state)
+        mock_context_state_class.get.assert_called_once()
 
-    async def test_error_handling_in_wrapper_execution(self):
+    @patch('nat.front_ends.mcp.tool_converter.ContextState')
+    async def test_error_handling_in_wrapper_execution(self, mock_context_state_class):
         """Test error handling during wrapper execution."""
         # Arrange
+        mock_function = MagicMock(spec=Function)
+        mock_function.acall_invoke.side_effect = Exception("Test error")
+
         mock_workflow = create_mock_workflow_with_observability()
-        mock_session_manager = MagicMock(spec=SessionManager)
-        mock_session_manager.workflow = mock_workflow
 
-        # Create mock runner that raises an error
-        mock_runner = MagicMock()
-        mock_runner.__aenter__ = AsyncMock(return_value=mock_runner)
-        mock_runner.__aexit__ = AsyncMock(return_value=None)
-        mock_runner.result = AsyncMock(side_effect=Exception("Test error"))
-        mock_session_manager.run = MagicMock(return_value=mock_runner)
+        # Mock ContextState.get()
+        mock_context_state = MagicMock()
+        mock_context_state_class.get.return_value = mock_context_state
 
-        wrapper = create_function_wrapper("test_func", mock_session_manager, MockRegularSchema)
+        wrapper = create_function_wrapper("test_func", mock_function, MockRegularSchema, False, mock_workflow)
 
         # Act & Assert
         with pytest.raises(Exception, match="Test error"):
             await wrapper(name="test", age=25)
 
-        # Verify session_manager.run() was called even though it raised an error
-        mock_session_manager.run.assert_called_once()
+        # Observability context should still have been started
+        mock_workflow.exporter_manager.start.assert_called_once_with(context_state=mock_context_state)
+        mock_context_state_class.get.assert_called_once()
 
-    async def test_wrapper_with_optional_parameters_omitted(self):
+    @patch('nat.front_ends.mcp.tool_converter.ContextState')
+    async def test_wrapper_with_optional_parameters_omitted(self, mock_context_state_class):
         """Test wrapper execution when optional parameters are omitted."""
         # Arrange
-        mock_session_manager = create_mock_session_manager(result_value="result")
+        mock_function = MagicMock(spec=Function)
+        mock_function.acall_invoke = AsyncMock(return_value="result")
 
-        wrapper = create_function_wrapper("test_func", mock_session_manager, MockMixedRequiredOptionalSchema)
+        mock_workflow = create_mock_workflow_with_observability()
+
+        # Mock ContextState.get()
+        mock_context_state = MagicMock()
+        mock_context_state_class.get.return_value = mock_context_state
+
+        wrapper = create_function_wrapper("test_func",
+                                          mock_function,
+                                          MockMixedRequiredOptionalSchema,
+                                          False,
+                                          mock_workflow)
 
         # Act - Call with only required parameters
         result = await wrapper(required_str="test", required_int=123)
 
         # Assert
         assert result == "result"
-        # SessionManager.run() should have been called
-        mock_session_manager.run.assert_called_once()
+        # Function should have been called with defaults for optional parameters
+        mock_function.acall_invoke.assert_called_once()
 
-    async def test_wrapper_with_optional_parameters_provided(self):
+    @patch('nat.front_ends.mcp.tool_converter.ContextState')
+    async def test_wrapper_with_optional_parameters_provided(self, mock_context_state_class):
         """Test wrapper execution when optional parameters are provided."""
         # Arrange
-        mock_session_manager = create_mock_session_manager(result_value="result")
+        mock_function = MagicMock(spec=Function)
+        mock_function.acall_invoke = AsyncMock(return_value="result")
 
-        wrapper = create_function_wrapper("test_func", mock_session_manager, MockMixedRequiredOptionalSchema)
+        mock_workflow = create_mock_workflow_with_observability()
+
+        # Mock ContextState.get()
+        mock_context_state = MagicMock()
+        mock_context_state_class.get.return_value = mock_context_state
+
+        wrapper = create_function_wrapper("test_func",
+                                          mock_function,
+                                          MockMixedRequiredOptionalSchema,
+                                          False,
+                                          mock_workflow)
 
         # Act - Call with all parameters
         result = await wrapper(required_str="test",
@@ -651,18 +659,26 @@ class TestIntegrationScenarios:
 
         # Assert
         assert result == "result"
-        mock_session_manager.run.assert_called_once()
+        mock_function.acall_invoke.assert_called_once()
 
-    async def test_wrapper_with_none_values(self):
+    @patch('nat.front_ends.mcp.tool_converter.ContextState')
+    async def test_wrapper_with_none_values(self, mock_context_state_class):
         """Test wrapper execution with explicit None values for optional parameters."""
         # Arrange
-        mock_session_manager = create_mock_session_manager(result_value="result")
+        mock_function = MagicMock(spec=Function)
+        mock_function.acall_invoke = AsyncMock(return_value="result")
 
-        wrapper = create_function_wrapper("test_func", mock_session_manager, MockOptionalTypesSchema)
+        mock_workflow = create_mock_workflow_with_observability()
+
+        # Mock ContextState.get()
+        mock_context_state = MagicMock()
+        mock_context_state_class.get.return_value = mock_context_state
+
+        wrapper = create_function_wrapper("test_func", mock_function, MockOptionalTypesSchema, False, mock_workflow)
 
         # Act - Call with None for optional parameters
         result = await wrapper(required_field="test", optional_str_none=None, optional_int_none=None)
 
         # Assert
         assert result == "result"
-        mock_session_manager.run.assert_called_once()
+        mock_function.acall_invoke.assert_called_once()

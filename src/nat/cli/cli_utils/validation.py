@@ -14,42 +14,11 @@
 # limitations under the License.
 
 from pathlib import Path
-from urllib.parse import urlparse
 
 import click
 import yaml
 
 from nat.data_models.config import Config
-
-
-def validate_url(_ctx: click.Context, _param: click.Parameter, value: str) -> str:
-    """Validate URL format for CLI options.
-
-    Args:
-        _ctx: Click context (unused, required by Click callback interface)
-        _param: Click parameter (unused, required by Click callback interface)
-        value: URL string to validate
-
-    Returns:
-        The validated URL string
-
-    Raises:
-        click.BadParameter: If URL is invalid or uses unsupported scheme
-    """
-    if not value:
-        return value
-
-    try:
-        result = urlparse(value)
-        if result.scheme not in ('http', 'https'):
-            raise click.BadParameter('URL must use http:// or https:// scheme')
-        if not result.netloc:
-            raise click.BadParameter('URL must include a hostname')
-        return value
-    except click.BadParameter:
-        raise
-    except Exception as e:
-        raise click.BadParameter(f'Invalid URL format: {e}')
 
 
 def validate_config(config_file: Path) -> Config:

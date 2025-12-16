@@ -38,5 +38,5 @@ This guide demonstrates how to quickly scaffold and generate new NVIDIA NeMo Age
 
 For comprehensive workflow development guidance, explore these detailed tutorials:
 
-- [Create a New Workflow](../../../docs/source/get-started/tutorials/create-a-new-workflow.md) - Complete guide to building custom workflows from scratch
-- [Build a Demo Agent Workflow Using Cursor Rules](../../../docs/source/get-started/tutorials/build-a-demo-agent-workflow-using-cursor-rules.md) - Interactive development using Cursor rules assistance
+- [Create a New Workflow](../../../docs/source/tutorials/create-a-new-workflow.md) - Complete guide to building custom workflows from scratch
+- [Build a Demo Agent Workflow Using Cursor Rules](../../../docs/source/tutorials/build-a-demo-agent-workflow-using-cursor-rules.md) - Interactive development using Cursor rules assistance

@@ -34,7 +34,6 @@ from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.config import Config
 from nat.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
 from nat.front_ends.mcp.memory_profiler import MemoryProfiler
-from nat.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
 
@@ -142,7 +141,7 @@ class MCPFrontEndPluginWorkerBase(ABC):
         # Set up the health endpoint
         self._setup_health_endpoint(mcp)
 
-        # Build the default workflow
+        # Build the workflow and register all functions with MCP
         workflow = await builder.build()
 
         # Get all functions from the workflow
@@ -163,36 +162,16 @@ class MCPFrontEndPluginWorkerBase(ABC):
                     logger.debug("Skipping function %s as it's not in tool_names", function_name)
             functions = filtered_functions
 
-        # Create SessionManagers for each function
-        # For regular functions, wrap them in a mini-workflow with that function as entry point
-        # For workflows, use them directly
-        session_managers: dict[str, SessionManager] = {}
+        # Register each function with MCP, passing workflow context for observability
         for function_name, function in functions.items():
-            if isinstance(function, Workflow):
-                # Already a workflow, use it directly
-                logger.info("Function %s is a Workflow, using directly", function_name)
-                session_managers[function_name] = await SessionManager.create(config=self.full_config,
-                                                                              shared_builder=builder,
-                                                                              entry_function=function_name)
-            else:
-                # Regular function - build a workflow with this function as entry point
-                logger.info("Function %s is a regular function, building entry workflow", function_name)
-                session_managers[function_name] = await SessionManager.create(config=self.full_config,
-                                                                              shared_builder=builder,
-                                                                              entry_function=function_name)
-
-        # Register each function with MCP, passing SessionManager for observability
-        for function_name, session_manager in session_managers.items():
-            register_function_with_mcp(mcp, function_name, session_manager, self.memory_profiler)
+            register_function_with_mcp(mcp, function_name, function, workflow, self.memory_profiler)
 
         # Add a simple fallback function if no functions were found
-        if not session_managers:
+        if not functions:
             raise RuntimeError("No functions found in workflow. Please check your configuration.")
 
         # After registration, expose debug endpoints for tool/schema inspection
-        # Extract the entry functions from session managers for debug endpoints
-        debug_functions = {name: sm.workflow for name, sm in session_managers.items()}
-        self._setup_debug_endpoints(mcp, debug_functions)
+        self._setup_debug_endpoints(mcp, functions)
 
     async def _get_all_functions(self, workflow: Workflow) -> dict[str, Function]:
         """Get all functions from the workflow.

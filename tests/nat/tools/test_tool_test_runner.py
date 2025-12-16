@@ -96,32 +96,3 @@ async def test_tool_with_mocked_dependencies():
             input_data="2 + 3")
 
         assert "5" in result
-
-
-async def test_tool_with_mocked_training_components():
-    """
-    Example of how to test a tool that depends on training components.
-
-    This demonstrates the pattern for tools that use trainers, trainer adapters,
-    or trajectory builders (like tools that perform fine-tuning operations).
-    """
-    from nat.test.tool_test_runner import with_mocked_dependencies
-
-    async with with_mocked_dependencies() as (runner, mock_builder):
-        # Mock training component dependencies
-        mock_builder.mock_trainer("my_trainer", {"status": "training_complete"})
-        mock_builder.mock_trainer_adapter("my_adapter", {"adapted": True})
-        mock_builder.mock_trajectory_builder("my_trajectory_builder", {"trajectories": []})
-
-        # Verify that mocked training components can be retrieved
-        trainer = await mock_builder.get_trainer("my_trainer", None, None)
-        assert trainer is not None
-        assert await trainer.train() == {"status": "training_complete"}
-
-        adapter = await mock_builder.get_trainer_adapter("my_adapter")
-        assert adapter is not None
-        assert await adapter.adapt() == {"adapted": True}
-
-        trajectory_builder = await mock_builder.get_trajectory_builder("my_trajectory_builder")
-        assert trajectory_builder is not None
-        assert await trajectory_builder.build() == {"trajectories": []}

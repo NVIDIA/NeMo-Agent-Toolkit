@@ -17,7 +17,6 @@ help:
 
 clean:
 	rm -rf $(BUILDDIR)
-	rm -rf $(SOURCEDIR)/api
 
 .PHONY: help Makefile
 

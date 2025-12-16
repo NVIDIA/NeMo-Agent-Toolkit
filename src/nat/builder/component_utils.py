@@ -29,9 +29,6 @@ from nat.data_models.component_ref import ComponentRefNode
 from nat.data_models.component_ref import generate_instance_id
 from nat.data_models.config import Config
 from nat.data_models.embedder import EmbedderBaseConfig
-from nat.data_models.finetuning import TrainerAdapterConfig
-from nat.data_models.finetuning import TrainerConfig
-from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.llm import LLMBaseConfig
@@ -41,8 +38,6 @@ from nat.data_models.object_store import ObjectStoreBaseConfig
 from nat.data_models.retriever import RetrieverBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.utils.type_utils import DecomposedType
-
-WORKFLOW_COMPONENT_NAME = "<workflow>"
 
 logger = logging.getLogger(__name__)
 
@@ -59,9 +54,6 @@ _component_group_order = [
     ComponentGroup.MIDDLEWARE,
     ComponentGroup.FUNCTION_GROUPS,
     ComponentGroup.FUNCTIONS,
-    ComponentGroup.TRAINER_ADAPTERS,
-    ComponentGroup.TRAJECTORY_BUILDERS,
-    ComponentGroup.TRAINERS
 ]
 
 
@@ -118,12 +110,6 @@ def group_from_component(component: TypedBaseModel) -> ComponentGroup | None:
         return ComponentGroup.AUTHENTICATION
     if (isinstance(component, EmbedderBaseConfig)):
         return ComponentGroup.EMBEDDERS
-    if (isinstance(component, TrainerConfig)):
-        return ComponentGroup.TRAINERS
-    if (isinstance(component, TrainerAdapterConfig)):
-        return ComponentGroup.TRAINER_ADAPTERS
-    if (isinstance(component, TrajectoryBuilderConfig)):
-        return ComponentGroup.TRAJECTORY_BUILDERS
     if (isinstance(component, FunctionBaseConfig)):
         return ComponentGroup.FUNCTIONS
     if (isinstance(component, FunctionGroupBaseConfig)):
@@ -177,16 +163,7 @@ def recursive_componentref_discovery(cls: TypedBaseModel, value: typing.Any,
             yield from recursive_componentref_discovery(cls, field_data, field_info.annotation)
     if (decomposed_type.is_union):
         for arg in decomposed_type.args:
-            # Check if value matches this union arg type
-            # TypedDict and some other types don't support isinstance checks,
-            # so we catch the TypeError and skip them
-            try:
-                is_match = arg is typing.Any or DecomposedType(arg).is_instance(value)
-            except TypeError:
-                # Skip types that don't support isinstance (e.g., TypedDict)
-                continue
-
-            if is_match:
+            if arg is typing.Any or DecomposedType(arg).is_instance(value):
                 yield from recursive_componentref_discovery(cls, value, arg)
     else:
         for arg in decomposed_type.args:
@@ -264,7 +241,7 @@ def config_to_dependency_objects(config: "Config") -> tuple[dict[str, ComponentI
     dependency_map[workflow_instance_id] = ComponentInstanceData(
         component_group=ComponentGroup.FUNCTIONS,
         instance_id=workflow_instance_id,
-        name=WORKFLOW_COMPONENT_NAME,  # type: ignore
+        name="<workflow>",  # type: ignore
         config=config.workflow,
         is_root=True)
 
@@ -288,8 +265,7 @@ def build_dependency_sequence(config: "Config") -> list[ComponentInstanceData]:
 
     total_node_count = (len(config.embedders) + len(config.functions) + len(config.function_groups) + len(config.llms) +
                         len(config.memory) + len(config.object_stores) + len(config.retrievers) +
-                        len(config.ttc_strategies) + len(config.authentication) + len(config.middleware) +
-                        len(config.trainers) + len(config.trajectory_builders) + len(config.trainer_adapters) + 1
+                        len(config.ttc_strategies) + len(config.authentication) + len(config.middleware) + 1
                         )  # +1 for the workflow
 
     dependency_map: dict

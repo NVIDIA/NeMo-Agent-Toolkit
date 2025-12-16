@@ -24,7 +24,6 @@ from uuid import uuid4
 from pydantic import BaseModel
 from tqdm import tqdm
 
-from nat.builder.context import ContextState
 from nat.data_models.evaluate import EvalConfig
 from nat.data_models.evaluate import JobEvictionPolicy
 from nat.data_models.runtime_enum import RuntimeTypeEnum
@@ -170,74 +169,62 @@ class EvaluationRun:
             if stop_event.is_set():
                 return "", []
 
-            # Set user_id in context if provided
-            user_id_token = None
-            if self.config.user_id:
-                user_id_token = ContextState().user_id.set(self.config.user_id)
+            async with session_manager.run(item.input_obj, runtime_type=RuntimeTypeEnum.EVALUATE) as runner:
+                if not session_manager.workflow.has_single_output:
+                    # raise an error if the workflow has multiple outputs
+                    raise NotImplementedError("Multiple outputs are not supported")
 
-            try:
-                async with session_manager.run(item.input_obj, runtime_type=RuntimeTypeEnum.EVALUATE) as runner:
-                    if not session_manager.workflow.has_single_output:
-                        # raise an error if the workflow has multiple outputs
-                        raise NotImplementedError("Multiple outputs are not supported")
+                runner_result = None
+                intermediate_future = None
 
-                    runner_result = None
-                    intermediate_future = None
+                try:
+                    # Start usage stats and intermediate steps collection in parallel
+                    intermediate_future = pull_intermediate()
+                    runner_result = runner.result()
+                    base_output = await runner_result
+                    intermediate_steps = await intermediate_future
+                except NotImplementedError as e:
+                    logger.error("Failed to run the workflow: %s", e)
+                    # raise original error
+                    raise
+                except Exception as e:
+                    logger.exception("Failed to run the workflow: %s", e)
+                    # stop processing if a workflow error occurs
+                    self.workflow_interrupted = True
 
-                    try:
-                        # Start usage stats and intermediate steps collection in parallel
-                        intermediate_future = pull_intermediate()
-                        runner_result = runner.result()
-                        base_output = await runner_result
-                        intermediate_steps = await intermediate_future
-                    except NotImplementedError as e:
-                        logger.error("Failed to run the workflow: %s", e)
-                        # raise original error
-                        raise
-                    except Exception as e:
-                        logger.exception("Failed to run the workflow: %s", e)
-                        # stop processing if a workflow error occurs
-                        self.workflow_interrupted = True
+                    # Cancel any coroutines that are still running, avoiding a warning about unawaited coroutines
+                    # (typically one of these two is what raised the exception and the other is still running)
+                    for coro in (runner_result, intermediate_future):
+                        if coro is not None:
+                            asyncio.ensure_future(coro).cancel()
 
-                        # Cancel any coroutines that are still running, avoiding a warning about unawaited coroutines
-                        # (typically one of these two is what raised the exception and the other is still running)
-                        for coro in (runner_result, intermediate_future):
-                            if coro is not None:
-                                asyncio.ensure_future(coro).cancel()
+                    stop_event.set()
+                    return
 
-                        stop_event.set()
-                        return
+                try:
+                    base_output = runner.convert(base_output, to_type=str)
+                except ValueError:
+                    pass
 
-                    try:
-                        base_output = runner.convert(base_output, to_type=str)
-                    except ValueError:
-                        pass
+                # if base_output is a pydantic model dump it to json
+                if isinstance(base_output, BaseModel):
+                    output = base_output.model_dump_json(indent=2)
+                else:
+                    m = jsonpath_expr.find(base_output)
+                    if (not m):
+                        raise RuntimeError(f"Failed to extract output using jsonpath: {self.config.result_json_path}")
+                    if (len(m) > 1):
+                        logger.warning("Multiple matches found for jsonpath at row '%s'. Matches: %s. Using the first",
+                                       base_output,
+                                       m)
+                    output = m[0].value
 
-                    # if base_output is a pydantic model dump it to json
-                    if isinstance(base_output, BaseModel):
-                        output = base_output.model_dump_json(indent=2)
-                    else:
-                        m = jsonpath_expr.find(base_output)
-                        if (not m):
-                            raise RuntimeError(
-                                f"Failed to extract output using jsonpath: {self.config.result_json_path}")
-                        if (len(m) > 1):
-                            logger.warning(
-                                "Multiple matches found for jsonpath at row '%s'. Matches: %s. Using the first",
-                                base_output,
-                                m)
-                        output = m[0].value
+                item.output_obj = output
+                item.trajectory = self.intermediate_step_adapter.validate_intermediate_steps(intermediate_steps)
+                usage_stats_item = self._compute_usage_stats(item)
 
-                    item.output_obj = output
-                    item.trajectory = self.intermediate_step_adapter.validate_intermediate_steps(intermediate_steps)
-                    usage_stats_item = self._compute_usage_stats(item)
-
-                    self.weave_eval.log_prediction(item, output)
-                    await self.weave_eval.log_usage_stats(item, usage_stats_item)
-            finally:
-                # Reset user_id context if it was set
-                if user_id_token is not None:
-                    ContextState().user_id.reset(user_id_token)
+                self.weave_eval.log_prediction(item, output)
+                await self.weave_eval.log_usage_stats(item, usage_stats_item)
 
         async def wrapped_run(item: EvalInputItem) -> None:
             await run_one(item)
@@ -539,32 +526,25 @@ class EvaluationRun:
 
             with self.eval_trace_context.evaluation_context():
                 # Run workflow
-                local_session_manager: SessionManager | None = None
-                try:
-                    if self.config.endpoint:
-                        await self.run_workflow_remote()
-                    elif not self.config.skip_workflow:
-                        if session_manager is None:
-                            session_manager = await SessionManager.create(
-                                config=config,
-                                shared_builder=eval_workflow,
-                                max_concurrency=self.eval_config.general.max_concurrency)
-                            local_session_manager = session_manager
-                        await self.run_workflow_local(session_manager)
+                if self.config.endpoint:
+                    await self.run_workflow_remote()
+                elif not self.config.skip_workflow:
+                    if session_manager is None:
+                        workflow = await eval_workflow.build()
+                        session_manager = SessionManager(workflow,
+                                                         max_concurrency=self.eval_config.general.max_concurrency)
+                    await self.run_workflow_local(session_manager)
 
-                    # Pre-evaluation process the workflow output
-                    self.eval_input = dataset_handler.pre_eval_process_eval_input(self.eval_input)
+                # Pre-evaluation process the workflow output
+                self.eval_input = dataset_handler.pre_eval_process_eval_input(self.eval_input)
 
-                    # Evaluate
-                    evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
-                    await self.run_evaluators(evaluators)
+                # Evaluate
+                evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
+                await self.run_evaluators(evaluators)
 
-                    # Wait for all trace export tasks to complete (local workflows only)
-                    if session_manager and not self.config.endpoint:
-                        await self.wait_for_all_export_tasks_local(session_manager, timeout=self.config.export_timeout)
-                finally:
-                    if local_session_manager is not None:
-                        await local_session_manager.shutdown()
+                # Wait for all trace export tasks to complete (local workflows only)
+                if session_manager and not self.config.endpoint:
+                    await self.wait_for_all_export_tasks_local(session_manager, timeout=self.config.export_timeout)
 
         # Profile the workflow
         profiler_results = await self.profile_workflow()

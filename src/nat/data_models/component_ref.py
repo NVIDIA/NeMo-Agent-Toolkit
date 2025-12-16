@@ -188,36 +188,3 @@ class MiddlewareRef(ComponentRef):
     @override
     def component_group(self):
         return ComponentGroup.MIDDLEWARE
-
-
-class TrainerRef(ComponentRef):
-    """
-    A reference to a trainer in a NAT configuration object.
-    """
-
-    @property
-    @override
-    def component_group(self):
-        return ComponentGroup.TRAINERS
-
-
-class TrajectoryBuilderRef(ComponentRef):
-    """
-    A reference to a trajectory builder in a NAT configuration object.
-    """
-
-    @property
-    @override
-    def component_group(self):
-        return ComponentGroup.TRAJECTORY_BUILDERS
-
-
-class TrainerAdapterRef(ComponentRef):
-    """
-    A reference to a trainer adapter in a NAT configuration object.
-    """
-
-    @property
-    @override
-    def component_group(self):
-        return ComponentGroup.TRAINER_ADAPTERS

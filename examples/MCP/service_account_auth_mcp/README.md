@@ -19,7 +19,7 @@ limitations under the License.
 
 This example demonstrates how to use the NVIDIA NeMo Agent toolkit with MCP servers that support service account authentication. Service account authentication enables headless, automated workflows without requiring browser-based user interaction.
 
-It is recommended to read the [MCP Service Account Authentication](../../../docs/source/components/auth/mcp-auth/mcp-service-account-auth.md) documentation first.
+It is recommended to read the [MCP Service Account Authentication](../../../docs/source/workflows/mcp/mcp-service-account-auth.md) documentation first.
 
 ## Overview
 
@@ -182,7 +182,7 @@ When using service account authentication:
 
 ## Troubleshooting
 
-For common issues and solutions, refer to the [Troubleshooting section](../../../docs/source/components/auth/mcp-auth/mcp-service-account-auth.md#troubleshooting) in the Service Account Authentication documentation.
+For common issues and solutions, see the [Troubleshooting section](../../../docs/source/workflows/mcp/mcp-service-account-auth.md#troubleshooting) in the Service Account Authentication documentation.
 
 ## Adapting This Example
 
@@ -210,10 +210,10 @@ To use this example with your own service:
 4. For dual authentication, configure the service token header name and service token
 5. Adjust the token prefix if your service uses a different format
 
-For detailed configuration options and authentication patterns, refer to the [MCP Service Account Authentication](../../../docs/source/components/auth/mcp-auth/mcp-service-account-auth.md) documentation.
+For detailed configuration options and authentication patterns, refer to the [MCP Service Account Authentication](../../../docs/source/workflows/mcp/mcp-service-account-auth.md) documentation.
 
 ## See Also
 
-- [MCP Service Account Authentication](../../../docs/source/components/auth/mcp-auth/mcp-service-account-auth.md) - Complete configuration reference and authentication patterns
-- [MCP Authentication](../../../docs/source/components/auth/mcp-auth/index.md) - OAuth2 interactive authentication for user-facing workflows
-- [MCP Client](../../../docs/source/build-workflows/mcp-client.md) - MCP client configuration guide
+- [MCP Service Account Authentication](../../../docs/source/workflows/mcp/mcp-service-account-auth.md) - Complete configuration reference and authentication patterns
+- [MCP Authentication](../../../docs/source/workflows/mcp/mcp-auth.md) - OAuth2 interactive authentication for user-facing workflows
+- [MCP Client](../../../docs/source/workflows/mcp/mcp-client.md) - MCP client configuration guide
