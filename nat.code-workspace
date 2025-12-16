@@ -53,7 +53,7 @@
         "pylint.importStrategy": "fromEnvironment",
         "python.analysis.inlayHints.pytestParameters": true,
         "python.analysis.typeCheckingMode": "basic",
-        "python.languageServer": "None",
+        "python.languageServer": "Pylance",
         "python.testing.pytestArgs": [
             "-s"
         ],
@@ -62,14 +62,6 @@
         "rewrap.wrappingColumn": 120,
         "yapf.args": [
             "--style=${workspaceFolder}/pyproject.toml"
-        ],
-        "cursorpyright.analysis.exclude": [
-            "**/node_modules",
-            "**/__pycache__",
-            ".git",
-            "build",
-            "dist"
-        ],
-        "cursorpyright.analysis.typeCheckingMode": "basic"
+        ]
     }
 }

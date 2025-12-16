@@ -37,12 +37,10 @@ dependencies = [
   "openinference-semantic-conventions~=0.1.14",
   "openpyxl~=3.1",
   "optuna~=4.4.0",
-  "pandas~=2.2",
   "pip>=24.3.1",
   "pkce==1.0.3",
   "pkginfo~=1.12",
   "platformdirs~=4.3",
-  "plotly~=6.0",
   "pydantic~=2.11",
   "pymilvus~=2.5",
   "python-dotenv~=1.1.1",
@@ -87,7 +85,6 @@ mcp = ["nvidia-nat-mcp"]
 mem0ai = ["nvidia-nat-mem0ai"]
 opentelemetry = ["nvidia-nat-opentelemetry"]
 phoenix = ["nvidia-nat-phoenix"]
-pii-defense = ["presidio-analyzer~=2.2", "presidio-anonymizer~=2.2"]
 profiling = ["nvidia-nat-profiling"] # meta-package
 ragaai = ["nvidia-nat-ragaai"]
 mysql = ["nvidia-nat-mysql"]
@@ -167,11 +164,6 @@ litellm = [
 ]
 openai = [
   "openai~=1.106"
-]
-huggingface = [
-  "transformers~=4.57",
-  "torch~=2.9",
-  "accelerate~=1.12"
 ]
 
 [tool.uv]

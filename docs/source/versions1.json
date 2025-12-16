@@ -1,11 +1,7 @@
 [
     {
-        "version": "1.5",
-        "preferred": true,
-        "url": "../1.5/"
-    },
-    {
         "version": "1.4",
+        "preferred": true,
         "url": "https://docs.nvidia.com/nemo/agent-toolkit/1.3/"
     },
     {
