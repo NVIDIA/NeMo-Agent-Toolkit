@@ -249,7 +249,7 @@ nvidia-smi
 
 Example output for an 8x H100 system:
 
-```
+```text
 +-----------------------------------------------------------------------------------------+
 | NVIDIA-SMI 580.65.06              Driver Version: 580.65.06      CUDA Version: 13.0     |
 +-----------------------------------------+------------------------+----------------------+
@@ -423,7 +423,7 @@ bash test_dynamo_integration.sh
 6. NAT workflow with prefix hints runs successfully
 
 **Expected output (all tests passing):**
-```
+```text
 ==========================================
 Testing react_benchmark_agent with Dynamo
 ==========================================
@@ -479,7 +479,7 @@ bash stop_dynamo.sh
 - `nats` container (`nats-dynamo`)
 
 **Output:**
-```
+```text
 =========================================================
 Stopping Dynamo SGLang FULL STACK
 =========================================================
@@ -526,7 +526,7 @@ source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 6. NAT workflow executes with prefix hints
 
 **Expected output:**
-```
+```text
 ==========================================
 Test Summary
 ==========================================
@@ -716,7 +716,7 @@ llms:
 1. **NAT Config** uses `_type: dynamo` (prefix headers enabled by default)
 2. **Dynamo LLM Provider** generates unique UUID per request using the template
 3. **Headers injected** into HTTP request:
-   ```
+   ```text
    x-prefix-id: react-benchmark-a1b2c3d4e5f6g7h8
    x-prefix-total-requests: 1
    x-prefix-osl: MEDIUM
@@ -919,7 +919,7 @@ watch -n 1 nvidia-smi
 
 ## File Structure
 
-```
+```text
 external/dynamo/                                # Dynamo backend
 │
 ├── 📄 README.md                                # This file - Dynamo setup guide
