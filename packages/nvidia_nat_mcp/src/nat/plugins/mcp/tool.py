@@ -85,17 +85,21 @@ def mcp_tool_function(tool: MCPToolClient) -> FunctionInfo:
         return tool.input_schema.model_validate_json(input_str)
 
     async def _response_fn(tool_input: BaseModel | None = None, **kwargs) -> str:
-        # Run the tool, catching any errors and sending to agent for correction
-        try:
-            if tool_input:
-                args = tool_input.model_dump()
-                return await tool.acall(args)
-
-            _ = tool.input_schema.model_validate(kwargs)
-            return await tool.acall(kwargs)
-        except Exception as e:
-            logger.warning("Error calling tool %s", tool.name, exc_info=True)
-            return str(e)
+         # Run the tool, catching any errors and sending to agent for correction
+         try:
+             if tool_input:
+                 # Exclude None values for optional parameters.
+                 # Sourcegraph will use server-side defaults for omitted optional fields.
+                 args = tool_input.model_dump(exclude_none=True)
+                 return await tool.acall(args)
+    
+             # Also filter None values from kwargs
+             kwargs_filtered = {k: v for k, v in kwargs.items() if v is not None}
+             _ = tool.input_schema.model_validate(kwargs)
+             return await tool.acall(kwargs_filtered)
+         except Exception as e:
+             logger.warning("Error calling tool %s", tool.name, exc_info=True)
+             return str(e)
 
     return FunctionInfo.create(single_fn=_response_fn,
                                description=tool.description,
