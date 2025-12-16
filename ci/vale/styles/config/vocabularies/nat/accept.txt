@@ -114,7 +114,6 @@ NIC
 NIM(s?)
 npm
 NumPy
-NAT's
 NVIDIA
 Nemotron
 OAuth
