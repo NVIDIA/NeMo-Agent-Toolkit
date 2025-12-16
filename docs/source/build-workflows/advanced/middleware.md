@@ -628,8 +628,8 @@ Build order:
 6. [Retrievers](../retrievers.md)
 7. [TTC strategies](../../improve-workflows/test-time-compute.md)
 8. **Middleware** ← Built here
-9. [Function groups](./functions-and-function-groups/function-groups.md) ← Can use middleware
-10. [Functions](./functions-and-function-groups/functions.md) ← Can use middleware
+9. [Function groups](../functions-and-function-groups/function-groups.md) ← Can use middleware
+10. [Functions](../functions-and-function-groups/functions.md) ← Can use middleware
 
 ## Troubleshooting
 
