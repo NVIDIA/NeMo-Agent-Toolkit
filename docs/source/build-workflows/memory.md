@@ -17,7 +17,7 @@ limitations under the License.
 
 # NVIDIA NeMo Agent Toolkit Memory Module
 
-The NeMo Agent toolkit Memory subsystem is designed to store and retrieve a user's conversation history, preferences, and other "long-term memory." This is especially useful for building stateful [LLM](./llms/index.md)-based applications that recall user-specific data or interactions across multiple steps.
+The NeMo Agent toolkit Memory subsystem is designed to store and retrieve a user's conversation history, preferences, and other "long-term memory." This is especially useful for building stateful [LLM-based](./llms/index.md) applications that recall user-specific data or interactions across multiple steps.
 
 The memory module is designed to be extensible, allowing developers to create custom memory back-ends, providers in NeMo Agent toolkit terminology.
 
