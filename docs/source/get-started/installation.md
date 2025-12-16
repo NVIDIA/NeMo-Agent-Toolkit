@@ -47,7 +47,7 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[mysql]` or `nvidia-nat-mysql` - [MySQL](https://www.mysql.com/)
 - `nvidia-nat[opentelemetry]` or `nvidia-nat-opentelemetry` - [OpenTelemetry](https://opentelemetry.io/)
 - `nvidia-nat[phoenix]` or `nvidia-nat-phoenix` - [Arize Phoenix](https://arize.com/docs/phoenix)
-- `nvidia-nat[profiling]` or `nvidia-nat-profiling` - Additional dependencies needed for profiling
+- `nvidia-nat[profiling]` or `nvidia-nat-profiling` - Additional dependencies needed for [profiling](../improve-workflows/profiler.md)
 - `nvidia-nat[ragaai]` or `nvidia-nat-ragaai` - [RagaAI Catalyst](https://raga.ai/)
 - `nvidia-nat[redis]` or `nvidia-nat-redis` - [Redis](https://redis.io/)
 - `nvidia-nat[s3]` or `nvidia-nat-s3` - [Amazon S3](https://aws.amazon.com/s3/)
