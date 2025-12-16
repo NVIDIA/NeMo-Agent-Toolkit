@@ -69,7 +69,7 @@ class WeaveFastAPIPluginWorker(FastApiFrontEndPluginWorker):
             return
 
         try:
-            session_manager = SessionManager(await builder.build())
+            session_manager = await SessionManager.create(config=self._config, shared_builder=builder)
 
             # Get the weave project name from the configuration
             entity = weave_config.entity
