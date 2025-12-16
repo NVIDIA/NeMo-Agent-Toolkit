@@ -263,19 +263,19 @@ optimizer:
     llm_latency:
       evaluator_name: avg_llm_latency
       direction: minimize
-      weight: 0.7  # 50% weight - primary objective
+      weight: 0.7  # 70% weight - primary objective
     
     # Secondary: Minimize total workflow runtime
     workflow_runtime:
       evaluator_name: avg_workflow_runtime
       direction: minimize
-      weight: 0.2  # 30% weight
+      weight: 0.2  # 20% weight
     
     # Tertiary: Minimize number of LLM calls (efficiency)
     num_calls:
       evaluator_name: avg_num_llm_calls
       direction: minimize
-      weight: 0.1  # 20% weight
+      weight: 0.1  # 10% weight
   
   # =========================================================================
   # NUMERIC OPTIMIZATION (Optuna-based)

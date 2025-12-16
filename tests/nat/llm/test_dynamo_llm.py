@@ -12,19 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Unit tests for the Dynamo LLM provider."""
 
-from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
 import pytest
 
-from nat.llm.dynamo_llm import create_httpx_client_with_dynamo_hooks
 from nat.llm.dynamo_llm import DynamoModelConfig
 from nat.llm.dynamo_llm import DynamoPrefixContext
 from nat.llm.dynamo_llm import _create_dynamo_request_hook
-
+from nat.llm.dynamo_llm import create_httpx_client_with_dynamo_hooks
 
 # ---------------------------------------------------------------------------
 # DynamoModelConfig Tests
@@ -442,4 +439,3 @@ class TestDynamoLLMProvider:
     def test_dynamo_model_config_full_type(self):
         """Test that DynamoModelConfig has the correct full type."""
         assert DynamoModelConfig.static_full_type() == "nat.llm/dynamo"
-

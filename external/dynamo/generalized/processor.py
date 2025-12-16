@@ -15,21 +15,20 @@
 
 import argparse
 import asyncio
+import csv
 import logging
+import os
 import time
 import uuid
-import json
-import csv
-import os
-from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
-import jinja2
+from collections.abc import AsyncIterator
+from typing import Any
 
 import uvloop
+from dynamo.runtime import DistributedRuntime
+from dynamo.runtime import dynamo_worker
+from dynamo.runtime.logging import configure_dynamo_logging
 from pydantic import BaseModel
 from transformers import AutoTokenizer
-
-from dynamo.runtime import DistributedRuntime, dynamo_worker
-from dynamo.runtime.logging import configure_dynamo_logging
 
 configure_dynamo_logging()
 logger = logging.getLogger(__name__)
@@ -41,61 +40,62 @@ class Message(BaseModel):
     # Allow None or structured content for assistant tool-calls and tool messages
     content: Any | None = None
     # Optional fields for tool and assistant messages
-    name: Optional[str] = None
-    tool_call_id: Optional[str] = None
-    tool_calls: Optional[List[Dict[str, Any]]] = None
+    name: str | None = None
+    tool_call_id: str | None = None
+    tool_calls: list[dict[str, Any]] | None = None
 
 
 class StreamOptions(BaseModel):
-    include_usage: Optional[bool] = False
+    include_usage: bool | None = False
 
 
 class PrefixHints(BaseModel):
     prefix_id: str
-    total_requests: int           # same value on every call for this prefix
-    osl: str                      # LOW | MEDIUM | HIGH  (output sequence length)
-    iat: str                      # LOW | MEDIUM | HIGH  (inter-arrival time)
+    total_requests: int  # same value on every call for this prefix
+    osl: str  # LOW | MEDIUM | HIGH  (output sequence length)
+    iat: str  # LOW | MEDIUM | HIGH  (inter-arrival time)
 
 
 class ChatCompletionRequest(BaseModel):
-    model: Optional[str] = "Qwen/Qwen2.5-0.5B-Instruct"
-    messages: List[Message]
-    max_tokens: Optional[int] = 1024
-    temperature: Optional[float] = 0.6
-    top_p: Optional[float] = 0.999
-    top_k: Optional[int] = 1
-    ignore_eos: Optional[bool] = False
+    model: str | None = "Qwen/Qwen2.5-0.5B-Instruct"
+    messages: list[Message]
+    max_tokens: int | None = 1024
+    temperature: float | None = 0.6
+    top_p: float | None = 0.999
+    top_k: int | None = 1
+    ignore_eos: bool | None = False
 
     # Passed through from frontend
-    stream: Optional[bool] = False
-    stream_options: Optional[StreamOptions] = None
-    prefix_hints: Optional[PrefixHints] = None
+    stream: bool | None = False
+    stream_options: StreamOptions | None = None
+    prefix_hints: PrefixHints | None = None
 
     # Native tool-calling support (pass-through to engine)
-    tools: Optional[List[Dict[str, Any]]] = None
-    tool_choice: Optional[Any] = None
-    parallel_tool_calls: Optional[bool] = None
+    tools: list[dict[str, Any]] | None = None
+    tool_choice: Any | None = None
+    parallel_tool_calls: bool | None = None
 
 
 class RouterRequest(BaseModel):
-    tokens: List[int]
+    tokens: list[int]
     prefix_id: str
-    reuse_budget: int = 0             # remaining *after this request*
-    expected_osl: Optional[str] = None
-    interarrival: Optional[str] = None
+    reuse_budget: int = 0  # remaining *after this request*
+    expected_osl: str | None = None
+    interarrival: str | None = None
 
 
 class RouterFeedbackRequest(BaseModel):
     decision_id: str
     latency_ms: float
-    success: Optional[bool] = True
-    tokens_in: Optional[int] = None
-    tokens_out: Optional[int] = None
-    finish_reason: Optional[str] = None
+    success: bool | None = True
+    tokens_in: int | None = None
+    tokens_out: int | None = None
+    finish_reason: str | None = None
 
 
 # -------------------------- processor handler -------------------------- #
 class ProcessorRequestHandler:
+
     def __init__(
         self,
         runtime: DistributedRuntime,
@@ -106,13 +106,13 @@ class ProcessorRequestHandler:
         self.model_name = model_name
         self.enable_router = enable_router
 
-        self.tokenizer: Optional[AutoTokenizer] = None
+        self.tokenizer: AutoTokenizer | None = None
         self.router_pick_client = None
         self.router_feedback_client = None
         self.engine_client = None
 
         # Prefix-level state: {prefix_id: {"total": int, "processed": int}}
-        self._prefix_state: Dict[str, Dict[str, int]] = {}
+        self._prefix_state: dict[str, dict[str, int]] = {}
         self._prefix_lock = asyncio.Lock()
 
         # CSV metrics logging
@@ -143,12 +143,7 @@ class ProcessorRequestHandler:
             logger.info("Router clients initialized")
 
         # engine client
-        self.engine_client = (
-            await self.runtime.namespace("dynamo")
-            .component("backend")
-            .endpoint("generate")
-            .client()
-        )
+        self.engine_client = (await self.runtime.namespace("dynamo").component("backend").endpoint("generate").client())
         logger.info("Processor initialized successfully")
 
         # Initialize metrics CSV with header if file doesn't exist
@@ -165,7 +160,7 @@ class ProcessorRequestHandler:
                 else:
                     # Count existing data rows (exclude header)
                     try:
-                        with open(self._metrics_csv_path, "r", newline="") as f:
+                        with open(self._metrics_csv_path, newline="") as f:
                             # subtract header if present
                             lines = sum(1 for _ in f)
                             self._metrics_written_count = max(lines - 1, 0)
@@ -175,29 +170,27 @@ class ProcessorRequestHandler:
             logger.warning("Failed to initialize metrics CSV %s: %s", self._metrics_csv_path, e)
 
     # ---- helpers ----
-    def _render_prompt(self, messages: List[Message]) -> str:
+    def _render_prompt(self, messages: list[Message]) -> str:
         message_dicts = [{"role": m.role, "content": m.content} for m in messages]
         if getattr(self.tokenizer, "chat_template", None):
             try:
-                return self.tokenizer.apply_chat_template(
-                    message_dicts, tokenize=False, add_generation_prompt=True
-                )
+                return self.tokenizer.apply_chat_template(message_dicts, tokenize=False, add_generation_prompt=True)
             except Exception as e:
                 logger.warning(f"Chat template failed: {e}, using simple format")
 
         return "\n".join(f"{m.role}: {m.content}" for m in messages) + "\nassistant:"
 
-    def tokenize(self, text: str) -> List[int]:
+    def tokenize(self, text: str) -> list[int]:
         if not self.tokenizer:
             raise RuntimeError("Tokenizer not initialized")
         return self.tokenizer.encode(text, add_special_tokens=True)
 
-    def detokenize(self, token_ids: List[int]) -> str:
+    def detokenize(self, token_ids: list[int]) -> str:
         if not self.tokenizer:
             raise RuntimeError("Tokenizer not initialized")
         return self.tokenizer.decode(token_ids, skip_special_tokens=True)
 
-    async def _update_prefix_state(self, hints: PrefixHints) -> Tuple[int, str, str]:
+    async def _update_prefix_state(self, hints: PrefixHints) -> tuple[int, str, str]:
         """Updates prefix counters and returns (remaining_after, osl, iat)."""
         pid = hints.prefix_id
         total = max(1, int(hints.total_requests))
@@ -222,9 +215,8 @@ class ProcessorRequestHandler:
                 self._prefix_state.pop(pid, None)
         return remaining_after, osl, iat
 
-    async def _pick_worker(
-        self, token_ids: List[int], prefix_id: str, reuse_budget: int, osl: str, iat: str
-    ) -> Tuple[Optional[int], Optional[str]]:
+    async def _pick_worker(self, token_ids: list[int], prefix_id: str, reuse_budget: int, osl: str,
+                           iat: str) -> tuple[int | None, str | None]:
         if not self.router_pick_client:
             return None, None
 
@@ -237,8 +229,8 @@ class ProcessorRequestHandler:
         )
         stream = await self.router_pick_client.generate(req.model_dump())
 
-        worker_id: Optional[int] = None
-        decision_id: Optional[str] = None
+        worker_id: int | None = None
+        decision_id: str | None = None
         async for chunk in stream:
             data = chunk.data()
             if "error" in data:
@@ -255,10 +247,13 @@ class ProcessorRequestHandler:
             logger.warning("Router stream ended without worker_id; falling back to engine load balancing.")
         return worker_id, decision_id
 
-    async def _send_feedback_safely(
-        self, decision_id: Optional[str], latency_ms: float, success: bool,
-        tokens_in: int, tokens_out: int, finish_reason: Optional[str]
-    ):
+    async def _send_feedback_safely(self,
+                                    decision_id: str | None,
+                                    latency_ms: float,
+                                    success: bool,
+                                    tokens_in: int,
+                                    tokens_out: int,
+                                    finish_reason: str | None):
         if not decision_id or not self.router_feedback_client:
             return
         try:
@@ -278,7 +273,7 @@ class ProcessorRequestHandler:
 
     async def _stream_from_engine(
         self,
-        token_ids: List[int],
+        token_ids: list[int],
         model: str,
         temperature: float,
         top_p: float,
@@ -289,13 +284,17 @@ class ProcessorRequestHandler:
         reuse_budget: int,
         osl: str,
         iat: str,
-    ) -> AsyncIterator[Dict[str, Any]]:
+    ) -> AsyncIterator[dict[str, Any]]:
         """Streaming generator: yields {'delta': str} tokens and finally {'finish_reason': <str>}."""
         worker_id, decision_id = await self._pick_worker(token_ids, prefix_id, reuse_budget, osl, iat)
-        engine_request: Dict[str, Any] = {
+        engine_request: dict[str, Any] = {
             "token_ids": token_ids,
-            "sampling_options": {"temperature": temperature, "top_p": top_p, "top_k": top_k},
-            "stop_conditions": {"max_tokens": max_tokens, "ignore_eos": ignore_eos},
+            "sampling_options": {
+                "temperature": temperature, "top_p": top_p, "top_k": top_k
+            },
+            "stop_conditions": {
+                "max_tokens": max_tokens, "ignore_eos": ignore_eos
+            },
             "model": model,
         }
 
@@ -305,18 +304,21 @@ class ProcessorRequestHandler:
             stream = await self.engine_client.generate(engine_request)
 
         t0 = time.perf_counter()
-        all_tokens: List[int] = []
+        all_tokens: list[int] = []
         text_so_far: str = ""
-        finish_reason: Optional[str] = None
+        finish_reason: str | None = None
 
         try:
             async for chunk in stream:
                 data = chunk.data()
                 if "error" in data:
                     latency_ms = (time.perf_counter() - t0) * 1000.0
-                    await self._send_feedback_safely(
-                        decision_id, latency_ms, False, len(token_ids), len(all_tokens), "error"
-                    )
+                    await self._send_feedback_safely(decision_id,
+                                                     latency_ms,
+                                                     False,
+                                                     len(token_ids),
+                                                     len(all_tokens),
+                                                     "error")
                     yield {"error": data["error"]}
                     return
 
@@ -333,9 +335,12 @@ class ProcessorRequestHandler:
                 if "finish_reason" in data and data["finish_reason"] is not None:
                     finish_reason = data["finish_reason"]
                     latency_ms = (time.perf_counter() - t0) * 1000.0
-                    await self._send_feedback_safely(
-                        decision_id, latency_ms, True, len(token_ids), len(all_tokens), finish_reason
-                    )
+                    await self._send_feedback_safely(decision_id,
+                                                     latency_ms,
+                                                     True,
+                                                     len(token_ids),
+                                                     len(all_tokens),
+                                                     finish_reason)
                     # Persist per-request metrics to CSV (concurrency-safe)
                     await self._log_request_metrics(num_tokens=len(all_tokens), latency_ms=latency_ms)
                     yield {"finish_reason": finish_reason}
@@ -343,21 +348,23 @@ class ProcessorRequestHandler:
 
         except Exception as e:
             latency_ms = (time.perf_counter() - t0) * 1000.0
-            await self._send_feedback_safely(
-                decision_id, latency_ms, False, len(token_ids), len(all_tokens), "exception"
-            )
+            await self._send_feedback_safely(decision_id,
+                                             latency_ms,
+                                             False,
+                                             len(token_ids),
+                                             len(all_tokens),
+                                             "exception")
             logger.exception("Engine stream exception: %s", e)
             yield {"error": str(e)}
             return
 
     # ---- main generation ----
-    async def generate(self, raw: Dict[str, Any]):
+    async def generate(self, raw: dict[str, Any]):
         """Processor endpoint: always yields a stream of dicts."""
         chat_req = ChatCompletionRequest(**raw)
         logger.info("Chat completion request was %s with %d messages", chat_req.model, len(chat_req.messages))
         hints = chat_req.prefix_hints or PrefixHints(
-            prefix_id=f"auto-{uuid.uuid4().hex}", total_requests=1, osl="MEDIUM", iat="MEDIUM"
-        )
+            prefix_id=f"auto-{uuid.uuid4().hex}", total_requests=1, osl="MEDIUM", iat="MEDIUM")
 
         # Update prefix state and compute reuse_budget := remaining AFTER this request
         reuse_budget, osl, iat = await self._update_prefix_state(hints)
@@ -368,19 +375,17 @@ class ProcessorRequestHandler:
         tokens = self.tokenize(text)
 
         # Stream from engine (frontend can aggregate if non-streaming)
-        async for resp in self._stream_from_engine(
-            tokens,
-            chat_req.model,
-            chat_req.temperature,
-            chat_req.top_p,
-            chat_req.top_k,
-            chat_req.ignore_eos,
-            chat_req.max_tokens,
-            hints.prefix_id,
-            reuse_budget,
-            osl,
-            iat
-        ):
+        async for resp in self._stream_from_engine(tokens,
+                                                   chat_req.model,
+                                                   chat_req.temperature,
+                                                   chat_req.top_p,
+                                                   chat_req.top_k,
+                                                   chat_req.ignore_eos,
+                                                   chat_req.max_tokens,
+                                                   hints.prefix_id,
+                                                   reuse_budget,
+                                                   osl,
+                                                   iat):
             yield resp
 
     async def _log_request_metrics(self, *, num_tokens: int, latency_ms: float):
@@ -417,9 +422,7 @@ async def worker(runtime: DistributedRuntime):
     component = runtime.namespace("dynamo").component("processor")
     await component.create_service()
 
-    handler = ProcessorRequestHandler(
-        runtime, model_name=args.model, enable_router=args.enable_router
-    )
+    handler = ProcessorRequestHandler(runtime, model_name=args.model, enable_router=args.enable_router)
     await handler.initialize()
     await component.endpoint("process").serve_endpoint(handler.generate)
 

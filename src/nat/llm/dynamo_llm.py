@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 Dynamo LLM provider with automatic prefix header injection for KV cache optimization.
 
@@ -42,10 +41,14 @@ Dynamo Prefix Parameters:
 
 import logging
 import uuid
+from collections.abc import Callable
+from collections.abc import Coroutine
+from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
-from collections.abc import Callable, Coroutine
-from typing import TYPE_CHECKING, Any, Iterator, Literal
+from typing import TYPE_CHECKING
+from typing import Any
+from typing import Literal
 
 if TYPE_CHECKING:
     import httpx
@@ -55,7 +58,8 @@ from pydantic import Field
 from nat.builder.builder import Builder
 from nat.builder.llm import LLMProviderInfo
 from nat.cli.register_workflow import register_llm_provider
-from nat.data_models.optimizable import OptimizableField, SearchSpace
+from nat.data_models.optimizable import OptimizableField
+from nat.data_models.optimizable import SearchSpace
 from nat.llm.openai_llm import OpenAIModelConfig
 
 logger = logging.getLogger(__name__)
@@ -169,43 +173,32 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
     prefix_template: str | None = Field(
         default="nat-dynamo-{uuid}",
         description="Template for prefix ID. The {uuid} placeholder will be replaced with a unique ID. "
-                    "Prefix headers are sent by default for KV cache optimization. "
-                    "Set to null/None to disable prefix header injection.",
+        "Prefix headers are sent by default for KV cache optimization. "
+        "Set to null/None to disable prefix header injection.",
     )
 
     prefix_total_requests: int = OptimizableField(
         default=10,
         ge=1,
         le=50,
-        description=(
-            "Expected number of requests for this conversation/prefix. "
-            "Higher values increase worker stickiness and KV cache locality. "
-            "Lower values allow more load balancing across workers."
-        ),
-        space=SearchSpace(low=1, high=20, step=5)
-    )
+        description=("Expected number of requests for this conversation/prefix. "
+                     "Higher values increase worker stickiness and KV cache locality. "
+                     "Lower values allow more load balancing across workers."),
+        space=SearchSpace(low=1, high=20, step=5))
 
-    prefix_osl: PrefixLevel = OptimizableField(
-        default="MEDIUM",
-        description=(
-            "Output Sequence Length hint for the Dynamo router. "
-            "LOW=short responses (decode_cost=1.0), "
-            "MEDIUM=typical (decode_cost=2.0), "
-            "HIGH=long responses (decode_cost=3.0)."
-        ),
-        space=SearchSpace(values=["LOW", "MEDIUM", "HIGH"])
-    )
+    prefix_osl: PrefixLevel = OptimizableField(default="MEDIUM",
+                                               description=("Output Sequence Length hint for the Dynamo router. "
+                                                            "LOW=short responses (decode_cost=1.0), "
+                                                            "MEDIUM=typical (decode_cost=2.0), "
+                                                            "HIGH=long responses (decode_cost=3.0)."),
+                                               space=SearchSpace(values=["LOW", "MEDIUM", "HIGH"]))
 
-    prefix_iat: PrefixLevel = OptimizableField(
-        default="MEDIUM",
-        description=(
-            "Inter-Arrival Time hint for the Dynamo router. "
-            "LOW=rapid bursts (iat_factor=1.5, high stickiness), "
-            "MEDIUM=normal (iat_factor=1.0), "
-            "HIGH=slow requests (iat_factor=0.6, more exploration)."
-        ),
-        space=SearchSpace(values=["LOW", "MEDIUM", "HIGH"])
-    )
+    prefix_iat: PrefixLevel = OptimizableField(default="MEDIUM",
+                                               description=("Inter-Arrival Time hint for the Dynamo router. "
+                                                            "LOW=rapid bursts (iat_factor=1.5, high stickiness), "
+                                                            "MEDIUM=normal (iat_factor=1.0), "
+                                                            "HIGH=slow requests (iat_factor=0.6, more exploration)."),
+                                               space=SearchSpace(values=["LOW", "MEDIUM", "HIGH"]))
 
     request_timeout: float = Field(
         default=600.0,
@@ -303,10 +296,11 @@ def _create_dynamo_request_hook(
         request.headers["x-prefix-osl"] = osl.upper()
         request.headers["x-prefix-iat"] = iat.upper()
 
-        logger.debug(
-            "Injected Dynamo headers: prefix_id=%s, total_requests=%d, osl=%s, iat=%s",
-            prefix_id, total_requests, osl.upper(), iat.upper()
-        )
+        logger.debug("Injected Dynamo headers: prefix_id=%s, total_requests=%d, osl=%s, iat=%s",
+                     prefix_id,
+                     total_requests,
+                     osl.upper(),
+                     iat.upper())
 
     return on_request
 

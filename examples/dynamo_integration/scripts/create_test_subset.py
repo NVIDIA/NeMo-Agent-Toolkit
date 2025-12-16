@@ -13,8 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
 """
 Create a filtered test subset from the full Agent Leaderboard v2 dataset.
 
@@ -32,31 +30,31 @@ logger = logging.getLogger(__name__)
 def create_test_subset(input_file: Path, output_file: Path, num_scenarios: int = 3) -> None:
     """
     Create a test subset with a limited number of scenarios.
-    
+
     Args:
         input_file: Full dataset file
         output_file: Output file for test subset
         num_scenarios: Number of scenarios to include
     """
     logger.info("Loading full dataset from %s", input_file)
-    
-    with open(input_file, "r") as f:
+
+    with open(input_file) as f:
         full_dataset = json.load(f)
-    
+
     logger.info("Loaded %d scenarios from full dataset", len(full_dataset))
-    
+
     # Select first N scenarios
     test_subset = full_dataset[:num_scenarios]
-    
+
     logger.info("Created test subset with %d scenarios", len(test_subset))
-    
+
     # Save test subset
     output_file.parent.mkdir(parents=True, exist_ok=True)
     with open(output_file, "w") as f:
         json.dump(test_subset, f, indent=2)
-    
+
     logger.info("Saved test subset to %s", output_file)
-    
+
     # Print summary
     for i, scenario in enumerate(test_subset):
         logger.info(
@@ -71,7 +69,7 @@ def create_test_subset(input_file: Path, output_file: Path, num_scenarios: int =
 
 if __name__ == "__main__":
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="Create test subset from Agent Leaderboard v2 dataset")
     parser.add_argument(
         "--input-file",
@@ -91,8 +89,7 @@ if __name__ == "__main__":
         default=3,
         help="Number of scenarios to include",
     )
-    
-    args = parser.parse_args()
-    
-    create_test_subset(args.input_file, args.output_file, args.num_scenarios)
 
+    args = parser.parse_args()
+
+    create_test_subset(args.input_file, args.output_file, args.num_scenarios)

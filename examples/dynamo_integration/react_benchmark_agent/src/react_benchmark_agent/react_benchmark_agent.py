@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import logging
-from typing import Any
 
 from pydantic import Field
 
@@ -30,7 +29,7 @@ logger = logging.getLogger(__name__)
 class ReactBenchmarkAgentFunctionConfig(FunctionBaseConfig, name="react_benchmark_agent"):
     """
     React Benchmark Agent for Agent Leaderboard evaluation.
-    
+
     This function supports two modes:
     1. Standard mode: Acts as a regular tool in the workflow
     2. Decision-only mode: Dynamically registers tool stubs from dataset to capture tool intents
@@ -51,7 +50,7 @@ class ReactBenchmarkAgentFunctionConfig(FunctionBaseConfig, name="react_benchmar
 async def react_benchmark_agent_function(config: ReactBenchmarkAgentFunctionConfig, builder: Builder):
     """
     Registers the React Benchmark Agent function.
-    
+
     In decision-only mode, this function initializes a tool intent buffer that can be used
     to dynamically register tool stubs from dataset tool schemas.
 
@@ -80,10 +79,10 @@ async def react_benchmark_agent_function(config: ReactBenchmarkAgentFunctionConf
         async def _decision_only_info(query: str) -> str:
             """
             Provides information about the decision-only evaluation mode.
-            
+
             Args:
                 query (str): User query
-            
+
             Returns:
                 str: Information about decision-only mode
             """

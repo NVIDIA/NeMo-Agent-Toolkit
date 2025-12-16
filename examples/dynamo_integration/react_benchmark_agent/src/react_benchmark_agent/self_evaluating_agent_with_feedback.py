@@ -12,8 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
 """
 Self-Evaluating Agent Wrapper with Optional Feedback Loop.
 
@@ -75,16 +73,15 @@ class SelfEvaluatingAgentConfig(FunctionBaseConfig, name="self_evaluating_agent"
     """
 
     wrapped_agent: FunctionRef = Field(
-        ..., description="The underlying agent to wrap (e.g., react_agent with decision_only mode)"
-    )
+        ..., description="The underlying agent to wrap (e.g., react_agent with decision_only mode)")
     evaluator_llm: LLMRef = Field(..., description="LLM to use for self-evaluation")
     max_retries: int = Field(default=2, description="Maximum number of retry attempts", ge=0, le=5)
-    min_confidence_threshold: float = Field(
-        default=0.7, description="Minimum confidence to accept the tool sequence", ge=0.0, le=1.0
-    )
-    pass_feedback_to_agent: bool = Field(
-        default=False, description="Whether to pass evaluation feedback to the agent on retry"
-    )
+    min_confidence_threshold: float = Field(default=0.7,
+                                            description="Minimum confidence to accept the tool sequence",
+                                            ge=0.0,
+                                            le=1.0)
+    pass_feedback_to_agent: bool = Field(default=False,
+                                         description="Whether to pass evaluation feedback to the agent on retry")
     feedback_template: str = Field(
         default="""PREVIOUS ATTEMPT FEEDBACK:
 
@@ -142,9 +139,7 @@ JSON Response:""",
 # =============================================================================
 # ADVANCED CONFIG: self_evaluating_agent_with_feedback
 # =============================================================================
-class SelfEvaluatingAgentWithFeedbackConfig(
-    FunctionBaseConfig, name="self_evaluating_agent_with_feedback"
-):
+class SelfEvaluatingAgentWithFeedbackConfig(FunctionBaseConfig, name="self_evaluating_agent_with_feedback"):
     """
     Configuration for Self-Evaluating Agent with Feedback Loop.
 
@@ -156,12 +151,12 @@ class SelfEvaluatingAgentWithFeedbackConfig(
     wrapped_agent: FunctionRef = Field(..., description="The underlying agent to wrap")
     evaluator_llm: LLMRef = Field(..., description="LLM to use for self-evaluation")
     max_retries: int = Field(default=3, description="Maximum number of retry attempts", ge=0, le=5)
-    min_confidence_threshold: float = Field(
-        default=0.85, description="Minimum confidence to accept the tool sequence", ge=0.0, le=1.0
-    )
-    pass_feedback_to_agent: bool = Field(
-        default=True, description="Whether to pass evaluation feedback to the agent on retry"
-    )
+    min_confidence_threshold: float = Field(default=0.85,
+                                            description="Minimum confidence to accept the tool sequence",
+                                            ge=0.0,
+                                            le=1.0)
+    pass_feedback_to_agent: bool = Field(default=True,
+                                         description="Whether to pass evaluation feedback to the agent on retry")
     feedback_template: str = Field(
         default="""PREVIOUS ATTEMPT FEEDBACK:
 
@@ -215,16 +210,14 @@ JSON Response:""",
 
 
 @register_function(config_type=SelfEvaluatingAgentWithFeedbackConfig)
-async def self_evaluating_agent_with_feedback_function(
-    config: SelfEvaluatingAgentWithFeedbackConfig, builder: Builder
-):
+async def self_evaluating_agent_with_feedback_function(config: SelfEvaluatingAgentWithFeedbackConfig, builder: Builder):
     """
     Register the advanced self-evaluating agent with feedback loop.
-    
+
     Args:
         config: Configuration for the agent
         builder: The builder object
-    
+
     Yields:
         FunctionInfo: The function info for the agent
     """
@@ -236,17 +229,17 @@ async def self_evaluating_agent_with_feedback_function(
     intent_buffer = None
     if hasattr(builder, "runtime_metadata"):
         intent_buffer = builder.runtime_metadata.get("tool_intent_buffer")
-    
+
     # Flag to use global registry as fallback
     use_global_registry = intent_buffer is None
 
     async def _self_evaluating_agent_with_feedback(question: str) -> str:
         """
         Execute the agent with self-evaluation, feedback, and retry.
-        
+
         Args:
             question: The user's input question
-        
+
         Returns:
             The final answer from the agent
         """
@@ -254,7 +247,7 @@ async def self_evaluating_agent_with_feedback_function(
         best_result = None
         best_evaluation = None
         previous_feedback = None
-        
+
         # Generate unique scenario ID for this question (for concurrent execution isolation)
         scenario_id = _get_scenario_id_for_question(question)
 
@@ -285,7 +278,7 @@ async def self_evaluating_agent_with_feedback_function(
 
             # Set the current scenario ID for this thread (so tool stubs record to correct scenario)
             set_current_scenario_id(scenario_id)
-            
+
             # Clear the intent buffer/registry for this attempt
             if intent_buffer:
                 intent_buffer.clear()
@@ -301,8 +294,8 @@ async def self_evaluating_agent_with_feedback_function(
                 query = f"{question}\n\n{previous_feedback}"
                 if config.verbose:
                     logger.info("📝 Passing feedback to agent (%d chars):", len(previous_feedback))
-                    logger.info("   Feedback preview:\n%s", 
-                              previous_feedback[:500] + "..." if len(previous_feedback) > 500 else previous_feedback)
+                    logger.info("   Feedback preview:\n%s",
+                                previous_feedback[:500] + "..." if len(previous_feedback) > 500 else previous_feedback)
             else:
                 query = question
                 if attempt > 0:
@@ -344,8 +337,8 @@ async def self_evaluating_agent_with_feedback_function(
                 if config.verbose:
                     logger.info("🏁 Final attempt reached - accepting result")
                     logger.info("   Total attempts made: %d", attempt + 1)
-                    logger.info("   Best confidence seen: %.2f", 
-                              best_evaluation.get("confidence", 0.0) if best_evaluation else 0.0)
+                    logger.info("   Best confidence seen: %.2f",
+                                best_evaluation.get("confidence", 0.0) if best_evaluation else 0.0)
                 return result
 
             # Perform self-evaluation
@@ -359,9 +352,7 @@ async def self_evaluating_agent_with_feedback_function(
             )
 
             # Track the best result
-            if best_evaluation is None or evaluation_result.get("confidence", 0) > best_evaluation.get(
-                "confidence", 0
-            ):
+            if best_evaluation is None or evaluation_result.get("confidence", 0) > best_evaluation.get("confidence", 0):
                 best_result = result
                 best_evaluation = evaluation_result
                 if config.verbose:
@@ -396,7 +387,8 @@ async def self_evaluating_agent_with_feedback_function(
             # Prepare feedback for next attempt
             if config.pass_feedback_to_agent:
                 missing_steps = evaluation_result.get("missing_steps", [])
-                missing_steps_str = "\n".join(f"- {step}" for step in missing_steps) if missing_steps else "None identified"
+                missing_steps_str = "\n".join(f"- {step}"
+                                              for step in missing_steps) if missing_steps else "None identified"
 
                 previous_feedback = config.feedback_template.format(
                     reasoning=evaluation_result.get("reasoning", "Insufficient tool sequence"),
@@ -407,8 +399,10 @@ async def self_evaluating_agent_with_feedback_function(
 
             if config.verbose:
                 logger.warning("❌ Tool sequence INSUFFICIENT - retrying with feedback...")
-                logger.warning("   Reason: is_sufficient=%s, confidence=%.2f < threshold=%.2f", 
-                             is_sufficient, confidence, config.min_confidence_threshold)
+                logger.warning("   Reason: is_sufficient=%s, confidence=%.2f < threshold=%.2f",
+                               is_sufficient,
+                               confidence,
+                               config.min_confidence_threshold)
 
             attempt += 1
 
@@ -416,7 +410,8 @@ async def self_evaluating_agent_with_feedback_function(
         if config.verbose:
             logger.warning("⚠️  MAX RETRIES EXHAUSTED - returning best result")
             logger.warning("   Total attempts: %d", config.max_retries + 1)
-            logger.warning("   Best confidence: %.2f", best_evaluation.get("confidence", 0.0) if best_evaluation else 0.0)
+            logger.warning("   Best confidence: %.2f",
+                           best_evaluation.get("confidence", 0.0) if best_evaluation else 0.0)
 
         return best_result if best_result is not None else "No valid result obtained after retries."
 
@@ -560,9 +555,7 @@ async def self_evaluating_agent_function(config: SelfEvaluatingAgentConfig, buil
             )
 
             # Track the best result
-            if best_evaluation is None or evaluation_result.get("confidence", 0) > best_evaluation.get(
-                "confidence", 0
-            ):
+            if best_evaluation is None or evaluation_result.get("confidence", 0) > best_evaluation.get("confidence", 0):
                 best_result = result
                 best_evaluation = evaluation_result
 
@@ -594,9 +587,8 @@ async def self_evaluating_agent_function(config: SelfEvaluatingAgentConfig, buil
             # Prepare feedback for next attempt (if feedback is enabled)
             if config.pass_feedback_to_agent:
                 missing_steps = evaluation_result.get("missing_steps", [])
-                missing_steps_str = (
-                    "\n".join(f"- {step}" for step in missing_steps) if missing_steps else "None identified"
-                )
+                missing_steps_str = ("\n".join(f"- {step}"
+                                               for step in missing_steps) if missing_steps else "None identified")
                 previous_feedback = config.feedback_template.format(
                     reasoning=evaluation_result.get("reasoning", "Insufficient tool sequence"),
                     missing_steps=missing_steps_str,
@@ -696,4 +688,3 @@ async def _evaluate_tool_sequence(
             "missing_steps": [],
             "suggestions": "Check evaluation LLM configuration",
         }
-

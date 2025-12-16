@@ -14,26 +14,29 @@
 # limitations under the License.
 
 import asyncio
+import csv
 import json
 import logging
+import os
 import time
 import uuid
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from collections.abc import AsyncGenerator
+from typing import Any
 
 import uvicorn
 import uvloop
-from fastapi import FastAPI, Header, HTTPException, Request
+from dynamo.runtime import DistributedRuntime
+from dynamo.runtime import dynamo_worker
+from dynamo.runtime.logging import configure_dynamo_logging
+from fastapi import FastAPI
+from fastapi import Header
+from fastapi import HTTPException
+from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from transformers import AutoTokenizer
-import os
-import csv
-import re
-
-from dynamo.runtime import DistributedRuntime, dynamo_worker
-from dynamo.runtime.logging import configure_dynamo_logging
 
 configure_dynamo_logging()
 logger = logging.getLogger(__name__)
@@ -45,13 +48,13 @@ class Message(BaseModel):
     # content may be None (assistant with tool_calls) or structured list
     content: Any | None = None
     # Optional fields for tool and assistant messages
-    name: Optional[str] = None
-    tool_call_id: Optional[str] = None
-    tool_calls: Optional[List[Dict[str, Any]]] = None
+    name: str | None = None
+    tool_call_id: str | None = None
+    tool_calls: list[dict[str, Any]] | None = None
 
 
 class StreamOptions(BaseModel):
-    include_usage: Optional[bool] = False
+    include_usage: bool | None = False
 
 
 class PrefixHints(BaseModel):
@@ -62,34 +65,35 @@ class PrefixHints(BaseModel):
 
 
 class ChatCompletionRequest(BaseModel):
-    model: Optional[str] = "nvidia/Llama-3.1-Nemotron-Nano-8B-v1"
-    messages: List[Message]
-    max_tokens: Optional[int] = 1024
-    temperature: Optional[float] = 0.6
-    top_p: Optional[float] = 0.999
-    top_k: Optional[int] = 1
-    ignore_eos: Optional[bool] = False
+    model: str | None = "nvidia/Llama-3.1-Nemotron-Nano-8B-v1"
+    messages: list[Message]
+    max_tokens: int | None = 1024
+    temperature: float | None = 0.6
+    top_p: float | None = 0.999
+    top_k: int | None = 1
+    ignore_eos: bool | None = False
 
     # OpenAI-style streaming controls
-    stream: Optional[bool] = False
-    stream_options: Optional[StreamOptions] = None
+    stream: bool | None = False
+    stream_options: StreamOptions | None = None
 
     # New generalized hints (filled by frontend from headers)
-    prefix_hints: Optional[PrefixHints] = None
+    prefix_hints: PrefixHints | None = None
 
     # OpenAI-native tool calling support (pass-through to processor/engine)
-    tools: Optional[List[Dict[str, Any]]] = None
-    tool_choice: Optional[Any] = None
-    parallel_tool_calls: Optional[bool] = None
+    tools: list[dict[str, Any]] | None = None
+    tool_choice: Any | None = None
+    parallel_tool_calls: bool | None = None
 
 
 # ----------------- Frontend handler -----------------
 class FrontendRequestHandler:
+
     def __init__(self, runtime: DistributedRuntime):
         self.runtime = runtime
         self.processor_client = None
         self.app = None
-        self.tokenizers: Dict[str, AutoTokenizer] = {}
+        self.tokenizers: dict[str, AutoTokenizer] = {}
         # Regex to find one or more JSON objects optionally separated by semicolons
 
         # Throughput (requests/sec) tracking
@@ -103,12 +107,8 @@ class FrontendRequestHandler:
         self._tps_task = None
 
     async def initialize(self):
-        self.processor_client = (
-            await self.runtime.namespace("dynamo")
-            .component("processor")
-            .endpoint("process")
-            .client()
-        )
+        self.processor_client = (await
+                                 self.runtime.namespace("dynamo").component("processor").endpoint("process").client())
         self.app = FastAPI(title="Dynamo")
         self.setup_routes()
         logging.info("Frontend initialized successfully")
@@ -139,18 +139,17 @@ class FrontendRequestHandler:
             self.tokenizers[model] = tok
         return tok
 
-    def _messages_to_text(self, messages: List[Dict[str, str]], tokenizer) -> str:
+    def _messages_to_text(self, messages: list[dict[str, str]], tokenizer) -> str:
         # Try chat template first; fall back to a plain transcript
         if getattr(tokenizer, "chat_template", None):
             try:
-                return tokenizer.apply_chat_template(
-                    messages, tokenize=False, add_generation_prompt=True
-                )
+                return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
             except Exception:
                 pass
         return "\n".join(f"{m['role']}: {m['content']}" for m in messages) + "\nassistant:"
 
     def setup_routes(self):
+
         @self.app.exception_handler(RequestValidationError)
         async def validation_exception_handler(request: Request, exc: RequestValidationError):
             try:
@@ -160,14 +159,15 @@ class FrontendRequestHandler:
             except Exception as e:  # pragma: no cover
                 logger.exception("Failed to log 422 payload: %s", e)
             return JSONResponse(status_code=422, content={"detail": exc.errors()})
+
         @self.app.post("/v1/chat/completions")
         async def chat_completions(
-            request: ChatCompletionRequest,
-            # ---- New generalized prefix headers ----
-            hdr_prefix_id: Optional[str] = Header(None, alias="x-prefix-id"),
-            hdr_prefix_total: Optional[str] = Header(None, alias="x-prefix-total-requests"),
-            hdr_prefix_osl: Optional[str] = Header(None, alias="x-prefix-osl"),
-            hdr_prefix_iat: Optional[str] = Header(None, alias="x-prefix-iat"),
+                request: ChatCompletionRequest,
+                # ---- New generalized prefix headers ----
+                hdr_prefix_id: str | None = Header(None, alias="x-prefix-id"),
+                hdr_prefix_total: str | None = Header(None, alias="x-prefix-total-requests"),
+                hdr_prefix_osl: str | None = Header(None, alias="x-prefix-osl"),
+                hdr_prefix_iat: str | None = Header(None, alias="x-prefix-iat"),
         ):
             """
             OpenAI-compatible /v1/chat/completions:
@@ -182,7 +182,7 @@ class FrontendRequestHandler:
 
             try:
                 # Convert to dict once; we may augment it with prefix hints
-                req_dict: Dict[str, Any] = request.model_dump()
+                req_dict: dict[str, Any] = request.model_dump()
                 logger.info("Got full request: %s", req_dict)
 
                 # ---- Build prefix_hints from headers (with robust defaults) ----
@@ -192,7 +192,7 @@ class FrontendRequestHandler:
                 except Exception:
                     total_requests = 1
 
-                def norm_level(v: Optional[str], default: str = "MEDIUM") -> str:
+                def norm_level(v: str | None, default: str = "MEDIUM") -> str:
                     if not v:
                         return default
                     v = str(v).strip().upper()
@@ -209,7 +209,7 @@ class FrontendRequestHandler:
                 }
 
                 # Build the processor payload (includes stream fields)
-                processor_req: Dict[str, Any] = dict(req_dict)
+                processor_req: dict[str, Any] = dict(req_dict)
 
                 # Fast path: non-streaming -> JSON response
                 if not request.stream:
@@ -236,7 +236,7 @@ class FrontendRequestHandler:
                     prompt_tokens = len(tok.encode(prompt_text, add_special_tokens=True))
                     completion_tokens = len(tok.encode(full_text, add_special_tokens=False))
 
-                    message_payload: Dict[str, Any]
+                    message_payload: dict[str, Any]
                     message_payload = {"role": "assistant", "content": full_text}
 
                     # Count completed request
@@ -247,13 +247,11 @@ class FrontendRequestHandler:
                         "object": "chat.completion",
                         "created": int(time.time()),
                         "model": request.model,
-                        "choices": [
-                            {
-                                "index": 0,
-                                "message": message_payload,
-                                "finish_reason": finish_reason,
-                            }
-                        ],
+                        "choices": [{
+                            "index": 0,
+                            "message": message_payload,
+                            "finish_reason": finish_reason,
+                        }],
                         "usage": {
                             "prompt_tokens": prompt_tokens,
                             "completion_tokens": completion_tokens,
@@ -277,22 +275,20 @@ class FrontendRequestHandler:
                         prompt_text = self._messages_to_text(processor_req["messages"], tok)
                         prompt_tokens = len(tok.encode(prompt_text, add_special_tokens=True))
 
-                    def sse_packet(payload: Dict[str, Any]) -> str:
+                    def sse_packet(payload: dict[str, Any]) -> str:
                         return "data: " + json.dumps(payload, separators=(",", ":")) + "\n\n"
 
-                    def make_chunk(delta: Dict[str, Any], finish_reason: Optional[str]) -> Dict[str, Any]:
+                    def make_chunk(delta: dict[str, Any], finish_reason: str | None) -> dict[str, Any]:
                         return {
                             "id": resp_id,
                             "object": "chat.completion.chunk",
                             "created": created,
                             "model": model_name,
-                            "choices": [
-                                {
-                                    "index": 0,
-                                    "delta": delta,
-                                    "finish_reason": finish_reason,
-                                }
-                            ],
+                            "choices": [{
+                                "index": 0,
+                                "delta": delta,
+                                "finish_reason": finish_reason,
+                            }],
                         }
 
                     # 1) Send the role chunk first
@@ -301,7 +297,7 @@ class FrontendRequestHandler:
                     # 2) Stream content chunks from processor
                     processor_stream = await self.processor_client.generate(processor_req)
                     full_text = ""
-                    finish_reason: Optional[str] = None
+                    finish_reason: str | None = None
 
                     try:
                         async for chunk in processor_stream:
@@ -309,7 +305,7 @@ class FrontendRequestHandler:
                             if "error" in data:
                                 raise HTTPException(status_code=500, detail=data["error"])
 
-                            piece: Optional[str] = None
+                            piece: str | None = None
                             if isinstance(data.get("delta"), str):
                                 piece = data["delta"]
                             elif isinstance(data.get("token"), str):

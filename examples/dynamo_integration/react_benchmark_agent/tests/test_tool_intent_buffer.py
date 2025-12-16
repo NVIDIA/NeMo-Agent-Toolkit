@@ -12,8 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
 """
 Unit tests for ToolIntentBuffer and tool intent stubs.
 
@@ -25,16 +23,13 @@ These tests verify that:
 """
 
 import pytest
-
-from react_benchmark_agent.tool_intent_stubs import (
-    ToolIntentBuffer,
-    _GLOBAL_INTENT_REGISTRY,
-    _current_scenario_id,
-    clear_global_intents,
-    get_current_scenario_id,
-    get_global_intents,
-    set_current_scenario_id,
-)
+from react_benchmark_agent.tool_intent_stubs import _GLOBAL_INTENT_REGISTRY
+from react_benchmark_agent.tool_intent_stubs import ToolIntentBuffer
+from react_benchmark_agent.tool_intent_stubs import _current_scenario_id
+from react_benchmark_agent.tool_intent_stubs import clear_global_intents
+from react_benchmark_agent.tool_intent_stubs import get_current_scenario_id
+from react_benchmark_agent.tool_intent_stubs import get_global_intents
+from react_benchmark_agent.tool_intent_stubs import set_current_scenario_id
 
 
 @pytest.fixture(autouse=True)
@@ -410,9 +405,15 @@ class TestMockResponseGeneration:
 
         schema = {
             "properties": {
-                "name": {"type": "string"},
-                "balance": {"type": "number"},
-                "active": {"type": "boolean"},
+                "name": {
+                    "type": "string"
+                },
+                "balance": {
+                    "type": "number"
+                },
+                "active": {
+                    "type": "boolean"
+                },
             }
         }
         result = _generate_mock_response(schema)
@@ -423,4 +424,3 @@ class TestMockResponseGeneration:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-

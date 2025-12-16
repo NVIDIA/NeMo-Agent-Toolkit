@@ -12,8 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
 """
 Tool Selection Quality (TSQ) Evaluator for Agent Leaderboard benchmarks.
 
@@ -63,9 +61,7 @@ class TSQEvaluatorConfig(EvaluatorBaseConfig, name="tsq_evaluator"):
 
 
 @register_evaluator(config_type=TSQEvaluatorConfig)
-async def tsq_evaluator_function(
-    config: TSQEvaluatorConfig, builder: EvalBuilder
-) -> AsyncIterator[EvaluatorInfo]:
+async def tsq_evaluator_function(config: TSQEvaluatorConfig, builder: EvalBuilder) -> AsyncIterator[EvaluatorInfo]:
     """
     Register the Tool Selection Quality (TSQ) evaluator.
 
@@ -81,16 +77,16 @@ async def tsq_evaluator_function(
     def extract_tool_calls_from_trajectory(trajectory: list[dict[str, Any] | Any]) -> list[dict[str, Any]]:
         """
         Extract tool calls from agent trajectory.
-        
+
         Handles multiple data formats:
         1. Flat structure with event_type at top level (legacy)
         2. Nested structure with payload containing event_type (profiler format)
         3. LangChain action/action_input format
         4. IntermediateStep Pydantic objects
-        
+
         Args:
             trajectory: List of trajectory steps (can be dicts or IntermediateStep objects)
-        
+
         Returns:
             List of extracted tool calls with format [{"tool": "name", "parameters": {...}}]
         """
@@ -149,25 +145,25 @@ async def tsq_evaluator_function(
     def normalize_tool_name(tool_name: str) -> str:
         """
         Normalize tool names for comparison.
-        
+
         Handles:
         - Case normalization (lowercase)
         - Underscore and dash removal
         - Module prefix stripping (e.g., 'banking_tools.report_lost_stolen_card' -> 'reportloststolencard')
-        
+
         Args:
             tool_name: Raw tool name from trajectory or expected list
-            
+
         Returns:
             Normalized tool name for comparison
         """
         if not tool_name:
             return ""
-        
+
         # Strip module prefix (e.g., "banking_tools.report_lost_stolen_card" -> "report_lost_stolen_card")
         if "." in tool_name:
             tool_name = tool_name.rsplit(".", 1)[-1]
-        
+
         return tool_name.lower().strip().replace("_", "").replace("-", "")
 
     def calculate_tool_accuracy(actual: list[dict], expected: list[dict]) -> float:
@@ -240,11 +236,13 @@ async def tsq_evaluator_function(
         try:
             # Debug: Log what we receive
             logger.info("Evaluating item %s", item.id)
-            logger.debug("  Trajectory type: %s, length: %d", type(item.trajectory), len(item.trajectory) if item.trajectory else 0)
-            
+            logger.debug("  Trajectory type: %s, length: %d",
+                         type(item.trajectory),
+                         len(item.trajectory) if item.trajectory else 0)
+
             # Extract actual tool calls from trajectory
             actual_tool_calls = extract_tool_calls_from_trajectory(item.trajectory)
-            
+
             logger.info("  Extracted %d tool calls from trajectory", len(actual_tool_calls))
 
             # In decision-only mode, also check for tool intents in metadata
@@ -255,20 +253,23 @@ async def tsq_evaluator_function(
                     logger.info("Found %d tool intents in metadata for item %s", len(tool_intents), item.id)
                     # Merge intents with trajectory-extracted calls
                     actual_tool_calls.extend(tool_intents)
-            
+
             # FALLBACK: Access global intent registry
             # This is a workaround for decision-only mode where intents are stored globally
             if len(actual_tool_calls) == 0:
                 try:
-                    from react_benchmark_agent.tool_intent_stubs import get_global_intents, clear_global_intents
-                    
+                    from react_benchmark_agent.tool_intent_stubs import clear_global_intents
+                    from react_benchmark_agent.tool_intent_stubs import get_global_intents
+
                     # Try with scenario ID first, then fallback to "current"
                     scenario_intents = get_global_intents(str(item.id))
                     if not scenario_intents:
                         scenario_intents = get_global_intents("current")
-                    
+
                     if scenario_intents:
-                        logger.info("Retrieved %d intents from global registry for item %s", len(scenario_intents), item.id)
+                        logger.info("Retrieved %d intents from global registry for item %s",
+                                    len(scenario_intents),
+                                    item.id)
                         actual_tool_calls = scenario_intents
                         # Clear for next scenario
                         clear_global_intents("current")
@@ -309,7 +310,9 @@ async def tsq_evaluator_function(
             return EvalOutputItem(
                 id=item.id,
                 score=0.0,
-                reasoning={"error": "Evaluation failed", "tool_selection_accuracy": 0.0, "parameter_usage_accuracy": 0.0},
+                reasoning={
+                    "error": "Evaluation failed", "tool_selection_accuracy": 0.0, "parameter_usage_accuracy": 0.0
+                },
             )
 
     async def evaluate_fn(eval_input: EvalInput) -> EvalOutput:
@@ -323,17 +326,17 @@ async def tsq_evaluator_function(
             EvalOutput with average TSQ score and per-item results
         """
         eval_output_items = []
-        
+
         for item in eval_input.eval_input_items:
             output_item = await evaluate_single_item(item)
             eval_output_items.append(output_item)
 
         # Calculate average score
-        scores = [item.score for item in eval_output_items if isinstance(item.score, (int, float))]
+        scores = [item.score for item in eval_output_items if isinstance(item.score, int | float)]
         average_score = sum(scores) / len(scores) if scores else 0.0
 
         logger.info("TSQ Evaluation complete: average_score=%.3f across %d items", average_score, len(scores))
-        
+
         return EvalOutput(average_score=average_score, eval_output_items=eval_output_items)
 
     yield EvaluatorInfo(
@@ -341,4 +344,3 @@ async def tsq_evaluator_function(
         evaluate_fn=evaluate_fn,
         description="Tool Selection Quality (TSQ) evaluator for agent leaderboard benchmarks",
     )
-

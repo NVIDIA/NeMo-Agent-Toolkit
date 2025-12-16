@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 Download and transform agent leaderboard v2 dataset from Hugging Face for NAT evaluation framework.
 This version uses domain-specific scenarios (banking, healthcare, etc.).
@@ -47,21 +46,21 @@ def convert_tool_json_strings(tool_record: dict) -> dict:
 def derive_expected_tool_calls(user_goals: list[str], tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
     Derive expected tool calls from user goals by matching goal keywords to tool names and descriptions.
-    
+
     This is a heuristic approach that:
     1. Extracts keywords from user goals
     2. Matches keywords against tool names and descriptions
     3. Returns a list of expected tool calls with parameter placeholders
-    
+
     Args:
         user_goals: List of user goal descriptions
         tools: Available tools with their schemas
-    
+
     Returns:
         List of expected tool calls with format: [{"tool": "tool_name", "parameters": {...}}]
     """
     expected_calls = []
-    
+
     # Common keyword mappings to tool patterns
     keyword_mappings = {
         "balance": ["balance", "check", "account"],
@@ -80,17 +79,17 @@ def derive_expected_tool_calls(user_goals: list[str], tools: list[dict[str, Any]
         "standing": ["standing", "recurring", "automatic"],
         "wire": ["wire", "international", "swift"],
     }
-    
+
     # Process each goal
     for goal in user_goals:
         goal_lower = goal.lower()
         matched_tools = []
-        
+
         # Try to match goal keywords to tools
         for tool in tools:
             tool_name = tool.get("title", "").lower()
             tool_desc = tool.get("description", "").lower()
-            
+
             # Check if any keywords match
             for keyword, patterns in keyword_mappings.items():
                 if keyword in goal_lower:
@@ -100,11 +99,11 @@ def derive_expected_tool_calls(user_goals: list[str], tools: list[dict[str, Any]
                         params = {}
                         properties = tool.get("properties", {})
                         required = tool.get("required", [])
-                        
+
                         for param_name in required:
                             param_info = properties.get(param_name, {})
                             param_type = param_info.get("type", "string")
-                            
+
                             # Create placeholder based on type
                             if param_type == "string":
                                 params[param_name] = f"<{param_name}>"
@@ -116,17 +115,17 @@ def derive_expected_tool_calls(user_goals: list[str], tools: list[dict[str, Any]
                                 params[param_name] = True
                             else:
                                 params[param_name] = None
-                        
+
                         matched_tools.append({
                             "tool": tool.get("title", ""),
                             "parameters": params,
                             "goal": goal,  # Keep track of which goal this satisfies
                         })
                         break  # Only match once per keyword
-        
+
         # Add matched tools for this goal
         expected_calls.extend(matched_tools)
-    
+
     # Remove duplicates while preserving order
     seen = set()
     unique_calls = []
@@ -135,7 +134,7 @@ def derive_expected_tool_calls(user_goals: list[str], tools: list[dict[str, Any]
         if tool_sig not in seen:
             seen.add(tool_sig)
             unique_calls.append(call)
-    
+
     return unique_calls
 
 
@@ -234,8 +233,11 @@ def download_and_transform_v2_dataset(
             personas_ds = load_dataset("galileo-ai/agent-leaderboard-v2", "personas", split=domain)
             scenarios_ds = load_dataset("galileo-ai/agent-leaderboard-v2", "adaptive_tool_use", split=domain)
 
-            logger.info("Loaded %d tools, %d personas, %d scenarios for %s", 
-                       len(tools_ds), len(personas_ds), len(scenarios_ds), domain)
+            logger.info("Loaded %d tools, %d personas, %d scenarios for %s",
+                        len(tools_ds),
+                        len(personas_ds),
+                        len(scenarios_ds),
+                        domain)
 
             # Convert tools
             tools = [convert_tool_json_strings(dict(tool)) for tool in tools_ds]
@@ -266,7 +268,7 @@ def download_and_transform_v2_dataset(
 
             logger.info("Saved raw data to %s", raw_dir)
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to load domain: %s", domain)
             continue
 
@@ -308,4 +310,3 @@ if __name__ == "__main__":
         os.environ["HF_HOME"] = default_hf_home
 
     download_and_transform_v2_dataset(args.output_dir, args.domains)
-

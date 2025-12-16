@@ -12,8 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
 """
 Action Completion (AC) Evaluator for Agent Leaderboard benchmarks.
 
@@ -58,7 +56,7 @@ async def action_completion_evaluator_function(config: ActionCompletionEvaluator
     Register the Action Completion (AC) evaluator.
 
     The AC metric evaluates whether the agent's final response addresses all user goals.
-    
+
     Score calculation:
     - AC score = (goals_addressed / total_goals)
     - A score of 1.0 means all goals were addressed
@@ -72,10 +70,10 @@ async def action_completion_evaluator_function(config: ActionCompletionEvaluator
     def extract_final_response(trajectory: list[dict[str, Any] | Any]) -> str:
         """
         Extract the final response from agent trajectory.
-        
+
         Args:
             trajectory: List of trajectory steps
-        
+
         Returns:
             Final response text
         """
@@ -104,11 +102,11 @@ async def action_completion_evaluator_function(config: ActionCompletionEvaluator
     def check_goal_completion_simple(response: str, goal: str) -> bool:
         """
         Simple keyword-based goal completion check.
-        
+
         Args:
             response: Agent's final response
             goal: User goal to check
-        
+
         Returns:
             True if goal appears to be addressed in response
         """
@@ -117,9 +115,22 @@ async def action_completion_evaluator_function(config: ActionCompletionEvaluator
 
         # Extract key action words from goal
         action_words = [
-            "check", "transfer", "pay", "send", "block", "unblock",
-            "update", "change", "view", "get", "set", "cancel",
-            "increase", "decrease", "report", "dispute"
+            "check",
+            "transfer",
+            "pay",
+            "send",
+            "block",
+            "unblock",
+            "update",
+            "change",
+            "view",
+            "get",
+            "set",
+            "cancel",
+            "increase",
+            "decrease",
+            "report",
+            "dispute"
         ]
 
         # Check if any key words from goal appear in response
@@ -135,11 +146,11 @@ async def action_completion_evaluator_function(config: ActionCompletionEvaluator
     async def check_goal_completion_llm(response: str, goal: str) -> bool:
         """
         LLM-based semantic goal completion check.
-        
+
         Args:
             response: Agent's final response
             goal: User goal to check
-        
+
         Returns:
             True if goal is addressed in response according to LLM
         """
@@ -159,7 +170,7 @@ Was the user goal addressed in the agent's response? Respond with only "YES" or 
             result = await llm.ainvoke(prompt)
             result_text = str(result).strip().upper()
             return "YES" in result_text
-        except Exception as e:
+        except Exception:
             logger.exception("LLM evaluation failed, falling back to simple check")
             return check_goal_completion_simple(response, goal)
 
@@ -186,7 +197,9 @@ Was the user goal addressed in the agent's response? Respond with only "YES" or 
                 return EvalOutputItem(
                     id=item.id,
                     score=1.0,
-                    reasoning={"error": "No user goals provided", "goals_addressed": 0, "total_goals": 0},
+                    reasoning={
+                        "error": "No user goals provided", "goals_addressed": 0, "total_goals": 0
+                    },
                 )
 
             # Check each goal
@@ -215,8 +228,11 @@ Was the user goal addressed in the agent's response? Respond with only "YES" or 
                 "final_response_preview": final_response[:200] + "..." if len(final_response) > 200 else final_response,
             }
 
-            logger.debug("AC evaluation for item %s: score=%.3f (%d/%d goals)", 
-                        item.id, ac_score, goals_addressed, len(user_goals))
+            logger.debug("AC evaluation for item %s: score=%.3f (%d/%d goals)",
+                         item.id,
+                         ac_score,
+                         goals_addressed,
+                         len(user_goals))
             return EvalOutputItem(id=item.id, score=ac_score, reasoning=reasoning)
 
         except Exception as e:
@@ -224,7 +240,9 @@ Was the user goal addressed in the agent's response? Respond with only "YES" or 
             return EvalOutputItem(
                 id=item.id,
                 score=0.0,
-                reasoning={"error": str(e), "goals_addressed": 0, "total_goals": 0},
+                reasoning={
+                    "error": str(e), "goals_addressed": 0, "total_goals": 0
+                },
             )
 
     async def evaluate_fn(eval_input: EvalInput) -> EvalOutput:
@@ -244,7 +262,7 @@ Was the user goal addressed in the agent's response? Respond with only "YES" or 
             eval_output_items.append(output_item)
 
         # Calculate average score
-        scores = [item.score for item in eval_output_items if isinstance(item.score, (int, float))]
+        scores = [item.score for item in eval_output_items if isinstance(item.score, int | float)]
         average_score = sum(scores) / len(scores) if scores else 0.0
 
         logger.info("AC Evaluation complete: average_score=%.3f across %d items", average_score, len(scores))
@@ -256,4 +274,3 @@ Was the user goal addressed in the agent's response? Respond with only "YES" or 
         evaluate_fn=evaluate_fn,
         description="Action Completion (AC) evaluator for agent leaderboard benchmarks",
     )
-

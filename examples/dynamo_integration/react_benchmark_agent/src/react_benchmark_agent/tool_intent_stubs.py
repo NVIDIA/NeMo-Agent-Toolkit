@@ -12,8 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
 """
 Tool Intent Stub System for Decision-Only Evaluation.
 
@@ -46,14 +44,14 @@ _current_scenario_id: contextvars.ContextVar[str] = contextvars.ContextVar("scen
 def set_current_scenario_id(scenario_id: str) -> contextvars.Token:
     """
     Set the current scenario ID for this async context.
-    
+
     This allows concurrent async workflows to isolate their intents.
     Call this before executing a workflow to ensure intents are recorded
     to the correct scenario.
-    
+
     Args:
         scenario_id: Unique identifier for the current scenario/question
-    
+
     Returns:
         Token that can be used to reset the scenario ID (for cleanup)
     """
@@ -68,7 +66,7 @@ def set_current_scenario_id(scenario_id: str) -> contextvars.Token:
 def get_current_scenario_id() -> str:
     """
     Get the current scenario ID for this async context.
-    
+
     Returns:
         The current scenario ID, or "current" if not set
     """
@@ -131,12 +129,12 @@ class ToolIntentBuffer:
 def get_global_intents(scenario_id: str = "current") -> list[dict[str, Any]]:
     """
     Retrieve tool intents from the global registry.
-    
+
     This allows evaluators to access intents without needing builder access.
-    
+
     Args:
         scenario_id: Identifier for the scenario
-    
+
     Returns:
         List of tool intents
     """
@@ -146,7 +144,7 @@ def get_global_intents(scenario_id: str = "current") -> list[dict[str, Any]]:
 def clear_global_intents(scenario_id: str = "current") -> None:
     """
     Clear intents from global registry.
-    
+
     Args:
         scenario_id: Identifier for the scenario to clear
     """
@@ -158,12 +156,12 @@ def clear_global_intents(scenario_id: str = "current") -> None:
 class PermissiveToolInput(BaseModel):
     """
     Input schema that accepts tool parameters as either dict or JSON string.
-    
+
     This handles the case where LangChain sometimes serializes tool inputs
     as JSON strings before passing them to the tool, while NAT expects dicts.
     """
     input_params: dict[str, Any] | str
-    
+
     @field_validator('input_params', mode='before')
     @classmethod
     def parse_string_to_dict(cls, v: Any) -> dict[str, Any]:
@@ -183,17 +181,17 @@ class PermissiveToolInput(BaseModel):
             return {}
 
 
-def create_tool_stub_function(
-    tool_schema: dict[str, Any], intent_buffer: ToolIntentBuffer, canned_response: str | None = None
-) -> tuple[callable, BaseModel | None, str]:
+def create_tool_stub_function(tool_schema: dict[str, Any],
+                              intent_buffer: ToolIntentBuffer,
+                              canned_response: str | None = None) -> tuple[callable, BaseModel | None, str]:
     """
     Create a stub function for a tool that captures intent without executing.
-    
+
     Args:
         tool_schema: Tool schema from the dataset (includes title, description, properties, required)
         intent_buffer: Shared buffer to record tool intents
         canned_response: Optional canned response to return (defaults to success message)
-    
+
     Returns:
         Tuple of (async_function, input_schema, function_description)
         Note: Returns custom input_schema with no validation to accept any parameter format
@@ -225,18 +223,18 @@ def create_tool_stub_function(
             # Fallback in case validation didn't run
             logger.warning("input_params is not a dict: %s", type(input_params))
             params_dict = {}
-        
+
         # Filter out None values
         if isinstance(params_dict, dict):
             params_dict = {k: v for k, v in params_dict.items() if v is not None}
         intent_buffer.record(tool_name, params_dict)
         logger.info("Tool stub executed: %s with %d parameters", tool_name, len(params_dict))
         return canned_response
-    
+
     # Set proper attributes
     tool_stub_fn.__name__ = tool_name
     tool_stub_fn.__doc__ = tool_description
-    
+
     # Return function WITH custom input_schema that accepts both dict and string
     return tool_stub_fn, PermissiveToolInput, tool_description
 
@@ -244,10 +242,10 @@ def create_tool_stub_function(
 def _generate_mock_response(response_schema: dict[str, Any]) -> dict[str, Any]:
     """
     Generate a mock response based on the response schema.
-    
+
     Args:
         response_schema: Response schema from the tool definition
-    
+
     Returns:
         Dictionary with mock values matching the schema
     """
@@ -274,4 +272,3 @@ def _generate_mock_response(response_schema: dict[str, Any]) -> dict[str, Any]:
             mock_response[prop_name] = None
 
     return mock_response
-

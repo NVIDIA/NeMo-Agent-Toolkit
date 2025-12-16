@@ -221,9 +221,11 @@ class TestDynamoLangChain:
 
     @patch("nat.plugins.langchain.llm.create_httpx_client_with_dynamo_hooks")
     @patch("langchain_openai.ChatOpenAI")
-    async def test_creation_with_prefix_template(
-        self, mock_chat, mock_create_client, dynamo_cfg_with_prefix, mock_builder
-    ):
+    async def test_creation_with_prefix_template(self,
+                                                 mock_chat,
+                                                 mock_create_client,
+                                                 dynamo_cfg_with_prefix,
+                                                 mock_builder):
         """Wrapper should create ChatOpenAI with custom httpx client when prefix template is set."""
         mock_httpx_client = MagicMock()
         mock_create_client.return_value = mock_httpx_client

@@ -12,8 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
 """
 Unit tests for the self-evaluating agent.
 
@@ -24,10 +22,9 @@ These tests verify that the self-evaluation wrapper correctly:
 - Returns the best result after max retries
 """
 
-import pytest
-
 from pathlib import Path
 
+import pytest
 
 # Get the configs directory relative to this test file
 CONFIGS_DIR = Path(__file__).parent.parent / "configs"
@@ -56,8 +53,7 @@ class TestSelfEvaluatingAgentConfig:
 
         assert "workflow" in config, "Config must have workflow section"
         assert config["workflow"]["_type"] == "self_evaluating_agent_with_feedback", (
-            "Workflow type must be self_evaluating_agent_with_feedback"
-        )
+            "Workflow type must be self_evaluating_agent_with_feedback")
 
     def test_config_has_required_parameters(self):
         """Verify the config has all required self-evaluation parameters."""
@@ -186,9 +182,9 @@ class TestEvaluationResponseParsing:
         """Test parsing partial JSON embedded in text."""
         response = """
         Let me evaluate this...
-        
+
         {"is_sufficient": true, "confidence": 0.92, "reasoning": "Good", "missing_steps": [], "suggestions": ""}
-        
+
         That concludes my evaluation.
         """
         result = self.parse_evaluation_response(response)

@@ -161,7 +161,13 @@ async def dynamo_adk(config: DynamoModelConfig, _builder: Builder):
 
     config_dict = config.model_dump(
         exclude={
-            "type", "max_retries", "thinking", "model_name", "model", "base_url", "api_type",
+            "type",
+            "max_retries",
+            "thinking",
+            "model_name",
+            "model",
+            "base_url",
+            "api_type",
             *DynamoModelConfig.get_dynamo_field_names()
         },
         by_alias=True,

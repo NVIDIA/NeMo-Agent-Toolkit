@@ -27,8 +27,8 @@ from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
-from nat.llm.dynamo_llm import create_httpx_client_with_dynamo_hooks
 from nat.llm.dynamo_llm import DynamoModelConfig
+from nat.llm.dynamo_llm import create_httpx_client_with_dynamo_hooks
 from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
@@ -209,8 +209,7 @@ async def dynamo_langchain(llm_config: DynamoModelConfig, _builder: Builder):
 
     # Build config dict excluding Dynamo-specific and NAT-specific fields
     config_dict = llm_config.model_dump(
-        exclude={"type", "thinking", "api_type", "name",
-                *DynamoModelConfig.get_dynamo_field_names()},
+        exclude={"type", "thinking", "api_type", "name", *DynamoModelConfig.get_dynamo_field_names()},
         by_alias=True,
         exclude_none=True,
         exclude_unset=True,
@@ -236,12 +235,7 @@ async def dynamo_langchain(llm_config: DynamoModelConfig, _builder: Builder):
 
     # Create the ChatOpenAI client
     if llm_config.api_type == APITypeEnum.RESPONSES:
-        client = ChatOpenAI(
-            stream_usage=True,
-            use_responses_api=True,
-            use_previous_response_id=True,
-            **config_dict
-        )
+        client = ChatOpenAI(stream_usage=True, use_responses_api=True, use_previous_response_id=True, **config_dict)
     else:
         client = ChatOpenAI(stream_usage=True, **config_dict)
 

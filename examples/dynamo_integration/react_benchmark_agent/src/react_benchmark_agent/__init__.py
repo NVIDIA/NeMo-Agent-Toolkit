@@ -13,9 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 # Import register module to trigger function registrations
 from . import register  # noqa: F401
 
 __all__ = ["register"]
-
