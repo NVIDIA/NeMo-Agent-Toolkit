@@ -841,19 +841,35 @@ def sandbox_config_fixture(local_sandbox_url: str) -> dict[str, typing.Any]:
 @pytest.fixture(name="piston_url", scope="session")
 def piston_url_fixture(fail_missing: bool) -> str:
     """
-    Configuration for piston testing.
-
-    The public piston server limits usage to five requests per minute.
+    Verify that a Piston server is running and has the required python version installed.
     """
     import requests
-    url = os.environ.get("NAT_CI_PISTON_URL", "https://emkc.org/api/v2/piston")
+
+    url = os.environ.get("NAT_CI_PISTON_URL", "http://localhost:2000/api/v2")
+    url = url.rstrip('/')
+
+    # This is the version of Python used in `src/nat/tool/code_execution/code_sandbox.py`
+    python_version = os.environ.get("NAT_CI_PISTON_PYTHON_VERSION", "3.10.0")
     try:
-        response = requests.get(f"{url.rstrip('/')}/runtimes", timeout=30)
+        # If this request returns a 200 status code then the server is running
+        response = requests.get(f"{url}/runtimes", timeout=30)
         response.raise_for_status()
+
+        # Check if the required python version is installed
+        runtimes = response.json()
+        for runtime in runtimes:
+            if runtime["language"] == "python" and runtime["version"] == python_version:
+                return url
+
+        # Install the required python version
+        response = requests.post(f"{url}/packages", json={"language": "python", "version": python_version}, timeout=60)
+        response.raise_for_status()
+
         return url
     except Exception:
         reason = (f"Piston server is not running at {url}. "
-                  "Please start it with: cd src/nat/tool/code_execution/local_sandbox && ./start_local_sandbox.sh")
+                  "Please start it along with the other integration services by running: "
+                  "docker compose -f tests/test_data/docker-compose.services.yml up -d")
         if fail_missing:
             raise RuntimeError(reason)
         pytest.skip(reason)

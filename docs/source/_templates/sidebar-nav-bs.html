@@ -1,0 +1,39 @@
+{#
+SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-License-Identifier: Apache-2.0
+#
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+#
+http://www.apache.org/licenses/LICENSE-2.0
+#
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+#}
+{#
+Modified from:
+https://github.com/pydata/pydata-sphinx-theme/blob/v0.16.1/src/pydata_sphinx_theme/theme/pydata_sphinx_theme/components/sidebar-nav-bs.html
+
+Which was licensed under the BSD-3-Clause License https://github.com/pydata/pydata-sphinx-theme/blob/v0.16.1/LICENSE
+
+The purpose of this modification is to remove the "Table of Contents" title from the sidebar navigation.
+#}
+
+<nav class="bd-docs-nav bd-links" aria-label="{{ _('Table of Contents') }}">
+  <div class="bd-toc-item navbar-nav">
+    {{- generate_toctree_html(
+    "sidebar",
+    startdepth=0,
+    show_nav_level=theme_show_nav_level | int,
+    maxdepth=theme_navigation_depth | int,
+    collapse=theme_collapse_navigation | tobool,
+    includehidden=theme_sidebar_includehidden | tobool,
+    titles_only=True
+    )
+    -}}
+  </div>
+</nav>
