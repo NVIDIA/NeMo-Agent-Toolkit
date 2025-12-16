@@ -42,6 +42,8 @@ from nat.data_models.retriever import RetrieverBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.utils.type_utils import DecomposedType
 
+WORKFLOW_COMPONENT_NAME = "<workflow>"
+
 logger = logging.getLogger(__name__)
 
 # Order in which we want to process the component groups
@@ -262,7 +264,7 @@ def config_to_dependency_objects(config: "Config") -> tuple[dict[str, ComponentI
     dependency_map[workflow_instance_id] = ComponentInstanceData(
         component_group=ComponentGroup.FUNCTIONS,
         instance_id=workflow_instance_id,
-        name="<workflow>",  # type: ignore
+        name=WORKFLOW_COMPONENT_NAME,  # type: ignore
         config=config.workflow,
         is_root=True)
 
