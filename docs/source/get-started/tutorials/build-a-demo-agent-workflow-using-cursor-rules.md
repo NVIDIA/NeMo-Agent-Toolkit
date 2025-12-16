@@ -17,7 +17,7 @@ limitations under the License.
 
 # Build a Demo Agent Workflow Using Cursor Rules for NVIDIA NeMo Agent Toolkit
 
-Learn how to use Cursor rules for NeMo Agent toolkit development to create and run a demo [agent](../../components/agents/index.md) workflow.
+Learn how to use Cursor rules for NeMo Agent toolkit development to create and run a demo [agent](../../components/agents/index.md) [workflow](../../build-workflows/about-building-workflows.md).
 
 ## About Cursor Rules
 Cursor rules in NeMo Agent toolkit act as an intelligent development that offers structured assistance for developers at all experience levels. The key functionalities of Cursor rules are as follows:
