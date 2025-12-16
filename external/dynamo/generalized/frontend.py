@@ -108,7 +108,7 @@ class FrontendRequestHandler:
 
     async def initialize(self) -> None:
         """Initialize the frontend handler.
-        
+
         Sets up the processor client, FastAPI application, routes, and background
         TPS tracking task.
         """
@@ -389,7 +389,7 @@ class FrontendRequestHandler:
 
     async def run_server(self, host: str = "0.0.0.0", port: int = 8099) -> None:
         """Start the FastAPI server.
-        
+
         Args:
             host: Host address to bind to. Defaults to all interfaces.
             port: Port number to listen on. Defaults to 8099.
@@ -432,7 +432,6 @@ class FrontendRequestHandler:
 @dynamo_worker(static=False)
 async def worker(runtime: DistributedRuntime) -> None:
     """Dynamo worker entry point for the frontend service.
-    
     Args:
         runtime: The distributed runtime for inter-service communication.
     """
