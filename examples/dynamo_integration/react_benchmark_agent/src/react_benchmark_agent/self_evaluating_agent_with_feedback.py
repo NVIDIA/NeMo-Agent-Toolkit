@@ -306,7 +306,7 @@ async def self_evaluating_agent_with_feedback_function(config: SelfEvaluatingAge
                 logger.debug("⚙️  Executing wrapped agent...")
                 result = await wrapped_agent.ainvoke(query)
                 logger.debug("✓ Agent execution completed")
-            except Exception as e:
+            except Exception:
                 logger.exception("💥 Error executing wrapped agent on attempt %d", attempt + 1)
                 attempt += 1
                 continue
@@ -518,7 +518,7 @@ async def self_evaluating_agent_function(config: SelfEvaluatingAgentConfig, buil
             # Execute the wrapped agent
             try:
                 result = await wrapped_agent.ainvoke(query)
-            except Exception as e:
+            except Exception:
                 logger.exception("Error executing wrapped agent on attempt %d", attempt + 1)
                 attempt += 1
                 continue
@@ -679,12 +679,12 @@ async def _evaluate_tool_sequence(
             "missing_steps": [],
             "suggestions": "Retry with clearer tool sequence",
         }
-    except Exception as e:
+    except Exception:
         logger.exception("Error during self-evaluation")
         return {
             "is_sufficient": False,
             "confidence": 0.0,
-            "reasoning": f"Evaluation error occurred",
+            "reasoning": "Evaluation error occurred",
             "missing_steps": [],
             "suggestions": "Check evaluation LLM configuration",
         }
