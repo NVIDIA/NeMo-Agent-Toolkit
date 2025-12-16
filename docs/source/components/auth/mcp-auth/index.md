@@ -262,7 +262,7 @@ export CORPORATE_MCP_JIRA_URL="https://your-jira-mcp-url"
 
 2. Start the server:
 ```bash
-nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-per-user-mcp-auth-jira.yml
+nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira-per-user.yml
 ```
 
 3. Test requests with different users:
