@@ -27,7 +27,7 @@ To begin building a sharable component, do the following:
 This section emphasizes the details of configuration objects that facilitate component discovery.
 
 After installing the NeMo Agent toolkit library, and potentially other NeMo Agent toolkit plugin packages, a developer may want to know what
-components are available for [workflow](../build-workflows/about-building-workflows.md) development or evaluation. A great tool for this is the `nat info components` CLI
+components are available for [workflow](../build-workflows/about-building-workflows.md) development or [evaluation](../improve-workflows/evaluate.md). A great tool for this is the `nat info components` CLI
 utility described in [Components Information](../reference/cli.md#components-information). This command produces a
 table containing information dynamically accumulated from each NeMo Agent toolkit component. The `details` column is sourced from
 each configuration object's docstring and field descriptions. Behind the scenes, these data (and others) are aggregated

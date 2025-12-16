@@ -54,7 +54,7 @@ LlamaIndex, CrewAI, Google ADK, and Semantic Kernel.
 
 ### Profiler Runner
 
-- `src/nat/profiler/profile_runner.py` is the main orchestration class. It collects workflow run statistics from the NeMo Agent toolkit Eval module, computed workflow-specific metrics, and optionally forecasts usage metrics using the Profiler module.
+- `src/nat/profiler/profile_runner.py` is the main orchestration class. It collects workflow run statistics from the NeMo Agent toolkit [Eval](./evaluate.md) module, computed workflow-specific metrics, and optionally forecasts usage metrics using the Profiler module.
 
 - Under `src/nat/profiler/forecasting`, the code trains scikit-learn style models on the usage data.
 model_trainer.py can train a LinearModel or a RandomForestModel on the aggregated usage data (the raw statistics collected).

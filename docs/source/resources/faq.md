@@ -28,4 +28,4 @@ No, NeMo Agent toolkit is designed to work alongside, not replace, your existing
 No, agent communication is best handled over existing protocols, such as MCP, HTTP, gRPC, and sockets.
 
 ## Is NeMo Agent Toolkit an Observability Platform?
-No, while NeMo Agent toolkit is able to collect and transmit fine-grained telemetry to help with optimization and evaluation, it does not replace your preferred observability platform and data collection application.
+No, while NeMo Agent toolkit is able to collect and transmit fine-grained telemetry to help with optimization and [evaluation](../improve-workflows/evaluate.md), it does not replace your preferred observability platform and data collection application.

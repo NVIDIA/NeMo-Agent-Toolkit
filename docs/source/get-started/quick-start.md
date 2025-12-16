@@ -60,7 +60,7 @@ Replace `<YOUR_API_KEY>` with your actual NVIDIA API key.
 
 3. **Run and evaluate the `nat_simple_web_query` Workflow**
 
-   The `eval_config.yml` YAML is a super-set of the `config.yml` containing additional fields for evaluation. To evaluate the `nat_simple_web_query` workflow, run the following command:
+   The `eval_config.yml` YAML is a super-set of the `config.yml` containing additional fields for [evaluation](../improve-workflows/evaluate.md). To evaluate the `nat_simple_web_query` workflow, run the following command:
 
    ```bash
    nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
