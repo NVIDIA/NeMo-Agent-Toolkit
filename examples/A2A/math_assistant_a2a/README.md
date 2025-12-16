@@ -16,13 +16,15 @@ limitations under the License.
 
 # Math Assistant A2A Example
 
-This example demonstrates a math assistant that connects to a NAT-based calculator server while integrating with local tools, showcasing end-to-end NAT-to-NAT A2A communication with hybrid tool composition.
+This example demonstrates a per-user math assistant workflow that connects to a NAT-based calculator server while integrating with local tools, showcasing end-to-end NAT-to-NAT A2A communication with per-user isolation and hybrid tool composition.
 
 ## Key Features
 
+- **Per-User A2A Client**: Each user gets isolated A2A client connections with separate authentication and session state
 - **A2A Protocol Integration**: Connects to a remote NAT calculator workflow via A2A protocol
 - **Hybrid Tool Architecture**: Combines remote A2A tools with local MCP and custom functions
-- **OAuth2 Authentication**: Optional OAuth2-protected A2A server setup for secure agent-to-agent communication
+- **OAuth2 Authentication**: Optional OAuth2-protected A2A server setup for secure per-user agent-to-agent communication
+- **Multi-User Support**: Demonstrates user isolation with different session cookies
 
 ## Architecture Overview
 
@@ -119,26 +121,74 @@ The OAuth2 setup demonstrates:
 
 This setup uses the OAuth2-enabled configuration (`configs/config-client-oauth2.yml`) instead of the basic configuration.
 
+## Per-User Workflow Architecture
+
+This example uses a **per-user workflow** pattern because A2A clients are per-user function groups:
+
+**Why Per-User?**
+- Each user gets isolated A2A client connections
+- Separate authentication credentials per user (important for OAuth2)
+- Independent session state and task tracking
+- No interference between users
+
+**Implementation**:
+The example uses `per_user_react_agent`, which is the per-user version of the ReAct agent:
+- Each user gets their own isolated ReAct agent instance
+- Gets per-user A2A client tools via the builder
+- Provides the same interface as the shared `react_agent` but with per-user isolation
+- Built-in support for per-user function groups like A2A clients
+
+**Multi-User Testing**:
+When using `nat serve`, different users are identified by the `nat-session` cookie:
+
+```bash
+# User "alice" makes a request
+curl -X POST http://localhost:8000/generate \
+  -H "Cookie: nat-session=alice" \
+  -d '{"query": "What is 5 + 3?"}'
+
+# User "hatter" makes a request (isolated from alice)
+curl -X POST http://localhost:8000/generate \
+  -H "Cookie: nat-session=hatter" \
+  -d '{"query": "What is 10 * 2?"}'
+```
+
 ## Configuration Details
 
 ### Available Configurations
 
 - **`config.yml`**: Basic setup with unprotected calculator server
-- **`config-client-oauth2.yml`**: OAuth2-protected setup (requires Keycloak - see [OAuth2 guide](oauth2-keycloak-setup.md))
+- **`config-client-oauth2.yml`**: OAuth2-protected setup with per-user authentication (requires Keycloak - see [OAuth2 guide](oauth2-keycloak-setup.md))
+
+### Workflow Configuration
+
+The workflow is configured to use the core per-user ReAct agent:
+
+```yaml
+workflow:
+  _type: per_user_react_agent  # Per-user ReAct agent
+  tool_names:
+    - calculator_a2a  # Per-user A2A client
+    - mcp_time.get_current_time_mcp
+    - logic_evaluator.if_then_else
+    - logic_evaluator.evaluate_condition
+  llm_name: nim_llm
+```
 
 ### Tool Composition
 
 The configuration demonstrates three types of tool integration:
 
-1. **A2A Client Tools** (`calculator_a2a`):
+1. **A2A Client Tools** (`calculator_a2a`) - **Per-User**:
    - Connects to remote calculator server
+   - Each user gets isolated connection and authentication
    - Provides: `add`, `subtract`, `multiply`, `divide`, `compare` functions
 
-2. **MCP Client Tools** (`mcp_time`):
+2. **MCP Client Tools** (`mcp_time`) - **Shared**:
    - Local MCP server for time operations
    - Provides: `get_current_time_mcp` function
 
-3. **Logic Evaluator** (`logic_evaluator`):
+3. **Logic Evaluator** (`logic_evaluator`) - **Shared**:
    - Simple local utility for logical operations
    - Provides: `if_then_else` and `evaluate_condition` functions
 

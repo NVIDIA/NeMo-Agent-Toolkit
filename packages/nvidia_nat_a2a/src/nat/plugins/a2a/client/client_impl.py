@@ -23,7 +23,7 @@ from pydantic import Field
 
 from nat.builder.function import FunctionGroup
 from nat.builder.workflow_builder import Builder
-from nat.cli.register_workflow import register_function_group
+from nat.cli.register_workflow import register_per_user_function_group
 from nat.plugins.a2a.client.client_base import A2ABaseClient
 from nat.plugins.a2a.client.client_config import A2AClientConfig
 
@@ -303,11 +303,12 @@ class A2AClientFunctionGroup(FunctionGroup):
             yield event
 
 
-@register_function_group(config_type=A2AClientConfig)
+@register_per_user_function_group(config_type=A2AClientConfig)
 async def a2a_client_function_group(config: A2AClientConfig, _builder: Builder):
     """
     Connect to an A2A agent, discover agent card and publish the primary
-    agent function and helper functions.
+    agent function and helper functions. This function group is per-user,
+    meaning each user gets their own isolated instance.
 
     This function group creates a three-level API:
     - High-level: Agent function named after the agent (e.g., dice_agent)
