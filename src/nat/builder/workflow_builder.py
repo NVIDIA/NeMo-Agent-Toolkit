@@ -298,8 +298,9 @@ async def _build_function_group_impl(
         raise ValueError("Expected a FunctionGroup object to be returned from the function group builder. "
                          f"Got {type(build_result)}")
 
-    build_result.configure_middleware(middleware_instances)
+    # Set the instance name BEFORE configuring middleware
     build_result.set_instance_name(name)
+    build_result.configure_middleware(middleware_instances)
 
     return ConfiguredFunctionGroup(config=config, instance=build_result)
 
@@ -517,7 +518,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                             k: v.config
                             for k, v in self._trajectory_builders.items()
                         })
-
         if (entry_function is None):
             entry_fn_obj = self.get_workflow()
         else:
