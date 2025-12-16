@@ -141,7 +141,7 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
         """Retrieve detailed information about a specific product.
 
         Args:
-            product_identifier: Either the product ID (for example PROD001) or product name.
+            product_identifier: Either the product ID (for example PROD001).
 
         Returns:
             Product information including id, name, description, price, stock, and reviews.
