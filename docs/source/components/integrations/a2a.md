@@ -43,22 +43,22 @@ JSON metadata describing an A2A agent's capabilities, including:
 - Content types (input/output modes)
 
 ### A2A Client
-A component that connects to remote A2A agents and invokes their skills. In NAT, the `a2a_client` [function group](../../build-workflows/functions-and-function-groups/function-groups.md) provides a function interface for interacting with remote agents.
+A component that connects to remote A2A agents and invokes their skills. The `a2a_client` [function group](../../build-workflows/functions-and-function-groups/function-groups.md) provides a function interface for interacting with remote agents.
 
 ### A2A Server
-A service that exposes NAT workflows as A2A agents. The `nat a2a serve` command publishes workflows so they can be discovered and called by other A2A clients.
+A service that exposes workflows as A2A agents. The `nat a2a serve` command publishes workflows so they can be discovered and called by other A2A clients.
 
 ## Examples
 
 The following examples demonstrate A2A integration:
 
-- **Math Assistant A2A** (`examples/A2A/math_assistant_a2a/`) - NAT-to-NAT A2A communication with hybrid [tool](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) composition (A2A calculator + MCP time + local logic)
+- **Math Assistant A2A** (`examples/A2A/math_assistant_a2a/`) - A2A communication with hybrid [tool](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) composition (A2A calculator + MCP time + local logic)
 - **Currency Agent A2A** (`examples/A2A/currency_agent_a2a/`) - Connecting to external third-party A2A services (LangGraph-based currency agent)
 
 ## Documentation
 
 - [Connecting to Remote Agents](../../build-workflows/a2a-client.md)
-- [Publishing NAT Workflows](../../run-workflows/a2a-server.md)
+- [Publishing Workflows](../../run-workflows/a2a-server.md)
 
 ## Protocol Compliance
 
