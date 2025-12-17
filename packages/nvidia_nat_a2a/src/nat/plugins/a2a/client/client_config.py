@@ -17,7 +17,6 @@ from datetime import timedelta
 
 from pydantic import Field
 from pydantic import HttpUrl
-from pydantic import model_validator
 
 from nat.data_models.component_ref import AuthenticationRef
 from nat.data_models.function import FunctionGroupBaseConfig
@@ -36,7 +35,6 @@ class A2AClientConfig(FunctionGroupBaseConfig, name="a2a_client"):
         include_skills_in_description: Include skill details in high-level function description (default: True)
         streaming: Whether to enable streaming support for the A2A client (default: False)
         auth_provider: Optional reference to NAT auth provider for authentication
-        default_user_id: Default user identifier for authentication when no session context is available
     """
 
     url: HttpUrl = Field(
@@ -72,16 +70,3 @@ class A2AClientConfig(FunctionGroupBaseConfig, name="a2a_client"):
         description="Reference to NAT authentication provider for authenticating with the A2A agent. "
         "Supports OAuth2, API Key, HTTP Basic, and other NAT auth providers.",
     )
-
-    default_user_id: str | None = Field(
-        default=None,
-        description="Default user ID for authentication. Defaults to agent URL if not provided. "
-        "Used for CLI workflows and token storage cache key.",
-    )
-
-    @model_validator(mode="after")
-    def _set_default_user_id(self) -> "A2AClientConfig":
-        """Set default_user_id to agent URL if not provided."""
-        if not self.default_user_id:
-            self.default_user_id = str(self.url)
-        return self

@@ -51,7 +51,7 @@ class A2ABaseClient:
         task_timeout: Timeout for task operations (default: 300 seconds)
         streaming: Enable streaming responses (default: True)
         auth_provider: Optional NAT authentication provider for securing requests
-        user_id: Optional user identifier for authentication
+        default_user_id: User identifier for authentication (provided by per-user function group)
     """
 
     def __init__(
