@@ -223,6 +223,10 @@ class GeneralConfig(BaseModel):
         default=timedelta(minutes=5),
         description="Interval for running cleanup of inactive per-user workflows. "
         "Only applies when workflow is per-user. Defaults to 5 minutes.")
+    enable_per_user_monitoring: bool = Field(
+        default=False,
+        description="Enable the /monitor/users endpoint for per-user workflow resource monitoring. "
+        "When enabled, exposes metrics like request counts, latency, LLM usage, and memory for each user.")
 
     # FrontEnd Configuration
     front_end: FrontEndBaseConfig = FastApiFrontEndConfig()

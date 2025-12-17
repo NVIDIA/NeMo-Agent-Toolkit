@@ -364,3 +364,138 @@ class TestSessionManagerSchemas:
 
             # Cleanup
             await worker.cleanup_session_managers()
+
+
+def create_per_user_workflow_config_with_monitoring() -> Config:
+    """Create a config with per-user workflow and monitoring enabled."""
+    front_end = FastApiFrontEndConfig(root_path="",
+                                      workflow=FastApiFrontEndConfig.EndpointBase(
+                                          path="/counter", method="POST", description="Per-user counter endpoint"))
+    return Config(general=GeneralConfig(front_end=front_end, enable_per_user_monitoring=True),
+                  workflow=PerUserCounterWorkflowConfig(initial_value=0))
+
+
+class TestPerUserMonitoringEndpoint:
+    """Tests for the /monitor/users endpoint."""
+
+    async def test_monitor_endpoint_disabled_by_default(self):
+        """Test that monitoring endpoint is not available when disabled."""
+        config = create_per_user_workflow_config()  # monitoring disabled by default
+        worker = FastApiFrontEndPluginWorker(config)
+        app = worker.build_app()
+
+        async with LifespanManager(app):
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.get("/monitor/users")
+                # Endpoint should not exist
+                assert response.status_code == 404
+
+    async def test_monitor_endpoint_enabled(self):
+        """Test that monitoring endpoint is available when enabled."""
+        config = create_per_user_workflow_config_with_monitoring()
+        worker = FastApiFrontEndPluginWorker(config)
+        app = worker.build_app()
+
+        async with LifespanManager(app):
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.get("/monitor/users")
+                assert response.status_code == 200
+                data = response.json()
+                assert "timestamp" in data
+                assert "total_active_users" in data
+                assert "users" in data
+                assert data["total_active_users"] == 0
+                assert data["users"] == []
+
+    async def test_monitor_endpoint_shows_active_users(self):
+        """Test that monitoring endpoint shows metrics for active users."""
+        config = create_per_user_workflow_config_with_monitoring()
+        worker = FastApiFrontEndPluginWorker(config)
+        app = worker.build_app()
+
+        async with LifespanManager(app):
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+                # Create some user activity first
+                client.cookies.set("nat-session", "monitor_test_user")
+                await client.post("/counter", json={"action": "increment"})
+                await client.post("/counter", json={"action": "increment"})
+
+                # Now check monitoring endpoint
+                response = await client.get("/monitor/users")
+                assert response.status_code == 200
+                data = response.json()
+
+                assert data["total_active_users"] == 1
+                assert len(data["users"]) == 1
+
+                user_metrics = data["users"][0]
+                assert user_metrics["user_id"] == "monitor_test_user"
+
+                # Check session metrics
+                assert "session" in user_metrics
+                assert user_metrics["session"]["ref_count"] >= 0
+
+                # Check request metrics
+                assert "requests" in user_metrics
+                assert user_metrics["requests"]["total_requests"] == 2
+
+                # Check LLM usage metrics (should be 0 for this simple test)
+                assert "llm_usage" in user_metrics
+                assert user_metrics["llm_usage"]["llm_calls"] == 0
+
+                # Check memory metrics
+                assert "memory" in user_metrics
+                assert "per_user_functions_count" in user_metrics["memory"]
+
+    async def test_monitor_endpoint_filter_by_user_id(self):
+        """Test that monitoring endpoint can filter by user_id."""
+        config = create_per_user_workflow_config_with_monitoring()
+        worker = FastApiFrontEndPluginWorker(config)
+        app = worker.build_app()
+
+        async with LifespanManager(app):
+            # Create activity for two users
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as alice_client:
+                alice_client.cookies.set("nat-session", "alice")
+                await alice_client.post("/counter", json={"action": "increment"})
+
+                async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as bob_client:
+                    bob_client.cookies.set("nat-session", "bob")
+                    await bob_client.post("/counter", json={"action": "increment"})
+
+                    # Filter for alice only
+                    response = await alice_client.get("/monitor/users", params={"user_id": "alice"})
+                    assert response.status_code == 200
+                    data = response.json()
+
+                    assert data["total_active_users"] == 1
+                    assert len(data["users"]) == 1
+                    assert data["users"][0]["user_id"] == "alice"
+
+                    # Filter for non-existent user
+                    response = await alice_client.get("/monitor/users", params={"user_id": "nonexistent"})
+                    assert response.status_code == 200
+                    data = response.json()
+                    assert data["total_active_users"] == 0
+                    assert data["users"] == []
+
+    async def test_monitor_endpoint_tracks_errors(self):
+        """Test that monitoring endpoint tracks error counts."""
+        # This test would require a workflow that can produce errors
+        # For now, we just verify the error_count field exists
+        config = create_per_user_workflow_config_with_monitoring()
+        worker = FastApiFrontEndPluginWorker(config)
+        app = worker.build_app()
+
+        async with LifespanManager(app):
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+                client.cookies.set("nat-session", "error_test_user")
+                await client.post("/counter", json={"action": "get"})
+
+                response = await client.get("/monitor/users")
+                data = response.json()
+
+                assert len(data["users"]) == 1
+                assert "error_count" in data["users"][0]["requests"]
+                # No errors in this simple case
+                assert data["users"][0]["requests"]["error_count"] == 0
