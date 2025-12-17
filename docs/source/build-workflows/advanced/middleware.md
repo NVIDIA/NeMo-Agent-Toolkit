@@ -665,8 +665,8 @@ Solution: Ensure the register module is imported. NAT automatically imports `nat
 - {py:class}`~nat.middleware.function_middleware.FunctionMiddleware`: Base class
 - {py:class}`~nat.middleware.function_middleware.FunctionMiddlewareContext`: Context info
 - {py:class}`~nat.middleware.function_middleware.FunctionMiddlewareChain`: Chain management
-- {py:class}`~nat.middleware.register.CacheMiddlewareConfig`: Cache configuration
-- {py:class}`~nat.middleware.cache_middleware.CacheMiddleware`: Cache implementation
+- {py:class}`~nat.middleware.cache.cache_middleware.CacheMiddlewareConfig`: Cache configuration
+- {py:class}`~nat.middleware.cache.cache_middleware.CacheMiddleware`: Cache implementation
 - {py:func}`~nat.cli.register_workflow.register_middleware`: Registration decorator
 
 ## See Also

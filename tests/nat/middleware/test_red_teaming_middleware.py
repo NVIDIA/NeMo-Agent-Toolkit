@@ -16,14 +16,14 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from pydantic import BaseModel
 
 from nat.middleware.function_middleware import FunctionMiddlewareContext
-from nat.middleware.red_teaming_middleware import RedTeamingMiddleware
+from nat.middleware.red_teaming.red_teaming_middleware import \
+    RedTeamingMiddleware
 
 
 class UserInfo(BaseModel):

@@ -12,10 +12,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
-# flake8: noqa
-# isort:skip_file
+from nat.cli.register_workflow import register_middleware
+from nat.middleware.cache.cache_middleware import (CacheMiddleware, CacheMiddlewareConfig)
 
-from nat.middleware.cache import register
-from nat.middleware.defense import register
-from nat.middleware.red_teaming import register
+
+@register_middleware(config_type=CacheMiddlewareConfig)
+async def cache_middleware(config: CacheMiddlewareConfig, builder):
+    """Build a cache middleware from configuration.
+
+    Args:
+        config: The cache middleware configuration
+        builder: The workflow builder (unused but required by component pattern)
+
+    Yields:
+        A configured cache middleware instance
+    """
+    yield CacheMiddleware(enabled_mode=config.enabled_mode, similarity_threshold=config.similarity_threshold)

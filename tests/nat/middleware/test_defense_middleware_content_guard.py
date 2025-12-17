@@ -23,8 +23,8 @@ from unittest.mock import patch
 import pytest
 from pydantic import BaseModel
 
-from nat.middleware.defense_middleware_content_guard import ContentSafetyGuardMiddleware
-from nat.middleware.defense_middleware_content_guard import ContentSafetyGuardMiddlewareConfig
+from nat.middleware.defense.defense_middleware_content_guard import ContentSafetyGuardMiddleware
+from nat.middleware.defense.defense_middleware_content_guard import ContentSafetyGuardMiddlewareConfig
 from nat.middleware.middleware import FunctionMiddlewareContext
 
 
@@ -121,7 +121,7 @@ class TestContentSafetyGuardInvoke:
         async def mock_next(_value):
             return _TestOutputModel(message="harmful content", status="ok")
 
-        with patch('nat.middleware.defense_middleware_content_guard.logger'):
+        with patch('nat.middleware.defense.defense_middleware_content_guard.logger'):
             result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
             assert mock_llm.ainvoke.called
             # Should analyze only the message field
@@ -184,7 +184,7 @@ class TestContentSafetyGuardInvoke:
                 "total": 2
             }
 
-        with patch('nat.middleware.defense_middleware_content_guard.logger'):
+        with patch('nat.middleware.defense.defense_middleware_content_guard.logger'):
             result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
             assert mock_llm.ainvoke.called
             # Should analyze only the first result's user message
@@ -221,7 +221,7 @@ class TestContentSafetyGuardInvoke:
                 }]
             }
 
-        with patch('nat.middleware.defense_middleware_content_guard.logger'):
+        with patch('nat.middleware.defense.defense_middleware_content_guard.logger'):
             result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
             assert mock_llm.ainvoke.called
 
@@ -259,7 +259,7 @@ class TestContentSafetyGuardInvoke:
         async def mock_next(_value):
             return "harmful content"
 
-        with patch('nat.middleware.defense_middleware_content_guard.logger') as mock_logger:
+        with patch('nat.middleware.defense.defense_middleware_content_guard.logger') as mock_logger:
             result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
             # Should log warning but return original output
             mock_logger.warning.assert_called()
@@ -318,7 +318,7 @@ class TestContentSafetyGuardInvoke:
         async def mock_next(_value):
             return "harmful content"
 
-        with patch('nat.middleware.defense_middleware_content_guard.logger') as mock_logger:
+        with patch('nat.middleware.defense.defense_middleware_content_guard.logger') as mock_logger:
             result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
             # Should detect unsafe and extract categories
             mock_logger.warning.assert_called()
@@ -353,7 +353,7 @@ class TestContentSafetyGuardInvoke:
         async def mock_next(_value):
             return "harmful content"
 
-        with patch('nat.middleware.defense_middleware_content_guard.logger') as mock_logger:
+        with patch('nat.middleware.defense.defense_middleware_content_guard.logger') as mock_logger:
             result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
             # Should detect unsafe and extract categories
             mock_logger.warning.assert_called()
@@ -393,7 +393,7 @@ class TestContentSafetyGuardInvoke:
         async def mock_next(_value):
             return "harmful content"
 
-        with patch('nat.middleware.defense_middleware_content_guard.logger') as mock_logger:
+        with patch('nat.middleware.defense.defense_middleware_content_guard.logger') as mock_logger:
             result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
             mock_logger.warning.assert_called()
             assert result == "harmful content"
@@ -609,7 +609,7 @@ class TestContentSafetyGuardStreaming:
             yield "harmful "
             yield "content"
 
-        with patch('nat.middleware.defense_middleware_content_guard.logger') as mock_logger:
+        with patch('nat.middleware.defense.defense_middleware_content_guard.logger') as mock_logger:
             chunks = []
             async for chunk in middleware.function_middleware_stream({}, mock_stream, middleware_context):
                 chunks.append(chunk)

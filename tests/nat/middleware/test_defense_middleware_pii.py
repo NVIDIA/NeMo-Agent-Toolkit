@@ -22,8 +22,8 @@ from unittest.mock import patch
 import pytest
 from pydantic import BaseModel
 
-from nat.middleware.defense_middleware_pii import PIIDefenseMiddleware
-from nat.middleware.defense_middleware_pii import PIIDefenseMiddlewareConfig
+from nat.middleware.defense.defense_middleware_pii import PIIDefenseMiddleware
+from nat.middleware.defense.defense_middleware_pii import PIIDefenseMiddlewareConfig
 from nat.middleware.middleware import FunctionMiddlewareContext
 
 
@@ -221,7 +221,7 @@ class TestPIIDefenseInvoke:
                 }]
             }
 
-        with patch('nat.middleware.defense_middleware_pii.logger'):
+        with patch('nat.middleware.defense.defense_middleware_pii.logger'):
             result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
             assert mock_analyzer.analyze.called
 
@@ -270,7 +270,7 @@ class TestPIIDefenseInvoke:
         async def mock_next(_value):
             return "Contact john.doe@example.com"
 
-        with patch('nat.middleware.defense_middleware_pii.logger') as mock_logger:
+        with patch('nat.middleware.defense.defense_middleware_pii.logger') as mock_logger:
             await middleware.function_middleware_invoke({}, mock_next, middleware_context)
             # Should log warning but return original output
             mock_logger.warning.assert_called()
@@ -343,7 +343,7 @@ class TestPIIDefenseInvoke:
         async def mock_next(_value):
             return "Contact john.doe@example.com John 555-123-4567"
 
-        with patch('nat.middleware.defense_middleware_pii.logger') as mock_logger:
+        with patch('nat.middleware.defense.defense_middleware_pii.logger') as mock_logger:
             await middleware.function_middleware_invoke({}, mock_next, middleware_context)
             # Should detect all three entity types
             assert mock_analyzer.analyze.called
@@ -571,7 +571,7 @@ class TestPIIDefenseStreaming:
             yield "Contact "
             yield "john.doe@example.com"
 
-        with patch('nat.middleware.defense_middleware_pii.logger') as mock_logger:
+        with patch('nat.middleware.defense.defense_middleware_pii.logger') as mock_logger:
             chunks = []
             async for chunk in middleware.function_middleware_stream({}, mock_stream, middleware_context):
                 chunks.append(chunk)

@@ -23,8 +23,8 @@ from unittest.mock import patch
 import pytest
 from pydantic import BaseModel
 
-from nat.middleware.defense_middleware_output_verifier import OutputVerifierMiddleware
-from nat.middleware.defense_middleware_output_verifier import OutputVerifierMiddlewareConfig
+from nat.middleware.defense.defense_middleware_output_verifier import OutputVerifierMiddleware
+from nat.middleware.defense.defense_middleware_output_verifier import OutputVerifierMiddlewareConfig
 from nat.middleware.middleware import FunctionMiddlewareContext
 
 
@@ -241,7 +241,7 @@ class TestOutputVerifierInvoke:
         async def mock_next(_value):
             return {"items": [{"result": 1.0, "id": 1}, {"result": 2.0, "id": 2}, {"result": 3.0, "id": 3}]}
 
-        with patch('nat.middleware.defense_middleware_output_verifier.logger'):
+        with patch('nat.middleware.defense.defense_middleware_output_verifier.logger'):
             result = await middleware.function_middleware_invoke({"a": 2, "b": 3}, mock_next, middleware_context)
             assert mock_llm.ainvoke.called
 
@@ -278,7 +278,7 @@ class TestOutputVerifierInvoke:
         async def mock_next(_value):
             return 999.0  # Incorrect result
 
-        with patch('nat.middleware.defense_middleware_output_verifier.logger') as mock_logger:
+        with patch('nat.middleware.defense.defense_middleware_output_verifier.logger') as mock_logger:
             result = await middleware.function_middleware_invoke(2.0, mock_next, middleware_context)
             # Should log warning but return original output
             mock_logger.warning.assert_called()
@@ -567,7 +567,7 @@ class TestOutputVerifierStreaming:
         async def mock_stream(_value):
             yield "-999.0"
 
-        with patch('nat.middleware.defense_middleware_output_verifier.logger') as mock_logger:
+        with patch('nat.middleware.defense.defense_middleware_output_verifier.logger') as mock_logger:
             chunks = []
             async for chunk in middleware.function_middleware_stream({"a": 2, "b": 3}, mock_stream, middleware_context):
                 chunks.append(chunk)

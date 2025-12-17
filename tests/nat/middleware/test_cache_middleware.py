@@ -25,7 +25,7 @@ from pydantic import BaseModel
 from nat.builder.context import Context  # noqa: F401
 from nat.builder.context import ContextState  # noqa: F401
 from nat.data_models.runtime_enum import RuntimeTypeEnum
-from nat.middleware.cache_middleware import CacheMiddleware
+from nat.middleware.cache.cache_middleware import CacheMiddleware
 from nat.middleware.middleware import FunctionMiddlewareContext
 
 
@@ -143,7 +143,7 @@ class TestCacheMiddlewareCaching:
             return _TestOutput(result=f"Result {call_count}")
 
         # Mock ContextState to control is_evaluating
-        mock_ctx_cls = 'nat.middleware.cache_middleware.ContextState'
+        mock_ctx_cls = 'nat.middleware.cache.cache_middleware.ContextState'
         with patch(mock_ctx_cls) as mock_context_state:
             mock_state = MagicMock()
             mock_context_state.get.return_value = mock_state
@@ -244,7 +244,7 @@ class TestCacheMiddlewareEdgeCases:
             return _TestOutput(result="Result")
 
         # Mock ContextState.get to raise an exception
-        mock_ctx_cls = 'nat.middleware.cache_middleware.ContextState.get'
+        mock_ctx_cls = 'nat.middleware.cache.cache_middleware.ContextState.get'
         with patch(mock_ctx_cls, side_effect=Exception("Context error")):
             input1 = {"value": "test", "number": 42}
             await middleware.function_middleware_invoke(input1, mock_next_call, middleware_context)

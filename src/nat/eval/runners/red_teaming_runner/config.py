@@ -26,17 +26,15 @@ import logging
 import typing
 from pathlib import Path
 
-from pydantic import BaseModel
-from pydantic import Discriminator
-from pydantic import Field
-from pydantic import model_validator
+from pydantic import BaseModel, Discriminator, Field, model_validator
 
 from nat.cli.type_registry import GlobalTypeRegistry
 from nat.data_models.common import TypedBaseModel
 from nat.data_models.evaluate import EvalGeneralConfig
 from nat.data_models.llm import LLMBaseConfig
 from nat.eval.red_teaming_evaluator.register import RedTeamingEvaluatorConfig
-from nat.middleware.red_teaming_middleware_config import RedTeamingMiddlewareConfig
+from nat.middleware.red_teaming.red_teaming_middleware_config import \
+    RedTeamingMiddlewareConfig
 
 logger = logging.getLogger(__name__)
 

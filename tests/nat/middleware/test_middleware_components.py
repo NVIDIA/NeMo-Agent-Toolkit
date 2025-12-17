@@ -18,7 +18,7 @@ import pytest
 from pydantic import Field
 
 # Register built-in middlewares
-import nat.middleware.cache_middleware  # noqa: F401
+import nat.middleware.cache.cache_middleware  # noqa: F401
 from nat.builder.builder import Builder
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.cli.register_workflow import register_function
@@ -269,7 +269,7 @@ class TestCacheMiddlewareComponent:
 
     async def test_cache_middleware_registration(self):
         """Test that cache middleware is registered."""
-        from nat.middleware.register import CacheMiddlewareConfig
+        from nat.middleware.cache.cache_middleware import CacheMiddlewareConfig
 
         registry = GlobalTypeRegistry.get()
         registration = registry.get_middleware(CacheMiddlewareConfig)
@@ -279,7 +279,7 @@ class TestCacheMiddlewareComponent:
 
     async def test_cache_middleware_from_yaml(self):
         """Test building cache middleware from YAML."""
-        from nat.middleware.cache_middleware import CacheMiddleware
+        from nat.middleware.cache.cache_middleware import CacheMiddleware
 
         config_dict = {
             "middleware": {
@@ -300,7 +300,7 @@ class TestCacheMiddlewareComponent:
 
     async def test_cache_middleware_with_different_configs(self):
         """Test cache middleware with various configurations."""
-        from nat.middleware.cache_middleware import CacheMiddleware
+        from nat.middleware.cache.cache_middleware import CacheMiddleware
 
         configs = [
             {

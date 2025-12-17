@@ -16,16 +16,15 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from jsonpath_ng import parse
 from pydantic import BaseModel
 
-from nat.middleware.defense_middleware import DefenseMiddleware
-from nat.middleware.defense_middleware import DefenseMiddlewareConfig
-from nat.middleware.defense_middleware import MultipleTargetFieldMatchesError
+from nat.middleware.defense.defense_middleware import (DefenseMiddleware,
+                                                       DefenseMiddlewareConfig,
+                                                       MultipleTargetFieldMatchesError)
 from nat.middleware.middleware import FunctionMiddlewareContext
 
 

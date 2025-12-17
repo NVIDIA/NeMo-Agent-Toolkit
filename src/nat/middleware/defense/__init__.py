@@ -12,10 +12,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# flake8: noqa
-# isort:skip_file
-
-from nat.middleware.cache import register
-from nat.middleware.defense import register
-from nat.middleware.red_teaming import register
