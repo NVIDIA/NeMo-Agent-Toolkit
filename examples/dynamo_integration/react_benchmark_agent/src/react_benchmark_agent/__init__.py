@@ -13,13 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# flake8: noqa
+# Import register module to trigger function registrations
+from . import register  # noqa: F401
 
-# Import any workflows which need to be automatically registered here
-from .prompt_optimizer import register as prompt_optimizer
-from .react_agent import register as react_agent
-from .react_agent import register_per_user_agent as react_agent_per_user
-from .reasoning_agent import reasoning_agent
-from .responses_api_agent import register as responses_api_agent
-from .rewoo_agent import register as rewoo_agent
-from .tool_calling_agent import register as tool_calling_agent
+__all__ = ["register"]
