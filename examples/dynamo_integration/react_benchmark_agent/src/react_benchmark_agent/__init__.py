@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,17 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# flake8: noqa
-# isort:skip_file
-"""Register LLM providers via import side effects.
+# Import register module to trigger function registrations
+from . import register  # noqa: F401
 
-This module is imported by the NeMo Agent Toolkit runtime to ensure providers are registered and discoverable.
-"""
-# Import any providers which need to be automatically registered here
-from . import aws_bedrock_llm
-from . import azure_openai_llm
-from . import dynamo_llm
-from . import huggingface_llm
-from . import litellm_llm
-from . import nim_llm
-from . import openai_llm
+__all__ = ["register"]

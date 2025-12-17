@@ -147,6 +147,25 @@ The LiteLLM LLM provider is defined by the {py:class}`~nat.llm.litellm_llm.LiteL
 * `top_p` - The top-p value to use for the model
 * `max_retries` - The maximum number of retries for the request
 
+### NVIDIA Dynamo (experimental)
+
+Dynamo is an inference engine agnostic LLM provider designed to optimize KV cache reuse of LLMs served on NVIDIA hardware. See the [ai-dynamo repository](https://github.com/ai-dynamo/dynamo) for instructions on how to use Dynamo.
+
+The Dynamo LLM provider is defined by the {py:class}`~nat.llm.dynamo_llm.DynamoModelConfig` class. The provider mirrors the implementation of the OpenAI provider, with additional prefix hints for Dynamo inference optimizations.
+
+* `model_name` - The name of the model to use
+* `temperature` - The temperature to use for the model
+* `top_p` - The top-p value to use for the model
+* `max_tokens` - The maximum number of tokens to generate
+* `seed` - The seed to use for the model
+* `api_key` - The API key to use for the model
+* `base_url` - The base URL to use for the model
+* `max_retries` - The maximum number of retries for the request
+* `prefix_template` - a template for conversation prefix IDs. Setting to null will disable use of `prefix_template`, `prefix_total_requests`, `prefix_osl`, and `prefix_iat`
+* `prefix_total_requests` - Expected number of requests for this conversation
+* `prefix_osl` - Output sequence length for the Dynamo router
+* `prefix_iat` - Inter-arrival time hint for the Dynamo router
+* `request_timeout` - HTTP request timeout in seconds for Dynamo LLM requests
 
 ## Testing Provider
 ### `nat_test_llm`

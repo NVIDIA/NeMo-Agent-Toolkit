@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,18 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Custom evaluators for react_benchmark_agent."""
 
-# flake8: noqa
-# isort:skip_file
-"""Register LLM providers via import side effects.
+from .action_completion_evaluator import action_completion_evaluator_function
+from .tsq_evaluator import tsq_evaluator_function
 
-This module is imported by the NeMo Agent Toolkit runtime to ensure providers are registered and discoverable.
-"""
-# Import any providers which need to be automatically registered here
-from . import aws_bedrock_llm
-from . import azure_openai_llm
-from . import dynamo_llm
-from . import huggingface_llm
-from . import litellm_llm
-from . import nim_llm
-from . import openai_llm
+__all__ = ["tsq_evaluator_function", "action_completion_evaluator_function"]
