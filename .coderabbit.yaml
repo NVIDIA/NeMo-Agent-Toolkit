@@ -129,7 +129,7 @@ reviews:
           digit version (ex: `~=1.0`).
         - Not all packages contain Python code, if they do they should also contain their own set of tests, in a
           `tests/` directory at the same level as the `pyproject.toml` file.
-        - When adding a new package, that new package name (as defined in the `pyproject.toml` file) should 
+        - When adding a new package, that new package name (as defined in the `pyproject.toml` file) should
           be added as a dependency to the nvidia-nat-all package in `packages/nvidia_nat_all/pyproject.toml`
 
     - path: "tests/**/*.py"
@@ -142,6 +142,8 @@ reviews:
             @pytest.fixture(name="my_fixture")
             def fixture_my_fixture():
                 pass
+        - Do NOT add `@pytest.mark.asyncio` to any test. Async tests are automatically detected and run by the
+          async runner - the decorator is unnecessary clutter.
 
   auto_apply_labels: true
   suggested_labels: true
