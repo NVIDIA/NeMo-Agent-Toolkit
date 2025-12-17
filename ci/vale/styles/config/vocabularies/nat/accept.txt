@@ -23,6 +23,7 @@ Authlib
 [Cc]allable(s?)
 # Documentation for ccache only capitalizes the name at the start of a sentence https://ccache.dev/
 [Cc]cache
+[Cc]heckpointed
 [Cc]ategorizer
 [Cc]hatbot(s?)
 # clangd is never capitalized even at the start of a sentence https://clangd.llvm.org/
@@ -76,6 +77,7 @@ GPU(s?)
 Grafana
 groundedness
 [Gg]ranularities
+[Gg]uardrail(s|ed|ing)?
 [Hh]ashable
 [Hh]yperparameter(s?)
 impactful
@@ -84,6 +86,7 @@ impactful
 isort
 Jama
 Jira
+JSONPath
 jsonlines
 [Kk]aggle
 Langfuse
@@ -102,6 +105,7 @@ Loghub
 Mem0
 [Mm]iddleware
 Milvus
+[Mm]itigation(s?)
 [Mm]ixin(s?)
 MLflow
 MLOps
@@ -116,6 +120,7 @@ NIM(s?)
 npm
 NumPy
 NAT's
+NASSE('s)?
 NVIDIA
 Nemotron
 OAuth
@@ -124,6 +129,8 @@ URIs
 OTel
 onboarding
 OpenPipe
+[Oo]ptimizable
+Optuna
 [Oo]verfitting
 pandas
 [Pp]arallelization
@@ -141,16 +148,19 @@ PDF(s?)
 Pydantic
 PyPI
 pytest
+Qwen
 [Rr]edis
 [Rr]eimplement(ing)?
 [Rr]einstall(s?)
 [Rr]eplatform(ing)?
 [Rr]epo
+[Rr]eputational
 [Rr]etarget(ed?)
 [Rr]eusability
 [Rr]ollout(s?)
 [Rr]untime(s?)
 [Ss]andboxing
+[Ss]anitiz(e|ed|ation|ing)
 [Ss]erializable
 [Ss]treamable
 [Ss]ubclassing
@@ -160,6 +170,7 @@ pytest
 [Ss]ubpackage(s?)
 [Ss]ubword(s?)
 [Ss]uperset(s?)
+spaCy
 SSE
 SQLAlchemy
 Tavily
@@ -167,6 +178,7 @@ Tavily
 [Tt]imestamp(s?)
 [Tt]okenization
 [Tt]okenizer(s?)
+[Tt]oolkit's
 triages
 [Uu]ncomment(ed)?
 [Uu]nencrypted
@@ -182,17 +194,5 @@ VectorDB
 [Ww]eb[Ss]ocket
 [We]ebSocket
 XGBoost
-zsh
 Zep
-Optuna
-[Oo]ptimizable
-[Cc]heckpointed
-[Gg]uardrail(s|ed|ing)?
-JSONPath
-[Mm]itigation(s?)
-NASSE('s)?
-Qwen
-[Rr]eputational
-[Ss]anitiz(e|ed|ation|ing)
-spaCy
-Toolkit's
+zsh

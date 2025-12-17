@@ -114,9 +114,6 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
 ALLOWLISTED_WORDS: set[str] = {
     "A/B",
     "and/or",
-    "filtering/grouping",
-    "harmful/violent",
-    "walmart.com/garden-trowels",
     "application/json",
     "CI/CD",
     "commit/push",
@@ -160,6 +157,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "try/except",
     "user/assistant",
     "validate/sanitize",
+    "walmart.com/garden-trowels",
     "Workflows/tools",
     "Yes/No",  #
     # numbers

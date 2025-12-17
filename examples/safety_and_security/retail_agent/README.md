@@ -446,7 +446,7 @@ scenarios:
 |-------|-------------|
 | `middleware` | Attack injection configuration (payload, target, placement) |
 | `evaluator` | Attack success evaluation (can use `_extends` to inherit from defaults) |
-| `tags` | Labels for filtering/grouping in reports |
+| `tags` | Labels for filtering and/or grouping in reports |
 | `scenario_group` | Groups related scenarios (e.g., same attack type, different payloads) |
 
 ### Example Attack Scenarios
