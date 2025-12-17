@@ -131,16 +131,20 @@ Based on the configuration, the RedTeamingRunner will run all scenarios, perform
 
 Defense Middleware acts as a critical layer within the agent's workflow, intercepting inputs, outputs, and intermediate steps to apply various mitigation techniques. Its primary goal is to prevent and neutralize attacks, ensuring the agent's safe and secure operation by enforcing policies and sanitizing data. The Defense Middleware enables the following mitigation techniques:
 
-- Redaction
-- Sanitization
-- Filtering
-- Guardrailing
+- Redaction is applicable for PII related risk mitigation.
+- Sanitization is applicable to input/ output verification and mitigation.
+- Filtering is applicable to simple rule based mitigation.  
+- Guard Models are applicable for content safety related risk mitigation. 
 
 ---
 
 ## Retail Agent Example
 
 This section demonstrates NASSE using a realistic retail customer service agent. We will explain how to perform risk assessment of the retail agent using NASSE's red teaming functionality.
+
+> ⚠️ **Content Warning**: Some red teaming scenarios test the system for content safety. These scenarios contain references to self-harm and content that some may find offensive or disturbing. This is intentional for evaluating agent robustness.
+
+> ⚠️ **Sandbox Requirement**: Any red teaming scenarios should be run in a sandbox to prevent data leakage and other harm. This example is safe to use as any unsafe agent functions are mocked and the provided data is purely fictional.
 
 ### The Retail Agent
 
@@ -333,9 +337,6 @@ Workflow Result:
 
 ### Red Teaming the Retail Agent
 
-> ⚠️ **Content Warning**: Some red teaming scenarios test the system for content safety. These scenarios contain references to self-harm and content that some may find offensive or disturbing. This is intentional for evaluating agent robustness.
-
-> ⚠️ **Sandbox Requirement**: Any red teaming scenarios should be run in a sandbox to prevent data leakage and other harm. This example is safe to use as any unsafe agent functions are mocked and the provided data is purely fictional.
 
 **Quick Start:**
 
