@@ -100,7 +100,7 @@ class WeaveFastAPIPluginWorker(FastApiFrontEndPluginWorker):
                         await asyncio.to_thread(add_weave_feedback)
                         return {"message": f"Added reaction '{reaction_type}' to call {observability_trace_id}"}
                     except Exception as e:
-                        logger.error("Failed to add feedback to Weave: %s", e)
+                        logger.exception("Failed to add feedback to Weave: %s", e)
                         raise HTTPException(status_code=500, detail=f"Failed to add feedback: {str(e)}") from e
 
             app.add_api_route(
