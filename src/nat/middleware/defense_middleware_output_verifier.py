@@ -269,9 +269,9 @@ Respond ONLY with valid JSON in this exact format:
                             correct_answer)
                 return correct_answer
             else:
-                # No correction available, return safe placeholder
+                # No correction available, return string message
                 logger.info("Redirecting %s (no correction available)", context.name)
-                return {"error": "Content sanitized by security policy", "original_blocked": True}
+                return "[Content blocked: unable to provide corrected value]"
 
         else:  # action == "partial_compliance"
             logger.warning("Threat logged for %s: %s", context.name, analysis_result.reason)
