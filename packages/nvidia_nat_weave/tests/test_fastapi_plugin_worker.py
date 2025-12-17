@@ -112,11 +112,11 @@ async def test_feedback_endpoint_requires_parameters() -> None:
     async with build_nat_client(config, worker_class=WeaveFastAPIPluginWorker) as client:
         # Test with missing observability_trace_id
         response = await client.post("/feedback", json={"reaction_type": "👍"})
-        assert response.status_code == 400
+        assert response.status_code == 422
 
         # Test with missing reaction_type
         response = await client.post("/feedback", json={"observability_trace_id": "test-trace-id"})
-        assert response.status_code == 400
+        assert response.status_code == 422
 
 
 async def test_weave_worker_adds_standard_routes() -> None:
