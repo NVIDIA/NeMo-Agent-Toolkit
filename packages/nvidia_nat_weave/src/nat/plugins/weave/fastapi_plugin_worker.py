@@ -19,6 +19,7 @@ import logging
 from fastapi import FastAPI
 from fastapi import HTTPException
 from fastapi import Request
+from pydantic import BaseModel
 
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
@@ -26,6 +27,19 @@ from nat.runtime.session import SessionManager
 from nat.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
+
+
+class WeaveFeedbackPayload(BaseModel):
+    """Payload for adding feedback to a Weave trace."""
+
+    observability_trace_id: str
+    reaction_type: str
+
+
+class WeaveFeedbackResponse(BaseModel):
+    """Response for feedback submission."""
+
+    message: str
 
 
 class WeaveFastAPIPluginWorker(FastApiFrontEndPluginWorker):
@@ -46,7 +60,7 @@ class WeaveFastAPIPluginWorker(FastApiFrontEndPluginWorker):
     """
 
     @override
-    async def add_routes(self, app: FastAPI, builder: WorkflowBuilder):
+    async def add_routes(self, app: FastAPI, builder: WorkflowBuilder) -> None:
         """Add routes including Weave feedback endpoint if Weave is configured."""
         # Add all standard routes first
         await super().add_routes(app, builder)
@@ -54,7 +68,7 @@ class WeaveFastAPIPluginWorker(FastApiFrontEndPluginWorker):
         # Add Weave-specific routes
         await self._add_weave_feedback_route(app, builder)
 
-    async def _add_weave_feedback_route(self, app: FastAPI, builder: WorkflowBuilder):
+    async def _add_weave_feedback_route(self, app: FastAPI, builder: WorkflowBuilder) -> None:
         """Add the Weave feedback endpoint if Weave telemetry is configured."""
 
         # Find Weave telemetry exporter configuration
@@ -76,18 +90,13 @@ class WeaveFastAPIPluginWorker(FastApiFrontEndPluginWorker):
             project = weave_config.project
             weave_project = f"{entity}/{project}" if entity else project
 
-            async def add_chat_feedback(request: Request, payload: dict):
+            async def add_chat_feedback(request: Request, payload: WeaveFeedbackPayload) -> WeaveFeedbackResponse:
                 """Add reaction feedback for an assistant message via observability trace ID."""
 
                 async with session_manager.session(http_connection=request,
                                                    user_authentication_callback=self._http_flow_handler.authenticate):
-                    # Extract parameters from payload
-                    observability_trace_id = payload.get('observability_trace_id')
-                    reaction_type = payload.get('reaction_type')
-
-                    if not observability_trace_id or not reaction_type:
-                        raise HTTPException(status_code=400,
-                                            detail="observability_trace_id and reaction_type are required")
+                    observability_trace_id = payload.observability_trace_id
+                    reaction_type = payload.reaction_type
 
                     def add_weave_feedback():
                         import weave
@@ -98,9 +107,10 @@ class WeaveFastAPIPluginWorker(FastApiFrontEndPluginWorker):
 
                     try:
                         await asyncio.to_thread(add_weave_feedback)
-                        return {"message": f"Added reaction '{reaction_type}' to call {observability_trace_id}"}
+                        return WeaveFeedbackResponse(
+                            message=f"Added reaction '{reaction_type}' to call {observability_trace_id}")
                     except Exception as e:
-                        logger.exception("Failed to add feedback to Weave: %s", e)
+                        logger.exception("Failed to add feedback to Weave")
                         raise HTTPException(status_code=500, detail=f"Failed to add feedback: {str(e)}") from e
 
             app.add_api_route(
