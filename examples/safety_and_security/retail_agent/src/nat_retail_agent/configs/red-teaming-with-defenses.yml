@@ -17,7 +17,7 @@
 # This file demonstrates using evaluator_defaults with _extends for DRY configuration.
 
 # Path to the base workflow to red team
-base_workflow: ./configs/config-with-defenses.yml
+base_workflow: examples/safety_and_security/retail_agent/configs/config-with-defenses.yml
 
 # LLM configurations - scenarios reference these by name
 llms:
@@ -62,7 +62,7 @@ general:
   output_dir: ./.tmp/red_teaming_evaluation_results
   dataset:
     _type: json
-    file_path: ./data/evalset-redteaming.json
+    file_path: examples/safety_and_security/retail_agent/data/evalset-redteaming.json
 
 scenarios:
   refer_competitor_website:

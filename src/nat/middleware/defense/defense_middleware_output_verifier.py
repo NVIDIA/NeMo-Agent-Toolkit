@@ -27,10 +27,11 @@ from typing import Any
 
 from pydantic import Field
 
-from nat.middleware.defense.defense_middleware import (DefenseMiddleware, DefenseMiddlewareConfig)
-from nat.middleware.defense.defense_middleware_data_models import \
-    OutputVerificationResult
-from nat.middleware.function_middleware import CallNext, CallNextStream
+from nat.middleware.defense.defense_middleware import DefenseMiddleware
+from nat.middleware.defense.defense_middleware import DefenseMiddlewareConfig
+from nat.middleware.defense.defense_middleware_data_models import OutputVerificationResult
+from nat.middleware.function_middleware import CallNext
+from nat.middleware.function_middleware import CallNextStream
 from nat.middleware.middleware import FunctionMiddlewareContext
 
 logger = logging.getLogger(__name__)

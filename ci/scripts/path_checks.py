@@ -105,11 +105,18 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/finetuning/dpo_tic_tac_toe/.*/configs/config.*\.yml$",
         r"^examples/finetuning/dpo_tic_tac_toe/(.*/)?data/",
     ),
+    (
+        r"^examples/safety_and_security/retail_agent/.*configs/",
+        r"^examples/safety_and_security/retail_agent/(configs|data)/",
+    ),
 }
 
 ALLOWLISTED_WORDS: set[str] = {
     "A/B",
     "and/or",
+    "filtering/grouping",
+    "harmful/violent",
+    "walmart.com/garden-trowels",
     "application/json",
     "CI/CD",
     "commit/push",
@@ -199,7 +206,7 @@ IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
     (
         r"^docs/",
         r"\.rst$",
-    )
+    ),
 }
 
 # Files to ignore -- regex pattern

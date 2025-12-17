@@ -17,11 +17,12 @@
 from __future__ import annotations
 
 from nat.cli.register_workflow import register_middleware
-from nat.middleware.defense.defense_middleware_content_guard import (ContentSafetyGuardMiddleware,
-                                                                     ContentSafetyGuardMiddlewareConfig)
-from nat.middleware.defense.defense_middleware_output_verifier import (OutputVerifierMiddleware,
-                                                                       OutputVerifierMiddlewareConfig)
-from nat.middleware.defense.defense_middleware_pii import (PIIDefenseMiddleware, PIIDefenseMiddlewareConfig)
+from nat.middleware.defense.defense_middleware_content_guard import ContentSafetyGuardMiddleware
+from nat.middleware.defense.defense_middleware_content_guard import ContentSafetyGuardMiddlewareConfig
+from nat.middleware.defense.defense_middleware_output_verifier import OutputVerifierMiddleware
+from nat.middleware.defense.defense_middleware_output_verifier import OutputVerifierMiddlewareConfig
+from nat.middleware.defense.defense_middleware_pii import PIIDefenseMiddleware
+from nat.middleware.defense.defense_middleware_pii import PIIDefenseMiddlewareConfig
 
 
 @register_middleware(config_type=ContentSafetyGuardMiddlewareConfig)

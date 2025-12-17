@@ -15,7 +15,8 @@
 from __future__ import annotations
 
 from nat.cli.register_workflow import register_middleware
-from nat.middleware.cache.cache_middleware import (CacheMiddleware, CacheMiddlewareConfig)
+from nat.middleware.cache.cache_middleware import CacheMiddleware
+from nat.middleware.cache.cache_middleware import CacheMiddlewareConfig
 
 
 @register_middleware(config_type=CacheMiddlewareConfig)

@@ -91,7 +91,7 @@ The Red Teaming Middleware enables the developer to:
 | `attack_payload` | The adversarial string to inject |
 | `target_function_or_group` | Which function(s) to attack (e.g., `retail_tools.get_product_info` or `<workflow>`) |
 | `target_location` | Attack `input` or `output` of the function |
-| `target_field` | JSONPath to the field within the function input or output to modify (e.g., `$.messages.[1].message`). <br> This is required if the input or output are dictionaries, lists or pydantic models |
+| `target_field` | JSONPath to the field within the function input or output to modify (e.g., `$.messages.[1].message`). <br> This is required if the input or output are dictionaries, lists or Pydantic models |
 | `payload_placement` | How to inject: `replace`, `append_start`, `append_middle`, `append_end` |
 | `call_limit` | Maximum number of times to apply the payload |
 

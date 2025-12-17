@@ -20,15 +20,13 @@ import pytest
 from pydantic import ValidationError
 
 from nat.data_models.evaluate import EvalGeneralConfig
-from nat.eval.red_teaming_evaluator.filter_conditions import \
-    IntermediateStepsFilterCondition
+from nat.eval.red_teaming_evaluator.filter_conditions import IntermediateStepsFilterCondition
 from nat.eval.red_teaming_evaluator.register import RedTeamingEvaluatorConfig
-from nat.eval.runners.red_teaming_runner.config import (RedTeamingRunnerConfig,
-                                                        RedTeamingScenario,
-                                                        _RedTeamingScenarioRaw)
+from nat.eval.runners.red_teaming_runner.config import RedTeamingRunnerConfig
+from nat.eval.runners.red_teaming_runner.config import RedTeamingScenario
+from nat.eval.runners.red_teaming_runner.config import _RedTeamingScenarioRaw
 from nat.llm.nim_llm import NIMModelConfig
-from nat.middleware.red_teaming.red_teaming_middleware_config import \
-    RedTeamingMiddlewareConfig
+from nat.middleware.red_teaming.red_teaming_middleware_config import RedTeamingMiddlewareConfig
 
 
 class TestRedTeamingRunnerConfigNormalConstruction:
