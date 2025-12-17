@@ -196,7 +196,7 @@ Look for: `Listening on: http://0.0.0.0:8080`
    curl http://localhost:8080/realms/master/.well-known/openid-configuration | python3 -m json.tool
    ```
 
-   You should see the OAuth2/OIDC endpoints:
+   You should see the OAuth2 and OpenID Connect endpoints:
    - `authorization_endpoint`: `http://localhost:8080/realms/master/protocol/openid-connect/auth`
    - `token_endpoint`: `http://localhost:8080/realms/master/protocol/openid-connect/token`
    - `jwks_uri`: `http://localhost:8080/realms/master/protocol/openid-connect/certs`
