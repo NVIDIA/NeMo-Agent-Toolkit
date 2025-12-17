@@ -14,13 +14,19 @@
 # limitations under the License.
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
+
+from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_middleware
 from nat.middleware.cache.cache_middleware import CacheMiddleware
 from nat.middleware.cache.cache_middleware import CacheMiddlewareConfig
 
 
 @register_middleware(config_type=CacheMiddlewareConfig)
-async def cache_middleware(config: CacheMiddlewareConfig, builder):
+async def cache_middleware(
+    config: CacheMiddlewareConfig,
+    builder: Builder,
+) -> AsyncGenerator[CacheMiddleware, None]:
     """Build a cache middleware from configuration.
 
     Args:

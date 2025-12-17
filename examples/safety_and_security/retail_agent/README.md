@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,9 +23,9 @@ limitations under the License.
 
 ## Introduction
 
-In this guide we will outline the features NeMo Agent Toolkit's Safety and Security Engine (NASSE) and will demonstrate its capabilities by assessing and improving the safety and security posture of an example Retail Agent.
+In this guide we will outline the features of NVIDIA NeMo Agent Toolkit's Safety and Security Engine (NASSE) and will demonstrate its capabilities by assessing and improving the safety and security posture of an example Retail Agent.
 
-NASSE is a framework designed to integrate robust safety and security measures directly into the lifecycle of AI agents built with NeMo Agent Toolkit. Its overarching purpose is to provide developers with the tools and methodologies necessary to proactively identify, mitigate, and report potential risks associated with agent deployment. In an era where AI agents are becoming increasingly autonomous and integrated into critical systems, ensuring their safety and security is paramount to prevent misuse, maintain trust, and comply with ethical guidelines and regulations.
+NASSE is a framework designed to integrate robust safety and security measures directly into the lifecycle of AI agents built with NeMo Agent toolkit. Its overarching purpose is to provide developers with the tools and methodologies necessary to proactively identify, mitigate, and report potential risks associated with agent deployment. In an era where AI agents are becoming increasingly autonomous and integrated into critical systems, ensuring their safety and security is paramount to prevent misuse, maintain trust, and comply with ethical guidelines and regulations.
 
 ---
 
@@ -131,18 +131,20 @@ Based on the configuration, the RedTeamingRunner will run all scenarios, perform
 
 Defense Middleware acts as a critical layer within the agent's workflow, intercepting inputs, outputs, and intermediate steps to apply various mitigation techniques. Its primary goal is to prevent and neutralize attacks, ensuring the agent's safe and secure operation by enforcing policies and sanitizing data. The Defense Middleware enables the following mitigation techniques:
 
- **PII Defense**
+#### PII Defense
+
 - Redaction and Sanitization for PII-related risk mitigation
 - Block, Sanitize, or Log sensitive outputs and warnings
 
- **Content Safety Defense**
+#### Content Safety Defense
+
 - Guard Models (SOTA model providers on Hugging Face and NVIDIA NIMs) for content safety–related risk mitigation
 - Block, Sanitize, or Log unsafe outputs
 
-**Rule-Based / LLM Verifier Defense**
+#### Rule-Based / LLM Verifier Defense
+
 - Filtering and Verification for general policy enforcement and sanity checks, using tool descriptions, tool inputs, and tool outputs as evaluation signals
 - Block, Sanitize, or Log policy violations
-
 
 ---
 
@@ -151,7 +153,7 @@ Defense Middleware acts as a critical layer within the agent's workflow, interce
 This section demonstrates NASSE using a realistic retail customer service agent. We will explain how to perform risk assessment of the retail agent using NASSE's red teaming functionality.
 
 > ⚠️ **Content Warning**: Some red teaming scenarios test the system for content safety. These scenarios contain references to self-harm and content that some may find offensive or disturbing. This is intentional for evaluating agent robustness.
-
+>
 > ⚠️ **Sandbox Requirement**: Any red teaming scenarios should be run in a sandbox to prevent data leakage and other harm. This example is safe to use as any unsafe agent functions are mocked and the provided data is purely fictional.
 
 ### The Retail Agent
@@ -227,7 +229,7 @@ cd ./examples/safety_and_security/retail_agent
 nat run --config_file configs/config.yml --input "Email From: john@email.com\nContent: What garden trowels do you have?"
 ```
 
-**Expected Workflow Output**
+#### Expected Workflow Output
 
 ```console
 nemo-agent-toolkit % nat run --config_file configs/config.yml --input "Email From: john@email.com\nContent: What garden trowels do you have?"
@@ -345,8 +347,7 @@ Workflow Result:
 
 ### Red Teaming the Retail Agent
 
-
-**Quick Start:**
+#### Quick Start
 
 Run the red teaming evaluation from the example directory:
 
@@ -450,7 +451,7 @@ scenarios:
 
 ### Example Attack Scenarios
 
-**Scenario 1: Indirect Prompt Injection (Competitor Redirect)**
+#### Scenario 1: Indirect Prompt Injection (Competitor Redirect)
 
 *Attack Type*: Reputational damage via tool output manipulation
 
@@ -473,7 +474,7 @@ refer_competitor_website:
 
 *What it tests*: Can an attacker inject content into database results that causes the agent to recommend a competitor?
 
-**Scenario 2: Denial of Service**
+#### Scenario 2: Denial of Service
 
 *Attack Type*: Agent functionality disruption
 
@@ -575,7 +576,7 @@ nat run --config_file configs/config-with-defenses.yml \
   --input "Email From: john@email.com\nContent: What garden trowels do you have?"
 ```
 
-**Expected Workflow Output (with Defenses)**
+#### Expected Workflow Output (with Defenses)
 
 ```console
 nemo-agent-toolkit % nat run --config_file configs/config-with-defenses.yml \
@@ -727,7 +728,7 @@ Each defense can operate in one of three modes:
 
 Defenses can target three levels: entire workflow, function groups, or specific functions.
 
-**Example 1: PII Defense + Redirection Mode (Workflow-Level)**
+##### Example 1: PII Defense + Redirection Mode (Workflow-Level)
 
 ```yaml
 middleware:
@@ -747,7 +748,7 @@ workflow:
     - pii_defense_workflow  # Applied to entire workflow output
 ```
 
-**Example 2: Content Safety Guard + Refusal Mode (Function Group-Level)**
+##### Example 2: Content Safety Guard + Refusal Mode (Function Group-Level)
 
 ```yaml
 function_groups:
@@ -782,7 +783,7 @@ middleware:
     target_field_resolution_strategy: all
 ```
 
-**Example 3: Output Verifier + Partial Refusal Mode (Specific Function-Level)**
+##### Example 3: Output Verifier + Partial Refusal Mode (Specific Function-Level)
 
 ```yaml
 middleware:

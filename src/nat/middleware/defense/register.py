@@ -16,6 +16,9 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
+
+from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_middleware
 from nat.middleware.defense.defense_middleware_content_guard import ContentSafetyGuardMiddleware
 from nat.middleware.defense.defense_middleware_content_guard import ContentSafetyGuardMiddlewareConfig
@@ -26,7 +29,10 @@ from nat.middleware.defense.defense_middleware_pii import PIIDefenseMiddlewareCo
 
 
 @register_middleware(config_type=ContentSafetyGuardMiddlewareConfig)
-async def content_safety_guard_middleware(config: ContentSafetyGuardMiddlewareConfig, builder):
+async def content_safety_guard_middleware(
+    config: ContentSafetyGuardMiddlewareConfig,
+    builder: Builder,
+) -> AsyncGenerator[ContentSafetyGuardMiddleware, None]:
     """Build a Content Safety Guard middleware from configuration.
 
     Args:
@@ -41,7 +47,10 @@ async def content_safety_guard_middleware(config: ContentSafetyGuardMiddlewareCo
 
 
 @register_middleware(config_type=OutputVerifierMiddlewareConfig)
-async def output_verifier_middleware(config: OutputVerifierMiddlewareConfig, builder):
+async def output_verifier_middleware(
+    config: OutputVerifierMiddlewareConfig,
+    builder: Builder,
+) -> AsyncGenerator[OutputVerifierMiddleware, None]:
     """Build an Output Verifier middleware from configuration.
 
     Args:
@@ -56,7 +65,10 @@ async def output_verifier_middleware(config: OutputVerifierMiddlewareConfig, bui
 
 
 @register_middleware(config_type=PIIDefenseMiddlewareConfig)
-async def pii_defense_middleware(config: PIIDefenseMiddlewareConfig, builder):
+async def pii_defense_middleware(
+    config: PIIDefenseMiddlewareConfig,
+    builder: Builder,
+) -> AsyncGenerator[PIIDefenseMiddleware, None]:
     """Build a PII Defense middleware from configuration.
 
     Args:
