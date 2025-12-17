@@ -150,13 +150,13 @@ When using the FastAPI front end with `nat serve`, users are identified by the `
 curl -X POST http://localhost:8000/generate \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=alice" \
-  -d '{"message": "Hello"}'
+  -d ''{"messages": [{"role": "user", "content": "Hello"}]}''
 
 # User "bob" makes a request (isolated from alice)
 curl -X POST http://localhost:8000/generate \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=bob" \
-  -d '{"message": "Hello"}'
+  -d ''{"messages": [{"role": "user", "content": "Hello"}]}''
 ```
 
 ### Lifecycle
