@@ -25,6 +25,7 @@ from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import AgentCapabilities
 from a2a.types import AgentCard
 from a2a.types import AgentSkill
+from a2a.types import SecurityScheme
 from nat.builder.function import Function
 from nat.builder.workflow import Workflow
 from nat.builder.workflow_builder import WorkflowBuilder
@@ -73,6 +74,81 @@ class A2AFrontEndPluginWorker:
 
         return functions
 
+    async def _generate_security_schemes(
+            self, server_auth_config) -> tuple[dict[str, SecurityScheme], list[dict[str, list[str]]]]:
+        """Generate A2A security schemes from OAuth2ResourceServerConfig.
+
+        Args:
+            server_auth_config: OAuth2ResourceServerConfig
+
+        Returns:
+            Tuple of (security_schemes dict, security requirements list)
+        """
+        from a2a.types import AuthorizationCodeOAuthFlow
+        from a2a.types import OAuth2SecurityScheme
+        from a2a.types import OAuthFlows
+
+        # Resolve OAuth2 endpoints from configuration
+        auth_url, token_url = await self._resolve_oauth_endpoints(server_auth_config)
+
+        # Create scope descriptions
+        scope_descriptions = {scope: f"Permission: {scope}" for scope in server_auth_config.scopes}
+
+        # Build OAuth2 security scheme
+        security_schemes = {
+            "oauth2":
+                SecurityScheme(root=OAuth2SecurityScheme(
+                    type="oauth2",
+                    description="OAuth 2.0 authentication required to access this agent",
+                    flows=OAuthFlows(authorizationCode=AuthorizationCodeOAuthFlow(
+                        authorizationUrl=auth_url,
+                        tokenUrl=token_url,
+                        scopes=scope_descriptions,
+                    )),
+                ))
+        }
+
+        # Security requirements (scopes needed)
+        security = [{"oauth2": server_auth_config.scopes}]
+
+        return security_schemes, security
+
+    async def _resolve_oauth_endpoints(self, server_auth_config) -> tuple[str, str]:
+        """Resolve authorization and token URLs from OAuth2 configuration.
+
+        Args:
+            server_auth_config: OAuth2ResourceServerConfig
+
+        Returns:
+            Tuple of (authorization_url, token_url)
+        """
+        import httpx
+
+        # If discovery URL is provided, use OIDC discovery
+        if server_auth_config.discovery_url:
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(server_auth_config.discovery_url, timeout=5.0)
+                    response.raise_for_status()
+                    metadata = response.json()
+
+                    auth_url = metadata.get("authorization_endpoint")
+                    token_url = metadata.get("token_endpoint")
+
+                    if auth_url and token_url:
+                        logger.info("Resolved OAuth endpoints via discovery: %s", server_auth_config.discovery_url)
+                        return auth_url, token_url
+            except Exception as e:
+                logger.warning("Failed to discover OAuth endpoints: %s", e)
+
+        # Fallback: derive from issuer URL (common convention)
+        issuer = server_auth_config.issuer_url.rstrip("/")
+        auth_url = f"{issuer}/oauth/authorize"
+        token_url = f"{issuer}/oauth/token"
+
+        logger.info("Using derived OAuth endpoints from issuer: %s", issuer)
+        return auth_url, token_url
+
     async def create_agent_card(self, workflow: Workflow) -> AgentCard:
         """Build AgentCard from configuration and workflow functions.
 
@@ -113,6 +189,18 @@ class A2AFrontEndPluginWorker:
 
         logger.info("Auto-generated %d skills from workflow functions", len(skills))
 
+        # Generate security schemes if server_auth is configured
+        security_schemes = None
+        security = None
+
+        if config.server_auth:
+            security_schemes, security = await self._generate_security_schemes(config.server_auth)
+            logger.info(
+                "Generated OAuth2 security schemes for agent (issuer=%s, scopes=%s)",
+                config.server_auth.issuer_url,
+                config.server_auth.scopes,
+            )
+
         # Build agent card
         agent_url = f"http://{config.host}:{config.port}/"
         agent_card = AgentCard(
@@ -124,11 +212,15 @@ class A2AFrontEndPluginWorker:
             default_output_modes=config.default_output_modes,
             capabilities=capabilities,
             skills=skills,
+            security_schemes=security_schemes,
+            security=security,
         )
 
         logger.info("Created AgentCard for: %s v%s", config.name, config.version)
         logger.info("Agent URL: %s", agent_url)
         logger.info("Skills: %d", len(skills))
+        if security_schemes:
+            logger.info("Security: OAuth2 authentication required")
 
         return agent_card
 

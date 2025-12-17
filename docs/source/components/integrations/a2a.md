@@ -59,6 +59,7 @@ The following examples demonstrate A2A integration:
 
 - [Connecting to Remote Agents](../../build-workflows/a2a-client.md)
 - [Publishing NAT Workflows](../../run-workflows/a2a-server.md)
+- [A2A Authentication](../auth/a2a-auth.md)
 
 ## Protocol Compliance
 
