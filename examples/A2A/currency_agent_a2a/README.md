@@ -143,13 +143,15 @@ When using `nat serve`, test with different session cookies:
 ```bash
 # User "alice" queries currency rates
 curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
   -H "Cookie: nat-session=alice" \
-  -d '{"query": "What is the EUR to USD rate?"}'
+  -d '{"messages": [{"role": "user", "content": "What is the EUR to USD rate?"}]}'
 
 # User "hatter" queries independently (separate connection)
 curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
   -H "Cookie: nat-session=hatter" \
-  -d '{"query": "Convert 100 GBP to JPY"}'
+  -d '{"messages": [{"role": "user", "content": "Convert 100 GBP to JPY"}]}'
 ```
 
 ## Configuration Details

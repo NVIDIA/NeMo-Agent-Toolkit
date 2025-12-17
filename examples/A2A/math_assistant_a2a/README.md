@@ -107,19 +107,6 @@ nat run --config_file examples/A2A/math_assistant_a2a/configs/config.yml \
 
 For comprehensive examples demonstrating different capabilities (basic calculations, time-integrated math, multi-step problems), see [`data/sample_queries.json`](data/sample_queries.json).
 
-## OAuth2 Protected Setup
-
-For production scenarios requiring authentication:
-
-- **Architecture and Concepts**: [A2A Authentication Documentation](../../../docs/source/components/auth/a2a-auth.md)
-- **Hands-on Setup Guide**: [OAuth2 Keycloak Setup Guide](oauth2-keycloak-setup.md)
-
-The OAuth2 setup demonstrates:
-- End-to-end OAuth2 authorization code flow
-- Protected A2A server with JWT token validation
-- Keycloak integration for testing secure A2A communication
-
-This setup uses the OAuth2-enabled configuration (`configs/config-client-oauth2.yml`) instead of the basic configuration.
 
 ## Per-User Workflow Architecture
 
@@ -142,16 +129,37 @@ The example uses `per_user_react_agent`, which is the per-user version of the Re
 When using `nat serve`, different users are identified by the `nat-session` cookie:
 
 ```bash
-# User "alice" makes a request
-curl -X POST http://localhost:8000/generate \
-  -H "Cookie: nat-session=alice" \
-  -d '{"query": "What is 5 + 3?"}'
-
-# User "hatter" makes a request (isolated from alice)
-curl -X POST http://localhost:8000/generate \
-  -H "Cookie: nat-session=hatter" \
-  -d '{"query": "What is 10 * 2?"}'
+# Start the math assistant as a server on terminal 1
+nat serve --config_file examples/A2A/math_assistant_a2a/configs/config.yml
 ```
+
+```bash
+# User "alice" makes a request on terminal 2
+curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -H "Cookie: nat-session=alice" \
+  -d '{"messages": [{"role": "user", "content": "Is the sum of 5 and 3 greater than the current hour of the day?"}]}' | jq
+
+# User "hatter" makes a request on terminal 2 (isolated from alice)
+curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -H "Cookie: nat-session=hatter" \
+  -d '{"messages": [{"role": "user", "content": "Is the product of 3 and 2 greater than the current hour of the day?"}]}' | jq
+```
+
+## OAuth2 Protected Setup
+
+For production scenarios requiring authentication:
+
+- **Architecture and Concepts**: [A2A Authentication Documentation](../../../docs/source/components/auth/a2a-auth.md)
+- **Hands-on Setup Guide**: [OAuth2 Keycloak Setup Guide](oauth2-keycloak-setup.md)
+
+The OAuth2 setup demonstrates:
+- End-to-end OAuth2 authorization code flow
+- Protected A2A server with JWT token validation
+- Keycloak integration for testing secure A2A communication
+
+This setup uses the OAuth2-enabled configuration (`configs/config-client-oauth2.yml`) instead of the basic configuration.
 
 ## Configuration Details
 
