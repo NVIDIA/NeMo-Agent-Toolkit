@@ -153,7 +153,7 @@ general:
         project: "nat-demo"
 ```
 
-The `WeaveFastAPIPluginWorker` registers the `/feedback` endpoint when Weave telemetry is configured. For more details on the feedback API, see the [API Server Endpoints](../../reference/api-server-endpoints.md#feedback-endpoint) documentation.
+The `WeaveFastAPIPluginWorker` registers the `/feedback` endpoint when Weave telemetry is configured. For more details on the feedback API, see the [API Server Endpoints](../../reference/rest-api/api-server-endpoints.md#feedback-endpoint) documentation.
 
 ## Resources
 
