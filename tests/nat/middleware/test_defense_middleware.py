@@ -418,7 +418,6 @@ class TestDefenseMiddlewareFieldApplication:
 class TestDefenseMiddlewareEndToEnd:
     """End-to-end tests for defense middleware field extraction and targeting."""
 
-    @pytest.mark.asyncio
     async def test_extract_nested_output_field(self, mock_builder):
         """Test extracting nested field from output in actual invoke scenario."""
         config = DefenseMiddlewareConfig(target_field="$.result", target_function_or_group="my_calculator.multiply")
@@ -441,7 +440,6 @@ class TestDefenseMiddlewareEndToEnd:
         assert middleware._last_field_info is not None
         assert middleware._last_field_info["target_field"] == "$.result"
 
-    @pytest.mark.asyncio
     async def test_extract_deeply_nested_field(self, mock_builder):
         """Test extracting deeply nested field using JSONPath."""
 
@@ -468,7 +466,6 @@ class TestDefenseMiddlewareEndToEnd:
         assert middleware._last_extracted_content == "Hello world"
         assert middleware._last_field_info is not None
 
-    @pytest.mark.asyncio
     async def test_target_function_filtering(self, mock_builder):
         """Test that defense skips non-targeted functions."""
         config = DefenseMiddlewareConfig(target_field="$.result", target_function_or_group="other_function")
@@ -490,7 +487,6 @@ class TestDefenseMiddlewareEndToEnd:
         assert middleware._last_extracted_content is None
         assert middleware._last_field_info is None
 
-    @pytest.mark.asyncio
     async def test_multiple_field_matches_with_all_strategy(self, mock_builder):
         """Test resolution strategy 'all' extracts all matching fields."""
 
@@ -520,7 +516,6 @@ class TestDefenseMiddlewareEndToEnd:
         assert middleware._last_field_info is not None
         assert len(middleware._last_field_info["matches"]) == 3
 
-    @pytest.mark.asyncio
     async def test_multiple_field_matches_with_first_strategy(self, mock_builder):
         """Test resolution strategy 'first' extracts only first match."""
 
@@ -550,7 +545,6 @@ class TestDefenseMiddlewareEndToEnd:
         assert middleware._last_field_info is not None
         assert len(middleware._last_field_info["matches"]) == 1
 
-    @pytest.mark.asyncio
     async def test_multiple_field_matches_with_error_strategy(self, mock_builder):
         """Test resolution strategy 'error' logs warning and analyzes entire value on multiple matches."""
 
@@ -581,7 +575,6 @@ class TestDefenseMiddlewareEndToEnd:
         assert middleware._last_extracted_content == output_value
         assert middleware._last_field_info is None
 
-    @pytest.mark.asyncio
     async def test_extract_simple_type_no_target_field(self, mock_builder):
         """Test that simple types without target_field extract entire value."""
         config = DefenseMiddlewareConfig(target_field=None, target_function_or_group="simple_function")

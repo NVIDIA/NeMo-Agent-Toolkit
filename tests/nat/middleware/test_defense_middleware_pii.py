@@ -58,7 +58,6 @@ def fixture_middleware_context():
 class TestPIIDefenseInvoke:
     """Test PII Defense invoke behavior."""
 
-    @pytest.mark.asyncio
     async def test_simple_output_no_target_field(self, mock_builder, middleware_context):
         """Test analyzing simple string output without target_field."""
         config = PIIDefenseMiddlewareConfig(target_field=None, action="partial_compliance")
@@ -82,7 +81,6 @@ class TestPIIDefenseInvoke:
         call_args = mock_analyzer.analyze.call_args
         assert "john.doe@example.com" in str(call_args)
 
-    @pytest.mark.asyncio
     async def test_dict_output_with_target_field(self, mock_builder, middleware_context):
         """Test analyzing dict output with target_field."""
         config = PIIDefenseMiddlewareConfig(target_field="$.text", action="partial_compliance")
@@ -105,7 +103,6 @@ class TestPIIDefenseInvoke:
         call_args = mock_analyzer.analyze.call_args
         assert "john.doe@example.com" in str(call_args)
 
-    @pytest.mark.asyncio
     async def test_basemodel_output_with_target_field(self, mock_builder, middleware_context):
         """Test analyzing BaseModel output with target_field."""
         config = PIIDefenseMiddlewareConfig(target_field="$.text", action="partial_compliance")
@@ -128,7 +125,6 @@ class TestPIIDefenseInvoke:
         call_args = mock_analyzer.analyze.call_args
         assert "john.doe@example.com" in str(call_args)
 
-    @pytest.mark.asyncio
     async def test_nested_field_targeting(self, mock_builder, middleware_context):
         """Test analyzing nested field in output."""
         config = PIIDefenseMiddlewareConfig(target_field="$.data.content.message", action="partial_compliance")
@@ -151,7 +147,6 @@ class TestPIIDefenseInvoke:
         call_args = mock_analyzer.analyze.call_args
         assert "john.doe@example.com" in str(call_args)
 
-    @pytest.mark.asyncio
     async def test_complex_nested_structure_with_field_targeting(self, mock_builder, middleware_context):
         """Test field targeting on complex nested structure with lists and dicts."""
         config = PIIDefenseMiddlewareConfig(
@@ -194,7 +189,6 @@ class TestPIIDefenseInvoke:
         assert result["results"][1]["user"]["email"] == "jane.smith@example.com"
         assert result["total"] == 2
 
-    @pytest.mark.asyncio
     async def test_field_resolution_strategy_all(self, mock_builder, middleware_context):
         """Test field resolution strategy 'all' analyzes all matching fields."""
         config = PIIDefenseMiddlewareConfig(target_field="$.items[*].email",
@@ -253,7 +247,6 @@ class TestPIIDefenseInvoke:
             assert "third@example.com" in text_analyzed, (
                 f"Expected 'third@example.com' in analyzed text: {text_analyzed}")
 
-    @pytest.mark.asyncio
     async def test_action_partial_compliance(self, mock_builder, middleware_context):
         """Test partial_compliance action logs but allows output."""
         config = PIIDefenseMiddlewareConfig(action="partial_compliance")
@@ -275,7 +268,6 @@ class TestPIIDefenseInvoke:
             # Should log warning but return original output
             mock_logger.warning.assert_called()
 
-    @pytest.mark.asyncio
     async def test_action_refusal(self, mock_builder, middleware_context):
         """Test refusal action raises ValueError."""
         config = PIIDefenseMiddlewareConfig(action="refusal")
@@ -296,7 +288,6 @@ class TestPIIDefenseInvoke:
         with pytest.raises(ValueError, match="PII detected"):
             await middleware.function_middleware_invoke({}, mock_next, middleware_context)
 
-    @pytest.mark.asyncio
     async def test_action_redirection(self, mock_builder, middleware_context):
         """Test redirection action anonymizes PII."""
         config = PIIDefenseMiddlewareConfig(action="redirection")
@@ -321,7 +312,6 @@ class TestPIIDefenseInvoke:
         assert "<EMAIL_ADDRESS>" in result
         assert "john.doe@example.com" not in result
 
-    @pytest.mark.asyncio
     async def test_multiple_entity_types(self, mock_builder, middleware_context):
         """Test detecting multiple PII entity types."""
         config = PIIDefenseMiddlewareConfig(action="partial_compliance")
@@ -349,7 +339,6 @@ class TestPIIDefenseInvoke:
             assert mock_analyzer.analyze.called
             mock_logger.warning.assert_called()
 
-    @pytest.mark.asyncio
     async def test_no_pii_detected(self, mock_builder, middleware_context):
         """Test when no PII is detected."""
         config = PIIDefenseMiddlewareConfig(action="partial_compliance")
@@ -370,7 +359,6 @@ class TestPIIDefenseInvoke:
         assert mock_analyzer.analyze.called
         assert result == "Safe content with no PII"
 
-    @pytest.mark.asyncio
     async def test_targeting_configuration(self, mock_builder, middleware_context):
         """Test targeting configuration (function/group targeting and target_location)."""
         # Test None target applies to all functions
@@ -410,7 +398,6 @@ class TestPIIDefenseInvoke:
         assert not mock_analyzer.analyze.called  # Defense should not run
         assert result == "content"
 
-    @pytest.mark.asyncio
     async def test_target_location_validation(self, mock_builder, middleware_context):
         """Test target_location validation and default behavior."""
         # Test that target_location='input' raises ValidationError
@@ -439,7 +426,6 @@ class TestPIIDefenseInvoke:
         assert mock_analyzer.analyze.called
         assert result == "content"
 
-    @pytest.mark.asyncio
     async def test_non_string_output_converts_to_string(self, mock_builder, middleware_context):
         """Test that non-string outputs (int, float, dict, list) are converted to strings for analysis."""
         config = PIIDefenseMiddlewareConfig(target_field=None, action="partial_compliance")
@@ -490,7 +476,6 @@ class TestPIIDefenseInvoke:
 class TestPIIDefenseStreaming:
     """Test PII Defense streaming behavior."""
 
-    @pytest.mark.asyncio
     async def test_streaming_no_pii_detected(self, mock_builder, middleware_context):
         """Test streaming with no PII yields original chunks."""
         config = PIIDefenseMiddlewareConfig(action="redirection")
@@ -512,7 +497,6 @@ class TestPIIDefenseStreaming:
         assert chunks == ["Hello ", "world"]
         assert mock_analyzer.analyze.called
 
-    @pytest.mark.asyncio
     async def test_streaming_refusal_action(self, mock_builder, middleware_context):
         """Test streaming refusal action raises exception."""
         config = PIIDefenseMiddlewareConfig(action="refusal")
@@ -534,7 +518,6 @@ class TestPIIDefenseStreaming:
             async for _ in middleware.function_middleware_stream({}, mock_stream, middleware_context):
                 pass
 
-    @pytest.mark.asyncio
     async def test_streaming_redirection_action(self, mock_builder, middleware_context):
         """Test streaming redirection action yields anonymized content."""
         config = PIIDefenseMiddlewareConfig(action="redirection")
@@ -559,7 +542,6 @@ class TestPIIDefenseStreaming:
         assert len(chunks) == 1
         assert chunks[0] == "Contact <EMAIL_ADDRESS>"
 
-    @pytest.mark.asyncio
     async def test_streaming_partial_compliance(self, mock_builder, middleware_context):
         """Test streaming partial_compliance yields original chunks."""
         config = PIIDefenseMiddlewareConfig(action="partial_compliance")
@@ -585,7 +567,6 @@ class TestPIIDefenseStreaming:
             assert chunks == ["Contact ", "john.doe@example.com"]
             mock_logger.warning.assert_called()
 
-    @pytest.mark.asyncio
     async def test_streaming_skips_when_not_targeted(self, mock_builder, middleware_context):
         """Test streaming skips when function not targeted."""
         config = PIIDefenseMiddlewareConfig(target_function_or_group="other_function", action="refusal")

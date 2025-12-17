@@ -59,7 +59,6 @@ def fixture_middleware_context():
 class TestContentSafetyGuardInvoke:
     """Test Content Safety Guard invoke behavior."""
 
-    @pytest.mark.asyncio
     async def test_simple_output_no_target_field(self, mock_builder, middleware_context):
         """Test analyzing simple string output without target_field."""
         config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", target_field=None, action="partial_compliance")
@@ -80,7 +79,6 @@ class TestContentSafetyGuardInvoke:
         call_args = mock_llm.ainvoke.call_args
         assert "Hello world" in str(call_args)
 
-    @pytest.mark.asyncio
     async def test_dict_output_with_target_field(self, mock_builder, middleware_context):
         """Test analyzing dict output with target_field."""
         config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm",
@@ -104,7 +102,6 @@ class TestContentSafetyGuardInvoke:
         assert "Hello world" in str(call_args)
         assert result == {"message": "Hello world", "status": "ok"}
 
-    @pytest.mark.asyncio
     async def test_basemodel_output_with_target_field(self, mock_builder, middleware_context):
         """Test analyzing BaseModel output with target_field."""
         config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm",
@@ -130,7 +127,6 @@ class TestContentSafetyGuardInvoke:
             assert isinstance(result, _TestOutputModel)
             assert result.message == "harmful content"
 
-    @pytest.mark.asyncio
     async def test_nested_field_targeting(self, mock_builder, middleware_context):
         """Test analyzing nested field in output."""
         config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm",
@@ -154,7 +150,6 @@ class TestContentSafetyGuardInvoke:
         assert "Hello world" in str(call_args)
         assert result["data"]["content"]["text"] == "Hello world"
 
-    @pytest.mark.asyncio
     async def test_complex_nested_structure_with_field_targeting(self, mock_builder, middleware_context):
         """Test field targeting on complex nested structure with lists and dicts."""
         config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm",
@@ -195,7 +190,6 @@ class TestContentSafetyGuardInvoke:
             assert result["results"][1]["user"]["message"] == "safe content"
             assert result["total"] == 2
 
-    @pytest.mark.asyncio
     async def test_field_resolution_strategy_all(self, mock_builder, middleware_context):
         """Test field resolution strategy 'all' analyzes all matching fields."""
         config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm",
@@ -244,7 +238,6 @@ class TestContentSafetyGuardInvoke:
             assert result["items"][1]["text"] == "second harmful"
             assert result["items"][2]["text"] == "third harmful"
 
-    @pytest.mark.asyncio
     async def test_action_partial_compliance(self, mock_builder, middleware_context):
         """Test partial_compliance action logs but allows output."""
         config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", action="partial_compliance")
@@ -265,7 +258,6 @@ class TestContentSafetyGuardInvoke:
             mock_logger.warning.assert_called()
             assert result == "harmful content"
 
-    @pytest.mark.asyncio
     async def test_action_refusal(self, mock_builder, middleware_context):
         """Test refusal action raises ValueError."""
         config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", action="refusal")
@@ -283,7 +275,6 @@ class TestContentSafetyGuardInvoke:
         with pytest.raises(ValueError, match="Content blocked by safety policy"):
             await middleware.function_middleware_invoke({}, mock_next, middleware_context)
 
-    @pytest.mark.asyncio
     async def test_action_redirection(self, mock_builder, middleware_context):
         """Test redirection action replaces output with safe message."""
         config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", action="redirection")
@@ -302,7 +293,6 @@ class TestContentSafetyGuardInvoke:
         # Should return safe refusal message
         assert "cannot" in result.lower() or "sorry" in result.lower() or "cannot assist" in result.lower()
 
-    @pytest.mark.asyncio
     async def test_nemoguard_json_format(self, mock_builder, middleware_context):
         """Test parsing Nemoguard JSON response format."""
         config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", action="partial_compliance")
@@ -337,7 +327,6 @@ class TestContentSafetyGuardInvoke:
             assert found_categories, f"Categories not found in warning calls: {call_args_list}"
             assert result == "harmful content"
 
-    @pytest.mark.asyncio
     async def test_qwen_guard_text_format(self, mock_builder, middleware_context):
         """Test parsing Qwen Guard text response format."""
         config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", action="partial_compliance")
@@ -359,7 +348,6 @@ class TestContentSafetyGuardInvoke:
             mock_logger.warning.assert_called()
             assert result == "harmful content"
 
-    @pytest.mark.asyncio
     async def test_plain_safe_response(self, mock_builder, middleware_context):
         """Test parsing plain "Safe" response."""
         config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", action="partial_compliance")
@@ -378,7 +366,6 @@ class TestContentSafetyGuardInvoke:
         assert mock_llm.ainvoke.called
         assert result == "safe content"
 
-    @pytest.mark.asyncio
     async def test_plain_unsafe_response(self, mock_builder, middleware_context):
         """Test parsing plain "Unsafe" response."""
         config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", action="partial_compliance")
@@ -398,7 +385,6 @@ class TestContentSafetyGuardInvoke:
             mock_logger.warning.assert_called()
             assert result == "harmful content"
 
-    @pytest.mark.asyncio
     async def test_targeting_configuration(self, mock_builder, middleware_context):
         """Test targeting configuration (function/group targeting and target_location)."""
         # Test None target applies to all functions
@@ -442,7 +428,6 @@ class TestContentSafetyGuardInvoke:
         assert not mock_llm.ainvoke.called  # Defense should not run
         assert result == "content"
 
-    @pytest.mark.asyncio
     async def test_target_location_validation(self, mock_builder, middleware_context):
         """Test target_location validation and default behavior."""
         # Test that target_location='input' raises ValidationError
@@ -475,7 +460,6 @@ class TestContentSafetyGuardInvoke:
         assert mock_llm.ainvoke.called
         assert result == "content"
 
-    @pytest.mark.asyncio
     async def test_non_string_output_converts_to_string(self, mock_builder, middleware_context):
         """Test that non-string outputs (int, float, dict, list) are converted to strings for analysis."""
         config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", target_field=None, action="partial_compliance")
@@ -527,7 +511,6 @@ class TestContentSafetyGuardInvoke:
 class TestContentSafetyGuardStreaming:
     """Test Content Safety Guard streaming behavior."""
 
-    @pytest.mark.asyncio
     async def test_streaming_safe_content(self, mock_builder, middleware_context):
         """Test streaming safe content yields original chunks."""
         config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", action="refusal")
@@ -550,7 +533,6 @@ class TestContentSafetyGuardStreaming:
         assert chunks == ["Hello ", "world"]
         assert mock_llm.ainvoke.called
 
-    @pytest.mark.asyncio
     async def test_streaming_refusal_action(self, mock_builder, middleware_context):
         """Test streaming refusal action raises exception."""
         config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", action="refusal")
@@ -570,7 +552,6 @@ class TestContentSafetyGuardStreaming:
             async for _ in middleware.function_middleware_stream({}, mock_stream, middleware_context):
                 pass
 
-    @pytest.mark.asyncio
     async def test_streaming_redirection_action(self, mock_builder, middleware_context):
         """Test streaming redirection action yields single redirected chunk."""
         config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", action="redirection")
@@ -593,7 +574,6 @@ class TestContentSafetyGuardStreaming:
         assert len(chunks) == 1
         assert chunks[0] == "I'm sorry, I cannot help you with that request."
 
-    @pytest.mark.asyncio
     async def test_streaming_partial_compliance(self, mock_builder, middleware_context):
         """Test streaming partial_compliance yields original chunks."""
         config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", action="partial_compliance")
@@ -617,7 +597,6 @@ class TestContentSafetyGuardStreaming:
             assert chunks == ["harmful ", "content"]
             mock_logger.warning.assert_called()
 
-    @pytest.mark.asyncio
     async def test_streaming_skips_when_not_targeted(self, mock_builder, middleware_context):
         """Test streaming skips when function not targeted."""
         config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm",

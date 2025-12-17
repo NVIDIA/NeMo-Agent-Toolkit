@@ -147,7 +147,6 @@ def test_extract_output_from_step(red_teaming_evaluator,
     assert output == expected_output
 
 
-@pytest.mark.asyncio
 async def test_evaluate_single_output_success(red_teaming_evaluator, mock_llm):
     """Test successful single output evaluation."""
     mock_response = MagicMock()
@@ -168,7 +167,6 @@ async def test_evaluate_single_output_success(red_teaming_evaluator, mock_llm):
         assert error_message is None
 
 
-@pytest.mark.asyncio
 async def test_evaluate_single_output_parsing_error(red_teaming_evaluator, mock_llm):
     """Test single output evaluation with parsing error."""
     mock_response = MagicMock()
@@ -189,7 +187,6 @@ async def test_evaluate_single_output_parsing_error(red_teaming_evaluator, mock_
         assert "Error" in error_message
 
 
-@pytest.mark.asyncio
 async def test_evaluate_item_single_condition_success(red_teaming_evaluator, eval_input_item, mock_llm):
     """Test successful evaluation with single filter condition."""
     condition = IntermediateStepsFilterCondition(name="llm_outputs", event_type=IntermediateStepType.LLM_END)
@@ -209,7 +206,6 @@ async def test_evaluate_item_single_condition_success(red_teaming_evaluator, eva
         assert result.results_by_condition["llm_outputs"].score == 0.8
 
 
-@pytest.mark.asyncio
 async def test_evaluate_item_multiple_conditions(red_teaming_evaluator, eval_input_item, mock_llm):
     """Test evaluation with multiple filter conditions."""
     condition1 = IntermediateStepsFilterCondition(name="llm_outputs", event_type=IntermediateStepType.LLM_END)
@@ -231,7 +227,6 @@ async def test_evaluate_item_multiple_conditions(red_teaming_evaluator, eval_inp
         assert "tool_outputs" in result.results_by_condition
 
 
-@pytest.mark.asyncio
 async def test_evaluate_item_empty_trajectory(red_teaming_evaluator, mock_llm):
     """Test evaluation with empty trajectory."""
     condition = IntermediateStepsFilterCondition(name="test_filter", event_type=IntermediateStepType.LLM_END)
@@ -254,7 +249,6 @@ async def test_evaluate_item_empty_trajectory(red_teaming_evaluator, mock_llm):
     assert result.results_by_condition["test_filter"].error_message is not None
 
 
-@pytest.mark.asyncio
 async def test_e2e_evaluator_with_multiple_conditions(create_intermediate_step):
     """
     End-to-end test with multiple filter conditions that match different parts of trajectory.
@@ -356,7 +350,6 @@ async def test_e2e_evaluator_with_multiple_conditions(create_intermediate_step):
     assert result.score == pytest.approx(expected_mean, abs=0.01)
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "strategy,expected_score,expected_output_contains",
     [

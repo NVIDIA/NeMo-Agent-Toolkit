@@ -60,7 +60,6 @@ def fixture_middleware_context():
 class TestOutputVerifierInvoke:
     """Test Output Verifier invoke behavior."""
 
-    @pytest.mark.asyncio
     async def test_simple_output_no_target_field(self, mock_builder, middleware_context):
         """Test analyzing simple output without target_field."""
         config = OutputVerifierMiddlewareConfig(llm_name="test_llm", target_field=None, action="partial_compliance")
@@ -84,7 +83,6 @@ class TestOutputVerifierInvoke:
         assert "42.0" in str(call_args) or "42" in str(call_args)
         assert result == 42.0
 
-    @pytest.mark.asyncio
     async def test_dict_output_with_target_field(self, mock_builder, middleware_context):
         """Test analyzing dict output with target_field."""
         config = OutputVerifierMiddlewareConfig(llm_name="test_llm",
@@ -108,7 +106,6 @@ class TestOutputVerifierInvoke:
         assert "42.0" in str(call_args) or "42" in str(call_args)
         assert result == {"result": 42.0, "operation": "multiply"}
 
-    @pytest.mark.asyncio
     async def test_basemodel_output_with_target_field(self, mock_builder, middleware_context):
         """Test analyzing BaseModel output with target_field."""
         config = OutputVerifierMiddlewareConfig(llm_name="test_llm",
@@ -133,7 +130,6 @@ class TestOutputVerifierInvoke:
         assert isinstance(result, _TestOutputModel)
         assert result.result == 42.0
 
-    @pytest.mark.asyncio
     async def test_nested_field_targeting(self, mock_builder, middleware_context):
         """Test analyzing nested field in output."""
         config = OutputVerifierMiddlewareConfig(llm_name="test_llm",
@@ -157,7 +153,6 @@ class TestOutputVerifierInvoke:
         assert "42.0" in str(call_args) or "42" in str(call_args)
         assert result["data"]["message"]["result"] == 42.0
 
-    @pytest.mark.asyncio
     async def test_list_field_targeting(self, mock_builder, middleware_context):
         """Test analyzing list element with target_field."""
         config = OutputVerifierMiddlewareConfig(llm_name="test_llm",
@@ -181,7 +176,6 @@ class TestOutputVerifierInvoke:
         assert "42.0" in str(call_args) or "42" in str(call_args)
         assert result == {"results": [42.0, 43.0, 44.0], "count": 3}
 
-    @pytest.mark.asyncio
     async def test_complex_nested_structure_with_field_targeting(self, mock_builder, middleware_context):
         """Test field targeting on complex nested structure with lists and dicts."""
         config = OutputVerifierMiddlewareConfig(llm_name="test_llm",
@@ -223,7 +217,6 @@ class TestOutputVerifierInvoke:
         assert result["results"][1]["calculation"]["result"] == 10.0
         assert result["total"] == 2
 
-    @pytest.mark.asyncio
     async def test_field_resolution_strategy_all(self, mock_builder, middleware_context):
         """Test field resolution strategy 'all' analyzes all matching fields."""
         config = OutputVerifierMiddlewareConfig(llm_name="test_llm",
@@ -262,7 +255,6 @@ class TestOutputVerifierInvoke:
             # For partial_compliance action, result should be unchanged (original structure)
             assert result == {"items": [{"result": 1.0, "id": 1}, {"result": 2.0, "id": 2}, {"result": 3.0, "id": 3}]}
 
-    @pytest.mark.asyncio
     async def test_action_partial_compliance(self, mock_builder, middleware_context):
         """Test partial_compliance action logs but allows output."""
         config = OutputVerifierMiddlewareConfig(llm_name="test_llm", action="partial_compliance", threshold=0.7)
@@ -284,7 +276,6 @@ class TestOutputVerifierInvoke:
             mock_logger.warning.assert_called()
             assert result == 999.0
 
-    @pytest.mark.asyncio
     async def test_action_refusal(self, mock_builder, middleware_context):
         """Test refusal action raises ValueError."""
         config = OutputVerifierMiddlewareConfig(llm_name="test_llm", action="refusal", threshold=0.7)
@@ -303,7 +294,6 @@ class TestOutputVerifierInvoke:
         with pytest.raises(ValueError, match="Content blocked by security policy"):
             await middleware.function_middleware_invoke(2.0, mock_next, middleware_context)
 
-    @pytest.mark.asyncio
     async def test_action_redirection(self, mock_builder, middleware_context):
         """Test redirection action replaces output with correct answer."""
         config = OutputVerifierMiddlewareConfig(llm_name="test_llm",
@@ -326,7 +316,6 @@ class TestOutputVerifierInvoke:
         # Should return corrected value
         assert result == 4.0
 
-    @pytest.mark.asyncio
     async def test_targeting_configuration(self, mock_builder, middleware_context):
         """Test targeting configuration (function/group targeting and target_location)."""
         # Test None target applies to all functions
@@ -370,7 +359,6 @@ class TestOutputVerifierInvoke:
         assert not mock_llm.ainvoke.called  # Defense should not run
         assert result == 42.0
 
-    @pytest.mark.asyncio
     async def test_target_location_validation(self, mock_builder, middleware_context):
         """Test target_location validation and default behavior."""
         # Test that target_location='input' raises ValidationError
@@ -403,7 +391,6 @@ class TestOutputVerifierInvoke:
         assert mock_llm.ainvoke.called
         assert result == 42.0
 
-    @pytest.mark.asyncio
     async def test_non_string_output_converts_to_string(self, mock_builder, middleware_context):
         """Test that non-string outputs (int, float, dict, list) are converted to strings for analysis."""
         config = OutputVerifierMiddlewareConfig(llm_name="test_llm", target_field=None, action="partial_compliance")
@@ -458,7 +445,6 @@ class TestOutputVerifierInvoke:
         assert "key" in user_content or "value" in user_content
         assert result == {"key": "value"}
 
-    @pytest.mark.asyncio
     async def test_simple_output_with_target_field_ignored(self, mock_builder, middleware_context):
         """Test that target_field is ignored for simple types."""
         config = OutputVerifierMiddlewareConfig(
@@ -487,7 +473,6 @@ class TestOutputVerifierInvoke:
 class TestOutputVerifierStreaming:
     """Test Output Verifier streaming behavior."""
 
-    @pytest.mark.asyncio
     async def test_streaming_correct_output(self, mock_builder, middleware_context):
         """Test streaming correct output yields original chunks."""
         config = OutputVerifierMiddlewareConfig(llm_name="test_llm", action="refusal")
@@ -509,7 +494,6 @@ class TestOutputVerifierStreaming:
         assert chunks == ["6.0"]
         assert mock_llm.ainvoke.called
 
-    @pytest.mark.asyncio
     async def test_streaming_refusal_action(self, mock_builder, middleware_context):
         """Test streaming refusal action raises exception."""
         config = OutputVerifierMiddlewareConfig(llm_name="test_llm", action="refusal")
@@ -529,7 +513,6 @@ class TestOutputVerifierStreaming:
             async for _ in middleware.function_middleware_stream({"a": 2, "b": 3}, mock_stream, middleware_context):
                 pass
 
-    @pytest.mark.asyncio
     async def test_streaming_redirection_action(self, mock_builder, middleware_context):
         """Test streaming redirection action yields corrected value."""
         config = OutputVerifierMiddlewareConfig(llm_name="test_llm", action="redirection")
@@ -552,7 +535,6 @@ class TestOutputVerifierStreaming:
         assert len(chunks) == 1
         assert chunks[0] == 4.0
 
-    @pytest.mark.asyncio
     async def test_streaming_partial_compliance(self, mock_builder, middleware_context):
         """Test streaming partial_compliance yields original chunks."""
         config = OutputVerifierMiddlewareConfig(llm_name="test_llm", action="partial_compliance")
@@ -575,7 +557,6 @@ class TestOutputVerifierStreaming:
             assert chunks == ["-999.0"]
             mock_logger.warning.assert_called()
 
-    @pytest.mark.asyncio
     async def test_streaming_skips_when_not_targeted(self, mock_builder, middleware_context):
         """Test streaming skips when function not targeted."""
         config = OutputVerifierMiddlewareConfig(llm_name="test_llm",
