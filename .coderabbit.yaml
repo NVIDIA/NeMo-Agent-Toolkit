@@ -141,6 +141,8 @@ reviews:
             @pytest.fixture(name="my_fixture")
             def fixture_my_fixture():
                 pass
+        - Do NOT add `@pytest.mark.asyncio` to any test. Async tests are automatically detected and run by the
+          async runner - the decorator is unnecessary clutter.
 
   auto_apply_labels: true
   suggested_labels: true

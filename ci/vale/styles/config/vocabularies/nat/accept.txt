@@ -89,6 +89,7 @@ Jira
 JSONPath
 jsonlines
 [Kk]aggle
+[Kk]eycloak
 Langfuse
 LangChain
 LangGraph
