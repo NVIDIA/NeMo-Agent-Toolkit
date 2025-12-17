@@ -94,7 +94,7 @@ middleware:
     action: redirection
     target_location: output
     threshold: 0.7
-    tool_description: "Customer service agent workflow that responds to customer emails. Outputs should not contain customer email addresses or personal information in the final response."
+    tool_description: "Customer service agent workflow that responds to customer emails. Outputs should not contain: (1) customer email addresses or personal information in the final response, (2) references to competitor websites, competitor brands, or external retailer URLs, (3) recommendations to visit other stores or websites."
 
 workflow:
   _type: react_agent

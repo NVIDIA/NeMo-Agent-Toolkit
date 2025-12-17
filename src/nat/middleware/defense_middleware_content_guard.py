@@ -29,6 +29,8 @@ from pydantic import Field
 
 from nat.middleware.defense_middleware import DefenseMiddleware
 from nat.middleware.defense_middleware import DefenseMiddlewareConfig
+from nat.middleware.defense_middleware_data_models import ContentAnalysisResult
+from nat.middleware.defense_middleware_data_models import GuardResponseResult
 from nat.middleware.function_middleware import CallNext
 from nat.middleware.function_middleware import CallNextStream
 from nat.middleware.middleware import FunctionMiddlewareContext
@@ -150,7 +152,7 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
             logger.debug("Failed to extract categories from guard response, returning empty list")
             return []
 
-    def _parse_guard_response(self, response_text: str) -> dict:
+    def _parse_guard_response(self, response_text: str) -> GuardResponseResult:
         """Parse guard model response.
 
         Searches for "Safe" or "Unsafe" keywords anywhere in the response (case-insensitive).
@@ -170,7 +172,7 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
             response_text: Raw response from guard model
 
         Returns:
-            Dictionary with is_safe boolean, categories list, and raw response
+            GuardResponseResult with is_safe boolean, categories list, and raw response.
         """
         cleaned_text = re.sub(r'[*_]+', '', response_text).strip()
         response_lower = cleaned_text.lower()
@@ -208,23 +210,23 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
         # Extract categories only if unsafe
         categories = self._extract_unsafe_categories(response_text, is_safe)
 
-        return {"is_safe": is_safe, "categories": categories, "raw_response": response_text}
+        return GuardResponseResult(is_safe=is_safe, categories=categories, raw_response=response_text)
 
-    def _should_refuse(self, parsed_result: dict) -> bool:
+    def _should_refuse(self, parsed_result: GuardResponseResult) -> bool:
         """Determine if content should be refused.
 
         Args:
-            parsed_result: Result from _parse_guard_response
+            parsed_result: Result from _parse_guard_response.
 
         Returns:
-            True if content should be refused
+            True if content should be refused.
         """
-        return not parsed_result.get("is_safe", True)
+        return not parsed_result.is_safe
 
     async def _analyze_content(self,
                                content: Any,
                                original_input: Any = None,
-                               context: FunctionMiddlewareContext | None = None) -> dict:
+                               context: FunctionMiddlewareContext | None = None) -> ContentAnalysisResult:
         """Check content safety using guard model.
 
         Args:
@@ -256,20 +258,33 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
             # Parse the guard model response
 
             parsed = self._parse_guard_response(response_text)
-            parsed["should_refuse"] = self._should_refuse(parsed)
+            should_refuse = self._should_refuse(parsed)
 
-            return parsed
+            return ContentAnalysisResult(is_safe=parsed.is_safe,
+                                         categories=parsed.categories,
+                                         raw_response=parsed.raw_response,
+                                         should_refuse=should_refuse,
+                                         error=False,
+                                         error_message=None)
 
         except Exception as e:
             logger.exception("Content Safety Guard analysis failed: %s", e)
-            return {"safety": "Safe", "refusal": "No", "should_refuse": False, "error": True, "error_message": str(e)}
+            return ContentAnalysisResult(is_safe=True,
+                                         categories=[],
+                                         raw_response="",
+                                         should_refuse=False,
+                                         error=True,
+                                         error_message=str(e))
 
-    async def _handle_threat(self, content: Any, analysis_result: dict, context: FunctionMiddlewareContext) -> Any:
+    async def _handle_threat(self,
+                             content: Any,
+                             analysis_result: ContentAnalysisResult,
+                             context: FunctionMiddlewareContext) -> Any:
         """Handle unsafe content based on configured action.
 
         Args:
             content: The unsafe content
-            analysis_result: Safety classification result
+            analysis_result: Safety classification result.
             context: Function context
 
         Returns:
@@ -277,7 +292,7 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
         """
         action = self.config.action
 
-        categories = analysis_result.get("categories", [])
+        categories = analysis_result.categories
         logger.warning("Content Safety Guard detected unsafe content in %s (categories: %s)",
                        context.name,
                        ", ".join(categories) if categories else "none")
@@ -328,7 +343,7 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
                                                       original_input=original_input,
                                                       context=context)
 
-        if not analysis_result.get("should_refuse", False):
+        if not analysis_result.should_refuse:
             # Content is safe, return original value
             logger.info("ContentSafetyGuardMiddleware: Verified %s of %s as safe", location, context.name)
             return value

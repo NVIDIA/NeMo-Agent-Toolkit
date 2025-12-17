@@ -27,6 +27,7 @@ from pydantic import Field
 
 from nat.middleware.defense_middleware import DefenseMiddleware
 from nat.middleware.defense_middleware import DefenseMiddlewareConfig
+from nat.middleware.defense_middleware_data_models import PIIAnalysisResult
 from nat.middleware.function_middleware import CallNext
 from nat.middleware.function_middleware import CallNextStream
 from nat.middleware.middleware import FunctionMiddlewareContext
@@ -106,14 +107,14 @@ class PIIDefenseMiddleware(DefenseMiddleware):
                 raise ImportError("Microsoft Presidio is not installed. "
                                   "Install it with: pip install presidio-analyzer presidio-anonymizer") from err
 
-    def _analyze_content(self, text: str) -> dict:
+    def _analyze_content(self, text: str) -> PIIAnalysisResult:
         """Analyze content for PII entities using Presidio.
 
         Args:
             text: The text to analyze
 
         Returns:
-            Dictionary with detection results and anonymized text
+            PIIAnalysisResult with detection results and anonymized text.
         """
         self._lazy_load_presidio()
         from presidio_anonymizer.entities import OperatorConfig
@@ -145,12 +146,10 @@ class PIIDefenseMiddleware(DefenseMiddleware):
 
             anonymized_text = self._anonymizer.anonymize(text=text, analyzer_results=results, operators=operators).text
 
-        return {
-            "pii_detected": len(results) > 0,
-            "entities": detected_entities,
-            "anonymized_text": anonymized_text,
-            "original_text": text
-        }
+        return PIIAnalysisResult(pii_detected=len(results) > 0,
+                                 entities=detected_entities,
+                                 anonymized_text=anonymized_text,
+                                 original_text=text)
 
     def _process_pii_detection(
         self,
@@ -185,12 +184,12 @@ class PIIDefenseMiddleware(DefenseMiddleware):
         content_text = str(content_to_analyze)
         analysis_result = self._analyze_content(content_text)
 
-        if not analysis_result.get("pii_detected", False):
+        if not analysis_result.pii_detected:
             logger.info("PIIDefenseMiddleware: Verified %s of %s: No PII detected", location, context.name)
             return value
 
         # PII detected - handle based on action
-        entities = analysis_result.get("entities", {})
+        entities = analysis_result.entities
         # Build entities string efficiently without intermediate list
         entities_str = ", ".join(f"{k}({len(v)})" for k, v in entities.items())
         sanitized_content = self._handle_threat(content_to_analyze, analysis_result, context, location, entities_str)
@@ -205,7 +204,7 @@ class PIIDefenseMiddleware(DefenseMiddleware):
     def _handle_threat(
         self,
         content: Any,
-        analysis_result: dict,
+        analysis_result: PIIAnalysisResult,
         context: FunctionMiddlewareContext,
         location: str,
         entities_str: str,
@@ -229,8 +228,8 @@ class PIIDefenseMiddleware(DefenseMiddleware):
         elif self.config.action == "redirection":
             logger.warning("PII Defense detected PII in %s of %s: %s", location, context.name, entities_str)
             logger.info("PII Defense anonymizing %s for %s", location, context.name)
-            content_text = str(content)
-            anonymized_content = analysis_result.get("anonymized_text", content_text)
+            str(content)
+            anonymized_content = analysis_result.anonymized_text
 
             # Convert anonymized_text back to original type if needed
             redirected_value = anonymized_content

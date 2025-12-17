@@ -18,7 +18,17 @@ HuggingFace Transformers LLM Provider - Local in-process model execution.
 
 import logging
 from collections.abc import AsyncIterator
+from typing import Any
 
+from langchain_core.callbacks import AsyncCallbackManagerForLLMRun
+from langchain_core.callbacks import CallbackManagerForLLMRun
+from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessageChunk
+from langchain_core.messages import BaseMessage
+from langchain_core.outputs import ChatGeneration
+from langchain_core.outputs import ChatResult
+from pydantic import ConfigDict
 from pydantic import Field
 
 from nat.builder.builder import Builder
@@ -53,25 +63,92 @@ class HuggingFaceConfig(LLMBaseConfig, name="huggingface"):
     trust_remote_code: bool = Field(default=False, description="Trust remote code when loading model")
 
 
-class HuggingFaceModel:
-    """Wrapper that provides LangChain-compatible interface for local HuggingFace models."""
+class HuggingFaceModel(BaseChatModel):
+    """LangChain-compatible wrapper for local HuggingFace models.
+
+    This class inherits from BaseChatModel to provide proper LangChain integration
+    for locally loaded HuggingFace Transformers models.
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    # Attributes (set during initialization)
+    _model_name: str
+    _config: HuggingFaceConfig
+    _model: Any
+    _tokenizer: Any
+    _torch: Any
 
     def __init__(self, model_name: str, config: HuggingFaceConfig):
-        self.model_name = model_name
-        self.config = config
+        """Initialize HuggingFace model wrapper.
 
+        Args:
+            model_name: Name of the loaded model
+            config: Configuration for the model
+        """
         # Get from cache
         if model_name not in _model_cache:
             raise ValueError(f"Model {model_name} not loaded in cache")
 
         cached = _model_cache[model_name]
-        self.model = cached["model"]
-        self.tokenizer = cached["tokenizer"]
-        self.torch = cached["torch"]
 
-    def _prepare_text(self, messages):
-        """Convert messages to text using chat template or fallback."""
+        # Initialize parent
+        super().__init__()
+
+        # Set private attributes
+        self._model_name = model_name
+        self._config = config
+        self._model = cached["model"]
+        self._tokenizer = cached["tokenizer"]
+        self._torch = cached["torch"]
+
+    @property
+    def model_name(self) -> str:
+        """Return the model name."""
+        return self._model_name
+
+    @property
+    def config(self) -> HuggingFaceConfig:
+        """Return the model configuration."""
+        return self._config
+
+    @property
+    def model(self):
+        """Return the HuggingFace model."""
+        return self._model
+
+    @property
+    def tokenizer(self):
+        """Return the tokenizer."""
+        return self._tokenizer
+
+    @property
+    def torch(self):
+        """Return the torch module."""
+        return self._torch
+
+    @property
+    def _llm_type(self) -> str:
+        """Return identifier for the LLM type."""
+        return "huggingface"
+
+    def _prepare_text(self, messages: list[BaseMessage] | list[dict] | str) -> str:
+        """Convert messages to text using chat template or fallback.
+
+        Args:
+            messages: Input messages in various formats (BaseMessage list, dict list, or string)
+
+        Returns:
+            Formatted text string ready for tokenization
+        """
+        # Convert BaseMessage objects to dict format for template
         if isinstance(messages, list) and len(messages) > 0:
+            # Handle LangChain BaseMessage objects
+            if hasattr(messages[0], "type") and hasattr(messages[0], "content"):
+                messages = [{
+                    "role": msg.type, "content": msg.content
+                } for msg in messages]  # type: ignore[attr-defined]
+
             # Try using chat template
             try:
                 text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
@@ -84,20 +161,54 @@ class HuggingFaceModel:
             text = str(messages)
         return text
 
-    def invoke(self, messages, **kwargs):
-        """Synchronous invoke - wraps async version."""
+    def _generate(
+        self,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
+        run_manager: CallbackManagerForLLMRun | None = None,
+        **kwargs: Any,
+    ) -> ChatResult:
+        """Generate response synchronously (required by BaseChatModel).
+
+        Args:
+            messages: List of message objects
+            stop: Optional list of stop sequences
+            run_manager: Optional callback manager
+            **kwargs: Additional generation parameters
+
+        Returns:
+            ChatResult containing the generated response
+        """
+        # Wrap async implementation
         import asyncio
         try:
             loop = asyncio.get_event_loop()
         except RuntimeError:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-        return loop.run_until_complete(self.ainvoke(messages, **kwargs))
 
-    async def ainvoke(self, messages, **kwargs):
-        """Generate response - matches LangChain interface."""
-        from langchain_core.messages import AIMessage
+        # Note: run_manager is sync but _agenerate expects async, so we don't pass it
+        result = loop.run_until_complete(self._agenerate(messages, stop=stop, **kwargs))
+        return result
 
+    async def _agenerate(
+        self,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
+        run_manager: AsyncCallbackManagerForLLMRun | None = None,
+        **kwargs: Any,
+    ) -> ChatResult:
+        """Generate response asynchronously (called by BaseChatModel.ainvoke).
+
+        Args:
+            messages: List of message objects
+            stop: Optional list of stop sequences
+            run_manager: Optional callback manager
+            **kwargs: Additional generation parameters
+
+        Returns:
+            ChatResult containing the generated response
+        """
         # Convert messages to text
         text = self._prepare_text(messages)
 
@@ -117,42 +228,41 @@ class HuggingFaceModel:
         output_ids = generated_ids[0][len(model_inputs.input_ids[0]):].tolist()
         content = self.tokenizer.decode(output_ids, skip_special_tokens=True)
 
-        # Return AIMessage (matches LangChain interface)
-        return AIMessage(content=content)
+        # Return ChatResult (BaseChatModel format)
+        message = AIMessage(content=content)
+        generation = ChatGeneration(message=message)
+        return ChatResult(generations=[generation])
 
-    def stream(self, messages, **kwargs):
-        """Synchronous stream - wraps async version."""
-        import asyncio
+    async def _astream(
+        self,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
+        run_manager: AsyncCallbackManagerForLLMRun | None = None,
+        **kwargs: Any,
+    ):
+        """Stream response tokens as they are generated (called by BaseChatModel.astream).
 
-        async def _collect():
-            chunks = []
-            async for chunk in self.astream(messages, **kwargs):
-                chunks.append(chunk)
-            return chunks
+        Args:
+            messages: List of message objects
+            stop: Optional list of stop sequences
+            run_manager: Optional callback manager
+            **kwargs: Additional generation parameters
 
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-        chunks = loop.run_until_complete(_collect())
-        yield from chunks
-
-    async def astream(self, messages, **kwargs):
-        """Stream response token by token - matches LangChain streaming interface."""
-        import asyncio
-        from threading import Thread
-
-        from langchain_core.messages import AIMessageChunk
+        Yields:
+            ChatGenerationChunk objects containing token chunks
+        """
+        from langchain_core.outputs import ChatGenerationChunk
 
         try:
             from transformers import TextIteratorStreamer
         except ImportError:
             # Fallback: if TextIteratorStreamer not available, yield full response
             logger.debug("TextIteratorStreamer not available, falling back to non-streaming")
-            response = await self.ainvoke(messages)
-            yield AIMessageChunk(content=response.content)
+            result = await self._agenerate(messages, stop=stop, run_manager=run_manager, **kwargs)
+            # Convert AIMessage to AIMessageChunk for streaming
+            full_message = result.generations[0].message
+            chunk = AIMessageChunk(content=full_message.content)
+            yield ChatGenerationChunk(message=chunk)
             return
 
         # Convert messages to text
@@ -160,7 +270,7 @@ class HuggingFaceModel:
         model_inputs = self.tokenizer([text], return_tensors="pt").to(self.model.device)
 
         # Create streamer for token-by-token generation
-        streamer = TextIteratorStreamer(self.tokenizer, skip_special_tokens=True)
+        streamer = TextIteratorStreamer(self.tokenizer, skip_special_tokens=True, skip_prompt=True)
 
         # Prepare generation kwargs
         generation_kwargs = {
@@ -173,7 +283,9 @@ class HuggingFaceModel:
         }
 
         # Start generation in background thread (model.generate is blocking)
-        thread = Thread(target=self.model.generate, kwargs=generation_kwargs)
+        import asyncio
+        import threading
+        thread = threading.Thread(target=self.model.generate, kwargs=generation_kwargs)
         thread.start()
 
         # Stream tokens as they're generated
@@ -182,8 +294,9 @@ class HuggingFaceModel:
                 # Yield control to event loop
                 await asyncio.sleep(0)
 
-                # Return chunk in LangChain format
-                yield AIMessageChunk(content=token_text)
+                # Return chunk in BaseChatModel format
+                chunk = AIMessageChunk(content=token_text)
+                yield ChatGenerationChunk(message=chunk)
         finally:
             # Ensure thread completes
             thread.join()

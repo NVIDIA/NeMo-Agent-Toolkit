@@ -29,6 +29,7 @@ from pydantic import Field
 
 from nat.middleware.defense_middleware import DefenseMiddleware
 from nat.middleware.defense_middleware import DefenseMiddlewareConfig
+from nat.middleware.defense_middleware_data_models import OutputVerificationResult
 from nat.middleware.function_middleware import CallNext
 from nat.middleware.function_middleware import CallNextStream
 from nat.middleware.middleware import FunctionMiddlewareContext
@@ -125,7 +126,7 @@ class OutputVerifierMiddleware(DefenseMiddleware):
                                content: Any,
                                content_type: str,
                                inputs: Any = None,
-                               function_name: str | None = None) -> dict:
+                               function_name: str | None = None) -> OutputVerificationResult:
         """Check content for threats using the configured LLM.
 
         Args:
@@ -135,7 +136,7 @@ class OutputVerifierMiddleware(DefenseMiddleware):
             function_name: Name of the function being verified (for context)
 
         Returns:
-            Detection result with threat info and should_refuse flag
+            OutputVerificationResult with threat detection info and should_refuse flag.
         """
         content_str = str(content)
 
@@ -192,14 +193,13 @@ Respond ONLY with valid JSON in this exact format:
             threat_detected = result.get("threat_detected", False)
             confidence = float(result.get("confidence", 0.0))
 
-            return {
-                "threat_detected": threat_detected,
-                "confidence": confidence,
-                "reason": result.get("reason", "Unknown"),
-                "correct_answer": result.get("correct_answer"),
-                "content_type": content_type,
-                "should_refuse": threat_detected and confidence >= self.config.threshold
-            }
+            return OutputVerificationResult(threat_detected=threat_detected,
+                                            confidence=confidence,
+                                            reason=result.get("reason", "Unknown"),
+                                            correct_answer=result.get("correct_answer"),
+                                            content_type=content_type,
+                                            should_refuse=threat_detected and confidence >= self.config.threshold,
+                                            error=False)
 
         except Exception as e:
             logger.exception("Output Verifier analysis failed for %s: %s", content_type, e)
@@ -207,21 +207,23 @@ Respond ONLY with valid JSON in this exact format:
                 "Output Verifier failed response length: %s",
                 len(response_text) if response_text else 0,
             )
-            return {
-                "threat_detected": False,
-                "confidence": 0.0,
-                "reason": f"Analysis failed: {e}",
-                "content_type": content_type,
-                "should_refuse": False,
-                "error": True
-            }
+            return OutputVerificationResult(threat_detected=False,
+                                            confidence=0.0,
+                                            reason=f"Analysis failed: {e}",
+                                            correct_answer=None,
+                                            content_type=content_type,
+                                            should_refuse=False,
+                                            error=True)
 
-    async def _handle_threat(self, content: Any, analysis_result: dict, context: FunctionMiddlewareContext) -> Any:
+    async def _handle_threat(self,
+                             content: Any,
+                             analysis_result: OutputVerificationResult,
+                             context: FunctionMiddlewareContext) -> Any:
         """Handle detected threat based on configured action.
 
         Args:
             content: The threatening content
-            analysis_result: Detection result from LLM
+            analysis_result: Detection result from LLM.
             context: Function context
 
         Returns:
@@ -229,20 +231,18 @@ Respond ONLY with valid JSON in this exact format:
         """
         logger.warning("Output Verifier detected threat in %s: %s (confidence=%s)",
                        context.name,
-                       analysis_result.get('reason', 'Unknown'),
-                       analysis_result.get('confidence', 0.0))
+                       analysis_result.reason,
+                       analysis_result.confidence)
 
         action = self.config.action
 
         if action == "refusal":
-            logger.error("Output Verifier refusing output of %s: %s",
-                         context.name,
-                         analysis_result.get('reason', 'Unknown'))
-            raise ValueError(f"Content blocked by security policy: {analysis_result.get('reason', 'Unknown')}")
+            logger.error("Output Verifier refusing output of %s: %s", context.name, analysis_result.reason)
+            raise ValueError(f"Content blocked by security policy: {analysis_result.reason}")
 
         elif action == "redirection":
             # Redirection = Replace with correct answer if available
-            correct_answer = analysis_result.get("correct_answer")
+            correct_answer = analysis_result.correct_answer
 
             if correct_answer is not None:
                 # Try to convert to same type as original content
@@ -274,7 +274,7 @@ Respond ONLY with valid JSON in this exact format:
                 return {"error": "Content sanitized by security policy", "original_blocked": True}
 
         else:  # action == "partial_compliance"
-            logger.warning("Threat logged for %s: %s", context.name, analysis_result.get('reason', 'Unknown'))
+            logger.warning("Threat logged for %s: %s", context.name, analysis_result.reason)
             return content
 
     async def _process_output_verification(
@@ -314,12 +314,12 @@ Respond ONLY with valid JSON in this exact format:
                                                     inputs=inputs,
                                                     function_name=context.name)
 
-        if not output_result.get("should_refuse", False):
+        if not output_result.should_refuse:
             # Content verified as correct, return original value
             logger.info("OutputVerifierMiddleware: Verified %s of %s as correct (confidence=%s)",
                         location,
                         context.name,
-                        output_result.get('confidence', 'N/A'))
+                        output_result.confidence)
             return value
 
         # Threat detected - handle based on action
