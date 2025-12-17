@@ -219,14 +219,10 @@ workflow:
 
 #### Run the Workflow
 
-From the example directory, run a single query:
+From the project root directory, run a single query:
 
 ```bash
-cd ./examples/safety_and_security/retail_agent
-```
-
-```bash
-nat run --config_file configs/config.yml --input "Email From: john@email.com\nContent: What garden trowels do you have?"
+nat run --config_file examples/safety_and_security/retail_agent/configs/config.yml --input "Email From: john@email.com\nContent: What garden trowels do you have?"
 ```
 
 #### Expected Workflow Output
@@ -349,14 +345,10 @@ Workflow Result:
 
 #### Quick Start
 
-Run the red teaming evaluation from the example directory:
+Run the red teaming evaluation from the project root directory:
 
 ```bash
-cd ./examples/safety_and_security/retail_agent
-```
-
-```bash
-nat red-team --red_team_config configs/red-teaming.yml
+nat red-team --red_team_config examples/safety_and_security/retail_agent/configs/red-teaming.yml
 ```
 
 The HTML report is generated automatically at `.tmp/red_teaming_evaluation_results/report.html`.
@@ -364,7 +356,7 @@ The HTML report is generated automatically at `.tmp/red_teaming_evaluation_resul
 The generated report is more reliable if the red teaming scenarios are repeated multiple times to account for non-determinism. To do this, use the `--reps` flag:
 
 ```bash
-nat red-team --red_team_config configs/red-teaming.yml --reps 5
+nat red-team --red_team_config examples/safety_and_security/retail_agent/configs/red-teaming.yml --reps 5
 ```
 
 > **Note**: Running with multiple repetitions might take some time.
@@ -376,8 +368,8 @@ The red teaming config ([`configs/red-teaming.yml`](configs/red-teaming.yml)) de
 **Configuration Structure:**
 
 ```yaml
-# Reference to the base workflow (relative to the agent's folder)
-base_workflow: ./configs/config.yml
+# Reference to the base workflow (from project root)
+base_workflow: examples/safety_and_security/retail_agent/configs/config.yml
 
 # LLMs used for evaluation (judge)
 llms:
@@ -406,7 +398,7 @@ general:
   output_dir: ./.tmp/nat/redteaming/retail_agent
   dataset:
     _type: json
-    file_path: ./data/evalset-redteaming.json
+    file_path: examples/safety_and_security/retail_agent/data/evalset-redteaming.json
 
 # Attack scenarios
 scenarios:
@@ -569,10 +561,10 @@ uv pip install -e '.[pii-defense]'
 
 **Running with Defenses:**
 
-Run the agent with the defense configuration:
+Run the agent with the defense configuration from the project root directory:
 
 ```bash
-nat run --config_file configs/config-with-defenses.yml \
+nat run --config_file examples/safety_and_security/retail_agent/configs/config-with-defenses.yml \
   --input "Email From: john@email.com\nContent: What garden trowels do you have?"
 ```
 
@@ -624,7 +616,7 @@ To evaluate the effectiveness of your defenses, use the [`configs/red-teaming-wi
 
 ```yaml
 # Path to the base workflow to red team
-base_workflow: ./configs/config-with-defenses.yml  # Changed from ./configs/config.yml
+base_workflow: examples/safety_and_security/retail_agent/configs/config-with-defenses.yml  # Changed from config.yml
 
 # LLM configurations - scenarios reference these by name
 llms:
@@ -640,7 +632,7 @@ llms:
 Run the red teaming evaluation against the defended workflow:
 
 ```bash
-nat red-team --red_team_config configs/red-teaming-with-defenses.yml
+nat red-team --red_team_config examples/safety_and_security/retail_agent/configs/red-teaming-with-defenses.yml
 ```
 
 This allows you to compare attack success rates before and after adding defenses.
