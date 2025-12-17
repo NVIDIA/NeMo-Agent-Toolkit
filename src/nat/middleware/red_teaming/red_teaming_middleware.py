@@ -52,13 +52,15 @@ class RedTeamingMiddleware(FunctionMiddleware):
     modifications, and multiple attack modes.
 
     Features:
-    - Target specific functions or entire function groups
-    - Search for specific fields in input/output schemas
-    - Apply attacks via replace or append modes
-    - Support for both regular and streaming calls
-    - Type-safe operations on strings, numbers
 
-    Example:
+    * Target specific functions or entire function groups
+    * Search for specific fields in input/output schemas
+    * Apply attacks via replace or append modes
+    * Support for both regular and streaming calls
+    * Type-safe operations on strings, numbers
+
+    Example::
+
         # In YAML config
         middleware:
           prompt_injection:
@@ -70,12 +72,11 @@ class RedTeamingMiddleware(FunctionMiddleware):
             target_field: prompt
 
     Args:
-        attack_payload: The malicious payload to inject
-        target_function_or_group: Function or group to target
-            (None = all functions for which the middleware is applied in the workflow)
-        payload_placement: How to apply the payload (replace/append_start/append_middle/append_end)
-        target_location: Whether to attack input or output
-        target_field: Field name or path to attack (None = operate on value directly)
+        attack_payload: The malicious payload to inject.
+        target_function_or_group: Function or group to target (None for all).
+        payload_placement: How to apply (replace, append_start, append_middle, append_end).
+        target_location: Whether to attack input or output.
+        target_field: Field name or path to attack (None for direct value).
     """
 
     def __init__(
@@ -92,20 +93,13 @@ class RedTeamingMiddleware(FunctionMiddleware):
         """Initialize red teaming middleware.
 
         Args:
-            attack_payload: The value to inject to the function input or output
-            target_function_or_group: Optional function/group to target
-            payload_placement: How to apply the payload (replace or append modes)
-            target_location: Whether to place the payload in the input or output
-            target_field: Json path to the field to attack
-            target_field_resolution_strategy: Strategy to resolve multiple field matches
-                - random: Choose a random field match
-                - first: Choose the first field match
-                - last: Choose the last field match
-                - all: Choose all field matches
-                - error: Raise an error if multiple field matches are found.
+            attack_payload: The value to inject to the function input or output.
+            target_function_or_group: Optional function/group to target.
+            payload_placement: How to apply the payload (replace or append modes).
+            target_location: Whether to place the payload in the input or output.
+            target_field: JSONPath to the field to attack.
+            target_field_resolution_strategy: Strategy (random/first/last/all/error).
             call_limit: Maximum number of times the middleware will apply a payload.
-                       A middleware might be called but not apply a payload. Such cases
-                       do not count towards the max_calls.
         """
         super().__init__(is_final=False)
         self._attack_payload = attack_payload

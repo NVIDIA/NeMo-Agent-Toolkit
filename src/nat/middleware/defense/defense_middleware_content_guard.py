@@ -43,10 +43,8 @@ class ContentSafetyGuardMiddlewareConfig(DefenseMiddlewareConfig, name="content_
 
     This middleware uses guard models to classify content as safe or harmful.
 
-    Actions:
-    - 'partial_compliance': Log warning but allow content through
-    - 'refusal': Raise ValueError to block content (hard stop)
-    - 'redirection': Replace content with polite refusal message
+    Actions: partial_compliance (log warning but allow), refusal (block content),
+    or redirection (replace with polite refusal message).
 
     Note: Only output analysis is currently supported (target_location='output').
     """
@@ -61,13 +59,13 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
     that return "Safe" or "Unsafe" classifications. The middleware extracts safety categories
     when unsafe content is detected.
 
-    Only output analysis is currently supported (target_location='output').
+    Only output analysis is currently supported (``target_location='output'``).
 
     Streaming Behavior:
-    - For 'refusal' and 'redirection' actions: Chunks are buffered and checked before yielding
-      to prevent unsafe content from being streamed to clients.
-    - For 'partial_compliance' action: Chunks are yielded immediately; violations are logged
-      but content passes through.
+        For 'refusal' and 'redirection' actions, chunks are buffered and checked
+        before yielding to prevent unsafe content from being streamed to clients.
+        For 'partial_compliance' action, chunks are yielded immediately; violations
+        are logged but content passes through.
     """
 
     def __init__(self, config: ContentSafetyGuardMiddlewareConfig, builder):
@@ -96,16 +94,15 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
     def _extract_unsafe_categories(self, response_text: str, is_safe: bool) -> list[str]:
         """Extract safety categories only if content is unsafe.
 
-        Supports both JSON and text formats:
-        - JSON: {"Safety Categories": "Category1, Category2"} or {"Categories": ["Category1", "Category2"]}
-        - Text: Categories: Category1, Category2
+        Supports both JSON formats (Safety Categories field) and text formats
+        (Categories: line).
 
         Args:
-            response_text: Raw response from guard model
-            is_safe: Whether the content was detected as safe
+            response_text: Raw response from guard model.
+            is_safe: Whether the content was detected as safe.
 
         Returns:
-            List of category strings if unsafe, empty list otherwise or on parsing error
+            List of category strings if unsafe, empty list otherwise or on parsing error.
         """
         if is_safe:
             return []
@@ -155,21 +152,14 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
     def _parse_guard_response(self, response_text: str) -> GuardResponseResult:
         """Parse guard model response.
 
-        Searches for "Safe" or "Unsafe" keywords anywhere in the response (case-insensitive).
-        Works with any guard model format that includes these keywords:
-        - JSON: {"User Safety": "unsafe", "Safety Categories": "..."}
-        - Structured text: Safety: Unsafe\nCategories: Violent
-        - Plain text: Any text containing "Unsafe" or "Safe"
-
-        Also extracts safety categories from both formats:
-        - JSON: Extracts "Safety Categories" field
-        - Text: Extracts text after "Categories:" or "Category:"
-
+        Searches for Safe or Unsafe keywords anywhere in the response (case-insensitive).
+        Works with any guard model format (JSON, structured text, or plain text).
+        Also extracts safety categories from both JSON and text formats.
         If neither keyword is found, falls back to implicit refusal detection.
-        Prioritizes "Unsafe" if both keywords are present.
+        Prioritizes Unsafe if both keywords are present.
 
         Args:
-            response_text: Raw response from guard model
+            response_text: Raw response from guard model.
 
         Returns:
             GuardResponseResult with is_safe boolean, categories list, and raw response.
@@ -317,20 +307,17 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
     ) -> Any:
         """Process content safety detection and handling for a given value.
 
-        This is a common helper method that handles:
-        - Field extraction (if target_field is specified)
-        - Content safety analysis
-        - Threat handling (refusal, redirection, partial_compliance)
-        - Applying sanitized value back to original structure
+        Handles field extraction, content safety analysis, threat handling,
+        and applying sanitized value back to original structure.
 
         Args:
-            value: The value to analyze (input or output)
-            location: Either "input" or "output" (for logging)
-            context: Function context metadata
-            original_input: Original function input (for output analysis context)
+            value: The value to analyze (input or output).
+            location: Either input or output (for logging).
+            context: Function context metadata.
+            original_input: Original function input (for output analysis context).
 
         Returns:
-            The value after content safety handling (may be unchanged, sanitized, or raise exception)
+            The value after content safety handling (may be unchanged, sanitized, or raise).
         """
         # Extract field from value if target_field is specified
         content_to_analyze, field_info = self._extract_field_from_value(value)

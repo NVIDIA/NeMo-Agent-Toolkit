@@ -49,12 +49,14 @@ class RedTeamingRunner:
     """Runner for executing red teaming evaluations across multiple scenarios.
 
     This runner encapsulates all the logic for:
-    - Generating workflow configurations for each scenario
-    - Setting up output directories
-    - Saving configuration files
-    - Running evaluations via MultiEvaluationRunner
 
-    Example usage:
+    * Generating workflow configurations for each scenario
+    * Setting up output directories
+    * Saving configuration files
+    * Running evaluations via MultiEvaluationRunner
+
+    Example usage::
+
         runner = RedTeamingRunner(
             config=rt_config,
             base_workflow_config=base_workflow_config,
@@ -77,9 +79,8 @@ class RedTeamingRunner:
         """Initialize the RedTeamingRunner.
 
         Args:
-            config: Red teaming configuration with scenarios. If None, the base_workflow_config
-                is used as a single pre-configured scenario.
-            base_workflow_config: The base workflow configuration to transform for each scenario.
+            config: Red teaming config with scenarios (None uses base_workflow_config).
+            base_workflow_config: Base workflow config to transform for each scenario.
             dataset_path: Optional dataset path (overrides config dataset).
             result_json_path: JSON path to extract the result from the workflow.
             endpoint: Optional endpoint URL for running the workflow.

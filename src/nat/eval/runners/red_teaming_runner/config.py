@@ -71,11 +71,11 @@ class RedTeamingScenario(BaseModel):
 
     Attributes:
         scenario_id: Optional unique identifier. If not provided, the dict key
-            from RedTeamingRunnerConfig.scenarios is used.
+            from ``RedTeamingRunnerConfig.scenarios`` is used.
         middleware: Full middleware configuration to apply. Set to None for
             baseline scenarios (no middleware modification).
         evaluator: Complete evaluator configuration. Can inherit from
-            evaluator_defaults using _extends in YAML/JSON.
+            ``evaluator_defaults`` using ``_extends`` in YAML/JSON.
     """
 
     scenario_id: str | None = Field(default=None,
@@ -99,18 +99,16 @@ class RedTeamingScenario(BaseModel):
 class RedTeamingRunnerConfig(BaseModel):
     """Top-level configuration for red teaming evaluation.
 
-    Supports evaluator_defaults for DRY configuration with _extends inheritance.
+    Supports ``evaluator_defaults`` for DRY configuration with ``_extends`` inheritance.
 
     Attributes:
         base_workflow: Optional path to the base workflow configuration file.
         llms: Dictionary of LLM configurations keyed by name.
-        evaluator_defaults: Named evaluator configurations that scenarios can
-            extend using _extends. Each default must be a complete, valid config.
+        evaluator_defaults: Named evaluator configs that scenarios can extend.
         general: General evaluation settings (concurrency, output, dataset).
-        scenarios: Dictionary of scenarios. Scenarios can provide complete
-            evaluator configs or use _extends to inherit from evaluator_defaults.
+        scenarios: Dictionary of scenario configurations.
 
-    Example YAML configuration:
+    Example YAML configuration::
 
         base_workflow: ./configs/base_workflow.yml
 
@@ -147,13 +145,12 @@ class RedTeamingRunnerConfig(BaseModel):
 
           custom_scenario:
             tags: [category_1, category_2]
-            middleware: {...}
+            middleware: {}
             evaluator:
-              # Can also provide complete config without _extends
               llm_name: judge_llm
               _type: red_teaming_evaluator
               judge_llm_prompt: "Custom prompt..."
-              filter_conditions: [...]
+              filter_conditions: []
     """
 
     base_workflow: Path | None = Field(default=None,

@@ -171,13 +171,13 @@ class HuggingFaceModel(BaseChatModel):
         """Generate response synchronously (required by BaseChatModel).
 
         Args:
-            messages: List of message objects
-            stop: Optional list of stop sequences
-            run_manager: Optional callback manager
-            **kwargs: Additional generation parameters
+            messages: List of message objects.
+            stop: Optional list of stop sequences.
+            run_manager: Optional callback manager.
+            kwargs: Additional generation parameters.
 
         Returns:
-            ChatResult containing the generated response
+            ChatResult containing the generated response.
         """
         # Wrap async implementation
         import asyncio
@@ -201,13 +201,13 @@ class HuggingFaceModel(BaseChatModel):
         """Generate response asynchronously (called by BaseChatModel.ainvoke).
 
         Args:
-            messages: List of message objects
-            stop: Optional list of stop sequences
-            run_manager: Optional callback manager
-            **kwargs: Additional generation parameters
+            messages: List of message objects.
+            stop: Optional list of stop sequences.
+            run_manager: Optional callback manager.
+            kwargs: Additional generation parameters.
 
         Returns:
-            ChatResult containing the generated response
+            ChatResult containing the generated response.
         """
         # Convert messages to text
         text = self._prepare_text(messages)
@@ -243,13 +243,13 @@ class HuggingFaceModel(BaseChatModel):
         """Stream response tokens as they are generated (called by BaseChatModel.astream).
 
         Args:
-            messages: List of message objects
-            stop: Optional list of stop sequences
-            run_manager: Optional callback manager
-            **kwargs: Additional generation parameters
+            messages: List of message objects.
+            stop: Optional list of stop sequences.
+            run_manager: Optional callback manager.
+            kwargs: Additional generation parameters.
 
         Yields:
-            ChatGenerationChunk objects containing token chunks
+            ChatGenerationChunk objects containing token chunks.
         """
         from langchain_core.outputs import ChatGenerationChunk
 
@@ -314,6 +314,7 @@ class HuggingFaceModel(BaseChatModel):
 
 async def _cleanup_model(model_name: str) -> None:
     """Clean up a loaded model and free GPU memory.
+
     Args:
         model_name: Name of the model to clean up.
     """

@@ -67,15 +67,15 @@ class PIIDefenseMiddleware(DefenseMiddleware):
     """PII Defense Middleware using Microsoft Presidio.
 
     Detects PII in function outputs using Presidio's rule-based entity recognition.
-    Only output analysis is currently supported (target_location='output').
+    Only output analysis is currently supported (``target_location='output'``).
 
-    See <https://github.com/microsoft/presidio> for more information about Presidio.
+    See https://github.com/microsoft/presidio for more information about Presidio.
 
     Streaming Behavior:
-    - For 'refusal' and 'redirection' actions: Chunks are buffered and checked before yielding
-      to prevent PII from being streamed to clients.
-    - For 'partial_compliance' action: Chunks are yielded immediately; violations are logged
-      but content passes through.
+        For 'refusal' and 'redirection' actions, chunks are buffered and checked
+        before yielding to prevent PII from being streamed to clients.
+        For 'partial_compliance' action, chunks are yielded immediately; violations
+        are logged but content passes through.
     """
 
     def __init__(self, config: PIIDefenseMiddlewareConfig, builder):

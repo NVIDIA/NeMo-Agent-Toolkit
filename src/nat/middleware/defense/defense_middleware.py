@@ -102,28 +102,29 @@ class DefenseMiddleware(FunctionMiddleware):
     """Utility base class for defense middleware.
 
     This base class provides:
-    - Common configuration fields (action, check_input, check_output, llm_wrapper_type)
-    - Helper methods for LLM loading (for LLM-based defenses)
-    - Access to builder for any resources needed
+
+    * Common configuration fields (action, check_input, check_output, llm_wrapper_type)
+    * Helper methods for LLM loading (for LLM-based defenses)
+    * Access to builder for any resources needed
 
     Unlike an abstract base class, this does NOT enforce a specific pattern.
     Each defense middleware implements its own invoke/stream logic based on
     its specific defense strategy:
-    - LLM-based analysis (guard models, verifiers)
-    - Rule-based detection (regex, signatures)
-    - Heuristic-based checks
-    - Statistical anomaly detection
-    - etc.
+
+    * LLM-based analysis (guard models, verifiers)
+    * Rule-based detection (regex, signatures)
+    * Heuristic-based checks
+    * Statistical anomaly detection
+    * etc.
 
     Each defense owns its core logic, just like red_teaming_middleware does.
 
     LLM Wrapper Types:
-        The llm_wrapper_type config field supports different framework wrappers:
-        - langchain (default) - For LangChain/LangGraph-based workflows
-        - llama_index - For LlamaIndex-based workflows
-        - crewai - For CrewAI-based workflows
-        - semantic_kernel - For Semantic Kernel-based workflows
-        - agno, adk, strands - Other supported frameworks
+        The ``llm_wrapper_type`` config field supports different framework wrappers:
+        langchain (default) for LangChain/LangGraph-based workflows,
+        llama_index for LlamaIndex-based workflows, crewai for CrewAI-based
+        workflows, semantic_kernel for Semantic Kernel-based workflows, and
+        agno, adk, strands for other supported frameworks.
     """
 
     def __init__(self, config: DefenseMiddlewareConfig, builder):
@@ -223,13 +224,13 @@ class DefenseMiddleware(FunctionMiddleware):
         """Extract field(s) from value using JSONPath if target_field is specified.
 
         Args:
-            value: The value to extract fields from (can be simple or complex type)
+            value: The value to extract fields from (can be simple or complex type).
 
         Returns:
-            Tuple of (content_to_analyze, field_info_dict)
-            - content_to_analyze: The extracted field value(s) or original value if no targeting
-            - field_info_dict: Dict with 'target_field', 'matches', 'original_value' if field was extracted,
-              None otherwise
+            A tuple of (content_to_analyze, field_info_dict) where content_to_analyze
+            is the extracted field value(s) or original value if no targeting, and
+            field_info_dict contains target_field, matches, and original_value if
+            field was extracted, or None otherwise.
         """
         # If no target_field specified, analyze entire value
         if self.config.target_field is None:
