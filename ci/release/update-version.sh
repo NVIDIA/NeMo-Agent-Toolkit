@@ -57,8 +57,8 @@ if [[ -z "${SKIP_MD_UPDATE}" ]]; then
    sed_runner "s|https:\/\/docs.nvidia.com\/nemo\/agent-toolkit\/\([0-9|\.]\+\)|https:\/\/docs.nvidia.com\/nemo\/agent-toolkit\/${NEXT_SHORT_TAG}|g" src/nat/meta/pypi.md
 fi
 
-NAT_NOTEBOOKS=($(find ./examples/notebooks -name "*.ipynb" | sort ))
-for NOTEBOOK_FILE in ${NAT_NOTEBOOKS[@]}; do
+mapfile -t NAT_NOTEBOOKS < <(find ./examples/notebooks -name "*.ipynb" | sort)
+for NOTEBOOK_FILE in "${NAT_NOTEBOOKS[@]}"; do
    sed_runner "s|https:\/\/docs.nvidia.com\/nemo\/agent-toolkit\/\([0-9|\.]\+\)|https:\/\/docs.nvidia.com\/nemo\/agent-toolkit\/${NEXT_SHORT_TAG}|g" ${NOTEBOOK_FILE}
 done
 
