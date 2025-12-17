@@ -73,6 +73,8 @@ class A2AClientFunctionGroup(FunctionGroup):
         # Get user_id from context (set by runtime for per-user function groups)
         from nat.builder.context import Context
         user_id = Context.get().user_id
+        if not user_id:
+            raise RuntimeError("User ID not found in context")
 
         # Resolve auth provider if configured
         auth_provider: AuthProviderBase | None = None
@@ -91,7 +93,6 @@ class A2AClientFunctionGroup(FunctionGroup):
             task_timeout=config.task_timeout,
             streaming=config.streaming,
             auth_provider=auth_provider,
-            default_user_id=user_id,
         )
         await self._client.__aenter__()
 

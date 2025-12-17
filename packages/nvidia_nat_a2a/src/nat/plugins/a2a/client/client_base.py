@@ -51,7 +51,6 @@ class A2ABaseClient:
         task_timeout: Timeout for task operations (default: 300 seconds)
         streaming: Enable streaming responses (default: True)
         auth_provider: Optional NAT authentication provider for securing requests
-        default_user_id: User identifier for authentication (provided by per-user function group)
     """
 
     def __init__(
@@ -61,14 +60,12 @@ class A2ABaseClient:
         task_timeout: timedelta = timedelta(seconds=300),
         streaming: bool = True,
         auth_provider: AuthProviderBase | None = None,
-        default_user_id: str | None = None,
     ):
         self._base_url = base_url
         self._agent_card_path = agent_card_path
         self._task_timeout = task_timeout
         self._streaming = streaming
         self._auth_provider = auth_provider
-        self._default_user_id = default_user_id
 
         self._httpx_client: httpx.AsyncClient | None = None
         self._client: Client | None = None
@@ -103,11 +100,10 @@ class A2ABaseClient:
 
                 credential_service = A2ACredentialService(
                     auth_provider=self._auth_provider,
-                    default_user_id=self._default_user_id,
                     agent_card=self._agent_card,
                 )
                 interceptors.append(AuthInterceptor(credential_service))
-                logger.info("Authentication configured for A2A client (default_user_id: %s)", self._default_user_id)
+                logger.info("Authentication configured for A2A client")
             except ImportError as e:
                 logger.error("Failed to setup authentication: %s", e)
                 raise RuntimeError("Authentication requires a2a-sdk with AuthInterceptor support") from e
