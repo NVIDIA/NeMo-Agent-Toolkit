@@ -16,7 +16,7 @@ limitations under the License.
 
 # Math Assistant A2A Example
 
-This example demonstrates a math assistant that connects to a NeMo Agent toolkit based calculator server while integrating with local tools, showcasing end-to-end  A2A communication with hybrid tool composition.
+This example demonstrates a math assistant that connects to a NeMo Agent toolkit calculator server while integrating with local tools, showcasing end-to-end  A2A communication with hybrid tool composition.
 
 ## Key Features
 
