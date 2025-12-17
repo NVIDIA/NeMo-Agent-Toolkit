@@ -52,7 +52,7 @@ class A2ACredentialService(CredentialService):
 
     Args:
         auth_provider: NAT authentication provider instance
-        default_user_id: Default user identifier for authentication (defaults to agent URL)
+        default_user_id: User identifier for authentication (provided by per-user function group)
         agent_card: Agent card containing security scheme definitions
     """
 
@@ -124,7 +124,7 @@ class A2ACredentialService(CredentialService):
 
         Priority order:
         1. sessionId from context.state (for multi-user workflows via nat serve)
-        2. Configured default_user_id (for CLI via nat run, defaults to agent URL)
+        2. Configured default_user_id (provided by per-user function group from builder)
 
         Args:
             context: Client call context

@@ -70,6 +70,10 @@ class A2AClientFunctionGroup(FunctionGroup):
         config: A2AClientConfig = self._config  # type: ignore[assignment]
         base_url = str(config.url)
 
+        # Get user_id from context (set by runtime for per-user function groups)
+        from nat.builder.context import Context
+        user_id = Context.get().user_id
+
         # Resolve auth provider if configured
         auth_provider: AuthProviderBase | None = None
         if config.auth_provider:
@@ -87,14 +91,14 @@ class A2AClientFunctionGroup(FunctionGroup):
             task_timeout=config.task_timeout,
             streaming=config.streaming,
             auth_provider=auth_provider,
-            default_user_id=config.default_user_id,
+            default_user_id=user_id,
         )
         await self._client.__aenter__()
 
         if auth_provider:
-            logger.info("Connected to A2A agent at %s with authentication", base_url)
+            logger.info("Connected to A2A agent at %s with authentication (user_id: %s)", base_url, user_id)
         else:
-            logger.info("Connected to A2A agent at %s", base_url)
+            logger.info("Connected to A2A agent at %s (user_id: %s)", base_url, user_id)
 
         # Discover agent card and register functions
         self._register_functions()
