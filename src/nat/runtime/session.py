@@ -15,6 +15,7 @@
 
 import asyncio
 import logging
+import time
 import typing
 import uuid
 from collections.abc import Awaitable
@@ -64,6 +65,42 @@ class PerUserBuilderInfo(BaseModel):
                                     description="The timestamp of the last access to this builder")
     ref_count: int = Field(default=0, ge=0, description="The reference count of this builder")
     lock: asyncio.Lock = Field(default_factory=asyncio.Lock, description="Lock for thread-safe ref_count updates")
+
+    # Monitoring metrics
+    created_at: datetime = Field(default_factory=datetime.now, description="When the per-user workflow was created")
+    total_requests: int = Field(default=0, ge=0, description="Total number of requests processed")
+    error_count: int = Field(default=0, ge=0, description="Total number of failed requests")
+    total_latency_ms: float = Field(default=0.0, ge=0, description="Total latency of all requests in milliseconds")
+
+    # LLM usage tracking
+    total_tokens: int = Field(default=0, ge=0, description="Total tokens used (prompt + completion)")
+    prompt_tokens: int = Field(default=0, ge=0, description="Total prompt tokens used")
+    completion_tokens: int = Field(default=0, ge=0, description="Total completion tokens used")
+    llm_calls: int = Field(default=0, ge=0, description="Total number of LLM API calls")
+
+    def record_request(self, latency_ms: float, success: bool) -> None:
+        """Record metrics for a completed request.
+
+        Args:
+            latency_ms: Request latency in milliseconds
+            success: Whether the request was successful
+        """
+        self.total_requests += 1
+        self.total_latency_ms += latency_ms
+        if not success:
+            self.error_count += 1
+
+    def record_llm_usage(self, prompt_tokens: int, completion_tokens: int) -> None:
+        """Record LLM token usage.
+
+        Args:
+            prompt_tokens: Number of prompt tokens used
+            completion_tokens: Number of completion tokens used
+        """
+        self.prompt_tokens += prompt_tokens
+        self.completion_tokens += completion_tokens
+        self.total_tokens += prompt_tokens + completion_tokens
+        self.llm_calls += 1
 
 
 class Session:
@@ -436,6 +473,8 @@ class SessionManager:
             self.set_metadata_from_http_request(http_connection)
 
         builder_info: PerUserBuilderInfo | None = None
+        request_start_time: float | None = None
+        request_success = True
 
         if self._is_workflow_per_user:
             # Resolve user_id: explicit param > context
@@ -457,6 +496,8 @@ class SessionManager:
                 logger.debug(f"Incremented ref_count for user {user_id} to {builder_info.ref_count}")
             # Use per-user semaphore for concurrency control
             semaphore = builder_info.semaphore
+            # Start request timing for metrics
+            request_start_time = time.perf_counter()
         else:
             workflow = self._shared_workflow
             # Use shared semaphore for concurrency control
@@ -473,11 +514,20 @@ class SessionManager:
 
             yield session
 
+        except Exception:
+            request_success = False
+            raise
+
         finally:
             if builder_info is not None:
                 async with builder_info.lock:
                     builder_info.ref_count -= 1
                     builder_info.last_activity = datetime.now()
+
+                    # Record request metrics
+                    if request_start_time is not None:
+                        latency_ms = (time.perf_counter() - request_start_time) * 1000
+                        builder_info.record_request(latency_ms, request_success)
 
             if token_user_id is not None:
                 self._context_state.user_id.reset(token_user_id)
