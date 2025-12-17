@@ -25,7 +25,7 @@ For architectural overview and authentication concepts, see the [A2A Authenticat
 - **Protected A2A Server**: Calculator service that requires OAuth2 authentication
 - **A2A Client**: Math assistant that authenticates and calls the calculator
 - **OAuth2 Flow**: Complete authorization code flow with JWT validation
-- **Custom Scopes**: Resource-specific permissions (for example, `calculator_a2a:execute`)
+- **Custom Scopes**: Resource-specific permissions (for example, `calculator_a2a_execute`)
 
 This example is designed for **development and testing**. See [Production Considerations](#production-considerations) for deployment guidance.
 
@@ -100,17 +100,17 @@ sequenceDiagram
 
     Note over Client,AuthServer: 2. OAuth Authorization (if required)
     Client->>Browser: Open authorization URL<br/>(from agent card)
-    Browser->>AuthServer: GET /oauth/authorize<br/>(client_id, redirect_uri, scope)
+    Browser->>AuthServer: GET authorization_endpoint<br/>(client_id, redirect_uri, scope)
     AuthServer->>Browser: Login page
     Browser->>AuthServer: User credentials
-    AuthServer->>Browser: Consent page<br/>(Request calculator_a2a:execute scope)
+    AuthServer->>Browser: Consent page<br/>(Request calculator_a2a_execute scope)
     Browser->>AuthServer: User approves
 
     Note over Client,AuthServer: 3. Token Exchange
     AuthServer->>Browser: Redirect with authorization code
     Browser->>Client: Authorization code
-    Client->>AuthServer: POST /oauth/token<br/>(code, client_secret)
-    AuthServer-->>Client: Access token (JWT)<br/>{scope: calculator_a2a:execute, ...}
+    Client->>AuthServer: POST token_endpoint<br/>(code, client_secret)
+    AuthServer-->>Client: Access token (JWT)<br/>{scope: calculator_a2a_execute, ...}
 
     Note over Client,Resource: 4. Authenticated A2A Request
     Client->>Resource: POST / (JSON-RPC)<br/>Authorization: Bearer <JWT>
@@ -161,43 +161,48 @@ Look for: `Listening on: http://0.0.0.0:8080`
 
 2. **Verify you're in the `master` realm** (top-left dropdown)
 
-3. **Create the `calculator_a2a:execute` scope (for the calculator agent):**
+3. **Create the `calculator_a2a_execute` scope (for the calculator agent):**
    - Go to **Client scopes** (left sidebar)
    - Click **Create client scope**
    - Fill in:
-     - **Name**: `calculator_a2a:execute`
+     - **Name**: `calculator_a2a_execute`
      - **Description**: `Permission to execute calculator operations`
      - **Type**: `Optional`
      - **Protocol**: `openid-connect`
+     - **Include in token scope**: `On` ✅
    - Click **Save**
 
-4. **Add scope to token :**
+4. **Add audience mapper to the scope:**
 
-   Keycloak won't include custom scopes in JWT tokens by default. You must configure a mapper to include the scope in the token.
+   You need to add an audience mapper to ensure the calculator URL is included in tokens.
 
-   - Still in the `calculator_a2a:execute` client scope, go to the **Mappers** tab
-   - Click **Configure a new mapper**
-   - Select **`Hardcoded` claim**
+   **Audience Mapper** (adds calculator URL to audience claim)
+
+   - Click **Add mapper** > **By configuration**
+   - Select **Audience** mapper type
    - Configure the mapper:
-     - **Name**: `add-calculator-scope`
-     - **Token Claim Name**: `scope`
-     - **Claim value**: `calculator_a2a:execute`
-     - **Claim JSON Type**: `String`
+     - **Name**: `calculator-audience`
+     - **Included Client Audience**: Leave blank
+     - **Included Custom Audience**: `http://localhost:10000`
      - **Add to ID token**: `Off`
      - **Add to access token**: `On` ✅
-     - **Add to `userinfo`**: `Off`
+     - **Add to token introspection**: `On` ✅ (if available in your Keycloak version)
    - Click **Save**
 
-   This ensures `calculator_a2a:execute` appears in the token's `scope` claim.
+   This mapper ensures `http://localhost:10000` is included in the token's `aud` claim (required for JWT validation).
 
 5. **Verify OpenID Discovery endpoint:**
    ```bash
    curl http://localhost:8080/realms/master/.well-known/openid-configuration | python3 -m json.tool
    ```
 
-   You should see:
-   - `token_endpoint` - for token exchange
-   - `jwks_uri` - for JWT signature verification
+   You should see the OAuth2/OIDC endpoints:
+   - `authorization_endpoint`: `http://localhost:8080/realms/master/protocol/openid-connect/auth`
+   - `token_endpoint`: `http://localhost:8080/realms/master/protocol/openid-connect/token`
+   - `jwks_uri`: `http://localhost:8080/realms/master/protocol/openid-connect/certs`
+   - `introspection_endpoint`: `http://localhost:8080/realms/master/protocol/openid-connect/token/introspect`
+
+   **Note:** These endpoints use Keycloak's standard paths (`/protocol/openid-connect/*`), not generic `/oauth/*` paths. The NAT A2A client discovers these URLs automatically from the discovery endpoint.
 
 ## Step 3: Register Math Assistant Client
 
@@ -230,14 +235,12 @@ You have two options:
    - Copy the **Client secret**
    - Note the **Client ID**: `math-assistant-client`
 
-7. **Configure client scopes (make it default):**
+7. **Configure client scopes:**
    - Go to **Client scopes** tab
    - Click **Add client scope**
-   - Select `calculator_a2a:execute`
-   - Choose **Default** (not Optional) ✅
+   - Select `calculator_a2a_execute`
+   - Choose **Optional**
    - Click **Add**
-
-   **Why Default?** Default scopes are automatically included in every token request. Optional scopes must be explicitly requested and may not be granted.
 
 ### Option B: Dynamic Client Registration (DCR)
 
@@ -289,7 +292,7 @@ nat run --config_file examples/A2A/math_assistant_a2a/configs/config-client-oaut
 
 1. **Browser opens** with Keycloak login page
 2. **Log in** with any user (or create one)
-3. **Consent page** shows requesting `calculator_a2a:execute` scope - click **Yes**
+3. **Consent page** may show requesting calculator_a2a_execute (depending on realm consent settings)
 4. **Browser redirects** back to `localhost:8000/auth/redirect`
 5. **Workflow continues** and calls the calculator
 6. **Response returned** successfully

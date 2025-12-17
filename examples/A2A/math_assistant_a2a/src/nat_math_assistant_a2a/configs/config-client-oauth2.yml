@@ -55,7 +55,10 @@ authentication:
     token_endpoint_auth_method: client_secret_post
     use_pkce: false
     scopes:
-      - calculator_a2a:execute
+      - openid
+      - profile
+      - email
+      - calculator_a2a_execute
 
 llms:
   nim_llm:

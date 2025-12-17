@@ -30,9 +30,8 @@ NeMo Agent toolkit A2A authentication provides the capabilities required for sec
 - **Agent Card Discovery**: Public endpoint for discovering security requirements without authentication
 - **OAuth 2.1 Authorization Code Flow**: Standard authorization flow conforming to [OAuth 2.1 draft specification](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13)
 - **JWT Token Validation**: Server-side token verification using JWKS (JSON Web Key Set)
-- **Custom Scopes**: Resource-specific permissions (for example, `calculator_a2a:execute`)
+- **Custom Scopes**: Resource-specific permissions (for example, `calculator_a2a_execute`)
 - **Audience Validation**: Ensures tokens are intended for the specific A2A server
-
 
 ## Architecture Overview
 
@@ -95,7 +94,7 @@ sequenceDiagram
 
     Note over Client,AuthServer: 2. Authorization Phase (If Required)
     Client->>Browser: Open authorization URL
-    Browser->>AuthServer: GET /oauth/authorize<br/>(client_id, redirect_uri, scope)
+    Browser->>AuthServer: GET authorization_endpoint<br/>(client_id, redirect_uri, scope)
     AuthServer->>Browser: Login page
     Browser->>AuthServer: User credentials
     AuthServer->>Browser: Consent page<br/>(Request scopes)
@@ -104,7 +103,7 @@ sequenceDiagram
     Note over Client,AuthServer: 3. Token Exchange
     AuthServer->>Browser: Redirect with authorization code
     Browser->>Client: Authorization code
-    Client->>AuthServer: POST /oauth/token<br/>(code, client_secret)
+    Client->>AuthServer: POST token_endpoint<br/>(code, client_secret)
     AuthServer-->>Client: Access token (JWT)<br/>{scope: ..., aud: ..., exp: ...}
 
     Note over Client,Server: 4. Authenticated Communication
@@ -149,7 +148,7 @@ authentication:
     authorization_url: http://localhost:8080/realms/master/protocol/openid-connect/auth
     token_url: http://localhost:8080/realms/master/protocol/openid-connect/token
     scopes:
-      - calculator_a2a:execute
+      - calculator_a2a_execute
 ```
 
 **Configuration Options:**
@@ -162,6 +161,8 @@ authentication:
 | `authorization_url` | Authorization endpoint URL | Yes |
 | `token_url` | Token endpoint URL | Yes |
 | `scopes` | List of OAuth2 scopes to request | Yes |
+
+**Endpoint Discovery**: The `authorization_url` and `token_url` can be discovered from your OAuth2 provider's discovery endpoint (typically `/.well-known/openid-configuration`). For example, Keycloak uses paths like `/protocol/openid-connect/auth` and `/protocol/openid-connect/token`.
 
 **Note**: Get the complete list of OAuth2 provider options by running:
 ```bash
@@ -182,7 +183,7 @@ general:
     server_auth:
       issuer_url: http://localhost:8080/realms/master
       scopes:
-        - calculator_a2a:execute
+        - calculator_a2a_execute
       audience: http://localhost:10000
       jwks_uri: http://localhost:8080/realms/master/protocol/openid-connect/certs
 ```
@@ -195,6 +196,8 @@ general:
 | `jwks_uri` | JWKS endpoint for fetching public keys | Yes |
 | `scopes` | Required scopes for access | Optional |
 | `audience` | Expected audience value in token | Optional |
+
+**Endpoint Discovery**: The `jwks_uri` can be discovered from your OAuth2 provider's discovery endpoint at `<issuer_url>/.well-known/openid-configuration`. For example, Keycloak typically uses `/protocol/openid-connect/certs`.
 
 The server validates incoming JWT tokens by:
 1. Verifying token signature using public keys from JWKS endpoint
