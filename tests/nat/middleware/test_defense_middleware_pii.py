@@ -521,7 +521,10 @@ class TestPIIDefenseStreaming:
         mock_analyzer = MagicMock()
         mock_analyzer.analyze.return_value = [MagicMock(entity_type="EMAIL_ADDRESS", start=0, end=20, score=0.9)]
         middleware._analyzer = mock_analyzer
-        middleware._anonymizer = MagicMock()
+
+        mock_anonymizer = MagicMock()
+        mock_anonymizer.anonymize.return_value = MagicMock(text="Contact <EMAIL_ADDRESS>")
+        middleware._anonymizer = mock_anonymizer
 
         async def mock_stream(_value):
             yield "Contact "
@@ -565,7 +568,10 @@ class TestPIIDefenseStreaming:
         mock_analyzer = MagicMock()
         mock_analyzer.analyze.return_value = [MagicMock(entity_type="EMAIL_ADDRESS", start=0, end=20, score=0.9)]
         middleware._analyzer = mock_analyzer
-        middleware._anonymizer = MagicMock()
+
+        mock_anonymizer = MagicMock()
+        mock_anonymizer.anonymize.return_value = MagicMock(text="Contact <EMAIL_ADDRESS>")
+        middleware._anonymizer = mock_anonymizer
 
         async def mock_stream(_value):
             yield "Contact "
