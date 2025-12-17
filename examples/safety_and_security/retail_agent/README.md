@@ -131,10 +131,18 @@ Based on the configuration, the RedTeamingRunner will run all scenarios, perform
 
 Defense Middleware acts as a critical layer within the agent's workflow, intercepting inputs, outputs, and intermediate steps to apply various mitigation techniques. Its primary goal is to prevent and neutralize attacks, ensuring the agent's safe and secure operation by enforcing policies and sanitizing data. The Defense Middleware enables the following mitigation techniques:
 
-- Redaction is applicable for PII related risk mitigation.
-- Sanitization is applicable to input/ output verification and mitigation.
-- Filtering is applicable to simple rule based mitigation.  
-- Guard Models are applicable for content safety related risk mitigation. 
+ **PII Defense**
+- Redaction and Sanitization for PII-related risk mitigation
+- Block, Sanitize, or Log sensitive outputs and warnings
+
+ **Content Safety Defense**
+- Guard Models (SOTA model providers on Hugging Face and NVIDIA NIMs) for content safety–related risk mitigation
+- Block, Sanitize, or Log unsafe outputs
+
+**Rule-Based / LLM Verifier Defense**
+- Filtering and Verification for general policy enforcement and sanity checks, using tool descriptions, tool inputs, and tool outputs as evaluation signals
+- Block, Sanitize, or Log policy violations
+
 
 ---
 
