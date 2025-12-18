@@ -121,7 +121,8 @@ class TestA2AClientFunctionality:
 
                     # Verify skill names or descriptions appear
                     description_lower = call_fn.description.lower()
-                    assert "add" in description_lower or "multiply" in description_lower or "datetime" in description_lower
+                    assert "add" in description_lower or "multiply" in description_lower \
+                        or "datetime" in description_lower
 
     async def test_skills_not_embedded_when_disabled(self, sample_agent_card):
         """Test skills are not embedded when disabled.
