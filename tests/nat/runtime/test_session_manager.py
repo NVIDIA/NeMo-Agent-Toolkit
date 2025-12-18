@@ -116,7 +116,6 @@ def create_mock_config(is_per_user: bool = False) -> Config:
     config.general = MagicMock(spec=GeneralConfig)
     config.general.per_user_workflow_timeout = timedelta(minutes=30)
     config.general.per_user_workflow_cleanup_interval = timedelta(minutes=5)
-    config.general.default_user_id = None
     config.workflow = MagicMock()
     return config
 
@@ -361,7 +360,7 @@ class TestSessionManagerSession:
                             entry_function=None,
                             shared_workflow=None)
 
-        with pytest.raises(ValueError, match="user_id is required for per-user workflow"):
+        with pytest.raises(ValueError, match="user_id is required for per-user workflow but could not be determined"):
             async with sm.session():
                 pass
 
