@@ -54,6 +54,11 @@ class SequentialExecutorConfig(FunctionBaseConfig, name="sequential_executor"):
         "which means the output type of the previous function is compatible with the input type of the next function."
         "If set to True, any incompatibility will raise an exception. If set to false, the incompatibility will only"
         "generate a warning message and the sequential execution will continue.")
+    return_error_on_exception: bool = Field(
+        default=False,
+        description="If set to True, when an uncaught exception occurs during tool execution, the sequential executor "
+        "will exit early and return an error message as the workflow output instead of raising the exception. "
+        "If set to False (default), exceptions are re-raised.")
 
 
 def _get_function_output_type(function: Function, tool_execution_config: dict[str, ToolExecutionConfig]) -> type:
@@ -150,6 +155,10 @@ async def sequential_execution(config: SequentialExecutorConfig, builder: Builde
                     tool_response = await tool.ainvoke(tool_input)
             except Exception as e:
                 logger.error(f"Error with tool {tool_name}: {e}")
+                if config.return_error_on_exception:
+                    # Return error message as workflow output instead of raising exception
+                    error_message = f"Error in {tool_name}: {type(e).__name__}: {str(e)}"
+                    return error_message
                 raise
 
             # The input of the next tool is the response of the previous tool
