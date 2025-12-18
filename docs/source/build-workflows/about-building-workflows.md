@@ -67,7 +67,7 @@ For details on workflow configuration, including sections not utilized in the ab
 
 ## Using Agents With Workflows
 
-The following are agents and an executor offered by NeMo Agent toolkit:
+The following are [agents](../components/agents/index.md) and an executor offered by NeMo Agent toolkit:
 
 - [ReAct Agent](../components/agents/react-agent/index.md)
 - [Reasoning Agent](../components/agents/reasoning-agent/index.md)
