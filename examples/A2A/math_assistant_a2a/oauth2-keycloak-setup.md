@@ -317,34 +317,40 @@ Workflow Result:
 
 The per-user architecture allows each user to have their own OAuth2 authentication. Test this with `nat serve`:
 
+1. Start the math assistant as a server
 ```bash
 # Terminal 2: Start the math assistant as a server
 nat serve --config_file examples/A2A/math_assistant_a2a/configs/config-client-oauth2.yml
 ```
 
-In separate terminals or browser tabs:
+2. Start the UI by following the instructions in the [Launching the UI](../../../docs/source/run-workflows/launching-ui.md) documentation.
 
-```bash
-# User "alice" - will trigger OAuth2 flow for alice
-curl -X POST http://localhost:8000/generate \
-  -H "Content-Type: application/json" \
-  -H "Cookie: nat-session=alice" \
-  -d '{"messages": [{"role": "user", "content": "Is the sum of 5 and 3 greater than the current hour of the day?"}]}' |jq
+3. Connect to the UI at `http://localhost:3000`
 
-# User "hatter" - will trigger separate OAuth2 flow for hatter
-curl -X POST http://localhost:8000/generate \
-  -H "Content-Type: application/json" \
-  -H "Cookie: nat-session=hatter" \
-  -d '{"messages": [{"role": "user", "content": "Is the product of 3 and 2 greater than the current hour of the day?"}]}' |jq
+4. Enable WebSocket mode in the UI by toggling the WebSocket button on the top right corner of the UI.
+
+:::important
+Per-user workflows are not supported in HTTP mode. You must use WebSocket mode to test multi-user support.
+:::
+
+5. Send a message to the agent by typing in the chat input:
+```text
+Is the sum of 5 and 3 greater than the current hour of the day?
+```
+
+6. The workflow will be instantiated for the user on the first message. The user will be authenticated and the workflow will be executed.
+
+```text
+Workflow Result:
+['Yes, the sum of 5 and 3 is greater than the current hour of the day.']
+--------------------------------------------------
 ```
 
 **Expected behavior:**
 - Each new user session triggers its own OAuth2 authorization flow
 - Different users authenticate independently with their own Keycloak credentials
-- Each user maintains separate JWT tokens and calculator sessions
-- User "alice" and "hatter" have completely isolated authentication state
+- Each user maintains separate JWT tokens and workflow instances
 
-**Note:** The OAuth2 flow will open a browser window for each new user. If you are testing with `curl`, you will need to complete the OAuth2 flow manually in the browser for each user session.
 
 ## Cleanup
 

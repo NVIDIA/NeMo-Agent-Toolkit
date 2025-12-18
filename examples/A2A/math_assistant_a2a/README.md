@@ -112,20 +112,20 @@ For comprehensive examples demonstrating different capabilities (basic calculati
 
 This example uses a **per-user workflow** pattern because A2A clients are per-user function groups:
 
-**Why Per-User?**
+### Why Per-User?
 - Each user gets isolated A2A client connections
 - Separate authentication credentials per user (important for OAuth2)
 - Independent session state and task tracking
 - No interference between users
 
-**Implementation**:
+### Implementation
 The example uses `per_user_react_agent`, which is the per-user version of the ReAct agent:
 - Each user gets their own isolated ReAct agent instance
 - Gets per-user A2A client tools via the builder
 - Provides the same interface as the shared `react_agent` but with per-user isolation
 - Built-in support for per-user function groups like A2A clients
 
-**Multi-User Testing**:
+### Multi-User Testing
 When using `nat serve`, different users are identified by the `nat-session` cookie:
 
 ```bash
@@ -134,17 +134,38 @@ nat serve --config_file examples/A2A/math_assistant_a2a/configs/config.yml
 ```
 
 ```bash
-# User "alice" makes a request on terminal 2
+# User "Alice" makes a request on terminal 2
 curl -X POST http://localhost:8000/generate \
   -H "Content-Type: application/json" \
-  -H "Cookie: nat-session=alice" \
+  -H "Cookie: nat-session=Alice" \
   -d '{"messages": [{"role": "user", "content": "Is the sum of 5 and 3 greater than the current hour of the day?"}]}' | jq
 
-# User "hatter" makes a request on terminal 2 (isolated from alice)
+# User "Hatter" makes a requ est on terminal 2 (isolated from Alice)
 curl -X POST http://localhost:8000/generate \
   -H "Content-Type: application/json" \
-  -H "Cookie: nat-session=hatter" \
+  -H "Cookie: nat-session=Hatter" \
   -d '{"messages": [{"role": "user", "content": "Is the product of 3 and 2 greater than the current hour of the day?"}]}' | jq
+```
+#### Testing with the UI
+
+1. Start the UI by following the instructions in the [Launching the UI](../../../docs/source/run-workflows/launching-ui.md) documentation.
+
+2. Connect to the UI at `http://localhost:3000`
+
+3. Enable WebSocket mode in the UI by toggling the WebSocket button on the top right corner of the UI.
+
+:::important
+Per-user workflows are not supported in HTTP mode. You must use WebSocket mode to test multi-user support.
+:::
+
+4. Send a message to the agent by typing in the chat input:
+```text
+Is the sum of 5 and 3 greater than the current hour of the day?
+```
+
+5. The workflow will be instantiated for the user on the first message and agent will respond with the result.
+```text
+Yes, the sum of 5 and 3 is greater than the current hour of the day.
 ```
 
 ## OAuth2 Protected Setup
