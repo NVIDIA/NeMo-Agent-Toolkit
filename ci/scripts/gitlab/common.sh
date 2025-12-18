@@ -58,7 +58,7 @@ function is_current_commit_release_tagged() {
         local is_pre_release=0
 
         # Ensure we don't have a dev or alpha tag
-        if [[ ! (${GIT_TAG} =~ "-dev" || ${GIT_TAG} =~ "a") ]]; then
+        if [[ ${GIT_TAG} =~ "-beta" || (! (${GIT_TAG} =~ "-dev" || ${GIT_TAG} =~ "a")) ]]; then
             is_tagged=1
         fi
     fi
