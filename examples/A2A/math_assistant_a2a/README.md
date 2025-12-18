@@ -22,6 +22,7 @@ This example demonstrates a math assistant that connects to a NeMo Agent toolkit
 
 - **A2A Protocol Integration**: Connects to a remote calculator workflow via A2A protocol
 - **Hybrid Tool Architecture**: Combines remote A2A tools with local MCP and custom functions
+- **OAuth2 Authentication**: Optional OAuth2-protected A2A server setup for secure agent-to-agent communication
 
 ## Architecture Overview
 
@@ -104,7 +105,26 @@ nat run --config_file examples/A2A/math_assistant_a2a/configs/config.yml \
 
 For comprehensive examples demonstrating different capabilities (basic calculations, time-integrated math, multi-step problems), see [`data/sample_queries.json`](data/sample_queries.json).
 
+## OAuth2 Protected Setup
+
+For production scenarios requiring authentication:
+
+- **Architecture and Concepts**: [A2A Authentication Documentation](../../../docs/source/components/auth/a2a-auth.md)
+- **Hands-on Setup Guide**: [OAuth2 Keycloak Setup Guide](oauth2-keycloak-setup.md)
+
+The OAuth2 setup demonstrates:
+- End-to-end OAuth2 authorization code flow
+- Protected A2A server with JWT token validation
+- Keycloak integration for testing secure A2A communication
+
+This setup uses the OAuth2-enabled configuration (`configs/config-client-oauth2.yml`) instead of the basic configuration.
+
 ## Configuration Details
+
+### Available Configurations
+
+- **`config.yml`**: Basic setup with unprotected calculator server
+- **`config-client-oauth2.yml`**: OAuth2-protected setup (requires Keycloak - see [OAuth2 guide](oauth2-keycloak-setup.md))
 
 ### Tool Composition
 

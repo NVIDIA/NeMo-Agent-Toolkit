@@ -22,4 +22,5 @@ limitations under the License.
 
 Authentication Provider API <./api-authentication.md>
 MCP Authentication <./mcp-auth/index.md>
+A2A Authentication <./a2a-auth.md>
 ```

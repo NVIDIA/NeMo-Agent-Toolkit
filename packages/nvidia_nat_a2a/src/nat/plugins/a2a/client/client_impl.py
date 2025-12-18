@@ -15,6 +15,7 @@
 
 import logging
 from collections.abc import AsyncGenerator
+from typing import TYPE_CHECKING
 from typing import Any
 
 from pydantic import BaseModel
@@ -25,6 +26,9 @@ from nat.builder.workflow_builder import Builder
 from nat.cli.register_workflow import register_function_group
 from nat.plugins.a2a.client.client_base import A2ABaseClient
 from nat.plugins.a2a.client.client_config import A2AClientConfig
+
+if TYPE_CHECKING:
+    from nat.authentication.interfaces import AuthProviderBase
 
 logger = logging.getLogger(__name__)
 
@@ -66,13 +70,31 @@ class A2AClientFunctionGroup(FunctionGroup):
         config: A2AClientConfig = self._config  # type: ignore[assignment]
         base_url = str(config.url)
 
+        # Resolve auth provider if configured
+        auth_provider: AuthProviderBase | None = None
+        if config.auth_provider:
+            try:
+                auth_provider = await self._builder.get_auth_provider(config.auth_provider)
+                logger.info("Resolved authentication provider for A2A client")
+            except Exception as e:
+                logger.error("Failed to resolve auth provider '%s': %s", config.auth_provider, e)
+                raise RuntimeError(f"Failed to resolve auth provider: {e}") from e
+
         # Create and initialize A2A client
-        self._client = A2ABaseClient(base_url=base_url,
-                                     agent_card_path=config.agent_card_path,
-                                     task_timeout=config.task_timeout,
-                                     streaming=config.streaming)
+        self._client = A2ABaseClient(
+            base_url=base_url,
+            agent_card_path=config.agent_card_path,
+            task_timeout=config.task_timeout,
+            streaming=config.streaming,
+            auth_provider=auth_provider,
+            default_user_id=config.default_user_id,
+        )
         await self._client.__aenter__()
-        logger.info("Connected to A2A agent at %s", base_url)
+
+        if auth_provider:
+            logger.info("Connected to A2A agent at %s with authentication", base_url)
+        else:
+            logger.info("Connected to A2A agent at %s", base_url)
 
         # Discover agent card and register functions
         self._register_functions()
