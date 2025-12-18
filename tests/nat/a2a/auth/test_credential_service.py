@@ -18,6 +18,7 @@ from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
 from unittest.mock import Mock
+from unittest.mock import patch
 
 import pytest
 from a2a.client import ClientCallContext
@@ -165,12 +166,15 @@ def sample_agent_card():
                              ("oidc", "oidc_scheme", "test-id-token"),
                              ("http_bearer", "http_bearer_scheme", "test-bearer-token"),
                          ])
-async def test_bearer_token_mapping(scheme_name,
-                                    scheme_fixture,
-                                    token_value,
-                                    request,
-                                    mock_auth_provider,
-                                    sample_agent_card):
+async def test_bearer_token_mapping(
+    scheme_name,
+    scheme_fixture,
+    token_value,
+    request,
+    mock_auth_provider,
+    sample_agent_card,
+    mock_user_context,
+):
     """Test BearerTokenCred maps to various bearer-compatible schemes."""
     scheme = request.getfixturevalue(scheme_fixture)
     auth_result = AuthResult(credentials=[BearerTokenCred(token=SecretStr(token_value))])
@@ -183,14 +187,8 @@ async def test_bearer_token_mapping(scheme_name,
     )
 
     # Mock the Context to return a user_id
-    from unittest.mock import patch
-
-    # Create a simple object with user_id attribute
-    class MockUserContext:
-        user_id = "test-user"
-
     with patch('nat.plugins.a2a.auth.credential_service.Context') as mock_context:
-        mock_context.get.return_value = MockUserContext()
+        mock_context.get.return_value = mock_user_context
         credential = await service.get_credentials(scheme_name, None)
 
     assert credential == token_value
@@ -206,8 +204,7 @@ async def test_header_credential_with_api_key_scheme(api_key_scheme, mock_auth_p
     service = A2ACredentialService(auth_provider=provider, agent_card=card)
 
     # Mock the Context to return a user_id
-    from unittest.mock import patch
-    with patch('nat.builder.context.Context') as mock_context:
+    with patch('nat.plugins.a2a.auth.credential_service.Context') as mock_context:
         mock_context.get.return_value.user_id = "test-user"
         credential = await service.get_credentials("api_key", None)
 
@@ -243,8 +240,7 @@ async def test_token_expiration_triggers_reauthentication(oauth2_scheme, mock_au
     service = A2ACredentialService(auth_provider=provider, agent_card=card)
 
     # Mock the Context to return a user_id
-    from unittest.mock import patch
-    with patch('nat.builder.context.Context') as mock_context:
+    with patch('nat.plugins.a2a.auth.credential_service.Context') as mock_context:
         mock_context.get.return_value.user_id = "test-user"
         # First call: gets and caches expired token (provider's responsibility to return valid tokens)
         credential1 = await service.get_credentials("oauth", None)
@@ -269,8 +265,7 @@ async def test_credential_caching(oauth2_scheme, mock_auth_provider, sample_agen
     service = A2ACredentialService(auth_provider=provider, agent_card=card)
 
     # Mock the Context to return a user_id
-    from unittest.mock import patch
-    with patch('nat.builder.context.Context') as mock_context:
+    with patch('nat.plugins.a2a.auth.credential_service.Context') as mock_context:
         mock_context.get.return_value.user_id = "test-user"
         credential1 = await service.get_credentials("oauth", None)
         credential2 = await service.get_credentials("oauth", None)
@@ -284,7 +279,7 @@ async def test_credential_caching(oauth2_scheme, mock_auth_provider, sample_agen
 # ============================================================================
 
 
-async def test_user_id_from_context(oauth2_scheme, mock_auth_provider, sample_agent_card):
+async def test_user_id_from_context(oauth2_scheme, mock_auth_provider, sample_agent_card, mock_user_context):
     """Test user_id is extracted from NAT Context."""
     auth_result = AuthResult(credentials=[BearerTokenCred(token=SecretStr("test-token"))])
     provider = mock_auth_provider("MockOAuth2Provider", auth_result)
@@ -296,14 +291,12 @@ async def test_user_id_from_context(oauth2_scheme, mock_auth_provider, sample_ag
     )
 
     # Mock the Context to return a user_id
-    from unittest.mock import patch
-
-    # Create a simple object with user_id attribute
-    class MockUserContext:
-        user_id = "context-user"
+    # Override the user_id for this specific test
+    mock_user_context.user_id = "context-user"
 
     with patch('nat.plugins.a2a.auth.credential_service.Context') as mock_context:
-        mock_context.get.return_value = MockUserContext()
+        mock_context.get.return_value = mock_user_context
+        # Note: user_id is sourced from mocked Context.get().user_id, not from the context parameter
         context = ClientCallContext(state={"sessionId": "context-user"})
         credential = await service.get_credentials("oauth", context)
 
@@ -325,8 +318,7 @@ async def test_missing_security_scheme_returns_none(mock_auth_provider, sample_a
     service = A2ACredentialService(auth_provider=provider, agent_card=card)
 
     # Mock the Context to return a user_id
-    from unittest.mock import patch
-    with patch('nat.builder.context.Context') as mock_context:
+    with patch('nat.plugins.a2a.auth.credential_service.Context') as mock_context:
         mock_context.get.return_value.user_id = "test-user"
         credential = await service.get_credentials("nonexistent", None)
 
@@ -341,8 +333,7 @@ async def test_authentication_failure_returns_none(oauth2_scheme, mock_auth_prov
     service = A2ACredentialService(auth_provider=provider, agent_card=card)
 
     # Mock the Context to return a user_id
-    from unittest.mock import patch
-    with patch('nat.builder.context.Context') as mock_context:
+    with patch('nat.plugins.a2a.auth.credential_service.Context') as mock_context:
         mock_context.get.return_value.user_id = "test-user"
         credential = await service.get_credentials("oauth", None)
 

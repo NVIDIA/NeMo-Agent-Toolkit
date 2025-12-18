@@ -85,7 +85,7 @@ class TestA2AClientFunctionality:
         assert call_fn.description is not None
         assert "Test agent for unit tests" in call_fn.description
 
-    async def test_skills_embedded_when_enabled(self, sample_agent_card):
+    async def test_skills_embedded_when_enabled(self, sample_agent_card, mock_user_context):
         """Test skills are embedded in function description when enabled.
 
         Verifies that when include_skills_in_description is True,
@@ -102,12 +102,8 @@ class TestA2AClientFunctionality:
             )
 
             # Mock the Context to provide a user_id
-            # Create a simple object with user_id attribute
-            class MockUserContext:
-                user_id = "test-user"
-
             with patch('nat.builder.context.Context') as mock_context:
-                mock_context.get.return_value = MockUserContext()
+                mock_context.get.return_value = mock_user_context
 
                 async with WorkflowBuilder() as builder:
                     group = await builder.add_function_group("test_agent", config)
@@ -124,7 +120,7 @@ class TestA2AClientFunctionality:
                     assert "add" in description_lower or "multiply" in description_lower \
                         or "datetime" in description_lower
 
-    async def test_skills_not_embedded_when_disabled(self, sample_agent_card):
+    async def test_skills_not_embedded_when_disabled(self, sample_agent_card, mock_user_context):
         """Test skills are not embedded when disabled.
 
         Verifies that when include_skills_in_description is False,
@@ -141,12 +137,8 @@ class TestA2AClientFunctionality:
             )
 
             # Mock the Context to provide a user_id
-            # Create a simple object with user_id attribute
-            class MockUserContext:
-                user_id = "test-user"
-
             with patch('nat.builder.context.Context') as mock_context:
-                mock_context.get.return_value = MockUserContext()
+                mock_context.get.return_value = mock_user_context
 
                 async with WorkflowBuilder() as builder:
                     group = await builder.add_function_group("test_agent", config)
@@ -191,7 +183,7 @@ class TestA2AClientFunctionality:
         # Verify skill count
         assert result["num_skills"] == 3
 
-    async def test_client_connection_configuration(self, sample_agent_card):
+    async def test_client_connection_configuration(self, sample_agent_card, mock_user_context):
         """Test client connection configuration is properly set.
 
         Verifies that the client is initialized with the correct
@@ -205,12 +197,8 @@ class TestA2AClientFunctionality:
             config = A2AClientConfig(url="http://localhost:10000", task_timeout=60.0)
 
             # Mock the Context to provide a user_id
-            # Create a simple object with user_id attribute
-            class MockUserContext:
-                user_id = "test-user"
-
             with patch('nat.builder.context.Context') as mock_context:
-                mock_context.get.return_value = MockUserContext()
+                mock_context.get.return_value = mock_user_context
 
                 async with WorkflowBuilder() as builder:
                     group = await builder.add_function_group("test_agent", config)
@@ -224,12 +212,11 @@ class TestA2AClientFunctionality:
                 # URL gets normalized with trailing slash
                 assert call_kwargs['base_url'] == "http://localhost:10000/"
                 # Timeout is converted to timedelta
-                from datetime import timedelta
                 assert call_kwargs['task_timeout'] == timedelta(seconds=60)
                 # Default A2A agent card path
                 assert call_kwargs['agent_card_path'] == '/.well-known/agent-card.json'
 
-    async def test_client_timeout_configuration(self, sample_agent_card):
+    async def test_client_timeout_configuration(self, sample_agent_card, mock_user_context):
         """Test client timeout can be configured.
 
         Verifies that the task_timeout configuration is properly
@@ -249,12 +236,8 @@ class TestA2AClientFunctionality:
             assert config.task_timeout.total_seconds() == 60
 
             # Mock the Context to provide a user_id
-            # Create a simple object with user_id attribute
-            class MockUserContext:
-                user_id = "test-user"
-
             with patch('nat.builder.context.Context') as mock_context:
-                mock_context.get.return_value = MockUserContext()
+                mock_context.get.return_value = mock_user_context
 
                 async with WorkflowBuilder() as builder:
                     group = await builder.add_function_group("test_agent", config)
