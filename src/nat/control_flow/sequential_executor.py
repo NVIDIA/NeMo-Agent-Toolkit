@@ -32,6 +32,14 @@ from nat.utils.type_utils import DecomposedType
 logger = logging.getLogger(__name__)
 
 
+class SequentialExecutorExit(Exception):
+    """Raised when a tool wants to exit the sequential executor chain early with a custom message."""
+
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(message)
+
+
 class ToolExecutionConfig(BaseModel):
     """Configuration for individual tool execution within sequential execution."""
 
@@ -153,6 +161,10 @@ async def sequential_execution(config: SequentialExecutorConfig, builder: Builde
                         tool_response = await tool.ainvoke(tool_input)
                 else:
                     tool_response = await tool.ainvoke(tool_input)
+            except SequentialExecutorExit as e:
+                # Tool explicitly requested early exit - always return the message
+                logger.info(f"Tool {tool_name} requested early exit: {e.message}")
+                return e.message
             except Exception as e:
                 logger.error(f"Error with tool {tool_name}: {e}")
                 if config.return_error_on_exception:
