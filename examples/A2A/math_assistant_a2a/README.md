@@ -140,7 +140,7 @@ curl -X POST http://localhost:8000/generate \
   -H "Cookie: nat-session=Alice" \
   -d '{"messages": [{"role": "user", "content": "Is the sum of 5 and 3 greater than the current hour of the day?"}]}' | jq
 
-# User "Hatter" makes a requ est on terminal 2 (isolated from Alice)
+# User "Hatter" makes a request on terminal 2 (isolated from Alice)
 curl -X POST http://localhost:8000/generate \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=Hatter" \

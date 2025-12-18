@@ -68,7 +68,7 @@ workflow:
 
 The `a2a_client` function group connects to a remote A2A agent, discovers its skills through the [Agent Card](https://a2a-protocol.org/latest/topics/agent-discovery/), and provides a function interface for invoking those skills.
 
-**Note**: Since A2A clients are per-user, the workflow must also be per-user. The example above uses `per_user_react_agent`, which is the per-user version of the builtin [ReAct agent](../build-workflows/react-agent.md). See the [examples](#examples) section for complete implementations.
+**Note**: Since A2A clients are per-user, the workflow must also be per-user. The example above uses `per_user_react_agent`, which is the per-user version of the builtin [ReAct agent](../components/agents/react-agent/react-agent.md). See the [examples](#examples) section for complete implementations.
 
 ### Configuration Options
 
