@@ -67,12 +67,17 @@ For details on workflow configuration, including sections not utilized in the ab
 
 ## Using Agents With Workflows
 
-The following are [agents](../components/agents/index.md) and an executor offered by NeMo Agent toolkit:
+The following are [agents](../components/agents/index.md) and offered by NeMo Agent toolkit:
 
 - [ReAct Agent](../components/agents/react-agent/index.md)
 - [Reasoning Agent](../components/agents/reasoning-agent/index.md)
 - [ReWOO Agent](../components/agents/rewoo-agent/index.md)
 - [Responses API and Agent](../components/agents/responses-api-and-agent/index.md)
+- [Tool Calling Agent](../components/agents/tool-calling-agent/index.md)
+
+## Using Control Flow Components With Workflows
+
+The following are control flow components offered by NeMo Agent toolkit:
+
 - [Router Agent](../components/agents/router-agent/index.md)
 - [Sequential Executor](../components/agents/sequential-executor/index.md)
-- [Tool Calling Agent](../components/agents/tool-calling-agent/index.md)
