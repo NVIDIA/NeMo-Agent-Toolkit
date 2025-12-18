@@ -124,35 +124,8 @@ For comprehensive examples, see [`data/sample_queries.json`](data/sample_queries
 
 This example uses a **per-user workflow** pattern because A2A clients are per-user function groups:
 
-**Why Per-User for External Services?**
 - Each user gets isolated connections to the external A2A service
 - Independent session state and request tracking per user
-- Protection against rate limits affecting other users
-- Supports per-user authentication if the external service requires it
-
-**Implementation**:
-The example uses `per_user_react_agent`, which is the per-user version of the ReAct agent:
-- Each user gets their own isolated ReAct agent instance
-- Gets per-user A2A client tools for the external currency service
-- Each user maintains separate connections to the third-party service
-- Built-in support for per-user function groups like A2A clients
-
-**Multi-User Testing**:
-When using `nat serve`, test with different session cookies:
-
-```bash
-# User "alice" queries currency rates
-curl -X POST http://localhost:8000/generate \
-  -H "Content-Type: application/json" \
-  -H "Cookie: nat-session=alice" \
-  -d '{"messages": [{"role": "user", "content": "What is the EUR to USD rate?"}]}'
-
-# User "hatter" queries independently (separate connection)
-curl -X POST http://localhost:8000/generate \
-  -H "Content-Type: application/json" \
-  -H "Cookie: nat-session=hatter" \
-  -d '{"messages": [{"role": "user", "content": "Convert 100 GBP to JPY"}]}'
-```
 
 ## Configuration Details
 
