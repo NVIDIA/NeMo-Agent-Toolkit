@@ -101,19 +101,27 @@ class TestA2AClientFunctionality:
                 include_skills_in_description=True,
             )
 
-            async with WorkflowBuilder() as builder:
-                group = await builder.add_function_group("test_agent", config)
-                functions = await group.get_accessible_functions()
+            # Mock the Context to provide a user_id
+            # Create a simple object with user_id attribute
+            class MockUserContext:
+                user_id = "test-user"
 
-                call_fn = functions["test_agent.call"]
+            with patch('nat.builder.context.Context') as mock_context:
+                mock_context.get.return_value = MockUserContext()
 
-                # Verify skills are embedded in description
-                # The description should mention the skills/capabilities
-                assert "Capabilities" in call_fn.description or "Skills" in call_fn.description
+                async with WorkflowBuilder() as builder:
+                    group = await builder.add_function_group("test_agent", config)
+                    functions = await group.get_accessible_functions()
 
-                # Verify skill names or descriptions appear
-                description_lower = call_fn.description.lower()
-                assert "add" in description_lower or "multiply" in description_lower or "datetime" in description_lower
+                    call_fn = functions["test_agent.call"]
+
+                    # Verify skills are embedded in description
+                    # The description should mention the skills/capabilities
+                    assert "Capabilities" in call_fn.description or "Skills" in call_fn.description
+
+                    # Verify skill names or descriptions appear
+                    description_lower = call_fn.description.lower()
+                    assert "add" in description_lower or "multiply" in description_lower or "datetime" in description_lower
 
     async def test_skills_not_embedded_when_disabled(self, sample_agent_card):
         """Test skills are not embedded when disabled.
@@ -131,18 +139,26 @@ class TestA2AClientFunctionality:
                 include_skills_in_description=False,
             )
 
-            async with WorkflowBuilder() as builder:
-                group = await builder.add_function_group("test_agent", config)
-                functions = await group.get_accessible_functions()
+            # Mock the Context to provide a user_id
+            # Create a simple object with user_id attribute
+            class MockUserContext:
+                user_id = "test-user"
 
-                call_fn = functions["test_agent.call"]
+            with patch('nat.builder.context.Context') as mock_context:
+                mock_context.get.return_value = MockUserContext()
 
-                # Verify description is shorter when skills not embedded
-                # (it should still have a description, just without skill details)
-                assert len(call_fn.description) > 0
+                async with WorkflowBuilder() as builder:
+                    group = await builder.add_function_group("test_agent", config)
+                    functions = await group.get_accessible_functions()
 
-                # The description should be more generic
-                # (not checking for absence of specific terms as format may vary)
+                    call_fn = functions["test_agent.call"]
+
+                    # Verify description is shorter when skills not embedded
+                    # (it should still have a description, just without skill details)
+                    assert len(call_fn.description) > 0
+
+                    # The description should be more generic
+                    # (not checking for absence of specific terms as format may vary)
 
     async def test_get_info_returns_agent_metadata(self, a2a_function_group):
         """Test get_info returns correct agent metadata.
@@ -187,22 +203,30 @@ class TestA2AClientFunctionality:
 
             config = A2AClientConfig(url="http://localhost:10000", task_timeout=60.0)
 
-            async with WorkflowBuilder() as builder:
-                group = await builder.add_function_group("test_agent", config)
+            # Mock the Context to provide a user_id
+            # Create a simple object with user_id attribute
+            class MockUserContext:
+                user_id = "test-user"
 
-            # Verify function group was created
-            assert group is not None
+            with patch('nat.builder.context.Context') as mock_context:
+                mock_context.get.return_value = MockUserContext()
 
-            # Verify A2ABaseClient was instantiated with correct parameters
-            mock_class.assert_called_once()
-            call_kwargs = mock_class.call_args.kwargs
-            # URL gets normalized with trailing slash
-            assert call_kwargs['base_url'] == "http://localhost:10000/"
-            # Timeout is converted to timedelta
-            from datetime import timedelta
-            assert call_kwargs['task_timeout'] == timedelta(seconds=60)
-            # Default A2A agent card path
-            assert call_kwargs['agent_card_path'] == '/.well-known/agent-card.json'
+                async with WorkflowBuilder() as builder:
+                    group = await builder.add_function_group("test_agent", config)
+
+                # Verify function group was created
+                assert group is not None
+
+                # Verify A2ABaseClient was instantiated with correct parameters
+                mock_class.assert_called_once()
+                call_kwargs = mock_class.call_args.kwargs
+                # URL gets normalized with trailing slash
+                assert call_kwargs['base_url'] == "http://localhost:10000/"
+                # Timeout is converted to timedelta
+                from datetime import timedelta
+                assert call_kwargs['task_timeout'] == timedelta(seconds=60)
+                # Default A2A agent card path
+                assert call_kwargs['agent_card_path'] == '/.well-known/agent-card.json'
 
     async def test_client_timeout_configuration(self, sample_agent_card):
         """Test client timeout can be configured.
@@ -223,13 +247,21 @@ class TestA2AClientFunctionality:
             # Verify timeout is set correctly
             assert config.task_timeout.total_seconds() == 60
 
-            async with WorkflowBuilder() as builder:
-                group = await builder.add_function_group("test_agent", config)
+            # Mock the Context to provide a user_id
+            # Create a simple object with user_id attribute
+            class MockUserContext:
+                user_id = "test-user"
 
-                # Verify group was created successfully
-                assert group is not None
-                functions = await group.get_accessible_functions()
-                assert len(functions) == 7
+            with patch('nat.builder.context.Context') as mock_context:
+                mock_context.get.return_value = MockUserContext()
+
+                async with WorkflowBuilder() as builder:
+                    group = await builder.add_function_group("test_agent", config)
+
+                    # Verify group was created successfully
+                    assert group is not None
+                    functions = await group.get_accessible_functions()
+                    assert len(functions) == 7
 
     async def test_multiple_functions_accessible(self, a2a_function_group):
         """Test multiple functions are accessible from function group.

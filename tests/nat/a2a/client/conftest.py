@@ -133,7 +133,15 @@ async def fixture_a2a_function_group(mock_a2a_client: AsyncMock,
             task_timeout=timedelta(seconds=30),
         )
 
-        # Create workflow builder and add function group
-        async with WorkflowBuilder() as builder:
-            group = await builder.add_function_group("test_agent", config)
-            yield group, mock_class.return_value
+        # Mock the Context to provide a user_id (required for per-user A2A clients)
+        # Create a simple object with user_id attribute
+        class MockUserContext:
+            user_id = "test-user"
+
+        with patch('nat.builder.context.Context') as mock_context:
+            mock_context.get.return_value = MockUserContext()
+
+            # Create workflow builder and add function group
+            async with WorkflowBuilder() as builder:
+                group = await builder.add_function_group("test_agent", config)
+                yield group, mock_class.return_value
