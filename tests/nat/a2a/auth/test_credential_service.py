@@ -189,7 +189,7 @@ async def test_bearer_token_mapping(scheme_name,
     class MockUserContext:
         user_id = "test-user"
 
-    with patch('nat.builder.context.Context') as mock_context:
+    with patch('nat.plugins.a2a.auth.credential_service.Context') as mock_context:
         mock_context.get.return_value = MockUserContext()
         credential = await service.get_credentials(scheme_name, None)
 
@@ -297,8 +297,13 @@ async def test_user_id_from_context(oauth2_scheme, mock_auth_provider, sample_ag
 
     # Mock the Context to return a user_id
     from unittest.mock import patch
-    with patch('nat.builder.context.Context') as mock_context:
-        mock_context.get.return_value.user_id = "context-user"
+
+    # Create a simple object with user_id attribute
+    class MockUserContext:
+        user_id = "context-user"
+
+    with patch('nat.plugins.a2a.auth.credential_service.Context') as mock_context:
+        mock_context.get.return_value = MockUserContext()
         context = ClientCallContext(state={"sessionId": "context-user"})
         credential = await service.get_credentials("oauth", context)
 
