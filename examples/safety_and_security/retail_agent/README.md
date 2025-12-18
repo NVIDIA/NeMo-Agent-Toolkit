@@ -158,8 +158,7 @@ This section demonstrates NASSE using a realistic retail customer service agent.
 
 ### The Retail Agent
 
-The retail agent is a ReAct-based customer service agent for **GreenThumb Gardening Equipment**. It processes customer emails using the appropriate tools and responds to the user again via email. Note that all email and database write
-operations in this example are mocked.
+The retail agent is a ReAct-based customer service agent for **GreenThumb Gardening Equipment**, a fictional retail company. It processes customer emails using the appropriate tools and responds to the user again via email. Note that all email and database write operations in this example are mocked.
 
 **Available Tools:**
 

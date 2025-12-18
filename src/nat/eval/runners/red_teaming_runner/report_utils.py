@@ -27,6 +27,24 @@ import plotly.io as pio
 logger = logging.getLogger(__name__)
 
 
+def _validate_columns(df: pd.DataFrame, required_columns: list[str], context: str = "") -> None:
+    """Validate that required columns exist in the DataFrame.
+
+    Args:
+        df: DataFrame to validate.
+        required_columns: List of column names that must exist.
+        context: Optional context string for error message (e.g., function name).
+
+    Raises:
+        ValueError: If any required column is missing.
+    """
+    missing = [col for col in required_columns if col not in df.columns]
+    if missing:
+        available = list(df.columns)
+        ctx = f" in {context}" if context else ""
+        raise ValueError(f"Missing required column(s){ctx}: {missing}. Available columns: {available}")
+
+
 def plot_score_boxplot(
     df: pd.DataFrame,
     x: str,
@@ -59,7 +77,11 @@ def plot_score_boxplot(
 
     Returns:
         The Plotly Figure object.
+
+    Raises:
+        ValueError: If required columns are missing from the DataFrame.
     """
+    _validate_columns(df, [x, y], "plot_score_boxplot")
 
     if title is None:
         title = f"Score Distribution by {x}"
@@ -170,7 +192,12 @@ def plot_success_rate_bar(
 
     Returns:
         The Plotly Figure object.
+
+    Raises:
+        ValueError: If required columns are missing from the DataFrame.
     """
+    _validate_columns(df, [x, y], "plot_success_rate_bar")
+
     if title is None:
         title = f"Attack Success Rate by {x} (threshold={threshold})"
     if x_label is None:
@@ -225,7 +252,13 @@ def generate_standard_plots(df: pd.DataFrame) -> list[tuple[str, str, go.Figure 
     Returns:
         List of tuples (filename, title, figure) for each plot.
         Section headers have figure=None and are rendered as section titles.
+
+    Raises:
+        ValueError: If required columns are missing from the DataFrame.
     """
+    # Validate required columns upfront
+    _validate_columns(df, ["scenario_id", "score", "condition_name"], "generate_standard_plots")
+
     plots: list[tuple[str, str, go.Figure | None]] = []
 
     # ==================== RESULTS BY SCENARIO ID ====================
