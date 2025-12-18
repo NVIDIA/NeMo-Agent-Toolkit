@@ -1,5 +1,5 @@
 ---
-description: 
+description:
 globs: **/*.md
 alwaysApply: false
 ---
@@ -105,11 +105,14 @@ Don't capitalize:
 - **Commands**: Usually lowercase unless they're proper names
 
 ### Product Names
-- **Use official capitalization**: 
-  - NVIDIA NeMo Agent toolkit (first use)
-  - Agent toolkit (subsequent uses)
+- **Use official capitalization**:
+  - NVIDIA NeMo Agent toolkit (first use in body text)
+  - NVIDIA NeMo Agent Toolkit (first use in titles/headings where all words are capitalized)
+  - NeMo Agent toolkit or "the toolkit" (subsequent uses in body text)
+  - NeMo Agent Toolkit (subsequent uses in titles/headings)
   - CUDA, TensorRT, PyTorch
 - **Don't capitalize** generic terms: database, server, application (unless part of proper name)
+- **Never use** "NAT" or "nat" as an abbreviation for the toolkit in documentation
 
 ### Feature Names
 - **Capitalize** official feature names: Smart Search, Auto-Save, Real-time Analytics
@@ -136,7 +139,7 @@ Don't capitalize:
 - **Example**: "application programming interface" → "API"
 
 #### Version Numbers
-- **Follow product conventions**: 
+- **Follow product conventions**:
   - "version 2.1" (lowercase version)
   - "Python 3.9" (capitalize language name)
   - "CUDA 11.8" (follow product style)

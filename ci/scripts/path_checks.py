@@ -105,6 +105,15 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/finetuning/dpo_tic_tac_toe/.*/configs/config.*\.yml$",
         r"^examples/finetuning/dpo_tic_tac_toe/(.*/)?data/",
     ),
+    # Allow A2A example cross-references for OAuth2 setup guide
+    (
+        r"^examples/A2A/calculator_a2a/README.md",
+        r"^examples/A2A/math_assistant_a2a/oauth2-keycloak-setup.md",
+    ),
+    (
+        r"^examples/A2A/math_assistant_a2a/oauth2-keycloak-setup.md",
+        r"^examples/A2A/calculator_a2a/configs/config-protected-oauth2.yml",
+    ),
 }
 
 ALLOWLISTED_WORDS: set[str] = {
