@@ -459,6 +459,11 @@ class SessionManager:
             # Use shared semaphore for concurrency control
             semaphore = self._semaphore
 
+        # Set user_id in context for unified behavior across nat run/serve/eval
+        token_user_id = None
+        if user_id is not None:
+            token_user_id = self._context_state.user_id.set(user_id)
+
         try:
             session = Session(session_manager=self, user_id=user_id, workflow=workflow, semaphore=semaphore)
 
@@ -470,6 +475,8 @@ class SessionManager:
                     builder_info.ref_count -= 1
                     builder_info.last_activity = datetime.now()
 
+            if token_user_id is not None:
+                self._context_state.user_id.reset(token_user_id)
             if token_user_manager is not None:
                 self._context_state.user_manager.reset(token_user_manager)
             if token_user_input is not None:
