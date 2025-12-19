@@ -46,8 +46,8 @@ class EvaluationRunConfig(BaseModel):
     num_passes: int = 0
     # timeout for waiting for trace export tasks to complete
     export_timeout: float = 60.0
-    # User ID to use for workflow session
-    user_id: str | None = None
+    # User ID to use for workflow session. Defaults to 'nat_eval_user_id'.
+    user_id: str = "nat_eval_user_id"
 
 
 class EvaluationRunOutput(BaseModel):

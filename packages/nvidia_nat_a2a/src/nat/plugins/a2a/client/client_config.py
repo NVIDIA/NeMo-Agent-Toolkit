@@ -65,5 +65,8 @@ class A2AClientConfig(FunctionGroupBaseConfig, name="a2a_client"):
         description="Whether to enable streaming support for the A2A client",
     )
 
-    auth_provider: str | AuthenticationRef | None = Field(default=None,
-                                                          description="Reference to authentication provider")
+    auth_provider: str | AuthenticationRef | None = Field(
+        default=None,
+        description="Reference to NAT authentication provider for authenticating with the A2A agent. "
+        "Supports OAuth2, API Key, HTTP Basic, and other NAT auth providers.",
+    )

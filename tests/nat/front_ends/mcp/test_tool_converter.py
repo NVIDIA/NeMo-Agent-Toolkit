@@ -666,3 +666,108 @@ class TestIntegrationScenarios:
         # Assert
         assert result == "result"
         mock_session_manager.run.assert_called_once()
+
+
+class TestResultTypeConversion:
+    """Test cases for result type conversion and serialization."""
+
+    async def test_runner_result_called_without_to_type(self):
+        """Test that runner.result() is called without to_type parameter."""
+        # Arrange
+        mock_session_manager = create_mock_session_manager(result_value="result")
+        wrapper = create_function_wrapper("test_func", mock_session_manager, MockRegularSchema)
+
+        # Act
+        await wrapper(name="test", age=25)
+
+        # Assert - Verify runner.result() was called without to_type
+        mock_runner = mock_session_manager.run.return_value
+        mock_runner.result.assert_called_once_with()  # No arguments, especially no to_type
+
+    async def test_dict_result_converted_to_json_string(self):
+        """Test that dict results are converted to JSON string."""
+        # Arrange
+        dict_result = {"key": "value", "number": 42}
+        mock_session_manager = create_mock_session_manager(result_value=dict_result)
+        wrapper = create_function_wrapper("test_func", mock_session_manager, MockRegularSchema)
+
+        # Act
+        result = await wrapper(name="test", age=25)
+
+        # Assert
+        import json
+        assert isinstance(result, str)
+        assert result == json.dumps(dict_result, default=str)
+
+    async def test_list_result_converted_to_json_string(self):
+        """Test that list results are converted to JSON string."""
+        # Arrange
+        list_result = [1, 2, 3, "test"]
+        mock_session_manager = create_mock_session_manager(result_value=list_result)
+        wrapper = create_function_wrapper("test_func", mock_session_manager, MockRegularSchema)
+
+        # Act
+        result = await wrapper(name="test", age=25)
+
+        # Assert
+        import json
+        assert isinstance(result, str)
+        assert result == json.dumps(list_result, default=str)
+
+    async def test_string_result_returned_as_is(self):
+        """Test that string results are returned without modification."""
+        # Arrange
+        string_result = "test result"
+        mock_session_manager = create_mock_session_manager(result_value=string_result)
+        wrapper = create_function_wrapper("test_func", mock_session_manager, MockRegularSchema)
+
+        # Act
+        result = await wrapper(name="test", age=25)
+
+        # Assert
+        assert isinstance(result, str)
+        assert result == string_result
+
+    async def test_complex_dict_result_serialization(self):
+        """Test that complex dict with nested structures is properly serialized."""
+        # Arrange
+        complex_dict = {
+            "nested": {
+                "key": "value"
+            }, "list": [1, 2, 3], "mixed": {
+                "items": ["a", "b"]
+            }, "number": 123.456
+        }
+        mock_session_manager = create_mock_session_manager(result_value=complex_dict)
+        wrapper = create_function_wrapper("test_func", mock_session_manager, MockRegularSchema)
+
+        # Act
+        result = await wrapper(name="test", age=25)
+
+        # Assert
+        import json
+        assert isinstance(result, str)
+        # Verify it's valid JSON and matches original
+        parsed = json.loads(result)
+        assert parsed == complex_dict
+
+    async def test_non_string_non_dict_result_converted_to_string(self):
+        """Test that other types (int, float, etc.) are converted to string."""
+        # Arrange
+        test_cases = [
+            (42, "42"),
+            (3.14, "3.14"),
+            (True, "True"),
+            (None, "None"),
+        ]
+
+        for input_value, expected_output in test_cases:
+            mock_session_manager = create_mock_session_manager(result_value=input_value)
+            wrapper = create_function_wrapper("test_func", mock_session_manager, MockRegularSchema)
+
+            # Act
+            result = await wrapper(name="test", age=25)
+
+            # Assert
+            assert isinstance(result, str)
+            assert result == expected_output

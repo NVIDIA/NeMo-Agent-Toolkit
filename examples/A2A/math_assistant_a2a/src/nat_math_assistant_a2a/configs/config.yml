@@ -48,9 +48,9 @@ llms:
     max_tokens: 1024
 
 workflow:
-  _type: react_agent
+  _type: per_user_react_agent
   tool_names:
-    - calculator_a2a  # A2A calculator functions
+    - calculator_a2a  # A2A calculator functions (per-user)
     - mcp_time.get_current_time_mcp  # Local time function
     - logic_evaluator.if_then_else  # Conditional logic
     - logic_evaluator.evaluate_condition  # Comparison operations
