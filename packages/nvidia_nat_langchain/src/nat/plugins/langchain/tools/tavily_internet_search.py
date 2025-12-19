@@ -32,6 +32,8 @@ class TavilyInternetSearchToolConfig(FunctionBaseConfig, name="tavily_internet_s
     max_results: int = 3
     api_key: SerializableSecretStr = Field(default_factory=lambda: SerializableSecretStr(""),
                                            description="The API key for the Tavily service.")
+    secret_key: SerializableSecretStr = Field(default="",
+                                             description="The secret key for the Tavily service.")
 
 
 @register_function(config_type=TavilyInternetSearchToolConfig)
