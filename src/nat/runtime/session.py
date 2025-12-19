@@ -445,6 +445,9 @@ class SessionManager:
                 raise ValueError("user_id is required for per-user workflow but could not be determined. "
                                  "Ensure 'nat-session' cookie is set or pass user_id explicitly.")
 
+            # To ensure the user_id is set in the context before the per-user builder is created
+            self._context_state.user_id.set(user_id)
+
             # Get or create per-user builder
             logger.debug(f"Getting or creating per-user builder for user {user_id}")
             _, workflow = await self._get_or_create_per_user_builder(user_id)
@@ -459,7 +462,8 @@ class SessionManager:
             # Use shared semaphore for concurrency control
             semaphore = self._semaphore
 
-        # Set user_id in context for unified behavior across nat run/serve/eval
+        # TODO: this logic needs to be cleaned up since it is a duplicated setting of the user_id
+        # But we need to keep it for now to maintain the token_user_id
         token_user_id = None
         if user_id is not None:
             token_user_id = self._context_state.user_id.set(user_id)
