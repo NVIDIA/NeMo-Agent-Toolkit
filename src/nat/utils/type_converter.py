@@ -227,7 +227,8 @@ class TypeConverter:
         ignoring parent. If not found, returns None.
         """
         # 1) If data is already correct type
-        if isinstance(data, to_type):
+        # Use DecomposedType for safe isinstance check with parameterized generics
+        if DecomposedType(to_type).is_instance(data):
             return data
 
         current_type = type(data)
@@ -239,10 +240,12 @@ class TypeConverter:
         # 2) Attempt each known converter from current_type -> ???, then recurse
         for _, to_type_converters in self._converters.items():
             for convert_from_type, from_type_converter in to_type_converters.items():
-                if isinstance(data, convert_from_type):
+                # Use DecomposedType for safe isinstance check with parameterized generics
+                if DecomposedType(convert_from_type).is_instance(data):
                     try:
                         next_data = from_type_converter(data)
-                        if isinstance(next_data, to_type):
+                        # Use DecomposedType for safe isinstance check with parameterized generics
+                        if DecomposedType(to_type).is_instance(next_data):
                             return next_data
                         # else keep going
                         deeper = self._try_indirect_conversion(next_data, to_type, visited)
