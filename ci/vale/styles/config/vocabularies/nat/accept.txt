@@ -188,3 +188,7 @@ Zep
 Optuna
 [Oo]ptimizable
 [Cc]heckpointed
+[Ss]anitization
+[Uu]nregister(ing|ed|s)?
+[Aa]rgs
+[Kk]wargs

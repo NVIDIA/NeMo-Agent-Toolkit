@@ -13,25 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import annotations
-
-import typing
-
-from .common import BaseModelRegistryTag
-from .common import TypedBaseModel
+from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_middleware
+from nat.middleware.logging.logging_middleware import LoggingMiddleware
+from nat.middleware.logging.logging_middleware_config import LoggingMiddlewareConfig
 
 
-class MiddlewareBaseConfig(TypedBaseModel, BaseModelRegistryTag):
-    """The base level config object for middleware.
+@register_middleware(config_type=LoggingMiddlewareConfig)
+async def logging_middleware(config: LoggingMiddlewareConfig, builder: Builder):
+    """Build a logging middleware from configuration.
 
-    Middleware provides middleware-style wrapping of calls with
-    preprocessing and postprocessing logic.
+    Args:
+        config: The logging middleware configuration
+        builder: The workflow builder
+
+    Yields:
+        A configured logging middleware instance
     """
-    pass
-
-
-MiddlewareBaseConfigT = typing.TypeVar("MiddlewareBaseConfigT", bound=MiddlewareBaseConfig)
-
-# Specialized type for function-specific middleware
-FunctionMiddlewareBaseConfig = MiddlewareBaseConfig
-FunctionMiddlewareBaseConfigT = MiddlewareBaseConfigT
+    yield LoggingMiddleware(config=config, builder=builder)

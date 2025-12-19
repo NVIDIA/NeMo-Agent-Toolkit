@@ -32,17 +32,14 @@ import json
 import logging
 from collections.abc import AsyncIterator
 from typing import Any
-from typing import Literal
-
-from pydantic import Field
 
 from nat.builder.context import Context
 from nat.builder.context import ContextState
-from nat.data_models.middleware import FunctionMiddlewareBaseConfig
 from nat.middleware.function_middleware import CallNext
 from nat.middleware.function_middleware import CallNextStream
 from nat.middleware.function_middleware import FunctionMiddleware
 from nat.middleware.function_middleware import FunctionMiddlewareContext
+from nat.middleware.middleware import InvocationContext
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +80,23 @@ class CacheMiddleware(FunctionMiddleware):
         self._enabled_mode = enabled_mode
         self._similarity_threshold = similarity_threshold
         self._cache: dict[str, Any] = {}
+
+    # ==================== Abstract Method Implementations ====================
+
+    @property
+    def enabled(self) -> bool:
+        """Middleware always enabled."""
+        return True
+
+    async def pre_invoke(self, context: InvocationContext) -> InvocationContext | None:  # noqa: ARG002
+        """Not used - CacheMiddleware overrides function_middleware_invoke."""
+        return None
+
+    async def post_invoke(self, context: InvocationContext) -> InvocationContext | None:  # noqa: ARG002
+        """Not used - CacheMiddleware overrides function_middleware_invoke."""
+        return None
+
+    # ==================== Cache Logic ====================
 
     def _should_cache(self) -> bool:
         """Check if caching should be enabled based on the current context."""
@@ -145,8 +159,11 @@ class CacheMiddleware(FunctionMiddleware):
 
         return best_match
 
-    async def function_middleware_invoke(self, value: Any, call_next: CallNext,
-                                         context: FunctionMiddlewareContext) -> Any:
+    async def function_middleware_invoke(self,
+                                         *args: Any,
+                                         call_next: CallNext,
+                                         context: FunctionMiddlewareContext,
+                                         **kwargs: Any) -> Any:
         """Cache middleware for single-output invocations.
 
         Implements the four-phase middleware pattern:
@@ -157,23 +174,27 @@ class CacheMiddleware(FunctionMiddleware):
         4. **Continue**: Return the result (cached or fresh)
 
         Args:
-            value: The input value to process
+            *args: The positional arguments to process
             call_next: Callable to invoke the next middleware or function
             context: Metadata about the function being wrapped
+            **kwargs: Additional function arguments
 
         Returns:
             The cached output if found, otherwise the fresh output
         """
-        # Phase 1: Preprocess - check if caching should be enabled
+        # Check if caching should be enabled for this invocation
         if not self._should_cache():
-            return await call_next(value)
+            return await call_next(*args, **kwargs)
+
+        # Use first arg as cache key (primary input)
+        value = args[0] if args else None
 
         # Phase 1: Preprocess - serialize the input
         input_str = self._serialize_input(value)
         if input_str is None:
             # Can't serialize, pass through to next middleware/function
             logger.debug("Could not serialize input for function %s, bypassing cache", context.name)
-            return await call_next(value)
+            return await call_next(*args, **kwargs)
 
         # Phase 1: Preprocess - look for a similar cached input
         similar_key = self._find_similar_key(input_str)
@@ -187,7 +208,7 @@ class CacheMiddleware(FunctionMiddleware):
 
         # Phase 2: Call next - no cache hit, call next middleware/function
         logger.debug("Cache miss for function %s", context.name)
-        result = await call_next(value)
+        result = await call_next(*args, **kwargs)
 
         # Phase 3: Postprocess - cache the result for future use
         self._cache[input_str] = result
@@ -197,9 +218,10 @@ class CacheMiddleware(FunctionMiddleware):
         return result
 
     async def function_middleware_stream(self,
-                                         value: Any,
+                                         *args: Any,
                                          call_next: CallNextStream,
-                                         context: FunctionMiddlewareContext) -> AsyncIterator[Any]:
+                                         context: FunctionMiddlewareContext,
+                                         **kwargs: Any) -> AsyncIterator[Any]:
         """Cache middleware for streaming invocations - bypasses caching.
 
         Streaming results are not cached as they would need to be buffered
@@ -213,9 +235,10 @@ class CacheMiddleware(FunctionMiddleware):
         4. **Continue**: Complete the stream
 
         Args:
-            value: The input value to process
+            *args: The positional arguments to process
             call_next: Callable to invoke the next middleware or function stream
             context: Metadata about the function being wrapped
+            **kwargs: Additional function arguments
 
         Yields:
             Chunks from the stream (unmodified)
@@ -224,33 +247,7 @@ class CacheMiddleware(FunctionMiddleware):
         logger.debug("Streaming call for function %s, bypassing cache", context.name)
 
         # Phase 2-3: Call next and process chunks - yield chunks as they arrive
-        async for chunk in call_next(value):
+        async for chunk in call_next(*args, **kwargs):
             yield chunk
 
         # Phase 4: Continue - stream is complete (implicit)
-
-
-class CacheMiddlewareConfig(FunctionMiddlewareBaseConfig, name="cache"):
-    """Configuration for cache middleware.
-
-    The cache middleware memoizes function outputs based on input similarity,
-    with support for both exact and fuzzy matching.
-
-    Args:
-        enabled_mode: Controls when caching is active:
-            - "always": Cache is always enabled
-            - "eval": Cache only active when Context.is_evaluating is True
-        similarity_threshold: Float between 0 and 1 for input matching:
-            - 1.0: Exact string matching (fastest)
-            - < 1.0: Fuzzy matching using difflib similarity
-    """
-
-    enabled_mode: Literal["always", "eval"] = Field(
-        default="eval", description="When caching is enabled: 'always' or 'eval' (only during evaluation)")
-    similarity_threshold: float = Field(default=1.0,
-                                        ge=0.0,
-                                        le=1.0,
-                                        description="Similarity threshold between 0 and 1. Use 1.0 for exact matching")
-
-
-__all__ = ["CacheMiddleware", "CacheMiddlewareConfig"]
