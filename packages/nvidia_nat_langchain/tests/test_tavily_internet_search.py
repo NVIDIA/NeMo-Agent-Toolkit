@@ -18,7 +18,7 @@ import pytest
 
 @pytest.mark.parametrize("constructor_args", [{}, {"api_key": ""}, {"api_key": "my_api_key"}],
                          ids=["default", "empty_api_key", "provided_api_key"])
-def test_default_api_key_is_secret_str(constructor_args: dict):
+def test_api_key_is_secret_str(constructor_args: dict):
     from nat.plugins.langchain.tools.tavily_internet_search import TavilyInternetSearchToolConfig
     expected_api_key = constructor_args.get("api_key", "")
 
@@ -27,3 +27,12 @@ def test_default_api_key_is_secret_str(constructor_args: dict):
 
     api_key = config.api_key.get_secret_value()
     assert api_key == expected_api_key
+
+
+def test_default_api_key_is_unique_instance():
+    from nat.plugins.langchain.tools.tavily_internet_search import TavilyInternetSearchToolConfig
+
+    config1 = TavilyInternetSearchToolConfig()
+    config2 = TavilyInternetSearchToolConfig()
+
+    assert config1.api_key is not config2.api_key
