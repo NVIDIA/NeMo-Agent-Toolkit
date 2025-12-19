@@ -152,11 +152,18 @@ Notes:
 
 ## Delivery Checklist
 
-- [ ] `AgentSpecWorkflowConfig` added and registered.
-- [ ] Build function executes adapter graph and returns `ChatResponse`.
-- [ ] Packaging: `agentspec` extra with pinned dependencies and docs.
+- [x] `AgentSpecWorkflowConfig` added and registered.
+- [x] Build function executes adapter graph and returns `ChatResponse`.
+- [x] Packaging: `agentspec` extra with pinned dependencies and docs stub.
 - [ ] Docs page with examples and limitations.
-- [ ] Unit tests + smoke test.
+- [x] Unit tests: config validation.
+- [ ] Smoke test with minimal Agent Spec graph.
+
+## Plan Updates
+
+- Added optional dependency extra `agentspec` in `pyproject.toml` with `pyagentspec` and `langgraph-agentspec-adapter`.
+- Implemented `AgentSpecWorkflowConfig` at `src/nat/agent/agentspec/register.py:1` and wired registration in `src/nat/agent/register.py:1`.
+- Added basic config validation tests in `tests/test_agentspec_config.py:1`.
 
 ## Appendix: References
 

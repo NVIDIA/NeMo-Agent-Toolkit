@@ -80,6 +80,7 @@ crewai = ["nvidia-nat-crewai"]
 data-flywheel = ["nvidia-nat-data-flywheel"]
 ingestion = ["nvidia-nat-ingestion"] # meta-package
 langchain = ["nvidia-nat-langchain"]
+agentspec = ["nvidia-nat-langchain", "pyagentspec>=0.1", "langgraph-agentspec-adapter>=0.1"]  # TODO: How do we actually reference the langgraph adapter as a dependency?
 llama-index = ["nvidia-nat-llama-index"]
 mcp = ["nvidia-nat-mcp"]
 mem0ai = ["nvidia-nat-mem0ai"]

@@ -53,7 +53,9 @@ TESTS_DIR = os.path.dirname(__file__)
 PROJECT_DIR = os.path.dirname(TESTS_DIR)
 SRC_DIR = os.path.join(PROJECT_DIR, "src")
 EXAMPLES_DIR = os.path.join(PROJECT_DIR, "examples")
-sys.path.append(SRC_DIR)
+# Prepend local src so tests run against workspace code rather than any installed package
+if SRC_DIR not in sys.path:
+    sys.path.insert(0, SRC_DIR)
 
 os.environ.setdefault("DASK_DISTRIBUTED__WORKER__PYTHON", sys.executable)
 
