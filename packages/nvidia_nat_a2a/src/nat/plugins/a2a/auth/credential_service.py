@@ -26,6 +26,7 @@ from a2a.types import OAuth2SecurityScheme
 from a2a.types import OpenIdConnectSecurityScheme
 from a2a.types import SecurityScheme
 from nat.authentication.interfaces import AuthProviderBase
+from nat.builder.context import Context
 from nat.data_models.authentication import AuthResult
 from nat.data_models.authentication import BasicAuthCred
 from nat.data_models.authentication import BearerTokenCred
@@ -52,18 +53,15 @@ class A2ACredentialService(CredentialService):
 
     Args:
         auth_provider: NAT authentication provider instance
-        default_user_id: Default user identifier for authentication (defaults to agent URL)
         agent_card: Agent card containing security scheme definitions
     """
 
     def __init__(
         self,
         auth_provider: AuthProviderBase,
-        default_user_id: str | None = None,
         agent_card: AgentCard | None = None,
     ):
         self._auth_provider = auth_provider
-        self._default_user_id = default_user_id
         self._agent_card = agent_card
         self._cached_auth_result: AuthResult | None = None
         self._auth_lock = asyncio.Lock()
@@ -80,7 +78,7 @@ class A2ACredentialService(CredentialService):
         Retrieve credentials for a security scheme.
 
         This method:
-        1. Extracts user_id from context or uses configured user_id
+        1. Gets user_id from NAT context
         2. Authenticates via NAT auth provider
         3. Handles token expiration and refresh
         4. Maps credentials to the requested security scheme
@@ -92,8 +90,8 @@ class A2ACredentialService(CredentialService):
         Returns:
             Credential string or None if not available
         """
-        # Extract user_id from context if available
-        user_id = self._resolve_user_id(context)
+        # Get user_id from NAT context
+        user_id = Context.get().user_id
 
         # Authenticate and get credentials from NAT provider
         auth_result = await self._authenticate(user_id)
@@ -117,24 +115,6 @@ class A2ACredentialService(CredentialService):
             )
 
         return credential
-
-    def _resolve_user_id(self, context: ClientCallContext | None) -> str | None:
-        """
-        Resolve user ID from context or configuration.
-
-        Priority order:
-        1. sessionId from context.state (for multi-user workflows via nat serve)
-        2. Configured default_user_id (for CLI via nat run, defaults to agent URL)
-
-        Args:
-            context: Client call context
-
-        Returns:
-            User ID string or None
-        """
-        if context and "sessionId" in context.state:
-            return context.state["sessionId"]
-        return self._default_user_id
 
     async def _authenticate(self, user_id: str | None) -> AuthResult | None:
         """
