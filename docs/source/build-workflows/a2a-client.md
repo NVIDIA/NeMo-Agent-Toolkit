@@ -251,7 +251,7 @@ flowchart TB
 1. Client fetches Agent Card from `{url}/.well-known/agent-card.json`
 2. Parses agent metadata (name, version, description)
 3. Extracts skills with their descriptions and examples
-4. Maps skills to a function group with three API levels
+4. Maps skills to a [function group](./functions-and-function-groups/function-groups.md) with three API levels
 5. Optionally embeds skill details in high-level function description
 
 ## Transport Support
