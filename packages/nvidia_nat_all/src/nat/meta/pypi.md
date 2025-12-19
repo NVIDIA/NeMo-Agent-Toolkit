@@ -17,7 +17,7 @@ limitations under the License.
 
 ![NVIDIA NeMo Agent Toolkit](https://media.githubusercontent.com/media/NVIDIA/NeMo-Agent-Toolkit/refs/heads/main/docs/source/_static/banner.png "NeMo Agent toolkit banner image")
 
-# NVIDIA NAT All Meta-Package
+# NVIDIA NeMo Agent Toolkit All Meta-Package
 This is a meta-package that installs all NVIDIA NeMo Agent Toolkit plugins and optional dependencies.
 
 For more information about the NVIDIA NeMo Agent toolkit, please visit the [NeMo Agent toolkit GitHub Repo](https://github.com/NVIDIA/NeMo-Agent-Toolkit).

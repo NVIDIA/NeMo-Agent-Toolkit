@@ -17,7 +17,7 @@ limitations under the License.
 
 # Functions
 
-Functions (tools) are the main building blocks of NeMo Agent toolkit and define the logic of your workflow.
+Functions are reusable components that perform specific operations, such as web searches, API calls, or calculations.
 
 In NeMo Agent toolkit, functions are a core abstraction that offer type-safe, asynchronous operations with support for both single and streaming outputs. They wrap callable objects (like Python functions or coroutines) and enhance them with:
 
@@ -25,6 +25,12 @@ In NeMo Agent toolkit, functions are a core abstraction that offer type-safe, as
 * Schema-based input/output validation via Pydantic models
 * Unified interfaces to improve composability
 * Support for both streaming and non-streaming (single) outputs
+
+## Agents and Tools
+
+In an [agentic](../../components/agents/index.md) workflow, a set of [tools](https://developer.nvidia.com/blog/introduction-to-llm-agents/#tools) are made available to the agent to use to perform a given task.
+
+In NeMo Agent toolkit, both agents and tools are implemented as functions, because of this, an agent can be used as a tool for another agent allowing for multi-agent workflows (refer to the `examples/agents/mixture_of_agents` example for more details).
 
 ## Included Functions
 For a complete list of functions run the following command:
@@ -66,7 +72,7 @@ All function operations are asynchronous. To invoke a function, use one of the f
 - {py:meth}`~nat.builder.function.Function.ainvoke` - For single output operations
 - {py:meth}`~nat.builder.function.Function.astream` - For streaming output operations
 
-Using asynchronous operations allows for better performance and scalability when processing a large number of functions in parallel. In most cases, applications that integrate LLMs are IO bound and can benefit from cooperative multitasking. Asynchronous operations also provide a natural mechanism (using `ContextVar`s) for maintaining application state between multiple function invocations simultaneously.
+Using asynchronous operations allows for better performance and scalability when processing a large number of functions in parallel. In most cases, applications that integrate [LLMs](../llms/index.md) are IO bound and can benefit from cooperative multitasking. Asynchronous operations also provide a natural mechanism (using `ContextVar`s) for maintaining application state between multiple function invocations simultaneously.
 
 
 ## Writing Functions

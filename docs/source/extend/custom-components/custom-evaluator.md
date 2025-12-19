@@ -17,10 +17,6 @@ limitations under the License.
 
 # Adding a Custom Evaluator
 
-:::{warning}
-**Experimental Feature**: The Evaluation API is experimental and may change in future releases. Future versions may introduce breaking changes without notice.
-:::
-
 :::{note}
 We recommend reading the [Evaluating NeMo Agent toolkit Workflows](../../improve-workflows/evaluate.md) guide before proceeding with this detailed documentation.
 :::

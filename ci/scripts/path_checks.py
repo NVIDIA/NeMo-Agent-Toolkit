@@ -141,6 +141,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "JSON/YAML",
     "LangChain/LangGraph",
     "LangChain/LangGraph.",
+    "LangChain/LangGraph-based",
     "LTE/5G",
     "output/jobs/job_",
     "POST/PUT",
