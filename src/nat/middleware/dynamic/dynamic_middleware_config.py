@@ -83,21 +83,20 @@ class DynamicMiddlewareConfig(FunctionMiddlewareBaseConfig, name="dynamic_middle
 
     # === Component References ===
 
-    llms: list[LLMRef] | None = Field(default_factory=list, description="LLMs to intercept")
+    llms: list[LLMRef] | None = Field(default=None, description="LLMs to intercept")
 
-    embedders: list[EmbedderRef] | None = Field(default_factory=list,
-                                                description="Embedders component functions to intercept")
+    embedders: list[EmbedderRef] | None = Field(default=None, description="Embedders component functions to intercept")
 
-    retrievers: list[RetrieverRef] | None = Field(default_factory=list,
+    retrievers: list[RetrieverRef] | None = Field(default=None,
                                                   description="Retrievers component functions to intercept")
 
-    memory: list[MemoryRef] | None = Field(default_factory=list, description="Memory component functions to intercept")
+    memory: list[MemoryRef] | None = Field(default=None, description="Memory component functions to intercept")
 
-    object_stores: list[ObjectStoreRef] | None = Field(default_factory=list,
+    object_stores: list[ObjectStoreRef] | None = Field(default=None,
                                                        description="Object stores component functions to intercept")
 
     auth_providers: list[AuthenticationRef] | None = Field(
-        default_factory=list, description="Authentication providers component functions to intercept")
+        default=None, description="Authentication providers component functions to intercept")
 
     # === Component and Function Auto-Discovery Flags ===
 

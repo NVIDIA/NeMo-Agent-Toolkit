@@ -692,7 +692,7 @@ class DynamicFunctionMiddleware(FunctionMiddleware):
         description = self._extract_component_attributes(discovered, 'description')
         input_schema = self._extract_component_attributes(discovered, 'input_schema')
         single_output_schema = self._extract_component_attributes(discovered, 'single_output_schema')
-        stream_output_schema = self._extract_component_attributes(discovered, 'streaming_output_schema')
+        stream_output_schema = self._extract_component_attributes(discovered, 'stream_output_schema')
 
         # Create static metadata context (original args/kwargs captured by orchestration)
         context = FunctionMiddlewareContext(name=function_name,
@@ -820,7 +820,7 @@ class DynamicFunctionMiddleware(FunctionMiddleware):
                 return False
 
             # Skip static/class methods
-            if isinstance(class_attr, staticmethod | classmethod):
+            if isinstance(class_attr, (staticmethod, classmethod)):
                 return False
 
             # Get instance attribute
