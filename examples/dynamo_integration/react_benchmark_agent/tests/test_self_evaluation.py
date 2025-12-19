@@ -325,7 +325,6 @@ Please try again, addressing the issues identified above.
         assert "Tips: Test tip" in feedback
 
 
-@pytest.mark.slow
 @pytest.mark.integration
 class TestSelfEvaluatingAgentWithNIM:
     """
