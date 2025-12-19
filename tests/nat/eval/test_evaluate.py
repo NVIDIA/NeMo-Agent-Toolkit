@@ -197,7 +197,18 @@ def session_manager(generated_answer, mock_pull_intermediate):
         """Mock async context manager for runner."""
         yield mock_runner
 
-    session_manager.run = mock_run
+    # Create a mock session with run method
+    mock_session = MagicMock()
+    mock_session.run = mock_run
+    mock_session.workflow = mock_workflow
+
+    # Define an async context manager for session
+    @asynccontextmanager
+    async def mock_session_cm(user_id=None):
+        """Mock async context manager for session."""
+        yield mock_session
+
+    session_manager.session = mock_session_cm
     return session_manager
 
 
@@ -288,7 +299,15 @@ async def test_run_workflow_local_workflow_interrupted(evaluation_run, eval_inpu
         """Mock async context manager for runner."""
         yield mock_error_runner
 
-    session_manager.run = mock_error_run
+    # Get the mock session from session_manager.session and update its run method
+    @asynccontextmanager
+    async def mock_error_session(user_id=None):
+        mock_session = MagicMock()
+        mock_session.run = mock_error_run
+        mock_session.workflow = session_manager.workflow
+        yield mock_session
+
+    session_manager.session = mock_error_session
     # Run the actual function
     # Check if workflow_interrupted is set to True
     await evaluation_run.run_workflow_local(session_manager)
