@@ -91,13 +91,12 @@ class InvocationContext(BaseModel):
         frozen=True, description="The original function input keyword arguments before any middleware processing.")
 
     # Mutable fields - modify these to transform inputs/outputs
-    modified_args: tuple[Any, ...] = Field(
-        description="The modified function input arguments after middleware processing.")
+    modified_args: tuple[Any,
+                         ...] = Field(description="The modified function input arguments after middleware processing.")
     modified_kwargs: dict[str, Any] = Field(
         description="The modified function input keyword arguments after middleware processing.")
-    output: Any = Field(
-        default=None,
-        description="The function output value. None in pre-invoke, contains result in post-invoke.")
+    output: Any = Field(default=None,
+                        description="The function output value. None in pre-invoke, contains result in post-invoke.")
 
 
 class Middleware(ABC):

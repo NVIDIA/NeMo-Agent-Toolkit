@@ -820,7 +820,7 @@ class DynamicFunctionMiddleware(FunctionMiddleware):
                 return False
 
             # Skip static/class methods
-            if isinstance(class_attr, (staticmethod, classmethod)):
+            if isinstance(class_attr, (staticmethod, classmethod)):  # noqa: UP038
                 return False
 
             # Get instance attribute
