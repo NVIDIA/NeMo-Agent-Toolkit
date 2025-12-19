@@ -68,6 +68,7 @@ The following options are required for the sequential executor:
 
 ### Optional Configuration Options
 
+- **`description`**: Description of the workflow (default: "Sequential Executor Workflow")
 - **`tool_execution_config`**: Configuration for each tool in the sequential execution tool list. Keys must match the tool names from the `tool_list`
   - **`use_streaming`**: Whether to use streaming output for the tool (default: `false`)
 

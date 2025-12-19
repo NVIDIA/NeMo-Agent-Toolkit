@@ -41,6 +41,7 @@ class ToolExecutionConfig(BaseModel):
 class SequentialExecutorConfig(FunctionBaseConfig, name="sequential_executor"):
     """Configuration for sequential execution of a list of functions."""
 
+    description: str = Field(default="Sequential Executor Workflow", description="Description of this functions use.")
     tool_list: list[FunctionRef] = Field(default_factory=list,
                                          description="A list of functions to execute sequentially.")
     tool_execution_config: dict[str, ToolExecutionConfig] = Field(default_factory=dict,
@@ -161,6 +162,4 @@ async def sequential_execution(config: SequentialExecutorConfig, builder: Builde
     _sequential_function_execution.__annotations__ = {"initial_tool_input": input_type, "return": output_type}
     logger.debug(f"Sequential executor function annotations: {_sequential_function_execution.__annotations__}")
 
-    yield FunctionInfo.from_fn(_sequential_function_execution,
-                               description="Executes a list of functions sequentially."
-                               "The input of the next tool is the response of the previous tool.")
+    yield FunctionInfo.from_fn(_sequential_function_execution, description=config.description)
