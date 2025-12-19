@@ -107,7 +107,7 @@ async def serve_workflow(config_path: Path, question: str, expected_answer: str,
         while response is None and time.time() < deadline:
             try:
                 response = requests.post(url=f"{workflow_url}/generate",
-                                         json={"input_message": question},
+                                         json= {"messages": [{"role": "user", "content": question}]},
                                          timeout=60)
             except Exception:
                 await asyncio.sleep(0.1)
@@ -115,7 +115,17 @@ async def serve_workflow(config_path: Path, question: str, expected_answer: str,
         assert response is not None, f"deadline exceeded waiting for workflow response: {proc.stdout.read()}"
         response.raise_for_status()
         response_payload = response.json()
-        assert expected_answer.lower() in response_payload['value'].lower(), \
+        combined_response = []
+        response_value = response_payload.get('value', {})
+        if isinstance(response_value, str):
+            response_text = response_value
+        else:
+            for choice in response_value.get('choices', []):
+                combined_response.append(choice.get('message', {}).get('content', ''))
+
+            response_text = "\n".join(combined_response)
+
+        assert expected_answer.lower() in response_text.lower(), \
             f"Unexpected response: {response.text}"
     finally:
         # Teardown
