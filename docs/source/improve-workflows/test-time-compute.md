@@ -28,7 +28,7 @@ The remainder of this document explains each step in detail.
 
 | Stage         | Purpose                                                      | Examples                                                                                                                                      |
 | ------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Search**    | Generate many alternative plans, prompts, or tool invocations | `single_shot_multi_plan`, `multi_llm_plan`, `multi_query_retrieval_search`, `multi_llm_generation`                                            |
+| **Search**    | Generate many alternative plans, prompts, or [tool](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) invocations | `single_shot_multi_plan`, `multi_llm_plan`, `multi_query_retrieval_search`, `multi_llm_generation`                                            |
 | **Editing**   | Refine or transform the candidates                           | `iterative_plan_refinement`, `llm_as_a_judge_editor`, `motivation_aware_summarization`                                                        |
 | **Scoring**   | Assign a numeric quality score                               | `llm_based_plan_scorer`, `llm_based_agent_scorer`, `motivation_aware_scorer`                                                                  |
 | **Selection** | Down‑select or merge                                         | `best_of_n_selector`, `threshold_selector`, `llm_based_plan_selector`, `llm_based_output_merging_selector`, `llm_based_agent_output_selector`, `llm_judge_selection` |

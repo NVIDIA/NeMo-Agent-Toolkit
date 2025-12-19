@@ -17,7 +17,7 @@ limitations under the License.
 
 # Framework Integrations
 
-NVIDIA NeMo Agent toolkit (NAT) provides comprehensive support for multiple agentic frameworks, allowing you to use your preferred development tools while leveraging the capabilities of NAT. This document describes the framework integrations available and their respective levels of support.
+NVIDIA NeMo Agent toolkit provides comprehensive support for multiple agentic frameworks, allowing you to use your preferred development tools while leveraging the capabilities of NeMo Agent toolkit. This document describes the framework integrations available and their respective levels of support.
 
 ## Supported Frameworks
 
@@ -26,7 +26,7 @@ NeMo Agent toolkit integrates with the following frameworks:
 - **ADK**: Google Agent Development Kit for building AI agents
 - **Agno**: A lightweight framework for building AI agents
 - **CrewAI**: A framework for orchestrating role-playing AI agents
-- **LangChain/LangGraph**: A framework for developing applications powered by large language models
+- **LangChain/LangGraph**: A framework for developing applications powered by [large language models](../../build-workflows/llms/index.md)
 - **LlamaIndex**: A data framework for building LLM applications
 - **Semantic Kernel**: Microsoft's SDK for integrating LLMs with conventional programming languages
 - **Strands**: AWS AgentCore runtime for running production agents on Bedrock
@@ -45,10 +45,10 @@ The ability to use embedding model providers for vector representations, includi
 The ability to integrate with vector databases and retrieval systems, such as NeMo Retriever and Milvus.
 
 ### Tool Calling Support
-The ability to use framework-specific tool calling mechanisms, allowing agents to invoke functions and tools during execution.
+The ability to use framework-specific [tool](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) calling mechanisms, allowing agents to invoke functions and tools during execution.
 
 ### Profiling Support
-The ability to view workflow execution traces including intermediate steps, LLM calls, and tool calls within the NeMo Agent toolkit profiler.
+The ability to view workflow execution traces including intermediate steps, LLM calls, and tool calls within the NeMo Agent toolkit [profiler](../../improve-workflows/profiler.md).
 
 ## Framework Capabilities Matrix
 

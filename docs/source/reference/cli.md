@@ -20,7 +20,7 @@ limitations under the License.
 ## Overview
 
 While the NeMo Agent toolkit library provides the capability to implement components that come together to form Agentic AI
-workflow, the command line interface (CLI) provides a no code entrypoint to configure settings, access the features of
+[workflow](../build-workflows/about-building-workflows.md), the command line interface (CLI) provides a no-code entrypoint to configure settings, access the features of
 pre-built components, and mechanisms to launch workflows from configuration files. This document describes the layout
 and functionality of the NeMo Agent toolkit CLI. To begin, the command hierarchy is depicted below. Each command will be introduced
 throughout the remainder of this document.
@@ -936,12 +936,12 @@ When defining a NeMo Agent toolkit workflow's configuration file, it can be help
 possible configuration settings, and their default values. The `nat info components` will provide this information in
 tabular format with the following columns.
 
-- `package`: The Python package containing this row's NAT component.
-- `version`: The version of the Python package containing the NAT component.
-- `component_type`: The type of NAT component this row represents
+- `package`: The Python package containing this row's component.
+- `version`: The version of the Python package containing the component.
+- `component_type`: The type of component this row represents
 (e.g. `front_end`, `function`, `tool_wrapper`, `llm_provider`, `llm_client`, `embedder_provider`, `embedder_client`,
 `evaluator`, `memory`, `retriever_provider`, `retriever_client`, `registry_handler`, `package`).
-- `component_name`: The name of the NAT component to be specified in the `_type` field of the component's section
+- `component_name`: The name of the component to be specified in the `_type` field of the component's section
 of the configuration file.
 - `description`: A description of the component's uses, configuration parameters, and any default values. These
 parameters are what will need to be specified in the configuration object.
@@ -1198,7 +1198,7 @@ Options:
 
 ## Object Store Commands
 
-The `nat object-store` command group provides utilities to interact with object stores. This command group is used to
+The `nat object-store` command group provides utilities to interact with [object stores](../build-workflows/object-store.md). This command group is used to
 upload and download files to and from object stores.
 
 The `nat object-store --help` utility provides an overview of its usage:

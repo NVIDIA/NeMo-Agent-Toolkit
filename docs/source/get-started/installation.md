@@ -21,7 +21,7 @@ This guide will help you set up your NVIDIA NeMo Agent toolkit development envir
 
 ## Supported LLM APIs
 
-The following LLM API providers are supported:
+The following [LLM](../build-workflows/llms/index.md) API providers are supported:
 
 - NIM (such as Llama-3.1-70b-instruct and Llama-3.3-70b-instruct)
 - OpenAI
@@ -47,7 +47,7 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[mysql]` or `nvidia-nat-mysql` - [MySQL](https://www.mysql.com/)
 - `nvidia-nat[opentelemetry]` or `nvidia-nat-opentelemetry` - [OpenTelemetry](https://opentelemetry.io/)
 - `nvidia-nat[phoenix]` or `nvidia-nat-phoenix` - [Arize Phoenix](https://arize.com/docs/phoenix)
-- `nvidia-nat[profiling]` or `nvidia-nat-profiling` - Additional dependencies needed for profiling
+- `nvidia-nat[profiling]` or `nvidia-nat-profiling` - Additional dependencies needed for [profiling](../improve-workflows/profiler.md)
 - `nvidia-nat[ragaai]` or `nvidia-nat-ragaai` - [RagaAI Catalyst](https://raga.ai/)
 - `nvidia-nat[redis]` or `nvidia-nat-redis` - [Redis](https://redis.io/)
 - `nvidia-nat[s3]` or `nvidia-nat-s3` - [Amazon S3](https://aws.amazon.com/s3/)
@@ -161,7 +161,7 @@ Installing from source is required to run any examples provided in the repositor
     Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/getting_started/simple_web_query/README.md` guide will install the `nvidia-nat-langchain` plugin if you haven't already done so.
     :::
 
-    In addition to plugins, there are optional dependencies needed for profiling. Installing the `profiling` sub-package is required for evaluation and profiling workflows using `nat eval`. To install these dependencies, run the following:
+    In addition to plugins, there are optional dependencies needed for profiling. Installing the `profiling` sub-package is required for [evaluation](../improve-workflows/evaluate.md) and profiling workflows using `nat eval`. To install these dependencies, run the following:
     ```bash
     uv pip install -e '.[profiling]'
     ```

@@ -17,18 +17,18 @@ limitations under the License.
 
 # Workflow Configuration
 
-NeMo Agent toolkit workflows are defined by a [YAML configuration file](#workflow-configuration-file), which specifies which entities (functions, LLMs, embedders, etc.) to use in the workflow, along with general configuration settings.
+NeMo Agent toolkit [workflows](./about-building-workflows.md) are defined by a [YAML configuration file](#workflow-configuration-file), which specifies which entities ([functions](./functions-and-function-groups/functions.md), [LLMs](./llms/index.md), [embedders](./embedders.md), etc.) to use in the workflow, along with general configuration settings.
 
 The configuration attributes of each entity in NeMo Agent toolkit is defined by a [Configuration Object](#configuration-object). This object defines both the type and optionally the default value of each attribute. Any attribute without a default value is required to be specified in the configuration file.
 
 ## Configuration Object
-Each NeMo Agent toolkit tool requires a configuration object which inherits from {py:class}`~nat.data_models.function.FunctionBaseConfig`. The `FunctionBaseConfig` class and ultimately all NeMo Agent toolkit configuration objects are subclasses of the [`pydantic.BaseModel `](https://docs.pydantic.dev/2.9/api/base_model/#pydantic.BaseModel) class from the [Pydantic Library](https://docs.pydantic.dev/2.9/), which provides a way to define and validate configuration objects. Each configuration object defines the parameters used to create runtime instances of functions (or other component type), each with different functionality based on configuration settings. It is possible to define nested functions that access other component runtime instances by name. These could be other `functions`, `llms`, `embedders`, `retrievers`, or `memory`. To facilitate nested runtime instance discovery, each component must be initialized in order based on the dependency tree. Enabling this feature requires configuration object parameters that refer to other component instances by name use a `ComponentRef` `dtype` that matches referred component type. The supported `ComponentRef` types are enumerated below:
+Each NeMo Agent toolkit [function](./functions-and-function-groups/functions.md) requires a configuration object that inherits from {py:class}`~nat.data_models.function.FunctionBaseConfig`. The `FunctionBaseConfig` class and ultimately all NeMo Agent toolkit configuration objects are subclasses of the [`pydantic.BaseModel`](https://docs.pydantic.dev/2.11/api/base_model/#pydantic.BaseModel) class from the [Pydantic Library](https://docs.pydantic.dev/2.11/), which provides a way to define and validate configuration objects. Each configuration object defines the parameters used to create runtime instances of functions (or other component type), each with different functionality based on configuration settings. It is possible to define nested functions that access other component runtime instances by name. These could be other `functions`, `llms`, `embedders`, `retrievers`, or `memory`. To facilitate nested runtime instance discovery, each component must be initialized in order based on the dependency tree. Enabling this feature requires configuration object parameters that refer to other component instances by name use a `ComponentRef` `dtype` that matches referred component type. The supported `ComponentRef` types are enumerated below:
 
-- `FunctionRef`: Refers to a registered function by its instance name in the `functions` section configuration object.
-- `LLMRef`: Refers to a registered LLM by its instance name in the `llms` section of the configuration object.
-- `EmbedderRef`: Refers to a registered embedder by its instance name in the `embedders` section of the configuration object.
-- `RetrieverRef`: Refers to a registered retriever by its instance name in the `retrievers` section of the configuration object.
-- `MemoryRef`: Refers to a registered memory by its instance name in the `memory` section of the configuration object.
+- `FunctionRef`: Refers to a registered [function](./functions-and-function-groups/functions.md) by its instance name in the `functions` section configuration object.
+- `LLMRef`: Refers to a registered [LLM](./llms/index.md) by its instance name in the `llms` section of the configuration object.
+- `EmbedderRef`: Refers to a registered [embedder](./embedders.md) by its instance name in the `embedders` section of the configuration object.
+- `RetrieverRef`: Refers to a registered [retriever](./retrievers.md) by its instance name in the `retrievers` section of the configuration object.
+- `MemoryRef`: Refers to a registered [memory](./memory.md) by its instance name in the `memory` section of the configuration object.
 
 
 ## Workflow Configuration File
@@ -92,7 +92,13 @@ See the [Embedders](./embedders.md) documentation for more information.
 
 This section ties the previous sections together by defining the tools and LLM models to use. The `tool_names` section lists the tool names from the `functions` section, while the `llm_name` section specifies the LLM model to use.
 
-The `_type` value refers to the workflow type, in our example we are using a `react_agent` workflow. You can also use the workflow type, `tool_calling_agent`. The parameters for each are specified by the {py:class}`~nat.agent.react_agent.register.ReActAgentWorkflowConfig` and {py:class}`~nat.agent.tool_calling_agent.register.ToolCallAgentWorkflowConfig` classes respectively.
+The `_type` value refers to the workflow type, in our example we are using a `react_agent` workflow. While the choice of workflow type is commonly an [agent](../components/agents/index.md), this can be any registered NeMo Agent toolkit function.
+
+:::{note}
+In NeMo Agent toolkit, an agent is a special type of function.
+:::
+
+The parameters for the `react_agent` workflow are specified by the {py:class}`~nat.agent.react_agent.register.ReActAgentWorkflowConfig` class.
 
 ### `general`
 This section contains general configuration settings for NeMo Agent toolkit which are not specific to any workflow. The parameters for this section are specified by the {py:class}`~nat.data_models.config.GeneralConfig` class.

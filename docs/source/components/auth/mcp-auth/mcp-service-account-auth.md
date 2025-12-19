@@ -36,7 +36,7 @@ Use interactive OAuth2 authentication (`mcp_oauth2`) instead when:
 
 ## Supported Capabilities
 
-The `mcp_service_account` authentication provider implements:
+The `mcp_service_account` [authentication provider](../api-authentication.md) implements:
 
 - **OAuth2 Client Credentials Flow**: Standard [RFC 6749 Section 4.4](https://www.rfc-editor.org/rfc/rfc6749#section-4.4) client credentials grant
 - **Token Caching**: Automatic token caching with configurable refresh buffer to minimize token endpoint requests

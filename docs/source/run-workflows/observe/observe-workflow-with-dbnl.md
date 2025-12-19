@@ -91,6 +91,6 @@ As the workflow runs, telemetry data will start showing up in DBNL.
 Analyze the traces in DBNL. To analyze traces in DBNL:
 
 1. Navigate to your DBNL deployment (e.g. http://localhost:8080/)
-2. Go to Projects > nat-calculator
+2. Go to Projects > `nat-calculator`
 
 For additional help, see the [DBNL docs](https://docs.dbnl.com/).

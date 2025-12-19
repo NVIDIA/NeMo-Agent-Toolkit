@@ -38,7 +38,7 @@ nat info components -t function_group
 
 ### Example: Without Function Groups
 
-Consider three functions that work with an object store. Without function groups, each function needs its own configuration and creates its own connection:
+Consider three functions that work with an [object store](../object-store.md). Without function groups, each function needs its own configuration and creates its own connection:
 
 ```python
 class SaveFileConfig(FunctionBaseConfig, name="save_file"):
@@ -403,7 +403,7 @@ Function groups provide different levels of access control. Understanding these 
 
 - Workflow Builder Tools (Agent-Accessible)
 
-    Functions that are not in the `exclude` list can be wrapped as tools for agents. This makes them:
+    Functions that are not in the `exclude` list can be wrapped as tools for [agents](../../components/agents/index.md). This makes them:
     - Available to AI agents
     - Discoverable in tool lists
     - Callable by agent frameworks

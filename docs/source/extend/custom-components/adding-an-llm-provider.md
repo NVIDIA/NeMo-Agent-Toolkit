@@ -17,7 +17,7 @@ limitations under the License.
 
 # Adding an LLM Provider to NVIDIA NeMo Agent Toolkit
 
-In NeMo Agent toolkit the set of configuration parameters needed to interact with an LLM API (provider) is defined separately from the client which is tied to a given framework. To determine which LLM providers are included in the NeMo Agent toolkit installation, run the following command:
+In NeMo Agent toolkit the set of configuration parameters needed to interact with an [LLM](../../build-workflows/llms/index.md) API (provider) is defined separately from the client which is tied to a given framework. To determine which LLM providers are included in the NeMo Agent toolkit installation, run the following command:
 ```bash
 nat info components -t llm_provider
 ```
@@ -32,7 +32,7 @@ nat info components -t llm_client -q openai
 
 ## Provider Types
 
-In NeMo Agent toolkit, there are three provider types: `llm`, `embedder`, and `retreiver`. The three provider types are defined by their respective base configuration classes: {class}`nat.data_models.llm.LLMBaseConfig`, {class}`nat.data_models.embedder.EmbedderBaseConfig`, and {class}`nat.data_models.retriever.RetrieverBaseConfig`. This guide focuses on adding an LLM provider. However, the process for adding an embedder or retriever provider is similar.
+In NeMo Agent toolkit, there are three provider types: `llm`, `embedder`, and `retreiver`. The three provider types are defined by their respective base configuration classes: {class}`nat.data_models.llm.LLMBaseConfig`, {class}`nat.data_models.embedder.EmbedderBaseConfig`, and {class}`nat.data_models.retriever.RetrieverBaseConfig`. This guide focuses on adding an LLM provider. However, the process for adding an [embedder](../../build-workflows/embedders.md) or [retriever](../../build-workflows/retrievers.md) provider is similar.
 
 
 ## Defining an LLM Provider

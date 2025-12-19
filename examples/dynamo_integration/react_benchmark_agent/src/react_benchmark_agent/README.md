@@ -62,14 +62,14 @@ This document details the source code implementation of the React Benchmark Agen
 ### Example-Specific Installation Steps
 
 ```bash
-# Navigate to NAT repository root
+# Navigate to the repository root
 cd /path/to/NeMo-Agent-Toolkit
 
 # Create virtual environment
 uv venv "${HOME}/.venvs/nat_dynamo_eval" --python 3.13
 source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 
-# Install NAT with LangChain support
+# Install nvidia-nat with LangChain support
 uv pip install -e ".[langchain]"
 
 # Install visualization dependencies
@@ -171,7 +171,7 @@ from .self_evaluating_agent_with_feedback import self_evaluating_agent_with_feed
 # Custom evaluators
 from .evaluators import tsq_evaluator_function
 
-# Note: LLM configuration uses NAT core's 'dynamo' type (_type: dynamo)
+# Note: LLM configuration uses the 'dynamo' type (_type: dynamo)
 # which provides prefix parameters with OptimizableField support.
 ```
 
@@ -189,10 +189,10 @@ This is the baseline deployment that runs a ReAct agent directly without self-ev
 
 | `config` Section | Source File | Component |
 |----------------|-------------|-----------|
-| `workflow._type: react_agent` | NAT core | Built-in ReAct agent |
+| `workflow._type: react_agent` | `nvidia-nat` | Built-in ReAct agent |
 | `function_groups.banking_tools._type: banking_tools_group` | `banking_tools.py` | `BankingToolsGroupConfig` |
 | `evaluators.tool_selection_quality._type: tsq_evaluator` | `evaluators/tsq_evaluator.py` | `TSQEvaluatorConfig` |
-| `llms.dynamo_llm._type: dynamo` | NAT core | Dynamo LLM with prefix headers |
+| `llms.dynamo_llm._type: dynamo` | `nvidia-nat` | Dynamo LLM with prefix headers |
 
 #### Data Flow
 
@@ -286,7 +286,7 @@ This advanced deployment wraps the ReAct agent with a self-evaluation loop that:
 
 | `config` Section | Source File | Component |
 |----------------|-------------|-----------|
-| `functions.react_workflow._type: react_agent` | NAT core | Inner ReAct agent |
+| `functions.react_workflow._type: react_agent` | `nvidia-nat` | Inner ReAct agent |
 | `workflow._type: self_evaluating_agent_with_feedback` | `self_evaluating_agent_with_feedback.py` | Self-eval wrapper |
 | `workflow.wrapped_agent: react_workflow` | (reference) | Reference to inner agent |
 | `workflow.evaluator_llm: eval_llm` | (reference) | LLM for self-evaluation |
@@ -400,21 +400,20 @@ def get_global_intents(scenario_id: str = "current") -> list[dict[str, Any]]:
 
 **Configuration:** `optimize_rethinking_full_test.yml`
 
-This configuration enables NAT optimizer to tune Dynamo router parameters for latency and throughput.
+This configuration enables the optimizer to tune Dynamo router parameters for latency and throughput.
 
 #### Configuration → Code Mapping
 
 | `config` Section | Source File | Component |
 |----------------|-------------|-----------|
-| `llms.dynamo_llm._type: dynamo` | NAT core (`nat.llm.dynamo_llm`) | Dynamo LLM with optimizable prefix fields |
-| `llms.dynamo_llm.optimizable_params` | NAT core | Fields to optimize |
-| `llms.dynamo_llm.search_space` | NAT core | Parameter search ranges |
-| `evaluators.avg_llm_latency._type: avg_llm_latency` | NAT core | Runtime performance metric |
-| `optimizer.eval_metrics` | NAT core | Metrics to minimize |
-
+| `llms.dynamo_llm._type: dynamo` | `nvidia-nat` (`nat.llm.dynamo_llm`) | Dynamo LLM with optimizable prefix fields |
+| `llms.dynamo_llm.optimizable_params` | `nvidia-nat` | Fields to optimize |
+| `llms.dynamo_llm.search_space` | `nvidia-nat` | Parameter search ranges |
+| `evaluators.avg_llm_latency._type: avg_llm_latency` | `nvidia-nat` | Runtime performance metric |
+| `optimizer.eval_metrics` | `nvidia-nat` | Metrics to minimize |
 #### Optimizable Parameters
 
-**NAT Core `DynamoModelConfig`** (`src/nat/llm/dynamo_llm.py`)
+**`DynamoModelConfig`** (`src/nat/llm/dynamo_llm.py`)
 ```python
 class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
     """Dynamo LLM with automatic prefix header injection for KV cache optimization."""
@@ -448,7 +447,7 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────┐
-│                         NAT Optimizer                               │
+│                           Optimizer                                 │
 └─────────────────────────────────────────────────────────────────────┘
                                 │
         ┌───────────────────────┼───────────────────────┐
@@ -501,10 +500,10 @@ This configuration enables comprehensive profiling for performance analysis.
 
 | `config` Section | Source File | Component |
 |----------------|-------------|-----------|
-| `eval.general.profiler.compute_llm_metrics: true` | NAT core | TTFT, ITL, throughput metrics |
-| `eval.general.profiler.token_uniqueness_forecast: true` | NAT core | Token pattern analysis |
-| `eval.general.profiler.bottleneck_analysis.enable_nested_stack: true` | NAT core | Call stack analysis |
-| `eval.general.profiler.prompt_caching_prefixes.enable: true` | NAT core | KV cache prefix detection |
+| `eval.general.profiler.compute_llm_metrics: true` | `nvidia-nat` | TTFT, ITL, throughput metrics |
+| `eval.general.profiler.token_uniqueness_forecast: true` | `nvidia-nat` | Token pattern analysis |
+| `eval.general.profiler.bottleneck_analysis.enable_nested_stack: true` | `nvidia-nat` | Call stack analysis |
+| `eval.general.profiler.prompt_caching_prefixes.enable: true` | `nvidia-nat` | KV cache prefix detection |
 
 #### Profiler Output Files
 
@@ -529,7 +528,7 @@ outputs/dynamo_evals/<job_id>/
 | `tool_intent_stubs.py` | Intent capture system | (infrastructure) |
 | `self_evaluating_agent_with_feedback.py` | Self-eval wrapper (unified) | `self_evaluating_agent`, `self_evaluating_agent_with_feedback` |
 
-> **Note**: LLM configuration uses NAT core's `dynamo` type (`_type: dynamo`) which provides 
+> **Note**: LLM configuration uses the `dynamo` type (`_type: dynamo`) which provides 
 > prefix parameters with `OptimizableField` support. No custom LLM config is needed.
 
 ### Evaluators

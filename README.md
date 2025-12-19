@@ -36,9 +36,6 @@ limitations under the License.
 
 </div>
 
-> [!NOTE]
-> NeMo Agent Toolkit was previously known as the Agent Intelligence (AIQ) toolkit, and <!-- vale off -->AgentIQ<!-- vale on -->. The library was renamed to better reflect the purpose of the toolkit and to align with the NVIDIA NeMo family of products. The core technologies, performance, and roadmap remain unchanged and the API is fully compatible with previous releases. Please refer to the [Migration Guide](./docs/source/resources/migration-guide.md) for more information.
-
 ## 🔥 New Features
 
 - [**Automatic Hyperparameter Tuning:**](docs/source/improve-workflows/optimizer.md) Automatically tune the parameters and prompts of your agents, tools, and workflows to maximize performance, minimize cost, and increase accuracy.

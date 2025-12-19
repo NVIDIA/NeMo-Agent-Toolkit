@@ -17,13 +17,13 @@ limitations under the License.
 
 # NeMo Agent Toolkit as an MCP Server
 
-Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. You can read more about MCP [here](https://modelcontextprotocol.io/introduction).
+Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to [LLMs](../build-workflows/llms/index.md). You can read more about MCP [here](https://modelcontextprotocol.io/introduction).
 
-This guide will cover how to use NeMo Agent toolkit as an MCP Server to publish tools using MCP. For more information on how to use NeMo Agent toolkit as an MCP Host with one or more MCP Clients, refer to [MCP Client](../build-workflows/mcp-client.md).
+This guide will cover how to use NeMo Agent toolkit as an MCP Server to publish [tools](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) using MCP. For more information on how to use NeMo Agent toolkit as an MCP Host with one or more MCP Clients, refer to [MCP Client](../build-workflows/mcp-client.md).
 
 ## MCP Server Usage
 
-The `nat mcp serve` command can be used to start an MCP server that publishes the functions from your workflow as MCP tools.
+The `nat mcp serve` command can be used to start an MCP server that publishes the [functions](../build-workflows/functions-and-function-groups/functions.md) from your [workflow](../build-workflows/about-building-workflows.md) as MCP tools.
 
 To start an MCP server publishing all tools from your workflow, run the following command:
 

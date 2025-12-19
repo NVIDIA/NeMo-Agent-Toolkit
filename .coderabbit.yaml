@@ -73,6 +73,14 @@ reviews:
           and should contain an Apache License 2.0 header comment at the top of each file.
         - Confirm that copyright years are up-to date whenever a file is changed.
 
+        # Common Bugs to Look For
+        - Pydantic models using one of the `SecretStr`, `SerializableSecretStr`, or `OptionalSecretStr` with a default
+          defined as `default=""`, creates a bug where the field will be initialized as `str` and not as an instance of
+          `SecretStr`. Instead, use `default=None` for optional secret fields such as `OptionalSecretStr` or with a
+          `default_factory=lambda: SerializableSecretStr("")` for non-optional secret fields such as `SerializableSecretStr`.
+          The `default_factory` approach is preferred for non-optional secret fields to ensure that the field is always
+          returns a unique instance.
+
     - path: "docs/source/**/*"
       instructions: >-
         This directory contains the source code for the documentation. All documentation should be written in Markdown

@@ -129,7 +129,7 @@ Each subdirectory focuses on a specific area of the toolkit:
    ```
 
    :::{note}
-   Important: To ensure the context window of the Cursor agent is large enough, DO NOT use the `Auto` mode of LLM model selection. Instead, manually select a model from the toggle list, such as `claude-4-sonnet`.
+   Important: To ensure the context window of the Cursor agent is large enough, DO NOT use the `Auto` mode of [LLM](../../../build-workflows/llms/index.md) model selection. Instead, manually select a model from the toggle list, such as `claude-4-sonnet`.
    :::
 
 3. **Select Proper Rule Type and Add Description**

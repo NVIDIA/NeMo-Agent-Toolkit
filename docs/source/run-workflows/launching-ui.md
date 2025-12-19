@@ -17,7 +17,7 @@ limitations under the License.
 
 # Launch the NVIDIA NeMo Agent Toolkit API Server and User Interface
 
-NVIDIA NeMo Agent toolkit provides a user interface for interacting with your running workflow. This guide walks you through starting the API server and launching the web-based user interface to interact with your workflows.
+NVIDIA NeMo Agent toolkit provides a user interface for interacting with your running [workflow](../build-workflows/about-building-workflows.md). This guide walks you through starting the API server and launching the web-based user interface to interact with your workflows.
 
 ## User Interface Features
 
