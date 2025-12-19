@@ -13,10 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pydantic import SecretStr
 import pytest
+from pydantic import SecretStr
 
-@pytest.mark.parametrize("constructor_args", [{}, {"api_key": ""}, {"api_key": "my_api_key"}],
+
+@pytest.mark.parametrize("constructor_args", [{}, {
+    "api_key": ""
+}, {
+    "api_key": "my_api_key"
+}],
                          ids=["default", "empty_api_key", "provided_api_key"])
 def test_api_key_is_secret_str(constructor_args: dict):
     from nat.plugins.langchain.tools.tavily_internet_search import TavilyInternetSearchToolConfig

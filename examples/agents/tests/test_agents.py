@@ -69,6 +69,7 @@ async def test_rewoo_full_workflow(agents_dir: Path, use_rest_api: bool, rewoo_q
     else:
         await run_workflow(config_file=config_file, question=rewoo_question, expected_answer=rewoo_answer)
 
+
 @pytest.mark.slow
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
@@ -84,7 +85,7 @@ async def test_rewoo_full_workflow(agents_dir: Path, use_rest_api: bool, rewoo_q
         "tool_calling/configs/config-reasoning.yml",
     ],
     ids=["mixture_of_agents", "react", "react-reasoning", "tool_calling", "tool_calling-reasoning"])
-async def test_agent_full_workflow(agents_dir: Path, config_file: str, use_rest_api: bool,question: str, answer: str):
+async def test_agent_full_workflow(agents_dir: Path, config_file: str, use_rest_api: bool, question: str, answer: str):
     if use_rest_api:
         await serve_workflow(config_path=agents_dir / config_file, question=question, expected_answer=answer)
     else:
