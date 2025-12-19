@@ -19,7 +19,7 @@ limitations under the License.
 
 ## Overview
 
-Use `nat.test.ToolTestRunner` to test [tools](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) in complete isolation without requiring spinning up entire workflows, agents, and external services. This allows you to validate tool functionality quickly and reliably during development. Refer `tests/nat/tools/test_tool_test_runner.py` for a full example.
+Use `nat.test.ToolTestRunner` to test [tools](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) in complete isolation without requiring spinning up entire workflows, agents, and external services. This allows you to validate tool functionality quickly and reliably during development. Refer to `tests/nat/tools/test_tool_test_runner.py` for a full example.
 
 The `nvidia-nat-test` package must be installed to use the `ToolTestRunner`.
 
