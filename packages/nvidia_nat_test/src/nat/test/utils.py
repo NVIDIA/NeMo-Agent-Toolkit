@@ -96,7 +96,9 @@ async def serve_workflow(*,
                          question: str,
                          expected_answer: str,
                          assert_expected_answer: bool = True,
-                         port: int = 8000) -> dict:
+                         port: int = 8000,
+                         pipeline_timeout: int = 60,
+                         request_timeout: int = 30) -> dict:
     """
     Execute a workflow using `nat serve`, and issue a POST request to the `/generate` endpoint with the given question.
 
@@ -110,7 +112,7 @@ async def serve_workflow(*,
 
     response_payload = {}
     try:
-        deadline = time.time() + 60  # 60 second timeout waiting for the workflow to respond
+        deadline = time.time() + pipeline_timeout  # timeout waiting for the workflow to respond
         response = None
         while response is None and time.time() < deadline:
             try:
@@ -118,7 +120,7 @@ async def serve_workflow(*,
                                          json={"messages": [{
                                              "role": "user", "content": question
                                          }]},
-                                         timeout=60)
+                                         timeout=request_timeout)
             except Exception:
                 await asyncio.sleep(0.1)
 
