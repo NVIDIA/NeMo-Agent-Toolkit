@@ -458,3 +458,108 @@ def test_try_convert_preserves_object_identity():
     original_dict = {"key": "value"}
     result = converter.try_convert(original_dict, list)
     assert result is original_dict  # Same object, not a copy
+
+
+# --------------------------------------------------------------------
+# Unit tests for parameterized generic types (e.g., dict[str, Any], list[int])
+# --------------------------------------------------------------------
+
+
+def test_convert_to_parameterized_dict_already_correct_type(basic_converter):
+    """Test conversion when data is already a dict and target is dict[str, Any]."""
+    from typing import Any
+
+    # This should not raise "isinstance() argument 2 cannot be a parameterized generic"
+    data = {"key": "value", "number": 42}
+    result = basic_converter.convert(data, dict[str, Any])
+    assert isinstance(result, dict)
+    assert result == data
+    assert result is data  # Should be same object since already correct type
+
+
+def test_convert_to_parameterized_list_already_correct_type(basic_converter):
+    """Test conversion when data is already a list and target is list[int]."""
+    data = [1, 2, 3, 4, 5]
+    result = basic_converter.convert(data, list[int])
+    assert isinstance(result, list)
+    assert result == data
+    assert result is data  # Should be same object since already correct type
+
+
+def test_convert_to_parameterized_dict_indirect_path(basic_converter):
+    """Test indirect conversion to parameterized dict type."""
+    from typing import Any
+
+    # Start with a string, convert to dict (if converter exists)
+    # In this case, we don't have str->dict converter, so this will fail
+    # But it should fail with ValueError, not TypeError from isinstance()
+    with pytest.raises(ValueError, match="Cannot convert"):
+        basic_converter.convert("test", dict[str, Any])
+
+
+def test_try_convert_to_parameterized_dict_no_converter(basic_converter):
+    """Test try_convert with parameterized dict when no conversion path exists."""
+    from typing import Any
+
+    original_value = "test string"
+    # No converter from str to dict, should return original value
+    result = basic_converter.try_convert(original_value, dict[str, Any])
+    assert result is original_value
+    assert isinstance(result, str)
+
+
+def test_try_convert_to_parameterized_list_no_converter(basic_converter):
+    """Test try_convert with parameterized list when no conversion path exists."""
+    original_value = {"key": "value"}
+    # No converter from dict to list, should return original value
+    result = basic_converter.try_convert(original_value, list[str])
+    assert result is original_value
+    assert isinstance(result, dict)
+
+
+def test_convert_with_various_parameterized_types():
+    """Test that various parameterized generic types don't cause TypeError."""
+    from typing import Any
+
+    converter = TypeConverter([])
+
+    # Test with different parameterized types - all should work without TypeError
+    test_cases = [
+        ({
+            "a": 1
+        }, dict[str, int]),
+        ([1, 2, 3], list[int]),
+        (["a", "b"], list[str]),
+        ({
+            "x": "y"
+        }, dict[str, Any]),
+        ((1, 2), tuple[int, ...]),
+    ]
+
+    for data, target_type in test_cases:
+        # Should successfully return the data since it's already the correct base type
+        result = converter.convert(data, target_type)
+        assert result is data
+
+
+def test_indirect_conversion_with_parameterized_target(inheritance_converter):
+    """Test indirect conversion where target is a parameterized generic."""
+    from typing import Any
+
+    # We have converters: Base->str, so converting to dict should fail
+    # but it should fail gracefully with ValueError, not TypeError
+    b = Base(name="test")
+    with pytest.raises(ValueError, match="Cannot convert"):
+        inheritance_converter.convert(b, dict[str, Any])
+
+
+def test_try_convert_indirect_with_parameterized_types(inheritance_converter):
+    """Test try_convert with indirect paths and parameterized generics."""
+    from typing import Any
+
+    # Derived can be converted to str, but not to dict
+    d = Derived(name="test")
+    result = inheritance_converter.try_convert(d, dict[str, Any])
+    # Should return original since no path to dict exists
+    assert result is d
+    assert isinstance(result, Derived)

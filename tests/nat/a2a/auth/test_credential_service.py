@@ -18,6 +18,7 @@ from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
 from unittest.mock import Mock
+from unittest.mock import patch
 
 import pytest
 from a2a.client import ClientCallContext
@@ -165,12 +166,15 @@ def sample_agent_card():
                              ("oidc", "oidc_scheme", "test-id-token"),
                              ("http_bearer", "http_bearer_scheme", "test-bearer-token"),
                          ])
-async def test_bearer_token_mapping(scheme_name,
-                                    scheme_fixture,
-                                    token_value,
-                                    request,
-                                    mock_auth_provider,
-                                    sample_agent_card):
+async def test_bearer_token_mapping(
+    scheme_name,
+    scheme_fixture,
+    token_value,
+    request,
+    mock_auth_provider,
+    sample_agent_card,
+    mock_user_context,
+):
     """Test BearerTokenCred maps to various bearer-compatible schemes."""
     scheme = request.getfixturevalue(scheme_fixture)
     auth_result = AuthResult(credentials=[BearerTokenCred(token=SecretStr(token_value))])
@@ -179,11 +183,13 @@ async def test_bearer_token_mapping(scheme_name,
     card = sample_agent_card({scheme_name: scheme})
     service = A2ACredentialService(
         auth_provider=provider,
-        default_user_id="test-user",
         agent_card=card,
     )
 
-    credential = await service.get_credentials(scheme_name, None)
+    # Mock the Context to return a user_id
+    with patch('nat.plugins.a2a.auth.credential_service.Context') as mock_context:
+        mock_context.get.return_value = mock_user_context
+        credential = await service.get_credentials(scheme_name, None)
 
     assert credential == token_value
     assert provider.authenticate_called_with == ["test-user"]
@@ -197,7 +203,10 @@ async def test_header_credential_with_api_key_scheme(api_key_scheme, mock_auth_p
     card = sample_agent_card({"api_key": api_key_scheme})
     service = A2ACredentialService(auth_provider=provider, agent_card=card)
 
-    credential = await service.get_credentials("api_key", None)
+    # Mock the Context to return a user_id
+    with patch('nat.plugins.a2a.auth.credential_service.Context') as mock_context:
+        mock_context.get.return_value.user_id = "test-user"
+        credential = await service.get_credentials("api_key", None)
 
     assert credential == "test-api-key"
 
@@ -230,15 +239,18 @@ async def test_token_expiration_triggers_reauthentication(oauth2_scheme, mock_au
     card = sample_agent_card({"oauth": oauth2_scheme})
     service = A2ACredentialService(auth_provider=provider, agent_card=card)
 
-    # First call: gets and caches expired token (provider's responsibility to return valid tokens)
-    credential1 = await service.get_credentials("oauth", None)
-    assert credential1 == "expired-token"
-    assert call_count[0] == 1
+    # Mock the Context to return a user_id
+    with patch('nat.plugins.a2a.auth.credential_service.Context') as mock_context:
+        mock_context.get.return_value.user_id = "test-user"
+        # First call: gets and caches expired token (provider's responsibility to return valid tokens)
+        credential1 = await service.get_credentials("oauth", None)
+        assert credential1 == "expired-token"
+        assert call_count[0] == 1
 
-    # Second call: detects cache is expired, re-authenticates and gets fresh token
-    credential2 = await service.get_credentials("oauth", None)
-    assert credential2 == "fresh-token"
-    assert call_count[0] == 2
+        # Second call: detects cache is expired, re-authenticates and gets fresh token
+        credential2 = await service.get_credentials("oauth", None)
+        assert credential2 == "fresh-token"
+        assert call_count[0] == 2
 
 
 async def test_credential_caching(oauth2_scheme, mock_auth_provider, sample_agent_card):
@@ -252,8 +264,11 @@ async def test_credential_caching(oauth2_scheme, mock_auth_provider, sample_agen
     card = sample_agent_card({"oauth": oauth2_scheme})
     service = A2ACredentialService(auth_provider=provider, agent_card=card)
 
-    credential1 = await service.get_credentials("oauth", None)
-    credential2 = await service.get_credentials("oauth", None)
+    # Mock the Context to return a user_id
+    with patch('nat.plugins.a2a.auth.credential_service.Context') as mock_context:
+        mock_context.get.return_value.user_id = "test-user"
+        credential1 = await service.get_credentials("oauth", None)
+        credential2 = await service.get_credentials("oauth", None)
 
     assert credential1 == credential2 == "cached-token"
     assert len(provider.authenticate_called_with) == 1  # Only called once
@@ -264,20 +279,26 @@ async def test_credential_caching(oauth2_scheme, mock_auth_provider, sample_agen
 # ============================================================================
 
 
-async def test_user_id_from_context(oauth2_scheme, mock_auth_provider, sample_agent_card):
-    """Test user_id is extracted from ClientCallContext."""
+async def test_user_id_from_context(oauth2_scheme, mock_auth_provider, sample_agent_card, mock_user_context):
+    """Test user_id is extracted from NAT Context."""
     auth_result = AuthResult(credentials=[BearerTokenCred(token=SecretStr("test-token"))])
     provider = mock_auth_provider("MockOAuth2Provider", auth_result)
 
     card = sample_agent_card({"oauth": oauth2_scheme})
     service = A2ACredentialService(
         auth_provider=provider,
-        default_user_id="default-user",
         agent_card=card,
     )
 
-    context = ClientCallContext(state={"sessionId": "context-user"})
-    credential = await service.get_credentials("oauth", context)
+    # Mock the Context to return a user_id
+    # Override the user_id for this specific test
+    mock_user_context.user_id = "context-user"
+
+    with patch('nat.plugins.a2a.auth.credential_service.Context') as mock_context:
+        mock_context.get.return_value = mock_user_context
+        # Note: user_id is sourced from mocked Context.get().user_id, not from the context parameter
+        context = ClientCallContext(state={"sessionId": "context-user"})
+        credential = await service.get_credentials("oauth", context)
 
     assert credential == "test-token"
     assert provider.authenticate_called_with == ["context-user"]
@@ -296,7 +317,10 @@ async def test_missing_security_scheme_returns_none(mock_auth_provider, sample_a
     card = sample_agent_card({})
     service = A2ACredentialService(auth_provider=provider, agent_card=card)
 
-    credential = await service.get_credentials("nonexistent", None)
+    # Mock the Context to return a user_id
+    with patch('nat.plugins.a2a.auth.credential_service.Context') as mock_context:
+        mock_context.get.return_value.user_id = "test-user"
+        credential = await service.get_credentials("nonexistent", None)
 
     assert credential is None
 
@@ -308,7 +332,10 @@ async def test_authentication_failure_returns_none(oauth2_scheme, mock_auth_prov
     card = sample_agent_card({"oauth": oauth2_scheme})
     service = A2ACredentialService(auth_provider=provider, agent_card=card)
 
-    credential = await service.get_credentials("oauth", None)
+    # Mock the Context to return a user_id
+    with patch('nat.plugins.a2a.auth.credential_service.Context') as mock_context:
+        mock_context.get.return_value.user_id = "test-user"
+        credential = await service.get_credentials("oauth", None)
 
     assert credential is None
 
@@ -349,7 +376,6 @@ def test_provider_validation(provider_name,
     if should_pass:
         service = A2ACredentialService(
             auth_provider=provider,
-            default_user_id="test-user",
             agent_card=card,
         )
         assert service is not None
@@ -357,7 +383,6 @@ def test_provider_validation(provider_name,
         with pytest.raises(ValueError, match="not compatible with agent's security requirements"):
             A2ACredentialService(
                 auth_provider=provider,
-                default_user_id="test-user",
                 agent_card=card,
             )
 
@@ -376,7 +401,6 @@ def test_validation_skipped_when_no_schemes(agent_card_config, mock_auth_provide
     card = sample_agent_card(agent_card_config) if agent_card_config is not None else None
     service = A2ACredentialService(
         auth_provider=provider,
-        default_user_id="test-user",
         agent_card=card,
     )
 
