@@ -62,8 +62,8 @@ class FunctionMiddleware(Middleware):
     Context Flow:
     - FunctionMiddlewareContext (frozen): Static function metadata only
     - InvocationContext: Unified context for both pre and post invoke phases
-      - Pre-invoke: output is None, modify modified_args/modified_kwargs
-      - Post-invoke: output has the result, modify output to transform
+    - Pre-invoke: output is None, modify modified_args/modified_kwargs
+    - Post-invoke: output has the result, modify output to transform
 
     Example::
 
@@ -124,10 +124,10 @@ class FunctionMiddleware(Middleware):
         You do NOT need to check ``enabled`` yourself.
 
         Args:
-            *args: Positional arguments for the function
+            args: Positional arguments for the function
             call_next: Callable to invoke next middleware or target function
             context: Static function metadata
-            **kwargs: Keyword arguments for the function
+            kwargs: Keyword arguments for the function
 
         Returns:
             The (potentially transformed) function output
@@ -177,10 +177,10 @@ class FunctionMiddleware(Middleware):
         You do NOT need to check ``enabled`` yourself.
 
         Args:
-            *args: Positional arguments for the function
+            args: Positional arguments for the function
             call_next: Callable to invoke next middleware or target stream
             context: Static function metadata
-            **kwargs: Keyword arguments for the function
+            kwargs: Keyword arguments for the function
 
         Yields:
             Stream chunks (potentially transformed by post_invoke)

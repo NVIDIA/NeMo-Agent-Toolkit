@@ -174,10 +174,10 @@ class CacheMiddleware(FunctionMiddleware):
         4. **Continue**: Return the result (cached or fresh)
 
         Args:
-            *args: The positional arguments to process
+            args: The positional arguments to process
             call_next: Callable to invoke the next middleware or function
             context: Metadata about the function being wrapped
-            **kwargs: Additional function arguments
+            kwargs: Additional function arguments
 
         Returns:
             The cached output if found, otherwise the fresh output
@@ -235,10 +235,10 @@ class CacheMiddleware(FunctionMiddleware):
         4. **Continue**: Complete the stream
 
         Args:
-            *args: The positional arguments to process
+            args: The positional arguments to process
             call_next: Callable to invoke the next middleware or function stream
             context: Metadata about the function being wrapped
-            **kwargs: Additional function arguments
+            kwargs: Additional function arguments
 
         Yields:
             Chunks from the stream (unmodified)

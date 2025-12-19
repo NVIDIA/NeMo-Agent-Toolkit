@@ -91,12 +91,9 @@ class InvocationContext(BaseModel):
         frozen=True, description="The original function input keyword arguments before any middleware processing.")
 
     # Mutable fields - modify these to transform inputs/outputs
-    modified_args: tuple[Any,
-                         ...] = Field(description="The modified function input arguments after middleware processing.")
-    modified_kwargs: dict[str, Any] = Field(
-        description="The modified function input keyword arguments after middleware processing.")
-    output: Any = Field(default=None,
-                        description="The function output value. None in pre-invoke, contains result in post-invoke.")
+    modified_args: tuple[Any, ...] = Field(description="Modified args after middleware processing.")
+    modified_kwargs: dict[str, Any] = Field(description="Modified kwargs after middleware processing.")
+    output: Any = Field(default=None, description="Function output. None pre-invoke, result post-invoke.")
 
 
 class Middleware(ABC):
@@ -229,7 +226,7 @@ class Middleware(ABC):
             value: The input value to process
             call_next: Callable to invoke the next middleware or target
             context: Metadata about the target being wrapped
-            **kwargs: Additional function arguments
+            kwargs: Additional function arguments
 
         Returns:
             The (potentially modified) output from the target
@@ -265,7 +262,7 @@ class Middleware(ABC):
             value: The input value to process
             call_next: Callable to invoke the next middleware or target stream
             context: Metadata about the target being wrapped
-            **kwargs: Additional function arguments
+            kwargs: Additional function arguments
 
         Yields:
             Chunks from the stream (potentially modified)
