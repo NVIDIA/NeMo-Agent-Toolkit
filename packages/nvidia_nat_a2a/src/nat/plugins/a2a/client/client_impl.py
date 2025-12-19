@@ -23,7 +23,7 @@ from pydantic import Field
 
 from nat.builder.function import FunctionGroup
 from nat.builder.workflow_builder import Builder
-from nat.cli.register_workflow import register_function_group
+from nat.cli.register_workflow import register_per_user_function_group
 from nat.plugins.a2a.client.client_base import A2ABaseClient
 from nat.plugins.a2a.client.client_config import A2AClientConfig
 
@@ -70,6 +70,12 @@ class A2AClientFunctionGroup(FunctionGroup):
         config: A2AClientConfig = self._config  # type: ignore[assignment]
         base_url = str(config.url)
 
+        # Get user_id from context (set by runtime for per-user function groups)
+        from nat.builder.context import Context
+        user_id = Context.get().user_id
+        if not user_id:
+            raise RuntimeError("User ID not found in context")
+
         # Resolve auth provider if configured
         auth_provider: AuthProviderBase | None = None
         if config.auth_provider:
@@ -87,14 +93,13 @@ class A2AClientFunctionGroup(FunctionGroup):
             task_timeout=config.task_timeout,
             streaming=config.streaming,
             auth_provider=auth_provider,
-            default_user_id=config.default_user_id,
         )
         await self._client.__aenter__()
 
         if auth_provider:
-            logger.info("Connected to A2A agent at %s with authentication", base_url)
+            logger.info("Connected to A2A agent at %s with authentication (user_id: %s)", base_url, user_id)
         else:
-            logger.info("Connected to A2A agent at %s", base_url)
+            logger.info("Connected to A2A agent at %s (user_id: %s)", base_url, user_id)
 
         # Discover agent card and register functions
         self._register_functions()
@@ -303,11 +308,12 @@ class A2AClientFunctionGroup(FunctionGroup):
             yield event
 
 
-@register_function_group(config_type=A2AClientConfig)
+@register_per_user_function_group(config_type=A2AClientConfig)
 async def a2a_client_function_group(config: A2AClientConfig, _builder: Builder):
     """
     Connect to an A2A agent, discover agent card and publish the primary
-    agent function and helper functions.
+    agent function and helper functions. This function group is per-user,
+    meaning each user gets their own isolated instance.
 
     This function group creates a three-level API:
     - High-level: Agent function named after the agent (e.g., dice_agent)
