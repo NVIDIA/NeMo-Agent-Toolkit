@@ -17,7 +17,7 @@ limitations under the License.
 
 # Adding an Object Store Provider With NVIDIA NeMo Agent Toolkit
 
-This documentation presumes familiarity with the NeMo Agent toolkit plugin architecture, the concept of "function registration" using `@register_function`, and how we define tool/workflow configurations in the NeMo Agent toolkit config described in the [Creating a New Tool and Workflow](../../get-started/tutorials/create-a-new-workflow.md) tutorial.
+This documentation presumes familiarity with the NeMo Agent toolkit [object store subsystem](../../build-workflows/object-store.md), [plugin architecture](../plugins.md), the concept of "function registration" using `@register_function`, and how we define tool/workflow configurations in the NeMo Agent toolkit config described in the [Creating a New Tool and Workflow](../../get-started/tutorials/create-a-new-workflow.md) tutorial.
 
 ## Key Object Store Module Components
 

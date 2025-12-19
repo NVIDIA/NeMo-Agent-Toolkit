@@ -19,20 +19,20 @@ limitations under the License.
 
 ## Overview
 
-Middleware provides a powerful mechanism for adding cross-cutting concerns to functions in the NeMo Agent Toolkit without modifying the function implementation itself. Like middleware in web frameworks (Express.js, FastAPI, etc.), middleware wraps function calls with a four-phase pattern:
+Middleware provides a powerful mechanism for adding cross-cutting concerns to functions in the NeMo Agent toolkit without modifying the function implementation itself. Like middleware in web frameworks (Express.js, FastAPI, etc.), middleware wraps function calls with a four-phase pattern:
 
 1. **Preprocess** - Inspect and modify inputs before calling next
 2. **Call Next** - Delegate to the next middleware or function
 3. **Postprocess** - Process, transform, or augment outputs
 4. **Continue** - Return or yield the final result
 
-Middleware components are first-class components in NAT, configured in YAML and built by the workflow builder, just like retrievers, memory providers, and other components.
+Middleware components are first-class components in NeMo Agent toolkit, configured in YAML and built by the workflow builder, just like retrievers, [memory](../memory.md) providers, and other components.
 
 ## Key Concepts
 
 **Middleware Component**: A middleware component that:
 - Is configured in YAML with a `middleware` section
-- Is built by the workflow builder before functions and function groups
+- Is built by the workflow builder before [functions](../functions-and-function-groups/functions.md) and [function groups](../functions-and-function-groups/function-groups.md)
 - Wraps a function's `ainvoke` or `astream` methods
 - Can be applied to individual functions or entire function groups
 - Can preprocess inputs, postprocess outputs, or short-circuit execution
@@ -43,7 +43,7 @@ Middleware components are first-class components in NAT, configured in YAML and 
 
 ## Component-Based Architecture
 
-Middleware follows the same component pattern as other NAT components:
+Middleware follows the same component pattern as other components:
 
 ```yaml
 middleware:
@@ -620,16 +620,16 @@ async def protected_api(config, builder):
 Middleware is built **before** functions and function groups in the workflow builder. This ensures all middleware is available when functions and function groups are constructed.
 
 Build order:
-1. Authentication providers
-2. Embedders
-3. LLMs
-4. Memory
-5. Object stores
-6. Retrievers
-7. TTC strategies
+1. [Authentication providers](../../components/auth/api-authentication.md)
+2. [Embedders](../embedders.md)
+3. [LLMs](../llms/index.md)
+4. [Memory](../memory.md)
+5. [Object stores](../object-store.md)
+6. [Retrievers](../retrievers.md)
+7. [TTC strategies](../../improve-workflows/test-time-compute.md)
 8. **Middleware** ← Built here
-9. Function groups ← Can use middleware
-10. Functions ← Can use middleware
+9. [Function groups](../functions-and-function-groups/function-groups.md) ← Can use middleware
+10. [Functions](../functions-and-function-groups/functions.md) ← Can use middleware
 
 ## Troubleshooting
 
@@ -646,7 +646,7 @@ Solution: Ensure the middleware is defined in the `middleware` section of your Y
 ```
 ModuleNotFoundError: No module named 'nat.middleware.register'
 ```
-Solution: Ensure the register module is imported. NAT automatically imports `nat.middleware.register` when importing `nat.middleware`.
+Solution: Ensure the register module is imported. NeMo Agent toolkit automatically imports `nat.middleware.register` when importing `nat.middleware`.
 
 **Cache not working**
 - Check `enabled_mode` setting

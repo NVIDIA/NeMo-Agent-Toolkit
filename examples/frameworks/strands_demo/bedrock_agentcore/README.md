@@ -15,9 +15,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Running Strands with NAT on AWS AgentCore
+# Running Strands with NVIDIA NeMo Agent Toolkit on AWS AgentCore
 
-A comprehensive guide for deploying NVIDIA NeMo Agent toolkit (NAT) with Strands on AWS AgentCore, including OpenTelemetry instrumentation for monitoring.
+A comprehensive guide for deploying NVIDIA NeMo Agent toolkit with Strands on AWS AgentCore, including OpenTelemetry instrumentation for monitoring.
 
 ## Prerequisites
 
@@ -59,8 +59,7 @@ Replace <YOUR_ACCOUNT_ID HERE> with your AWS account number (example: 2111234567
 ```
 
 ## Step 3 Create AWS Secrets Manager entry for NVIDIA_API_KEY
-for the NAT deployment scripts.
-This is security best practice
+This is needed for storing the API keys needed for running NeMo Agent toolkit workflow.
 
 ## Secrets Manager Prerequisites
 
@@ -452,7 +451,7 @@ uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py
 
 ## 🎉 Success!
 
-You have successfully set up NAT using Strands running on AWS AgentCore with OpenTelemetry monitoring!
+You have successfully set up NeMo Agent toolkit using Strands running on AWS AgentCore with OpenTelemetry monitoring!
 
 ---
 
@@ -695,7 +694,7 @@ Since we need a custom policy, we'll create it now:
 After the role is created, you'll be redirected to the Roles page:
 
 1. In the search box, type: `AgentCore_NAT`
-2. Click on the **AgentCore_NAT** role name
+2. Click on the `AgentCore_NAT` role name
 3. On the role summary page, locate and copy the **ARN** (Amazon Resource Name)
 
 The ARN will look like this:
@@ -756,7 +755,7 @@ The `Dockerfile` is organized into the following sections:
 
 1. **Base Image Configuration** - Ubuntu base with Python
 2. **Build Dependencies** - Compilers and build tools
-3. **Application Setup** - NAT package installation
+3. **Application Setup** - NeMo Agent toolkit package installation
 4. **OpenTelemetry Configuration** - Monitoring and observability
 5. **Runtime Configuration** - Entry point and environment
 

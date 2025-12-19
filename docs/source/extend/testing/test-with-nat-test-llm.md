@@ -29,7 +29,7 @@ uv pip install nvidia-nat-test
 
 ## Minimal YAML
 
-The following YAML config defines a testing LLM and a simple `chat_completion` workflow that uses it.
+The following YAML config defines a testing [LLM](../../build-workflows/llms/index.md) and a simple `chat_completion` workflow that uses it.
 
 ```yaml
 llms:

@@ -19,8 +19,8 @@ limitations under the License.
 
 The NVIDIA NeMo Agent toolkit supports OpenAI's Responses API through two complementary pieces:
 
-- Configuring the LLM client mode using the `api_type` field 
-- Integrating tool binding with the NeMo Agent toolkit dual-node graph using the dedicated workflow agent `_type: responses_api_agent`, designed for tool use with the Responses API.
+- Configuring the [LLM](../../../build-workflows/llms/index.md) client mode using the `api_type` field 
+- Integrating tool binding with the NeMo Agent toolkit dual-node graph using the dedicated workflow [agent](../index.md) `_type: responses_api_agent`, designed for tool use with the Responses API.
 
 The Responses API enables models to: 
 - Use built-in tools such as Code Interpreter through `builtin_tools`.

@@ -41,14 +41,14 @@ A2A authentication involves three main components working together to secure age
 graph TB
     subgraph Client["A2A Client"]
         direction TB
-        ClientWorkflow["NAT Workflow<br/>(Math Assistant)"]
+        ClientWorkflow["Workflow<br/>(Math Assistant)"]
         A2AClientPlugin["A2A Client Plugin<br/>• Discovers agent card<br/>• Handles OAuth2 flow<br/>• Manages JWT tokens"]
         ClientWorkflow --> A2AClientPlugin
     end
 
     subgraph Server["A2A Server (Resource Server)"]
         direction TB
-        ServerWorkflow["NAT Workflow<br/>(Calculator)"]
+        ServerWorkflow["Workflow<br/>(Calculator)"]
         OAuthMiddleware["OAuth Middleware<br/>• Validates JWT tokens<br/>• Checks scopes & audience<br/>• Caches JWKS"]
         ServerWorkflow --> OAuthMiddleware
     end
@@ -70,9 +70,9 @@ graph TB
 
 **Component Roles:**
 
-1. **A2A Client**: NAT workflow that connects to remote A2A agents using the `a2a_client` function group. Handles OAuth2 flow and includes JWT tokens in requests.
+1. **A2A Client**: workflow that connects to remote A2A agents using the `a2a_client` function group. Handles OAuth2 flow and includes JWT tokens in requests.
 
-2. **A2A Server (Resource Server)**: NAT workflow published via `nat a2a serve` with OAuth2 protection. Validates incoming JWT tokens and enforces access policies.
+2. **A2A Server (Resource Server)**: workflow published via `nat a2a serve` with OAuth2 protection. Validates incoming JWT tokens and enforces access policies.
 
 3. **Authorization Server**: OAuth2 server (such as Keycloak) that authenticates users, issues JWT tokens, and provides public keys for token verification.
 
@@ -246,4 +246,4 @@ This example includes:
 
 - [A2A Protocol Overview](../integrations/a2a.md) - Introduction to Agent-to-Agent protocol
 - [A2A Client](../../build-workflows/a2a-client.md) - Connecting to remote A2A agents
-- [A2A Server](../../run-workflows/a2a-server.md) - Publishing NAT workflows as A2A agents
+- [A2A Server](../../run-workflows/a2a-server.md) - Publishing workflows as A2A agents

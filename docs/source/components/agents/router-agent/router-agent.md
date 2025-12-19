@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 # Configure the Router Agent
-Configure the NVIDIA NeMo Agent toolkit router agent as a workflow or a function. The router agent workflow consists of two phases: routing and execution.
+Configure the NVIDIA NeMo Agent toolkit router agent as a [workflow](../../../build-workflows/about-building-workflows.md) or a [function](../../../build-workflows/functions-and-function-groups/functions.md). The router agent workflow consists of two phases: routing and execution.
 
 ## Requirements
 The router agent requires the `nvidia-nat[langchain]` plugin to be installed, which can be installed with one of the following commands.
@@ -71,9 +71,9 @@ The router agent supports the following required and optional configurations.
 
 * `workflow_alias`: Defaults to `None`. The alias of the workflow. Useful when the router agent is configured as a workflow and needs to expose a customized name as a tool.
 
-* `branches`: A list of available tools, functions, or agents that the router can direct requests to. These branches must be configured in the YAML file.
+* `branches`: A list of available [tools](../../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools), functions, or agents that the router can direct requests to. These branches must be configured in the YAML file.
 
-* `llm_name`: The language model used for request analysis and routing decisions. The LLM must be configured in the YAML file.
+* `llm_name`: The language model used for request analysis and routing decisions. The [LLM](../../../build-workflows/llms/index.md) must be configured in the YAML file.
 
 #### Optional Options
 

@@ -121,5 +121,5 @@ sequenceDiagram
 ## References
 
 - [OAuth2 Protected A2A Setup Guide](../math_assistant_a2a/oauth2-keycloak-setup.md)
-- [NAT A2A Client Documentation](../../../docs/source/build-workflows/a2a-client.md)
-- [NAT A2A Server Documentation](../../../docs/source/run-workflows/a2a-server.md)
+- [A2A Client Documentation](../../../docs/source/build-workflows/a2a-client.md)
+- [A2A Server Documentation](../../../docs/source/run-workflows/a2a-server.md)
