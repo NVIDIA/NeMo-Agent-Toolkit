@@ -21,6 +21,7 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
+from nat.control_flow.sequential_executor import SequentialExecutorExit
 from nat.data_models.function import FunctionBaseConfig
 
 logger = logging.getLogger(__name__)
@@ -155,9 +156,8 @@ async def data_analyzer_function(config: DataAnalyzerFunctionConfig, builder: Bu
             return json.dumps(analysis_results)
 
         except json.JSONDecodeError:
-            # Handle invalid JSON input
-            error_result = {"error": "Invalid input format", "analysis_status": "failed"}
-            return json.dumps(error_result)
+            # Handle invalid JSON input - exit chain early
+            raise SequentialExecutorExit("Invalid input format - cannot proceed")
 
     yield FunctionInfo.from_fn(
         analyze_data, description="Analyze processed text data and generate insights about complexity and content")
