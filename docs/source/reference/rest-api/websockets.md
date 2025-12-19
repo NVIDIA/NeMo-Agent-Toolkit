@@ -37,6 +37,7 @@ to the client.
       - `system_response_message`
       - `system_interaction_message`
       - `user_interaction_message`
+      - `observability_trace_message`
       - `error_message`
 - `schema_type`:  Defines the response schema for a given workflow
 - `id`: A unique identifier for the message.
@@ -384,5 +385,21 @@ System Human Interaction messages are sent from the server to the client contain
   },
   "status": "in_progress",
   "timestamp": "2025-01-13T10:00:03Z"
+}
+```
+
+### System Observability Trace Message
+Definition: This message contains the observability trace ID for tracking requests across services.
+#### System Observability Trace Message Example:
+```json
+{
+  "type": "observability_trace_message",
+  "id": "trace_001",
+  "parent_id": "id from user message",
+  "conversation_id": "string",
+  "content": {
+    "observability_trace_id": "019a9f4d-072a-77b0-aff1-262550329c13"
+  },
+  "timestamp": "2025-01-20T10:00:00Z"
 }
 ```

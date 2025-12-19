@@ -30,6 +30,7 @@ from nat.data_models.api_server import ChatResponse
 from nat.data_models.api_server import ChatResponseChunk
 from nat.data_models.api_server import Error
 from nat.data_models.api_server import ErrorTypes
+from nat.data_models.api_server import ResponseObservabilityTrace
 from nat.data_models.api_server import ResponsePayloadOutput
 from nat.data_models.api_server import ResponseSerializable
 from nat.data_models.api_server import SystemResponseContent
@@ -38,6 +39,7 @@ from nat.data_models.api_server import UserMessageContentRoleType
 from nat.data_models.api_server import UserMessages
 from nat.data_models.api_server import WebSocketMessageStatus
 from nat.data_models.api_server import WebSocketMessageType
+from nat.data_models.api_server import WebSocketObservabilityTraceMessage
 from nat.data_models.api_server import WebSocketSystemInteractionMessage
 from nat.data_models.api_server import WebSocketSystemIntermediateStepMessage
 from nat.data_models.api_server import WebSocketSystemResponseTokenMessage
@@ -69,6 +71,7 @@ class WebSocketMessageHandler:
         self._conversation_id: str | None = None
         self._workflow_schema_type: str | None = None
         self._user_interaction_response: asyncio.Future[TextContent] | None = None
+        self._pending_observability_trace: ResponseObservabilityTrace | None = None
 
         self._flow_handler: FlowHandlerBase | None = None
 
@@ -175,6 +178,7 @@ class WebSocketMessageHandler:
             self._message_parent_id = user_message_as_validated_type.id
             self._workflow_schema_type = user_message_as_validated_type.schema_type
             self._conversation_id = user_message_as_validated_type.conversation_id
+            self._pending_observability_trace = None
 
             message_content: typing.Any = await self._process_websocket_user_message(user_message_as_validated_type)
 
@@ -249,6 +253,13 @@ class WebSocketMessageHandler:
                     conversation_id=self._conversation_id,
                     content=content,
                     status=status)
+
+            elif issubclass(message_schema, WebSocketObservabilityTraceMessage):
+                message = await self._message_validator.create_observability_trace_message(
+                    message_id=message_id,
+                    parent_id=self._message_parent_id,
+                    conversation_id=self._conversation_id,
+                    content=content)
 
             elif isinstance(content, Error):
                 raise ValidationError(f"Invalid input data creating websocket message. {data_model.model_dump_json()}")
@@ -333,6 +344,12 @@ class WebSocketMessageHandler:
                                                                result_type=result_type,
                                                                output_type=output_type):
 
+                    # Store observability trace to send after completion message
+                    if isinstance(value, ResponseObservabilityTrace):
+                        if self._pending_observability_trace is None:
+                            self._pending_observability_trace = value
+                        continue
+
                     if not isinstance(value, ResponseSerializable):
                         value = ResponsePayloadOutput(payload=value)
 
@@ -342,3 +359,9 @@ class WebSocketMessageHandler:
             await self.create_websocket_message(data_model=SystemResponseContent(),
                                                 message_type=WebSocketMessageType.RESPONSE_MESSAGE,
                                                 status=WebSocketMessageStatus.COMPLETE)
+
+            # Send observability trace after completion message
+            if self._pending_observability_trace is not None:
+                await self.create_websocket_message(data_model=self._pending_observability_trace,
+                                                    message_type=WebSocketMessageType.OBSERVABILITY_TRACE_MESSAGE)
+                self._pending_observability_trace = None
