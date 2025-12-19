@@ -272,7 +272,7 @@ For most use cases, the high-level `call()` function is sufficient. Use `send_me
 
 The following examples demonstrate A2A client usage:
 
-- Math Assistant A2A Example - A2A communication with hybrid tool composition. See `examples/A2A/math_assistant_a2a/README.md`.
+- Math Assistant A2A Example - A2A communication with hybrid tool composition. Refer to `examples/A2A/math_assistant_a2a/README.md`.
 - Currency Agent A2A Example - Connecting to external third-party A2A services. See `examples/A2A/currency_agent_a2a/README.md`.
 
 ## CLI Utilities

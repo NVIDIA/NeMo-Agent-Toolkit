@@ -21,7 +21,7 @@ This example demonstrates a per-user math assistant workflow that connects to a 
 ## Key Features
 
 - **Per-User A2A Client**: Each user gets isolated A2A client connections with separate authentication and session state
-- **A2A Protocol Integration**: Connects to a remote calculator workflow via A2A protocol
+- **A2A Protocol Integration**: Connects to a remote calculator workflow using A2A protocol
 - **Hybrid Tool Architecture**: Combines remote A2A tools with local MCP and custom functions
 - **OAuth2 Authentication**: Optional OAuth2-protected A2A server setup for secure per-user agent-to-agent communication
 - **Multi-User Support**: Demonstrates user isolation with different session cookies
