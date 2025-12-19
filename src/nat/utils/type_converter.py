@@ -184,7 +184,10 @@ class TypeConverter:
             # e.g. if Derived is a subclass of Base, this is valid
             if issubclass(DecomposedType(convert_to_type).root, target_root_type):
                 for convert_from_type, from_type_converter in to_type_converters.items():
-                    if isinstance(data, DecomposedType(convert_from_type).root):
+                    # union types correctly in Python 3.10+ (e.g., isinstance("x", str | int))
+                    decomposed_from = DecomposedType(convert_from_type)
+                    check_type = convert_from_type if decomposed_from.is_union else decomposed_from.root
+                    if isinstance(data, check_type):
                         try:
                             return from_type_converter(data)
                         except ConvertException:
@@ -240,8 +243,15 @@ class TypeConverter:
         # 2) Attempt each known converter from current_type -> ???, then recurse
         for _, to_type_converters in self._converters.items():
             for convert_from_type, from_type_converter in to_type_converters.items():
-                # Use DecomposedType for safe isinstance check with parameterized generics
-                if DecomposedType(convert_from_type).is_instance(data):
+                # For union types, use isinstance directly since it handles union types
+                # correctly in Python 3.10+ (e.g., isinstance("x", str | int))
+                decomposed_from = DecomposedType(convert_from_type)
+                if decomposed_from.is_union:
+                    matches = isinstance(data, convert_from_type)
+                else:
+                    matches = decomposed_from.is_instance(data)
+
+                if matches:
                     try:
                         next_data = from_type_converter(data)
                         # Use DecomposedType for safe isinstance check with parameterized generics
