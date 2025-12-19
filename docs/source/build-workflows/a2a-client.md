@@ -26,7 +26,7 @@ This guide covers how to use NeMo Agent toolkit as an A2A client. For informatio
 :::important
 **Per-User A2A Clients**
 
-A2A clients are per-user function groups, which means:
+A2A clients are per-user [function groups](./functions-and-function-groups/function-groups.md), which means:
 - Each user gets their own isolated A2A client instance with separate connections, authentication, and session state
 - Workflows using A2A clients **must** be registered as per-user using `@register_per_user_function` or use one of the builtin per-user workflows (such as `per_user_react_agent`)
 - Shared workflows (such as `react_agent`) **cannot** use A2A client function groups directly
