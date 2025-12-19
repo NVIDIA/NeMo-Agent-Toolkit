@@ -166,11 +166,12 @@ async def sequential_execution(config: SequentialExecutorConfig, builder: Builde
                 logger.info(f"Tool {tool_name} requested early exit: {e.message}")
                 return e.message
             except Exception as e:
-                logger.error(f"Error with tool {tool_name}: {e}")
                 if config.return_error_on_exception:
                     # Return error message as workflow output instead of raising exception
+                    logger.exception(f"Error with tool {tool_name}, returning error message")
                     error_message = f"Error in {tool_name}: {type(e).__name__}: {str(e)}"
                     return error_message
+                logger.error(f"Error with tool {tool_name}: {e}")
                 raise
 
             # The input of the next tool is the response of the previous tool

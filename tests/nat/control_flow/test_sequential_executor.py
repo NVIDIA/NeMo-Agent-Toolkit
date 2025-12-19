@@ -528,6 +528,10 @@ class TestSequentialExecution:
                 result = await actual_function("initial_input")  # type: ignore
                 assert result == "Custom exit message"
 
+                # Verify tool3 was never invoked after early exit
+                tool3 = mock_builder.get_tools.return_value[2]
+                assert tool3.__dict__['_call_count'] == 0
+
     @pytest.mark.asyncio
     async def test_empty_tool_list(self, mock_builder):
         """Test handling of empty tool list."""

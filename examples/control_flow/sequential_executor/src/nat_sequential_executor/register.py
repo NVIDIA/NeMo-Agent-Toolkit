@@ -157,7 +157,7 @@ async def data_analyzer_function(config: DataAnalyzerFunctionConfig, builder: Bu
 
         except json.JSONDecodeError:
             # Handle invalid JSON input - exit chain early
-            raise SequentialExecutorExit("Invalid input format - cannot proceed")
+            raise SequentialExecutorExit("Invalid input format - cannot proceed") from None
 
     yield FunctionInfo.from_fn(
         analyze_data, description="Analyze processed text data and generate insights about complexity and content")
