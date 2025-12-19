@@ -22,10 +22,8 @@ from unittest.mock import patch
 import pytest
 from pydantic import BaseModel
 
-from nat.builder.context import Context  # noqa: F401
-from nat.builder.context import ContextState  # noqa: F401
 from nat.data_models.runtime_enum import RuntimeTypeEnum
-from nat.middleware.cache_middleware import CacheMiddleware
+from nat.middleware.cache.cache_middleware import CacheMiddleware
 from nat.middleware.middleware import FunctionMiddlewareContext
 
 
@@ -42,7 +40,7 @@ class _TestOutput(BaseModel):
 
 @pytest.fixture
 def middleware_context():
-    """Create a test FunctionMiddlewareContext."""
+    """Create a test FunctionMiddlewareContext (static metadata only)."""
     return FunctionMiddlewareContext(name="test_function",
                                      config=MagicMock(),
                                      description="Test function",
@@ -80,25 +78,32 @@ class TestCacheMiddlewareCaching:
         # Mock the next call
         call_count = 0
 
-        async def mock_next_call(_val):
+        async def mock_next_call(*args, **kwargs):
             nonlocal call_count
             call_count += 1
+            _val = args[0]
             return _TestOutput(result=f"Result for {_val['value']}")
 
         # First call - should call the function
         input1 = {"value": "test", "number": 42}
-        result1 = await middleware.function_middleware_invoke(input1, mock_next_call, middleware_context)
+        result1 = await middleware.function_middleware_invoke(input1,
+                                                              call_next=mock_next_call,
+                                                              context=middleware_context)
         assert call_count == 1
         assert result1.result == "Result for test"
 
         # Second call with same input - should use cache
-        result2 = await middleware.function_middleware_invoke(input1, mock_next_call, middleware_context)
+        result2 = await middleware.function_middleware_invoke(input1,
+                                                              call_next=mock_next_call,
+                                                              context=middleware_context)
         assert call_count == 1  # No additional call
         assert result2.result == "Result for test"
 
         # Third call with different input - should call function
         input2 = {"value": "test", "number": 43}  # Different number
-        result3 = await middleware.function_middleware_invoke(input2, mock_next_call, middleware_context)
+        result3 = await middleware.function_middleware_invoke(input2,
+                                                              call_next=mock_next_call,
+                                                              context=middleware_context)
         assert call_count == 2
         assert result3.result == "Result for test"
 
@@ -108,26 +113,32 @@ class TestCacheMiddlewareCaching:
 
         call_count = 0
 
-        async def mock_next_call(_val):
+        async def mock_next_call(*args, **kwargs):
             nonlocal call_count
             call_count += 1
             return _TestOutput(result=f"Result {call_count}")
 
         # First call
         input1 = {"value": "hello world", "number": 42}
-        result1 = await middleware.function_middleware_invoke(input1, mock_next_call, middleware_context)
+        result1 = await middleware.function_middleware_invoke(input1,
+                                                              call_next=mock_next_call,
+                                                              context=middleware_context)
         assert call_count == 1
         assert result1.result == "Result 1"
 
         # Second call with similar input - should use cache
         input2 = {"value": "hello world!", "number": 42}
-        result2 = await middleware.function_middleware_invoke(input2, mock_next_call, middleware_context)
+        result2 = await middleware.function_middleware_invoke(input2,
+                                                              call_next=mock_next_call,
+                                                              context=middleware_context)
         assert call_count == 1  # No additional call due to similarity
         assert result2.result == "Result 1"
 
         # Third call with very different input - should call function
         input3 = {"value": "goodbye universe", "number": 99}
-        result3 = await middleware.function_middleware_invoke(input3, mock_next_call, middleware_context)
+        result3 = await middleware.function_middleware_invoke(input3,
+                                                              call_next=mock_next_call,
+                                                              context=middleware_context)
         assert call_count == 2
         assert result3.result == "Result 2"
 
@@ -137,13 +148,13 @@ class TestCacheMiddlewareCaching:
 
         call_count = 0
 
-        async def mock_next_call(_val):
+        async def mock_next_call(*args, **kwargs):
             nonlocal call_count
             call_count += 1
             return _TestOutput(result=f"Result {call_count}")
 
         # Mock ContextState to control is_evaluating
-        mock_ctx_cls = 'nat.middleware.cache_middleware.ContextState'
+        mock_ctx_cls = 'nat.middleware.cache.cache_middleware.ContextState'
         with patch(mock_ctx_cls) as mock_context_state:
             mock_state = MagicMock()
             mock_context_state.get.return_value = mock_state
@@ -152,22 +163,22 @@ class TestCacheMiddlewareCaching:
             mock_state.runtime_type.get.return_value = RuntimeTypeEnum.RUN_OR_SERVE
 
             input1 = {"value": "test", "number": 42}
-            await middleware.function_middleware_invoke(input1, mock_next_call, middleware_context)
+            await middleware.function_middleware_invoke(input1, call_next=mock_next_call, context=middleware_context)
             assert call_count == 1
 
             # Same input again - should NOT use cache
-            await middleware.function_middleware_invoke(input1, mock_next_call, middleware_context)
+            await middleware.function_middleware_invoke(input1, call_next=mock_next_call, context=middleware_context)
             assert call_count == 2  # Called again
 
             # Now test when evaluating
             mock_state.runtime_type.get.return_value = RuntimeTypeEnum.EVALUATE
 
             # Same input - should call function (no cache before)
-            await middleware.function_middleware_invoke(input1, mock_next_call, middleware_context)
+            await middleware.function_middleware_invoke(input1, call_next=mock_next_call, context=middleware_context)
             assert call_count == 3
 
             # Same input again - should use cache now
-            await middleware.function_middleware_invoke(input1, mock_next_call, middleware_context)
+            await middleware.function_middleware_invoke(input1, call_next=mock_next_call, context=middleware_context)
             assert call_count == 3  # No additional call
 
     async def test_serialization_failure(self, middleware_context):
@@ -176,7 +187,7 @@ class TestCacheMiddlewareCaching:
 
         call_count = 0
 
-        async def mock_next_call(_val):
+        async def mock_next_call(*args, **kwargs):
             nonlocal call_count
             call_count += 1
             return _TestOutput(result="Result")
@@ -190,11 +201,11 @@ class TestCacheMiddlewareCaching:
         # Mock json.dumps to raise an exception
         with patch('json.dumps', side_effect=Exception("Cannot serialize")):
             input_obj = UnserializableObject()
-            await middleware.function_middleware_invoke(input_obj, mock_next_call, middleware_context)
+            await middleware.function_middleware_invoke(input_obj, call_next=mock_next_call, context=middleware_context)
             assert call_count == 1
 
             # Try again - should call function again (no caching)
-            await middleware.function_middleware_invoke(input_obj, mock_next_call, middleware_context)
+            await middleware.function_middleware_invoke(input_obj, call_next=mock_next_call, context=middleware_context)
             assert call_count == 2
 
 
@@ -207,7 +218,7 @@ class TestCacheMiddlewareStreaming:
 
         call_count = 0
 
-        async def mock_stream_call(_val):
+        async def mock_stream_call(*args, **kwargs):
             nonlocal call_count
             call_count += 1
             for i in range(3):
@@ -216,14 +227,18 @@ class TestCacheMiddlewareStreaming:
         # First streaming call
         input1 = {"value": "test", "number": 42}
         chunks1 = []
-        async for chunk in middleware.function_middleware_stream(input1, mock_stream_call, middleware_context):
+        async for chunk in middleware.function_middleware_stream(input1,
+                                                                 call_next=mock_stream_call,
+                                                                 context=middleware_context):
             chunks1.append(chunk)
         assert call_count == 1
         assert chunks1 == ["Chunk 0", "Chunk 1", "Chunk 2"]
 
         # Second streaming call with same input - should call again
         chunks2 = []
-        async for chunk in middleware.function_middleware_stream(input1, mock_stream_call, middleware_context):
+        async for chunk in middleware.function_middleware_stream(input1,
+                                                                 call_next=mock_stream_call,
+                                                                 context=middleware_context):
             chunks2.append(chunk)
         assert call_count == 2  # Function called again
         assert chunks2 == ["Chunk 0", "Chunk 1", "Chunk 2"]
@@ -238,16 +253,16 @@ class TestCacheMiddlewareEdgeCases:
 
         call_count = 0
 
-        async def mock_next_call(_val):
+        async def mock_next_call(*args, **kwargs):
             nonlocal call_count
             call_count += 1
             return _TestOutput(result="Result")
 
         # Mock ContextState.get to raise an exception
-        mock_ctx_cls = 'nat.middleware.cache_middleware.ContextState.get'
+        mock_ctx_cls = 'nat.middleware.cache.cache_middleware.ContextState.get'
         with patch(mock_ctx_cls, side_effect=Exception("Context error")):
             input1 = {"value": "test", "number": 42}
-            await middleware.function_middleware_invoke(input1, mock_next_call, middleware_context)
+            await middleware.function_middleware_invoke(input1, call_next=mock_next_call, context=middleware_context)
             assert call_count == 1  # Should fall back to calling function
 
     def test_similarity_computation_for_different_thresholds(self):
@@ -284,10 +299,10 @@ class TestCacheMiddlewareEdgeCases:
         middleware._cache[key1] = _TestOutput(result="Result 1")  # noqa
         middleware._cache[key2] = _TestOutput(result="Result 2")  # noqa
 
-        async def mock_next_call(_val):
+        async def mock_next_call(*args, **kwargs):
             return _TestOutput(result="New Result")
 
         # Query with something similar to all
         input_str = {"value": "test input X", "number": 42}
-        await middleware.function_middleware_invoke(input_str, mock_next_call, middleware_context)
+        await middleware.function_middleware_invoke(input_str, call_next=mock_next_call, context=middleware_context)
         # The exact behavior depends on which cached key is most similar

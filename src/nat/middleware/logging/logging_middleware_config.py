@@ -13,25 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import annotations
+from pydantic import Field
 
-import typing
-
-from .common import BaseModelRegistryTag
-from .common import TypedBaseModel
+from nat.middleware.dynamic.dynamic_middleware_config import DynamicMiddlewareConfig
 
 
-class MiddlewareBaseConfig(TypedBaseModel, BaseModelRegistryTag):
-    """The base level config object for middleware.
+class LoggingMiddlewareConfig(DynamicMiddlewareConfig, name="logging_middleware"):
+    """Configuration for logging middleware.
 
-    Middleware provides middleware-style wrapping of calls with
-    preprocessing and postprocessing logic.
+    Extends DynamicMiddlewareConfig to inherit all dynamic discovery features
+    (register_llms, register_workflow_functions, and so on) and the enabled toggle.
     """
-    pass
 
-
-MiddlewareBaseConfigT = typing.TypeVar("MiddlewareBaseConfigT", bound=MiddlewareBaseConfig)
-
-# Specialized type for function-specific middleware
-FunctionMiddlewareBaseConfig = MiddlewareBaseConfig
-FunctionMiddlewareBaseConfigT = MiddlewareBaseConfigT
+    log_level: str = Field(default="INFO", description="Logging level (DEBUG, INFO, WARNING, ERROR)")
