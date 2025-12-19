@@ -90,9 +90,16 @@ async def run_workflow(*,
 
     return result
 
-async def serve_workflow(config_path: Path, question: str, expected_answer: str, port: int= 8000) -> dict:
+async def serve_workflow(*,
+                         config_path: Path,
+                         question: str,
+                         expected_answer: str,
+                         assert_expected_answer: bool = True,
+                         port: int= 8000) -> dict:
     """
-    Execute a workflow using the sandbox and return the response.
+    Execute a workflow using `nat serve`, and issue a POST request to the `/generate` endpoint with the given question.
+
+    Intendted to be analogous to `run_workflow` but for the REST API serving mode.
     """
     import requests
     workflow_url = f"http://localhost:{port}"
@@ -125,8 +132,9 @@ async def serve_workflow(config_path: Path, question: str, expected_answer: str,
 
             response_text = "\n".join(combined_response)
 
-        assert expected_answer.lower() in response_text.lower(), \
-            f"Unexpected response: {response.text}"
+        if assert_expected_answer:
+            assert expected_answer.lower() in response_text.lower(), \
+                f"Unexpected response: {response.text}"
     finally:
         # Teardown
         i = 0
