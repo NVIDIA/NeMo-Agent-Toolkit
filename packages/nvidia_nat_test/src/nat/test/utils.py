@@ -102,7 +102,7 @@ async def serve_workflow(*,
     """
     Execute a workflow using `nat serve`, and issue a POST request to the `/generate` endpoint with the given question.
 
-    Intendted to be analogous to `run_workflow` but for the REST API serving mode.
+    Intended to be analogous to `run_workflow` but for the REST API serving mode.
     """
     import requests
     workflow_url = f"http://localhost:{port}"
