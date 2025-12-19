@@ -128,6 +128,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "copy/paste",
     "delete/recreate",
     "edit/score",
+    "Enable/disable",
     "file/console",
     "files/functions",
     "I/O",

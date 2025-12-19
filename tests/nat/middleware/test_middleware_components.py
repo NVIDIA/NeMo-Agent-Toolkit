@@ -18,7 +18,6 @@ import pytest
 from pydantic import Field
 
 # Register built-in middlewares
-import nat.middleware.cache_middleware  # noqa: F401
 from nat.builder.builder import Builder
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.cli.register_workflow import register_function
@@ -44,6 +43,16 @@ class _TestMiddleware(FunctionMiddleware):
         super().__init__()
         self.test_param = test_param
         self.call_order = call_order
+
+    @property
+    def enabled(self) -> bool:
+        return True
+
+    async def pre_invoke(self, context):
+        return None
+
+    async def post_invoke(self, context):
+        return None
 
     async def function_middleware_invoke(self, value, call_next, context):
         self.call_order.append(f"{self.test_param}_pre")
@@ -269,7 +278,7 @@ class TestCacheMiddlewareComponent:
 
     async def test_cache_middleware_registration(self):
         """Test that cache middleware is registered."""
-        from nat.middleware.register import CacheMiddlewareConfig
+        from nat.middleware.cache.cache_middleware_config import CacheMiddlewareConfig
 
         registry = GlobalTypeRegistry.get()
         registration = registry.get_middleware(CacheMiddlewareConfig)
@@ -279,7 +288,7 @@ class TestCacheMiddlewareComponent:
 
     async def test_cache_middleware_from_yaml(self):
         """Test building cache middleware from YAML."""
-        from nat.middleware.cache_middleware import CacheMiddleware
+        from nat.middleware.cache.cache_middleware import CacheMiddleware
 
         config_dict = {
             "middleware": {
@@ -300,7 +309,7 @@ class TestCacheMiddlewareComponent:
 
     async def test_cache_middleware_with_different_configs(self):
         """Test cache middleware with various configurations."""
-        from nat.middleware.cache_middleware import CacheMiddleware
+        from nat.middleware.cache.cache_middleware import CacheMiddleware
 
         configs = [
             {
@@ -647,6 +656,16 @@ class TestFunctionGroupMiddlewares:
             def __init__(self, name: str):
                 super().__init__()
                 self.name = name
+
+            @property
+            def enabled(self) -> bool:
+                return True
+
+            async def pre_invoke(self, context):
+                return None
+
+            async def post_invoke(self, context):
+                return None
 
             async def function_middleware_invoke(self, value, call_next, context):
                 results.append(f"{self.name}_pre")
