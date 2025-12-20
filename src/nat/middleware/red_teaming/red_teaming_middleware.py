@@ -302,32 +302,38 @@ class RedTeamingMiddleware(FunctionMiddleware):
             logger.error("Failed to apply red team attack to function %s: %s", context.name, e, exc_info=True)
             raise
 
-    async def function_middleware_invoke(self, value: Any, call_next: CallNext,
-                                         context: FunctionMiddlewareContext) -> Any:
+    async def function_middleware_invoke(self,
+                                         *args: Any,
+                                         call_next: CallNext,
+                                         context: FunctionMiddlewareContext,
+                                         **kwargs: Any) -> Any:
         """Invoke middleware for single-output functions.
 
         Args:
-            value: The input value to the function
-            call_next: Callable to invoke next middleware/function
-            context: Metadata about the function being wrapped
+            args: Positional arguments passed to the function (first arg is typically the input value).
+            call_next: Callable to invoke next middleware/function.
+            context: Metadata about the function being wrapped.
+            kwargs: Keyword arguments passed to the function.
 
         Returns:
-            The output value (potentially modified if attacking output)
+            The output value (potentially modified if attacking output).
         """
+        value = args[0] if args else None
+
         # Check if we should attack this function
         if not self._should_apply_payload(context.name):
             logger.debug("Skipping function %s (not targeted)", context.name)
-            return await call_next(value)
+            return await call_next(value, *args[1:], **kwargs)
 
         if self._target_location == "input":
             # Attack the input before calling the function
             modified_input = self._apply_payload_to_function_value_with_exception(value, context)
             # Call next with modified input
-            return await call_next(modified_input)
+            return await call_next(modified_input, *args[1:], **kwargs)
 
         elif self._target_location == "output":  # target_location == "output"
             # Call function first, then attack the output
-            output = await call_next(value)
+            output = await call_next(value, *args[1:], **kwargs)
             modified_output = self._apply_payload_to_function_value_with_exception(output, context)
             return modified_output
         else:

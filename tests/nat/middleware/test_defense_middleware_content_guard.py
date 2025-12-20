@@ -73,7 +73,7 @@ class TestContentSafetyGuardInvoke:
         async def mock_next(_value):
             return "Hello world"
 
-        await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+        await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
         assert mock_llm.ainvoke.called
         # Should analyze the entire output string
         call_args = mock_llm.ainvoke.call_args
@@ -95,7 +95,7 @@ class TestContentSafetyGuardInvoke:
         async def mock_next(_value):
             return {"message": "Hello world", "status": "ok"}
 
-        result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
         assert mock_llm.ainvoke.called
         # Should analyze only the message field
         call_args = mock_llm.ainvoke.call_args
@@ -119,7 +119,7 @@ class TestContentSafetyGuardInvoke:
             return _TestOutputModel(message="harmful content", status="ok")
 
         with patch('nat.middleware.defense.defense_middleware_content_guard.logger'):
-            result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+            result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
             assert mock_llm.ainvoke.called
             # Should analyze only the message field
             call_args = mock_llm.ainvoke.call_args
@@ -143,7 +143,7 @@ class TestContentSafetyGuardInvoke:
         async def mock_next(_value):
             return {"data": {"content": {"text": "Hello world", "metadata": "ignored"}}}
 
-        result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
         assert mock_llm.ainvoke.called
         # Should analyze only the nested text field
         call_args = mock_llm.ainvoke.call_args
@@ -180,7 +180,7 @@ class TestContentSafetyGuardInvoke:
             }
 
         with patch('nat.middleware.defense.defense_middleware_content_guard.logger'):
-            result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+            result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
             assert mock_llm.ainvoke.called
             # Should analyze only the first result's user message
             call_args = mock_llm.ainvoke.call_args
@@ -216,7 +216,7 @@ class TestContentSafetyGuardInvoke:
             }
 
         with patch('nat.middleware.defense.defense_middleware_content_guard.logger'):
-            result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+            result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
             assert mock_llm.ainvoke.called
 
             # call_args is a unittest.mock._Call object: call(args, kwargs)
@@ -253,7 +253,7 @@ class TestContentSafetyGuardInvoke:
             return "harmful content"
 
         with patch('nat.middleware.defense.defense_middleware_content_guard.logger') as mock_logger:
-            result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+            result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
             # Should log warning but return original output
             mock_logger.warning.assert_called()
             assert result == "harmful content"
@@ -273,7 +273,7 @@ class TestContentSafetyGuardInvoke:
             return "harmful content"
 
         with pytest.raises(ValueError, match="Content blocked by safety policy"):
-            await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+            await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
 
     async def test_action_redirection(self, mock_builder, middleware_context):
         """Test redirection action replaces output with safe message."""
@@ -289,7 +289,7 @@ class TestContentSafetyGuardInvoke:
         async def mock_next(_value):
             return "harmful content"
 
-        result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
         # Should return safe refusal message
         assert "cannot" in result.lower() or "sorry" in result.lower() or "cannot assist" in result.lower()
 
@@ -309,7 +309,7 @@ class TestContentSafetyGuardInvoke:
             return "harmful content"
 
         with patch('nat.middleware.defense.defense_middleware_content_guard.logger') as mock_logger:
-            result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+            result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
             # Should detect unsafe and extract categories
             mock_logger.warning.assert_called()
             # Check that categories are in the warning message
@@ -343,7 +343,7 @@ class TestContentSafetyGuardInvoke:
             return "harmful content"
 
         with patch('nat.middleware.defense.defense_middleware_content_guard.logger') as mock_logger:
-            result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+            result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
             # Should detect unsafe and extract categories
             mock_logger.warning.assert_called()
             assert result == "harmful content"
@@ -362,7 +362,7 @@ class TestContentSafetyGuardInvoke:
         async def mock_next(_value):
             return "safe content"
 
-        result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
         assert mock_llm.ainvoke.called
         assert result == "safe content"
 
@@ -381,7 +381,7 @@ class TestContentSafetyGuardInvoke:
             return "harmful content"
 
         with patch('nat.middleware.defense.defense_middleware_content_guard.logger') as mock_logger:
-            result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+            result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
             mock_logger.warning.assert_called()
             assert result == "harmful content"
 
@@ -401,7 +401,7 @@ class TestContentSafetyGuardInvoke:
         async def mock_next(_value):
             return "content"
 
-        result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
         assert mock_llm.ainvoke.called
         assert result == "content"
 
@@ -413,7 +413,7 @@ class TestContentSafetyGuardInvoke:
         middleware._llm = mock_llm
         mock_llm.ainvoke.reset_mock()
 
-        result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
         assert mock_llm.ainvoke.called
         assert result == "content"
 
@@ -424,7 +424,7 @@ class TestContentSafetyGuardInvoke:
         middleware = ContentSafetyGuardMiddleware(config, mock_builder)
         mock_llm.ainvoke.reset_mock()
 
-        result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
         assert not mock_llm.ainvoke.called  # Defense should not run
         assert result == "content"
 
@@ -456,7 +456,7 @@ class TestContentSafetyGuardInvoke:
         async def mock_next(_value):
             return "content"
 
-        result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
         assert mock_llm.ainvoke.called
         assert result == "content"
 
@@ -475,7 +475,7 @@ class TestContentSafetyGuardInvoke:
         async def mock_next_int(_value):
             return 42
 
-        result = await middleware.function_middleware_invoke({}, mock_next_int, middleware_context)
+        result = await middleware.function_middleware_invoke({}, call_next=mock_next_int, context=middleware_context)
         assert mock_llm.ainvoke.called
         call_args = mock_llm.ainvoke.call_args
         # Verify int was converted to string for analysis
@@ -488,7 +488,7 @@ class TestContentSafetyGuardInvoke:
         async def mock_next_float(_value):
             return 3.14
 
-        result = await middleware.function_middleware_invoke({}, mock_next_float, middleware_context)
+        result = await middleware.function_middleware_invoke({}, call_next=mock_next_float, context=middleware_context)
         assert mock_llm.ainvoke.called
         call_args = mock_llm.ainvoke.call_args
         assert "3.14" in str(call_args) or '"3.14"' in str(call_args)
@@ -500,7 +500,7 @@ class TestContentSafetyGuardInvoke:
         async def mock_next_dict(_value):
             return {"key": "value"}
 
-        result = await middleware.function_middleware_invoke({}, mock_next_dict, middleware_context)
+        result = await middleware.function_middleware_invoke({}, call_next=mock_next_dict, context=middleware_context)
         assert mock_llm.ainvoke.called
         call_args = mock_llm.ainvoke.call_args
         # Dict should be converted to string representation
@@ -527,7 +527,7 @@ class TestContentSafetyGuardStreaming:
             yield "world"
 
         chunks = []
-        async for chunk in middleware.function_middleware_stream({}, mock_stream, middleware_context):
+        async for chunk in middleware.function_middleware_stream({}, call_next=mock_stream, context=middleware_context):
             chunks.append(chunk)
 
         assert chunks == ["Hello ", "world"]
@@ -549,7 +549,7 @@ class TestContentSafetyGuardStreaming:
             yield "content"
 
         with pytest.raises(ValueError, match="Content blocked by safety policy"):
-            async for _ in middleware.function_middleware_stream({}, mock_stream, middleware_context):
+            async for _ in middleware.function_middleware_stream({}, call_next=mock_stream, context=middleware_context):
                 pass
 
     async def test_streaming_redirection_action(self, mock_builder, middleware_context):
@@ -568,7 +568,7 @@ class TestContentSafetyGuardStreaming:
             yield "content"
 
         chunks = []
-        async for chunk in middleware.function_middleware_stream({}, mock_stream, middleware_context):
+        async for chunk in middleware.function_middleware_stream({}, call_next=mock_stream, context=middleware_context):
             chunks.append(chunk)
 
         assert len(chunks) == 1
@@ -591,7 +591,9 @@ class TestContentSafetyGuardStreaming:
 
         with patch('nat.middleware.defense.defense_middleware_content_guard.logger') as mock_logger:
             chunks = []
-            async for chunk in middleware.function_middleware_stream({}, mock_stream, middleware_context):
+            async for chunk in middleware.function_middleware_stream({},
+                                                                     call_next=mock_stream,
+                                                                     context=middleware_context):
                 chunks.append(chunk)
 
             assert chunks == ["harmful ", "content"]
@@ -609,7 +611,7 @@ class TestContentSafetyGuardStreaming:
             yield "chunk2"
 
         chunks = []
-        async for chunk in middleware.function_middleware_stream({}, mock_stream, middleware_context):
+        async for chunk in middleware.function_middleware_stream({}, call_next=mock_stream, context=middleware_context):
             chunks.append(chunk)
 
         assert chunks == ["chunk1", "chunk2"]

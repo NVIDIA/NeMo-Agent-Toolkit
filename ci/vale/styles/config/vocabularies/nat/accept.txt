@@ -8,6 +8,7 @@ AIQ
 [Aa]llowlist
 [Aa]nonymize(d?)
 API(s?)
+[Aa]rgs
 Arize
 ART
 arXiv
@@ -90,6 +91,7 @@ jsonlines
 JSONPath
 [Kk]aggle
 [Kk]eycloak
+[Kk]wargs
 LangChain
 Langfuse
 LangGraph
@@ -184,6 +186,7 @@ triages
 [Uu]nencrypted
 [Uu]nittest(s?)
 [Uu]nprocessable
+[Uu]nregister(ing|ed|s)?
 [Uu]ntrusted
 [Uu]ploader
 [Uu]psert
@@ -196,6 +199,3 @@ VectorDB
 XGBoost
 Zep
 zsh
-[Uu]nregister(ing|ed|s)?
-[Aa]rgs
-[Kk]wargs

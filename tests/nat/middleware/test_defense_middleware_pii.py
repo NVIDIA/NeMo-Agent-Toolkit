@@ -75,7 +75,7 @@ class TestPIIDefenseInvoke:
         async def mock_next(_value):
             return "Contact john.doe@example.com"
 
-        await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+        await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
         # Should analyze the entire output string
         assert mock_analyzer.analyze.called
         call_args = mock_analyzer.analyze.call_args
@@ -97,7 +97,7 @@ class TestPIIDefenseInvoke:
         async def mock_next(_value):
             return {"text": "Contact john.doe@example.com", "status": "ok"}
 
-        await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+        await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
         assert mock_analyzer.analyze.called
         # Should analyze only the text field
         call_args = mock_analyzer.analyze.call_args
@@ -119,7 +119,7 @@ class TestPIIDefenseInvoke:
         async def mock_next(_value):
             return _TestOutputModel(text="Contact john.doe@example.com", metadata="ok")
 
-        await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+        await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
         assert mock_analyzer.analyze.called
         # Should analyze only the text field
         call_args = mock_analyzer.analyze.call_args
@@ -141,7 +141,7 @@ class TestPIIDefenseInvoke:
         async def mock_next(_value):
             return {"data": {"content": {"message": "Contact john.doe@example.com", "metadata": "ignored"}}}
 
-        await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+        await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
         assert mock_analyzer.analyze.called
         # Should analyze only the nested message field
         call_args = mock_analyzer.analyze.call_args
@@ -179,7 +179,7 @@ class TestPIIDefenseInvoke:
                 "total": 2
             }
 
-        result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
         assert mock_analyzer.analyze.called
         # Should analyze only the first result's user email
         call_args = mock_analyzer.analyze.call_args
@@ -216,7 +216,7 @@ class TestPIIDefenseInvoke:
             }
 
         with patch('nat.middleware.defense.defense_middleware_pii.logger'):
-            result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+            result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
             assert mock_analyzer.analyze.called
 
             # For partial_compliance, middleware should return original structure unchanged
@@ -264,7 +264,7 @@ class TestPIIDefenseInvoke:
             return "Contact john.doe@example.com"
 
         with patch('nat.middleware.defense.defense_middleware_pii.logger') as mock_logger:
-            await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+            await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
             # Should log warning but return original output
             mock_logger.warning.assert_called()
 
@@ -286,7 +286,7 @@ class TestPIIDefenseInvoke:
             return "Contact john.doe@example.com"
 
         with pytest.raises(ValueError, match="PII detected"):
-            await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+            await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
 
     async def test_action_redirection(self, mock_builder, middleware_context):
         """Test redirection action anonymizes PII."""
@@ -307,7 +307,7 @@ class TestPIIDefenseInvoke:
         async def mock_next(_value):
             return "Contact john.doe@example.com"
 
-        result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
         # Should return anonymized output
         assert "<EMAIL_ADDRESS>" in result
         assert "john.doe@example.com" not in result
@@ -334,7 +334,7 @@ class TestPIIDefenseInvoke:
             return "Contact john.doe@example.com John 555-123-4567"
 
         with patch('nat.middleware.defense.defense_middleware_pii.logger') as mock_logger:
-            await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+            await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
             # Should detect all three entity types
             assert mock_analyzer.analyze.called
             mock_logger.warning.assert_called()
@@ -355,7 +355,7 @@ class TestPIIDefenseInvoke:
         async def mock_next(_value):
             return "Safe content with no PII"
 
-        result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
         assert mock_analyzer.analyze.called
         assert result == "Safe content with no PII"
 
@@ -372,7 +372,7 @@ class TestPIIDefenseInvoke:
         async def mock_next(_value):
             return "content"
 
-        result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
         assert mock_analyzer.analyze.called
         assert result == "content"
 
@@ -384,7 +384,7 @@ class TestPIIDefenseInvoke:
         middleware._anonymizer = MagicMock()
         mock_analyzer.analyze.reset_mock()
 
-        result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
         assert mock_analyzer.analyze.called
         assert result == "content"
 
@@ -394,7 +394,7 @@ class TestPIIDefenseInvoke:
         middleware = PIIDefenseMiddleware(config, mock_builder)
         mock_analyzer.analyze.reset_mock()
 
-        result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
         assert not mock_analyzer.analyze.called  # Defense should not run
         assert result == "content"
 
@@ -422,7 +422,7 @@ class TestPIIDefenseInvoke:
         async def mock_next(_value):
             return "content"
 
-        result = await middleware.function_middleware_invoke({}, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
         assert mock_analyzer.analyze.called
         assert result == "content"
 
@@ -440,7 +440,7 @@ class TestPIIDefenseInvoke:
         async def mock_next_int(_value):
             return 42
 
-        result = await middleware.function_middleware_invoke({}, mock_next_int, middleware_context)
+        result = await middleware.function_middleware_invoke({}, call_next=mock_next_int, context=middleware_context)
         assert mock_analyzer.analyze.called
         call_args = mock_analyzer.analyze.call_args
         # Verify int was converted to string for Presidio analysis
@@ -453,7 +453,7 @@ class TestPIIDefenseInvoke:
         async def mock_next_float(_value):
             return 3.14
 
-        result = await middleware.function_middleware_invoke({}, mock_next_float, middleware_context)
+        result = await middleware.function_middleware_invoke({}, call_next=mock_next_float, context=middleware_context)
         assert mock_analyzer.analyze.called
         call_args = mock_analyzer.analyze.call_args
         assert "3.14" in str(call_args) or '"3.14"' in str(call_args)
@@ -465,7 +465,7 @@ class TestPIIDefenseInvoke:
         async def mock_next_dict(_value):
             return {"key": "value"}
 
-        result = await middleware.function_middleware_invoke({}, mock_next_dict, middleware_context)
+        result = await middleware.function_middleware_invoke({}, call_next=mock_next_dict, context=middleware_context)
         assert mock_analyzer.analyze.called
         call_args = mock_analyzer.analyze.call_args
         # Dict should be converted to string representation
@@ -491,7 +491,7 @@ class TestPIIDefenseStreaming:
             yield "world"
 
         chunks = []
-        async for chunk in middleware.function_middleware_stream({}, mock_stream, middleware_context):
+        async for chunk in middleware.function_middleware_stream({}, call_next=mock_stream, context=middleware_context):
             chunks.append(chunk)
 
         assert chunks == ["Hello ", "world"]
@@ -515,7 +515,7 @@ class TestPIIDefenseStreaming:
             yield "john.doe@example.com"
 
         with pytest.raises(ValueError, match="PII detected in output"):
-            async for _ in middleware.function_middleware_stream({}, mock_stream, middleware_context):
+            async for _ in middleware.function_middleware_stream({}, call_next=mock_stream, context=middleware_context):
                 pass
 
     async def test_streaming_redirection_action(self, mock_builder, middleware_context):
@@ -536,7 +536,7 @@ class TestPIIDefenseStreaming:
             yield "john.doe@example.com"
 
         chunks = []
-        async for chunk in middleware.function_middleware_stream({}, mock_stream, middleware_context):
+        async for chunk in middleware.function_middleware_stream({}, call_next=mock_stream, context=middleware_context):
             chunks.append(chunk)
 
         assert len(chunks) == 1
@@ -561,7 +561,9 @@ class TestPIIDefenseStreaming:
 
         with patch('nat.middleware.defense.defense_middleware_pii.logger') as mock_logger:
             chunks = []
-            async for chunk in middleware.function_middleware_stream({}, mock_stream, middleware_context):
+            async for chunk in middleware.function_middleware_stream({},
+                                                                     call_next=mock_stream,
+                                                                     context=middleware_context):
                 chunks.append(chunk)
 
             assert chunks == ["Contact ", "john.doe@example.com"]
@@ -577,7 +579,7 @@ class TestPIIDefenseStreaming:
             yield "chunk2"
 
         chunks = []
-        async for chunk in middleware.function_middleware_stream({}, mock_stream, middleware_context):
+        async for chunk in middleware.function_middleware_stream({}, call_next=mock_stream, context=middleware_context):
             chunks.append(chunk)
 
         assert chunks == ["chunk1", "chunk2"]

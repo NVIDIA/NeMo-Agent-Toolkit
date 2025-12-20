@@ -76,7 +76,7 @@ class TestOutputVerifierInvoke:
             return 42.0
 
         # Should analyze the entire output (42.0)
-        result = await middleware.function_middleware_invoke(10.0, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke(10.0, call_next=mock_next, context=middleware_context)
         assert mock_llm.ainvoke.called
         # Check that the LLM was called with the output value
         call_args = mock_llm.ainvoke.call_args
@@ -99,7 +99,7 @@ class TestOutputVerifierInvoke:
         async def mock_next(_value):
             return {"result": 42.0, "operation": "multiply"}
 
-        result = await middleware.function_middleware_invoke(10.0, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke(10.0, call_next=mock_next, context=middleware_context)
         assert mock_llm.ainvoke.called
         # Should analyze only the result field (42.0)
         call_args = mock_llm.ainvoke.call_args
@@ -122,7 +122,7 @@ class TestOutputVerifierInvoke:
         async def mock_next(_value):
             return _TestOutputModel(result=42.0, operation="multiply")
 
-        result = await middleware.function_middleware_invoke(10.0, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke(10.0, call_next=mock_next, context=middleware_context)
         assert mock_llm.ainvoke.called
         # Should analyze only the result field
         call_args = mock_llm.ainvoke.call_args
@@ -146,7 +146,7 @@ class TestOutputVerifierInvoke:
         async def mock_next(_value):
             return {"data": {"message": {"result": 42.0, "status": "ok"}}, "metadata": "ignored"}
 
-        result = await middleware.function_middleware_invoke(10.0, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke(10.0, call_next=mock_next, context=middleware_context)
         assert mock_llm.ainvoke.called
         # Should analyze only the nested result field
         call_args = mock_llm.ainvoke.call_args
@@ -169,7 +169,7 @@ class TestOutputVerifierInvoke:
         async def mock_next(_value):
             return {"results": [42.0, 43.0, 44.0], "count": 3}
 
-        result = await middleware.function_middleware_invoke(10.0, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke(10.0, call_next=mock_next, context=middleware_context)
         assert mock_llm.ainvoke.called
         # Should analyze only the first result
         call_args = mock_llm.ainvoke.call_args
@@ -205,7 +205,11 @@ class TestOutputVerifierInvoke:
                 "total": 2
             }
 
-        result = await middleware.function_middleware_invoke({"a": 2, "b": 3}, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke({
+            "a": 2, "b": 3
+        },
+                                                             call_next=mock_next,
+                                                             context=middleware_context)
         assert mock_llm.ainvoke.called
         # Should analyze only the first result's calculation result
         call_args = mock_llm.ainvoke.call_args
@@ -235,7 +239,11 @@ class TestOutputVerifierInvoke:
             return {"items": [{"result": 1.0, "id": 1}, {"result": 2.0, "id": 2}, {"result": 3.0, "id": 3}]}
 
         with patch('nat.middleware.defense.defense_middleware_output_verifier.logger'):
-            result = await middleware.function_middleware_invoke({"a": 2, "b": 3}, mock_next, middleware_context)
+            result = await middleware.function_middleware_invoke({
+                "a": 2, "b": 3
+            },
+                                                                 call_next=mock_next,
+                                                                 context=middleware_context)
             assert mock_llm.ainvoke.called
 
             # call_args is a unittest.mock._Call object: call(args, kwargs)
@@ -271,7 +279,7 @@ class TestOutputVerifierInvoke:
             return 999.0  # Incorrect result
 
         with patch('nat.middleware.defense.defense_middleware_output_verifier.logger') as mock_logger:
-            result = await middleware.function_middleware_invoke(2.0, mock_next, middleware_context)
+            result = await middleware.function_middleware_invoke(2.0, call_next=mock_next, context=middleware_context)
             # Should log warning but return original output
             mock_logger.warning.assert_called()
             assert result == 999.0
@@ -292,7 +300,7 @@ class TestOutputVerifierInvoke:
             return 999.0  # Incorrect result
 
         with pytest.raises(ValueError, match="Content blocked by security policy"):
-            await middleware.function_middleware_invoke(2.0, mock_next, middleware_context)
+            await middleware.function_middleware_invoke(2.0, call_next=mock_next, context=middleware_context)
 
     async def test_action_redirection(self, mock_builder, middleware_context):
         """Test redirection action replaces output with correct answer."""
@@ -312,7 +320,7 @@ class TestOutputVerifierInvoke:
         async def mock_next(_value):
             return 999.0  # Incorrect result
 
-        result = await middleware.function_middleware_invoke(2.0, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke(2.0, call_next=mock_next, context=middleware_context)
         # Should return corrected value
         assert result == 4.0
 
@@ -332,7 +340,7 @@ class TestOutputVerifierInvoke:
         async def mock_next(_value):
             return 42.0
 
-        result = await middleware.function_middleware_invoke(10.0, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke(10.0, call_next=mock_next, context=middleware_context)
         assert mock_llm.ainvoke.called
         assert result == 42.0
 
@@ -344,7 +352,7 @@ class TestOutputVerifierInvoke:
         middleware._llm = mock_llm
         mock_llm.ainvoke.reset_mock()
 
-        result = await middleware.function_middleware_invoke(10.0, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke(10.0, call_next=mock_next, context=middleware_context)
         assert mock_llm.ainvoke.called
         assert result == 42.0
 
@@ -355,7 +363,7 @@ class TestOutputVerifierInvoke:
         middleware = OutputVerifierMiddleware(config, mock_builder)
         mock_llm.ainvoke.reset_mock()
 
-        result = await middleware.function_middleware_invoke(10.0, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke(10.0, call_next=mock_next, context=middleware_context)
         assert not mock_llm.ainvoke.called  # Defense should not run
         assert result == 42.0
 
@@ -387,7 +395,7 @@ class TestOutputVerifierInvoke:
         async def mock_next(_value):
             return 42.0
 
-        result = await middleware.function_middleware_invoke(10.0, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke(10.0, call_next=mock_next, context=middleware_context)
         assert mock_llm.ainvoke.called
         assert result == 42.0
 
@@ -406,7 +414,7 @@ class TestOutputVerifierInvoke:
         async def mock_next_int(_value):
             return 42
 
-        result = await middleware.function_middleware_invoke(10.0, mock_next_int, middleware_context)
+        result = await middleware.function_middleware_invoke(10.0, call_next=mock_next_int, context=middleware_context)
         assert mock_llm.ainvoke.called
         call_args = mock_llm.ainvoke.call_args
         messages = call_args[0][0]  # Extract messages list
@@ -422,7 +430,9 @@ class TestOutputVerifierInvoke:
         async def mock_next_float(_value):
             return 3.14
 
-        result = await middleware.function_middleware_invoke(10.0, mock_next_float, middleware_context)
+        result = await middleware.function_middleware_invoke(10.0,
+                                                             call_next=mock_next_float,
+                                                             context=middleware_context)
         assert mock_llm.ainvoke.called
         call_args = mock_llm.ainvoke.call_args
         messages = call_args[0][0]
@@ -436,7 +446,7 @@ class TestOutputVerifierInvoke:
         async def mock_next_dict(_value):
             return {"key": "value"}
 
-        result = await middleware.function_middleware_invoke(10.0, mock_next_dict, middleware_context)
+        result = await middleware.function_middleware_invoke(10.0, call_next=mock_next_dict, context=middleware_context)
         assert mock_llm.ainvoke.called
         call_args = mock_llm.ainvoke.call_args
         messages = call_args[0][0]
@@ -462,7 +472,7 @@ class TestOutputVerifierInvoke:
         async def mock_next(_value):
             return 42.0  # Simple float
 
-        result = await middleware.function_middleware_invoke(10.0, mock_next, middleware_context)
+        result = await middleware.function_middleware_invoke(10.0, call_next=mock_next, context=middleware_context)
         assert mock_llm.ainvoke.called
         # Should analyze entire value, not try to extract field
         call_args = mock_llm.ainvoke.call_args
@@ -488,7 +498,11 @@ class TestOutputVerifierStreaming:
             yield "6.0"
 
         chunks = []
-        async for chunk in middleware.function_middleware_stream({"a": 2, "b": 3}, mock_stream, middleware_context):
+        async for chunk in middleware.function_middleware_stream({
+                "a": 2, "b": 3
+        },
+                                                                 call_next=mock_stream,
+                                                                 context=middleware_context):
             chunks.append(chunk)
 
         assert chunks == ["6.0"]
@@ -510,7 +524,11 @@ class TestOutputVerifierStreaming:
             yield "-999.0"
 
         with pytest.raises(ValueError, match="Content blocked by security policy"):
-            async for _ in middleware.function_middleware_stream({"a": 2, "b": 3}, mock_stream, middleware_context):
+            async for _ in middleware.function_middleware_stream({
+                    "a": 2, "b": 3
+            },
+                                                                 call_next=mock_stream,
+                                                                 context=middleware_context):
                 pass
 
     async def test_streaming_redirection_action(self, mock_builder, middleware_context):
@@ -529,7 +547,11 @@ class TestOutputVerifierStreaming:
             yield "-999.0"
 
         chunks = []
-        async for chunk in middleware.function_middleware_stream({"a": 2, "b": 3}, mock_stream, middleware_context):
+        async for chunk in middleware.function_middleware_stream({
+                "a": 2, "b": 3
+        },
+                                                                 call_next=mock_stream,
+                                                                 context=middleware_context):
             chunks.append(chunk)
 
         assert len(chunks) == 1
@@ -551,7 +573,11 @@ class TestOutputVerifierStreaming:
 
         with patch('nat.middleware.defense.defense_middleware_output_verifier.logger') as mock_logger:
             chunks = []
-            async for chunk in middleware.function_middleware_stream({"a": 2, "b": 3}, mock_stream, middleware_context):
+            async for chunk in middleware.function_middleware_stream({
+                    "a": 2, "b": 3
+            },
+                                                                     call_next=mock_stream,
+                                                                     context=middleware_context):
                 chunks.append(chunk)
 
             assert chunks == ["-999.0"]
@@ -569,7 +595,7 @@ class TestOutputVerifierStreaming:
             yield "chunk2"
 
         chunks = []
-        async for chunk in middleware.function_middleware_stream({}, mock_stream, middleware_context):
+        async for chunk in middleware.function_middleware_stream({}, call_next=mock_stream, context=middleware_context):
             chunks.append(chunk)
 
         assert chunks == ["chunk1", "chunk2"]

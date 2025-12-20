@@ -80,7 +80,7 @@ async def test_simple_output_replace_strategy():
         stream_output_schema=None,
     )
 
-    result = await middleware.function_middleware_invoke("hello", mock_call_next, context)
+    result = await middleware.function_middleware_invoke("hello", call_next=mock_call_next, context=context)
 
     mock_call_next.assert_called_once_with("hello")
     assert result == "REPLACED"
@@ -116,7 +116,7 @@ async def test_call_limit(call_limit, expected_results):
     results = []
     for i, output in enumerate(outputs):
         mock_call_next = AsyncMock(return_value=output)
-        result = await middleware.function_middleware_invoke(f"input{i}", mock_call_next, context)
+        result = await middleware.function_middleware_invoke(f"input{i}", call_next=mock_call_next, context=context)
         results.append(result)
 
     assert results == expected_results
@@ -147,7 +147,7 @@ async def test_attack_nested_input_field():
         stream_output_schema=None,
     )
 
-    await middleware.function_middleware_invoke(input_value, mock_call_next, context)
+    await middleware.function_middleware_invoke(input_value, call_next=mock_call_next, context=context)
 
     mock_call_next.assert_called_once()
     received_input = mock_call_next.call_args.args[0]
@@ -179,7 +179,7 @@ async def test_attack_input_with_output_passthrough():
         stream_output_schema=None,
     )
 
-    result = await middleware.function_middleware_invoke(input_value, mock_call_next, context)
+    result = await middleware.function_middleware_invoke(input_value, call_next=mock_call_next, context=context)
 
     mock_call_next.assert_called_once()
     assert result.response == "Hi there!"
@@ -211,7 +211,7 @@ async def test_attack_deeply_nested_jsonpath():
         stream_output_schema=None,
     )
 
-    await middleware.function_middleware_invoke(input_value, mock_call_next, context)
+    await middleware.function_middleware_invoke(input_value, call_next=mock_call_next, context=context)
 
     mock_call_next.assert_called_once()
     received_input = mock_call_next.call_args.args[0]
@@ -240,7 +240,7 @@ async def test_attack_nested_output_field():
         stream_output_schema=None,
     )
 
-    result = await middleware.function_middleware_invoke(input_value, mock_call_next, context)
+    result = await middleware.function_middleware_invoke(input_value, call_next=mock_call_next, context=context)
 
     mock_call_next.assert_called_once()
     assert result.response == "MALICIOUS RESPONSE"
@@ -272,7 +272,7 @@ async def test_attack_output_preserves_input():
         stream_output_schema=None,
     )
 
-    result = await middleware.function_middleware_invoke(input_value, mock_call_next, context)
+    result = await middleware.function_middleware_invoke(input_value, call_next=mock_call_next, context=context)
 
     # Input should be unchanged
     mock_call_next.assert_called_once()
@@ -305,7 +305,7 @@ async def test_target_function_filtering():
         stream_output_schema=None,
     )
 
-    await middleware.function_middleware_invoke(input_value, mock_call_next, context)
+    await middleware.function_middleware_invoke(input_value, call_next=mock_call_next, context=context)
 
     # Input should NOT be modified since function is not targeted
     mock_call_next.assert_called_once()
@@ -335,7 +335,7 @@ async def test_multiple_field_matches_with_all_strategy():
         stream_output_schema=None,
     )
 
-    await middleware.function_middleware_invoke(input_value, mock_call_next, context)
+    await middleware.function_middleware_invoke(input_value, call_next=mock_call_next, context=context)
 
     mock_call_next.assert_called_once()
     received_input = mock_call_next.call_args.args[0]
@@ -364,7 +364,7 @@ async def test_multiple_field_matches_with_first_strategy():
         stream_output_schema=None,
     )
 
-    await middleware.function_middleware_invoke(input_value, mock_call_next, context)
+    await middleware.function_middleware_invoke(input_value, call_next=mock_call_next, context=context)
 
     mock_call_next.assert_called_once()
     received_input = mock_call_next.call_args.args[0]
@@ -394,7 +394,7 @@ async def test_multiple_field_matches_with_error_strategy():
     )
 
     with pytest.raises(ValueError, match="Multiple matches found"):
-        await middleware.function_middleware_invoke(input_value, mock_call_next, context)
+        await middleware.function_middleware_invoke(input_value, call_next=mock_call_next, context=context)
 
 
 @pytest.mark.parametrize(

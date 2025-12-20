@@ -250,28 +250,32 @@ class PIIDefenseMiddleware(DefenseMiddleware):
 
     async def function_middleware_invoke(
         self,
-        value: Any,
+        *args: Any,
         call_next: CallNext,
         context: FunctionMiddlewareContext,
+        **kwargs: Any,
     ) -> Any:
         """Intercept function calls to detect and anonymize PII in inputs or outputs.
 
         Args:
-            value: The input value to the function
-            call_next: Function to call the next middleware or the actual function
-            context: Context containing function metadata
+            args: Positional arguments passed to the function (first arg is typically the input value).
+            call_next: Function to call the next middleware or the actual function.
+            context: Context containing function metadata.
+            kwargs: Keyword arguments passed to the function.
 
         Returns:
-            The function result, with PII anonymized if action='redirection'
+            The function result, with PII anonymized if action='redirection'.
         """
+        value = args[0] if args else None
+
         # Check if this defense should apply to this function
         if not self._should_apply_defense(context.name):
             logger.debug("PIIDefenseMiddleware: Skipping %s (not targeted)", context.name)
-            return await call_next(value)
+            return await call_next(value, *args[1:], **kwargs)
 
         try:
             # Call the actual function
-            result = await call_next(value)
+            result = await call_next(value, *args[1:], **kwargs)
 
             # Handle output analysis (only output is supported)
             result = self._process_pii_detection(result, "output", context)
@@ -288,9 +292,10 @@ class PIIDefenseMiddleware(DefenseMiddleware):
 
     async def function_middleware_stream(
         self,
-        value: Any,
+        *args: Any,
         call_next: CallNextStream,
         context: FunctionMiddlewareContext,
+        **kwargs: Any,
     ) -> AsyncIterator[Any]:
         """Intercept streaming calls to detect and anonymize PII in inputs or outputs.
 
@@ -298,17 +303,20 @@ class PIIDefenseMiddleware(DefenseMiddleware):
         For 'partial_compliance' action: Chunks are yielded immediately; violations are logged.
 
         Args:
-            value: The input value to the function
-            call_next: Function to call the next middleware or the actual function
-            context: Context containing function metadata
+            args: Positional arguments passed to the function (first arg is typically the input value).
+            call_next: Function to call the next middleware or the actual function.
+            context: Context containing function metadata.
+            kwargs: Keyword arguments passed to the function.
 
         Yields:
-            The function result chunks, with PII anonymized if action='redirection'
+            The function result chunks, with PII anonymized if action='redirection'.
         """
+        value = args[0] if args else None
+
         # Check if this defense should apply to this function
         if not self._should_apply_defense(context.name):
             logger.debug("PIIDefenseMiddleware: Skipping %s (not targeted)", context.name)
-            async for chunk in call_next(value):
+            async for chunk in call_next(value, *args[1:], **kwargs):
                 yield chunk
             return
 
@@ -316,7 +324,7 @@ class PIIDefenseMiddleware(DefenseMiddleware):
             buffer_chunks = self.config.action in ("refusal", "redirection")
             accumulated_chunks: list[Any] = []
 
-            async for chunk in call_next(value):
+            async for chunk in call_next(value, *args[1:], **kwargs):
                 if buffer_chunks:
                     accumulated_chunks.append(chunk)
                 else:
@@ -345,4 +353,5 @@ class PIIDefenseMiddleware(DefenseMiddleware):
                 context.name,
                 exc_info=True,
             )
+            raise
             raise

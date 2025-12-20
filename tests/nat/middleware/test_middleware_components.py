@@ -54,9 +54,10 @@ class _TestMiddleware(FunctionMiddleware):
     async def post_invoke(self, context):
         return None
 
-    async def function_middleware_invoke(self, value, call_next, context):
+    async def function_middleware_invoke(self, *args, call_next, context, **kwargs):
+        value = args[0] if args else None
         self.call_order.append(f"{self.test_param}_pre")
-        result = await call_next(value)
+        result = await call_next(value, *args[1:], **kwargs)
         self.call_order.append(f"{self.test_param}_post")
         return result
 
@@ -667,14 +668,15 @@ class TestFunctionGroupMiddlewares:
             async def post_invoke(self, context):
                 return None
 
-            async def function_middleware_invoke(self, value, call_next, context):
+            async def function_middleware_invoke(self, *args, call_next, context, **kwargs):
+                value = args[0] if args else None
                 results.append(f"{self.name}_pre")
                 # Modify value based on middleware name
                 if self.name == "first":
                     value = value * 2
                 elif self.name == "second":
                     value = value + 10
-                result = await call_next(value)
+                result = await call_next(value, *args[1:], **kwargs)
                 results.append(f"{self.name}_post")
                 return result
 

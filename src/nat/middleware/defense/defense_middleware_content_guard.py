@@ -348,29 +348,35 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
             # No field extraction - return sanitized content directly
             return sanitized_content
 
-    async def function_middleware_invoke(self, value: Any, call_next: CallNext,
-                                         context: FunctionMiddlewareContext) -> Any:
+    async def function_middleware_invoke(self,
+                                         *args: Any,
+                                         call_next: CallNext,
+                                         context: FunctionMiddlewareContext,
+                                         **kwargs: Any) -> Any:
         """Apply content safety guard check to function invocation.
 
         This is the core logic for content safety guard defense - each defense implements
         its own invoke/stream based on its specific strategy.
 
         Args:
-            value: Function input (original_input from context)
-            call_next: Next middleware/function to call
-            context: Function metadata (provides context state)
+            args: Positional arguments passed to the function (first arg is typically the input value).
+            call_next: Next middleware/function to call.
+            context: Function metadata (provides context state).
+            kwargs: Keyword arguments passed to the function.
 
         Returns:
-            Function output (potentially blocked or sanitized)
+            Function output (potentially blocked or sanitized).
         """
+        value = args[0] if args else None
+
         # Check if defense should apply to this function
         if not self._should_apply_defense(context.name):
             logger.debug("ContentSafetyGuardMiddleware: Skipping %s (not targeted)", context.name)
-            return await call_next(value)
+            return await call_next(value, *args[1:], **kwargs)
 
         try:
             # Call the function
-            output = await call_next(value)
+            output = await call_next(value, *args[1:], **kwargs)
 
             # Handle output analysis (only output is supported)
             output = await self._process_content_safety_detection(output, "output", context, original_input=value)
@@ -382,26 +388,30 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
             raise
 
     async def function_middleware_stream(self,
-                                         value: Any,
+                                         *args: Any,
                                          call_next: CallNextStream,
-                                         context: FunctionMiddlewareContext) -> AsyncIterator[Any]:
+                                         context: FunctionMiddlewareContext,
+                                         **kwargs: Any) -> AsyncIterator[Any]:
         """Apply content safety guard check to streaming function.
 
         For 'refusal' and 'redirection' actions: Chunks are buffered and checked before yielding.
         For 'partial_compliance' action: Chunks are yielded immediately; violations are logged.
 
         Args:
-            value: Function input
-            call_next: Next middleware/function to call
-            context: Function metadata
+            args: Positional arguments passed to the function (first arg is typically the input value).
+            call_next: Next middleware/function to call.
+            context: Function metadata.
+            kwargs: Keyword arguments passed to the function.
 
         Yields:
-            Function output chunks (potentially blocked or sanitized)
+            Function output chunks (potentially blocked or sanitized).
         """
+        value = args[0] if args else None
+
         # Check if defense should apply to this function
         if not self._should_apply_defense(context.name):
             logger.debug("ContentSafetyGuardMiddleware: Skipping %s (not targeted)", context.name)
-            async for chunk in call_next(value):
+            async for chunk in call_next(value, *args[1:], **kwargs):
                 yield chunk
             return
 
@@ -409,7 +419,7 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
             buffer_chunks = self.config.action in ("refusal", "redirection")
             accumulated_chunks: list[Any] = []
 
-            async for chunk in call_next(value):
+            async for chunk in call_next(value, *args[1:], **kwargs):
                 if buffer_chunks:
                     accumulated_chunks.append(chunk)
                 else:
