@@ -1846,6 +1846,16 @@ async def register_test_middleware(config: TMiddlewareConfig, b: Builder):
             super().__init__()
             self.raise_error = raise_error
 
+        @property
+        def enabled(self) -> bool:
+            return True
+
+        async def pre_invoke(self, _context):
+            return None
+
+        async def post_invoke(self, _context):
+            return None
+
     if config.raise_error:
         raise ValueError("Middleware initialization failed")
 

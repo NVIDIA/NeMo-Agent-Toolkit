@@ -19,7 +19,7 @@ limitations under the License.
 
 This guide provides a step-by-step process to enable observability in a NVIDIA NeMo Agent toolkit workflow that exports runtime traces to an Elasticsearch instance that is part of the [NVIDIA Data Flywheel Blueprint](https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel). The Data Flywheel Blueprint can then leverage the traces to fine-tune and evaluate smaller models which can be deployed to replace the original model to reduce latency.
 
-The Data Flywheel integration supports LangChain/LangGraph based workflows with `nim` and `openai` LLM providers and can be enabled with just a few lines of configuration.
+The Data Flywheel integration supports LangChain/LangGraph-based workflows with `nim` and `openai` [LLM](../../build-workflows/llms/index.md) providers and can be enabled with just a few lines of configuration.
 
 ## Supported Framework and Provider Combinations
 
@@ -28,7 +28,7 @@ The Data Flywheel integration currently supports LangChain (as used in LangChain
 - `_type: openai` - OpenAI provider
 - `_type: nim` - NVIDIA NIM provider
 
-The integration captures `LLM_START` events for completions and tool calls when using these specific combinations. Other framework and provider combinations are not currently supported.
+The integration captures `LLM_START` events for completions and [tool](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) calls when using these specific combinations. Other framework and provider combinations are not currently supported.
 
 ## Step 1: Prerequisites
 
@@ -71,7 +71,7 @@ The Data Flywheel integration supports the following core configuration paramete
 
 | Parameter | Description | Required | Example |
 |-----------|-------------|----------|---------|
-| `client_id` | Identifier for your NAT application to distinguish traces between deployments | Yes | `"my_nat_app"` |
+| `client_id` | Identifier for your application to distinguish traces between deployments | Yes | `"my_nat_app"` |
 | `index` | Elasticsearch index name where traces will be stored | Yes | `"flywheel"` |
 | `endpoint` | Elasticsearch endpoint URL | Yes | `"https://elasticsearch.example.com:9200"` |
 | `username` | Elasticsearch username for authentication | No | `"elastic"` |

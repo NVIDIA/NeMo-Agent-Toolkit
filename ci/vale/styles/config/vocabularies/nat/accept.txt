@@ -196,3 +196,6 @@ VectorDB
 XGBoost
 Zep
 zsh
+[Uu]nregister(ing|ed|s)?
+[Aa]rgs
+[Kk]wargs

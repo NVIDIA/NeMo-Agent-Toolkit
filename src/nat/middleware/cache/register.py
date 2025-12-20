@@ -12,21 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from __future__ import annotations
-
-from collections.abc import AsyncGenerator
 
 from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_middleware
 from nat.middleware.cache.cache_middleware import CacheMiddleware
-from nat.middleware.cache.cache_middleware import CacheMiddlewareConfig
+from nat.middleware.cache.cache_middleware_config import CacheMiddlewareConfig
 
 
 @register_middleware(config_type=CacheMiddlewareConfig)
-async def cache_middleware(
-    config: CacheMiddlewareConfig,
-    builder: Builder,
-) -> AsyncGenerator[CacheMiddleware, None]:
+async def cache_middleware(config: CacheMiddlewareConfig, builder: Builder):
     """Build a cache middleware from configuration.
 
     Args:

@@ -37,81 +37,214 @@ from typing import Any
 from nat.middleware.middleware import CallNext
 from nat.middleware.middleware import CallNextStream
 from nat.middleware.middleware import FunctionMiddlewareContext
+from nat.middleware.middleware import InvocationContext
 from nat.middleware.middleware import Middleware
 
 
 class FunctionMiddleware(Middleware):
-    """Specialized middleware for function-specific wrapping.
+    """Base class for function middleware with pre/post-invoke hooks.
 
-    This class extends the base Middleware class and provides function-specific
-    wrapping methods. Functions that use this middleware type will call
-    ``function_middleware_invoke`` and ``function_middleware_stream`` instead of
-    the base ``middleware_invoke`` and ``middleware_stream`` methods.
+    Middleware intercepts function calls and can:
+    - Transform inputs before execution (pre_invoke)
+    - Transform outputs after execution (post_invoke)
+    - Override function_middleware_invoke for full control
+
+    Lifecycle:
+    - Framework checks ``enabled`` property before calling any methods
+    - If disabled, middleware is skipped entirely (no methods called)
+    - Users do NOT need to check ``enabled`` in their implementations
+
+    Inherited abstract members that must be implemented:
+    - enabled: Property that returns whether middleware should run
+    - pre_invoke: Transform inputs before function execution
+    - post_invoke: Transform outputs after function execution
+
+    Context Flow:
+    - FunctionMiddlewareContext (frozen): Static function metadata only
+    - InvocationContext: Unified context for both pre and post invoke phases
+    - Pre-invoke: output is None, modify modified_args/modified_kwargs
+    - Post-invoke: output has the result, modify output to transform
+
+    Example::
+
+        class LoggingMiddleware(FunctionMiddleware):
+            def __init__(self, config: LoggingConfig):
+                super().__init__()
+                self._config = config
+
+            @property
+            def enabled(self) -> bool:
+                return self._config.enabled
+
+            async def pre_invoke(self, context: InvocationContext) -> InvocationContext | None:
+                logger.info(f"Calling {context.function_context.name} with {context.modified_args}")
+                logger.info(f"Original args: {context.original_args}")
+                return None  # Pass through unchanged
+
+            async def post_invoke(self, context: InvocationContext) -> InvocationContext | None:
+                logger.info(f"Result: {context.output}")
+                return None  # Pass through unchanged
     """
 
-    async def middleware_invoke(self, value: Any, call_next: CallNext, context: FunctionMiddlewareContext) -> Any:
+    # ==================== Middleware Delegation ====================
+    async def middleware_invoke(self,
+                                *args: Any,
+                                call_next: CallNext,
+                                context: FunctionMiddlewareContext,
+                                **kwargs: Any) -> Any:
         """Delegate to function_middleware_invoke for function-specific handling."""
-        return await self.function_middleware_invoke(value, call_next, context)
+        return await self.function_middleware_invoke(*args, call_next=call_next, context=context, **kwargs)
 
-    async def middleware_stream(self, value: Any, call_next: CallNextStream,
-                                context: FunctionMiddlewareContext) -> AsyncIterator[Any]:
+    async def middleware_stream(self,
+                                *args: Any,
+                                call_next: CallNextStream,
+                                context: FunctionMiddlewareContext,
+                                **kwargs: Any) -> AsyncIterator[Any]:
         """Delegate to function_middleware_stream for function-specific handling."""
-        async for chunk in self.function_middleware_stream(value, call_next, context):
+        async for chunk in self.function_middleware_stream(*args, call_next=call_next, context=context, **kwargs):
             yield chunk
 
-    async def function_middleware_invoke(self, value: Any, call_next: CallNext,
-                                         context: FunctionMiddlewareContext) -> Any:
-        """Function-specific middleware for single-output invocations.
+    # ==================== Orchestration ====================
+
+    async def function_middleware_invoke(
+        self,
+        *args: Any,
+        call_next: CallNext,
+        context: FunctionMiddlewareContext,
+        **kwargs: Any,
+    ) -> Any:
+        """Execute middleware hooks around function call.
+
+        Default implementation orchestrates: pre_invoke → call_next → post_invoke
+
+        Override for full control over execution flow (e.g., caching,
+        retry logic, conditional execution).
+
+        Note: Framework checks ``enabled`` before calling this method.
+        You do NOT need to check ``enabled`` yourself.
 
         Args:
-            value: The input value to process
-            call_next: Callable to invoke the next middleware or function
-            context: Metadata about the function being wrapped
+            args: Positional arguments for the function
+            call_next: Callable to invoke next middleware or target function
+            context: Static function metadata
+            kwargs: Keyword arguments for the function
 
         Returns:
-            The (potentially modified) output from the function
-
-        The default implementation simply delegates to ``call_next``. Override this
-        in subclasses to add function-specific preprocessing and postprocessing.
+            The (potentially transformed) function output
         """
-        return await call_next(value)
+        # Build invocation context with frozen originals + mutable current
+        # output starts as None (pre-invoke phase)
+        ctx = InvocationContext(
+            function_context=context,
+            original_args=args,
+            original_kwargs=dict(kwargs),
+            modified_args=args,
+            modified_kwargs=dict(kwargs),
+            output=None,
+        )
 
-    async def function_middleware_stream(self,
-                                         value: Any,
-                                         call_next: CallNextStream,
-                                         context: FunctionMiddlewareContext) -> AsyncIterator[Any]:
-        """Function-specific middleware for streaming invocations.
+        # Pre-invoke transformation (output is None at this phase)
+        result = await self.pre_invoke(ctx)
+        if result is not None:
+            ctx = result
+
+        # Execute function with (potentially modified) args/kwargs
+        ctx.output = await call_next(*ctx.modified_args, **ctx.modified_kwargs)
+
+        # Post-invoke transformation (output now has the result)
+        result = await self.post_invoke(ctx)
+        if result is not None:
+            ctx = result
+
+        return ctx.output
+
+    async def function_middleware_stream(
+        self,
+        *args: Any,
+        call_next: CallNextStream,
+        context: FunctionMiddlewareContext,
+        **kwargs: Any,
+    ) -> AsyncIterator[Any]:
+        """Execute middleware hooks around streaming function call.
+
+        Pre-invoke runs once before streaming starts.
+        Post-invoke runs per-chunk as they stream through.
+
+        Override for custom streaming behavior (e.g., buffering,
+        aggregation, chunk filtering).
+
+        Note: Framework checks ``enabled`` before calling this method.
+        You do NOT need to check ``enabled`` yourself.
 
         Args:
-            value: The input value to process
-            call_next: Callable to invoke the next middleware or function stream
-            context: Metadata about the function being wrapped
+            args: Positional arguments for the function
+            call_next: Callable to invoke next middleware or target stream
+            context: Static function metadata
+            kwargs: Keyword arguments for the function
 
         Yields:
-            Chunks from the stream (potentially modified)
-
-        The default implementation forwards to ``call_next`` untouched. Override this
-        in subclasses to add function-specific preprocessing and chunk transformations.
+            Stream chunks (potentially transformed by post_invoke)
         """
-        async for chunk in call_next(value):
-            yield chunk
+        # Build invocation context with frozen originals + mutable current
+        # output starts as None (pre-invoke phase)
+        ctx = InvocationContext(
+            function_context=context,
+            original_args=args,
+            original_kwargs=dict(kwargs),
+            modified_args=args,
+            modified_kwargs=dict(kwargs),
+            output=None,
+        )
+
+        # Pre-invoke transformation (once before streaming)
+        result = await self.pre_invoke(ctx)
+        if result is not None:
+            ctx = result
+
+        # Stream with per-chunk post-invoke
+        async for chunk in call_next(*ctx.modified_args, **ctx.modified_kwargs):
+            # Set output for this chunk
+            ctx.output = chunk
+
+            # Post-invoke transformation per chunk
+            result = await self.post_invoke(ctx)
+            if result is not None:
+                ctx = result
+
+            yield ctx.output
 
 
 class FunctionMiddlewareChain:
-    """Utility that composes middleware-style callables.
+    """Composes middleware into an execution chain.
 
-    This class builds a chain of middleware that executes in order,
-    with each middleware able to preprocess inputs, call the next middleware,
-    and postprocess outputs.
+    The chain builder checks each middleware's ``enabled`` property.
+    Disabled middleware is skipped entirely—no methods are called.
+
+    Execution order:
+    - Pre-invoke: first middleware → last middleware → function
+    - Post-invoke: function → last middleware → first middleware
+
+    Context:
+    - FunctionMiddlewareContext contains only static function metadata
+    - Original args/kwargs are captured by the orchestration layer
+    - Middleware receives InvocationContext with frozen originals and mutable args/output
     """
 
-    def __init__(self, *, middleware: Sequence[Middleware], context: FunctionMiddlewareContext) -> None:
+    def __init__(self, *, middleware: Sequence[FunctionMiddleware], context: FunctionMiddlewareContext) -> None:
+        """Initialize the middleware chain.
+
+        Args:
+            middleware: Sequence of middleware to chain (order matters)
+            context: Static function metadata
+        """
         self._middleware = tuple(middleware)
         self._context = context
 
     def build_single(self, final_call: CallNext) -> CallNext:
         """Build the middleware chain for single-output invocations.
 
+        Disabled middleware (enabled=False) is skipped entirely.
+
         Args:
             final_call: The final function to call (the actual function implementation)
 
@@ -121,18 +254,28 @@ class FunctionMiddlewareChain:
         call = final_call
 
         for mw in reversed(self._middleware):
+            # Framework-enforced: skip disabled middleware
+            if not mw.enabled:
+                continue
+
             call_next = call
 
-            async def wrapped(value: Any, *, _middleware: Middleware = mw, _call_next: CallNext = call_next) -> Any:
-                return await _middleware.middleware_invoke(value, _call_next, self._context)
+            async def wrapped(*args: Any,
+                              _middleware: FunctionMiddleware = mw,
+                              _call_next: CallNext = call_next,
+                              _context: FunctionMiddlewareContext = self._context,
+                              **kwargs: Any) -> Any:
+                return await _middleware.middleware_invoke(*args, call_next=_call_next, context=_context, **kwargs)
 
-            call = wrapped
+            call = wrapped  # type: ignore[assignment]
 
         return call
 
     def build_stream(self, final_call: CallNextStream) -> CallNextStream:
         """Build the middleware chain for streaming invocations.
 
+        Disabled middleware (enabled=False) is skipped entirely.
+
         Args:
             final_call: The final function to call (the actual function implementation)
 
@@ -142,16 +285,21 @@ class FunctionMiddlewareChain:
         call = final_call
 
         for mw in reversed(self._middleware):
+            if not mw.enabled:
+                continue
+
             call_next = call
 
-            async def wrapped(value: Any,
-                              *,
-                              _middleware: Middleware = mw,
-                              _call_next: CallNextStream = call_next) -> AsyncIterator[Any]:
-                async for chunk in _middleware.middleware_stream(value, _call_next, self._context):
+            async def wrapped(*args: Any,
+                              _middleware: FunctionMiddleware = mw,
+                              _call_next: CallNextStream = call_next,
+                              _context: FunctionMiddlewareContext = self._context,
+                              **kwargs: Any) -> AsyncIterator[Any]:
+                stream = _middleware.middleware_stream(*args, call_next=_call_next, context=_context, **kwargs)
+                async for chunk in stream:
                     yield chunk
 
-            call = wrapped
+            call = wrapped  # type: ignore[assignment]
 
         return call
 

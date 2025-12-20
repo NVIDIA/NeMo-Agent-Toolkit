@@ -19,20 +19,20 @@ limitations under the License.
 
 ## Overview
 
-Middleware provides a powerful mechanism for adding cross-cutting concerns to functions in the NeMo Agent Toolkit without modifying the function implementation itself. Like middleware in web frameworks (Express.js, FastAPI, etc.), middleware wraps function calls with a four-phase pattern:
+Middleware provides a powerful mechanism for adding cross-cutting concerns to functions in the NeMo Agent toolkit without modifying the function implementation itself. Like middleware in web frameworks (Express.js, FastAPI, etc.), middleware wraps function calls with a four-phase pattern:
 
 1. **Preprocess** - Inspect and modify inputs before calling next
 2. **Call Next** - Delegate to the next middleware or function
 3. **Postprocess** - Process, transform, or augment outputs
 4. **Continue** - Return or yield the final result
 
-Middleware components are first-class components in NAT, configured in YAML and built by the workflow builder, just like retrievers, memory providers, and other components.
+Middleware components are first-class components in NeMo Agent toolkit, configured in YAML and built by the workflow builder, just like retrievers, [memory](../memory.md) providers, and other components.
 
 ## Key Concepts
 
 **Middleware Component**: A middleware component that:
 - Is configured in YAML with a `middleware` section
-- Is built by the workflow builder before functions and function groups
+- Is built by the workflow builder before [functions](../functions-and-function-groups/functions.md) and [function groups](../functions-and-function-groups/function-groups.md)
 - Wraps a function's `ainvoke` or `astream` methods
 - Can be applied to individual functions or entire function groups
 - Can preprocess inputs, postprocess outputs, or short-circuit execution
@@ -43,7 +43,7 @@ Middleware components are first-class components in NAT, configured in YAML and 
 
 ## Component-Based Architecture
 
-Middleware follows the same component pattern as other NAT components:
+Middleware follows the same component pattern as other components:
 
 ```yaml
 middleware:
@@ -80,94 +80,164 @@ async def my_function(config, builder):
 
 ### Step 1: Define the Configuration
 
-Create a configuration class inheriting from `FunctionMiddlewareBaseConfig`:
+Create a configuration class inheriting from `DynamicMiddlewareConfig`:
 
 ```python
 from pydantic import Field
-from nat.data_models.middleware import FunctionMiddlewareBaseConfig
+from nat.middleware.dynamic.dynamic_middleware_config import DynamicMiddlewareConfig
 
 
-class LoggingMiddlewareConfig(FunctionMiddlewareBaseConfig, name="logging_middleware"):
-  """Configuration for logging middleware."""
+class LoggingMiddlewareConfig(DynamicMiddlewareConfig, name="logging_middleware"):
+    """Configuration for logging middleware.
 
-  log_level: str = Field(
-    default="INFO",
-    description="Logging level (DEBUG, INFO, WARNING, ERROR)"
-  )
-  include_inputs: bool = Field(
-    default=True,
-    description="Whether to log function inputs"
-  )
-  include_outputs: bool = Field(
-    default=True,
-    description="Whether to log function outputs"
-  )
+    Inherits dynamic discovery features (register_llms, register_workflow_functions,
+    and so on) and the enabled toggle from DynamicMiddlewareConfig.
+    """
+
+    log_level: str = Field(
+        default="INFO",
+        description="Logging level (DEBUG, INFO, WARNING, ERROR)"
+    )
 ```
+
+The `DynamicMiddlewareConfig` base class provides the following fields:
+
+**Enable/Disable:**
+
+- `enabled` (`bool`, default=`True`): Toggle middleware on or off at runtime through configuration
+
+**Auto-Discovery Flags:**
+
+When set to `True`, these flags automatically intercept all components of that type:
+
+- `register_llms` (`bool`, default=`False`): Auto-discover and intercept all LLM component functions
+- `register_embedders` (`bool`, default=`False`): Auto-discover and intercept all embedder component functions
+- `register_retrievers` (`bool`, default=`False`): Auto-discover and intercept all retriever component functions
+- `register_memory` (`bool`, default=`False`): Auto-discover and intercept all memory provider component functions
+- `register_object_stores` (`bool`, default=`False`): Auto-discover and intercept all object store component functions
+- `register_auth_providers` (`bool`, default=`False`): Auto-discover and intercept all authentication provider component functions
+- `register_workflow_functions` (`bool`, default=`False`): Auto-discover and intercept all workflow functions
+
+**Explicit Component References:**
+
+For fine-grained control, specify exactly which components to intercept (alternative to auto-discovery):
+
+- `llms` (list, default=`[]`): Specific LLM component names to intercept
+- `embedders` (list, default=`[]`): Specific embedder component names to intercept
+- `retrievers` (list, default=`[]`): Specific retriever component names to intercept
+- `memory` (list, default=`[]`): Specific memory provider component names to intercept
+- `object_stores` (list, default=`[]`): Specific object store component names to intercept
+- `auth_providers` (list, default=`[]`): Specific authentication provider component names to intercept
+
+**Function Allow Lists:**
+
+- `allowed_component_functions` (object, default=`None`): Controls which methods on each component type can be wrapped. When `None`, uses built-in defaults. Provide to extend the defaults with additional method names:
+  - `llms` (set of strings): Additional LLM methods to allow
+  - `embedders` (set of strings): Additional embedder methods to allow
+  - `retrievers` (set of strings): Additional retriever methods to allow
+  - `memory` (set of strings): Additional memory methods to allow
+  - `object_stores` (set of strings): Additional object store methods to allow
+  - `authentication` (set of strings): Additional authentication methods to allow
+
+**How toggles and allow lists interact:**
+
+1. Auto-discovery flags (`register_*`) control *which components* are intercepted
+2. Explicit references (`llms`, `embedders`, and so on) provide fine-grained component selection
+3. `allowed_component_functions` controls *which methods* on those components can be wrapped
+4. Only methods in the allowlist are wrapped; others pass through unchanged
+
+**Default Allowed Functions by Component Type:**
+
+The following methods are allowed by default for each component type. You can extend these lists through `allowed_component_functions`:
+
+| Component Type | Default Allowed Methods |
+|----------------|------------------------|
+| **LLMs** | `invoke`, `ainvoke`, `stream`, `astream` |
+| **Embedders** | `embed_query`, `aembed_query` |
+| **Retrievers** | `search` |
+| **Memory** | `search`, `add_items`, `remove_items` |
+| **Object Stores** | `put_object`, `get_object`, `delete_object`, `upsert_object` |
+| **Authentication** | `authenticate` |
+
+Workflow functions (`register_workflow_functions`) intercept the function's `ainvoke` and `astream` methods directly.
 
 ### Step 2: Implement the Middleware Class
 
-Create the middleware class inheriting from `FunctionMiddleware`:
+Create the middleware class inheriting from `DynamicFunctionMiddleware`:
 
 ```python
-from nat.middleware import FunctionMiddleware, FunctionMiddlewareContext
-from nat.middleware import CallNext, CallNextStream
 import logging
-from typing import Any
-from collections.abc import AsyncIterator
+
+from nat.middleware.dynamic.dynamic_function_middleware import DynamicFunctionMiddleware
+from nat.middleware.middleware import InvocationContext
+
+logger = logging.getLogger(__name__)
 
 
-class LoggingMiddleware(FunctionMiddleware):
-    """Logging middleware that tracks function calls."""
+class LoggingMiddleware(DynamicFunctionMiddleware):
+    """Logging middleware that tracks function calls.
 
-    def __init__(self, *, log_level: str, include_inputs: bool, include_outputs: bool):
-        super().__init__(is_final=False)
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(getattr(logging, log_level.upper()))
-        self.include_inputs = include_inputs
-        self.include_outputs = include_outputs
+    Extends DynamicFunctionMiddleware to get automatic chain orchestration
+    and dynamic discovery features. Custom logic is implemented through
+    the pre_invoke and post_invoke hooks.
+    """
 
-    async def function_middleware_invoke(
-        self,
-        value: Any,
-        call_next: CallNext,
-        context: FunctionMiddlewareContext
-    ) -> Any:
-        """Middleware for single-output invocations."""
-        # Phase 1: Preprocess
-        if self.include_inputs:
-            self.logger.info(f"Calling {context.name} with input: {value}")
+    async def pre_invoke(self, context: InvocationContext) -> InvocationContext | None:
+        """Log inputs before function execution.
 
-        # Phase 2: Call next
-        result = await call_next(value)
+        Args:
+            context: Invocation context containing:
+                - function_context: Static function metadata (frozen)
+                - original_args: Original function arguments before transformation (frozen)
+                - original_kwargs: Original function keyword arguments before transformation (frozen)
+                - modified_args: Current function arguments (mutable)
+                - modified_kwargs: Current function keyword arguments (mutable)
+                - output: None (function not yet called)
 
-        # Phase 3: Postprocess
-        if self.include_outputs:
-            self.logger.info(f"Function {context.name} returned: {result}")
+        Returns:
+            InvocationContext if modified, or None to pass through unchanged
+        """
+        log_level = getattr(logging, self._config.log_level.upper(), logging.INFO)
+        logger.log(log_level, f"Calling {context.function_context.name} with args: {context.modified_args}")
 
-        # Phase 4: Continue
-        return result
+        # Optional: Check if args were modified by prior middleware
+        if context.modified_args != context.original_args:
+            logger.log(log_level, f"  (original args were: {context.original_args})")
 
-    async def function_middleware_stream(
-        self,
-        value: Any,
-        call_next: CallNextStream,
-        context: FunctionMiddlewareContext
-    ) -> AsyncIterator[Any]:
-        """Middleware for streaming invocations."""
-        # Phase 1: Preprocess
-        if self.include_inputs:
-            self.logger.info(f"Streaming call to {context.name} with input: {value}")
+        return None  # Pass through unchanged
 
-        # Phase 2-3: Call next and yield chunks
-        chunk_count = 0
-        async for chunk in call_next(value):
-            chunk_count += 1
-            yield chunk
+    async def post_invoke(self, context: InvocationContext) -> InvocationContext | None:
+        """Log outputs after function execution.
 
-        # Phase 4: Cleanup
-        if self.include_outputs:
-            self.logger.info(f"Streamed {chunk_count} chunks from {context.name}")
+        Args:
+            context: Invocation context (Pydantic model) containing:
+                - function_context: Static function metadata (frozen)
+                - original_args: Original function arguments before transformation (frozen)
+                - original_kwargs: Original function keyword arguments before transformation (frozen)
+                - modified_args: Function arguments after pre-invoke transforms (mutable)
+                - modified_kwargs: Function keyword arguments after pre-invoke transforms (mutable)
+                - output: Current output value (mutable)
+
+        Returns:
+            InvocationContext if modified, or None to pass through unchanged
+        """
+        log_level = getattr(logging, self._config.log_level.upper(), logging.INFO)
+        logger.log(log_level, f"Function {context.function_context.name} returned: {context.output}")
+        return None  # Pass through unchanged
 ```
+
+Key benefits of extending `DynamicFunctionMiddleware`:
+
+- **No manual chain handling**: The base class manages `call_next` orchestration automatically
+- **Separate hooks**: `pre_invoke` handles input processing, `post_invoke` handles output processing
+- **Unified context**: Single `InvocationContext` used for both phases
+  - Pre-invoke: `output` is `None`, modify `modified_args`/`modified_kwargs`
+  - Post-invoke: `output` has the result, modify to transform
+- **Chain awareness**: Access `original_args` to see original values versus current `modified_args`
+- **Frozen originals**: `original_args`/`original_kwargs` are immutable (Pydantic enforced)
+- **Mutable current values**: Modify `modified_args`/`modified_kwargs`/`output` in place, return context to signal changes
+- **Streaming support built-in**: `post_invoke` is called per-chunk for streaming functions
+- **Configuration access**: Use `self._config` to access your configuration values
 
 ### Step 3: Register the Component
 
@@ -190,11 +260,7 @@ async def logging_middleware(config: LoggingMiddlewareConfig, builder: Builder):
     Yields:
         A configured logging middleware instance
     """
-    yield LoggingMiddleware(
-        log_level=config.log_level,
-        include_inputs=config.include_inputs,
-        include_outputs=config.include_outputs
-    )
+    yield LoggingMiddleware(config=config, builder=builder)
 ```
 
 ### Step 4: Configure in YAML
@@ -206,8 +272,10 @@ middleware:
   request_logger:
     _type: logging_middleware
     log_level: DEBUG
-    include_inputs: true
-    include_outputs: true
+    enabled: true  # Inherited from DynamicMiddlewareConfig
+    # Dynamic discovery options (inherited):
+    # register_llms: true
+    # register_workflow_functions: true
 
 functions:
   my_api_function:
@@ -340,8 +408,9 @@ class ValidationMiddleware(FunctionMiddleware):
         super().__init__(is_final=True)  # Mark as final
         self.strict_mode = strict_mode
 
-    async def function_middleware_invoke(self, value, call_next, context):
-        # Validate input against schema
+    async def function_middleware_invoke(self, *args, call_next, context, **kwargs):
+        # Validate input against schema (using first arg)
+        value = args[0] if args else None
         try:
             validated = context.input_schema.model_validate(value)
         except ValidationError as e:
@@ -352,7 +421,7 @@ class ValidationMiddleware(FunctionMiddleware):
                 validated = value
 
         # Only call next if validation passed
-        return await call_next(validated)
+        return await call_next(validated, *args[1:], **kwargs)
 ```
 
 ### Chaining Multiple Middleware
@@ -502,19 +571,25 @@ Test middleware in isolation:
 ```python
 import pytest
 from unittest.mock import MagicMock
+from nat.middleware.middleware import FunctionMiddlewareContext, InvocationContext
 
 
 @pytest.mark.asyncio
 async def test_logging_middleware():
     """Test logging middleware logs correctly."""
-    middleware = LoggingMiddleware(
-        log_level="DEBUG",
-        include_inputs=True,
-        include_outputs=True
-    )
+    # Create a mock config
+    mock_config = MagicMock()
+    mock_config.log_level = "DEBUG"
+    mock_config.enabled = True
 
-    # Mock context
-    context = FunctionMiddlewareContext(
+    # Create a mock builder
+    mock_builder = MagicMock()
+
+    # Create middleware instance
+    middleware = LoggingMiddleware(config=mock_config, builder=mock_builder)
+
+    # Mock function context (static metadata only - no args/kwargs)
+    function_context = FunctionMiddlewareContext(
         name="test_fn",
         config=MagicMock(),
         description="Test",
@@ -523,13 +598,33 @@ async def test_logging_middleware():
         stream_output_schema=None
     )
 
-    # Mock call_next
-    async def mock_next(value):
-        return {"result": value * 2}
+    # Test pre_invoke (output is None, function not yet called)
+    context = InvocationContext(
+        function_context=function_context,
+        original_args=(5,),        # Frozen - original function args
+        original_kwargs={},        # Frozen - original function kwargs
+        modified_args=(5,),        # Mutable - current args
+        modified_kwargs={},        # Mutable - current kwargs
+        output=None                # None in pre-invoke phase
+    )
+    result = await middleware.pre_invoke(context)
+    assert result is None  # Pass-through, no modification
 
-    # Test middleware
-    result = await middleware.function_middleware_invoke(5, mock_next, context)
-    assert result == {"result": 10}
+    # Test post_invoke (output now has the result)
+    context.output = {"result": 10}  # Set output after function call
+    result = await middleware.post_invoke(context)
+    assert result is None  # Pass-through, no modification
+
+    # Test detecting modified args
+    context_modified = InvocationContext(
+        function_context=function_context,
+        original_args=(5,),        # Original
+        original_kwargs={},
+        modified_args=(10,),       # Modified - different from original_args
+        modified_kwargs={},
+        output=None
+    )
+    # Middleware can detect: context_modified.modified_args != context_modified.original_args
 ```
 
 ### Integration Testing
@@ -620,17 +715,50 @@ async def protected_api(config, builder):
 Middleware is built **before** functions and function groups in the workflow builder. This ensures all middleware is available when functions and function groups are constructed.
 
 Build order:
-1. Authentication providers
-2. Embedders
-3. LLMs
-4. Memory
-5. Object stores
-6. Retrievers
-7. TTC strategies
+1. [Authentication providers](../../components/auth/api-authentication.md)
+2. [Embedders](../embedders.md)
+3. [LLMs](../llms/index.md)
+4. [Memory](../memory.md)
+5. [Object stores](../object-store.md)
+6. [Retrievers](../retrievers.md)
+7. [TTC strategies](../../improve-workflows/test-time-compute.md)
 8. **Middleware** ← Built here
-9. Function groups ← Can use middleware
-10. Functions ← Can use middleware
+9. [Function groups](../functions-and-function-groups/function-groups.md) ← Can use middleware
+10. [Functions](../functions-and-function-groups/functions.md) ← Can use middleware
 
+## Dynamic Middleware: Unregistering Callables
+
+The `DynamicFunctionMiddleware` supports unregistering callables at runtime, allowing you to remove middleware interception from workflow functions or component methods.
+
+### Unregister API
+
+The `unregister` method accepts a `RegisteredFunction` or `RegisteredComponentMethod` object. Use the `get_registered()` method to retrieve a registered callable by its key:
+
+```python
+from nat.middleware.utils.workflow_inventory import RegisteredFunction, RegisteredComponentMethod
+
+# Get a registered callable by key
+registered = middleware.get_registered("my_llm.invoke")
+
+# Unregister it (if found)
+if registered:
+    middleware.unregister(registered)
+
+# List all registered keys
+all_keys = middleware.get_registered_keys()
+```
+
+### Behavior
+
+- **Workflow Functions**: Removes the `DynamicFunctionMiddleware` from the function's middleware chain
+- **Component Methods**: Restores the original unwrapped method on the component instance
+
+### Registered Callable Models
+
+The tracking uses Pydantic models for type safety:
+
+- **`RegisteredFunction`**: Tracks workflow functions with `key` and `function_instance`
+- **`RegisteredComponentMethod`**: Tracks component methods with `key`, `component_instance`, `function_name`, and `original_callable`
 ## Troubleshooting
 
 ### Common Issues
@@ -646,7 +774,7 @@ Solution: Ensure the middleware is defined in the `middleware` section of your Y
 ```
 ModuleNotFoundError: No module named 'nat.middleware.register'
 ```
-Solution: Ensure the register module is imported. NAT automatically imports `nat.middleware.register` when importing `nat.middleware`.
+Solution: Ensure the register module is imported. NeMo Agent toolkit automatically imports `nat.middleware.register` when importing `nat.middleware`.
 
 **Cache not working**
 - Check `enabled_mode` setting
@@ -665,7 +793,7 @@ Solution: Ensure the register module is imported. NAT automatically imports `nat
 - {py:class}`~nat.middleware.function_middleware.FunctionMiddleware`: Base class
 - {py:class}`~nat.middleware.function_middleware.FunctionMiddlewareContext`: Context info
 - {py:class}`~nat.middleware.function_middleware.FunctionMiddlewareChain`: Chain management
-- {py:class}`~nat.middleware.cache.cache_middleware.CacheMiddlewareConfig`: Cache configuration
+- {py:class}`~nat.middleware.cache.cache_middleware_config.CacheMiddlewareConfig`: Cache configuration
 - {py:class}`~nat.middleware.cache.cache_middleware.CacheMiddleware`: Cache implementation
 - {py:func}`~nat.cli.register_workflow.register_middleware`: Registration decorator
 

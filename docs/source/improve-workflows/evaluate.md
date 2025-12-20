@@ -17,15 +17,13 @@ limitations under the License.
 
 # Evaluating NVIDIA NeMo Agent Toolkit Workflows
 
-:::{warning}
-**Experimental Feature**: The Evaluation API is experimental and may change in future releases. Future versions may introduce breaking changes without notice.
-:::
+Evaluation is the process of executing [workflows](../build-workflows/about-building-workflows.md) ([agents](../components/agents/index.md), [tools](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools), or pipelines) on curated test data and measuring their quality using quantitative metrics such as accuracy, reliability, and latency. Each of these metrics in turn is produced by an evaluator.
 
 NeMo Agent toolkit provides a set of evaluators to run and evaluate workflows. In addition to the built-in evaluators, the toolkit provides a plugin system to add custom evaluators.
 
 ## Prerequisites
 
-In addition to the base `nvidia-nat` package, you need to install the `profiling` sub-package to use the `nat eval` command.
+In addition to the base `nvidia-nat` package, you need to install the [`profiling`](./profiler.md) sub-package to use the `nat eval` command.
 
 If you are installing from source, you can install the sub-package by running the following command from the root directory of the NeMo Agent toolkit repository:
 ```bash
@@ -53,7 +51,7 @@ If you encounter rate limiting (`[429] Too Many Requests`) during evaluation, yo
 1. **Reduce concurrency**: Set the `eval.general.max_concurrency` value either in the YAML directly or through the command line with: `--override eval.general.max_concurrency 1`.
 2. **Deploy NIM locally**: Download and deploy NIM on your local machine to avoid rate limitations entirely. To deploy NIM locally:
    - Follow the [NVIDIA NIM deployment guide](https://docs.nvidia.com/nim/large-language-models/latest/getting-started.html) to download and run NIM containers locally
-   - Update your configuration to point to your local NIM endpoint by setting the `base_url` parameter in the LLM configuration:
+   - Update your configuration to point to your local NIM endpoint by setting the `base_url` parameter in the [LLM](../build-workflows/llms/index.md) configuration:
      ```yaml
      llms:
        nim_rag_eval_llm:
@@ -227,7 +225,7 @@ eval:
       llm_name: nim_trajectory_eval_llm
 ```
 
-A judge LLM is used to evaluate the trajectory produced by the workflow, taking into account the tools available during execution. It returns a floating-point score between 0 and 1, where 1.0 indicates a perfect trajectory.
+A judge LLM is used to evaluate the trajectory produced by the workflow, taking into account the [tools](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) available during execution. It returns a floating-point score between 0 and 1, where 1.0 indicates a perfect trajectory.
 
 To configure the judge LLM, define it in the `llms` section of the configuration file, and reference it in the evaluator configuration using the `llm_name` key.
 

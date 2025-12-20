@@ -211,8 +211,8 @@ Results: 42 customers found
 
 | Parameter | Type | Description | Default |
 |-----------|------|-------------|---------|
-| `llm_name` | `str` | LLM reference for SQL generation | Required |
-| `embedder_name` | `str` | Embedder reference for vector ops | Required |
+| `llm_name` | `str` | [LLM](../../build-workflows/llms/index.md) reference for SQL generation | Required |
+| `embedder_name` | `str` | [Embedder](../../build-workflows/embedders.md) reference for vector ops | Required |
 | `milvus_retriever` | `str` | Milvus retriever reference (must use `use_async_client=true`) | Required |
 | `database_type` | `str` | Database type (must be 'Databricks') | "Databricks" |
 | `connection_url` | `str` | Database connection string (SQLAlchemy format) | Required |

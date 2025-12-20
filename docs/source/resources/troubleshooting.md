@@ -40,7 +40,7 @@ limitations under the License.
 
 ## Runtime Issues
 
-- **[429] Too Many Requests**: This error might arise during executing workflows that involve LLM calls because of rate limiting on the LLM models. It is recommended to pause briefly and then attempt the operation again a few times. For warm fix set the `parse_agent_response_max_retries: 1` in `config.yaml` for the `react_agent`. Usually happens that the `react_agent` exhausts the available LLM rate with entire error stack trace.
+- **[429] Too Many Requests**: This error might arise during executing workflows that involve [LLM](../build-workflows/llms/index.md) calls because of rate limiting on the LLM models. It is recommended to pause briefly and then attempt the operation again a few times. For warm fix set the `parse_agent_response_max_retries: 1` in `config.yaml` for the `react_agent`. Usually happens that the `react_agent` exhausts the available LLM rate with entire error stack trace.
 
 - **Environment Variables**: Double-check that your `NVIDIA_API_KEY` is correctly set if using NVIDIA NIMs. For other LLM providers, you may need to set other environment variables.
 

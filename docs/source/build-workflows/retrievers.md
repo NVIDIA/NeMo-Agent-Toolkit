@@ -15,9 +15,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Retrievers
+# NVIDIA NeMo Agent Toolkit Retrievers
 
-Retrievers are an important component of Retrieval Augmented Generation (RAG) workflows which allow LLMs to search a data store for content which is semantically similar to a query, which can be used as context by the LLM when providing a response to the query. Within NeMo Agent toolkit, retrievers are a configurable component that can be used within functions, similar to LLMs and Embedders, to provide a consistent read-only interface for connecting to different data store providers.
+Retrievers are an important component of Retrieval Augmented Generation (RAG) [workflows](./about-building-workflows.md) which allow [LLMs](./llms/index.md) to search a data store for content which is semantically similar to a query, which can be used as context by the LLM when providing a response to the query. Within NeMo Agent toolkit, retrievers are a configurable component that can be used within [functions](./functions-and-function-groups/functions.md), similar to LLMs and [embedders](./embedders.md), to provide a consistent read-only interface for connecting to different data store providers.
 
 ## Features
  - **Standard Interface**: Retrievers implement a standard search interface, allowing for compatibility across different retriever implementations.
@@ -74,7 +74,7 @@ The Milvus retriever provider is defined by the {py:class}`~nat.retriever.milvus
 * `output_fields` - A list of fields to return from the data store. If `None`, all fields but the vector are returned.
 * `search_params` - Search parameters to use when performing vector search.
 * `vector_field` - Name of the field to compare with the vector generated from the query.
-* `description` - If present it will be used as the tool description.
+* `description` - If present it will be used as the [tool](./functions-and-function-groups/functions.md#agents-and-tools) description.
 
 ### Configuration Examples
 Retrievers are configured similarly to other NeMo Agent toolkit components, such as Functions and LLMs. Each Retriever provider (e.g., Milvus) has a Pydantic config object which defines its configurable parameters and type.
@@ -156,4 +156,4 @@ async def my_function(config: MyFunctionConfig, builder: Builder):
     langchain_retriever = await builder.get_retriever(config.retriever, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 ```
 
-Retrievers expose a `search` method for retrieving data that takes a single required argument, "query", and any number of optional keyword arguments. NeMo Agent toolkit Retrievers support a `bind` method which can be used to set or override defaults for these optional keyword arguments. Any additional required, unbound, parameters can be inspected using the `get_unbound_params` method. This provides flexibility in how retrievers are used in functions, allowing for all search parameters to be specified in the config, or allowing some to be specified by the agent when the function is called.
+Retrievers expose a `search` method for retrieving data that takes a single required argument, "query", and any number of optional keyword arguments. NeMo Agent toolkit Retrievers support a `bind` method which can be used to set or override defaults for these optional keyword arguments. Any additional required, unbound, parameters can be inspected using the `get_unbound_params` method. This provides flexibility in how retrievers are used in functions, allowing for all search parameters to be specified in the config, or allowing some to be specified by the [agent](../components/agents/index.md) when the function is called.
