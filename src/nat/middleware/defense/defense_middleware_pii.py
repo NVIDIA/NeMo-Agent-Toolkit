@@ -354,4 +354,3 @@ class PIIDefenseMiddleware(DefenseMiddleware):
                 exc_info=True,
             )
             raise
-            raise

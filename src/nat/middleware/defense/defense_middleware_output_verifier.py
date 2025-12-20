@@ -438,4 +438,3 @@ Respond ONLY with valid JSON in this exact format:
                 exc_info=True,
             )
             raise
-            raise
