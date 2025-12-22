@@ -689,7 +689,7 @@ curl "http://localhost:8000/monitor/users?user_id=alice"
 
 **Response:**
 
-```json
+```text
 {
   "timestamp": "2025-12-17T10:30:00.000000",
   "total_users": 1,
