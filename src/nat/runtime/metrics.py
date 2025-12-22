@@ -147,37 +147,35 @@ class PerUserMetricsCollector:
         """
         # Session metrics
         session_metrics = PerUserSessionMetrics(
-            created_at=getattr(builder_info, 'created_at', builder_info.last_activity),
+            created_at=builder_info.created_at,
             last_activity=builder_info.last_activity,
             ref_count=builder_info.ref_count,
             is_active=builder_info.ref_count > 0,
         )
 
         # Request metrics
-        total_requests = getattr(builder_info, 'total_requests', 0)
-        error_count = getattr(builder_info, 'error_count', 0)
-        total_latency_ms = getattr(builder_info, 'total_latency_ms', 0.0)
-        avg_latency = total_latency_ms / total_requests if total_requests > 0 else 0.0
+        avg_latency = (builder_info.total_latency_ms /
+                       builder_info.total_requests if builder_info.total_requests > 0 else 0.0)
 
         request_metrics = PerUserRequestMetrics(
-            total_requests=total_requests,
+            total_requests=builder_info.total_requests,
             active_requests=builder_info.ref_count,
             avg_latency_ms=round(avg_latency, 2),
-            error_count=error_count,
+            error_count=builder_info.error_count,
         )
 
         # LLM usage metrics
         llm_metrics = PerUserLLMUsageMetrics(
-            total_tokens=getattr(builder_info, 'total_tokens', 0),
-            prompt_tokens=getattr(builder_info, 'prompt_tokens', 0),
-            completion_tokens=getattr(builder_info, 'completion_tokens', 0),
-            llm_calls=getattr(builder_info, 'llm_calls', 0),
+            total_tokens=builder_info.total_tokens,
+            prompt_tokens=builder_info.prompt_tokens,
+            completion_tokens=builder_info.completion_tokens,
+            llm_calls=builder_info.llm_calls,
         )
 
         # Memory/resource count metrics from the builder
         builder = builder_info.builder
-        per_user_functions_count = len(getattr(builder, '_per_user_functions', {}))
-        per_user_function_groups_count = len(getattr(builder, '_per_user_function_groups', {}))
+        per_user_functions_count = len(builder._per_user_functions)
+        per_user_function_groups_count = len(builder._per_user_function_groups)
 
         # Count resources in exit stack (if accessible)
         exit_stack = getattr(builder, '_exit_stack', None)
