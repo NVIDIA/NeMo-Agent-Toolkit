@@ -109,7 +109,7 @@ docker compose -f tests/test_data/docker-compose.services.yml down
 ```
 
 ## Writing Integration Tests
-Many of the example workflows cannot be fully tested with unit tests alone, as they typically require an actual LLM service and potentially other services to be running.
+Many of the example workflows cannot be fully tested with unit tests alone, as they typically require an actual [LLM](../../../build-workflows/llms/index.md) service and potentially other services to be running.
 
 ### Typical Example of an Integration Test
 

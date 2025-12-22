@@ -16,8 +16,7 @@ limitations under the License.
 -->
 
 # Configure a Reasoning Agent
-Configure the NVIDIA NeMo Agent toolkit reasoning agent as a workflow or a function. We recommend using the reasoning wrapper with any NVIDIA NeMo Agent toolkit function that could improve performance from task-specific plan generation.
----
+Configure the NVIDIA NeMo Agent toolkit reasoning [agent](../index.md) as a [workflow](../../../build-workflows/about-building-workflows.md) or a [function](../../../build-workflows/functions-and-function-groups/functions.md). We recommend using the reasoning wrapper with any NVIDIA NeMo Agent toolkit function that could improve performance from task-specific plan generation.
 
 ## Requirements
 The reasoning agent requires the `nvidia-nat[langchain]` plugin, which can be installed with one of the following commands.
@@ -51,7 +50,7 @@ workflow:
 The following are more ways you can configure your config file when using the reasoning agent:
 * `workflow_alias`: Defaults to `None`. The alias of the workflow. Useful when the Reasoning agent is configured as a workflow and need to expose a customized name as a tool.
 
-* `llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file. The LLM must support thinking tags.
+* `llm_name`: The [LLM](../../../build-workflows/llms/index.md) the agent should use. The LLM must be configured in the YAML file. The LLM must support thinking tags.
 
 * `verbose`: Defaults to False (useful to prevent logging of sensitive data). If set to True, the agent will log input, output, and intermediate steps.
 
@@ -67,7 +66,7 @@ The following are more ways you can configure your config file when using the re
 
   Given the following input and a list of available tools, please provide a detailed step-by-step plan that an instruction following system can use to address the input. Ensure the plan includes:
   1. Identifying the key components of the input.
-  2. Determining the most suitable tools for each task.
+  2. Determining the most suitable [tools](../../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) for each task.
   3. Outlining the sequence of actions to be taken.
 
   **Input:**
@@ -127,4 +126,4 @@ The following are the limitations of reasoning agents:
 * Requires a thinking/reasoning LLM, such as DeepSeek R1. There should be thought tags within the LLM output:
   >&lt;think&gt;&lt;/think&gt;
 
-* Performs reasoning up front and does not revisit the plan to revise strategy during execution like a ReAct agent does. Revising the strategy is beneficial if a tool returns a non-useful response (let's say our retriever tool did not have any relevant search results to the user's original question).
+* Performs reasoning up front and does not revisit the plan to revise strategy during execution like a ReAct agent does. Revising the strategy is beneficial if a tool returns a non-useful response (let's say our [retriever](../../../build-workflows/retrievers.md) tool did not have any relevant search results to the user's original question).

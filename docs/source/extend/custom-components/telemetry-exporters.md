@@ -29,7 +29,7 @@ Telemetry exporters solve critical observability challenges in Agentic AI workfl
 
 ### **Production Monitoring**
 - **Track workflow performance**: Monitor execution times, success rates, and resource usage across your AI agents
-- **Identify bottlenecks**: Discover slow LLM calls, inefficient tool usage, or processing delays
+- **Identify bottlenecks**: Discover slow [LLM](../../build-workflows/llms/index.md) calls, inefficient tool usage, or processing delays
 - **Real-time alerting**: Get notified when workflows fail or performance degrades
 
 ### **Debugging and Troubleshooting**

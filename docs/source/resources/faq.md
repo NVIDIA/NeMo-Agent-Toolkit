@@ -19,7 +19,7 @@ limitations under the License.
 NVIDIA NeMo Agent toolkit frequently asked questions (FAQs).
 
 ## Do I Need to Rewrite All of my Existing Code to Use NeMo Agent Toolkit?
-No, NeMo Agent toolkit is **100% opt in.** While we encourage users to wrap (decorate) every tool and agent to get the most out of the profiler, you have the freedom to integrate to whatever level you want - tool level, agent level, or entire workflow level. You have the freedom to start small and where you believe you’ll see the most value and expand from there.
+No, NeMo Agent toolkit is **100% opt in.** While we encourage users to wrap (decorate) every [tool](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) and [agent](../components/agents/index.md) to get the most out of the [profiler](../improve-workflows/profiler.md), you have the freedom to integrate to whatever level you want - tool level, agent level, or entire [workflow](../build-workflows/about-building-workflows.md) level. You have the freedom to start small and where you believe you will see the most value and expand from there.
 
 ## Is NeMo Agent Toolkit another LLM or Agentic Framework?
 No, NeMo Agent toolkit is designed to work alongside, not replace, your existing agentic frameworks — whether they are enterprise-grade systems or simple Python-based agents.
@@ -28,4 +28,4 @@ No, NeMo Agent toolkit is designed to work alongside, not replace, your existing
 No, agent communication is best handled over existing protocols, such as MCP, HTTP, gRPC, and sockets.
 
 ## Is NeMo Agent Toolkit an Observability Platform?
-No, while NeMo Agent toolkit is able to collect and transmit fine-grained telemetry to help with optimization and evaluation, it does not replace your preferred observability platform and data collection application.
+No, while NeMo Agent toolkit is able to collect and transmit fine-grained telemetry to help with optimization and [evaluation](../improve-workflows/evaluate.md), it does not replace your preferred observability platform and data collection application.

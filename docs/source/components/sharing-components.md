@@ -17,7 +17,7 @@ limitations under the License.
 
 # Sharing NVIDIA NeMo Agent Toolkit Components
 
-Every NeMo Agent toolkit component is packaged inside of a NeMo Agent toolkit plugin and is designed to be sharable with the community of NeMo Agent toolkit  developers. Functions are by far the most common NeMo Agent toolkit component type. In fact, NeMo Agent components include all pieces that leverage a NeMo Agent toolkit registration decorator (e.g. `register_function`, `register_llm_client`, `register_evaluator`, etc.). This guide will discuss the requirements for developing registered components that can be shared, discovered, and integrated leveraged with any NeMo Agent toolkit application.
+Every NeMo Agent toolkit component is packaged inside of a NeMo Agent toolkit plugin and is designed to be sharable with the community of NeMo Agent toolkit  developers. [Functions](../build-workflows/functions-and-function-groups/functions.md) are by far the most common NeMo Agent toolkit component type. In fact, NeMo Agent components include all pieces that leverage a NeMo Agent toolkit registration decorator (for example, `register_function`, `register_llm_client`, `register_evaluator`). This guide will discuss the requirements for developing registered components that can be shared, discovered, and integrated with any NeMo Agent toolkit application.
 
 ## Enabling Local and Remote Discovery
 To begin building a sharable component, do the following:
@@ -27,7 +27,7 @@ To begin building a sharable component, do the following:
 This section emphasizes the details of configuration objects that facilitate component discovery.
 
 After installing the NeMo Agent toolkit library, and potentially other NeMo Agent toolkit plugin packages, a developer may want to know what
-components are available for workflow development or evaluation. A great tool for this is the `nat info components` CLI
+components are available for [workflow](../build-workflows/about-building-workflows.md) development or [evaluation](../improve-workflows/evaluate.md). A great tool for this is the `nat info components` CLI
 utility described in [Components Information](../reference/cli.md#components-information). This command produces a
 table containing information dynamically accumulated from each NeMo Agent toolkit component. The `details` column is sourced from
 each configuration object's docstring and field descriptions. Behind the scenes, these data (and others) are aggregated

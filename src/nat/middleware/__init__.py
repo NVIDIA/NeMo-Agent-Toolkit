@@ -14,7 +14,6 @@
 # limitations under the License.
 """Middleware implementations for NeMo Agent Toolkit."""
 
-from nat.middleware.cache_middleware import CacheMiddleware
 from nat.middleware.function_middleware import FunctionMiddleware
 from nat.middleware.function_middleware import FunctionMiddlewareChain
 from nat.middleware.function_middleware import validate_middleware
@@ -24,12 +23,11 @@ from nat.middleware.middleware import FunctionMiddlewareContext
 from nat.middleware.middleware import Middleware
 
 __all__ = [
-    "CacheMiddleware",
     "CallNext",
     "CallNextStream",
-    "FunctionMiddlewareContext",
-    "Middleware",
     "FunctionMiddleware",
     "FunctionMiddlewareChain",
+    "FunctionMiddlewareContext",
+    "Middleware",
     "validate_middleware",
 ]
