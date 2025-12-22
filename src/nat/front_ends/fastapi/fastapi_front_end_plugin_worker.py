@@ -1455,7 +1455,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 if user_id:
                     # Filter for specific user
-                    user_metrics = collector.collect_user_metrics(user_id)
+                    user_metrics = await collector.collect_user_metrics(user_id)
                     if user_metrics:
                         all_users.append(user_metrics)
                 else:

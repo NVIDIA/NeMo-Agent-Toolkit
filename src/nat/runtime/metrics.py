@@ -97,7 +97,7 @@ class PerUserMetricsCollector:
         """
         self._session_manager = session_manager
 
-    def collect_user_metrics(self, user_id: str) -> PerUserResourceUsage | None:
+    async def collect_user_metrics(self, user_id: str) -> PerUserResourceUsage | None:
         """Collect metrics for a specific user.
 
         Args:
@@ -106,11 +106,12 @@ class PerUserMetricsCollector:
         Returns:
             PerUserResourceUsage if user exists, None otherwise
         """
-        if user_id not in self._session_manager._per_user_builders:
-            return None
+        async with self._session_manager._per_user_builders_lock:
+            if user_id not in self._session_manager._per_user_builders:
+                return None
 
-        builder_info = self._session_manager._per_user_builders[user_id]
-        return self._build_user_metrics(user_id, builder_info)
+            builder_info = self._session_manager._per_user_builders[user_id]
+            return self._build_user_metrics(user_id, builder_info)
 
     async def collect_all_metrics(self) -> PerUserMonitorResponse:
         """Collect metrics for all active per-user workflows.
