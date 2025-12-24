@@ -26,7 +26,7 @@ Before you begin, ensure you have the following installed:
 - Docker
 - git
 - git Large File Storage (LFS)
-- uv
+- uv (Python environment with `uv pip install setuptools setuptools-scm`)
 - AWS CLI
 
 ## Step 1: Setup NeMo Agent Toolkit Environment
@@ -40,23 +40,34 @@ https://docs.nvidia.com/nemo/agent-toolkit/latest/quick-start/installing.html
 ## Step 2: Configure AWS CLI
 
 ```bash
+unset AWS_ACCESS_KEY_ID
+unset AWS_SECRET_ACCESS_KEY
+unset AWS_SESSION_TOKEN
+unset AWS_REGION
+unset AWS_DEFAULT_REGION
 aws configure
 ```
 Enter your AWS ACCESS KEY, AWS SECRET ACCESS KEY, and REGION for your AWS Account.
 
+**Note**: If you are using temporary AWS credentials (such as those from AWS SSO, assumed roles, or session tokens), these credentials typically expire after one to 12 hours. If you receive authentication errors like `InvalidClientTokenId` or `UnrecognizedClientException`, you need to refresh your credentials by re-authenticating with your credential provider.
+
+After configuring AWS CLI, verify that your credentials are valid:
+
+```bash
+aws sts get-caller-identity
+```
+
+This command returns your AWS Account ID, User ARN, and User ID if authentication is successful. If you receive an error, check that your credentials are correct and have not expired.
+
 ### Setup AWS ENV Variables
 
 ```bash
-    export AWS_ACCESS_KEY_ID=$(aws configure get default.aws_access_key_id)
-    export AWS_SECRET_ACCESS_KEY=$(aws configure get default.aws_secret_access_key)
-    export AWS_DEFAULT_REGION=$(aws configure get default.region)
+export AWS_ACCOUNT_ID="YOUR_AWS_ACCOUNT_ID"
+# export AWS_ACCESS_KEY_ID="YOUR_AWS_ACCESS_KEY_ID"
+# export AWS_SECRET_ACCESS_KEY="YOUR_AWS_SECRET_ACCESS_KEY"
+export AWS_DEFAULT_REGION="YOUR_AWS_DEFAULT_REGION"
 ```
 ### Set Account for local configuration
-Replace <YOUR_ACCOUNT_ID HERE> with your AWS account number (example: 211123456789)
-
-```bash
-    export AWS_ACCOUNT_ID="<YOUR AWS ACCOUNT ID HERE>"
-```
 
 ## Step 3 Create AWS Secrets Manager entry for NVIDIA_API_KEY
 This is needed for storing the API keys needed for running NeMo Agent toolkit workflow.
@@ -79,7 +90,7 @@ aws secretsmanager create-secret \
   --region $AWS_DEFAULT_REGION
 ```
 
-Replace `YOUR-NVIDIA-API-KEY-HERE` with your actual NVIDIA API key.
+Replace `YOUR-NVIDIA-API-KEY-HERE` with your actual NVIDIA GPU Cloud API key. Warning: will throw a "ResourceExistsException" if the secret already exists for this region.
 
 ## Verify the Secret
 
@@ -97,6 +108,11 @@ aws secretsmanager describe-secret \
 
 ```bash
 uv pip install -e examples/frameworks/strands_demo
+```
+
+### Make the script executable
+```bash
+chmod +x examples/frameworks/strands_demo/bedrock_agentcore/scripts/run_nat_no_OTEL.sh
 ```
 
 ### Build the Docker Image
@@ -118,10 +134,11 @@ docker build \
 docker run \
   -p 8080:8080 \
   -p 6006:6006 \
-  -e NVIDIA_API_KEY \
-  -e AWS_ACCESS_KEY_ID \
-  -e AWS_SECRET_ACCESS_KEY \
-  -e AWS_DEFAULT_REGION \
+  -e NVIDIA_API_KEY=$NVIDIA_API_KEY \
+  -e AWS_ACCESS_KEY_ID="your-access-key-here" \
+  -e AWS_SECRET_ACCESS_KEY="your-secret-key-here" \
+  -e AWS_SESSION_TOKEN="your-session-token-here" \
+  -e AWS_DEFAULT_REGION="your-region" \
   strands_demo \
   --platform linux/arm64
 ```
@@ -869,7 +886,7 @@ Throughout this guide, replace the following placeholders with your actual value
 
 | Placeholder | Description | Example |
 |------------|-------------|---------|
-| `<AWS_ACCOUNT_ID>` | Your AWS account ID | `123456789012` |
+| `<AWS_ACCOUNT_ID>` | Your AWS account ID | `1234567891011` |
 | `<AWS_REGION>` | Your AWS region | `us-west-2`, `us-east-1`, `eu-west-1` |
 | `<RUNTIME_ID>` | AgentCore runtime ID | `strands_demo-abc123XYZ` |
 | `<NVIDIA_API_KEY>` | Your NVIDIA API key | Retrieve from secrets manager |
