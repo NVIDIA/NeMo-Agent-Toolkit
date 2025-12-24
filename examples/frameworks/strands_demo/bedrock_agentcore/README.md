@@ -34,7 +34,7 @@ Before you begin, ensure you have the following installed:
 Follow the official NeMo Agent toolkit installation guide:
 
 ```text
-https://docs.nvidia.com/nemo/agent-toolkit/1.2/get-started/installing.html
+https://docs.nvidia.com/nemo/agent-toolkit/latest/quick-start/installing.html
 ```
 
 ## Step 2: Configure AWS CLI
