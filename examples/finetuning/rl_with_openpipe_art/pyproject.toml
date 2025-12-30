@@ -12,8 +12,8 @@ root = "../../.."
 name = "nat_rl_with_openpipe_art"
 dynamic = ["version"]
 dependencies = [
-  "nvidia-nat[langchain]~=1.5",
-  "nvidia-nat[openpipe-art]~=1.5"
+  "nvidia-nat[langchain]~=1.4",
+  "nvidia-nat[openpipe-art]~=1.4"
 ]
 requires-python = ">=3.11,<3.14"
 description = "NeMo Agent Toolkit Workflow Demonstrating GRPO with OpenPipe ART"
