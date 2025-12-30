@@ -24,7 +24,6 @@ from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Discriminator
 from pydantic import Field
-from pydantic import HttpUrl
 from pydantic import conlist
 from pydantic import field_serializer
 from pydantic import field_validator
@@ -90,7 +89,8 @@ class AudioContent(BaseModel):
 
 
 class ImageUrl(BaseModel):
-    url: HttpUrl = HttpUrl(url="http://default.com")
+    url: str = Field(default="http://default.com",
+                     description="Either a URL of the image or the base64 encoded image data.")
 
 
 class ImageContent(BaseModel):
