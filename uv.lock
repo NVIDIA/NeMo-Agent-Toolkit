@@ -6518,7 +6518,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiorwlock", specifier = "~=1.4" },
+    { name = "aiorwlock", specifier = "~=1.5.0" },
     { name = "mcp", specifier = "~=1.14" },
     { name = "nvidia-nat", editable = "." },
 ]
