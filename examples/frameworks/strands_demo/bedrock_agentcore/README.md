@@ -94,7 +94,7 @@ unset AWS_PROFILE
 aws configure
 ```
 
-> Note: using `aws configure` requries preexisting long- or short-lived access keys for the permissed IAM user.
+> Note: using `aws configure` requires preexisting long- or short-lived access keys for the permitted IAM user.
 
 Enter your AWS ACCESS KEY, AWS SECRET ACCESS KEY, and REGION when prompted.
 
@@ -107,7 +107,6 @@ aws sso login --profile your-profile-name
 ```
 
 > **Important:** AWS Bedrock AgentCore is available only in specific regions. Use `us-west-2` or `us-east-1`. Other regions such as `us-west-1` are **not supported** and will result in DNS resolution errors.
-
 > **Note:** Temporary credentials (SSO, assumed roles, session tokens) expire after 1-12 hours. If you receive `InvalidClientTokenId` or `UnrecognizedClientException`, refresh your credentials.
 
 ### Verify Your Credentials
@@ -252,7 +251,7 @@ aws ecr get-login-password --region $AWS_DEFAULT_REGION | \
   --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
 ```
 
-> **Note:** This step requires that Appendix 1 was previously followed to preoperly configure an IAM Role and Policy
+> **Note:** This step requires that Appendix 1 was previously followed to properly configure an IAM Role and Policy
 
 ## Step 6: Build and Deploy Agent in AWS AgentCore
 
@@ -263,7 +262,7 @@ aws ecr get-login-password --region $AWS_DEFAULT_REGION | \
 <!-- path-check-skip-begin -->
 ```bash
 docker build \
-  --build-arg NAT_VERSION=$(python3 -m setuptools_scm) \
+  --build-arg NAT_VERSION=$(python -m setuptools_scm) \
   -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/strands-demo:latest \
   -f ./examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile \
   --platform linux/arm64 \

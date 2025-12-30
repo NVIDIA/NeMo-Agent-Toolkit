@@ -120,7 +120,6 @@ Runs the workflow over a dataset and computes evaluation and performance metrics
 nat eval --config_file examples/frameworks/strands_demo/configs/eval_config.yml
 ```
 > Tip: If you hit rate limits, lower concurrency: `--override eval.general.max_concurrency 1`
-
 > Note: Refer to [the evaluation guide](../../../docs/source/improve-workflows/evaluate.md) for more details on evaluation metrics and configuration options.
 
 ### 3) Optimize workflow parameters (optimizer_config.yml)
