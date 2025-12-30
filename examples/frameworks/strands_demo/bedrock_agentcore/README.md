@@ -64,6 +64,8 @@ You will need access to the following AWS Console services:
 - **CloudWatch Console** - To enable Transaction Search and view logs and traces (see [Appendix 2](#appendix-2-turning-on-opentelemetry-support-in-cloudwatch))
 - **Secrets Manager Console** - To manage the NVIDIA API credentials secret
 
+> NOTE: Details instructions for setting up IAM permissions in the AWS console are available in Appendix 1
+
 ### Additional Requirements
 
 - **NVIDIA API Key** - Obtain from [NVIDIA NGC](https://ngc.nvidia.com/) or [build.nvidia.com](https://build.nvidia.com). This will be stored in AWS Secrets Manager during setup.
@@ -91,6 +93,8 @@ unset AWS_DEFAULT_REGION
 unset AWS_PROFILE
 aws configure
 ```
+
+> Note: using `aws configure` requries preexisting long- or short-lived access keys for the permissed IAM user.
 
 Enter your AWS ACCESS KEY, AWS SECRET ACCESS KEY, and REGION when prompted.
 
@@ -182,6 +186,15 @@ docker build \
 
 > **Note:** If you built the image with `--platform linux/arm64`, you do not need to specify platform again at runtime.
 
+Run the following command to view and set Access Key ID, Secret Access Key, and Session Token
+```bash
+aws sts get-session-token --duration 3600 --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' --output text
+export AWS_ACCESS_KEY_ID="YOUR_AWS_ACCESS_KEY_ID_HERE"
+export AWS_SECRET_ACCESS_KEY="YOUR_AWS_SECRET_ACCESS_KEY_HERE"
+export AWS_SESSION_TOKEN="YOUR_AWS_SESSION_TOKEN_HERE"
+export AWS_DEFAULT_REGION="us-west-2"
+```
+
 <!-- path-check-skip-begin -->
 ```bash
 docker run \
@@ -239,9 +252,7 @@ aws ecr get-login-password --region $AWS_DEFAULT_REGION | \
   --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
 ```
 
-### Create AgentCore IAM Role
-
-> **Note:** If creating for the first time, see Appendix 1 for detailed instructions on creating the AgentCore Runtime Role.
+> **Note:** This step requires that Appendix 1 was previously followed to preoperly configure an IAM Role and Policy
 
 ## Step 6: Build and Deploy Agent in AWS AgentCore
 
@@ -274,7 +285,7 @@ Then run the deployment script:
 uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/deploy_nat.py
 ```
 
-> **Tip:** The script source is located at [`scripts/deploy_nat.py`](scripts/deploy_nat.py) if you need to review or modify it.
+> **Warning:** The script will deploy an ECR instance, which will incur cost. Script source is located at [`scripts/deploy_nat.py`](scripts/deploy_nat.py) if you need to review or modify it.
 
 **Important:** Record the runtime ID from the output for the next steps. It will look something like: `strands_demo-abc123XYZ`
 
@@ -617,7 +628,7 @@ Before creating the role, ensure you have:
 
 Since we need a custom policy, we'll create it now:
 
-1. Instead of selecting existing policies, click **Create policy** (this opens in a new browser tab)
+1. Instead of selecting existing policies, open IAM > Policies in a new tab and click **Create policy** (this opens in a new browser tab)
 2. In the new tab, click on the **JSON** tab
 3. Delete the default policy in the text editor
 4. Copy and paste the following policy:
@@ -641,16 +652,40 @@ Since we need a custom policy, we'll create it now:
             ],
             "Resource": "*"
         },
+            "Sid": "BedrockAgentCoreControl",
+            "Effect": "Allow",
+            "Action": [
+                "bedrock-agentcore:CreateAgentRuntime",
+                "bedrock-agentcore:UpdateAgentRuntime",
+                "bedrock-agentcore:DeleteAgentRuntime",
+                "bedrock-agentcore:GetAgentRuntime"
+            ],
+            "Resource": "*"
         {
             "Sid": "ECRImageAccess",
             "Effect": "Allow",
             "Action": [
                 "ecr:BatchGetImage",
-                "ecr:GetDownloadUrlForLayer"
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:InitiateLayerUpload",
+                "ecr:UploadLayerPart",
+                "ecr:CompleteLayerUpload",
+                "ecr:PutImage"
             ],
             "Resource": [
                 "arn:aws:ecr:<AWS_REGION>:<AWS_ACCOUNT_ID>:repository/*"
             ]
+        },
+        {
+            "Sid": "ECRRepoCreate",
+            "Effect": "Allow",
+            "Action": [
+                "ecr:CreateRepository",
+                "ecr:DescribeRepositories",
+                "ecr:ListImage"
+            ],
+            "Resource": "arn:aws:ecr:<AWS_REGION>:<AWS_ACCOUNT_ID>:repository/*"
         },
         {
             "Sid": "ECRTokenAccess",
@@ -726,9 +761,20 @@ Since we need a custom policy, we'll create it now:
             "Sid": "SecretsManagerAccess",
             "Effect": "Allow",
             "Action": [
-                "secretsmanager:GetSecretValue"
+                "secretsmanager:DescribeSecret",
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:PutSecretValue",
+                "secretsmanager:UpdateSecret"
             ],
-            "Resource": "arn:aws:secretsmanager:*:*:secret:nvidia-api-credentials"
+            "Resource": "arn:aws:secretsmanager:*:*:secret:nvidia-api-credentials*"
+        },
+        {
+            "Sid": "SecretsManagerCreate",
+            "Effect": "Allow",
+            "Action": [
+                "secretsmanager:CreateSecret"
+            ],
+            "Resource": "*"
         }
     ]
 }
