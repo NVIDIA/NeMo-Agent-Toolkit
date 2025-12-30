@@ -24,7 +24,7 @@ FROM ${BASE_IMAGE_URL}:${BASE_IMAGE_TAG}
 ARG PYTHON_VERSION
 ARG NAT_VERSION
 
-COPY --from=ghcr.io/astral-sh/uv:0.8.15 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.9.15 /uv /uvx /bin/
 
 ENV PYTHONDONTWRITEBYTECODE=1
 

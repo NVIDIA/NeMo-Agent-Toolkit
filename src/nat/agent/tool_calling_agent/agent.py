@@ -27,6 +27,7 @@ from langchain_core.tools import BaseTool
 from langgraph.graph import StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode
+from langgraph.runtime import DEFAULT_RUNTIME
 from pydantic import BaseModel
 from pydantic import Field
 
@@ -137,9 +138,9 @@ class ToolCallAgentGraph(DualNodeAgent):
             tool_input = state.messages[-1]
             tool_response = await self.tool_caller.ainvoke(
                 input={"messages": [tool_input]},
-                config=RunnableConfig(callbacks=self.callbacks, configurable={}),
+                config=RunnableConfig(callbacks=self.callbacks, configurable={"__pregel_runtime": DEFAULT_RUNTIME}),
             )
-            # this configurable = {} argument is needed due to a bug in LangGraph PreBuilt ToolNode ^
+            # configurable with __pregel_runtime is needed when invoking ToolNode outside graph context
 
             for response in tool_response.get("messages"):
                 if self.detailed_logs:

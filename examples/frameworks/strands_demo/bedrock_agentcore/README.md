@@ -251,7 +251,7 @@ Copy and Paste the export command from output into your shell for easier configu
 
 You can test your agent in AgentCore with the following script:
 
-**test_nat.py:**
+**verify_nat.py:**
 
 ```python
 
@@ -296,7 +296,7 @@ print("Agent Response:", response_data)
 ### Run the Test
 
 ```bash
-uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py
+uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/verify_nat.py
 ```
 
 ## Step 7: Instrument for OpenTelemetry
@@ -444,7 +444,7 @@ uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/update_nat.p
 ### Final Test 
 
 ```bash
-uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py
+uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/verify_nat.py
 ```
 
 > **Note:** If you do not see OpenTelemetry telemetry for your agent after a few test runs, please refer to Appendix 2 to ensure you have enabled OpenTelemetry support in CloudWatch.
@@ -776,7 +776,7 @@ FROM ${BASE_IMAGE_URL}:${BASE_IMAGE_TAG}
 ARG PYTHON_VERSION
 ARG NAT_VERSION
 
-COPY --from=ghcr.io/astral-sh/uv:0.8.15 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.9.15 /uv /uvx /bin/
 
 ENV PYTHONDONTWRITEBYTECODE=1
 

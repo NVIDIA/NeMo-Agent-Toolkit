@@ -65,7 +65,7 @@ async def email_phishing_analyzer(config: EmailPhishingAnalyzerConfig, builder: 
 
         try:
             # Get response from LLM
-            response = await llm.apredict(config.prompt.replace("{body}", text))
+            response = await llm.ainvoke(config.prompt.replace("{body}", text)).content
         except Exception as e:
             logger.error(f"Error during LLM prediction: {e}")
             return f"Error: LLM prediction failed {e}"

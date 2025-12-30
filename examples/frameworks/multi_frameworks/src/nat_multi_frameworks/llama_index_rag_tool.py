@@ -48,7 +48,7 @@ async def llama_index_rag_tool(tool_config: LlamaIndexRAGConfig, builder: Builde
     from llama_index.core import Settings
     from llama_index.core import SimpleDirectoryReader
     from llama_index.core import VectorStoreIndex
-    from llama_index.core.agent import FunctionCallingAgentWorker
+    from llama_index.core.agent import FunctionAgent
     from llama_index.core.node_parser import SimpleFileNodeParser
     from llama_index.core.tools import QueryEngineTool
 
@@ -77,12 +77,11 @@ async def llama_index_rag_tool(tool_config: LlamaIndexRAGConfig, builder: Builde
         tool = QueryEngineTool.from_defaults(
             query_engine, name="rag", description="ingest data from README about this workflow with llama_index_rag")
 
-        agent_worker = FunctionCallingAgentWorker.from_tools(
-            [tool],
+        agent = FunctionAgent(
+            tools=[tool],
             llm=llm,
             verbose=True,
         )
-        agent = agent_worker.as_agent()
 
     async def _arun(inputs: str) -> str:
         """
@@ -91,9 +90,10 @@ async def llama_index_rag_tool(tool_config: LlamaIndexRAGConfig, builder: Builde
             query : user query
         """
         if not model_name.startswith('nvdev'):
-            agent_response = (await agent.achat(inputs))
-            logger.info("response from llama-index Agent : \n %s %s", Fore.MAGENTA, agent_response.response)
-            output = agent_response.response
+            agent_response = await agent.run(inputs)
+            response_content = agent_response.response
+            logger.info("response from llama-index Agent : \n %s %s", Fore.MAGENTA, response_content)
+            output = response_content
         else:
             logger.info("%s %s %s %s", Fore.MAGENTA, type(query_engine), query_engine, inputs)
             output = query_engine.query(inputs).response

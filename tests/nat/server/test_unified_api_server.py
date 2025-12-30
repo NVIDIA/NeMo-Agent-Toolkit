@@ -379,10 +379,13 @@ async def test_chat_stream_endpoint_observability_trace_id_integration(client: h
     """Tests that chat stream endpoint sends observability_trace_id as a separate SSE event."""
     input_message = {"messages": [{"role": "user", "content": f"{config.app.input}"}], "use_knowledge_base": True}
 
-    # Mock the context to provide an observability_trace_id
-    with patch('nat.builder.context.Context.get') as mock_context:
-        mock_context.return_value.observability_trace_id = "integration-stream-observability-id"
+    # Set the observability_trace_id directly on the ContextState's ContextVar
+    # This avoids breaking Context.get() which the workflow depends on
+    from nat.builder.context import ContextState
+    context_state = ContextState()
+    token = context_state.observability_trace_id.set("integration-stream-observability-id")
 
+    try:
         response = await client.post(f"{config.endpoint.chat_stream}", json=input_message)
         assert response.status_code == 200
 
@@ -399,6 +402,9 @@ async def test_chat_stream_endpoint_observability_trace_id_integration(client: h
         data_match_dict: dict = json.loads(data_match.group(1))
         validated_response = ChatResponseChunk(**data_match_dict)
         assert isinstance(validated_response, ChatResponseChunk)
+    finally:
+        # Reset the ContextVar to avoid affecting other tests
+        context_state.observability_trace_id.reset(token)
 
 
 @pytest.mark.integration

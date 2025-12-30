@@ -15,7 +15,7 @@
 
 import logging
 
-from langchain.evaluation import TrajectoryEvalChain
+from langchain_classic.evaluation import TrajectoryEvalChain
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
 
