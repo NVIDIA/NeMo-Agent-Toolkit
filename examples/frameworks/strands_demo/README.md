@@ -101,7 +101,9 @@ Runs the workflow over a dataset and computes evaluation and performance metrics
 ```bash
 nat eval --config_file examples/frameworks/strands_demo/configs/eval_config.yml
 ```
-> Tip: If you hit rate limits, lower concurrency: `--override eval.general.max_concurrency 1`.
+> Tip: If you hit rate limits, lower concurrency: `--override eval.general.max_concurrency 1`
+
+> Note: Refer to [the evaluation guide](../../../docs/source/improve-workflows/evaluate.md) for more details on evaluation metrics and configuration options.
 
 ### 3) Optimize workflow parameters (optimizer_config.yml)
 
@@ -119,6 +121,8 @@ nat optimize --config_file examples/frameworks/strands_demo/configs/optimizer_co
 The optimizer runs 20 trials with 3 repetitions each for statistical stability and generates a report showing the best parameter combination based on weighted multi-objective scoring.
 
 > Note: Optimization can take significant time. Reduce `n_trials` or adjust the search space in the config for faster experimentation.
+
+> Note: Refer to [the optimizer guide](../../../docs/source/improve-workflows/optimizer.md) for more details on optimization metrics and configuration options.
 
 ### 4) Determine GPU cluster sizing (sizing_config.yml)
 

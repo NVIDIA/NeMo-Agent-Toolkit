@@ -21,13 +21,52 @@ A comprehensive guide for deploying NVIDIA NeMo Agent toolkit with Strands on AW
 
 ## Prerequisites
 
-Before you begin, ensure you have the following installed:
+Before you begin, ensure you have the following:
 
-- Docker
-- git
-- git Large File Storage (LFS)
-- uv, Python 3.11-3.13 environment, run: `uv pip install setuptools setuptools-scm`
-- AWS CLI
+### Local Development Tools
+
+- **Docker** - For building and running container images
+- **git** - Version control
+- **git Large File Storage (LFS)** - For handling large files in the repository
+- **uv with Python 3.11-3.13** - Python environment manager. After installing uv, run: `uv pip install setuptools setuptools-scm`
+- **AWS CLI v2** - For interacting with AWS services
+
+### AWS Account Requirements
+
+- An active AWS account
+- Your 12-digit **AWS Account ID** (visible in the top-right corner of the AWS Console)
+- Access to a **supported region**: `us-west-2` or `us-east-1` only
+
+> **Important:** AWS Bedrock AgentCore is only available in specific regions. Using unsupported regions such as `us-west-1` will result in DNS resolution errors.
+
+### IAM Permissions for Deployment
+
+The user or role running this tutorial needs the following IAM permissions:
+
+| Service | Required Permissions | Purpose |
+|---------|---------------------|---------|
+| **Secrets Manager** | `secretsmanager:CreateSecret`, `secretsmanager:DescribeSecret` | Store NVIDIA API credentials |
+| **ECR** | `ecr:CreateRepository`, `ecr:GetAuthorizationToken`, `ecr:BatchCheckLayerAvailability`, `ecr:InitiateLayerUpload`, `ecr:UploadLayerPart`, `ecr:CompleteLayerUpload`, `ecr:PutImage` | Create repository and push container images |
+| **IAM** | `iam:CreateRole`, `iam:CreatePolicy`, `iam:AttachRolePolicy`, `iam:GetRole`, `iam:PassRole` | Create the AgentCore runtime role |
+| **Bedrock AgentCore** | `bedrock-agentcore:*`, `bedrock-agentcore-control:*` | Deploy and manage agent runtimes |
+| **CloudWatch** | `cloudwatch:PutMetricData`, `logs:*` | Enable observability and Transaction Search |
+| **STS** | `sts:GetCallerIdentity` | Verify credentials |
+
+> **Tip:** For a quick start, you can use the `AdministratorAccess` managed policy during initial setup, then scope down permissions for production use.
+
+### AWS Console Access
+
+You will need access to the following AWS Console services:
+
+- **IAM Console** - To create the `AgentCore_NAT` role and policy (see [Appendix 1](#appendix-1-creating-an-aws-agentcore-runtime-role))
+- **ECR Console** - To verify repository creation and image uploads
+- **Bedrock AgentCore Console** - To view and manage deployed agents
+- **CloudWatch Console** - To enable Transaction Search and view logs and traces (see [Appendix 2](#appendix-2-turning-on-opentelemetry-support-in-cloudwatch))
+- **Secrets Manager Console** - To manage the NVIDIA API credentials secret
+
+### Additional Requirements
+
+- **NVIDIA API Key** - Obtain from [NVIDIA NGC](https://ngc.nvidia.com/) or [build.nvidia.com](https://build.nvidia.com). This will be stored in AWS Secrets Manager during setup.
 
 ## Step 1: Setup NeMo Agent Toolkit Environment
 
