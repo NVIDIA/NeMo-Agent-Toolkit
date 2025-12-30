@@ -295,49 +295,6 @@ Copy and Paste the export command from output into your shell for easier configu
 
 You can test your agent in AgentCore with the following script:
 
-[**`test_nat.py`**](scripts/test_nat.py):
-
-```python
-
-import json
-import boto3
-import os
-
-# Configuration
-
-AWS_REGION = os.environ['AWS_DEFAULT_REGION']
-AWS_ACCOUNT_ID = os.environ['AWS_ACCOUNT_ID']
-RUNTIME_NAME = "strands_demo"
-
-cclient = boto3.client('bedrock-agentcore-control', region_name=AWS_REGION)
-cresponse = cclient.list_agent_runtimes()
-
-runtime_id = None
-for runtime in cresponse['agentRuntimes']:
-    if runtime['agentRuntimeName'] == RUNTIME_NAME:
-        runtime_id = runtime['agentRuntimeId']
-        print(f"Found runtime ID: {runtime_id}")
-        break
-
-if runtime_id is None:
-    raise RuntimeError(f"No AgentCore runtime named {RUNTIME_NAME!r} found in region {AWS_REGION}")
-
-
-client = boto3.client('bedrock-agentcore', region_name=AWS_REGION)
-payload = json.dumps({"inputs": "What is AWS AgentCore?"})
-
-response = client.invoke_agent_runtime(
-    agentRuntimeArn=f'arn:aws:bedrock-agentcore:{AWS_REGION}:{AWS_ACCOUNT_ID}:runtime/{runtime_id}',
-    payload=payload,
-    qualifier="DEFAULT"  # Optional
-)
-response_body = response['response'].read()
-response_data = json.loads(response_body)
-print("Agent Response:", response_data)
-```
-
-
-### Run the Test
 
 ```bash
 uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py
@@ -351,29 +308,6 @@ For this step you will need your Runtime ID (obtained from Step 6) to update you
 
 NOTE:  If you do not have the runtime ID, you can check the AWS Console or run:
 
-[**`get_agentcore_runtime_id.py`**](scripts/get_agentcore_runtime_id.py)
-
-```python
-import boto3
-import os
-
-# Configuration
-
-AWS_REGION = os.environ['AWS_DEFAULT_REGION']
-AWS_ACCOUNT_ID = os.environ['AWS_ACCOUNT_ID']
-RUNTIME_NAME = "strands_demo"
-
-cclient = boto3.client('bedrock-agentcore-control', region_name=AWS_REGION)
-cresponse = cclient.list_agent_runtimes()
-
-for runtime in cresponse['agentRuntimes']:
-    if runtime['agentRuntimeName'] == RUNTIME_NAME:
-        runtime_id = runtime['agentRuntimeId']
-        print(f"Found runtime ID: {runtime_id}")
-        break
-```
-
-You can run it as follows:
 ```bash
 uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/get_agentcore_runtime_id.py
 ```
@@ -427,62 +361,6 @@ docker build \
 Since you already have the agent deployed, you will need to run an update (rather than a deploy/create)
 
 [**`update_nat.py`**](scripts/update_nat.py)
-
-```python
-import boto3
-import os
-
-# Configuration
-CONTAINER_IMAGE = 'strands-demo:latest'
-
-AWS_REGION = os.environ['AWS_DEFAULT_REGION']
-AWS_ACCOUNT_ID = os.environ['AWS_ACCOUNT_ID']
-IAM_AGENTCORE_ROLE = f'arn:aws:iam::{os.environ.get("AWS_ACCOUNT_ID")}:role/AgentCore_NAT'
-
-RUNTIME_NAME = "strands_demo"
-
-cclient = boto3.client('bedrock-agentcore-control', region_name=AWS_REGION)
-cresponse = cclient.list_agent_runtimes()
-
-runtime_id = None
-for runtime in cresponse['agentRuntimes']:
-    if runtime['agentRuntimeName'] == RUNTIME_NAME:
-        runtime_id = runtime['agentRuntimeId']
-        print(f"Found runtime ID: {runtime_id}")
-        break
-
-if runtime_id is None:
-    raise RuntimeError(f"No AgentCore runtime named {RUNTIME_NAME!r} found in region {AWS_REGION}")
-
-client = boto3.client(
-    'bedrock-agentcore-control',
-    region_name=AWS_REGION
-)
-
-response = client.update_agent_runtime(
-    agentRuntimeId=runtime_id,
-    agentRuntimeArtifact={
-        'containerConfiguration': {
-            'containerUri': (
-                f'{AWS_ACCOUNT_ID}.dkr.ecr.{AWS_REGION}'
-                f'.amazonaws.com/{CONTAINER_IMAGE}'
-            )
-        }
-    },
-    networkConfiguration={"networkMode": "PUBLIC"},
-    roleArn=IAM_AGENTCORE_ROLE,
-    environmentVariables={
-        'AWS_DEFAULT_REGION': AWS_REGION
-    },
-)
-
-print("Agent Runtime updated successfully!")
-print(f"Agent Runtime ARN: {response['agentRuntimeArn']}")
-print(f"Status: {response['status']}")
-
-```
-
-### Run the Update Script
 
 ```bash
 uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/update_nat.py
@@ -611,7 +489,7 @@ Before creating the role, ensure you have:
     "Version": "2012-10-17",
     "Statement": [
         {
-            "Sid": "AllowAccessToBedrockAgentcore",
+            "Sid": "AllowBedrockAgentCore",
             "Effect": "Allow",
             "Principal": {
                 "Service": "bedrock-agentcore.amazonaws.com"
@@ -652,15 +530,32 @@ Since we need a custom policy, we'll create it now:
             ],
             "Resource": "*"
         },
+        {
+            "Sid": "CreateServiceLinkedRole",
+            "Effect": "Allow",
+            "Action": "iam:CreateServiceLinkedRole",
+            "Resource": "*"
+        },
+        {
             "Sid": "BedrockAgentCoreControl",
             "Effect": "Allow",
             "Action": [
-                "bedrock-agentcore:CreateAgentRuntime",
-                "bedrock-agentcore:UpdateAgentRuntime",
-                "bedrock-agentcore:DeleteAgentRuntime",
-                "bedrock-agentcore:GetAgentRuntime"
+                "bedrock:*",
+                "bedrock-agentcore:*"
             ],
             "Resource": "*"
+        },
+        {
+            "Sid": "PassRoleToAgentCore",
+            "Effect": "Allow",
+            "Action": "iam:PassRole",
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "iam:PassedToService": "bedrock-agentcore.amazonaws.com"
+                }
+            }
+        },
         {
             "Sid": "ECRImageAccess",
             "Effect": "Allow",
@@ -820,6 +715,7 @@ arn:aws:iam::<AWS_ACCOUNT_ID>:role/AgentCore_NAT
 ```
 
 **Save this ARN** - you'll need it when deploying your AgentCore runtime!
+
 
 ---
 

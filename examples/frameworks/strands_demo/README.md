@@ -42,16 +42,34 @@ A minimal example showcasing a Strands agent that answers questions about Strand
 
 ## Prerequisites
 
-- NVIDIA NeMo Agent Toolkit installed. See the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source).
-- API keys as required by your chosen models.
+### Local Development Tools
+
+- **uv with Python 3.11-3.13**: Python environment manager. After installing uv, run: `uv pip install setuptools setuptools-scm`
+- **git**: Version control
+- **git Large File Storage (LFS)**: For handling large files in the repository
+
+### NeMo Agent Toolkit
+
+Follow the official NeMo Agent toolkit installation guide:
+
+```text
+https://docs.nvidia.com/nemo/agent-toolkit/latest/quick-start/installing.html
+```
+
+Or see the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) for installing from source.
+
+### API Keys
+
+API keys as required by your chosen models. See [Set Up API Keys](#set-up-api-keys) below.
 
 ## Installation and Setup
 
-### Install this Workflow
+### Install NeMo Agent Toolkit and Workflow
 
 This command installs the workflow along with its dependencies, including the Strands Agents SDK:
 
 ```bash
+uv pip install -e . # at NeMo-Agent-Toolkit root
 uv pip install -e examples/frameworks/strands_demo
 ```
 
