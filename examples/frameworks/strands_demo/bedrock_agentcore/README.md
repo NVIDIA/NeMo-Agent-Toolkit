@@ -50,7 +50,7 @@ A comprehensive guide for deploying NVIDIA NeMo Agent toolkit with Strands on AW
   - [Deploy the Agent](#deploy-the-agent)
   - [Test the Deployment](#test-the-deployment)
 - [Step 7: Instrument for OpenTelemetry](#step-7-instrument-for-opentelemetry)
-  - [Update Dockerfile Environment Variables](#update-dockerfile-environment-variables)
+  - [Update `Dockerfile` Environment Variables](#update-dockerfile-environment-variables)
   - [Enable OpenTelemetry Instrumentation](#enable-opentelemetry-instrumentation)
   - [ReBuild and Push Docker Image to ECR](#rebuild-and-push-docker-image-to-ecr)
   - [Update the Agent with New Version](#update-the-agent-with-new-version)
@@ -59,7 +59,7 @@ A comprehensive guide for deploying NVIDIA NeMo Agent toolkit with Strands on AW
 - [Appendices](#appendices)
   - [Appendix 1: Creating an AWS AgentCore Runtime Role](#appendix-1-creating-an-aws-agentcore-runtime-role)
   - [Appendix 2: Turning on OpenTelemetry Support in CloudWatch](#appendix-2-turning-on-opentelemetry-support-in-cloudwatch)
-- [Dockerfile Reference](#dockerfile-reference)
+- [`Dockerfile` Reference](#dockerfile-reference)
 - [Placeholder Reference](#placeholder-reference)
 - [Additional Resources](#additional-resources)
 
