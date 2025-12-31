@@ -221,13 +221,13 @@ docker build \
   --platform linux/arm64 \
   --load .
 ```
-<!-- path-check-skip-end -->
+
 
 ### Run the Container Locally
 
 > [!NOTE] 
 > If you built the image with `--platform linux/arm64`, you do not need to specify platform again at runtime.
-
+<!-- path-check-skip-end -->
 Run the following command to view and set Access Key ID, Secret Access Key, and Session Token
 ```bash
 aws sts get-session-token --duration 3600 --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' --output text
