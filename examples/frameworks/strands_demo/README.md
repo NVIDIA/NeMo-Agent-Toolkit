@@ -53,7 +53,7 @@ A minimal example showcasing a Strands agent that answers questions about Strand
 
 ### NeMo Agent Toolkit
 
-Follow the official NeMo Agent toolkit installation guide: [here](https://docs.nvidia.com/nemo/agent-toolkit/latest/quick-start/installing.html)
+Follow the official NeMo Agent toolkit [installation guide](https://docs.nvidia.com/nemo/agent-toolkit/latest/quick-start/installing.html)
 
 Or see the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) for installing from source.
 

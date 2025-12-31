@@ -109,7 +109,7 @@ You will need access to the following AWS Console services:
 - **CloudWatch Console** - To enable Transaction Search and view logs and traces (see [Appendix 2](#appendix-2-turning-on-opentelemetry-support-in-cloudwatch))
 - **Secrets Manager Console** - To manage the NVIDIA API credentials secret
 
-> NOTE: Details instructions for setting up IAM permissions in the AWS console are available in Appendix 1
+> NOTE: Detailed instructions for setting up IAM permissions in the AWS console are available in Appendix 1
 
 ### Additional Requirements
 
@@ -117,7 +117,7 @@ You will need access to the following AWS Console services:
 
 ## Step 1: Setup NeMo Agent Toolkit Environment
 
-Follow the official NeMo Agent toolkit installation guide: [here](https://docs.nvidia.com/nemo/agent-toolkit/latest/quick-start/installing.html)
+Follow the official NeMo Agent toolkit [installation guide](https://docs.nvidia.com/nemo/agent-toolkit/latest/quick-start/installing.html)
 
 ## Step 2: Configure AWS CLI
 
@@ -128,7 +128,7 @@ If you have IAM user credentials, configure them with:
 ```bash
 unset AWS_ACCESS_KEY_ID      # these `unset` commands are non-breaking
 unset AWS_SECRET_ACCESS_KEY  # and will help with consistency across
-unset AWS_SESSION_TOKEN      # multiple runs. Alternativley,
+unset AWS_SESSION_TOKEN      # multiple runs. Alternatively,
 unset AWS_REGION             # `rm ~/.aws/credentials`  or `rm ~/.aws/config`
 unset AWS_DEFAULT_REGION
 unset AWS_PROFILE
