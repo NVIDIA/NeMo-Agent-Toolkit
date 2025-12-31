@@ -411,7 +411,7 @@ Since you already have the agent deployed, you will need to run an update (rathe
 uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/update_nat.py
 ```
 
-### Final Test 
+### Final Test
 
 ```bash
 uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py
