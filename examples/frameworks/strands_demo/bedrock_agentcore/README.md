@@ -52,7 +52,8 @@ The user or role running this tutorial needs the following IAM permissions:
 | **CloudWatch** | `cloudwatch:PutMetricData`, `logs:*` | Enable observability and Transaction Search |
 | **STS** | `sts:GetCallerIdentity` | Verify credentials |
 
-> **Tip:** For a quick start, you can use the `AdministratorAccess` managed policy during initial setup, then scope down permissions for production use.
+> [!NOTE]
+> For a quick start, you can use the `AdministratorAccess` managed policy during initial setup, then scope down permissions for production use.
 
 ### AWS Console Access
 
@@ -72,11 +73,7 @@ You will need access to the following AWS Console services:
 
 ## Step 1: Setup NeMo Agent Toolkit Environment
 
-Follow the official NeMo Agent toolkit installation guide:
-
-```text
-https://docs.nvidia.com/nemo/agent-toolkit/latest/quick-start/installing.html
-```
+Follow the official NeMo Agent toolkit installation guide: [here](https://docs.nvidia.com/nemo/agent-toolkit/latest/quick-start/installing.html)
 
 ## Step 2: Configure AWS CLI
 
@@ -105,9 +102,9 @@ If you use AWS SSO, log in with your profile:
 ```bash
 aws sso login --profile your-profile-name
 ```
-
-> **Important:** AWS Bedrock AgentCore is available only in specific regions. Use `us-west-2` or `us-east-1`. Other regions such as `us-west-1` are **not supported** and will result in DNS resolution errors.
-> **Note:** Temporary credentials (SSO, assumed roles, session tokens) expire after 1-12 hours. If you receive `InvalidClientTokenId` or `UnrecognizedClientException`, refresh your credentials.
+> [!NOTE]
+> AWS Bedrock AgentCore is available only in specific regions. Use `us-west-2` or `us-east-1`. Other regions such as `us-west-1` are **not supported** and will result in DNS resolution errors.
+> Temporary credentials (SSO, assumed roles, session tokens) expire after 1-12 hours. If you receive `InvalidClientTokenId` or `UnrecognizedClientException`, refresh your credentials.
 
 ### Verify Your Credentials
 
@@ -148,7 +145,8 @@ aws secretsmanager create-secret \
 
 Replace `<YOUR-NVIDIA-API-KEY-HERE>` with your actual NVIDIA API key.
 
-> **Warning:** This command will throw a `ResourceExistsException` if the secret already exists in this region.
+> [!WARNING]
+> This command will throw a `ResourceExistsException` if the secret already exists in this region.
 
 ### Verify the Secret
 
@@ -183,7 +181,8 @@ docker build \
 
 ### Run the Container Locally
 
-> **Note:** If you built the image with `--platform linux/arm64`, you do not need to specify platform again at runtime.
+> [!NOTE] 
+> If you built the image with `--platform linux/arm64`, you do not need to specify platform again at runtime.
 
 Run the following command to view and set Access Key ID, Secret Access Key, and Session Token
 ```bash
@@ -199,7 +198,7 @@ export AWS_DEFAULT_REGION="us-west-2"
 docker run \
   -p 8080:8080 \
   -p 6006:6006 \
-  -e NVIDIA_API_KEY=$NVIDIA_API_KEY \
+  -e NVIDIA_API_KEY \
   -e AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY \
   -e AWS_SESSION_TOKEN \
@@ -209,7 +208,8 @@ docker run \
 ```
 <!-- path-check-skip-end -->
 
-> **Tip:** The command above passes environment variables from your shell. Ensure they are exported before running. For SSO users, see [Troubleshooting](#troubleshooting) for how to export temporary credentials.
+> [!NOTE]
+> The command above passes environment variables from your shell. Ensure they are exported before running. For SSO users, see [Troubleshooting](#troubleshooting) for how to export temporary credentials.
 
 ### Test Local Deployment
 
@@ -251,7 +251,8 @@ aws ecr get-login-password --region $AWS_DEFAULT_REGION | \
   --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
 ```
 
-> **Note:** This step requires that Appendix 1 was previously followed to properly configure an IAM Role and Policy
+> [!NOTE]
+> This step requires that Appendix 1 was previously followed to properly configure an IAM Role and Policy
 
 ## Step 6: Build and Deploy Agent in AWS AgentCore
 
@@ -284,7 +285,8 @@ Then run the deployment script:
 uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/deploy_nat.py
 ```
 
-> **Warning:** The script will deploy an ECR instance, which will incur cost. Script source is located at [`scripts/deploy_nat.py`](scripts/deploy_nat.py) if you need to review or modify it.
+> [!WARNING] 
+> The script will deploy an ECR instance, which will incur cost. Script source is located at [`scripts/deploy_nat.py`](scripts/deploy_nat.py) if you need to review or modify it.
 
 **Important:** Record the runtime ID from the output for the next steps. It will look something like: `strands_demo-abc123XYZ`
 
@@ -371,7 +373,8 @@ uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/update_nat.p
 uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py
 ```
 
-> **Note:** If you do not see OpenTelemetry telemetry for your agent after a few test runs, please refer to Appendix 2 to ensure you have enabled OpenTelemetry support in CloudWatch.
+> [!NOTE] 
+> If you do not see OpenTelemetry telemetry for your agent after a few test runs, please refer to Appendix 2 to ensure you have enabled OpenTelemetry support in CloudWatch.
 
 ## 🎉 Success!
 
@@ -890,7 +893,8 @@ Throughout this guide, replace the following placeholders with your actual value
 
 ### Supported AWS Regions for Bedrock AgentCore
 
-> **Note:** Bedrock AgentCore is available in limited regions. The following are confirmed to work:
+> [!NOTE] 
+> Bedrock AgentCore is available in limited regions. The following are confirmed to work:
 
 | Region Code | Region Name | AgentCore Support |
 |------------|-------------|-------------------|
