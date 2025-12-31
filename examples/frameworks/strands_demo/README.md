@@ -23,15 +23,18 @@ A minimal example showcasing a Strands agent that answers questions about Strand
 
 - [Key Features](#key-features)
 - [Prerequisites](#prerequisites)
+  - [Local Development Tools](#local-development-tools)
+  - [NeMo Agent Toolkit](#nemo-agent-toolkit)
+  - [API Keys](#api-keys)
 - [Installation and Setup](#installation-and-setup)
-  - [Install this Workflow](#install-this-workflow)
+  - [Install NeMo Agent Toolkit and Workflow](#install-nemo-agent-toolkit-and-workflow)
   - [Set Up API Keys](#set-up-api-keys)
-- [Run the Workflow Locally](#run-the-workflow-locally)
-  - [Run the workflow (config.yml)](#1-run-the-workflow-configyml)
-  - [Evaluate accuracy and performance (eval_config.yml)](#2-evaluate-accuracy-and-performance-eval_configyml)
-  - [Optimize workflow parameters (optimizer_config.yml)](#3-optimize-workflow-parameters-optimizer_configyml)
-  - [Determine GPU cluster sizing (sizing_config.yml)](#4-determine-gpu-cluster-sizing-sizing_configyml)
-  - [Test and serve AgentCore-compatible endpoints locally (agentcore_config.yml)](#5-test-and-serve-agentcore-compatible-endpoints-locally-agentcore_configyml)
+- [Run the Workflow locally](#run-the-workflow-locally)
+  - [1) Run the workflow (config.yml)](#1-run-the-workflow-configyml)
+  - [2) Evaluate accuracy and performance (eval_config.yml)](#2-evaluate-accuracy-and-performance-eval_configyml)
+  - [3) Optimize workflow parameters (optimizer_config.yml)](#3-optimize-workflow-parameters-optimizer_configyml)
+  - [4) Determine GPU cluster sizing (sizing_config.yml)](#4-determine-gpu-cluster-sizing-sizing_configyml)
+  - [5) Test and serve AgentCore-compatible endpoints locally (agentcore_config.yml)](#5-test-and-serve-agentcore-compatible-endpoints-locally-agentcore_configyml)
 
 ## Key Features
 
@@ -42,22 +45,37 @@ A minimal example showcasing a Strands agent that answers questions about Strand
 
 ## Prerequisites
 
-- NVIDIA NeMo Agent Toolkit installed. See the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source).
-- API keys as required by your chosen models.
+### Local Development Tools
+
+- **uv with Python 3.11-3.13**: Python environment manager. After installing uv, run: `uv pip install setuptools setuptools-scm`
+- **git**: Version control
+- **git Large File Storage (LFS)**: For handling large files in the repository
+
+### NeMo Agent Toolkit
+
+Follow the official NeMo Agent toolkit [installation guide](https://docs.nvidia.com/nemo/agent-toolkit/latest/quick-start/installing.html)
+
+Or see the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) for installing from source.
+
+### API Keys
+
+API keys as required by your chosen models. See [Set Up API Keys](#set-up-api-keys) below.
 
 ## Installation and Setup
 
-### Install this Workflow
+### Install NeMo Agent Toolkit and Workflow
 
 This command installs the workflow along with its dependencies, including the Strands Agents SDK:
 
 ```bash
+uv pip install -e . # at NeMo-Agent-Toolkit root
 uv pip install -e examples/frameworks/strands_demo
 ```
 
 ### Set Up API Keys
 
-> **Note:** The `NVIDIA_API_KEY` is required only when using NVIDIA-hosted NIM endpoints (default configuration). If you are using a self-hosted NVIDIA NIM or model with OAI compatible endpoint and a custom `base_url` specified in your configuration file (such as in `examples/frameworks/strands_demo/configs/sizing_config.yml`), you do not need to set the `NVIDIA_API_KEY`.
+> [!NOTE]
+> The `NVIDIA_API_KEY` is required only when using NVIDIA-hosted NIM endpoints (default configuration). If you are using a self-hosted NVIDIA NIM or model with OAI compatible endpoint and a custom `base_url` specified in your configuration file (such as in `examples/frameworks/strands_demo/configs/sizing_config.yml`), you do not need to set the `NVIDIA_API_KEY`.
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_NVIDIA_API_KEY>
@@ -101,7 +119,9 @@ Runs the workflow over a dataset and computes evaluation and performance metrics
 ```bash
 nat eval --config_file examples/frameworks/strands_demo/configs/eval_config.yml
 ```
-> Tip: If you hit rate limits, lower concurrency: `--override eval.general.max_concurrency 1`.
+> [!NOTE]
+> If you hit rate limits, lower concurrency: `--override eval.general.max_concurrency 1`
+> Refer to [the evaluation guide](../../../docs/source/improve-workflows/evaluate.md) for more details on evaluation metrics and configuration options.
 
 ### 3) Optimize workflow parameters (optimizer_config.yml)
 
@@ -118,7 +138,9 @@ nat optimize --config_file examples/frameworks/strands_demo/configs/optimizer_co
 
 The optimizer runs 20 trials with 3 repetitions each for statistical stability and generates a report showing the best parameter combination based on weighted multi-objective scoring.
 
-> Note: Optimization can take significant time. Reduce `n_trials` or adjust the search space in the config for faster experimentation.
+> [!NOTE]
+> Optimization can take significant time. Reduce `n_trials` or adjust the search space in the config for faster experimentation.
+> Refer to [the optimizer guide](../../../docs/source/improve-workflows/optimizer.md) for more details on optimization metrics and configuration options.
 
 ### 4) Determine GPU cluster sizing (sizing_config.yml)
 
