@@ -140,8 +140,6 @@ The optimizer runs 20 trials with 3 repetitions each for statistical stability a
 
 > [!NOTE]
 > Optimization can take significant time. Reduce `n_trials` or adjust the search space in the config for faster experimentation.
-
-> [!NOTE]
 > Refer to [the optimizer guide](../../../docs/source/improve-workflows/optimizer.md) for more details on optimization metrics and configuration options.
 
 ### 4) Determine GPU cluster sizing (sizing_config.yml)
