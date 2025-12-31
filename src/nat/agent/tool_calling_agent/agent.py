@@ -102,7 +102,7 @@ class ToolCallAgentGraph(DualNodeAgent):
                 raise RuntimeError('No input received in state: "messages"')
             response = await self.agent.ainvoke(
                 {"messages": state.messages},
-                config=RunnableConfig(callbacks=self.callbacks),
+                config=RunnableConfig(callbacks=self.callbacks, configurable={"__pregel_runtime": DEFAULT_RUNTIME}),
             )
             if self.detailed_logs:
                 agent_input = "\n".join(str(message.content) for message in state.messages)
