@@ -69,7 +69,7 @@ You will need access to the following AWS Console services:
 
 ### Additional Requirements
 
-- **NVIDIA API Key** - Obtain from [NVIDIA NGC](https://ngc.nvidia.com/) or [build.nvidia.com](https://build.nvidia.com). This will be stored in AWS Secrets Manager during setup.
+- **NVIDIA API Key** - Obtain from [NVIDIA NGC](https://ngc.nvidia.com/) or [build.NVIDIA](https://build.nvidia.com). This will be stored in AWS Secrets Manager during setup.
 
 ## Step 1: Setup NeMo Agent Toolkit Environment
 
