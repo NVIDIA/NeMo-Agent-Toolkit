@@ -19,6 +19,50 @@ limitations under the License.
 
 A comprehensive guide for deploying NVIDIA NeMo Agent toolkit with Strands on AWS AgentCore, including OpenTelemetry instrumentation for monitoring.
 
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+  - [Local Development Tools](#local-development-tools)
+  - [AWS Account Requirements](#aws-account-requirements)
+  - [IAM Permissions for Deployment](#iam-permissions-for-deployment)
+  - [AWS Console Access](#aws-console-access)
+  - [Additional Requirements](#additional-requirements)
+- [Step 1: Setup NeMo Agent Toolkit Environment](#step-1-setup-nemo-agent-toolkit-environment)
+- [Step 2: Configure AWS CLI](#step-2-configure-aws-cli)
+  - [Option A: Using Long-Term Credentials](#option-a-using-long-term-credentials)
+  - [Option B: Using AWS SSO (Recommended for Organizations)](#option-b-using-aws-sso-recommended-for-organizations)
+  - [Verify Your Credentials](#verify-your-credentials)
+  - [Setup AWS ENV Variables](#setup-aws-env-variables)
+- [Step 3: Create AWS Secrets Manager Entry for NVIDIA_API_KEY](#step-3-create-aws-secrets-manager-entry-for-nvidia_api_key)
+  - [Secrets Manager Prerequisites](#secrets-manager-prerequisites)
+  - [Create the Secret](#create-the-secret)
+  - [Verify the Secret](#verify-the-secret)
+- [Step 4: Install and Test the Agent Locally](#step-4-install-and-test-the-agent-locally)
+  - [Install the Example Package](#install-the-example-package)
+  - [Build the Docker Image](#build-the-docker-image)
+  - [Run the Container Locally](#run-the-container-locally)
+  - [Test Local Deployment](#test-local-deployment)
+- [Step 5: Set Up ECR](#step-5-set-up-ecr)
+  - [Create ECR Repository](#create-ecr-repository)
+  - [Authenticate Docker with ECR](#authenticate-docker-with-ecr)
+- [Step 6: Build and Deploy Agent in AWS AgentCore](#step-6-build-and-deploy-agent-in-aws-agentcore)
+  - [Build and Push Docker Image to ECR](#build-and-push-docker-image-to-ecr)
+  - [Deploy the Agent](#deploy-the-agent)
+  - [Test the Deployment](#test-the-deployment)
+- [Step 7: Instrument for OpenTelemetry](#step-7-instrument-for-opentelemetry)
+  - [Update Dockerfile Environment Variables](#update-dockerfile-environment-variables)
+  - [Enable OpenTelemetry Instrumentation](#enable-opentelemetry-instrumentation)
+  - [ReBuild and Push Docker Image to ECR](#rebuild-and-push-docker-image-to-ecr)
+  - [Update the Agent with New Version](#update-the-agent-with-new-version)
+  - [Final Test](#final-test)
+- [Troubleshooting](#troubleshooting)
+- [Appendices](#appendices)
+  - [Appendix 1: Creating an AWS AgentCore Runtime Role](#appendix-1-creating-an-aws-agentcore-runtime-role)
+  - [Appendix 2: Turning on OpenTelemetry Support in CloudWatch](#appendix-2-turning-on-opentelemetry-support-in-cloudwatch)
+- [Dockerfile Reference](#dockerfile-reference)
+- [Placeholder Reference](#placeholder-reference)
+- [Additional Resources](#additional-resources)
+
 ## Prerequisites
 
 Before you begin, ensure you have the following:

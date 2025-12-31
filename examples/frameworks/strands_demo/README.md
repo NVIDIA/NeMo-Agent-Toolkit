@@ -23,15 +23,18 @@ A minimal example showcasing a Strands agent that answers questions about Strand
 
 - [Key Features](#key-features)
 - [Prerequisites](#prerequisites)
+  - [Local Development Tools](#local-development-tools)
+  - [NeMo Agent Toolkit](#nemo-agent-toolkit)
+  - [API Keys](#api-keys)
 - [Installation and Setup](#installation-and-setup)
-  - [Install this Workflow](#install-this-workflow)
+  - [Install NeMo Agent Toolkit and Workflow](#install-nemo-agent-toolkit-and-workflow)
   - [Set Up API Keys](#set-up-api-keys)
-- [Run the Workflow Locally](#run-the-workflow-locally)
-  - [Run the workflow (config.yml)](#1-run-the-workflow-configyml)
-  - [Evaluate accuracy and performance (eval_config.yml)](#2-evaluate-accuracy-and-performance-eval_configyml)
-  - [Optimize workflow parameters (optimizer_config.yml)](#3-optimize-workflow-parameters-optimizer_configyml)
-  - [Determine GPU cluster sizing (sizing_config.yml)](#4-determine-gpu-cluster-sizing-sizing_configyml)
-  - [Test and serve AgentCore-compatible endpoints locally (agentcore_config.yml)](#5-test-and-serve-agentcore-compatible-endpoints-locally-agentcore_configyml)
+- [Run the Workflow locally](#run-the-workflow-locally)
+  - [1) Run the workflow (config.yml)](#1-run-the-workflow-configyml)
+  - [2) Evaluate accuracy and performance (eval_config.yml)](#2-evaluate-accuracy-and-performance-eval_configyml)
+  - [3) Optimize workflow parameters (optimizer_config.yml)](#3-optimize-workflow-parameters-optimizer_configyml)
+  - [4) Determine GPU cluster sizing (sizing_config.yml)](#4-determine-gpu-cluster-sizing-sizing_configyml)
+  - [5) Test and serve AgentCore-compatible endpoints locally (agentcore_config.yml)](#5-test-and-serve-agentcore-compatible-endpoints-locally-agentcore_configyml)
 
 ## Key Features
 
