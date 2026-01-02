@@ -17,11 +17,15 @@ import logging
 from abc import ABC
 from abc import abstractmethod
 from collections.abc import Mapping
+from typing import TYPE_CHECKING
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
+
+if TYPE_CHECKING:
+    from fastapi import FastAPI
 
 from nat.builder.function import Function
 from nat.builder.function_base import FunctionBase
@@ -30,6 +34,7 @@ from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.config import Config
 from nat.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
 from nat.front_ends.mcp.memory_profiler import MemoryProfiler
+from nat.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
 
@@ -137,7 +142,7 @@ class MCPFrontEndPluginWorkerBase(ABC):
         # Set up the health endpoint
         self._setup_health_endpoint(mcp)
 
-        # Build the workflow and register all functions with MCP
+        # Build the default workflow
         workflow = await builder.build()
 
         # Get all functions from the workflow
@@ -158,16 +163,36 @@ class MCPFrontEndPluginWorkerBase(ABC):
                     logger.debug("Skipping function %s as it's not in tool_names", function_name)
             functions = filtered_functions
 
-        # Register each function with MCP, passing workflow context for observability
+        # Create SessionManagers for each function
+        # For regular functions, wrap them in a mini-workflow with that function as entry point
+        # For workflows, use them directly
+        session_managers: dict[str, SessionManager] = {}
         for function_name, function in functions.items():
-            register_function_with_mcp(mcp, function_name, function, workflow, self.memory_profiler)
+            if isinstance(function, Workflow):
+                # Already a workflow, use it directly
+                logger.info("Function %s is a Workflow, using directly", function_name)
+                session_managers[function_name] = await SessionManager.create(config=self.full_config,
+                                                                              shared_builder=builder,
+                                                                              entry_function=None)
+            else:
+                # Regular function - build a workflow with this function as entry point
+                logger.info("Function %s is a regular function, building entry workflow", function_name)
+                session_managers[function_name] = await SessionManager.create(config=self.full_config,
+                                                                              shared_builder=builder,
+                                                                              entry_function=function_name)
+
+        # Register each function with MCP, passing SessionManager for observability
+        for function_name, session_manager in session_managers.items():
+            register_function_with_mcp(mcp, function_name, session_manager, self.memory_profiler)
 
         # Add a simple fallback function if no functions were found
-        if not functions:
+        if not session_managers:
             raise RuntimeError("No functions found in workflow. Please check your configuration.")
 
         # After registration, expose debug endpoints for tool/schema inspection
-        self._setup_debug_endpoints(mcp, functions)
+        # Extract the entry functions from session managers for debug endpoints
+        debug_functions = {name: sm.workflow for name, sm in session_managers.items()}
+        self._setup_debug_endpoints(mcp, debug_functions)
 
     async def _get_all_functions(self, workflow: Workflow) -> dict[str, Function]:
         """Get all functions from the workflow.
@@ -191,6 +216,28 @@ class MCPFrontEndPluginWorkerBase(ABC):
             functions[workflow.config.workflow.type] = workflow
 
         return functions
+
+    async def add_root_level_routes(self, wrapper_app: "FastAPI", mcp: FastMCP) -> None:
+        """Add routes to the wrapper FastAPI app (optional extension point).
+
+        This method is called when base_path is configured and a wrapper
+        FastAPI app is created to mount the MCP server. Plugins can override
+        this to add routes to the wrapper app at the root level, outside the
+        mounted MCP server path.
+
+        Common use cases:
+        - OAuth discovery endpoints (e.g., /.well-known/oauth-protected-resource)
+        - Health checks at root level
+        - Static file serving
+        - Custom authentication/authorization endpoints
+
+        Default implementation does nothing, making this an optional extension point.
+
+        Args:
+            wrapper_app: The FastAPI wrapper application that mounts the MCP server
+            mcp: The FastMCP server instance (already mounted at base_path)
+        """
+        pass  # Default: no additional root-level routes
 
     def _setup_debug_endpoints(self, mcp: FastMCP, functions: Mapping[str, FunctionBase]) -> None:
         """Set up HTTP debug endpoints for introspecting tools and schemas.

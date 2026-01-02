@@ -89,6 +89,7 @@ async def nim_agno(llm_config: NIMModelConfig, _builder: Builder):
             exclude={"type", "model_name", "thinking", "api_type"},
             by_alias=True,
             exclude_none=True,
+            exclude_unset=True,
         ),
     }
 
@@ -108,6 +109,7 @@ async def openai_agno(llm_config: OpenAIModelConfig, _builder: Builder):
             exclude={"type", "model_name", "thinking", "api_type"},
             by_alias=True,
             exclude_none=True,
+            exclude_unset=True,
         ),
     }
 
@@ -131,6 +133,7 @@ async def litellm_agno(llm_config: LiteLlmModelConfig, _builder: Builder):
             exclude={"type", "thinking", "model_name", "api_type"},
             by_alias=True,
             exclude_none=True,
+            exclude_unset=True,
         ),
         id=llm_config.model_name,
     )

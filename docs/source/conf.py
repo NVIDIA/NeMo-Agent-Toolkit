@@ -31,18 +31,22 @@ import glob
 import os
 import shutil
 import subprocess
+import textwrap
 import typing
 from pathlib import Path
 
 if typing.TYPE_CHECKING:
     from autoapi._objects import PythonObject
 
+# API builds take about 4 minutes, while the rest of the build process takes about 30 seconds.
+build_api_docs = os.getenv('NAT_DISABLE_API_BUILD', '0') != '1'
+cur_dir = Path(os.path.abspath(__file__)).parent
+
 
 def _build_api_tree() -> Path:
     # Work-around for https://github.com/readthedocs/sphinx-autoapi/issues/298
     # AutoAPI support for implicit namespaces is broken, so we need to manually
 
-    cur_dir = Path(os.path.abspath(__file__)).parent
     docs_dir = cur_dir.parent
     root_dir = docs_dir.parent
     nat_dir = root_dir / "src" / "nat"
@@ -56,6 +60,7 @@ def _build_api_tree() -> Path:
         shutil.rmtree(api_tree.absolute())
 
     os.makedirs(api_tree.absolute())
+
     shutil.copytree(nat_dir, dest_dir)
     dest_plugins_dir = dest_dir / "plugins"
 
@@ -79,9 +84,6 @@ def _build_api_tree() -> Path:
     return api_tree
 
 
-API_TREE = _build_api_tree()
-print(f"API tree built at {API_TREE}")
-
 # -- Project information -----------------------------------------------------
 
 project = 'NVIDIA NeMo Agent Toolkit'
@@ -103,38 +105,58 @@ version = '.'.join(release.split('.')[:2])
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'autoapi.extension',
     'IPython.sphinxext.ipython_console_highlighting',
     'IPython.sphinxext.ipython_directive',
     'myst_parser',
     'nbsphinx',
     'sphinx_copybutton',
+    'sphinx_design',
     'sphinx.ext.doctest',
     'sphinx.ext.graphviz',
     'sphinx.ext.intersphinx',
     "sphinxmermaid"
 ]
 
-autoapi_dirs = [str(API_TREE.absolute())]
+if build_api_docs:
+    api_tree = _build_api_tree()
+    print(f"API tree built at {api_tree}")
 
-autoapi_root = "api"
-autoapi_python_class_content = "both"
-autoapi_options = [
-    'members',
-    'undoc-members',
-    'private-members',
-    'show-inheritance',
-    'show-module-summary',
-    'imported-members',
-]
+    extensions.append('autoapi.extension')
 
-# set to true once https://github.com/readthedocs/sphinx-autoapi/issues/298 is fixed
-autoapi_python_use_implicit_namespaces = False
+    autoapi_dirs = [str(api_tree.absolute())]
 
-# Enable this for debugging
-autoapi_keep_files = False
+    autoapi_root = "api"
+    autoapi_python_class_content = "both"
+    autoapi_options = [
+        'members',
+        'undoc-members',
+        'private-members',
+        'show-inheritance',
+        'show-module-summary',
+        'imported-members',
+    ]
 
-myst_enable_extensions = ["colon_fence"]
+    # set to true once https://github.com/readthedocs/sphinx-autoapi/issues/298 is fixed
+    autoapi_python_use_implicit_namespaces = False
+
+    # Enable this for debugging
+    autoapi_keep_files = os.getenv('NAT_AUTOAPI_KEEP_FILES', '0') == '1'
+
+else:
+    # Create an empty 'api' directory to avoid build errors when API docs are disabled
+    api_stub_path = cur_dir / 'api'
+    api_stub_path.mkdir(exist_ok=True)
+    with open(api_stub_path / "index.rst", "w", encoding="utf-8") as f:
+        index_rst = """
+                   ==========
+                   Python API
+                   ==========
+
+                   Placeholder for API documentation build with NAT_DISABLE_API_BUILD=1.
+                   """
+        f.write(textwrap.dedent(index_rst))
+
+myst_enable_extensions = ["attrs_inline", "colon_fence"]
 
 html_show_sourcelink = False  # Remove 'view source code' from top of page (for html, not python)
 set_type_checking_flag = True  # Enable 'expensive' imports for sphinx_autodoc_typehints
@@ -161,10 +183,9 @@ numpydoc_class_members_toctree = False
 # mysql.com  reports a 403 when requested by linkcheck
 # api.service.com is a placeholder for a service example
 # Ignore example.com/mcp as it is inaccessible when building the docs
-# Once v1.2 is merged into main, remove the ignore for the banner.png
 linkcheck_ignore = [
-    r'http://localhost:\d+/',
-    r'https://localhost:\d+/',
+    r'http://localhost:\d+',
+    r'https://localhost:\d+',
     r'^http://$',
     r'^https://$',
     r'https://(platform\.)?openai.com',
@@ -172,8 +193,12 @@ linkcheck_ignore = [
     r'https://www.mysql.com',
     r'https://api.service.com',
     r'https?://example\.com/mcp/?',
-    r'http://custom-server'
+    r'http://custom-server',
+    r'^\?provider=',
+    r'https://agent\.example\.com'
 ]
+
+templates_path = ['_templates']
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
@@ -232,7 +257,7 @@ html_theme_options = {
     '''
     ],
     "show_nav_level":
-        2,
+        1,
     "switcher": {
         "json_url": "../versions1.json", "version_match": version
     },
@@ -251,6 +276,7 @@ html_extra_path = ["versions1.json"]
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+html_css_files = ['css/custom.css']
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -330,19 +356,67 @@ default_role = "py:obj"
 # versions of Pydantic.
 PYDANTIC_DEFAULT_DOCSTRING = "A base class for creating Pydantic models."
 
+if build_api_docs:
 
-def skip_pydantic_special_attrs(app: object, what: str, name: str, obj: "PythonObject", skip: bool,
-                                options: list[str]) -> bool:
+    def skip_pydantic_special_attrs(app: object,
+                                    what: str,
+                                    name: str,
+                                    obj: "PythonObject",
+                                    skip: bool,
+                                    options: list[str]) -> bool:
 
-    if not skip:
-        bases = getattr(obj, 'bases', [])
-        if (not skip and ('pydantic.BaseModel' in bases or 'EndpointBase' in bases)
-                and PYDANTIC_DEFAULT_DOCSTRING in obj.docstring):
-            obj.docstring = ""
+        if not skip:
+            bases = getattr(obj, 'bases', [])
+            if (not skip and ('pydantic.BaseModel' in bases or 'EndpointBase' in bases)
+                    and PYDANTIC_DEFAULT_DOCSTRING in obj.docstring):
+                obj.docstring = ""
 
-    return skip
+        return skip
 
+    def clean_markdown_from_docstrings(app, docname, source):
+        """Clean up Markdown syntax that doesn't work in RST.
 
-def setup(sphinx):
-    # Work-around for for Pydantic docstrings that trigger parsing warnings
-    sphinx.connect("autoapi-skip-member", skip_pydantic_special_attrs)
+        Some inherited docstrings (for example, from LangChain) use Markdown syntax like
+        triple backticks for code blocks and !!! for admonitions. These cause RST
+        parsing warnings. This function converts or removes such patterns.
+        """
+        import re
+        if docname.startswith('api/'):
+            content = source[0]
+
+            # Remove MkDocs-style admonition blocks: !!! type "title"\n    content
+            # These span multiple lines and are complex to convert, so we remove them
+            content = re.sub(r'^\s*!!!\s+\w+\s+"[^"]*"\s*\n(?:\s{4,}.*\n)*', '', content, flags=re.MULTILINE)
+
+            # Convert Markdown code fences to RST code blocks
+            # Match ```language\n...code...\n``` and convert to :: block
+            def convert_code_fence(match):
+                indent = match.group(1)
+                lang = match.group(2) or ''
+                code = match.group(3)
+                # Create RST code block with proper indentation
+                if lang:
+                    header = f"{indent}.. code-block:: {lang}\n\n"
+                else:
+                    header = f"{indent}::\n\n"
+                # Indent the code content
+                indented_code = '\n'.join(f"{indent}   {line}" if line.strip() else '' for line in code.split('\n'))
+                return header + indented_code + '\n'
+
+            # Handle code fences with optional language - match ``` at any indentation
+            content = re.sub(r'^(\s*)```(\w*)\n(.*?)^\s*```\s*$',
+                             convert_code_fence,
+                             content,
+                             flags=re.MULTILINE | re.DOTALL)
+
+            # Escape **kwargs and **args patterns that appear in function signatures
+            # These get interpreted as RST bold/strong markup
+            content = re.sub(r'\*\*(kwargs|args|kw)', r'\\*\\*\1', content)
+
+            source[0] = content
+
+    def setup(sphinx):
+        # Work-around for for Pydantic docstrings that trigger parsing warnings
+        sphinx.connect("autoapi-skip-member", skip_pydantic_special_attrs)
+        # Clean up Markdown syntax in auto-generated API docs
+        sphinx.connect("source-read", clean_markdown_from_docstrings)

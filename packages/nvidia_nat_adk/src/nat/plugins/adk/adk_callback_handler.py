@@ -43,10 +43,17 @@ class ADKProfilerHandler(BaseProfilerCallback):
     and store them in NeMo Agent Toolkit's usage_stats queue for subsequent analysis.
     """
 
-    def __init__(self) -> None:
-        super().__init__()
+    _instance: "ADKProfilerHandler | None" = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+
+        return cls._instance
+
+    def __init__(self):
         self._lock = threading.Lock()
-        self.last_call_ts = time.time()
+        self.last_call_ts = 0.0
         self.step_manager = Context.get().intermediate_step_manager
 
         # Original references to Google ADK Tool and LLM methods (for uninstrumenting if needed)
@@ -59,10 +66,15 @@ class ADKProfilerHandler(BaseProfilerCallback):
         Monkey-patch the relevant Google ADK methods with usage-stat collection logic.
         Assumes the 'google-adk' library is installed.
         """
-        import litellm
 
-        if getattr(self, "_instrumented", False):
+        if self._instrumented:
             logger.debug("ADKProfilerHandler already instrumented; skipping.")
+            return
+
+        try:
+            import litellm
+        except Exception as _e:
+            logger.exception("litellm import failed; skipping instrumentation")
             return
         try:
             from google.adk.tools.function_tool import FunctionTool
@@ -71,15 +83,11 @@ class ADKProfilerHandler(BaseProfilerCallback):
             return
 
         # Save the originals
-        self._original_tool_call = getattr(FunctionTool, "run_async", None)
-        self._original_llm_call = getattr(litellm, "acompletion", None)
+        self._original_tool_call = FunctionTool.run_async
+        self._original_llm_call = litellm.acompletion
 
-        # Patch if available
-        if self._original_tool_call:
-            FunctionTool.run_async = self._tool_use_monkey_patch()
-
-        if self._original_llm_call:
-            litellm.acompletion = self._llm_call_monkey_patch()
+        FunctionTool.run_async = self._tool_use_monkey_patch()
+        litellm.acompletion = self._llm_call_monkey_patch()
 
         logger.debug("ADKProfilerHandler instrumentation applied successfully.")
         self._instrumented = True
@@ -91,13 +99,28 @@ class ADKProfilerHandler(BaseProfilerCallback):
         try:
             import litellm
             from google.adk.tools.function_tool import FunctionTool
-            if self._original_tool_call:
+            if self._original_tool_call is not None:
                 FunctionTool.run_async = self._original_tool_call
-            if self._original_llm_call:
+                self._original_tool_call = None
+
+            if self._original_llm_call is not None:
                 litellm.acompletion = self._original_llm_call
+                self._original_llm_call = None
+
+            self._instrumented = False
+            self.last_call_ts = 0.0
             logger.debug("ADKProfilerHandler uninstrumented successfully.")
         except Exception as _e:
             logger.exception("Failed to uninstrument ADKProfilerHandler")
+
+    def ensure_last_call_ts_initialized(self) -> float:
+        """ Ensure that last_call_ts is initialized to avoid issues in async calls. """
+        if self.last_call_ts == 0.0:
+            with self._lock:
+                # Now that we have the lock, double-check
+                if self.last_call_ts == 0.0:
+                    self.last_call_ts = time.time()
+        return self.last_call_ts
 
     def _tool_use_monkey_patch(self) -> Callable[..., Any]:
         """
@@ -118,6 +141,7 @@ class ADKProfilerHandler(BaseProfilerCallback):
             Returns:
                 Any: The result of the tool execution.
             """
+            self.ensure_last_call_ts_initialized()
             now = time.time()
             tool_name = ""
 
@@ -203,6 +227,7 @@ class ADKProfilerHandler(BaseProfilerCallback):
             Returns:
                 Any: The result of the LLM call.
             """
+            self.ensure_last_call_ts_initialized()
 
             now = time.time()
             with self._lock:
@@ -236,7 +261,7 @@ class ADKProfilerHandler(BaseProfilerCallback):
                 event_type=IntermediateStepType.LLM_START,
                 framework=LLMFrameworkEnum.ADK,
                 name=model_name,
-                data=StreamEventData(input=model_input),
+                data=StreamEventData(input=model_input, payload=kwargs.get("messages", [])),
                 metadata=TraceMetadata(chat_inputs=copy.deepcopy(kwargs.get("messages", []))),
                 usage_info=UsageInfo(
                     token_usage=TokenUsageBaseModel(),
@@ -254,9 +279,13 @@ class ADKProfilerHandler(BaseProfilerCallback):
                 raise RuntimeError("Original LLM function is None - instrumentation may not have been set up correctly")
             output = await original_func(*args, **kwargs)
 
+            choice_dump = None
             model_output = []
             try:
                 for choice in output.choices:
+                    if not choice_dump:
+                        choice_dump = choice.model_dump() if hasattr(
+                            choice, "model_dump") else getattr(choice, "__dict__", {}) or {}
                     msg = choice.message
                     model_output.append(msg.content or "")
             except Exception as _e:
@@ -292,7 +321,7 @@ class ADKProfilerHandler(BaseProfilerCallback):
                 span_event_timestamp=now,
                 framework=LLMFrameworkEnum.ADK,
                 name=model_name,
-                data=StreamEventData(input=model_input, output=model_output),
+                data=StreamEventData(input=model_input, output=model_output, payload=choice_dump),
                 metadata=TraceMetadata(chat_responses=chat_resp),
                 usage_info=UsageInfo(
                     token_usage=TokenUsageBaseModel(**usage_payload),

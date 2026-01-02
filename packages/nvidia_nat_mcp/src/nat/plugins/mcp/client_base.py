@@ -112,14 +112,21 @@ class AuthAdapter(httpx.Auth):
             # Use the user_id passed to this AuthAdapter instance
             auth_result = await self.auth_provider.authenticate(user_id=self.user_id, response=response)
 
-            # Check if we have BearerTokenCred
+            # Build headers from credentials
             from nat.data_models.authentication import BearerTokenCred
-            if auth_result.credentials and isinstance(auth_result.credentials[0], BearerTokenCred):
-                token = auth_result.credentials[0].token.get_secret_value()
-                return {"Authorization": f"Bearer {token}"}
-            else:
-                logger.info("Auth provider did not return BearerTokenCred")
-                return {}
+            from nat.data_models.authentication import HeaderCred
+            headers = {}
+
+            for cred in auth_result.credentials:
+                if isinstance(cred, BearerTokenCred):
+                    # Standard Bearer token
+                    token = cred.token.get_secret_value()
+                    headers["Authorization"] = f"Bearer {token}"
+                elif isinstance(cred, HeaderCred):
+                    # Generic header credential (supports custom formats and service accounts)
+                    headers[cred.name] = cred.value.get_secret_value()
+
+            return headers
         except Exception as e:
             logger.warning("Failed to get auth token: %s", e)
             return {}
@@ -162,8 +169,9 @@ class MCPBaseClient(ABC):
 
         # Convert auth provider to AuthAdapter
         self._auth_provider = auth_provider
-        # Use provided user_id or fall back to auth provider's default_user_id
-        effective_user_id = user_id or (auth_provider.config.default_user_id if auth_provider else None)
+        # Use provided user_id or fall back to auth provider's default_user_id (if available)
+        effective_user_id = user_id or (getattr(auth_provider.config, 'default_user_id', None)
+                                        if auth_provider else None)
         self._httpx_auth = AuthAdapter(auth_provider, effective_user_id) if auth_provider else None
 
         self._tool_call_timeout = tool_call_timeout

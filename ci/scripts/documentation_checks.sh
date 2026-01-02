@@ -20,7 +20,7 @@ set +e
 DOC_FILES=$(git ls-files "*.md" "*.rst" | grep -v -E '(^|/)(CHANGELOG|LICENSE)\.md$')
 NOTEBOOK_FILES=$(git ls-files "*.ipynb")
 
-if [[ -v ${WORKSPACE_TMP} ]]; then
+if [[ -z "${WORKSPACE_TMP}" ]]; then
     MKTEMP_ARGS=""
 else
     MKTEMP_ARGS="--tmpdir=${WORKSPACE_TMP}"

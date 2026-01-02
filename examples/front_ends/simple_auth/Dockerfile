@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Use Python 3.11 slim base image
-FROM python:3.11-slim
+# Use the uv Python 3.11 slim base image
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim
 
 # Set working directory
 WORKDIR /app
@@ -31,8 +31,7 @@ RUN git clone https://github.com/authlib/example-oauth2-server.git oauth2-server
 WORKDIR /app/oauth2-server
 
 # Install Python dependencies
-RUN pip install --upgrade pip && \
-    pip install -r requirements.txt
+RUN uv sync
 
 # Set environment variables for development
 ENV AUTHLIB_INSECURE_TRANSPORT=1
@@ -43,4 +42,4 @@ ENV FLASK_ENV=development
 EXPOSE 5000
 
 # Start the Flask OAuth2 server
-CMD ["flask", "run", "--host=0.0.0.0", "--port=5000"]
+CMD [ "uv", "run", "flask", "run", "--host=0.0.0.0", "--port=5000"]

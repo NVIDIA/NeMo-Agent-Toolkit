@@ -272,7 +272,8 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
                 name=model_name,
                 UUID=str(kwargs.get("run_id", str(uuid4()))),
                 data=StreamEventData(input=self._run_id_to_llm_input.get(str(kwargs.get("run_id", "")), ""),
-                                     output=llm_text_output),
+                                     output=llm_text_output,
+                                     payload=generation),
                 usage_info=UsageInfo(token_usage=self._extract_token_base_model(usage_metadata)),
                 metadata=TraceMetadata(chat_responses=[generation] if generation else []))
 
@@ -407,6 +408,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
                                         metadata=TraceMetadata(tool_outputs=output),
                                         usage_info=UsageInfo(token_usage=TokenUsageBaseModel()),
                                         data=StreamEventData(input=self._run_id_to_tool_input.get(str(run_id), ""),
-                                                             output=output))
+                                                             output=output,
+                                                             payload=output))
 
         self.step_manager.push_intermediate_step(stats)

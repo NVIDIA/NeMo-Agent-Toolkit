@@ -17,7 +17,7 @@ limitations under the License.
 
 # NeMo Agent Toolkit Examples
 
-Each NVIDIA NeMo Agent toolkit example demonstrates a particular feature or use case of the NeMo Agent toolkit library. Most of these contain a custom [workflow](../docs/source/tutorials/index.md) along with a set of custom tools ([functions](../docs/source/workflows/functions/index.md) in NeMo Agent toolkit). These examples can be used as a starting off point for creating your own custom workflows and tools. Each example contains a `README.md` file that explains the use case along with instructions on how to run the example.
+Each NVIDIA NeMo Agent toolkit example demonstrates a particular feature or use case of the NeMo Agent toolkit library. Most of these contain a custom [workflow](../docs/source/get-started/tutorials/index.md) along with a set of custom tools ([functions](../docs/source/build-workflows/functions-and-function-groups/functions.md) in NeMo Agent toolkit). These examples can be used as a starting off point for creating your own custom workflows and tools. Each example contains a `README.md` file that explains the use case along with instructions on how to run the example.
 
 ## Examples Repository
 In addition the examples in this repository, there are examples in the [NeMo-Agent-Toolkit-Examples](https://github.com/NVIDIA/NeMo-Agent-Toolkit-Examples) repository.
@@ -53,7 +53,7 @@ The examples in the NeMo-Agent-Toolkit-Examples repository are community contrib
 
 ## Installation and Setup
 
-To run the examples, install the NeMo Agent toolkit from source, if you haven't already done so, by following the instructions in [Install From Source](../docs/source/quick-start/installing.md#install-from-source).
+To run the examples, install the NeMo Agent toolkit from source, if you haven't already done so, by following the instructions in [Install From Source](../docs/source/get-started/installation.md#install-from-source).
 
 ## Example Categories
 
@@ -122,7 +122,7 @@ To run the examples, install the NeMo Agent toolkit from source, if you haven't 
 4. [MCP Client and Servers Setup](notebooks/mcp_setup_and_integration.ipynb) - Deploy and integrate MCP clients and servers with NeMo Agent toolkit workflows
 5. [Multi-Agent Orchestration](notebooks/multi_agent_orchestration.ipynb) - Setting up a multi-agent orchestration workflow
 6. [Observability, Evaluation, and Profiling](notebooks/observability_evaluation_and_profiling.ipynb) - Instrumenting with observability, evaluation and profiling tools
-7. [Optimizing Model Selection, Parameters, and Prompts](notebooks/optimize_model_selection.ipynb) - Use NAT Optimize to compare models, parameters, and prompt variations
+7. [Optimizing Model Selection, Parameters, and Prompts](notebooks/optimize_model_selection.ipynb) - Use the NeMo Agent toolkit Optimizer to compare models, parameters, and prompt variations
 
 #### Brev Launchables
 
@@ -147,5 +147,5 @@ To run the examples, install the NeMo Agent toolkit from source, if you haven't 
 - **[`vllm_config`](documentation_guides/locally_hosted_llms/vllm_config.yml)**: Configuration for locally hosted vLLM models
 
 ### Workflow Artifacts
-- **`custom_workflow`**: Artifacts for the [Custom Workflow](../docs/source/tutorials/add-tools-to-a-workflow.md) tutorial
-- **`text_file_ingest`**: Artifacts for the [Text File Ingest](../docs/source/tutorials/create-a-new-workflow.md) tutorial
+- **`custom_workflow`**: Artifacts for the [Custom Workflow](../docs/source/get-started/tutorials/add-tools-to-a-workflow.md) tutorial
+- **`text_file_ingest`**: Artifacts for the [Text File Ingest](../docs/source/get-started/tutorials/create-a-new-workflow.md) tutorial

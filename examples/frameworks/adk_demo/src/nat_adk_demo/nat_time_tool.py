@@ -56,6 +56,6 @@ async def get_city_time(_config: TimeMCPToolConfig, _builder: Builder) -> AsyncI
             return f"Sorry, I don't have timezone information for {city}."
 
         now = datetime.datetime.now(ZoneInfo("America/New_York"))
-        return f'The current time in {city} is {now.strftime("%Y-%m-%d %H:%M:%S %Z%z")}'
+        return f"The current time in {city} is {now.strftime('%Y-%m-%d %H:%M:%S %Z%z')}"
 
     yield FunctionInfo.from_fn(_get_city_time, description=_get_city_time.__doc__)

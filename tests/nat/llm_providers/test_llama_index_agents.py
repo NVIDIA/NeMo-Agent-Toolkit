@@ -58,7 +58,7 @@ async def create_minimal_agent(llm_name: str, llm_config: Any) -> ReActAgent:
                                        "Input should be a string containing a mathematical expression.")
         ]
 
-        return ReActAgent.from_tools(tools=tools, llm=llm, verbose=True)
+        return ReActAgent(tools=tools, llm=llm, verbose=True)
 
 
 @pytest.mark.integration
@@ -68,10 +68,10 @@ async def test_nim_minimal_agent():
     llm_config = NIMModelConfig(model_name="meta/llama-3.1-70b-instruct", temperature=0.0)
     agent = await create_minimal_agent("nim_llm", llm_config)
 
-    response = await agent.achat("What is 1+2?")
+    response = await agent.run("What is 1+2?")
     assert response is not None
     assert hasattr(response, 'response')
-    assert "3" in response.response.lower()
+    assert "3" in response.response.content.lower()
 
 
 @pytest.mark.integration
@@ -81,10 +81,10 @@ async def test_openai_minimal_agent():
     llm_config = OpenAIModelConfig(model_name="gpt-3.5-turbo", temperature=0.0)
     agent = await create_minimal_agent("openai_llm", llm_config)
 
-    response = await agent.achat("What is 1+2?")
+    response = await agent.run("What is 1+2?")
     assert response is not None
     assert hasattr(response, 'response')
-    assert "3" in response.response.lower()
+    assert "3" in response.response.content.lower()
 
 
 @pytest.mark.integration
@@ -102,27 +102,33 @@ async def test_aws_bedrock_minimal_agent():
                                        credentials_profile_name="default")
     agent = await create_minimal_agent("aws_bedrock_llm", llm_config)
 
-    response = await agent.achat("What is 1+2?")
+    response = await agent.run("What is 1+2?")
     assert response is not None
     assert hasattr(response, 'response')
-    assert "3" in response.response.lower()
+    assert "3" in response.response.content.lower()
 
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("azure_openai_keys")
-async def test_azure_openai_minimal_agent():
+@pytest.mark.parametrize("api_version", [None, '2025-04-01-preview'])
+async def test_azure_openai_minimal_agent(api_version: str | None):
     """
     Test Azure OpenAI LLM with minimal LlamaIndex agent.
     Requires AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT to be set.
     The model can be changed by setting AZURE_OPENAI_DEPLOYMENT.
     See https://learn.microsoft.com/en-us/azure/ai-foundry/openai/quickstart for more information.
     """
-    llm_config = AzureOpenAIModelConfig(azure_deployment=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4.1"),
-                                        azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
-                                        api_key=os.environ.get("AZURE_OPENAI_API_KEY"))
+    config_args = {
+        "azure_deployment": os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4.1"),
+        "azure_endpoint": os.environ.get("AZURE_OPENAI_ENDPOINT"),
+        "api_key": os.environ.get("AZURE_OPENAI_API_KEY")
+    }
+    if api_version is not None:
+        config_args["api_version"] = api_version
+    llm_config = AzureOpenAIModelConfig(**config_args)
     agent = await create_minimal_agent("azure_openai_llm", llm_config)
 
-    response = await agent.achat("What is 1+2?")
+    response = await agent.run("What is 1+2?")
     assert response is not None
     assert hasattr(response, 'response')
-    assert "3" in response.response.lower()
+    assert "3" in response.response.content.lower()

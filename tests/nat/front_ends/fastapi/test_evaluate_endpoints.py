@@ -256,3 +256,149 @@ async def test_config_file_outside_curdir(test_client: TestClient, eval_config_f
     data = response.json()
     assert data["status"] == "submitted"
     await await_job(data["job_id"])
+
+
+# ============================================================================
+# Evaluate Item Endpoint Tests
+# ============================================================================
+
+
+@pytest_asyncio.fixture(name="evaluate_item_client")
+async def evaluate_item_client_fixture() -> TestClient:
+    """Test client with evaluate_item endpoint configured."""
+    from unittest.mock import AsyncMock
+
+    from nat.builder.evaluator import EvaluatorInfo
+    from nat.eval.evaluator.evaluator_model import EvalInput
+    from nat.eval.evaluator.evaluator_model import EvalOutput
+    from nat.eval.evaluator.evaluator_model import EvalOutputItem
+
+    config = Config()
+    config.general.front_end = FastApiFrontEndConfig(evaluate_item=FastApiFrontEndConfig.EndpointBase(
+        path="/evaluate/item", method="POST", description="Test evaluate item endpoint"))
+
+    worker = FastApiFrontEndPluginWorker(config)
+    app = FastAPI()
+    worker.set_cors_config(app)
+
+    # Mock evaluator with async evaluate_fn
+    async def success_eval(_eval_input: EvalInput) -> EvalOutput:
+        return EvalOutput(
+            eval_output_items=[EvalOutputItem(id="test_1", score=0.85, reasoning={"explanation": "Good match"})],
+            average_score=0.85)
+
+    mock_evaluator = MagicMock(spec=EvaluatorInfo)
+    mock_evaluator.evaluate_fn = AsyncMock(side_effect=success_eval)
+
+    worker._evaluators = {"accuracy": mock_evaluator}
+
+    with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker.SessionManager") as MockSessionManager:
+        mock_session = MagicMock()
+        MockSessionManager.return_value = mock_session
+        await worker.add_evaluate_item_route(app, session_manager=mock_session)
+
+    return TestClient(app)
+
+
+def test_evaluate_item_success(evaluate_item_client: TestClient):
+    """Test successful single-item evaluation."""
+    payload = {
+        "evaluator_name": "accuracy",
+        "item": {
+            "id": "test_1",
+            "input_obj": "What is AI?",
+            "expected_output_obj": "Artificial Intelligence",
+            "output_obj": "AI is artificial intelligence",
+            "trajectory": [],
+            "expected_trajectory": [],
+            "full_dataset_entry": {}
+        }
+    }
+
+    response = evaluate_item_client.post("/evaluate/item", json=payload)
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["success"] is True
+    assert data["result"]["score"] == 0.85
+    assert data["result"]["reasoning"]["explanation"] == "Good match"
+    assert data["error"] is None
+
+
+def test_evaluate_item_not_found(evaluate_item_client: TestClient):
+    """Test evaluation with non-existent evaluator."""
+    payload = {
+        "evaluator_name": "nonexistent",
+        "item": {
+            "id": "test_1",
+            "input_obj": "test",
+            "expected_output_obj": "test",
+            "output_obj": "test",
+            "trajectory": [],
+            "expected_trajectory": [],
+            "full_dataset_entry": {}
+        }
+    }
+
+    response = evaluate_item_client.post("/evaluate/item", json=payload)
+    assert response.status_code == 404
+    assert "nonexistent" in response.json()["detail"]
+
+
+@pytest_asyncio.fixture(name="evaluate_item_client_with_error")
+async def evaluate_item_client_with_error_fixture() -> TestClient:
+    """Test client where evaluator throws an error."""
+    from unittest.mock import AsyncMock
+
+    from nat.builder.evaluator import EvaluatorInfo
+
+    config = Config()
+    config.general.front_end = FastApiFrontEndConfig(evaluate_item=FastApiFrontEndConfig.EndpointBase(
+        path="/evaluate/item", method="POST", description="Test evaluate item endpoint"))
+
+    worker = FastApiFrontEndPluginWorker(config)
+    app = FastAPI()
+
+    # Mock evaluator that raises exception
+    mock_evaluator = MagicMock(spec=EvaluatorInfo)
+    mock_evaluator.evaluate_fn = AsyncMock(side_effect=RuntimeError("Evaluation failed"))
+
+    worker._evaluators = {"failing": mock_evaluator}
+
+    with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker.SessionManager") as MockSessionManager:
+        mock_session = MagicMock()
+        MockSessionManager.return_value = mock_session
+        await worker.add_evaluate_item_route(app, session_manager=mock_session)
+
+    return TestClient(app)
+
+
+def test_evaluate_item_evaluation_error(evaluate_item_client_with_error: TestClient):
+    """Test evaluation failure handling."""
+    payload = {
+        "evaluator_name": "failing",
+        "item": {
+            "id": "test_1",
+            "input_obj": "test",
+            "expected_output_obj": "test",
+            "output_obj": "test",
+            "trajectory": [],
+            "expected_trajectory": [],
+            "full_dataset_entry": {}
+        }
+    }
+
+    response = evaluate_item_client_with_error.post("/evaluate/item", json=payload)
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["success"] is False
+    assert data["result"] is None
+    assert "Evaluation failed" in data["error"]
+
+
+def test_evaluate_item_invalid_payload(evaluate_item_client: TestClient):
+    """Test with invalid request payload."""
+    # Missing required 'item' field
+    response = evaluate_item_client.post("/evaluate/item", json={"evaluator_name": "accuracy"})
+    assert response.status_code == 422  # Unprocessable Entity

@@ -458,3 +458,299 @@ def test_try_convert_preserves_object_identity():
     original_dict = {"key": "value"}
     result = converter.try_convert(original_dict, list)
     assert result is original_dict  # Same object, not a copy
+
+
+# --------------------------------------------------------------------
+# Unit tests for parameterized generic types (e.g., dict[str, Any], list[int])
+# --------------------------------------------------------------------
+
+
+def test_convert_to_parameterized_dict_already_correct_type(basic_converter):
+    """Test conversion when data is already a dict and target is dict[str, Any]."""
+    from typing import Any
+
+    # This should not raise "isinstance() argument 2 cannot be a parameterized generic"
+    data = {"key": "value", "number": 42}
+    result = basic_converter.convert(data, dict[str, Any])
+    assert isinstance(result, dict)
+    assert result == data
+    assert result is data  # Should be same object since already correct type
+
+
+def test_convert_to_parameterized_list_already_correct_type(basic_converter):
+    """Test conversion when data is already a list and target is list[int]."""
+    data = [1, 2, 3, 4, 5]
+    result = basic_converter.convert(data, list[int])
+    assert isinstance(result, list)
+    assert result == data
+    assert result is data  # Should be same object since already correct type
+
+
+def test_convert_to_parameterized_dict_indirect_path(basic_converter):
+    """Test indirect conversion to parameterized dict type."""
+    from typing import Any
+
+    # Start with a string, convert to dict (if converter exists)
+    # In this case, we don't have str->dict converter, so this will fail
+    # But it should fail with ValueError, not TypeError from isinstance()
+    with pytest.raises(ValueError, match="Cannot convert"):
+        basic_converter.convert("test", dict[str, Any])
+
+
+def test_try_convert_to_parameterized_dict_no_converter(basic_converter):
+    """Test try_convert with parameterized dict when no conversion path exists."""
+    from typing import Any
+
+    original_value = "test string"
+    # No converter from str to dict, should return original value
+    result = basic_converter.try_convert(original_value, dict[str, Any])
+    assert result is original_value
+    assert isinstance(result, str)
+
+
+def test_try_convert_to_parameterized_list_no_converter(basic_converter):
+    """Test try_convert with parameterized list when no conversion path exists."""
+    original_value = {"key": "value"}
+    # No converter from dict to list, should return original value
+    result = basic_converter.try_convert(original_value, list[str])
+    assert result is original_value
+    assert isinstance(result, dict)
+
+
+def test_convert_with_various_parameterized_types():
+    """Test that various parameterized generic types don't cause TypeError."""
+    from typing import Any
+
+    converter = TypeConverter([])
+
+    # Test with different parameterized types - all should work without TypeError
+    test_cases = [
+        ({
+            "a": 1
+        }, dict[str, int]),
+        ([1, 2, 3], list[int]),
+        (["a", "b"], list[str]),
+        ({
+            "x": "y"
+        }, dict[str, Any]),
+        ((1, 2), tuple[int, ...]),
+    ]
+
+    for data, target_type in test_cases:
+        # Should successfully return the data since it's already the correct base type
+        result = converter.convert(data, target_type)
+        assert result is data
+
+
+def test_indirect_conversion_with_parameterized_target(inheritance_converter):
+    """Test indirect conversion where target is a parameterized generic."""
+    from typing import Any
+
+    # We have converters: Base->str, so converting to dict should fail
+    # but it should fail gracefully with ValueError, not TypeError
+    b = Base(name="test")
+    with pytest.raises(ValueError, match="Cannot convert"):
+        inheritance_converter.convert(b, dict[str, Any])
+
+
+def test_try_convert_indirect_with_parameterized_types(inheritance_converter):
+    """Test try_convert with indirect paths and parameterized generics."""
+    from typing import Any
+
+    # Derived can be converted to str, but not to dict
+    d = Derived(name="test")
+    result = inheritance_converter.try_convert(d, dict[str, Any])
+    # Should return original since no path to dict exists
+    assert result is d
+    assert isinstance(result, Derived)
+
+
+# --------------------------------------------------------------------
+# Unit tests for union type handling in converters
+# --------------------------------------------------------------------
+
+
+class TargetSchema:
+    """A simple target class for union type tests."""
+
+    def __init__(self, value):
+        self.value = value
+
+    def __eq__(self, other):
+        if isinstance(other, TargetSchema):
+            return self.value == other.value
+        return False
+
+    def __hash__(self):
+        return hash(self.value) if self.value is not None else 0
+
+
+def test_direct_conversion_with_union_from_type_str():
+    """Test direct conversion when converter has union type as from_type and data is str."""
+
+    def convert_union_to_schema(data: str | int) -> TargetSchema:
+        return TargetSchema(value=data)
+
+    converter = TypeConverter([convert_union_to_schema])
+
+    # Test with str (first member of union)
+    result = converter.convert("hello", TargetSchema)
+    assert isinstance(result, TargetSchema)
+    assert result.value == "hello"
+
+
+def test_direct_conversion_with_union_from_type_int():
+    """Test direct conversion when converter has union type as from_type and data is int."""
+
+    def convert_union_to_schema(data: str | int) -> TargetSchema:
+        return TargetSchema(value=data)
+
+    converter = TypeConverter([convert_union_to_schema])
+
+    # Test with int (second member of union)
+    result = converter.convert(42, TargetSchema)
+    assert isinstance(result, TargetSchema)
+    assert result.value == 42
+
+
+def test_direct_conversion_with_union_from_type_class():
+    """Test direct conversion when converter has union type including a class."""
+
+    def convert_union_to_schema(data: Base | str) -> TargetSchema:
+        return TargetSchema(value=data)
+
+    converter = TypeConverter([convert_union_to_schema])
+
+    # Test with str
+    result = converter.convert("hello", TargetSchema)
+    assert isinstance(result, TargetSchema)
+    assert result.value == "hello"
+
+    # Test with Base instance
+    base_obj = Base(name="test")
+    result = converter.convert(base_obj, TargetSchema)
+    assert isinstance(result, TargetSchema)
+    assert result.value is base_obj
+
+
+def test_direct_conversion_with_union_from_type_derived_class():
+    """Test direct conversion with union type where data is a subclass of union member."""
+
+    def convert_union_to_schema(data: Base | str) -> TargetSchema:
+        return TargetSchema(value=data)
+
+    converter = TypeConverter([convert_union_to_schema])
+
+    # Test with Derived (subclass of Base) - should match Base | str
+    derived_obj = Derived(name="derived")
+    result = converter.convert(derived_obj, TargetSchema)
+    assert isinstance(result, TargetSchema)
+    assert result.value is derived_obj
+
+
+def test_direct_conversion_union_type_no_match():
+    """Test that conversion fails when data doesn't match any union member."""
+
+    def convert_union_to_schema(data: str | int) -> TargetSchema:
+        return TargetSchema(value=data)
+
+    converter = TypeConverter([convert_union_to_schema])
+
+    # A list doesn't match str | int
+    with pytest.raises(ValueError, match="Cannot convert"):
+        converter.convert([1, 2, 3], TargetSchema)
+
+
+def test_indirect_conversion_with_union_from_type():
+    """Test indirect conversion when intermediate converter has union type as from_type."""
+
+    def convert_str_to_int_value(s: str) -> int:
+        return int(s)
+
+    def convert_union_to_schema(data: str | int) -> TargetSchema:
+        return TargetSchema(value=data)
+
+    converter = TypeConverter([convert_str_to_int_value, convert_union_to_schema])
+
+    # Direct path: str matches str | int directly
+    result = converter.convert("hello", TargetSchema)
+    assert isinstance(result, TargetSchema)
+    assert result.value == "hello"
+
+
+def test_try_convert_with_union_from_type_success():
+    """Test try_convert succeeds when data matches union type."""
+
+    def convert_union_to_schema(data: str | int) -> TargetSchema:
+        return TargetSchema(value=data)
+
+    converter = TypeConverter([convert_union_to_schema])
+
+    result = converter.try_convert("test", TargetSchema)
+    assert isinstance(result, TargetSchema)
+    assert result.value == "test"
+
+
+def test_try_convert_with_union_from_type_failure():
+    """Test try_convert returns original when data doesn't match union type."""
+
+    def convert_union_to_schema(data: str | int) -> TargetSchema:
+        return TargetSchema(value=data)
+
+    converter = TypeConverter([convert_union_to_schema])
+
+    original = [1, 2, 3]
+    result = converter.try_convert(original, TargetSchema)
+    assert result is original
+
+
+def test_union_type_with_three_members():
+    """Test conversion with union type having three members."""
+
+    def convert_union_to_schema(data: str | int | float) -> TargetSchema:
+        return TargetSchema(value=data)
+
+    converter = TypeConverter([convert_union_to_schema])
+
+    # Test all three union members
+    assert converter.convert("hello", TargetSchema).value == "hello"
+    assert converter.convert(42, TargetSchema).value == 42
+    assert converter.convert(3.14, TargetSchema).value == 3.14
+
+
+def test_union_type_with_none():
+    """Test conversion with optional type (union with None)."""
+
+    def convert_optional_to_schema(data: str | None) -> TargetSchema:
+        return TargetSchema(value=data if data is not None else "default")
+
+    converter = TypeConverter([convert_optional_to_schema])
+
+    # Test with str
+    result = converter.convert("hello", TargetSchema)
+    assert result.value == "hello"
+
+    # Test with None
+    result = converter.convert(None, TargetSchema)
+    assert result.value == "default"
+
+
+def test_union_type_bidirectional_conversion():
+    """Test that both directions work with union types."""
+
+    def convert_to_schema(data: str | int) -> TargetSchema:
+        return TargetSchema(value=data)
+
+    def convert_from_schema(schema: TargetSchema) -> str | int:
+        return schema.value
+
+    converter = TypeConverter([convert_to_schema, convert_from_schema])
+
+    # str -> TargetSchema
+    schema = converter.convert("hello", TargetSchema)
+    assert schema.value == "hello"
+
+    # TargetSchema -> str | int (but we target str specifically)
+    # Note: This tests that union return types don't break conversion
+    result = converter.convert(TargetSchema(value="test"), str)
+    assert result == "test"

@@ -6,6 +6,7 @@
 [Aa]gno
 AIQ
 API(s?)
+ART
 Arize
 arXiv
 [Aa]sync
@@ -13,6 +14,7 @@ arXiv
 [Aa]llowlist
 [Aa]nonymize(d?)
 Authlib
+[Bb]ackdoor(s?)
 [Bb]ackoff
 [Bb]ackpressure
 [Bb]atcher
@@ -39,12 +41,15 @@ CPython
 cuDF
 cuML
 CuPy
+[Cc]ustomizer
+CVE(s?)
 [Cc]yber
 [Cc]ybersecurity
 Cython
 Dask
 Databricks
 Datadog
+[Dd]atastore
 DB(s?)
 [Dd]enylist
 [Dd]eserialize
@@ -56,8 +61,13 @@ Dynatrace
 [Ee]ngineerable
 etcd
 [Ee]val
+[Ee]xfiltration
 [Ee]xplainability
 Faiss
+[Ff]inetune(d?)
+[Ff]inetune(r|rs|ing)
+[Ff]inetuning
+[Ff]inetunable
 Gantt
 [Gg]eneratable
 GitHub
@@ -72,15 +82,21 @@ impactful
 [Ii]nferencing
 [Ii]nterquartile
 isort
+Jama
 Jira
 jsonlines
+[Kk]aggle
+[Kk]eycloak
 Langfuse
 LangChain
 LangGraph
 LangSmith
 [Ll]aunchable(s?)
+[Ll]eaderboard
 # libcudf isn't styled in the way that cuDF is https://docs.rapids.ai/api/libcudf/stable/
 libcudf
+[Ll]earnable
+[Ll]ogprob(s?)
 LLM(s?)
 # https://github.com/logpai/loghub/
 Loghub
@@ -91,6 +107,7 @@ Milvus
 MLflow
 MLOps
 Morpheus
+Minimax
 [Mm]ultimodal
 [Nn]amespac(e|ed|es|ing)
 NeMo
@@ -102,9 +119,11 @@ NumPy
 NVIDIA
 Nemotron
 OAuth
+Ollama
 URIs
 OTel
 onboarding
+OpenPipe
 [Oo]verfitting
 pandas
 [Pp]arallelization
@@ -113,6 +132,9 @@ Pareto
 Patronus
 PCIe
 PDF(s?)
+[Pp]ostprocess
+[Pp]ostprocessing
+[Pp]luggable
 [Pp]reprocess
 [Pp]retrained
 [Pp]rofiler
@@ -126,12 +148,15 @@ pytest
 [Rr]epo
 [Rr]etarget(ed?)
 [Rr]eusability
+[Rr]ollout(s?)
 [Rr]untime(s?)
+[Ss]andboxing
 [Ss]erializable
 [Ss]treamable
 [Ss]ubclassing
 [Ss]ubcard(s?)
 [Ss]ubgraph(s?)
+[Ss]ubsampl(e|ing)
 [Ss]ubpackage(s?)
 [Ss]ubword(s?)
 [Ss]uperset(s?)
@@ -147,9 +172,11 @@ triages
 [Uu]nencrypted
 [Uu]nittest(s?)
 [Uu]nprocessable
+[Uu]ntrusted
 [Uu]ploader
 [Uu]psert
 uv
+Vanna
 VectorDB
 [Ww]alkthrough
 [Ww]eb[Ss]ocket
@@ -160,3 +187,7 @@ Zep
 Optuna
 [Oo]ptimizable
 [Cc]heckpointed
+[Ss]anitization
+[Uu]nregister(ing|ed|s)?
+[Aa]rgs
+[Kk]wargs

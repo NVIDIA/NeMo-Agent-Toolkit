@@ -32,23 +32,35 @@ from nat.data_models.component_ref import FunctionGroupRef
 from nat.data_models.component_ref import FunctionRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.component_ref import MemoryRef
+from nat.data_models.component_ref import MiddlewareRef
 from nat.data_models.component_ref import ObjectStoreRef
 from nat.data_models.component_ref import RetrieverRef
+from nat.data_models.component_ref import TrainerAdapterRef
+from nat.data_models.component_ref import TrainerRef
+from nat.data_models.component_ref import TrajectoryBuilderRef
 from nat.data_models.component_ref import TTCStrategyRef
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.evaluator import EvaluatorBaseConfig
+from nat.data_models.finetuning import TrainerAdapterConfig
+from nat.data_models.finetuning import TrainerConfig
+from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.function_dependencies import FunctionDependencies
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
+from nat.data_models.middleware import MiddlewareBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfig
 from nat.data_models.retriever import RetrieverBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.experimental.decorators.experimental_warning_decorator import experimental
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
+from nat.finetuning.interfaces.finetuning_runner import Trainer
+from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
+from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 from nat.memory.interfaces import MemoryEditor
+from nat.middleware.middleware import Middleware
 from nat.object_store.interfaces import ObjectStore
 from nat.retriever.interface import Retriever
 
@@ -259,6 +271,50 @@ class Builder(ABC):
         pass
 
     @abstractmethod
+    @experimental(feature_name="Finetuning")
+    async def add_trainer(self, name: str | TrainerRef, config: TrainerConfig) -> Trainer:
+        pass
+
+    @abstractmethod
+    @experimental(feature_name="Finetuning")
+    async def add_trainer_adapter(self, name: str | TrainerAdapterRef, config: TrainerAdapterConfig) -> TrainerAdapter:
+        pass
+
+    @abstractmethod
+    @experimental(feature_name="Finetuning")
+    async def add_trajectory_builder(self, name: str | TrajectoryBuilderRef,
+                                     config: TrajectoryBuilderConfig) -> TrajectoryBuilder:
+        pass
+
+    @abstractmethod
+    async def get_trainer(self,
+                          trainer_name: str | TrainerRef,
+                          trajectory_builder: TrajectoryBuilder,
+                          trainer_adapter: TrainerAdapter) -> Trainer:
+        pass
+
+    @abstractmethod
+    async def get_trainer_adapter(self, trainer_adapter_name: str | TrainerAdapterRef) -> TrainerAdapter:
+        pass
+
+    @abstractmethod
+    async def get_trajectory_builder(self, trajectory_builder_name: str | TrajectoryBuilderRef) -> TrajectoryBuilder:
+        pass
+
+    @abstractmethod
+    async def get_trainer_config(self, trainer_name: str | TrainerRef) -> TrainerConfig:
+        pass
+
+    @abstractmethod
+    async def get_trainer_adapter_config(self, trainer_adapter_name: str | TrainerAdapterRef) -> TrainerAdapterConfig:
+        pass
+
+    @abstractmethod
+    async def get_trajectory_builder_config(
+            self, trajectory_builder_name: str | TrajectoryBuilderRef) -> (TrajectoryBuilderConfig):
+        pass
+
+    @abstractmethod
     @experimental(feature_name="TTC")
     async def add_ttc_strategy(self, name: str | TTCStrategyRef, config: TTCStrategyBaseConfig):
         pass
@@ -288,6 +344,55 @@ class Builder(ABC):
     @abstractmethod
     def get_function_group_dependencies(self, fn_name: str) -> FunctionDependencies:
         pass
+
+    @abstractmethod
+    async def add_middleware(self, name: str | MiddlewareRef, config: MiddlewareBaseConfig) -> Middleware:
+        """Add middleware to the builder.
+
+        Args:
+            name: The name or reference for the middleware
+            config: The configuration for the middleware
+
+        Returns:
+            The built middleware instance
+        """
+        pass
+
+    @abstractmethod
+    async def get_middleware(self, middleware_name: str | MiddlewareRef) -> Middleware:
+        """Get built middleware by name.
+
+        Args:
+            middleware_name: The name or reference of the middleware
+
+        Returns:
+            The built middleware instance
+        """
+        pass
+
+    @abstractmethod
+    def get_middleware_config(self, middleware_name: str | MiddlewareRef) -> MiddlewareBaseConfig:
+        """Get the configuration for middleware.
+
+        Args:
+            middleware_name: The name or reference of the middleware
+
+        Returns:
+            The configuration for the middleware
+        """
+        pass
+
+    async def get_middleware_list(self, middleware_names: Sequence[str | MiddlewareRef]) -> list[Middleware]:
+        """Get multiple middleware by name.
+
+        Args:
+            middleware_names: The names or references of the middleware
+
+        Returns:
+            List of built middleware instances
+        """
+        tasks = [self.get_middleware(name) for name in middleware_names]
+        return list(await asyncio.gather(*tasks, return_exceptions=False))
 
 
 class EvalBuilder(ABC):

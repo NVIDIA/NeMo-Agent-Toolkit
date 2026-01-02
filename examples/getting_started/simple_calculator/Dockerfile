@@ -24,13 +24,18 @@ FROM ${BASE_IMAGE_URL}:${BASE_IMAGE_TAG}
 ARG PYTHON_VERSION
 ARG NAT_VERSION
 
-COPY --from=ghcr.io/astral-sh/uv:0.8.15 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.9.15 /uv /uvx /bin/
 
 ENV PYTHONDONTWRITEBYTECODE=1
 
 # Install compiler [g++, gcc] (currently only needed for thinc indirect dependency)
 RUN apt-get update && \
-    apt-get install -y g++ gcc
+    apt-get install -y g++ gcc ca-certificates && \
+    update-ca-certificates
+
+# Set SSL environment variables
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 
 # Set working directory
 WORKDIR /workspace

@@ -31,6 +31,7 @@ from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.graph import StateGraph
 from langgraph.graph.state import CompiledStateGraph
+from langgraph.runtime import DEFAULT_RUNTIME
 from pydantic import BaseModel
 from pydantic import Field
 
@@ -275,7 +276,8 @@ class ReWOOAgentGraph(BaseAgent):
                 {
                     "task": task, "chat_history": chat_history
                 },
-                RunnableConfig(callbacks=self.callbacks)  # type: ignore
+                RunnableConfig(callbacks=self.callbacks,
+                               configurable={"__pregel_runtime": DEFAULT_RUNTIME})  # type: ignore
             )
 
             steps = self._parse_planner_output(str(plan.content))
@@ -433,7 +435,8 @@ class ReWOOAgentGraph(BaseAgent):
         tool_response = await self._call_tool(
             requested_tool,
             tool_input_parsed,
-            RunnableConfig(callbacks=self.callbacks),  # type: ignore
+            RunnableConfig(callbacks=self.callbacks,
+                           configurable={"__pregel_runtime": DEFAULT_RUNTIME}),  # type: ignore
             max_retries=self.tool_call_max_retries)
 
         if self.detailed_logs:
@@ -486,7 +489,9 @@ class ReWOOAgentGraph(BaseAgent):
             solver = solver_prompt | self.llm
 
             output_message = await self._stream_llm(solver, {"task": task},
-                                                    RunnableConfig(callbacks=self.callbacks))  # type: ignore
+                                                    RunnableConfig(callbacks=self.callbacks,
+                                                                   configurable={"__pregel_runtime": DEFAULT_RUNTIME})
+                                                    )  # type: ignore
 
             if self.detailed_logs:
                 solver_output_log_message = AGENT_CALL_LOG_MESSAGE % (task, str(output_message.content))

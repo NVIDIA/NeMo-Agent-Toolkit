@@ -25,18 +25,10 @@ from nat.data_models.optimizable import OptimizableField
 from nat.data_models.optimizable import OptimizableMixin
 from nat.data_models.optimizable import SearchSpace
 from nat.data_models.retry_mixin import RetryMixin
-from nat.data_models.temperature_mixin import TemperatureMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
-from nat.data_models.top_p_mixin import TopPMixin
 
 
-class AWSBedrockModelConfig(LLMBaseConfig,
-                            RetryMixin,
-                            OptimizableMixin,
-                            TemperatureMixin,
-                            TopPMixin,
-                            ThinkingMixin,
-                            name="aws_bedrock"):
+class AWSBedrockModelConfig(LLMBaseConfig, RetryMixin, OptimizableMixin, ThinkingMixin, name="aws_bedrock"):
     """An AWS Bedrock llm provider to be used with an LLM client."""
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")
@@ -61,6 +53,16 @@ class AWSBedrockModelConfig(LLMBaseConfig,
         default=None, description="Bedrock endpoint to use. Needed if you don't want to default to us-east-1 endpoint.")
     credentials_profile_name: str | None = Field(
         default=None, description="The name of the profile in the ~/.aws/credentials or ~/.aws/config files.")
+    temperature: float | None = OptimizableField(
+        default=None,
+        ge=0.0,
+        description="Sampling temperature to control randomness in the output.",
+        space=SearchSpace(high=0.9, low=0.1, step=0.2))
+    top_p: float | None = OptimizableField(default=None,
+                                           ge=0.0,
+                                           le=1.0,
+                                           description="Top-p for distribution sampling.",
+                                           space=SearchSpace(high=1.0, low=0.5, step=0.1))
 
 
 @register_llm_provider(config_type=AWSBedrockModelConfig)

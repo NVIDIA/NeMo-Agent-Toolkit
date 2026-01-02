@@ -29,6 +29,8 @@ dependencies = [
   "nvidia-nat-mcp",
   "nvidia-nat-mem0ai",
   "nvidia-nat-mysql",
+  "nvidia-nat-nemo-customizer",
+  "nvidia-nat-openpipe-art",
   "nvidia-nat-opentelemetry",
   "nvidia-nat-phoenix",
   "nvidia-nat-profiling",
@@ -36,6 +38,8 @@ dependencies = [
   "nvidia-nat-redis",
   "nvidia-nat-s3",
   "nvidia-nat-semantic-kernel",
+  "nvidia-nat-strands",
+  "nvidia-nat-vanna",
   "nvidia-nat-weave",
   "nvidia-nat-zep-cloud",
   "nvidia-nat-ingestion",
@@ -73,6 +77,8 @@ nvidia-nat-llama-index = { workspace = true }
 nvidia-nat-mcp = { workspace = true }
 nvidia-nat-mem0ai = { workspace = true }
 nvidia-nat-mysql = { workspace = true }
+nvidia-nat-nemo-customizer = { workspace = true }
+nvidia-nat-openpipe-art = { workspace = true }
 nvidia-nat-opentelemetry = { workspace = true }
 nvidia-nat-phoenix = { workspace = true }
 nvidia-nat-profiling = { workspace = true }
@@ -80,6 +86,8 @@ nvidia-nat-ragaai = { workspace = true }
 nvidia-nat-redis = { workspace = true }
 nvidia-nat-s3 = { workspace = true }
 nvidia-nat-semantic-kernel = { workspace = true }
+nvidia-nat-strands = { workspace = true }
+nvidia-nat-vanna = { workspace = true }
 nvidia-nat-weave = { workspace = true }
 nvidia-nat-zep-cloud = { workspace = true }
 nvidia-nat-ingestion = { workspace = true }

@@ -25,9 +25,24 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import LLMFrameworkEnum
 from nat.plugins.adk.adk_callback_handler import ADKProfilerHandler
 
+
 # ----------------------------
 # Test Fixtures and Helpers
 # ----------------------------
+@pytest.fixture(autouse=True)
+def reset_patches():
+    import litellm
+    from google.adk.tools.function_tool import FunctionTool
+
+    # Store original functions
+    original_acompletion = litellm.acompletion
+    original_function_tool_run_async = FunctionTool.run_async
+
+    yield
+
+    # Restore original functions
+    litellm.acompletion = original_acompletion
+    FunctionTool.run_async = original_function_tool_run_async
 
 
 @pytest.fixture
@@ -50,6 +65,34 @@ def handler(mock_context: MagicMock) -> ADKProfilerHandler:
 # ----------------------------
 # Pytest Unit Tests
 # ----------------------------
+
+
+def test_no_double_patching():
+    a1 = ADKProfilerHandler()
+    a2 = ADKProfilerHandler()
+    a1.instrument()
+    a2.instrument()
+    assert a1._original_llm_call is a2._original_llm_call
+    assert a1._original_tool_call is a2._original_tool_call
+
+
+def test_uninstrument_restores_originals():
+    import litellm
+    from google.adk.tools.function_tool import FunctionTool
+
+    original_acompletion = litellm.acompletion
+    original_function_tool_run_async = FunctionTool.run_async
+
+    handler = ADKProfilerHandler()
+    handler.instrument()
+    assert handler._instrumented
+    assert handler._original_llm_call is original_acompletion
+    assert handler._original_tool_call is original_function_tool_run_async
+
+    handler.uninstrument()
+    assert not handler._instrumented
+    assert handler._original_llm_call is None
+    assert handler._original_tool_call is None
 
 
 def test_adk_profiler_handler_initialization(handler, mock_context):

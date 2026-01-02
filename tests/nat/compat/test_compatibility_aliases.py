@@ -13,13 +13,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import importlib
 import subprocess
+import sys
 
 import pytest
 
-# Prevent isort from removing the pylint disable comments
-# isort:skip_file
+
+def _remove_aiq_modules():
+    # Remove any aiq modules from sys.modules to ensure fresh imports
+    for module_name in list(sys.modules.keys()):
+        if module_name == "aiq" or module_name.startswith("aiq."):
+            del sys.modules[module_name]
+
+
+@pytest.fixture(autouse=True)
+def remove_aiq_compat_finder():
+    # Restore the original sys.meta_path this ensures that the AIQ compatibility finder is removed after each test
+    original_meta_path = copy.copy(sys.meta_path)
+
+    # Remove aiq from sys.modules so that the compatibility finder will be added on the next import of aiq
+    _remove_aiq_modules()
+    yield
+    sys.meta_path = original_meta_path
+
+    _remove_aiq_modules()
 
 
 def test_aiq_subclass_is_nat_subclass():
@@ -90,11 +109,15 @@ def test_compatibility_aliases(module_name: str, alias_name: str, target_name: s
     This test verifies that the alias points to the correct target, and that it is available under both the 'aiq'
     namespace and the 'nat' namespace.
     """
+
     if use_nat_namespace:
         module_name = module_name.replace("aiq.", "nat.", 1)
         assert module_name.startswith("nat.")
+        module = importlib.import_module(module_name)
+    else:
+        with pytest.deprecated_call():
+            module = importlib.import_module(module_name)
 
-    module = importlib.import_module(module_name)
     alias = getattr(module, alias_name)
     target = getattr(module, target_name)
     assert alias is target

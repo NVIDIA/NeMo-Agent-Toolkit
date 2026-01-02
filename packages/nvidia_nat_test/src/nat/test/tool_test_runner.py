@@ -29,18 +29,27 @@ from nat.builder.function import FunctionGroup
 from nat.builder.function_info import FunctionInfo
 from nat.cli.type_registry import GlobalTypeRegistry
 from nat.data_models.authentication import AuthProviderBaseConfig
+from nat.data_models.component_ref import MiddlewareRef
 from nat.data_models.embedder import EmbedderBaseConfig
+from nat.data_models.finetuning import TrainerAdapterConfig
+from nat.data_models.finetuning import TrainerConfig
+from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.function_dependencies import FunctionDependencies
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
+from nat.data_models.middleware import FunctionMiddlewareBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfig
 from nat.data_models.retriever import RetrieverBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
+from nat.finetuning.interfaces.finetuning_runner import Trainer
+from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
+from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 from nat.memory.interfaces import MemoryEditor
+from nat.middleware import FunctionMiddleware
 from nat.object_store.interfaces import ObjectStore
 from nat.runtime.loader import PluginTypes
 from nat.runtime.loader import discover_and_register_plugins
@@ -92,6 +101,18 @@ class MockBuilder(Builder):
     def mock_auth_provider(self, name: str, mock_response: typing.Any):
         """Add a mock auth provider that returns a fixed response."""
         self._mocks[f"auth_provider_{name}"] = mock_response
+
+    def mock_trainer(self, name: str, mock_response: typing.Any):
+        """Add a mock trainer that returns a fixed response."""
+        self._mocks[f"trainer_{name}"] = mock_response
+
+    def mock_trainer_adapter(self, name: str, mock_response: typing.Any):
+        """Add a mock trainer adapter that returns a fixed response."""
+        self._mocks[f"trainer_adapter_{name}"] = mock_response
+
+    def mock_trajectory_builder(self, name: str, mock_response: typing.Any):
+        """Add a mock trajectory builder that returns a fixed response."""
+        self._mocks[f"trajectory_builder_{name}"] = mock_response
 
     async def add_ttc_strategy(self, name: str, config: TTCStrategyBaseConfig) -> None:
         """Mock implementation (no‑op)."""
@@ -288,6 +309,74 @@ class MockBuilder(Builder):
     def get_function_group_dependencies(self, fn_name: str) -> FunctionDependencies:
         """Mock implementation."""
         return FunctionDependencies()
+
+    async def get_middleware(self, middleware_name: str | MiddlewareRef) -> FunctionMiddleware:
+        """Mock implementation."""
+        return FunctionMiddleware()
+
+    def get_middleware_config(self, middleware_name: str | MiddlewareRef) -> FunctionMiddlewareBaseConfig:
+        """Mock implementation."""
+        return FunctionMiddlewareBaseConfig()
+
+    async def add_middleware(self, name: str | MiddlewareRef,
+                             config: FunctionMiddlewareBaseConfig) -> FunctionMiddleware:
+        """Mock implementation."""
+        return FunctionMiddleware()
+
+    async def add_trainer(self, name: str, config: TrainerConfig) -> Trainer:
+        """Mock implementation."""
+        return MagicMock(spec=Trainer)
+
+    async def get_trainer(self,
+                          trainer_name: str,
+                          trajectory_builder: TrajectoryBuilder,
+                          trainer_adapter: TrainerAdapter) -> Trainer:
+        """Return a mock trainer if one is configured."""
+        key = f"trainer_{trainer_name}"
+        if key in self._mocks:
+            mock_trainer = MagicMock()
+            mock_trainer.train = AsyncMock(return_value=self._mocks[key])
+            return mock_trainer
+        raise ValueError(f"Trainer '{trainer_name}' not mocked. Use mock_trainer() to add it.")
+
+    async def get_trainer_config(self, trainer_name: str) -> TrainerConfig:
+        """Mock implementation."""
+        return TrainerConfig()
+
+    async def add_trainer_adapter(self, name: str, config: TrainerAdapterConfig) -> TrainerAdapter:
+        """Mock implementation."""
+        return MagicMock(spec=TrainerAdapter)
+
+    async def get_trainer_adapter(self, trainer_adapter_name: str) -> TrainerAdapter:
+        """Return a mock trainer adapter if one is configured."""
+        key = f"trainer_adapter_{trainer_adapter_name}"
+        if key in self._mocks:
+            mock_adapter = MagicMock()
+            mock_adapter.adapt = AsyncMock(return_value=self._mocks[key])
+            return mock_adapter
+        raise ValueError(f"Trainer adapter '{trainer_adapter_name}' not mocked. Use mock_trainer_adapter() to add it.")
+
+    async def get_trainer_adapter_config(self, trainer_adapter_name: str) -> TrainerAdapterConfig:
+        """Mock implementation."""
+        return TrainerAdapterConfig()
+
+    async def add_trajectory_builder(self, name: str, config: TrajectoryBuilderConfig) -> TrajectoryBuilder:
+        """Mock implementation."""
+        return MagicMock(spec=TrajectoryBuilder)
+
+    async def get_trajectory_builder(self, trajectory_builder_name: str) -> TrajectoryBuilder:
+        """Return a mock trajectory builder if one is configured."""
+        key = f"trajectory_builder_{trajectory_builder_name}"
+        if key in self._mocks:
+            mock_builder = MagicMock()
+            mock_builder.build = AsyncMock(return_value=self._mocks[key])
+            return mock_builder
+        raise ValueError(
+            f"Trajectory builder '{trajectory_builder_name}' not mocked. Use mock_trajectory_builder() to add it.")
+
+    async def get_trajectory_builder_config(self, trajectory_builder_name: str) -> TrajectoryBuilderConfig:
+        """Mock implementation."""
+        return TrajectoryBuilderConfig()
 
 
 class ToolTestRunner:

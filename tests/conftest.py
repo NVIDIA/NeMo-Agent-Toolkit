@@ -29,7 +29,6 @@ import os
 import sys
 import typing
 import uuid
-import warnings
 from collections.abc import AsyncGenerator
 from collections.abc import Callable
 from collections.abc import Sequence
@@ -49,13 +48,15 @@ from langchain_core.outputs import ChatGeneration
 from langchain_core.outputs import ChatResult
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel
-from pydantic.warnings import PydanticDeprecatedSince20
 
 TESTS_DIR = os.path.dirname(__file__)
 PROJECT_DIR = os.path.dirname(TESTS_DIR)
 SRC_DIR = os.path.join(PROJECT_DIR, "src")
 EXAMPLES_DIR = os.path.join(PROJECT_DIR, "examples")
 sys.path.append(SRC_DIR)
+
+os.environ["PYTHONPATH"] = (f"{SRC_DIR}:{os.environ['PYTHONPATH']}" if "PYTHONPATH" in os.environ else SRC_DIR)
+os.environ.setdefault("DASK_DISTRIBUTED__WORKER__PYTHON", sys.executable)
 
 if typing.TYPE_CHECKING:
     from dask.distributed import LocalCluster
@@ -374,22 +375,6 @@ def mock_tool():
     return _create_mock_tool
 
 
-@pytest.fixture(scope="function", autouse=True)
-def patched_async_memory_client(monkeypatch):
-    # Suppress Pydantic's class-based Config deprecation only during mem0 import
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore",
-            category=PydanticDeprecatedSince20,
-            module=r"^pydantic\._internal\._config$",
-        )
-        from mem0.client.main import MemoryClient
-
-    mock_method = mock.MagicMock(return_value=None)
-    monkeypatch.setattr(MemoryClient, "_validate_api_key", mock_method)
-    return MemoryClient
-
-
 @pytest.fixture(name="rag_user_inputs")
 def rag_user_inputs_fixture() -> list[str]:
     """Fixture providing multiple user inputs."""
@@ -497,6 +482,11 @@ def rag_intermediate_property_adaptor_fixture(rag_intermediate_steps) -> list[li
 def dask_cluster_fixture(fail_missing: bool) -> "LocalCluster":
     """
     Fixture to provide a Dask LocalCluster for tests.
+
+    Uses processes=False (threaded workers) for testing because:
+    1. Tests don't need process isolation
+    2. Avoids import issues with editable installs in worker processes
+    3. Faster startup and teardown for tests
     """
     try:
         from dask.distributed import LocalCluster
@@ -505,7 +495,9 @@ def dask_cluster_fixture(fail_missing: bool) -> "LocalCluster":
             raise
         pytest.skip("Dask is not installed, skipping Dask cluster fixture.")
 
-    cluster = LocalCluster(asynchronous=False, n_workers=1, threads_per_worker=1)
+    # Use threaded workers for tests - this is the standard practice for test suites
+    # as it avoids complexity with module imports and provides faster execution
+    cluster = LocalCluster(asynchronous=False, n_workers=1, threads_per_worker=1, processes=False)
     yield cluster
     cluster.close()
 
