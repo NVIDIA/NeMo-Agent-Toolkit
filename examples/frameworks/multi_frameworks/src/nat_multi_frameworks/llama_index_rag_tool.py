@@ -88,7 +88,7 @@ async def llama_index_rag_tool(tool_config: LlamaIndexRAGConfig, builder: Builde
         """
         rag using llama-index ingesting README markdown file
         Args:
-            query : user query
+            inputs : user query
         """
         output: str
         if not is_nvdev:
