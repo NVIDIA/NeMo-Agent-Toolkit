@@ -191,12 +191,7 @@ def main():
         add_text(msg, blocks, plain_text)
 
         # Not using the failure fields here since this is not a test failure but a script failure.
-        report_messages = ReportMessages(
-            plain_text=plain_text,
-            blocks=blocks,
-            failure_text=None,
-            failure_blocks=None
-        )
+        report_messages = ReportMessages(plain_text=plain_text, blocks=blocks, failure_text=None, failure_blocks=None)
         return_code = 1
 
     client = WebClient(token=slack_token)
