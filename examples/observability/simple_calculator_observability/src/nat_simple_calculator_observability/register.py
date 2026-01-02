@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 Nested tool example for testing parent-child span tracking.
 
@@ -84,9 +83,6 @@ async def power_of_two_function(config: PowerOfTwoConfig, builder: Builder):
 
     yield FunctionInfo.from_fn(
         _power_of_two,
-        description=(
-            "Calculate a number raised to the power of 2. "
-            "This tool internally calls the multiply function, creating a nested tool call."
-        ),
+        description=("Calculate a number raised to the power of 2. "
+                     "This tool internally calls the multiply function, creating a nested tool call."),
     )
-
