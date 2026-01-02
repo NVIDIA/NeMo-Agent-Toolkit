@@ -9,8 +9,7 @@ MemMachine is a unified memory management system that supports both episodic and
 ## Prerequisites
 
 - Python 3.11+
-- MemMachine server (install via `pip install memmachine-server` and run with `python memmachine-server`)
-- MemMachine configuration file (`cfg.yml`)
+- MemMachine server (install via `pip install memmachine-server`)
 
 ## Installation
 
@@ -28,79 +27,44 @@ uv pip install -e packages/memmachine
 
 ## MemMachine Server Setup
 
-MemMachine requires a running server instance. Install and run the MemMachine server:
+### Step 1: Install MemMachine Server
 
 ```bash
 pip install memmachine-server
-python memmachine-server
 ```
 
-The server will start on `http://localhost:8080` by default. Make sure your `cfg.yml` configuration file is properly set up with database connections (PostgreSQL for semantic memory and Neo4j for episodic memory).
+### Step 2: Run the Configuration Wizard
 
-## Configuration
+Before starting the server, you need to configure MemMachine using the interactive configuration wizard:
 
-MemMachine requires a `cfg.yml` configuration file that specifies:
-
-- **Databases**: PostgreSQL and Neo4j connection details
-- **AI Models**: LLMs and embedders for processing
-- **Other Resources**: Rerankers, session managers, etc.
-
-### Example Configuration
-
-Create a `cfg.yml` file with your database and model configurations:
-
-```yaml
-episodic_memory:
-  long_term_memory:
-    embedder: openai_embedder
-    vector_graph_store: my_storage_id
-  short_term_memory:
-    llm_model: openai_model
-    message_capacity: 500
-
-semantic_memory:
-  llm_model: openai_model
-  embedding_model: openai_embedder
-  database: profile_storage
-
-resources:
-  databases:
-    profile_storage:
-      provider: postgres
-      config:
-        host: localhost  # Use 'postgres' if running memmachine in Docker
-        port: 5432
-        user: memmachine
-        password: memmachine_password
-        db_name: memmachine
-    my_storage_id:
-      provider: neo4j
-      config:
-        uri: 'bolt://localhost:7687'  # Use 'bolt://neo4j:7687' if running in Docker
-        username: neo4j
-        password: neo4j_password
-  language_models:
-    openai_model:
-      provider: openai-responses
-      config:
-        model: "gpt-4o-mini"
-        api_key: <YOUR_OPENAI_API_KEY>
-        base_url: "https://api.openai.com/v1"
-  embedders:
-    openai_embedder:
-      provider: openai
-      config:
-        model: "text-embedding-3-small"
-        api_key: <YOUR_OPENAI_API_KEY>
-        base_url: "https://api.openai.com/v1"
-        dimensions: 1536
+```bash
+memmachine-configure
 ```
+
+The wizard will guide you through setting up:
+
+- **Neo4j Database**: Option to install Neo4j automatically or provide connection details for an existing instance
+- **Large Language Model (LLM) Provider**: Choose from supported providers like OpenAI, AWS Bedrock, or Ollama
+- **Model Selection**: Select specific LLM and embedding models
+- **API Keys and Credentials**: Input necessary API keys for your selected LLM provider
+- **Server Settings**: Configure server host and port
 
 **Note**: 
-- Use `localhost` for database hosts when databases are running on your host machine
-- Adjust hostnames in the configuration based on your database setup
+- The wizard installs Neo4j and Java automatically when you choose to install Neo4j (platform-specific: Windows uses ZIP, macOS uses brew, Linux uses tar.gz)
+- The wizard uses Neo4j as the vector database and SQLite as the relational database by default
+- The configuration file will be generated at `<HOME>/.config/memmachine/cfg.yml`
 
-For more details, see the [MemMachine Configuration Documentation](https://docs.memmachine.ai/open_source/configuration).
+### Step 3: Start the MemMachine Server
+
+After completing the configuration wizard, start the server:
+
+```bash
+memmachine-server
+```
+
+The server will start on `http://localhost:8080` by default (or the port you configured).
+
+For more details, see the [MemMachine Configuration Wizard Documentation](https://docs.memmachine.ai/open_source/configuration-wizard).
 
 ## Usage in NeMo Agent Toolkit
 
