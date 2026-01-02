@@ -83,7 +83,7 @@ class ReActAgentWorkflowConfig(AgentBaseConfig, OptimizableMixin, name="react_ag
 
 @register_function(config_type=ReActAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builder):
-    from langchain.schema import BaseMessage
+    from langchain_core.messages import BaseMessage
     from langchain_core.messages import trim_messages
     from langgraph.graph.state import CompiledStateGraph
 

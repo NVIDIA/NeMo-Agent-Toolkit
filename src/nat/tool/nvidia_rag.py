@@ -44,8 +44,8 @@ class NVIDIARAGToolConfig(FunctionBaseConfig, name="nvidia_rag"):
 @register_function(config_type=NVIDIARAGToolConfig)
 async def nvidia_rag_tool(config: NVIDIARAGToolConfig, builder: Builder):
     import httpx
-    from langchain.prompts import PromptTemplate
     from langchain_core.documents import Document
+    from langchain_core.prompts import PromptTemplate
     from langchain_core.prompts import aformat_document
 
     document_prompt = PromptTemplate.from_template(config.document_prompt)

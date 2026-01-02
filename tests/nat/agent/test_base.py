@@ -24,6 +24,7 @@ from langchain_core.messages import HumanMessage
 from langchain_core.messages import ToolMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph.state import CompiledStateGraph
+from langgraph.runtime import DEFAULT_RUNTIME
 
 from nat.agent.base import BaseAgent
 
@@ -76,7 +77,7 @@ class TestStreamLLM:
         mock_runnable.astream = mock_astream
 
         inputs = {"messages": [HumanMessage(content="test")]}
-        config = RunnableConfig(callbacks=[])
+        config = RunnableConfig(callbacks=[], configurable={"__pregel_runtime": DEFAULT_RUNTIME})
 
         result = await base_agent._stream_llm(mock_runnable, inputs, config)
 
@@ -166,7 +167,7 @@ class TestCallTool:
         """Test successful tool call."""
         tool = base_agent.tools[0]  # Tool A
         tool_input = {"query": "test"}
-        config = RunnableConfig(callbacks=[])
+        config = RunnableConfig(callbacks=[], configurable={"__pregel_runtime": DEFAULT_RUNTIME})
 
         tool.ainvoke = AsyncMock(return_value="Tool response")
 
@@ -182,7 +183,7 @@ class TestCallTool:
         """Test that tool call succeeds on second attempt with retry logic."""
         tool = base_agent.tools[0]  # Tool A
         tool_input = {"query": "test"}
-        config = RunnableConfig(callbacks=[])
+        config = RunnableConfig(callbacks=[], configurable={"__pregel_runtime": DEFAULT_RUNTIME})
 
         tool.ainvoke = AsyncMock(side_effect=[Exception("Network error"), "Tool response"])
 

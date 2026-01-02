@@ -41,7 +41,7 @@ class PerUserReActAgentWorkflowConfig(ReActAgentWorkflowConfig, name="per_user_r
                             framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def per_user_react_agent_workflow(config: PerUserReActAgentWorkflowConfig, builder: Builder):
     """Per-user ReAct Agent - each user gets their own isolated instance."""
-    from langchain.schema import BaseMessage
+    from langchain_core.messages import BaseMessage
     from langchain_core.messages import trim_messages
     from langgraph.graph.state import CompiledStateGraph
 

@@ -373,6 +373,52 @@ if build_api_docs:
 
         return skip
 
+    def clean_markdown_from_docstrings(app: object, docname: str, source: list[str]) -> None:
+        """Clean up Markdown syntax that doesn't work in RST.
+
+        Some inherited docstrings (for example, from LangChain) use Markdown syntax like
+        triple backticks for code blocks and !!! for admonitions. These cause RST
+        parsing warnings. This function converts or removes such patterns.
+        """
+        import re
+        if not docname.startswith('api/'):
+            return
+
+        content = source[0]
+
+        # Remove MkDocs-style admonition blocks: !!! type "title"\n    content
+        # These span multiple lines and are complex to convert, so we remove them
+        content = re.sub(r'^\s*!!!\s+\w+\s+"[^"]*"\s*\n(?:\s{4,}.*\n)*', '', content, flags=re.MULTILINE)
+
+        # Convert Markdown code fences to RST code blocks
+        # Match ```language\n...code...\n``` and convert to :: block
+        def convert_code_fence(match: re.Match[str]) -> str:
+            indent = match.group(1)
+            lang = match.group(2) or ''
+            code = match.group(3)
+            # Create RST code block with proper indentation
+            if lang:
+                header = f"{indent}.. code-block:: {lang}\n\n"
+            else:
+                header = f"{indent}::\n\n"
+            # Indent the code content
+            indented_code = '\n'.join(f"{indent}   {line}" if line.strip() else '' for line in code.split('\n'))
+            return header + indented_code + '\n'
+
+        # Handle code fences with optional language - match ``` at any indentation
+        content = re.sub(r'^(\s*)```(\w*)\n(.*?)^\s*```\s*$',
+                         convert_code_fence,
+                         content,
+                         flags=re.MULTILINE | re.DOTALL)
+
+        # Escape **kwargs and **args patterns that appear in function signatures
+        # These get interpreted as RST bold/strong markup
+        content = re.sub(r'\*\*(kwargs|args|kw)', r'\\*\\*\1', content)
+
+        source[0] = content
+
     def setup(sphinx):
         # Work-around for for Pydantic docstrings that trigger parsing warnings
         sphinx.connect("autoapi-skip-member", skip_pydantic_special_attrs)
+        # Clean up Markdown syntax in auto-generated API docs
+        sphinx.connect("source-read", clean_markdown_from_docstrings)

@@ -340,9 +340,8 @@ Copy and Paste the export command from output into your shell for easier configu
 
 You can test your agent in AgentCore with the following script:
 
-
 ```bash
-uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py
+uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/verify_nat.py
 ```
 
 ## Step 7: Instrument for OpenTelemetry
@@ -414,7 +413,7 @@ uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/update_nat.p
 ### Final Test
 
 ```bash
-uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py
+uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/verify_nat.py
 ```
 
 > [!NOTE] 
@@ -835,7 +834,7 @@ FROM ${BASE_IMAGE_URL}:${BASE_IMAGE_TAG}
 ARG PYTHON_VERSION
 ARG NAT_VERSION
 
-COPY --from=ghcr.io/astral-sh/uv:0.8.15 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.9.15 /uv /uvx /bin/
 
 ENV PYTHONDONTWRITEBYTECODE=1
 

@@ -15,7 +15,7 @@
 
 import re
 
-from langchain.agents.agent import AgentOutputParser
+from langchain_classic.agents.agent import AgentOutputParser
 from langchain_core.agents import AgentAction
 from langchain_core.agents import AgentFinish
 from langchain_core.exceptions import LangChainException

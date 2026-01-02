@@ -68,10 +68,10 @@ class NemoRetriever(Retriever):
 
     def bind(self, **kwargs) -> None:
         """
-        Bind default values to the search method. Cannot bind the 'query' parameter.
+        Bind default values to the search method. Cannot bind the ``query`` parameter.
 
         Args:
-          kwargs (dict): Key value pairs corresponding to the default values of search parameters.
+            kwargs: Key value pairs corresponding to the default values of search parameters.
         """
         if "query" in kwargs:
             kwargs = {k: v for k, v in kwargs.items() if k != "query"}
@@ -87,7 +87,7 @@ class NemoRetriever(Retriever):
 
     async def get_collections(self, client) -> list[Collection]:
         """
-        Get a list of all available collections as pydantic `Collection` objects
+        Get a list of all available collections as pydantic Collection objects.
         """
         collection_response = await client.get(urljoin(self.base_url, "/v1/collections"))
         collection_response.raise_for_status()
@@ -102,7 +102,7 @@ class NemoRetriever(Retriever):
 
     async def get_collection_by_name(self, collection_name, client) -> Collection:
         """
-        Retrieve a collection using it's name. Will return the first collection found if the name is ambiguous.
+        Retrieve a collection using its name. Will return the first collection found if the name is ambiguous.
         """
         collections = await self.get_collections(client)
         if (collection := next((c for c in collections if c.name == collection_name), None)) is None:
