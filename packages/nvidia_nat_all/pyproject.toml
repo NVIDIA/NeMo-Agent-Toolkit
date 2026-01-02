@@ -20,7 +20,7 @@ dependencies = [
   # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
   # Keep sorted!!!
-  "nvidia-nat[async_endpoints,gunicorn]~=1.4",
+  "nvidia-nat[async_endpoints,gunicorn]~=1.5",
   "nvidia-nat-adk",
   "nvidia-nat-agno",
   "nvidia-nat-crewai",
@@ -29,6 +29,8 @@ dependencies = [
   "nvidia-nat-mcp",
   "nvidia-nat-mem0ai",
   "nvidia-nat-mysql",
+  "nvidia-nat-nemo-customizer",
+  "nvidia-nat-openpipe-art",
   "nvidia-nat-opentelemetry",
   "nvidia-nat-phoenix",
   "nvidia-nat-profiling",
@@ -75,6 +77,8 @@ nvidia-nat-llama-index = { workspace = true }
 nvidia-nat-mcp = { workspace = true }
 nvidia-nat-mem0ai = { workspace = true }
 nvidia-nat-mysql = { workspace = true }
+nvidia-nat-nemo-customizer = { workspace = true }
+nvidia-nat-openpipe-art = { workspace = true }
 nvidia-nat-opentelemetry = { workspace = true }
 nvidia-nat-phoenix = { workspace = true }
 nvidia-nat-profiling = { workspace = true }

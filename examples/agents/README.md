@@ -31,11 +31,11 @@ custom agentic workflows and tools in a flexible manner.
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 
 ### Set Up API Keys
 
-If you have not already done so, follow the [Obtaining API Keys](../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+If you have not already done so, follow the [Obtaining API Keys](../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
@@ -53,7 +53,7 @@ Each agent example contains its own installation and usage instructions. Navigat
 ## Learn More
 
 For a deeper dive into the AI Agents utilized in the examples, refer to the component documentation:
-- [ReAct Agent](../../docs/source/workflows/about/react-agent.md)
-- [Reasoning Agent](../../docs/source/workflows/about/reasoning-agent.md)
-- [Tool Calling Agent](../../docs/source/workflows/about/tool-calling-agent.md)
-- [ReWOO Agent](../../docs/source/workflows/about/rewoo-agent.md)
+- [ReAct Agent](../../docs/source/components/agents/react-agent/index.md)
+- [Reasoning Agent](../../docs/source/components/agents/reasoning-agent/index.md)
+- [Tool Calling Agent](../../docs/source/components/agents/tool-calling-agent/index.md)
+- [ReWOO Agent](../../docs/source/components/agents/rewoo-agent/index.md)

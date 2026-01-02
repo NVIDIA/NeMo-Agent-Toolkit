@@ -175,6 +175,7 @@ Key practices:
 - Import third-party service libraries at module level in fixtures
 - Use function scope for service fixtures (use session scope)
 - Fail tests when services are unavailable (skip them instead)
+- Add `@pytest.mark.asyncio` decorator - async tests are automatically detected and run by the async runner
 
 ## Running Integration Tests
 

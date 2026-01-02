@@ -78,6 +78,30 @@ reviews:
         This directory contains the source code for the documentation. All documentation should be written in Markdown
         format. Any image files should be placed in the `docs/source/_static` directory.
 
+
+        # Documentation Categories
+
+        Ensure documentation is placed in the correct category:
+
+        - `get-started/`: Introductory documentation for new users
+          - `get-started/tutorials/`: Step-by-step learning guides
+        - `build-workflows/`: Workflow creation, configuration, adding remote MCP tools or A2A agents
+        - `run-workflows/`: Execution, observability, serving workflows via MCP and A2A protocols
+        - `improve-workflows/`: Evaluation and optimization guides
+        - `components/`: Specific component implementations (agents, tools, connectors)
+        - `extend/`: Custom component development and testing (not core library contributions)
+        - `reference/`: Python and REST API documentation only
+        - `resources/`: Project information (licensing, FAQs)
+          - `resources/contributing/`: Development environment and contribution guides
+
+
+        Placement rules:
+
+        1. Component implementations always belong in `components/`, not `build-workflows/`
+        2. API documentation belongs only in `reference/`
+        3. Using remote MCP tools or A2A agents should be placed in `build-workflows/`
+        4. Serving workflows via MCP/A2A should be placed in `run-workflows/`
+
     - path: "examples/**/*"
       instructions: >-
         - This directory contains example code and usage scenarios for the toolkit, at a minimum an example should
@@ -105,6 +129,8 @@ reviews:
           digit version (ex: `~=1.0`).
         - Not all packages contain Python code, if they do they should also contain their own set of tests, in a
           `tests/` directory at the same level as the `pyproject.toml` file.
+        - When adding a new package, that new package name (as defined in the `pyproject.toml` file) should
+          be added as a dependency to the nvidia-nat-all package in `packages/nvidia_nat_all/pyproject.toml`
 
     - path: "tests/**/*.py"
       instructions: >-
@@ -116,6 +142,8 @@ reviews:
             @pytest.fixture(name="my_fixture")
             def fixture_my_fixture():
                 pass
+        - Do NOT add `@pytest.mark.asyncio` to any test. Async tests are automatically detected and run by the
+          async runner - the decorator is unnecessary clutter.
 
   auto_apply_labels: true
   suggested_labels: true

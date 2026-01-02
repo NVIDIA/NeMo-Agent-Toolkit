@@ -1,0 +1,26 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+[tool.setuptools_scm]
+git_describe_command = "git describe --long --first-parent"
+root = "../../.."
+
+[project]
+name = "nat_math_assistant_a2a"
+dynamic = ["version"]
+dependencies = [
+    "nvidia-nat[a2a]~=1.5",
+    "nvidia-nat[mcp]~=1.5",
+    "mcp-server-time~=2025.8"
+]
+requires-python = ">=3.11,<3.14"
+description = "A2A client example demonstrating NAT-to-NAT integration with hybrid tool composition"
+keywords = ["ai", "a2a", "protocol", "agents", "calculator", "mcp"]
+classifiers = ["Programming Language :: Python"]
+
+[tool.uv.sources]
+nvidia-nat = { path = "../../..", editable = true }
+
+[project.entry-points.'nat.components']
+nat_math_assistant_a2a = "nat_math_assistant_a2a.register"

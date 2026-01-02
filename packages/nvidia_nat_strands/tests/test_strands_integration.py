@@ -226,7 +226,7 @@ class TestStrandsAgentE2ENIM:
         """Test NIM with reasoning capabilities (basic, no thinking mixin)."""
         from strands.agent import Agent
 
-        llm_config = NIMModelConfig(model_name="meta/llama-3.1-8b-instruct", temperature=0.0, max_tokens=128)
+        llm_config = NIMModelConfig(model_name="meta/llama-3.1-8b-instruct", temperature=0.0, max_tokens=256)
 
         strands_tool = strands_tool_wrapper("echo", echo_function, builder)
 
