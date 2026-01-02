@@ -324,9 +324,7 @@ async def client_fixture(config):
 
     async with LifespanManager(fastapi_app) as manager:
         transport = ASGITransport(app=manager.app)
-        print(f"\n**********\nStarting httpx.AsyncClient transport={transport}\n***********\n")
         async with httpx.AsyncClient(transport=transport,
-                                     timeout=30.0,
                                      base_url=f"http://{config.app.host}:{config.app.port}") as client:
             yield client
 
@@ -379,16 +377,13 @@ async def test_chat_stream_endpoint(client: httpx.AsyncClient, config: Config):
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_chat_stream_endpoint_observability_trace_id_integration(client: httpx.AsyncClient, config: Config):
     """Tests that chat stream endpoint sends observability_trace_id as a separate SSE event."""
-    print("\n**********\n1\n***********\n")
     input_message = {"messages": [{"role": "user", "content": f"{config.app.input}"}], "use_knowledge_base": True}
 
     # Mock the context to provide an observability_trace_id
     with patch('nat.builder.context.Context.get') as mock_context:
-        print("\n**********\n2\n***********\n")
         mock_context.return_value.observability_trace_id = "integration-stream-observability-id"
 
-        response = await client.post(f"{config.endpoint.chat_stream}", json=input_message, timeout=30.0)
-        print("\n**********\n3\n***********\n")
+        response = await client.post(f"{config.endpoint.chat_stream}", json=input_message)
         assert response.status_code == 200
 
         # Verify the observability trace is sent as a separate SSE event
