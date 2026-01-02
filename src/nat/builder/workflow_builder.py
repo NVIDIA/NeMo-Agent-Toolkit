@@ -41,6 +41,7 @@ from nat.builder.function import LambdaFunction
 from nat.builder.function_info import FunctionInfo
 from nat.builder.llm import LLMProviderInfo
 from nat.builder.retriever import RetrieverProviderInfo
+from nat.builder.sync_builder import SyncBuilder
 from nat.builder.workflow import Workflow
 from nat.cli.type_registry import GlobalTypeRegistry
 from nat.cli.type_registry import TypeRegistry
@@ -430,6 +431,11 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         await self._exit_stack.__aexit__(*exc_details)
 
+    @override
+    @property
+    def sync_builder(self) -> SyncBuilder:
+        return SyncBuilder(self)
+
     async def build(self, entry_function: str | None = None) -> Workflow:
         """
         Creates an instance of a workflow object using the added components and the desired entry function.
@@ -587,29 +593,29 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         return middleware_instances
 
     async def _build_function(self, name: str, config: FunctionBaseConfig) -> ConfiguredFunction:
-        inner_builder = ChildBuilder(self)
+        with ChildBuilder.use(config, self) as inner_builder:
 
-        # We need to do this for every function because we don't know
-        # Where LLama Index Agents are Instantiated and Settings need to
-        # be set before the function is built
-        # It's only slower the first time because of the import
-        # So we can afford to do this for every function
-        llms = {k: v.instance for k, v in self._llms.items()}
+            # We need to do this for every function because we don't know
+            # Where LLama Index Agents are Instantiated and Settings need to
+            # be set before the function is built
+            # It's only slower the first time because of the import
+            # So we can afford to do this for every function
+            llms = {k: v.instance for k, v in self._llms.items()}
 
-        # Resolve middleware names from config to middleware instances
-        # Only FunctionMiddleware types can be used with functions
-        middleware_instances = await self._resolve_middleware_instances(config.middleware, name, "function")
+            # Resolve middleware names from config to middleware instances
+            # Only FunctionMiddleware types can be used with functions
+            middleware_instances = await self._resolve_middleware_instances(config.middleware, name, "function")
 
-        return await _build_function_impl(
-            name=name,
-            config=config,
-            registry=self._registry,
-            exit_stack=self._get_exit_stack(),
-            inner_builder=inner_builder,
-            llms=llms,
-            dependencies=self.function_dependencies,
-            middleware_instances=middleware_instances,
-        )
+            return await _build_function_impl(
+                name=name,
+                config=config,
+                registry=self._registry,
+                exit_stack=self._get_exit_stack(),
+                inner_builder=inner_builder,
+                llms=llms,
+                dependencies=self.function_dependencies,
+                middleware_instances=middleware_instances,
+            )
 
     async def _build_function_group(self, name: str, config: FunctionGroupBaseConfig) -> ConfiguredFunctionGroup:
         """Build a function group from the provided configuration.
@@ -624,22 +630,23 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         Raises:
             ValueError: If the function group builder returns invalid results
         """
-        inner_builder = ChildBuilder(self)
 
-        # Build the function group - use the same wrapping pattern as _build_function
-        llms = {k: v.instance for k, v in self._llms.items()}
-        # Resolve middleware names from config to middleware instances
-        # Only FunctionMiddleware types can be used with function groups
-        middleware_instances = await self._resolve_middleware_instances(config.middleware, name, "function group")
+        with ChildBuilder.use(config, self) as inner_builder:
 
-        return await _build_function_group_impl(name=name,
-                                                config=config,
-                                                registry=self._registry,
-                                                exit_stack=self._get_exit_stack(),
-                                                inner_builder=inner_builder,
-                                                llms=llms,
-                                                dependencies=self.function_group_dependencies,
-                                                middleware_instances=middleware_instances)
+            # Build the function group - use the same wrapping pattern as _build_function
+            llms = {k: v.instance for k, v in self._llms.items()}
+            # Resolve middleware names from config to middleware instances
+            # Only FunctionMiddleware types can be used with function groups
+            middleware_instances = await self._resolve_middleware_instances(config.middleware, name, "function group")
+
+            return await _build_function_group_impl(name=name,
+                                                    config=config,
+                                                    registry=self._registry,
+                                                    exit_stack=self._get_exit_stack(),
+                                                    inner_builder=inner_builder,
+                                                    llms=llms,
+                                                    dependencies=self.function_group_dependencies,
+                                                    middleware_instances=middleware_instances)
 
     @override
     async def add_function(self, name: str | FunctionRef, config: FunctionBaseConfig) -> Function:
@@ -816,9 +823,10 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         try:
             llm_info = self._registry.get_llm_provider(type(config))
 
-            info_obj = await self._get_exit_stack().enter_async_context(llm_info.build_fn(config, self))
+            with ChildBuilder.use(config, self) as inner_builder:
+                info_obj = await self._get_exit_stack().enter_async_context(llm_info.build_fn(config, inner_builder))
 
-            self._llms[name] = ConfiguredLLM(config=config, instance=info_obj)
+                self._llms[name] = ConfiguredLLM(config=config, instance=info_obj)
         except Exception as e:
             logger.error("Error adding llm `%s` with config `%s`: %s", name, config, e)
             raise
@@ -836,7 +844,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             # Generate wrapped client from registered client info
             client_info = self._registry.get_llm_client(config_type=type(llm_info.config), wrapper_type=wrapper_type)
 
-            client = await self._get_exit_stack().enter_async_context(client_info.build_fn(llm_info.config, self))
+            with ChildBuilder.use(llm_info.config, self) as inner_builder:
+                client = await self._get_exit_stack().enter_async_context(
+                    client_info.build_fn(llm_info.config, inner_builder))
 
             # Return a frameworks specific client
             return client
@@ -886,7 +896,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         try:
             authentication_info = self._registry.get_auth_provider(type(config))
 
-            info_obj = await self._get_exit_stack().enter_async_context(authentication_info.build_fn(config, self))
+            with ChildBuilder.use(config, self) as inner_builder:
+                info_obj = await self._get_exit_stack().enter_async_context(
+                    authentication_info.build_fn(config, inner_builder))
 
             self._auth_providers[name] = ConfiguredAuthProvider(config=config, instance=info_obj)
 
@@ -932,7 +944,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         try:
             embedder_info = self._registry.get_embedder_provider(type(config))
 
-            info_obj = await self._get_exit_stack().enter_async_context(embedder_info.build_fn(config, self))
+            with ChildBuilder.use(config, self) as inner_builder:
+                info_obj = await self._get_exit_stack().enter_async_context(
+                    embedder_info.build_fn(config, inner_builder))
 
             self._embedders[name] = ConfiguredEmbedder(config=config, instance=info_obj)
         except Exception as e:
@@ -952,7 +966,10 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             # Generate wrapped client from registered client info
             client_info = self._registry.get_embedder_client(config_type=type(embedder_info.config),
                                                              wrapper_type=wrapper_type)
-            client = await self._get_exit_stack().enter_async_context(client_info.build_fn(embedder_info.config, self))
+
+            with ChildBuilder.use(embedder_info.config, self) as inner_builder:
+                client = await self._get_exit_stack().enter_async_context(
+                    client_info.build_fn(embedder_info.config, inner_builder))
 
             # Return a frameworks specific client
             return client
@@ -977,7 +994,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         memory_info = self._registry.get_memory(type(config))
 
-        info_obj = await self._get_exit_stack().enter_async_context(memory_info.build_fn(config, self))
+        with ChildBuilder.use(config, self) as inner_builder:
+            info_obj = await self._get_exit_stack().enter_async_context(memory_info.build_fn(config, inner_builder))
 
         self._memory_clients[name] = ConfiguredMemory(config=config, instance=info_obj)
 
@@ -1009,7 +1027,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         object_store_info = self._registry.get_object_store(type(config))
 
-        info_obj = await self._get_exit_stack().enter_async_context(object_store_info.build_fn(config, self))
+        with ChildBuilder.use(config, self) as inner_builder:
+            info_obj = await self._get_exit_stack().enter_async_context(
+                object_store_info.build_fn(config, inner_builder))
 
         self._object_stores[name] = ConfiguredObjectStore(config=config, instance=info_obj)
 
@@ -1038,7 +1058,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         try:
             retriever_info = self._registry.get_retriever_provider(type(config))
 
-            info_obj = await self._get_exit_stack().enter_async_context(retriever_info.build_fn(config, self))
+            with ChildBuilder.use(config, self) as inner_builder:
+                info_obj = await self._get_exit_stack().enter_async_context(
+                    retriever_info.build_fn(config, inner_builder))
 
             self._retrievers[name] = ConfiguredRetriever(config=config, instance=info_obj)
 
@@ -1062,7 +1084,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             client_info = self._registry.get_retriever_client(config_type=type(retriever_info.config),
                                                               wrapper_type=wrapper_type)
 
-            client = await self._get_exit_stack().enter_async_context(client_info.build_fn(retriever_info.config, self))
+            with ChildBuilder.use(retriever_info.config, self) as inner_builder:
+                client = await self._get_exit_stack().enter_async_context(
+                    client_info.build_fn(retriever_info.config, inner_builder))
 
             # Return a frameworks specific client
             return client
@@ -1087,7 +1111,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         try:
             trainer_info = self._registry.get_trainer(type(config))
 
-            info_obj = await self._get_exit_stack().enter_async_context(trainer_info.build_fn(config, self))
+            with ChildBuilder.use(config, self) as inner_builder:
+                info_obj = await self._get_exit_stack().enter_async_context(trainer_info.build_fn(
+                    config, inner_builder))
 
             self._trainers[name] = ConfiguredTrainer(config=config, instance=info_obj)
 
@@ -1106,7 +1132,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         try:
             trainer_adapter_info = self._registry.get_trainer_adapter(type(config))
 
-            info_obj = await self._get_exit_stack().enter_async_context(trainer_adapter_info.build_fn(config, self))
+            with ChildBuilder.use(config, self) as inner_builder:
+                info_obj = await self._get_exit_stack().enter_async_context(
+                    trainer_adapter_info.build_fn(config, inner_builder))
 
             self._trainer_adapters[name] = ConfiguredTrainerAdapter(config=config, instance=info_obj)
 
@@ -1126,7 +1154,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         try:
             trajectory_builder_info = self._registry.get_trajectory_builder(type(config))
 
-            info_obj = await self._get_exit_stack().enter_async_context(trajectory_builder_info.build_fn(config, self))
+            with ChildBuilder.use(config, self) as inner_builder:
+                info_obj = await self._get_exit_stack().enter_async_context(
+                    trajectory_builder_info.build_fn(config, inner_builder))
 
             self._trajectory_builders[name] = ConfiguredTrajectoryBuilder(config=config, instance=info_obj)
 
@@ -1195,7 +1225,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         try:
             ttc_strategy_info = self._registry.get_ttc_strategy(type(config))
 
-            info_obj = await self._get_exit_stack().enter_async_context(ttc_strategy_info.build_fn(config, self))
+            with ChildBuilder.use(config, self) as inner_builder:
+                info_obj = await self._get_exit_stack().enter_async_context(
+                    ttc_strategy_info.build_fn(config, inner_builder))
 
             self._ttc_strategies[name] = ConfiguredTTCStrategy(config=config, instance=info_obj)
 
@@ -1272,8 +1304,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         try:
             middleware_info = self._registry.get_middleware(type(config))
 
-            middleware_instance = await self._get_exit_stack().enter_async_context(
-                middleware_info.build_fn(config, self))
+            with ChildBuilder.use(config, self) as inner_builder:
+                middleware_instance = await self._get_exit_stack().enter_async_context(
+                    middleware_info.build_fn(config, inner_builder))
 
             self._middleware[name] = ConfiguredMiddleware(config=config, instance=middleware_instance)
 
@@ -1335,10 +1368,12 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         exporter_info = self._registry.get_telemetry_exporter(type(config))
 
         # Build the exporter outside the lock (parallel)
-        exporter_context_manager = exporter_info.build_fn(config, self)
+        with ChildBuilder.use(config, self) as inner_builder:
+            exporter_context_manager = exporter_info.build_fn(config, inner_builder)
 
-        # Only protect the shared state modifications (serialized)
-        exporter = await self._get_exit_stack().enter_async_context(exporter_context_manager)
+            # Only protect the shared state modifications (serialized)
+            exporter = await self._get_exit_stack().enter_async_context(exporter_context_manager)
+
         self._telemetry_exporters[name] = ConfiguredTelemetryExporter(config=config, instance=exporter)
 
     async def populate_builder(self, config: Config, skip_workflow: bool = False):

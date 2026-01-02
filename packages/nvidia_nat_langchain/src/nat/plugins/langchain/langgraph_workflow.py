@@ -2,8 +2,6 @@ import importlib.util
 import sys
 from collections.abc import AsyncGenerator
 
-from deepagents.static_builder import StaticBuilder
-from deepagents.static_builder import StaticConfig
 from pydantic import BaseModel
 from pydantic import Field
 
@@ -13,39 +11,36 @@ from nat.cli.register_workflow import register_function
 from nat.data_models.function import FunctionBaseConfig
 
 
-class StreamOutputConfig(FunctionBaseConfig, name="deepagent"):
+class LanggraphWorkflowConfig(FunctionBaseConfig, name="langgraph_workflow"):
     dependencies: list[str] = Field(default_factory=list)
     graph: str
     env: str | None = None
 
 
-@register_function(config_type=StreamOutputConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
-async def register(config: StreamOutputConfig, b: Builder):
+@register_function(config_type=LanggraphWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
+async def register(config: LanggraphWorkflowConfig, b: Builder):
 
-    # Set the builder in the static builder context
-    with StaticConfig.use(config), StaticBuilder.use(b):
+    # Split the graph path into module and name
+    module_path, name = config.graph.rsplit(":", 1)
 
-        # Split the graph path into module and name
-        module_path, name = config.graph.rsplit(":", 1)
+    spec = importlib.util.spec_from_file_location("agent_code", module_path)
 
-        spec = importlib.util.spec_from_file_location("agent_code", module_path)
+    if spec is None:
+        raise ValueError(f"Spec not found for module: {module_path}")
 
-        if spec is None:
-            raise ValueError(f"Spec not found for module: {module_path}")
+    module = importlib.util.module_from_spec(spec)
 
-        module = importlib.util.module_from_spec(spec)
+    if module is None:
+        raise ValueError(f"Module not found for module: {module_path}")
 
-        if module is None:
-            raise ValueError(f"Module not found for module: {module_path}")
+    sys.modules["agent_code"] = module
 
-        sys.modules["agent_code"] = module
+    if spec.loader is not None:
+        spec.loader.exec_module(module)
+    else:
+        raise ValueError(f"Loader not found for module: {module_path}")
 
-        if spec.loader is not None:
-            spec.loader.exec_module(module)
-        else:
-            raise ValueError(f"Loader not found for module: {module_path}")
-
-        graph = getattr(module, name)
+    graph = getattr(module, name)
 
     async def _inner_stream(message: str) -> str:
         with StaticConfig.use(config), StaticBuilder.use(b):

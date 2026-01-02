@@ -18,6 +18,7 @@ import typing
 from abc import ABC
 from abc import abstractmethod
 from collections.abc import Sequence
+from contextvars import ContextVar
 from pathlib import Path
 
 from nat.authentication.interfaces import AuthProviderBase
@@ -65,7 +66,10 @@ from nat.object_store.interfaces import ObjectStore
 from nat.retriever.interface import Retriever
 
 if typing.TYPE_CHECKING:
+    from nat.builder.sync_builder import SyncBuilder
     from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
+
+_current_builder_context: ContextVar["Builder | None"] = ContextVar("current_builder", default=None)
 
 
 class UserManagerHolder:
@@ -78,6 +82,25 @@ class UserManagerHolder:
 
 
 class Builder(ABC):
+
+    @staticmethod
+    def get_current() -> "Builder":
+        """Get the Builder object from the current context.
+
+        Returns:
+            The Builder object stored in the ContextVar, or None if not set.
+        """
+        builder = _current_builder_context.get()
+
+        if builder is None:
+            raise ValueError("Builder not set in context")
+
+        return builder
+
+    @property
+    @abstractmethod
+    def sync_builder(self) -> "SyncBuilder":
+        pass
 
     @abstractmethod
     async def add_function(self, name: str | FunctionRef, config: FunctionBaseConfig) -> Function:
