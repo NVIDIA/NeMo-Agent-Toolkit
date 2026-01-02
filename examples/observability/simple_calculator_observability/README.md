@@ -77,6 +77,33 @@ Phoenix provides local tracing capabilities perfect for development and testing.
 
 4. Open your browser to `http://localhost:6006` to explore traces in the Phoenix UI.
 
+### Phoenix Tracing with Nested Tool Calls
+
+This configuration demonstrates **parent-child span tracking** for nested tool calls. The `power_of_two` tool internally calls `calculator.multiply`, creating a hierarchy that you can filter in Phoenix.
+
+1. Run the workflow with nested tool tracing:
+
+    ```bash
+    nat run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix-nested.yml --input "What is 5 squared?"
+    ```
+
+2. In Phoenix UI (`http://localhost:6006`), you can filter spans by their parent:
+
+    | Span Attribute | Value | Description |
+    |----------------|-------|-------------|
+    | `nat.function.parent_name` | `react_agent` | Shows only agent-selected tools |
+    | `nat.function.parent_name` | `power_of_two` | Shows nested tool calls |
+
+3. Expected span hierarchy:
+
+    ```
+    react_agent (root)
+    └── power_of_two (parent: react_agent)
+        └── calculator.multiply (parent: power_of_two)
+    ```
+
+This is useful for filtering out internal tool calls when analyzing agent behavior, allowing you to focus on only the tools the agent directly selected.
+
 ### File-Based Tracing
 
 For simple local development and debugging, you can export traces directly to a local file without requiring any external services.
@@ -305,6 +332,7 @@ The example includes multiple configuration files for different observability pl
 | Configuration File | Platform | Best For |
 |-------------------|----------|----------|
 | `config-phoenix.yml` | Phoenix | Tracing with Phoenix |
+| `config-phoenix-nested.yml` | Phoenix | Testing parent-child span tracking with nested tool calls |
 | `config-otel-file.yml` | File Export | Local file-based tracing for development and debugging |
 | `config-langfuse.yml` | Langfuse | Langfuse monitoring and analytics |
 | `config-langsmith.yml` | LangSmith | LangChain/LangGraph ecosystem integration |

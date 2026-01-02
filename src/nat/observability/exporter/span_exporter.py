@@ -174,6 +174,10 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
                 event.function_ancestry.function_id if event.function_ancestry else "unknown",
             f"{self._span_prefix}.function.name":
                 event.function_ancestry.function_name if event.function_ancestry else "unknown",
+            f"{self._span_prefix}.function.parent_id":
+                event.function_ancestry.parent_id if event.function_ancestry and event.function_ancestry.parent_id else "unknown",
+            f"{self._span_prefix}.function.parent_name":
+                event.function_ancestry.parent_name if event.function_ancestry and event.function_ancestry.parent_name else "unknown",
             f"{self._span_prefix}.subspan.name":
                 event.payload.name or "",
             f"{self._span_prefix}.event_timestamp":
