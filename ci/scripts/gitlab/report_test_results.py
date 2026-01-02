@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -183,6 +183,7 @@ def main():
 
         report_messages = build_messages(junit_data, coverage_data)
     except Exception as e:
+        # Intentionally not using logger.exception to limit what we log in CI.
         msg = f"Error: Failed to parse test results or coverage data: {e}"
         logger.error(msg)
         plain_text = []
