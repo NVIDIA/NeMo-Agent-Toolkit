@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -138,7 +138,7 @@ The rest of the code largely remains the same resulting in the following code, t
 @register_function(config_type=TextFileIngestFunctionConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def text_file_ingest_function(config: TextFileIngestFunctionConfig, builder: Builder):
 
-    from langchain.tools.retriever import create_retriever_tool
+    from langchain_classic.tools.retriever import create_retriever_tool
     from langchain_community.document_loaders import DirectoryLoader
     from langchain_community.document_loaders import TextLoader
     from langchain_community.vectorstores import USearch

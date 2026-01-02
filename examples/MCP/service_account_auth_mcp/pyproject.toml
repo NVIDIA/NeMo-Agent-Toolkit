@@ -10,7 +10,7 @@ root = "../../.."
 name = "nat_service_account_auth_mcp"
 dynamic = ["version"]
 dependencies = [
-    "nvidia-nat[mcp]~=1.5",
+    "nvidia-nat[mcp]~=1.4",
 ]
 requires-python = ">=3.11,<3.14"
 description = "MCP Service Account Authentication - demonstrates headless OAuth2 service account authentication for MCP servers"

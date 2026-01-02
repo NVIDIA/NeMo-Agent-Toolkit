@@ -12,7 +12,7 @@ root = "../../.."
 name = "nat_dpo_tic_tac_toe"
 dynamic = ["version"]
 dependencies = [
-  "nvidia-nat[langchain]~=1.5",
+  "nvidia-nat[langchain]~=1.4",
   # langchain-aws pins numpy to 1.* for Python <3.12 -- remove once package is updated
   "numpy~=1.26; python_version < '3.12'",
   "numpy~=2.3; python_version >= '3.12'",
