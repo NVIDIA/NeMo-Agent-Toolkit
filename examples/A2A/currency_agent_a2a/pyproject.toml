@@ -13,8 +13,8 @@ root = "../../.."
 name = "nat_currency_agent_a2a"
 dynamic = ["version"]
 dependencies = [
-    "nvidia-nat[a2a]~=1.5",
-    "nvidia-nat[mcp]~=1.5",
+    "nvidia-nat[a2a]~=1.4",
+    "nvidia-nat[mcp]~=1.4",
     "mcp-server-time~=2025.8"
 ]
 requires-python = ">=3.11,<3.14"
