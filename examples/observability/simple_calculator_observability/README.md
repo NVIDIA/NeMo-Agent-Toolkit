@@ -96,7 +96,7 @@ This configuration demonstrates **parent-child span tracking** for nested tool c
 
 3. Expected span hierarchy:
 
-    ```
+    ```text
     react_agent (root)
     └── power_of_two (parent: react_agent)
         └── calculator.multiply (parent: power_of_two)
