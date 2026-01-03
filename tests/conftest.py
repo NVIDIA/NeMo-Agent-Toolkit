@@ -55,7 +55,6 @@ SRC_DIR = os.path.join(PROJECT_DIR, "src")
 EXAMPLES_DIR = os.path.join(PROJECT_DIR, "examples")
 sys.path.append(SRC_DIR)
 
-os.environ["PYTHONPATH"] = (f"{SRC_DIR}:{os.environ['PYTHONPATH']}" if "PYTHONPATH" in os.environ else SRC_DIR)
 os.environ.setdefault("DASK_DISTRIBUTED__WORKER__PYTHON", sys.executable)
 
 if typing.TYPE_CHECKING:

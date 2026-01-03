@@ -6538,12 +6538,14 @@ name = "nvidia-nat-semantic-kernel"
 source = { editable = "packages/nvidia_nat_semantic_kernel" }
 dependencies = [
     { name = "nvidia-nat" },
+    { name = "ruamel-yaml-clibz" },
     { name = "semantic-kernel" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "nvidia-nat", editable = "." },
+    { name = "ruamel-yaml-clibz", specifier = "==0.3.5" },
     { name = "semantic-kernel", specifier = "~=1.35" },
 ]
 
@@ -9132,9 +9134,9 @@ wheels = [
 
 [[package]]
 name = "ruamel-yaml-clibz"
-version = "0.3.7"
+version = "0.3.5"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/cb/73/2a9857a017f8ee260c683d8155634f0e3ca57964da2c3055b02822d582cd/ruamel_yaml_clibz-0.3.7.tar.gz", hash = "sha256:2be85214793cfc787eb12380fa3226e10cd7727b24551c3067c173d66c9bedd9", size = 231233, upload-time = "2026-01-02T14:52:41.734Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f7/5d/c589ccf1b86632d21c0cc89a442294c7cebd46aa0e03cfc604dc534ea678/ruamel_yaml_clibz-0.3.5.tar.gz", hash = "sha256:fdffa4b92ed86d00d59324b15f358f1b807e6b8b0464be53ffecf6bc10153b87", size = 231097, upload-time = "2026-01-02T08:13:40.577Z" }
 
 [[package]]
 name = "ruff"
