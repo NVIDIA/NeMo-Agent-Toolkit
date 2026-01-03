@@ -290,12 +290,13 @@ async def test_nested_span_parent_child_lineage(tmp_path: Path, config_dir: Path
 
     # Replace phoenix tracing with file-based tracing for testability
     config.general.telemetry.tracing = {
-        "otel_file": FileTelemetryExporterConfig(
-            output_path=str(otel_file.absolute()),
-            project="nested_test",
-            mode="append",
-            enable_rolling=False,
-        )
+        "otel_file":
+            FileTelemetryExporterConfig(
+                output_path=str(otel_file.absolute()),
+                project="nested_test",
+                mode="append",
+                enable_rolling=False,
+            )
     }
 
     # Ask a question that requires using power_of_two (which internally calls multiply)
@@ -325,8 +326,7 @@ async def test_nested_span_parent_child_lineage(tmp_path: Path, config_dir: Path
 
     # Verify power_of_two span exists and has correct lineage
     assert "power_of_two" in spans_by_function, (
-        f"power_of_two span not found. Available functions: {list(spans_by_function.keys())}"
-    )
+        f"power_of_two span not found. Available functions: {list(spans_by_function.keys())}")
     power_of_two_span = spans_by_function["power_of_two"]
     power_of_two_ancestry = power_of_two_span.get("function_ancestry", {})
 
@@ -336,15 +336,13 @@ async def test_nested_span_parent_child_lineage(tmp_path: Path, config_dir: Path
 
     # Verify calculator.multiply span exists and has power_of_two as parent
     assert "calculator.multiply" in spans_by_function, (
-        f"calculator.multiply span not found. Available functions: {list(spans_by_function.keys())}"
-    )
+        f"calculator.multiply span not found. Available functions: {list(spans_by_function.keys())}")
     multiply_span = spans_by_function["calculator.multiply"]
     multiply_ancestry = multiply_span.get("function_ancestry", {})
 
     multiply_parent_name = multiply_ancestry.get("parent_name")
     assert multiply_parent_name == "power_of_two", (
-        f"calculator.multiply parent_name should be 'power_of_two', got '{multiply_parent_name}'"
-    )
+        f"calculator.multiply parent_name should be 'power_of_two', got '{multiply_parent_name}'")
 
     # Additionally verify the parent_id linkage is consistent
     power_of_two_id = power_of_two_ancestry.get("function_id")

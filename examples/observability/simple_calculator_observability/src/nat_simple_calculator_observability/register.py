@@ -20,7 +20,6 @@ multiply function, creating a nested tool call scenario for testing span lineage
 """
 
 import logging
-from typing import AsyncGenerator
 
 from pydantic import Field
 
