@@ -4,3 +4,6 @@
 [submodule "lc_deepagents"]
 	path = external/lc_deepagents
 	url = git@github.com:langchain-ai/deepagents.git
+[submodule "external/lc-deepagents-quickstarts"]
+	path = external/lc-deepagents-quickstarts
+	url = git@github.com:langchain-ai/deepagents-quickstarts.git

@@ -2,6 +2,7 @@ import importlib.util
 import sys
 from collections.abc import AsyncGenerator
 
+from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel
 from pydantic import Field
 
@@ -40,15 +41,18 @@ async def register(config: LanggraphWorkflowConfig, b: Builder):
     else:
         raise ValueError(f"Loader not found for module: {module_path}")
 
-    graph = getattr(module, name)
+    graph: CompiledStateGraph = getattr(module, name)
 
-    async def _inner_stream(message: str) -> str:
-        with StaticConfig.use(config), StaticBuilder.use(b):
-            try:
-                output = await graph.ainvoke({"messages": [{"role": "user", "content": message}]})
-                return output["messages"][-1].content
-            except Exception as e:
-                print(f"Error in graph: {e}")
-                return f"Error in graph: {e}"
+    input_type = graph.InputType
+    output_type = graph.OutputType or dict
+
+    async def _inner_stream(input_data: input_type) -> output_type:
+
+        try:
+            output = await graph.ainvoke(input_data)
+            return output
+        except Exception as e:
+            print(f"Error in graph: {e}")
+            return f"Error in graph: {e}"
 
     yield _inner_stream
