@@ -84,7 +84,7 @@ class UserManagerHolder:
 class Builder(ABC):
 
     @staticmethod
-    def get_current() -> "Builder":
+    def current() -> "Builder":
         """Get the Builder object from the current context.
 
         Returns:

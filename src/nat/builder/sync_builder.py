@@ -66,6 +66,10 @@ class SyncBuilder:
         # Save the current loop
         self._loop = asyncio.get_running_loop()
 
+    @staticmethod
+    def current() -> "SyncBuilder":
+        return SyncBuilder(Builder.current())
+
     @property
     def async_builder(self) -> Builder:
         return self._builder
