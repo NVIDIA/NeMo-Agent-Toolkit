@@ -32,8 +32,8 @@ from nat.builder.function_base import FunctionBase
 from nat.builder.workflow import Workflow
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.config import Config
-from nat.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
-from nat.front_ends.mcp.memory_profiler import MemoryProfiler
+from nat.plugins.mcp.server.front_end_config import MCPFrontEndConfig
+from nat.plugins.mcp.server.memory_profiler import MemoryProfiler
 from nat.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
@@ -137,7 +137,7 @@ class MCPFrontEndPluginWorkerBase(ABC):
             mcp: The FastMCP server instance
             builder: The workflow builder instance
         """
-        from nat.front_ends.mcp.tool_converter import register_function_with_mcp
+        from nat.plugins.mcp.server.tool_converter import register_function_with_mcp
 
         # Set up the health endpoint
         self._setup_health_endpoint(mcp)
@@ -254,7 +254,7 @@ class MCPFrontEndPluginWorkerBase(ABC):
 
             from starlette.responses import JSONResponse
 
-            from nat.front_ends.mcp.tool_converter import get_function_description
+            from nat.plugins.mcp.server.tool_converter import get_function_description
 
             # Query params
             # Support repeated names and comma-separated lists
@@ -387,7 +387,7 @@ class MCPFrontEndPluginWorker(MCPFrontEndPluginWorkerBase):
                                          resource_server_url=AnyHttpUrl(server_url))
 
             # Create token verifier
-            from nat.front_ends.mcp.introspection_token_verifier import IntrospectionTokenVerifier
+            from nat.plugins.mcp.server.introspection_token_verifier import IntrospectionTokenVerifier
 
             token_verifier = IntrospectionTokenVerifier(self.front_end_config.server_auth)
 

@@ -29,7 +29,7 @@ from nat.builder.function import Function
 from nat.builder.function_base import FunctionBase
 
 if TYPE_CHECKING:
-    from nat.front_ends.mcp.memory_profiler import MemoryProfiler
+    from nat.plugins.mcp.server.memory_profiler import MemoryProfiler
     from nat.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)

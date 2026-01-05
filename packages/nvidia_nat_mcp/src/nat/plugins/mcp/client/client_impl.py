@@ -28,9 +28,9 @@ from nat.authentication.interfaces import AuthProviderBase
 from nat.builder.builder import Builder
 from nat.builder.function import FunctionGroup
 from nat.cli.register_workflow import register_function_group
-from nat.plugins.mcp.client_base import MCPBaseClient
-from nat.plugins.mcp.client_config import MCPClientConfig
-from nat.plugins.mcp.client_config import MCPToolOverrideConfig
+from nat.plugins.mcp.client.client_base import MCPBaseClient
+from nat.plugins.mcp.client.client_config import MCPClientConfig
+from nat.plugins.mcp.client.client_config import MCPToolOverrideConfig
 from nat.plugins.mcp.utils import truncate_session_id
 
 logger = logging.getLogger(__name__)

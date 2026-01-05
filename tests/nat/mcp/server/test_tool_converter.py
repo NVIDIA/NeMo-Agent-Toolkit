@@ -24,11 +24,11 @@ from pydantic import Field
 
 from nat.builder.function import Function
 from nat.builder.workflow import Workflow
-from nat.front_ends.mcp.tool_converter import _USE_PYDANTIC_DEFAULT
-from nat.front_ends.mcp.tool_converter import create_function_wrapper
-from nat.front_ends.mcp.tool_converter import get_function_description
-from nat.front_ends.mcp.tool_converter import is_field_optional
-from nat.front_ends.mcp.tool_converter import register_function_with_mcp
+from nat.plugins.mcp.server.tool_converter import _USE_PYDANTIC_DEFAULT
+from nat.plugins.mcp.server.tool_converter import create_function_wrapper
+from nat.plugins.mcp.server.tool_converter import get_function_description
+from nat.plugins.mcp.server.tool_converter import is_field_optional
+from nat.plugins.mcp.server.tool_converter import register_function_with_mcp
 from nat.runtime.session import SessionManager
 
 
@@ -374,9 +374,9 @@ class TestGetFunctionDescription:
 class TestRegisterFunctionWithMcp:
     """Test cases for register_function_with_mcp function."""
 
-    @patch('nat.front_ends.mcp.tool_converter.create_function_wrapper')
-    @patch('nat.front_ends.mcp.tool_converter.get_function_description')
-    @patch('nat.front_ends.mcp.tool_converter.logger')
+    @patch('nat.plugins.mcp.server.tool_converter.create_function_wrapper')
+    @patch('nat.plugins.mcp.server.tool_converter.get_function_description')
+    @patch('nat.plugins.mcp.server.tool_converter.logger')
     def test_register_function_with_mcp(self, mock_logger, mock_get_desc, mock_create_wrapper):
         """Test registering a function with MCP using SessionManager."""
         # Arrange
@@ -402,9 +402,9 @@ class TestRegisterFunctionWithMcp:
                                                     None)  # memory_profiler defaults to None
         mock_mcp.tool.assert_called_once_with(name=function_name, description="Test description")
 
-    @patch('nat.front_ends.mcp.tool_converter.create_function_wrapper')
-    @patch('nat.front_ends.mcp.tool_converter.get_function_description')
-    @patch('nat.front_ends.mcp.tool_converter.logger')
+    @patch('nat.plugins.mcp.server.tool_converter.create_function_wrapper')
+    @patch('nat.plugins.mcp.server.tool_converter.get_function_description')
+    @patch('nat.plugins.mcp.server.tool_converter.logger')
     def test_register_workflow_with_mcp(self, mock_logger, mock_get_desc, mock_create_wrapper):
         """Test registering a workflow with MCP using SessionManager."""
         # Arrange

@@ -22,10 +22,10 @@ from unittest.mock import patch
 
 import pytest
 
-from nat.plugins.mcp.client_config import MCPClientConfig
-from nat.plugins.mcp.client_config import MCPServerConfig
-from nat.plugins.mcp.client_impl import MCPFunctionGroup
-from nat.plugins.mcp.client_impl import SessionData
+from nat.plugins.mcp.client.client_config import MCPClientConfig
+from nat.plugins.mcp.client.client_config import MCPServerConfig
+from nat.plugins.mcp.client.client_impl import MCPFunctionGroup
+from nat.plugins.mcp.client.client_impl import SessionData
 
 
 class TestMCPSessionManagement:

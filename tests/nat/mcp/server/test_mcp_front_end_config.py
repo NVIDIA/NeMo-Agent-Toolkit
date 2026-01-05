@@ -17,7 +17,7 @@ import pytest
 from pydantic import ValidationError
 
 from nat.authentication.oauth2.oauth2_resource_server_config import OAuth2ResourceServerConfig
-from nat.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
+from nat.plugins.mcp.server.front_end_config import MCPFrontEndConfig
 
 
 def test_mcp_front_end_config_default_values():

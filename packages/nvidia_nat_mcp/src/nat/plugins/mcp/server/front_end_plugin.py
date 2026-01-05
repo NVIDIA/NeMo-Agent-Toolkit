@@ -18,8 +18,8 @@ import typing
 
 from nat.builder.front_end import FrontEndBase
 from nat.builder.workflow_builder import WorkflowBuilder
-from nat.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
-from nat.front_ends.mcp.mcp_front_end_plugin_worker import MCPFrontEndPluginWorkerBase
+from nat.plugins.mcp.server.front_end_config import MCPFrontEndConfig
+from nat.plugins.mcp.server.front_end_plugin_worker import MCPFrontEndPluginWorkerBase
 
 if typing.TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
@@ -32,7 +32,7 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
 
     def get_worker_class(self) -> type[MCPFrontEndPluginWorkerBase]:
         """Get the worker class for handling MCP routes."""
-        from nat.front_ends.mcp.mcp_front_end_plugin_worker import MCPFrontEndPluginWorker
+        from nat.plugins.mcp.server.front_end_plugin_worker import MCPFrontEndPluginWorker
 
         return MCPFrontEndPluginWorker
 

@@ -22,7 +22,7 @@ import pytest
 from pydantic import BaseModel
 from pydantic.networks import HttpUrl
 
-from nat.plugins.mcp.client_base import MCPBaseClient
+from nat.plugins.mcp.client.client_base import MCPBaseClient
 from nat.plugins.mcp.tool import MCPToolConfig
 from nat.plugins.mcp.tool import mcp_tool
 

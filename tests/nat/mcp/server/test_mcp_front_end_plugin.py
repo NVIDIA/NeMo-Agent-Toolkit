@@ -20,8 +20,8 @@ import pytest
 
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
-from nat.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
-from nat.front_ends.mcp.mcp_front_end_plugin import MCPFrontEndPlugin
+from nat.plugins.mcp.server.front_end_config import MCPFrontEndConfig
+from nat.plugins.mcp.server.front_end_plugin import MCPFrontEndPlugin
 from nat.test.functions import EchoFunctionConfig
 
 
@@ -113,7 +113,7 @@ async def test_workflow_alias_usage_in_mcp_front_end():
     from unittest.mock import MagicMock
 
     from nat.data_models.config import Config
-    from nat.front_ends.mcp.mcp_front_end_plugin_worker import MCPFrontEndPluginWorker
+    from nat.plugins.mcp.server.front_end_plugin_worker import MCPFrontEndPluginWorker
 
     # Create a mock workflow with workflow_alias
     mock_workflow = MagicMock()
@@ -151,7 +151,7 @@ async def test_workflow_alias_priority_over_type():
     from unittest.mock import MagicMock
 
     from nat.data_models.config import Config
-    from nat.front_ends.mcp.mcp_front_end_plugin_worker import MCPFrontEndPluginWorker
+    from nat.plugins.mcp.server.front_end_plugin_worker import MCPFrontEndPluginWorker
 
     # Create a mock workflow with both workflow_alias and type
     mock_workflow = MagicMock()
@@ -178,7 +178,7 @@ async def test_workflow_alias_with_function_groups():
     from unittest.mock import MagicMock
 
     from nat.data_models.config import Config
-    from nat.front_ends.mcp.mcp_front_end_plugin_worker import MCPFrontEndPluginWorker
+    from nat.plugins.mcp.server.front_end_plugin_worker import MCPFrontEndPluginWorker
 
     # Create mock functions for function group
     mock_func_group = MagicMock()
@@ -217,7 +217,7 @@ async def test_session_manager_creation_for_workflow_vs_function():
     from nat.builder.workflow import Workflow
     from nat.builder.workflow_builder import WorkflowBuilder
     from nat.data_models.config import Config
-    from nat.front_ends.mcp.mcp_front_end_plugin_worker import MCPFrontEndPluginWorker
+    from nat.plugins.mcp.server.front_end_plugin_worker import MCPFrontEndPluginWorker
 
     # Create a proper config
     config = Config(general=GeneralConfig(front_end=MCPFrontEndConfig()), workflow=EchoFunctionConfig())
@@ -240,7 +240,7 @@ async def test_session_manager_creation_for_workflow_vs_function():
                           "react_agent": mock_workflow, "echo_function": mock_regular_function
                       }):
         # Patch SessionManager.create to track calls
-        with patch('nat.front_ends.mcp.mcp_front_end_plugin_worker.SessionManager.create',
+        with patch('nat.plugins.mcp.server.front_end_plugin_worker.SessionManager.create',
                    new_callable=AsyncMock) as mock_session_create:
             # Configure the mock to return a mock SessionManager
             mock_session_manager = MagicMock()
@@ -248,7 +248,7 @@ async def test_session_manager_creation_for_workflow_vs_function():
             mock_session_create.return_value = mock_session_manager
 
             # Patch register_function_with_mcp to avoid actual registration
-            with patch('nat.front_ends.mcp.tool_converter.register_function_with_mcp'):
+            with patch('nat.plugins.mcp.server.tool_converter.register_function_with_mcp'):
                 # Call the method we're testing
                 await worker._default_add_routes(mock_mcp, mock_builder)
 

@@ -22,9 +22,9 @@ from mcp.server.fastmcp import FastMCP
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
-from nat.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
-from nat.front_ends.mcp.mcp_front_end_plugin import MCPFrontEndPlugin
-from nat.front_ends.mcp.mcp_front_end_plugin_worker import MCPFrontEndPluginWorker
+from nat.plugins.mcp.server.front_end_config import MCPFrontEndConfig
+from nat.plugins.mcp.server.front_end_plugin import MCPFrontEndPlugin
+from nat.plugins.mcp.server.front_end_plugin_worker import MCPFrontEndPluginWorker
 from nat.utils.type_utils import override
 
 
@@ -78,7 +78,7 @@ async def test_custom_mcp_worker(mcp_nat_config: Config):
     mock_builder.build = AsyncMock(return_value=mock_workflow)
 
     # Mock the register_function_with_mcp so we skip function registration entirely
-    with patch('nat.front_ends.mcp.tool_converter.register_function_with_mcp') as mock_register_function:
+    with patch('nat.plugins.mcp.server.tool_converter.register_function_with_mcp') as mock_register_function:
         # Test that the worker can add routes
         await worker.add_routes(mcp, mock_builder)
 
@@ -107,7 +107,7 @@ def test_runner_class_configuration(mcp_nat_config: Config):
 
     # Test with custom runner_class (should return the custom class name)
     custom_nat_config = Config(general=GeneralConfig(front_end=MCPFrontEndConfig(
-        runner_class="nat.front_ends.mcp.test_mcp_custom_routes.CustomMCPWorker")))
+        runner_class="tests.nat.mcp.server.test_mcp_custom_routes.CustomMCPWorker")))
 
     plugin_custom = MCPFrontEndPlugin(custom_nat_config)
     assert "CustomMCPWorker" in plugin_custom.get_worker_class_name()

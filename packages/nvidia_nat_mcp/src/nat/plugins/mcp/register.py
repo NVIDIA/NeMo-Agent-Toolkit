@@ -16,7 +16,11 @@
 # flake8: noqa
 # isort:skip_file
 
-# Import any providers which need to be automatically registered here
+# Register client components
+from .client import client_impl
 
-from . import client_impl
+# Register server/frontend components
+from .server import register_frontend
+
+# Register tools
 from . import tool
