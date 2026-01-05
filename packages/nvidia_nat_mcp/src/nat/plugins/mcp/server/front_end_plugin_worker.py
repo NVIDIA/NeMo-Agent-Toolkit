@@ -20,9 +20,10 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING
 from typing import Any
 
-from mcp.server.fastmcp import FastMCP
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
+
+from mcp.server.fastmcp import FastMCP
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
@@ -378,8 +379,9 @@ class MCPFrontEndPluginWorker(MCPFrontEndPluginWorkerBase):
         token_verifier = None
 
         if self.front_end_config.server_auth:
-            from mcp.server.auth.settings import AuthSettings
             from pydantic import AnyHttpUrl
+
+            from mcp.server.auth.settings import AuthSettings
 
             server_url = f"http://{self.front_end_config.host}:{self.front_end_config.port}"
             auth_settings = AuthSettings(issuer_url=AnyHttpUrl(self.front_end_config.server_auth.issuer_url),
