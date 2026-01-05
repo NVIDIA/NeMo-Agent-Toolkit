@@ -148,7 +148,6 @@ class TestAutoGenToolWrapper:
             call_args = mock_function_tool.call_args
             assert call_args[1]['description'] == "No description provided."
 
-    @pytest.mark.asyncio
     async def test_callable_ainvoke(self, mock_function, mock_builder):
         """Test the async invoke callable."""
         with patch('nat.plugins.autogen.tool_wrapper.FunctionTool'):
@@ -159,7 +158,6 @@ class TestAutoGenToolWrapper:
             assert result == "test_result"
             mock_function.acall_invoke.assert_called_once_with("arg1", param="value")
 
-    @pytest.mark.asyncio
     async def test_callable_astream(self, mock_function, mock_builder):
         """Test the async stream callable."""
         mock_function.has_streaming_output = True

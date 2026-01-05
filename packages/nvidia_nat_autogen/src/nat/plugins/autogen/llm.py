@@ -12,8 +12,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""AutoGen LLM client registrations for NAT."""
+"""AutoGen LLM client registrations for NAT.
 
+This module provides AutoGen-compatible LLM client wrappers for the following providers:
+
+Supported Providers
+-------------------
+- **OpenAI**: Direct OpenAI API integration via ``OpenAIChatCompletionClient``
+- **Azure OpenAI**: Azure-hosted OpenAI models via ``AzureOpenAIChatCompletionClient``
+- **NVIDIA NIM**: OpenAI-compatible endpoints for NVIDIA models
+- **LiteLLM**: Unified interface to multiple LLM providers via OpenAI-compatible client
+- **AWS Bedrock**: Amazon Bedrock models (Claude/Anthropic) via ``AnthropicBedrockChatCompletionClient``
+
+Each wrapper:
+- Patches clients with NAT retry logic from ``RetryMixin``
+- Injects chain-of-thought prompts when ``ThinkingMixin`` is configured
+- Removes NAT-specific config keys before instantiating AutoGen clients
+"""
+
+import logging
 from collections.abc import AsyncGenerator
 from typing import Any
 from typing import TypeVar
@@ -21,10 +38,13 @@ from typing import TypeVar
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
+from nat.data_models.common import get_secret_value
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
+from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
+from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 from nat.llm.utils.thinking import BaseThinkingInjector
@@ -32,6 +52,8 @@ from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 from nat.utils.type_utils import override
+
+logger = logging.getLogger(__name__)
 
 ModelType = TypeVar("ModelType")
 
@@ -46,28 +68,21 @@ def _patch_autogen_client_based_on_config(client: ModelType, llm_config: LLMBase
     Returns:
         ModelType: The patched AutoGen LLM client.
     """
-
     from autogen_core.models import SystemMessage
 
     class AutoGenThinkingInjector(BaseThinkingInjector):
         """Thinking injector for AutoGen message format.
-        Injects a system message at the start of the message list.
 
-        Args:
-            system_prompt: The system prompt to inject.
-            *args: The rest of the arguments to the function.
-            **kwargs: The rest of the keyword arguments to the function.
-
-        Returns:
-            FunctionArgumentWrapper: An object that contains the transformed args and kwargs.
-
+        Injects a system message at the start of the message list to enable
+        chain-of-thought prompting for supported models (e.g., Nemotron).
         """
 
         @override
         def inject(self, messages: list, *args: Any, **kwargs: Any) -> FunctionArgumentWrapper:
             """Inject thinking system prompt into AutoGen messages.
+
             Args:
-                messages (list): List of AutoGen messages (UserMessage, AssistantMessage, SystemMessage
+                messages (list): List of AutoGen messages (UserMessage, AssistantMessage, SystemMessage)
                 *args (Any): Additional positional arguments
                 **kwargs (Any): Additional keyword arguments
 
@@ -92,9 +107,7 @@ def _patch_autogen_client_based_on_config(client: ModelType, llm_config: LLMBase
             AutoGenThinkingInjector(system_prompt=llm_config.thinking_system_prompt,
                                     function_names=[
                                         "create",
-                                        "acreate",
                                         "create_stream",
-                                        "acreate_stream",
                                     ]))
 
     return client
@@ -228,6 +241,111 @@ async def nim_autogen(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGen
 
     # NIM uses OpenAI-compatible API
     client = OpenAIChatCompletionClient(model=llm_config.model_name, **config_obj)
+
+    # Apply NAT mixins and yield patched client
+    yield _patch_autogen_client_based_on_config(client, llm_config)
+
+
+@register_llm_client(config_type=LiteLlmModelConfig, wrapper_type=LLMFrameworkEnum.AUTOGEN)
+async def litellm_autogen(llm_config: LiteLlmModelConfig, _builder: Builder) -> AsyncGenerator[ModelType, None]:
+    """Create LiteLLM client for AutoGen integration.
+
+    LiteLLM provides a unified interface to multiple LLM providers. This integration
+    uses AutoGen's OpenAI-compatible client since LiteLLM exposes an OpenAI-compatible
+    API endpoint.
+
+    Args:
+        llm_config (LiteLlmModelConfig): LiteLLM model configuration
+        _builder (Builder): NAT builder instance
+
+    Yields:
+        AsyncGenerator[ModelType, None]: Configured AutoGen client via LiteLLM
+    """
+    from autogen_core.models import ModelFamily
+    from autogen_core.models import ModelInfo
+    from autogen_ext.models.openai import OpenAIChatCompletionClient
+
+    # Extract LiteLLM configuration for OpenAI-compatible client
+    config_obj = {
+        **llm_config.model_dump(
+            exclude={"type", "model_name", "thinking"},
+            by_alias=True,
+            exclude_none=True,
+        ),
+    }
+
+    # Resolve API key from secret if provided
+    if llm_config.api_key is not None:
+        config_obj["api_key"] = get_secret_value(llm_config.api_key)
+
+    # Define model info for AutoGen
+    model_info = ModelInfo(vision=False,
+                           function_calling=True,
+                           json_output=True,
+                           family=ModelFamily.UNKNOWN,
+                           structured_output=True,
+                           multiple_system_messages=True)
+
+    config_obj.update({"model_info": model_info})
+    config_obj.pop("model", None)
+
+    # LiteLLM uses OpenAI-compatible API
+    client = OpenAIChatCompletionClient(model=llm_config.model_name, **config_obj)
+
+    # Apply NAT mixins and yield patched client
+    yield _patch_autogen_client_based_on_config(client, llm_config)
+
+
+@register_llm_client(config_type=AWSBedrockModelConfig, wrapper_type=LLMFrameworkEnum.AUTOGEN)
+async def bedrock_autogen(llm_config: AWSBedrockModelConfig, _builder: Builder) -> AsyncGenerator[ModelType, None]:
+    """Create AWS Bedrock client for AutoGen integration.
+
+    Uses AutoGen's ``AnthropicBedrockChatCompletionClient`` which supports
+    Anthropic Claude models hosted on AWS Bedrock. Credentials are loaded in
+    the following priority:
+
+    1. Explicit values from ``credentials_profile_name`` in the AWS profile.
+    2. Standard environment variables (``AWS_ACCESS_KEY_ID``, ``AWS_SECRET_ACCESS_KEY``,
+       ``AWS_SESSION_TOKEN``).
+    3. Ambient credentials provided by the compute environment (IAM role).
+
+    Args:
+        llm_config (AWSBedrockModelConfig): AWS Bedrock model configuration
+        _builder (Builder): NAT builder instance
+
+    Yields:
+        AsyncGenerator[ModelType, None]: Configured AutoGen Bedrock client
+    """
+    from autogen_ext.models.anthropic import AnthropicBedrockChatCompletionClient
+
+    # Build Bedrock-specific configuration
+    bedrock_config: dict[str, Any] = {
+        "model": llm_config.model_name,
+    }
+
+    # Handle region - None or "None" string should use AWS default
+    if llm_config.region_name not in (None, "None"):
+        bedrock_config["aws_region"] = llm_config.region_name
+
+    # Add optional parameters if provided
+    if llm_config.credentials_profile_name is not None:
+        bedrock_config["aws_profile"] = llm_config.credentials_profile_name
+
+    if llm_config.base_url is not None:
+        bedrock_config["base_url"] = llm_config.base_url
+
+    # Add model parameters
+    if llm_config.max_tokens is not None:
+        bedrock_config["max_tokens"] = llm_config.max_tokens
+
+    if llm_config.temperature is not None:
+        bedrock_config["temperature"] = llm_config.temperature
+
+    if llm_config.top_p is not None:
+        bedrock_config["top_p"] = llm_config.top_p
+
+    # Create AutoGen Bedrock client
+    client = AnthropicBedrockChatCompletionClient(**bedrock_config)
 
     # Apply NAT mixins and yield patched client
     yield _patch_autogen_client_based_on_config(client, llm_config)

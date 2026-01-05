@@ -222,7 +222,6 @@ class TestAutoGenProfilerHandler:
             mock_logger.debug.assert_called_with("AutoGenProfilerHandler uninstrumented successfully.")
 
 
-@pytest.mark.asyncio
 async def test_integration_flow():
     """Test the complete integration flow."""
     handler = AutoGenProfilerHandler()
@@ -244,7 +243,6 @@ class TestLLMCallMonkeyPatch:
         patch_func = handler._llm_call_monkey_patch()  # pylint: disable=protected-access
         assert callable(patch_func)
 
-    @pytest.mark.asyncio
     @patch('nat.plugins.autogen.autogen_callback_handler.Context.get')
     @patch('nat.plugins.autogen.autogen_callback_handler.logger')
     async def test_llm_wrapped_call_basic_flow(self, mock_logger: Mock, mock_get: Mock):
@@ -291,7 +289,6 @@ class TestLLMCallMonkeyPatch:
         # Verify step manager interactions
         assert mock_step_manager.push_intermediate_step.call_count == 2  # Start and end events
 
-    @pytest.mark.asyncio
     @patch('nat.plugins.autogen.autogen_callback_handler.Context.get')
     @patch('nat.plugins.autogen.autogen_callback_handler.logger')
     async def test_llm_wrapped_call_with_exception(self, mock_logger: Mock, mock_get: Mock):
@@ -329,7 +326,6 @@ class TestLLMCallMonkeyPatch:
         # Verify error handling
         mock_logger.error.assert_called()
 
-    @pytest.mark.asyncio
     @patch('nat.plugins.autogen.autogen_callback_handler.Context.get')
     async def test_llm_wrapped_call_model_name_fallback(self, mock_get: Mock):
         """Test model name fallback when _raw_config fails.
@@ -369,7 +365,6 @@ class TestLLMCallMonkeyPatch:
         # Verify call completed
         original_func.assert_called_once()
 
-    @pytest.mark.asyncio
     @patch('nat.plugins.autogen.autogen_callback_handler.Context.get')
     async def test_llm_wrapped_call_complex_content(self, mock_get: Mock):
         """Test LLM wrapped call with complex message content.
@@ -421,7 +416,6 @@ class TestToolCallMonkeyPatch:
         patch_func = handler._tool_call_monkey_patch()  # pylint: disable=protected-access
         assert callable(patch_func)
 
-    @pytest.mark.asyncio
     @patch('nat.plugins.autogen.autogen_callback_handler.Context.get')
     async def test_tool_wrapped_call_basic_flow(self, mock_get: Mock):
         """Test basic tool wrapped call flow.
@@ -458,7 +452,6 @@ class TestToolCallMonkeyPatch:
         original_func.assert_called_once_with(mock_tool, mock_call_data)
         assert mock_step_manager.push_intermediate_step.call_count == 2
 
-    @pytest.mark.asyncio
     @patch('nat.plugins.autogen.autogen_callback_handler.Context.get')
     @patch('nat.plugins.autogen.autogen_callback_handler.logger')
     async def test_tool_wrapped_call_with_exception(self, mock_logger: Mock, mock_get: Mock):
@@ -496,7 +489,6 @@ class TestToolCallMonkeyPatch:
         assert "Tool error" in str(exc_info.value)
         mock_logger.error.assert_called()
 
-    @pytest.mark.asyncio
     @patch('nat.plugins.autogen.autogen_callback_handler.Context.get')
     async def test_tool_wrapped_call_various_input_formats(self, mock_get: Mock):
         """Test tool wrapped call with various input formats."""
@@ -527,7 +519,6 @@ class TestToolCallMonkeyPatch:
 class TestErrorHandlingPaths:
     """Test error handling in various code paths."""
 
-    @pytest.mark.asyncio
     @patch('nat.plugins.autogen.autogen_callback_handler.Context.get')
     @patch('nat.plugins.autogen.autogen_callback_handler.logger')
     async def test_llm_model_name_error_handling(self, mock_logger: Mock, mock_get: Mock):
@@ -574,7 +565,6 @@ class TestErrorHandlingPaths:
         # Verify exception was logged
         mock_logger.exception.assert_called()
 
-    @pytest.mark.asyncio
     @patch('nat.plugins.autogen.autogen_callback_handler.Context.get')
     @patch('nat.plugins.autogen.autogen_callback_handler.logger')
     async def test_llm_input_processing_error(self, mock_logger: Mock, mock_get: Mock):

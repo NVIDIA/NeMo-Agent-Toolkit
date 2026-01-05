@@ -23,6 +23,7 @@ from dataclasses import is_dataclass
 from typing import Any
 
 from autogen_core.tools import FunctionTool
+from pydantic import BaseModel
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 
 from nat.builder.builder import Builder
@@ -138,6 +139,21 @@ def autogen_tool_wrapper(
                 model_fields = getattr(input_schema, "model_fields", {})
                 for param_name, model_field in model_fields.items():
                     resolved_type = resolve_type(model_field.annotation)
+
+                    # Warn about nested Pydantic models or dataclasses that may not serialize properly
+                    # Note: If autogen is updated to support nested models, this warning can be removed - or
+                    # if autogen adds a mechanism to remove the tool from the function choices we can add that later.
+                    if isinstance(resolved_type, type) and (
+                        issubclass(resolved_type, BaseModel) or is_dataclass(resolved_type)
+                    ):
+                        logger.warning(
+                            "Nested model detected in input schema for parameter '%s' in tool '%s'. "
+                            "AutoGen may not properly serialize complex nested types for function calling. "
+                            "Consider flattening the schema or using primitive types.",
+                            param_name,
+                            name,
+                        )
+
                     default = model_field.default if model_field.is_required() is False else inspect._empty
                     params.append(
                         inspect.Parameter(param_name,
