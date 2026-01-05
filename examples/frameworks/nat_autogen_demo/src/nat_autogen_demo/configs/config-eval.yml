@@ -119,4 +119,3 @@ eval:
     trajectory_accuracy:
       _type: trajectory
       llm_name: evaluator_llm
-

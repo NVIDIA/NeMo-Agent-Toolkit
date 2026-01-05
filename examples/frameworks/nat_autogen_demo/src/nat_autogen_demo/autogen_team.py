@@ -50,7 +50,7 @@ async def autogen_team(config: AutoGenFunctionConfig, builder: Builder) -> Async
         builder (Builder): The NAT workflow builder to access registered components.
 
     Yields:
-        AsyncGenerator[FunctionInfo, None]: Yields a FunctionInfo object encapsulating the workflow.
+        AsyncIterator[FunctionInfo]: Yields a FunctionInfo object encapsulating the workflow.
     """
 
     from autogen_agentchat.agents import AssistantAgent
@@ -115,8 +115,8 @@ async def autogen_team(config: AutoGenFunctionConfig, builder: Builder) -> Async
 
     except GeneratorExit:
         logger.info("AutoGen workflow exited early")
-    except Exception:
-        logger.exception("Failed to initialize AutoGen workflow")
+    except Exception as e:
+        logger.error("Failed to initialize AutoGen workflow: %s", e)
         raise
     finally:
         logger.debug("AutoGen workflow cleanup completed")
