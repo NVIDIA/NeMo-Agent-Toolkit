@@ -95,7 +95,7 @@ In a separate terminal, or in the background, run the MCP server with this comma
 nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml --tool_names current_datetime
 ```
 
-Then, run the workflow with the the toolkit's CLI:
+Then, run the workflow with the toolkit's CLI:
 
 ```bash
 nat run --config_file examples/frameworks/nat_autogen_demo/configs/config.yml --input "What is the weather and time in New York today?"
@@ -217,7 +217,7 @@ nat eval --config_file examples/frameworks/nat_autogen_demo/configs/config-eval.
 The evaluation runs the workflow against all three test cases and evaluates results using:
 
 - **Answer Accuracy**: Measures how accurately the agent answers the questions
-- **Response Groundedness**: Evaluates whether responses are grounded in the tool outputs
+- **Response groundedness**: Evaluates whether responses are grounded in the tool outputs
 - **Trajectory Accuracy**: Assesses the agent's decision-making path and tool usage
 
 ### Understanding Evaluation Results
