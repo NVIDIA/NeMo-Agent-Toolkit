@@ -36,9 +36,7 @@ NeMo Agent toolkit can access protected MCP servers through the MCP client auth 
 ## MCP Client Configuration
 NeMo Agent toolkit enables workflows to use MCP tools as functions. The library handles the MCP server connection, tool discovery, and function registration. This allows the workflow to use MCP tools as regular functions.
 
-Tools served by remote MCP servers can be used as NeMo Agent toolkit functions in one of two ways:
-- `mcp_client`: A flexible configuration using [function groups](./functions-and-function-groups/function-groups.md) that allows you to connect to an MCP server, dynamically discover the tools it serves, and register them as NeMo Agent toolkit functions.
-- `mcp_tool_wrapper`: A simple configuration that allows you to wrap a single MCP tool as a NeMo Agent toolkit function.
+Tools served by remote MCP servers can be used as NeMo Agent toolkit functions using `mcp_client`, a flexible configuration using [function groups](./functions-and-function-groups/function-groups.md) that allows you to connect to an MCP server, dynamically discover the tools it serves, and register them as NeMo Agent toolkit functions.
 
 ### `mcp_client` Configuration
 ```yaml
@@ -162,28 +160,8 @@ function_groups:
         description: "Multiply two numbers"  # Keeps original name
 ```
 
-### `mcp_tool_wrapper` Configuration
-```yaml
-functions:
-  mcp_tool_a:
-    _type: mcp_tool_wrapper
-    url: "http://localhost:9901/mcp"
-    mcp_tool_name: tool_a
-  mcp_tool_b:
-    _type: mcp_tool_wrapper
-    url: "http://localhost:9901/mcp"
-    mcp_tool_name: tool_b
-
-workflows:
-  _type: react_agent
-  tool_names:
-    - mcp_tool_a
-    - mcp_tool_b
-```
-You can use `mcp_tool_wrapper` to wrap a single MCP tool as a NeMo Agent toolkit function. Specify the server URL and the tool name for each tool you want to wrap. This approach requires a separate configuration entry for each individual tool.
-
 ## Transport Configuration
-The `mcp_client` function group and `mcp_tool_wrapper` can connect to MCP servers using different transport types. Choose the transport that matches your MCP server's configuration to ensure proper communication.
+The `mcp_client` function group can connect to MCP servers using different transport types. Choose the transport that matches your MCP server's configuration to ensure proper communication.
 
 ### Transport Types
 
