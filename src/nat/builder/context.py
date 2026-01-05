@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -69,8 +69,10 @@ class ContextState(metaclass=Singleton):
     def __init__(self):
         self.conversation_id: ContextVar[str | None] = ContextVar("conversation_id", default=None)
         self.user_message_id: ContextVar[str | None] = ContextVar("user_message_id", default=None)
+        self.user_id: ContextVar[str | None] = ContextVar("user_id", default=None)
         self.workflow_run_id: ContextVar[str | None] = ContextVar("workflow_run_id", default=None)
         self.workflow_trace_id: ContextVar[int | None] = ContextVar("workflow_trace_id", default=None)
+        self.observability_trace_id: ContextVar[str | None] = ContextVar("observability_trace_id", default=None)
         self.input_message: ContextVar[typing.Any] = ContextVar("input_message", default=None)
         self.user_manager: ContextVar[typing.Any] = ContextVar("user_manager", default=None)
         self.runtime_type: ContextVar[RuntimeTypeEnum] = ContextVar("runtime_type",
@@ -203,6 +205,13 @@ class Context:
         return self._context_state.user_message_id.get()
 
     @property
+    def user_id(self) -> str | None:
+        """
+        This property retrieves the user ID which is the unique identifier for the current user.
+        """
+        return self._context_state.user_id.get()
+
+    @property
     def workflow_run_id(self) -> str | None:
         """
         Returns a stable identifier for the current workflow/agent invocation (UUID string).
@@ -215,6 +224,13 @@ class Context:
         Returns the 128-bit trace identifier for the current run, used as the OpenTelemetry trace_id.
         """
         return self._context_state.workflow_trace_id.get()
+
+    @property
+    def observability_trace_id(self) -> str | None:
+        """
+        Returns the root observability trace identifier for the current run.
+        """
+        return self._context_state.observability_trace_id.get()
 
     @contextmanager
     def push_active_function(self,

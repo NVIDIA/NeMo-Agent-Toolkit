@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,6 +22,7 @@ limitations under the License.
 
 Functions <./custom-functions/functions.md>
 Function Groups <./custom-functions/function-groups.md>
+Writing Per-User Functions <./custom-functions/per-user-functions.md>
 Authentication Provider <./adding-an-authentication-provider.md>
 LLM Provider <./adding-an-llm-provider.md>
 Retriever <./adding-a-retriever.md>

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,6 +39,7 @@ from pydantic import BaseModel
 from pydantic import Field
 from starlette.websockets import WebSocket
 
+from nat.builder.context import Context
 from nat.builder.eval_builder import WorkflowEvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.function import Function
@@ -232,6 +233,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         self._outstanding_flows: dict[str, FlowState] = {}
         self._outstanding_flows_lock = asyncio.Lock()
 
+        # Track session managers for each route
+        self._session_managers: list[SessionManager] = []
+
         # Evaluator storage for single-item evaluation
         self._evaluators: dict[str, EvaluatorInfo] = {}
         self._eval_builder: WorkflowEvalBuilder | None = None
@@ -268,6 +272,27 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             # Don't fail startup, just log the error
             self._evaluators = {}
 
+    async def _create_session_manager(self,
+                                      builder: WorkflowBuilder,
+                                      entry_function: str | None = None) -> SessionManager:
+        """Create and register a SessionManager."""
+
+        sm = await SessionManager.create(config=self._config, shared_builder=builder, entry_function=entry_function)
+        self._session_managers.append(sm)
+
+        return sm
+
+    async def cleanup_session_managers(self):
+        """Clean up all SessionManager resources on shutdown."""
+        for sm in self._session_managers:
+            try:
+                await sm.shutdown()
+            except Exception as e:
+                logger.error(f"Error cleaning up SessionManager: {e}")
+
+        self._session_managers.clear()
+        logger.info("All SessionManagers cleaned up")
+
     async def cleanup_evaluators(self):
         """Clean up evaluator resources on shutdown."""
         if self._eval_builder:
@@ -293,6 +318,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         # TODO: we need config control over this as it's not always needed
         await self.initialize_evaluators(self._config)
 
+        # Ensure session manager resources are cleaned up when the app shuts down
+        app.add_event_handler("shutdown", self.cleanup_session_managers)
+
         # Ensure evaluator resources are cleaned up when the app shuts down
         app.add_event_handler("shutdown", self.cleanup_evaluators)
 
@@ -300,18 +328,19 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
     async def add_routes(self, app: FastAPI, builder: WorkflowBuilder):
 
-        await self.add_default_route(app, SessionManager(await builder.build()))
-        await self.add_evaluate_route(app, SessionManager(await builder.build()))
-        await self.add_evaluate_item_route(app, SessionManager(await builder.build()))
+        await self.add_default_route(app, await self._create_session_manager(builder))
+        await self.add_evaluate_route(app, await self._create_session_manager(builder))
+        await self.add_evaluate_item_route(app, await self._create_session_manager(builder))
+
         await self.add_static_files_route(app, builder)
         await self.add_authorization_route(app)
         await self.add_mcp_client_tool_list_route(app, builder)
 
         for ep in self.front_end_config.endpoints:
 
-            entry_workflow = await builder.build(entry_function=ep.function_name)
-
-            await self.add_route(app, endpoint=ep, session_manager=SessionManager(entry_workflow))
+            await self.add_route(app,
+                                 endpoint=ep,
+                                 session_manager=await self._create_session_manager(builder, ep.function_name))
 
     async def add_default_route(self, app: FastAPI, session_manager: SessionManager):
 
@@ -662,11 +691,15 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         endpoint: FastApiFrontEndConfig.EndpointBase,
                         session_manager: SessionManager):
 
-        workflow = session_manager.workflow
+        GenerateBodyType = session_manager.get_workflow_input_schema()
+        GenerateStreamResponseType = session_manager.get_workflow_streaming_output_schema()
+        GenerateSingleResponseType = session_manager.get_workflow_single_output_schema()
 
-        GenerateBodyType = workflow.input_schema
-        GenerateStreamResponseType = workflow.streaming_output_schema
-        GenerateSingleResponseType = workflow.single_output_schema
+        def add_context_headers_to_response(response: Response) -> None:
+            """Add context-based headers to response if available."""
+            observability_trace_id = Context.get().observability_trace_id
+            if observability_trace_id:
+                response.headers["Observability-Trace-Id"] = observability_trace_id
 
         # Skip async generation for custom routes (those with function_name)
         if self._dask_available and not hasattr(endpoint, 'function_name'):
@@ -715,10 +748,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 response.headers["Content-Type"] = "application/json"
 
-                async with session_manager.session(http_connection=request,
-                                                   user_authentication_callback=self._http_flow_handler.authenticate):
+                async with session_manager.session(
+                        http_connection=request,
+                        user_authentication_callback=self._http_flow_handler.authenticate) as session:
 
-                    return await generate_single_response(None, session_manager, result_type=result_type)
+                    result = await generate_single_response(None, session, result_type=result_type)
+                    add_context_headers_to_response(response)
+                    return result
 
             return get_single
 
@@ -726,13 +762,14 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def get_stream(request: Request):
 
-                async with session_manager.session(http_connection=request,
-                                                   user_authentication_callback=self._http_flow_handler.authenticate):
+                async with session_manager.session(
+                        http_connection=request,
+                        user_authentication_callback=self._http_flow_handler.authenticate) as session:
 
                     return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                              content=generate_streaming_response_as_str(
                                                  None,
-                                                 session_manager=session_manager,
+                                                 session=session,
                                                  streaming=streaming,
                                                  step_adaptor=self.get_step_adaptor(),
                                                  result_type=result_type,
@@ -744,14 +781,14 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def get_stream(filter_steps: str | None = None):
 
-                return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
-                                         content=generate_streaming_response_full_as_str(
-                                             None,
-                                             session_manager=session_manager,
-                                             streaming=streaming,
-                                             result_type=result_type,
-                                             output_type=output_type,
-                                             filter_steps=filter_steps))
+                async with session_manager.session(http_connection=None) as session:
+                    return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                                             content=generate_streaming_response_full_as_str(None,
+                                                                                             session=session,
+                                                                                             streaming=streaming,
+                                                                                             result_type=result_type,
+                                                                                             output_type=output_type,
+                                                                                             filter_steps=filter_steps))
 
             return get_stream
 
@@ -761,10 +798,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 response.headers["Content-Type"] = "application/json"
 
-                async with session_manager.session(http_connection=request,
-                                                   user_authentication_callback=self._http_flow_handler.authenticate):
+                async with session_manager.session(
+                        http_connection=request,
+                        user_authentication_callback=self._http_flow_handler.authenticate) as session:
 
-                    return await generate_single_response(payload, session_manager, result_type=result_type)
+                    result = await generate_single_response(payload, session, result_type=result_type)
+                    add_context_headers_to_response(response)
+                    return result
 
             return post_single
 
@@ -775,13 +815,14 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def post_stream(request: Request, payload: request_type):
 
-                async with session_manager.session(http_connection=request,
-                                                   user_authentication_callback=self._http_flow_handler.authenticate):
+                async with session_manager.session(
+                        http_connection=request,
+                        user_authentication_callback=self._http_flow_handler.authenticate) as session:
 
                     return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                              content=generate_streaming_response_as_str(
                                                  payload,
-                                                 session_manager=session_manager,
+                                                 session=session,
                                                  streaming=streaming,
                                                  step_adaptor=self.get_step_adaptor(),
                                                  result_type=result_type,
@@ -799,14 +840,14 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def post_stream(payload: request_type, filter_steps: str | None = None):
 
-                return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
-                                         content=generate_streaming_response_full_as_str(
-                                             payload,
-                                             session_manager=session_manager,
-                                             streaming=streaming,
-                                             result_type=result_type,
-                                             output_type=output_type,
-                                             filter_steps=filter_steps))
+                async with session_manager.session(http_connection=None) as session:
+                    return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                                             content=generate_streaming_response_full_as_str(payload,
+                                                                                             session=session,
+                                                                                             streaming=streaming,
+                                                                                             result_type=result_type,
+                                                                                             output_type=output_type,
+                                                                                             filter_steps=filter_steps))
 
             return post_stream
 
@@ -822,20 +863,22 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 response.headers["Content-Type"] = "application/json"
                 stream_requested = getattr(payload, 'stream', False)
 
-                async with session_manager.session(http_connection=request):
+                async with session_manager.session(http_connection=request) as session:
                     if stream_requested:
 
                         # Return streaming response
                         return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                                  content=generate_streaming_response_as_str(
                                                      payload,
-                                                     session_manager=session_manager,
+                                                     session=session,
                                                      streaming=True,
                                                      step_adaptor=self.get_step_adaptor(),
                                                      result_type=ChatResponseChunk,
                                                      output_type=ChatResponseChunk))
 
-                    return await generate_single_response(payload, session_manager, result_type=ChatResponse)
+                    result = await generate_single_response(payload, session, result_type=ChatResponse)
+                    add_context_headers_to_response(response)
+                    return result
 
             return post_openai_api_compatible
 
@@ -865,8 +908,10 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
             try:
                 async with load_workflow(config_file_path) as local_session_manager:
-                    result = await generate_single_response(
-                        payload, local_session_manager, result_type=local_session_manager.workflow.single_output_schema)
+                    async with local_session_manager.session() as session:
+                        result = await generate_single_response(payload,
+                                                                session,
+                                                                result_type=session.workflow.single_output_schema)
 
                 await job_store.update_status(job_id, JobStatus.SUCCESS, output=result)
             except Exception as e:

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -105,6 +105,15 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/finetuning/dpo_tic_tac_toe/.*/configs/config.*\.yml$",
         r"^examples/finetuning/dpo_tic_tac_toe/(.*/)?data/",
     ),
+    # Allow A2A example cross-references for OAuth2 setup guide
+    (
+        r"^examples/A2A/calculator_a2a/README.md",
+        r"^examples/A2A/math_assistant_a2a/oauth2-keycloak-setup.md",
+    ),
+    (
+        r"^examples/A2A/math_assistant_a2a/oauth2-keycloak-setup.md",
+        r"^examples/A2A/calculator_a2a/configs/config-protected-oauth2.yml",
+    ),
 }
 
 ALLOWLISTED_WORDS: set[str] = {
@@ -119,6 +128,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "copy/paste",
     "delete/recreate",
     "edit/score",
+    "Enable/disable",
     "file/console",
     "files/functions",
     "I/O",
@@ -131,6 +141,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "JSON/YAML",
     "LangChain/LangGraph",
     "LangChain/LangGraph.",
+    "LangChain/LangGraph-based",
     "LTE/5G",
     "output/jobs/job_",
     "POST/PUT",

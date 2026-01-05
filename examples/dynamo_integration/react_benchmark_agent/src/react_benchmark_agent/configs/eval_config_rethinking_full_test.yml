@@ -1,0 +1,256 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# <!-- path-check-skip-file -->
+
+# =============================================================================
+# FULL EVALUATION WITH RETHINKING / SELF-EVALUATION (100 scenarios)
+# =============================================================================
+# Purpose: Quality optimization using self-evaluation loop with feedback
+# Dataset: 100 banking scenarios from Agent Leaderboard v2
+#
+# This configuration wraps the ReAct agent with a self-evaluating wrapper that:
+# - Evaluates tool selection after each attempt
+# - Provides structured feedback to the agent on retry
+# - Continues until confidence threshold is met or max retries reached
+#
+# Key Parameters:
+# - max_retries: 5 - Maximum retry attempts per question
+# - min_confidence_threshold: 0.85 - Minimum confidence to accept result
+# - pass_feedback_to_agent: true - Include evaluation feedback on retry
+#
+# Usage:
+#   nat eval --config_file configs/eval_config_rethinking_full_test.yml
+#
+# Expected runtime: ~45-90 minutes (longer due to retries)
+# Expected TSQ improvement: +5-15% over no-rethinking baseline
+# =============================================================================
+
+functions:
+  react_benchmark_agent:
+    _type: react_benchmark_agent
+    prefix: "Agent:"
+    decision_only: true
+    canned_response_template: "Successfully executed {tool_name}. Operation completed."
+
+  # Define the ReAct workflow
+  react_workflow:
+    _type: react_agent
+    llm_name: dynamo_llm
+    tool_names: [
+      banking_tools
+    ]
+    verbose: true
+    parse_agent_response_max_retries: 3
+    max_tool_calls: 25
+    max_history: 1000
+    pass_tool_call_errors_to_agent: true
+    recursion_limit: 50
+    system_prompt: |
+      You are a tool-calling agent evaluated on TOOL SELECTION capability. Your goal is to select ALL the correct tools, in the correct order, to COMPLETELY handle real-world use-cases.
+      
+      IMPORTANT: This is a tool selection exercise, NOT real execution.
+      - Focus on selecting the RIGHT TOOL for each step
+      - Use placeholder or dummy values for required parameters (e.g., "12345", "user@example.com", "2024-01-01")
+      - Tool responses are simulated - ignore them and focus on selecting the next appropriate tool
+      - What matters is YOUR INTENT and TOOL CHOICE, not the data quality
+      
+      ⚠️ COMPLETENESS IS CRITICAL:
+      - Complex scenarios may require 10-15+ tool calls to fully address
+      - Do NOT stop until you have addressed EVERY aspect of the user's request
+      - Think through ALL steps: information gathering, actions, verifications, and confirmations
+      - When in doubt, include the tool - thoroughness is more important than brevity
+      - Review your work: "Have I addressed every part of the user's request?"
+      
+      Available tools:
+
+      {tools}
+
+      Use this exact format for EACH response:
+
+      Thought: I need to analyze what the user needs and select the SINGLE NEXT tool to call. Have I completed all aspects of the request?
+      Action: the ONE tool to call right now, must be one of [{tool_names}]
+      Action Input: valid JSON with required parameters (use placeholder values)
+
+      CRITICAL RULES:
+      1. Output ONLY ONE Thought, Action, and Action Input per response
+      2. STOP IMMEDIATELY after writing Action Input
+      3. DO NOT write the Observation - the system will provide it
+      4. DO NOT write multiple Thought/Action/Action Input cycles in one response
+      5. After receiving the Observation, you will get another turn to select the next tool
+      6. Continue calling tools until you have FULLY addressed the user's request
+      7. Better to call more tools than too few - thoroughness matters
+      
+      When you have called ALL necessary tools and FULLY addressed the request:
+      Thought: I have now completed all necessary steps and fully addressed every aspect of the user's request
+      Final Answer: [comprehensive summary of everything that was accomplished]
+function_groups:
+  banking_tools:
+    _type: banking_tools_group
+    # tools.json available after running: /examples/dynamo_integration/scripts/download_agent_leaderboard_v2.py
+    tools_json_path: ./examples/dynamo_integration/data/raw/banking/tools.json
+    decision_only: true
+    include: [
+      get_account_balance,
+      get_transaction_history,
+      transfer_funds,
+      get_loan_information,
+      get_credit_card_information,
+      get_mortgage_details,
+      get_savings_account_products,
+      schedule_appointment,
+      check_loan_application_status,
+      find_nearby_locations,
+      get_investment_products,
+      report_lost_stolen_card,
+      update_contact_information,
+      setup_automatic_bill_pay,
+      initiate_transaction_dispute,
+      get_exchange_rates,
+      calculate_loan_payment,
+      manage_account_alerts,
+      check_wire_transfer_status,
+      get_cd_products
+    ]
+
+llms:
+  dynamo_llm:
+    _type: dynamo
+    model_name: llama-3.3-70b
+    base_url: http://localhost:8099/v1
+    api_key: dummy
+    temperature: 0.0
+    max_tokens: 8192
+    stop: ["Observation:", "\nThought:"]
+    # Dynamo prefix headers for KV cache optimization (enabled when prefix_template is set)
+    prefix_template: "react-benchmark-{uuid}"
+    prefix_total_requests: 10
+    prefix_osl: MEDIUM
+    prefix_iat: MEDIUM
+    # # Enable parameter optimization for this LLM
+    # optimizable_params: [temperature]
+    # search_space:
+    #   temperature:
+    #     low: 0.0
+    #     high: 0.25
+    #     step: 0.05
+  
+  eval_llm:
+    _type: dynamo
+    model_name: llama-3.3-70b
+    base_url: http://localhost:8099/v1
+    api_key: dummy
+    temperature: 0.0
+    max_tokens: 1024
+
+# Advanced self-evaluating wrapper with feedback
+workflow:
+  _type: self_evaluating_agent_with_feedback
+  wrapped_agent: react_workflow
+  evaluator_llm: eval_llm
+  max_retries: 5
+  min_confidence_threshold: 0.85
+  pass_feedback_to_agent: true  # KEY FEATURE: Pass evaluation feedback on retry
+  verbose: true
+  # Optional: customize feedback template
+  feedback_template: |
+    PREVIOUS ATTEMPT FEEDBACK:
+
+    Your previous tool selection was evaluated and found to be insufficient.
+
+    EVALUATION:
+    {reasoning}
+
+    MISSING STEPS:
+    {missing_steps}
+
+    SUGGESTIONS:
+    {suggestions}
+
+    Please try again, addressing the issues identified above. Focus on:
+    1. Including all necessary information gathering steps
+    2. Ensuring proper order of operations
+    3. Adding verification steps where appropriate
+
+eval:
+  general:
+    max_concurrency: 4
+    
+    output:
+      dir: ./examples/dynamo_integration/react_benchmark_agent/outputs/dynamo_evals/rethinking_full_test/
+      cleanup: false
+      job_management:
+        append_job_id_to_output_dir: true
+    
+    dataset:
+      _type: json
+      file_path: ./examples/dynamo_integration/data/agent_leaderboard_v2_banking.json
+      structure:
+        disable: true
+    
+    profiler:
+      compute_llm_metrics: false
+      token_uniqueness_forecast: false
+      workflow_runtime_forecast: false
+      prompt_caching_prefixes:
+        enable: false
+      bottleneck_analysis:
+        enable_nested_stack: false
+      concurrency_spike_analysis:
+        enable: false
+
+  evaluators:
+    tool_selection_quality:
+      _type: tsq_evaluator
+      llm_name: eval_llm
+      strict_mode: false
+      tool_weight: 1.0
+      parameter_weight: 0.4
+      verbose: true
+
+# =============================================================================
+# OPTIMIZER CONFIGURATION
+# =============================================================================
+# Run with: nat optimize --config_file <this_file>
+# 
+# This section allows you to run parameter optimization on the same evaluation
+# dataset and compare performance using the tsq_evaluator metrics.
+# =============================================================================
+optimizer:
+  # Output directory for optimization results
+  output_path: ./examples/dynamo_integration/react_benchmark_agent/outputs/dynamo_evals/rethinking_full_test/optimizer_results/
+  
+  # Number of repetitions per parameter set for stable evaluation
+  reps_per_param_set: 1
+  
+  # Evaluation metrics to optimize (references the evaluators defined above)
+  eval_metrics:
+    tool_selection_quality:
+      evaluator_name: tool_selection_quality  # References the tsq_evaluator
+      direction: maximize                     # Higher TSQ score is better
+      weight: 1.0
+  
+  # Numeric parameter optimization (Optuna-based)
+  numeric:
+    enabled: true
+    sampler: grid            # Use grid search for systematic comparison
+  
+  # Prompt optimization (Genetic Algorithm) - disabled by default
+  prompt:
+    enabled: false
+    # Uncomment below to enable prompt optimization:
+    # prompt_population_init_function: prompt_init
+    # ga_generations: 3
+    # ga_population_size: 4
+    # ga_parallel_evaluations: 1

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,6 +38,7 @@ from nat.builder.component_utils import update_dependency_graph
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.cli.register_workflow import register_function
+from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.component import ComponentGroup
 from nat.data_models.component_ref import ComponentRefNode
 from nat.data_models.component_ref import EmbedderRef
@@ -56,10 +57,13 @@ from nat.data_models.finetuning import TrainerAdapterConfig
 from nat.data_models.finetuning import TrainerConfig
 from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
+from nat.data_models.middleware import MiddlewareBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfig
 from nat.data_models.retriever import RetrieverBaseConfig
+from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.embedder.nim_embedder import NIMEmbedderModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.object_store.in_memory_object_store import InMemoryObjectStoreConfig
@@ -184,10 +188,14 @@ def test_group_from_component():
     test_component_config_group_map = {
         EmbedderBaseConfig: ComponentGroup.EMBEDDERS,
         FunctionBaseConfig: ComponentGroup.FUNCTIONS,
+        FunctionGroupBaseConfig: ComponentGroup.FUNCTION_GROUPS,
         LLMBaseConfig: ComponentGroup.LLMS,
         MemoryBaseConfig: ComponentGroup.MEMORY,
+        MiddlewareBaseConfig: ComponentGroup.MIDDLEWARE,
         ObjectStoreBaseConfig: ComponentGroup.OBJECT_STORES,
         RetrieverBaseConfig: ComponentGroup.RETRIEVERS,
+        TTCStrategyBaseConfig: ComponentGroup.TTC_STRATEGIES,
+        AuthProviderBaseConfig: ComponentGroup.AUTHENTICATION,
         TrainerConfig: ComponentGroup.TRAINERS,
         TrainerAdapterConfig: ComponentGroup.TRAINER_ADAPTERS,
         TrajectoryBuilderConfig: ComponentGroup.TRAJECTORY_BUILDERS
@@ -460,8 +468,12 @@ def test_build_dependency_sequence(nested_nat_config: Config):
 async def test_load_hierarchial_workflow(nested_nat_config: Config):
 
     # Validate nested workflow instantiation
-    async with WorkflowBuilder.from_config(config=nested_nat_config) as workflow:
-        assert SessionManager(await workflow.build(), max_concurrency=1)
+    async with WorkflowBuilder.from_config(config=nested_nat_config) as builder:
+        workflow = await builder.build()
+        assert SessionManager(config=nested_nat_config,
+                              shared_builder=builder,
+                              shared_workflow=workflow,
+                              max_concurrency=1)
 
 
 def test_finetuning_component_dependencies():

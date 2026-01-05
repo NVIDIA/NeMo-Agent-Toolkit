@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +14,8 @@
 # limitations under the License.
 
 from contextlib import asynccontextmanager
+
+from pydantic import BaseModel
 
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.type_registry import AuthProviderBuildCallableT
@@ -77,6 +79,7 @@ from nat.data_models.middleware import MiddlewareBaseConfigT
 from nat.data_models.object_store import ObjectStoreBaseConfigT
 from nat.data_models.registry_handler import RegistryHandlerBaseConfigT
 from nat.data_models.retriever import RetrieverBaseConfigT
+from nat.utils.type_utils import DecomposedType
 
 
 def register_telemetry_exporter(config_type: type[TelemetryExporterConfigT]):
@@ -190,6 +193,64 @@ def register_function(config_type: type[FunctionConfigT],
     return register_function_inner
 
 
+def register_per_user_function(config_type: type[FunctionConfigT],
+                               input_type: type | type[BaseModel],
+                               single_output_type: type | type[BaseModel] | None = None,
+                               streaming_output_type: type | type[BaseModel] | None = None,
+                               framework_wrappers: list[LLMFrameworkEnum | str] | None = None):
+    """
+    Register a per-user function with optional framework_wrappers for automatic profiler hooking.
+
+    The per-user function is instantiated lazily on user's first invocation. Each user will have a separate instance of
+    the function. Schemas must be provided to enable OpenAPI documentation generation without a concrete instance.
+
+    Args:
+        config_type: The function configuration type
+        input_type: The input type for the function (can be a type or a Pydantic model)
+        single_output_type: The single output type for the function (can be a type or a Pydantic model)
+        streaming_output_type: The streaming output type for the function (can be a type or a Pydantic model)
+        framework_wrappers: Optional list of framework wrappers for automatic profiler hooking
+    """
+
+    def register_per_user_function_inner(
+            fn: FunctionBuildCallableT[FunctionConfigT]) -> FunctionRegisteredCallableT[FunctionConfigT]:
+        from .type_registry import GlobalTypeRegistry
+        from .type_registry import RegisteredFunctionInfo
+
+        if not input_type:
+            raise ValueError("input_type must be provided to register a per-user function")
+
+        context_manager_fn = asynccontextmanager(fn)
+
+        framework_wrappers_list = list(framework_wrappers or [])
+
+        discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
+                                                                component_type=ComponentEnum.FUNCTION)
+
+        # Convert types to Pydantic models if they are not already
+        input_schema = DecomposedType(input_type).get_pydantic_schema()
+        single_output_schema = DecomposedType(single_output_type).get_pydantic_schema() if single_output_type else None
+        streaming_output_schema = DecomposedType(
+            streaming_output_type).get_pydantic_schema() if streaming_output_type else None
+
+        GlobalTypeRegistry.get().register_function(
+            RegisteredFunctionInfo(
+                full_type=config_type.full_type,
+                config_type=config_type,
+                build_fn=context_manager_fn,
+                framework_wrappers=framework_wrappers_list,
+                discovery_metadata=discovery_metadata,
+                is_per_user=True,
+                per_user_function_input_schema=input_schema,
+                per_user_function_single_output_schema=single_output_schema,
+                per_user_function_streaming_output_schema=streaming_output_schema,
+            ))
+
+        return context_manager_fn
+
+    return register_per_user_function_inner
+
+
 def register_function_group(config_type: type[FunctionGroupConfigT],
                             framework_wrappers: list[LLMFrameworkEnum | str] | None = None):
     """
@@ -222,6 +283,43 @@ def register_function_group(config_type: type[FunctionGroupConfigT],
         return context_manager_fn
 
     return register_function_group_inner
+
+
+def register_per_user_function_group(config_type: type[FunctionGroupConfigT],
+                                     framework_wrappers: list[LLMFrameworkEnum | str] | None = None):
+    """
+    Register a per-user function group with optional framework_wrappers for automatic profiler hooking.
+
+    Per-user function groups are instantiated separately for each user, allowing for user-specific
+    shared state across multiple functions within the group.
+    """
+
+    def register_per_user_function_group_inner(
+        fn: FunctionGroupBuildCallableT[FunctionGroupConfigT]
+    ) -> FunctionGroupRegisteredCallableT[FunctionGroupConfigT]:
+        from .type_registry import GlobalTypeRegistry
+        from .type_registry import RegisteredFunctionGroupInfo
+
+        context_manager_fn = asynccontextmanager(fn)
+
+        framework_wrappers_list = list(framework_wrappers or [])
+
+        discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
+                                                                component_type=ComponentEnum.FUNCTION_GROUP)
+
+        GlobalTypeRegistry.get().register_function_group(
+            RegisteredFunctionGroupInfo(
+                full_type=config_type.full_type,
+                config_type=config_type,
+                build_fn=context_manager_fn,
+                framework_wrappers=framework_wrappers_list,
+                discovery_metadata=discovery_metadata,
+                is_per_user=True,
+            ))
+
+        return context_manager_fn
+
+    return register_per_user_function_group_inner
 
 
 def register_middleware(config_type: type[MiddlewareBaseConfigT]):

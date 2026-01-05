@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -84,6 +84,12 @@ logger = logging.getLogger(__name__)
     type=(str, str),
     multiple=True,
     help="Override config values using dot notation (e.g., --override llms.nim_llm.temperature 0.7)",
+)
+@click.option(
+    "--user_id",
+    type=str,
+    default=None,
+    help="User ID to use for workflow session.",
 )
 @click.pass_context
 def eval_command(ctx, **kwargs) -> None:
@@ -171,6 +177,7 @@ def process_nat_eval(
     endpoint_timeout: int,
     reps: int,
     override: tuple[tuple[str, str], ...],
+    user_id: str | None,
 ):
     """
     Process the eval command and execute the evaluation. Here the config_file, if provided, is checked for its existence
@@ -188,15 +195,19 @@ def process_nat_eval(
                                "have a partially completed dataset.")
 
     # Create the configuration object
-    config = EvaluationRunConfig(
-        config_file=config_file,
-        dataset=str(dataset) if dataset else None,
-        result_json_path=result_json_path,
-        skip_workflow=skip_workflow,
-        skip_completed_entries=skip_completed_entries,
-        endpoint=endpoint,
-        endpoint_timeout=endpoint_timeout,
-        reps=reps,
-        override=override,
-    )
+    # Only include user_id if explicitly provided via CLI, otherwise use the default
+    config_kwargs = {
+        "config_file": config_file,
+        "dataset": str(dataset) if dataset else None,
+        "result_json_path": result_json_path,
+        "skip_workflow": skip_workflow,
+        "skip_completed_entries": skip_completed_entries,
+        "endpoint": endpoint,
+        "endpoint_timeout": endpoint_timeout,
+        "reps": reps,
+        "override": override,
+    }
+    if user_id is not None:
+        config_kwargs["user_id"] = user_id
+    config = EvaluationRunConfig(**config_kwargs)
     asyncio.run(run_and_evaluate(config))

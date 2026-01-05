@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,7 @@
 import logging
 import sys
 import typing
+from datetime import timedelta
 
 from pydantic import BaseModel
 from pydantic import ConfigDict
@@ -213,6 +214,15 @@ class GeneralConfig(BaseModel):
     """
 
     telemetry: TelemetryConfig = TelemetryConfig()
+
+    per_user_workflow_timeout: timedelta = Field(
+        default=timedelta(minutes=30),
+        description="Time after which inactive per-user workflows are cleaned up. "
+        "Only applies when workflow is per-user. Defaults to 30 minutes.")
+    per_user_workflow_cleanup_interval: timedelta = Field(
+        default=timedelta(minutes=5),
+        description="Interval for running cleanup of inactive per-user workflows. "
+        "Only applies when workflow is per-user. Defaults to 5 minutes.")
 
     # FrontEnd Configuration
     front_end: FrontEndBaseConfig = FastApiFrontEndConfig()

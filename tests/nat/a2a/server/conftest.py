@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,12 @@ import pytest
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
 from nat.plugins.a2a.server.front_end_config import A2AFrontEndConfig
+
+
+@pytest.fixture(name="mock_workflow_builder")
+def fixture_mock_workflow_builder() -> MagicMock:
+    """Mock workflow builder for A2A server testing."""
+    return MagicMock()
 
 
 @pytest.fixture(name="mock_workflow_with_functions")

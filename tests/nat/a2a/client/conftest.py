@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -107,8 +107,11 @@ def fixture_mock_a2a_client(sample_agent_card: AgentCard) -> AsyncMock:
 
 
 @pytest.fixture(name="a2a_function_group")
-async def fixture_a2a_function_group(mock_a2a_client: AsyncMock,
-                                     sample_agent_card: AgentCard) -> tuple[FunctionGroup, AsyncMock]:
+async def fixture_a2a_function_group(
+    mock_a2a_client: AsyncMock,
+    sample_agent_card: AgentCard,
+    mock_user_context,
+) -> tuple[FunctionGroup, AsyncMock]:
     """A2A client function group with mocked agent.
 
     This fixture provides a fully configured A2A client function group
@@ -117,6 +120,7 @@ async def fixture_a2a_function_group(mock_a2a_client: AsyncMock,
     Args:
         mock_a2a_client: Mock A2A client fixture
         sample_agent_card: Sample agent card fixture
+        mock_user_context: Mock user context fixture
 
     Yields:
         Tuple of (function_group, mock_client) for testing
@@ -133,7 +137,11 @@ async def fixture_a2a_function_group(mock_a2a_client: AsyncMock,
             task_timeout=timedelta(seconds=30),
         )
 
-        # Create workflow builder and add function group
-        async with WorkflowBuilder() as builder:
-            group = await builder.add_function_group("test_agent", config)
-            yield group, mock_class.return_value
+        # Mock the Context to provide a user_id (required for per-user A2A clients)
+        with patch('nat.builder.context.Context') as mock_context:
+            mock_context.get.return_value = mock_user_context
+
+            # Create workflow builder and add function group
+            async with WorkflowBuilder() as builder:
+                group = await builder.add_function_group("test_agent", config)
+                yield group, mock_class.return_value

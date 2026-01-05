@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,7 +53,7 @@ class A2AFrontEndPlugin(FrontEndBase[A2AFrontEndConfig]):
             agent_card = await worker.create_agent_card(workflow)
 
             # Create agent executor adapter
-            agent_executor = worker.create_agent_executor(workflow)
+            agent_executor = worker.create_agent_executor(workflow, builder)
 
             # Create A2A server
             a2a_server = worker.create_a2a_server(agent_card, agent_executor)
@@ -70,8 +70,21 @@ class A2AFrontEndPlugin(FrontEndBase[A2AFrontEndConfig]):
                             self.front_end_config.host,
                             self.front_end_config.port)
 
-                # Build the ASGI app and run with uvicorn
+                # Build the ASGI app
                 app = a2a_server.build()
+
+                # Add OAuth2 validation middleware if configured
+                if self.front_end_config.server_auth:
+                    from nat.plugins.a2a.server.oauth_middleware import OAuth2ValidationMiddleware
+
+                    app.add_middleware(OAuth2ValidationMiddleware, config=self.front_end_config.server_auth)
+                    logger.info(
+                        "OAuth2 token validation enabled for A2A server (issuer=%s, scopes=%s)",
+                        self.front_end_config.server_auth.issuer_url,
+                        self.front_end_config.server_auth.scopes,
+                    )
+
+                # Run with uvicorn
                 config = uvicorn.Config(
                     app,
                     host=self.front_end_config.host,

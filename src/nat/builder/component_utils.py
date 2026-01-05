@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,6 +41,8 @@ from nat.data_models.object_store import ObjectStoreBaseConfig
 from nat.data_models.retriever import RetrieverBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.utils.type_utils import DecomposedType
+
+WORKFLOW_COMPONENT_NAME = "<workflow>"
 
 logger = logging.getLogger(__name__)
 
@@ -262,7 +264,7 @@ def config_to_dependency_objects(config: "Config") -> tuple[dict[str, ComponentI
     dependency_map[workflow_instance_id] = ComponentInstanceData(
         component_group=ComponentGroup.FUNCTIONS,
         instance_id=workflow_instance_id,
-        name="<workflow>",  # type: ignore
+        name=WORKFLOW_COMPONENT_NAME,  # type: ignore
         config=config.workflow,
         is_root=True)
 

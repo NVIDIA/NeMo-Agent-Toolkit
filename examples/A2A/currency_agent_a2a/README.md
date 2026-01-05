@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,13 +17,15 @@ limitations under the License.
 
 # Currency Agent A2A Example
 
-This example demonstrates connecting to a third-party A2A service, the LangGraph-based currency agent, to perform currency conversions and financial queries with time-based context.
+This example demonstrates a per-user workflow connecting to a third-party A2A service, the LangGraph-based currency agent, to perform currency conversions and financial queries with time-based context.
 
 ## Key Features
 
+- **Per-User A2A Client**: Each user gets isolated A2A client connections to external services
 - **External A2A Integration**: Connects to a third-party LangGraph currency agent
 - **Hybrid Tool Architecture**: Combines A2A currency tools with MCP time services
 - **Simple Real-world Use Case**: Currency conversion with historical date context
+- **Multi-User Support**: Demonstrates user isolation with different session cookies
 
 ## Architecture Overview
 
@@ -118,17 +120,38 @@ nat run --config_file examples/A2A/currency_agent_a2a/configs/config.yml \
 
 For comprehensive examples, see [`data/sample_queries.json`](data/sample_queries.json).
 
+## Per-User Workflow Architecture
+
+This example uses a **per-user workflow** pattern because A2A clients are per-user function groups:
+
+- Each user gets isolated connections to the external A2A service
+- Independent session state and request tracking per user
+
 ## Configuration Details
+
+### Workflow Configuration
+
+The workflow is configured to use the core per-user ReAct agent:
+
+```yaml
+workflow:
+  _type: per_user_react_agent  # Per-user ReAct agent
+  tool_names:
+    - mcp_date_time.get_current_time_mcp_tool
+    - currency_agent  # Per-user A2A client to external service
+  llm_name: nim_llm
+```
 
 ### Tool Composition
 
 The configuration demonstrates two types of tool integration:
 
-1. **A2A Client Tools** (`currency_agent`):
+1. **A2A Client Tools** (`currency_agent`) - **Per-User**:
    - Connects to external LangGraph currency agent
+   - Each user gets isolated connection to the external service
    - Provides currency conversion and exchange rate queries
 
-2. **MCP Client Tools** (`mcp_date_time`):
+2. **MCP Client Tools** (`mcp_date_time`) - **Shared**:
    - Local MCP server for time operations
    - Provides: `get_current_time_mcp_tool` function
 
@@ -156,4 +179,4 @@ curl http://localhost:11000/.well-known/agent-card.json | jq
 
 ## Related Examples
 
-- [Math Assistant A2A](../math_assistant_a2a/) - NAT-to-NAT A2A with hybrid tools
+- [Math Assistant A2A](../math_assistant_a2a/) - NeMo Agent toolkit A2A with hybrid tools

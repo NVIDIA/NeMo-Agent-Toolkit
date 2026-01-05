@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,9 @@ import logging
 
 from pydantic import BaseModel
 from pydantic import Field
+from pydantic import model_validator
 
+from nat.authentication.oauth2.oauth2_resource_server_config import OAuth2ResourceServerConfig
 from nat.data_models.front_end import FrontEndBaseConfig
 
 logger = logging.getLogger(__name__)
@@ -102,3 +104,28 @@ class A2AFrontEndConfig(FrontEndBaseConfig, name="a2a"):
         default=None,
         description="Custom worker class for handling A2A routes (default: built-in worker)",
     )
+
+    # OAuth2 Resource Server (for protecting this A2A agent)
+    server_auth: OAuth2ResourceServerConfig | None = Field(
+        default=None,
+        description=("OAuth 2.0 Resource Server configuration for token verification. "
+                     "When configured, the A2A server will validate OAuth2 Bearer tokens on all requests "
+                     "except public agent card discovery. Supports both JWT validation (via JWKS) and "
+                     "opaque token validation (via RFC 7662 introspection)."),
+    )
+
+    @model_validator(mode="after")
+    def validate_security_configuration(self):
+        """Validate security configuration to prevent accidental misconfigurations."""
+        # Check if server is bound to a non-localhost interface without authentication
+        localhost_hosts = {"localhost", "127.0.0.1", "::1"}
+        if self.host not in localhost_hosts and self.server_auth is None:
+            logger.warning(
+                "A2A server is configured to bind to '%s' without authentication. "
+                "This may expose your server to unauthorized access. "
+                "Consider either: (1) binding to localhost for local-only access, "
+                "or (2) configuring server_auth for production deployments on public interfaces.",
+                self.host,
+            )
+
+        return self

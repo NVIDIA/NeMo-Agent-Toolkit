@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -194,6 +194,19 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  piston:
+    build: ./piston
+    container_name: test-piston
+    privileged: true # Required by Piston
+    ports:
+      - "2000:2000"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:2000/api/v2/runtimes')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
 
   opensearch:
     image: opensearchproject/opensearch:2.11.1

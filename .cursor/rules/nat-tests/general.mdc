@@ -26,6 +26,7 @@ All tests in NeMo Agent toolkit use pytest. See the general coding guidelines fo
 - Use `@pytest.fixture(name="fixture_name")` decorator pattern
 - Mock external services with `pytest_httpserver` or `unittest.mock`
 - Maintain ≥ 80% code coverage
+- Do NOT add `@pytest.mark.asyncio` to any test - async tests are automatically detected and run by the async runner
 
 ### Integration Tests
 

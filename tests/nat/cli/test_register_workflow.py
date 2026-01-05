@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,12 +17,14 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 import pytest
+from pydantic import BaseModel
 
 from _utils.configs import EmbedderProviderTestConfig
 from _utils.configs import FunctionTestConfig
 from _utils.configs import LLMProviderTestConfig
 from _utils.configs import MemoryTestConfig
 from _utils.configs import ObjectStoreTestConfig
+from _utils.configs import PerUserFunctionTestConfig
 from _utils.configs import RegistryHandlerTestConfig
 from _utils.configs import TrainerAdapterTestConfig
 from _utils.configs import TrainerTestConfig
@@ -39,6 +41,7 @@ from nat.cli.register_workflow import register_llm_client
 from nat.cli.register_workflow import register_llm_provider
 from nat.cli.register_workflow import register_memory
 from nat.cli.register_workflow import register_object_store
+from nat.cli.register_workflow import register_per_user_function
 from nat.cli.register_workflow import register_registry_handler
 from nat.cli.register_workflow import register_tool_wrapper
 from nat.cli.register_workflow import register_trainer
@@ -307,3 +310,399 @@ def test_register_trajectory_builder(registry: TypeRegistry):
     assert trajectory_builder_info.local_name == TrajectoryBuilderTestConfig.static_type()
     assert trajectory_builder_info.config_type is TrajectoryBuilderTestConfig
     assert trajectory_builder_info.build_fn is build_fn
+
+
+def test_register_per_user_function_with_single_output(registry: TypeRegistry):
+    """Test per-user function registration with single output schema."""
+
+    class PerUserInputSchema(BaseModel):
+        message: str
+
+    class PerUserOutputSchema(BaseModel):
+        result: str
+
+    with pytest.raises(KeyError):
+        registry.get_function(PerUserFunctionTestConfig)
+
+    @register_per_user_function(config_type=PerUserFunctionTestConfig,
+                                input_type=PerUserInputSchema,
+                                single_output_type=PerUserOutputSchema)
+    async def build_fn(config: PerUserFunctionTestConfig, builder: Builder):
+
+        async def _impl(inp: PerUserInputSchema) -> PerUserOutputSchema:
+            return PerUserOutputSchema(result=inp.message)
+
+        yield _impl
+
+    func_info = registry.get_function(PerUserFunctionTestConfig)
+    assert func_info.full_type == PerUserFunctionTestConfig.static_full_type()
+    assert func_info.local_name == PerUserFunctionTestConfig.static_type()
+    assert func_info.config_type is PerUserFunctionTestConfig
+    assert func_info.build_fn is build_fn
+
+    assert func_info.is_per_user is True
+    assert func_info.per_user_function_input_schema is PerUserInputSchema
+    assert func_info.per_user_function_single_output_schema is PerUserOutputSchema
+    assert func_info.per_user_function_streaming_output_schema is None
+
+
+def test_register_per_user_function_with_streaming(registry: TypeRegistry):
+    """Test per-user function registration with streaming output schema."""
+
+    class StreamInputSchema(BaseModel):
+        text: str
+
+    class StreamOutputSchema(BaseModel):
+        chunk: str
+
+    class PerUserStreamFunctionConfig(FunctionTestConfig, name="test_per_user_stream"):
+        pass
+
+    # Register with streaming output schema
+    @register_per_user_function(config_type=PerUserStreamFunctionConfig,
+                                input_type=StreamInputSchema,
+                                streaming_output_type=StreamOutputSchema)
+    async def build_fn(config: PerUserStreamFunctionConfig, builder: Builder):
+
+        async def _impl(inp: StreamInputSchema):
+            yield StreamOutputSchema(chunk=inp.text)
+
+        yield _impl
+
+    # Verify registration
+    func_info = registry.get_function(PerUserStreamFunctionConfig)
+    assert func_info.is_per_user is True
+    assert func_info.per_user_function_input_schema is StreamInputSchema
+    assert func_info.per_user_function_single_output_schema is None
+    assert func_info.per_user_function_streaming_output_schema is StreamOutputSchema
+
+
+def test_register_per_user_function_with_both_outputs(registry: TypeRegistry):
+    """Test per-user function registration with both single and streaming output schemas."""
+
+    class DualInputSchema(BaseModel):
+        value: int
+
+    class DualSingleOutputSchema(BaseModel):
+        total: int
+
+    class DualStreamOutputSchema(BaseModel):
+        partial: int
+
+    class PerUserDualFunctionConfig(FunctionTestConfig, name="test_per_user_dual"):
+        pass
+
+    # Register with both output schemas
+    @register_per_user_function(config_type=PerUserDualFunctionConfig,
+                                input_type=DualInputSchema,
+                                single_output_type=DualSingleOutputSchema,
+                                streaming_output_type=DualStreamOutputSchema)
+    async def build_fn(config: PerUserDualFunctionConfig, builder: Builder):
+
+        async def _impl(inp: DualInputSchema) -> DualSingleOutputSchema:
+            return DualSingleOutputSchema(total=inp.value)
+
+        yield _impl
+
+    # Verify registration
+    func_info = registry.get_function(PerUserDualFunctionConfig)
+    assert func_info.is_per_user is True
+    assert func_info.per_user_function_input_schema is DualInputSchema
+    assert func_info.per_user_function_single_output_schema is DualSingleOutputSchema
+    assert func_info.per_user_function_streaming_output_schema is DualStreamOutputSchema
+
+
+def test_register_per_user_function_missing_output_schema(registry: TypeRegistry):
+    """Test that registration fails when no output schema is provided."""
+
+    class MissingOutputInputSchema(BaseModel):
+        data: str
+
+    class MissingOutputFunctionConfig(FunctionTestConfig, name="test_missing_output"):
+        pass
+
+    # Should fail validation - no output schema provided
+    with pytest.raises(
+            ValueError,
+            match="per_user_function_single_output_schema or per_user_function_streaming_output_schema must be provided"
+    ):
+
+        @register_per_user_function(config_type=MissingOutputFunctionConfig, input_type=MissingOutputInputSchema)
+        async def build_fn(config: MissingOutputFunctionConfig, builder: Builder):
+
+            async def _impl(inp: MissingOutputInputSchema):
+                pass
+
+            yield _impl
+
+
+def test_register_per_user_function_missing_input_schema(registry: TypeRegistry):
+    """Test that registration fails when no input schema is provided."""
+
+    class MissingInputOutputSchema(BaseModel):
+        result: str
+
+    class MissingInputFunctionConfig(FunctionTestConfig, name="test_missing_input"):
+        pass
+
+    # Should fail validation - no input schema provided
+    with pytest.raises(ValueError, match="input_type must be provided to register a per-user function"):
+
+        @register_per_user_function(
+            config_type=MissingInputFunctionConfig,
+            input_type=None,  # type: ignore
+            single_output_type=MissingInputOutputSchema)
+        async def build_fn(config: MissingInputFunctionConfig, builder: Builder):
+
+            async def _impl():
+                return MissingInputOutputSchema(result="test")
+
+            yield _impl
+
+
+def test_register_per_user_function_vs_regular_function(registry: TypeRegistry):
+    """Test that per-user functions are distinguished from regular functions."""
+
+    # Register a regular function
+    class RegularFunctionConfig(FunctionTestConfig, name="test_regular"):
+        pass
+
+    @register_function(config_type=RegularFunctionConfig)
+    async def regular_build_fn(config: RegularFunctionConfig, builder: Builder):
+
+        async def _impl():
+            pass
+
+        yield _impl
+
+    # Register a per-user function
+    class PerUserCompareInputSchema(BaseModel):
+        text: str
+
+    class PerUserCompareOutputSchema(BaseModel):
+        result: str
+
+    class PerUserCompareFunctionConfig(FunctionTestConfig, name="test_per_user_compare"):
+        pass
+
+    @register_per_user_function(config_type=PerUserCompareFunctionConfig,
+                                input_type=PerUserCompareInputSchema,
+                                single_output_type=PerUserCompareOutputSchema)
+    async def per_user_build_fn(config: PerUserCompareFunctionConfig, builder: Builder):
+
+        async def _impl(inp: PerUserCompareInputSchema) -> PerUserCompareOutputSchema:
+            return PerUserCompareOutputSchema(result=inp.text)
+
+        yield _impl
+
+    # Verify regular function is not per-user
+    regular_func_info = registry.get_function(RegularFunctionConfig)
+    assert regular_func_info.is_per_user is False
+    assert regular_func_info.per_user_function_input_schema is None
+    assert regular_func_info.per_user_function_single_output_schema is None
+    assert regular_func_info.per_user_function_streaming_output_schema is None
+
+    # Verify per-user function is marked correctly
+    per_user_func_info = registry.get_function(PerUserCompareFunctionConfig)
+    assert per_user_func_info.is_per_user is True
+    assert per_user_func_info.per_user_function_input_schema is PerUserCompareInputSchema
+    assert per_user_func_info.per_user_function_single_output_schema is PerUserCompareOutputSchema
+
+
+def test_register_per_user_function_with_framework_wrappers(registry: TypeRegistry):
+    """Test per-user function registration with framework wrappers."""
+
+    class WrapperInputSchema(BaseModel):
+        query: str
+
+    class WrapperOutputSchema(BaseModel):
+        answer: str
+
+    class PerUserWrapperFunctionConfig(FunctionTestConfig, name="test_per_user_wrapper"):
+        pass
+
+    # Register with framework wrappers
+    @register_per_user_function(config_type=PerUserWrapperFunctionConfig,
+                                input_type=WrapperInputSchema,
+                                single_output_type=WrapperOutputSchema,
+                                framework_wrappers=["langchain", "llama_index"])
+    async def build_fn(config: PerUserWrapperFunctionConfig, builder: Builder):
+
+        async def _impl(inp: WrapperInputSchema) -> WrapperOutputSchema:
+            return WrapperOutputSchema(answer=inp.query)
+
+        yield _impl
+
+    # Verify framework wrappers are registered
+    func_info = registry.get_function(PerUserWrapperFunctionConfig)
+    assert func_info.is_per_user is True
+    assert func_info.framework_wrappers == ["langchain", "llama_index"]
+
+
+# ==================== Simple Type Conversion Tests ====================
+
+
+def test_register_per_user_function_with_simple_input_type(registry: TypeRegistry):
+    """Test that simple input types (str, int) are converted to Pydantic models."""
+
+    class SimpleInputOutputSchema(BaseModel):
+        result: str
+
+    class SimpleInputFunctionConfig(FunctionTestConfig, name="test_simple_input"):
+        pass
+
+    @register_per_user_function(config_type=SimpleInputFunctionConfig,
+                                input_type=str,
+                                single_output_type=SimpleInputOutputSchema)
+    async def build_fn(config: SimpleInputFunctionConfig, builder: Builder):
+
+        async def _impl(inp: str) -> SimpleInputOutputSchema:
+            return SimpleInputOutputSchema(result=inp)
+
+        yield _impl
+
+    func_info = registry.get_function(SimpleInputFunctionConfig)
+    assert func_info.is_per_user is True
+
+    # The input schema should be a Pydantic model (not str directly)
+    input_schema = func_info.per_user_function_input_schema
+    assert input_schema is not None
+    assert issubclass(input_schema, BaseModel)
+
+    # The converted model should have a 'value' field of type str
+    assert 'value' in input_schema.model_fields
+    assert input_schema.model_fields['value'].annotation is str
+
+    # Output schema should remain as-is (already a Pydantic model)
+    assert func_info.per_user_function_single_output_schema is SimpleInputOutputSchema
+
+
+def test_register_per_user_function_with_simple_output_type(registry: TypeRegistry):
+    """Test that simple output types (str, int) are converted to Pydantic models."""
+
+    class SimpleOutputInputSchema(BaseModel):
+        query: str
+
+    class SimpleOutputFunctionConfig(FunctionTestConfig, name="test_simple_output"):
+        pass
+
+    @register_per_user_function(config_type=SimpleOutputFunctionConfig,
+                                input_type=SimpleOutputInputSchema,
+                                single_output_type=str)
+    async def build_fn(config: SimpleOutputFunctionConfig, builder: Builder):
+
+        async def _impl(inp: SimpleOutputInputSchema) -> str:
+            return inp.query
+
+        yield _impl
+
+    func_info = registry.get_function(SimpleOutputFunctionConfig)
+    assert func_info.is_per_user is True
+
+    # Input schema should remain as-is
+    assert func_info.per_user_function_input_schema is SimpleOutputInputSchema
+
+    # The output schema should be a Pydantic model (not str directly)
+    output_schema = func_info.per_user_function_single_output_schema
+    assert output_schema is not None
+    assert issubclass(output_schema, BaseModel)
+
+    # The converted model should have a 'value' field of type str
+    assert 'value' in output_schema.model_fields
+    assert output_schema.model_fields['value'].annotation is str
+
+
+def test_register_per_user_function_with_all_simple_types(registry: TypeRegistry):
+    """Test that all simple types (input and outputs) are converted to Pydantic models."""
+
+    class AllSimpleFunctionConfig(FunctionTestConfig, name="test_all_simple"):
+        pass
+
+    @register_per_user_function(config_type=AllSimpleFunctionConfig,
+                                input_type=str,
+                                single_output_type=int,
+                                streaming_output_type=float)
+    async def build_fn(config: AllSimpleFunctionConfig, builder: Builder):
+
+        async def _impl(inp: str) -> int:
+            return len(inp)
+
+        yield _impl
+
+    func_info = registry.get_function(AllSimpleFunctionConfig)
+    assert func_info.is_per_user is True
+
+    # Verify input schema conversion
+    input_schema = func_info.per_user_function_input_schema
+    assert issubclass(input_schema, BaseModel)
+    assert input_schema.model_fields['value'].annotation is str
+
+    # Verify single output schema conversion
+    single_output_schema = func_info.per_user_function_single_output_schema
+    assert issubclass(single_output_schema, BaseModel)
+    assert single_output_schema.model_fields['value'].annotation is int
+
+    # Verify streaming output schema conversion
+    streaming_output_schema = func_info.per_user_function_streaming_output_schema
+    assert issubclass(streaming_output_schema, BaseModel)
+    assert streaming_output_schema.model_fields['value'].annotation is float
+
+
+def test_register_per_user_function_pydantic_model_unchanged(registry: TypeRegistry):
+    """Test that Pydantic models are passed through unchanged."""
+
+    class UnchangedInputSchema(BaseModel):
+        message: str
+        count: int
+
+    class UnchangedOutputSchema(BaseModel):
+        result: str
+
+    class UnchangedFunctionConfig(FunctionTestConfig, name="test_unchanged"):
+        pass
+
+    @register_per_user_function(config_type=UnchangedFunctionConfig,
+                                input_type=UnchangedInputSchema,
+                                single_output_type=UnchangedOutputSchema)
+    async def build_fn(config: UnchangedFunctionConfig, builder: Builder):
+
+        async def _impl(inp: UnchangedInputSchema) -> UnchangedOutputSchema:
+            return UnchangedOutputSchema(result=inp.message)
+
+        yield _impl
+
+    func_info = registry.get_function(UnchangedFunctionConfig)
+
+    # Pydantic models should be passed through unchanged
+    assert func_info.per_user_function_input_schema is UnchangedInputSchema
+    assert func_info.per_user_function_single_output_schema is UnchangedOutputSchema
+
+
+def test_register_per_user_function_with_complex_simple_type(registry: TypeRegistry):
+    """Test conversion of more complex simple types like list[str]."""
+
+    class ComplexSimpleFunctionConfig(FunctionTestConfig, name="test_complex_simple"):
+        pass
+
+    @register_per_user_function(config_type=ComplexSimpleFunctionConfig,
+                                input_type=list[str],
+                                single_output_type=dict[str, int])
+    async def build_fn(config: ComplexSimpleFunctionConfig, builder: Builder):
+
+        async def _impl(inp: list[str]) -> dict[str, int]:
+            return {s: len(s) for s in inp}
+
+        yield _impl
+
+    func_info = registry.get_function(ComplexSimpleFunctionConfig)
+    assert func_info.is_per_user is True
+
+    # Verify input schema is a Pydantic model
+    input_schema = func_info.per_user_function_input_schema
+    assert issubclass(input_schema, BaseModel)
+    assert 'value' in input_schema.model_fields
+
+    # Verify output schema is a Pydantic model
+    output_schema = func_info.per_user_function_single_output_schema
+    assert issubclass(output_schema, BaseModel)
+    assert 'value' in output_schema.model_fields

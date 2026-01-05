@@ -86,11 +86,13 @@ Jama
 Jira
 jsonlines
 [Kk]aggle
+[Kk]eycloak
 Langfuse
 LangChain
 LangGraph
 LangSmith
 [Ll]aunchable(s?)
+[Ll]eaderboard
 # libcudf isn't styled in the way that cuDF is https://docs.rapids.ai/api/libcudf/stable/
 libcudf
 [Ll]earnable
@@ -114,7 +116,6 @@ NIC
 NIM(s?)
 npm
 NumPy
-NAT's
 NVIDIA
 Nemotron
 OAuth
@@ -186,3 +187,7 @@ Zep
 Optuna
 [Oo]ptimizable
 [Cc]heckpointed
+[Ss]anitization
+[Uu]nregister(ing|ed|s)?
+[Aa]rgs
+[Kk]wargs

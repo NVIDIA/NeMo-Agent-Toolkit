@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,6 +23,7 @@ from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.workflow_builder import WorkflowBuilder
+from nat.builder.workflow_builder import _log_build_failure
 from nat.cli.type_registry import TypeRegistry
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
@@ -124,12 +125,12 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
         completed_components = [(name, "evaluator") for name in completed_evaluators]
         remaining_components = [(name, "evaluator") for name in remaining_evaluators]
 
-        # Use the inherited common logging method from WorkflowBuilder
-        self._log_build_failure(failing_evaluator_name,
-                                "evaluator",
-                                completed_components,
-                                remaining_components,
-                                original_error)
+        # Use the common logging function from workflow_builder
+        _log_build_failure(failing_evaluator_name,
+                           "evaluator",
+                           completed_components,
+                           remaining_components,
+                           original_error)
 
     @override
     async def populate_builder(self, config: Config, skip_workflow: bool = False):

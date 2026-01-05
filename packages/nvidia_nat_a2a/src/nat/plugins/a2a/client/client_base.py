@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,7 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncGenerator
 from datetime import timedelta
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import httpx
@@ -34,6 +35,9 @@ from a2a.types import Role
 from a2a.types import Task
 from a2a.types import TextPart
 
+if TYPE_CHECKING:
+    from nat.authentication.interfaces import AuthProviderBase
+
 logger = logging.getLogger(__name__)
 
 
@@ -43,20 +47,25 @@ class A2ABaseClient:
 
     Args:
         base_url: The base URL of the A2A agent
+        agent_card_path: Path to agent card (default: /.well-known/agent-card.json)
         task_timeout: Timeout for task operations (default: 300 seconds)
+        streaming: Enable streaming responses (default: True)
+        auth_provider: Optional NAT authentication provider for securing requests
     """
 
     def __init__(
-            self,
-            base_url: str,
-            agent_card_path: str = "/.well-known/agent-card.json",
-            task_timeout: timedelta = timedelta(seconds=300),
-            streaming: bool = True,
+        self,
+        base_url: str,
+        agent_card_path: str = "/.well-known/agent-card.json",
+        task_timeout: timedelta = timedelta(seconds=300),
+        streaming: bool = True,
+        auth_provider: AuthProviderBase | None = None,
     ):
         self._base_url = base_url
         self._agent_card_path = agent_card_path
         self._task_timeout = task_timeout
         self._streaming = streaming
+        self._auth_provider = auth_provider
 
         self._httpx_client: httpx.AsyncClient | None = None
         self._client: Client | None = None
@@ -82,13 +91,30 @@ class A2ABaseClient:
         if not self._agent_card:
             raise RuntimeError("Agent card not resolved")
 
-        # 3) Create A2A client
+        # 3) Setup authentication interceptors if auth is configured
+        interceptors = []
+        if self._auth_provider:
+            try:
+                from a2a.client import AuthInterceptor
+                from nat.plugins.a2a.auth.credential_service import A2ACredentialService
+
+                credential_service = A2ACredentialService(
+                    auth_provider=self._auth_provider,
+                    agent_card=self._agent_card,
+                )
+                interceptors.append(AuthInterceptor(credential_service))
+                logger.info("Authentication configured for A2A client")
+            except ImportError as e:
+                logger.error("Failed to setup authentication: %s", e)
+                raise RuntimeError("Authentication requires a2a-sdk with AuthInterceptor support") from e
+
+        # 4) Create A2A client with interceptors
         client_config = ClientConfig(
             httpx_client=self._httpx_client,
             streaming=self._streaming,
         )
         factory = ClientFactory(client_config)
-        self._client = factory.create(self._agent_card)
+        self._client = factory.create(self._agent_card, interceptors=interceptors)
 
         logger.info("Connected to A2A agent at %s", self._base_url)
         return self
