@@ -21,6 +21,9 @@ dependencies = [
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
   # Keep sorted!!!
   "nvidia-nat~=1.4",
+  # Override dependencies that nvidia-nat-openpipe-art would otherwise regress.
+  # This keeps status-quo for other packages.
+  "litellm==1.74.9",
   "matplotlib~=3.9",
   "openpipe-art~=0.5.4"
 ]
