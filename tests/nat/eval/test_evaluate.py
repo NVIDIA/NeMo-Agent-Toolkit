@@ -499,7 +499,7 @@ def test_write_configuration_with_path_config(evaluation_run, default_eval_confi
 
     # Setup evaluation run
     evaluation_run.config.config_file = config_file
-    evaluation_run.config.override = (("eval.general.max_concurrency", "5"),)
+    evaluation_run.config.override = (("eval.general.max_concurrency", "5"), )
     evaluation_run.eval_config = default_eval_config
     evaluation_run.eval_config.general.output_dir = tmp_path / "output"
 
@@ -522,7 +522,7 @@ def test_write_configuration_with_path_config(evaluation_run, default_eval_confi
     assert config_metadata_file.exists(), "config_metadata.json should be created"
 
     # Verify metadata content
-    with open(config_metadata_file, "r", encoding="utf-8") as f:
+    with open(config_metadata_file, encoding="utf-8") as f:
         metadata = json.load(f)
     assert metadata["config_file"] == str(config_file)
     assert metadata["config_file_type"] == "Path"
@@ -559,7 +559,7 @@ def test_write_configuration_with_basemodel_config(evaluation_run, default_eval_
     assert config_metadata_file.exists(), "config_metadata.json should be created"
 
     # Verify metadata content
-    with open(config_metadata_file, "r", encoding="utf-8") as f:
+    with open(config_metadata_file, encoding="utf-8") as f:
         metadata = json.load(f)
     assert metadata["config_file_type"] == "BaseModel"
     assert len(metadata["overrides"]) == 0, "Should have no overrides"
@@ -591,7 +591,7 @@ def test_write_configuration_handles_missing_effective_config(evaluation_run, de
     config_metadata_file = evaluation_run.eval_config.general.output_dir / "config_metadata.json"
 
     assert config_original_file.exists(), "config_original.yml should be created"
-    assert not config_effective_file.exists(), "config_effective.yml should NOT be created when effective_config is None"
+    assert not config_effective_file.exists(), "config_effective.yml should NOT be created when there are no overrides"
     assert config_metadata_file.exists(), "config_metadata.json should be created"
 
 
