@@ -49,8 +49,17 @@ async def weather_update(_config: WeatherToolConfig, _builder: Builder) -> Async
         Returns:
             str: The current weather for the specified city.
         """
-        if "new york" in city.lower():
+        city_lower = city.lower()
+        if "new york" in city_lower:
             return "The weather in New York is sunny with a temperature of 25 degrees Celsius (77 degrees Fahrenheit)."
+        if "london" in city_lower:
+            return "The weather in London is cloudy with a temperature of 15 degrees Celsius (59 degrees Fahrenheit)."
+        if "tokyo" in city_lower:
+            return "The weather in Tokyo is partly cloudy with a temperature of 22 degrees Celsius (72 degrees Fahrenheit)."
+        if "paris" in city_lower:
+            return "The weather in Paris is rainy with a temperature of 18 degrees Celsius (64 degrees Fahrenheit)."
+        if "san francisco" in city_lower or "sf" in city_lower:
+            return "The weather in San Francisco is foggy with a temperature of 16 degrees Celsius (61 degrees Fahrenheit)."
         return f"Weather information for '{city}' is not available."
 
     yield FunctionInfo.from_fn(_weather_update, description=_weather_update.__doc__)

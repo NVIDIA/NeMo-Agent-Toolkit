@@ -20,53 +20,77 @@ limitations under the License.
 
 A minimal example using Microsoft's AutoGen framework showcasing a multi-agent weather and time information system where agents collaborate through AutoGen's conversation system to provide accurate weather and time data for specified cities.
 
+## Table of Contents
+
+- [Key Features](#key-features)
+- [Prerequisites](#prerequisites)
+- [Installation and Setup](#installation-and-setup)
+  - [Install this Workflow](#install-this-workflow)
+  - [Export Required Environment Variables](#export-required-environment-variables)
+- [Run the Workflow](#run-the-workflow)
+  - [Set up the MCP Server](#set-up-the-mcp-server)
+  - [Expected Output](#expected-output)
+- [Architecture](#architecture)
+
 ## Key Features
 
 - **AutoGen Framework Integration:** Demonstrates NeMo Agent Toolkit support for Microsoft's AutoGen framework alongside other frameworks like LangChain/LangGraph and Semantic Kernel.
 - **Multi-Agent Collaboration:** Shows two specialized agents working together - a WeatherAndTimeAgent for data retrieval and a FinalResponseAgent for response formatting.
-- **MCP Server Integration:** Demonstrates how NAT can interact with MCP (Model Context Protocol) servers to provide time information through external services.
-- **Tool Integration:** Showcases integration of both local tools (weather updates) and remote tools (MCP time service) within the AutoGen framework.
+- **Unified Tool Integration:** Uses NeMo Agent Toolkit's unified abstraction to integrate both local tools (weather updates) and MCP tools (time service) without framework-specific code. MCP servers are configured in YAML and automatically wrapped for AutoGen.
 - **Round-Robin Group Chat:** Uses AutoGen's RoundRobinGroupChat for structured agent communication with termination conditions.
+
+## Prerequisites
+
+Before running this example, ensure you have:
+
+- Python 3.11 or higher
+- NeMo Agent Toolkit installed (see [Install Guide](../../../docs/source/get-started/installation.md))
+- NVIDIA API key for NIM access
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md) to create the development environment and install NeMo Agent Toolkit.
 
 ### Install this Workflow
 
-From the root directory of the NAT library, run the following commands:
+From the root directory of the NeMo Agent Toolkit repository, run the following commands:
 
 ```bash
-uv pip install -e examples/getting_started/simple_calculator  # required to run the current_datetime MCP tool used in example workflow.
+# Required to run the current_datetime MCP tool used in the example workflow
+uv pip install -e examples/getting_started/simple_calculator
+
+uv pip install -e ".[mcp]"
+
 uv pip install -e examples/frameworks/nat_autogen_demo
 ```
 
-### Export required ENV variables
-If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain API keys.
+### Export Required Environment Variables
 
-For OpenAI Export these:
-- OPENAI_MODEL_NAME
-- OPENAI_API_KEY
-- OPENAI_API_BASE
+If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/get-started/installation.md#obtain-api-keys) instructions to obtain API keys.
 
-### Run the Workflow
+For NVIDIA NIM, export the following:
 
-#### Set up the MCP server
-This example demonstrates how NAT can interact with MCP servers on behalf of AutoGen agents.
+- `NVIDIA_API_KEY`
 
-First run the MCP server with this command:
+## Run the Workflow
+
+### Set up the MCP Server
+
+This example uses NeMo Agent Toolkit's MCP client abstraction to connect to an MCP server. The MCP connection is configured in the workflow's YAML file, and the toolkit automatically wraps the MCP tools for use with AutoGen agents. This approach provides a consistent interface across all supported frameworks.
+
+First, run the MCP server with this command:
 
 ```bash
 nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml --tool_names current_datetime
 ```
 
-Then run the workflow with the NAT CLI:
+Then, run the workflow with the NAT CLI:
 
 ```bash
 nat run --config_file examples/frameworks/nat_autogen_demo/configs/config.yml --input "What is the weather and time in New York today?"
 ```
 
-### Expected output
+### Expected Output
 
 ```console
 2025-10-07 14:34:28,122 - nat.cli.commands.start - INFO - Starting NAT from config file: 'examples/frameworks/nat_autogen_demo/configs/config.yml'
@@ -110,13 +134,21 @@ The AutoGen workflow consists of two main agents:
 
 1. **WeatherAndTimeAgent**: Retrieves weather and time information using tools
    - Uses the `weather_update_tool` for current weather conditions
-   - Connects to MCP server for accurate time information
+   - Uses the `mcp_time` tool group for accurate time information (configured through NAT's MCP client)
    - Responds with "DONE" when task is completed
 
 2. **FinalResponseAgent**: Formats and presents the final response
    - Consolidates information from other agents
    - Provides clear, concise answers to user queries
-   - Terminates the conversation with "APPROVE".
+   - Terminates the conversation with "APPROVE"
 
 The agents communicate through AutoGen's RoundRobinGroupChat system, which manages the conversation flow and ensures proper termination when the task is complete.
 
+### Tool Integration
+
+This example demonstrates NeMo Agent Toolkit's unified approach to tool integration:
+
+- **Local tools** (like `weather_update_tool`) are defined as NAT functions
+- **MCP tools** (like `mcp_time`) are configured in YAML using NAT's `mcp_client` function group
+
+Both types of tools are passed to AutoGen agents through NAT's `builder.get_tools()` method, which automatically wraps them for the target framework. This eliminates the need for framework-specific MCP integration code and provides a consistent interface across all supported frameworks (AutoGen, LangChain, Semantic Kernel, and others).

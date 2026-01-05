@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import logging
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncIterator
 
 from pydantic import Field
 
@@ -33,10 +33,6 @@ class AutoGenFunctionConfig(FunctionBaseConfig, name="autogen_team"):
 
     llm_name: LLMRef = Field(description="The LLM model to use with AutoGen agents.")
     tool_names: list[str] = Field(default_factory=list, description="List of tool names to be used by the agents.")
-    mcp_server_url: str = Field(
-        default="http://0.0.0.0:9901/mcp",
-        description="URL for the MCP time server.",
-    )
     query_processing_agent_name: str = Field(description="Name of the query processing agent")
     query_processing_agent_instructions: str = Field(description="Instructions for the query processing agent")
     final_response_agent_name: str = Field(description="Name of the final response agent")
@@ -44,7 +40,7 @@ class AutoGenFunctionConfig(FunctionBaseConfig, name="autogen_team"):
 
 
 @register_function(config_type=AutoGenFunctionConfig, framework_wrappers=[LLMFrameworkEnum.AUTOGEN])
-async def autogen_team(config: AutoGenFunctionConfig, builder: Builder) -> AsyncGenerator[FunctionInfo, None]:
+async def autogen_team(config: AutoGenFunctionConfig, builder: Builder) -> AsyncIterator[FunctionInfo]:
     """
     AutoGen multi-agent workflow that demonstrates collaborative agents in a team.
     The agents communicate through AutoGen's conversation system to produce output.
@@ -60,31 +56,27 @@ async def autogen_team(config: AutoGenFunctionConfig, builder: Builder) -> Async
     from autogen_agentchat.agents import AssistantAgent
     from autogen_agentchat.conditions import TextMentionTermination
     from autogen_agentchat.teams import RoundRobinGroupChat
-    from autogen_ext.tools.mcp import StreamableHttpMcpToolAdapter
-    from autogen_ext.tools.mcp import StreamableHttpServerParams
 
     try:
         llm_client = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.AUTOGEN)
         tools = await builder.get_tools(config.tool_names, wrapper_type=LLMFrameworkEnum.AUTOGEN)
 
-        time_server_params = StreamableHttpServerParams(
-            url=config.mcp_server_url,
-            headers={"Content-Type": "application/json"},
-            timeout=30,
+        query_processing_agent = AssistantAgent(
+            name=config.query_processing_agent_name,
+            model_client=llm_client,
+            tools=tools,
+            system_message=config.query_processing_agent_instructions,
         )
-        adapter = await StreamableHttpMcpToolAdapter.from_server_params(time_server_params, "current_datetime")
-        tools.append(adapter)
+        final_response_agent = AssistantAgent(
+            name=config.final_response_agent_name,
+            model_client=llm_client,
+            system_message=config.final_response_agent_instructions,
+        )
 
-        query_processing_agent = AssistantAgent(name=config.query_processing_agent_name,
-                                                model_client=llm_client,
-                                                tools=tools,
-                                                system_message=config.query_processing_agent_instructions)
-        final_response_agent = AssistantAgent(name=config.final_response_agent_name,
-                                              model_client=llm_client,
-                                              system_message=config.final_response_agent_instructions)
-
-        team = RoundRobinGroupChat(participants=[query_processing_agent, final_response_agent],
-                                   termination_condition=TextMentionTermination("APPROVE"))
+        team = RoundRobinGroupChat(
+            participants=[query_processing_agent, final_response_agent],
+            termination_condition=TextMentionTermination("APPROVE"),
+        )
 
         async def _autogen_team_workflow(user_input: str) -> str:
             """Execute the workflow with the given input.
@@ -108,11 +100,11 @@ async def autogen_team(config: AutoGenFunctionConfig, builder: Builder) -> Async
                 return f"Error occurred during AutoGen workflow: {e!s}"
 
         # Yield the function info
-        yield FunctionInfo.create(single_fn=_autogen_team_workflow)
+        yield FunctionInfo.from_fn(_autogen_team_workflow)
 
     except GeneratorExit:
         logger.info("AutoGen workflow exited early")
-    except Exception as _e:
+    except Exception:
         logger.exception("Failed to initialize AutoGen workflow")
         raise
     finally:

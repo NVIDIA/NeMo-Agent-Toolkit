@@ -21,22 +21,45 @@ general:
         level: debug
 
 llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    api_key: ${NVIDIA_API_KEY}
+    base_url: https://integrate.api.nvidia.com/v1
+    temperature: 0.0
+    max_tokens: 1024
+
   openai_llm:
     _type: openai
-    model_name: ${OPENAI_MODEL_NAME:-gpt-5}
+    model_name: gpt-4o-mini
     api_key: ${OPENAI_API_KEY}
-    base_url: ${OPENAI_API_BASE}
+    temperature: 0.0
 
+  azure_openai_llm:
+    _type: azure_openai
+    azure_deployment: ${AZURE_OPENAI_DEPLOYMENT:-your-deployment-name}
+    azure_endpoint: ${AZURE_OPENAI_ENDPOINT:-https://your-resource.openai.azure.com/}
+    api_key: ${AZURE_OPENAI_API_KEY:-placeholder}
+    temperature: 0.0
+
+# MCP tools defined as individual functions to avoid AutoGen's dot naming limitation.
+# Function groups prefix tools as "group.tool" but AutoGen doesn't allow dots in tool names.
 functions:
   weather_update_tool:
     _type: nat_autogen_demo/weather_update_autogen
     description: "Get the current weather for a specified city"
+  
+  current_datetime:
+    _type: mcp_tool_wrapper
+    transport: streamable-http
+    url: "http://localhost:9901/mcp"
+    mcp_tool_name: current_datetime
 
 workflow:
   _type: autogen_team
-  llm_name: openai_llm
+  llm_name: azure_openai_llm  # Options: nim_llm, openai_llm, azure_openai_llm
   description: "To get the current weather and time in a specific city"
-  tool_names: [weather_update_tool]
+  tool_names: [weather_update_tool, current_datetime]
   query_processing_agent_name: WeatherAndTimeAgent
   query_processing_agent_instructions: |
     You are an agent that provides the current weather and time information.

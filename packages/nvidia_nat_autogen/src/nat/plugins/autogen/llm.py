@@ -203,6 +203,67 @@ async def azure_openai_autogen(llm_config: AzureOpenAIModelConfig,
     yield _patch_autogen_client_based_on_config(client, llm_config)
 
 
+def _strip_strict_from_tools_deep(kwargs: dict[str, Any]) -> dict[str, Any]:
+    """Remove 'strict' field from tool definitions in request kwargs for NIM compatibility.
+
+    NIM's API doesn't support OpenAI's 'strict' parameter in tool/function definitions.
+    AutoGen adds this field automatically, so we strip it before sending to NIM.
+
+    Args:
+        kwargs: The request keyword arguments dictionary
+
+    Returns:
+        kwargs with 'strict' field removed from tool function definitions
+    """
+    tools = kwargs.get("tools")
+
+    # Handle NotGiven sentinel or None - just return unchanged
+    if tools is None or not isinstance(tools, (list, tuple)):
+        return kwargs
+
+    kwargs = kwargs.copy()
+    cleaned_tools = []
+    for tool in tools:
+        if isinstance(tool, dict):
+            tool_copy = tool.copy()
+            if "function" in tool_copy and isinstance(tool_copy["function"], dict):
+                func_copy = tool_copy["function"].copy()
+                func_copy.pop("strict", None)
+                tool_copy["function"] = func_copy
+            cleaned_tools.append(tool_copy)
+        else:
+            cleaned_tools.append(tool)
+    kwargs["tools"] = cleaned_tools
+    return kwargs
+
+
+def _patch_nim_client_for_tools(client: ModelType) -> ModelType:
+    """Patch AutoGen client's underlying OpenAI client to strip 'strict' from tools for NIM.
+
+    This patches at the lowest level (the actual OpenAI AsyncClient) to ensure
+    the 'strict' field is removed after AutoGen's internal processing.
+
+    Args:
+        client: The AutoGen OpenAI client to patch
+
+    Returns:
+        The patched client
+    """
+    # Access the underlying OpenAI AsyncClient
+    openai_client = client._client  # pylint: disable=protected-access
+
+    # Patch the chat.completions.create method
+    original_create = openai_client.chat.completions.create
+
+    async def patched_create(*args: Any, **kwargs: Any) -> Any:
+        # Strip 'strict' from tools before sending to NIM
+        kwargs = _strip_strict_from_tools_deep(kwargs)
+        return await original_create(*args, **kwargs)
+
+    openai_client.chat.completions.create = patched_create
+    return client
+
+
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.AUTOGEN)
 async def nim_autogen(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGenerator[ModelType, None]:
     """Create NVIDIA NIM client for AutoGen integration.
@@ -228,11 +289,12 @@ async def nim_autogen(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGen
     }
 
     # Define model info for AutoGen 0.7.4 (replaces model_capabilities)
+    # Note: structured_output=False because NIM doesn't support OpenAI's 'strict' parameter
     model_info = ModelInfo(vision=False,
                            function_calling=True,
                            json_output=True,
                            family=ModelFamily.UNKNOWN,
-                           structured_output=True,
+                           structured_output=False,
                            multiple_system_messages=True)
 
     # Add required AutoGen 0.7.4 parameters
@@ -241,6 +303,9 @@ async def nim_autogen(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGen
 
     # NIM uses OpenAI-compatible API
     client = OpenAIChatCompletionClient(model=llm_config.model_name, **config_obj)
+
+    # Patch to remove 'strict' field from tools (NIM doesn't support it)
+    client = _patch_nim_client_for_tools(client)
 
     # Apply NAT mixins and yield patched client
     yield _patch_autogen_client_based_on_config(client, llm_config)
