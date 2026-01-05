@@ -120,7 +120,7 @@ class TestMCPSessionManagement:
         """Test that a new session client is created for non-default session IDs."""
         session_id = "session-123"
 
-        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient') as mock_client_class:
+        with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient') as mock_client_class:
             mock_session_client = AsyncMock()
             mock_session_client.__aenter__ = AsyncMock(return_value=mock_session_client)
             mock_client_class.return_value = mock_session_client
@@ -140,7 +140,7 @@ class TestMCPSessionManagement:
         """Test that existing session clients are reused."""
         session_id = "session-123"
 
-        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient') as mock_client_class:
+        with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient') as mock_client_class:
             mock_session_client = AsyncMock()
             mock_session_client.__aenter__ = AsyncMock(return_value=mock_session_client)
             mock_client_class.return_value = mock_session_client
@@ -161,7 +161,7 @@ class TestMCPSessionManagement:
         """Test that last activity is updated when accessing existing sessions."""
         session_id = "session-123"
 
-        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient') as mock_client_class:
+        with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient') as mock_client_class:
             mock_session_client = AsyncMock()
             mock_session_client.__aenter__ = AsyncMock(return_value=mock_session_client)
             mock_client_class.return_value = mock_session_client
@@ -189,7 +189,7 @@ class TestMCPSessionManagement:
         for i in range(function_group._client_config.max_sessions):
             session_id = f"session-{i}"
 
-            with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient') as mock_client_class:
+            with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient') as mock_client_class:
                 mock_session_client = AsyncMock()
                 mock_session_client.__aenter__ = AsyncMock(return_value=mock_session_client)
                 mock_client_class.return_value = mock_session_client
@@ -197,7 +197,7 @@ class TestMCPSessionManagement:
                 await function_group._get_session_client(session_id)
 
         # Try to create one more session - should raise RuntimeError
-        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient') as mock_client_class:
+        with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient') as mock_client_class:
             mock_session_client = AsyncMock()
             mock_session_client.__aenter__ = AsyncMock(return_value=mock_session_client)
             mock_client_class.return_value = mock_session_client
@@ -212,7 +212,7 @@ class TestMCPSessionManagement:
         """Test that inactive sessions are cleaned up."""
         session_id = "session-123"
 
-        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient') as mock_client_class:
+        with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient') as mock_client_class:
             mock_session_client = AsyncMock()
             mock_session_client.__aenter__ = AsyncMock(return_value=mock_session_client)
             mock_session_client.__aexit__ = AsyncMock(return_value=None)
@@ -236,7 +236,7 @@ class TestMCPSessionManagement:
         """Test that sessions with active references are not cleaned up."""
         session_id = "session-123"
 
-        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient') as mock_client_class:
+        with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient') as mock_client_class:
             mock_session_client = AsyncMock()
             mock_session_client.__aenter__ = AsyncMock(return_value=mock_session_client)
             mock_client_class.return_value = mock_session_client
@@ -265,7 +265,7 @@ class TestMCPSessionManagement:
         session_id = "session-123"
 
         # Create a session first
-        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient') as mock_client_class:
+        with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient') as mock_client_class:
             mock_session_client = AsyncMock()
             mock_session_client.__aenter__ = AsyncMock(return_value=mock_session_client)
             mock_client_class.return_value = mock_session_client
@@ -296,7 +296,7 @@ class TestMCPSessionManagement:
         session2 = "session-2"
 
         # Create sessions first
-        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient') as mock_client_class:
+        with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient') as mock_client_class:
             mock_session_client = AsyncMock()
             mock_session_client.__aenter__ = AsyncMock(return_value=mock_session_client)
             mock_client_class.return_value = mock_session_client
@@ -329,7 +329,7 @@ class TestMCPSessionManagement:
         """Test cleanup with custom max_age parameter."""
         session_id = "session-123"
 
-        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient') as mock_client_class:
+        with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient') as mock_client_class:
             mock_session_client = AsyncMock()
             mock_session_client.__aenter__ = AsyncMock(return_value=mock_session_client)
             mock_session_client.__aexit__ = AsyncMock(return_value=None)
@@ -352,7 +352,7 @@ class TestMCPSessionManagement:
         """Test cleanup with longer max_age parameter that doesn't remove sessions."""
         session_id = "session-123"
 
-        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient') as mock_client_class:
+        with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient') as mock_client_class:
             mock_session_client = AsyncMock()
             mock_session_client.__aenter__ = AsyncMock(return_value=mock_session_client)
             mock_client_class.return_value = mock_session_client
@@ -377,7 +377,7 @@ class TestMCPSessionManagement:
         """Test that cleanup handles errors when closing client connections."""
         session_id = "session-123"
 
-        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient') as mock_client_class:
+        with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient') as mock_client_class:
             mock_session_client = AsyncMock()
             mock_session_client.__aenter__ = AsyncMock(return_value=mock_session_client)
             mock_session_client.__aexit__ = AsyncMock(side_effect=Exception("Close error"))
@@ -401,7 +401,7 @@ class TestMCPSessionManagement:
         """Test that concurrent session creation is handled properly."""
         session_id = "session-123"
 
-        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient') as mock_client_class:
+        with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient') as mock_client_class:
             mock_session_client = AsyncMock()
             mock_session_client.__aenter__ = AsyncMock(return_value=mock_session_client)
             mock_client_class.return_value = mock_session_client
@@ -427,7 +427,7 @@ class TestMCPSessionManagement:
         """Test that cleanup is throttled and only runs periodically."""
         session_id = "session-123"
 
-        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient') as mock_client_class:
+        with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient') as mock_client_class:
             mock_session_client = AsyncMock()
             mock_session_client.__aenter__ = AsyncMock(return_value=mock_session_client)
             mock_client_class.return_value = mock_session_client
@@ -470,7 +470,7 @@ class TestMCPSessionManagement:
         session3 = "session-3"
 
         # Create multiple sessions
-        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient') as mock_client_class:
+        with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient') as mock_client_class:
             mock_session_client = AsyncMock()
             mock_session_client.__aenter__ = AsyncMock(return_value=mock_session_client)
             mock_session_client.__aexit__ = AsyncMock(return_value=None)
@@ -505,7 +505,7 @@ class TestMCPSessionManagement:
         session_id = "session-123"
 
         # Create session
-        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient') as mock_client_class:
+        with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient') as mock_client_class:
             mock_session_client = AsyncMock()
             mock_session_client.__aenter__ = AsyncMock(return_value=mock_session_client)
             mock_session_client.__aexit__ = AsyncMock(return_value=None)
@@ -532,7 +532,7 @@ class TestMCPSessionManagement:
         sessions = ["session-1", "session-2", "session-3", "session-4"]
 
         # Create sessions
-        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient') as mock_client_class:
+        with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient') as mock_client_class:
             mock_session_client = AsyncMock()
             mock_session_client.__aenter__ = AsyncMock(return_value=mock_session_client)
             mock_session_client.__aexit__ = AsyncMock(return_value=None)
@@ -569,7 +569,7 @@ class TestMCPSessionManagement:
         mock_client.__aexit__ = AsyncMock(return_value=None)
 
         # Mock the client creation
-        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient', return_value=mock_client):
+        with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient', return_value=mock_client):
             client, stop_event, lifetime_task = await function_group._create_session_client(session_id)
 
         # Verify the client was created
@@ -596,7 +596,7 @@ class TestMCPSessionManagement:
         mock_client.__aenter__ = AsyncMock(side_effect=RuntimeError("Connection failed"))
         mock_client.__aexit__ = AsyncMock(return_value=None)
 
-        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient', return_value=mock_client):
+        with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient', return_value=mock_client):
             with pytest.raises(RuntimeError, match="Failed to initialize session client: Connection failed"):
                 await function_group._create_session_client(session_id)
 
@@ -619,7 +619,7 @@ class TestMCPSessionManagement:
         mock_client.__aenter__ = hanging_aenter
         mock_client.__aexit__ = AsyncMock(return_value=None)
 
-        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient', return_value=mock_client):
+        with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient', return_value=mock_client):
             with pytest.raises(RuntimeError, match=r"Session client initialization timed out after 2\.0s"):
                 await fg._create_session_client(session_id)
 
@@ -630,7 +630,7 @@ class TestMCPSessionManagement:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
 
-        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient', return_value=mock_client):
+        with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient', return_value=mock_client):
             _, stop_event, lifetime_task = await function_group._create_session_client(session_id)
 
         # Verify task is running
@@ -672,7 +672,7 @@ class TestMCPSessionManagement:
         mock_client.__aenter__ = tracked_aenter
         mock_client.__aexit__ = tracked_aexit
 
-        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient', return_value=mock_client):
+        with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient', return_value=mock_client):
             _, stop_event, lifetime_task = await function_group._create_session_client(session_id)
 
         # Signal stop and wait for completion
@@ -697,7 +697,7 @@ class TestMCPSessionManagement:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
 
-        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient', return_value=mock_client):
+        with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient', return_value=mock_client):
             client, stop_event, lifetime_task = await function_group._create_session_client(session_id)
 
         # Create session data
@@ -726,7 +726,7 @@ class TestMCPSessionManagement:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
 
-        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient', return_value=mock_client):
+        with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient', return_value=mock_client):
             client, stop_event, lifetime_task = await function_group._create_session_client(session_id)
 
         # Create session data with active ref_count
@@ -760,7 +760,7 @@ class TestMCPSessionManagement:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
 
-        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient', return_value=mock_client):
+        with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient', return_value=mock_client):
             client, stop_event, lifetime_task = await function_group._create_session_client(session_id)
 
         # Complete the task manually
@@ -790,7 +790,7 @@ class TestMCPSessionManagement:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
 
-        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient', return_value=mock_client):
+        with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient', return_value=mock_client):
             # Create session
             client = await function_group._get_session_client(session_id)
             assert client == mock_client
@@ -830,7 +830,7 @@ class TestMCPSessionManagement:
         mock_client2.__aenter__ = AsyncMock(return_value=mock_client2)
         mock_client2.__aexit__ = AsyncMock(return_value=None)
 
-        with patch('nat.plugins.mcp.client_base.MCPStreamableHTTPClient') as mock_client_class:
+        with patch('nat.plugins.mcp.client.client_base.MCPStreamableHTTPClient') as mock_client_class:
             mock_client_class.side_effect = [mock_client1, mock_client2]
 
             # Create both sessions
