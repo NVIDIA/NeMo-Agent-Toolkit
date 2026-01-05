@@ -179,7 +179,7 @@ The following configuration options control per-user function behavior:
 
 ### Monitoring Per-User Workflows
 
-The NeMo Agent toolkit provides a built-in monitoring endpoint for per-user workflows that exposes real-time resource usage metrics. To enable it, set `enable_per_user_monitoring` to `true` in your configuration:
+The NVIDIA NeMo Agent toolkit provides a built-in monitoring endpoint for per-user workflows that exposes real-time resource usage metrics. To enable it, set `enable_per_user_monitoring` to `true` in your configuration:
 
 ```yaml
 general:

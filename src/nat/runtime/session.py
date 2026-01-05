@@ -72,12 +72,6 @@ class PerUserBuilderInfo(BaseModel):
     error_count: int = Field(default=0, ge=0, description="Total number of failed requests")
     total_latency_ms: float = Field(default=0.0, ge=0, description="Total latency of all requests in milliseconds")
 
-    # LLM usage tracking
-    total_tokens: int = Field(default=0, ge=0, description="Total tokens used (prompt + completion)")
-    prompt_tokens: int = Field(default=0, ge=0, description="Total prompt tokens used")
-    completion_tokens: int = Field(default=0, ge=0, description="Total completion tokens used")
-    llm_calls: int = Field(default=0, ge=0, description="Total number of LLM API calls")
-
     def record_request(self, latency_ms: float, success: bool) -> None:
         """Record metrics for a completed request.
 
@@ -89,18 +83,6 @@ class PerUserBuilderInfo(BaseModel):
         self.total_latency_ms += latency_ms
         if not success:
             self.error_count += 1
-
-    def record_llm_usage(self, prompt_tokens: int, completion_tokens: int) -> None:
-        """Record LLM token usage.
-
-        Args:
-            prompt_tokens: Number of prompt tokens used
-            completion_tokens: Number of completion tokens used
-        """
-        self.prompt_tokens += prompt_tokens
-        self.completion_tokens += completion_tokens
-        self.total_tokens += prompt_tokens + completion_tokens
-        self.llm_calls += 1
 
 
 class Session:

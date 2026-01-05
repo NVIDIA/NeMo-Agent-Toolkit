@@ -593,6 +593,7 @@ The response includes the following metrics for each user:
 
 | Field | Description |
 |-------|-------------|
+| `total_active_users` | Count of users with active per-user sessions (builders still in memory), regardless of in-flight requests |
 | `user_id` | The user identifier (from `nat-session` cookie) |
 | `session.created_at` | When the per-user workflow was first created |
 | `session.last_activity` | Timestamp of the most recent request |
@@ -623,7 +624,7 @@ curl http://localhost:8000/monitor/users | jq
 ```json
 {
   "timestamp": "2025-12-17T10:30:00.000000",
-  "total_users": 2,
+  "total_active_users": 2,
   "users": [
     {
       "user_id": "alice",
@@ -692,7 +693,7 @@ curl "http://localhost:8000/monitor/users?user_id=alice"
 ```text
 {
   "timestamp": "2025-12-17T10:30:00.000000",
-  "total_users": 1,
+  "total_active_users": 1,
   "users": [
     {
       "user_id": "alice",

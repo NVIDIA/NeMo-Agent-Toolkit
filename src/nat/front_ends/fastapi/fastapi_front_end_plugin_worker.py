@@ -1424,7 +1424,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             })
 
     async def add_monitor_route(self, app: FastAPI):
-        """Add the per-user monitoring endpoint to the FastAPI app."""
+        """Add the per-user monitoring endpoint to the FastAPI app.
+
+        Security Warning:
+            This endpoint exposes per-user identifiers and usage metrics. It should be
+            protected by deploying behind an internal network, a reverse proxy with
+            authentication, or similar access controls to prevent exposure to untrusted callers.
+        """
         # Check if monitoring is enabled in config
         if not self._config.general.enable_per_user_monitoring:
             logger.debug("Per-user monitoring disabled, skipping /monitor/users endpoint")
@@ -1453,7 +1459,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 collector = PerUserMetricsCollector(session_manager)
 
-                if user_id:
+                if user_id is not None:
                     # Filter for specific user
                     user_metrics = await collector.collect_user_metrics(user_id)
                     if user_metrics:

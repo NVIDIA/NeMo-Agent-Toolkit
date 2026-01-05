@@ -126,8 +126,8 @@ class PerUserMetricsCollector:
                 try:
                     user_metrics = self._build_user_metrics(user_id, builder_info)
                     users.append(user_metrics)
-                except Exception as e:
-                    logger.warning("Failed to collect metrics for user %s: %s", user_id, e)
+                except Exception:
+                    logger.exception("Failed to collect metrics for user %s", user_id)
 
         return PerUserMonitorResponse(
             timestamp=datetime.now(),
