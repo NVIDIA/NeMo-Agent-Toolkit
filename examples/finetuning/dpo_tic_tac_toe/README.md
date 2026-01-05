@@ -274,11 +274,6 @@ For non-terminal positions without forced outcomes, the scorer uses these featur
 ```bash
 # Navigate to the example directory
 cd examples/finetuning/dpo_tic_tac_toe
-
-# Install dependencies with uv
-uv sync
-
-# Or with pip
 pip install -e .
 ```
 

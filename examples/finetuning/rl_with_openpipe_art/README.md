@@ -53,10 +53,9 @@ The model learns to play against a **random opponent**, receiving rewards based 
 
 1. **Python 3.11+**
 
-2. **NeMo Agent Toolkit** with the OpenPipe ART plugin:
-   ```bash
-   pip install nvidia-nat[openpipe-art]
-   ```
+2. **NeMo Agent Toolkit** with the OpenPipe ART plugin. This example is meant to be run using a NeMo Agent Toolkit
+   installation from source. You can follow the [NeMo Agent Toolkit Installation Guide](../../../docs/source/get-started/installation.md) to set up your environment.
+
 
 3. **OpenPipe ART** installed in a **separate virtual environment**:
 
