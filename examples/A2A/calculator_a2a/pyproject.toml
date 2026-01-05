@@ -25,7 +25,7 @@ root = "../../.."
 name = "nat_calculator_a2a"
 dynamic = ["version"]
 dependencies = [
-    "nvidia-nat[a2a]~=1.4",
+    "nvidia-nat[a2a]~=1.5",
     "nat_simple_calculator",
 ]
 requires-python = ">=3.11,<3.14"
