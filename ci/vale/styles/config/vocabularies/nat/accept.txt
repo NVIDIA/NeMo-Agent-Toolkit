@@ -22,9 +22,9 @@ Authlib
 [Bb]oolean
 [Bb]rev
 [Cc]allable(s?)
-[Cc]ategorizer
 # Documentation for ccache only capitalizes the name at the start of a sentence https://ccache.dev/
 [Cc]cache
+[Cc]ategorizer
 [Cc]hatbot(s?)
 [Cc]heckpointed
 # clangd is never capitalized even at the start of a sentence https://clangd.llvm.org/
