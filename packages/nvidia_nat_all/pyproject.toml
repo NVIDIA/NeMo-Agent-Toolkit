@@ -72,6 +72,7 @@ config-settings = { editable_mode = "compat" }
 [tool.uv.sources]
 nvidia-nat = { workspace = true }
 nvidia-nat-agno = { workspace = true }
+nvidia-nat-autogen = { workspace = true }
 nvidia-nat-crewai = { workspace = true }
 nvidia-nat-langchain = { workspace = true }
 nvidia-nat-llama-index = { workspace = true }
