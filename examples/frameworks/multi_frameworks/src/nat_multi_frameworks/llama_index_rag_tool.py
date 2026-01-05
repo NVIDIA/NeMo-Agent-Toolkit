@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -88,7 +88,7 @@ async def llama_index_rag_tool(tool_config: LlamaIndexRAGConfig, builder: Builde
         """
         rag using llama-index ingesting README markdown file
         Args:
-            query : user query
+            inputs : user query
         """
         output: str
         if not is_nvdev:
