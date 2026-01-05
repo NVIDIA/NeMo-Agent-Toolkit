@@ -19,6 +19,8 @@ limitations under the License.
 
 An agent is a system that can use an LLM to reason through a problem, create a plan to solve the problem, and execute the plan with the help of a set of tools. Refer to [Introduction to LLM Agents](https://developer.nvidia.com/blog/introduction-to-llm-agents/) for more details on this. NeMo Agent toolkit includes several agents out of the box to choose from. In addition to this NeMo Agent toolkit makes it easy to write a custom agent, for an example of this refer to the Alert Triage example (`examples/advanced_agents/alert_triage_agent`) in the [repository](https://github.com/NVIDIA/NeMo-Agent-Toolkit).
 
+NeMo Agent Toolkit also provides an [Automatic Memory Wrapper](./auto-memory-wrapper/index.md) that enhances any existing agent with automatic memory capture and retrieval capabilities.
+
 
 ```{toctree}
 :titlesonly:
@@ -30,4 +32,5 @@ Responses API and Agent <./responses-api-and-agent/index.md>
 Router Agent <./router-agent/index.md>
 Sequential Executor <./sequential-executor/index.md>
 Tool Calling Agent <./tool-calling-agent/index.md>
+Automatic Memory Wrapper <./auto-memory-wrapper/index.md>
 ```
