@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,11 +17,11 @@ limitations under the License.
 
 # About Building NVIDIA NeMo Agent Toolkit Workflows
 
-Workflows are the core of the NeMo Agent toolkit because they define which agentic tools and models are used to perform a given task or series of tasks.
+In NeMo Agent toolkit, a workflow defines which [functions](./functions-and-function-groups/functions.md) and [models](./llms/index.md) are used to perform a given task or series of tasks. A workflow definition is specified in a [YAML configuration file](#understanding-the-workflow-configuration-file). The `workflow` section of the configuration file defines the workflow itself, and specifies a function, typically an [agent](../components/agents/index.md), which will orchestrate which functions and models are called to complete the given task.
 
 ## Understanding the Workflow Configuration File
 
-The workflow configuration file is a YAML file that specifies the tools and models to use in a workflow, along with general configuration settings. This section examines the configuration of the `examples/getting_started/simple_web_query` workflow to show how they are organized.
+The workflow configuration file is a YAML file that specifies the [tools](./functions-and-function-groups/functions.md#agents-and-tools) and models to use in a workflow, along with general configuration settings. This section examines the configuration of the `examples/getting_started/simple_web_query` workflow to show how they are organized.
 
 `examples/getting_started/simple_web_query/configs/config.yml`:
 
@@ -67,13 +67,18 @@ For details on workflow configuration, including sections not utilized in the ab
 
 ## Using Agents With Workflows
 
-There are several different agents that use large language models (LLMs) to reason and determine the actions to take and inputs to use for those actions. After executing those actions, the agent uses the LLM to determine if more actions are required. The following are agents and an executor offered by NeMo Agent toolkit:
+The following are [agents](../components/agents/index.md) offered by NeMo Agent toolkit:
 
 - [Automatic Memory Wrapper Agent](../components/agents/auto-memory-wrapper/index.md)
 - [ReAct Agent](../components/agents/react-agent/index.md)
 - [Reasoning Agent](../components/agents/reasoning-agent/index.md)
 - [ReWOO Agent](../components/agents/rewoo-agent/index.md)
 - [Responses API and Agent](../components/agents/responses-api-and-agent/index.md)
+- [Tool Calling Agent](../components/agents/tool-calling-agent/index.md)
+
+## Using Control Flow Components With Workflows
+
+The following are control flow components offered by NeMo Agent toolkit:
+
 - [Router Agent](../components/agents/router-agent/index.md)
 - [Sequential Executor](../components/agents/sequential-executor/index.md)
-- [Tool Calling Agent](../components/agents/tool-calling-agent/index.md)

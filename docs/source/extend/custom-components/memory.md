@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,7 @@ limitations under the License.
 
 # Adding a Memory Provider
 
-This documentation presumes familiarity with the NeMo Agent toolkit plugin architecture, the concept of "function registration" using `@register_function`, and how we define tool/workflow configurations in the NeMo Agent toolkit config described in the [Creating a New Tool and Workflow](../../get-started/tutorials/create-a-new-workflow.md) tutorial.
+This documentation presumes familiarity with the NeMo Agent toolkit [memory module](../../build-workflows/memory.md), [plugin architecture](../plugins.md), the concept of "function registration" using `@register_function`, and how we define [tool](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) and workflow configurations in the NeMo Agent toolkit config described in the [Creating a New Tool and Workflow](../../get-started/tutorials/create-a-new-workflow.md) tutorial.
 
 ## Key Memory Module Components
 

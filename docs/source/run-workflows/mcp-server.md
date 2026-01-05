@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,13 +17,13 @@ limitations under the License.
 
 # NeMo Agent Toolkit as an MCP Server
 
-Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. You can read more about MCP [here](https://modelcontextprotocol.io/introduction).
+Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to [LLMs](../build-workflows/llms/index.md). You can read more about MCP [here](https://modelcontextprotocol.io/introduction).
 
-This guide will cover how to use NeMo Agent toolkit as an MCP Server to publish tools using MCP. For more information on how to use NeMo Agent toolkit as an MCP Host with one or more MCP Clients, refer to [MCP Client](../build-workflows/mcp-client.md).
+This guide will cover how to use NeMo Agent toolkit as an MCP Server to publish [tools](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) using MCP. For more information on how to use NeMo Agent toolkit as an MCP Host with one or more MCP Clients, refer to [MCP Client](../build-workflows/mcp-client.md).
 
 ## MCP Server Usage
 
-The `nat mcp serve` command can be used to start an MCP server that publishes the functions from your workflow as MCP tools.
+The `nat mcp serve` command can be used to start an MCP server that publishes the [functions](../build-workflows/functions-and-function-groups/functions.md) from your [workflow](../build-workflows/about-building-workflows.md) as MCP tools.
 
 To start an MCP server publishing all tools from your workflow, run the following command:
 
@@ -88,18 +88,18 @@ To list the tools published by the MCP server you can use the `nat mcp client to
 
 ```console
 $ nat mcp client tool list
-calculator.divide
-calculator.compare
-calculator.subtract
-calculator.add
-calculator.multiply
+calculator__divide
+calculator__compare
+calculator__subtract
+calculator__add
+calculator__multiply
 ```
 
 To get more information about a specific tool, use the `--detail` flag or the `--tool` flag followed by the tool name.
 
 ```console
-$ nat mcp client tool list --tool calculator.multiply
-Tool: calculator.multiply
+$ nat mcp client tool list --tool calculator__multiply
+Tool: calculator__multiply
 Description: Multiply two or more numbers together.
 Input Schema:
 {
@@ -116,7 +116,7 @@ Input Schema:
   "required": [
     "numbers"
   ],
-  "title": "Calculator.MultiplyInputSchema",
+  "title": "Calculator__MultiplyInputSchema",
   "type": "object"
 }
 ```
@@ -130,27 +130,27 @@ $ curl -s http://localhost:9901/debug/tools/list | jq
   "count": 5,
   "tools": [
     {
-      "name": "calculator.subtract",
+      "name": "calculator__subtract",
       "description": "Subtract one number from another.",
       "is_workflow": false
     },
     {
-      "name": "calculator.divide",
+      "name": "calculator__divide",
       "description": "Divide one number by another.",
       "is_workflow": false
     },
     {
-      "name": "calculator.add",
+      "name": "calculator__add",
       "description": "Add two or more numbers together.",
       "is_workflow": false
     },
     {
-      "name": "calculator.compare",
+      "name": "calculator__compare",
       "description": "Compare two numbers.",
       "is_workflow": false
     },
     {
-      "name": "calculator.multiply",
+      "name": "calculator__multiply",
       "description": "Multiply two or more numbers together.",
       "is_workflow": false
     }
@@ -166,12 +166,12 @@ You can request one or more specific tools by name. The `name` parameter accepts
 #### Single tool (detailed by default)
 
 ```console
-$ curl -s "http://localhost:9901/debug/tools/list?name=calculator.multiply" | jq
+$ curl -s "http://localhost:9901/debug/tools/list?name=calculator__multiply" | jq
 {
   "count": 1,
   "tools": [
     {
-      "name": "calculator.multiply",
+      "name": "calculator__multiply",
       "description": "Multiply two or more numbers together",
       "is_workflow": false,
       "schema": {
@@ -199,12 +199,12 @@ $ curl -s "http://localhost:9901/debug/tools/list?name=calculator.multiply" | jq
 #### Multiple tools (detailed by default)
 
 ```console
-$ curl -s "http://localhost:9901/debug/tools/list?name=calculator.multiply&name=calculator.divide" | jq
+$ curl -s "http://localhost:9901/debug/tools/list?name=calculator__multiply&name=calculator__divide" | jq
 {
   "count": 2,
   "tools": [
     {
-      "name": "calculator.divide",
+      "name": "calculator__divide",
       "description": "Divide one number by another",
       "is_workflow": false,
       "schema": {
@@ -225,7 +225,7 @@ $ curl -s "http://localhost:9901/debug/tools/list?name=calculator.multiply&name=
       }
     },
     {
-      "name": "calculator.multiply",
+      "name": "calculator__multiply",
       "description": "Multiply two or more numbers together",
       "is_workflow": false,
       "schema": {
@@ -253,12 +253,12 @@ $ curl -s "http://localhost:9901/debug/tools/list?name=calculator.multiply&name=
 #### Comma-separated list (equivalent to multiple tools)
 
 ```console
-$ curl -s "http://localhost:9901/debug/tools/list?name=calculator.multiply,calculator.divide" | jq
+$ curl -s "http://localhost:9901/debug/tools/list?name=calculator__multiply,calculator__divide" | jq
 {
   "count": 2,
   "tools": [
     {
-      "name": "calculator.multiply",
+      "name": "calculator__multiply",
       "description": "Multiply two or more numbers together.",
       "is_workflow": false,
       "schema": {
@@ -279,7 +279,7 @@ $ curl -s "http://localhost:9901/debug/tools/list?name=calculator.multiply,calcu
       }
     },
     {
-      "name": "calculator.divide",
+      "name": "calculator__divide",
       "description": "Divide one number by another.",
       "is_workflow": false,
       "schema": {
@@ -311,12 +311,12 @@ You can control the amount of detail using the `detail` query parameter:
 - When requesting specific tool(s) with `name`, detailed schema is returned by default. Pass `detail=false` to suppress schemas:
 
     ```console
-    $ curl -s "http://localhost:9901/debug/tools/list?name=calculator.multiply&detail=false" | jq
+    $ curl -s "http://localhost:9901/debug/tools/list?name=calculator__multiply&detail=false" | jq
     {
       "count": 1,
       "tools": [
         {
-          "name": "calculator.multiply",
+          "name": "calculator__multiply",
           "description": "Multiply two or more numbers together",
           "is_workflow": false
         }

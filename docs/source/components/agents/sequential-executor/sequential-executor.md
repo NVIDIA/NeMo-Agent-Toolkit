@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 # Configure With the Sequential Executor
-A sequential executor is a deterministic workflow orchestrator that executes functions in a predefined linear order. This section explores ways you can configure using the sequential executor.
+A sequential executor is a deterministic [workflow](../../../build-workflows/about-building-workflows.md) orchestrator that executes functions in a predefined linear order. This section explores ways you can configure using the sequential executor.
 
 The sequential executor is part of the core NeMo Agent toolkit and does not require additional plugin installations.
 
@@ -39,6 +39,7 @@ workflow:
   _type: sequential_executor
   tool_list: [text_processor, data_analyzer, report_generator]
   raise_type_incompatibility: false
+  return_error_on_exception: false
 ```
 ### Example 2: Sequential Executor as a Function to Configure `config.yml`
 To use the sequential executor as a function, configure the YAML file as follows:
@@ -55,6 +56,7 @@ functions:
     tool_list: [text_processor, data_analyzer, report_generator]
     description: 'A pipeline that processes text through multiple stages'
     raise_type_incompatibility: false
+    return_error_on_exception: false
 ```
 
 ### Example 3: Configure with Tool Execution Settings
@@ -79,18 +81,25 @@ workflow:
     report_generator:
       use_streaming: true
   raise_type_incompatibility: false
+  return_error_on_exception: false
 ```
 
 ### Configurable Options
 
-* `tool_list`: **Required**. A list of functions to execute sequentially. Each function's output becomes the input for the next function in the chain.
+* `description`: Defaults to "Sequential Executor Workflow". When the sequential executor is configured as a function, this config option allows control of the tool description (for example, when used as a tool within another agent).
+
+* `tool_list`: **Required**. A list of functions ([tools](../../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools)) to execute sequentially. Each function's output becomes the input for the next function in the chain.
 
 * `raise_type_incompatibility`: Defaults to `False`. Whether to raise an exception if the type compatibility check fails. The type compatibility check runs before executing the tool list, based on the type annotations of the functions. When set to `True`, any incompatibility immediately raises an exception. When set to `False`, incompatibilities generate warning messages and the sequential executor continues execution. Set this to `False` when functions in the tool list include custom type converters, as the type compatibility check may fail even though the sequential executor can still execute the tool list.
+
+* `return_error_on_exception`: Defaults to `False`. Whether to return an error message instead of raising an exception when a tool fails during execution. When set to `True`, the sequential executor exits early and returns an error message as the workflow output instead of raising the exception. When set to `False`, exceptions are re-raised. Set this to `True` when you want the workflow to gracefully handle uncaught tool failures and immediately return error information to the user.
 
 * `tool_execution_config`: Optional configuration for each tool in the sequential execution tool list. Keys must match the tool names from the `tool_list`.
   - `use_streaming`: Defaults to `False`. Whether to use streaming output for the tool.
 
+### Exceptions
 
+* **{py:class}`~nat.control_flow.sequential_executor.SequentialExecutorExit`**: Raised by a tool to exit the chain early and return a custom message as the workflow output. Unlike `return_error_on_exception` which handles unexpected errors, this exception is for intentional early termination.
 
 ## The Sequential Executor Workflow
 

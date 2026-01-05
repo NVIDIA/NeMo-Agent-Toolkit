@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,7 @@ from pathlib import Path
 import pytest
 
 from nat.test.utils import run_workflow
+from nat.test.utils import serve_workflow
 
 
 @pytest.fixture(name="agents_dir", scope="session")
@@ -57,17 +58,22 @@ def rewoo_answer_fixture(request: pytest.FixtureRequest, rewoo_data: list[dict])
 
 @pytest.mark.usefixtures("nvidia_api_key", "tavily_api_key")
 @pytest.mark.integration
+@pytest.mark.parametrize("use_rest_api", [False, True], ids=["nat_run", "nat_serve"])
 @pytest.mark.parametrize("rewoo_question, rewoo_answer", [(i, i) for i in range(5)],
                          ids=[f"qa_{i+1}" for i in range(5)],
                          indirect=True)
-async def test_rewoo_full_workflow(agents_dir: Path, rewoo_question: str, rewoo_answer: str):
+async def test_rewoo_full_workflow(agents_dir: Path, use_rest_api: bool, rewoo_question: str, rewoo_answer: str):
     config_file = agents_dir / "rewoo/configs/config.yml"
-    await run_workflow(config_file=config_file, question=rewoo_question, expected_answer=rewoo_answer)
+    if use_rest_api:
+        await serve_workflow(config_path=config_file, question=rewoo_question, expected_answer=rewoo_answer)
+    else:
+        await run_workflow(config_file=config_file, question=rewoo_question, expected_answer=rewoo_answer)
 
 
 @pytest.mark.slow
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
+@pytest.mark.parametrize("use_rest_api", [False, True], ids=["nat_run", "nat_serve"])
 @pytest.mark.parametrize(
     "config_file",
     [
@@ -79,8 +85,11 @@ async def test_rewoo_full_workflow(agents_dir: Path, rewoo_question: str, rewoo_
         "tool_calling/configs/config-reasoning.yml",
     ],
     ids=["mixture_of_agents", "react", "react-reasoning", "tool_calling", "tool_calling-reasoning"])
-async def test_agent_full_workflow(agents_dir: Path, config_file: str, question: str, answer: str):
-    await run_workflow(config_file=agents_dir / config_file, question=question, expected_answer=answer)
+async def test_agent_full_workflow(agents_dir: Path, config_file: str, use_rest_api: bool, question: str, answer: str):
+    if use_rest_api:
+        await serve_workflow(config_path=agents_dir / config_file, question=question, expected_answer=answer)
+    else:
+        await run_workflow(config_file=agents_dir / config_file, question=question, expected_answer=answer)
 
 
 # Code examples from `docs/source/resources/running-tests.md`

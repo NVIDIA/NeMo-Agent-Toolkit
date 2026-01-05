@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,14 +47,14 @@ def fixture_sample_agent_card() -> AgentCard:
         ),
         skills=[
             AgentSkill(
-                id="calculator.add",
+                id="calculator__add",
                 name="Add",
                 description="Add two or more numbers together",
                 examples=["Add 5 and 3", "What is 10 plus 20?"],
                 tags=["calculator", "math"],
             ),
             AgentSkill(
-                id="calculator.multiply",
+                id="calculator__multiply",
                 name="Multiply",
                 description="Multiply two or more numbers together",
                 examples=["Multiply 4 by 6", "What is 3 times 7?"],

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,12 +35,12 @@ def fixture_mock_workflow_with_functions() -> MagicMock:
 
     # Create mock functions with realistic attributes
     add_fn = MagicMock()
-    add_fn.name = "calculator.add"
+    add_fn.name = "calculator__add"
     add_fn.description = "Add two or more numbers together"
     add_fn.input_schema = {"type": "object", "properties": {"numbers": {"type": "array"}}}
 
     multiply_fn = MagicMock()
-    multiply_fn.name = "calculator.multiply"
+    multiply_fn.name = "calculator__multiply"
     multiply_fn.description = "Multiply two or more numbers together"
     multiply_fn.input_schema = {"type": "object", "properties": {"numbers": {"type": "array"}}}
 
@@ -50,7 +50,7 @@ def fixture_mock_workflow_with_functions() -> MagicMock:
     datetime_fn.input_schema = {"type": "object", "properties": {}}
 
     mock_workflow.functions = {
-        "calculator.add": add_fn, "calculator.multiply": multiply_fn, "current_datetime": datetime_fn
+        "calculator__add": add_fn, "calculator__multiply": multiply_fn, "current_datetime": datetime_fn
     }
     mock_workflow.function_groups = {}
 

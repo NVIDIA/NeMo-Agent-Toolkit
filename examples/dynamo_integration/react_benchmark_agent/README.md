@@ -1,5 +1,5 @@
 <!--
-Copyright (c) 2025 NVIDIA Corporation
+Copyright (c) 2025-2026, NVIDIA CORPORATION
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -78,14 +78,14 @@ The Dynamo backend must be running on `localhost:8099` before executing evaluati
 ### Create Virtual Environment
 
 ```bash
-# Navigate to NAT repository root
+# Navigate to the repository root
 cd /path/to/NeMo-Agent-Toolkit
 
 # Create virtual environment with uv
 uv venv "${HOME}/.venvs/nat_dynamo_eval" --python 3.13
 source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 
-# Install NAT with LangChain support
+# Install nvidia-nat with LangChain support
 uv pip install -e ".[langchain]"
 
 # Install visualization dependencies
@@ -794,9 +794,9 @@ pip install -e . --force-reinstall
 
 **Symptom**: Configuration paths not resolving
 
-**Fix**: Run `nat eval` from NAT repository root:
+**Fix**: Run `nat eval` from the repository root:
 ```bash
-cd /path/to/NeMo-Agent-Toolkit  # NAT root, not workflow directory
+cd /path/to/NeMo-Agent-Toolkit  # repository root, not workflow directory
 nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs/...
 ```
 

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,12 +49,12 @@ class TestA2AServerFunctionality:
 
         # Verify all functions are extracted
         assert len(functions) == 3
-        assert "calculator.add" in functions
-        assert "calculator.multiply" in functions
+        assert "calculator__add" in functions
+        assert "calculator__multiply" in functions
         assert "current_datetime" in functions
 
         # Verify function objects are preserved
-        assert functions["calculator.add"].description == "Add two or more numbers together"
+        assert functions["calculator__add"].description == "Add two or more numbers together"
 
     async def test_agent_executor_creation(self, mock_workflow_with_functions, mock_workflow_builder,
                                            a2a_server_config):

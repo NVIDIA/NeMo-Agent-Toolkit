@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +24,7 @@ from pathlib import Path
 
 import pytest
 
+from nat.observability.register import FileTelemetryExporterConfig
 from nat.runtime.loader import load_config
 from nat.test.utils import run_workflow
 
@@ -167,7 +168,7 @@ async def test_otel_full_workflow(tmp_path: Path, config_dir: Path, question: st
 
             if not called_multiply:
                 function_name = trace.get('function_ancestry', {}).get('function_name')
-                called_multiply = function_name == "calculator.multiply"
+                called_multiply = function_name == "calculator__multiply"
 
     assert len(traces) > 0
     assert called_multiply
@@ -269,3 +270,84 @@ async def test_catalyst_full_workflow(config_dir: Path,
             await asyncio.sleep(0.5)
 
     assert dataset_found
+
+
+@pytest.mark.integration
+async def test_nested_span_parent_child_lineage(tmp_path: Path, config_dir: Path):
+    """
+    Test that nested tool calls correctly track parent-child span lineage.
+
+    This test verifies that when power_of_two internally calls calculator__multiply,
+    the span exports correctly reflect the parent-child relationship:
+    - power_of_two should have parent_name pointing to the react_agent
+    - calculator__multiply should have parent_name = "power_of_two"
+    """
+    otel_file = tmp_path / "otel-nested-trace.jsonl"
+
+    # Load the nested config that has power_of_two -> calculator__multiply
+    config_file = config_dir / "config-phoenix-nested.yml"
+    config = load_config(config_file)
+
+    # Replace phoenix tracing with file-based tracing for testability
+    config.general.telemetry.tracing = {
+        "otel_file":
+            FileTelemetryExporterConfig(
+                output_path=str(otel_file.absolute()),
+                project="nested_test",
+                mode="append",
+                enable_rolling=False,
+            )
+    }
+
+    # Ask a question that requires using power_of_two (which internally calls multiply)
+    nested_question = "What is 5 to the power of 2?"
+    expected_answer = "25"
+
+    await run_workflow(config=config, question=nested_question, expected_answer=expected_answer)
+
+    assert otel_file.exists(), "OTEL trace file was not created"
+
+    # Parse all spans from the trace file
+    spans = []
+    with open(otel_file, encoding="utf-8") as fh:
+        for line in fh:
+            span = json.loads(line)
+            spans.append(span)
+
+    assert len(spans) > 0, "No spans were exported"
+
+    # Build a lookup of spans by function name
+    spans_by_function = {}
+    for span in spans:
+        func_ancestry = span.get("function_ancestry", {})
+        func_name = func_ancestry.get("function_name")
+        if func_name:
+            spans_by_function[func_name] = span
+
+    # Verify power_of_two span exists and has correct lineage
+    assert "power_of_two" in spans_by_function, (
+        f"power_of_two span not found. Available functions: {list(spans_by_function.keys())}")
+    power_of_two_span = spans_by_function["power_of_two"]
+    power_of_two_ancestry = power_of_two_span.get("function_ancestry", {})
+
+    # power_of_two's parent should be the react_agent (or workflow)
+    power_of_two_parent = power_of_two_ancestry.get("parent_name")
+    assert power_of_two_parent is not None, "power_of_two should have a parent_name"
+
+    # Verify calculator__multiply span exists and has power_of_two as parent
+    assert "calculator__multiply" in spans_by_function, (
+        f"calculator__multiply span not found. Available functions: {list(spans_by_function.keys())}")
+    multiply_span = spans_by_function["calculator__multiply"]
+    multiply_ancestry = multiply_span.get("function_ancestry", {})
+
+    multiply_parent_name = multiply_ancestry.get("parent_name")
+    assert multiply_parent_name == "power_of_two", (
+        f"calculator__multiply parent_name should be 'power_of_two', got '{multiply_parent_name}'")
+
+    # Additionally verify the parent_id linkage is consistent
+    power_of_two_id = power_of_two_ancestry.get("function_id")
+    multiply_parent_id = multiply_ancestry.get("parent_id")
+    assert multiply_parent_id == power_of_two_id, (
+        f"calculator__multiply parent_id ({multiply_parent_id}) should match "
+        f"power_of_two function_id ({power_of_two_id})"
+    )

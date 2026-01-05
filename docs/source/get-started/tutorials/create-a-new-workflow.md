@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,11 +16,11 @@ limitations under the License.
 -->
 
 
-# Create a New Tool and Workflow with NeMo Agent Toolkit
+# Create a New Tool and Workflow with NVIDIA NeMo Agent Toolkit
 
-In the [Customizing a Workflow](./customize-a-workflow.md) and [Adding Tools to a Workflow](./create-a-new-workflow.md) tutorials, we have been primarily utilizing tools that were included with the NeMo Agent toolkit. This tutorial demonstrates how to create a new tool that can ingest data from local files stored on disk.
+In the [Customizing a Workflow](./customize-a-workflow.md) and [Adding Tools to a Workflow](./create-a-new-workflow.md) tutorials, we have been primarily utilizing [tools](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) that were included with the NeMo Agent toolkit. This tutorial demonstrates how to create a new tool that can ingest data from local files stored on disk.
 
-For this purpose, create a new empty tool using the `nat workflow create` command. This command automates the setup process by generating the necessary files and directory structure for your new workflow.
+For this purpose, create a new empty component using the `nat workflow create` command. This command automates the setup process by generating the necessary files and directory structure for your new [workflow](../../build-workflows/about-building-workflows.md).
 ```bash
 nat workflow create --workflow-dir examples text_file_ingest
 ```
@@ -138,7 +138,7 @@ The rest of the code largely remains the same resulting in the following code, t
 @register_function(config_type=TextFileIngestFunctionConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def text_file_ingest_function(config: TextFileIngestFunctionConfig, builder: Builder):
 
-    from langchain.tools.retriever import create_retriever_tool
+    from langchain_classic.tools.retriever import create_retriever_tool
     from langchain_community.document_loaders import DirectoryLoader
     from langchain_community.document_loaders import TextLoader
     from langchain_community.vectorstores import USearch

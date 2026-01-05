@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -563,3 +563,194 @@ def test_try_convert_indirect_with_parameterized_types(inheritance_converter):
     # Should return original since no path to dict exists
     assert result is d
     assert isinstance(result, Derived)
+
+
+# --------------------------------------------------------------------
+# Unit tests for union type handling in converters
+# --------------------------------------------------------------------
+
+
+class TargetSchema:
+    """A simple target class for union type tests."""
+
+    def __init__(self, value):
+        self.value = value
+
+    def __eq__(self, other):
+        if isinstance(other, TargetSchema):
+            return self.value == other.value
+        return False
+
+    def __hash__(self):
+        return hash(self.value) if self.value is not None else 0
+
+
+def test_direct_conversion_with_union_from_type_str():
+    """Test direct conversion when converter has union type as from_type and data is str."""
+
+    def convert_union_to_schema(data: str | int) -> TargetSchema:
+        return TargetSchema(value=data)
+
+    converter = TypeConverter([convert_union_to_schema])
+
+    # Test with str (first member of union)
+    result = converter.convert("hello", TargetSchema)
+    assert isinstance(result, TargetSchema)
+    assert result.value == "hello"
+
+
+def test_direct_conversion_with_union_from_type_int():
+    """Test direct conversion when converter has union type as from_type and data is int."""
+
+    def convert_union_to_schema(data: str | int) -> TargetSchema:
+        return TargetSchema(value=data)
+
+    converter = TypeConverter([convert_union_to_schema])
+
+    # Test with int (second member of union)
+    result = converter.convert(42, TargetSchema)
+    assert isinstance(result, TargetSchema)
+    assert result.value == 42
+
+
+def test_direct_conversion_with_union_from_type_class():
+    """Test direct conversion when converter has union type including a class."""
+
+    def convert_union_to_schema(data: Base | str) -> TargetSchema:
+        return TargetSchema(value=data)
+
+    converter = TypeConverter([convert_union_to_schema])
+
+    # Test with str
+    result = converter.convert("hello", TargetSchema)
+    assert isinstance(result, TargetSchema)
+    assert result.value == "hello"
+
+    # Test with Base instance
+    base_obj = Base(name="test")
+    result = converter.convert(base_obj, TargetSchema)
+    assert isinstance(result, TargetSchema)
+    assert result.value is base_obj
+
+
+def test_direct_conversion_with_union_from_type_derived_class():
+    """Test direct conversion with union type where data is a subclass of union member."""
+
+    def convert_union_to_schema(data: Base | str) -> TargetSchema:
+        return TargetSchema(value=data)
+
+    converter = TypeConverter([convert_union_to_schema])
+
+    # Test with Derived (subclass of Base) - should match Base | str
+    derived_obj = Derived(name="derived")
+    result = converter.convert(derived_obj, TargetSchema)
+    assert isinstance(result, TargetSchema)
+    assert result.value is derived_obj
+
+
+def test_direct_conversion_union_type_no_match():
+    """Test that conversion fails when data doesn't match any union member."""
+
+    def convert_union_to_schema(data: str | int) -> TargetSchema:
+        return TargetSchema(value=data)
+
+    converter = TypeConverter([convert_union_to_schema])
+
+    # A list doesn't match str | int
+    with pytest.raises(ValueError, match="Cannot convert"):
+        converter.convert([1, 2, 3], TargetSchema)
+
+
+def test_indirect_conversion_with_union_from_type():
+    """Test indirect conversion when intermediate converter has union type as from_type."""
+
+    def convert_str_to_int_value(s: str) -> int:
+        return int(s)
+
+    def convert_union_to_schema(data: str | int) -> TargetSchema:
+        return TargetSchema(value=data)
+
+    converter = TypeConverter([convert_str_to_int_value, convert_union_to_schema])
+
+    # Direct path: str matches str | int directly
+    result = converter.convert("hello", TargetSchema)
+    assert isinstance(result, TargetSchema)
+    assert result.value == "hello"
+
+
+def test_try_convert_with_union_from_type_success():
+    """Test try_convert succeeds when data matches union type."""
+
+    def convert_union_to_schema(data: str | int) -> TargetSchema:
+        return TargetSchema(value=data)
+
+    converter = TypeConverter([convert_union_to_schema])
+
+    result = converter.try_convert("test", TargetSchema)
+    assert isinstance(result, TargetSchema)
+    assert result.value == "test"
+
+
+def test_try_convert_with_union_from_type_failure():
+    """Test try_convert returns original when data doesn't match union type."""
+
+    def convert_union_to_schema(data: str | int) -> TargetSchema:
+        return TargetSchema(value=data)
+
+    converter = TypeConverter([convert_union_to_schema])
+
+    original = [1, 2, 3]
+    result = converter.try_convert(original, TargetSchema)
+    assert result is original
+
+
+def test_union_type_with_three_members():
+    """Test conversion with union type having three members."""
+
+    def convert_union_to_schema(data: str | int | float) -> TargetSchema:
+        return TargetSchema(value=data)
+
+    converter = TypeConverter([convert_union_to_schema])
+
+    # Test all three union members
+    assert converter.convert("hello", TargetSchema).value == "hello"
+    assert converter.convert(42, TargetSchema).value == 42
+    assert converter.convert(3.14, TargetSchema).value == 3.14
+
+
+def test_union_type_with_none():
+    """Test conversion with optional type (union with None)."""
+
+    def convert_optional_to_schema(data: str | None) -> TargetSchema:
+        return TargetSchema(value=data if data is not None else "default")
+
+    converter = TypeConverter([convert_optional_to_schema])
+
+    # Test with str
+    result = converter.convert("hello", TargetSchema)
+    assert result.value == "hello"
+
+    # Test with None
+    result = converter.convert(None, TargetSchema)
+    assert result.value == "default"
+
+
+def test_union_type_bidirectional_conversion():
+    """Test that both directions work with union types."""
+
+    def convert_to_schema(data: str | int) -> TargetSchema:
+        return TargetSchema(value=data)
+
+    def convert_from_schema(schema: TargetSchema) -> str | int:
+        return schema.value
+
+    converter = TypeConverter([convert_to_schema, convert_from_schema])
+
+    # str -> TargetSchema
+    schema = converter.convert("hello", TargetSchema)
+    assert schema.value == "hello"
+
+    # TargetSchema -> str | int (but we target str specifically)
+    # Note: This tests that union return types don't break conversion
+    result = converter.convert(TargetSchema(value="test"), str)
+    assert result == "test"

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -1096,10 +1096,10 @@ async def test_per_user_builder_function_groups_expose_functions():
             assert "expose_fg" in per_user_builder._per_user_function_groups
 
             # Exposed function should be accessible with prefixed name (group_name.function_name)
-            assert "expose_fg.exposed_tool" in per_user_builder._per_user_functions
+            assert "expose_fg__exposed_tool" in per_user_builder._per_user_functions
 
             # Should be able to get and call it using the prefixed name
-            exposed_fn = await per_user_builder.get_function("expose_fg.exposed_tool")
+            exposed_fn = await per_user_builder.get_function("expose_fg__exposed_tool")
             result = await exposed_fn.ainvoke("test", to_type=str)
             assert result == "exposed: test"
 

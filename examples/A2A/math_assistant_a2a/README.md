@@ -1,4 +1,4 @@
-<!-- SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+<!-- SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,12 +16,12 @@ limitations under the License.
 
 # Math Assistant A2A Example
 
-This example demonstrates a per-user math assistant workflow that connects to a NAT-based calculator server while integrating with local tools, showcasing end-to-end NAT-to-NAT A2A communication with per-user isolation and hybrid tool composition.
+This example demonstrates a per-user math assistant workflow that connects to a NeMo Agent toolkit calculator server while integrating with local tools, showcasing end-to-end A2A communication with per-user isolation and hybrid tool composition.
 
 ## Key Features
 
 - **Per-User A2A Client**: Each user gets isolated A2A client connections with separate authentication and session state
-- **A2A Protocol Integration**: Connects to a remote NAT calculator workflow via A2A protocol
+- **A2A Protocol Integration**: Connects to a remote calculator workflow using A2A protocol
 - **Hybrid Tool Architecture**: Combines remote A2A tools with local MCP and custom functions
 - **OAuth2 Authentication**: Optional OAuth2-protected A2A server setup for secure per-user agent-to-agent communication
 - **Multi-User Support**: Demonstrates user isolation with different session cookies
@@ -38,14 +38,14 @@ flowchart LR
     end
 
     CTA --> AP[A2A Protocol<br/>localhost:10000]
-    AP --> CS[Calculator A2A Server<br/>NAT-based]
+    AP --> CS[Calculator A2A Server]
 
     subgraph "Calculator A2A Server"
-        CS --> CA[calculator.add]
-        CS --> CSUB[calculator.subtract]
-        CS --> CDIV[calculator.divide]
-        CS --> CMUL[calculator.multiply]
-        CS --> CCMP[calculator.compare]
+        CS --> CA[calculator__add]
+        CS --> CSUB[calculator__subtract]
+        CS --> CDIV[calculator__divide]
+        CS --> CMUL[calculator__multiply]
+        CS --> CCMP[calculator__compare]
         CS --> CDT[current_datetime]
     end
 
@@ -128,19 +128,31 @@ The example uses `per_user_react_agent`, which is the per-user version of the Re
 ### Multi-User Testing
 When using `nat serve`, different users are identified by the `nat-session` cookie:
 
+Before testing multi-user support, ensure the Calculator A2A server is running:
 ```bash
-# Start the math assistant as a server on terminal 1
+# Terminal 1: Start the A2A calculator server (if not already running)
+nat a2a serve --config_file examples/getting_started/simple_calculator/configs/config.yml --port 10000
+```
+
+Verify the server is running:
+```bash
+# Terminal 2: Check discover card
+nat a2a client discover --url http://localhost:10000
+```
+
+```bash
+# Start the math assistant as a FastAPI server on terminal 2
 nat serve --config_file examples/A2A/math_assistant_a2a/configs/config.yml
 ```
 
 ```bash
-# User "Alice" makes a request on terminal 2
+# User "Alice" makes a request on terminal 3
 curl -X POST http://localhost:8000/generate \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=Alice" \
   -d '{"messages": [{"role": "user", "content": "Is the sum of 5 and 3 greater than the current hour of the day?"}]}' | jq
 
-# User "Hatter" makes a request on terminal 2 (isolated from Alice)
+# User "Hatter" makes a request on terminal 3 (isolated from Alice)
 curl -X POST http://localhost:8000/generate \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=Hatter" \

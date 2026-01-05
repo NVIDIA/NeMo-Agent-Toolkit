@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,6 +23,7 @@ Supported Providers
 - **AWS Bedrock**: Amazon Bedrock models (such as Claude) through ``AWSBedrockModelConfig``
 
 Each wrapper:
+
 - Validates that Responses API features are disabled (Strands manages tool execution)
 - Patches clients with NeMo Agent toolkit retry logic from ``RetryMixin``
 - Injects chain-of-thought prompts when ``ThinkingMixin`` is configured
@@ -37,7 +38,7 @@ The following providers are not yet supported but could be contributed:
   ``openai_strands`` and ensure Azure-specific authentication (endpoint, API version,
   deployment name) is properly handled.
 
-- **LiteLLM**: The wrapper  would need to handle LiteLLM's unified interface across
+- **LiteLLM**: The wrapper would need to handle LiteLLM's unified interface across
   multiple providers while preserving Strands' tool execution semantics.
 
 See the Strands documentation at https://strandsagents.com for model provider details.

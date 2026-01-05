@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -123,7 +123,7 @@ To run the examples, install the NeMo Agent toolkit from source, if you haven't 
 4. [MCP Client and Servers Setup](notebooks/mcp_setup_and_integration.ipynb) - Deploy and integrate MCP clients and servers with NeMo Agent toolkit workflows
 5. [Multi-Agent Orchestration](notebooks/multi_agent_orchestration.ipynb) - Setting up a multi-agent orchestration workflow
 6. [Observability, Evaluation, and Profiling](notebooks/observability_evaluation_and_profiling.ipynb) - Instrumenting with observability, evaluation and profiling tools
-7. [Optimizing Model Selection, Parameters, and Prompts](notebooks/optimize_model_selection.ipynb) - Use NAT Optimize to compare models, parameters, and prompt variations
+7. [Optimizing Model Selection, Parameters, and Prompts](notebooks/optimize_model_selection.ipynb) - Use the NeMo Agent toolkit Optimizer to compare models, parameters, and prompt variations
 
 #### Brev Launchables
 

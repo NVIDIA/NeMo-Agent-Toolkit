@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,10 +34,10 @@ class TestA2AClientFunctionality:
         functions = await group.get_accessible_functions()
 
         # Verify get_skills function exists
-        assert "test_agent.get_skills" in functions
+        assert "test_agent__get_skills" in functions
 
         # Call get_skills
-        get_skills_fn = functions["test_agent.get_skills"]
+        get_skills_fn = functions["test_agent__get_skills"]
         result = await get_skills_fn.acall_invoke()
 
         # Verify skills are returned with correct structure
@@ -50,12 +50,12 @@ class TestA2AClientFunctionality:
         assert len(skills) == 3, "Should have exactly 3 skills from sample agent card"
 
         skill_ids = [s["id"] for s in skills]
-        assert "calculator.add" in skill_ids
-        assert "calculator.multiply" in skill_ids
+        assert "calculator__add" in skill_ids
+        assert "calculator__multiply" in skill_ids
         assert "current_datetime" in skill_ids
 
         # Verify skill details are present and well-formed
-        add_skill = next(s for s in skills if s["id"] == "calculator.add")
+        add_skill = next(s for s in skills if s["id"] == "calculator__add")
         assert add_skill["name"] == "Add"
         assert add_skill["description"] == "Add two or more numbers together"
         assert "examples" in add_skill
@@ -71,10 +71,10 @@ class TestA2AClientFunctionality:
         functions = await group.get_accessible_functions()
 
         # Verify call function exists
-        assert "test_agent.call" in functions
+        assert "test_agent__call" in functions
 
         # Verify function has correct signature
-        call_fn = functions["test_agent.call"]
+        call_fn = functions["test_agent__call"]
         assert call_fn.input_schema is not None
 
         schema_props = call_fn.input_schema.model_json_schema()["properties"]
@@ -109,7 +109,7 @@ class TestA2AClientFunctionality:
                     group = await builder.add_function_group("test_agent", config)
                     functions = await group.get_accessible_functions()
 
-                    call_fn = functions["test_agent.call"]
+                    call_fn = functions["test_agent__call"]
 
                     # Verify skills are embedded in description
                     # The description should mention the skills/capabilities
@@ -144,7 +144,7 @@ class TestA2AClientFunctionality:
                     group = await builder.add_function_group("test_agent", config)
                     functions = await group.get_accessible_functions()
 
-                    call_fn = functions["test_agent.call"]
+                    call_fn = functions["test_agent__call"]
 
                     # Verify description is shorter when skills not embedded
                     # (it should still have a description, just without skill details)
@@ -163,10 +163,10 @@ class TestA2AClientFunctionality:
         functions = await group.get_accessible_functions()
 
         # Verify get_info function exists
-        assert "test_agent.get_info" in functions
+        assert "test_agent__get_info" in functions
 
         # Call get_info
-        get_info_fn = functions["test_agent.get_info"]
+        get_info_fn = functions["test_agent__get_info"]
         result = await get_info_fn.acall_invoke()
 
         # Verify metadata structure and content

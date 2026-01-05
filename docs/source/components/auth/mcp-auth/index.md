@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 # Model Context Protocol (MCP) Authentication for the NVIDIA NeMo Agent Toolkit
-MCP provides authorization capabilities at the transport level, enabling MCP clients to make requests to restricted MCP servers on behalf of resource owners. The NVIDIA NeMo Agent toolkit provides a set of built-in authentication providers for accessing servers that require authentication.
+MCP provides authorization capabilities at the transport level, enabling MCP clients to make requests to restricted MCP servers on behalf of resource owners. The NVIDIA NeMo Agent toolkit provides a set of built-in [authentication providers](../api-authentication.md) for accessing servers that require authentication.
 
 This document covers **interactive OAuth2 authentication** (`mcp_oauth2`) for user-facing workflows. For automated, headless scenarios such as CI/CD pipelines or backend services, see [Service Account Authentication](./mcp-service-account-auth.md).
 
@@ -42,7 +42,7 @@ authentication:
 ```
 Configuration options:
 - `server_url`: The URL of the MCP server that requires authentication.
-- `redirect_uri`: The redirect URI for the OAuth2 flow. This must match the address where your NAT server is accessible from your browser.
+- `redirect_uri`: The redirect URI for the OAuth2 flow. This must match the address where your server is accessible from your browser.
 - `default_user_id`: The user ID for discovering and adding tools to the workflow at startup. The `default_user_id` can be any string and is used as the key to cache the user's information. It defaults to the `server_url` if not provided.
 - `allow_default_user_id_for_tool_calls`: Whether to allow the default user ID for tool calls. This is typically enabled for single-user workflows, for example, a workflow that is launched using the `nat run` CLI command. For multi-user workflows, this should be disabled to avoid accidental tool calls by unauthorized users.
 
@@ -55,7 +55,7 @@ To view all configuration options for the `mcp_oauth2` authentication provider, 
 Some configuration values are commonly provided through environment variables:
 - `NAT_USER_ID`: Used as `default_user_id` to cache the authenticating user during setup and optionally for tool calls. Defaults to the `server_url` if not provided.
 - `ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS`: Controls whether the default user can invoke tools. Defaults to `true` if not provided.
-- `NAT_REDIRECT_URI`: The full redirect URI for OAuth2 callbacks. Defaults to `http://localhost:8000/auth/redirect` if not provided. For remote servers or production deployments, set this to match the address where your NAT server is accessible from your browser. **Note**: If no port is specified in the URI, the server will bind to port 8000 by default.
+- `NAT_REDIRECT_URI`: The full redirect URI for OAuth2 callbacks. Defaults to `http://localhost:8000/auth/redirect` if not provided. For remote servers or production deployments, set this to match the address where your server is accessible from your browser. **Note**: If no port is specified in the URI, the server will bind to port 8000 by default.
 
 Set them for your current shell:
 ```bash
@@ -86,9 +86,6 @@ function_groups:
 - **stdio**: Local process communication, no network authentication needed
 - **SSE**: Does not support authentication, use only for local development
 
-### Configuration Compatibility
-- Authentication configuration is only available with `mcp_client` style configuration
-- Not supported with `mcp_tool_wrapper` style configuration
 
 ## Example Workflow
 The MCP Authentication Example Workflow, `examples/MCP/simple_auth_mcp/README.md`, provides an example of how to use the `mcp_oauth2` authentication provider to authenticate with an MCP server.
@@ -120,7 +117,7 @@ In this mode, the `default_user_id` is used for authentication during setup and 
 
 ```mermaid
 flowchart LR
-  U[User<br/>default-user-id] --> H[MCP Host<br/>NAT Workflow]
+  U[User<br/>default-user-id] --> H[MCP Host<br/>Workflow]
   H --> C[MCP Client<br/>default-user-id]
   C --> S[MCP Server<br/>Protected Jira Service]
 ```
@@ -141,7 +138,7 @@ In this mode, the workflow is served through a FastAPI frontend. Multiple users 
 
 ```mermaid
 flowchart LR
-  U0[User<br/>default-user-id] --> H2[MCP Host<br/>NAT Workflow]
+  U0[User<br/>default-user-id] --> H2[MCP Host<br/>Workflow]
   U1[User<br/>UI-User-1] --> H2
   U2[User<br/>UI-User-2] --> H2
 
@@ -197,7 +194,7 @@ Set the `NAT_REDIRECT_URI` environment variable to match your remote server's ad
 ```bash
 export NAT_REDIRECT_URI="http://192.168.1.100:8080/auth/redirect"
 ```
-This is an example value for a remote server at `192.168.1.100` running on port `8080`. Replace this with the actual network address where your NAT server is accessible from your browser.
+This is an example value for a remote server at `192.168.1.100` running on port `8080`. Replace this with the actual network address where your server is accessible from your browser.
 
 For production environments using a reverse proxy, specify the public HTTPS URL:
 ```bash
@@ -205,7 +202,7 @@ export NAT_REDIRECT_URI="https://myapp.example.com/auth/redirect"
 ```
 
 :::{important}
-When `redirect_uri` does not include an explicit port, the NAT server will bind to port **8000** by default (not port 80 or 443). For HTTPS redirect URIs, you must use a reverse proxy to handle TLS termination on port 443 and forward requests to the NAT server on port 8000.
+When `redirect_uri` does not include an explicit port, the server will bind to port **8000** by default (not port 80 or 443). For HTTPS redirect URIs, you must use a reverse proxy to handle TLS termination on port 443 and forward requests to the server on port 8000.
 :::
 
 Configure the authentication provider in the workflow configuration:
@@ -219,7 +216,7 @@ authentication:
     allow_default_user_id_for_tool_calls: false
 ```
 
-The `redirect_uri` must match the address where your NAT server is accessible from your browser. The `/auth/redirect` endpoint is automatically registered on the main NAT server for handling OAuth callbacks.
+The `redirect_uri` must match the address where your server is accessible from your browser. The `/auth/redirect` endpoint is automatically registered on the main server for handling OAuth callbacks.
 
 Start the server using the `--host` and `--port` flags that match your `redirect_uri`:
 ```bash
@@ -231,7 +228,7 @@ nat serve --host 0.0.0.0 --port 8000
 ```
 
 :::{note}
-For production deployments with HTTPS, you typically run NAT behind a reverse proxy (such as nginx) that handles TLS termination. In this case, set `NAT_REDIRECT_URI` to your public HTTPS address, and configure the reverse proxy to forward requests to your NAT server's internal address and port.
+For production deployments with HTTPS, you typically run behind a reverse proxy (such as nginx) that handles TLS termination. In this case, set `NAT_REDIRECT_URI` to your public HTTPS address, and configure the reverse proxy to forward requests to your server's internal address and port.
 :::
 
 ## Displaying Protected MCP Tools through the CLI
@@ -253,7 +250,7 @@ When using MCP authentication, consider the following security recommendations:
 - The `default_user_id` is used to cache the authenticating user during setup and optionally for tool calls. It is recommended to set `allow_default_user_id_for_tool_calls` to `false` in the authentication configuration for multi-user workflows to avoid accidental tool calls by unauthorized users.
 - Use HTTPS redirect URIs in production environments.
 - Scope OAuth2 tokens to the minimum required permissions.
-- For production deployments, configure [secure token storage](./mcp-auth-token-storage.md) using an external object store (S3, MySQL, or Redis) with encryption enabled.
+- For production deployments, configure [secure token storage](./mcp-auth-token-storage.md) using an external [object store](../../../build-workflows/object-store.md) (S3, MySQL, or Redis) with encryption enabled.
 
 ### Deployment Recommendations
 - **Production**: Use `streamable-http` transport with authentication and HTTPS

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -175,7 +175,7 @@ class A2AFrontEndPluginWorker:
 
         for function_name, function in functions.items():
             # Create skill from function metadata
-            skill_name = function_name.replace('_', ' ').replace('.', ' - ').title()
+            skill_name = function_name.replace('__', ' - ').replace('_', ' ').title()
             skill_description = function.description or f"Execute {function_name}"
 
             skill = AgentSkill(

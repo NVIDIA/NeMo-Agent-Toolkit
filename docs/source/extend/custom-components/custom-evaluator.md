@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,10 +16,6 @@ limitations under the License.
 -->
 
 # Adding a Custom Evaluator
-
-:::{warning}
-**Experimental Feature**: The Evaluation API is experimental and may change in future releases. Future versions may introduce breaking changes without notice.
-:::
 
 :::{note}
 We recommend reading the [Evaluating NeMo Agent toolkit Workflows](../../improve-workflows/evaluate.md) guide before proceeding with this detailed documentation.

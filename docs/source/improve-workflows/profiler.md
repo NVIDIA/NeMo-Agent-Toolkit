@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,16 +18,16 @@ limitations under the License.
 
 # Profiling and Performance Monitoring of NVIDIA NeMo Agent Toolkit Workflows
 
-The NeMo Agent toolkit Profiler Module provides profiling and forecasting capabilities for workflows. The profiler instruments the workflow execution by:
+The NeMo Agent toolkit Profiler Module provides profiling and forecasting capabilities for [workflows](../build-workflows/about-building-workflows.md). The profiler instruments the workflow execution by:
 - Collecting usage statistics in real time (using callbacks).
-- Recording the usage statistics on a per-invocation basis (for example, tokens used, time between calls, and LLM calls).
+- Recording the usage statistics on a per-invocation basis (for example, tokens used, time between calls, and [LLM](../build-workflows/llms/index.md) calls).
 - Storing the data for offline analysis.
 - Forecasting usage metrics using time-series style models (for example, linear, random forest)
 - Computing workflow specific metrics for performance analysis (for example, latency, and throughput).
 - Analyzing workflow performance measures such as bottlenecks, latency, and concurrency spikes.
 
 These functionalities will allow NeMo Agent toolkit developers to dynamically stress test their workflows in pre-production phases to receive workflow-specific sizing guidance based on observed latency and throughput of their specific workflows
-At any or every stage in a workflow execution, the NeMo Agent toolkit profiler generates predictions/forecasts about future token and tool usage. Client side forecasting allows for workflow-specific predictions which can be difficult, if not impossible, to achieve server side in order to facilitate inference planning.
+At any or every stage in a workflow execution, the NeMo Agent toolkit profiler generates predictions/forecasts about future token and [tool](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) usage. Client-side forecasting allows for workflow-specific predictions, which can be difficult, if not impossible, to achieve server-side in order to facilitate inference planning.
 Will allow for features such as offline-replay or simulation of workflow runs without the need for deployed infrastructure such as tooling/vector DBs, etc. Will also allow for NeMo Agent toolkit native observability and workflow fingerprinting.
 
 ## Prerequisites
@@ -54,7 +54,7 @@ LlamaIndex, CrewAI, Google ADK, and Semantic Kernel.
 
 ### Profiler Runner
 
-- `src/nat/profiler/profile_runner.py` is the main orchestration class. It collects workflow run statistics from the NeMo Agent toolkit Eval module, computed workflow-specific metrics, and optionally forecasts usage metrics using the Profiler module.
+- `src/nat/profiler/profile_runner.py` is the main orchestration class. It collects workflow run statistics from the NeMo Agent toolkit [Eval](./evaluate.md) module, computed workflow-specific metrics, and optionally forecasts usage metrics using the Profiler module.
 
 - Under `src/nat/profiler/forecasting`, the code trains scikit-learn style models on the usage data.
 model_trainer.py can train a LinearModel or a RandomForestModel on the aggregated usage data (the raw statistics collected).

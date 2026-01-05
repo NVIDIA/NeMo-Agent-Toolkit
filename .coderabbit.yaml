@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 
 # Docs: https://docs.coderabbit.ai/getting-started/configure-coderabbit/
 language: "en-US"
@@ -72,6 +71,14 @@ reviews:
         - All code (except .mdc files that contain Cursor rules) should be licensed under the Apache License 2.0,
           and should contain an Apache License 2.0 header comment at the top of each file.
         - Confirm that copyright years are up-to date whenever a file is changed.
+
+        # Common Bugs to Look For
+        - Pydantic models using one of the `SecretStr`, `SerializableSecretStr`, or `OptionalSecretStr` with a default
+          defined as `default=""`, creates a bug where the field will be initialized as `str` and not as an instance of
+          `SecretStr`. Instead, use `default=None` for optional secret fields such as `OptionalSecretStr` or with a
+          `default_factory=lambda: SerializableSecretStr("")` for non-optional secret fields such as `SerializableSecretStr`.
+          The `default_factory` approach is preferred for non-optional secret fields to ensure that the field is always
+          returns a unique instance.
 
     - path: "docs/source/**/*"
       instructions: >-

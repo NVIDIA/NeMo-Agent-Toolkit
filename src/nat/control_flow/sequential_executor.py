@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,6 +32,14 @@ from nat.utils.type_utils import DecomposedType
 logger = logging.getLogger(__name__)
 
 
+class SequentialExecutorExit(Exception):
+    """Raised when a tool wants to exit the sequential executor chain early with a custom message."""
+
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(message)
+
+
 class ToolExecutionConfig(BaseModel):
     """Configuration for individual tool execution within sequential execution."""
 
@@ -41,6 +49,7 @@ class ToolExecutionConfig(BaseModel):
 class SequentialExecutorConfig(FunctionBaseConfig, name="sequential_executor"):
     """Configuration for sequential execution of a list of functions."""
 
+    description: str = Field(default="Sequential Executor Workflow", description="Description of this functions use.")
     tool_list: list[FunctionRef] = Field(default_factory=list,
                                          description="A list of functions to execute sequentially.")
     tool_execution_config: dict[str, ToolExecutionConfig] = Field(default_factory=dict,
@@ -54,6 +63,11 @@ class SequentialExecutorConfig(FunctionBaseConfig, name="sequential_executor"):
         "which means the output type of the previous function is compatible with the input type of the next function."
         "If set to True, any incompatibility will raise an exception. If set to false, the incompatibility will only"
         "generate a warning message and the sequential execution will continue.")
+    return_error_on_exception: bool = Field(
+        default=False,
+        description="If set to True, when an uncaught exception occurs during tool execution, the sequential executor "
+        "will exit early and return an error message as the workflow output instead of raising the exception. "
+        "If set to False (default), exceptions are re-raised.")
 
 
 def _get_function_output_type(function: Function, tool_execution_config: dict[str, ToolExecutionConfig]) -> type:
@@ -148,7 +162,16 @@ async def sequential_execution(config: SequentialExecutorConfig, builder: Builde
                         tool_response = await tool.ainvoke(tool_input)
                 else:
                     tool_response = await tool.ainvoke(tool_input)
+            except SequentialExecutorExit as e:
+                # Tool explicitly requested early exit - always return the message
+                logger.info(f"Tool {tool_name} requested early exit: {e.message}")
+                return e.message
             except Exception as e:
+                if config.return_error_on_exception:
+                    # Return error message as workflow output instead of raising exception
+                    logger.exception(f"Error with tool {tool_name}, returning error message")
+                    error_message = f"Error in {tool_name}: {type(e).__name__}: {str(e)}"
+                    return error_message
                 logger.error(f"Error with tool {tool_name}: {e}")
                 raise
 
@@ -161,6 +184,4 @@ async def sequential_execution(config: SequentialExecutorConfig, builder: Builde
     _sequential_function_execution.__annotations__ = {"initial_tool_input": input_type, "return": output_type}
     logger.debug(f"Sequential executor function annotations: {_sequential_function_execution.__annotations__}")
 
-    yield FunctionInfo.from_fn(_sequential_function_execution,
-                               description="Executes a list of functions sequentially."
-                               "The input of the next tool is the response of the previous tool.")
+    yield FunctionInfo.from_fn(_sequential_function_execution, description=config.description)

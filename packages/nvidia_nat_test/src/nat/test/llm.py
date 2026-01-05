@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,9 +33,9 @@ from nat.cli.register_workflow import register_llm_provider
 from nat.data_models.llm import LLMBaseConfig
 
 
-class TestLLMConfig(LLMBaseConfig, name="nat_test_llm"):
-    """Test LLM configuration."""
-    __test__ = False
+class MockLLMConfig(LLMBaseConfig, name="nat_test_llm"):
+    """Mock LLM configuration."""
+
     response_seq: list[str] = Field(
         default=[],
         description="Returns the next element in order (wraps)",
@@ -66,14 +66,14 @@ class _ResponseChooser:
         await asyncio.sleep(self._delay_ms / 1000.0)
 
 
-@register_llm_provider(config_type=TestLLMConfig)
-async def test_llm_provider(config: TestLLMConfig, builder: Builder):
+@register_llm_provider(config_type=MockLLMConfig)
+async def test_llm_provider(config: MockLLMConfig, builder: Builder) -> AsyncGenerator[LLMProviderInfo, None]:
     """Register the `nat_test_llm` provider for the NAT registry."""
     yield LLMProviderInfo(config=config, description="Test LLM provider")
 
 
-@register_llm_client(config_type=TestLLMConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-async def test_llm_langchain(config: TestLLMConfig, builder: Builder):
+@register_llm_client(config_type=MockLLMConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+async def test_llm_langchain(config: MockLLMConfig, builder: Builder):
     """LLM client for LangChain/LangGraph."""
 
     chooser = _ResponseChooser(response_seq=config.response_seq, delay_ms=config.delay_ms)
@@ -107,8 +107,8 @@ async def test_llm_langchain(config: TestLLMConfig, builder: Builder):
     yield LangChainTestLLM()
 
 
-@register_llm_client(config_type=TestLLMConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
-async def test_llm_llama_index(config: TestLLMConfig, builder: Builder):
+@register_llm_client(config_type=MockLLMConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
+async def test_llm_llama_index(config: MockLLMConfig, builder: Builder):
 
     try:
         from llama_index.core.base.llms.types import ChatMessage
@@ -142,8 +142,8 @@ async def test_llm_llama_index(config: TestLLMConfig, builder: Builder):
     yield LITestLLM()
 
 
-@register_llm_client(config_type=TestLLMConfig, wrapper_type=LLMFrameworkEnum.CREWAI)
-async def test_llm_crewai(config: TestLLMConfig, builder: Builder):
+@register_llm_client(config_type=MockLLMConfig, wrapper_type=LLMFrameworkEnum.CREWAI)
+async def test_llm_crewai(config: MockLLMConfig, builder: Builder):
     """LLM client for CrewAI."""
 
     chooser = _ResponseChooser(response_seq=config.response_seq, delay_ms=config.delay_ms)
@@ -157,8 +157,8 @@ async def test_llm_crewai(config: TestLLMConfig, builder: Builder):
     yield CrewAITestLLM()
 
 
-@register_llm_client(config_type=TestLLMConfig, wrapper_type=LLMFrameworkEnum.SEMANTIC_KERNEL)
-async def test_llm_semantic_kernel(config: TestLLMConfig, builder: Builder):
+@register_llm_client(config_type=MockLLMConfig, wrapper_type=LLMFrameworkEnum.SEMANTIC_KERNEL)
+async def test_llm_semantic_kernel(config: MockLLMConfig, builder: Builder):
     """LLM client for SemanticKernel."""
 
     try:
@@ -186,8 +186,8 @@ async def test_llm_semantic_kernel(config: TestLLMConfig, builder: Builder):
     yield SKTestLLM()
 
 
-@register_llm_client(config_type=TestLLMConfig, wrapper_type=LLMFrameworkEnum.AGNO)
-async def test_llm_agno(config: TestLLMConfig, builder: Builder):
+@register_llm_client(config_type=MockLLMConfig, wrapper_type=LLMFrameworkEnum.AGNO)
+async def test_llm_agno(config: MockLLMConfig, builder: Builder):
     """LLM client for agno."""
 
     chooser = _ResponseChooser(response_seq=config.response_seq, delay_ms=config.delay_ms)
@@ -213,8 +213,8 @@ async def test_llm_agno(config: TestLLMConfig, builder: Builder):
     yield AgnoTestLLM()
 
 
-@register_llm_client(config_type=TestLLMConfig, wrapper_type=LLMFrameworkEnum.ADK)
-async def test_llm_adk(config: TestLLMConfig, builder: Builder):
+@register_llm_client(config_type=MockLLMConfig, wrapper_type=LLMFrameworkEnum.ADK)
+async def test_llm_adk(config: MockLLMConfig, builder: Builder):
     """LLM client for Google ADK."""
 
     try:
