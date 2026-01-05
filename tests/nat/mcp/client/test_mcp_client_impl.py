@@ -122,7 +122,7 @@ async def test_mcp_client_function_group_includes_respected():
 
         async with mcp_client_function_group(client_cfg, mock_builder) as group:
             accessible = await group.get_accessible_functions()
-            assert set(accessible.keys()) == {"mcp_client.fake_tool_1"}
+            assert set(accessible.keys()) == {"mcp_client__fake_tool_1"}
 
 
 async def test_mcp_client_function_group_applies_overrides():
@@ -141,8 +141,8 @@ async def test_mcp_client_function_group_applies_overrides():
 
         async with mcp_client_function_group(client_cfg, mock_builder) as group:
             accessible = await group.get_accessible_functions()
-            assert set(accessible.keys()) == {"mcp_client.alias_raw"}
-            assert accessible["mcp_client.alias_raw"].description == "new desc"
+            assert set(accessible.keys()) == {"mcp_client__alias_raw"}
+            assert accessible["mcp_client__alias_raw"].description == "new desc"
 
 
 async def test_mcp_client_function_group_no_include_exposes_all():
@@ -157,4 +157,4 @@ async def test_mcp_client_function_group_no_include_exposes_all():
 
         async with mcp_client_function_group(client_cfg, mock_builder) as group:
             accessible = await group.get_accessible_functions()
-            assert set(accessible.keys()) == {"mcp_client.a", "mcp_client.b"}
+            assert set(accessible.keys()) == {"mcp_client__a", "mcp_client__b"}

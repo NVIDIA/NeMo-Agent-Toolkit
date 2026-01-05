@@ -139,9 +139,9 @@ class CalcRunner:
         Validate the configuration parameters.
         Raises ValueError if configuration is invalid.
         """
-        # atleast two concurrencies are needed to estimate the GPU count
+        # at least two concurrencies are needed to estimate the GPU count
         if len(self.config.concurrencies) < 2:
-            raise ValueError("Atleast two concurrencies are needed to estimate the GPU count.")
+            raise ValueError("At least two concurrencies are needed to estimate the GPU count.")
 
         # if the same value is repeated in the concurrencies list, raise an error
         if len(self.config.concurrencies) != len(set(self.config.concurrencies)):

@@ -85,10 +85,10 @@ An additional case to note is when a function group is served by an MCP server, 
 workflow:
   _type: react_agent
   tool_names:
-    - mcp_tools.calculator.add
+    - mcp_tools__calculator__add
 ```
 
-`mcp_tools` is the name of the function group, and `calculator.add` is the name of the tool within the function group. This is because the tools are added to the function group as functions, and the function group is then added to the workflow as a tool.
+`mcp_tools` is the name of the function group, and `calculator__add` is the name of the tool within the function group. This is because the tools are added to the function group as functions, and the function group is then added to the workflow as a tool.
 
 #### Configuration Options
 
@@ -138,8 +138,8 @@ function_groups:
   mcp_tools:
     _type: mcp_client
     include:
-      - calculator.add
-      - calculator.multiply
+      - calculator__add
+      - calculator__multiply
     server:
       transport: streamable-http
       url: "http://localhost:9901/mcp"
@@ -153,10 +153,10 @@ function_groups:
     max_sessions: 50  # Maximum concurrent sessions
     session_idle_timeout: 7200  # 2 hours (in seconds)
     tool_overrides:
-      calculator.add:
+      calculator__add:
         alias: "add_numbers"
         description: "Add two numbers together"
-      calculator.multiply:
+      calculator__multiply:
         description: "Multiply two numbers"  # Keeps original name
 ```
 
@@ -279,11 +279,11 @@ For SSE transport, ensure the MCP server starts with the `--transport sse` flag.
 
 Sample output:
 ```text
-calculator.add
-calculator.multiply
-calculator.subtract
-calculator.divide
-calculator.compare
+calculator__add
+calculator__multiply
+calculator__subtract
+calculator__divide
+calculator__compare
 current_datetime
 react_agent
 ```
@@ -293,12 +293,12 @@ react_agent
 To get detailed information about a specific tool, use the `--tool` flag:
 
 ```bash
-nat mcp client tool list --url http://localhost:9901/mcp --tool calculator.multiply
+nat mcp client tool list --url http://localhost:9901/mcp --tool calculator__multiply
 ```
 
 Sample output:
 ```text
-Tool: calculator.multiply
+Tool: calculator__multiply
 Description: Multiply two or more numbers together
 Input Schema:
 {
@@ -315,7 +315,7 @@ Input Schema:
   "required": [
     "numbers"
   ],
-  "title": "Calculator.MultiplyInputSchema",
+  "title": "Calculator__MultiplyInputSchema",
   "type": "object"
 }
 ```
@@ -325,7 +325,7 @@ To call a tool and get its output:
 
 ```console
 # Pass arguments as JSON
-$ nat mcp client tool call calculator.multiply \
+$ nat mcp client tool call calculator__multiply \
   --url http://localhost:9901/mcp \
   --json-args '{"numbers": [1, 3, 6, 10]}'
 180.0
@@ -403,31 +403,31 @@ When you serve a workflow that includes an `mcp_client` function group, the NeMo
       "protected": false,
       "tools": [
         {
-          "name": "calculator.add",
+          "name": "calculator__add",
           "description": "Add two or more numbers together",
           "server": "streamable-http:http://localhost:9901/mcp",
           "available": true
         },
         {
-          "name": "calculator.compare",
+          "name": "calculator__compare",
           "description": "Compare two numbers",
           "server": "streamable-http:http://localhost:9901/mcp",
           "available": true
         },
         {
-          "name": "calculator.divide",
+          "name": "calculator__divide",
           "description": "Divide one number by another",
           "server": "streamable-http:http://localhost:9901/mcp",
           "available": true
         },
         {
-          "name": "calculator.multiply",
+          "name": "calculator__multiply",
           "description": "Multiply two or more numbers together",
           "server": "streamable-http:http://localhost:9901/mcp",
           "available": true
         },
         {
-          "name": "calculator.subtract",
+          "name": "calculator__subtract",
           "description": "Subtract one number from another",
           "server": "streamable-http:http://localhost:9901/mcp",
           "available": true

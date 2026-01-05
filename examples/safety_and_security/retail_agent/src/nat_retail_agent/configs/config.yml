@@ -1,0 +1,46 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+function_groups:
+  retail_tools:
+    _type: retail_tools
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.0
+    max_tokens: 1024
+
+workflow:
+  _type: react_agent
+  tool_names: [retail_tools]
+  llm_name: nim_llm
+  verbose: true
+  max_tool_calls: 64
+  parse_agent_response_max_retries: 3
+  additional_instructions: |
+    You are a customer service agent for GreenThumb Gardening Equipment.
+    You receive an email and you answer an email using the email tool provided.
+    The output of the workflow should also include all the email_details as a JSON object.
+
+    In the email:
+    - Always greet the customer as Sir / Madam, pick the right one if it can be guessed from the email.
+    - When a customer wants to place an order, use get_product_info to check stock and pricing
+    - Use product identifiers to refer to concrete products, not their names.
+    - Use the product names to search for concrete products matching a general description.
+    - After confirming an order, use update_customer_info and send_email to finalize.
+    - Be helpful and suggest related products when appropriate
+    - Always confirm important details like quantities and email addresses
