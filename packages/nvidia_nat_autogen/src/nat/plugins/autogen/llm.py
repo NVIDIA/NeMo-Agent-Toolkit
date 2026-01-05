@@ -113,6 +113,21 @@ def _patch_autogen_client_based_on_config(client: ModelType, llm_config: LLMBase
     return client
 
 
+async def _close_autogen_client(client: Any) -> None:
+    """Close an AutoGen client if it has a close method.
+
+    Args:
+        client: The AutoGen client to close
+    """
+    try:
+        if hasattr(client, "close"):
+            await client.close()
+        elif hasattr(client, "_client") and hasattr(client._client, "close"):
+            await client._client.close()
+    except Exception:
+        logger.debug("Error closing AutoGen client", exc_info=True)
+
+
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.AUTOGEN)
 async def openai_autogen(llm_config: OpenAIModelConfig, _builder: Builder) -> AsyncGenerator[ModelType, None]:
     """Create OpenAI client for AutoGen integration.
@@ -152,8 +167,11 @@ async def openai_autogen(llm_config: OpenAIModelConfig, _builder: Builder) -> As
     # Create AutoGen OpenAI client
     client = OpenAIChatCompletionClient(model=llm_config.model_name, **config_obj)
 
-    # Apply NAT mixins and yield patched client
-    yield _patch_autogen_client_based_on_config(client, llm_config)
+    try:
+        # Apply NAT mixins and yield patched client
+        yield _patch_autogen_client_based_on_config(client, llm_config)
+    finally:
+        await _close_autogen_client(client)
 
 
 @register_llm_client(config_type=AzureOpenAIModelConfig, wrapper_type=LLMFrameworkEnum.AUTOGEN)
@@ -199,8 +217,11 @@ async def azure_openai_autogen(llm_config: AzureOpenAIModelConfig,
         model=llm_config.azure_deployment,  # Use deployment name for Azure
         **config_obj)
 
-    # Apply NAT mixins and yield patched client
-    yield _patch_autogen_client_based_on_config(client, llm_config)
+    try:
+        # Apply NAT mixins and yield patched client
+        yield _patch_autogen_client_based_on_config(client, llm_config)
+    finally:
+        await _close_autogen_client(client)
 
 
 def _strip_strict_from_tools_deep(kwargs: dict[str, Any]) -> dict[str, Any]:
@@ -247,21 +268,34 @@ def _patch_nim_client_for_tools(client: ModelType) -> ModelType:
         client: The AutoGen OpenAI client to patch
 
     Returns:
-        The patched client
+        The patched client (unmodified if patching fails)
     """
-    # Access the underlying OpenAI AsyncClient
-    openai_client = client._client  # pylint: disable=protected-access
+    try:
+        # Access the underlying OpenAI AsyncClient (protected member)
+        openai_client = getattr(client, "_client", None)
+        if openai_client is None:
+            logger.warning("Unable to patch NIM client for tools - _client attribute not found")
+            return client
 
-    # Patch the chat.completions.create method
-    original_create = openai_client.chat.completions.create
+        # Verify the expected structure exists
+        if not hasattr(openai_client, "chat") or not hasattr(openai_client.chat, "completions"):
+            logger.warning("Unable to patch NIM client for tools - unexpected client structure")
+            return client
 
-    async def patched_create(*args: Any, **kwargs: Any) -> Any:
-        # Strip 'strict' from tools before sending to NIM
-        kwargs = _strip_strict_from_tools_deep(kwargs)
-        return await original_create(*args, **kwargs)
+        # Patch the chat.completions.create method
+        original_create = openai_client.chat.completions.create
 
-    openai_client.chat.completions.create = patched_create
-    return client
+        async def patched_create(*args: Any, **kwargs: Any) -> Any:
+            # Strip 'strict' from tools before sending to NIM
+            kwargs = _strip_strict_from_tools_deep(kwargs)
+            return await original_create(*args, **kwargs)
+
+        openai_client.chat.completions.create = patched_create
+        return client
+
+    except AttributeError as e:
+        logger.warning("Unable to patch NIM client for tools - AutoGen internal structure changed: %s", e)
+        return client
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.AUTOGEN)
@@ -307,8 +341,11 @@ async def nim_autogen(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGen
     # Patch to remove 'strict' field from tools (NIM doesn't support it)
     client = _patch_nim_client_for_tools(client)
 
-    # Apply NAT mixins and yield patched client
-    yield _patch_autogen_client_based_on_config(client, llm_config)
+    try:
+        # Apply NAT mixins and yield patched client
+        yield _patch_autogen_client_based_on_config(client, llm_config)
+    finally:
+        await _close_autogen_client(client)
 
 
 @register_llm_client(config_type=LiteLlmModelConfig, wrapper_type=LLMFrameworkEnum.AUTOGEN)
@@ -357,8 +394,11 @@ async def litellm_autogen(llm_config: LiteLlmModelConfig, _builder: Builder) -> 
     # LiteLLM uses OpenAI-compatible API
     client = OpenAIChatCompletionClient(model=llm_config.model_name, **config_obj)
 
-    # Apply NAT mixins and yield patched client
-    yield _patch_autogen_client_based_on_config(client, llm_config)
+    try:
+        # Apply NAT mixins and yield patched client
+        yield _patch_autogen_client_based_on_config(client, llm_config)
+    finally:
+        await _close_autogen_client(client)
 
 
 @register_llm_client(config_type=AWSBedrockModelConfig, wrapper_type=LLMFrameworkEnum.AUTOGEN)
@@ -412,5 +452,8 @@ async def bedrock_autogen(llm_config: AWSBedrockModelConfig, _builder: Builder) 
     # Create AutoGen Bedrock client
     client = AnthropicBedrockChatCompletionClient(**bedrock_config)
 
-    # Apply NAT mixins and yield patched client
-    yield _patch_autogen_client_based_on_config(client, llm_config)
+    try:
+        # Apply NAT mixins and yield patched client
+        yield _patch_autogen_client_based_on_config(client, llm_config)
+    finally:
+        await _close_autogen_client(client)

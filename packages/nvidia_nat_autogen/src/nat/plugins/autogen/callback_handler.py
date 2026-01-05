@@ -251,11 +251,14 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
         except Exception:
             return "unknown_model"
 
-    def _extract_input_text(self, messages: list[dict[str, Any]]) -> str:
+    def _extract_input_text(self, messages: list[Any]) -> str:
         """Extract text content from message list.
 
+        Handles both dict-style messages and AutoGen typed message objects
+        (UserMessage, AssistantMessage, SystemMessage).
+
         Args:
-            messages: List of message dictionaries
+            messages: List of message dictionaries or AutoGen message objects
 
         Returns:
             str: Concatenated text content from messages
@@ -263,7 +266,16 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
         model_input = ""
         try:
             for message in messages:
-                content = message.get("content", "")
+                # Handle dict-style messages
+                if isinstance(message, dict):
+                    content = message.get("content", "")
+                # Handle AutoGen typed message objects (UserMessage, AssistantMessage, etc.)
+                elif hasattr(message, "content"):
+                    content = message.content
+                else:
+                    # Fallback to string conversion
+                    content = str(message)
+
                 if isinstance(content, list):
                     for part in content:
                         if isinstance(part, dict):
@@ -464,7 +476,6 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
             # Collect streaming output
             output_chunks: list[str] = []
             usage_payload: dict[str, Any] = {}
-            error_occurred = False
 
             try:
                 async for chunk in original_func(*args, **kwargs):
@@ -482,8 +493,29 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
                         pass
                     yield chunk
 
+                # Success path - push LLM_END event after stream completes
+                end_time = time.time()
+                model_output = "".join(output_chunks)
+                handler.step_manager.push_intermediate_step(
+                    IntermediateStepPayload(
+                        event_type=IntermediateStepType.LLM_END,
+                        span_event_timestamp=end_time,
+                        framework=LLMFrameworkEnum.AUTOGEN,
+                        name=model_name,
+                        data=StreamEventData(input=model_input, output=model_output),
+                        metadata=TraceMetadata(chat_responses={}),
+                        usage_info=UsageInfo(
+                            token_usage=TokenUsageBaseModel(**usage_payload),
+                            num_llm_calls=1,
+                            seconds_between_calls=seconds_between_calls,
+                        ),
+                        UUID=start_uuid,
+                    ))
+                with handler._lock:
+                    handler.last_call_ts = end_time
+
             except Exception as e:
-                error_occurred = True
+                # Error path - push error LLM_END event
                 logger.error("Error during streaming LLM call: %s", e)
                 handler.step_manager.push_intermediate_step(
                     IntermediateStepPayload(
@@ -499,29 +531,6 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
                 with handler._lock:
                     handler.last_call_ts = time.time()
                 raise
-
-            finally:
-                if not error_occurred:
-                    # Push LLM_END event after stream completes
-                    end_time = time.time()
-                    model_output = "".join(output_chunks)
-                    handler.step_manager.push_intermediate_step(
-                        IntermediateStepPayload(
-                            event_type=IntermediateStepType.LLM_END,
-                            span_event_timestamp=end_time,
-                            framework=LLMFrameworkEnum.AUTOGEN,
-                            name=model_name,
-                            data=StreamEventData(input=model_input, output=model_output),
-                            metadata=TraceMetadata(chat_responses={}),
-                            usage_info=UsageInfo(
-                                token_usage=TokenUsageBaseModel(**usage_payload),
-                                num_llm_calls=1,
-                                seconds_between_calls=seconds_between_calls,
-                            ),
-                            UUID=start_uuid,
-                        ))
-                    with handler._lock:
-                        handler.last_call_ts = end_time
 
         return wrapped_stream_call
 

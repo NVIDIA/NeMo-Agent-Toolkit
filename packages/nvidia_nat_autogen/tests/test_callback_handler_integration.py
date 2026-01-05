@@ -406,7 +406,11 @@ async def test_nim_autogen_error_handling_telemetry(
         # Make a call that should fail
         messages = [UserMessage(content="Hello", source="user")]
 
-        with pytest.raises(Exception):  # Should raise authentication or API error
+        # Should raise authentication or API error - match common auth/API failure patterns
+        with pytest.raises(
+                Exception,
+                match=r"(?i)(authentication|api[_\s]?key|401|unauthorized|invalid|forbidden|credentials)",
+        ):
             await client.create(messages=messages)
 
         # Allow events to propagate
