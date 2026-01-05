@@ -105,14 +105,11 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
                 if refreshed_auth_result:
                     return refreshed_auth_result
 
-        # Prefer custom auth callback if explicitly set (e.g., MCP-specific handler),
-        # otherwise fall back to context's callback
-        auth_callback = self._auth_callback
-        if not auth_callback:
-            try:
-                auth_callback = Context.get().user_auth_callback
-            except RuntimeError:
-                pass
+        # Try getting callback from the context if that's not set, use the default callback
+        try:
+            auth_callback = Context.get().user_auth_callback
+        except RuntimeError:
+            auth_callback = self._auth_callback
 
         if not auth_callback:
             raise RuntimeError("Authentication callback not set on Context.")
