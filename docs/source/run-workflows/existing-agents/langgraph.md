@@ -15,9 +15,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Running Existing LangGraph Agents
+# Running Existing LangGraph Agents in NVIDIA NeMo Agent Toolkit
 
-NeMo Agent toolkit provides a `langgraph_wrapper` workflow type that allows you to integrate existing LangGraph agents with minimal changes to your code. This wrapper enables you to run LangGraph agents through the toolkit while adding configuration management, observability, and evaluation capabilities.
+NVIDIA NeMo Agent toolkit provides a `langgraph_wrapper` workflow type that allows you to integrate existing LangGraph agents with minimal changes to your code. This wrapper enables you to run LangGraph agents through the toolkit while adding configuration management, observability, and evaluation capabilities.
 
 ## Prerequisites
 

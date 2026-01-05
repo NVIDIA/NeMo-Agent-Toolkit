@@ -46,6 +46,7 @@ logger = logging.getLogger(__name__)
 
 
 class LanggraphWrapperInput(BaseModel):
+    """Input model for the LangGraph wrapper."""
 
     model_config = ConfigDict(extra="allow")
 
@@ -53,6 +54,7 @@ class LanggraphWrapperInput(BaseModel):
 
 
 class LanggraphWrapperOutput(BaseModel):
+    """Output model for the LangGraph wrapper."""
 
     model_config = ConfigDict(extra="allow")
 
@@ -60,9 +62,9 @@ class LanggraphWrapperOutput(BaseModel):
 
 
 class LanggraphWrapperConfig(FunctionBaseConfig, name="langgraph_wrapper"):
+    """Configuration model for the LangGraph wrapper."""
 
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(extra="forbid")
 
     description: str = ""
     dependencies: list[str] = Field(default_factory=list)
@@ -71,8 +73,17 @@ class LanggraphWrapperConfig(FunctionBaseConfig, name="langgraph_wrapper"):
 
 
 class LanggraphWrapperFunction(Function[LanggraphWrapperInput, NoneType, LanggraphWrapperOutput]):
+    """Function for the LangGraph wrapper."""
 
     def __init__(self, *, config: LanggraphWrapperConfig, description: str | None = None, graph: CompiledStateGraph):
+        """Initialize the LangGraph wrapper function.
+
+        Args:
+            config: The configuration for the LangGraph wrapper.
+            description: The description of the LangGraph wrapper.
+            graph: The graph to wrap.
+        """
+
         super().__init__(config=config, description=description, converters=[LanggraphWrapperFunction.convert_to_str])
 
         self._graph = graph
@@ -99,13 +110,17 @@ class LanggraphWrapperFunction(Function[LanggraphWrapperInput, NoneType, Langgra
 
     async def _astream(self, value: LanggraphWrapperInput) -> AsyncGenerator[LanggraphWrapperOutput, None]:
         try:
-            async for output in self._graph.astream(value):
-                yield output
+            async for output in self._graph.astream(value.model_dump()):
+                yield LanggraphWrapperOutput.model_validate(output)
         except Exception as e:
             raise RuntimeError(f"Error in langchain graph: {e}") from e
 
     @staticmethod
     def convert_to_str(value: LanggraphWrapperOutput) -> str:
+        """Convert the output to a string."""
+        if not value.messages:
+            return ""
+
         return value.messages[-1].text
 
 

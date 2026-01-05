@@ -33,6 +33,7 @@ from nat.builder.context import Context
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import ServerToolUseSchema
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import ToolSchema
 from nat.data_models.intermediate_step import TraceMetadata

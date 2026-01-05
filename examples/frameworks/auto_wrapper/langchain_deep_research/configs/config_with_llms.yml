@@ -32,5 +32,5 @@ workflow:
   _type: langgraph_wrapper
   dependencies:
     - external/lc-deepagents-quickstarts/deep_research
-  graph: examples/frameworks/auto_wrapper/langchain_deep_research/configurable_agent.py:agent
+  graph: examples/frameworks/auto_wrapper/langchain_deep_research/src/configurable_agent.py:agent
   env: .env

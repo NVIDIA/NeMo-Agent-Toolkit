@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 
-# Integrating Existing LangGraph Agents with NeMo Agent Toolkit
+# Integrating Existing LangGraph Agents with NVIDIA NeMo Agent Toolkit
 
 This example demonstrates how to integrate any existing LangGraph agent with NeMo Agent toolkit using the `langgraph_wrapper` workflow type.
 
