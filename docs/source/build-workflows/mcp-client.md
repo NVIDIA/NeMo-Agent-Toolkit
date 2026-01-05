@@ -36,9 +36,7 @@ NeMo Agent toolkit can access protected MCP servers through the MCP client auth 
 ## MCP Client Configuration
 NeMo Agent toolkit enables workflows to use MCP tools as functions. The library handles the MCP server connection, tool discovery, and function registration. This allows the workflow to use MCP tools as regular functions.
 
-Tools served by remote MCP servers can be used as NeMo Agent toolkit functions in one of two ways:
-- `mcp_client`: A flexible configuration using [function groups](./functions-and-function-groups/function-groups.md) that allows you to connect to an MCP server, dynamically discover the tools it serves, and register them as NeMo Agent toolkit functions.
-- `mcp_tool_wrapper`: A simple configuration that allows you to wrap a single MCP tool as a NeMo Agent toolkit function.
+Tools served by remote MCP servers can be used as NeMo Agent toolkit functions using `mcp_client`, a flexible configuration using [function groups](./functions-and-function-groups/function-groups.md) that allows you to connect to an MCP server, dynamically discover the tools it serves, and register them as NeMo Agent toolkit functions.
 
 ### `mcp_client` Configuration
 ```yaml
@@ -87,10 +85,10 @@ An additional case to note is when a function group is served by an MCP server, 
 workflow:
   _type: react_agent
   tool_names:
-    - mcp_tools.calculator.add
+    - mcp_tools__calculator__add
 ```
 
-`mcp_tools` is the name of the function group, and `calculator.add` is the name of the tool within the function group. This is because the tools are added to the function group as functions, and the function group is then added to the workflow as a tool.
+`mcp_tools` is the name of the function group, and `calculator__add` is the name of the tool within the function group. This is because the tools are added to the function group as functions, and the function group is then added to the workflow as a tool.
 
 #### Configuration Options
 
@@ -140,8 +138,8 @@ function_groups:
   mcp_tools:
     _type: mcp_client
     include:
-      - calculator.add
-      - calculator.multiply
+      - calculator__add
+      - calculator__multiply
     server:
       transport: streamable-http
       url: "http://localhost:9901/mcp"
@@ -155,35 +153,15 @@ function_groups:
     max_sessions: 50  # Maximum concurrent sessions
     session_idle_timeout: 7200  # 2 hours (in seconds)
     tool_overrides:
-      calculator.add:
+      calculator__add:
         alias: "add_numbers"
         description: "Add two numbers together"
-      calculator.multiply:
+      calculator__multiply:
         description: "Multiply two numbers"  # Keeps original name
 ```
 
-### `mcp_tool_wrapper` Configuration
-```yaml
-functions:
-  mcp_tool_a:
-    _type: mcp_tool_wrapper
-    url: "http://localhost:9901/mcp"
-    mcp_tool_name: tool_a
-  mcp_tool_b:
-    _type: mcp_tool_wrapper
-    url: "http://localhost:9901/mcp"
-    mcp_tool_name: tool_b
-
-workflows:
-  _type: react_agent
-  tool_names:
-    - mcp_tool_a
-    - mcp_tool_b
-```
-You can use `mcp_tool_wrapper` to wrap a single MCP tool as a NeMo Agent toolkit function. Specify the server URL and the tool name for each tool you want to wrap. This approach requires a separate configuration entry for each individual tool.
-
 ## Transport Configuration
-The `mcp_client` function group and `mcp_tool_wrapper` can connect to MCP servers using different transport types. Choose the transport that matches your MCP server's configuration to ensure proper communication.
+The `mcp_client` function group can connect to MCP servers using different transport types. Choose the transport that matches your MCP server's configuration to ensure proper communication.
 
 ### Transport Types
 
@@ -301,11 +279,11 @@ For SSE transport, ensure the MCP server starts with the `--transport sse` flag.
 
 Sample output:
 ```text
-calculator.add
-calculator.multiply
-calculator.subtract
-calculator.divide
-calculator.compare
+calculator__add
+calculator__multiply
+calculator__subtract
+calculator__divide
+calculator__compare
 current_datetime
 react_agent
 ```
@@ -315,12 +293,12 @@ react_agent
 To get detailed information about a specific tool, use the `--tool` flag:
 
 ```bash
-nat mcp client tool list --url http://localhost:9901/mcp --tool calculator.multiply
+nat mcp client tool list --url http://localhost:9901/mcp --tool calculator__multiply
 ```
 
 Sample output:
 ```text
-Tool: calculator.multiply
+Tool: calculator__multiply
 Description: Multiply two or more numbers together
 Input Schema:
 {
@@ -337,7 +315,7 @@ Input Schema:
   "required": [
     "numbers"
   ],
-  "title": "Calculator.MultiplyInputSchema",
+  "title": "Calculator__MultiplyInputSchema",
   "type": "object"
 }
 ```
@@ -347,7 +325,7 @@ To call a tool and get its output:
 
 ```console
 # Pass arguments as JSON
-$ nat mcp client tool call calculator.multiply \
+$ nat mcp client tool call calculator__multiply \
   --url http://localhost:9901/mcp \
   --json-args '{"numbers": [1, 3, 6, 10]}'
 180.0
@@ -425,31 +403,31 @@ When you serve a workflow that includes an `mcp_client` function group, the NeMo
       "protected": false,
       "tools": [
         {
-          "name": "calculator.add",
+          "name": "calculator__add",
           "description": "Add two or more numbers together",
           "server": "streamable-http:http://localhost:9901/mcp",
           "available": true
         },
         {
-          "name": "calculator.compare",
+          "name": "calculator__compare",
           "description": "Compare two numbers",
           "server": "streamable-http:http://localhost:9901/mcp",
           "available": true
         },
         {
-          "name": "calculator.divide",
+          "name": "calculator__divide",
           "description": "Divide one number by another",
           "server": "streamable-http:http://localhost:9901/mcp",
           "available": true
         },
         {
-          "name": "calculator.multiply",
+          "name": "calculator__multiply",
           "description": "Multiply two or more numbers together",
           "server": "streamable-http:http://localhost:9901/mcp",
           "available": true
         },
         {
-          "name": "calculator.subtract",
+          "name": "calculator__subtract",
           "description": "Subtract one number from another",
           "server": "streamable-http:http://localhost:9901/mcp",
           "available": true

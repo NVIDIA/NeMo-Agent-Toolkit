@@ -22,11 +22,13 @@ from unittest.mock import patch
 import pytest
 from langchain_core.tools.base import BaseTool
 from pydantic import BaseModel
+from pydantic import PrivateAttr
 
 from nat.builder.builder import Builder
 from nat.builder.function import Function
 from nat.builder.function_info import FunctionInfo
 from nat.control_flow.sequential_executor import SequentialExecutorConfig
+from nat.control_flow.sequential_executor import SequentialExecutorExit
 from nat.control_flow.sequential_executor import ToolExecutionConfig
 from nat.control_flow.sequential_executor import _validate_function_type_compatibility
 from nat.control_flow.sequential_executor import _validate_tool_list_type_compatibility
@@ -127,18 +129,37 @@ class ErrorMockTool(BaseTool):
 
     name: str = "error_mock_tool"
     description: str = "A mock tool that raises errors"
+    _error_message: str = PrivateAttr(default="Mock error")
 
     def __init__(self, name: str = "error_mock_tool", error_message: str = "Mock error", **kwargs):
         super().__init__(**kwargs)
         self.name = name
-        # Store error_message in a way that doesn't conflict with Pydantic
-        self.__dict__['_error_message'] = error_message
+        self._error_message = error_message
 
     async def _arun(self, query: typing.Any = None, **kwargs) -> str:
-        raise RuntimeError(self.__dict__['_error_message'])
+        raise RuntimeError(self._error_message)
 
     def _run(self, query: typing.Any = None, **kwargs) -> str:
-        raise RuntimeError(self.__dict__['_error_message'])
+        raise RuntimeError(self._error_message)
+
+
+class EarlyExitMockTool(BaseTool):
+    """Mock tool that raises SequentialExecutorExit for testing early exit."""
+
+    name: str = "early_exit_mock_tool"
+    description: str = "A mock tool that exits early"
+    _exit_message: str = PrivateAttr(default="Early exit")
+
+    def __init__(self, name: str = "early_exit_mock_tool", exit_message: str = "Early exit", **kwargs):
+        super().__init__(**kwargs)
+        self.name = name
+        self._exit_message = exit_message
+
+    async def _arun(self, query: typing.Any = None, **kwargs) -> str:
+        raise SequentialExecutorExit(self._exit_message)
+
+    def _run(self, query: typing.Any = None, **kwargs) -> str:
+        raise SequentialExecutorExit(self._exit_message)
 
 
 class TestSequentialExecutionToolConfig:
@@ -151,6 +172,7 @@ class TestSequentialExecutionToolConfig:
         assert config.tool_list == []
         assert config.tool_execution_config == {}
         assert not config.raise_type_incompatibility
+        assert not config.return_error_on_exception
 
     def test_config_with_values(self):
         """Test configuration with custom values."""
@@ -162,11 +184,13 @@ class TestSequentialExecutionToolConfig:
 
         config = SequentialExecutorConfig(tool_list=tool_list,
                                           tool_execution_config=tool_config,
-                                          raise_type_incompatibility=True)
+                                          raise_type_incompatibility=True,
+                                          return_error_on_exception=True)
 
         assert config.tool_list == tool_list
         assert config.tool_execution_config == tool_config
         assert config.raise_type_incompatibility
+        assert config.return_error_on_exception
 
 
 class TestToolExecutionConfig:
@@ -434,6 +458,80 @@ class TestSequentialExecution:
 
                 # Check that warning was logged
                 assert "The sequential executor tool list has incompatible types" in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_return_error_on_exception_enabled(self, mock_builder):
+        """Test that errors are returned as messages when return_error_on_exception is True."""
+        # Replace middle tool with error tool
+        error_tool = ErrorMockTool(name="tool2", error_message="Test error")
+        mock_builder.get_tools.return_value = [
+            MockTool(name="tool1", return_value="result1"),
+            error_tool,
+            MockTool(name="tool3", return_value="final_result")
+        ]
+
+        config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1"), FunctionRef("tool2"), FunctionRef("tool3")],
+                                          return_error_on_exception=True)
+
+        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
+                   return_value=(str, str)):
+            async with sequential_execution(config, mock_builder) as function_info:
+                actual_function = function_info.single_fn  # type: ignore
+
+                # Test that the function returns error message instead of raising
+                result = await actual_function("initial_input")  # type: ignore
+                assert "Error in tool2" in result
+                assert "RuntimeError" in result
+                assert "Test error" in result
+
+    @pytest.mark.asyncio
+    async def test_return_error_on_exception_disabled(self, mock_builder):
+        """Test that errors are raised when return_error_on_exception is False (default)."""
+        # Replace middle tool with error tool
+        error_tool = ErrorMockTool(name="tool2", error_message="Test error")
+        mock_builder.get_tools.return_value = [
+            MockTool(name="tool1", return_value="result1"),
+            error_tool,
+            MockTool(name="tool3", return_value="final_result")
+        ]
+
+        config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1"), FunctionRef("tool2"), FunctionRef("tool3")],
+                                          return_error_on_exception=False)
+
+        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
+                   return_value=(str, str)):
+            async with sequential_execution(config, mock_builder) as function_info:
+                actual_function = function_info.single_fn  # type: ignore
+
+                # Test that the function raises the error
+                with pytest.raises(RuntimeError, match="Test error"):
+                    await actual_function("initial_input")  # type: ignore
+
+    @pytest.mark.asyncio
+    async def test_sequential_executor_exit(self, mock_builder):
+        """Test that SequentialExecutorExit causes early exit with custom message."""
+        # Replace middle tool with early exit tool
+        early_exit_tool = EarlyExitMockTool(name="tool2", exit_message="Custom exit message")
+        mock_builder.get_tools.return_value = [
+            MockTool(name="tool1", return_value="result1"),
+            early_exit_tool,
+            MockTool(name="tool3", return_value="final_result")
+        ]
+
+        config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1"), FunctionRef("tool2"), FunctionRef("tool3")])
+
+        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
+                   return_value=(str, str)):
+            async with sequential_execution(config, mock_builder) as function_info:
+                actual_function = function_info.single_fn  # type: ignore
+
+                # Test that the function returns the exit message
+                result = await actual_function("initial_input")  # type: ignore
+                assert result == "Custom exit message"
+
+                # Verify tool3 was never invoked after early exit
+                tool3 = mock_builder.get_tools.return_value[2]
+                assert tool3.__dict__['_call_count'] == 0
 
     @pytest.mark.asyncio
     async def test_empty_tool_list(self, mock_builder):

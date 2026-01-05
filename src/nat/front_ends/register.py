@@ -18,4 +18,3 @@
 
 from .console import register as console_register
 from .fastapi import register as fastapi_register
-from .mcp import register as mcp_register

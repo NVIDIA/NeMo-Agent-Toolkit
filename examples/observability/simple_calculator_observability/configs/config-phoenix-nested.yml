@@ -1,0 +1,72 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This config demonstrates NESTED TOOL CALLS for testing parent-child span tracking.
+#
+# The power_of_two tool internally calls calculator__multiply, creating a hierarchy:
+#   react_agent -> power_of_two -> calculator__multiply
+#
+# In Phoenix, you can filter spans by parent:
+#   - nat.function.parent_name = "react_agent" -> shows power_of_two (agent-selected tool)
+#   - nat.function.parent_name = "power_of_two" -> shows calculator__multiply (nested call)
+
+general:
+  telemetry:
+    logging:
+      console:
+        _type: console
+        level: WARN
+      file:
+        _type: file
+        path: ./.tmp/nat_simple_calculator_nested.log
+        level: DEBUG
+    tracing:
+      phoenix:
+        _type: phoenix
+        endpoint: http://localhost:6006/v1/traces
+        project: simple_calculator
+
+  front_end:
+    _type: fastapi
+    cors:
+      allow_origins: ['*']
+
+# The calculator function group provides the underlying multiply function
+function_groups:
+  calculator:
+    _type: calculator
+
+# The power_of_two function wraps calculator__multiply to create nested calls
+functions:
+  power_of_two:
+    _type: power_of_two
+    multiply_fn: calculator__multiply
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.0
+    max_tokens: 1024
+
+workflow:
+  _type: react_agent
+  # Only expose power_of_two to the agent (not the raw calculator tools)
+  # This forces the agent to use power_of_two, which internally calls multiply
+  tool_names: [power_of_two]
+  llm_name: nim_llm
+  verbose: true
+  parse_agent_response_max_retries: 3
+
