@@ -6428,14 +6428,14 @@ name = "nvidia-nat-openpipe-art"
 source = { editable = "packages/nvidia_nat_openpipe_art" }
 dependencies = [
     { name = "matplotlib" },
-    { name = "nvidia-nat" },
+    { name = "nvidia-nat", extra = ["litellm"] },
     { name = "openpipe-art" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "matplotlib", specifier = "~=3.9" },
-    { name = "nvidia-nat", editable = "." },
+    { name = "nvidia-nat", extras = ["litellm"], editable = "." },
     { name = "openpipe-art", specifier = "~=0.5.4" },
 ]
 

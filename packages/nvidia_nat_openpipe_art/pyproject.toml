@@ -20,10 +20,7 @@ dependencies = [
   # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
   # Keep sorted!!!
-  "nvidia-nat~=1.4",
-  # Override dependencies that nvidia-nat-openpipe-art would otherwise regress.
-  # This keeps status-quo for other packages.
-  "litellm==1.74.9",
+  "nvidia-nat[litellm]~=1.4",
   "matplotlib~=3.9",
   "openpipe-art~=0.5.4"
 ]
@@ -49,12 +46,6 @@ source = "https://github.com/NVIDIA/NeMo-Agent-Toolkit"
 [tool.uv]
 managed = true
 config-settings = { editable_mode = "compat" }
-
-override-dependencies = [
-  # Override dependencies that nvidia-nat-openpipe-art would otherwise regress.
-  # This keeps status-quo for other packages.
-  "litellm==1.74.9",
-]
 
 [tool.uv.sources]
 nvidia-nat = { workspace = true }
