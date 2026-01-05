@@ -128,19 +128,31 @@ The example uses `per_user_react_agent`, which is the per-user version of the Re
 ### Multi-User Testing
 When using `nat serve`, different users are identified by the `nat-session` cookie:
 
+Before testing multi-user support, ensure the Calculator A2A server is running:
 ```bash
-# Start the math assistant as a server on terminal 1
+# Terminal 1: Start the A2A calculator server (if not already running)
+nat a2a serve --config_file examples/getting_started/simple_calculator/configs/config.yml --port 10000
+```
+
+Verify the server is running:
+```bash
+# Terminal 2: Check discover card
+nat a2a client discover --url http://localhost:10000
+```
+
+```bash
+# Start the math assistant as a FastAPI server on terminal 2
 nat serve --config_file examples/A2A/math_assistant_a2a/configs/config.yml
 ```
 
 ```bash
-# User "Alice" makes a request on terminal 2
+# User "Alice" makes a request on terminal 3
 curl -X POST http://localhost:8000/generate \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=Alice" \
   -d '{"messages": [{"role": "user", "content": "Is the sum of 5 and 3 greater than the current hour of the day?"}]}' | jq
 
-# User "Hatter" makes a request on terminal 2 (isolated from Alice)
+# User "Hatter" makes a request on terminal 3 (isolated from Alice)
 curl -X POST http://localhost:8000/generate \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=Hatter" \
