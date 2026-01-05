@@ -25,7 +25,7 @@ from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.function import FunctionBaseConfig
-from nat.plugins.mcp.client_base import MCPToolClient
+from nat.plugins.mcp.client.client_base import MCPToolClient
 from nat.utils.decorators import deprecated
 
 logger = logging.getLogger(__name__)
@@ -113,9 +113,9 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):
     Generate a NeMo Agent Toolkit Function that wraps a tool provided by the MCP server.
     """
 
-    from nat.plugins.mcp.client_base import MCPSSEClient
-    from nat.plugins.mcp.client_base import MCPStdioClient
-    from nat.plugins.mcp.client_base import MCPStreamableHTTPClient
+    from nat.plugins.mcp.client.client_base import MCPSSEClient
+    from nat.plugins.mcp.client.client_base import MCPStdioClient
+    from nat.plugins.mcp.client.client_base import MCPStreamableHTTPClient
 
     # Initialize the client
     if config.transport == 'stdio':

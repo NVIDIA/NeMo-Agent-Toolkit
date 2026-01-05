@@ -348,7 +348,7 @@ class MCPFunctionGroup(FunctionGroup):
 
     async def _create_session_client(self, session_id: str) -> tuple[MCPBaseClient, asyncio.Event, asyncio.Task]:
         """Create a new MCP client instance for the session."""
-        from nat.plugins.mcp.client_base import MCPStreamableHTTPClient
+        from nat.plugins.mcp.client.client_base import MCPStreamableHTTPClient
 
         config = self._client_config
         if not config:
@@ -484,9 +484,9 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
     Returns:
         The function group
     """
-    from nat.plugins.mcp.client_base import MCPSSEClient
-    from nat.plugins.mcp.client_base import MCPStdioClient
-    from nat.plugins.mcp.client_base import MCPStreamableHTTPClient
+    from nat.plugins.mcp.client.client_base import MCPSSEClient
+    from nat.plugins.mcp.client.client_base import MCPStdioClient
+    from nat.plugins.mcp.client.client_base import MCPStreamableHTTPClient
 
     # Resolve auth provider if specified
     auth_provider = None

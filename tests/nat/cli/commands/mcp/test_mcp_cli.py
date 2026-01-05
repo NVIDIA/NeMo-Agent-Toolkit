@@ -680,7 +680,7 @@ def test_call_tool_and_print_group_success(monkeypatch):
 
     fake_builder_mod.WorkflowBuilder = _WorkflowBuilder
 
-    fake_client_impl = ModuleType("nat.plugins.mcp.client_impl")
+    fake_client_impl = ModuleType("nat.plugins.mcp.client.client_impl")
 
     class _Cfg:
 
@@ -693,7 +693,7 @@ def test_call_tool_and_print_group_success(monkeypatch):
     import sys
 
     monkeypatch.setitem(sys.modules, "nat.builder.workflow_builder", fake_builder_mod)
-    monkeypatch.setitem(sys.modules, "nat.plugins.mcp.client_impl", fake_client_impl)
+    monkeypatch.setitem(sys.modules, "nat.plugins.mcp.client.client_impl", fake_client_impl)
 
     out = asyncio.run(
         call_tool_and_print(
@@ -731,7 +731,7 @@ def test_call_tool_and_print_group_tool_not_found(monkeypatch):
 
     fake_builder_mod.WorkflowBuilder = _WorkflowBuilder
 
-    fake_client_impl = ModuleType("nat.plugins.mcp.client_impl")
+    fake_client_impl = ModuleType("nat.plugins.mcp.client.client_impl")
 
     class _Cfg:
 
@@ -744,7 +744,7 @@ def test_call_tool_and_print_group_tool_not_found(monkeypatch):
     import sys
 
     monkeypatch.setitem(sys.modules, "nat.builder.workflow_builder", fake_builder_mod)
-    monkeypatch.setitem(sys.modules, "nat.plugins.mcp.client_impl", fake_client_impl)
+    monkeypatch.setitem(sys.modules, "nat.plugins.mcp.client.client_impl", fake_client_impl)
 
     err = None
     try:
