@@ -111,6 +111,9 @@ class TestInstrument:
                 handler.instrument()
                 # Should still complete (gracefully handle missing imports)
                 mock_logger.debug.assert_any_call("autogen_core.tools not available; skipping tool instrumentation")
+        # Always uninstrument to clean up any partial patches that may have succeeded
+        # (e.g., if autogen_ext modules were already in sys.modules)
+        handler.uninstrument()
 
     def test_instrument_patches_openai_client(self):
         """Test instrument() patches OpenAIChatCompletionClient."""
@@ -148,28 +151,53 @@ class TestInstrument:
                         mock_wrapper.assert_called()
                         mock_stream_wrapper.assert_called()
 
+                        # Uninstrument within the mocked context to properly restore mocked classes
+                        handler.uninstrument()
+
     def test_instrument_sets_instrumented_flag(self):
         """Test instrument() sets _instrumented to True."""
         handler = AutoGenProfilerHandler()
 
         with patch('nat.plugins.autogen.callback_handler.logger'):
-            # All imports will fail but handler should still mark as instrumented
+            # Note: When AutoGen is installed, imports will succeed and patch real classes.
+            # Always uninstrument to restore original class methods.
             handler.instrument()
             assert handler._instrumented is True
+            handler.uninstrument()
 
 
 class TestUninstrument:
     """Test uninstrument() method."""
 
     def test_uninstrument_resets_state(self):
-        """Test uninstrument() resets handler state."""
+        """Test uninstrument() resets handler state.
+
+        This test verifies uninstrument() properly resets internal state.
+        We must use mocked modules to avoid polluting the real OpenAIChatCompletionClient.
+        """
         handler = AutoGenProfilerHandler()
         handler._instrumented = True
         handler._patched.tool = Mock()
         handler._patched.openai.create = Mock()
 
+        # Mock the imports so uninstrument() operates on mocks, not the real classes
+        mock_openai_client = Mock()
+        mock_azure_client = Mock()
+        mock_bedrock_client = Mock()
+        mock_base_tool = Mock()
+
         with patch('nat.plugins.autogen.callback_handler.logger'):
-            handler.uninstrument()
+            with patch.dict('sys.modules', {
+                'autogen_core.tools': Mock(BaseTool=mock_base_tool),
+                'autogen_ext.models.openai': Mock(
+                    OpenAIChatCompletionClient=mock_openai_client,
+                    AzureOpenAIChatCompletionClient=mock_azure_client
+                ),
+                'autogen_ext.models.anthropic': Mock(
+                    AnthropicBedrockChatCompletionClient=mock_bedrock_client
+                ),
+            }):
+                handler.uninstrument()
 
         assert handler._instrumented is False
         assert handler._patched.tool is None
