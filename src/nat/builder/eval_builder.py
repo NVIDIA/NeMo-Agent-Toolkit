@@ -97,11 +97,11 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
 
         async def get_tool(fn_name: str):
             # Maintain backwards compatibility with the old function group name format
-            compat_name = fn_name.replace("__", ".")
+            compat_name = fn_name.replace(".", "__")
             if (fn_name not in self._functions) and (compat_name in self._functions):
                 logger.warning(
-                    f"Function `{compat_name}` is deprecated and will be removed in a future release." + \
-                        f"Use `{fn_name}` instead."
+                    f"Function `{fn_name}` is deprecated and will be removed in a future release." + \
+                        f"Use `{compat_name}` instead."
                 )
                 fn_name = compat_name
             # end of backwards compatibility check
