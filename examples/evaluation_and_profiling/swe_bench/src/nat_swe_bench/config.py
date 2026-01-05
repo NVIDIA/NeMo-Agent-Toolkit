@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,7 +35,8 @@ class SweBenchPredictorFullConfig(SweBenchPredictorBaseConfig, name="full"):
     llm_name: LLMRef = "nim_llm"
     tool_names: list[FunctionRef] = []
     # Temporary, key needs to be removed and read from the environment
-    openai_api_key: SerializableSecretStr = Field(default="")  # OpenAI API key field
+    openai_api_key: SerializableSecretStr = Field(
+        default_factory=lambda: SerializableSecretStr(""))  # OpenAI API key field
 
 
 class SweBenchPredictorGoldConfig(SweBenchPredictorBaseConfig, name="gold"):

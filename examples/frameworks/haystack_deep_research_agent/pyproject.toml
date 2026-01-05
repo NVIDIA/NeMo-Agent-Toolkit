@@ -10,11 +10,11 @@ root = "../../.."
 name = "nat_haystack_deep_research_agent"
 dynamic = ["version"]
 dependencies = [
-  "nvidia-nat[nvidia_haystack]~=1.5",
+  "nvidia-nat[nvidia_haystack]~=1.4",
   "haystack-ai~=2.18.1",
   "opensearch-haystack~=4.2.0",
   "trafilatura~=2.0.0",
-  "pypdf~=5.8.0",
+  "pypdf~=6.5.0",
   "docstring-parser~=0.16",
 ]
 requires-python = ">=3.11,<3.14"

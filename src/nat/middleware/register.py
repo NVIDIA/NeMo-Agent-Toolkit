@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,24 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Registration module for built-in middleware."""
 
-from __future__ import annotations
+# flake8: noqa
 
-from nat.cli.register_workflow import register_middleware
-from nat.middleware.cache_middleware import CacheMiddleware
-from nat.middleware.cache_middleware import CacheMiddlewareConfig
-
-
-@register_middleware(config_type=CacheMiddlewareConfig)
-async def cache_middleware(config: CacheMiddlewareConfig, builder):
-    """Build a cache middleware from configuration.
-
-    Args:
-        config: The cache middleware configuration
-        builder: The workflow builder (unused but required by component pattern)
-
-    Yields:
-        A configured cache middleware instance
-    """
-    yield CacheMiddleware(enabled_mode=config.enabled_mode, similarity_threshold=config.similarity_threshold)
+from nat.middleware.cache import register as register_cache
+from nat.middleware.dynamic import register as register_dynamic
+from nat.middleware.logging import register as register_logging

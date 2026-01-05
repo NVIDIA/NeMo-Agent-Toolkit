@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 # Configure the ReAct Agent
-Configure the NVIDIA NeMo Agent toolkit ReAct agent as a workflow or a function.
+Configure the NVIDIA NeMo Agent toolkit ReAct [agent](../index.md) as a [workflow](../../../build-workflows/about-building-workflows.md) or a function.
 
 ## Requirements
 The ReAct agent requires the `nvidia-nat[langchain]` plugin, which can be installed with one of the following commands.
@@ -64,9 +64,9 @@ functions:
 The following are more ways you can configure your config file when using the ReAct agent:
 * `workflow_alias`: Defaults to `None`. The alias of the workflow. Useful when the ReAct agent is configured as a workflow and needs to expose a customized name as a tool.
 
-* `tool_names`: A list of tools that the agent can call. The tools must be functions or function groups configured in the YAML file.
+* `tool_names`: A list of [tools](../../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) that the agent can call. The tools must be functions or [function groups](../../../build-workflows/functions-and-function-groups/function-groups.md) configured in the YAML file.
 
-* `llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file.
+* `llm_name`: The [LLM](../../../build-workflows/llms/index.md) the agent should use. The LLM must be configured in the YAML file.
 
 * `verbose`: Defaults to `False` (useful to prevent logging of sensitive data). If set to `True`, the agent will log input, output, and intermediate steps.
 

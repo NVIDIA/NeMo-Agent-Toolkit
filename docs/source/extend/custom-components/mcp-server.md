@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,7 +21,7 @@ limitations under the License.
 We recommend reading the [MCP Server Guide](../../run-workflows/mcp-server.md) before proceeding with this documentation, to understand how MCP servers work in NVIDIA NeMo Agent toolkit.
 :::
 
-The NVIDIA NeMo Agent toolkit provides a default MCP server worker that publishes your workflow functions as MCP tools. However, you may need to customize the server behavior for enterprise requirements such as authentication, custom endpoints, or telemetry. This guide shows you how to create custom MCP server workers that extend the default implementation.
+The NVIDIA NeMo Agent toolkit provides a default MCP server worker that publishes your [workflow](../../build-workflows/about-building-workflows.md) [functions](../../build-workflows/functions-and-function-groups/functions.md) as MCP [tools](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools). However, you may need to customize the server behavior for enterprise requirements such as authentication, custom endpoints, or telemetry. This guide shows you how to create custom MCP server workers that extend the default implementation.
 
 ## When to Create a Custom Worker
 
@@ -29,7 +29,7 @@ Create a custom MCP worker when you need to:
 - **Add authentication/authorization**: OAuth, API keys, JWT tokens, or custom auth flows
 - **Integrate custom transport protocols**: WebSocket, gRPC, or other communication methods
 - **Add logging and telemetry**: Custom logging, metrics collection, or distributed tracing
-- **Modify server behavior**: Custom middleware, error handling, or protocol extensions
+- **Modify server behavior**: Custom [middleware](../../build-workflows/advanced/middleware.md), error handling, or protocol extensions
 - **Integrate with enterprise systems**: SSO, audit logging, or compliance requirements
 
 ## Creating and Registering a Custom MCP Worker
@@ -264,7 +264,7 @@ Your worker has access to configuration through instance variables:
 
 - **`self.full_config`**: Complete NeMo Agent toolkit configuration
   - `general`: General settings including front end config
-  - `llms`: LLM configurations
+  - `llms`: [LLM](../../build-workflows/llms/index.md) configurations
   - `functions`: Function configurations
   - `workflow`: Workflow configuration
 

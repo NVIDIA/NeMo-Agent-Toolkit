@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +14,6 @@
 # limitations under the License.
 """Middleware implementations for NeMo Agent Toolkit."""
 
-from nat.middleware.cache_middleware import CacheMiddleware
 from nat.middleware.function_middleware import FunctionMiddleware
 from nat.middleware.function_middleware import FunctionMiddlewareChain
 from nat.middleware.function_middleware import validate_middleware
@@ -24,12 +23,11 @@ from nat.middleware.middleware import FunctionMiddlewareContext
 from nat.middleware.middleware import Middleware
 
 __all__ = [
-    "CacheMiddleware",
     "CallNext",
     "CallNextStream",
-    "FunctionMiddlewareContext",
-    "Middleware",
     "FunctionMiddleware",
     "FunctionMiddlewareChain",
+    "FunctionMiddlewareContext",
+    "Middleware",
     "validate_middleware",
 ]

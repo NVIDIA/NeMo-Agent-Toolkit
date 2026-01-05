@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,7 +60,7 @@ The model learns to play against a **random opponent**, receiving rewards based 
 
 3. **OpenPipe ART** installed in a **separate virtual environment**:
 
-   OpenPipe ART has specific dependency requirements that may conflict with NAT. We recommend installing it in an isolated environment:
+   OpenPipe ART has specific dependency requirements that may conflict with NeMo Agent toolkit. We recommend installing it in an isolated environment:
 
    ```bash
    # Create a separate virtual environment for ART
@@ -195,7 +195,7 @@ curl http://localhost:8000/v1/models
 
 ### 1.2 Run Pre-Training Evaluation
 
-In a **separate terminal** with your NAT environment activated:
+In a **separate terminal** with your NeMo Agent toolkit environment activated:
 
 ```bash
 # Navigate to the example directory
@@ -315,7 +315,7 @@ finetuning:
 
 ### 3.2 Start Training
 
-In your **NAT environment**:
+In your **NeMo Agent toolkit environment**:
 
 ```bash
 cd examples/finetuning/rl_with_openpipe_art
@@ -761,7 +761,7 @@ curl http://localhost:7623/health
 
 ## Further Reading
 
-- [NAT Finetuning Concepts](../../../docs/source/improve-workflows/finetuning/concepts.md)
-- [NAT Finetuning Extension Guide](../../../docs/source/extend/custom-components/finetuning.md)
+- [NeMo Agent toolkit Finetuning Concepts](../../../docs/source/improve-workflows/finetuning/concepts.md)
+- [NeMo Agent toolkit Finetuning Extension Guide](../../../docs/source/extend/custom-components/finetuning.md)
 - [OpenPipe ART Integration](../../../docs/source/improve-workflows/finetuning/rl_with_openpipe.md)
 - [OpenPipe ART Documentation](https://art.openpipe.ai/)

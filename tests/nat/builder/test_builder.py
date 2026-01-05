@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -1845,6 +1845,16 @@ async def register_test_middleware(config: TMiddlewareConfig, b: Builder):
         def __init__(self, raise_error: bool = False):
             super().__init__()
             self.raise_error = raise_error
+
+        @property
+        def enabled(self) -> bool:
+            return True
+
+        async def pre_invoke(self, _context):
+            return None
+
+        async def post_invoke(self, _context):
+            return None
 
     if config.raise_error:
         raise ValueError("Middleware initialization failed")

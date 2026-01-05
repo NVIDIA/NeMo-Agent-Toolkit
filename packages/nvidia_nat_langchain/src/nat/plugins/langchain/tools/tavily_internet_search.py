@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,7 +30,8 @@ class TavilyInternetSearchToolConfig(FunctionBaseConfig, name="tavily_internet_s
     Requires a TAVILY_API_KEY.
     """
     max_results: int = 3
-    api_key: SerializableSecretStr = Field(default="", description="The API key for the Tavily service.")
+    api_key: SerializableSecretStr = Field(default_factory=lambda: SerializableSecretStr(""),
+                                           description="The API key for the Tavily service.")
 
 
 @register_function(config_type=TavilyInternetSearchToolConfig)

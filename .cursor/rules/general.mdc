@@ -85,6 +85,13 @@ These are the overarching standards that every **source, test, documentation and
 - When re-raising exceptions: use bare `raise` statements to maintain the original stack trace, and use `logger.error()` for logging (not `logger.exception()`) to avoid duplicate stack trace output.
 - When catching and logging exceptions without re-raising: always use `logger.exception()` (equivalent to `logger.error(exc_info=True)`) to capture the full stack trace information.
 
+
+## Common Bugs to Avoid
+
+- **Pydantic SecretStr defaults**: Pydantic models using `SecretStr`, `SerializableSecretStr`, or `OptionalSecretStr` with `default=""` creates a bug where the field is initialized as `str` instead of a `SecretStr` instance. Instead:
+  - For optional secret fields (e.g., `OptionalSecretStr`): use `default=None`
+  - For non-optional secret fields (e.g., `SerializableSecretStr`): use `default_factory=lambda: SerializableSecretStr("")` to ensure each instance gets a unique `SecretStr` object
+
 ## Documentation
 
 - Provide Google-style docstrings for every public module, class, function and CLI command.

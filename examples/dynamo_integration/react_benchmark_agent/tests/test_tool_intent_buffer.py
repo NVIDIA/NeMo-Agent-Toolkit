@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -287,7 +287,6 @@ class TestPermissiveToolInput:
 class TestCreateToolStubFunction:
     """Test create_tool_stub_function."""
 
-    @pytest.mark.asyncio
     async def test_stub_records_intent(self):
         """Test that tool stub records intent to buffer."""
         from react_benchmark_agent.tool_intent_stubs import create_tool_stub_function
@@ -315,7 +314,6 @@ class TestCreateToolStubFunction:
         # Check response
         assert result == "Test response"
 
-    @pytest.mark.asyncio
     async def test_stub_filters_none_values(self):
         """Test that tool stub filters out None parameter values."""
         from react_benchmark_agent.tool_intent_stubs import create_tool_stub_function
@@ -331,7 +329,6 @@ class TestCreateToolStubFunction:
         assert "none_param" not in intents[0]["parameters"]
         assert intents[0]["parameters"] == {"valid": "value", "another": "data"}
 
-    @pytest.mark.asyncio
     async def test_stub_handles_nested_params(self):
         """Test that tool stub handles nested 'params' dict from LangChain."""
         from react_benchmark_agent.tool_intent_stubs import create_tool_stub_function

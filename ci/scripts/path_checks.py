@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -128,6 +128,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "copy/paste",
     "delete/recreate",
     "edit/score",
+    "Enable/disable",
     "file/console",
     "files/functions",
     "I/O",
@@ -140,6 +141,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "JSON/YAML",
     "LangChain/LangGraph",
     "LangChain/LangGraph.",
+    "LangChain/LangGraph-based",
     "LTE/5G",
     "output/jobs/job_",
     "POST/PUT",
