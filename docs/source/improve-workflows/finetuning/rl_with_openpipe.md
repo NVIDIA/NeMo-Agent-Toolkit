@@ -72,6 +72,18 @@ The ART backend runs on GPU infrastructure and provides:
 
 NeMo Agent toolkit connects to this backend through the `ARTTrainerAdapter`, which handles the protocol for submitting trajectories and monitoring training.
 
+### Supported Agent Frameworks
+
+The following table highlights the current support matrix for using ART with different agent frameworks in the NeMo Agent toolkit:
+
+| Agent Framework      | Support | 
+|----------------------|--------------------------------------------------|
+| Langchain or LangGraph | ✅ Supported                                      |
+| Google ADK       | ✅ Supported                                      |
+| LlamaIndex | ✅ Supported                                      |
+| All others     | 🛠️ In Progress                                   |
+
+
 ## Installation
 
 Install the OpenPipe ART plugin package:
