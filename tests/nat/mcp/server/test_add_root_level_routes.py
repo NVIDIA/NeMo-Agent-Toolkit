@@ -23,8 +23,8 @@ from pytest import fixture
 
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
-from nat.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
-from nat.front_ends.mcp.mcp_front_end_plugin_worker import MCPFrontEndPluginWorker
+from nat.plugins.mcp.server.front_end_config import MCPFrontEndConfig
+from nat.plugins.mcp.server.front_end_plugin_worker import MCPFrontEndPluginWorker
 from nat.utils.type_utils import override
 
 
@@ -138,7 +138,7 @@ async def test_root_level_routes_are_accessible(mcp_config_with_base_path: Confi
 
 async def test_add_root_level_routes_called_in_run_with_mount():
     """Test that add_root_level_routes() is called when base_path is configured."""
-    from nat.front_ends.mcp.mcp_front_end_plugin import MCPFrontEndPlugin
+    from nat.plugins.mcp.server.front_end_plugin import MCPFrontEndPlugin
 
     # Create config with base_path
     config = Config(general=GeneralConfig(

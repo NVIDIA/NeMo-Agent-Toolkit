@@ -21,12 +21,12 @@ from unittest.mock import patch
 from pydantic import BaseModel
 
 from nat.builder.workflow_builder import WorkflowBuilder
-from nat.plugins.mcp.client_base import MCPBaseClient
-from nat.plugins.mcp.client_config import MCPClientConfig
-from nat.plugins.mcp.client_config import MCPServerConfig
-from nat.plugins.mcp.client_config import MCPToolOverrideConfig
-from nat.plugins.mcp.client_impl import mcp_apply_tool_alias_and_description
-from nat.plugins.mcp.client_impl import mcp_client_function_group
+from nat.plugins.mcp.client.client_base import MCPBaseClient
+from nat.plugins.mcp.client.client_config import MCPClientConfig
+from nat.plugins.mcp.client.client_config import MCPServerConfig
+from nat.plugins.mcp.client.client_config import MCPToolOverrideConfig
+from nat.plugins.mcp.client.client_impl import mcp_apply_tool_alias_and_description
+from nat.plugins.mcp.client.client_impl import mcp_client_function_group
 
 
 class _InputSchema(BaseModel):
@@ -107,7 +107,7 @@ def test_mcp_apply_tool_alias_and_description_applies_alias_and_desc(caplog):
 
 async def test_mcp_client_function_group_includes_respected():
     """Function group exposes only included tools as accessible functions."""
-    with patch("nat.plugins.mcp.client_base.MCPStdioClient") as mock_client:
+    with patch("nat.plugins.mcp.client.client_base.MCPStdioClient") as mock_client:
         fake_tools = {
             "fake_tool_1": _FakeTool("fake_tool_1", "A fake tool for testing"),
             "fake_tool_2": _FakeTool("fake_tool_2", "Another fake tool for testing"),
@@ -126,7 +126,7 @@ async def test_mcp_client_function_group_includes_respected():
 
 
 async def test_mcp_client_function_group_applies_overrides():
-    with patch("nat.plugins.mcp.client_base.MCPStdioClient") as mock_client:
+    with patch("nat.plugins.mcp.client.client_base.MCPStdioClient") as mock_client:
         fake_tools = {"raw": _FakeTool("raw", "original")}
         mock_client.return_value = _FakeMCPClient(tools=fake_tools, command="python", args=["server.py"])
 
@@ -146,7 +146,7 @@ async def test_mcp_client_function_group_applies_overrides():
 
 
 async def test_mcp_client_function_group_no_include_exposes_all():
-    with patch("nat.plugins.mcp.client_base.MCPStdioClient") as mock_client:
+    with patch("nat.plugins.mcp.client.client_base.MCPStdioClient") as mock_client:
         fake_tools = {"a": _FakeTool("a", "da"), "b": _FakeTool("b", "db")}
         mock_client.return_value = _FakeMCPClient(tools=fake_tools, command="python", args=["server.py"])
 

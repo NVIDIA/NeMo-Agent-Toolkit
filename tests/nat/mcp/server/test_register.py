@@ -15,9 +15,9 @@
 
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
-from nat.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
-from nat.front_ends.mcp.mcp_front_end_plugin import MCPFrontEndPlugin
-from nat.front_ends.mcp.register import register_mcp_front_end
+from nat.plugins.mcp.server.front_end_config import MCPFrontEndConfig
+from nat.plugins.mcp.server.front_end_plugin import MCPFrontEndPlugin
+from nat.plugins.mcp.server.register_frontend import register_mcp_front_end
 from nat.test.functions import EchoFunctionConfig
 
 

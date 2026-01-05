@@ -26,10 +26,10 @@ from mcp.client.session import ClientSession
 from mcp.server.fastmcp.server import FastMCP
 from mcp.types import TextContent
 
-from nat.plugins.mcp.client_base import MCPBaseClient
-from nat.plugins.mcp.client_base import MCPSSEClient
-from nat.plugins.mcp.client_base import MCPStdioClient
-from nat.plugins.mcp.client_base import MCPStreamableHTTPClient
+from nat.plugins.mcp.client.client_base import MCPBaseClient
+from nat.plugins.mcp.client.client_base import MCPSSEClient
+from nat.plugins.mcp.client.client_base import MCPStdioClient
+from nat.plugins.mcp.client.client_base import MCPStreamableHTTPClient
 from nat.plugins.mcp.exceptions import MCPConnectionError
 
 
@@ -533,7 +533,7 @@ class TestMCPToolClient:
 
     def test_tool_client_instantiation(self):
         """Test that MCPToolClient can be instantiated correctly."""
-        from nat.plugins.mcp.client_base import MCPToolClient
+        from nat.plugins.mcp.client.client_base import MCPToolClient
 
         # Create mock objects
         mock_session = MagicMock()
@@ -552,7 +552,7 @@ class TestMCPToolClient:
 
     def test_tool_client_with_input_schema(self):
         """Test that MCPToolClient handles input schema correctly."""
-        from nat.plugins.mcp.client_base import MCPToolClient
+        from nat.plugins.mcp.client.client_base import MCPToolClient
 
         # Create mock objects
         mock_session = MagicMock()
@@ -571,7 +571,7 @@ class TestMCPToolClient:
 
     def test_tool_client_description_override(self):
         """Test that tool description can be overridden."""
-        from nat.plugins.mcp.client_base import MCPToolClient
+        from nat.plugins.mcp.client.client_base import MCPToolClient
 
         # Create mock objects
         mock_session = MagicMock()
@@ -589,7 +589,7 @@ class TestMCPToolClient:
 
     def test_tool_client_no_parent_client_raises_error(self):
         """Test that MCPToolClient raises error when no parent client is provided."""
-        from nat.plugins.mcp.client_base import MCPToolClient
+        from nat.plugins.mcp.client.client_base import MCPToolClient
 
         # Create mock objects
         mock_session = MagicMock()

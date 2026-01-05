@@ -17,7 +17,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 from nat.builder.intermediate_step_manager import IntermediateStepManager
-from nat.front_ends.mcp.memory_profiler import MemoryProfiler
+from nat.plugins.mcp.server.memory_profiler import MemoryProfiler
 
 
 class TestMemoryProfilerInit:
@@ -96,7 +96,7 @@ class TestMemoryProfilerEnabled:
         profiler.on_request_complete()
         assert profiler.request_count == 2
 
-    @patch('nat.front_ends.mcp.memory_profiler.logger')
+    @patch('nat.plugins.mcp.server.memory_profiler.logger')
     def test_on_request_complete_logs_at_interval(self, mock_logger):
         """Test that memory stats are logged at the configured interval."""
         profiler = MemoryProfiler(enabled=True, log_interval=2)

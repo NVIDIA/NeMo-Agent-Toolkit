@@ -27,8 +27,8 @@ from nat.data_models.authentication import AuthResult
 from nat.data_models.authentication import BearerTokenCred
 from nat.plugins.mcp.auth.auth_provider import MCPOAuth2Provider
 from nat.plugins.mcp.auth.auth_provider_config import MCPOAuth2ProviderConfig
-from nat.plugins.mcp.client_base import AuthAdapter
-from nat.plugins.mcp.client_base import MCPBaseClient
+from nat.plugins.mcp.client.client_base import AuthAdapter
+from nat.plugins.mcp.client.client_base import MCPBaseClient
 
 
 class MockMCPClient(MCPBaseClient):

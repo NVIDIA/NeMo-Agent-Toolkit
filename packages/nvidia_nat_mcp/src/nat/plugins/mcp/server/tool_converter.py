@@ -20,16 +20,16 @@ from inspect import Signature
 from typing import TYPE_CHECKING
 from typing import Any
 
-from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
+from mcp.server.fastmcp import FastMCP
 from nat.builder.function import Function
 from nat.builder.function_base import FunctionBase
 
 if TYPE_CHECKING:
-    from nat.front_ends.mcp.memory_profiler import MemoryProfiler
+    from nat.plugins.mcp.server.memory_profiler import MemoryProfiler
     from nat.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)

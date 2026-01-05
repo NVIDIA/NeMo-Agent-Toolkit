@@ -18,7 +18,6 @@ import logging
 
 from mcp.server.auth.provider import AccessToken
 from mcp.server.auth.provider import TokenVerifier
-
 from nat.authentication.credential_validator.bearer_token_validator import BearerTokenValidator
 from nat.authentication.oauth2.oauth2_resource_server_config import OAuth2ResourceServerConfig
 

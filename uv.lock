@@ -5941,7 +5941,6 @@ dependencies = [
     { name = "httpx" },
     { name = "jinja2" },
     { name = "jsonpath-ng" },
-    { name = "mcp" },
     { name = "nest-asyncio2" },
     { name = "networkx" },
     { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
@@ -6167,7 +6166,6 @@ requires-dist = [
     { name = "jinja2", specifier = "~=3.1" },
     { name = "jsonpath-ng", specifier = "~=1.7" },
     { name = "litellm", marker = "extra == 'litellm'", specifier = "==1.74.9" },
-    { name = "mcp", specifier = "~=1.13" },
     { name = "nat-adk-demo", marker = "extra == 'examples'", editable = "examples/frameworks/adk_demo" },
     { name = "nat-agno-personal-finance", marker = "extra == 'examples'", editable = "examples/frameworks/agno_personal_finance" },
     { name = "nat-alert-triage-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/alert_triage_agent" },
@@ -6518,7 +6516,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "aiorwlock", specifier = "~=1.5.0" },
-    { name = "mcp", specifier = "~=1.14" },
+    { name = "mcp", specifier = "~=1.25" },
     { name = "nvidia-nat", editable = "." },
 ]
 

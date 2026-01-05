@@ -86,9 +86,6 @@ function_groups:
 - **stdio**: Local process communication, no network authentication needed
 - **SSE**: Does not support authentication, use only for local development
 
-### Configuration Compatibility
-- Authentication configuration is only available with `mcp_client` style configuration
-- Not supported with `mcp_tool_wrapper` style configuration
 
 ## Example Workflow
 The MCP Authentication Example Workflow, `examples/MCP/simple_auth_mcp/README.md`, provides an example of how to use the `mcp_oauth2` authentication provider to authenticate with an MCP server.
