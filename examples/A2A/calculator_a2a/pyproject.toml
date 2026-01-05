@@ -36,3 +36,4 @@ classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }
+nat_simple_calculator = { path = "../../getting_started/simple_calculator", editable = true }
