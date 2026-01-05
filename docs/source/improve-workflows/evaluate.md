@@ -84,10 +84,22 @@ eval:
 The dataset section specifies the dataset to use for running the workflow. The dataset can be of type `json`, `jsonl`, `csv`, `xls`, or `parquet`. The dataset file path is specified using the `file_path` key.
 
 ## Evaluation outputs (what you will get)
-Running `nat eval` produces a set of artifacts in the configured output directory. These files fall into three groups: workflow outputs, evaluator outputs, and profiler observability outputs.
+Running `nat eval` produces a set of artifacts in the configured output directory. These files fall into four groups: workflow outputs, configuration outputs, evaluator outputs, and profiler observability outputs.
 
 ### Workflow outputs (always available)
 - `workflow_output.json`: Per-sample execution results including question, expected `answer`, `generated_answer`, and `intermediate_steps`. Use this to inspect or debug individual runs.
+
+### Configuration outputs (always available)
+For reproducibility and debugging, the evaluation system saves the configuration used for each run:
+- `config_original.yml`: The original configuration file as provided, before any modifications
+- `config_effective.yml`: The final configuration with all command-line overrides applied (the actual configuration used to run the evaluation)
+- `config_metadata.json`: Metadata about the evaluation run, including all command-line arguments such as `--override` flags, `--dataset`, `--reps`, `--endpoint`, and a timestamp
+
+These files allow you to reproduce the exact evaluation conditions or compare configurations between different runs.
+
+:::{note}
+When evaluating remote workflows using the `--endpoint` flag, the saved configuration captures the evaluation settings (dataset, evaluators, endpoint URL) but does not reflect the workflow configuration running on the remote server. To fully reproduce a remote evaluation, you need both the saved evaluation configuration and access to the same workflow configuration on the remote endpoint.
+:::
 
 ### Evaluator outputs (only when configured)
 

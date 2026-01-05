@@ -491,6 +491,110 @@ def test_write_output_handles_none_output(evaluation_run, eval_input):
             pytest.fail("write_output should not access .output without a None check")
 
 
+def test_write_configuration_with_path_config(evaluation_run, default_eval_config, tmp_path):
+    """Test that write_configuration correctly saves config files when config_file is a Path."""
+    # Create a temporary config file
+    config_file = tmp_path / "test_config.yml"
+    config_file.write_text("workflow:\n  type: test\neval:\n  general:\n    max_concurrency: 1\n")
+
+    # Setup evaluation run
+    evaluation_run.config.config_file = config_file
+    evaluation_run.config.override = (("eval.general.max_concurrency", "5"),)
+    evaluation_run.eval_config = default_eval_config
+    evaluation_run.eval_config.general.output_dir = tmp_path / "output"
+
+    # Create a mock effective config
+    mock_effective_config = Config()
+    mock_effective_config.eval = default_eval_config
+    evaluation_run.effective_config = mock_effective_config
+
+    # Run the function
+    with patch("nat.eval.evaluate.logger.info") as mock_logger:
+        evaluation_run.write_configuration()
+
+    # Verify that all three files were created
+    config_original_file = evaluation_run.eval_config.general.output_dir / "config_original.yml"
+    config_effective_file = evaluation_run.eval_config.general.output_dir / "config_effective.yml"
+    config_metadata_file = evaluation_run.eval_config.general.output_dir / "config_metadata.json"
+
+    assert config_original_file.exists(), "config_original.yml should be created"
+    assert config_effective_file.exists(), "config_effective.yml should be created"
+    assert config_metadata_file.exists(), "config_metadata.json should be created"
+
+    # Verify metadata content
+    with open(config_metadata_file, "r", encoding="utf-8") as f:
+        metadata = json.load(f)
+    assert metadata["config_file"] == str(config_file)
+    assert metadata["config_file_type"] == "Path"
+    assert len(metadata["overrides"]) == 1
+    assert metadata["overrides"][0]["path"] == "eval.general.max_concurrency"
+    assert metadata["overrides"][0]["value"] == "5"
+
+    # Verify logging
+    assert mock_logger.call_count >= 3, "Should log for all three config files"
+
+
+def test_write_configuration_with_basemodel_config(evaluation_run, default_eval_config, tmp_path):
+    """Test that write_configuration correctly saves config files when config_file is a BaseModel."""
+    # Setup evaluation run with BaseModel config
+    mock_config = Config()
+    mock_config.eval = default_eval_config
+    evaluation_run.config.config_file = mock_config
+    evaluation_run.config.override = ()  # No overrides
+    evaluation_run.eval_config = default_eval_config
+    evaluation_run.eval_config.general.output_dir = tmp_path / "output"
+    evaluation_run.effective_config = mock_config
+
+    # Run the function
+    with patch("nat.eval.evaluate.logger.info"):
+        evaluation_run.write_configuration()
+
+    # Verify that all three files were created
+    config_original_file = evaluation_run.eval_config.general.output_dir / "config_original.yml"
+    config_effective_file = evaluation_run.eval_config.general.output_dir / "config_effective.yml"
+    config_metadata_file = evaluation_run.eval_config.general.output_dir / "config_metadata.json"
+
+    assert config_original_file.exists(), "config_original.yml should be created"
+    assert config_effective_file.exists(), "config_effective.yml should be created"
+    assert config_metadata_file.exists(), "config_metadata.json should be created"
+
+    # Verify metadata content
+    with open(config_metadata_file, "r", encoding="utf-8") as f:
+        metadata = json.load(f)
+    assert metadata["config_file_type"] == "BaseModel"
+    assert len(metadata["overrides"]) == 0, "Should have no overrides"
+
+
+def test_write_configuration_handles_missing_effective_config(evaluation_run, default_eval_config, tmp_path):
+    """Test that write_configuration handles gracefully when effective_config is None."""
+    # Create a temporary config file
+    config_file = tmp_path / "test_config.yml"
+    config_file.write_text("workflow:\n  type: test\n")
+
+    # Setup evaluation run with None effective_config
+    evaluation_run.config.config_file = config_file
+    evaluation_run.eval_config = default_eval_config
+    evaluation_run.eval_config.general.output_dir = tmp_path / "output"
+    evaluation_run.effective_config = None  # This is the key test condition
+
+    # Run the function - it should not crash
+    with patch("nat.eval.evaluate.logger.info"), \
+         patch("nat.eval.evaluate.logger.warning") as mock_warning:
+        evaluation_run.write_configuration()
+
+    # Verify warning was logged
+    mock_warning.assert_any_call("Effective config not available, skipping config_effective.yml")
+
+    # Verify that original and metadata files were created but not effective
+    config_original_file = evaluation_run.eval_config.general.output_dir / "config_original.yml"
+    config_effective_file = evaluation_run.eval_config.general.output_dir / "config_effective.yml"
+    config_metadata_file = evaluation_run.eval_config.general.output_dir / "config_metadata.json"
+
+    assert config_original_file.exists(), "config_original.yml should be created"
+    assert not config_effective_file.exists(), "config_effective.yml should NOT be created when effective_config is None"
+    assert config_metadata_file.exists(), "config_metadata.json should be created"
+
+
 @pytest.mark.parametrize("skip_workflow", [True, False])
 async def test_run_and_evaluate(evaluation_run, default_eval_config, session_manager, mock_evaluator, skip_workflow):
     """
