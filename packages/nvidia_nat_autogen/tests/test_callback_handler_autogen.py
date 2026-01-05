@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,248 +12,452 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Test AutoGen Callback Handler"""
+"""Test AutoGen Callback Handler."""
 
 import threading
 import time
 from unittest.mock import AsyncMock
 from unittest.mock import Mock
-from unittest.mock import PropertyMock
 from unittest.mock import patch
 
 import pytest
 
-from nat.plugins.autogen.autogen_callback_handler import AutoGenProfilerHandler
+from nat.plugins.autogen.callback_handler import AutoGenProfilerHandler
+from nat.plugins.autogen.callback_handler import ClientPatchInfo
+from nat.plugins.autogen.callback_handler import PatchedClients
 
 
-class TestAutoGenProfilerHandler:
-    """Test cases for AutoGenProfilerHandler."""
+class TestDataClasses:
+    """Test the dataclass structures."""
 
-    def test_init(self):
-        """Test initialization of AutoGenProfilerHandler."""
+    def test_client_patch_info_defaults(self):
+        """Test ClientPatchInfo has correct defaults."""
+        info = ClientPatchInfo()
+        assert info.create is None
+        assert info.create_stream is None
+
+    def test_client_patch_info_with_values(self):
+        """Test ClientPatchInfo stores values."""
+        mock_create = Mock()
+        mock_stream = Mock()
+        info = ClientPatchInfo(create=mock_create, create_stream=mock_stream)
+        assert info.create is mock_create
+        assert info.create_stream is mock_stream
+
+    def test_patched_clients_defaults(self):
+        """Test PatchedClients has correct defaults."""
+        patched = PatchedClients()
+        assert isinstance(patched.openai, ClientPatchInfo)
+        assert isinstance(patched.azure, ClientPatchInfo)
+        assert isinstance(patched.bedrock, ClientPatchInfo)
+        assert patched.tool is None
+
+
+class TestAutoGenProfilerHandlerInit:
+    """Test AutoGenProfilerHandler initialization."""
+
+    def test_init_creates_lock(self):
+        """Test handler creates a threading lock."""
         handler = AutoGenProfilerHandler()
-        assert isinstance(handler._lock, type(threading.Lock()))  # pylint: disable=protected-access
+        assert isinstance(handler._lock, type(threading.Lock()))
+
+    def test_init_sets_timestamp(self):
+        """Test handler initializes last_call_ts."""
+        handler = AutoGenProfilerHandler()
         assert isinstance(handler.last_call_ts, float)
-        assert handler._original_tool_call is None  # pylint: disable=protected-access
-        assert handler._original_llm_call is None  # pylint: disable=protected-access
-        assert handler._instrumented is False  # pylint: disable=protected-access
+        assert handler.last_call_ts > 0
 
-    def test_instrument_already_instrumented(self):
-        """Test instrument when already instrumented."""
+    def test_init_creates_patched_clients(self):
+        """Test handler creates PatchedClients structure."""
         handler = AutoGenProfilerHandler()
-        handler._instrumented = True  # pylint: disable=protected-access
+        assert isinstance(handler._patched, PatchedClients)
 
-        with patch('nat.plugins.autogen.autogen_callback_handler.logger') as mock_logger:
+    def test_init_not_instrumented(self):
+        """Test handler starts not instrumented."""
+        handler = AutoGenProfilerHandler()
+        assert handler._instrumented is False
+
+    @patch('nat.plugins.autogen.callback_handler.Context.get')
+    def test_init_gets_step_manager(self, mock_get):
+        """Test handler gets step_manager from context."""
+        mock_context = Mock()
+        mock_step_manager = Mock()
+        mock_context.intermediate_step_manager = mock_step_manager
+        mock_get.return_value = mock_context
+
+        handler = AutoGenProfilerHandler()
+        assert handler.step_manager is mock_step_manager
+
+
+class TestInstrument:
+    """Test instrument() method."""
+
+    def test_instrument_skips_if_already_instrumented(self):
+        """Test instrument() skips if already instrumented."""
+        handler = AutoGenProfilerHandler()
+        handler._instrumented = True
+
+        with patch('nat.plugins.autogen.callback_handler.logger') as mock_logger:
             handler.instrument()
-            mock_logger.debug.assert_called_with("AutoGenProfilerHandler already instrumented; skipping.")
+            mock_logger.debug.assert_any_call("AutoGenProfilerHandler already instrumented; skipping.")
 
-    def test_instrument_import_failure(self):
-        """Test instrument when AutoGen imports fail."""
+    @patch('nat.plugins.autogen.callback_handler.logger')
+    def test_instrument_handles_missing_tool_import(self, mock_logger):
+        """Test instrument() handles missing autogen_core.tools."""
         handler = AutoGenProfilerHandler()
-        # Force import failure by patching the import to raise an exception
-        with patch('nat.plugins.autogen.autogen_callback_handler.logger') as mock_logger:
-            with patch('builtins.__import__', side_effect=ImportError("Mock import error")):
+
+        with patch.dict('sys.modules', {'autogen_core': None, 'autogen_core.tools': None}):
+            with patch('builtins.__import__', side_effect=ImportError("No module")):
                 handler.instrument()
-                mock_logger.exception.assert_called_with("AutoGen import failed; skipping instrumentation")
+                # Should still complete (gracefully handle missing imports)
+                mock_logger.debug.assert_any_call("autogen_core.tools not available; skipping tool instrumentation")
 
-    def test_uninstrument_failure(self):
-        """Test uninstrument with exception."""
+    def test_instrument_patches_openai_client(self):
+        """Test instrument() patches OpenAIChatCompletionClient."""
         handler = AutoGenProfilerHandler()
-        handler._instrumented = True  # pylint: disable=protected-access
-        handler._original_llm_call = Mock()  # pylint: disable=protected-access
 
-        with patch('nat.plugins.autogen.autogen_callback_handler.logger') as mock_logger:
-            # Force an exception by making the import fail
-            with patch('builtins.__import__', side_effect=ImportError("Mock import error")):
+        mock_openai_client = Mock()
+        mock_openai_client.create = Mock()
+        mock_openai_client.create_stream = Mock()
+
+        with patch.object(handler, '_create_llm_wrapper', return_value=Mock()) as mock_wrapper:
+            with patch.object(handler, '_create_stream_wrapper', return_value=Mock()) as mock_stream_wrapper:
+                with patch('nat.plugins.autogen.callback_handler.logger'):
+                    # Mock the import
+                    with patch.dict('sys.modules', {
+                        'autogen_core': Mock(),
+                        'autogen_core.tools': Mock(BaseTool=Mock(run_json=Mock())),
+                        'autogen_ext': Mock(),
+                        'autogen_ext.models': Mock(),
+                        'autogen_ext.models.openai': Mock(
+                            OpenAIChatCompletionClient=mock_openai_client,
+                            AzureOpenAIChatCompletionClient=Mock()
+                        ),
+                        'autogen_ext.models.anthropic': Mock(AnthropicBedrockChatCompletionClient=Mock())
+                    }):
+                        handler.instrument()
+
+                        # Verify wrappers were created
+                        assert handler._instrumented is True
+                        mock_wrapper.assert_called()
+                        mock_stream_wrapper.assert_called()
+
+    def test_instrument_sets_instrumented_flag(self):
+        """Test instrument() sets _instrumented to True."""
+        handler = AutoGenProfilerHandler()
+
+        with patch('nat.plugins.autogen.callback_handler.logger'):
+            # All imports will fail but handler should still mark as instrumented
+            handler.instrument()
+            assert handler._instrumented is True
+
+
+class TestUninstrument:
+    """Test uninstrument() method."""
+
+    def test_uninstrument_resets_state(self):
+        """Test uninstrument() resets handler state."""
+        handler = AutoGenProfilerHandler()
+        handler._instrumented = True
+        handler._patched.tool = Mock()
+        handler._patched.openai.create = Mock()
+
+        with patch('nat.plugins.autogen.callback_handler.logger'):
+            handler.uninstrument()
+
+        assert handler._instrumented is False
+        assert handler._patched.tool is None
+        assert handler._patched.openai.create is None
+
+    def test_uninstrument_handles_import_errors(self):
+        """Test uninstrument() handles import errors gracefully."""
+        handler = AutoGenProfilerHandler()
+        handler._instrumented = True
+        handler._patched.openai.create = Mock()
+
+        with patch('nat.plugins.autogen.callback_handler.logger') as mock_logger:
+            with patch('builtins.__import__', side_effect=ImportError("No module")):
                 handler.uninstrument()
                 mock_logger.exception.assert_called_with("Failed to uninstrument AutoGenProfilerHandler")
 
-    def test_lock_mechanism(self):
-        """Test that lock mechanism works properly."""
+
+class TestHelperMethods:
+    """Test helper extraction methods."""
+
+    def test_extract_model_name_from_raw_config(self):
+        """Test _extract_model_name extracts from _raw_config."""
         handler = AutoGenProfilerHandler()
-        # Test that we can acquire the lock
-        with handler._lock:  # pylint: disable=protected-access
-            # Lock should be held
+        client = Mock()
+        client._raw_config = {"model": "gpt-4-turbo"}
+
+        result = handler._extract_model_name(client)
+        assert result == "gpt-4-turbo"
+
+    def test_extract_model_name_fallback_to_model_attr(self):
+        """Test _extract_model_name falls back to model attribute."""
+        handler = AutoGenProfilerHandler()
+        client = Mock()
+        client._raw_config = {}
+        client.model = "fallback-model"
+
+        result = handler._extract_model_name(client)
+        assert result == "fallback-model"
+
+    def test_extract_model_name_returns_unknown(self):
+        """Test _extract_model_name returns 'unknown_model' on failure."""
+        handler = AutoGenProfilerHandler()
+        client = Mock(spec=[])  # No attributes
+
+        result = handler._extract_model_name(client)
+        assert result == "unknown_model"
+
+    def test_extract_input_text_simple_content(self):
+        """Test _extract_input_text with simple string content."""
+        handler = AutoGenProfilerHandler()
+        messages = [
+            {"content": "Hello"},
+            {"content": "World"}
+        ]
+
+        result = handler._extract_input_text(messages)
+        assert result == "HelloWorld"
+
+    def test_extract_input_text_list_content(self):
+        """Test _extract_input_text with list content."""
+        handler = AutoGenProfilerHandler()
+        messages = [
+            {"content": ["Part 1", {"text": "Part 2"}, "Part 3"]}
+        ]
+
+        result = handler._extract_input_text(messages)
+        assert "Part 1" in result
+        assert "Part 2" in result
+        assert "Part 3" in result
+
+    def test_extract_input_text_handles_none(self):
+        """Test _extract_input_text handles None content."""
+        handler = AutoGenProfilerHandler()
+        messages = [{"content": None}]
+
+        result = handler._extract_input_text(messages)
+        assert result == ""
+
+    def test_extract_output_text(self):
+        """Test _extract_output_text extracts from response."""
+        handler = AutoGenProfilerHandler()
+        output = Mock()
+        output.content = ["Hello ", "World"]
+
+        result = handler._extract_output_text(output)
+        assert result == "Hello World"
+
+    def test_extract_output_text_handles_error(self):
+        """Test _extract_output_text returns empty on error."""
+        handler = AutoGenProfilerHandler()
+        output = Mock(spec=[])  # No content attribute
+
+        result = handler._extract_output_text(output)
+        assert result == ""
+
+    def test_extract_usage_with_model_dump(self):
+        """Test _extract_usage with model_dump method."""
+        handler = AutoGenProfilerHandler()
+        output = Mock()
+        output.usage = Mock()
+        output.usage.model_dump.return_value = {"total_tokens": 100}
+
+        result = handler._extract_usage(output)
+        assert result == {"total_tokens": 100}
+
+    def test_extract_usage_with_dict(self):
+        """Test _extract_usage with dict usage."""
+        handler = AutoGenProfilerHandler()
+        output = Mock()
+        output.usage = {"prompt_tokens": 50, "completion_tokens": 50}
+
+        result = handler._extract_usage(output)
+        assert result["prompt_tokens"] == 50
+
+    def test_extract_usage_from_model_extra(self):
+        """Test _extract_usage falls back to model_extra."""
+        handler = AutoGenProfilerHandler()
+        output = Mock()
+        output.usage = None
+        output.model_extra = {"usage": {"total_tokens": 75}}
+
+        result = handler._extract_usage(output)
+        assert result == {"total_tokens": 75}
+
+    def test_extract_chat_response(self):
+        """Test _extract_chat_response extracts first choice."""
+        handler = AutoGenProfilerHandler()
+        output = Mock()
+        output.choices = [Mock()]
+        output.choices[0].model_dump.return_value = {"role": "assistant", "content": "Hi"}
+
+        result = handler._extract_chat_response(output)
+        assert result == {"role": "assistant", "content": "Hi"}
+
+    def test_extract_chat_response_empty_choices(self):
+        """Test _extract_chat_response handles empty choices."""
+        handler = AutoGenProfilerHandler()
+        output = Mock()
+        output.choices = []
+
+        result = handler._extract_chat_response(output)
+        assert result == {}
+
+
+class TestLLMWrapper:
+    """Test _create_llm_wrapper functionality."""
+
+    @patch('nat.plugins.autogen.callback_handler.Context.get')
+    async def test_llm_wrapper_pushes_start_and_end_events(self, mock_get):
+        """Test LLM wrapper pushes START and END events."""
+        mock_context = Mock()
+        mock_step_manager = Mock()
+        mock_context.intermediate_step_manager = mock_step_manager
+        mock_get.return_value = mock_context
+
+        handler = AutoGenProfilerHandler()
+
+        # Create mock response
+        mock_output = Mock()
+        mock_output.content = ["Test response"]
+        mock_output.usage = None
+        mock_output.choices = []
+        mock_output.model_extra = {}
+
+        original_func = AsyncMock(return_value=mock_output)
+        wrapped = handler._create_llm_wrapper(original_func)
+
+        # Call the wrapper
+        client = Mock()
+        client._raw_config = {"model": "test-model"}
+        await wrapped(client, messages=[{"content": "Hello"}])
+
+        # Verify both events pushed
+        assert mock_step_manager.push_intermediate_step.call_count == 2
+
+        # Verify event types (enum values are uppercase)
+        calls = mock_step_manager.push_intermediate_step.call_args_list
+        assert calls[0][0][0].event_type.value == "LLM_START"
+        assert calls[1][0][0].event_type.value == "LLM_END"
+
+    @patch('nat.plugins.autogen.callback_handler.Context.get')
+    async def test_llm_wrapper_handles_exception(self, mock_get):
+        """Test LLM wrapper handles exceptions correctly."""
+        mock_context = Mock()
+        mock_step_manager = Mock()
+        mock_context.intermediate_step_manager = mock_step_manager
+        mock_get.return_value = mock_context
+
+        handler = AutoGenProfilerHandler()
+
+        original_func = AsyncMock(side_effect=ValueError("LLM Error"))
+        wrapped = handler._create_llm_wrapper(original_func)
+
+        client = Mock()
+        client._raw_config = {"model": "test-model"}
+
+        with pytest.raises(ValueError, match="LLM Error"):
+            await wrapped(client, messages=[])
+
+        # Should have START and error END
+        assert mock_step_manager.push_intermediate_step.call_count == 2
+        error_call = mock_step_manager.push_intermediate_step.call_args_list[1][0][0]
+        assert "LLM Error" in error_call.data.output
+
+    @patch('nat.plugins.autogen.callback_handler.Context.get')
+    async def test_llm_wrapper_extracts_usage(self, mock_get):
+        """Test LLM wrapper extracts token usage."""
+        mock_context = Mock()
+        mock_step_manager = Mock()
+        mock_context.intermediate_step_manager = mock_step_manager
+        mock_get.return_value = mock_context
+
+        handler = AutoGenProfilerHandler()
+
+        mock_output = Mock()
+        mock_output.content = ["Response"]
+        mock_output.choices = []
+        mock_output.usage = Mock()
+        mock_output.usage.model_dump.return_value = {
+            "prompt_tokens": 10,
+            "completion_tokens": 20,
+            "total_tokens": 30
+        }
+
+        original_func = AsyncMock(return_value=mock_output)
+        wrapped = handler._create_llm_wrapper(original_func)
+
+        client = Mock()
+        client._raw_config = {"model": "test-model"}
+        await wrapped(client, messages=[])
+
+        # Check the END event has usage
+        end_call = mock_step_manager.push_intermediate_step.call_args_list[1][0][0]
+        assert end_call.usage_info.token_usage.prompt_tokens == 10
+        assert end_call.usage_info.token_usage.completion_tokens == 20
+
+
+class TestStreamWrapper:
+    """Test _create_stream_wrapper functionality."""
+
+    @patch('nat.plugins.autogen.callback_handler.Context.get')
+    async def test_stream_wrapper_yields_chunks(self, mock_get):
+        """Test stream wrapper yields all chunks."""
+        mock_context = Mock()
+        mock_step_manager = Mock()
+        mock_context.intermediate_step_manager = mock_step_manager
+        mock_get.return_value = mock_context
+
+        handler = AutoGenProfilerHandler()
+
+        # Create async generator that yields chunks
+        async def mock_stream(*args, **kwargs):
+            yield Mock(content="chunk1", usage=None)
+            yield Mock(content="chunk2", usage=None)
+            yield Mock(content="chunk3", usage={"total_tokens": 30})
+
+        wrapped = handler._create_stream_wrapper(mock_stream)
+
+        client = Mock()
+        client._raw_config = {"model": "test-model"}
+
+        chunks = []
+        async for chunk in wrapped(client, messages=[]):
+            chunks.append(chunk)
+
+        assert len(chunks) == 3
+
+    @patch('nat.plugins.autogen.callback_handler.Context.get')
+    async def test_stream_wrapper_pushes_events(self, mock_get):
+        """Test stream wrapper pushes START and END events."""
+        mock_context = Mock()
+        mock_step_manager = Mock()
+        mock_context.intermediate_step_manager = mock_step_manager
+        mock_get.return_value = mock_context
+
+        handler = AutoGenProfilerHandler()
+
+        async def mock_stream(*args, **kwargs):
+            yield Mock(content="test", usage=None)
+
+        wrapped = handler._create_stream_wrapper(mock_stream)
+
+        client = Mock()
+        client._raw_config = {"model": "test-model"}
+
+        async for _ in wrapped(client, messages=[]):
             pass
 
-        # Lock should be released
-        assert handler._lock.acquire(blocking=False)  # pylint: disable=protected-access
-        handler._lock.release()  # pylint: disable=protected-access
+        # Should have START and END
+        assert mock_step_manager.push_intermediate_step.call_count == 2
 
-    def test_last_call_timestamp_update(self):
-        """Test that last call timestamp is updated correctly."""
-        handler = AutoGenProfilerHandler()
-        original_ts = handler.last_call_ts
-        time.sleep(0.01)  # Small delay
-
-        # Simulate updating timestamp
-        with handler._lock:  # pylint: disable=protected-access
-            handler.last_call_ts = time.time()
-
-        assert handler.last_call_ts > original_ts
-
-    @patch('nat.plugins.autogen.autogen_callback_handler.Context.get')
-    def test_step_manager_property(self, mock_get: Mock):
-        """Test step_manager property access.
-
-        Args:
-            mock_get (Mock): Mock for Context.get method.
-        """
-        mock_context = Mock()
-        mock_step_manager = Mock()
-        mock_context.intermediate_step_manager = mock_step_manager
-        mock_get.return_value = mock_context
-
-        handler = AutoGenProfilerHandler()
-        assert handler.step_manager == mock_step_manager
-
-    def test_monkey_patch_functions_exist(self):
-        """Test that monkey patch functions can be created."""
-        handler = AutoGenProfilerHandler()
-        llm_patch = handler._llm_call_monkey_patch()  # pylint: disable=protected-access
-        tool_patch = handler._tool_call_monkey_patch()  # pylint: disable=protected-access
-
-        assert callable(llm_patch)
-        assert callable(tool_patch)
-
-    def test_time_tracking(self):
-        """Test last call timestamp tracking."""
-        handler = AutoGenProfilerHandler()
-        original_ts = handler.last_call_ts
-
-        # Update timestamp
-        time.sleep(0.001)  # Small delay to ensure timestamp changes
-        handler.last_call_ts = time.time()
-
-        assert handler.last_call_ts > original_ts
-
-    def test_context_integration(self):
-        """Test context and step manager integration."""
-        with patch('nat.plugins.autogen.autogen_callback_handler.Context.get') as mock_get:
-            mock_context = Mock()
-            mock_step_manager = Mock()
-            mock_context.intermediate_step_manager = mock_step_manager
-            mock_get.return_value = mock_context
-
-            handler = AutoGenProfilerHandler()
-            assert handler.step_manager == mock_step_manager
-
-    @patch('nat.plugins.autogen.autogen_callback_handler.logger')
-    def test_successful_instrumentation(self, mock_logger):
-        """Test successful instrumentation path.
-
-        Args:
-            mock_logger (Mock): Mock for the logger.
-        """
-        _ = mock_logger  # Unused in this test
-        handler = AutoGenProfilerHandler()
-
-        with patch('builtins.__import__') as mock_import:
-            # Mock successful imports
-            mock_autogen_core = Mock()
-            mock_autogen_ext = Mock()
-            mock_base_tool = Mock()
-            mock_client = Mock()
-
-            mock_autogen_core.tools.BaseTool = mock_base_tool
-            mock_autogen_ext.models.openai.OpenAIChatCompletionClient = mock_client
-
-            def side_effect(name, *args, **kwargs):
-                if 'autogen_core.tools' in name:
-                    return mock_autogen_core.tools
-                elif 'autogen_ext.models.openai' in name:
-                    return mock_autogen_ext.models.openai
-                return Mock()
-
-            mock_import.side_effect = side_effect
-
-            # Mock original methods
-            mock_base_tool.run_json = Mock()
-            mock_client.create = Mock()
-
-            handler.instrument()
-
-            # Verify instrumentation succeeded
-            assert handler._instrumented  # pylint: disable=protected-access
-            assert handler._original_tool_call is not None  # pylint: disable=protected-access
-            assert handler._original_llm_call is not None  # pylint: disable=protected-access
-
-    @patch('nat.plugins.autogen.autogen_callback_handler.logger')
-    def test_successful_uninstrumentation(self, mock_logger):
-        """Test successful uninstrumentation path.
-
-        Args:
-            mock_logger (Mock): Mock for the logger.
-        """
-        handler = AutoGenProfilerHandler()
-        handler._instrumented = True  # pylint: disable=protected-access
-
-        # Mock original methods
-        mock_original_llm = Mock()
-        mock_original_tool = Mock()
-        handler._original_llm_call = mock_original_llm  # pylint: disable=protected-access
-        handler._original_tool_call = mock_original_tool  # pylint: disable=protected-access
-
-        with patch('builtins.__import__') as mock_import:
-            # Mock successful imports
-            mock_autogen_core = Mock()
-            mock_autogen_ext = Mock()
-            mock_base_tool = Mock()
-            mock_client = Mock()
-
-            mock_autogen_core.tools.BaseTool = mock_base_tool
-            mock_autogen_ext.models.openai.OpenAIChatCompletionClient = mock_client
-
-            def side_effect(name, *args, **kwargs):
-                if 'autogen_core.tools' in name:
-                    return mock_autogen_core.tools
-                elif 'autogen_ext.models.openai' in name:
-                    return mock_autogen_ext.models.openai
-                return Mock()
-
-            mock_import.side_effect = side_effect
-
-            handler.uninstrument()
-
-            # Verify restoration
-            assert mock_client.create == mock_original_llm
-            assert mock_base_tool.run_json == mock_original_tool
-            assert not handler._instrumented  # pylint: disable=protected-access
-            mock_logger.debug.assert_called_with("AutoGenProfilerHandler uninstrumented successfully.")
-
-
-async def test_integration_flow():
-    """Test the complete integration flow."""
-    handler = AutoGenProfilerHandler()
-
-    # Test that handler starts uninitialized
-    assert not handler._instrumented  # pylint: disable=protected-access
-
-    # Test instrument/uninstrument cycle
-    handler.instrument()  # Should handle missing imports gracefully
-    handler.uninstrument()  # Should handle gracefully
-
-
-class TestLLMCallMonkeyPatch:
-    """Test LLM call monkey patch functionality."""
-
-    def test_llm_call_monkey_patch_creation(self):
-        """Test that LLM call monkey patch can be created."""
-        handler = AutoGenProfilerHandler()
-        patch_func = handler._llm_call_monkey_patch()  # pylint: disable=protected-access
-        assert callable(patch_func)
-
-    @patch('nat.plugins.autogen.autogen_callback_handler.Context.get')
-    @patch('nat.plugins.autogen.autogen_callback_handler.logger')
-    async def test_llm_wrapped_call_basic_flow(self, mock_logger: Mock, mock_get: Mock):
-        """Test basic LLM wrapped call flow.
-
-        Args:
-            mock_logger (Mock): Mock for the logger.
-            mock_get (Mock): Mock for Context.get method.
-        """
-        # Setup mocks
-        _ = mock_logger  # Unused in this test
+    @patch('nat.plugins.autogen.callback_handler.Context.get')
+    async def test_stream_wrapper_handles_error(self, mock_get):
+        """Test stream wrapper handles errors during streaming."""
         mock_context = Mock()
         mock_step_manager = Mock()
         mock_context.intermediate_step_manager = mock_step_manager
@@ -261,169 +465,29 @@ class TestLLMCallMonkeyPatch:
 
         handler = AutoGenProfilerHandler()
 
-        # Mock original function
-        mock_output = Mock()
-        mock_output.content = ["test output"]
-        mock_output.choices = []  # Empty choices to avoid processing
-        mock_output.usage = None  # No usage to avoid type error
-        mock_output.model_extra = {}  # Empty model_extra
-        original_func = AsyncMock(return_value=mock_output)
-        handler._original_llm_call = original_func  # pylint: disable=protected-access
+        async def mock_stream(*args, **kwargs):
+            yield Mock(content="test", usage=None)
+            raise RuntimeError("Stream error")
 
-        # Get wrapped function
-        wrapped_func = handler._llm_call_monkey_patch()  # pylint: disable=protected-access
+        wrapped = handler._create_stream_wrapper(mock_stream)
 
-        # Mock args with proper structure
-        mock_args = [Mock()]
-        mock_args[0]._raw_config = {"model": "gpt-4"}
-        mock_args[0].model = "gpt-4"
+        client = Mock()
+        client._raw_config = {"model": "test-model"}
 
-        kwargs = {"messages": [{"content": "Hello"}, {"content": ["text part", {"text": "nested text"}]}]}
+        with pytest.raises(RuntimeError, match="Stream error"):
+            async for _ in wrapped(client, messages=[]):
+                pass
 
-        # Call wrapped function
-        await wrapped_func(*mock_args, **kwargs)
-
-        # Verify original function was called
-        original_func.assert_called_once_with(*mock_args, **kwargs)
-
-        # Verify step manager interactions
-        assert mock_step_manager.push_intermediate_step.call_count == 2  # Start and end events
-
-    @patch('nat.plugins.autogen.autogen_callback_handler.Context.get')
-    @patch('nat.plugins.autogen.autogen_callback_handler.logger')
-    async def test_llm_wrapped_call_with_exception(self, mock_logger: Mock, mock_get: Mock):
-        """Test LLM wrapped call with exception handling.
-
-        Args:
-            mock_logger (Mock): Mock for the logger.
-            mock_get (Mock): Mock for Context.get method.
-        """
-        # Setup mocks
-        mock_context = Mock()
-        mock_step_manager = Mock()
-        mock_context.intermediate_step_manager = mock_step_manager
-        mock_get.return_value = mock_context
-
-        handler = AutoGenProfilerHandler()
-
-        # Mock original function that raises exception
-        original_func = AsyncMock(side_effect=Exception("LLM error"))
-        handler._original_llm_call = original_func  # pylint: disable=protected-access
-
-        # Get wrapped function
-        wrapped_func = handler._llm_call_monkey_patch()  # pylint: disable=protected-access
-
-        # Mock args
-        mock_args = [Mock()]
-        mock_args[0]._raw_config = {}
-        mock_args[0].model = "gpt-4"
-        kwargs = {"messages": [{"content": "test"}]}
-
-        # Call wrapped function
-        with pytest.raises(Exception):
-            await wrapped_func(*mock_args, **kwargs)
-
-        # Verify error handling
-        mock_logger.error.assert_called()
-
-    @patch('nat.plugins.autogen.autogen_callback_handler.Context.get')
-    async def test_llm_wrapped_call_model_name_fallback(self, mock_get: Mock):
-        """Test model name fallback when _raw_config fails.
-
-        Args:
-            mock_get (Mock): Mock for Context.get method.
-        """
-        # Setup mocks
-        mock_context = Mock()
-        mock_step_manager = Mock()
-        mock_context.intermediate_step_manager = mock_step_manager
-        mock_get.return_value = mock_context
-
-        handler = AutoGenProfilerHandler()
-
-        # Mock original function
-        mock_output = Mock()
-        mock_output.content = ["output"]
-        mock_output.choices = []  # Empty choices
-        mock_output.usage = None  # No usage
-        mock_output.model_extra = {}  # Empty model_extra
-        original_func = AsyncMock(return_value=mock_output)
-        handler._original_llm_call = original_func  # pylint: disable=protected-access
-
-        # Get wrapped function
-        wrapped_func = handler._llm_call_monkey_patch()  # pylint: disable=protected-access
-
-        # Mock args without _raw_config but ensure model returns a string
-        mock_args = [Mock()]
-        mock_args[0]._raw_config = {}  # Empty dict so get() returns None
-        mock_args[0].model = "fallback-model"
-        kwargs = {"messages": []}
-
-        # Call wrapped function
-        await wrapped_func(*mock_args, **kwargs)
-
-        # Verify call completed
-        original_func.assert_called_once()
-
-    @patch('nat.plugins.autogen.autogen_callback_handler.Context.get')
-    async def test_llm_wrapped_call_complex_content(self, mock_get: Mock):
-        """Test LLM wrapped call with complex message content.
-
-        Args:
-            mock_get (Mock): Mock for Context.get method.
-        """
-        # Setup mocks
-        mock_context = Mock()
-        mock_step_manager = Mock()
-        mock_context.intermediate_step_manager = mock_step_manager
-        mock_get.return_value = mock_context
-
-        handler = AutoGenProfilerHandler()
-
-        # Mock original function with complex output
-        mock_output = Mock()
-        mock_output.content = ["part1", "part2"]
-        mock_output.choices = [Mock()]
-        mock_output.choices[0].model_dump = Mock(return_value={"role": "assistant"})
-        mock_output.usage = Mock()
-        mock_output.usage.model_dump = Mock(return_value={"total_tokens": 50})
-
-        original_func = AsyncMock(return_value=mock_output)
-        handler._original_llm_call = original_func  # pylint: disable=protected-access
-
-        # Get wrapped function
-        wrapped_func = handler._llm_call_monkey_patch()  # pylint: disable=protected-access
-
-        # Mock args
-        mock_args = [Mock()]
-        mock_args[0]._raw_config = {"model": "gpt-4"}
-        kwargs = {"messages": [{"content": ["text_part", {"text": "nested_text"}, {"type": "image"}]}]}
-
-        # Call wrapped function
-        result = await wrapped_func(*mock_args, **kwargs)
-
-        # Verify result
-        assert result == mock_output
+        # Should have START and error END
         assert mock_step_manager.push_intermediate_step.call_count == 2
 
 
-class TestToolCallMonkeyPatch:
-    """Test tool call monkey patch functionality."""
+class TestToolWrapper:
+    """Test _create_tool_wrapper functionality."""
 
-    def test_tool_call_monkey_patch_creation(self):
-        """Test that tool call monkey patch can be created."""
-        handler = AutoGenProfilerHandler()
-        patch_func = handler._tool_call_monkey_patch()  # pylint: disable=protected-access
-        assert callable(patch_func)
-
-    @patch('nat.plugins.autogen.autogen_callback_handler.Context.get')
-    async def test_tool_wrapped_call_basic_flow(self, mock_get: Mock):
-        """Test basic tool wrapped call flow.
-
-        Args:
-            mock_get (Mock): Mock for Context.get method.
-        """
-        # Setup mocks
+    @patch('nat.plugins.autogen.callback_handler.Context.get')
+    async def test_tool_wrapper_basic_flow(self, mock_get):
+        """Test tool wrapper pushes START and END events."""
         mock_context = Mock()
         mock_step_manager = Mock()
         mock_context.intermediate_step_manager = mock_step_manager
@@ -431,37 +495,27 @@ class TestToolCallMonkeyPatch:
 
         handler = AutoGenProfilerHandler()
 
-        # Mock original function
         original_func = AsyncMock(return_value="tool result")
-        handler._original_tool_call = original_func  # pylint: disable=protected-access
+        wrapped = handler._create_tool_wrapper(original_func)
 
-        # Get wrapped function
-        wrapped_func = handler._tool_call_monkey_patch()  # pylint: disable=protected-access
+        tool = Mock()
+        tool.name = "test_tool"
+        call_data = Mock()
+        call_data.kwargs = {"param": "value"}
 
-        # Mock args
-        mock_tool = Mock()
-        mock_tool.name = "test_tool"
-        mock_call_data = Mock()
-        mock_call_data.kwargs = {"param": "value"}
+        result = await wrapped(tool, call_data)
 
-        # Call wrapped function
-        result = await wrapped_func(mock_tool, mock_call_data)
-
-        # Verify result
         assert result == "tool result"
-        original_func.assert_called_once_with(mock_tool, mock_call_data)
         assert mock_step_manager.push_intermediate_step.call_count == 2
 
-    @patch('nat.plugins.autogen.autogen_callback_handler.Context.get')
-    @patch('nat.plugins.autogen.autogen_callback_handler.logger')
-    async def test_tool_wrapped_call_with_exception(self, mock_logger: Mock, mock_get: Mock):
-        """Test tool wrapped call with exception handling.
+        # Verify event types (enum values are uppercase)
+        calls = mock_step_manager.push_intermediate_step.call_args_list
+        assert calls[0][0][0].event_type.value == "TOOL_START"
+        assert calls[1][0][0].event_type.value == "TOOL_END"
 
-        Args:
-            mock_logger (Mock): Mock for the logger.
-            mock_get (Mock): Mock for Context.get method.
-        """
-        # Setup mocks
+    @patch('nat.plugins.autogen.callback_handler.Context.get')
+    async def test_tool_wrapper_handles_dict_input(self, mock_get):
+        """Test tool wrapper handles dict input format."""
         mock_context = Mock()
         mock_step_manager = Mock()
         mock_context.intermediate_step_manager = mock_step_manager
@@ -469,61 +523,19 @@ class TestToolCallMonkeyPatch:
 
         handler = AutoGenProfilerHandler()
 
-        # Mock original function that raises exception
-        original_func = AsyncMock(side_effect=Exception("Tool error"))
-        handler._original_tool_call = original_func  # pylint: disable=protected-access
-
-        # Get wrapped function
-        wrapped_func = handler._tool_call_monkey_patch()  # pylint: disable=protected-access
-
-        # Mock args
-        mock_tool = Mock()
-        mock_tool.name = "failing_tool"
-        mock_call_data = {"kwargs": {"param": "value"}}
-
-        # Call wrapped function
-        with pytest.raises(Exception) as exc_info:
-            await wrapped_func(mock_tool, mock_call_data)
-
-        # Verify error handling
-        assert "Tool error" in str(exc_info.value)
-        mock_logger.error.assert_called()
-
-    @patch('nat.plugins.autogen.autogen_callback_handler.Context.get')
-    async def test_tool_wrapped_call_various_input_formats(self, mock_get: Mock):
-        """Test tool wrapped call with various input formats."""
-        # Setup mocks
-        mock_context = Mock()
-        mock_step_manager = Mock()
-        mock_context.intermediate_step_manager = mock_step_manager
-        mock_get.return_value = mock_context
-
-        handler = AutoGenProfilerHandler()
-
-        # Mock original function
         original_func = AsyncMock(return_value="result")
-        handler._original_tool_call = original_func  # pylint: disable=protected-access
+        wrapped = handler._create_tool_wrapper(original_func)
 
-        # Get wrapped function
-        wrapped_func = handler._tool_call_monkey_patch()  # pylint: disable=protected-access
+        tool = Mock()
+        tool.name = "test_tool"
+        call_data = {"kwargs": {"key": "value"}}
 
-        # Test with dict input format
-        mock_tool = Mock()
-        mock_tool.name = "test_tool"
-        mock_call_data = {"kwargs": {"param": "value"}}
-
-        result = await wrapped_func(mock_tool, mock_call_data)
+        result = await wrapped(tool, call_data)
         assert result == "result"
 
-
-class TestErrorHandlingPaths:
-    """Test error handling in various code paths."""
-
-    @patch('nat.plugins.autogen.autogen_callback_handler.Context.get')
-    @patch('nat.plugins.autogen.autogen_callback_handler.logger')
-    async def test_llm_model_name_error_handling(self, mock_logger: Mock, mock_get: Mock):
-        """Test error handling when getting model name fails."""
-        # Setup mocks
+    @patch('nat.plugins.autogen.callback_handler.Context.get')
+    async def test_tool_wrapper_handles_exception(self, mock_get):
+        """Test tool wrapper handles tool execution errors."""
         mock_context = Mock()
         mock_step_manager = Mock()
         mock_context.intermediate_step_manager = mock_step_manager
@@ -531,73 +543,57 @@ class TestErrorHandlingPaths:
 
         handler = AutoGenProfilerHandler()
 
-        # Mock original function
-        mock_output = Mock()
-        mock_output.content = ["output"]
-        mock_output.choices = []  # Empty choices to avoid processing
-        # Create proper usage mock that has model_dump method
-        mock_usage = Mock()
-        mock_usage.model_dump.return_value = {
-            'completion_tokens': 100,
-            'prompt_tokens': 50,
-            'total_tokens': 150,
-            'completion_tokens_details': None,
-            'prompt_tokens_details': None
-        }
-        mock_output.usage = mock_usage
-        original_func = AsyncMock(return_value=mock_output)
-        handler._original_llm_call = original_func  # pylint: disable=protected-access
+        original_func = AsyncMock(side_effect=ValueError("Tool failed"))
+        wrapped = handler._create_tool_wrapper(original_func)
 
-        # Get wrapped function
-        wrapped_func = handler._llm_call_monkey_patch()  # pylint: disable=protected-access
+        tool = Mock()
+        tool.name = "failing_tool"
+        call_data = Mock()
+        call_data.kwargs = {}
 
-        # Mock args that will cause error in model name retrieval
-        mock_args = [Mock()]
-        # Make _raw_config access raise exception
-        type(mock_args[0])._raw_config = PropertyMock(side_effect=Exception("Config error"))
-        mock_args[0].model = "fallback"
+        with pytest.raises(ValueError, match="Tool failed"):
+            await wrapped(tool, call_data)
 
-        kwargs = {"messages": []}
+        # Should have START and error END
+        assert mock_step_manager.push_intermediate_step.call_count == 2
+        error_call = mock_step_manager.push_intermediate_step.call_args_list[1][0][0]
+        assert "Tool failed" in error_call.data.output
 
-        # Call wrapped function
-        await wrapped_func(*mock_args, **kwargs)
 
-        # Verify exception was logged
-        mock_logger.exception.assert_called()
+class TestIntegration:
+    """Integration tests for full workflow."""
 
-    @patch('nat.plugins.autogen.autogen_callback_handler.Context.get')
-    @patch('nat.plugins.autogen.autogen_callback_handler.logger')
-    async def test_llm_input_processing_error(self, mock_logger: Mock, mock_get: Mock):
-        """Test error handling in input processing."""
-        # Setup mocks
-        mock_context = Mock()
-        mock_step_manager = Mock()
-        mock_context.intermediate_step_manager = mock_step_manager
-        mock_get.return_value = mock_context
-
+    async def test_full_instrument_uninstrument_cycle(self):
+        """Test complete instrument/uninstrument cycle."""
         handler = AutoGenProfilerHandler()
 
-        # Mock original function
-        original_func = AsyncMock(return_value=Mock(content=["output"]))
-        handler._original_llm_call = original_func  # pylint: disable=protected-access
+        # Should start not instrumented
+        assert not handler._instrumented
 
-        # Get wrapped function
-        wrapped_func = handler._tool_call_monkey_patch()  # pylint: disable=protected-access
+        # Instrument (will handle missing imports gracefully)
+        handler.instrument()
+        assert handler._instrumented
 
-        # Mock args that will cause error in input processing
-        mock_tool = Mock()
-        mock_tool.name = "test_tool"
-        # Create problematic input that will cause exception
-        problematic_input = Mock()
-        type(problematic_input).kwargs = PropertyMock(side_effect=Exception("Input error"))
+        # Uninstrument
+        handler.uninstrument()
+        assert not handler._instrumented
 
-        # Call wrapped function and expect exception
-        with pytest.raises(Exception) as exc_info:
-            await wrapped_func(mock_tool, problematic_input)
+    def test_lock_thread_safety(self):
+        """Test that lock prevents concurrent timestamp updates."""
+        handler = AutoGenProfilerHandler()
 
-        # Verify error was logged and exception message is correct
-        mock_logger.error.assert_called()
-        assert "Input error" in str(exc_info.value)
+        def update_timestamp():
+            with handler._lock:
+                time.sleep(0.01)
+                handler.last_call_ts = time.time()
+
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+            futures = [executor.submit(update_timestamp) for _ in range(10)]
+            concurrent.futures.wait(futures)
+
+        # Should complete without errors
+        assert handler.last_call_ts > 0
 
 
 if __name__ == "__main__":

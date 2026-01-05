@@ -150,7 +150,7 @@ def set_framework_profiler_handler(
 
             if LLMFrameworkEnum.AUTOGEN in frameworks and not _library_instrumented["autogen"]:
                 try:
-                    from nat.plugins.autogen.autogen_callback_handler import AutoGenProfilerHandler
+                    from nat.plugins.autogen.callback_handler import AutoGenProfilerHandler
                 except ImportError as e:
                     logger.warning(
                         "AutoGen profiler not available. " +
