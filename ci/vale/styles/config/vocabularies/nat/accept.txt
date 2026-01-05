@@ -91,6 +91,7 @@ Langfuse
 LangChain
 LangGraph
 LangSmith
+LlamaIndex
 [Ll]aunchable(s?)
 [Ll]eaderboard
 # libcudf isn't styled in the way that cuDF is https://docs.rapids.ai/api/libcudf/stable/
