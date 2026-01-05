@@ -168,7 +168,7 @@ async def test_otel_full_workflow(tmp_path: Path, config_dir: Path, question: st
 
             if not called_multiply:
                 function_name = trace.get('function_ancestry', {}).get('function_name')
-                called_multiply = function_name == "calculator.multiply"
+                called_multiply = function_name == "calculator__multiply"
 
     assert len(traces) > 0
     assert called_multiply
@@ -277,14 +277,14 @@ async def test_nested_span_parent_child_lineage(tmp_path: Path, config_dir: Path
     """
     Test that nested tool calls correctly track parent-child span lineage.
 
-    This test verifies that when power_of_two internally calls calculator.multiply,
+    This test verifies that when power_of_two internally calls calculator__multiply,
     the span exports correctly reflect the parent-child relationship:
     - power_of_two should have parent_name pointing to the react_agent
-    - calculator.multiply should have parent_name = "power_of_two"
+    - calculator__multiply should have parent_name = "power_of_two"
     """
     otel_file = tmp_path / "otel-nested-trace.jsonl"
 
-    # Load the nested config that has power_of_two -> calculator.multiply
+    # Load the nested config that has power_of_two -> calculator__multiply
     config_file = config_dir / "config-phoenix-nested.yml"
     config = load_config(config_file)
 
@@ -334,20 +334,20 @@ async def test_nested_span_parent_child_lineage(tmp_path: Path, config_dir: Path
     power_of_two_parent = power_of_two_ancestry.get("parent_name")
     assert power_of_two_parent is not None, "power_of_two should have a parent_name"
 
-    # Verify calculator.multiply span exists and has power_of_two as parent
-    assert "calculator.multiply" in spans_by_function, (
-        f"calculator.multiply span not found. Available functions: {list(spans_by_function.keys())}")
-    multiply_span = spans_by_function["calculator.multiply"]
+    # Verify calculator__multiply span exists and has power_of_two as parent
+    assert "calculator__multiply" in spans_by_function, (
+        f"calculator__multiply span not found. Available functions: {list(spans_by_function.keys())}")
+    multiply_span = spans_by_function["calculator__multiply"]
     multiply_ancestry = multiply_span.get("function_ancestry", {})
 
     multiply_parent_name = multiply_ancestry.get("parent_name")
     assert multiply_parent_name == "power_of_two", (
-        f"calculator.multiply parent_name should be 'power_of_two', got '{multiply_parent_name}'")
+        f"calculator__multiply parent_name should be 'power_of_two', got '{multiply_parent_name}'")
 
     # Additionally verify the parent_id linkage is consistent
     power_of_two_id = power_of_two_ancestry.get("function_id")
     multiply_parent_id = multiply_ancestry.get("parent_id")
     assert multiply_parent_id == power_of_two_id, (
-        f"calculator.multiply parent_id ({multiply_parent_id}) should match "
+        f"calculator__multiply parent_id ({multiply_parent_id}) should match "
         f"power_of_two function_id ({power_of_two_id})"
     )

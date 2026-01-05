@@ -620,7 +620,7 @@ class DynamicFunctionMiddleware(FunctionMiddleware):
         """Get a registered callable by its key.
 
         Args:
-            key: The registration key (for example, "my_llm.invoke" or "calculator.add")
+            key: The registration key (for example, "my_llm.invoke" or "calculator__add")
 
         Returns:
             The RegisteredFunction or RegisteredComponentMethod if found, None otherwise

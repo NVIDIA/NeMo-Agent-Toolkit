@@ -489,7 +489,13 @@ class FunctionGroup:
         return self._config
 
     def _get_fn_name(self, name: str) -> str:
-        return f"{self._instance_name}.{name}"
+        """
+        The function name of a function in a function group is the function name concatenated with
+        the function group instance name separated with a separator string.
+
+        The separator is a double underscore (``__``), but was a period (``.``) in prior versions.
+        """
+        return f"{self._instance_name}__{name}"
 
     async def _fn_should_be_included(self, name: str) -> bool:
         if name not in self._per_function_filter_fn:
