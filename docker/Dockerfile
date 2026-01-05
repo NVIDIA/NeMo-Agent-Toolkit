@@ -49,7 +49,7 @@ RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
     uv venv --python ${PYTHON_VERSION} /workspace/.venv && \
     . /workspace/.venv/bin/activate && \
     test -n "${NAT_VERSION}" || { echo "NAT_VERSION build-arg is required" >&2; exit 1; } && \
-    uv pip install --prerelease=allow "nvidia-nat-all==${NAT_VERSION}"
+    uv pip install --prerelease=allow "nvidia-nat[all]==${NAT_VERSION}"
 
 # Environment variables for the venv
 ENV PATH="/workspace/.venv/bin:$PATH"
