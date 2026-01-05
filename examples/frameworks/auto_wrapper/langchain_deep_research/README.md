@@ -27,7 +27,7 @@ We use LangGraph's **Deep Research agent** as a comprehensive example—a sophis
 The included Jupyter notebook (`langgraph_deep_research.ipynb`) provides a complete walkthrough:
 
 1. Running an existing LangGraph agent through NeMo Agent toolkit without code changes
-2. Making agents configurable with different LLMs (Gemini, GPT-4, GPT-5, etc.)
+2. Making agents configurable with different components (LLMs, tools, embedders)
 3. Adding Phoenix telemetry for observability
 4. Evaluating agent performance with automated metrics
 
