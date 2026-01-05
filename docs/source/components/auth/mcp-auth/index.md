@@ -285,27 +285,6 @@ curl -X POST http://localhost:8000/generate \
 
 Each user identified by their `nat-session` cookie gets their own workflow instance and MCP client. When a user makes their first request, they will be prompted to complete OAuth authentication. Their tokens are stored separately from other users.
 
-#### Redirect URI Port Requirement for Per-User Workflows
-
-:::{important}
-For per-user workflows, the `redirect_uri` must use a **different port** than the main server (for example, port 8001 instead of 8000). This is different from non-per-user workflows where the same port can be used.
-:::
-
-**Why this is required:**
-
-- **Non-per-user workflows**: Authentication happens during startup, *before* the main server binds to its port. The authentication handler starts a temporary server on port 8000, completes OAuth, then stops it. The main server then starts on port 8000 with no conflict.
-
-- **Per-user workflows**: The main server starts on port 8000 first. Authentication happens lazily when a user makes their first API call. At this point, the authentication handler cannot start another server on port 8000 because it's already in use.
-
-Configure the `redirect_uri` to use a different port in your authentication provider:
-```yaml
-authentication:
-  mcp_oauth2_jira:
-    _type: mcp_oauth2
-    server_url: ${CORPORATE_MCP_JIRA_URL}
-    redirect_uri: ${NAT_REDIRECT_URI:-http://localhost:8001/auth/redirect}  # Note: port 8001
-```
-
 ## Displaying Protected MCP Tools through the CLI
 MCP client CLI can be used to display and call MCP tools on a remote MCP server. To use a protected MCP server, you need to provide the `--auth` flag:
 ```bash
