@@ -13,12 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# path-check-skip-file
+
 general:
   telemetry:
     logging:
       console:
         _type: console
-        level: debug
+        level: info
+    # Phoenix tracing requires: uv pip install "nvidia-nat[phoenix]" arize-phoenix
+    tracing:
+      phoenix:
+        _type: phoenix
+        endpoint: http://localhost:6006/v1/traces
+        project: nat_autogen_demo
 
 llms:
   nim_llm:
@@ -29,21 +37,16 @@ llms:
     temperature: 0.0
     max_tokens: 1024
 
-  openai_llm:
-    _type: openai
-    model_name: gpt-4o-mini
-    api_key: ${OPENAI_API_KEY}
+  # Evaluator LLM (used for evaluation metrics)
+  evaluator_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    api_key: ${NVIDIA_API_KEY}
+    base_url: https://integrate.api.nvidia.com/v1
     temperature: 0.0
+    max_tokens: 2048
 
-  azure_openai_llm:
-    _type: azure_openai
-    azure_deployment: ${AZURE_OPENAI_DEPLOYMENT:-your-deployment-name}
-    azure_endpoint: ${AZURE_OPENAI_ENDPOINT:-https://your-resource.openai.azure.com/}
-    api_key: ${AZURE_OPENAI_API_KEY:-placeholder}
-    temperature: 0.0
-
-# MCP tools defined as individual functions to avoid AutoGen's dot naming limitation.
-# Function groups prefix tools as "group.tool" but AutoGen doesn't allow dots in tool names.
+# MCP tools defined as individual functions
 functions:
   weather_update_tool:
     _type: nat_autogen_demo/weather_update_autogen
@@ -81,3 +84,39 @@ workflow:
     You are the final response agent.
     Your role is to provide a concise and clear answer based on the information provided by other agents.
     Once you are done, reply with the final answer and then say 'APPROVE'.
+
+eval:
+  general:
+    output:
+      dir: ./.tmp/nat/examples/frameworks/nat_autogen_demo/eval/
+      cleanup: true
+    dataset:
+      _type: json
+      file_path: examples/frameworks/nat_autogen_demo/data/eval_dataset.json
+    profiler:
+      token_uniqueness_forecast: true
+      workflow_runtime_forecast: true
+      compute_llm_metrics: true
+      csv_exclude_io_text: true
+      prompt_caching_prefixes:
+        enable: true
+        min_frequency: 0.1
+      bottleneck_analysis:
+        enable_nested_stack: true
+      concurrency_spike_analysis:
+        enable: true
+        spike_threshold: 5
+
+  evaluators:
+    accuracy:
+      _type: ragas
+      metric: AnswerAccuracy
+      llm_name: evaluator_llm
+    groundedness:
+      _type: ragas
+      metric: ResponseGroundedness
+      llm_name: evaluator_llm
+    trajectory_accuracy:
+      _type: trajectory
+      llm_name: evaluator_llm
+
