@@ -459,7 +459,6 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
                 ),
             )
             start_uuid = start_payload.UUID
-            start_time = time.time()
             handler.step_manager.push_intermediate_step(start_payload)
 
             # Collect streaming output
@@ -575,7 +574,6 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
                 ),
             )
             start_uuid = start_payload.UUID
-            start_time = time.time()
             handler.step_manager.push_intermediate_step(start_payload)
 
             # Call original function
