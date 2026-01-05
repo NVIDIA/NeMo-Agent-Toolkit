@@ -298,8 +298,9 @@ async def _build_function_group_impl(
         raise ValueError("Expected a FunctionGroup object to be returned from the function group builder. "
                          f"Got {type(build_result)}")
 
-    build_result.configure_middleware(middleware_instances)
+    # Set the instance name BEFORE configuring middleware
     build_result.set_instance_name(name)
+    build_result.configure_middleware(middleware_instances)
 
     return ConfiguredFunctionGroup(config=config, instance=build_result)
 
@@ -648,6 +649,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         if (name in self._functions or name in self._function_groups):
             raise ValueError(f"Function `{name}` already exists in the list of functions or function groups")
+        if any(name.startswith(k + "__") for k in self._function_groups.keys()):
+            raise ValueError(f"A Function name starts with a Function Group name: `{name}`")
 
         build_result = await self._build_function(name=name, config=config)
 
@@ -662,6 +665,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         if (name in self._function_groups or name in self._functions):
             raise ValueError(f"Function group `{name}` already exists in the list of function groups or functions")
+        if any(k.startswith(name + "__") for k in self._functions.keys()):
+            raise ValueError(f"A Function name starts with a Function Group name: `{name}`")
 
         # Build the function group
         build_result = await self._build_function_group(name=name, config=config)
@@ -681,10 +686,24 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         return build_result.instance
 
+    def _check_backwards_compatibility_function_name(self, name: str) -> str:
+        if name in self._functions:
+            return name
+        compat_name = name.replace(".", "__")
+        if compat_name in self._functions:
+            logger.warning(
+                f"Function `{name}` is deprecated and will be removed in a future release. Use `{compat_name}` instead."
+            )
+            return compat_name
+        return name
+
     @override
     async def get_function(self, name: str | FunctionRef) -> Function:
         if isinstance(name, FunctionRef):
             name = str(name)
+
+        name = self._check_backwards_compatibility_function_name(name)
+
         if name not in self._functions:
             raise ValueError(f"Function `{name}` not found")
 
@@ -703,6 +722,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
     def get_function_config(self, name: str | FunctionRef) -> FunctionBaseConfig:
         if isinstance(name, FunctionRef):
             name = str(name)
+        name = self._check_backwards_compatibility_function_name(name)
         if name not in self._functions:
             raise ValueError(f"Function `{name}` not found")
 
@@ -794,6 +814,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
     async def get_tool(self, fn_name: str | FunctionRef, wrapper_type: LLMFrameworkEnum | str) -> typing.Any:
         if isinstance(fn_name, FunctionRef):
             fn_name = str(fn_name)
+
+        fn_name = self._check_backwards_compatibility_function_name(fn_name)
+
         if fn_name not in self._functions:
             raise ValueError(f"Function `{fn_name}` not found in list of functions")
         fn = self._functions[fn_name]

@@ -92,7 +92,7 @@ In the workflow configuration, you can reference individual functions or the ent
 workflow:
   _type: react_agent
   # Reference individual functions
-  tool_names: [user_report.get, user_report.put, user_report.update, user_report.delete]
+  tool_names: [user_report__get, user_report__put, user_report__update, user_report__delete]
 ```
 
 ```yaml
@@ -251,7 +251,7 @@ nat run --config_file examples/object_store/user_report/configs/config_s3.yml --
 <snipped for brevity>
 
 [AGENT]
-Calling tools: user_report.get
+Calling tools: user_report__get
 Tool's input: {"user_id": "67890", "date": null}
 
 <snipped for brevity>
@@ -292,7 +292,7 @@ nat run --config_file examples/object_store/user_report/configs/config_s3.yml --
 <snipped for brevity>
 
 [AGENT]
-Calling tools: user_report.put
+Calling tools: user_report__put
 Tool's input: {"report": "{\n    \"recommendations\": [\n        \"Update graphics driver\",\n        \"Check for overheating hardware\",\n        \"Enable automatic crash reporting\"\n    ]\n}", "user_id": "6789", "date": null}
 Tool's response:
 User report for 6789 with date latest added successfully
@@ -310,7 +310,7 @@ If you attempt to put a report for a user and date that already exists, the work
 <snipped for brevity>
 
 [AGENT]
-Calling tools: user_report.put
+Calling tools: user_report__put
 Tool's input: {"report": "{\"recommendations\": [\"Update graphics driver\", \"Check for overheating hardware\", \"Enable automatic crash reporting\"]}", "user_id": "6789", "date": null}
 Tool's response:
 User report for 6789 with date latest already exists
@@ -339,7 +339,7 @@ nat run --config_file examples/object_store/user_report/configs/config_s3.yml --
 <snipped for brevity>
 
 [AGENT]
-Calling tools: user_report.update
+Calling tools: user_report__update
 Tool's input: {"report": "{\"recommendations\": [\"Update graphics driver\", \"Check for overheating hardware\", \"Reboot the system\"]}", "user_id": "6789", "date": null}
 Tool's response:
 User report for 6789 with date latest updated
@@ -360,7 +360,7 @@ nat run --config_file examples/object_store/user_report/configs/config_s3.yml --
 <snipped for brevity>
 
 [AGENT]
-Calling tools: user_report.delete
+Calling tools: user_report__delete
 Tool's input: {"user_id": "6789", "date": null}
 Tool's response:
 User report for 6789 with date latest deleted
@@ -378,7 +378,7 @@ If you attempt to delete a report that does not exist, the workflow will return 
 <snipped for brevity>
 
 [AGENT]
-Calling tools: user_report.delete
+Calling tools: user_report__delete
 Tool's input: {"user_id": "6789", "date": null}
 Tool's response:
 Tool call failed after all retry attempts. Last error: No object found with key: /reports/6789/latest.json. An error occurred (NoSuchKey) when calling the GetObject operation: The specified key does not exist.

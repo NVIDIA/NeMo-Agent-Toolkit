@@ -130,10 +130,10 @@ workflow:
 {
   "name": "Calculator Agent",
   "skills": [
-    {"id": "calculator.add", "name": "add", "description": "Add two or more numbers"},
-    {"id": "calculator.subtract", "name": "subtract", "description": "Subtract numbers"},
-    {"id": "calculator.multiply", "name": "multiply", "description": "Multiply numbers"},
-    {"id": "calculator.divide", "name": "divide", "description": "Divide numbers"}
+    {"id": "calculator__add", "name": "add", "description": "Add two or more numbers"},
+    {"id": "calculator__subtract", "name": "subtract", "description": "Subtract numbers"},
+    {"id": "calculator__multiply", "name": "multiply", "description": "Multiply numbers"},
+    {"id": "calculator__divide", "name": "divide", "description": "Divide numbers"}
   ]
 }
 ```

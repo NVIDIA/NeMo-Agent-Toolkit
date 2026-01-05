@@ -117,7 +117,7 @@ async def test_function_group_filter_fn():
 
     # Test get_accessible_functions with group filter
     accessible = await group.get_accessible_functions()
-    expected_keys = {"test_function_group.func1", "test_function_group.func1_alt"}
+    expected_keys = {"test_function_group__func1", "test_function_group__func1_alt"}
     assert set(accessible.keys()) == expected_keys
 
     # Test get_all_functions with group filter
@@ -129,7 +129,7 @@ async def test_function_group_filter_fn():
         return [name for name in names if name == "func2"]
 
     accessible_override = await group.get_accessible_functions(filter_fn=override_filter)
-    assert set(accessible_override.keys()) == {"test_function_group.func2"}
+    assert set(accessible_override.keys()) == {"test_function_group__func2"}
 
 
 @pytest.mark.asyncio
@@ -160,7 +160,7 @@ async def test_function_group_per_function_filter():
 
     # Test that func1 is excluded by its per-function filter
     accessible = await group.get_accessible_functions()
-    expected_keys = {"test_function_group.func2", "test_function_group.func3"}
+    expected_keys = {"test_function_group__func2", "test_function_group__func3"}
     assert set(accessible.keys()) == expected_keys
 
     # Test get_all_functions also respects per-function filters
@@ -189,11 +189,11 @@ async def test_function_group_filter_interaction_with_include_config():
 
     # Only func2 should be accessible (intersection of include config and group filter)
     accessible = await group.get_accessible_functions()
-    assert set(accessible.keys()) == {"test_function_group_include.func2"}
+    assert set(accessible.keys()) == {"test_function_group_include__func2"}
 
     # get_included_functions should also respect the group filter
     included = await group.get_included_functions()
-    assert set(included.keys()) == {"test_function_group_include.func2"}
+    assert set(included.keys()) == {"test_function_group_include__func2"}
 
 
 @pytest.mark.asyncio
@@ -217,7 +217,7 @@ async def test_function_group_filter_interaction_with_exclude_config():
 
     # Only func1 should be accessible (group filter allows func1,func3 but config excludes func3)
     accessible = await group.get_accessible_functions()
-    assert set(accessible.keys()) == {"test_function_group_exclude.func1"}
+    assert set(accessible.keys()) == {"test_function_group_exclude__func1"}
 
 
 @pytest.mark.asyncio
@@ -246,12 +246,12 @@ async def test_function_group_complex_filter_interaction():
 
     # Only func1 and func3 should be accessible
     accessible = await group.get_accessible_functions()
-    expected_keys = {"test_function_group.func1", "test_function_group.func3"}
+    expected_keys = {"test_function_group__func1", "test_function_group__func3"}
     assert set(accessible.keys()) == expected_keys
 
     # Test excluded functions
     excluded = await group.get_excluded_functions()
-    assert set(excluded.keys()) == {"test_function_group.func2", "test_function_group.func4"}
+    assert set(excluded.keys()) == {"test_function_group__func2", "test_function_group__func4"}
 
 
 @pytest.mark.asyncio
@@ -280,7 +280,7 @@ async def test_function_group_set_filter_fn():
 
     # Now only func1 should be accessible
     accessible = await group.get_accessible_functions()
-    assert set(accessible.keys()) == {"test_function_group.func1"}
+    assert set(accessible.keys()) == {"test_function_group__func1"}
 
 
 @pytest.mark.asyncio
@@ -308,7 +308,7 @@ async def test_function_group_set_per_function_filter_fn():
 
     # Now only func2 should be accessible
     accessible = await group.get_accessible_functions()
-    assert set(accessible.keys()) == {"test_function_group.func2"}
+    assert set(accessible.keys()) == {"test_function_group__func2"}
 
     # Test error when setting filter for non-existent function
     with pytest.raises(ValueError, match="Function nonexistent not found in function group"):
@@ -400,18 +400,18 @@ async def test_function_group_filter_override_precedence():
 
     # With instance filter, only func1 is accessible
     accessible = await group.get_accessible_functions()
-    assert set(accessible.keys()) == {"test_function_group.func1"}
+    assert set(accessible.keys()) == {"test_function_group__func1"}
 
     # Override filter includes only func2
     async def override_filter(names: Sequence[str]) -> Sequence[str]:
         return [name for name in names if name == "func2"]
 
     accessible_override = await group.get_accessible_functions(filter_fn=override_filter)
-    assert set(accessible_override.keys()) == {"test_function_group.func2"}
+    assert set(accessible_override.keys()) == {"test_function_group__func2"}
 
     # Instance filter should still work when no override provided
     accessible_instance = await group.get_accessible_functions()
-    assert set(accessible_instance.keys()) == {"test_function_group.func1"}
+    assert set(accessible_instance.keys()) == {"test_function_group__func1"}
 
 
 def test_function_group_instance_name_defaults():
@@ -487,15 +487,15 @@ async def test_function_group_function_name_generation():
 
     # Test internal storage uses short name
     assert "test_func" in group._functions
-    assert "my_group.test_func" not in group._functions
+    assert "my_group__test_func" not in group._functions
 
     # Test that generated full names are correct in returned functions
     accessible = await group.get_accessible_functions()
-    assert "my_group.test_func" in accessible
-    assert accessible["my_group.test_func"] is group._functions["test_func"]
+    assert "my_group__test_func" in accessible
+    assert accessible["my_group__test_func"] is group._functions["test_func"]
 
     # Test _get_fn_name method directly
-    assert group._get_fn_name("test_func") == "my_group.test_func"
+    assert group._get_fn_name("test_func") == "my_group__test_func"
 
 
 def test_function_group_both_include_and_exclude():
@@ -531,7 +531,7 @@ async def test_function_group_empty_include_exclude():
 
     # Empty lists should behave like no configuration - all functions accessible
     accessible = await group.get_accessible_functions()
-    assert set(accessible.keys()) == {"empty_lists.func1", "empty_lists.func2"}
+    assert set(accessible.keys()) == {"empty_lists__func1", "empty_lists__func2"}
 
 
 @pytest.mark.asyncio
@@ -548,7 +548,7 @@ async def test_function_group_preserves_function_metadata():
 
     func = group._functions["test_func"]
     assert func.description == "Custom description"
-    assert func.instance_name == "test_function_group.test_func"
+    assert func.instance_name == "test_function_group__test_func"
 
 
 def test_function_group_lambda_function_creation():
@@ -660,12 +660,12 @@ async def test_function_group_comprehensive_metadata():
     # Test all metadata is preserved
     assert func.description == "A complex function with all features"
     assert func.input_schema == CustomInput
-    assert func.instance_name == "comprehensive_test.complex_func"
+    assert func.instance_name == "comprehensive_test__complex_func"
     assert func._converter is not None
     assert isinstance(func, LambdaFunction)
     assert isinstance(func.config, EmptyFunctionConfig)
 
     # Test function appears correctly in accessible functions
     accessible = await group.get_accessible_functions()
-    assert "comprehensive_test.complex_func" in accessible
-    assert accessible["comprehensive_test.complex_func"] is func
+    assert "comprehensive_test__complex_func" in accessible
+    assert accessible["comprehensive_test__complex_func"] is func

@@ -42,7 +42,7 @@ llms:
 workflow:
   _type: per_user_react_agent
   tool_names:
-    - mcp_date_time.get_current_time_mcp_tool
+    - mcp_date_time__get_current_time_mcp_tool
     - currency_agent  # External A2A service (per-user)
   llm_name: nim_llm
   verbose: true
