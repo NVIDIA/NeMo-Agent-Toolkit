@@ -18,7 +18,7 @@ limitations under the License.
 
 # AutoGen Framework Example
 
-A minimal example using Microsoft's AutoGen framework showcasing a multi-agent weather and time information system where agents collaborate through AutoGen's conversation system to provide accurate weather and time data for specified cities.
+A quick example using Microsoft's AutoGen framework showcasing a multi-agent weather and time information system where agents collaborate through AutoGen's conversation system to provide accurate weather and time data for specified cities.
 
 ## Table of Contents
 
@@ -34,9 +34,9 @@ A minimal example using Microsoft's AutoGen framework showcasing a multi-agent w
 
 ## Key Features
 
-- **AutoGen Framework Integration:** Demonstrates NeMo Agent Toolkit support for Microsoft's AutoGen framework alongside other frameworks like LangChain/LangGraph and Semantic Kernel.
+- **AutoGen Framework Integration:** Demonstrates the NVIDIA NeMo Agent toolkit support for Microsoft's AutoGen framework alongside other frameworks like LangChain/LangGraph and Semantic Kernel.
 - **Multi-Agent Collaboration:** Shows two specialized agents working together - a WeatherAndTimeAgent for data retrieval and a FinalResponseAgent for response formatting.
-- **Unified Tool Integration:** Uses NeMo Agent Toolkit's unified abstraction to integrate both local tools (weather updates) and MCP tools (time service) without framework-specific code. MCP servers are configured in YAML and automatically wrapped for AutoGen.
+- **Unified Tool Integration:** Uses the toolkit's unified abstraction to integrate both local tools (weather updates) and MCP tools (time service) without framework-specific code. MCP servers are hosted using the toolkit's native MCP server and integrated with AutoGen as a function.
 - **Round-Robin Group Chat:** Uses AutoGen's RoundRobinGroupChat for structured agent communication with termination conditions.
 
 ## Prerequisites
@@ -44,16 +44,16 @@ A minimal example using Microsoft's AutoGen framework showcasing a multi-agent w
 Before running this example, ensure you have:
 
 - Python 3.11 or higher
-- NeMo Agent Toolkit installed (see [Install Guide](../../../docs/source/get-started/installation.md))
+- NeMo Agent toolkit installed (see [Install Guide](../../../docs/source/get-started/installation.md))
 - NVIDIA API key for NIM access
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md) to create the development environment and install NeMo Agent Toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md) to create the development environment and install NeMo Agent toolkit.
 
 ### Install this Workflow
 
-From the root directory of the NeMo Agent Toolkit repository, run the following commands:
+From the root directory of the NeMo Agent toolkit repository, run the following commands:
 
 ```bash
 # Required to run the current_datetime MCP tool used in the example workflow
@@ -76,7 +76,7 @@ For NVIDIA NIM, export the following:
 
 ### Set up the MCP Server
 
-This example uses NeMo Agent Toolkit's MCP client abstraction to connect to an MCP server. The MCP connection is configured in the workflow's YAML file, and the toolkit automatically wraps the MCP tools for use with AutoGen agents. This approach provides a consistent interface across all supported frameworks.
+This example uses NeMo Agent toolkit's MCP client abstraction to connect to an MCP server. The MCP connection is configured in the workflow's YAML file, and the toolkit automatically wraps the MCP tools for use with AutoGen agents. This approach provides a consistent interface across all supported frameworks.
 
 First, run the MCP server with this command:
 
@@ -146,7 +146,7 @@ The agents communicate through AutoGen's RoundRobinGroupChat system, which manag
 
 ### Tool Integration
 
-This example demonstrates NeMo Agent Toolkit's unified approach to tool integration:
+This example demonstrates NeMo Agent toolkit's unified approach to tool integration:
 
 - **Local tools** (like `weather_update_tool`) are defined as NAT functions
 - **MCP tools** (like `mcp_time`) are configured in YAML using NAT's `mcp_client` function group

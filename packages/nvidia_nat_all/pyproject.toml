@@ -23,6 +23,7 @@ dependencies = [
   "nvidia-nat[async_endpoints,gunicorn]~=1.4",
   "nvidia-nat-adk",
   "nvidia-nat-agno",
+  "nvidia-nat-autogen",
   "nvidia-nat-crewai",
   "nvidia-nat-langchain",
   "nvidia-nat-llama-index",

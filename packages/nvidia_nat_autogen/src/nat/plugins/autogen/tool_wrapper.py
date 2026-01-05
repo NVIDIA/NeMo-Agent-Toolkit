@@ -153,14 +153,14 @@ def autogen_tool_wrapper(
                             name,
                         )
 
-                    default = model_field.default if model_field.is_required() is False else inspect._empty
+                    default = inspect.Parameter.empty if model_field.is_required() else model_field.default
                     params.append(
                         inspect.Parameter(param_name,
                                           inspect.Parameter.POSITIONAL_OR_KEYWORD,
                                           annotation=resolved_type,
                                           default=default))
                     annotations[param_name] = resolved_type
-                setattr(func_to_wrap, "__signature__", inspect.Signature(parameters=params))
+                func_to_wrap.__signature__ = inspect.Signature(parameters=params)
                 func_to_wrap.__annotations__ = annotations
 
             return func_to_wrap

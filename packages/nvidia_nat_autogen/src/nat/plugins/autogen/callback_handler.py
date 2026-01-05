@@ -509,7 +509,7 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
                     handler.step_manager.push_intermediate_step(
                         IntermediateStepPayload(
                             event_type=IntermediateStepType.LLM_END,
-                            span_event_timestamp=start_time,
+                            span_event_timestamp=end_time,
                             framework=LLMFrameworkEnum.AUTOGEN,
                             name=model_name,
                             data=StreamEventData(input=model_input, output=model_output),
@@ -603,7 +603,7 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
             handler.step_manager.push_intermediate_step(
                 IntermediateStepPayload(
                     event_type=IntermediateStepType.TOOL_END,
-                    span_event_timestamp=start_time,
+                    span_event_timestamp=end_time,
                     framework=LLMFrameworkEnum.AUTOGEN,
                     name=tool_name,
                     data=StreamEventData(input=tool_input, output=str(output)),
