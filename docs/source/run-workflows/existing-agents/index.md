@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Running Existing Agents in NeMo Agent Toolkit
+# Running Existing Agents in NVIDIA NeMo Agent Toolkit
 
 NeMo Agent toolkit provides automatic wrapper functionality that allows you to integrate existing agents from other frameworks without rewriting them. This enables you to leverage the toolkit's features such as observability, evaluation, and configuration management while continuing to use your existing agent implementations.
 
