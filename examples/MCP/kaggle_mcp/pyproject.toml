@@ -13,7 +13,7 @@ root = "../../.."
 name = "nat_kaggle_mcp"
 dynamic = ["version"]
 dependencies = [
-    "nvidia-nat[mcp]~=1.5",
+    "nvidia-nat[mcp]~=1.4",
 ]
 requires-python = ">=3.11,<3.14"
 description = "Kaggle MCP integration example with bearer token authentication"

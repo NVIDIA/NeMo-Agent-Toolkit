@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,7 +48,7 @@ async def llama_index_rag_tool(tool_config: LlamaIndexRAGConfig, builder: Builde
     from llama_index.core import Settings
     from llama_index.core import SimpleDirectoryReader
     from llama_index.core import VectorStoreIndex
-    from llama_index.core.agent import FunctionCallingAgentWorker
+    from llama_index.core.agent import FunctionAgent
     from llama_index.core.node_parser import SimpleFileNodeParser
     from llama_index.core.tools import QueryEngineTool
 
@@ -72,31 +72,34 @@ async def llama_index_rag_tool(tool_config: LlamaIndexRAGConfig, builder: Builde
     Settings.llm = llm
     query_engine = index.as_query_engine(similarity_top_k=2)
 
-    model_name = tool_config.model_name
-    if not model_name.startswith('nvdev'):
+    is_nvdev = tool_config.model_name.startswith('nvdev')
+
+    if not is_nvdev:
         tool = QueryEngineTool.from_defaults(
             query_engine, name="rag", description="ingest data from README about this workflow with llama_index_rag")
 
-        agent_worker = FunctionCallingAgentWorker.from_tools(
-            [tool],
+        agent = FunctionAgent(
+            tools=[tool],
             llm=llm,
             verbose=True,
         )
-        agent = agent_worker.as_agent()
 
     async def _arun(inputs: str) -> str:
         """
         rag using llama-index ingesting README markdown file
         Args:
-            query : user query
+            inputs : user query
         """
-        if not model_name.startswith('nvdev'):
-            agent_response = (await agent.achat(inputs))
-            logger.info("response from llama-index Agent : \n %s %s", Fore.MAGENTA, agent_response.response)
-            output = agent_response.response
+        output: str
+        if not is_nvdev:
+            agent_response = await agent.run(inputs)
+            response_content = agent_response.response
+            logger.info("response from llama-index Agent : \n %s %s", Fore.MAGENTA, response_content)
+            output = str(response_content) if response_content else ""
         else:
             logger.info("%s %s %s %s", Fore.MAGENTA, type(query_engine), query_engine, inputs)
-            output = query_engine.query(inputs).response
+            response = await query_engine.aquery(inputs)
+            output = str(response) if response else ""
 
         return output
 

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -191,5 +191,8 @@ async def test_a2a_workflow(root_repo_dir: Path, nat_a2a_url: str):
     config.function_groups["calculator_a2a"].url = HttpUrl(nat_a2a_url)
 
     logger.info("Running workflow with question: 'Is 2 * 4 greater than 5?'")
-    await run_workflow(config=config, question="Is 2 * 4 greater than 5?", expected_answer="yes")
+    await run_workflow(config=config,
+                       question="Is 2 * 4 greater than 5?",
+                       expected_answer="yes",
+                       session_kwargs={"user_id": "test-user"})
     logger.info("Workflow completed successfully!")
