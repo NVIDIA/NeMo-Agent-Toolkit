@@ -114,6 +114,11 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/A2A/math_assistant_a2a/oauth2-keycloak-setup.md",
         r"^examples/A2A/calculator_a2a/configs/config-protected-oauth2.yml",
     ),
+    # Allow retail_agent src configs to reference root configs and data
+    (
+        r"^examples/safety_and_security/retail_agent/.*configs/",
+        r"^examples/safety_and_security/retail_agent/(configs|data)/",
+    ),
 }
 
 ALLOWLISTED_WORDS: set[str] = {
@@ -164,6 +169,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "try/except",
     "user/assistant",
     "validate/sanitize",
+    "walmart.com/garden-trowels",
     "Workflows/tools",
     "Yes/No",  #
     # numbers
