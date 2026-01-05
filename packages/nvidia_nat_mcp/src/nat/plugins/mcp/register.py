@@ -21,6 +21,3 @@ from .client import client_impl
 
 # Register server/frontend components
 from .server import register_frontend
-
-# Register tools
-from . import tool
