@@ -347,10 +347,9 @@ To call a tool and get its output:
 
 ```console
 # Pass arguments as JSON
-$ nat mcp client tool call calculator.multiply \
+nat mcp client tool call calculator.multiply \
   --url http://localhost:9901/mcp \
   --json-args '{"numbers": [1, 3, 6, 10]}'
-180.0
 ```
 
 ### Using Protected MCP Servers
