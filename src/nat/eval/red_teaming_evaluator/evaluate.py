@@ -17,11 +17,11 @@ import logging
 from collections.abc import Callable
 from enum import Enum
 
-from langchain.output_parsers import ResponseSchema
-from langchain.output_parsers import StructuredOutputParser
-from langchain.schema import HumanMessage
-from langchain.schema import SystemMessage
+from langchain_classic.output_parsers import ResponseSchema
+from langchain_classic.output_parsers import StructuredOutputParser
 from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import HumanMessage
+from langchain_core.messages import SystemMessage
 from langchain_core.runnables import RunnableLambda
 
 from nat.data_models.intermediate_step import IntermediateStep
