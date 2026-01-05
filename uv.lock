@@ -6436,7 +6436,7 @@ dependencies = [
 requires-dist = [
     { name = "matplotlib", specifier = "~=3.9" },
     { name = "nvidia-nat", editable = "." },
-    { name = "openpipe-art", specifier = "==0.5.1" },
+    { name = "openpipe-art", specifier = "==0.5.4" },
 ]
 
 [[package]]
@@ -7034,7 +7034,7 @@ wheels = [
 
 [[package]]
 name = "openpipe-art"
-version = "0.5.1"
+version = "0.5.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "litellm" },
@@ -7042,9 +7042,9 @@ dependencies = [
     { name = "typer" },
     { name = "weave" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0d/cb/44ec1546b29b67299042812249659337e4e9357710ea228cb08b3fbe8b03/openpipe_art-0.5.1.tar.gz", hash = "sha256:dc9a51cc912d6e7f2e84f6787fefc852d136a9352cc881ffbc7b3821cd16422d", size = 7978357, upload-time = "2025-10-22T15:58:37.951Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/be/34/5f54288ee0b69fcd1a3680c97dd868060da07d04f86b5d69ec083eb97e65/openpipe_art-0.5.4.tar.gz", hash = "sha256:22810b6621798690c202bccbce5a86e2d815a24b5c703c8334bf779df980494d", size = 8024884, upload-time = "2025-12-15T23:24:52.037Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ed/8c/dc0752a523b0635f1bec5eb84b2c669774681356d535441693d250d554db/openpipe_art-0.5.1-py3-none-any.whl", hash = "sha256:a3e04520166b13c25b1761f57f65faa732b35b6393d540cc22ffc13af6043337", size = 166998, upload-time = "2025-10-22T15:58:36.221Z" },
+    { url = "https://files.pythonhosted.org/packages/41/e3/316161744fbe8b5733971b955a208a5f5ecbb18b3314772d6dce6dd72fbc/openpipe_art-0.5.4-py3-none-any.whl", hash = "sha256:a92a1f1a4655653577f2d541d5c19c0480c3e0757ec8130ff9f10088689e90d7", size = 176753, upload-time = "2025-12-15T23:24:43.889Z" },
 ]
 
 [[package]]
