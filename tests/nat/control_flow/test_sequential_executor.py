@@ -22,6 +22,7 @@ from unittest.mock import patch
 import pytest
 from langchain_core.tools.base import BaseTool
 from pydantic import BaseModel
+from pydantic import PrivateAttr
 
 from nat.builder.builder import Builder
 from nat.builder.function import Function
@@ -128,18 +129,18 @@ class ErrorMockTool(BaseTool):
 
     name: str = "error_mock_tool"
     description: str = "A mock tool that raises errors"
+    _error_message: str = PrivateAttr(default="Mock error")
 
     def __init__(self, name: str = "error_mock_tool", error_message: str = "Mock error", **kwargs):
         super().__init__(**kwargs)
         self.name = name
-        # Store error_message in a way that doesn't conflict with Pydantic
-        self.__dict__['_error_message'] = error_message
+        self._error_message = error_message
 
     async def _arun(self, query: typing.Any = None, **kwargs) -> str:
-        raise RuntimeError(self.__dict__['_error_message'])
+        raise RuntimeError(self._error_message)
 
     def _run(self, query: typing.Any = None, **kwargs) -> str:
-        raise RuntimeError(self.__dict__['_error_message'])
+        raise RuntimeError(self._error_message)
 
 
 class EarlyExitMockTool(BaseTool):
@@ -147,18 +148,18 @@ class EarlyExitMockTool(BaseTool):
 
     name: str = "early_exit_mock_tool"
     description: str = "A mock tool that exits early"
+    _exit_message: str = PrivateAttr(default="Early exit")
 
     def __init__(self, name: str = "early_exit_mock_tool", exit_message: str = "Early exit", **kwargs):
         super().__init__(**kwargs)
         self.name = name
-        # Store exit_message in a way that doesn't conflict with Pydantic
-        self.__dict__['_exit_message'] = exit_message
+        self._exit_message = exit_message
 
     async def _arun(self, query: typing.Any = None, **kwargs) -> str:
-        raise SequentialExecutorExit(self.__dict__['_exit_message'])
+        raise SequentialExecutorExit(self._exit_message)
 
     def _run(self, query: typing.Any = None, **kwargs) -> str:
-        raise SequentialExecutorExit(self.__dict__['_exit_message'])
+        raise SequentialExecutorExit(self._exit_message)
 
 
 class TestSequentialExecutionToolConfig:
