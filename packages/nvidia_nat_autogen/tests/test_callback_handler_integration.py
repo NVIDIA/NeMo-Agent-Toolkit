@@ -254,10 +254,7 @@ async def test_nim_autogen_streaming_llm_telemetry(
 
     # Get the last START event and find its matching END event by UUID
     start_event = llm_start_events[-1]
-    end_event = next(
-        (e for e in llm_end_events if e.payload.UUID == start_event.payload.UUID),
-        None
-    )
+    end_event = next((e for e in llm_end_events if e.payload.UUID == start_event.payload.UUID), None)
     assert end_event is not None, f"No matching LLM_END event for START UUID {start_event.payload.UUID}"
 
     # Verify framework
@@ -702,10 +699,7 @@ async def test_openai_autogen_streaming_llm_telemetry(
 
     # Get the last START event and find its matching END event by UUID
     start_event = llm_start_events[-1]
-    end_event = next(
-        (e for e in llm_end_events if e.payload.UUID == start_event.payload.UUID),
-        None
-    )
+    end_event = next((e for e in llm_end_events if e.payload.UUID == start_event.payload.UUID), None)
     assert end_event is not None, f"No matching LLM_END event for START UUID {start_event.payload.UUID}"
 
     # Verify framework

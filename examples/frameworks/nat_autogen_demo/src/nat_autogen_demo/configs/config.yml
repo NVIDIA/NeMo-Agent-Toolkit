@@ -57,7 +57,7 @@ functions:
 
 workflow:
   _type: autogen_team
-  llm_name: azure_openai_llm  # Options: nim_llm, openai_llm, azure_openai_llm
+  llm_name: nim_llm  # Options: nim_llm, openai_llm, azure_openai_llm
   description: "To get the current weather and time in a specific city"
   tool_names: [weather_update_tool, current_datetime]
   query_processing_agent_name: WeatherAndTimeAgent

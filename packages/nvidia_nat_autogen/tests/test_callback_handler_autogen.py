@@ -187,16 +187,17 @@ class TestUninstrument:
         mock_base_tool = Mock()
 
         with patch('nat.plugins.autogen.callback_handler.logger'):
-            with patch.dict('sys.modules', {
-                'autogen_core.tools': Mock(BaseTool=mock_base_tool),
-                'autogen_ext.models.openai': Mock(
-                    OpenAIChatCompletionClient=mock_openai_client,
-                    AzureOpenAIChatCompletionClient=mock_azure_client
-                ),
-                'autogen_ext.models.anthropic': Mock(
-                    AnthropicBedrockChatCompletionClient=mock_bedrock_client
-                ),
-            }):
+            with patch.dict(
+                    'sys.modules',
+                {
+                    'autogen_core.tools':
+                        Mock(BaseTool=mock_base_tool),
+                    'autogen_ext.models.openai':
+                        Mock(OpenAIChatCompletionClient=mock_openai_client,
+                             AzureOpenAIChatCompletionClient=mock_azure_client),
+                    'autogen_ext.models.anthropic':
+                        Mock(AnthropicBedrockChatCompletionClient=mock_bedrock_client),
+                }):
                 handler.uninstrument()
 
         assert handler._instrumented is False
