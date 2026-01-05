@@ -96,6 +96,16 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
         tool_wrapper_reg = self._registry.get_tool_wrapper(llm_framework=wrapper_type)
 
         async def get_tool(fn_name: str):
+            # Maintain backwards compatibility with the old function group name format
+            compat_name = fn_name.replace(".", "__")
+            if (fn_name not in self._functions) and (compat_name in self._functions):
+                logger.warning(
+                    f"Function `{fn_name}` is deprecated and will be removed in a future release." + \
+                        f"Use `{compat_name}` instead."
+                )
+                fn_name = compat_name
+            # end of backwards compatibility check
+
             fn = await self.get_function(fn_name)
             try:
                 return tool_wrapper_reg.build_fn(fn_name, fn, self)

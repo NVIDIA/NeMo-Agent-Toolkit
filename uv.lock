@@ -6326,7 +6326,7 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.38" },
     { name = "wikipedia", specifier = "~=1.4" },
 ]
-provides-extras = ["all", "a2a", "adk", "agno", "autogen", "crewai", "data-flywheel", "huggingface", "ingestion", "langchain", "llama-index", "mcp", "mem0ai", "opentelemetry", "phoenix", "pii-defense", "profiling", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "strands", "telemetry", "test", "vanna", "weave", "zep-cloud", "openpipe-art", "nemo-customizer", "examples", "gunicorn", "async-endpoints", "nvidia-haystack", "litellm", "openai"]
+provides-extras = ["all", "a2a", "adk", "agno", "crewai", "data-flywheel", "huggingface", "ingestion", "langchain", "llama-index", "mcp", "mem0ai", "opentelemetry", "phoenix", "pii-defense", "profiling", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "strands", "telemetry", "test", "vanna", "weave", "zep-cloud", "openpipe-art", "nemo-customizer", "examples", "gunicorn", "async-endpoints", "nvidia-haystack", "litellm", "openai"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -6652,14 +6652,14 @@ name = "nvidia-nat-openpipe-art"
 source = { editable = "packages/nvidia_nat_openpipe_art" }
 dependencies = [
     { name = "matplotlib" },
-    { name = "nvidia-nat" },
+    { name = "nvidia-nat", extra = ["litellm"] },
     { name = "openpipe-art" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "matplotlib", specifier = "~=3.9" },
-    { name = "nvidia-nat", editable = "." },
+    { name = "nvidia-nat", extras = ["litellm"], editable = "." },
     { name = "openpipe-art", specifier = "~=0.5.4" },
 ]
 

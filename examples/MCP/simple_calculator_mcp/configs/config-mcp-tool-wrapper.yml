@@ -24,31 +24,31 @@ functions:
     _type: mcp_tool_wrapper
     url: "http://localhost:9901/mcp"
     transport: "streamable-http"
-    mcp_tool_name: calculator.add
+    mcp_tool_name: calculator__add
     description: "Returns the sum of two numbers"
   calculator_subtract:
     _type: mcp_tool_wrapper
     url: "http://localhost:9901/mcp"
     transport: "streamable-http"
-    mcp_tool_name: calculator.subtract
+    mcp_tool_name: calculator__subtract
     description: "Returns the difference of two numbers"
   calculator_multiply:
     _type: mcp_tool_wrapper
     url: "http://localhost:9901/mcp"
     transport: "streamable-http"
-    mcp_tool_name: calculator.multiply
+    mcp_tool_name: calculator__multiply
     description: "Returns the product of two numbers"
   calculator_divide:
     _type: mcp_tool_wrapper
     url: "http://localhost:9901/mcp"
     transport: "streamable-http"
-    mcp_tool_name: calculator.divide
+    mcp_tool_name: calculator__divide
     description: "Returns the quotient of two numbers"
   calculator_compare:
     _type: mcp_tool_wrapper
     url: "http://localhost:9901/mcp"
     transport: "streamable-http"
-    mcp_tool_name: calculator.compare
+    mcp_tool_name: calculator__compare
     description: "Returns the comparison of two numbers"
   current_datetime:
     _type: current_datetime

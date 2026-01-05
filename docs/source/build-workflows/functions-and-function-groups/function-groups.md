@@ -365,10 +365,12 @@ This will return a list of all accessible functions in the function group that a
 
 Functions inside a group are automatically namespaced by the group instance name. This creates a clear hierarchy and prevents naming conflicts.
 
-**Pattern**: `instance_name.function_name`
+To maintain compatibility with third-party libraries, the namespace separator switched from `.` (period) to `__` (double underscore).
+
+**Pattern**: `instance_name__function_name`
 
 **Example**: If your group instance name is `math` and you add functions named `add` and `multiply`:
-- Functions become: `math.add` and `math.multiply`
+- Functions become: `math__add` and `math__multiply`
 - These names are used in workflow configurations and when calling functions
 
 ### Understanding Function Accessibility
@@ -392,13 +394,13 @@ Function groups provide different levels of access control. Understanding these 
 - Global Registry (Individually Addressable)
 
     Functions in the `include` list are added to the global function registry. This means you can:
-    - Reference them by their fully qualified name (`math.add`)
+    - Reference them by their fully qualified name (`math__add`)
     - Use them individually in tool lists
     - Get them directly without accessing the group
 
     ```python
     # Only works if "add" is in the include list
-    add_function = await builder.get_function("math.add")
+    add_function = await builder.get_function("math__add")
     ```
 
 - Workflow Builder Tools (Agent-Accessible)
@@ -411,7 +413,7 @@ Function groups provide different levels of access control. Understanding these 
     ```yaml
     workflow:
       _type: react_agent
-      tool_names: [math.add]  # Agent can only use this function (not multiply)
+      tool_names: [math__add]  # Agent can only use this function (not multiply)
     ```
 
 #### Filtering Functions with `include` and `exclude`
@@ -507,7 +509,7 @@ function_groups:
 
 workflow:
   _type: react_agent
-  tool_names: [math.add, math.multiply]
+  tool_names: [math__add, math__multiply]
   llm_name: my_llm
 ```
 
@@ -548,7 +550,7 @@ function_groups:
 
 workflow:
   _type: react_agent
-  tool_names: [math.add, storage]  # Individual function + whole group
+  tool_names: [math__add, storage]  # Individual function + whole group
   llm_name: my_llm
 ```
 
@@ -567,7 +569,7 @@ async with WorkflowBuilder() as builder:
     await builder.add_function_group("math", MathGroupConfig(rhs=5.0, include=["add", "multiply"]))
     
     # Call an included function by its fully-qualified name
-    add = await builder.get_function("math.add")
+    add = await builder.get_function("math__add")
     result = await add.ainvoke(3.0)  # Returns: 8.0
 ```
 
@@ -744,7 +746,7 @@ function_groups:
     
 workflow:
   _type: react_agent
-  tool_names: [experimental.stable_model_v1]
+  tool_names: [experimental__stable_model_v1]
 ```
 
 ### Configuration Best Practices
