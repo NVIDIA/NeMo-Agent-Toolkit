@@ -96,6 +96,7 @@ LangChain
 Langfuse
 LangGraph
 LangSmith
+LlamaIndex
 [Ll]aunchable(s?)
 [Ll]eaderboard
 [Ll]earnable
