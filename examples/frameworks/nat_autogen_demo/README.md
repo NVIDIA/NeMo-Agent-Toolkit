@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -78,7 +78,7 @@ For NVIDIA NIM, export the following:
 
 This example uses NeMo Agent toolkit's MCP client abstraction to connect to an MCP server. The MCP connection is configured in the workflow's YAML file, and the toolkit automatically wraps the MCP tools for use with AutoGen agents. This approach provides a consistent interface across all supported frameworks.
 
-First, run the MCP server with this command:
+In a separate terminal, or in the background, run the MCP server with this command:
 
 ```bash
 nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml --tool_names current_datetime
