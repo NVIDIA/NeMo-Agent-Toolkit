@@ -41,11 +41,11 @@ flowchart LR
     AP --> CS[Calculator A2A Server]
 
     subgraph "Calculator A2A Server"
-        CS --> CA[calculator.add]
-        CS --> CSUB[calculator.subtract]
-        CS --> CDIV[calculator.divide]
-        CS --> CMUL[calculator.multiply]
-        CS --> CCMP[calculator.compare]
+        CS --> CA[calculator__add]
+        CS --> CSUB[calculator__subtract]
+        CS --> CDIV[calculator__divide]
+        CS --> CMUL[calculator__multiply]
+        CS --> CCMP[calculator__compare]
         CS --> CDT[current_datetime]
     end
 
