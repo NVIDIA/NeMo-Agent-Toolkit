@@ -170,7 +170,8 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
                 logger.debug("Patched AnthropicBedrockChatCompletionClient.create")
             # Note: Bedrock client may not have create_stream - check if available
             if hasattr(AnthropicBedrockChatCompletionClient, "create_stream"):
-                self._patched.bedrock.create_stream = getattr(AnthropicBedrockChatCompletionClient, "create_stream",
+                self._patched.bedrock.create_stream = getattr(AnthropicBedrockChatCompletionClient,
+                                                              "create_stream",
                                                               None)
                 if self._patched.bedrock.create_stream:
                     AnthropicBedrockChatCompletionClient.create_stream = self._create_stream_wrapper(
@@ -617,4 +618,3 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
             return output
 
         return wrapped_tool_call
-

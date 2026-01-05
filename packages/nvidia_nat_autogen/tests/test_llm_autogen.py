@@ -387,9 +387,7 @@ class TestLLMClientFunctions:
 
         mock_import.side_effect = import_side_effect
 
-        config = LiteLlmModelConfig(model_name="gpt-4",
-                                    base_url="http://localhost:4000",
-                                    api_key="test-key")
+        config = LiteLlmModelConfig(model_name="gpt-4", base_url="http://localhost:4000", api_key="test-key")
         mock_builder = Mock()
 
         # Test the async generator
@@ -759,7 +757,8 @@ class TestAutoGenThinkingInjectorDirect:
 
     def test_inject_prepends_system_message(self):
         """Test that inject() correctly prepends a SystemMessage to the message list."""
-        from autogen_core.models import SystemMessage, UserMessage
+        from autogen_core.models import SystemMessage
+        from autogen_core.models import UserMessage
 
         # Create the injector by calling _patch_autogen_client_based_on_config
         # and capturing the injector instance
@@ -790,7 +789,9 @@ class TestAutoGenThinkingInjectorDirect:
 
     def test_inject_preserves_existing_messages(self):
         """Test that inject() preserves all existing messages."""
-        from autogen_core.models import SystemMessage, UserMessage, AssistantMessage
+        from autogen_core.models import AssistantMessage
+        from autogen_core.models import SystemMessage
+        from autogen_core.models import UserMessage
 
         mock_client = Mock()
         config = MockThinkingConfig()
@@ -888,7 +889,6 @@ class TestThinkingPromptVariations:
 
     def test_llama_nemotron_v1_thinking_off_prompt(self):
         """Test Llama Nemotron v1.0 with thinking=False produces 'detailed thinking off'."""
-        mock_client = Mock()
 
         class LlamaNemotronV1Config(LLMBaseConfig, ThinkingMixin):
             """Config for Llama Nemotron v1.0 model."""
@@ -943,13 +943,11 @@ class TestConfigExclusion:
         """Test Azure OpenAI client excludes azure_deployment, thinking, azure_endpoint, api_version."""
         from nat.plugins.autogen.llm import azure_openai_autogen
 
-        config = AzureOpenAIModelConfig(
-            api_key="test-key",
-            azure_deployment="gpt-4-deployment",
-            azure_endpoint="https://test.openai.azure.com",
-            api_version="2024-02-01",
-            temperature=0.5
-        )
+        config = AzureOpenAIModelConfig(api_key="test-key",
+                                        azure_deployment="gpt-4-deployment",
+                                        azure_endpoint="https://test.openai.azure.com",
+                                        api_version="2024-02-01",
+                                        temperature=0.5)
         builder = Mock(spec=Builder)
 
         with patch('autogen_ext.models.openai.AzureOpenAIChatCompletionClient') as mock_client_class:
@@ -1012,11 +1010,7 @@ class TestLiteLLMSecretResolution:
         """Test that LiteLLM correctly resolves API key via get_secret_value."""
         from nat.plugins.autogen.llm import litellm_autogen
 
-        config = LiteLlmModelConfig(
-            model_name="gpt-4",
-            base_url="http://localhost:4000",
-            api_key="secret-api-key"
-        )
+        config = LiteLlmModelConfig(model_name="gpt-4", base_url="http://localhost:4000", api_key="secret-api-key")
         builder = Mock(spec=Builder)
 
         with patch('autogen_ext.models.openai.OpenAIChatCompletionClient') as mock_client_class:
@@ -1087,12 +1081,7 @@ class TestErrorHandling:
             # Should not raise, even with edge case values
             result = _patch_autogen_client_based_on_config(mock_client, config)
 
-            mock_patch_retry.assert_called_once_with(
-                mock_client,
-                retries=0,
-                retry_codes=[],
-                retry_on_messages=None
-            )
+            mock_patch_retry.assert_called_once_with(mock_client, retries=0, retry_codes=[], retry_on_messages=None)
             assert result == mock_client
 
     def test_patch_with_unsupported_model_for_thinking(self):
@@ -1124,8 +1113,7 @@ class TestErrorHandling:
         config = OpenAIModelConfig(
             api_key="test-key",
             model_name="",  # Empty model name
-            base_url="https://api.openai.com/v1"
-        )
+            base_url="https://api.openai.com/v1")
         builder = Mock(spec=Builder)
 
         with patch('autogen_ext.models.openai.OpenAIChatCompletionClient') as mock_client_class:
@@ -1232,11 +1220,9 @@ class TestAsyncGeneratorCleanup:
         """Test Bedrock generator cleanup works correctly."""
         from nat.plugins.autogen.llm import bedrock_autogen
 
-        config = AWSBedrockModelConfig(
-            model_name="anthropic.claude-3-sonnet-20240229-v1:0",
-            region_name="us-east-1",
-            max_tokens=256
-        )
+        config = AWSBedrockModelConfig(model_name="anthropic.claude-3-sonnet-20240229-v1:0",
+                                       region_name="us-east-1",
+                                       max_tokens=256)
         builder = Mock(spec=Builder)
 
         with patch('autogen_ext.models.anthropic.AnthropicBedrockChatCompletionClient') as mock_client_class:

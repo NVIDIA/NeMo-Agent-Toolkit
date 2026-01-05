@@ -46,7 +46,6 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================
@@ -192,8 +191,7 @@ async def test_nim_autogen_non_streaming_llm_telemetry(
     assert end_event.payload.data is not None
     # Output may be in data.output or metadata.chat_responses
     has_output = (end_event.payload.data.output is not None
-                  or (end_event.payload.metadata is not None
-                      and end_event.payload.metadata.chat_responses is not None))
+                  or (end_event.payload.metadata is not None and end_event.payload.metadata.chat_responses is not None))
     assert has_output, "Output should be captured in data.output or metadata.chat_responses"
 
     # Verify usage_info structure exists (token counts may be 0 for some providers)
@@ -274,8 +272,7 @@ async def test_nim_autogen_streaming_llm_telemetry(
     # Verify END event has output
     assert end_event.payload.data is not None
     has_output = (end_event.payload.data.output is not None
-                  or (end_event.payload.metadata is not None
-                      and end_event.payload.metadata.chat_responses is not None))
+                  or (end_event.payload.metadata is not None and end_event.payload.metadata.chat_responses is not None))
     assert has_output, "Output should be captured"
 
 
@@ -519,7 +516,6 @@ async def test_nim_autogen_streaming_with_agent_telemetry(
     Validates end-to-end telemetry in a realistic agent scenario.
     """
     from autogen_agentchat.agents import AssistantAgent
-    from autogen_agentchat.conditions import MaxMessageTermination
     from autogen_core.tools import FunctionTool
 
     def add(a: int, b: int) -> int:
@@ -647,8 +643,7 @@ async def test_openai_autogen_non_streaming_llm_telemetry(
     assert end_event.payload.data is not None
     # Output may be in data.output or metadata.chat_responses
     has_output = (end_event.payload.data.output is not None
-                  or (end_event.payload.metadata is not None
-                      and end_event.payload.metadata.chat_responses is not None))
+                  or (end_event.payload.metadata is not None and end_event.payload.metadata.chat_responses is not None))
     assert has_output, "Output should be captured in data.output or metadata.chat_responses"
 
     # Verify usage_info structure exists (token counts may be 0 for some providers)
@@ -724,8 +719,7 @@ async def test_openai_autogen_streaming_llm_telemetry(
     # Verify END event has output
     assert end_event.payload.data is not None
     has_output = (end_event.payload.data.output is not None
-                  or (end_event.payload.metadata is not None
-                      and end_event.payload.metadata.chat_responses is not None))
+                  or (end_event.payload.metadata is not None and end_event.payload.metadata.chat_responses is not None))
     assert has_output, "Output should be captured"
 
 
@@ -882,4 +876,3 @@ async def test_openai_autogen_multi_turn_conversation_telemetry(
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-m", "integration"])
-

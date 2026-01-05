@@ -218,7 +218,7 @@ def _strip_strict_from_tools_deep(kwargs: dict[str, Any]) -> dict[str, Any]:
     tools = kwargs.get("tools")
 
     # Handle NotGiven sentinel or None - just return unchanged
-    if tools is None or not isinstance(tools, (list, tuple)):
+    if tools is None or not isinstance(tools, list | tuple):
         return kwargs
 
     kwargs = kwargs.copy()

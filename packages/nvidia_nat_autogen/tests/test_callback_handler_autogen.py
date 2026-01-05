@@ -124,17 +124,23 @@ class TestInstrument:
             with patch.object(handler, '_create_stream_wrapper', return_value=Mock()) as mock_stream_wrapper:
                 with patch('nat.plugins.autogen.callback_handler.logger'):
                     # Mock the import
-                    with patch.dict('sys.modules', {
-                        'autogen_core': Mock(),
-                        'autogen_core.tools': Mock(BaseTool=Mock(run_json=Mock())),
-                        'autogen_ext': Mock(),
-                        'autogen_ext.models': Mock(),
-                        'autogen_ext.models.openai': Mock(
-                            OpenAIChatCompletionClient=mock_openai_client,
-                            AzureOpenAIChatCompletionClient=Mock()
-                        ),
-                        'autogen_ext.models.anthropic': Mock(AnthropicBedrockChatCompletionClient=Mock())
-                    }):
+                    with patch.dict(
+                            'sys.modules',
+                        {
+                            'autogen_core':
+                                Mock(),
+                            'autogen_core.tools':
+                                Mock(BaseTool=Mock(run_json=Mock())),
+                            'autogen_ext':
+                                Mock(),
+                            'autogen_ext.models':
+                                Mock(),
+                            'autogen_ext.models.openai':
+                                Mock(OpenAIChatCompletionClient=mock_openai_client,
+                                     AzureOpenAIChatCompletionClient=Mock()),
+                            'autogen_ext.models.anthropic':
+                                Mock(AnthropicBedrockChatCompletionClient=Mock())
+                        }):
                         handler.instrument()
 
                         # Verify wrappers were created
@@ -214,10 +220,7 @@ class TestHelperMethods:
     def test_extract_input_text_simple_content(self):
         """Test _extract_input_text with simple string content."""
         handler = AutoGenProfilerHandler()
-        messages = [
-            {"content": "Hello"},
-            {"content": "World"}
-        ]
+        messages = [{"content": "Hello"}, {"content": "World"}]
 
         result = handler._extract_input_text(messages)
         assert result == "HelloWorld"
@@ -225,9 +228,7 @@ class TestHelperMethods:
     def test_extract_input_text_list_content(self):
         """Test _extract_input_text with list content."""
         handler = AutoGenProfilerHandler()
-        messages = [
-            {"content": ["Part 1", {"text": "Part 2"}, "Part 3"]}
-        ]
+        messages = [{"content": ["Part 1", {"text": "Part 2"}, "Part 3"]}]
 
         result = handler._extract_input_text(messages)
         assert "Part 1" in result
@@ -382,11 +383,7 @@ class TestLLMWrapper:
         mock_output.content = ["Response"]
         mock_output.choices = []
         mock_output.usage = Mock()
-        mock_output.usage.model_dump.return_value = {
-            "prompt_tokens": 10,
-            "completion_tokens": 20,
-            "total_tokens": 30
-        }
+        mock_output.usage.model_dump.return_value = {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30}
 
         original_func = AsyncMock(return_value=mock_output)
         wrapped = handler._create_llm_wrapper(original_func)

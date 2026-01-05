@@ -143,9 +143,8 @@ def autogen_tool_wrapper(
                     # Warn about nested Pydantic models or dataclasses that may not serialize properly
                     # Note: If autogen is updated to support nested models, this warning can be removed - or
                     # if autogen adds a mechanism to remove the tool from the function choices we can add that later.
-                    if isinstance(resolved_type, type) and (
-                        issubclass(resolved_type, BaseModel) or is_dataclass(resolved_type)
-                    ):
+                    if isinstance(resolved_type, type) and (issubclass(resolved_type, BaseModel)
+                                                            or is_dataclass(resolved_type)):
                         logger.warning(
                             "Nested model detected in input schema for parameter '%s' in tool '%s'. "
                             "AutoGen may not properly serialize complex nested types for function calling. "
