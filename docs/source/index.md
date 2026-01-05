@@ -180,10 +180,10 @@ About <./build-workflows/about-building-workflows.md>
 Workflow Configuration <./build-workflows/workflow-configuration.md>
 ./build-workflows/functions-and-function-groups/index.md
 ./build-workflows/llms/index.md
-./build-workflows/embedders.md
-./build-workflows/retrievers.md
-Memory Module <./build-workflows/memory.md>
-Object Store <./build-workflows/object-store.md>
+Embedders <./build-workflows/embedders.md>
+Retrievers <./build-workflows/retrievers.md>
+Memory <./build-workflows/memory.md>
+Object Stores <./build-workflows/object-store.md>
 MCP <./build-workflows/mcp-client.md>
 A2A <./build-workflows/a2a-client.md>
 ./build-workflows/advanced/index.md
@@ -194,6 +194,7 @@ A2A <./build-workflows/a2a-client.md>
 :caption: Run Workflows
 
 About <./run-workflows/about-running-workflows.md>
+Existing Agents <./run-workflows/existing-agents/index.md>
 ./run-workflows/observe/observe.md
 API Server and User Interface <./run-workflows/launching-ui.md>
 MCP Server <./run-workflows/mcp-server.md>

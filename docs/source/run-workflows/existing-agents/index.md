@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Running Existing Agents from Other Frameworks
+# Running Existing Agents in NeMo Agent Toolkit
 
 NeMo Agent toolkit provides automatic wrapper functionality that allows you to integrate existing agents from other frameworks without rewriting them. This enables you to leverage the toolkit's features such as observability, evaluation, and configuration management while continuing to use your existing agent implementations.
 
@@ -78,3 +78,9 @@ To get started with automatic wrappers:
 4. Run your agent using standard NeMo Agent toolkit commands
 
 Each framework guide provides complete examples and step-by-step instructions for integration.
+
+```{toctree}
+:titlesonly:
+
+LangGraph <./langgraph.md>
+```

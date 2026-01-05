@@ -6,20 +6,18 @@ from collections.abc import AsyncGenerator
 from collections.abc import Callable
 from types import NoneType
 from typing import Any
-from typing import Iterable
 
 from dotenv import load_dotenv
 from langchain_core.messages import BaseMessage
 from langchain_core.messages import MessageLikeRepresentation
 from langchain_core.messages.utils import convert_to_messages
-from langchain_core.messages.utils import messages_from_dict
 from langchain_core.prompt_values import PromptValue
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.graph.state import StateGraph
 from pydantic import BaseModel
+from pydantic import ConfigDict
 from pydantic import Field
-from pydantic.v1 import create_model_from_typeddict
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -34,16 +32,14 @@ logger = logging.getLogger(__name__)
 
 class LanggraphWrapperInput(BaseModel):
 
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
     messages: list[MessageLikeRepresentation] | PromptValue
 
 
 class LanggraphWrapperOutput(BaseModel):
 
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
     messages: list[BaseMessage]
 
@@ -68,7 +64,8 @@ class LanggraphWrapperFunction(Function[LanggraphWrapperInput, NoneType, Langgra
 
     def _convert_input(self, value: Any) -> LanggraphWrapperInput:
 
-        # If the value is not a list, wrap it in a list to be compatible with the graph input and use the normal convertion logic
+        # If the value is not a list, wrap it in a list to be compatible with the graph input and use the normal
+        # convertion logic
         if (not isinstance(value, list)):
             value = [value]
 
@@ -111,7 +108,8 @@ async def register(config: LanggraphWrapperConfig, b: Builder):
             raise ValueError(f"Dependency {dependency} is not a valid directory. At the moment, we only support "
                              "directories. Packages need to be installed in the environment before they can be used.")
 
-    # Process the env. This is a path to a .env file to load into the environment or a list of environment variables to set.
+    # Process the env. This is a path to a .env file to load into the environment or a list of environment variables to
+    # set.
     if config.env is not None:
         if isinstance(config.env, str):
             if os.path.exists(config.env) and os.path.isfile(config.env):

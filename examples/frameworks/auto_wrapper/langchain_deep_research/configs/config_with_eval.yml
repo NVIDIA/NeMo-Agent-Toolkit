@@ -26,13 +26,13 @@ llms:
     _type: openai
     # model: azure/openai/gpt-5-nano
     model: gcp/google/gemini-3-pro
-    base_url: "https://inference-api.nvidia.com/v1/"
+    base_url: ${OPENAI_BASE_URL:-https://integrate.api.nvidia.com/v1}
     api_key: ${NVIDIA_API_KEY}
   judge:
     _type: openai
     model: azure/openai/gpt-5-nano
     api_key: ${NVIDIA_API_KEY}
-    base_url: "https://inference-api.nvidia.com/v1/"
+    base_url: ${OPENAI_BASE_URL:-https://integrate.api.nvidia.com/v1}
 
 workflow:
   _type: langgraph_wrapper

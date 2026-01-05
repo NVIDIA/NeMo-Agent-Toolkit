@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from pydantic import ConfigDict
 import importlib
 import json
 import typing
@@ -21,6 +20,7 @@ from pathlib import Path
 
 import pandas as pd
 from pydantic import BaseModel
+from pydantic import ConfigDict
 from pydantic import Discriminator
 from pydantic import FilePath
 from pydantic import Tag

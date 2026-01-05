@@ -171,7 +171,7 @@ llms:
   agent:
     _type: openai
     model: azure/openai/gpt-4
-    base_url: "https://inference-api.nvidia.com/v1/"
+    base_url: https://integrate.api.nvidia.com/v1
     api_key: ${NVIDIA_API_KEY}
 
 tools:
@@ -219,7 +219,7 @@ llms:
   agent:
     _type: openai
     model: azure/openai/gpt-4
-    base_url: "https://inference-api.nvidia.com/v1/"
+    base_url: https://integrate.api.nvidia.com/v1
     api_key: ${NVIDIA_API_KEY}
 
 workflow:
