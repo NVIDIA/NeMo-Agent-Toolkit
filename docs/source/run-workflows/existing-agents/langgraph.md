@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -83,7 +83,7 @@ nat run --config_file config.yml --input "What is LangSmith?"
 
 ## Making Agents Configurable
 
-To make your LangGraph agent configurable through the NeMo Agent toolkit configuration system, you need to modify your agent code to retrieve LLMs/Embeddings/Tools/etc. from the toolkit's builder.
+To make your LangGraph agent configurable through the NeMo Agent toolkit configuration system, you need to modify your agent code to retrieve LLMs, Embeddings, Tools, etc. from the toolkit's builder.
 
 ### When Code Changes Are Necessary
 
