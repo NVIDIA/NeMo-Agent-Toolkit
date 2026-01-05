@@ -222,10 +222,10 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
     def _check_backwards_compatibility_function_name(self, name: str) -> str:
         if name in self._per_user_functions:
             return name
-        compat_name = name.replace("__", ".")
+        compat_name = name.replace(".", "__")
         if compat_name in self._per_user_functions:
             logger.warning(
-                f"Function `{compat_name}` is deprecated and will be removed in a future release. Use `{name}` instead."
+                f"Function `{name}` is deprecated and will be removed in a future release. Use `{compat_name}` instead."
             )
             return compat_name
         return name

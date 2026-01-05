@@ -746,7 +746,7 @@ function_groups:
     
 workflow:
   _type: react_agent
-  tool_names: [experimental_stable_model_v1]
+  tool_names: [experimental__stable_model_v1]
 ```
 
 ### Configuration Best Practices

@@ -140,8 +140,8 @@ function_groups:
   mcp_tools:
     _type: mcp_client
     include:
-      - calculator_add
-      - calculator_multiply
+      - calculator__add
+      - calculator__multiply
     server:
       transport: streamable-http
       url: "http://localhost:9901/mcp"
@@ -155,10 +155,10 @@ function_groups:
     max_sessions: 50  # Maximum concurrent sessions
     session_idle_timeout: 7200  # 2 hours (in seconds)
     tool_overrides:
-      calculator_add:
+      calculator__add:
         alias: "add_numbers"
         description: "Add two numbers together"
-      calculator_multiply:
+      calculator__multiply:
         description: "Multiply two numbers"  # Keeps original name
 ```
 
