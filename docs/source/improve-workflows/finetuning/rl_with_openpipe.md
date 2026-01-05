@@ -76,12 +76,12 @@ NeMo Agent toolkit connects to this backend through the `ARTTrainerAdapter`, whi
 
 The following table highlights the current support matrix for using ART with different agent frameworks in the NeMo Agent toolkit:
 
-| Agent Framework      | Support | 
-|----------------------|--------------------------------------------------|
-| Langchain or LangGraph | ✅ Supported                                      |
-| Google ADK       | ✅ Supported                                      |
-| LlamaIndex | ✅ Supported                                      |
-| All others     | 🛠️ In Progress                                   |
+| Agent Framework        | Support | 
+|------------------------|--------------------------------------------------|
+| LangChain or LangGraph | ✅ Supported                                      |
+| Google ADK             | ✅ Supported                                      |
+| LlamaIndex             | ✅ Supported                                      |
+| All others             | 🛠️ In Progress                                   |
 
 
 ## Installation
