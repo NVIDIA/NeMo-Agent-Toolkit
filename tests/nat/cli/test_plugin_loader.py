@@ -14,6 +14,7 @@
 # limitations under the License.
 """Tests for CLI plugin discovery system."""
 
+from typing import ClassVar
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -166,7 +167,7 @@ class TestPluginLoaderIntegration:
     """Integration tests for CLI plugin discovery with real plugins."""
 
     # Expected core commands that should always be present
-    EXPECTED_CORE_COMMANDS = {
+    EXPECTED_CORE_COMMANDS: ClassVar[set[str]] = {
         "configure",
         "eval",
         "finetune",
