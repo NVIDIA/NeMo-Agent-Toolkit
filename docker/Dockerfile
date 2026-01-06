@@ -55,4 +55,4 @@ RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
 ENV PATH="/workspace/.venv/bin:$PATH"
 
 # Define the entry point to start the nat CLI tool
-# ENTRYPOINT ["nat"]
+ENTRYPOINT ["nat"]
