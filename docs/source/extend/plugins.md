@@ -143,7 +143,7 @@ To create a CLI command plugin:
    # packages/my_plugin/src/nat/plugins/my_plugin/cli/commands.py
    import click
 
-   @click.group(name=__name__, invoke_without_command=False, help="My plugin commands.")
+   @click.group(name="my-plugin", invoke_without_command=False, help="My plugin commands.")
    def my_plugin_command():
        """My plugin CLI commands."""
        return None
