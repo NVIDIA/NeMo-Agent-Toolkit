@@ -119,6 +119,11 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/safety_and_security/retail_agent/.*configs/",
         r"^examples/safety_and_security/retail_agent/(configs|data)/",
     ),
+    # Allow Deep Research eval config to reference data
+    (
+        r"^examples/frameworks/auto_wrapper/langchain_deep_research/configs/config_with_eval.yml",
+        r"^examples/frameworks/auto_wrapper/langchain_deep_research/data/DeepConsult_top10.csv",
+    ),
 }
 
 ALLOWLISTED_WORDS: set[str] = {
