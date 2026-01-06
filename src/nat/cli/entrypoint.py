@@ -33,7 +33,6 @@ from dotenv import load_dotenv
 
 from nat.utils.log_levels import LOG_LEVELS
 
-from .commands.a2a.a2a import a2a_command
 from .commands.configure.configure import configure_command
 from .commands.evaluate import eval_command
 from .commands.finetune import finetune_command
@@ -105,7 +104,6 @@ def cli(ctx: click.Context, log_level: str):
     ctx_dict["log_level"] = log_level
 
 
-cli.add_command(a2a_command, name="a2a")
 cli.add_command(configure_command, name="configure")
 cli.add_command(eval_command, name="eval")
 cli.add_command(finetune_command, name="finetune")
