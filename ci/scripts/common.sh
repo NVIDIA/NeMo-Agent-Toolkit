@@ -157,7 +157,17 @@ function create_env() {
 
     rapids-logger "Creating Environment with extras: ${@}"
 
+    set +e
     UV_SYNC_STDERROUT=$(uv sync --active ${extras[@]} 2>&1)
+    UV_RESULT=$?
+    set -e
+
+    if [[ ${UV_RESULT} -ne 0 ]]; then
+        echo "Error, uv sync failed with exit code ${UV_RESULT}"
+        echo "StdErr output:"
+        echo "${UV_SYNC_STDERROUT}"
+        exit ${UV_RESULT}
+    fi
 
     # Explicitly filter the warning about multiple packages providing a tests module, work-around for issue #611
     UV_SYNC_STDERROUT=$(echo "${UV_SYNC_STDERROUT}" | grep -v "warning: The module \`tests\` is provided by more than one package")
