@@ -165,36 +165,32 @@ class TestPluginLoader:
 class TestPluginLoaderIntegration:
     """Integration tests for CLI plugin discovery with real plugins."""
 
+    # Expected core commands that should always be present
+    EXPECTED_CORE_COMMANDS = {
+        "configure",
+        "eval",
+        "finetune",
+        "info",
+        "object-store",
+        "optimize",
+        "red-team",
+        "registry",
+        "sizing",
+        "start",
+        "uninstall",
+        "validate",
+        "workflow",
+    }
+
     def test_core_commands_discovered(self):
         """Test that all core NAT commands are discovered via entry points."""
         cli_group = click.Group()
         discover_and_load_cli_plugins(cli_group)
 
-        # Core commands that should always be present
-        expected_core_commands = {
-            "configure",
-            "eval",
-            "finetune",
-            "info",
-            "object-store",
-            "optimize",
-            "red-team",
-            "registry",
-            "sizing",
-            "start",
-            "uninstall",
-            "validate",
-            "workflow",
-        }
-
         discovered_commands = set(cli_group.commands.keys())
-        missing_commands = expected_core_commands - discovered_commands
+        missing_commands = self.EXPECTED_CORE_COMMANDS - discovered_commands
 
         assert not missing_commands, f"Missing core commands: {missing_commands}"
-
-        # Verify all expected commands are present
-        for cmd in expected_core_commands:
-            assert cmd in cli_group.commands, f"Core command '{cmd}' not discovered"
 
     def test_mcp_plugin_discovered(self):
         """Test that MCP plugin is discovered when nvidia-nat-mcp is installed."""
@@ -230,7 +226,9 @@ class TestPluginLoaderIntegration:
         discover_and_load_cli_plugins(cli_group)
 
         # Should have at minimum all core commands
-        assert len(cli_group.commands) >= 13, "Should have at least 13 core commands"
+        min_expected = len(self.EXPECTED_CORE_COMMANDS)
+        assert len(cli_group.commands) >= min_expected, \
+            f"Should have at least {min_expected} core commands"
 
         # Verify commands are Click command/group instances
         for name, cmd in cli_group.commands.items():
