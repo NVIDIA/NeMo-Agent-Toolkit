@@ -18,6 +18,7 @@ import json
 import logging
 import shutil
 import warnings
+from datetime import UTC
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -416,7 +417,7 @@ class EvaluationRun:
                 "user_id":
                     self.config.user_id,
                 "timestamp":
-                    datetime.now(tz=datetime.UTC).isoformat(),
+                    datetime.now(tz=UTC).isoformat(),
             }
 
             with open(config_metadata_file, "w", encoding="utf-8") as f:
