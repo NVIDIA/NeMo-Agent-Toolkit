@@ -8,7 +8,6 @@ AIQ
 [Aa]llowlist
 [Aa]nonymize(d?)
 API(s?)
-[Aa]rgs
 Arize
 ART
 arXiv
@@ -93,7 +92,6 @@ jsonlines
 JSONPath
 [Kk]aggle
 [Kk]eycloak
-[Kk]wargs
 LangChain
 Langfuse
 LangGraph
@@ -119,8 +117,6 @@ MLOps
 Morpheus
 [Mm]ultimodal
 [Nn]amespac(e|ed|es|ing)
-NASSE('s)?
-NAT's
 NeMo
 Nemotron
 nginx

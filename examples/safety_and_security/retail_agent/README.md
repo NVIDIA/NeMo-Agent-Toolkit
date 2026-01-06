@@ -38,7 +38,7 @@ Consider a Retail Agent whose primary function is to assist customers with produ
 - **Policy Violations**: Agent actions that contravene established ethical, legal, or operational policies.
 - **Unintended Harmful Behaviors**: Agent actions that, despite benign intentions, result in negative or damaging outcomes.
 
-This README sets the stage for a deeper exploration of NASSE's key features, demonstrating how each component contributes to building more robust, secure, and trustworthy AI agents. This README explains how to:
+This README sets the stage for a deeper exploration of the key features of NASSE, demonstrating how each component contributes to building more robust, secure, and trustworthy AI agents. This README explains how to:
 
 - Instrument agent red teaming workflows for proactive risk discovery
 - Evaluate failure modes
@@ -65,7 +65,7 @@ This README will teach you to do the following:
 
 ## Key Features Overview
 
-NASSE's integrated features allow the user to:
+The integrated features of NASSE allow the user to:
 
 - Inject adversarial strings (attacks) into registered function inputs and outputs of the workflow.
 - Evaluate whether the attack has been successful at different points within the workflow.
@@ -150,7 +150,7 @@ Defense Middleware acts as a critical layer within the agent's workflow, interce
 
 ## Retail Agent Example
 
-This section demonstrates NASSE using a realistic retail customer service agent. We will explain how to perform risk assessment of the retail agent using NASSE's red teaming functionality.
+This section demonstrates NASSE using a realistic retail customer service agent. We will explain how to perform risk assessment of the retail agent using the red teaming functionality of NASSE.
 
 > ⚠️ **Content Warning**: Some red teaming scenarios test the system for content safety. These scenarios contain references to self-harm and content that some may find offensive or disturbing. This is intentional for evaluating agent robustness.
 >
