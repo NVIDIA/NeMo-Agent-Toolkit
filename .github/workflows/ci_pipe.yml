@@ -213,6 +213,6 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: "wheels"
-          path: "${{ github.workspace }}/tmp/wheels/**/*.whl"
+          path: "${{ github.workspace }}/tmp/wheels/*.whl"
           if-no-files-found: error
           compression-level: 9
