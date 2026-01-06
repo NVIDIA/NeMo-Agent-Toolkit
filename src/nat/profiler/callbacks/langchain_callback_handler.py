@@ -90,6 +90,31 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
                 f"\tCompletion Tokens: {self.completion_tokens}\n"
                 f"Successful Requests: {self.successful_requests}\n")
 
+    def __getstate__(self):
+        """Used for serializing instances"""
+
+        # start with a copy so we don't accidentally modify the object state
+        # or cause other conflicts
+        state = self.__dict__.copy()
+
+        # remove unpicklable entries
+        del state["_lock"]
+        del state["step_manager"]
+        return state
+
+    def __setstate__(self, state):
+        """Used for deserializing"""
+        # restore the state which was picklable
+
+        if (getattr(self, "_lock", None) is None):
+            setattr(self, "_lock", threading.Lock())
+
+        with self._lock:
+            self.__dict__.update(state)
+
+            if (getattr(self, "step_manager", None) is None):
+                setattr(self, "step_manager", Context.get().intermediate_step_manager)
+
     @property
     def always_verbose(self) -> bool:
         """Whether to call verbose callbacks even if verbose is False."""
@@ -241,6 +266,9 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
             if "tool_calls" in generation.message.additional_kwargs:
                 # add tool calls if included in the output
                 tool_calls = generation.message.additional_kwargs['tool_calls']
+                llm_text_output = f"{llm_text_output}\n\nTool calls: {tool_calls}"
+            elif isinstance(message, AIMessage) and message.tool_calls:
+                tool_calls = message.tool_calls
                 llm_text_output = f"{llm_text_output}\n\nTool calls: {tool_calls}"
         else:
             llm_text_output = ""

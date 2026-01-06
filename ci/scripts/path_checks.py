@@ -119,6 +119,11 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/safety_and_security/retail_agent/.*configs/",
         r"^examples/safety_and_security/retail_agent/(configs|data)/",
     ),
+    # Allow Deep Research eval config to reference data
+    (
+        r"^examples/frameworks/auto_wrapper/langchain_deep_research/configs/config_with_eval.yml",
+        r"^examples/frameworks/auto_wrapper/langchain_deep_research/data/DeepConsult_top10.csv",
+    ),
 }
 
 ALLOWLISTED_WORDS: set[str] = {
@@ -148,6 +153,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "LangChain/LangGraph.",
     "LangChain/LangGraph-based",
     "LTE/5G",
+    "N/A",
     "output/jobs/job_",
     "POST/PUT",
     "predictions/forecasts",
@@ -189,7 +195,8 @@ ALLOWLISTED_WORDS: set[str] = {
     "ghcr\\.io/.*",  # Container registry references
     # anything starting with nvcr.io
     "nvcr\\.io/.*",  # anything starting with default/
-    "default/.*",
+    "default/.*",  # Models with their prefixes
+    "(azure|openai|gcp|google)/.*",
 }
 
 IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {

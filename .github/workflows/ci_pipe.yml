@@ -93,6 +93,7 @@ jobs:
         with:
           fetch-depth: 0
           path: 'nat'
+          submodules: recursive
 
       - name: Check
         shell: bash
@@ -129,6 +130,7 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
           path: 'nat'
+          submodules: recursive
 
       - name: Test:linux:${{ matrix.arch }}:py${{ matrix.python-version }}
         shell: bash

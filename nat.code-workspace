@@ -6,7 +6,6 @@
         "recommendations": [
             "charliermarsh.ruff",
             "eeyore.yapf",
-            "ms-python.pylint",
             "ms-python.vscode-pylance",
             "stkb.rewrap"
         ],
