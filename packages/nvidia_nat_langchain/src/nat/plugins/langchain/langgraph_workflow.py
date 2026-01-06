@@ -20,6 +20,7 @@ import sys
 import uuid
 from collections.abc import AsyncGenerator
 from collections.abc import Callable
+from pathlib import Path
 from types import NoneType
 from typing import Any
 
@@ -33,6 +34,7 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.graph.state import StateGraph
 from pydantic import BaseModel
 from pydantic import ConfigDict
+from pydantic import DirectoryPath
 from pydantic import Field
 from pydantic import FilePath
 
@@ -69,7 +71,7 @@ class LanggraphWrapperConfig(FunctionBaseConfig, name="langgraph_wrapper"):
     model_config = ConfigDict(extra="forbid")
 
     description: str = ""
-    dependencies: list[str] = Field(default_factory=list)
+    dependencies: list[DirectoryPath] = Field(default_factory=list)
     graph: str
     env: FilePath | dict[str, str] | None = None
 
@@ -146,18 +148,18 @@ async def register(config: LanggraphWrapperConfig, b: Builder):
         # Process the env. This is a path to a .env file to load into the environment or a list of environment variables
         # to set.
         if config.env is not None:
-            if isinstance(config.env, str):
+            if isinstance(config.env, Path):
                 if os.path.exists(config.env) and os.path.isfile(config.env):
                     load_dotenv(config.env, override=True)
                 else:
                     raise ValueError(
-                        f"Env {config.env} is not a valid file. At the moment, we only support .env files.")
+                        f"Env '{config.env}' is not a valid file. At the moment, we only support .env files.")
             elif isinstance(config.env, dict):
                 for key, value in config.env.items():
                     os.environ[key] = value
             else:
                 raise ValueError(
-                    f"Env {config.env} is not a valid type. At the moment, we only support strings and dictionaries.")
+                    f"Env '{config.env}' is not a valid type. At the moment, we only support strings and dictionaries.")
 
         # Now process the graph.
         # Check that config.graph contains exactly one colon
