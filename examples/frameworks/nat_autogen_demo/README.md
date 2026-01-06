@@ -22,30 +22,33 @@ A quick example using Microsoft's AutoGen framework showcasing a multi-agent wea
 
 ## Table of Contents
 
-- [Key Features](#key-features)
-- [Prerequisites](#prerequisites)
-- [Installation and Setup](#installation-and-setup)
-  - [Install this Workflow](#install-this-workflow)
-  - [Export Required Environment Variables](#export-required-environment-variables)
-- [Run the Workflow](#run-the-workflow)
-  - [Set up the MCP Server](#set-up-the-mcp-server)
-  - [Expected Output](#expected-output)
-- [Observability with Phoenix](#observability-with-phoenix)
-  - [Install Phoenix Dependencies](#install-phoenix-dependencies)
-  - [Start Phoenix Server](#start-phoenix-server)
-  - [Run with Tracing Enabled](#run-with-tracing-enabled)
-  - [View Traces in Phoenix](#view-traces-in-phoenix)
-- [Evaluate the Workflow](#evaluate-the-workflow)
-  - [Evaluation Dataset](#evaluation-dataset)
-  - [Run the Evaluation](#run-the-evaluation)
-  - [Understanding Evaluation Results](#understanding-evaluation-results)
-- [Architecture](#architecture)
+- [AutoGen Framework Example](#autogen-framework-example)
+  - [Table of Contents](#table-of-contents)
+  - [Key Features](#key-features)
+  - [Prerequisites](#prerequisites)
+  - [Installation and Setup](#installation-and-setup)
+    - [Install this Workflow](#install-this-workflow)
+    - [Export Required Environment Variables](#export-required-environment-variables)
+  - [Run the Workflow](#run-the-workflow)
+    - [Set up the MCP Server](#set-up-the-mcp-server)
+    - [Expected Output](#expected-output)
+  - [Observability with Phoenix](#observability-with-phoenix)
+    - [Install Phoenix Dependencies](#install-phoenix-dependencies)
+    - [Start Phoenix Server](#start-phoenix-server)
+    - [Run with Tracing Enabled](#run-with-tracing-enabled)
+    - [View Traces in Phoenix](#view-traces-in-phoenix)
+  - [Evaluate the Workflow](#evaluate-the-workflow)
+    - [Evaluation Dataset](#evaluation-dataset)
+    - [Run the Evaluation](#run-the-evaluation)
+    - [Understanding Evaluation Results](#understanding-evaluation-results)
+  - [Architecture](#architecture)
+    - [Tool Integration](#tool-integration)
 
 ## Key Features
 
 - **AutoGen Framework Integration:** Demonstrates the NVIDIA NeMo Agent toolkit support for Microsoft's AutoGen framework alongside other frameworks like LangChain/LangGraph and Semantic Kernel.
 - **Multi-Agent Collaboration:** Shows two specialized agents working together - a WeatherAndTimeAgent for data retrieval and a FinalResponseAgent for response formatting.
-- **Unified Tool Integration:** Uses the toolkit's unified abstraction to integrate both local tools (weather updates) and MCP tools (time service) without framework-specific code. MCP servers are hosted using the toolkit's native MCP server and integrated with AutoGen as a function.
+- **Unified Tool Integration:** Uses the unified abstraction provided by the toolkit to integrate both local tools (weather updates) and MCP tools (time service) without framework-specific code. MCP servers are hosted using the native MCP server included in the toolkit and integrated with AutoGen as a function.
 - **Round-Robin Group Chat:** Uses AutoGen's RoundRobinGroupChat for structured agent communication with termination conditions.
 
 ## Prerequisites
@@ -87,7 +90,7 @@ For NVIDIA NIM, export the following:
 
 ### Set up the MCP Server
 
-This example uses NeMo Agent toolkit's MCP client abstraction to connect to an MCP server. The MCP connection is configured in the workflow's YAML file, and the toolkit automatically wraps the MCP tools for use with AutoGen agents. This approach provides a consistent interface across all supported frameworks.
+This example uses the MCP client abstraction provided by NeMo Agent toolkit to connect to an MCP server. The MCP connection is configured in the workflow YAML file, and the toolkit automatically wraps the MCP tools for use with AutoGen agents. This approach provides a consistent interface across all supported frameworks.
 
 In a separate terminal, or in the background, run the MCP server with this command:
 
@@ -95,7 +98,7 @@ In a separate terminal, or in the background, run the MCP server with this comma
 nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml --tool_names current_datetime
 ```
 
-Then, run the workflow with the toolkit's CLI:
+Then, run the workflow with the CLI provided by the toolkit:
 
 ```bash
 nat run --config_file examples/frameworks/nat_autogen_demo/configs/config.yml --input "What is the weather and time in New York today?"
@@ -256,7 +259,7 @@ The AutoGen workflow consists of two main agents:
 
 1. **WeatherAndTimeAgent**: Retrieves weather and time information using tools
    - Uses the `weather_update_tool` for current weather conditions
-   - Uses the `mcp_time` tool group for accurate time information (configured through the toolkit's MCP client)
+   - Uses the `mcp_time` tool group for accurate time information (configured through the MCP client provided by the toolkit)
    - Responds with "DONE" when task is completed
 
 2. **FinalResponseAgent**: Formats and presents the final response
@@ -268,9 +271,9 @@ The agents communicate through AutoGen's RoundRobinGroupChat system, which manag
 
 ### Tool Integration
 
-This example demonstrates NeMo Agent toolkit's unified approach to tool integration:
+This example demonstrates the unified approach to tool integration provided by NeMo Agent toolkit:
 
-- **Local tools** (like `weather_update_tool`) are defined as the toolkit's functions
-- **MCP tools** (like `mcp_time`) are configured in YAML using the toolkit's `mcp_client` function group
+- **Local tools** (like `weather_update_tool`) are defined as functions in the toolkit
+- **MCP tools** (like `mcp_time`) are configured in YAML using the `mcp_client` function group provided by the toolkit
 
-Both types of tools are passed to AutoGen agents through the toolkit's `builder.get_tools()` method, which automatically wraps them for the target framework. This eliminates the need for framework-specific MCP integration code and provides a consistent interface across all supported frameworks (AutoGen, LangChain, Semantic Kernel, and others).
+Both types of tools are passed to AutoGen agents through the `builder.get_tools()` method included in the toolkit, which automatically wraps them for the target framework. This eliminates the need for framework-specific MCP integration code and provides a consistent interface across all supported frameworks (AutoGen, LangChain, Semantic Kernel, and others).

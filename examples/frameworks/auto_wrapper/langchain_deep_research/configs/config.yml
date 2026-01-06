@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,14 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# flake8: noqa
-# isort:skip_file
-
-# Import any providers which need to be automatically registered here
-
-from . import embedder
-from . import langgraph_workflow
-from . import llm
-from . import tool_wrapper
-from . import retriever
-from .tools import register
+workflow:
+  _type: langgraph_wrapper
+  dependencies:
+    - external/lc-deepagents-quickstarts/deep_research
+  graph: external/lc-deepagents-quickstarts/deep_research/agent.py:agent
+  env: .env

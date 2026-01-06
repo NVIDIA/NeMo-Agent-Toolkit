@@ -26,7 +26,6 @@ DOCKER_TARGET_ARCH=${DOCKER_TARGET_ARCH:-${HOST_ARCH}}
 
 if [ ${DOCKER_TARGET_ARCH} != ${HOST_ARCH} ]; then
     echo -n "Performing cross-build for ${DOCKER_TARGET_ARCH} on ${HOST_ARCH}, please ensure qemu is installed, "
-    echo "details in ${REPO_ROOT}/docs/source/advanced/running-ci-locally.md"
 fi
 
 NAT_VERSION=${NAT_VERSION:-$(git describe --tags --abbrev=0 2>/dev/null || echo "no-tag")}
