@@ -34,10 +34,10 @@ logger = logging.getLogger(__name__)
 
 
 class PowerOfTwoConfig(FunctionBaseConfig, name="power_of_two"):
-    """Configuration for the power_of_two function that wraps calculator.multiply."""
+    """Configuration for the power_of_two function that wraps calculator__multiply."""
 
     multiply_fn: FunctionRef = Field(
-        default=FunctionRef("calculator.multiply"),
+        default=FunctionRef("calculator__multiply"),
         description="Reference to the multiply function to use internally.",
     )
 
@@ -45,11 +45,11 @@ class PowerOfTwoConfig(FunctionBaseConfig, name="power_of_two"):
 @register_function(config_type=PowerOfTwoConfig)
 async def power_of_two_function(config: PowerOfTwoConfig, builder: Builder):
     """
-    Create a power_of_two function that internally calls calculator.multiply.
+    Create a power_of_two function that internally calls calculator__multiply.
 
     This creates a nested tool call scenario:
     - react_agent calls power_of_two (parent_name = "react_agent")
-    - power_of_two calls calculator.multiply (parent_name = "power_of_two")
+    - power_of_two calls calculator__multiply (parent_name = "power_of_two")
 
     This allows testing of the parent_id and parent_name span attributes.
     """

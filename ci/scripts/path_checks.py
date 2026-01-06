@@ -114,10 +114,10 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/A2A/math_assistant_a2a/oauth2-keycloak-setup.md",
         r"^examples/A2A/calculator_a2a/configs/config-protected-oauth2.yml",
     ),
-    # Allow model names in Deep Research examples
+    # Allow retail_agent src configs to reference root configs and data
     (
-        r"^examples/frameworks/auto_wrapper/langchain_deep_research/configs/config.*\.yml",
-        r"^(azure|openai|gcp|google)/.*$",
+        r"^examples/safety_and_security/retail_agent/.*configs/",
+        r"^examples/safety_and_security/retail_agent/(configs|data)/",
     ),
 }
 
@@ -170,6 +170,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "try/except",
     "user/assistant",
     "validate/sanitize",
+    "walmart.com/garden-trowels",
     "Workflows/tools",
     "Yes/No",  #
     # numbers

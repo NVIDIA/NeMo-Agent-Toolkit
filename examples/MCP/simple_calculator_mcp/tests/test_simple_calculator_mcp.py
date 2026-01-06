@@ -78,7 +78,7 @@ async def simple_calc_mcp_process_fixture(nat_mcp_host: str, nat_mcp_port: str) 
 @pytest.fixture(name="simple_calc_mcp_avail", scope="module")
 async def simple_calc_mcp_avail_fixture(simple_calc_mcp_process: subprocess.Popen, nat_mcp_url: str):
     """
-    Wait for the MCP server to become available, then verify that the calculator.subtract tool is registered."""
+    Wait for the MCP server to become available, then verify that the calculator__subtract tool is registered."""
     from mcp import ClientSession
     from mcp.client.streamable_http import streamablehttp_client
 
@@ -95,7 +95,7 @@ async def simple_calc_mcp_avail_fixture(simple_calc_mcp_process: subprocess.Pope
                 async with ClientSession(read_stream, write_stream) as session:
                     await session.initialize()
                     tools = await session.list_tools()
-                    assert 'calculator.subtract' in (t.name for t in tools.tools)
+                    assert 'calculator__subtract' in (t.name for t in tools.tools)
                     return
         except Exception:
             pass

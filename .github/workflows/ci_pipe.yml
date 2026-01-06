@@ -89,7 +89,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           path: 'nat'
@@ -124,7 +124,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -135,7 +135,7 @@ jobs:
         run: ./nat/ci/scripts/github/tests.sh
 
       - name: Upload Test Results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         # Upload test results even if the tests fail
         if: ${{ always() }}
         with:
@@ -167,7 +167,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-tags: true
           path: 'nat'
@@ -177,7 +177,7 @@ jobs:
         run: ./nat/ci/scripts/github/docs.sh
 
       - name: Upload Documentation
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: "docs"
           path: "${{ github.workspace }}/tmp/docs.tar.bz2"
@@ -197,7 +197,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -208,7 +208,7 @@ jobs:
         run: ./nat/ci/scripts/github/build_wheel.sh
 
       - name: Upload Wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: "wheels"
           path: "${{ github.workspace }}/tmp/wheels/**/*.whl"
