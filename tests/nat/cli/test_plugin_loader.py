@@ -234,4 +234,4 @@ class TestPluginLoaderIntegration:
 
         # Verify commands are Click command/group instances
         for name, cmd in cli_group.commands.items():
-            assert isinstance(cmd, (click.Command, click.Group)), f"Command '{name}' is not a valid Click command"
+            assert isinstance(cmd, click.Command | click.Group), f"Command '{name}' is not a valid Click command"
