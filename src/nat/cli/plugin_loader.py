@@ -48,7 +48,7 @@ def discover_and_load_cli_plugins(cli_group: click.Group) -> None:
             command = ep.load()
 
             # Verify it's a Click command or group
-            if not isinstance(command, (click.Command, click.Group)):
+            if not isinstance(command, click.Command | click.Group):
                 logger.warning("CLI plugin '%s' from '%s' is not a Click command/group, skipping", ep.name, ep.value)
                 continue
 
