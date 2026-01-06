@@ -38,7 +38,6 @@ from .commands.configure.configure import configure_command
 from .commands.evaluate import eval_command
 from .commands.finetune import finetune_command
 from .commands.info.info import info_command
-from .commands.mcp.mcp import mcp_command
 from .commands.object_store.object_store import object_store_command
 from .commands.optimize import optimizer_command
 from .commands.red_teaming.red_teaming import red_team_command
@@ -48,6 +47,7 @@ from .commands.start import start_command
 from .commands.uninstall import uninstall_command
 from .commands.validate import validate_command
 from .commands.workflow.workflow import workflow_command
+from .plugin_loader import discover_and_load_cli_plugins
 
 # Load environment variables from .env file, if it exists
 load_dotenv()
@@ -119,7 +119,9 @@ cli.add_command(workflow_command, name="workflow")
 cli.add_command(sizing, name="sizing")
 cli.add_command(optimizer_command, name="optimize")
 cli.add_command(object_store_command, name="object-store")
-cli.add_command(mcp_command, name="mcp")
+
+# Discover and load CLI commands from plugin packages
+discover_and_load_cli_plugins(cli)
 
 # Aliases
 cli.add_command(start_command.get_command(None, "console"), name="run")  # type: ignore
