@@ -104,6 +104,17 @@ function get_num_proc() {
    echo "${NUM_PROC}"
 }
 
+function set_versions() {
+   # Update internal dependencies to the current git tag
+   export SETUPTOOLS_SCM_PRETEND_VERSION="${GIT_TAG}"
+   export USE_FULL_VERSION="1"
+
+   # The dev environment is needed to run the update-version script
+   create_env group:dev
+
+   SKIP_MD_UPDATE=1 ${PROJECT_ROOT}/ci/release/update-version.sh "${GIT_TAG}"
+}
+
 function build_wheel() {
     rapids-logger "Building Wheel for $1"
     uv build --wheel --no-progress --out-dir "${WHEELS_DIR}/$2" --directory $1

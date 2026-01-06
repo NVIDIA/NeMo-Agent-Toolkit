@@ -22,10 +22,13 @@ source ${GITHUB_SCRIPT_DIR}/common.sh
 WHEELS_BASE_DIR="${WORKSPACE_TMP}/wheels"
 WHEELS_DIR="${WHEELS_BASE_DIR}/nvidia-nat"
 
-create_env extra:all
-
 GIT_TAG=$(get_git_tag)
 rapids-logger "Git Version: ${GIT_TAG}"
+
+# Update internal dependencies to the current git tag
+$(set_versions)
+
+create_env extra:all
 
 build_wheel . "nvidia-nat/${GIT_TAG}"
 
