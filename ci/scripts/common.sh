@@ -159,7 +159,7 @@ function create_env() {
     rapids-logger "Creating Environment with extras: ${@}"
 
     set +e
-    UV_SYNC_STDERROUT=$(uv sync --active ${extras[@]} 2>&1)
+    UV_SYNC_STDERROUT=$(uv sync --active "${extras[@]}" 2>&1)
     UV_RESULT=$?
     set -e
 
