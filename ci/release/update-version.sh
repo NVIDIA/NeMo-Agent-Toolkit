@@ -95,6 +95,8 @@ for TOML_FILE in "${NAT_PACKAGE_TOMLS[@]}"; do
 done
 
 # Update the documentation versions1.json file
-${CUR_DIR}/update_doc_versions1.py \
-  --versions-file=${PROJECT_ROOT}/docs/source/versions1.json \
-  --new-version="${NEXT_SHORT_TAG}"
+if [[ -z "${SKIP_MD_UPDATE}" ]]; then
+   ${CUR_DIR}/update_doc_versions1.py \
+   --versions-file=${PROJECT_ROOT}/docs/source/versions1.json \
+   --new-version="${NEXT_SHORT_TAG}"
+fi
