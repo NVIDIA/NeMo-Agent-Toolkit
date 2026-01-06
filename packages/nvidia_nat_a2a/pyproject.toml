@@ -56,3 +56,6 @@ nat_a2a_client = "nat.plugins.a2a.client.client_impl"
 
 [project.entry-points.'nat.front_ends']
 nat_a2a_server = "nat.plugins.a2a.server.register_frontend"
+
+[project.entry-points.'nat.cli']
+a2a = "nat.plugins.a2a.cli.commands:a2a_command"
