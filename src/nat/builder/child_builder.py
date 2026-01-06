@@ -363,7 +363,7 @@ class ChildBuilder(Builder):
         Example:
             >>> with ChildBuilder.use(config, my_builder) as builder:
             >>>     # builder is active in this context
-            >>>     assert Builder.get_current() == builder
+            >>>     assert Builder.current() == builder
             >>> # Original builder is restored here
         """
 

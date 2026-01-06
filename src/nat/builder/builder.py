@@ -88,7 +88,7 @@ class Builder(ABC):
         """Get the Builder object from the current context.
 
         Returns:
-            The Builder object stored in the ContextVar, or None if not set.
+            The Builder object stored in the ContextVar, or raises ValueError if not set.
         """
         builder = _current_builder_context.get()
 
