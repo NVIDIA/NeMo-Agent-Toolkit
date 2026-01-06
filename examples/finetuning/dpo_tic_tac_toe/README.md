@@ -271,10 +271,13 @@ For non-terminal positions without forced outcomes, the scorer uses these featur
 
 ## Installation
 
+This example is meant to be run using a NeMo Agent Toolkit installation from source. You 
+can follow the [NeMo Agent Toolkit Installation Guide](../../../docs/source/get-started/installation.md) to set up your environment.
+
+Then: 
+
 ```bash
-# Navigate to the example directory
-cd examples/finetuning/dpo_tic_tac_toe
-pip install -e .
+uv pip install -e examples/finetuning/dpo_tic_tac_toe
 ```
 
 ## Configuration Reference
@@ -514,7 +517,7 @@ To test data collection without submitting training jobs:
 
 ```bash
 # Run evaluation and collect DPO data
-nat eval --config_file=configs/config.yml
+nat eval --config_file examples/finetuning/dpo_tic_tac_toe/configs/config.yml
 
 # Results saved to .tmp/nat/dpo_tic_tac_toe/eval/
 ```
@@ -534,7 +537,7 @@ To collect data and submit training to NeMo Customizer:
 export NGC_API_KEY="your-ngc-api-key"
 
 # Run finetuning pipeline
-nat finetune --config_file=configs/config.yml
+nat finetune --config_file examples/finetuning/dpo_tic_tac_toe/configs/config.yml
 ```
 
 This will:
