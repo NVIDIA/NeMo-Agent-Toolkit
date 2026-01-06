@@ -603,10 +603,6 @@ The response includes the following metrics for each user:
 | `requests.active_requests` | Number of requests currently in progress |
 | `requests.avg_latency_ms` | Average request latency in milliseconds |
 | `requests.error_count` | Number of failed requests |
-| `llm_usage.total_tokens` | Total tokens used (prompt + completion) |
-| `llm_usage.prompt_tokens` | Total prompt tokens used |
-| `llm_usage.completion_tokens` | Total completion tokens used |
-| `llm_usage.llm_calls` | Total number of LLM API calls |
 | `memory.per_user_functions_count` | Number of per-user functions built for this user |
 | `memory.per_user_function_groups_count` | Number of per-user function groups built |
 | `memory.exit_stack_size` | Number of resources held in the async exit stack |
@@ -640,12 +636,6 @@ curl http://localhost:8000/monitor/users | jq
         "avg_latency_ms": 1250.5,
         "error_count": 2
       },
-      "llm_usage": {
-        "total_tokens": 15000,
-        "prompt_tokens": 10000,
-        "completion_tokens": 5000,
-        "llm_calls": 40
-      },
       "memory": {
         "per_user_functions_count": 3,
         "per_user_function_groups_count": 1,
@@ -665,12 +655,6 @@ curl http://localhost:8000/monitor/users | jq
         "active_requests": 0,
         "avg_latency_ms": 980.0,
         "error_count": 0
-      },
-      "llm_usage": {
-        "total_tokens": 3500,
-        "prompt_tokens": 2500,
-        "completion_tokens": 1000,
-        "llm_calls": 10
       },
       "memory": {
         "per_user_functions_count": 2,
@@ -699,7 +683,6 @@ curl "http://localhost:8000/monitor/users?user_id=alice"
       "user_id": "alice",
       "session": {...},
       "requests": {...},
-      "llm_usage": {...},
       "memory": {...}
     }
   ]

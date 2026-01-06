@@ -439,10 +439,6 @@ class TestPerUserMonitoringEndpoint:
                 assert "requests" in user_metrics
                 assert user_metrics["requests"]["total_requests"] == 2
 
-                # Check LLM usage metrics (should be 0 for this simple test)
-                assert "llm_usage" in user_metrics
-                assert user_metrics["llm_usage"]["llm_calls"] == 0
-
                 # Check memory metrics
                 assert "memory" in user_metrics
                 assert "per_user_functions_count" in user_metrics["memory"]

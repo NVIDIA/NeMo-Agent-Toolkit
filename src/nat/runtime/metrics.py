@@ -47,15 +47,6 @@ class PerUserRequestMetrics(BaseModel):
     error_count: int = Field(ge=0, default=0, description="Total number of failed requests")
 
 
-class PerUserLLMUsageMetrics(BaseModel):
-    """LLM token usage metrics for a per-user workflow."""
-
-    total_tokens: int = Field(ge=0, default=0, description="Total tokens used (prompt + completion)")
-    prompt_tokens: int = Field(ge=0, default=0, description="Total prompt tokens used")
-    completion_tokens: int = Field(ge=0, default=0, description="Total completion tokens used")
-    llm_calls: int = Field(ge=0, default=0, description="Total number of LLM API calls")
-
-
 class PerUserMemoryMetrics(BaseModel):
     """Memory/resource count metrics for a per-user workflow."""
 
@@ -70,7 +61,6 @@ class PerUserResourceUsage(BaseModel):
     user_id: str = Field(description="The user identifier")
     session: PerUserSessionMetrics = Field(description="Session lifecycle metrics")
     requests: PerUserRequestMetrics = Field(description="Request-level metrics")
-    llm_usage: PerUserLLMUsageMetrics = Field(description="LLM token usage metrics")
     memory: PerUserMemoryMetrics = Field(description="Memory/resource count metrics")
 
 
@@ -164,14 +154,6 @@ class PerUserMetricsCollector:
             error_count=builder_info.error_count,
         )
 
-        # LLM usage metrics
-        llm_metrics = PerUserLLMUsageMetrics(
-            total_tokens=builder_info.total_tokens,
-            prompt_tokens=builder_info.prompt_tokens,
-            completion_tokens=builder_info.completion_tokens,
-            llm_calls=builder_info.llm_calls,
-        )
-
         # Memory/resource count metrics from the builder
         builder = builder_info.builder
         per_user_functions_count = len(builder._per_user_functions)
@@ -194,6 +176,5 @@ class PerUserMetricsCollector:
             user_id=user_id,
             session=session_metrics,
             requests=request_metrics,
-            llm_usage=llm_metrics,
             memory=memory_metrics,
         )

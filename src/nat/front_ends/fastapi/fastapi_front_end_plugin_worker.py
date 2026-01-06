@@ -1507,12 +1507,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                       "avg_latency_ms": 1250.5,
                                                       "error_count": 2
                                                   },
-                                                  "llm_usage": {
-                                                      "total_tokens": 15420,
-                                                      "prompt_tokens": 12000,
-                                                      "completion_tokens": 3420,
-                                                      "llm_calls": 28
-                                                  },
                                                   "memory": {
                                                       "per_user_functions_count": 2,
                                                       "per_user_function_groups_count": 1,
