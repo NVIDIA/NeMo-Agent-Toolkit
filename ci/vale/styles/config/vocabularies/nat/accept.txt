@@ -13,6 +13,7 @@ Arize
 ART
 arXiv
 [Aa]sync
+[Aa]nthropic('s)?
 Authlib
 [Aa]utoencoder
 [Bb]ackdoor(s?)
@@ -80,6 +81,7 @@ Grafana
 groundedness
 [Gg]uardrail(s|ed|ing)?
 [Hh]ashable
+[Hh]ardcode(s|d)?
 [Hh]yperparameter(s?)
 impactful
 [Ii]nferencing
@@ -174,6 +176,7 @@ SSE
 [Ss]ubgraph(s?)
 [Ss]ubpackage(s?)
 [Ss]ubsampl(e|ing)
+[Ss]ubtask(s?)
 [Ss]ubword(s?)
 [Ss]uperset(s?)
 Tavily
@@ -181,7 +184,6 @@ Tavily
 [Tt]imestamp(s?)
 [Tt]okenization
 [Tt]okenizer(s?)
-[Tt]oolkit's
 triages
 [Uu]ncomment(ed)?
 [Uu]nencrypted

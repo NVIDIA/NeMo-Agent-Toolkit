@@ -556,6 +556,153 @@ If you're migrating from OpenAI's API:
   }
   ```
 
+## Per-User Workflow Monitoring Endpoint
+
+The NeMo Agent toolkit provides a built-in monitoring endpoint for per-user workflows that exposes real-time resource usage metrics. This is useful for debugging, capacity planning, and operational monitoring of multi-user deployments.
+
+### Configuration
+
+To enable the monitoring endpoint, set `enable_per_user_monitoring` to `true` in your workflow configuration:
+
+```yaml
+general:
+  enable_per_user_monitoring: true
+```
+
+:::{note}
+This endpoint is only available when:
+- The workflow is registered as a per-user workflow (using `@register_per_user_function`)
+- The `enable_per_user_monitoring` configuration option is set to `true`
+:::
+
+### Endpoint Details
+
+- **Route:** `/monitor/users`
+- **Method:** GET
+- **Description:** Returns resource usage metrics for all active per-user workflow sessions, or for a specific user if a `user_id` query parameter is provided.
+
+### Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `user_id` | string | No | Filter results to a specific user. If omitted, returns metrics for all active users. |
+
+### Response Format
+
+The response includes the following metrics for each user:
+
+| Field | Description |
+|-------|-------------|
+| `total_active_users` | Count of users with active per-user sessions (builders still in memory), regardless of in-flight requests |
+| `user_id` | The user identifier (from `nat-session` cookie) |
+| `session.created_at` | When the per-user workflow was first created |
+| `session.last_activity` | Timestamp of the most recent request |
+| `session.ref_count` | Number of active concurrent requests for this user |
+| `session.is_active` | Whether the user session is currently active |
+| `requests.total_requests` | Total number of requests processed |
+| `requests.active_requests` | Number of requests currently in progress |
+| `requests.avg_latency_ms` | Average request latency in milliseconds |
+| `requests.error_count` | Number of failed requests |
+| `memory.per_user_functions_count` | Number of per-user functions built for this user |
+| `memory.per_user_function_groups_count` | Number of per-user function groups built |
+| `memory.exit_stack_size` | Number of resources held in the async exit stack |
+
+### Usage Examples
+
+**Get metrics for all users:**
+
+```bash
+curl http://localhost:8000/monitor/users | jq
+```
+
+**Response:**
+
+```json
+{
+  "timestamp": "2025-12-17T10:30:00.000000",
+  "total_active_users": 2,
+  "users": [
+    {
+      "user_id": "alice",
+      "session": {
+        "created_at": "2025-12-17T10:00:00.000000",
+        "last_activity": "2025-12-17T10:29:55.000000",
+        "ref_count": 1,
+        "is_active": true
+      },
+      "requests": {
+        "total_requests": 42,
+        "active_requests": 1,
+        "avg_latency_ms": 1250.5,
+        "error_count": 2
+      },
+      "memory": {
+        "per_user_functions_count": 3,
+        "per_user_function_groups_count": 1,
+        "exit_stack_size": 2
+      }
+    },
+    {
+      "user_id": "bob",
+      "session": {
+        "created_at": "2025-12-17T10:15:00.000000",
+        "last_activity": "2025-12-17T10:28:00.000000",
+        "ref_count": 0,
+        "is_active": false
+      },
+      "requests": {
+        "total_requests": 10,
+        "active_requests": 0,
+        "avg_latency_ms": 980.0,
+        "error_count": 0
+      },
+      "memory": {
+        "per_user_functions_count": 2,
+        "per_user_function_groups_count": 1,
+        "exit_stack_size": 1
+      }
+    }
+  ]
+}
+```
+
+**Get metrics for a specific user:**
+
+```bash
+curl "http://localhost:8000/monitor/users?user_id=alice"
+```
+
+**Response:**
+
+```text
+{
+  "timestamp": "2025-12-17T10:30:00.000000",
+  "total_active_users": 1,
+  "users": [
+    {
+      "user_id": "alice",
+      "session": {...},
+      "requests": {...},
+      "memory": {...}
+    }
+  ]
+}
+```
+
+### Use Cases
+
+The monitoring endpoint is useful for:
+
+- **Debugging**: Identify users with high error counts or unusual latency patterns
+- **Capacity Planning**: Monitor resource usage across users to plan scaling
+- **Usage Analytics**: Track LLM token consumption and request volumes per user
+- **Session Management**: Identify inactive sessions for cleanup or investigate active sessions
+
+### Related Documentation
+
+For more information about per-user workflows, refer to:
+- [Writing Per-User Functions](../../extend/custom-components/custom-functions/per-user-functions.md)
+
 ## Evaluation Endpoint
 You can also evaluate workflows via the NeMo Agent toolkit `evaluate` endpoint. For more information, refer to the [NeMo Agent toolkit Evaluation Endpoint](./evaluate-api.md) documentation.
 

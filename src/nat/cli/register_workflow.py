@@ -58,10 +58,13 @@ from nat.cli.type_registry import TelemetryExporterBuildCallableT
 from nat.cli.type_registry import TelemetryExporterConfigT
 from nat.cli.type_registry import ToolWrapperBuildCallableT
 from nat.cli.type_registry import TrainerAdapterBuildCallableT
+from nat.cli.type_registry import TrainerAdapterRegisteredCallableT
 from nat.cli.type_registry import TrainerBuildCallableT
+from nat.cli.type_registry import TrainerRegisteredCallableT
 from nat.cli.type_registry import TrajectoryBuilderBuildCallableT
+from nat.cli.type_registry import TrajectoryBuilderRegisteredCallableT
 from nat.cli.type_registry import TTCStrategyBuildCallableT
-from nat.cli.type_registry import TTCStrategyRegisterCallableT
+from nat.cli.type_registry import TTCStrategyRegisteredCallableT
 from nat.data_models.authentication import AuthProviderBaseConfigT
 from nat.data_models.component import ComponentEnum
 from nat.data_models.discovery_metadata import DiscoveryMetadata
@@ -79,6 +82,7 @@ from nat.data_models.middleware import MiddlewareBaseConfigT
 from nat.data_models.object_store import ObjectStoreBaseConfigT
 from nat.data_models.registry_handler import RegistryHandlerBaseConfigT
 from nat.data_models.retriever import RetrieverBaseConfigT
+from nat.data_models.ttc_strategy import TTCStrategyBaseConfigT
 from nat.utils.type_utils import DecomposedType
 
 
@@ -559,11 +563,11 @@ def register_object_store(config_type: type[ObjectStoreBaseConfigT]):
     return register_kv_store_inner
 
 
-def register_ttc_strategy(config_type: type[TTCStrategyRegisterCallableT]):
+def register_ttc_strategy(config_type: type[TTCStrategyBaseConfigT]):
 
     def register_ttc_strategy_inner(
-        fn: TTCStrategyBuildCallableT[TTCStrategyRegisterCallableT]
-    ) -> TTCStrategyRegisterCallableT[TTCStrategyRegisterCallableT]:
+        fn: TTCStrategyBuildCallableT[TTCStrategyBaseConfigT]
+    ) -> TTCStrategyRegisteredCallableT[TTCStrategyBaseConfigT]:
         from .type_registry import GlobalTypeRegistry
         from .type_registry import RegisteredTTCStrategyInfo
 
@@ -585,7 +589,7 @@ def register_ttc_strategy(config_type: type[TTCStrategyRegisterCallableT]):
 
 def register_trainer(config_type: type[TrainerConfigT]):
 
-    def register_trainer_inner(fn: TrainerBuildCallableT[TrainerConfigT]) -> TrainerBuildCallableT[TrainerConfigT]:
+    def register_trainer_inner(fn: TrainerBuildCallableT[TrainerConfigT]) -> TrainerRegisteredCallableT[TrainerConfigT]:
         from .type_registry import GlobalTypeRegistry
         from .type_registry import RegisteredTrainerInfo
 
@@ -608,8 +612,8 @@ def register_trainer(config_type: type[TrainerConfigT]):
 def register_trainer_adapter(config_type: type[TrainerAdapterConfigT]):
 
     def register_trainer_adapter_inner(
-            fn: TrainerAdapterBuildCallableT[TrainerAdapterConfigT]
-    ) -> TrainerAdapterBuildCallableT[TrainerAdapterConfigT]:
+        fn: TrainerAdapterBuildCallableT[TrainerAdapterConfigT]
+    ) -> TrainerAdapterRegisteredCallableT[TrainerAdapterConfigT]:
         from .type_registry import GlobalTypeRegistry
         from .type_registry import RegisteredTrainerAdapterInfo
 
@@ -633,7 +637,7 @@ def register_trajectory_builder(config_type: type[TrajectoryBuilderConfigT]):
 
     def register_trajectory_builder_inner(
         fn: TrajectoryBuilderBuildCallableT[TrajectoryBuilderConfigT]
-    ) -> TrajectoryBuilderBuildCallableT[TrajectoryBuilderConfigT]:
+    ) -> TrajectoryBuilderRegisteredCallableT[TrajectoryBuilderConfigT]:
         from .type_registry import GlobalTypeRegistry
         from .type_registry import RegisteredTrajectoryBuilderInfo
 

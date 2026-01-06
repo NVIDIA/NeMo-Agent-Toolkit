@@ -23,6 +23,7 @@ dependencies = [
   "nvidia-nat[async_endpoints,gunicorn]~=1.4",
   "nvidia-nat-adk",
   "nvidia-nat-agno",
+  "nvidia-nat-autogen",
   "nvidia-nat-crewai",
   "nvidia-nat-langchain",
   "nvidia-nat-llama-index",
@@ -73,6 +74,7 @@ config-settings = { editable_mode = "compat" }
 [tool.uv.sources]
 nvidia-nat = { workspace = true }
 nvidia-nat-agno = { workspace = true }
+nvidia-nat-autogen = { workspace = true }
 nvidia-nat-crewai = { workspace = true }
 nvidia-nat-langchain = { workspace = true }
 nvidia-nat-llama-index = { workspace = true }
