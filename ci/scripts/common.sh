@@ -105,15 +105,21 @@ function get_num_proc() {
 }
 
 function set_versions() {
-   # The dev environment is needed to run the update-version script
-   create_env group:dev
-
    # Update internal dependencies to the current git tag
-   VERSION=$(python -m setuptools_scm)
-   export SETUPTOOLS_SCM_PRETEND_VERSION="${VERSION}"
+   set +e
+   SETUPTOOLS_SCM_OUTPUT=$(python -m setuptools_scm)
+   SETUPTOOLS_SCM_RESULT=$?
+   set -e
+
+   if [[ ${SETUPTOOLS_SCM_RESULT} -ne 0 ]]; then
+       rapids-logger "Error, setuptools_scm failed to determine the version: ${SETUPTOOLS_SCM_OUTPUT}"
+       exit ${SETUPTOOLS_SCM_RESULT}
+   fi
+
+   export SETUPTOOLS_SCM_PRETEND_VERSION="${SETUPTOOLS_SCM_OUTPUT}"
    export USE_FULL_VERSION="1"
 
-   SKIP_MD_UPDATE=1 ${PROJECT_ROOT}/ci/release/update-version.sh "${VERSION}"
+   SKIP_MD_UPDATE=1 ${PROJECT_ROOT}/ci/release/update-version.sh "${SETUPTOOLS_SCM_OUTPUT}"
 }
 
 function build_wheel() {
