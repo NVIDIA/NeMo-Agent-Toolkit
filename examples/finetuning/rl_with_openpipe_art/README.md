@@ -77,8 +77,7 @@ The model learns to play against a **random opponent**, receiving rewards based 
 
 4. **This example package**:
    ```bash
-   cd examples/finetuning/rl_with_openpipe_art
-   uv pip install -e .
+   uv pip install -e examples/finetuning/rl_with_openpipe_art
    ```
    
 5. The rest of this example assumes you are in the root of the NeMo Agent Toolkit repository. Please execute

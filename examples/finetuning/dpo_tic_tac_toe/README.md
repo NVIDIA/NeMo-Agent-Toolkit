@@ -277,9 +277,7 @@ can follow the [NeMo Agent Toolkit Installation Guide](../../../docs/source/get-
 Then: 
 
 ```bash
-# Navigate to the example directory
-cd examples/finetuning/dpo_tic_tac_toe
-uv pip install -e .
+uv pip install -e examples/finetuning/dpo_tic_tac_toe
 ```
 
 ## Configuration Reference
@@ -500,13 +498,6 @@ finetuning:
 ```
 
 ## Running the Example
-
-The rest of this example is meant to be run *from the root of your NeMo Agent Toolkit installation*. To navigate to the root of 
-the repository from this example directory, run:
-
-```bash
-  cd ../../..
-```
 
 ### Step 1: Start an LLM Server (for data collection)
 
