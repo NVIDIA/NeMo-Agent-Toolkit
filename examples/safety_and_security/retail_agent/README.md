@@ -23,7 +23,7 @@ limitations under the License.
 
 ## Introduction
 
-In this guide we will outline the features of NVIDIA NeMo Agent Toolkit's Safety and Security Engine (NASSE) and will demonstrate its capabilities by assessing and improving the safety and security posture of an example Retail Agent.
+In this guide we will outline the features of the Safety and Security Engine (NASSE) included in NVIDIA NeMo Agent Toolkit and will demonstrate its capabilities by assessing and improving the safety and security posture of an example Retail Agent.
 
 NASSE is a framework designed to integrate robust safety and security measures directly into the lifecycle of AI agents built with NeMo Agent toolkit. Its overarching purpose is to provide developers with the tools and methodologies necessary to proactively identify, mitigate, and report potential risks associated with agent deployment. In an era where AI agents are becoming increasingly autonomous and integrated into critical systems, ensuring their safety and security is paramount to prevent misuse, maintain trust, and comply with ethical guidelines and regulations.
 
