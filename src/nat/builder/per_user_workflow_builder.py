@@ -31,6 +31,7 @@ from nat.builder.component_utils import build_dependency_sequence
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function import Function
 from nat.builder.function import FunctionGroup
+from nat.builder.sync_builder import SyncBuilder
 from nat.builder.workflow import Workflow
 from nat.builder.workflow_builder import ConfiguredFunction
 from nat.builder.workflow_builder import ConfiguredFunctionGroup
@@ -132,6 +133,11 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise ValueError(
                 "Exit stack not initialized. Did you forget to call `async with PerUserWorkflowBuilder() as builder`?")
         return self._exit_stack
+
+    @override
+    @property
+    def sync_builder(self) -> SyncBuilder:
+        return SyncBuilder(self)
 
     @property
     def user_id(self) -> str:

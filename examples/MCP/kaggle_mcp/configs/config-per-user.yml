@@ -1,0 +1,52 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+general:
+  per_user_workflow_timeout: 300
+  per_user_workflow_cleanup_interval: 1800
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.0
+
+function_groups:
+  kaggle_mcp_tools:
+    _type: per_user_mcp_client
+    server:
+      transport: streamable-http
+      url: https://www.kaggle.com/mcp
+      auth_provider: kaggle
+    tool_overrides:
+      search_datasets:
+        description: >
+          Search for datasets on Kaggle. Use the 'search' parameter to search by keywords.
+          Returns a list of datasets with metadata including
+          title, owner, download count, and URL. Example: {"request": {"search": "titanic"}}
+
+authentication:
+  kaggle:
+    _type: api_key
+    raw_key: ${KAGGLE_BEARER_TOKEN}
+    auth_scheme: Bearer
+
+workflow:
+  _type: per_user_react_agent
+  tool_names:
+    - kaggle_mcp_tools
+  llm_name: nim_llm
+  verbose: true
+  parse_agent_response_max_retries: 3

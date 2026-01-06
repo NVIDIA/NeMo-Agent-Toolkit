@@ -335,6 +335,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         await self.add_static_files_route(app, builder)
         await self.add_authorization_route(app)
         await self.add_mcp_client_tool_list_route(app, builder)
+        await self.add_monitor_route(app)
 
         for ep in self.front_end_config.endpoints:
 
@@ -1421,6 +1422,107 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     "description": "Internal Server Error"
                 }
             })
+
+    async def add_monitor_route(self, app: FastAPI):
+        """Add the per-user monitoring endpoint to the FastAPI app.
+
+        Security Warning:
+            This endpoint exposes per-user identifiers and usage metrics. It should be
+            protected by deploying behind an internal network, a reverse proxy with
+            authentication, or similar access controls to prevent exposure to untrusted callers.
+        """
+        # Check if monitoring is enabled in config
+        if not self._config.general.enable_per_user_monitoring:
+            logger.debug("Per-user monitoring disabled, skipping /monitor/users endpoint")
+            return
+
+        from nat.runtime.metrics import PerUserMetricsCollector
+        from nat.runtime.metrics import PerUserMonitorResponse
+        from nat.runtime.metrics import PerUserResourceUsage
+
+        async def get_per_user_metrics(user_id: str | None = None) -> PerUserMonitorResponse:
+            """
+            Get resource usage metrics for per-user workflows.
+
+            Args:
+                user_id: Optional user ID to filter metrics for a specific user
+
+            Returns:
+                PerUserMonitorResponse with metrics for all or specified users
+            """
+            # Collect metrics from all session managers that have per-user workflows
+            all_users: list[PerUserResourceUsage] = []
+
+            for session_manager in self._session_managers:
+                if not session_manager.is_workflow_per_user:
+                    continue
+
+                collector = PerUserMetricsCollector(session_manager)
+
+                if user_id is not None:
+                    # Filter for specific user
+                    user_metrics = await collector.collect_user_metrics(user_id)
+                    if user_metrics:
+                        all_users.append(user_metrics)
+                else:
+                    # Get all users
+                    response = await collector.collect_all_metrics()
+                    all_users.extend(response.users)
+
+            from datetime import datetime
+            return PerUserMonitorResponse(
+                timestamp=datetime.now(),
+                total_active_users=len(all_users),
+                users=all_users,
+            )
+
+        # Register the monitoring endpoint
+        app.add_api_route(path="/monitor/users",
+                          endpoint=get_per_user_metrics,
+                          methods=["GET"],
+                          response_model=PerUserMonitorResponse,
+                          description="Get resource usage metrics for per-user workflows",
+                          tags=["Monitoring"],
+                          responses={
+                              200: {
+                                  "description": "Successfully retrieved per-user metrics",
+                                  "content": {
+                                      "application/json": {
+                                          "example": {
+                                              "timestamp":
+                                                  "2025-12-16T10:30:00Z",
+                                              "total_active_users":
+                                                  2,
+                                              "users": [{
+                                                  "user_id": "alice",
+                                                  "session": {
+                                                      "created_at": "2025-12-16T09:00:00Z",
+                                                      "last_activity": "2025-12-16T10:29:55Z",
+                                                      "ref_count": 1,
+                                                      "is_active": True
+                                                  },
+                                                  "requests": {
+                                                      "total_requests": 42,
+                                                      "active_requests": 1,
+                                                      "avg_latency_ms": 1250.5,
+                                                      "error_count": 2
+                                                  },
+                                                  "memory": {
+                                                      "per_user_functions_count": 2,
+                                                      "per_user_function_groups_count": 1,
+                                                      "exit_stack_size": 3
+                                                  }
+                                              }]
+                                          }
+                                      }
+                                  }
+                              },
+                              500: {
+                                  "description": "Internal Server Error"
+                              }
+                          })
+
+        logger.info("Added per-user monitoring endpoint at /monitor/users")
 
     async def _add_flow(self, state: str, flow_state: FlowState):
         async with self._outstanding_flows_lock:
