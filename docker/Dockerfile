@@ -33,7 +33,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     export TZ=Etc/UTC && \
     apt-get update && \
     apt upgrade -y && \
-    apt-get install --no-install-recommends  -y ca-certificates && \
+    apt-get install --no-install-recommends  -y ca-certificates tzdata && \
     apt clean && \
     update-ca-certificates
 
@@ -55,4 +55,4 @@ RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
 ENV PATH="/workspace/.venv/bin:$PATH"
 
 # Define the entry point to start the nat CLI tool
-ENTRYPOINT ["nat"]
+# ENTRYPOINT ["nat"]
