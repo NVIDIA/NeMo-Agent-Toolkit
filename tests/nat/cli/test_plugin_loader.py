@@ -165,6 +165,37 @@ class TestPluginLoader:
 class TestPluginLoaderIntegration:
     """Integration tests for CLI plugin discovery with real plugins."""
 
+    def test_core_commands_discovered(self):
+        """Test that all core NAT commands are discovered via entry points."""
+        cli_group = click.Group()
+        discover_and_load_cli_plugins(cli_group)
+
+        # Core commands that should always be present
+        expected_core_commands = {
+            "configure",
+            "eval",
+            "finetune",
+            "info",
+            "object-store",
+            "optimize",
+            "red-team",
+            "registry",
+            "sizing",
+            "start",
+            "uninstall",
+            "validate",
+            "workflow",
+        }
+
+        discovered_commands = set(cli_group.commands.keys())
+        missing_commands = expected_core_commands - discovered_commands
+
+        assert not missing_commands, f"Missing core commands: {missing_commands}"
+
+        # Verify all expected commands are present
+        for cmd in expected_core_commands:
+            assert cmd in cli_group.commands, f"Core command '{cmd}' not discovered"
+
     def test_mcp_plugin_discovered(self):
         """Test that MCP plugin is discovered when nvidia-nat-mcp is installed."""
         try:
@@ -192,3 +223,15 @@ class TestPluginLoaderIntegration:
             assert "a2a" in cli_group.commands
         except ImportError:
             pytest.skip("nvidia-nat-a2a not installed")
+
+    def test_all_commands_together(self):
+        """Test that core and plugin commands can coexist."""
+        cli_group = click.Group()
+        discover_and_load_cli_plugins(cli_group)
+
+        # Should have at minimum all core commands
+        assert len(cli_group.commands) >= 13, "Should have at least 13 core commands"
+
+        # Verify commands are Click command/group instances
+        for name, cmd in cli_group.commands.items():
+            assert isinstance(cmd, (click.Command, click.Group)), f"Command '{name}' is not a valid Click command"
