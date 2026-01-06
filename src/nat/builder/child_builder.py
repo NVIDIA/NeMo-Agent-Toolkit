@@ -353,13 +353,15 @@ class ChildBuilder(Builder):
         """Context manager for temporarily setting the Builder object.
 
         Args:
+            config: The configuration to use within the context. Note: Not used for now, but required by the interface
+                    and will be used in the future.
             builder: The Builder instance to use within the context.
 
         Yields:
             The Builder instance that was set.
 
         Example:
-            >>> with ChildBuilder.use(config,my_builder) as builder:
+            >>> with ChildBuilder.use(config, my_builder) as builder:
             >>>     # builder is active in this context
             >>>     assert Builder.get_current() == builder
             >>> # Original builder is restored here

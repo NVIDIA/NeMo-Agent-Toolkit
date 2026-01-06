@@ -21,6 +21,13 @@ general:
         endpoint: http://localhost:6006/v1/traces
         project: lc_deepagents
 
+llms:
+  agent:
+    _type: openai
+    model: azure/openai/gpt-5-nano
+    base_url: ${OPENAI_BASE_URL:-https://integrate.api.nvidia.com/v1}
+    api_key: ${NVIDIA_API_KEY}
+
 workflow:
   _type: langgraph_wrapper
   dependencies:

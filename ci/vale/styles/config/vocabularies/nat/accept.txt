@@ -13,6 +13,7 @@ arXiv
 [Aa]utoencoder
 [Aa]llowlist
 [Aa]nonymize(d?)
+[Aa]nthropic('s)?
 Authlib
 [Bb]ackdoor(s?)
 [Bb]ackoff
@@ -77,6 +78,7 @@ Grafana
 groundedness
 [Gg]ranularities
 [Hh]ashable
+[Hh]ardcode(s|d)?
 [Hh]yperparameter(s?)
 impactful
 [Ii]nferencing
@@ -158,6 +160,7 @@ pytest
 [Ss]ubgraph(s?)
 [Ss]ubsampl(e|ing)
 [Ss]ubpackage(s?)
+[Ss]ubtask(s?)
 [Ss]ubword(s?)
 [Ss]uperset(s?)
 SSE
@@ -167,7 +170,6 @@ Tavily
 [Tt]imestamp(s?)
 [Tt]okenization
 [Tt]okenizer(s?)
-[Tt]oolkit's
 triages
 [Uu]ncomment(ed)?
 [Uu]nencrypted

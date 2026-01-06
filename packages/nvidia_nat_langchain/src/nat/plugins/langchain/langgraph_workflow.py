@@ -17,6 +17,7 @@ import importlib.util
 import logging
 import os
 import sys
+import uuid
 from collections.abc import AsyncGenerator
 from collections.abc import Callable
 from types import NoneType
@@ -33,6 +34,7 @@ from langgraph.graph.state import StateGraph
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
+from pydantic import FilePath
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -69,7 +71,7 @@ class LanggraphWrapperConfig(FunctionBaseConfig, name="langgraph_wrapper"):
     description: str = ""
     dependencies: list[str] = Field(default_factory=list)
     graph: str
-    env: str | dict[str, str] | None = None
+    env: FilePath | dict[str, str] | None = None
 
 
 class LanggraphWrapperFunction(Function[LanggraphWrapperInput, NoneType, LanggraphWrapperOutput]):
@@ -91,7 +93,7 @@ class LanggraphWrapperFunction(Function[LanggraphWrapperInput, NoneType, Langgra
     def _convert_input(self, value: Any) -> LanggraphWrapperInput:
 
         # If the value is not a list, wrap it in a list to be compatible with the graph input and use the normal
-        # convertion logic
+        # conversion logic
         if (not isinstance(value, list)):
             value = [value]
 
@@ -106,14 +108,14 @@ class LanggraphWrapperFunction(Function[LanggraphWrapperInput, NoneType, Langgra
             output = await self._graph.ainvoke(value.model_dump())
             return LanggraphWrapperOutput.model_validate(output)
         except Exception as e:
-            raise RuntimeError(f"Error in langchain graph: {e}") from e
+            raise RuntimeError(f"Error in LangGraph workflow: {e}") from e
 
     async def _astream(self, value: LanggraphWrapperInput) -> AsyncGenerator[LanggraphWrapperOutput, None]:
         try:
             async for output in self._graph.astream(value.model_dump()):
                 yield LanggraphWrapperOutput.model_validate(output)
         except Exception as e:
-            raise RuntimeError(f"Error in langchain graph: {e}") from e
+            raise RuntimeError(f"Error in LangGraph workflow: {e}") from e
 
     @staticmethod
     def convert_to_str(value: LanggraphWrapperOutput) -> str:
@@ -129,64 +131,80 @@ async def register(config: LanggraphWrapperConfig, b: Builder):
 
     # Process the dependencies. This is a list of either paths or names of packages to add to the env. For now, we only
     # support paths.
-    for dependency in config.dependencies:
-
-        if os.path.exists(dependency) and os.path.isdir(dependency):
-            # Add the dependency to the environment
-            sys.path.append(dependency)
-        else:
-            raise ValueError(f"Dependency {dependency} is not a valid directory. At the moment, we only support "
-                             "directories. Packages need to be installed in the environment before they can be used.")
-
-    # Process the env. This is a path to a .env file to load into the environment or a list of environment variables to
-    # set.
-    if config.env is not None:
-        if isinstance(config.env, str):
-            if os.path.exists(config.env) and os.path.isfile(config.env):
-                load_dotenv(config.env, override=True)
+    added_paths = []
+    try:
+        for dependency in config.dependencies:
+            if os.path.exists(dependency) and os.path.isdir(dependency):
+                # Add the dependency to the environment
+                sys.path.append(dependency)
+                added_paths.append(dependency)
             else:
-                raise ValueError(f"Env {config.env} is not a valid file. At the moment, we only support .env files.")
-        elif isinstance(config.env, dict):
-            for key, value in config.env.items():
-                os.environ[key] = value
+                raise ValueError(f"Dependency '{dependency}' (from langgraph_wrapper.dependencies) is not a "
+                                 "valid directory. At the moment, we only support directories. Packages "
+                                 "need to be installed in the environment before they can be used.")
+
+        # Process the env. This is a path to a .env file to load into the environment or a list of environment variables
+        # to set.
+        if config.env is not None:
+            if isinstance(config.env, str):
+                if os.path.exists(config.env) and os.path.isfile(config.env):
+                    load_dotenv(config.env, override=True)
+                else:
+                    raise ValueError(
+                        f"Env {config.env} is not a valid file. At the moment, we only support .env files.")
+            elif isinstance(config.env, dict):
+                for key, value in config.env.items():
+                    os.environ[key] = value
+            else:
+                raise ValueError(
+                    f"Env {config.env} is not a valid type. At the moment, we only support strings and dictionaries.")
+
+        # Now process the graph.
+        # Check that config.graph contains exactly one colon
+        if config.graph.count(":") != 1:
+            raise ValueError(
+                f"Graph definition path '{config.graph}' must contain exactly one colon to split module and name "
+                f"(e.g., '/path/to/module.py:graph_name'). Found {config.graph.count(':')}.")
+
+        # Split the graph path into module and name
+        module_path, name = config.graph.rsplit(":", 1)
+
+        unique_module_name = f"langgraph_workflow_{uuid.uuid4().hex[:8]}"
+
+        spec = importlib.util.spec_from_file_location(unique_module_name, module_path)
+
+        if spec is None:
+            raise ValueError(f"Spec not found for module: {module_path}")
+
+        module = importlib.util.module_from_spec(spec)
+
+        if module is None:
+            raise ValueError(f"Module not found for module: {module_path}")
+
+        sys.modules[unique_module_name] = module
+
+        if spec.loader is not None:
+            spec.loader.exec_module(module)
+        else:
+            raise ValueError(f"Loader not found for module: {module_path}")
+
+        graph_def: GraphDefType = getattr(module, name)
+
+        if isinstance(graph_def, CompiledStateGraph):
+            graph = graph_def
+        elif callable(graph_def):
+            graph = graph_def(RunnableConfig())
+
+            if isinstance(graph, StateGraph):
+                graph = graph.compile()
         else:
             raise ValueError(
-                f"Env {config.env} is not a valid type. At the moment, we only support strings and dictionaries.")
+                f"Graph definition {name} is not a valid graph definition. It must be a CompiledStateGraph or a "
+                f"callable that returns a CompiledStateGraph. Got {type(graph_def)}.")
 
-    # Now process the graph.
-
-    # Split the graph path into module and name
-    module_path, name = config.graph.rsplit(":", 1)
-
-    spec = importlib.util.spec_from_file_location("agent_code", module_path)
-
-    if spec is None:
-        raise ValueError(f"Spec not found for module: {module_path}")
-
-    module = importlib.util.module_from_spec(spec)
-
-    if module is None:
-        raise ValueError(f"Module not found for module: {module_path}")
-
-    sys.modules["agent_code"] = module
-
-    if spec.loader is not None:
-        spec.loader.exec_module(module)
-    else:
-        raise ValueError(f"Loader not found for module: {module_path}")
-
-    graph_def: GraphDefType = getattr(module, name)
-
-    if isinstance(graph_def, CompiledStateGraph):
-        graph = graph_def
-    elif callable(graph_def):
-        graph = graph_def(RunnableConfig())
-
-        if isinstance(graph, StateGraph):
-            graph = graph.compile()
-    else:
-        raise ValueError(
-            f"Graph definition {name} is not a valid graph definition. It must be a CompiledStateGraph or a "
-            f"callable that returns a CompiledStateGraph. Got {type(graph_def)}.")
-
-    yield LanggraphWrapperFunction(config=config, description=config.description, graph=graph)
+        yield LanggraphWrapperFunction(config=config, description=config.description, graph=graph)
+    finally:
+        # Remove only the paths we've added to sys.path to restore sys.path to its original state
+        for dependency in added_paths:
+            if dependency in sys.path:
+                sys.path.remove(dependency)

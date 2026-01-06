@@ -17,9 +17,9 @@ limitations under the License.
 
 # Running Existing Agents in NVIDIA NeMo Agent Toolkit
 
-NeMo Agent toolkit provides automatic wrapper functionality that allows you to integrate existing agents from other frameworks without rewriting them. This enables you to leverage the toolkit's features such as observability, evaluation, and configuration management while continuing to use your existing agent implementations.
+NeMo Agent toolkit provides automatic wrapper functionality that allows you to integrate existing agents from other frameworks without rewriting them. This enables you to leverage features such as observability, evaluation, and configuration management while continuing to use your existing agent implementations.
 
-This approach is particularly valuable for users who are just getting started with NeMo Agent toolkit. You can begin using the toolkit's capabilities immediately with your existing agents, then gradually adopt more native features as you become familiar with the platform.
+This approach is particularly valuable for users who are just getting started with NeMo Agent Toolkit. You can begin taking advantage of features offered by the toolkit right away with your existing agents, then gradually adopt more native features as you become familiar with the platform.
 
 ## How Automatic Wrappers Work
 
@@ -42,11 +42,11 @@ NeMo Agent toolkit currently provides automatic wrappers for the following frame
 The automatic wrapper approach provides several advantages:
 
 - **No Rewrite Required**: Run existing agents without modifying their core implementation
-- **Unified Configuration**: Use NeMo Agent toolkit's YAML configuration system to manage agents
+- **Unified Configuration**: Use the NeMo Agent toolkit YAML configuration system to manage agents
 - **Observability**: Add tracing and monitoring through supported observability platforms
 - **Evaluation**: Leverage the toolkit evaluation framework to measure agent performance
 - **LLM Flexibility**: Easily swap between different LLMs through configuration
-- **Deployment Options**: Use the toolkit's deployment capabilities such as MCP server, A2A server, and REST API
+- **Deployment Options**: Use deployment capabilities such as MCP server, A2A server, and REST API provided by the toolkit
 
 ## When to Use Automatic Wrappers
 
@@ -55,7 +55,7 @@ Automatic wrappers are ideal when:
 - You have existing agent implementations that work well
 - You want to quickly add NeMo Agent toolkit capabilities without refactoring
 - You need to evaluate multiple frameworks and compare performance
-- You want to leverage the toolkit's deployment and serving features
+- You want to leverage the deployment and serving features provided by the toolkit
 
 ## Limitations
 
@@ -65,6 +65,7 @@ While automatic wrappers provide significant benefits, there are some limitation
 - **Configuration Constraints**: Custom configuration classes cannot be used out of the box with automatic wrappers, but can be used with code modifications
 - **Code Modifications**: Minor code changes may be required to make agents configurable
 - **State Management**: Complex state management patterns may need adaptation
+- **Threading**: Automatic wrappers are not thread-safe and should not be used in multi-threaded environments.
 
 For detailed information on framework-specific limitations, refer to the individual framework documentation pages.
 

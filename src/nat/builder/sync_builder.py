@@ -17,8 +17,6 @@
 import asyncio
 import typing
 from collections.abc import Sequence
-from contextvars import ContextVar
-from typing import TypeVar
 
 from nat.authentication.interfaces import AuthProviderBase
 from nat.builder.builder import Builder
@@ -65,10 +63,6 @@ from nat.retriever.interface import Retriever
 if typing.TYPE_CHECKING:
     from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
 
-_config_context: ContextVar[FunctionBaseConfig | None] = ContextVar("config", default=None)
-
-T = TypeVar("T", bound=FunctionBaseConfig)
-
 
 class SyncBuilder:
     """Synchronous wrapper for the Builder class.
@@ -79,8 +73,12 @@ class SyncBuilder:
     def __init__(self, builder: Builder) -> None:
         self._builder = builder
 
-        # Save the current loop
-        self._loop = asyncio.get_running_loop()
+        try:
+            # Save the current loop. This should always be available given the creation pattern of the Builder class.
+            self._loop = asyncio.get_running_loop()
+        except RuntimeError as e:
+            raise ValueError("No event loop is running. If you are running the code in a synchronous context, "
+                             "please use the async builder instead.") from e
 
     @staticmethod
     def current() -> "SyncBuilder":

@@ -114,6 +114,11 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/A2A/math_assistant_a2a/oauth2-keycloak-setup.md",
         r"^examples/A2A/calculator_a2a/configs/config-protected-oauth2.yml",
     ),
+    # Allow model names in Deep Research examples
+    (
+        r"^examples/frameworks/auto_wrapper/langchain_deep_research/configs/config.*\.yml",
+        r"^(azure|openai|gcp|google)/.*$",
+    ),
 }
 
 ALLOWLISTED_WORDS: set[str] = {
@@ -143,6 +148,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "LangChain/LangGraph.",
     "LangChain/LangGraph-based",
     "LTE/5G",
+    "N/A",
     "output/jobs/job_",
     "POST/PUT",
     "predictions/forecasts",
@@ -183,7 +189,8 @@ ALLOWLISTED_WORDS: set[str] = {
     "ghcr\\.io/.*",  # Container registry references
     # anything starting with nvcr.io
     "nvcr\\.io/.*",  # anything starting with default/
-    "default/.*",
+    "default/.*",  # Models with their prefixes
+    "(azure|openai|gcp|google)/.*",
 }
 
 IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
