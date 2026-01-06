@@ -28,5 +28,5 @@ printenv | sort
 
 function get_git_tag() {
     # Get the latest Git tag, sorted by version, excluding lightweight tags
-    git describe --first-parent --tags  2>/dev/null || echo "no-tag"
+    git describe --first-parent --tags --abbrev=0 2>/dev/null || echo "no-tag"
 }

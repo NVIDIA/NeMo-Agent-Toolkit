@@ -53,7 +53,7 @@ if [[ "${BUILD_NAT_COMPAT}" == "true" ]]; then
     done
 fi
 
-# When we perform a release, the tag is created from the main branch, this triggers two CI pipelines. 
+# When we perform a release, the tag is created from the main branch, this triggers two CI pipelines.
 # The first for the main branch, and the second for the tag. Gitlab's internal package registry will reject uploads
 # of duplicate versions, so we only want one of these pipelines to perform the upload.
 # Note: A hotfix for an older release is the exception to this and the tag will be created from the release/X.Y branch
