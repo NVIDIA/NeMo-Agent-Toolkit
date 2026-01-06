@@ -36,7 +36,7 @@ dependencies = [
   "nvidia-nat-opentelemetry",
   "nvidia-nat-phoenix",
   "nvidia-nat-profiling",
-  # nvidia-nat-ragaai cannot not be part of all due to conflicts with nvidia-nat-strands
+  # nvidia-nat-ragaai cannot be part of all due to conflicts with nvidia-nat-strands
   # "nvidia-nat-ragaai",
   "nvidia-nat-redis",
   "nvidia-nat-s3",

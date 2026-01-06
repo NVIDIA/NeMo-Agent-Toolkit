@@ -42,7 +42,7 @@ limitations under the License.
 
 - [**Amazon Bedrock AgentCore and Strands Agents Support:**](./docs/source/components/integrations/frameworks.md#strands) NeMo Agent Toolkit now supports building agents using Strands Agents framework and deploying them securely on Amazon Bedrock AgentCore runtime.
 
-- [**Microsoft Autogen Support**](./docs/source/components/integrations/frameworks.md#autogen) NeMo Agent Toolkit now supports building agents using Autogen framework.
+- [**Microsoft AutoGen Support**](./docs/source/components/integrations/frameworks.md#autogen) NeMo Agent Toolkit now supports building agents using AutoGen framework.
 
 - [**Initial NVIDIA Dynamo Integration:**](https://docs.nvidia.com/dynamo/latest/) NeMo Agent Toolkit now has initial Dynamo support for end-to-end deployment acceleration of agentic workflows.
 
@@ -172,7 +172,7 @@ We would like to thank the following groups for their contribution to the toolki
 
 - [Synopsys](https://www.synopsys.com/)
   - Google ADK framework support.
-  - Microsoft Autogen framework support.
+  - Microsoft AutoGen framework support.
 - [W&B Weave Team](https://wandb.ai/site/weave/)
   - Contributions to the evaluation and telemetry system.
 
@@ -186,7 +186,7 @@ In addition, we would like to thank the following open source projects that made
 - [LangChain](https://github.com/langchain-ai/langchain)
 - [Llama-Index](https://github.com/run-llama/llama_index)
 - [Mem0ai](https://github.com/mem0ai/mem0)
-- [Microsoft Autogen](https://github.com/microsoft/autogen)
+- [Microsoft AutoGen](https://github.com/microsoft/autogen)
 - [MinIO](https://github.com/minio/minio)
 - [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol/modelcontextprotocol)
 - [OpenTelemetry](https://github.com/open-telemetry/opentelemetry-python)
