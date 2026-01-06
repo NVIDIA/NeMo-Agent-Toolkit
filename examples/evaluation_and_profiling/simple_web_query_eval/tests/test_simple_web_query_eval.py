@@ -46,7 +46,7 @@ def validate_rag_accuracy(rag_metric_output_file: Path, score: float):
 
     assert result_json, f"The {rag_metric_output_file} file is empty"
     assert isinstance(result_json, dict), f"The {rag_metric_output_file} file is not a dictionary"
-    assert result_json.get("average_score", 0) > score, \
+    assert result_json.get("average_score", 0) >= score, \
         f"The {rag_metric_output_file} score is less than {score}"
 
 
