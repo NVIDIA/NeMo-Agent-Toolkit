@@ -15,9 +15,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Automatic Memory Wrapper for NAT Agents
+# Automatic Memory Wrapper for NeMo Agent Toolkit Agents
 
-The `auto_memory_agent` wraps any NAT agent to provide **automatic memory capture and retrieval** without requiring the LLM to invoke memory tools.
+The `auto_memory_agent` wraps any agent to provide **automatic memory capture and retrieval** without requiring the LLM to invoke memory tools.
 
 ## Why Use This?
 
