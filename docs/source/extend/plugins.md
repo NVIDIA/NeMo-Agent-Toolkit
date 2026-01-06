@@ -33,6 +33,7 @@ NeMo Agent toolkit utilizes the this plugin system for all first party component
 
 NeMo Agent toolkit currently supports the following plugin types:
 
+- **CLI Commands**: CLI commands extend the `nat` command-line interface with plugin-specific commands. For example, the MCP and A2A plugins provide their own CLI commands for client operations and server management. To register a CLI command, add an entry point in the `nat.cli` group.
 - **Embedder Clients**: [Embedder](../build-workflows/embedders.md) Clients are implementations of embedder providers, which are specific to a [LLM](../build-workflows/llms/index.md) framework. For example, when using the OpenAI embedder provider with the LangChain/LangGraph framework, the LangChain/LangGraph OpenAI embedder client needs to be registered. To register an embedder client, you can use the {py:deco}`nat.cli.register_workflow.register_embedder_client` decorator.
 - **Embedder Providers**: Embedder Providers are services that provide a way to embed text. For example, OpenAI and NVIDIA NIMs are embedder providers. To register an embedder provider, you can use the {py:deco}`nat.cli.register_workflow.register_embedder_provider` decorator.
 - **Evaluators**: [Evaluators](../improve-workflows/evaluate.md) are used by the evaluation framework to evaluate the performance of NeMo Agent toolkit workflows. To register an evaluator, you can use the {py:deco}`nat.cli.register_workflow.register_evaluator` decorator.
@@ -127,3 +128,54 @@ To register multiple plugins in a single distribution, there are two options:
       nat_langchain = "nat.plugins.langchain.register"
       nat_langchain_tools = "nat.plugins.langchain.tools.register"
       ```
+
+### CLI Command Plugins
+
+CLI command plugins allow you to extend the `nat` command-line interface with custom commands specific to your plugin. This is useful when your plugin provides functionality that users need to access directly from the command line.
+
+#### Creating a CLI Command Plugin
+
+To create a CLI command plugin:
+
+1. **Create a Click command or group** in your plugin package:
+
+   ```python
+   # packages/my_plugin/src/nat/plugins/my_plugin/cli/commands.py
+   import click
+
+   @click.group(name=__name__, invoke_without_command=False, help="My plugin commands.")
+   def my_plugin_command():
+       """My plugin CLI commands."""
+       return None
+
+   @my_plugin_command.command(name="hello", help="Say hello")
+   @click.option('--name', default='World', help='Name to greet')
+   def hello(name: str):
+       """Say hello to someone."""
+       click.echo(f"Hello, {name}!")
+   ```
+
+2. **Register the command via entry point** in your `pyproject.toml`:
+
+   ```toml
+   [project.entry-points.'nat.cli']
+   my-plugin = "nat.plugins.my_plugin.cli.commands:my_plugin_command"
+   ```
+
+3. **Install your plugin** and the command will be automatically discovered:
+
+   ```bash
+   nat my-plugin hello --name Alice
+   ```
+
+#### CLI Plugin Discovery
+
+When the `nat` CLI starts, it automatically discovers and loads CLI commands from all installed plugins using Python entry points. If a plugin package is not installed or has missing dependencies, the CLI will gracefully skip loading that plugin's commands without affecting other functionality.
+
+#### Best Practices for CLI Plugins
+
+- **Use descriptive command names** that clearly indicate their purpose
+- **Provide helpful help text** for all commands and options
+- **Handle errors gracefully** and provide clear error messages
+- **Keep commands focused** on plugin-specific functionality
+- **Follow Click conventions** for consistency with the core CLI
