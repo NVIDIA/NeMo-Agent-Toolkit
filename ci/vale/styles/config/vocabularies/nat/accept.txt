@@ -89,7 +89,6 @@ isort
 Jama
 Jira
 jsonlines
-JSONPath
 [Kk]aggle
 [Kk]eycloak
 LangChain
