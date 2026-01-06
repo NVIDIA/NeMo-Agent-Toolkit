@@ -100,3 +100,4 @@ if [[ -z "${SKIP_MD_UPDATE}" ]]; then
    --versions-file=${PROJECT_ROOT}/docs/source/versions1.json \
    --new-version="${NEXT_SHORT_TAG}"
 fi
+
