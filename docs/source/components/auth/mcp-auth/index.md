@@ -231,6 +231,57 @@ nat serve --host 0.0.0.0 --port 8000
 For production deployments with HTTPS, you typically run behind a reverse proxy (such as nginx) that handles TLS termination. In this case, set `NAT_REDIRECT_URI` to your public HTTPS address, and configure the reverse proxy to forward requests to your server's internal address and port.
 :::
 
+### Running Per-User Workflows with MCP Authentication
+
+For workflows that require complete per-user isolation (including separate MCP client instances per user), use the `per_user_mcp_client` function group with a per-user workflow like `per_user_react_agent`. This ensures each user gets their own MCP client with independent authentication state.
+
+```mermaid
+flowchart LR
+  U1[User Alice] --> H[MCP Host<br/>FastAPI Server]
+  U2[User Bob] --> H
+
+  H --> W1[Per-user Workflow Instance<br/>Alice]
+  H --> W2[Per-user Workflow Instance<br/>Bob]
+
+  W1 --> C1[MCP Client<br/>Alice]
+  W2 --> C2[MCP Client<br/>Bob]
+
+  C1 --> S[MCP Server]
+  C2 --> S
+```
+
+Follow the steps below to run a per-user workflow with MCP authentication.
+
+1. Set the environment variables to access the protected MCP server:
+```bash
+export CORPORATE_MCP_JIRA_URL="https://your-jira-mcp-url"
+```
+
+2. Start the server:
+```bash
+nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira-per-user.yml
+```
+
+3. Test requests with different users:
+
+User Alice:
+```bash
+curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -H "Cookie: nat-session=user-alice" \
+  -d '{"messages": [{"role": "user", "content": "What is status of AIQ-2342?"}]}'
+```
+
+User Bob (has a separate MCP client instance):
+```bash
+curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -H "Cookie: nat-session=user-bob" \
+  -d '{"messages": [{"role": "user", "content": "What is status of AIQ-2507?"}]}'
+```
+
+Each user identified by their `nat-session` cookie gets their own workflow instance and MCP client. When a user makes their first request, they will be prompted to complete OAuth authentication. Their tokens are stored separately from other users.
+
 ## Displaying Protected MCP Tools through the CLI
 MCP client CLI can be used to display and call MCP tools on a remote MCP server. To use a protected MCP server, you need to provide the `--auth` flag:
 ```bash
