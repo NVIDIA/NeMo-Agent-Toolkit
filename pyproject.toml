@@ -175,19 +175,20 @@ openai = [
 managed = true
 config-settings = { editable_mode = "compat" }
 override-dependencies = [
-  # TODO: remove this when ragaai-catalsty supports tenacity version ~=9.0
-  # Override tenacity version to resolve conflict between ragaai-catalyst ("tenacity==8.3.0"). and strands-agents-tools ("tenacity>=9.1.2")
+  # Override tenacity version to resolve conflict between ragaai-catalyst ("tenacity==8.3.0")
+  #   and strands-agents-tools ("tenacity>=9.1.2")
   # tenacity 9.x maintains API compatibility with 8.x except for the statistics attribute (breaking change in 9.0.0)
   # See: https://github.com/jd/tenacity/releases
   "tenacity>=9.1.2,<10.0.0",
+
   # Override dependencies that nvidia-nat-openpipe-art would otherwise regress.
   # This keeps status-quo for other packages.
   "litellm==1.74.9",
   "openai>=1.106,<2.dev0",
-  # Override pdfminer.six version (transitive dependency of pdfplumber)
+
+  # Override pdfminer.six version (transitive dependency of polyfill-weave)
   "pdfminer.six>=20251229"
 ]
-
 
 [tool.uv.sources]
 # Workspace members

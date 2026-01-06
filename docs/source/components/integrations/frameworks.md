@@ -25,6 +25,7 @@ NeMo Agent toolkit integrates with the following frameworks:
 
 - **ADK**: Google Agent Development Kit for building AI agents
 - **Agno**: A lightweight framework for building AI agents
+- **Autogen**: A framework for building AI agents and applications
 - **CrewAI**: A framework for orchestrating role-playing AI agents
 - **LangChain/LangGraph**: A framework for developing applications powered by [large language models](../../build-workflows/llms/index.md)
 - **LlamaIndex**: A data framework for building LLM applications
@@ -58,6 +59,7 @@ The following table summarizes the current support level for each framework:
 |------------------|----------------------|------------------------|--------------------------|-----------------------|-----------------------|
 | ADK              | ✅ Yes               | ❌ No                  | ❌ No                    | ✅ Yes                 | ✅ Yes                |
 | Agno             | ⚠️ Limited           | ❌ No                  | ❌ No                    | ✅ Yes                 | ✅ Yes                |
+| Autogen          | ✅ Yes               | ❌ No                  | ❌ No                    | ✅ Yes                 | ✅ Yes                |
 | CrewAI           | ✅ Yes               | ❌ No                  | ❌ No                    | ✅ Yes                 | ✅ Yes                |
 | LangChain        | ✅ Yes               | ✅ Yes                 | ✅ Yes                   | ✅ Yes                 | ✅ Yes                |
 | LlamaIndex       | ✅ Yes               | ✅ Yes                 | ❌ No                    | ✅ Yes                 | ✅ Yes                |
@@ -102,6 +104,25 @@ For more information, visit the [Agno website](https://agno.com/).
 **Installation:**
 ```bash
 uv pip install "nvidia-nat[agno]"
+```
+
+### Autogen
+
+Microsoft Autogen is a framework for creating and orchestrating multi-agent systems powered by large language models. It enables collaboration between multiple agents—each with specialized roles—to accomplish complex tasks by communicating and reasoning together. Autogen offers a modular design, flexible agent-to-agent messaging, and supports integration with custom tools, LLM providers, and external data sources, making it well-suited for advanced agentic workflows in enterprise and research environments.
+
+For more information, visit the [Microsoft Autogen webpage](https://microsoft.github.io/autogen/stable/).
+
+| Capability              | Providers / Details                                                                 |
+|-------------------------|-------------------------------------------------------------------------------------|
+| **LLM Providers**       | NVIDIA NIM, OpenAI, Azure OpenAI, AWS Bedrock, LiteLLM                              |
+| **Embedder Providers**  | None (use framework-agnostic embedders if needed)                                   |
+| **Retriever Providers** | None (use Autogen native tools)                                                     |
+| **Tool Calling**        | Fully supported through Autogen's tool integration                                  |
+| **Profiling**           | Comprehensive profiling support with instrumentation                                |
+
+**Installation:**
+```bash
+uv pip install "nvidia-nat[autogen]"
 ```
 
 ### CrewAI
