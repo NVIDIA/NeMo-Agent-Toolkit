@@ -27,6 +27,7 @@ from nat.builder.builder import Builder
 from nat.builder.function import Function
 from nat.builder.function import FunctionGroup
 from nat.builder.function_info import FunctionInfo
+from nat.builder.sync_builder import SyncBuilder
 from nat.cli.type_registry import GlobalTypeRegistry
 from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.component_ref import MiddlewareRef
@@ -65,6 +66,11 @@ class MockBuilder(Builder):
     def __init__(self):
         self._functions = {}
         self._mocks = {}
+
+    @override
+    @property
+    def sync_builder(self) -> SyncBuilder:
+        return SyncBuilder(self)
 
     def mock_function(self, name: str, mock_response: typing.Any):
         """Add a mock function that returns a fixed response."""
