@@ -42,6 +42,8 @@ limitations under the License.
 
 - [**Amazon Bedrock AgentCore and Strands Agents Support:**](./docs/source/components/integrations/frameworks.md#strands) NeMo Agent Toolkit now supports building agents using Strands Agents framework and deploying them securely on Amazon Bedrock AgentCore runtime.
 
+- [**LangChain Agent Automatic Wrapper:**](./examples/frameworks/auto_wrapper/langchain_deep_research/README.md) NeMo Agent Toolkit now supports automatic wrapping of existing LangChain/LangGraph Agents.
+
 - [**Microsoft AutoGen Support**](./docs/source/components/integrations/frameworks.md#autogen) NeMo Agent Toolkit now supports building agents using AutoGen framework.
 
 - [**Initial NVIDIA Dynamo Integration:**](https://docs.nvidia.com/dynamo/latest/) NeMo Agent Toolkit now has initial Dynamo support for end-to-end deployment acceleration of agentic workflows.

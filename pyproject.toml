@@ -191,6 +191,24 @@ openai = [
 [tool.uv]
 managed = true
 config-settings = { editable_mode = "compat" }
+
+# Only use override-dependencies as a temporary workaround across package version resolution.
+#
+# We currently have all packages part of the same workspace, which means a single lockfile is in
+# use across all packages. However, subsets of packages currently conflict:
+#
+# nvidia-nat-openpipe-art <> nvidia-nat-crewai**
+# - these packages conflict due to a litellm conflict
+#
+# nvidia-nat-ragaai <> nvidia-nat-strands**
+# - these packages conflict due to a tenacity conflict
+#
+# All conflicts have specific resolutions below, namely conforming to the package which is kept
+# in nvidia-nat-all. Packages denoted with ** are those which are preferred as part of an "all"
+# distribution (thus included in both nvidia-nat-all and nvidia-nat[all])
+#
+# Long-term solutions include better package isolation and testing, which is on the roadmap.
+# 
 override-dependencies = [
   # Override tenacity version to resolve conflict between ragaai-catalyst ("tenacity==8.3.0")
   #   and strands-agents-tools ("tenacity>=9.1.2")
