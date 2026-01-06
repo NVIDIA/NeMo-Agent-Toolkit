@@ -138,7 +138,7 @@ CLI command plugins allow you to extend the `nat` command-line interface with cu
 To create a CLI command plugin:
 
 1. **Create a Click command or group** in your plugin package:
-
+<!-- path-check-skip-begin -->
    ```python
    # packages/my_plugin/src/nat/plugins/my_plugin/cli/commands.py
    import click
@@ -154,6 +154,7 @@ To create a CLI command plugin:
        """Say hello to someone."""
        click.echo(f"Hello, {name}!")
    ```
+<!-- path-check-skip-end -->
 
 2. **Register the command via entry point** in your `pyproject.toml`:
 
