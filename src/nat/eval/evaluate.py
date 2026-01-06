@@ -27,6 +27,7 @@ import yaml
 from pydantic import BaseModel
 from tqdm import tqdm
 
+from nat.data_models.config import Config
 from nat.data_models.evaluate import EvalConfig
 from nat.data_models.evaluate import JobEvictionPolicy
 from nat.data_models.runtime_enum import RuntimeTypeEnum
@@ -65,7 +66,7 @@ class EvaluationRun:
         # Run-specific configuration
         self.config: EvaluationRunConfig = config
         self.eval_config: EvalConfig | None = None
-        self.effective_config: Any = None  # Stores the complete config after applying overrides
+        self.effective_config: Config | None = None  # Stores the complete config after applying overrides
 
         # Helpers
         self.intermediate_step_adapter: IntermediateStepAdapter = IntermediateStepAdapter()
@@ -341,7 +342,7 @@ class EvaluationRun:
             except Exception as e:
                 logger.exception("Failed to delete old job directory: %s: %s", dir_to_delete, e)
 
-    def write_configuration(self):
+    def write_configuration(self) -> None:
         """Save the configuration used for this evaluation run to the output directory.
 
         This saves three files:
@@ -374,12 +375,7 @@ class EvaluationRun:
             # 2. Save effective configuration (with overrides applied)
             config_effective_file = output_dir / "config_effective.yml"
             if self.effective_config is not None:
-                # Convert to dict if it's a BaseModel, using mode='json' to handle special types like timedelta
-                if isinstance(self.effective_config, BaseModel):
-                    effective_config_dict = self.effective_config.model_dump(mode='json')
-                else:
-                    effective_config_dict = self.effective_config
-
+                effective_config_dict = self.effective_config.model_dump(mode='json') if self.effective_config else {}
                 with open(config_effective_file, "w", encoding="utf-8") as f:
                     yaml.safe_dump(effective_config_dict, f, default_flow_style=False, sort_keys=False)
                 self.config_effective_file = config_effective_file
@@ -420,7 +416,7 @@ class EvaluationRun:
                 "user_id":
                     self.config.user_id,
                 "timestamp":
-                    datetime.now().isoformat(),
+                    datetime.now(tz=datetime.UTC).isoformat(),
             }
 
             with open(config_metadata_file, "w", encoding="utf-8") as f:
@@ -428,8 +424,8 @@ class EvaluationRun:
             self.config_metadata_file = config_metadata_file
             logger.info("Configuration metadata saved to %s", config_metadata_file)
 
-        except Exception as e:
-            logger.exception("Failed to write configuration files: %s", e)
+        except Exception:
+            logger.exception("Failed to write configuration files")
             # Don't raise - this is not critical enough to fail the entire evaluation
 
     def write_output(self, dataset_handler: DatasetHandler, profiler_results: ProfilerResults):
@@ -565,7 +561,7 @@ class EvaluationRun:
         from nat.runtime.loader import load_config
 
         # Load and override the config
-        config = None
+        config: Config | None = None
         if isinstance(self.config.config_file, BaseModel):
             config = self.config.config_file
         elif self.config.override:
