@@ -105,14 +105,15 @@ function get_num_proc() {
 }
 
 function set_versions() {
-   # Update internal dependencies to the current git tag
-   export SETUPTOOLS_SCM_PRETEND_VERSION="${GIT_TAG}"
-   export USE_FULL_VERSION="1"
-
    # The dev environment is needed to run the update-version script
    create_env group:dev
 
-   SKIP_MD_UPDATE=1 ${PROJECT_ROOT}/ci/release/update-version.sh "${GIT_TAG}"
+   # Update internal dependencies to the current git tag
+   VERSION=$(python -m setuptools_scm)
+   export SETUPTOOLS_SCM_PRETEND_VERSION="${VERSION}"
+   export USE_FULL_VERSION="1"
+
+   SKIP_MD_UPDATE=1 ${PROJECT_ROOT}/ci/release/update-version.sh "${VERSION}"
 }
 
 function build_wheel() {
