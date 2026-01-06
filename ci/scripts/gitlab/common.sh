@@ -26,7 +26,7 @@ function get_git_tag() {
     FT=$(git fetch --all --tags)
 
     # Get the latest Git tag, sorted by version, excluding lightweight tags
-    GIT_TAG=$(git describe --first-parent --tags --abbrev=0 2>/dev/null || echo "no-tag")
+    GIT_TAG=$(git describe --first-parent --tags 2>/dev/null || echo "no-tag")
 
     if [[ "${CI_CRON_NIGHTLY}" == "1" ]]; then
         if [[ ${GIT_TAG} == "no-tag" ]]; then
