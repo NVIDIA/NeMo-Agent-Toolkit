@@ -19,6 +19,10 @@ limitations under the License.
 
 # NVIDIA NeMo Agent Toolkit
 
+NeMo Agent Toolkit (NAT) is an open-source library that simplifies the development, deployment, and management of AI agents across various frameworks and platforms. It provides a unified interface to connect agents with data sources, tools, and services, enabling rapid prototyping and deployment of intelligent applications.
+
+The toolkit's built-in capabilities include profiling, observability, evaluation, and a user interface, allowing developers to monitor and optimize agent performance effectively. NeMo Agent Toolkit is framework-agnostic, supporting popular agentic frameworks like LangChain, LlamaIndex, CrewAI, Microsoft Semantic Kernel, and Google ADK, as well as custom and simple Python agents.
+
 <!-- vale off (due to hyperlinks) -->
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
 [![GitHub Release](https://img.shields.io/github/v/release/NVIDIA/NeMo-Agent-Toolkit)](https://github.com/NVIDIA/NeMo-Agent-Toolkit/releases)
