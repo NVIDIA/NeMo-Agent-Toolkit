@@ -25,7 +25,7 @@ IS_TAGGED=$(is_current_commit_release_tagged)
 rapids-logger "Git Version: ${GIT_TAG} - Is Tagged: ${IS_TAGGED}"
 
 # Update internal dependencies to the current git tag
-$(set_versions)
+set_versions
 
 WHEELS_BASE_DIR="${CI_PROJECT_DIR}/.tmp/wheels"
 WHEELS_DIR="${WHEELS_BASE_DIR}/nvidia-nat"

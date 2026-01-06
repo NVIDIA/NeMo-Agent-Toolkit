@@ -26,7 +26,7 @@ GIT_TAG=$(get_git_tag)
 rapids-logger "Git Version: ${GIT_TAG}"
 
 # Update internal dependencies to the current git tag
-$(set_versions)
+set_versions
 
 create_env extra:all
 
