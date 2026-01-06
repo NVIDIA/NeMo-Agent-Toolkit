@@ -140,11 +140,11 @@ async def sequential_execution(config: SequentialExecutorConfig, builder: Builde
         raise ValueError(f"Error with the sequential executor tool list: {e}")
 
     # The type annotation of _sequential_function_execution is dynamically set according to the tool list
-    async def _sequential_function_execution(initial_tool_input):
+    async def _sequential_function_execution(input_message):
         logger.debug(f"Executing sequential executor with tool list: {config.tool_list}")
 
         tool_list: list[FunctionRef] = config.tool_list
-        tool_input = initial_tool_input
+        tool_input = input_message
         tool_response = None
 
         for tool_name in tool_list:
@@ -181,7 +181,7 @@ async def sequential_execution(config: SequentialExecutorConfig, builder: Builde
         return tool_response
 
     # Dynamically set the annotations for the function
-    _sequential_function_execution.__annotations__ = {"initial_tool_input": input_type, "return": output_type}
+    _sequential_function_execution.__annotations__ = {"input_message": input_type, "return": output_type}
     logger.debug(f"Sequential executor function annotations: {_sequential_function_execution.__annotations__}")
 
     yield FunctionInfo.from_fn(_sequential_function_execution, description=config.description)
