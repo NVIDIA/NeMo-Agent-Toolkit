@@ -54,6 +54,7 @@ from nat.middleware import FunctionMiddleware
 from nat.object_store.interfaces import ObjectStore
 from nat.runtime.loader import PluginTypes
 from nat.runtime.loader import discover_and_register_plugins
+from nat.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
 
