@@ -13,30 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-from unittest.mock import MagicMock
-from unittest.mock import patch
+def test_mcp_command_registration():
+    """Test that MCP command is discoverable via entry points."""
+    # Verify the MCP command can be imported
+    from nat.plugins.mcp.cli.commands import mcp_command
 
+    # Verify it's a valid Click command
+    import click
+    assert isinstance(mcp_command, (click.Command, click.Group)), \
+        "mcp_command should be a valid Click command or group"
 
-@patch("nat.cli.entrypoint.cli.add_command")
-def test_mcp_command_registration(mock_add_command):
-    """Test the CLI command registration mechanism for MCP."""
-    from nat.cli.entrypoint import start_command
-
-    # Create a mock module to simulate main.py
-    mock_main_module = MagicMock()
-
-    # Create a mock command that would be returned by get_command
-    mock_command = MagicMock(name="mcp_command")
-
-    # Patch the get_command method to return our mock command
-    with patch.object(start_command, 'get_command', return_value=mock_command):
-        # Mock sys.modules to include our mock module
-        with patch.dict(sys.modules, {'nat.plugins.mcp.server.main': mock_main_module}):
-            # Import the module which would register the command
-            # Since we're mocking the module, we'll call the registration code directly
-            from nat.cli.entrypoint import cli
-            cli.add_command(mock_command, name="mcp")
-
-    # Verify that add_command was called with the correct arguments
-    mock_add_command.assert_called_with(mock_command, name="mcp")
+    # Verify the CLI discovers and loads the MCP command
+    from nat.cli.entrypoint import cli
+    assert "mcp" in cli.commands, "MCP command should be discovered and registered in CLI"
