@@ -422,7 +422,7 @@ redirects = {
     'workflows/llms/index': '/build-workflows/llms/index.html',
     'workflows/llms/using-local-llms': '/build-workflows/llms/using-local-llms.html',
     'workflows/mcp/index': '/build-workflows/mcp-client.html',
-    'workflows/mcp/mcp-auth-token-storage': '',
+    'workflows/mcp/mcp-auth-token-storage': '/components/auth/mcp-auth/mcp-auth-token-storage.html',
     'workflows/mcp/mcp-auth': '/components/auth/mcp-auth/index.html',
     'workflows/mcp/mcp-client': '/build-workflows/mcp-client.html',
     'workflows/mcp/mcp-server': '/run-workflows/mcp-server.html',
