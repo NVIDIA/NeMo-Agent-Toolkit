@@ -234,3 +234,19 @@ class TestPluginLoaderIntegration:
         # Verify commands are Click command/group instances
         for name, cmd in cli_group.commands.items():
             assert isinstance(cmd, click.Command | click.Group), f"Command '{name}' is not a valid Click command"
+
+    def test_command_aliases_created(self):
+        """Test that 'run' and 'serve' aliases are created from 'start' command."""
+        # Import the actual CLI to test the full entrypoint logic
+        from nat.cli.entrypoint import cli
+
+        # Verify the start command exists (it's the base for aliases)
+        assert "start" in cli.commands, "start command should be discovered"
+
+        # Verify the aliases are created
+        assert "run" in cli.commands, "'run' alias should be created from start command"
+        assert "serve" in cli.commands, "'serve' alias should be created from start command"
+
+        # Verify they are valid Click commands
+        assert isinstance(cli.commands["run"], click.Command | click.Group)
+        assert isinstance(cli.commands["serve"], click.Command | click.Group)
