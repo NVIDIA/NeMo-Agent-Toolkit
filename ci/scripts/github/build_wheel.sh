@@ -55,5 +55,6 @@ fi
 # Flatten out the wheels into a single directory for upload
 BUILT_WHEELS=$(find "${WHEELS_BASE_DIR}" -type f -name "*.whl")
 for whl in ${BUILT_WHEELS}; do
+    echo "Moving wheel ${whl} to ${WHEELS_BASE_DIR}/"
     mv -f "${whl}" "${WHEELS_BASE_DIR}/"
 done
