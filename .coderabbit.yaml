@@ -66,6 +66,12 @@ reviews:
         - Verify that documentation and comments are free of spelling mistakes, ensure the documentation doesn't contain any
           words listed in the `ci/vale/styles/config/vocabularies/nat/reject.txt` file, words that might appear to be
           spelling mistakes but are listed in the `ci/vale/styles/config/vocabularies/nat/accept.txt` file are OK.
+        - Documentation in Markdown files should not contain usage of a possessive 's with inanimate objects
+          (ex: "the system's performance" should be "the performance of the system").
+        - Documentation in Markdown files should not use NAT as an acronym, always spell out NeMo Agent Toolkit.
+          The exception to this rule is when referring to package names or code identifiers that contain "nat", these
+          should always be surrounded by backticks (ex: `nvidia-nat`), and be lowercase.
+
 
         # Misc.
         - All code (except .mdc files that contain Cursor rules) should be licensed under the Apache License 2.0,
