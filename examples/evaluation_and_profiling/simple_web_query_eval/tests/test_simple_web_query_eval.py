@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 def validate_rag_accuracy(rag_metric_output_file: Path, score: float):
     """
     1. Validate the contents of the rag evaluator ouput file.
-    2. Ensure the average_score is above a minimum threshold.
+    2. Ensure the average_score is at or above a minimum threshold.
     WIP: output format should be published as a schema and this validation should be done against that schema.
     """
     # Ensure the ile exists
