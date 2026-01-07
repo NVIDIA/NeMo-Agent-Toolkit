@@ -19,6 +19,7 @@ import asyncio
 import logging
 
 from nat.data_models.finetuning import FinetuneRunConfig
+from nat.data_models.finetuning import TrainingStatusEnum
 from nat.finetuning.interfaces.finetuning_runner import Trainer
 
 logger = logging.getLogger(__name__)
@@ -57,7 +58,29 @@ async def run_finetuning(runner: Trainer) -> None:
             except (ValueError, RuntimeError) as e:
                 logger.warning("Failed to retrieve metrics: %s", e)
 
-        logger.info("Finetuning completed successfully!")
+        # Log appropriate message based on job statuses
+        if not job_statuses:
+            logger.warning("Finetuning completed with no jobs executed.")
+        else:
+            failed_jobs = [s for s in job_statuses if s.status == TrainingStatusEnum.FAILED]
+            canceled_jobs = [s for s in job_statuses if s.status == TrainingStatusEnum.CANCELED]
+            completed_jobs = [s for s in job_statuses if s.status == TrainingStatusEnum.COMPLETED]
+
+            if failed_jobs:
+                logger.error("Finetuning completed with %d failed job(s) out of %d total.",
+                             len(failed_jobs),
+                             len(job_statuses))
+            elif canceled_jobs:
+                logger.warning("Finetuning was canceled. %d job(s) were canceled out of %d total.",
+                               len(canceled_jobs),
+                               len(job_statuses))
+            elif len(completed_jobs) == len(job_statuses):
+                logger.info("Finetuning completed successfully!")
+            else:
+                # Some jobs may still be pending or running (unexpected state)
+                logger.warning("Finetuning finished with %d completed, %d pending/running job(s).",
+                               len(completed_jobs),
+                               len(job_statuses) - len(completed_jobs))
 
     except Exception as e:
         logger.error("Finetuning failed: %s", e)
