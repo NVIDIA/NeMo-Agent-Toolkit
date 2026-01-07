@@ -401,8 +401,8 @@ Separate `prefill` and `decode` workers for maximum throughput. More complex set
 ```bash
 cd /path/to/NeMo-Agent-Toolkit/external/dynamo
 
-export PREFILL_GPUS="0,1"
-export DECODE_GPUS="2,3"
+export DYNAMO_PREFILL_GPUS="0,1"
+export DYNAMO_DECODE_GPUS="2,3"
 
 # Start Dynamo disaggregated
 bash start_dynamo_disagg.sh > startup_output.txt 2>&1
