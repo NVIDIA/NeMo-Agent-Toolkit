@@ -24,17 +24,17 @@ import pytest
 # pyright: reportMissingImports=false, reportAttributeAccessIssue=false
 from click.testing import CliRunner
 
-from nat.cli.commands.mcp.mcp import MCPPingResult
-from nat.cli.commands.mcp.mcp import call_tool_and_print
-from nat.cli.commands.mcp.mcp import call_tool_direct
-from nat.cli.commands.mcp.mcp import format_tool
-from nat.cli.commands.mcp.mcp import list_tools_direct
-from nat.cli.commands.mcp.mcp import mcp_client_ping
-from nat.cli.commands.mcp.mcp import mcp_client_tool_call
-from nat.cli.commands.mcp.mcp import mcp_client_tool_list
-from nat.cli.commands.mcp.mcp import ping_mcp_server
-from nat.cli.commands.mcp.mcp import print_tool
-from nat.cli.commands.mcp.mcp import validate_transport_cli_args
+from nat.plugins.mcp.cli.commands import MCPPingResult
+from nat.plugins.mcp.cli.commands import call_tool_and_print
+from nat.plugins.mcp.cli.commands import call_tool_direct
+from nat.plugins.mcp.cli.commands import format_tool
+from nat.plugins.mcp.cli.commands import list_tools_direct
+from nat.plugins.mcp.cli.commands import mcp_client_ping
+from nat.plugins.mcp.cli.commands import mcp_client_tool_call
+from nat.plugins.mcp.cli.commands import mcp_client_tool_list
+from nat.plugins.mcp.cli.commands import ping_mcp_server
+from nat.plugins.mcp.cli.commands import print_tool
+from nat.plugins.mcp.cli.commands import validate_transport_cli_args
 
 
 @pytest.fixture(name="mock_tools")
@@ -67,7 +67,7 @@ def fixture_cli_runner():
         (["--json-output", "--detail"], True, None),
     ],
 )
-@patch("nat.cli.commands.mcp.mcp.list_tools_via_function_group", new_callable=AsyncMock)
+@patch("nat.plugins.mcp.cli.commands.list_tools_via_function_group", new_callable=AsyncMock)
 def test_mcp_client_tool_list_variants(
     mock_fetcher,
     mock_tools,
@@ -88,7 +88,7 @@ def test_mcp_client_tool_list_variants(
             assert text in result.output
 
 
-@patch("nat.cli.commands.mcp.mcp.list_tools_via_function_group", new_callable=AsyncMock)
+@patch("nat.plugins.mcp.cli.commands.list_tools_via_function_group", new_callable=AsyncMock)
 def test_mcp_client_tool_list_specific_tool(mock_fetcher, mock_tools):
     mock_fetcher.return_value = [mock_tools[1]]
     runner = CliRunner()
@@ -99,7 +99,7 @@ def test_mcp_client_tool_list_specific_tool(mock_fetcher, mock_tools):
 
 
 @pytest.mark.parametrize("json_flag", [False, True])
-@patch("nat.cli.commands.mcp.mcp.ping_mcp_server", new_callable=AsyncMock)
+@patch("nat.plugins.mcp.cli.commands.ping_mcp_server", new_callable=AsyncMock)
 def test_mcp_client_ping_output(mock_ping, cli_runner, json_flag):
     mock_ping.return_value = MCPPingResult(url="http://localhost:9901/mcp",
                                            status="healthy",
@@ -117,7 +117,7 @@ def test_mcp_client_ping_output(mock_ping, cli_runner, json_flag):
 
 
 @pytest.mark.parametrize("with_direct, expected_direct", [(False, False), (True, True)])
-@patch("nat.cli.commands.mcp.mcp.call_tool_and_print", new_callable=AsyncMock)
+@patch("nat.plugins.mcp.cli.commands.call_tool_and_print", new_callable=AsyncMock)
 def test_mcp_client_tool_call_direct_variants(mock_call, cli_runner, with_direct, expected_direct):
     mock_call.return_value = "OK"
     args = [
@@ -135,7 +135,7 @@ def test_mcp_client_tool_call_direct_variants(mock_call, cli_runner, with_direct
     assert kwargs.get("direct") is expected_direct
 
 
-@patch("nat.cli.commands.mcp.mcp.list_tools_direct", new_callable=AsyncMock)
+@patch("nat.plugins.mcp.cli.commands.list_tools_direct", new_callable=AsyncMock)
 def test_mcp_client_tool_list_direct_fetcher_called(mock_fetcher, mock_tools):
     mock_fetcher.return_value = mock_tools
     runner = CliRunner()
@@ -167,7 +167,7 @@ def test_mcp_client_tool_call_invalid_json_args():
     assert "[ERROR] Failed to parse --json-args" in result.output
 
 
-@patch("nat.cli.commands.mcp.mcp.call_tool_and_print", new_callable=AsyncMock)
+@patch("nat.plugins.mcp.cli.commands.call_tool_and_print", new_callable=AsyncMock)
 def test_mcp_client_tool_call_args_env_parsing(mock_call):
     mock_call.return_value = "OK"
     runner = CliRunner()
@@ -196,7 +196,7 @@ def test_mcp_client_tool_call_args_env_parsing(mock_call):
     assert kwargs.get("direct") is False
 
 
-@patch("nat.cli.commands.mcp.mcp.ping_mcp_server", new_callable=AsyncMock)
+@patch("nat.plugins.mcp.cli.commands.ping_mcp_server", new_callable=AsyncMock)
 def test_mcp_client_ping_unreachable(mock_ping):
     mock_ping.return_value = MCPPingResult(url="http://localhost:9901/mcp",
                                            status="unhealthy",
@@ -209,15 +209,15 @@ def test_mcp_client_ping_unreachable(mock_ping):
     assert "Timeout" in result.output
 
 
-@patch("nat.cli.commands.mcp.mcp.call_tool_and_print", new_callable=AsyncMock)
-@patch("nat.cli.commands.mcp.mcp.format_mcp_error")
+@patch("nat.plugins.mcp.cli.commands.call_tool_and_print", new_callable=AsyncMock)
+@patch("nat.plugins.mcp.cli.commands.format_mcp_error")
 def test_mcp_client_tool_call_mcp_error_formatted(mock_format, mock_call):
 
     class _FakeMCPError(Exception):
         pass
 
     # Rebind MCPError symbol used in the module to our fake
-    import nat.cli.commands.mcp.mcp as mcp_mod
+    import nat.plugins.mcp.cli.commands as mcp_mod
     mcp_mod.MCPError = _FakeMCPError  # type: ignore
 
     mock_call.side_effect = _FakeMCPError("boom")
@@ -515,7 +515,7 @@ def test_ping_mcp_server_timeout(monkeypatch, transport):
         # Simulate asyncio.wait_for timing out
         raise TimeoutError
 
-    monkeypatch.setattr("nat.cli.commands.mcp.mcp.asyncio.wait_for", _raise_timeout)
+    monkeypatch.setattr("nat.plugins.mcp.cli.commands.asyncio.wait_for", _raise_timeout)
     res = asyncio.run(ping_mcp_server(url="http://u", timeout=0, transport=transport))
     assert res.status == "unhealthy"
     assert res.error and "Timeout" in res.error
@@ -764,7 +764,7 @@ def test_call_tool_and_print_group_tool_not_found(monkeypatch):
     assert err is not None and "Tool 'echo' not found" in err
 
 
-@patch("nat.cli.commands.mcp.mcp.call_tool_and_print", new_callable=AsyncMock)
+@patch("nat.plugins.mcp.cli.commands.call_tool_and_print", new_callable=AsyncMock)
 def test_mcp_client_tool_call_bearer_token_direct(mock_call, cli_runner):
     """Test that bearer token flags are passed correctly"""
     mock_call.return_value = "OK"
@@ -782,7 +782,7 @@ def test_mcp_client_tool_call_bearer_token_direct(mock_call, cli_runner):
     assert kwargs.get("bearer_token_env") is None
 
 
-@patch("nat.cli.commands.mcp.mcp.call_tool_and_print", new_callable=AsyncMock)
+@patch("nat.plugins.mcp.cli.commands.call_tool_and_print", new_callable=AsyncMock)
 def test_mcp_client_tool_call_bearer_token_env(mock_call, cli_runner):
     """Test that bearer token env flag is passed correctly"""
     mock_call.return_value = "OK"
