@@ -427,18 +427,18 @@ redirects = {
     'workflows/mcp/mcp-client': '/build-workflows/mcp-client.html',
     'workflows/mcp/mcp-server': '/run-workflows/mcp-server.html',
     'workflows/observe/index': '/run-workflows/observe/observe.html',
-    'workflows/observe/observe-workflow-with-catalyst': '',
-    'workflows/observe/observe-workflow-with-data-flywheel': '',
-    'workflows/observe/observe-workflow-with-dynatrace': '',
-    'workflows/observe/observe-workflow-with-galileo': '',
-    'workflows/observe/observe-workflow-with-otel-collector': '',
-    'workflows/observe/observe-workflow-with-phoenix': '',
-    'workflows/observe/observe-workflow-with-weave': '',
-    'workflows/profiler': '',
-    'workflows/retrievers': '',
-    'workflows/run-workflows': '',
-    'workflows/sizing-calc': '',
-    'workflows/workflow-configuration': ''
+    'workflows/observe/observe-workflow-with-catalyst': '/run-workflows/observe/observe.html?provider=Catalyst#provider-integration-guides',
+    'workflows/observe/observe-workflow-with-data-flywheel': '/run-workflows/observe/observe.html?provider=Data-Flywheel#provider-integration-guides',
+    'workflows/observe/observe-workflow-with-dynatrace': '/run-workflows/observe/observe.html?provider=Dynatrace#provider-integration-guides',
+    'workflows/observe/observe-workflow-with-galileo': '/run-workflows/observe/observe.html?provider=Galileo#provider-integration-guides',
+    'workflows/observe/observe-workflow-with-otel-collector': '/run-workflows/observe/observe.html?provider=OTel-collector#provider-integration-guides',
+    'workflows/observe/observe-workflow-with-phoenix': '/run-workflows/observe/observe.html?provider=Phoenix#provider-integration-guides',
+    'workflows/observe/observe-workflow-with-weave': '/run-workflows/observe/observe.html?provider=Wandb-Weave#provider-integration-guides',
+    'workflows/profiler': '/improve-workflows/profiler.html',
+    'workflows/retrievers': '/build-workflows/retrievers.html',
+    'workflows/run-workflows': '/run-workflows/about-running-workflows.html',
+    'workflows/sizing-calc': '/improve-workflows/sizing-calc.html',
+    'workflows/workflow-configuration': '/build-workflows/workflow-configuration.html'
     # End of v1.3 -> v1.4 documentation restructuring redirects
 }
 
