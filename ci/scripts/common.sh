@@ -107,8 +107,8 @@ function get_num_proc() {
 function set_versions() {
    # Update internal dependencies to the current git tag
    set +e
-   SETUPTOOLS_SCM_OUTPUT=$(python -m setuptools_scm)
-   SETUPTOOLS_SCM_RESULT=$?
+   local SETUPTOOLS_SCM_OUTPUT=$(python -m setuptools_scm)
+   local SETUPTOOLS_SCM_RESULT=$?
    set -e
 
    if [[ ${SETUPTOOLS_SCM_RESULT} -ne 0 ]]; then
