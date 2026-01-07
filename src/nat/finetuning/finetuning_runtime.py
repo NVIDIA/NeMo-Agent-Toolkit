@@ -64,23 +64,23 @@ async def run_finetuning(runner: Trainer) -> None:
         else:
             failed_jobs = sum(1 for s in job_statuses if s.status == TrainingStatusEnum.FAILED)
             canceled_jobs = sum(1 for s in job_statuses if s.status == TrainingStatusEnum.CANCELED)
-            completed_jobs = (1 for s in job_statuses if s.status == TrainingStatusEnum.COMPLETED)
+            completed_jobs = sum(1 for s in job_statuses if s.status == TrainingStatusEnum.COMPLETED)
 
             if failed_jobs:
                 logger.error("Finetuning completed with %d failed job(s) out of %d total.",
-                             len(failed_jobs),
+                             failed_jobs,
                              len(job_statuses))
             elif canceled_jobs:
                 logger.warning("Finetuning was canceled. %d job(s) were canceled out of %d total.",
-                               len(canceled_jobs),
+                               canceled_jobs,
                                len(job_statuses))
-            elif len(completed_jobs) == len(job_statuses):
+            elif completed_jobs == len(job_statuses):
                 logger.info("Finetuning completed successfully!")
             else:
                 # Some jobs may still be pending or running (unexpected state)
                 logger.warning("Finetuning finished with %d completed, %d pending/running job(s).",
-                               len(completed_jobs),
-                               len(job_statuses) - len(completed_jobs))
+                               completed_jobs,
+                               len(job_statuses) - completed_jobs)
 
     except Exception as e:
         logger.error("Finetuning failed: %s", e)
