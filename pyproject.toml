@@ -208,7 +208,7 @@ config-settings = { editable_mode = "compat" }
 # distribution (thus included in both nvidia-nat-all and nvidia-nat[all])
 #
 # Long-term solutions include better package isolation and testing, which is on the roadmap.
-# 
+#
 override-dependencies = [
   # Override tenacity version to resolve conflict between ragaai-catalyst ("tenacity==8.3.0")
   #   and strands-agents-tools ("tenacity>=9.1.2")
@@ -353,6 +353,22 @@ nat_front_ends = "nat.front_ends.register"
 
 [project.entry-points.'nat.registry_handlers']
 nat_registry_handlers = "nat.registry_handlers.register"
+
+
+[project.entry-points.'nat.cli']
+configure = "nat.cli.commands.configure.configure:configure_command"
+eval = "nat.cli.commands.evaluate:eval_command"
+finetune = "nat.cli.commands.finetune:finetune_command"
+info = "nat.cli.commands.info.info:info_command"
+object-store = "nat.cli.commands.object_store.object_store:object_store_command"
+optimize = "nat.cli.commands.optimize:optimizer_command"
+red-team = "nat.cli.commands.red_teaming.red_teaming:red_team_command"
+registry = "nat.cli.commands.registry.registry:registry_command"
+sizing = "nat.cli.commands.sizing.sizing:sizing"
+start = "nat.cli.commands.start:start_command"
+uninstall = "nat.cli.commands.uninstall:uninstall_command"
+validate = "nat.cli.commands.validate:validate_command"
+workflow = "nat.cli.commands.workflow.workflow:workflow_command"
 
 
 [project.scripts]
