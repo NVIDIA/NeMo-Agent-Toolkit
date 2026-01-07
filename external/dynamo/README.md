@@ -193,7 +193,7 @@ Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimizat
 
 ### Create a Python UV Environment
 
-```
+```bash
 cd /path/to/NeMo-Agent-Toolkit
 uv venv "${HOME}/.venvs/nat_dynamo_eval" --python 3.13
 source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
