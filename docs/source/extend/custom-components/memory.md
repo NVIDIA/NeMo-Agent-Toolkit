@@ -215,6 +215,10 @@ Explanation:
 - Then we define two tools (functions in NeMo Agent toolkit terminology) that reference `saas_memory`: `add_memory` and `get_memory`.
 - Finally, the `agent_memory` workflow references these two tool names.
 
+### Automatic Memory with the Auto-Memory Wrapper
+
+For convenient memory persistence, you can use the [automatic memory wrapper](../../components/agents/auto-memory-wrapper/auto-memory-wrapper.md). This wrapper automatically handles storing and retrieving conversation history from your memory backend, eliminating the need to manually manage memory operations in your agent workflows.
+
 ---
 
 

@@ -69,6 +69,7 @@ For details on workflow configuration, including sections not utilized in the ab
 
 The following are [agents](../components/agents/index.md) offered by NeMo Agent toolkit:
 
+- [Automatic Memory Wrapper Agent](../components/agents/auto-memory-wrapper/index.md)
 - [ReAct Agent](../components/agents/react-agent/index.md)
 - [Reasoning Agent](../components/agents/reasoning-agent/index.md)
 - [ReWOO Agent](../components/agents/rewoo-agent/index.md)

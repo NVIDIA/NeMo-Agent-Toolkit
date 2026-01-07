@@ -11,9 +11,7 @@ root = "../../.."
 [project]
 name = "nat_react_benchmark_agent"
 dynamic = ["version"]
-dependencies = [
-  "nvidia-nat[langchain]~=1.4",
-]
+dependencies = ["nvidia-nat[langchain]~=1.4"]
 requires-python = ">=3.11,<3.14"
 description = "Custom NeMo Agent Toolkit Workflow"
 classifiers = ["Programming Language :: Python"]
