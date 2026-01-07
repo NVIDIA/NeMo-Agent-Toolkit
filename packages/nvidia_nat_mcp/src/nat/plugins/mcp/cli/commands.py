@@ -310,8 +310,8 @@ async def list_tools_via_function_group(
         fns = await group.get_accessible_functions()
 
         def to_tool_entry(full_name: str, fn_obj) -> dict[str, str | None]:
-            # full_name like "mcp_client.<tool>"
-            name = full_name.split(".", 1)[1] if "." in full_name else full_name
+            # full_name like "mcp_client__<tool>"
+            name = full_name.split("__", 1)[1] if "__" in full_name else full_name
             schema = getattr(fn_obj, 'input_schema', None)
             if schema is None:
                 schema_str = None
@@ -327,10 +327,12 @@ async def list_tools_via_function_group(
             return {"name": name, "description": getattr(fn_obj, 'description', ''), "input_schema": schema_str}
 
         if tool_name:
-            full = f"mcp_client.{tool_name}"
+            full = f"mcp_client__{tool_name}"
             fn = fns.get(full)
             if fn is not None:
                 tools.append(to_tool_entry(full, fn))
+            else:
+                logger.debug(f"Tool '{tool_name}' not found. Available: {list(fns.keys())}")
         else:
             for full, fn in fns.items():
                 tools.append(to_tool_entry(full, fn))
@@ -908,10 +910,10 @@ async def call_tool_and_print(command: str | None,
 
         group = await builder.add_function_group("mcp_client", group_cfg)
         fns = await group.get_accessible_functions()
-        full = f"mcp_client.{tool_name}"
+        full = f"mcp_client__{tool_name}"
         fn = fns.get(full)
         if fn is None:
-            raise RuntimeError(f"Tool '{tool_name}' not found")
+            raise RuntimeError(f"Tool '{tool_name}' not found. Available: {list(fns.keys())}")
         # The group exposes a Function that we can invoke with kwargs
         result = await fn.acall_invoke(**(tool_args or {}))
         # Ensure string output for terminal

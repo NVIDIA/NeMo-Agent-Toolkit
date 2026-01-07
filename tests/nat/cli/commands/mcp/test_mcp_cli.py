@@ -663,7 +663,7 @@ def test_call_tool_and_print_group_success(monkeypatch):
     class _Group:
 
         async def get_accessible_functions(self):
-            return {"mcp_client.echo": _Fn()}
+            return {"mcp_client__echo": _Fn()}
 
     fake_builder_mod = ModuleType("nat.builder.workflow_builder")
 
@@ -714,7 +714,7 @@ def test_call_tool_and_print_group_tool_not_found(monkeypatch):
     class _Group:
 
         async def get_accessible_functions(self):
-            return {"mcp_client.other": object()}
+            return {"mcp_client__other": object()}
 
     fake_builder_mod = ModuleType("nat.builder.workflow_builder")
 
