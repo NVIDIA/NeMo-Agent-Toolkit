@@ -13,14 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 def test_mcp_command_registration():
     """Test that MCP command is discoverable via entry points."""
     # Verify the MCP command can be imported
-    from nat.plugins.mcp.cli.commands import mcp_command
-
     # Verify it's a valid Click command
     import click
-    assert isinstance(mcp_command, (click.Command, click.Group)), \
+
+    from nat.plugins.mcp.cli.commands import mcp_command
+    assert isinstance(mcp_command, click.Command | click.Group), \
         "mcp_command should be a valid Click command or group"
 
     # Verify the CLI discovers and loads the MCP command
