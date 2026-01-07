@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 def validate_rag_accuracy(rag_metric_output_file: Path, score: float):
     """
     1. Validate the contents of the rag evaluator ouput file.
-    2. Ensure the average_score is above a minimum threshold.
+    2. Ensure the average_score is at or above a minimum threshold.
     WIP: output format should be published as a schema and this validation should be done against that schema.
     """
     # Ensure the ile exists
@@ -46,7 +46,7 @@ def validate_rag_accuracy(rag_metric_output_file: Path, score: float):
 
     assert result_json, f"The {rag_metric_output_file} file is empty"
     assert isinstance(result_json, dict), f"The {rag_metric_output_file} file is not a dictionary"
-    assert result_json.get("average_score", 0) > score, \
+    assert result_json.get("average_score", 0) >= score, \
         f"The {rag_metric_output_file} score is less than {score}"
 
 
