@@ -62,7 +62,7 @@ LOCAL_MODEL_DIR="${DYNAMO_MODEL_DIR}"
 # Repository directory - auto-detect from script location or use env var
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOCAL_REPO_DIR="${DYNAMO_REPO_DIR:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
-CUSTOM_DYNAMO_DIR="$LOCAL_REPO_DIR/external/dynamo/generalized"
+CUSTOM_DYNAMO_DIR="$LOCAL_REPO_DIR/generalized"
 
 echo "========================================================="
 echo "Dynamo SGLang with Thompson Sampling Router (UNIFIED)"
@@ -552,13 +552,13 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo ""
     echo "========================================================="
     echo ""
-    echo "Waiting for SGLang to initialize (this may take 90-120 seconds for 70B model)..."
+    echo "Waiting for SGLang to initialize (this may take 5-10 minutes for a 70B model)..."
     echo "Monitoring logs (Ctrl+C to exit, container continues)..."
     echo ""
     
     # Wait for server to be ready
     echo "Checking for API availability..."
-    max_attempts=90
+    max_attempts=900
     attempt=0
     
     while [ $attempt -lt $max_attempts ]; do

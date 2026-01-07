@@ -432,13 +432,13 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo ""
     echo "========================================================="
     echo ""
-    echo "Waiting for SGLang to initialize (this may take 90-120 seconds for 70B model)..."
+    echo "Waiting for SGLang to initialize (this may take 5-10 minutes for a 70B model)..."
     echo "Monitoring logs (Ctrl+C to exit, container continues)..."
     echo ""
     
     # Wait for server to be ready
     echo "Checking for API availability..."
-    max_attempts=90
+    max_attempts=900
     attempt=0
     
     while [ $attempt -lt $max_attempts ]; do

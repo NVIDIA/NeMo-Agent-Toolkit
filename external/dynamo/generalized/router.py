@@ -1,17 +1,5 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA
 # SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 import argparse
 import asyncio
@@ -26,18 +14,36 @@ import time
 import uuid
 from collections import deque
 from functools import wraps
-from typing import Any
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import uvloop
-from dynamo.llm import AggregatedMetrics
-from dynamo.llm import KvIndexer
-from dynamo.llm import KvMetricsAggregator
-from dynamo.llm import OverlapScores
-from dynamo.runtime import DistributedRuntime
-from dynamo.runtime import dynamo_worker
-from dynamo.runtime.logging import configure_dynamo_logging
 from pydantic import BaseModel
+
+from dynamo.runtime import DistributedRuntime, dynamo_worker
+from dynamo.runtime.logging import configure_dynamo_logging
+
+# Try to import KV routing classes from dynamo.llm, fallback to stubs if unavailable
+try:
+    from dynamo.llm import KvIndexer, OverlapScores
+except ImportError:
+    logger_init = logging.getLogger(__name__)
+    logger_init.warning("dynamo.llm KV classes not available, using fallback implementations")
+
+    class OverlapScores:
+        """Fallback: KV cache overlap scores between a request and workers."""
+        def __init__(self, scores: Dict[int, float] | None = None):
+            self.scores = scores if scores is not None else {}
+
+    class KvIndexer:
+        """Fallback: KV cache indexer for finding overlap between requests and workers."""
+        def __init__(self, engine: Any, block_size: int):
+            self.engine = engine
+            self.block_size = block_size
+
+        async def find_matches_for_request(self, tokens: List[int], min_overlap: int) -> OverlapScores:
+            """Find overlap scores for each worker. Returns empty scores (round-robin fallback)."""
+            return OverlapScores({})
 
 configure_dynamo_logging()
 logger = logging.getLogger(__name__)
@@ -47,49 +53,45 @@ WorkerId = int
 
 # ---------------------- request / response models ---------------------- #
 class RouterRequest(BaseModel):
-    tokens: list[int]
+    tokens: List[int]
     prefix_id: str = "<no_reuse>"
-    reuse_budget: int = 0  # remaining *after this request*
-    expected_osl: str | None = "MEDIUM"
-    interarrival: str | None = "MEDIUM"
+    reuse_budget: int = 0                # remaining *after this request*
+    expected_osl: Optional[str] = "MEDIUM"
+    interarrival: Optional[str] = "MEDIUM"
 
 
 class RouterResponse(BaseModel):
     worker_id: int
     prefix_hit_rate: float
-    decision_id: str | None = None
+    decision_id: Optional[str] = None
 
 
 class FeedbackRequest(BaseModel):
     decision_id: str
     latency_ms: float
-    success: bool | None = True
-    tokens_in: int | None = None
-    tokens_out: int | None = None
-    finish_reason: str | None = None
+    success: Optional[bool] = True
+    tokens_in: Optional[int] = None
+    tokens_out: Optional[int] = None
+    finish_reason: Optional[str] = None
 
 
 class FeedbackAck(BaseModel):
     ok: bool
     used_baseline: float
     reward: float
-    worker_id: int | None = None
-    error: str | None = None
+    worker_id: Optional[int] = None
+    error: Optional[str] = None
 
 
 # ---------------------- helper decorator ---------------------- #
 def safe_update(lock_name: str):
-
     def decorator(fn):
-
         @wraps(fn)
         def wrapper(self, *args, **kwargs):
             lock = getattr(self, lock_name)
             with lock:
                 return fn(self, *args, **kwargs)
-
         return wrapper
-
     return decorator
 
 
@@ -141,9 +143,9 @@ class WorkloadAwareRouter:
         lints_v: float = 0.25,
         lints_forget: float = 0.995,
         # ---------- Feedback timeout / sweep ----------
-        feedback_timeout_seconds: float = 120.0,  # if no feedback by this time -> penalty
+        feedback_timeout_seconds: float = 120.0,      # if no feedback by this time -> penalty
         pending_sweep_interval_seconds: float = 5.0,  # how often to sweep pending
-        timeout_reward: float = 0.0,  # small penalty (0..1); 0.0 is harsh
+        timeout_reward: float = 0.0,                  # small penalty (0..1); 0.0 is harsh
         # ---------- Latency EMA (reward normalization) ----------
         latency_ema_alpha: float = 0.2,
         # ---------- Debug traces ----------
@@ -158,8 +160,7 @@ class WorkloadAwareRouter:
 
         # clients / helpers (initialized later)
         self.engine_client = None
-        self.indexer: KvIndexer | None = None
-        self.metrics: KvMetricsAggregator | None = None
+        self.indexer: Optional[KvIndexer] = None
 
         # concurrency primitives
         self._init_lock = threading.Lock()
@@ -169,19 +170,19 @@ class WorkloadAwareRouter:
         self._pending_lock = threading.Lock()
 
         # prefix state: pid -> {"worker": int|None, "reuse_remaining": int}
-        self.prefix_cache_state: dict[str, dict[str, int | None]] = {}
+        self.prefix_cache_state: Dict[str, Dict[str, Optional[int]]] = {}
         # pid -> {"decode_cost","prefill_cost","iat_factor"}
-        self.prefix_meta: dict[str, dict[str, float]] = {}
+        self.prefix_meta: Dict[str, Dict[str, float]] = {}
 
         # Beta bandits and LinTS params
-        self.worker_bandits: dict[int, tuple[float, float]] = {}
+        self.worker_bandits: Dict[int, Tuple[float, float]] = {}
         self.feature_dim = 9
         self.lin_lambda = float(lints_lambda)
         self.lin_v = float(lints_v)
         self.lin_forget = float(lints_forget)
         self.lin_forget = max(1e-6, min(self.lin_forget, 0.999999))
-        self.linA: dict[int, np.ndarray] = {}
-        self.linb: dict[int, np.ndarray] = {}
+        self.linA: Dict[int, np.ndarray] = {}
+        self.linb: Dict[int, np.ndarray] = {}
 
         # knobs
         self.affinity_base = float(affinity_base)
@@ -218,11 +219,11 @@ class WorkloadAwareRouter:
         # Latency EMA baselines (two modes: raw ms, or ms/token)
         self.latency_ema_alpha = float(latency_ema_alpha)
         # Global (per-mode)
-        self.lat_ema_global: dict[bool, float | None] = {False: None, True: None}
+        self.lat_ema_global: Dict[bool, Optional[float]] = {False: None, True: None}
         # Per worker (per-mode)
-        self.lat_ema_worker: dict[tuple[int, bool], float] = {}
+        self.lat_ema_worker: Dict[Tuple[int, bool], float] = {}
         # Per bucket (per-mode): (wid, osl, prefill_bin, per_tok) -> value
-        self.lat_ema_bucket: dict[tuple[int, str, str, bool], float] = {}
+        self.lat_ema_bucket: Dict[Tuple[int, str, str, bool], float] = {}
 
         # Pending decisions waiting for feedback:
         # decision_id -> {
@@ -230,7 +231,7 @@ class WorkloadAwareRouter:
         #   "start_ts": float, "prefix_id": str, "tokens_in": int, "reuse_after": int,
         #   "overlap": float, "prefill_cost": float, "decode_cost": float
         # }
-        self.pending: dict[str, dict[str, Any]] = {}
+        self.pending: Dict[str, Dict[str, Any]] = {}
 
         # Debug traces
         self.debug_traces = bool(debug_traces)
@@ -241,7 +242,7 @@ class WorkloadAwareRouter:
             logger.info("Router debug traces enabled -> %s", self.debug_trace_dir)
 
     # --------------------- tracing --------------------- #
-    def _emit_trace(self, kind: str, payload: dict[str, Any]):
+    def _emit_trace(self, kind: str, payload: Dict[str, Any]):
         if not self.debug_traces:
             return
         item = {"ts": time.time(), "kind": kind, **payload}
@@ -255,7 +256,7 @@ class WorkloadAwareRouter:
 
     # --------------------- level mappings --------------------- #
     @staticmethod
-    def _norm_level(s: str | None, default: str = "MEDIUM") -> str:
+    def _norm_level(s: Optional[str], default: str = "MEDIUM") -> str:
         if not s:
             return default
         s = str(s).strip().upper()
@@ -277,7 +278,6 @@ class WorkloadAwareRouter:
         await self.engine_client.wait_for_instances()
 
         self.indexer = KvIndexer(engine, self.block_size)
-        self.metrics = KvMetricsAggregator(engine)
 
         self._initialize_bandits()
         self._initialize_contextual()
@@ -332,7 +332,7 @@ class WorkloadAwareRouter:
 
     # --------------------- prefix state --------------------- #
     @safe_update("_prefix_lock")
-    def _get_prefix(self, pid: str) -> tuple[int | None, int]:
+    def _get_prefix(self, pid: str) -> Tuple[Optional[int], int]:
         info = self.prefix_cache_state.get(pid)
         if info:
             return info.get("worker"), int(info.get("reuse_remaining") or 0)
@@ -360,7 +360,7 @@ class WorkloadAwareRouter:
             "iat_factor": float(iat_factor),
         }
 
-    def _worker_outstanding(self, wid: int) -> tuple[int, float]:
+    def _worker_outstanding(self, wid: int) -> Tuple[int, float]:
         """
         Returns (reuse_total, work_total) without time decay:
           Σ reuse_remaining * (decode_cost + prefill_cost) * iat_factor
@@ -374,8 +374,10 @@ class WorkloadAwareRouter:
             reuse_total += r
             meta = self.prefix_meta.get(pid)
             if meta:
-                work_total += float(r) * (float(meta.get("decode_cost", 2.0)) +
-                                          float(meta.get("prefill_cost", 0.0))) * float(meta.get("iat_factor", 1.0))
+                work_total += float(r) * (
+                    float(meta.get("decode_cost", 2.0)) +
+                    float(meta.get("prefill_cost", 0.0))
+                ) * float(meta.get("iat_factor", 1.0))
         return reuse_total, work_total
 
     # --------------------- bandits --------------------- #
@@ -438,7 +440,7 @@ class WorkloadAwareRouter:
             self.worker_bandits[worker_id] = (alpha + r, beta + 1.0 - r)
 
     # --------------------- features / scores --------------------- #
-    def _prefill_cost_for_worker(self, tokens: list[int], overlap: float) -> float:
+    def _prefill_cost_for_worker(self, tokens: List[int], overlap: float) -> float:
         isl = max(0, len(tokens))
         frac = min(max(float(overlap), 0.0), 1.0)
         uncached = max(0.0, float(isl) * (1.0 - frac))
@@ -455,9 +457,9 @@ class WorkloadAwareRouter:
     def _feature_vector(
         self,
         wid: int,
-        metrics: AggregatedMetrics | None,
+        metrics: Optional[Dict[str, Any]],
         scores: "OverlapScores",
-        last_w: int | None,
+        last_w: Optional[int],
         reuse_after: int,
         decode_cost: float,
         prefill_cost: float,
@@ -465,13 +467,14 @@ class WorkloadAwareRouter:
     ) -> np.ndarray:
         gpu = 0.0
         queue = 0.0
-        if metrics and getattr(metrics, "endpoints", None):
-            for ep in metrics.endpoints:
-                if ep.worker_id == wid:
-                    gpu = float(getattr(ep, "gpu_cache_usage_perc", 0.0))
-                    queue = float(getattr(ep, "num_requests_waiting", 0.0))
+        if metrics and isinstance(metrics, dict) and "endpoints" in metrics:
+            for ep in metrics["endpoints"]:
+                if ep.get("worker_id") == wid:
+                    gpu = float(ep.get("gpu_cache_usage_perc", 0.0))
+                    queue = float(ep.get("num_requests_waiting", 0.0))
                     break
-        inv_load = 1.0 / (1.0 + self.gpu_penalty_weight * max(0.0, gpu) + self.queue_penalty_weight * max(0.0, queue))
+        inv_load = 1.0 / (1.0 + self.gpu_penalty_weight * max(0.0, gpu) +
+                          self.queue_penalty_weight * max(0.0, queue))
 
         overlap = float(scores.scores.get(wid, 0.0))
         affinity = 1.0 if (last_w is not None and wid == last_w) else 0.0
@@ -493,26 +496,28 @@ class WorkloadAwareRouter:
             prefill_norm,
             iat_norm,
             reuse_norm,
-        ],
-                        dtype=np.float64)
+        ], dtype=np.float64)
 
-    def _load_score(self, wid: int, metrics: AggregatedMetrics | None, job_cost_total: float) -> float:
+    def _load_score(self, wid: int, metrics: Optional[Dict[str, Any]], job_cost_total: float) -> float:
         gpu = 0.0
         queue = 0.0
-        if metrics and getattr(metrics, "endpoints", None):
-            for ep in metrics.endpoints:
-                if ep.worker_id == wid:
-                    gpu = float(getattr(ep, "gpu_cache_usage_perc", 0.0))
-                    queue = float(getattr(ep, "num_requests_waiting", 0.0))
+        if metrics and isinstance(metrics, dict) and "endpoints" in metrics:
+            for ep in metrics["endpoints"]:
+                if ep.get("worker_id") == wid:
+                    gpu = float(ep.get("gpu_cache_usage_perc", 0.0))
+                    queue = float(ep.get("num_requests_waiting", 0.0))
                     break
         _, work_out = self._worker_outstanding(wid)
-        penalty = (self.gpu_penalty_weight * gpu + self.queue_penalty_weight * queue +
-                   self.outstanding_work_weight * max(0.0, work_out) +
-                   self.job_gpu_coupling_weight * job_cost_total * gpu +
-                   self.job_queue_coupling_weight * job_cost_total * queue)
+        penalty = (
+            self.gpu_penalty_weight * gpu +
+            self.queue_penalty_weight * queue +
+            self.outstanding_work_weight * max(0.0, work_out) +
+            self.job_gpu_coupling_weight * job_cost_total * gpu +
+            self.job_queue_coupling_weight * job_cost_total * queue
+        )
         return 1.0 / (1.0 + max(0.0, penalty))
 
-    def _softmax(self, scores: list[float], temp: float) -> list[float]:
+    def _softmax(self, scores: List[float], temp: float) -> List[float]:
         t = float(min(max(temp, self.temp_min), self.temp_max))
         m = float(np.max(scores))
         exps = np.exp((np.array(scores) - m) / max(1e-6, t))
@@ -526,9 +531,9 @@ class WorkloadAwareRouter:
         self,
         worker_ids,
         req: RouterRequest,
-        metrics: AggregatedMetrics,
+        metrics: Optional[Dict[str, Any]],
         scores: OverlapScores,
-    ) -> tuple[int, dict[str, float], dict[int, dict[str, float]], list[float], list[float]]:
+    ) -> Tuple[int, Dict[str, float], Dict[int, Dict[str, float]], List[float], List[float]]:
         osl = self._norm_level(req.expected_osl, "MEDIUM")
         iat = self._norm_level(req.interarrival, "MEDIUM")
         last_w, _ = self._get_prefix(req.prefix_id)
@@ -540,11 +545,11 @@ class WorkloadAwareRouter:
         temp = self.temp_base / (1.0 + float(reuse_after) * iat_factor)
         temp = min(max(temp, self.temp_min), self.temp_max)
 
-        raw_scores: list[float] = []
-        worker_list: list[int] = [int(w) for w in worker_ids]
-        per_worker_ctx: dict[int, dict[str, float]] = {}
-        load_mods: list[float] = []
-        overlaps: list[float] = []
+        raw_scores: List[float] = []
+        worker_list: List[int] = [int(w) for w in worker_ids]
+        per_worker_ctx: Dict[int, Dict[str, float]] = {}
+        load_mods: List[float] = []
+        overlaps: List[float] = []
 
         for wid in worker_list:
             overlap = float(scores.scores.get(wid, 0.0))
@@ -567,12 +572,18 @@ class WorkloadAwareRouter:
             val += explore_w * self._ts_sample(wid)
 
             if last_w == wid and (reuse_after > 0):
-                val += (self.affinity_base + self.affinity_reuse_weight * float(reuse_after) +
-                        self.affinity_iat_weight * iat_factor) * (0.5 + 0.5 * overlap)
+                val += (
+                    self.affinity_base
+                    + self.affinity_reuse_weight * float(reuse_after)
+                    + self.affinity_iat_weight * iat_factor
+                ) * (0.5 + 0.5 * overlap)
 
             if last_w is not None and wid != last_w and (reuse_after > 0):
-                val -= (self.switch_cost_base + self.switch_cost_reuse * float(reuse_after) +
-                        self.switch_cost_iat * iat_factor)
+                val -= (
+                    self.switch_cost_base
+                    + self.switch_cost_reuse * float(reuse_after)
+                    + self.switch_cost_iat * iat_factor
+                )
 
             load_mod = self._load_score(wid, metrics, job_cost_total=job_cost_total)
             if last_w == wid and reuse_after > 0:
@@ -634,7 +645,7 @@ class WorkloadAwareRouter:
         return chosen, per_worker_ctx[chosen], per_worker_ctx, raw_scores, probs
 
     # --------------------- latency baselines & reward --------------------- #
-    def _ema_update(self, old: float | None, new: float) -> float:
+    def _ema_update(self, old: Optional[float], new: float) -> float:
         a = self.latency_ema_alpha
         return new if old is None else (a * new + (1.0 - a) * old)
 
@@ -661,7 +672,7 @@ class WorkloadAwareRouter:
         return self.lat_ema_bucket[key_b]
 
     @staticmethod
-    def _latency_metric(latency_ms: float, tokens_out: int | None) -> tuple[float, bool]:
+    def _latency_metric(latency_ms: float, tokens_out: Optional[int]) -> Tuple[float, bool]:
         """Return (metric_value, per_tok_flag). If tokens_out>0 -> ms/token else ms."""
         if tokens_out is not None and int(tokens_out) > 0:
             return float(latency_ms) / float(max(1, int(tokens_out))), True
@@ -672,7 +683,7 @@ class WorkloadAwareRouter:
         if not success:
             return 0.0
         denom = max(1e-3, baseline)
-        ratio = metric / denom  # <1.0 is good
+        ratio = metric / denom         # <1.0 is good
         return float(1.0 / (1.0 + ratio))  # baseline -> 0.5
 
     # --------------------- timeout sweep --------------------- #
@@ -680,7 +691,7 @@ class WorkloadAwareRouter:
         if now - self._last_pending_sweep < self.pending_sweep_interval_seconds:
             return
         self._last_pending_sweep = now
-        expired: list[tuple[str, dict[str, Any]]] = []
+        expired: List[Tuple[str, Dict[str, Any]]] = []
         with self._pending_lock:
             for did, rec in list(self.pending.items()):
                 if now - float(rec.get("start_ts", now)) >= self.feedback_timeout_seconds:
@@ -692,21 +703,19 @@ class WorkloadAwareRouter:
             reward = float(self.timeout_reward)  # small penalty
             self._update_bandit(wid, reward)
             self._update_contextual(wid, x, reward)
-            self._emit_trace(
-                "timeout",
-                {
-                    "decision_id": did,
-                    "wid": wid,
-                    "reward": reward,
-                    "age": self.feedback_timeout_seconds,
-                    "prefix_id": rec.get("prefix_id"),
-                    "osl": rec.get("osl"),
-                    "prefill_bin": rec.get("prefill_bin"),
-                })
+            self._emit_trace("timeout", {
+                "decision_id": did,
+                "wid": wid,
+                "reward": reward,
+                "age": self.feedback_timeout_seconds,
+                "prefix_id": rec.get("prefix_id"),
+                "osl": rec.get("osl"),
+                "prefill_bin": rec.get("prefill_bin"),
+            })
             logger.warning("Timeout feedback: wid=%s decision=%s reward=%.3f", wid, did, reward)
 
     # --------------------- main endpoint: find_worker --------------------- #
-    async def generate(self, request: dict):
+    async def generate(self, request: Dict):
         req = RouterRequest(**request)
 
         worker_ids = [int(w) for w in self.engine_client.instance_ids()]
@@ -717,7 +726,8 @@ class WorkloadAwareRouter:
         now = time.time()
         self._sweep_pending(now)
 
-        metrics = await self.metrics.get_metrics()
+        # Metrics aggregation API changed - using None for now (router works without it)
+        metrics = None  # TODO: Replace with proper metrics query when API is available
         if self.router_type == "kv_load":
             wid, _ = self._get_underloaded(metrics)
             yield RouterResponse(worker_id=wid, prefix_hit_rate=0.0).model_dump()
@@ -819,17 +829,15 @@ class WorkloadAwareRouter:
                 }
                 for i, wid in enumerate(worker_list)
             }
-            self._emit_trace("decision",
-                             {
-                                 "decision_id": decision_id,
-                                 "prefix_id": req.prefix_id,
-                                 "chosen": int(chosen),
-                                 "workers": details,
-                             })
+            self._emit_trace("decision", {
+                "decision_id": decision_id,
+                "prefix_id": req.prefix_id,
+                "chosen": int(chosen),
+                "workers": details,
+            })
 
         logger.info(
-            "Router picked worker=%s decision=%s prefix=%s "
-            "(last=%s reuse_after=%s osl=%s prefill_cost=%.3f iat=%s overlap=%.3f)",
+            "Router picked worker=%s decision=%s prefix=%s (last=%s reuse_after=%s osl=%s prefill_cost=%.3f iat=%s overlap=%.3f)",
             chosen,
             decision_id,
             req.prefix_id,
@@ -846,7 +854,7 @@ class WorkloadAwareRouter:
         return
 
     # --------------------- feedback endpoint --------------------- #
-    async def feedback(self, request: dict):
+    async def feedback(self, request: Dict):
         """Ex-post reward update from processor with observed latency."""
         try:
             fb = FeedbackRequest(**request)
@@ -871,7 +879,9 @@ class WorkloadAwareRouter:
         metric, per_tok = self._latency_metric(float(fb.latency_ms), tokens_out)
 
         # Baseline lookup (hierarchical)
-        baseline_before = self._get_latency_baseline(wid, osl, prefill_bin, per_tok, fallback=metric)
+        baseline_before = self._get_latency_baseline(
+            wid, osl, prefill_bin, per_tok, fallback=metric
+        )
 
         reward = self._metric_to_reward(metric, baseline_before, bool(fb.success))
 
@@ -885,21 +895,19 @@ class WorkloadAwareRouter:
         self._update_bandit(wid, reward)
         self._update_contextual(wid, x, reward)
 
-        self._emit_trace(
-            "feedback",
-            {
-                "decision_id": fb.decision_id,
-                "wid": wid,
-                "latency_ms": float(fb.latency_ms),
-                "tokens_out": tokens_out,
-                "metric": metric,
-                "per_tok": per_tok,
-                "baseline_used": baseline_before,
-                "baseline_after": baseline_after,
-                "reward": reward,
-                "success": bool(fb.success),
-                "finish_reason": fb.finish_reason or "",
-            })
+        self._emit_trace("feedback", {
+            "decision_id": fb.decision_id,
+            "wid": wid,
+            "latency_ms": float(fb.latency_ms),
+            "tokens_out": tokens_out,
+            "metric": metric,
+            "per_tok": per_tok,
+            "baseline_used": baseline_before,
+            "baseline_after": baseline_after,
+            "reward": reward,
+            "success": bool(fb.success),
+            "finish_reason": fb.finish_reason or "",
+        })
 
         logger.info(
             "Feedback: wid=%s decision=%s metric=%.3f%s baseline=%.3f reward=%.3f success=%s",
@@ -917,11 +925,11 @@ class WorkloadAwareRouter:
         return
 
     # --------------------- helpers --------------------- #
-    def _get_underloaded(self, metrics: AggregatedMetrics | None):
-        if not metrics or not metrics.endpoints:
+    def _get_underloaded(self, metrics: Optional[Dict[str, Any]]):
+        if not metrics or not metrics.get("endpoints"):
             wid = int(random.choice(self.engine_client.instance_ids()))
             return wid, 0.0
-        loads = {ep.worker_id: getattr(ep, "gpu_cache_usage_perc", 0.0) for ep in metrics.endpoints}
+        loads = {ep.get("worker_id"): ep.get("gpu_cache_usage_perc", 0.0) for ep in metrics["endpoints"]}
         min_val = min(loads.values())
         candidates = [wid for wid, v in loads.items() if v == min_val]
         return random.choice(candidates), min_val
@@ -972,7 +980,7 @@ def parse_args():
     parser.add_argument("--pending-sweep-interval-seconds", type=float, default=5.0)
     parser.add_argument("--timeout-reward", type=float, default=0.0)
 
-    # Latency EMAThe
+    # Latency EMA
     parser.add_argument("--latency-ema-alpha", type=float, default=0.2)
 
     # Traces
@@ -984,7 +992,7 @@ def parse_args():
 
 
 @dynamo_worker(static=False)
-async def worker(runtime: DistributedRuntime) -> None:
+async def worker(runtime: DistributedRuntime):
     args = parse_args()
 
     component = runtime.namespace("dynamo").component("router")

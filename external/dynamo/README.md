@@ -188,12 +188,50 @@ Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimizat
 2. **NVIDIA Driver** with CUDA 12.0+ support
 4. **Hugging Face CLI** for model downloads (optional, if model not already downloaded)
 5. **Llama-3.3-70B-Instruct** model downloaded locally
+6. **Python UV environment** python version 3.11-3.13
+
+
+### Create a Python UV Environment
+
+```
+cd /path/to/NeMo-Agent-Toolkit
+uv venv "${HOME}/.venvs/nat_dynamo_eval" --python 3.13
+source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
+```
+
+### Download model weights (can skip if already done)
+
+```bash
+# Set your desired model directory
+export DYNAMO_MODEL_DIR="${HOME}/models/Llama-3.3-70B-Instruct"
+
+# Create the directory
+# mkdir -p "$(dirname "$DYNAMO_MODEL_DIR")"
+mkdir -p $DYNAMO_MODEL_DIR
+
+# We will download the model weights directly from HuggingFace. Usage of
+# llama models from requires approval from Meta. See `Access Notes` below.
+# You will need to create a HuggingFace Access Token with read access in
+# order to download the model. On the huggingface webite visit:
+# "Access Tokens" -> "+ Create access token" to generate a token starting
+# with "hf_". Enter your token when prompted.
+# Respond "n" when asked "Add token as git credential? (Y/n)"
+uv pip install huggingface_hub
+uv run huggingface-cli login  # Enter your HF token
+
+uv run huggingface-cli download "meta-llama/Llama-3.3-70B-Instruct" \
+  --local-dir "$DYNAMO_MODEL_DIR"
+```
+
+> **Access Note**: The Llama-3.3-70B-Instruct model requires approval from Meta. Request access at [huggingface.co/meta-llama/Llama-3.3-70B-Instruct](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct) before downloading.
 
 ### Environment Setup
 
 Before running the Dynamo scripts, configure the following environment variables. See `env.example` for a complete list of all available options.
 
 ```bash
+cd external/dynamo/
+
 # Copy and customize the example environment file
 cp .env.example .env
 
@@ -216,26 +254,6 @@ export DYNAMO_REPO_DIR="/path/to/NeMo-Agent-Toolkit"
 # Optional: Configure GPU devices (default: 0,1,2,3)
 export DYNAMO_GPU_DEVICES="0,1,2,3"
 ```
-
-### Download Model (if needed)
-
-```bash
-# Set your desired model directory
-export DYNAMO_MODEL_DIR="${HOME}/models/Llama-3.3-70B-Instruct"
-
-# Create the directory
-mkdir -p "$(dirname "$DYNAMO_MODEL_DIR")"
-
-# Download using Hugging Face CLI
-# Note: Requires Hugging Face account with Llama access approval
-pip install huggingface_hub
-huggingface-cli login  # Enter your HF token
-
-huggingface-cli download "meta-llama/Llama-3.3-70B-Instruct" \
-  --local-dir "$DYNAMO_MODEL_DIR"
-```
-
-> **Access Note**: The Llama-3.3-70B-Instruct model requires approval from Meta. Request access at [huggingface.co/meta-llama/Llama-3.3-70B-Instruct](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct) before downloading.
 
 ### Verify GPU Access
 
@@ -260,22 +278,48 @@ Example output for an 8x H100 system:
 |                                         |                        |               MIG M. |
 |=========================================+========================+======================|
 |   0  NVIDIA B200                    On  |   00000000:1B:00.0 Off |                    0 |
-| None  29C    P0            139W / 1000W |       0MiB / 183359MiB |      0%      Default |
+| N/A   31C    P0            187W / 1000W |  169082MiB / 183359MiB |      0%      Default |
 |                                         |                        |             Disabled |
 +-----------------------------------------+------------------------+----------------------+
 |   1  NVIDIA B200                    On  |   00000000:43:00.0 Off |                    0 |
-| None  29C    P0            138W / 1000W |       0MiB / 183359MiB |      0%      Default |
+| N/A   31C    P0            187W / 1000W |  169178MiB / 183359MiB |      0%      Default |
 |                                         |                        |             Disabled |
 +-----------------------------------------+------------------------+----------------------+
 |   2  NVIDIA B200                    On  |   00000000:52:00.0 Off |                    0 |
-| None  33C    P0            142W / 1000W |       0MiB / 183359MiB |      0%      Default |
+| N/A   36C    P0            193W / 1000W |  169230MiB / 183359MiB |      0%      Default |
 |                                         |                        |             Disabled |
 +-----------------------------------------+------------------------+----------------------+
 |   3  NVIDIA B200                    On  |   00000000:61:00.0 Off |                    0 |
-| None  34C    P0            143W / 1000W |       0MiB / 183359MiB |      0%      Default |
+| N/A   36C    P0            195W / 1000W |  169230MiB / 183359MiB |      0%      Default |
 |                                         |                        |             Disabled |
 +-----------------------------------------+------------------------+----------------------+
-...
+|   4  NVIDIA B200                    On  |   00000000:9D:00.0 Off |                    0 |
+| N/A   32C    P0            139W / 1000W |       4MiB / 183359MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   5  NVIDIA B200                    On  |   00000000:C3:00.0 Off |                    0 |
+| N/A   30C    P0            139W / 1000W |       4MiB / 183359MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   6  NVIDIA B200                    On  |   00000000:D1:00.0 Off |                    0 |
+| N/A   34C    P0            141W / 1000W |       4MiB / 183359MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   7  NVIDIA B200                    On  |   00000000:DF:00.0 Off |                    0 |
+| N/A   35C    P0            139W / 1000W |       4MiB / 183359MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    0   N/A  N/A         2700092      C   VLLM::Worker_TP0_EP0                  16901... |
+|    1   N/A  N/A         2700093      C   VLLM::Worker_TP1_EP1                  16901... |
+|    2   N/A  N/A         2700094      C   VLLM::Worker_TP2_EP2                  16901... |
+|    3   N/A  N/A         2700095      C   VLLM::Worker_TP3_EP3                  16901... |
++-----------------------------------------------------------------------------------------+
 ```
 
 ### Verify Docker and NVIDIA Container Toolkit
@@ -289,7 +333,7 @@ docker info
 
 ## Starting Dynamo
 
-All startup scripts are located in this directory (`external/dynamo/`).
+Startup scripts can be found in the same directory (`NeMo-Agent-Toolkit/external/dynamo/`) at this `README.md`
 
 ### Option 1: Unified Mode (Development)
 
@@ -356,6 +400,9 @@ Separate `prefill` and `decode` workers for maximum throughput. More complex set
 
 ```bash
 cd /path/to/NeMo-Agent-Toolkit/external/dynamo
+
+export PREFILL_GPUS="0,1"
+export DECODE_GPUS="2,3"
 
 # Start Dynamo disaggregated
 bash start_dynamo_disagg.sh > startup_output.txt 2>&1
@@ -648,7 +695,7 @@ llms:
     model_name: llama-3.3-70b
     base_url: http://localhost:8099/v1
     api_key: dummy
-    
+
     # Prefix headers are enabled by default with template "nat-dynamo-{uuid}"
     # Optional: customize the template or routing hints
     # prefix_template: "react-benchmark-{uuid}"  # Custom template
@@ -866,7 +913,7 @@ ss -tlnp | grep 8099
 
 ```bash
 # Check `etcd` health
-curl http://localhost:2379/health 
+curl http://localhost:2379/health
 
 # Check `etcd` logs
 docker logs etcd-dynamo
