@@ -15,6 +15,7 @@
 
 """Tests for LLM endpoint validation before evaluation."""
 
+import asyncio
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -22,7 +23,7 @@ from nat.data_models.config import Config
 from nat.llm.openai_llm import OpenAIModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
-from nat.eval.llm_validator import validate_llm_endpoints, _is_404_error
+from nat.eval.llm_validator import validate_llm_endpoints, _is_404_error, _validate_single_llm
 
 
 class TestLLMEndpointValidation:
@@ -91,6 +92,23 @@ class TestLLMEndpointValidation:
         """Test validation succeeds when no LLMs are configured."""
         # Should not raise any error
         await validate_llm_endpoints(config_without_llms)
+
+    async def test_validation_rejects_invalid_config_structure(self):
+        """Test that validation rejects configs with invalid structure."""
+        # Config without llms attribute
+        config = Config()
+        delattr(config, "llms")
+        
+        with pytest.raises(ValueError, match="does not have 'llms' attribute"):
+            await validate_llm_endpoints(config)
+
+    async def test_validation_rejects_non_dict_llms(self):
+        """Test that validation rejects configs where llms is not a dict."""
+        config = Config()
+        config.llms = ["not", "a", "dict"]
+        
+        with pytest.raises(ValueError, match="must be a dict"):
+            await validate_llm_endpoints(config)
 
     @patch("nat.eval.llm_validator.WorkflowBuilder")
     async def test_validation_succeeds_with_accessible_endpoint(self, mock_builder_class, config_with_openai_llm):
@@ -257,6 +275,72 @@ class TestLLMEndpointValidation:
         assert "nim_llm" in error_msg or "404" in error_msg
 
 
+class TestTimeoutAndParallelValidation:
+    """Tests for timeout handling and parallel validation."""
+
+    @patch("nat.eval.llm_validator.WorkflowBuilder")
+    async def test_validation_times_out_gracefully(self, mock_builder_class):
+        """Test that validation handles timeouts without hanging."""
+        config = Config()
+        config.llms = {
+            "slow_llm": OpenAIModelConfig(
+                model_name="test-model",
+                base_url="http://localhost:8000/v1"
+            )
+        }
+
+        # Mock builder that hangs
+        mock_builder = AsyncMock()
+        mock_llm = AsyncMock()
+        
+        # Make ainvoke hang (longer than timeout)
+        async def slow_invoke(*args, **kwargs):
+            await asyncio.sleep(100)
+        
+        mock_llm.ainvoke = slow_invoke
+        mock_builder.add_llm = AsyncMock()
+        mock_builder.get_llm = AsyncMock(return_value=mock_llm)
+        mock_builder.__aenter__ = AsyncMock(return_value=mock_builder)
+        mock_builder.__aexit__ = AsyncMock(return_value=None)
+        
+        mock_builder_class.return_value = mock_builder
+
+        # Should not raise, just warn about timeout
+        await validate_llm_endpoints(config)
+        
+        # Verify it completed quickly (not hung)
+        # The actual timeout is handled by asyncio.wait_for in the implementation
+
+    @patch("nat.eval.llm_validator.WorkflowBuilder")
+    async def test_parallel_validation_of_multiple_llms(self, mock_builder_class):
+        """Test that multiple LLMs are validated in parallel batches."""
+        config = Config()
+        config.llms = {
+            f"llm_{i}": OpenAIModelConfig(
+                model_name=f"model-{i}",
+                base_url=f"http://localhost:800{i}/v1"
+            )
+            for i in range(10)
+        }
+
+        mock_builder = AsyncMock()
+        mock_llm = AsyncMock()
+        mock_llm.ainvoke = AsyncMock(return_value="ok")
+        
+        mock_builder.add_llm = AsyncMock()
+        mock_builder.get_llm = AsyncMock(return_value=mock_llm)
+        mock_builder.__aenter__ = AsyncMock(return_value=mock_builder)
+        mock_builder.__aexit__ = AsyncMock(return_value=None)
+        
+        mock_builder_class.return_value = mock_builder
+
+        await validate_llm_endpoints(config)
+        
+        # All 10 LLMs should have been validated
+        assert mock_builder.add_llm.call_count == 10
+        assert mock_llm.ainvoke.call_count == 10
+
+
 class Test404ErrorDetection:
     """Tests for the _is_404_error helper function."""
 
@@ -268,23 +352,39 @@ class Test404ErrorDetection:
         error = NotFoundError("Model not found")
         assert _is_404_error(error)
 
-    def test_detects_404_in_message(self):
-        """Test detection of 404 in error message."""
+    def test_detects_404_in_http_message(self):
+        """Test detection of HTTP 404 in error message."""
         error = Exception("HTTP 404: Model not found")
         assert _is_404_error(error)
+        
+        error2 = Exception("status code 404")
+        assert _is_404_error(error2)
 
-    def test_detects_not_found_phrase(self):
-        """Test detection of 'not found' phrase."""
+    def test_detects_model_not_found(self):
+        """Test detection of model-specific not found errors."""
         error = Exception("The model does not exist")
         assert _is_404_error(error)
+        
+        error2 = Exception("Model not found on server")
+        assert _is_404_error(error2)
 
     def test_does_not_detect_other_errors(self):
         """Test that non-404 errors are not detected as 404s."""
         auth_error = Exception("401: Unauthorized")
         rate_limit_error = Exception("429: Rate limit exceeded")
+        config_error = Exception("Configuration key not found")
         
         assert not _is_404_error(auth_error)
         assert not _is_404_error(rate_limit_error)
+        assert not _is_404_error(config_error)  # Generic "not found" without "model"
+
+    def test_does_not_false_positive_on_generic_not_found(self):
+        """Test that generic 'not found' without model context is not classified as 404."""
+        error = Exception("Resource not found in cache")
+        assert not _is_404_error(error)
+        
+        error2 = Exception("Service not deployed")
+        assert not _is_404_error(error2)
 
 
 class TestLLMValidationErrorMessages:

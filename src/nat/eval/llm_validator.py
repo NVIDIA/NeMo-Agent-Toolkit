@@ -23,18 +23,28 @@ training cancellation) and provides actionable error messages.
 The validation uses NAT's WorkflowBuilder to instantiate LLMs in a framework-agnostic way,
 then tests them with a minimal ainvoke() call. This approach works for all LLM types
 (OpenAI, NIM, AWS Bedrock, vLLM, etc.) and respects NAT's native auth and config system.
+
+Note: Validation invokes actual LLM endpoints with minimal test prompts. This may incur
+small API costs for cloud-hosted models.
 """
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING
 
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.workflow_builder import WorkflowBuilder
+from nat.data_models.llm import LLMBaseConfig
 
 if TYPE_CHECKING:
     from nat.data_models.config import Config
 
 logger = logging.getLogger(__name__)
+
+# Constants
+VALIDATION_TIMEOUT_SECONDS = 30  # Timeout for each LLM validation
+MAX_ERROR_MESSAGE_LENGTH = 500  # Truncate long error messages
+CONCURRENT_VALIDATION_BATCH_SIZE = 5  # Max LLMs to validate in parallel
 
 
 def _is_404_error(exception: Exception) -> bool:
@@ -43,7 +53,7 @@ def _is_404_error(exception: Exception) -> bool:
 
     This handles various 404 error formats from different LLM providers:
     - OpenAI SDK: openai.NotFoundError
-    - HTTP responses: 404 in error message
+    - HTTP responses: HTTP 404 or status code 404
     - LangChain wrappers: Various wrapped 404s
 
     Args:
@@ -59,18 +69,20 @@ def _is_404_error(exception: Exception) -> bool:
     if "notfounderror" in exception_type.lower():
         return True
 
-    # Check for 404 in error message
-    if "404" in exception_str:
+    # Check for HTTP 404 specifically (not just "404" which could appear in other contexts)
+    if any(pattern in exception_str for pattern in ["http 404", "status code 404", "status_code=404"]):
         return True
 
-    # Check for common "not found" phrases
-    if any(phrase in exception_str for phrase in ["not found", "does not exist", "not deployed"]):
+    # Check for model-specific not found errors
+    if "model" in exception_str and any(
+        phrase in exception_str for phrase in ["not found", "does not exist", "not deployed", "not available"]
+    ):
         return True
 
     return False
 
 
-def _get_llm_endpoint_info(llm_config) -> tuple[str | None, str | None]:
+def _get_llm_endpoint_info(llm_config: LLMBaseConfig) -> tuple[str | None, str | None]:
     """
     Extract endpoint and model information from an LLM config.
 
@@ -90,6 +102,99 @@ def _get_llm_endpoint_info(llm_config) -> tuple[str | None, str | None]:
     return base_url, model_name
 
 
+def _truncate_error_message(message: str, max_length: int = MAX_ERROR_MESSAGE_LENGTH) -> str:
+    """
+    Truncate error messages to prevent memory issues with large stack traces.
+
+    Args:
+        message: The error message to truncate.
+        max_length: Maximum length to keep.
+
+    Returns:
+        Truncated message with ellipsis if needed.
+    """
+    if len(message) <= max_length:
+        return message
+    return message[:max_length] + "... (truncated)"
+
+
+async def _validate_single_llm(
+    builder: WorkflowBuilder, llm_name: str, llm_config: LLMBaseConfig
+) -> tuple[str, str | None, str | None]:
+    """
+    Validate a single LLM endpoint.
+
+    Args:
+        builder: The WorkflowBuilder instance.
+        llm_name: Name of the LLM to validate.
+        llm_config: Configuration for the LLM.
+
+    Returns:
+        Tuple of (llm_name, error_type, error_message):
+        - error_type: "404" for model not found, "warning" for non-critical, None for success
+        - error_message: Description of the error, or None if successful
+    """
+    try:
+        logger.info("Validating LLM '%s' (type: %s)", llm_name, llm_config.type)
+
+        # Add LLM to builder (handles all LLM types)
+        await asyncio.wait_for(builder.add_llm(llm_name, llm_config), timeout=VALIDATION_TIMEOUT_SECONDS)
+
+        # Get LangChain-wrapped LLM instance
+        llm = await asyncio.wait_for(
+            builder.get_llm(llm_name, LLMFrameworkEnum.LANGCHAIN), timeout=VALIDATION_TIMEOUT_SECONDS
+        )
+
+        # Test with minimal prompt - this will hit the endpoint
+        await asyncio.wait_for(llm.ainvoke("test"), timeout=VALIDATION_TIMEOUT_SECONDS)
+        logger.info("LLM '%s' validated successfully", llm_name)
+        return (llm_name, None, None)
+
+    except TimeoutError:
+        error_msg = f"Validation timed out after {VALIDATION_TIMEOUT_SECONDS}s"
+        logger.warning("LLM '%s' validation timed out", llm_name)
+        return (llm_name, "warning", _truncate_error_message(error_msg))
+
+    except (KeyboardInterrupt, SystemExit):
+        # Don't catch system-level interrupts
+        raise
+
+    except Exception as invoke_error:
+        # Check if this is a 404 error (model not deployed)
+        if _is_404_error(invoke_error):
+            base_url, model_name = _get_llm_endpoint_info(llm_config)
+
+            error_msg = (
+                f"LLM '{llm_name}' validation failed: Model not found (404).\n"
+                f"\nThis typically means:\n"
+                f"  1. The model has not been deployed yet\n"
+                f"  2. The model name is incorrect\n"
+                f"  3. A training job was canceled and the model was never deployed\n"
+                f"\nLLM Configuration:\n"
+                f"  Type: {llm_config.type}\n"
+                f"  Endpoint: {base_url or 'N/A'}\n"
+                f"  Model: {model_name or 'N/A'}\n"
+                f"\nACTION REQUIRED:\n"
+                f"  1. Verify the model is deployed (check your deployment service)\n"
+                f"  2. If using NeMo Customizer, ensure training completed successfully\n"
+                f"  3. Check model deployment status in your platform\n"
+                f"  4. Verify the model name matches the deployed model\n"
+                f"\nOriginal error: {_truncate_error_message(str(invoke_error))}"
+            )
+            logger.error(error_msg)
+            return (llm_name, "404", error_msg)
+
+        else:
+            # Non-404 error - might be auth, rate limit, temporary issue, etc.
+            error_msg = (
+                f"Could not fully validate LLM '{llm_name}': {_truncate_error_message(str(invoke_error))}. "
+                f"This might be due to auth requirements, rate limits, or temporary issues. "
+                f"Evaluation will proceed, but may fail if the LLM is truly inaccessible."
+            )
+            logger.warning(error_msg)
+            return (llm_name, "warning", _truncate_error_message(str(invoke_error)))
+
+
 async def validate_llm_endpoints(config: "Config") -> None:
     """
     Validate that all LLM endpoints in the config are accessible.
@@ -103,78 +208,63 @@ async def validate_llm_endpoints(config: "Config") -> None:
     - 404 errors: Fail fast with detailed troubleshooting guidance
     - Other errors: Log warning but continue (to avoid false positives)
 
+    LLMs are validated in parallel batches to improve performance while respecting
+    rate limits. Each validation has a timeout to prevent hanging.
+
+    Note: This function invokes actual LLM endpoints, which may incur small API costs.
+
     Args:
         config: The NAT configuration object containing LLM definitions.
 
     Raises:
         RuntimeError: If any LLM endpoint has a 404 error (model not deployed).
+        ValueError: If config.llms is not properly structured.
     """
+    # Validate config structure
+    if not hasattr(config, "llms"):
+        raise ValueError("Config object does not have 'llms' attribute")
+
     if not config.llms:
         logger.debug("No LLMs defined in config, skipping validation")
         return
+
+    if not isinstance(config.llms, dict):
+        raise ValueError(f"config.llms must be a dict, got {type(config.llms)}")
 
     failed_llms = []  # List of (llm_name, error_message) tuples for 404 errors
     validation_warnings = []  # List of (llm_name, warning_message) tuples for non-critical errors
 
     # Use WorkflowBuilder to instantiate and test LLMs
     async with WorkflowBuilder() as builder:
-        for llm_name, llm_config in config.llms.items():
-            try:
-                logger.info("Validating LLM '%s' (type: %s)", llm_name, llm_config.type)
+        # Get list of LLMs to validate
+        llm_items = list(config.llms.items())
 
-                # Add LLM to builder (handles all LLM types)
-                await builder.add_llm(llm_name, llm_config)
+        # Validate in batches to respect rate limits
+        for batch_start in range(0, len(llm_items), CONCURRENT_VALIDATION_BATCH_SIZE):
+            batch = llm_items[batch_start : batch_start + CONCURRENT_VALIDATION_BATCH_SIZE]
 
-                # Get LangChain-wrapped LLM instance
-                llm = await builder.get_llm(llm_name, LLMFrameworkEnum.LANGCHAIN)
+            # Validate batch in parallel
+            validation_tasks = [_validate_single_llm(builder, llm_name, llm_config) for llm_name, llm_config in batch]
 
-                # Test with minimal prompt - this will hit the endpoint
-                try:
-                    await llm.ainvoke("test")
-                    logger.info("LLM '%s' validated successfully", llm_name)
+            results = await asyncio.gather(*validation_tasks, return_exceptions=True)
 
-                except Exception as invoke_error:
-                    # Check if this is a 404 error (model not deployed)
-                    if _is_404_error(invoke_error):
-                        base_url, model_name = _get_llm_endpoint_info(llm_config)
+            # Process results
+            for result in results:
+                if isinstance(result, BaseException):
+                    # Unexpected exception during validation
+                    # Note: SystemExit and KeyboardInterrupt are re-raised in _validate_single_llm
+                    # so we shouldn't see them here
+                    logger.warning("Unexpected error during validation: %s", _truncate_error_message(str(result)))
+                    validation_warnings.append(("unknown", _truncate_error_message(str(result))))
+                else:
+                    # Normal result: (llm_name, error_type, error_message)
+                    llm_name, error_type, error_message = result
 
-                        error_msg = (
-                            f"LLM '{llm_name}' validation failed: Model not found (404).\n"
-                            f"This typically means:\n"
-                            f"  1. The model has not been deployed yet\n"
-                            f"  2. The model name is incorrect\n"
-                            f"  3. A training job was canceled and the model was never deployed\n"
-                            f"\nLLM Configuration:\n"
-                            f"  Type: {llm_config.type}\n"
-                            f"  Endpoint: {base_url or 'N/A'}\n"
-                            f"  Model: {model_name or 'N/A'}\n"
-                            f"\nACTION REQUIRED:\n"
-                            f"  1. Verify the model is deployed: Check your deployment service\n"
-                            f"  2. If using NeMo Customizer, ensure training completed successfully\n"
-                            f"  3. Check model deployment status in your platform\n"
-                            f"  4. Verify the model name matches the deployed model\n"
-                            f"\nOriginal error: {invoke_error}"
-                        )
-                        logger.error(error_msg)
-                        failed_llms.append((llm_name, error_msg))
-
-                    else:
-                        # Non-404 error - might be auth, rate limit, temporary issue, etc.
-                        # Don't fail validation, but warn the user
-                        warning_msg = (
-                            f"Could not fully validate LLM '{llm_name}': {invoke_error}. "
-                            f"This might be due to auth requirements, rate limits, or temporary issues. "
-                            f"Evaluation will proceed, but may fail if the LLM is truly inaccessible."
-                        )
-                        logger.warning(warning_msg)
-                        validation_warnings.append((llm_name, str(invoke_error)))
-
-            except Exception as e:
-                # Error during builder setup (before ainvoke)
-                # This could be import errors, config errors, etc.
-                warning_msg = f"Could not validate LLM '{llm_name}' due to setup error: {e}"
-                logger.warning(warning_msg)
-                validation_warnings.append((llm_name, str(e)))
+                    if error_type == "404":
+                        failed_llms.append((llm_name, error_message))
+                    elif error_type == "warning":
+                        validation_warnings.append((llm_name, error_message))
+                    # If error_type is None, validation succeeded (no action needed)
 
     # Report non-critical warnings
     if validation_warnings:
