@@ -28,7 +28,7 @@ This example combines two components to show OAuth2-protected agent-to-agent com
 **Server Side (Calculator A2A)**
 - **Type**: A2A Server (Resource Server)
 - **Authentication**: OAuth2 with JWT validation
-- **Skills**: Basic arithmetic operations (add, subtract, multiply, divide, compare) and current datetime
+- **Skills**: Basic arithmetic operations (add, subtract, multiply, divide, compare)
 
 **Client Side (Math Assistant)**
 - **Type**: Per-user A2A client workflow

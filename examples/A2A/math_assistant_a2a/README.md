@@ -104,7 +104,17 @@ nat run --config_file examples/A2A/math_assistant_a2a/configs/config.yml \
 
 ### Additional Examples
 
-For comprehensive examples demonstrating different capabilities (basic calculations, time-integrated math, multi-step problems), see [`data/sample_queries.json`](data/sample_queries.json).
+For more query examples, see [`data/sample_queries.json`](data/sample_queries.json).
+
+**Run a specific query by its ID:**
+
+```bash
+# Run query by ID (e.g., ID 4)
+QUERY_ID=4
+QUESTION=$(jq -r --arg id "$QUERY_ID" '.[] | select(.id == ($id | tonumber)) | .question' examples/A2A/math_assistant_a2a/data/sample_queries.json)
+echo "Question: $QUESTION"
+nat run --config_file examples/A2A/math_assistant_a2a/configs/config.yml --input "$QUESTION"
+```
 
 ## Per-User Workflow Architecture
 
