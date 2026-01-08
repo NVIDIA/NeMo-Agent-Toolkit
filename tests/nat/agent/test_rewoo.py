@@ -16,8 +16,6 @@
 from unittest.mock import patch
 
 import pytest
-
-from nat.builder.function import FunctionGroup
 from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.human import HumanMessage
 from langchain_core.messages.tool import ToolMessage
@@ -32,6 +30,7 @@ from nat.agent.rewoo_agent.agent import ReWOOEvidence
 from nat.agent.rewoo_agent.agent import ReWOOGraphState
 from nat.agent.rewoo_agent.agent import ReWOOPlanStep
 from nat.agent.rewoo_agent.register import ReWOOAgentWorkflowConfig
+from nat.builder.function import FunctionGroup
 
 
 async def test_state_schema():
