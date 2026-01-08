@@ -540,6 +540,7 @@ class JobStore(DaskClientMixin):
             if len(expired_ids) > 0:
                 successfully_expired = []
                 for job_id in expired_ids:
+                    var = None
                     try:
                         var = Variable(name=job_id, client=client)
                         try:
@@ -550,10 +551,17 @@ class JobStore(DaskClientMixin):
                         except TimeoutError:
                             pass
 
-                        var.delete()
                         successfully_expired.append(job_id)
                     except Exception:
                         logger.exception("Failed to expire %s", job_id)
+
+                    finally:
+                        if var is not None:
+                            try:
+                                var.delete()
+                            except Exception:
+                                logger.exception("Failed to delete variable %s", job_id)
+                            del var
 
                 await session.execute(
                     update(JobInfo).where(JobInfo.job_id.in_(successfully_expired)).values(is_expired=True))
