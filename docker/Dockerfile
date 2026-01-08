@@ -33,7 +33,10 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     export TZ=Etc/UTC && \
     apt-get update && \
     apt upgrade -y && \
-    apt-get install --no-install-recommends  -y ca-certificates tzdata git && \
+    apt-get install --no-install-recommends  -y \
+        ca-certificates \
+        git \
+        tzdata && \
     apt clean && \
     update-ca-certificates
 
@@ -43,7 +46,7 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 
 
 # TODO: REVERT LATER
-RUN git clone --branch david-rel-13-cve-mem-leak git@github.com:dagardner-nv/NeMo-Agent-Toolkit.git /workspace
+RUN git clone --branch david-rel-13-cve-mem-leak https://github.com/dagardner-nv/NeMo-Agent-Toolkit.git /workspace
 
 # Set working directory
 WORKDIR /workspace
