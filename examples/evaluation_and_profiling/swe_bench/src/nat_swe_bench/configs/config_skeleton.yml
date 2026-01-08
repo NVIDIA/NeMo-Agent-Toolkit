@@ -26,8 +26,8 @@ eval:
     max_concurrency: 4
 
     dataset:
-      _type: json
-      file_path: examples/evaluation_and_profiling/swe_bench/data/test_dataset_lite.json
+      _type: parquet
+      file_path: hf://datasets/princeton-nlp/SWE-bench_Lite/data/test-00000-of-00001.parquet
       id_key: instance_id
       structure: # For swe-bench the entire row is the input
         disable: true
