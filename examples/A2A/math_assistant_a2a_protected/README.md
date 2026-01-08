@@ -215,7 +215,7 @@ Look for: `Listening on: http://0.0.0.0:8080`
 
    **Audience Mapper** (adds calculator URL to audience claim)
 
-   - Click **Add mapper** > **By configuration**
+   - Click **Configura a new mapper**
    - Select **Audience** mapper type
    - Configure the mapper:
      - **Name**: `calculator-audience`
@@ -243,9 +243,7 @@ Look for: `Listening on: http://0.0.0.0:8080`
 
 ### Step 3: Register Math Assistant Client
 
-You have two options:
-
-#### Option A: Manual Client Registration (Recommended for Testing)
+You can register the client manually or use the dynamic client registration (DCR) feature. For testing, manual registration is used.
 
 1. In Keycloak Admin Console, go to **Clients** (left sidebar)
 2. Click **Create client**
@@ -260,6 +258,7 @@ You have two options:
    - **Authentication flow:**
      - ✓ Standard flow (authorization code)
      - ✓ Direct access grants
+     - ✓ Consent required
    - Click **Next**
 
 5. **Login settings:**
@@ -267,39 +266,20 @@ You have two options:
    - **Web origins**: `http://localhost:8000`
    - Click **Save**
 
-6. **Get client credentials:**
-   - Go to **Credentials** tab
-   - Copy the **Client secret**
-   - Note the **Client ID**: `math-assistant-client`
-
-7. **Configure client scopes:**
+6. **Add client scope if not already added:**
    - Go to **Client scopes** tab
    - Click **Add client scope**
    - Select `calculator_a2a_execute`
    - Choose **Optional**
    - Click **Add**
 
-#### Option B: Dynamic Client Registration (DCR)
+7. **Get client credentials:**
+   - Go to **Credentials** tab
+   - Copy the **Client secret**
+   - Note the **Client ID**: `math-assistant-client`
 
-The NeMo Agent toolkit OAuth2 provider can use DCR if Keycloak is configured to allow it. See [Keycloak documentation](https://www.keycloak.org/securing-apps/client-registration) for details.
 
-**Note:** For testing, manual registration (Option A) is simpler.
-
-### Step 4: Set Environment Variables
-
-After registering the client:
-
-```bash
-# Set these in your terminal where you'll run the client
-export CALCULATOR_CLIENT_ID="math-assistant-client"
-export CALCULATOR_CLIENT_SECRET="<paste-client-secret-from-keycloak>"
-
-# Verify they're set
-echo "Client ID: ${CALCULATOR_CLIENT_ID}"
-echo "Client Secret: ${CALCULATOR_CLIENT_SECRET:0:10}..."
-```
-
-### Step 5: Start the Protected Calculator Server
+### Step 4: Start the Protected Calculator Server
 
 ```bash
 # Terminal 1
@@ -312,8 +292,8 @@ You should see:
 [INFO] Starting A2A server 'Protected Calculator' at http://localhost:10000
 ```
 
-### Step 6: Run the Math Assistant Client
-
+### Step 5: Run the Math Assistant Client
+Set the client id and client secret from `Step 3` in the environment variables:
 ```bash
 # Terminal 2
 # Make sure environment variables are set
@@ -328,10 +308,11 @@ nat run --config_file examples/A2A/math_assistant_a2a_protected/configs/config-c
 
 1. **Browser opens** with Keycloak login page
 2. **Log in** with any user (or create one)
-3. **Consent page** may show requesting `calculator_a2a_execute` (depending on realm consent settings)
+3. **Consent page** appears requesting `calculator_a2a_execute` scope
 4. **Browser redirects** back to `localhost:8000/auth/redirect`
 5. **Workflow continues** and calls the calculator
 6. **Response returned** successfully
+
 
 Sample output:
 ```text
