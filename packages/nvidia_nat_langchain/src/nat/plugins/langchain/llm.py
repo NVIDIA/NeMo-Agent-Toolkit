@@ -268,7 +268,7 @@ async def litellm_langchain(llm_config: LiteLlmModelConfig, _builder: Builder):
 async def huggingface_langchain(llm_config: HuggingFaceConfig, _builder: Builder):
 
     from nat.llm.huggingface_llm import get_cached_model
-    from nat.plugins.langchain.chat_models.huggingface import HuggingFaceModel
+    from nat.plugins.langchain.chat_models.huggingface import ChatHuggingFace
 
     cached = get_cached_model(llm_config.model_name)
 
@@ -276,6 +276,6 @@ async def huggingface_langchain(llm_config: HuggingFaceConfig, _builder: Builder
         raise ValueError(f"HuggingFace model '{llm_config.model_name}' not loaded. "
                          "The provider should have loaded it first.")
 
-    client = HuggingFaceModel(llm_config.model_name, llm_config, cached)
+    client = ChatHuggingFace(llm_config.model_name, llm_config, cached)
 
     yield _patch_llm_based_on_config(client, llm_config)

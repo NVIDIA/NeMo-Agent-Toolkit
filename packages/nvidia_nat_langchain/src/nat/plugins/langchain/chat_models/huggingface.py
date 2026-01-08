@@ -35,7 +35,7 @@ from nat.llm.huggingface_llm import HuggingFaceConfig
 logger = logging.getLogger(__name__)
 
 
-class HuggingFaceModel(BaseChatModel):
+class ChatHuggingFace(BaseChatModel):
     """LangChain-compatible wrapper for local HuggingFace models."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
