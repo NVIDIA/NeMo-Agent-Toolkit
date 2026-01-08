@@ -30,6 +30,7 @@ small API costs for cloud-hosted models.
 
 import asyncio
 import logging
+import time
 from typing import TYPE_CHECKING
 
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -45,6 +46,7 @@ logger = logging.getLogger(__name__)
 VALIDATION_TIMEOUT_SECONDS = 30  # Timeout for each LLM validation
 MAX_ERROR_MESSAGE_LENGTH = 500  # Truncate long error messages
 CONCURRENT_VALIDATION_BATCH_SIZE = 5  # Max LLMs to validate in parallel
+VALIDATION_PROMPT = "test"  # Minimal prompt for endpoint validation
 
 
 def _is_404_error(exception: Exception) -> bool:
@@ -106,6 +108,9 @@ def _truncate_error_message(message: str, max_length: int = MAX_ERROR_MESSAGE_LE
     """
     Truncate error messages to prevent memory issues with large stack traces.
 
+    Keeps both the start and end of the message to preserve context from both
+    the error description (start) and the stack trace (end).
+
     Args:
         message: The error message to truncate.
         max_length: Maximum length to keep.
@@ -115,7 +120,11 @@ def _truncate_error_message(message: str, max_length: int = MAX_ERROR_MESSAGE_LE
     """
     if len(message) <= max_length:
         return message
-    return message[:max_length] + "... (truncated)"
+
+    # Keep first and last portions to preserve both error description and stack trace
+    separator = " ... (truncated) ... "
+    keep_length = (max_length - len(separator)) // 2
+    return f"{message[:keep_length]}{separator}{message[-keep_length:]}"
 
 
 async def _validate_single_llm(
@@ -136,6 +145,7 @@ async def _validate_single_llm(
     """
     try:
         logger.info("Validating LLM '%s' (type: %s)", llm_name, llm_config.type)
+        start_time = time.time()
 
         # Add LLM to builder (handles all LLM types)
         await asyncio.wait_for(builder.add_llm(llm_name, llm_config), timeout=VALIDATION_TIMEOUT_SECONDS)
@@ -146,8 +156,10 @@ async def _validate_single_llm(
         )
 
         # Test with minimal prompt - this will hit the endpoint
-        await asyncio.wait_for(llm.ainvoke("test"), timeout=VALIDATION_TIMEOUT_SECONDS)
-        logger.info("LLM '%s' validated successfully", llm_name)
+        await asyncio.wait_for(llm.ainvoke(VALIDATION_PROMPT), timeout=VALIDATION_TIMEOUT_SECONDS)
+
+        duration = time.time() - start_time
+        logger.info("LLM '%s' validated successfully in %.2fs", llm_name, duration)
         return (llm_name, None, None)
 
     except TimeoutError:
@@ -251,9 +263,13 @@ async def validate_llm_endpoints(config: "Config") -> None:
             # Process results
             for result in results:
                 if isinstance(result, BaseException):
+                    # Re-raise system interrupts if they somehow got through
+                    if isinstance(result, (KeyboardInterrupt, SystemExit)):
+                        raise result
+
                     # Unexpected exception during validation
-                    # Note: SystemExit and KeyboardInterrupt are re-raised in _validate_single_llm
-                    # so we shouldn't see them here
+                    # Note: SystemExit and KeyboardInterrupt should be re-raised in _validate_single_llm
+                    # but we check again here as a defensive measure
                     logger.warning("Unexpected error during validation: %s", _truncate_error_message(str(result)))
                     validation_warnings.append(("unknown", _truncate_error_message(str(result))))
                 else:
@@ -265,6 +281,10 @@ async def validate_llm_endpoints(config: "Config") -> None:
                     elif error_type == "warning":
                         validation_warnings.append((llm_name, error_message))
                     # If error_type is None, validation succeeded (no action needed)
+
+    # Calculate validation metrics
+    total_llms = len(llm_items)
+    succeeded_count = total_llms - len(failed_llms) - len(validation_warnings)
 
     # Report non-critical warnings
     if validation_warnings:
@@ -278,6 +298,16 @@ async def validate_llm_endpoints(config: "Config") -> None:
     # If any LLMs have 404 errors, fail validation
     if failed_llms:
         error_summary = "\n\n".join([f"LLM '{name}':\n{msg}" for name, msg in failed_llms])
+
+        # Log metrics before raising error
+        logger.error(
+            "Validation summary: %d total, %d succeeded, %d warned, %d failed (404)",
+            total_llms,
+            succeeded_count,
+            len(validation_warnings),
+            len(failed_llms),
+        )
+
         raise RuntimeError(
             f"LLM endpoint validation failed for {len(failed_llms)} LLM(s) with 404 errors:\n\n"
             f"{error_summary}\n\n"
@@ -285,4 +315,10 @@ async def validate_llm_endpoints(config: "Config") -> None:
             f"Please resolve the deployment issues above before retrying."
         )
 
-    logger.info("All LLM endpoints validated successfully")
+    # Log success metrics
+    logger.info(
+        "All LLM endpoints validated successfully - %d total, %d succeeded, %d warned",
+        total_llms,
+        succeeded_count,
+        len(validation_warnings),
+    )
