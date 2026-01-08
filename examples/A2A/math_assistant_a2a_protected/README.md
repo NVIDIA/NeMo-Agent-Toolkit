@@ -25,12 +25,12 @@ This example demonstrates a complete end-to-end OAuth2-protected A2A setup with:
 
 This example combines two components to show OAuth2-protected agent-to-agent communication:
 
-**Server Side (Calculator A2A)**
+### Protected Calculator A2A Server
 - **Type**: A2A Server (Resource Server)
 - **Authentication**: OAuth2 with JWT validation
 - **Skills**: Basic arithmetic operations (add, subtract, multiply, divide, compare)
 
-**Client Side (Math Assistant)**
+### Math Assistant A2A Client
 - **Type**: Per-user A2A client workflow
 - **Authentication**: OAuth2 authorization code flow to obtain JWT tokens for authentication
 - **Functionality**: Connects to calculator server, local time operations, logic evaluator to answer math questions
@@ -215,7 +215,7 @@ Look for: `Listening on: http://0.0.0.0:8080`
 
    **Audience Mapper** (adds calculator URL to audience claim)
 
-   - Click **Configura a new mapper**
+   - Click **Configure a new mapper**
    - Select **Audience** mapper type
    - Configure the mapper:
      - **Name**: `calculator-audience`

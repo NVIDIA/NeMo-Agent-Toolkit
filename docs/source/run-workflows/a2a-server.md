@@ -211,7 +211,7 @@ A2A servers can be protected using OAuth2 authentication with JWT token validati
 
 For detailed authentication setup and configuration, see:
 - [A2A Authentication Documentation](../components/auth/a2a-auth.md)
-- [OAuth2 Protected Math Assistant A2A example](../../examples/A2A/math_assistant_a2a_protected/README.md)
+- [OAuth2 Protected Math Assistant A2A example](../../../examples/A2A/math_assistant_a2a_protected/README.md)
 
 ### Best Practices
 
