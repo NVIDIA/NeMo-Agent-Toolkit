@@ -16,11 +16,15 @@
 """LLM endpoint validation utilities for evaluation."""
 
 import logging
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from nat.data_models.config import Config
 
 logger = logging.getLogger(__name__)
 
 
-async def validate_llm_endpoints(config: "Config") -> None:  # noqa: F821
+async def validate_llm_endpoints(config: "Config") -> None:
     """
     Validate that all LLM endpoints in the config are accessible.
 
@@ -44,17 +48,17 @@ async def validate_llm_endpoints(config: "Config") -> None:  # noqa: F821
         try:
             # Only validate OpenAI-compatible endpoints
             if llm_config.type not in ["openai", "nim"]:
-                logger.debug(f"Skipping validation for LLM '{llm_name}' (type: {llm_config.type})")
+                logger.debug("Skipping validation for LLM '%s' (type: %s)", llm_name, llm_config.type)
                 continue
 
             base_url = getattr(llm_config, "base_url", None)
             model_name = getattr(llm_config, "model_name", None)
 
             if not base_url:
-                logger.debug(f"LLM '{llm_name}' has no base_url, skipping validation")
+                logger.debug("LLM '%s' has no base_url, skipping validation", llm_name)
                 continue
 
-            logger.info(f"Validating LLM endpoint '{llm_name}': {base_url}")
+            logger.info("Validating LLM endpoint '%s': %s", llm_name, base_url)
 
             # Try to connect to the endpoint
             try:
@@ -68,50 +72,40 @@ async def validate_llm_endpoints(config: "Config") -> None:  # noqa: F821
 
                 # Simple connectivity check - list models
                 try:
-                    models = client.models.list()
-                    logger.info(f"LLM endpoint '{llm_name}' is accessible ({len(list(models.data))} models available)")
+                    client.models.list()  # Just check if endpoint is accessible
+                    logger.info("LLM endpoint '%s' is accessible", llm_name)
+                except openai.NotFoundError as nf_error:
+                    # 404 means endpoint is reachable but model doesn't exist
+                    error_msg = (
+                        f"LLM endpoint '{llm_name}' is reachable but model '{model_name}' was not found (404). "
+                        f"This typically means:\n"
+                        f"  1. The model has not been deployed yet\n"
+                        f"  2. The model name is incorrect\n"
+                        f"  3. A training job was canceled and the model was never deployed\n"
+                        f"\nEndpoint: {base_url}\n"
+                        f"Model: {model_name}\n"
+                        f"\nACTION REQUIRED:\n"
+                        f"  1. Verify the model is deployed: Check your NIM deployment service\n"
+                        f"  2. If using NeMo Customizer, ensure training completed successfully\n"
+                        f"  3. Check model deployment status in your NeMo MS platform\n"
+                        f"  4. Verify the model name matches the deployed model\n"
+                        f"\nOriginal error: {nf_error}"
+                    )
+                    logger.error(error_msg)
+                    failed_llms.append((llm_name, error_msg))
+                    continue
                 except Exception as list_error:
-                    # Some endpoints don't support /models, try a simple completion instead
-                    logger.debug(f"Models list failed for '{llm_name}', trying completion test: {list_error}")
-
-                    # Try a minimal completion request
-                    try:
-                        client.completions.create(
-                            model=model_name or "test",
-                            prompt="test",
-                            max_tokens=1,
-                        )
-                        logger.info(f"LLM endpoint '{llm_name}' is accessible (completion test passed)")
-                    except openai.NotFoundError as nf_error:
-                        # 404 means endpoint is reachable but model doesn't exist
-                        error_msg = (
-                            f"LLM endpoint '{llm_name}' is reachable but model '{model_name}' was not found (404). "
-                            f"This typically means:\n"
-                            f"  1. The model has not been deployed yet\n"
-                            f"  2. The model name is incorrect\n"
-                            f"  3. A training job was canceled and the model was never deployed\n"
-                            f"\nEndpoint: {base_url}\n"
-                            f"Model: {model_name}\n"
-                            f"\nACTION REQUIRED:\n"
-                            f"  1. Verify the model is deployed: Check your NIM deployment service\n"
-                            f"  2. If using NeMo Customizer, ensure training completed successfully\n"
-                            f"  3. Check model deployment status in your NeMo MS platform\n"
-                            f"  4. Verify the model name matches the deployed model\n"
-                            f"\nOriginal error: {nf_error}"
-                        )
-                        logger.error(error_msg)
-                        failed_llms.append((llm_name, error_msg))
-                        continue
-                    except Exception as comp_error:
-                        # Other errors might be okay (auth, rate limit, etc.)
-                        logger.warning(
-                            f"LLM endpoint '{llm_name}' validation inconclusive: {comp_error}. "
-                            f"Proceeding with evaluation (endpoint may still work)."
-                        )
+                    # Other errors might be okay (auth, rate limit, etc.) or endpoint doesn't support /models
+                    logger.warning(
+                        "LLM endpoint '%s' validation inconclusive: %s. "
+                        "Proceeding with evaluation (endpoint may still work).",
+                        llm_name,
+                        list_error,
+                    )
 
             except ImportError:
                 logger.warning(
-                    f"Cannot validate LLM '{llm_name}': openai package not installed. Install with: pip install openai"
+                    "Cannot validate LLM '%s': openai package not installed. Install with: pip install openai", llm_name
                 )
             except Exception as e:
                 error_msg = (
@@ -126,7 +120,7 @@ async def validate_llm_endpoints(config: "Config") -> None:  # noqa: F821
                 failed_llms.append((llm_name, error_msg))
 
         except Exception as e:
-            logger.warning(f"Error during validation of LLM '{llm_name}': {e}")
+            logger.warning("Error during validation of LLM '%s': %s", llm_name, e)
 
     # If any critical LLMs failed, raise an error
     if failed_llms:

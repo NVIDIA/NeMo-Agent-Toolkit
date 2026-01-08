@@ -227,17 +227,17 @@ class TestLLMValidationErrorMessages:
         )
         mock_openai.OpenAI.return_value = mock_client
 
-        try:
+        with pytest.raises(RuntimeError) as exc_info:
             await validate_llm_endpoints(config)
-        except RuntimeError as e:
-            error_msg = str(e)
-            # Should mention training-related causes
-            assert any(phrase in error_msg.lower() for phrase in [
-                "training",
-                "deployed",
-                "canceled",
-                "model has not been deployed"
-            ])
+
+        error_msg = str(exc_info.value)
+        # Should mention training-related causes
+        assert any(phrase in error_msg.lower() for phrase in [
+            "training",
+            "deployed",
+            "canceled",
+            "model has not been deployed"
+        ])
 
 
 class TestLLMValidationIntegration:

@@ -417,10 +417,13 @@ class NeMoCustomizerTrainerAdapter(TrainerAdapter):
                     error_msg = status.message or "Training job was canceled"
                     logger.error(f"Training job {ref.run_id} CANCELED: {error_msg}")
                     
+                    # Format progress safely
+                    progress_str = f"{status.progress:.1f}%" if status.progress is not None else "unknown progress"
+                    
                     # If deployment was expected, raise an error
                     if self.adapter_config.deploy_on_completion:
                         raise RuntimeError(
-                            f"Training job {ref.run_id} was canceled at {status.progress:.1f}% progress: {error_msg}. "
+                            f"Training job {ref.run_id} was canceled at {progress_str}: {error_msg}. "
                             f"Model was not trained and will NOT be deployed. "
                             f"Evaluation will fail because the model does not exist. "
                             f"\n\nACTION REQUIRED:"
@@ -433,7 +436,7 @@ class NeMoCustomizerTrainerAdapter(TrainerAdapter):
                     else:
                         # Just log warning if deployment wasn't expected
                         logger.warning(
-                            f"Training job {ref.run_id} was canceled at {status.progress:.1f}% progress. "
+                            f"Training job {ref.run_id} was canceled at {progress_str}. "
                             f"No deployment was configured (deploy_on_completion=False)."
                         )
                         return status
