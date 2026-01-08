@@ -21,6 +21,7 @@ dependencies = [
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
   # Keep sorted!!!
   "nvidia-nat~=1.4",
+  "accelerate",
   "langchain~=1.2.0",
   "langchain-aws~=1.1.0",
   "langchain-classic~=1.0.1",
@@ -31,6 +32,8 @@ dependencies = [
   "langchain-openai~=1.1.6",
   "langchain-tavily~=0.2.16",
   "langgraph~=1.0.5",
+  "torch",
+  "transformers",
 ]
 requires-python = ">=3.11,<3.14"
 description = "Subpackage for LangChain/LangGraph integration in NeMo Agent toolkit"

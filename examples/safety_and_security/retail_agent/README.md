@@ -544,10 +544,10 @@ After identifying vulnerabilities through red teaming, you can add defense middl
 
 #### Optional Dependencies
 
-To use Hugging Face guard models (such as Qwen Guard), install the Hugging Face dependencies:
+To use Hugging Face guard models (such as Qwen Guard), install the LangChain plugin which includes the HuggingFace LLM provider:
 
 ```bash
-uv pip install -e '.[huggingface]'
+uv pip install "nvidia-nat[langchain]"
 ```
 
 To use the **PII Defense**, install the PII dependencies:

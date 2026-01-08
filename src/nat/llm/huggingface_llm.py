@@ -27,12 +27,40 @@ from nat.data_models.llm import LLMBaseConfig
 
 logger = logging.getLogger(__name__)
 
-# Global cache for loaded models
-# Models remain cached for the provider's lifetime (not per-query!) to enable fast reuse:
-# - During nat serve: Cached while server runs, cleaned up on shutdown
-# - During nat red-team: Cached across all evaluation queries, cleaned up when complete
-# - During nat run: Cached for single workflow execution, cleaned up when done
-_model_cache: dict[str, dict[str, Any]] = {}
+
+class ModelCache:
+    """Singleton cache for loaded HuggingFace models.
+
+    Models remain cached for the provider's lifetime (not per-query!) to enable fast reuse:
+    - During nat serve: Cached while server runs, cleaned up on shutdown
+    - During nat red-team: Cached across all evaluation queries, cleaned up when complete
+    - During nat run: Cached for single workflow execution, cleaned up when done
+    """
+
+    _instance: "ModelCache | None" = None
+    _cache: dict[str, dict[str, Any]]
+
+    def __new__(cls) -> "ModelCache":
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._cache = {}
+        return cls._instance
+
+    def get(self, model_name: str) -> dict[str, Any] | None:
+        """Return cached model data or None if not loaded."""
+        return self._cache.get(model_name)
+
+    def set(self, model_name: str, data: dict[str, Any]) -> None:
+        """Cache model data."""
+        self._cache[model_name] = data
+
+    def remove(self, model_name: str) -> None:
+        """Remove model from cache."""
+        self._cache.pop(model_name, None)
+
+    def __contains__(self, model_name: str) -> bool:
+        """Check if model is cached."""
+        return model_name in self._cache
 
 
 class HuggingFaceConfig(LLMBaseConfig, name="huggingface"):
@@ -47,14 +75,15 @@ class HuggingFaceConfig(LLMBaseConfig, name="huggingface"):
 
     max_new_tokens: int = Field(default=128, description="Maximum number of new tokens to generate")
 
-    temperature: float = Field(default=0.0, description="Sampling temperature")
+    temperature: float = Field(default=0.0,
+                               description="Sampling temperature (0 = deterministic greedy, > 0 = sampling enabled)")
 
     trust_remote_code: bool = Field(default=False, description="Trust remote code when loading model")
 
 
 def get_cached_model(model_name: str) -> dict[str, Any] | None:
     """Return cached model data (model, tokenizer, torch) or None if not loaded."""
-    return _model_cache.get(model_name)
+    return ModelCache().get(model_name)
 
 
 async def _cleanup_model(model_name: str) -> None:
@@ -64,9 +93,10 @@ async def _cleanup_model(model_name: str) -> None:
         model_name: Name of the model to clean up.
     """
     try:
-        if model_name in _model_cache:
-            cached = _model_cache[model_name]
+        cache = ModelCache()
+        cached = cache.get(model_name)
 
+        if cached is not None:
             # Move model to CPU to free GPU memory
             if "model" in cached:
                 cached["model"].to("cpu")
@@ -77,7 +107,7 @@ async def _cleanup_model(model_name: str) -> None:
                 cached["torch"].cuda.empty_cache()
 
             # Remove from cache
-            del _model_cache[model_name]
+            cache.remove(model_name)
 
             logger.debug("Model cleaned up: %s", model_name)
     except Exception:
@@ -106,8 +136,10 @@ async def huggingface_provider(
         raise ImportError(
             "transformers and torch required. Install: pip install transformers torch accelerate") from err
 
+    cache = ModelCache()
+
     # Load model if not cached
-    if config.model_name not in _model_cache:
+    if config.model_name not in cache:
         logger.debug("Loading model from HuggingFace: %s", config.model_name)
 
         # Load tokenizer
@@ -120,7 +152,7 @@ async def huggingface_provider(
                                                      trust_remote_code=config.trust_remote_code)
 
         # Cache it
-        _model_cache[config.model_name] = {"model": model, "tokenizer": tokenizer, "torch": torch}
+        cache.set(config.model_name, {"model": model, "tokenizer": tokenizer, "torch": torch})
 
         logger.debug("Model loaded: %s on device: %s", config.model_name, config.device)
     else:

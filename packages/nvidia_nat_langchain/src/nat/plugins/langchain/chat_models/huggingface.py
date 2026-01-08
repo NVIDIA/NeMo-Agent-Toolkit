@@ -102,9 +102,11 @@ class ChatHuggingFace(BaseChatModel):
         model_inputs = self._tokenizer([text], return_tensors="pt").to(self._model.device)
 
         with self._torch.no_grad():
+
             generated_ids = self._model.generate(
                 **model_inputs,
                 max_new_tokens=self._hf_config.max_new_tokens,
+                # Temperature > 0 enables sampling; otherwise temperature is ignored
                 temperature=self._hf_config.temperature if self._hf_config.temperature > 0 else None,
                 do_sample=self._hf_config.temperature > 0,
                 pad_token_id=self._tokenizer.eos_token_id,
@@ -143,6 +145,7 @@ class ChatHuggingFace(BaseChatModel):
             **model_inputs,
             "streamer": streamer,
             "max_new_tokens": self._hf_config.max_new_tokens,
+            # Temperature > 0 enables sampling; otherwise temperature is ignored
             "temperature": self._hf_config.temperature if self._hf_config.temperature > 0 else None,
             "do_sample": self._hf_config.temperature > 0,
             "pad_token_id": self._tokenizer.eos_token_id,

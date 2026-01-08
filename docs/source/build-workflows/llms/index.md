@@ -155,14 +155,8 @@ The LiteLLM LLM provider is defined by the {py:class}`~nat.llm.litellm_llm.LiteL
 
 ### HuggingFace
 
-HuggingFace is a general purpose LLM provider that can be used with any model supported by the HuggingFace API.
+HuggingFace is a general-purpose LLM provider that can be used with any model supported by the HuggingFace API.
 See the [HuggingFace documentation](https://huggingface.co/docs) for more information.
-
-**Installation:**
-
-```bash
-uv pip install "nvidia-nat[huggingface]"
-```
 
 The HuggingFace LLM provider is defined by the {py:class}`~nat.llm.huggingface_llm.HuggingFaceConfig` class.
 
