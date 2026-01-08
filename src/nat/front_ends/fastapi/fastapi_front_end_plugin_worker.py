@@ -100,7 +100,6 @@ class FastApiFrontEndPluginWorkerBase(ABC):
         self._scheduler_address = os.environ.get("NAT_DASK_SCHEDULER_ADDRESS")
         self._db_url = os.environ.get("NAT_JOB_STORE_DB_URL")
         self._config_file_path = get_config_file_path()
-        self._using_dask_threads: bool = os.environ.get("NAT_USE_DASK_THREADS", "0") == "1"
 
         if self._scheduler_address is not None:
             if not _DASK_AVAILABLE:
@@ -741,14 +740,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             """Background task to run the workflow."""
             job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
             try:
-                if self._using_dask_threads:
-                    async with session_manager.session():
-                        result = await generate_single_response(
-                            payload, session_manager, result_type=session_manager.workflow.single_output_schema)
-                else:
-                    async with load_workflow(config_file_path) as local_session_manager:
-                        result = await generate_single_response(
-                            payload, local_session_manager, result_type=local_session_manager.workflow.single_output_schema)
+                async with load_workflow(config_file_path) as local_session_manager:
+                    result = await generate_single_response(
+                        payload, local_session_manager, result_type=local_session_manager.workflow.single_output_schema)
 
                 await job_store.update_status(job_id, JobStatus.SUCCESS, output=result)
             except Exception as e:
