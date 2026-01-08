@@ -22,18 +22,19 @@ git_describe_command = "git describe --long --first-parent"
 root = "../../.."
 
 [project]
-name = "nat_calculator_a2a"
+name = "nat_math_assistant_a2a_protected"
 dynamic = ["version"]
 dependencies = [
-    "nvidia-nat[a2a]~=1.4",
     "nat_simple_calculator",
+    "nat_math_assistant_a2a",
 ]
 requires-python = ">=3.11,<3.14"
-description = "OAuth2-protected calculator A2A server example"
+description = "OAuth2-protected A2A example with calculator server and math assistant client"
 readme = "README.md"
-keywords = ["ai", "a2a", "protocol", "agents", "calculator", "oauth2"]
+keywords = ["ai", "a2a", "protocol", "agents", "calculator", "oauth2", "mcp"]
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }
 nat_simple_calculator = { path = "../../getting_started/simple_calculator", editable = true }
+nat_math_assistant_a2a = { path = "../math_assistant_a2a", editable = true }

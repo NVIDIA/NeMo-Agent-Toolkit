@@ -23,7 +23,6 @@ This example demonstrates a per-user math assistant workflow that connects to a 
 - **Per-User A2A Client**: Each user gets isolated A2A client connections with separate authentication and session state
 - **A2A Protocol Integration**: Connects to a remote calculator workflow using A2A protocol
 - **Hybrid Tool Architecture**: Combines remote A2A tools with local MCP and custom functions
-- **OAuth2 Authentication**: Optional OAuth2-protected A2A server setup for secure per-user agent-to-agent communication
 - **Multi-User Support**: Demonstrates user isolation with different session cookies
 
 ## Architecture Overview
@@ -107,7 +106,6 @@ nat run --config_file examples/A2A/math_assistant_a2a/configs/config.yml \
 
 For comprehensive examples demonstrating different capabilities (basic calculations, time-integrated math, multi-step problems), see [`data/sample_queries.json`](data/sample_queries.json).
 
-
 ## Per-User Workflow Architecture
 
 This example uses a **per-user workflow** pattern because A2A clients are per-user function groups:
@@ -121,7 +119,7 @@ This example uses a **per-user workflow** pattern because A2A clients are per-us
 ### Implementation
 The example uses `per_user_react_agent`, which is the per-user version of the ReAct agent:
 - Each user gets their own isolated ReAct agent instance
-- Gets per-user A2A client tools via the builder
+- Gets per-user A2A client tools through the builder
 - Provides the same interface as the shared `react_agent` but with per-user isolation
 - Built-in support for per-user function groups like A2A clients
 
@@ -180,26 +178,7 @@ Is the sum of 5 and 3 greater than the current hour of the day?
 Yes, the sum of 5 and 3 is greater than the current hour of the day.
 ```
 
-## OAuth2 Protected Setup
-
-For production scenarios requiring authentication:
-
-- **Architecture and Concepts**: [A2A Authentication Documentation](../../../docs/source/components/auth/a2a-auth.md)
-- **Hands-on Setup Guide**: [OAuth2 Keycloak Setup Guide](oauth2-keycloak-setup.md)
-
-The OAuth2 setup demonstrates:
-- End-to-end OAuth2 authorization code flow
-- Protected A2A server with JWT token validation
-- Keycloak integration for testing secure A2A communication
-
-This setup uses the OAuth2-enabled configuration (`configs/config-client-oauth2.yml`) instead of the basic configuration.
-
 ## Configuration Details
-
-### Available Configurations
-
-- **`config.yml`**: Basic setup with unprotected calculator server
-- **`config-client-oauth2.yml`**: OAuth2-protected setup with per-user authentication (requires Keycloak - see [OAuth2 guide](oauth2-keycloak-setup.md))
 
 ### Workflow Configuration
 
@@ -246,7 +225,7 @@ curl http://localhost:10000/.well-known/agent-card.json | jq
 **Port Conflicts**:
 - Ensure port 10000 is available for the calculator server
 - Check for other services using the port
-- Modify the port in both the server startup and config.yml if needed
+- Modify the port in both the server startup and `config.yml` if needed
 
 ### Performance Issues
 
@@ -254,6 +233,14 @@ curl http://localhost:10000/.well-known/agent-card.json | jq
 - Increase `task_timeout` in config if calculations take longer
 - Check network connectivity to remote services
 
+## OAuth2 Protected Setup
+
+For production scenarios requiring authentication, see the [OAuth2 Protected Math Assistant A2A](../math_assistant_a2a_protected/) example, which demonstrates:
+- End-to-end OAuth2 authorization code flow
+- Protected A2A server with JWT token validation
+- Keycloak integration for testing secure A2A communication
+
 ## Related Examples
 
+- [OAuth2 Protected Math Assistant A2A](../math_assistant_a2a_protected/) - OAuth2-protected A2A example
 - [Currency Agent A2A](../currency_agent_a2a/) - External A2A service integration example

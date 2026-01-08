@@ -14,19 +14,36 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Keycloak OAuth2 Setup Guide for NeMo Agent Toolkit A2A
+# OAuth2-Protected Math Assistant A2A Example
 
-This guide provides hands-on instructions for setting up Keycloak as an OAuth2 authorization server for testing OAuth2-protected A2A servers in NVIDIA NeMo Agent Toolkit.
+This example demonstrates a complete end-to-end OAuth2-protected A2A setup with:
+- **Protected A2A Server**: Calculator service requiring OAuth2 authentication
+- **OAuth2 A2A Client**: Math assistant with per-user OAuth2 credentials
+- **Authorization Server**: Keycloak setup for testing OAuth2-protected A2A communication
 
-For architectural overview and authentication concepts, see the [A2A Authentication Documentation](../../../docs/source/components/auth/a2a-auth.md).
+## Overview
 
-## What You'll Build
+This example combines two components to show OAuth2-protected agent-to-agent communication:
 
-- **Protected A2A Server**: Calculator service that requires OAuth2 authentication
-- **Per-User A2A Client**: Math assistant with isolated OAuth2 credentials per user
-- **OAuth2 Flow**: Complete authorization code flow with JWT validation
-- **Custom Scopes**: Resource-specific permissions (for example, `calculator_a2a_execute`)
+**Server Side (Calculator A2A)**
+- **Type**: A2A Server (Resource Server)
+- **Authentication**: OAuth2 with JWT validation
+- **Skills**: Basic arithmetic operations (add, subtract, multiply, divide, compare) and current datetime
+
+**Client Side (Math Assistant)**
+- **Type**: Per-user A2A client workflow
+- **Authentication**: OAuth2 authorization code flow with per-user isolation
+- **Skills**: Connects to calculator server, local time operations, logic evaluator
+
+## Key Features
+
+- **JWT Token Validation**: Validates access tokens using JWKS from authorization server
+- **Scope Enforcement**: Requires `calculator_a2a_execute` scope (configurable)
+- **Per-User A2A Client**: Each user gets isolated A2A client connections with separate authentication
+- **Public Agent Card**: Agent card is publicly accessible without authentication
+- **Protected Operations**: All calculator operations require valid authentication
 - **Multi-User Support**: Each user gets their own OAuth2 flow and authentication tokens
+- **Hybrid Tool Architecture**: Combines remote A2A tools with local MCP and custom functions
 
 This example is designed for **development and testing**. See [Production Considerations](#production-considerations) for deployment guidance.
 
@@ -65,7 +82,7 @@ graph TB
     style Auth fill:#e1ffe1
 ```
 
-**Components Overview:**
+**Components:**
 
 1. **Math Assistant (Client)**
    - Per-user workflow using `per_user_react_agent`
@@ -79,7 +96,7 @@ graph TB
    - Validates JWT tokens before processing requests
 
 3. **Keycloak (Authorization Server)**
-   - Test OAuth2 server for testing OAuth2-protected A2A servers in NeMo Agent toolkit
+   - Test OAuth2 server for OAuth2-protected A2A servers in NeMo Agent toolkit
    - Authenticates users and manages consent
    - Provides JWKS endpoint for token verification
 
@@ -88,10 +105,9 @@ graph TB
 - OAuth2 authentication flow and tokens
 - Independent calculator session
 
+## OAuth2 Flow
 
-## A2A OAuth2 Flow
-
-This example demonstrates the A2A protocol with OAuth 2.1 Authorization Code Flow. This flow executes independently for each user session:
+This example demonstrates the A2A protocol with OAuth 2.1 Authorization Code Flow:
 
 ```mermaid
 sequenceDiagram
@@ -133,15 +149,30 @@ sequenceDiagram
 3. **Token acquisition** - User authenticates through browser, client obtains JWT token
 4. **Authenticated communication** - Client includes token in A2A requests, server validates JWT
 
-**Per-User Isolation:** Each user identified by `nat-session` cookie goes through this flow independently. Tokens and authentication state are isolated per user, enabling secure multi-user deployments.
-
 ## Prerequisites
 
 - Docker installed and running
 - NeMo Agent toolkit development environment set up
-- No services running on port 8080
+- No services running on ports 8080 or 10000
+- NVIDIA API key
 
-## Step 1: Start Keycloak
+## Installation
+
+From the root directory of the NeMo Agent toolkit library, install this example:
+
+```bash
+uv pip install -e examples/A2A/math_assistant_a2a_protected
+```
+
+Set your NVIDIA API key:
+
+```bash
+export NVIDIA_API_KEY=<YOUR_API_KEY>
+```
+
+## Setup Instructions
+
+### Step 1: Start Keycloak
 
 ```bash
 # Start Keycloak
@@ -162,7 +193,7 @@ Look for: `Listening on: http://0.0.0.0:8080`
 
 **Access Keycloak:** Open `http://localhost:8080` in your browser
 
-## Step 2: Configure Keycloak Realm and Scopes
+### Step 2: Configure Keycloak Realm and Scopes
 
 1. **Log in to Keycloak Admin Console:**
    - Username: `admin`
@@ -171,15 +202,15 @@ Look for: `Listening on: http://0.0.0.0:8080`
 2. **Verify you're in the `master` realm** (top-left dropdown)
 
 3. **Create the `calculator_a2a_execute` scope (for the calculator agent):**
-   - Go to **Client scopes** (left sidebar)
-   - Click **Create client scope**
+   - Go to *Client scopes* (left sidebar)
+   - Click *Create client scope*
    - Fill in:
      - **Name**: `calculator_a2a_execute`
      - **Description**: `Permission to execute calculator operations`
      - **Type**: `Optional`
      - **Protocol**: `openid-connect`
      - **Include in token scope**: `On` ✅
-   - Click **Save**
+   - Click *Save*
 
 4. **Add audience mapper to the scope:**
 
@@ -187,8 +218,8 @@ Look for: `Listening on: http://0.0.0.0:8080`
 
    **Audience Mapper** (adds calculator URL to audience claim)
 
-   - Click **Add mapper** > **By configuration**
-   - Select **Audience** mapper type
+   - Click *Add mapper* > *By configuration*
+   - Select *Audience* mapper type
    - Configure the mapper:
      - **Name**: `calculator-audience`
      - **Included Client Audience**: Leave blank
@@ -196,7 +227,7 @@ Look for: `Listening on: http://0.0.0.0:8080`
      - **Add to ID token**: `Off`
      - **Add to access token**: `On` ✅
      - **Add to token introspection**: `On` ✅ (if available in your Keycloak version)
-   - Click **Save**
+   - Click *Save*
 
    This mapper ensures `http://localhost:10000` is included in the token's `aud` claim (required for JWT validation).
 
@@ -213,18 +244,18 @@ Look for: `Listening on: http://0.0.0.0:8080`
 
    **Note:** These endpoints use Keycloak's standard paths (`/protocol/openid-connect/*`), not generic `/oauth/*` paths. The NeMo Agent toolkit A2A client discovers these URLs automatically from the discovery endpoint.
 
-## Step 3: Register Math Assistant Client
+### Step 3: Register Math Assistant Client
 
 You have two options:
 
-### Option A: Manual Client Registration (Recommended for Testing)
+#### Option A: Manual Client Registration (Recommended for Testing)
 
-1. In Keycloak Admin Console, go to **Clients** (left sidebar)
-2. Click **Create client**
+1. In Keycloak Admin Console, go to *Clients* (left sidebar)
+2. Click *Create client*
 3. **General Settings:**
    - **Client ID**: `math-assistant-client`
    - **Client type**: `OpenID Connect`
-   - Click **Next**
+   - Click *Next*
 
 4. **Capability config:**
    - **Client authentication**: `On` (confidential client)
@@ -232,37 +263,37 @@ You have two options:
    - **Authentication flow:**
      - ✓ Standard flow (authorization code)
      - ✓ Direct access grants
-   - Click **Next**
+   - Click *Next*
 
 5. **Login settings:**
    - **Valid redirect URIs**: `http://localhost:8000/auth/redirect`
    - **Web origins**: `http://localhost:8000`
-   - Click **Save**
+   - Click *Save*
 
 6. **Get client credentials:**
-   - Go to **Credentials** tab
-   - Copy the **Client secret**
-   - Note the **Client ID**: `math-assistant-client`
+   - Go to *Credentials* tab
+   - Copy the *Client secret*
+   - Note the *Client ID*: `math-assistant-client`
 
 7. **Configure client scopes:**
-   - Go to **Client scopes** tab
-   - Click **Add client scope**
+   - Go to *Client scopes* tab
+   - Click *Add client scope*
    - Select `calculator_a2a_execute`
-   - Choose **Optional**
-   - Click **Add**
+   - Choose *Optional*
+   - Click *Add*
 
-### Option B: Dynamic Client Registration (DCR)
+#### Option B: Dynamic Client Registration (DCR)
 
-The NeMo Agent toolkit OAuth2 provider can use DCR if Keycloak is configured to allow it.See [Keycloak documentation](https://www.keycloak.org/securing-apps/client-registration) for details.
+The NeMo Agent toolkit OAuth2 provider can use DCR if Keycloak is configured to allow it. See [Keycloak documentation](https://www.keycloak.org/securing-apps/client-registration) for details.
 
 **Note:** For testing, manual registration (Option A) is simpler.
 
-## Step 4: Set Environment Variables
+### Step 4: Set Environment Variables
 
 After registering the client:
 
 ```bash
-# Set these in your terminal where you'll run the nat client
+# Set these in your terminal where you'll run the client
 export CALCULATOR_CLIENT_ID="math-assistant-client"
 export CALCULATOR_CLIENT_SECRET="<paste-client-secret-from-keycloak>"
 
@@ -271,12 +302,11 @@ echo "Client ID: ${CALCULATOR_CLIENT_ID}"
 echo "Client Secret: ${CALCULATOR_CLIENT_SECRET:0:10}..."
 ```
 
-
-## Step 5: Start the Protected Calculator Server
+### Step 5: Start the Protected Calculator Server
 
 ```bash
 # Terminal 1
-nat a2a serve --config_file examples/A2A/calculator_a2a/configs/config-protected-oauth2.yml
+nat a2a serve --config_file examples/A2A/math_assistant_a2a_protected/configs/config-server.yml
 ```
 
 You should see:
@@ -285,7 +315,7 @@ You should see:
 [INFO] Starting A2A server 'Protected Calculator' at http://localhost:10000
 ```
 
-## Step 6: Run the Math Assistant Client
+### Step 6: Run the Math Assistant Client
 
 ```bash
 # Terminal 2
@@ -293,15 +323,15 @@ You should see:
 export CALCULATOR_CLIENT_ID="math-assistant-client"
 export CALCULATOR_CLIENT_SECRET="<your-client-secret>"
 
-nat run --config_file examples/A2A/math_assistant_a2a/configs/config-client-oauth2.yml \
-  --input "Is the product of 2 * 4 greater than the current hour of the day?"
+nat run --config_file examples/A2A/math_assistant_a2a_protected/configs/config-client.yml \
+  --input "Is the product of 2 and 4 greater than the current hour of the day?"
 ```
 
 **What should happen:**
 
 1. **Browser opens** with Keycloak login page
 2. **Log in** with any user (or create one)
-3. **Consent page** may show requesting calculator_a2a_execute (depending on realm consent settings)
+3. **Consent page** may show requesting `calculator_a2a_execute` (depending on realm consent settings)
 4. **Browser redirects** back to `localhost:8000/auth/redirect`
 5. **Workflow continues** and calls the calculator
 6. **Response returned** successfully
@@ -309,18 +339,18 @@ nat run --config_file examples/A2A/math_assistant_a2a/configs/config-client-oaut
 Sample output:
 ```text
 Workflow Result:
-['No, the product of 2 * 4 is not greater than the current hour of the day.']
+['No, the product of 2 and 4 is not greater than the current hour of the day.']
 --------------------------------------------------
 ```
 
-## Step 7: Test Multi-User OAuth2 (Optional)
+### Step 7: Test Multi-User OAuth2 (Optional)
 
 The per-user architecture allows each user to have their own OAuth2 authentication. Test this with `nat serve`:
 
-1. Start the math assistant as a server
+1. Start the math assistant as a server:
 ```bash
 # Terminal 2: Start the math assistant as a server
-nat serve --config_file examples/A2A/math_assistant_a2a/configs/config-client-oauth2.yml
+nat serve --config_file examples/A2A/math_assistant_a2a_protected/configs/config-client.yml
 ```
 
 2. Start the UI by following the instructions in the [Launching the UI](../../../docs/source/run-workflows/launching-ui.md) documentation.
@@ -351,6 +381,102 @@ Workflow Result:
 - Different users authenticate independently with their own Keycloak credentials
 - Each user maintains separate JWT tokens and workflow instances
 
+## Configuration Details
+
+### Server Configuration (`config-server.yml`)
+
+The calculator server is configured with OAuth2 resource server protection:
+
+- **OAuth2 Issuer**: Authorization server URL
+- **JWKS URI**: Endpoint for JWT signature verification
+- **Required Scopes**: `calculator_a2a_execute`
+- **Audience**: `http://localhost:10000`
+
+The agent card automatically includes OAuth2 security schemes, and all requests except `/.well-known/agent-card.json` require authentication.
+
+### Client Configuration (`config-client.yml`)
+
+The math assistant client is configured with:
+
+**Authentication:**
+- OAuth2 authorization code flow
+- Per-user credentials from environment variables
+- Keycloak endpoints for token management
+
+**Tool Composition:**
+
+1. **A2A Client Tools** (`calculator_a2a`) - **Per-User**:
+   - Connects to protected calculator server
+   - Each user gets isolated connection and authentication
+   - Provides: `add`, `subtract`, `multiply`, `divide`, `compare` functions
+
+2. **MCP Client Tools** (`mcp_time`) - **Shared**:
+   - Local MCP server for time operations
+   - Provides: `get_current_time_mcp` function
+
+3. **Logic Evaluator** (`logic_evaluator`) - **Shared**:
+   - Simple local utility for logical operations
+   - Provides: `if_then_else` and `evaluate_condition` functions
+
+## Security
+
+**Token Validation:**
+- JWT signature verification using JWKS public keys
+- Issuer validation
+- Expiration check
+- Scope validation (`calculator_a2a_execute` required)
+- Audience validation (`http://localhost:10000`)
+
+**Public Endpoints:**
+- `/.well-known/agent-card.json` - Agent card discovery (no auth required)
+
+**Protected Endpoints:**
+- All other endpoints require valid Bearer token
+
+## Additional Examples
+
+For comprehensive examples demonstrating different capabilities (basic calculations, time-integrated math, multi-step problems), see [`data/sample_queries.json`](data/sample_queries.json).
+
+## Troubleshooting
+
+### Connection Issues
+
+**Keycloak Not Running:**
+```bash
+# Check Keycloak logs
+docker logs keycloak
+```
+
+**Calculator Server Not Running:**
+```bash
+# Check if the calculator server is running
+curl http://localhost:10000/.well-known/agent-card.json | jq
+```
+
+**Port Conflicts:**
+- Ensure port 8080 is available for Keycloak
+- Ensure port 10000 is available for the calculator server
+- Check for other services using these ports
+
+### Authentication Issues
+
+**Missing Environment Variables:**
+```bash
+# Verify environment variables are set
+echo "Client ID: ${CALCULATOR_CLIENT_ID}"
+echo "Client Secret: ${CALCULATOR_CLIENT_SECRET:0:10}..."
+```
+
+**Browser Not Opening:**
+- Check firewall settings
+- Ensure redirect URI matches Keycloak configuration
+- Try manually opening the authorization URL
+
+### Performance Issues
+
+**Timeouts:**
+- Increase `task_timeout` in config if calculations take longer
+- Check network connectivity to Keycloak and calculator server
 
 ## Cleanup
 
@@ -380,7 +506,7 @@ This setup is for **development and testing only**. For production:
    - A2A servers must use HTTPS
 
 2. **Secure Credentials**
-   - Store client secrets in a secrets manager (Vault, AWS Secrets Manager, etc.)
+   - Store client secrets in a secrets manager (Vault, AWS Secrets Manager, and so on)
    - Never commit secrets to version control
    - Use environment variables only for development
    - Rotate client secrets regularly
@@ -413,6 +539,14 @@ This setup is for **development and testing only**. For production:
    - Monitor memory usage with many concurrent users
    - Plan capacity based on expected concurrent user load
 
+## Related Examples
+
+- [Math Assistant A2A](../math_assistant_a2a/) - Unprotected A2A client example
+- [Currency Agent A2A](../currency_agent_a2a/) - External A2A service integration
+
 ## References
 
+- [A2A Authentication Documentation](../../../docs/source/components/auth/a2a-auth.md)
+- [A2A Client Documentation](../../../docs/source/build-workflows/a2a-client.md)
+- [A2A Server Documentation](../../../docs/source/run-workflows/a2a-server.md)
 - [Keycloak Documentation](https://www.keycloak.org/documentation)
