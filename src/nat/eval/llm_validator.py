@@ -192,7 +192,7 @@ async def _validate_single_llm(
                 f"  2. The model name is incorrect\n"
                 f"  3. A training job was canceled and the model was never deployed\n"
                 f"\nLLM Configuration:\n"
-                f"  Type: {llm_config.type}\n"
+                f"  Type: {str(llm_config.type)}\n"
                 f"  Endpoint: {base_url or 'N/A'}\n"
                 f"  Model: {model_name or 'N/A'}\n"
                 f"\nACTION REQUIRED:\n"
