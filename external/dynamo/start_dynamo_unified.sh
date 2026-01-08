@@ -16,7 +16,7 @@
 
 # Dynamo SGLang FULL STACK with Unified Worker
 # Architecture: ETCD + NATS + Dynamo Frontend (API) → SGLang Backend Worker (Unified)
-# 
+#
 # This script manages ALL required components:
 #   - ETCD (metadata and worker discovery)
 #   - NATS (message queue for requests)
@@ -168,7 +168,7 @@ if [ -z "$HF_TOKEN" ]; then
         echo "✗ Local model NOT found and no HF_TOKEN to download it"
         echo ""
         read -p "Please enter your HuggingFace token (or press Enter to skip): " HF_TOKEN
-        
+
         if [ -z "$HF_TOKEN" ]; then
             echo ""
             echo "WARNING: Proceeding without HF_TOKEN. This may fail if the model needs to be downloaded."
@@ -220,11 +220,11 @@ docker run -d \
   $IMAGE \
   bash -c "
     set -e  # Exit on any error
-    
+
     echo '========================================================='
     echo 'Verifying external infrastructure services...'
     echo '========================================================='
-    
+
     # Verify ETCD is accessible
     if curl -s http://localhost:$ETCD_CLIENT_PORT/health > /dev/null 2>&1; then
         echo \"✓ ETCD accessible at localhost:$ETCD_CLIENT_PORT\"
@@ -233,7 +233,7 @@ docker run -d \
         echo '  Make sure ETCD container is running with --network host'
         exit 1
     fi
-    
+
     # Verify NATS is accessible (basic TCP check)
     if timeout 2 bash -c '</dev/tcp/localhost/$NATS_PORT' 2>/dev/null; then
         echo \"✓ NATS accessible at localhost:$NATS_PORT\"
@@ -242,16 +242,16 @@ docker run -d \
         echo '  Make sure NATS container is running with --network host'
         exit 1
     fi
-    
+
     echo ''
-    
+
     # Function to wait for worker initialization
     wait_for_worker() {
         local worker_type=\$1
         local pid=\$2
         local max_wait=120
         local elapsed=0
-        
+
         echo \"Waiting for \$worker_type worker (PID \$pid) to initialize...\"
         while [ \$elapsed -lt \$max_wait ]; do
             # Check if process is still running
@@ -259,24 +259,24 @@ docker run -d \
                 echo \"ERROR: \$worker_type worker process died!\"
                 return 1
             fi
-            
+
             sleep 5
             elapsed=\$((elapsed + 5))
             if [ \$((elapsed % 15)) -eq 0 ]; then
                 echo \"  ... \${elapsed}s / \${max_wait}s\"
             fi
-            
+
             # After 60s, assume it's initialized (model loading takes time for 70B)
             if [ \$elapsed -ge 60 ]; then
                 echo \"✓ \$worker_type worker should be initialized\"
                 return 0
             fi
         done
-        
+
         echo \"WARNING: \$worker_type worker initialization timeout, proceeding anyway\"
         return 0
     }
-    
+
     echo '========================================================='
     echo 'Step 1: Starting Unified Worker (Host GPUs $WORKER_GPUS -> Container GPUs $CONTAINER_GPU_INDICES)...'
     echo '========================================================='
@@ -292,15 +292,15 @@ docker run -d \
     WORKER_PID=\$!
     echo \"Unified Worker PID: \$WORKER_PID\"
     echo \"\"
-    
+
     # Wait for unified worker to initialize
     wait_for_worker \"Unified\" \$WORKER_PID || exit 1
-    
+
     # Give worker extra time to register with ETCD
     echo ''
     echo 'Waiting for worker to register with ETCD (30s)...'
     sleep 30
-    
+
     echo ''
     echo '========================================================='
     echo 'Step 2: Starting Dynamo Frontend (HTTP API on port $HTTP_PORT)...'
@@ -314,7 +314,7 @@ docker run -d \
     echo \"Waiting 15s for frontend to discover workers...\"
     sleep 15
     echo \"\"
-    
+
     echo ''
     echo '========================================================='
     echo '✓ All components started successfully!'
@@ -336,7 +336,7 @@ docker run -d \
     echo '         ↓'
     echo '  Response'
     echo '========================================================='
-    
+
     # Monitor all processes
     while true; do
         # Check if any critical process died
@@ -432,15 +432,15 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo ""
     echo "========================================================="
     echo ""
-    echo "Waiting for SGLang to initialize (this may take 5-10 minutes for a 70B model)..."
+    echo "Waiting for SGLang to initialize (this will likely take 5-10 minutes for a 70B model)..."
     echo "Monitoring logs (Ctrl+C to exit, container continues)..."
     echo ""
-    
+
     # Wait for server to be ready
-    echo "Checking for API availability..."
+    echo "Checking for API availability (timeout=15 minutes)..."
     max_attempts=900
     attempt=0
-    
+
     while [ $attempt -lt $max_attempts ]; do
         if curl -s http://localhost:$HTTP_PORT/health > /dev/null 2>&1; then
             echo "✓ SGLang API is ready!"
@@ -450,9 +450,9 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
         if [ $((attempt % 15)) -eq 0 ]; then
             echo "  ... still waiting ($attempt/$max_attempts)"
         fi
-        sleep 2
+        sleep 1
     done
-    
+
     if [ $attempt -ge $max_attempts ]; then
         echo ""
         echo "⚠ Timeout waiting for API. Check logs with: docker logs $CONTAINER_NAME"
@@ -468,7 +468,7 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
             "messages": [{"role": "user", "content": "Say hello"}],
             "max_tokens": 20
           }' | jq '.choices[0].message.content, .usage'
-        
+
         echo ""
         echo "========================================================="
         echo "Container is running. View logs with:"

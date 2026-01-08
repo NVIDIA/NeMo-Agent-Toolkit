@@ -212,7 +212,7 @@ mkdir -p $DYNAMO_MODEL_DIR
 # We will download the model weights directly from HuggingFace. Usage of
 # llama models from requires approval from Meta. See `Access Notes` below.
 # You will need to create a HuggingFace Access Token with read access in
-# order to download the model. On the huggingface webite visit:
+# order to download the model. On the huggingface website visit:
 # "Access Tokens" -> "+ Create access token" to generate a token starting
 # with "hf_". Enter your token when prompted.
 # Respond "n" when asked "Add token as git credential? (Y/n)"
