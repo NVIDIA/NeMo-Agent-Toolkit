@@ -119,7 +119,7 @@ This example uses a **per-user workflow** pattern because A2A clients are per-us
 ### Implementation
 The example uses `per_user_react_agent`, which is the per-user version of the ReAct agent:
 - Each user gets their own isolated ReAct agent instance
-- Gets per-user A2A client tools through the builder
+- Gets per-user A2A client tools via the builder
 - Provides the same interface as the shared `react_agent` but with per-user isolation
 - Built-in support for per-user function groups like A2A clients
 
@@ -225,7 +225,7 @@ curl http://localhost:10000/.well-known/agent-card.json | jq
 **Port Conflicts**:
 - Ensure port 10000 is available for the calculator server
 - Check for other services using the port
-- Modify the port in both the server startup and `config.yml` if needed
+- Modify the port in both the server startup and config.yml if needed
 
 ### Performance Issues
 

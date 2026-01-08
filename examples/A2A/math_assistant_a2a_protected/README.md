@@ -96,7 +96,7 @@ graph TB
    - Validates JWT tokens before processing requests
 
 3. **Keycloak (Authorization Server)**
-   - Test OAuth2 server for OAuth2-protected A2A servers in NeMo Agent toolkit
+   - Example OAuth2 server for testing OAuth2-protected A2A servers in NeMo Agent toolkit
    - Authenticates users and manages consent
    - Provides JWKS endpoint for token verification
 
@@ -105,7 +105,7 @@ graph TB
 - OAuth2 authentication flow and tokens
 - Independent calculator session
 
-## OAuth2 Flow
+## A2A OAuth2 Flow
 
 This example demonstrates the A2A protocol with OAuth 2.1 Authorization Code Flow:
 
@@ -210,7 +210,7 @@ Look for: `Listening on: http://0.0.0.0:8080`
      - **Type**: `Optional`
      - **Protocol**: `openid-connect`
      - **Include in token scope**: `On` ✅
-     - Click **Save**
+   - Click **Save**
 
 4. **Add audience mapper to the scope:**
 
@@ -251,7 +251,7 @@ You have two options:
 #### Option A: Manual Client Registration (Recommended for Testing)
 
 1. In Keycloak Admin Console, go to **Clients** (left sidebar)
-2. Click *Create client*
+2. Click **Create client**
 3. **General Settings:**
    - **Client ID**: `math-assistant-client`
    - **Client type**: `OpenID Connect`
@@ -381,103 +381,6 @@ Workflow Result:
 - Different users authenticate independently with their own Keycloak credentials
 - Each user maintains separate JWT tokens and workflow instances
 
-## Configuration Details
-
-### Server Configuration (`config-server.yml`)
-
-The calculator server is configured with OAuth2 resource server protection:
-
-- **OAuth2 Issuer**: Authorization server URL
-- **JWKS URI**: Endpoint for JWT signature verification
-- **Required Scopes**: `calculator_a2a_execute`
-- **Audience**: `http://localhost:10000`
-
-The agent card automatically includes OAuth2 security schemes, and all requests except `/.well-known/agent-card.json` require authentication.
-
-### Client Configuration (`config-client.yml`)
-
-The math assistant client is configured with:
-
-**Authentication:**
-- OAuth2 authorization code flow
-- Per-user credentials from environment variables
-- Keycloak endpoints for token management
-
-**Tool Composition:**
-
-1. **A2A Client Tools** (`calculator_a2a`) - **Per-User**:
-   - Connects to protected calculator server
-   - Each user gets isolated connection and authentication
-   - Provides: `add`, `subtract`, `multiply`, `divide`, `compare` functions
-
-2. **MCP Client Tools** (`mcp_time`) - **Shared**:
-   - Local MCP server for time operations
-   - Provides: `get_current_time_mcp` function
-
-3. **Logic Evaluator** (`logic_evaluator`) - **Shared**:
-   - Simple local utility for logical operations
-   - Provides: `if_then_else` and `evaluate_condition` functions
-
-## Security
-
-**Token Validation:**
-- JWT signature verification using JWKS public keys
-- Issuer validation
-- Expiration check
-- Scope validation (`calculator_a2a_execute` required)
-- Audience validation (`http://localhost:10000`)
-
-**Public Endpoints:**
-- `/.well-known/agent-card.json` - Agent card discovery (no auth required)
-
-**Protected Endpoints:**
-- All other endpoints require valid Bearer token
-
-## Additional Examples
-
-For comprehensive examples demonstrating different capabilities (basic calculations, time-integrated math, multi-step problems), see [`data/sample_queries.json`](data/sample_queries.json).
-
-## Troubleshooting
-
-### Connection Issues
-
-**Keycloak Not Running:**
-```bash
-# Check Keycloak logs
-docker logs keycloak
-```
-
-**Calculator Server Not Running:**
-```bash
-# Check if the calculator server is running
-curl http://localhost:10000/.well-known/agent-card.json | jq
-```
-
-**Port Conflicts:**
-- Ensure port 8080 is available for Keycloak
-- Ensure port 10000 is available for the calculator server
-- Check for other services using these ports
-
-### Authentication Issues
-
-**Missing Environment Variables:**
-```bash
-# Verify environment variables are set
-echo "Client ID: ${CALCULATOR_CLIENT_ID}"
-echo "Client Secret: ${CALCULATOR_CLIENT_SECRET:0:10}..."
-```
-
-**Browser Not Opening:**
-- Check firewall settings
-- Ensure redirect URI matches Keycloak configuration
-- Try manually opening the authorization URL
-
-### Performance Issues
-
-**Timeouts:**
-- Increase `task_timeout` in config if calculations take longer
-- Check network connectivity to Keycloak and calculator server
-
 ## Cleanup
 
 To stop and remove Keycloak:
@@ -506,7 +409,7 @@ This setup is for **development and testing only**. For production:
    - A2A servers must use HTTPS
 
 2. **Secure Credentials**
-   - Store client secrets in a secrets manager (Vault, AWS Secrets Manager, and so on)
+   - Store client secrets in a secrets manager (Vault, AWS Secrets Manager, etc.)
    - Never commit secrets to version control
    - Use environment variables only for development
    - Rotate client secrets regularly
