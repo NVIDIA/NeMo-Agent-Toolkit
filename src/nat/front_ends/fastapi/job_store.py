@@ -208,13 +208,14 @@ class JobStore(DaskClientMixin):
         AsyncSession
             An active SQLAlchemy async session with an open transaction.
         """
-        async with self._session() as session:
-            async with session.begin():
-                yield session
-
-        # Removes the current task key from the session registry, preventing
-        # potential memory leaks
-        await self._session.remove()
+        try:
+            async with self._session() as session:
+                async with session.begin():
+                    yield session
+        finally:
+            # Removes the current task key from the session registry, preventing
+            # potential memory leaks
+            await self._session.remove()
 
     def ensure_job_id(self, job_id: str | None) -> str:
         """
