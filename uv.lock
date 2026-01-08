@@ -1892,15 +1892,6 @@ wheels = [
 ]
 
 [[package]]
-name = "eval-type-backport"
-version = "0.3.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/fb/a3/cafafb4558fd638aadfe4121dc6cefb8d743368c085acb2f521df0f3d9d7/eval_type_backport-0.3.1.tar.gz", hash = "sha256:57e993f7b5b69d271e37482e62f74e76a0276c82490cf8e4f0dffeb6b332d5ed", size = 9445, upload-time = "2025-12-02T11:51:42.987Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/cf/22/fdc2e30d43ff853720042fa15baa3e6122722be1a7950a98233ebb55cd71/eval_type_backport-0.3.1-py3-none-any.whl", hash = "sha256:279ab641905e9f11129f56a8a78f493518515b83402b860f6f06dd7c011fdfa8", size = 6063, upload-time = "2025-12-02T11:51:41.665Z" },
-]
-
-[[package]]
 name = "events"
 version = "0.5"
 source = { registry = "https://pypi.org/simple" }
@@ -2727,12 +2718,8 @@ wheels = [
 ]
 
 [package.optional-dependencies]
-aiohttp = [
-    { name = "aiohttp" },
-]
-requests = [
-    { name = "requests" },
-    { name = "requests-toolbelt" },
+httpx = [
+    { name = "httpx" },
 ]
 
 [[package]]
@@ -6843,7 +6830,7 @@ requires-dist = [
     { name = "nvidia-nat", editable = "." },
     { name = "presidio-analyzer", specifier = "~=2.2" },
     { name = "presidio-anonymizer", specifier = "~=2.2" },
-    { name = "weave", specifier = "==0.52.6" },
+    { name = "weave", specifier = "==0.52.22" },
 ]
 
 [[package]]
@@ -11261,25 +11248,24 @@ wheels = [
 
 [[package]]
 name = "weave"
-version = "0.52.6"
+version = "0.52.22"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
     { name = "diskcache" },
-    { name = "eval-type-backport" },
-    { name = "gql", extra = ["aiohttp", "requests"] },
+    { name = "gql", extra = ["httpx"] },
     { name = "jsonschema" },
-    { name = "nest-asyncio" },
     { name = "packaging" },
     { name = "polyfile-weave" },
     { name = "pydantic" },
     { name = "sentry-sdk" },
     { name = "tenacity" },
+    { name = "tzdata", marker = "sys_platform == 'win32'" },
     { name = "wandb" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/81/07/c44cc76f132deffd9a767f9ea1e059a4cc6b26773b9c658761c744a8c124/weave-0.52.6.tar.gz", hash = "sha256:5b074cea6702b18bf12020feb8078ec6a5c2d9ed048f082f936f02d178201c1e", size = 518689, upload-time = "2025-09-04T19:39:43.94Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2c/ac/e9e271cd13f4568f8cbcc128d48088d3228eea4fb77ebca0cbd33a6ec034/weave-0.52.22.tar.gz", hash = "sha256:d82b91540449734c0fb3032e86af9fd072d062cb3f0f107c88ebd9de15e1f5fe", size = 627270, upload-time = "2025-12-04T21:59:30.093Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0b/48/f0489e3bd901eab56c1d4ff3824005606d53676a2b0dd180e716a4fd10a8/weave-0.52.6-py3-none-any.whl", hash = "sha256:2c2075778c12333cdc66f96f36afde4ab4421d34df84f008e6f3fb62628748d3", size = 661206, upload-time = "2025-09-04T19:39:41.648Z" },
+    { url = "https://files.pythonhosted.org/packages/40/ee/cfc8d421a3d00be8d8ce2e22e7d572441366d2daa02163beb5b6ced83a2a/weave-0.52.22-py3-none-any.whl", hash = "sha256:d243bc92552b7a673718c61d5bacf4a2d49705cc19fd284da65c9834d0f2136e", size = 788523, upload-time = "2025-12-04T21:59:28.149Z" },
 ]
 
 [[package]]
