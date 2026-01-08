@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,26 +25,18 @@ from nat.data_models.optimizable import OptimizableField
 from nat.data_models.optimizable import OptimizableMixin
 from nat.data_models.optimizable import SearchSpace
 from nat.data_models.retry_mixin import RetryMixin
-from nat.data_models.temperature_mixin import TemperatureMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
-from nat.data_models.top_p_mixin import TopPMixin
 
 
-class AWSBedrockModelConfig(LLMBaseConfig,
-                            RetryMixin,
-                            OptimizableMixin,
-                            TemperatureMixin,
-                            TopPMixin,
-                            ThinkingMixin,
-                            name="aws_bedrock"):
+class AWSBedrockModelConfig(LLMBaseConfig, RetryMixin, OptimizableMixin, ThinkingMixin, name="aws_bedrock"):
     """An AWS Bedrock llm provider to be used with an LLM client."""
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")
 
     # Completion parameters
-    model_name: str = Field(validation_alias=AliasChoices("model_name", "model"),
-                            serialization_alias="model",
-                            description="The model name for the hosted AWS Bedrock.")
+    model_name: str = OptimizableField(validation_alias=AliasChoices("model_name", "model"),
+                                       serialization_alias="model",
+                                       description="The model name for the hosted AWS Bedrock.")
     max_tokens: int = OptimizableField(default=300,
                                        description="Maximum number of tokens to generate.",
                                        space=SearchSpace(high=2176, low=128, step=512))
@@ -61,6 +53,16 @@ class AWSBedrockModelConfig(LLMBaseConfig,
         default=None, description="Bedrock endpoint to use. Needed if you don't want to default to us-east-1 endpoint.")
     credentials_profile_name: str | None = Field(
         default=None, description="The name of the profile in the ~/.aws/credentials or ~/.aws/config files.")
+    temperature: float | None = OptimizableField(
+        default=None,
+        ge=0.0,
+        description="Sampling temperature to control randomness in the output.",
+        space=SearchSpace(high=0.9, low=0.1, step=0.2))
+    top_p: float | None = OptimizableField(default=None,
+                                           ge=0.0,
+                                           le=1.0,
+                                           description="Top-p for distribution sampling.",
+                                           space=SearchSpace(high=1.0, low=0.5, step=0.1))
 
 
 @register_llm_provider(config_type=AWSBedrockModelConfig)

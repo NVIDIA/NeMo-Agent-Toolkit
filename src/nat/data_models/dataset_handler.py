@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import importlib
 import json
 import typing
@@ -21,34 +20,47 @@ from pathlib import Path
 
 import pandas as pd
 from pydantic import BaseModel
+from pydantic import ConfigDict
 from pydantic import Discriminator
 from pydantic import FilePath
 from pydantic import Tag
 
 from nat.data_models.common import BaseModelRegistryTag
+from nat.data_models.common import SerializableSecretStr
 from nat.data_models.common import TypedBaseModel
 
 
 class EvalS3Config(BaseModel):
 
+    model_config = ConfigDict(extra="forbid")
+
     endpoint_url: str | None = None
     region_name: str | None = None
     bucket: str
-    access_key: str
-    secret_key: str
+    access_key: SerializableSecretStr
+    secret_key: SerializableSecretStr
 
 
 class EvalFilterEntryConfig(BaseModel):
+
+    model_config = ConfigDict(extra="forbid")
+
     # values are lists of allowed/blocked values
     field: dict[str, list[str | int | float]] = {}
 
 
 class EvalFilterConfig(BaseModel):
+
+    model_config = ConfigDict(extra="forbid")
+
     allowlist: EvalFilterEntryConfig | None = None
     denylist: EvalFilterEntryConfig | None = None
 
 
 class EvalDatasetStructureConfig(BaseModel):
+
+    model_config = ConfigDict(extra="forbid")
+
     disable: bool = False
     question_key: str = "question"
     answer_key: str = "answer"
@@ -59,6 +71,8 @@ class EvalDatasetStructureConfig(BaseModel):
 
 # Base model
 class EvalDatasetBaseConfig(TypedBaseModel, BaseModelRegistryTag):
+
+    model_config = ConfigDict(extra="forbid")
 
     id_key: str = "id"
     structure: EvalDatasetStructureConfig = EvalDatasetStructureConfig()

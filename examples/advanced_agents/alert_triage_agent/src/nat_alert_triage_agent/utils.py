@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -69,7 +69,7 @@ async def llm_ainvoke(config, builder, user_prompt, system_prompt=None) -> str:
         prompt = ChatPromptTemplate([MessagesPlaceholder("msgs")])
     chain = prompt | llm
     result = await chain.ainvoke({"msgs": [HumanMessage(content=user_prompt)]})
-    return result.text()
+    return result.text
 
 
 def log_header(log_str: str, dash_length: int = 100, level: int = logging.DEBUG):

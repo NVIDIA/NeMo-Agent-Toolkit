@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,6 +34,9 @@ from nat.builder.function_info import FunctionInfo
 from nat.data_models.function import EmptyFunctionConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
+from nat.middleware.function_middleware import FunctionMiddlewareChain
+from nat.middleware.middleware import FunctionMiddlewareContext
+from nat.middleware.middleware import Middleware
 
 _InvokeFnT = Callable[[InputT], Awaitable[SingleOutputT]]
 _StreamFnT = Callable[[InputT], AsyncGenerator[StreamingOutputT]]
@@ -64,6 +67,9 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
         self.description = description
         self.instance_name = instance_name or config.type
         self._context = Context.get()
+        self._configured_middleware: tuple[Middleware, ...] = tuple()
+        self._middlewared_single: _InvokeFnT | None = None
+        self._middlewared_stream: _StreamFnT | None = None
 
     def convert(self, value: typing.Any, to_type: type[_T]) -> _T:
         """
@@ -108,6 +114,37 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
         """
         return self._converter.try_convert(value, to_type=to_type)
 
+    @property
+    def middleware(self) -> tuple[Middleware, ...]:
+        """Return the currently configured middleware chain."""
+
+        return self._configured_middleware
+
+    def configure_middleware(self, middleware: Sequence[Middleware] | None = None) -> None:
+        """Attach an ordered list of middleware to this function instance."""
+
+        middleware_tuple: tuple[Middleware, ...] = tuple(middleware or ())
+
+        self._configured_middleware = middleware_tuple
+
+        if not middleware_tuple:
+            self._middlewared_single = None
+            self._middlewared_stream = None
+            return
+
+        logger.info(f"Building middleware for function '{self.instance_name}' in order of: {middleware_tuple}")
+        context = FunctionMiddlewareContext(name=self.instance_name,
+                                            config=self.config,
+                                            description=self.description,
+                                            input_schema=self.input_schema,
+                                            single_output_schema=self.single_output_schema,
+                                            stream_output_schema=self.streaming_output_schema)
+
+        chain = FunctionMiddlewareChain(middleware=middleware_tuple, context=context)
+
+        self._middlewared_single = chain.build_single(self._ainvoke) if self.has_single_output else None
+        self._middlewared_stream = chain.build_stream(self._astream) if self.has_streaming_output else None
+
     @abstractmethod
     async def _ainvoke(self, value: InputT) -> SingleOutputT:
         pass
@@ -150,7 +187,9 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
             try:
                 converted_input: InputT = self._convert_input(value)
 
-                result = await self._ainvoke(converted_input)
+                invoke_callable = self._middlewared_single or self._ainvoke
+
+                result = await invoke_callable(converted_input)
 
                 if to_type is not None and not isinstance(result, to_type):
                     result = self.convert(result, to_type)
@@ -243,7 +282,9 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
                 # Collect streaming outputs to capture the final result
                 final_output: list[typing.Any] = []
 
-                async for data in self._astream(converted_input):
+                stream_callable = self._middlewared_stream or self._astream
+
+                async for data in stream_callable(converted_input):
                     if to_type is not None and not isinstance(data, to_type):
                         converted_data = self.convert(data, to_type=to_type)
                         final_output.append(converted_data)
@@ -353,11 +394,38 @@ class FunctionGroup:
     A group of functions that can be used together, sharing the same configuration, context, and resources.
     """
 
+    SEPARATOR: str = "__"
+    """The separator between the function group name and the function name."""
+
+    LEGACY_SEPARATOR: str = "."
+    """The legacy separator between the function group name and the function name."""
+
+    @staticmethod
+    def decompose(name: str, legacy_compat: bool = False) -> tuple[str, str]:
+        """
+        Decompose a function name into the function group name and the function name.
+
+        Parameters
+        ----------
+        name : str
+            The function name to decompose.
+        legacy_compat : bool, optional
+            Whether to use the legacy separator (period) instead of the new separator (double underscore).
+
+        Returns
+        -------
+        tuple[str, str]
+            The function group name and the function name.
+        """
+        g, f = name.split(FunctionGroup.LEGACY_SEPARATOR if legacy_compat else FunctionGroup.SEPARATOR, maxsplit=1)
+        return g, f
+
     def __init__(self,
                  *,
                  config: FunctionGroupBaseConfig,
                  instance_name: str | None = None,
-                 filter_fn: Callable[[Sequence[str]], Awaitable[Sequence[str]]] | None = None):
+                 filter_fn: Callable[[Sequence[str]], Awaitable[Sequence[str]]] | None = None,
+                 middleware: Sequence[Middleware] | None = None):
         """
         Creates a new function group.
 
@@ -370,12 +438,15 @@ class FunctionGroup:
         filter_fn : Callable[[Sequence[str]], Awaitable[Sequence[str]]] | None, optional
             A callback function to additionally filter the functions in the function group dynamically when
             the functions are accessed via any accessor method.
+        middleware : Sequence[Middleware] | None, optional
+            The middleware instances to apply to all functions in this group.
         """
         self._config = config
         self._instance_name = instance_name or config.type
         self._functions: dict[str, Function] = dict()
         self._filter_fn = filter_fn
         self._per_function_filter_fn: dict[str, Callable[[str], Awaitable[bool]]] = dict()
+        self._middleware: tuple[Middleware, ...] = tuple(middleware or ())
 
     def add_function(self,
                      name: str,
@@ -424,6 +495,9 @@ class FunctionGroup:
         info = FunctionInfo.from_fn(fn, input_schema=input_schema, description=description, converters=converters)
         full_name = self._get_fn_name(name)
         lambda_fn = LambdaFunction.from_info(config=EmptyFunctionConfig(), info=info, instance_name=full_name)
+        # Configure middleware from the function group if any
+        if self._middleware:
+            lambda_fn.configure_middleware(self._middleware)
         self._functions[name] = lambda_fn
         if filter_fn:
             self._per_function_filter_fn[name] = filter_fn
@@ -440,7 +514,13 @@ class FunctionGroup:
         return self._config
 
     def _get_fn_name(self, name: str) -> str:
-        return f"{self._instance_name}.{name}"
+        """
+        The function name of a function in a function group is the function name concatenated with
+        the function group instance name separated with a separator string.
+
+        The separator is a double underscore (``__``).
+        """
+        return f"{self._instance_name}{FunctionGroup.SEPARATOR}{name}"
 
     async def _fn_should_be_included(self, name: str) -> bool:
         if name not in self._per_function_filter_fn:
@@ -698,13 +778,19 @@ class FunctionGroup:
     def set_instance_name(self, instance_name: str):
         """
         Sets the instance name for the function group.
+        Also updates all child function instance names to match the new group instance name,
+        preserving each function's suffix. This ensures naming consistency and prevents
+        mismatched names when the workflow builder assigns an instance name to the function group.
 
         Parameters
         ----------
         instance_name : str
             The instance name to set for the function group.
         """
+        old_name = self._instance_name
         self._instance_name = instance_name
+        for func in self._functions.values():
+            func.instance_name = func.instance_name.replace(old_name, instance_name, 1)
 
     @property
     def instance_name(self) -> str:
@@ -712,3 +798,25 @@ class FunctionGroup:
         Returns the instance name for the function group.
         """
         return self._instance_name
+
+    @property
+    def middleware(self) -> tuple[Middleware, ...]:
+        """
+        Returns the middleware configured for this function group.
+        """
+        return self._middleware
+
+    def configure_middleware(self, middleware: Sequence[Middleware] | None = None) -> None:
+        """
+        Configure the middleware for this function group.
+        These middleware will be applied to all functions added to the group.
+
+        Parameters
+        ----------
+        middleware : Sequence[Middleware] | None
+            The middleware to configure for the function group.
+        """
+        self._middleware = tuple(middleware or ())
+        # Update existing functions with the new middleware
+        for func in self._functions.values():
+            func.configure_middleware(self._middleware)

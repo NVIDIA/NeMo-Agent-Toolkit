@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,11 +21,11 @@ A minimal example using Agent Development Kit showcasing a simple weather and ti
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 
 ### Install this Workflow
 
-From the root directory of the NAT library, run the following command:
+From the root directory of the NeMo Agent toolkit repository, run the following command:
 
 ```bash
 uv pip install -e examples/frameworks/adk_demo
@@ -44,7 +44,7 @@ Google ADK support within NeMo Agent toolkit currently only supports OpenAI and 
 
 ## Run the Workflow
 
-Run the workflow with the NAT CLI
+Run the workflow with the `nat run` command:
 
 ```bash
 nat run --config_file examples/frameworks/adk_demo/configs/config.yml --input "What is the weather and time in New York today?"

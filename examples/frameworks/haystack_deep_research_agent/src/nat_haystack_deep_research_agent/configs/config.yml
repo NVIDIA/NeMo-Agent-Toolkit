@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,10 +16,15 @@
 llms:
   rag_llm:
     _type: nim
-    model: nvidia/llama-3.3-nemotron-super-49b-v1
+    model: nvidia/llama-3.3-nemotron-super-49b-v1.5
   agent_llm:
     _type: nim
-    model: nvidia/llama-3.3-nemotron-super-49b-v1
+    model: nvidia/llama-3.3-nemotron-super-49b-v1.5
+
+embedders:
+  nv-embed:
+    _type: nim
+    model: nvidia/nv-embedqa-e5-v5
 
 workflow:
   _type: haystack_deep_research_agent
@@ -29,3 +34,5 @@ workflow:
   opensearch_url: http://localhost:9200
   index_on_startup: true
   data_dir: /data
+  embedder_name: nv-embed
+  embedding_dim: 1024

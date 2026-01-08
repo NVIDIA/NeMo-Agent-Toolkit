@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,19 +15,14 @@
 """
 This file defines the workflow for solving problems in the SWE Bench dataset.
 
-Two types of predictors have been provided:
+Predictor types provided:
 1. **gold**: Uses the patch from the input, bypassing problem-solving logic. See predictors/predict_gold_stub.py.
-2. **full**: Full problem-solving workflow (TO BE IMPLEMENTED). See predictors/predict_full.py.
-
-### Implementation Guide for the Full Predictor:
-To implement the full predictor, populate the following functions in the predictors/full_predict.py file:
-1. `workflow_base_fn`: Setup the prompt and agents needed by the workflow.
-2. `predict_fn`: Implement the problem-solving logic for one swe-bench instance.
+2. **skeleton**: A minimal template for implementing custom predictors. See predictors/predict_skeleton.py.
 
 ### You can add more predictors by following these steps:
 1. Create a new file in the predictors directory.
-2. Add a concrete class using the abstrach base class predictors.predict_abc.SweBenchPredictorBase.
-3. Register the class with and unique name using the `@register_predictor` decorator.
+2. Add a concrete class using the abstract base class predictors.predict_abc.SweBenchPredictorBase.
+3. Register the class with a unique name using the `@register_predictor` decorator.
 4. Import the class in this file to populate the `PredictorRegistry`.
 """
 
@@ -69,7 +64,7 @@ async def swe_bench_workflow(config: SweBenchWorkflowConfig, builder: Builder):
         )
 
     def _get_predictor() -> SweBenchPredictorBase:
-        '''Fetch the predictor based on the prediction type such as gold, full etc.'''
+        '''Fetch the predictor based on the prediction type such as gold, skeleton etc.'''
         return PredictorRegistry.get(config.predictor.static_type())
 
     async def _response_fn(swe_bench_input_str: str) -> SWEBenchOutput:

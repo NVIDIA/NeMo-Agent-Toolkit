@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-FileCopyrightText: Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2019-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -82,7 +82,7 @@ class GitWrapper:
         str
             The full version of the repo in the format 'v#.#.#{a|b|rc}'
         """
-        return _git("describe", "--tags", "--abbrev=0")
+        return _git("describe", "--first-parent", "--tags", "--abbrev=0")
 
     @functools.lru_cache
     @staticmethod

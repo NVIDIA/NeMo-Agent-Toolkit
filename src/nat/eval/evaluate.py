@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,17 +14,24 @@
 # limitations under the License.
 
 import asyncio
+import json
 import logging
 import shutil
+import warnings
+from datetime import UTC
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+import yaml
 from pydantic import BaseModel
 from tqdm import tqdm
 
+from nat.data_models.config import Config
 from nat.data_models.evaluate import EvalConfig
 from nat.data_models.evaluate import JobEvictionPolicy
+from nat.data_models.runtime_enum import RuntimeTypeEnum
 from nat.eval.config import EvaluationRunConfig
 from nat.eval.config import EvaluationRunOutput
 from nat.eval.dataset_handler.dataset_handler import DatasetHandler
@@ -60,6 +67,7 @@ class EvaluationRun:
         # Run-specific configuration
         self.config: EvaluationRunConfig = config
         self.eval_config: EvalConfig | None = None
+        self.effective_config: Config | None = None  # Stores the complete config after applying overrides
 
         # Helpers
         self.intermediate_step_adapter: IntermediateStepAdapter = IntermediateStepAdapter()
@@ -67,7 +75,13 @@ class EvaluationRun:
         # Create evaluation trace context
         try:
             from nat.eval.utils.eval_trace_ctx import WeaveEvalTraceContext
-            self.eval_trace_context = WeaveEvalTraceContext()
+            with warnings.catch_warnings():
+                # Ignore deprecation warnings being triggered by weave. https://github.com/wandb/weave/issues/3666
+                warnings.filterwarnings("ignore",
+                                        category=DeprecationWarning,
+                                        message=r"`sentry_sdk\.Hub` is deprecated")
+
+                self.eval_trace_context = WeaveEvalTraceContext()
         except Exception:
             from nat.eval.utils.eval_trace_ctx import EvalTraceContext
             self.eval_trace_context = EvalTraceContext()
@@ -89,6 +103,11 @@ class EvaluationRun:
         # evaluation output files
         self.evaluator_output_files: list[Path] = []
 
+        # configuration output files
+        self.config_original_file: Path | None = None
+        self.config_effective_file: Path | None = None
+        self.config_metadata_file: Path | None = None
+
     def _compute_usage_stats(self, item: EvalInputItem):
         """Compute usage stats for a single item using the intermediate steps"""
         # get the prompt and completion tokens from the intermediate steps
@@ -104,6 +123,8 @@ class EvaluationRun:
                 usage_stats_per_llm[llm_name].prompt_tokens += step.token_usage.prompt_tokens
                 usage_stats_per_llm[llm_name].completion_tokens += step.token_usage.completion_tokens
                 usage_stats_per_llm[llm_name].total_tokens += step.token_usage.total_tokens
+                usage_stats_per_llm[llm_name].reasoning_tokens += step.token_usage.reasoning_tokens
+                usage_stats_per_llm[llm_name].cached_tokens += step.token_usage.cached_tokens
                 total_tokens += step.token_usage.total_tokens
 
         # find min and max event timestamps
@@ -159,62 +180,65 @@ class EvaluationRun:
             if stop_event.is_set():
                 return "", []
 
-            async with session_manager.run(item.input_obj) as runner:
-                if not session_manager.workflow.has_single_output:
-                    # raise an error if the workflow has multiple outputs
-                    raise NotImplementedError("Multiple outputs are not supported")
+            async with session_manager.session(user_id=self.config.user_id) as session:
+                async with session.run(item.input_obj, runtime_type=RuntimeTypeEnum.EVALUATE) as runner:
+                    if not session.workflow.has_single_output:
+                        # raise an error if the workflow has multiple outputs
+                        raise NotImplementedError("Multiple outputs are not supported")
 
-                runner_result = None
-                intermediate_future = None
+                    runner_result = None
+                    intermediate_future = None
 
-                try:
-                    # Start usage stats and intermediate steps collection in parallel
-                    intermediate_future = pull_intermediate()
-                    runner_result = runner.result()
-                    base_output = await runner_result
-                    intermediate_steps = await intermediate_future
-                except NotImplementedError as e:
-                    logger.error("Failed to run the workflow: %s", e)
-                    # raise original error
-                    raise
-                except Exception as e:
-                    logger.exception("Failed to run the workflow: %s", e)
-                    # stop processing if a workflow error occurs
-                    self.workflow_interrupted = True
+                    try:
+                        # Start usage stats and intermediate steps collection in parallel
+                        intermediate_future = pull_intermediate()
+                        runner_result = runner.result()
+                        base_output = await runner_result
+                        intermediate_steps = await intermediate_future
+                    except NotImplementedError as e:
+                        logger.error("Failed to run the workflow: %s", e)
+                        # raise original error
+                        raise
+                    except Exception as e:
+                        logger.exception("Failed to run the workflow: %s", e)
+                        # stop processing if a workflow error occurs
+                        self.workflow_interrupted = True
 
-                    # Cancel any coroutines that are still running, avoiding a warning about unawaited coroutines
-                    # (typically one of these two is what raised the exception and the other is still running)
-                    for coro in (runner_result, intermediate_future):
-                        if coro is not None:
-                            asyncio.ensure_future(coro).cancel()
+                        # Cancel any coroutines that are still running, avoiding a warning about unawaited coroutines
+                        # (typically one of these two is what raised the exception and the other is still running)
+                        for coro in (runner_result, intermediate_future):
+                            if coro is not None:
+                                asyncio.ensure_future(coro).cancel()
 
-                    stop_event.set()
-                    return
+                        stop_event.set()
+                        return
 
-                try:
-                    base_output = runner.convert(base_output, to_type=str)
-                except ValueError:
-                    pass
+                    try:
+                        base_output = runner.convert(base_output, to_type=str)
+                    except ValueError:
+                        pass
 
-                # if base_output is a pydantic model dump it to json
-                if isinstance(base_output, BaseModel):
-                    output = base_output.model_dump_json(indent=2)
-                else:
-                    m = jsonpath_expr.find(base_output)
-                    if (not m):
-                        raise RuntimeError(f"Failed to extract output using jsonpath: {self.config.result_json_path}")
-                    if (len(m) > 1):
-                        logger.warning("Multiple matches found for jsonpath at row '%s'. Matches: %s. Using the first",
-                                       base_output,
-                                       m)
-                    output = m[0].value
+                    # if base_output is a pydantic model dump it to json
+                    if isinstance(base_output, BaseModel):
+                        output = base_output.model_dump_json(indent=2)
+                    else:
+                        m = jsonpath_expr.find(base_output)
+                        if (not m):
+                            raise RuntimeError(
+                                f"Failed to extract output using jsonpath: {self.config.result_json_path}")
+                        if (len(m) > 1):
+                            logger.warning(
+                                "Multiple matches found for jsonpath at row '%s'. Matches: %s. Using the first",
+                                base_output,
+                                m)
+                        output = m[0].value
 
-                item.output_obj = output
-                item.trajectory = self.intermediate_step_adapter.validate_intermediate_steps(intermediate_steps)
-                usage_stats_item = self._compute_usage_stats(item)
+                    item.output_obj = output
+                    item.trajectory = self.intermediate_step_adapter.validate_intermediate_steps(intermediate_steps)
+                    usage_stats_item = self._compute_usage_stats(item)
 
-                self.weave_eval.log_prediction(item, output)
-                await self.weave_eval.log_usage_stats(item, usage_stats_item)
+                    self.weave_eval.log_prediction(item, output)
+                    await self.weave_eval.log_usage_stats(item, usage_stats_item)
 
         async def wrapped_run(item: EvalInputItem) -> None:
             await run_one(item)
@@ -319,9 +343,98 @@ class EvaluationRun:
             except Exception as e:
                 logger.exception("Failed to delete old job directory: %s: %s", dir_to_delete, e)
 
+    def write_configuration(self) -> None:
+        """Save the configuration used for this evaluation run to the output directory.
+
+        This saves three files:
+        1. config_original.yml - The original configuration file
+        2. config_effective.yml - The configuration with all overrides applied
+        3. config_metadata.json - Metadata about the evaluation run and overrides
+        """
+        output_dir = self.eval_config.general.output_dir
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        try:
+            # 1. Save original configuration
+            config_original_file = output_dir / "config_original.yml"
+            if isinstance(self.config.config_file, Path):
+                # Copy original file if it exists
+                if self.config.config_file.exists():
+                    shutil.copy2(self.config.config_file, config_original_file)
+                    self.config_original_file = config_original_file
+                    logger.info("Original config file copied to %s", config_original_file)
+                else:
+                    logger.warning("Original config file not found at %s", self.config.config_file)
+            elif isinstance(self.config.config_file, BaseModel):
+                # Serialize programmatic config, using mode='json' to handle special types like timedelta
+                config_dict = self.config.config_file.model_dump(mode='json')
+                with open(config_original_file, "w", encoding="utf-8") as f:
+                    yaml.safe_dump(config_dict, f, default_flow_style=False, sort_keys=False)
+                self.config_original_file = config_original_file
+                logger.info("Programmatic config saved to %s", config_original_file)
+
+            # 2. Save effective configuration (with overrides applied)
+            config_effective_file = output_dir / "config_effective.yml"
+            if self.effective_config is not None:
+                effective_config_dict = self.effective_config.model_dump(mode='json') if self.effective_config else {}
+                with open(config_effective_file, "w", encoding="utf-8") as f:
+                    yaml.safe_dump(effective_config_dict, f, default_flow_style=False, sort_keys=False)
+                self.config_effective_file = config_effective_file
+                logger.info("Effective config (with overrides) saved to %s", config_effective_file)
+            else:
+                logger.warning("Effective config not available, skipping config_effective.yml")
+
+            # 3. Save metadata about the run
+            config_metadata_file = output_dir / "config_metadata.json"
+            metadata = {
+                "config_file":
+                    str(self.config.config_file),
+                "config_file_type":
+                    "Path" if isinstance(self.config.config_file, Path) else "BaseModel",
+                "overrides": [{
+                    "path": path, "value": value
+                } for path, value in self.config.override] if self.config.override else [],
+                "dataset":
+                    self.config.dataset,
+                "result_json_path":
+                    self.config.result_json_path,
+                "skip_workflow":
+                    self.config.skip_workflow,
+                "skip_completed_entries":
+                    self.config.skip_completed_entries,
+                "reps":
+                    self.config.reps,
+                "endpoint":
+                    self.config.endpoint,
+                "endpoint_timeout":
+                    self.config.endpoint_timeout,
+                "adjust_dataset_size":
+                    self.config.adjust_dataset_size,
+                "num_passes":
+                    self.config.num_passes,
+                "export_timeout":
+                    self.config.export_timeout,
+                "user_id":
+                    self.config.user_id,
+                "timestamp":
+                    datetime.now(tz=UTC).isoformat(),
+            }
+
+            with open(config_metadata_file, "w", encoding="utf-8") as f:
+                json.dump(metadata, f, indent=2)
+            self.config_metadata_file = config_metadata_file
+            logger.info("Configuration metadata saved to %s", config_metadata_file)
+
+        except Exception:
+            logger.exception("Failed to write configuration files")
+            # Don't raise - this is not critical enough to fail the entire evaluation
+
     def write_output(self, dataset_handler: DatasetHandler, profiler_results: ProfilerResults):
         workflow_output_file = self.eval_config.general.output_dir / "workflow_output.json"
         workflow_output_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # Write the configuration files (original, effective, and metadata)
+        self.write_configuration()
 
         # Write the workflow output to a file (this can be used for re-running the evaluation)
 
@@ -449,7 +562,7 @@ class EvaluationRun:
         from nat.runtime.loader import load_config
 
         # Load and override the config
-        config = None
+        config: Config | None = None
         if isinstance(self.config.config_file, BaseModel):
             config = self.config.config_file
         elif self.config.override:
@@ -457,6 +570,8 @@ class EvaluationRun:
         else:
             config = load_config(self.config.config_file)
 
+        # Store the effective configuration for later saving to output directory
+        self.effective_config = config
         self.eval_config = config.eval
         workflow_alias = self._get_workflow_alias(config.workflow.type)
         logger.debug("Loaded %s evaluation configuration: %s", workflow_alias, self.eval_config)
@@ -488,7 +603,10 @@ class EvaluationRun:
                                        eval_input=EvalInput(eval_input_items=[]),
                                        evaluation_results=[],
                                        usage_stats=UsageStats(),
-                                       profiler_results=ProfilerResults())
+                                       profiler_results=ProfilerResults(),
+                                       config_original_file=self.config_original_file,
+                                       config_effective_file=self.config_effective_file,
+                                       config_metadata_file=self.config_metadata_file)
 
         custom_pre_eval_process_function = self.eval_config.general.output.custom_pre_eval_process_function \
             if self.eval_config.general.output else None
@@ -507,34 +625,44 @@ class EvaluationRun:
                                        eval_input=self.eval_input,
                                        evaluation_results=self.evaluation_results,
                                        usage_stats=self.usage_stats,
-                                       profiler_results=ProfilerResults())
+                                       profiler_results=ProfilerResults(),
+                                       config_original_file=self.config_original_file,
+                                       config_effective_file=self.config_effective_file,
+                                       config_metadata_file=self.config_metadata_file)
 
         # Run workflow and evaluate
         async with WorkflowEvalBuilder.from_config(config=config) as eval_workflow:
             # Initialize Weave integration
-            self.weave_eval.initialize_logger(workflow_alias, self.eval_input, config)
+            self.weave_eval.initialize_logger(workflow_alias, self.eval_input, config, job_id=job_id)
 
             with self.eval_trace_context.evaluation_context():
                 # Run workflow
-                if self.config.endpoint:
-                    await self.run_workflow_remote()
-                elif not self.config.skip_workflow:
-                    if session_manager is None:
-                        workflow = await eval_workflow.build()
-                        session_manager = SessionManager(workflow,
-                                                         max_concurrency=self.eval_config.general.max_concurrency)
-                    await self.run_workflow_local(session_manager)
+                local_session_manager: SessionManager | None = None
+                try:
+                    if self.config.endpoint:
+                        await self.run_workflow_remote()
+                    elif not self.config.skip_workflow:
+                        if session_manager is None:
+                            session_manager = await SessionManager.create(
+                                config=config,
+                                shared_builder=eval_workflow,
+                                max_concurrency=self.eval_config.general.max_concurrency)
+                            local_session_manager = session_manager
+                        await self.run_workflow_local(session_manager)
 
-                # Pre-evaluation process the workflow output
-                self.eval_input = dataset_handler.pre_eval_process_eval_input(self.eval_input)
+                    # Pre-evaluation process the workflow output
+                    self.eval_input = dataset_handler.pre_eval_process_eval_input(self.eval_input)
 
-                # Evaluate
-                evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
-                await self.run_evaluators(evaluators)
+                    # Evaluate
+                    evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
+                    await self.run_evaluators(evaluators)
 
-                # Wait for all trace export tasks to complete (local workflows only)
-                if session_manager and not self.config.endpoint:
-                    await self.wait_for_all_export_tasks_local(session_manager, timeout=self.config.export_timeout)
+                    # Wait for all trace export tasks to complete (local workflows only)
+                    if session_manager and not self.config.endpoint:
+                        await self.wait_for_all_export_tasks_local(session_manager, timeout=self.config.export_timeout)
+                finally:
+                    if local_session_manager is not None:
+                        await local_session_manager.shutdown()
 
         # Profile the workflow
         profiler_results = await self.profile_workflow()
@@ -562,4 +690,7 @@ class EvaluationRun:
                                    eval_input=self.eval_input,
                                    evaluation_results=self.evaluation_results,
                                    usage_stats=self.usage_stats,
-                                   profiler_results=profiler_results)
+                                   profiler_results=profiler_results,
+                                   config_original_file=self.config_original_file,
+                                   config_effective_file=self.config_effective_file,
+                                   config_metadata_file=self.config_metadata_file)

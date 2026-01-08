@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,10 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import importlib.resources
 import inspect
 import json
 import subprocess
+import time
 import typing
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -68,32 +70,90 @@ def locate_example_config(example_config_class: type,
     return config_path
 
 
-async def run_workflow(
-    *,
-    config: "Config | None" = None,
-    config_file: "StrPath | None" = None,
-    question: str,
-    expected_answer: str,
-    assert_expected_answer: bool = True,
-) -> str:
-    from nat.builder.workflow_builder import WorkflowBuilder
-    from nat.runtime.loader import load_config
-    from nat.runtime.session import SessionManager
+async def run_workflow(*,
+                       config: "Config | None" = None,
+                       config_file: "StrPath | None" = None,
+                       question: str,
+                       expected_answer: str,
+                       assert_expected_answer: bool = True,
+                       **kwargs) -> str:
+    """
+    Test specific wrapper for `nat.utils.run_workflow` to run a workflow with a question and validate the expected
+    answer. This variant always sets the result type to `str`.
+    """
+    from nat.utils import run_workflow as nat_run_workflow
 
-    if config is None:
-        assert config_file is not None, "Either config_file or config must be provided"
-        assert Path(config_file).exists(), f"Config file {config_file} does not exist"
-        config = load_config(config_file)
-
-    async with WorkflowBuilder.from_config(config=config) as workflow_builder:
-        workflow = SessionManager(await workflow_builder.build())
-        async with workflow.run(question) as runner:
-            result = await runner.result(to_type=str)
+    result = await nat_run_workflow(config=config, config_file=config_file, prompt=question, to_type=str, **kwargs)
 
     if assert_expected_answer:
         assert expected_answer.lower() in result.lower(), f"Expected '{expected_answer}' in '{result}'"
 
     return result
+
+
+async def serve_workflow(*,
+                         config_path: Path,
+                         question: str,
+                         expected_answer: str,
+                         assert_expected_answer: bool = True,
+                         port: int = 8000,
+                         pipeline_timeout: int = 60,
+                         request_timeout: int = 30) -> dict:
+    """
+    Execute a workflow using `nat serve`, and issue a POST request to the `/generate` endpoint with the given question.
+
+    Intended to be analogous to `run_workflow` but for the REST API serving mode.
+    """
+    import requests
+    workflow_url = f"http://localhost:{port}"
+    workflow_cmd = ["nat", "serve", "--port", str(port), "--config_file", str(config_path.absolute())]
+    proc = subprocess.Popen(workflow_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    assert proc.poll() is None, f"NAT server process failed to start: {proc.stdout.read()}"
+
+    response_payload = {}
+    try:
+        deadline = time.time() + pipeline_timeout  # timeout waiting for the workflow to respond
+        response = None
+        while response is None and time.time() < deadline:
+            try:
+                response = requests.post(url=f"{workflow_url}/generate",
+                                         json={"messages": [{
+                                             "role": "user", "content": question
+                                         }]},
+                                         timeout=request_timeout)
+            except Exception:
+                await asyncio.sleep(0.1)
+
+        assert response is not None, f"deadline exceeded waiting for workflow response: {proc.stdout.read()}"
+        response.raise_for_status()
+        response_payload = response.json()
+        combined_response = []
+        response_value = response_payload.get('value', {})
+        if isinstance(response_value, str):
+            response_text = response_value
+        else:
+            for choice in response_value.get('choices', []):
+                combined_response.append(choice.get('message', {}).get('content', ''))
+
+            response_text = "\n".join(combined_response)
+
+        if assert_expected_answer:
+            assert expected_answer.lower() in response_text.lower(), \
+                f"Unexpected response: {response.text}"
+    finally:
+        # Teardown
+        i = 0
+        while proc.poll() is None and i < 5:
+            if i == 0:
+                proc.terminate()
+            else:
+                proc.kill()
+            await asyncio.sleep(0.1)
+            i += 1
+
+        assert proc.poll() is not None, "NAT server process failed to terminate"
+
+    return response_payload
 
 
 @asynccontextmanager

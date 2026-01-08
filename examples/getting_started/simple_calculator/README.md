@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,7 +36,7 @@ This example demonstrates an end-to-end (E2E) agentic workflow using the NeMo Ag
 
 ## Key Features
 
-- **Custom Calculator Tools:** Demonstrates five mathematical tools - `calculator_multiply`, `calculator_inequality`, `calculator_divide`, `calculator_subtract`, and `current_datetime` for mathematical operations and time-based comparisons.
+- **Custom Calculator Tools:** Demonstrates six tools - `calculator__add`, `calculator__subtract`, `calculator__multiply`, `calculator__divide`, `calculator__compare`, and `current_datetime` for mathematical operations and time-based comparisons.
 - **ReAct Agent Integration:** Uses a `react_agent` that performs reasoning between tool calls to solve complex mathematical queries requiring multiple steps.
 - **Multi-step Problem Solving:** Shows how an agent can break down complex questions like "Is the product of 2 * 4 greater than the current hour?" into sequential tool calls.
 - **Custom Function Registration:** Demonstrates the NeMo Agent toolkit plugin system for registering custom mathematical functions with proper validation and error handling.
@@ -46,7 +46,7 @@ This example demonstrates an end-to-end (E2E) agentic workflow using the NeMo Ag
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 
 ### Install this Workflow:
 
@@ -57,7 +57,7 @@ uv pip install -e examples/getting_started/simple_calculator
 ```
 
 ### Set Up API Keys
-If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>

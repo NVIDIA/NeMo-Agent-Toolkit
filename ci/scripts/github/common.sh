@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,9 +20,13 @@ source ${SCRIPT_DIR}/common.sh
 
 install_rapids_gha_tools
 
-
 # Ensure the workspace tmp directory exists
 mkdir -p ${WORKSPACE_TMP}
 
 rapids-logger "Environment Variables"
 printenv | sort
+
+function get_git_tag() {
+    # Get the latest Git tag, sorted by version, excluding lightweight tags
+    git describe --first-parent --tags --abbrev=0 2>/dev/null || echo "no-tag"
+}

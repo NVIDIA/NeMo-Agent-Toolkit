@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,7 +50,7 @@ This example demonstrates how to evaluate and profile AI agent performance using
 
 ## Prerequisites
 
-1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
+1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 2. **Base workflow**: This example builds upon the Getting Started [Simple Web Query](../../getting_started/simple_web_query/) example. Make sure you are familiar with the example before proceeding.
 
 ## Installation and Setup
@@ -65,7 +65,7 @@ uv pip install -e examples/evaluation_and_profiling/simple_web_query_eval
 
 ### Set Up API Keys
 
-Follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to set up your API keys:
+Follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to set up your API keys:
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
@@ -80,7 +80,7 @@ Evaluate the Simple LangSmith-Documentation agent's accuracy using different con
 
 #### Basic Evaluation
 
-The configuration files specified below contain configurations for the NeMo Agent Toolkit `evaluation` and `profiler` capabilities. For detailed information about evaluation configuration and output files, refer to the [evaluation guide](../../../docs/source/workflows/evaluate.md). For profiling configuration and metrics, see the [profiling guide](../../../docs/source/workflows/profiler.md).
+The configuration files specified below contain configurations for the NeMo Agent Toolkit `evaluation` and `profiler` capabilities. For detailed information about evaluation configuration and output files, refer to the [evaluation guide](../../../docs/source/improve-workflows/evaluate.md). For profiling configuration and metrics, refer to the [profiling guide](../../../docs/source/improve-workflows/profiler.md).
 
 ```bash
 nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
@@ -148,7 +148,7 @@ aws s3 mb \
   ${S3_ENDPOINT_URL:+--endpoint-url=${S3_ENDPOINT_URL}}
 ```
 
-For more information about using remote files for evaluation, refer to the [evaluation guide](../../../docs/source/reference/evaluate.md).
+For more information about using remote files for evaluation, refer to the [evaluation guide](../../../docs/source/improve-workflows/evaluate.md).
 
 ##### Upload dataset to the S3 bucket
 To use the sample config file `eval_upload.yml`, you need to upload the following dataset files to the S3 bucket at path `input/`:
@@ -198,7 +198,7 @@ Running `nat eval` generates several artifacts in the output directory:
 - `all_requests_profiler_traces.json`: Full trace events
 - `inference_optimization.json`: Inference optimization signals (when `compute_llm_metrics` is enabled)
 
-For detailed descriptions of each output file, refer to the [Evaluation outputs section](../../../docs/source/workflows/evaluate.md#evaluation-outputs-what-you-will-get) in the evaluation guide.
+For detailed descriptions of each output file, refer to the [Evaluation outputs section](../../../docs/source/improve-workflows/evaluate.md#evaluation-outputs-what-you-will-get) in the evaluation guide.
 
 ### Available Configurations
 

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -65,7 +65,7 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
     def create_oauth_client(self, config: OAuth2AuthCodeFlowProviderConfig) -> AsyncOAuth2Client:
         try:
             return AsyncOAuth2Client(client_id=config.client_id,
-                                     client_secret=config.client_secret,
+                                     client_secret=config.client_secret.get_secret_value(),
                                      redirect_uri=config.redirect_uri,
                                      scope=" ".join(config.scopes) if config.scopes else None,
                                      token_endpoint=config.token_url,

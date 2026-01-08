@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,7 @@ limitations under the License.
 
 # Router Agent Example
 
-This example demonstrates how to use a configurable Router Agent with the NeMo Agent toolkit. The Router Agent analyzes incoming requests and directly routes them to the most appropriate branch (other agents, functions or tools) based on the request content. For this purpose, NeMo Agent toolkit provides a [`router_agent`](../../../docs/source/workflows/about/router-agent.md) workflow type.
+This example demonstrates how to use a configurable Router Agent with the NeMo Agent toolkit. The Router Agent analyzes incoming requests and directly routes them to the most appropriate branch (other agents, functions or tools) based on the request content. For this purpose, NeMo Agent toolkit provides a [`router_agent`](../../../docs/source/components/agents/router-agent/index.md) workflow type.
 
 ## Table of Contents
 
@@ -99,7 +99,7 @@ The agent will automatically analyze incoming requests and route them to the mos
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 
 ### Install this Workflow
 
@@ -110,7 +110,7 @@ uv pip install -e examples/control_flow/router_agent
 ```
 
 ### Set Up API Keys
-If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>

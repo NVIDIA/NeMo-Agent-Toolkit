@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -95,7 +95,7 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
         try:
             client = AsyncOAuth2Client(
                 client_id=cfg.client_id,
-                client_secret=cfg.client_secret,
+                client_secret=cfg.client_secret.get_secret_value(),
                 redirect_uri=cfg.redirect_uri,
                 scope=" ".join(cfg.scopes) if cfg.scopes else None,
                 token_endpoint=cfg.token_url,

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,7 @@ from pydantic import Field
 
 from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_telemetry_exporter
+from nat.data_models.common import OptionalSecretStr
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from nat.observability.mixin.batch_config_mixin import BatchConfigMixin
 from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch import ContractVersion
@@ -37,7 +38,7 @@ class DFWElasticsearchTelemetryExporter(TelemetryExporterBaseConfig,
     contract_version: ContractVersion = Field(default=ContractVersion.V1_1,
                                               description="The DFW Elasticsearch record schema version to use.")
     username: str | None = Field(default=None, description="The elasticsearch username.")
-    password: str | None = Field(default=None, description="The elasticsearch password.")
+    password: OptionalSecretStr = Field(default=None, description="The elasticsearch password.")
     headers: dict | None = Field(default=None, description="Additional headers for elasticsearch requests.")
 
 

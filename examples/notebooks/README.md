@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,11 +21,14 @@ Through this series of notebooks, we demonstrate how you can use the NVIDIA NeMo
 
 We showcase the building blocks that make up the agentic system, including tools, agents, workflows, and observability.
 
-1. [Getting Started](1_getting_started_with_nat.ipynb) - Getting started with the NeMo Agent toolkit
-2. [Bringing Your Own Agent](2_bringing_your_own_agent.ipynb) - Bringing your own agent to the NeMo Agent toolkit
-3. [Adding Tools and Agents](3_adding_tools_to_agents.ipynb) - Adding tools to your agentic workflow
-4. [Multi-Agent Orchestration](4_multi_agent_orchestration.ipynb) - Setting up a multi-agent orchestration workflow
-5. [Observability, Evaluation, and Profiling](5_observability_evaluation_and_profiling.ipynb) - Instrumenting with observability, evaluation and profiling tools
+1. [Hello World](hello_world.ipynb) - A simple "Hello World" example using NeMo Agent toolkit
+2. [Getting Started](getting_started_with_nat.ipynb) - Getting started with the NeMo Agent toolkit
+3. [Bringing Your Own Agent](bringing_your_own_agent.ipynb) - Bringing your own agent to the NeMo Agent toolkit
+4. [Adding Tools and Agents](adding_tools_to_agents.ipynb) - Adding tools to your agentic workflow
+5. [MCP Client and Servers Setup](mcp_setup_and_integration.ipynb) - Deploy and integrate MCP clients and servers with NeMo Agent toolkit workflows
+6. [Multi-Agent Orchestration](multi_agent_orchestration.ipynb) - Setting up a multi-agent orchestration workflow
+7. [Observability, Evaluation, and Profiling](observability_evaluation_and_profiling.ipynb) - Instrumenting with observability, evaluation and profiling tools
+8. [Optimizing Model Selection, Parameters, and Prompts](optimize_model_selection.ipynb) - Use NeMo Agent toolkit Optimizer to compare models, parameters, and prompt variations
    
 We recommend opening these notebooks in a Jupyter Lab environment or Google Colab environment.
 

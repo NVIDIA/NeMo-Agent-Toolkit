@@ -5,5 +5,7 @@
 (?i)A-IQ
 (?i)AI-Q
 (?i)[Bb]lacklist
+(?i)NAT
 (?i)TODO
+(?i)[Tt]oolkit's
 (?i)[Ww]hitelist

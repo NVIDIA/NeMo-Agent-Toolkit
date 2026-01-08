@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,9 +35,9 @@ def _register_test_llm():
 
 @pytest.fixture(scope="module")
 def test_llm_config_cls():
-    """Return TestLLMConfig class from nat.test.llm."""
+    """Return MockLLMConfig class from nat.test.llm."""
     mod = importlib.import_module("nat.test.llm")
-    return getattr(mod, "TestLLMConfig")
+    return getattr(mod, "MockLLMConfig")
 
 
 RESP_SEQ = ["alpha", "beta", "gamma"]
@@ -414,3 +414,71 @@ async def test_builder_framework_cycle(wrapper: str, seq: list[str], test_llm_co
             pytest.skip(f"Unsupported wrapper: {wrapper}")
 
     assert outs == seq
+
+
+async def test_langchain_bind_tools(test_llm_config_cls):
+    """Verify that LangChainTestLLM supports bind_tools method (required for tool-calling agents)."""
+    async with WorkflowBuilder() as builder:
+        cfg = test_llm_config_cls(response_seq=["test_response"], delay_ms=0)
+        await builder.add_llm("main", cfg)
+        client = await builder.get_llm("main", wrapper_type=LLMFrameworkEnum.LANGCHAIN.value)
+
+        # Mock tools - just need to verify bind_tools can be called
+        mock_tools = [
+            {
+                "name": "tool1", "description": "A test tool"
+            },
+            {
+                "name": "tool2", "description": "Another test tool"
+            },
+        ]
+
+        # Should not raise AttributeError
+        bound_client = client.bind_tools(mock_tools)
+
+        # Verify it returns self
+        assert bound_client is client
+
+        # Verify the client still works after binding
+        result = await bound_client.ainvoke("test message")
+        assert result == "test_response"
+
+
+async def test_langchain_bind(test_llm_config_cls):
+    """Verify that LangChainTestLLM supports bind method (required for ReAct agents with stop sequences)."""
+    async with WorkflowBuilder() as builder:
+        cfg = test_llm_config_cls(response_seq=["test_response"], delay_ms=0)
+        await builder.add_llm("main", cfg)
+        client = await builder.get_llm("main", wrapper_type=LLMFrameworkEnum.LANGCHAIN.value)
+
+        # Should not raise AttributeError
+        bound_client = client.bind(stop=["Observation:"])
+
+        # Verify it returns self
+        assert bound_client is client
+
+        # Verify the client still works after binding
+        result = await bound_client.ainvoke("test message")
+        assert result == "test_response"
+
+
+async def test_langchain_bind_tools_chaining(test_llm_config_cls):
+    """Verify that bind_tools and bind can be chained (fluent interface)."""
+    async with WorkflowBuilder() as builder:
+        cfg = test_llm_config_cls(response_seq=["alpha", "beta"], delay_ms=0)
+        await builder.add_llm("main", cfg)
+        client = await builder.get_llm("main", wrapper_type=LLMFrameworkEnum.LANGCHAIN.value)
+
+        mock_tools = [{"name": "tool1", "description": "A test tool"}]
+
+        # Chain bind_tools and bind calls
+        bound_client = client.bind_tools(mock_tools).bind(stop=["Observation:"])
+
+        # Verify it returns self throughout the chain
+        assert bound_client is client
+
+        # Verify the client still cycles responses correctly
+        result1 = await bound_client.ainvoke("msg1")
+        result2 = await bound_client.ainvoke("msg2")
+        assert result1 == "alpha"
+        assert result2 == "beta"

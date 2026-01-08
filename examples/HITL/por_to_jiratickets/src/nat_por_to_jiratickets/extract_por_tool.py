@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -130,8 +130,8 @@ async def extract_from_por_tool(config: ExtractPORToolConfig, builder: Builder):
     and store the result in session state.
     """
 
-    from langchain.prompts import PromptTemplate
     from langchain_core.output_parsers import StrOutputParser
+    from langchain_core.prompts import PromptTemplate
 
     llm = await builder.get_llm(llm_name=config.llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     prompt = PromptTemplate(

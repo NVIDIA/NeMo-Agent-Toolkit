@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,9 @@
 
 from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.embedder import EmbedderBaseConfig
+from nat.data_models.finetuning import TrainerAdapterConfig
+from nat.data_models.finetuning import TrainerConfig
+from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
@@ -29,6 +32,10 @@ class WorkflowTestConfig(FunctionBaseConfig, name="test_workflow"):
 
 
 class FunctionTestConfig(FunctionBaseConfig, name="test_function"):
+    pass
+
+
+class PerUserFunctionTestConfig(FunctionBaseConfig, name="test_per_user_function"):
     pass
 
 
@@ -61,4 +68,16 @@ class RegistryHandlerTestConfig(RegistryHandlerBaseConfig, name="test_registry_h
 
 
 class AuthenticationProviderTestConfig(AuthProviderBaseConfig, name="test_authentication"):
+    pass
+
+
+class TrainerTestConfig(TrainerConfig, name="test_trainer"):
+    pass
+
+
+class TrainerAdapterTestConfig(TrainerAdapterConfig, name="test_trainer_adapter"):
+    pass
+
+
+class TrajectoryBuilderTestConfig(TrajectoryBuilderConfig, name="test_trajectory_builder"):
     pass

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,6 +33,7 @@ from nat.builder.context import Context
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import ServerToolUseSchema
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import ToolSchema
 from nat.data_models.intermediate_step import TraceMetadata
@@ -48,7 +49,14 @@ def _extract_tools_schema(invocation_params: dict) -> list:
     tools_schema = []
     if invocation_params is not None:
         for tool in invocation_params.get("tools", []):
-            tools_schema.append(ToolSchema(**tool))
+            try:
+                tools_schema.append(ToolSchema(**tool))
+            except Exception:
+                logger.debug(
+                    "Failed to parse tool schema from invocation params: %s. \n This "
+                    "can occur when the LLM server has native tools and can be ignored if "
+                    "using the responses API.",
+                    tool)
 
     return tools_schema
 
@@ -82,6 +90,31 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
                 f"\tCompletion Tokens: {self.completion_tokens}\n"
                 f"Successful Requests: {self.successful_requests}\n")
 
+    def __getstate__(self):
+        """Used for serializing instances"""
+
+        # start with a copy so we don't accidentally modify the object state
+        # or cause other conflicts
+        state = self.__dict__.copy()
+
+        # remove unpicklable entries
+        del state["_lock"]
+        del state["step_manager"]
+        return state
+
+    def __setstate__(self, state):
+        """Used for deserializing"""
+        # restore the state which was picklable
+
+        if (getattr(self, "_lock", None) is None):
+            setattr(self, "_lock", threading.Lock())
+
+        with self._lock:
+            self.__dict__.update(state)
+
+            if (getattr(self, "step_manager", None) is None):
+                setattr(self, "step_manager", Context.get().intermediate_step_manager)
+
     @property
     def always_verbose(self) -> bool:
         """Whether to call verbose callbacks even if verbose is False."""
@@ -93,11 +126,15 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
             completion_tokens = usage_metadata.get("output_tokens", 0)
             total_tokens = usage_metadata.get("total_tokens", 0)
 
-            return TokenUsageBaseModel(
-                prompt_tokens=prompt_tokens,
-                completion_tokens=completion_tokens,
-                total_tokens=total_tokens,
-            )
+            cache_tokens = usage_metadata.get("input_token_details", {}).get("cache_read", 0)
+
+            reasoning_tokens = usage_metadata.get("output_token_details", {}).get("reasoning", 0)
+
+            return TokenUsageBaseModel(prompt_tokens=prompt_tokens,
+                                       completion_tokens=completion_tokens,
+                                       total_tokens=total_tokens,
+                                       cached_tokens=cache_tokens,
+                                       reasoning_tokens=reasoning_tokens)
         return TokenUsageBaseModel()
 
     async def on_llm_start(self, serialized: dict[str, Any], prompts: list[str], **kwargs: Any) -> None:
@@ -213,6 +250,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         except IndexError:
             generation = None
 
+        message = None
         if isinstance(generation, ChatGeneration):
             try:
                 message = generation.message
@@ -229,8 +267,22 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
                 # add tool calls if included in the output
                 tool_calls = generation.message.additional_kwargs['tool_calls']
                 llm_text_output = f"{llm_text_output}\n\nTool calls: {tool_calls}"
+            elif isinstance(message, AIMessage) and message.tool_calls:
+                tool_calls = message.tool_calls
+                llm_text_output = f"{llm_text_output}\n\nTool calls: {tool_calls}"
         else:
             llm_text_output = ""
+
+        tool_outputs_list = []
+        # Check if message.additional_kwargs as tool_outputs indicative of server side tool calling
+        if message and message.additional_kwargs and "tool_outputs" in message.additional_kwargs:
+            tools_outputs = message.additional_kwargs["tool_outputs"]
+            if isinstance(tools_outputs, list):
+                for tool in tools_outputs:
+                    try:
+                        tool_outputs_list.append(ServerToolUseSchema(**tool))
+                    except Exception:
+                        pass
 
         # update shared state behind lock
         with self._lock:
@@ -241,9 +293,11 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
                 name=model_name,
                 UUID=str(kwargs.get("run_id", str(uuid4()))),
                 data=StreamEventData(input=self._run_id_to_llm_input.get(str(kwargs.get("run_id", "")), ""),
-                                     output=llm_text_output),
+                                     output=llm_text_output,
+                                     payload=generation),
                 usage_info=UsageInfo(token_usage=self._extract_token_base_model(usage_metadata)),
-                metadata=TraceMetadata(chat_responses=[generation] if generation else []))
+                metadata=TraceMetadata(chat_responses=[generation] if generation else [],
+                                       tool_outputs=tool_outputs_list if tool_outputs_list else []))
 
             self.step_manager.push_intermediate_step(usage_stat)
 
@@ -292,6 +346,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
                                         metadata=TraceMetadata(tool_outputs=output),
                                         usage_info=UsageInfo(token_usage=TokenUsageBaseModel()),
                                         data=StreamEventData(input=self._run_id_to_tool_input.get(str(run_id), ""),
-                                                             output=output))
+                                                             output=output,
+                                                             payload=output))
 
         self.step_manager.push_intermediate_step(stats)

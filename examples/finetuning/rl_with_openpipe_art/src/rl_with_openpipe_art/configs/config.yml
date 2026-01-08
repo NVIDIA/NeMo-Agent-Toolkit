@@ -1,0 +1,90 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+llms:
+  openpipe_llm:
+    _type: openai
+    # Model name should be the same as the trainer adapter config base_model
+    model_name: Qwen/Qwen2.5-3B-Instruct
+    base_url: http://localhost:8000/v1
+    api_key: default
+    temperature: 0.4
+
+workflow:
+  _type: rl_with_openpipe_art
+  player_model: openpipe_llm
+  max_parser_retries: 2
+
+eval:
+  general:
+    max_concurrency: 16
+    output_dir: .tmp/nat/examples/rl_openpipe/eval/finetune
+    dataset:
+      _type: json
+      file_path: examples/finetuning/rl_with_openpipe_art/src/rl_with_openpipe_art/data/data.json
+
+  evaluators:
+    rl_accuracy:
+      _type: step_value_computation
+
+#################################
+#### Begin Finetuning Config ####
+#################################
+
+trajectory_builders:
+  openpipe_traj_builder:
+    _type: openpipe_art_traj_builder
+    num_generations: 1
+
+trainer_adapters:
+  openpipe_trainer_adapter:
+    _type: openpipe_art_trainer_adapter
+    backend:
+      # General Backend Arguments
+      ip: "0.0.0.0"
+      port: 7623
+      name: "tic_tac_toe_training_run"
+      project: "tic_tac_toe_project"
+      base_model: "Qwen/Qwen2.5-3B-Instruct"
+      api_key: "default"
+      # Model Initialization Arguments
+      init_args:
+        max_seq_length: 8192
+      # VLLM Engine Arguments
+      engine_args:
+        gpu_memory_utilization: 0.9
+        tensor_parallel_size: 1
+    # Training Arguments
+    # Adjust these arguments based on GPU size
+    training:
+      learning_rate: 1e-5
+      beta: 0.1
+
+trainers:
+  openpipe_trainer:
+    _type: openpipe_art_trainer
+
+######### Put it all together into a finetuning config
+
+finetuning:
+  enabled: true
+  trainer: openpipe_trainer
+  trajectory_builder: openpipe_traj_builder
+  trainer_adapter: openpipe_trainer_adapter
+  reward_function:
+    name: rl_accuracy
+  num_epochs: 8
+  output_dir: ./.tmp/nat/finetuning/tic_tac_toe
+
+

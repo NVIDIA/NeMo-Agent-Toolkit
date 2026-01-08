@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,6 +38,7 @@ from nat.builder.component_utils import update_dependency_graph
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.cli.register_workflow import register_function
+from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.component import ComponentGroup
 from nat.data_models.component_ref import ComponentRefNode
 from nat.data_models.component_ref import EmbedderRef
@@ -46,14 +47,23 @@ from nat.data_models.component_ref import LLMRef
 from nat.data_models.component_ref import MemoryRef
 from nat.data_models.component_ref import ObjectStoreRef
 from nat.data_models.component_ref import RetrieverRef
+from nat.data_models.component_ref import TrainerAdapterRef
+from nat.data_models.component_ref import TrainerRef
+from nat.data_models.component_ref import TrajectoryBuilderRef
 from nat.data_models.component_ref import generate_instance_id
 from nat.data_models.config import Config
 from nat.data_models.embedder import EmbedderBaseConfig
+from nat.data_models.finetuning import TrainerAdapterConfig
+from nat.data_models.finetuning import TrainerConfig
+from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
+from nat.data_models.middleware import MiddlewareBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfig
 from nat.data_models.retriever import RetrieverBaseConfig
+from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.embedder.nim_embedder import NIMEmbedderModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.object_store.in_memory_object_store import InMemoryObjectStoreConfig
@@ -178,10 +188,17 @@ def test_group_from_component():
     test_component_config_group_map = {
         EmbedderBaseConfig: ComponentGroup.EMBEDDERS,
         FunctionBaseConfig: ComponentGroup.FUNCTIONS,
+        FunctionGroupBaseConfig: ComponentGroup.FUNCTION_GROUPS,
         LLMBaseConfig: ComponentGroup.LLMS,
         MemoryBaseConfig: ComponentGroup.MEMORY,
+        MiddlewareBaseConfig: ComponentGroup.MIDDLEWARE,
         ObjectStoreBaseConfig: ComponentGroup.OBJECT_STORES,
-        RetrieverBaseConfig: ComponentGroup.RETRIEVERS
+        RetrieverBaseConfig: ComponentGroup.RETRIEVERS,
+        TTCStrategyBaseConfig: ComponentGroup.TTC_STRATEGIES,
+        AuthProviderBaseConfig: ComponentGroup.AUTHENTICATION,
+        TrainerConfig: ComponentGroup.TRAINERS,
+        TrainerAdapterConfig: ComponentGroup.TRAINER_ADAPTERS,
+        TrajectoryBuilderConfig: ComponentGroup.TRAJECTORY_BUILDERS
     }
 
     for TestBaseConfig, test_component_group in test_component_config_group_map.items():
@@ -221,10 +238,23 @@ def test_recursive_componentref_discovery():
         ComponentRefNode(ref_name="function1", component_group=ComponentGroup.FUNCTIONS),  # type: ignore
         ComponentRefNode(ref_name="embedder0", component_group=ComponentGroup.EMBEDDERS),  # type: ignore
         ComponentRefNode(ref_name="object_store0", component_group=ComponentGroup.OBJECT_STORES),  # type: ignore
-        ComponentRefNode(ref_name="retriever0", component_group=ComponentGroup.RETRIEVERS)))  # type: ignore
+        ComponentRefNode(ref_name="retriever0", component_group=ComponentGroup.RETRIEVERS),  # type: ignore
+        ComponentRefNode(ref_name="trainer0", component_group=ComponentGroup.TRAINERS),  # type: ignore
+        ComponentRefNode(ref_name="trainer_adapter0", component_group=ComponentGroup.TRAINER_ADAPTERS),  # type: ignore
+        ComponentRefNode(ref_name="trajectory_builder0",
+                         component_group=ComponentGroup.TRAJECTORY_BUILDERS)))  # type: ignore
 
     # Validate across each base component type class
-    base_config_types = [FunctionBaseConfig, LLMBaseConfig, EmbedderBaseConfig, MemoryBaseConfig, RetrieverBaseConfig]
+    base_config_types = [
+        FunctionBaseConfig,
+        LLMBaseConfig,
+        EmbedderBaseConfig,
+        MemoryBaseConfig,
+        RetrieverBaseConfig,
+        TrainerConfig,
+        TrainerAdapterConfig,
+        TrajectoryBuilderConfig
+    ]
 
     for base_config_type in base_config_types:
 
@@ -243,6 +273,9 @@ def test_recursive_componentref_discovery():
             memory_typed_dict: MemoryTypedDict
             object_store_name: list[ObjectStoreRef]
             function_union: FunctionRef | None = None
+            trainer: TrainerRef
+            trainer_adapter: TrainerAdapterRef
+            trajectory_builder: TrajectoryBuilderRef
 
         instance_config = TestConfig(
             llm="llm0",
@@ -251,6 +284,9 @@ def test_recursive_componentref_discovery():
             retrievers_list=["retriever0"],
             memory_typed_dict=MemoryTypedDict(memory="memory0"),  # type: ignore
             object_store_name=["object_store0"],
+            trainer="trainer0",  # type: ignore
+            trainer_adapter="trainer_adapter0",  # type: ignore
+            trajectory_builder="trajectory_builder0",  # type: ignore
         )
 
         expected_instance_id = generate_instance_id(instance_config)
@@ -432,5 +468,145 @@ def test_build_dependency_sequence(nested_nat_config: Config):
 async def test_load_hierarchial_workflow(nested_nat_config: Config):
 
     # Validate nested workflow instantiation
-    async with WorkflowBuilder.from_config(config=nested_nat_config) as workflow:
-        assert SessionManager(await workflow.build(), max_concurrency=1)
+    async with WorkflowBuilder.from_config(config=nested_nat_config) as builder:
+        workflow = await builder.build()
+        assert SessionManager(config=nested_nat_config,
+                              shared_builder=builder,
+                              shared_workflow=workflow,
+                              max_concurrency=1)
+
+
+def test_finetuning_component_dependencies():
+    """Test that finetuning components can have dependencies and are properly tracked"""
+    from nat.cli.register_workflow import register_trainer
+    from nat.cli.register_workflow import register_trainer_adapter
+    from nat.cli.register_workflow import register_trajectory_builder
+
+    # Create finetuning configs with dependencies on other components
+    class TrainerWithDepsConfig(TrainerConfig, name="trainer_with_deps"):
+        llm: LLMRef
+        function_ref: FunctionRef
+
+    class TrainerAdapterWithDepsConfig(TrainerAdapterConfig, name="trainer_adapter_with_deps"):
+        embedder: EmbedderRef
+        memory: MemoryRef
+
+    class TrajectoryBuilderWithDepsConfig(TrajectoryBuilderConfig, name="trajectory_builder_with_deps"):
+        retriever: RetrieverRef
+        object_store: ObjectStoreRef
+
+    # Register the custom finetuning components
+    @register_trainer(TrainerWithDepsConfig)
+    async def build_trainer(config: TrainerWithDepsConfig, builder: Builder):
+        from nat.plugins.openpipe.trainer import ARTTrainer
+        yield ARTTrainer(trainer_config=config)
+
+    @register_trainer_adapter(TrainerAdapterWithDepsConfig)
+    async def build_trainer_adapter(config: TrainerAdapterWithDepsConfig, builder: Builder):
+        from nat.plugins.openpipe.trainer_adapter import ARTTrainerAdapter
+        yield ARTTrainerAdapter(adapter_config=config)
+
+    @register_trajectory_builder(TrajectoryBuilderWithDepsConfig)
+    async def build_trajectory_builder(config: TrajectoryBuilderWithDepsConfig, builder: Builder):
+        from nat.plugins.openpipe.trajectory_builder import ARTTrajectoryBuilder
+        yield ARTTrajectoryBuilder(trajectory_builder_config=config)
+
+    # Setup a minimal function config
+    class SimpleFnConfig(FunctionBaseConfig, name="simple_fn"):
+        pass
+
+    @register_function(SimpleFnConfig)
+    async def simple_fn(config: SimpleFnConfig, builder: Builder):
+
+        async def _inner_func(fn_input: str) -> str:
+            return ""
+
+        yield _inner_func
+
+    # Create test config with finetuning components that have dependencies
+    config_dict = {
+        "functions": {
+            "fn0": SimpleFnConfig()
+        },
+        "llms": {
+            "llm0": NIMModelConfig(model_name="test")
+        },
+        "embedders": {
+            "embedder0": NIMEmbedderModelConfig(model_name="test")
+        },
+        "memory": {
+            "memory0": DummyMemoryConfig()
+        },
+        "retrievers": {
+            "retriever0": NemoRetrieverConfig(uri="http://test.com")
+        },  # type: ignore
+        "object_stores": {
+            "object_store0": InMemoryObjectStoreConfig()
+        },
+        "trainers": {
+            "trainer0":
+                TrainerWithDepsConfig(
+                    llm="llm0",  # type: ignore
+                    function_ref="fn0"  # type: ignore
+                )
+        },
+        "trainer_adapters": {
+            "trainer_adapter0":
+                TrainerAdapterWithDepsConfig(
+                    embedder="embedder0",  # type: ignore
+                    memory="memory0"  # type: ignore
+                )
+        },
+        "trajectory_builders": {
+            "trajectory_builder0":
+                TrajectoryBuilderWithDepsConfig(
+                    retriever="retriever0",  # type: ignore
+                    object_store="object_store0"  # type: ignore
+                )
+        },
+        "workflow": SimpleFnConfig()
+    }
+
+    test_config = Config.model_validate(config_dict)
+
+    # Test that dependencies are discovered
+    dependency_map, dependency_graph = config_to_dependency_objects(test_config)
+
+    # Verify that finetuning components are in the dependency map
+    assert any(inst.component_group == ComponentGroup.TRAINERS for inst in dependency_map.values())
+    assert any(inst.component_group == ComponentGroup.TRAINER_ADAPTERS for inst in dependency_map.values())
+    assert any(inst.component_group == ComponentGroup.TRAJECTORY_BUILDERS for inst in dependency_map.values())
+
+    # Verify that trainer has dependencies on llm and function
+    trainer_instance = next(inst for inst in dependency_map.values() if inst.name == "trainer0")
+    assert dependency_graph.out_degree(trainer_instance.instance_id) == 2  # llm + function
+
+    # Verify that trainer_adapter has dependencies on embedder and memory
+    trainer_adapter_instance = next(inst for inst in dependency_map.values() if inst.name == "trainer_adapter0")
+    assert dependency_graph.out_degree(trainer_adapter_instance.instance_id) == 2  # embedder + memory
+
+    # Verify that trajectory_builder has dependencies on retriever and object_store
+    trajectory_builder_instance = next(inst for inst in dependency_map.values() if inst.name == "trajectory_builder0")
+    assert dependency_graph.out_degree(trajectory_builder_instance.instance_id) == 2  # retriever + object_store
+
+    # Test that the dependency sequence is correct
+    dependency_sequence = build_dependency_sequence(test_config)
+
+    # Find positions of components in sequence
+    positions = {}
+    for idx, inst in enumerate(dependency_sequence):
+        positions[inst.name] = idx
+
+    # Verify that dependencies come before the components that depend on them
+    assert positions["llm0"] < positions["trainer0"]
+    assert positions["fn0"] < positions["trainer0"]
+    assert positions["embedder0"] < positions["trainer_adapter0"]
+    assert positions["memory0"] < positions["trainer_adapter0"]
+    assert positions["retriever0"] < positions["trajectory_builder0"]
+    assert positions["object_store0"] < positions["trajectory_builder0"]
+
+    # Verify that finetuning components come after functions but before workflow
+    assert positions["fn0"] < positions["trainer0"]
+    assert positions["trainer0"] < positions["<workflow>"]
+    assert positions["trainer_adapter0"] < positions["<workflow>"]
+    assert positions["trajectory_builder0"] < positions["<workflow>"]

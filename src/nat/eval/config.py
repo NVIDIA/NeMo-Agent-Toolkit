@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -46,6 +46,8 @@ class EvaluationRunConfig(BaseModel):
     num_passes: int = 0
     # timeout for waiting for trace export tasks to complete
     export_timeout: float = 60.0
+    # User ID to use for workflow session. Defaults to 'nat_eval_user_id'.
+    user_id: str = "nat_eval_user_id"
 
 
 class EvaluationRunOutput(BaseModel):
@@ -60,3 +62,8 @@ class EvaluationRunOutput(BaseModel):
     evaluation_results: list[tuple[str, EvalOutput]]
     usage_stats: UsageStats | None = None
     profiler_results: ProfilerResults
+
+    # Configuration files written to output directory
+    config_original_file: Path | None = None
+    config_effective_file: Path | None = None
+    config_metadata_file: Path | None = None

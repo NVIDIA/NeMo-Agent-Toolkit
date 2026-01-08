@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import logging
-import os
 
 from pydantic import ConfigDict
 
@@ -22,6 +21,8 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
+from nat.data_models.common import OptionalSecretStr
+from nat.data_models.common import set_secret_from_env
 from nat.data_models.component_ref import EmbedderRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
@@ -36,7 +37,7 @@ class LlamaIndexRAGConfig(FunctionBaseConfig, name="llama_index_rag"):
     llm_name: LLMRef
     embedding_name: EmbedderRef
     data_dir: str
-    api_key: str | None = None
+    api_key: OptionalSecretStr = None
     model_name: str
 
 
@@ -47,12 +48,12 @@ async def llama_index_rag_tool(tool_config: LlamaIndexRAGConfig, builder: Builde
     from llama_index.core import Settings
     from llama_index.core import SimpleDirectoryReader
     from llama_index.core import VectorStoreIndex
-    from llama_index.core.agent import FunctionCallingAgentWorker
+    from llama_index.core.agent import FunctionAgent
     from llama_index.core.node_parser import SimpleFileNodeParser
     from llama_index.core.tools import QueryEngineTool
 
     if (not tool_config.api_key):
-        tool_config.api_key = os.getenv("NVIDIA_API_KEY")
+        set_secret_from_env(tool_config, "api_key", "NVIDIA_API_KEY")
 
     if not tool_config.api_key:
         raise ValueError(
@@ -71,31 +72,34 @@ async def llama_index_rag_tool(tool_config: LlamaIndexRAGConfig, builder: Builde
     Settings.llm = llm
     query_engine = index.as_query_engine(similarity_top_k=2)
 
-    model_name = tool_config.model_name
-    if not model_name.startswith('nvdev'):
+    is_nvdev = tool_config.model_name.startswith('nvdev')
+
+    if not is_nvdev:
         tool = QueryEngineTool.from_defaults(
             query_engine, name="rag", description="ingest data from README about this workflow with llama_index_rag")
 
-        agent_worker = FunctionCallingAgentWorker.from_tools(
-            [tool],
+        agent = FunctionAgent(
+            tools=[tool],
             llm=llm,
             verbose=True,
         )
-        agent = agent_worker.as_agent()
 
     async def _arun(inputs: str) -> str:
         """
         rag using llama-index ingesting README markdown file
         Args:
-            query : user query
+            inputs : user query
         """
-        if not model_name.startswith('nvdev'):
-            agent_response = (await agent.achat(inputs))
-            logger.info("response from llama-index Agent : \n %s %s", Fore.MAGENTA, agent_response.response)
-            output = agent_response.response
+        output: str
+        if not is_nvdev:
+            agent_response = await agent.run(inputs)
+            response_content = agent_response.response
+            logger.info("response from llama-index Agent : \n %s %s", Fore.MAGENTA, response_content)
+            output = str(response_content) if response_content else ""
         else:
             logger.info("%s %s %s %s", Fore.MAGENTA, type(query_engine), query_engine, inputs)
-            output = query_engine.query(inputs).response
+            response = await query_engine.aquery(inputs)
+            output = str(response) if response else ""
 
         return output
 

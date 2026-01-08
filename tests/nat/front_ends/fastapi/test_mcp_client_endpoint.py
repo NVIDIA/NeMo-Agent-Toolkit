@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -86,9 +86,9 @@ async def test_mcp_client_tool_list_success_with_alias(app_worker):
     app, worker = app_worker
 
     # Build MCP client config with alias override
-    from nat.plugins.mcp.client_config import MCPClientConfig
-    from nat.plugins.mcp.client_config import MCPServerConfig
-    from nat.plugins.mcp.client_config import MCPToolOverrideConfig
+    from nat.plugins.mcp.client.client_config import MCPClientConfig
+    from nat.plugins.mcp.client.client_config import MCPServerConfig
+    from nat.plugins.mcp.client.client_config import MCPToolOverrideConfig
 
     server_cfg = MCPServerConfig(transport="streamable-http", url="http://localhost:9901/mcp")
     cfg = MCPClientConfig(
@@ -131,8 +131,8 @@ async def test_mcp_client_tool_list_success_with_alias(app_worker):
 async def test_mcp_client_tool_list_unhealthy_marks_unavailable(app_worker):
     app, worker = app_worker
 
-    from nat.plugins.mcp.client_config import MCPClientConfig
-    from nat.plugins.mcp.client_config import MCPServerConfig
+    from nat.plugins.mcp.client.client_config import MCPClientConfig
+    from nat.plugins.mcp.client.client_config import MCPServerConfig
 
     server_cfg = MCPServerConfig(transport="streamable-http", url="http://localhost:9901/mcp")
     cfg = MCPClientConfig(server=server_cfg)
@@ -143,8 +143,8 @@ async def test_mcp_client_tool_list_unhealthy_marks_unavailable(app_worker):
     group_name = "mcp_math"
     group_instance = _GroupInstanceStub(client,
                                         {
-                                            f"{group_name}.calculator_add": _FnStub("Add"),
-                                            f"{group_name}.calculator_subtract": _FnStub("Subtract"),
+                                            f"{group_name}.calculator__add": _FnStub("Add"),
+                                            f"{group_name}.calculator__subtract": _FnStub("Subtract"),
                                         })
     configured_group = _ConfiguredGroupStub(cfg, group_instance)
     builder = _BuilderStub({group_name: configured_group})

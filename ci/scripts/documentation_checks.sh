@@ -1,5 +1,5 @@
 #!/bin/bash
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,7 @@ set +e
 DOC_FILES=$(git ls-files "*.md" "*.rst" | grep -v -E '(^|/)(CHANGELOG|LICENSE)\.md$')
 NOTEBOOK_FILES=$(git ls-files "*.ipynb")
 
-if [[ -v ${WORKSPACE_TMP} ]]; then
+if [[ -z "${WORKSPACE_TMP}" ]]; then
     MKTEMP_ARGS=""
 else
     MKTEMP_ARGS="--tmpdir=${WORKSPACE_TMP}"

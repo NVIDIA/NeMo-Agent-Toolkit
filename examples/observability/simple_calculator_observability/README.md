@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,7 +39,7 @@ This example demonstrates how to implement **observability and tracing capabilit
 
 Before starting this example, you need:
 
-1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
+1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 2. **Base workflow**: This example builds upon the Getting Started [Simple Calculator](../../getting_started/simple_calculator/) example. Make sure you are familiar with the example before proceeding.
 3. **Observability platform**: Access to at least one of the supported platforms (Phoenix, Langfuse, LangSmith, Weave, or Patronus)
 
@@ -76,6 +76,33 @@ Phoenix provides local tracing capabilities perfect for development and testing.
     ```
 
 4. Open your browser to `http://localhost:6006` to explore traces in the Phoenix UI.
+
+### Phoenix Tracing with Nested Tool Calls
+
+This configuration demonstrates **parent-child span tracking** for nested tool calls. The `power_of_two` tool internally calls `calculator__multiply`, creating a hierarchy that you can filter in Phoenix.
+
+1. Run the workflow with nested tool tracing:
+
+    ```bash
+    nat run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix-nested.yml --input "What is 5 squared?"
+    ```
+
+2. In Phoenix UI (`http://localhost:6006`), you can filter spans by their parent:
+
+    | Span Attribute | Value | Description |
+    |----------------|-------|-------------|
+    | `nat.function.parent_name` | `react_agent` | Shows only agent-selected tools |
+    | `nat.function.parent_name` | `power_of_two` | Shows nested tool calls |
+
+3. Expected span hierarchy:
+
+    ```text
+    react_agent (root)
+    └── power_of_two (parent: react_agent)
+        └── calculator__multiply (parent: power_of_two)
+    ```
+
+This is useful for filtering out internal tool calls when analyzing agent behavior, allowing you to focus on only the tools the agent directly selected.
 
 ### File-Based Tracing
 
@@ -179,7 +206,7 @@ For simple local development and debugging, you can export traces directly to a 
     nat run --config_file examples/observability/simple_calculator_observability/configs/config-weave.yml --input "What's the sum of 7 and 8?"
     ```
 
-For detailed Weave setup instructions, see the [Fine-grained Tracing with Weave](../../../docs/source/workflows/observe/observe-workflow-with-weave.md) guide.
+For detailed Weave setup instructions, refer to the [Fine-grained Tracing with Weave](../../../docs/source/run-workflows/observe/observe-workflow-with-weave.md) guide.
 
 ### AI Safety Monitoring with Patronus
 
@@ -209,25 +236,41 @@ For detailed Weave setup instructions, see the [Fine-grained Tracing with Weave]
 
 Transmit traces to RagaAI Catalyst.
 
-1. Get your Catalyst credentials:
+1. Get your Catalyst credentials and create a project:
 
-    Login to [RagaAI Catalyst](https://catalyst.raga.ai/) and navigate to the settings page.
+    1. Login to [RagaAI Catalyst](https://catalyst.raga.ai/) and navigate to the settings page.
 
-    Under the "Account" section, you can find your API key. Click on the "Show" button to reveal the API key. Take note of this API key as you will need it to run the workflow.
+    2. Click on the "Authenticate" tab, then click on "Generate New Key". Take note of the Access Key and Secret Key as you will need them to run the workflow.
+    3. Click on "Projects" in the left sidebar, then click on the "Create Project" button. Name your project `simple-calculator` and click "Create". Alternately another project name can be used, just ensure to update the project name in `examples/observability/simple_calculator_observability/configs/config-catalyst.yml` to match.
+
 
 2. Set your Catalyst API key:
 
     ```bash
     export CATALYST_ACCESS_KEY=<your_access_key>
     export CATALYST_SECRET_KEY=<your_secret_key>
+    ```
+
+    Optionally set a custom endpoint (default is `https://catalyst.raga.ai/api`):
+
+    ```bash
     export CATALYST_ENDPOINT=<your_endpoint>
     ```
 
-3. Run the workflow:
+3. Set the NAT_SPAN_PREFIX environment variable to `aiq` for RagaAI Catalyst compatibility:
+
+    ```bash
+    export NAT_SPAN_PREFIX=aiq
+    ```
+
+4. Run the workflow:
 
     ```bash
     nat run --config_file examples/observability/simple_calculator_observability/configs/config-catalyst.yml --input "Divide 144 by 12"
     ```
+
+5. Return to the RagaAI Catalyst dashboard to view your traces.
+    Click on "Projects" in the left sidebar, then select your `simple-calculator` project (or the name you used). You should see `simple-calculator-dataset` listed in the datasets. Click on the dataset to bring up the traces.
 
 ### Galileo Integration
 
@@ -251,6 +294,36 @@ Transmit traces to Galileo for workflow observability.
     nat run --config_file examples/observability/simple_calculator_observability/configs/config-galileo.yml --input "Is 100 > 50?"
     ```
 
+### Analyze Traces with DBNL
+
+[DBNL](https://www.distributional.com/) helps you understand your agent by analyzing your traces.
+
+1. Install DBNL:
+
+    Visit [https://docs.dbnl.com/get-started/quickstart](https://docs.dbnl.com/get-started/quickstart) to install DBNL.
+
+2. Create a trace ingestion project:
+
+    Navigate to your DBNL deployment and go to Projects > + New Project
+
+    Create a trace ingestion project and generate an API token
+
+    Take note of the API token and project id
+
+3. Set your DBNL credentials:
+
+    ```bash
+    # DBNL_API_URL should point to your deployment API URL (e.g. http://localhost:8080/api)
+    export DBNL_API_URL=<your_api_url>
+    export DBNL_API_TOKEN=<your_api_token>
+    export DBNL_PROJECT_ID=<your_project_id>
+    ```
+
+4. Run the workflow
+
+    ```bash
+    nat run --config_file examples/observability/simple_calculator_observability/configs/config-dbnl.yml --input "Is 100 > 50?"
+    ```
 
 ## Configuration Files
 
@@ -259,6 +332,7 @@ The example includes multiple configuration files for different observability pl
 | Configuration File | Platform | Best For |
 |-------------------|----------|----------|
 | `config-phoenix.yml` | Phoenix | Tracing with Phoenix |
+| `config-phoenix-nested.yml` | Phoenix | Testing parent-child span tracking with nested tool calls |
 | `config-otel-file.yml` | File Export | Local file-based tracing for development and debugging |
 | `config-langfuse.yml` | Langfuse | Langfuse monitoring and analytics |
 | `config-langsmith.yml` | LangSmith | LangChain/LangGraph ecosystem integration |
@@ -266,6 +340,7 @@ The example includes multiple configuration files for different observability pl
 | `config-patronus.yml` | Patronus | AI safety and compliance monitoring |
 | `config-catalyst.yml` | Catalyst | RagaAI Catalyst integration |
 | `config-galileo.yml` | Galileo | Galileo integration |
+| `config-dbnl.yml` | DBNL | AI product analytics |
 
 ## What Gets Traced
 

@@ -1,0 +1,31 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+functions:
+  current_datetime:
+    _type: current_datetime
+
+llms:
+  agent_llm:
+    _type: azure_openai
+    azure_deployment: gpt-35-turbo
+    azure_endpoint: $AZURE_OPENAI_ENDPOINT
+    api_version: 2025-04-01-preview
+
+workflow:
+  _type: react_agent
+  llm_name: agent_llm
+  verbose: true
+  tool_names: [current_datetime]

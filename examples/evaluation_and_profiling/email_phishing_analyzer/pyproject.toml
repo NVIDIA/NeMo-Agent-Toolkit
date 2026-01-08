@@ -10,8 +10,8 @@ root = "../../.."
 name = "nat_email_phishing_analyzer"
 dynamic = ["version"]
 dependencies = [
-  "nvidia-nat[langchain,phoenix]~=1.3",
-  "bs4==0.0.2",
+  "nvidia-nat[langchain,phoenix]~=1.4",
+  "beautifulsoup4~=4.13",
   "networkx~=3.4",
   "openinference-instrumentation-langchain==0.1.29",
 ]

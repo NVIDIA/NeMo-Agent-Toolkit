@@ -1,0 +1,178 @@
+<!--
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-License-Identifier: Apache-2.0
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+# Workflow Configuration
+
+NeMo Agent toolkit [workflows](./about-building-workflows.md) are defined by a [YAML configuration file](#workflow-configuration-file), which specifies which entities ([functions](./functions-and-function-groups/functions.md), [LLMs](./llms/index.md), [embedders](./embedders.md), etc.) to use in the workflow, along with general configuration settings.
+
+The configuration attributes of each entity in NeMo Agent toolkit is defined by a [Configuration Object](#configuration-object). This object defines both the type and optionally the default value of each attribute. Any attribute without a default value is required to be specified in the configuration file.
+
+## Configuration Object
+Each NeMo Agent toolkit [function](./functions-and-function-groups/functions.md) requires a configuration object that inherits from {py:class}`~nat.data_models.function.FunctionBaseConfig`. The `FunctionBaseConfig` class and ultimately all NeMo Agent toolkit configuration objects are subclasses of the [`pydantic.BaseModel`](https://docs.pydantic.dev/2.11/api/base_model/#pydantic.BaseModel) class from the [Pydantic Library](https://docs.pydantic.dev/2.11/), which provides a way to define and validate configuration objects. Each configuration object defines the parameters used to create runtime instances of functions (or other component type), each with different functionality based on configuration settings. It is possible to define nested functions that access other component runtime instances by name. These could be other `functions`, `llms`, `embedders`, `retrievers`, or `memory`. To facilitate nested runtime instance discovery, each component must be initialized in order based on the dependency tree. Enabling this feature requires configuration object parameters that refer to other component instances by name use a `ComponentRef` `dtype` that matches referred component type. The supported `ComponentRef` types are enumerated below:
+
+- `FunctionRef`: Refers to a registered [function](./functions-and-function-groups/functions.md) by its instance name in the `functions` section configuration object.
+- `LLMRef`: Refers to a registered [LLM](./llms/index.md) by its instance name in the `llms` section of the configuration object.
+- `EmbedderRef`: Refers to a registered [embedder](./embedders.md) by its instance name in the `embedders` section of the configuration object.
+- `RetrieverRef`: Refers to a registered [retriever](./retrievers.md) by its instance name in the `retrievers` section of the configuration object.
+- `MemoryRef`: Refers to a registered [memory](./memory.md) by its instance name in the `memory` section of the configuration object.
+
+
+## Workflow Configuration File
+
+The workflow configuration file is a YAML file that specifies the tools and models to use in the workflow, along with general configuration settings. To illustrate how these are organized, we will examine the configuration of the simple workflow.
+
+`examples/getting_started/simple_web_query/configs/config.yml`:
+```yaml
+functions:
+  webpage_query:
+    _type: webpage_query
+    webpage_url: https://docs.smith.langchain.com
+    description: "Search for information about LangSmith. For any questions about LangSmith, you must use this tool!"
+    embedder_name: nv-embedqa-e5-v5
+    chunk_size: 512
+  current_datetime:
+    _type: current_datetime
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.0
+
+embedders:
+  nv-embedqa-e5-v5:
+    _type: nim
+    model_name: nvidia/nv-embedqa-e5-v5
+
+workflow:
+  _type: react_agent
+  tool_names: [webpage_query, current_datetime]
+  llm_name: nim_llm
+  verbose: true
+  parse_agent_response_max_retries: 3
+```
+
+From the above we see that it is divided into four sections: `functions`, `llms`, `embedders`, and `workflow`. There are additional optional sections not used in the above example they are: `general`, `memory`, `retrievers`, and `eval`.
+
+### `functions`
+The `functions` section contains the tools used in the workflow, in our example we have two `webpage_query` and `current_datetime`. By convention, the key matches the `_type` value, however this is not a strict requirement, and can be used to include multiple instances of the same tool.
+
+
+### `llms`
+This section contains the models used in the workflow. The `_type` value refers to the API hosting the model, in this case `nim` refers to an NIM model hosted on [`build.nvidia.com`](https://build.nvidia.com).
+
+<!-- path-check-skip-next-line -->
+The `model_name` value then needs to match a model hosted by the API, in our example we are using the [`meta/llama-3.1-70b-instruct`](https://build.nvidia.com/meta/llama-3_1-70b-instruct) model.
+
+Each type of API supports specific attributes. For `nim` these are defined in the {py:class}`~nat.llm.nim_llm.NIMModelConfig` class.
+
+See the [LLMs](./llms/index.md) documentation for more information.
+
+### `embedders`
+<!-- path-check-skip-next-line -->
+This section follows a the same structure as the `llms` section and serves as a way to separate the embedding models from the LLM models. In our example, we are using the [`nvidia/nv-embedqa-e5-v5`](https://build.nvidia.com/nvidia/nv-embedqa-e5-v5) model.
+
+See the [Embedders](./embedders.md) documentation for more information.
+
+### `workflow`
+
+This section ties the previous sections together by defining the tools and LLM models to use. The `tool_names` section lists the tool names from the `functions` section, while the `llm_name` section specifies the LLM model to use.
+
+The `_type` value refers to the workflow type, in our example we are using a `react_agent` workflow. While the choice of workflow type is commonly an [agent](../components/agents/index.md), this can be any registered NeMo Agent toolkit function.
+
+:::{note}
+In NeMo Agent toolkit, an agent is a special type of function.
+:::
+
+The parameters for the `react_agent` workflow are specified by the {py:class}`~nat.agent.react_agent.register.ReActAgentWorkflowConfig` class.
+
+### `general`
+This section contains general configuration settings for NeMo Agent toolkit which are not specific to any workflow. The parameters for this section are specified by the {py:class}`~nat.data_models.config.GeneralConfig` class.
+
+:::{note}
+⚠️ **Deprecated**: The `use_uvloop` parameter is deprecated and will be removed in a future release. Previously, the `use_uvloop` parameter meant to specify whether to use the [`uvloop`](https://github.com/MagicStack/uvloop) event loop, but now the use of `uv_loop` will be automatically determined based on the system platform the user is using.
+:::
+
+### `eval`
+This section contains the evaluation settings for the workflow. Refer to [Evaluating NeMo Agent toolkit Workflows](../improve-workflows/evaluate.md) for more information.
+
+### `memory`
+
+This section configures integration of memory layers with tools such as the [Mem0 Platform](https://mem0.ai/). It follows the same format as the `llms` section. Refer to the [Memory Module](./memory.md) document for an example on how this is used.
+
+### `retrievers`
+
+This section configures retrievers for vector stores. It follows the same format as the `llms` section. Refer to the `examples/RAG/simple_rag` example workflow for an example on how this is used.
+
+Refer to the [Retrievers](./retrievers.md) documentation for more information.
+
+### Environment Variable Interpolation
+
+NeMo Agent toolkit supports environment variable interpolation in YAML configuration files using the format `${VAR:-default_value}`. This allows you to:
+
+1. Reference environment variables in your configuration
+2. Provide default values if the environment variable is not set
+3. Use empty strings as default values if needed
+
+To illustrate this concept, an example from the `llms` section of the configuration file is provided below.
+
+```yaml
+llms:
+  nim_llm:
+    _type: nim
+    base_url: ${NIM_BASE_URL:-"http://default.com"}  # Optional with default value
+    api_key: ${NIM_API_KEY}  # Will use empty string if `NIM_API_KEY` not set
+    model_name: ${MODEL_NAME:-}  # Will use empty string if `MODEL_NAME` not set
+    temperature: 0.0
+```
+
+The environment variable interpolation process follow the rules enumerated below.
+
+- `${VAR}` - Uses the value of environment variable `VAR`, or empty string if not set
+- `${VAR:-default}` - Uses the value of environment variable `VAR`, or `default` if not set
+- `${VAR:-}` - Uses the value of environment variable `VAR`, or empty string if not set
+
+### Configuration Inheritance
+
+NeMo Agent toolkit supports configuration inheritance to reduce duplication across similar configuration files. Use the `base` key to reference a base configuration and selectively override specific values. For example, given a base configuration:
+
+```yaml
+# base-config.yml
+llms:
+  nim_llm:
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.0
+    max_tokens: 1024
+```
+
+A variant configuration can inherit from it and override specific values:
+
+```yaml
+# config-variant.yml
+base: base-config.yml
+llms:
+  nim_llm:
+    temperature: 0.9  # Override specific value
+```
+
+When you run a workflow using `config-variant.yml`, the configurations are combined so that values in the variant (such as `temperature: 0.9`) override those in the base, while unspecified values (such as `model_name` and `max_tokens`) are inherited. This feature also supports:
+
+- **Relative or absolute paths**: Base paths are resolved relative to the current configuration file's directory
+- **Chained inheritance**: Configurations can inherit from other variants (such as `base.yml` → `variant.yml` → `variant-debug.yml`)
+- **Error detection**: The system detects circular dependencies and missing base files
+
+See `examples/config_inheritance` for a complete example demonstrating different inheritance patterns and use cases.

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,7 +24,7 @@ FROM --platform=$TARGETPLATFORM ${BASE_IMAGE_URL}:${BASE_IMAGE_TAG}
 ARG PYTHON_VERSION
 ARG NAT_VERSION
 
-COPY --from=ghcr.io/astral-sh/uv:0.8.15 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.9.15 /uv /uvx /bin/
 
 ENV PYTHONDONTWRITEBYTECODE=1
 

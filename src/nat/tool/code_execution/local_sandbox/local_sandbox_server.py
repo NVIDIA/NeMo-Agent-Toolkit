@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2025, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2024-2026, NVIDIA CORPORATION.  All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -192,6 +192,11 @@ def do_execute(request: Request) -> CodeExecutionResponse:
 @app.route("/execute", methods=["POST"])
 def execute():
     return do_execute(request)
+
+
+@app.route("/", methods=["GET"])
+def status() -> tuple[dict[str, str], int]:
+    return ({"status": "ok"}, 200)
 
 
 if __name__ == '__main__':

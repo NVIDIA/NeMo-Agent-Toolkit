@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,10 +45,11 @@ function_groups:
       transport: streamable-http
       url: "http://localhost:9901/mcp"
     include:
-      - calculator_multiply
-      - calculator_inequality
-      - calculator_divide
-      - calculator_subtract
+      - calculator__add
+      - calculator__subtract
+      - calculator__multiply
+      - calculator__divide
+      - calculator__compare
 
 llms:
   nim_llm:

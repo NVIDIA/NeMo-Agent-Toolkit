@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -66,7 +66,7 @@ class TestUserReportTools:
             ObjectStoreItem(data=json.dumps(test_report).encode("utf-8"), content_type="application/json"))
 
         # Test: get the report
-        get_fn = group.get("user_report.get")
+        get_fn = group.get("user_report__get")
         result = await get_fn.ainvoke(get_fn.input_schema(user_id="test_user"))
         assert result == json.dumps(test_report)
 
@@ -79,13 +79,13 @@ class TestUserReportTools:
             ObjectStoreItem(data=json.dumps(test_report).encode("utf-8"), content_type="application/json"))
 
         # Test: get the report with date
-        get_fn = group.get("user_report.get")
+        get_fn = group.get("user_report__get")
         result = await get_fn.ainvoke(get_fn.input_schema(user_id="test_user", date="2024-01-01"))
         assert result == json.dumps(test_report)
 
     async def test_get_user_report_not_found(self, group):
         """Test get_user_report when report doesn't exist."""
-        get_fn = group.get("user_report.get")
+        get_fn = group.get("user_report__get")
         with pytest.raises(NoSuchKeyError):
             await get_fn.ainvoke(get_fn.input_schema(user_id="nonexistent_user"))
 
@@ -94,7 +94,7 @@ class TestUserReportTools:
     async def test_put_user_report_valid_case(self, object_store, group):
         """Test put_user_report with new report."""
         test_report = json.dumps({"user": "test_user", "data": "new data"})
-        put_fn = group.get("user_report.put")
+        put_fn = group.get("user_report__put")
         result = await put_fn.ainvoke(put_fn.input_schema(report=test_report, user_id="test_user"))
 
         assert result == "User report for test_user with date latest added successfully"
@@ -106,7 +106,7 @@ class TestUserReportTools:
     async def test_put_user_report_with_date(self, object_store, group):
         """Test put_user_report with specific date."""
         test_report = json.dumps({"user": "test_user", "date": "2024-01-01"})
-        put_fn = group.get("user_report.put")
+        put_fn = group.get("user_report__put")
         result = await put_fn.ainvoke(put_fn.input_schema(report=test_report, user_id="test_user", date="2024-01-01"))
         assert result == "User report for test_user with date 2024-01-01 added successfully"
 
@@ -121,7 +121,7 @@ class TestUserReportTools:
             ObjectStoreItem(data=initial_report.encode("utf-8"), content_type="application/json"))
 
         test_report = json.dumps({"user": "test_user", "data": "duplicate"})
-        put_fn = group.get("user_report.put")
+        put_fn = group.get("user_report__put")
         result = await put_fn.ainvoke(put_fn.input_schema(report=test_report, user_id="test_user"))
         assert result == "User report for test_user with date latest already exists"
 
@@ -130,7 +130,7 @@ class TestUserReportTools:
     async def test_update_user_report_new_report(self, object_store, group):
         """Test update_user_report creating a new report."""
         test_report = json.dumps({"user": "test_user", "data": "new data"})
-        update_fn = group.get("user_report.update")
+        update_fn = group.get("user_report__update")
         result = await update_fn.ainvoke(update_fn.input_schema(report=test_report, user_id="test_user"))
         assert result == "User report for test_user with date latest updated"
 
@@ -145,7 +145,7 @@ class TestUserReportTools:
             ObjectStoreItem(data=initial_report.encode("utf-8"), content_type="application/json"))
 
         updated_report = json.dumps({"user": "test_user", "data": "updated"})
-        update_fn = group.get("user_report.update")
+        update_fn = group.get("user_report__update")
         result = await update_fn.ainvoke(update_fn.input_schema(report=updated_report, user_id="test_user"))
         assert result == "User report for test_user with date latest updated"
 
@@ -155,7 +155,7 @@ class TestUserReportTools:
     async def test_update_user_report_with_date(self, object_store, group):
         """Test update_user_report with specific date."""
         test_report = json.dumps({"user": "test_user", "date": "2024-01-01"})
-        update_fn = group.get("user_report.update")
+        update_fn = group.get("user_report__update")
         result = await update_fn.ainvoke(
             update_fn.input_schema(report=test_report, user_id="test_user", date="2024-01-01"))
         assert result == "User report for test_user with date 2024-01-01 updated"
@@ -172,7 +172,7 @@ class TestUserReportTools:
             "reports/test_user/latest.json",
             ObjectStoreItem(data=test_report.encode("utf-8"), content_type="application/json"))
 
-        delete_fn = group.get("user_report.delete")
+        delete_fn = group.get("user_report__delete")
         result = await delete_fn.ainvoke(delete_fn.input_schema(user_id="test_user"))
         assert result == "User report for test_user with date latest deleted"
 
@@ -187,7 +187,7 @@ class TestUserReportTools:
             "reports/test_user/2024-01-01.json",
             ObjectStoreItem(data=test_report.encode("utf-8"), content_type="application/json"))
 
-        delete_fn = group.get("user_report.delete")
+        delete_fn = group.get("user_report__delete")
         result = await delete_fn.ainvoke(delete_fn.input_schema(user_id="test_user", date="2024-01-01"))
         assert result == "User report for test_user with date 2024-01-01 deleted"
 
@@ -197,7 +197,7 @@ class TestUserReportTools:
 
     async def test_delete_user_report_not_found(self, group):
         """Test delete_user_report when report doesn't exist."""
-        delete_fn = group.get("user_report.delete")
+        delete_fn = group.get("user_report__delete")
         with pytest.raises(NoSuchKeyError):
             await delete_fn.ainvoke(delete_fn.input_schema(user_id="nonexistent_user"))
 
@@ -209,29 +209,29 @@ class TestUserReportTools:
 
         # 1. Put a new report
         initial_report = json.dumps({"user": "integration_user", "data": "initial"})
-        put_fn = group.get("user_report.put")
+        put_fn = group.get("user_report__put")
         put_result = await put_fn.ainvoke(put_fn.input_schema(report=initial_report, user_id="integration_user"))
         assert "added successfully" in put_result
 
         # 2. Get the report
-        get_fn = group.get("user_report.get")
+        get_fn = group.get("user_report__get")
         get_result = await get_fn.ainvoke(get_fn.input_schema(user_id="integration_user"))
         assert get_result == initial_report
 
         # 3. Update the report
         updated_report = json.dumps({"user": "integration_user", "data": "updated"})
-        update_fn = group.get("user_report.update")
+        update_fn = group.get("user_report__update")
         update_result = await update_fn.ainvoke(
             update_fn.input_schema(report=updated_report, user_id="integration_user"))
         assert "updated" in update_result
 
         # 4. Get the updated report
-        get_fn = group.get("user_report.get")
+        get_fn = group.get("user_report__get")
         get_result_2 = await get_fn.ainvoke(get_fn.input_schema(user_id="integration_user"))
         assert get_result_2 == updated_report
 
         # 5. Delete the report
-        delete_fn = group.get("user_report.delete")
+        delete_fn = group.get("user_report__delete")
         delete_result = await delete_fn.ainvoke(delete_fn.input_schema(user_id="integration_user"))
         assert "deleted" in delete_result
 

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 
 # Docs: https://docs.coderabbit.ai/getting-started/configure-coderabbit/
 language: "en-US"
@@ -47,7 +46,8 @@ reviews:
           [PEP 20](https://peps.python.org/pep-0020/) and
           [PEP 8](https://peps.python.org/pep-0008/) for style guidelines.
         - Check for security vulnerabilities and potential issues.
-        - Python methods should use type hints for all parameters and return values.
+        - Python methods should use type hints for all parameters and return values (except for return values of `None`,
+          in that situation no return type hint is needed).
           Example:
             ```python
             def my_function(param1: int, param2: str) -> bool:
@@ -66,16 +66,54 @@ reviews:
         - Verify that documentation and comments are free of spelling mistakes, ensure the documentation doesn't contain any
           words listed in the `ci/vale/styles/config/vocabularies/nat/reject.txt` file, words that might appear to be
           spelling mistakes but are listed in the `ci/vale/styles/config/vocabularies/nat/accept.txt` file are OK.
+        - Documentation in Markdown files should not contain usage of a possessive 's with inanimate objects
+          (ex: "the system's performance" should be "the performance of the system").
+        - Documentation in Markdown files should not use NAT as an acronym, always spell out NeMo Agent Toolkit.
+          The exception to this rule is when referring to package names or code identifiers that contain "nat", these
+          should always be surrounded by backticks (ex: `nvidia-nat`), and be lowercase.
+
 
         # Misc.
         - All code (except .mdc files that contain Cursor rules) should be licensed under the Apache License 2.0,
           and should contain an Apache License 2.0 header comment at the top of each file.
         - Confirm that copyright years are up-to date whenever a file is changed.
 
+        # Common Bugs to Look For
+        - Pydantic models using one of the `SecretStr`, `SerializableSecretStr`, or `OptionalSecretStr` with a default
+          defined as `default=""`, creates a bug where the field will be initialized as `str` and not as an instance of
+          `SecretStr`. Instead, use `default=None` for optional secret fields such as `OptionalSecretStr` or with a
+          `default_factory=lambda: SerializableSecretStr("")` for non-optional secret fields such as `SerializableSecretStr`.
+          The `default_factory` approach is preferred for non-optional secret fields to ensure that the field is always
+          returns a unique instance.
+
     - path: "docs/source/**/*"
       instructions: >-
         This directory contains the source code for the documentation. All documentation should be written in Markdown
         format. Any image files should be placed in the `docs/source/_static` directory.
+
+
+        # Documentation Categories
+
+        Ensure documentation is placed in the correct category:
+
+        - `get-started/`: Introductory documentation for new users
+          - `get-started/tutorials/`: Step-by-step learning guides
+        - `build-workflows/`: Workflow creation, configuration, adding remote MCP tools or A2A agents
+        - `run-workflows/`: Execution, observability, serving workflows via MCP and A2A protocols
+        - `improve-workflows/`: Evaluation and optimization guides
+        - `components/`: Specific component implementations (agents, tools, connectors)
+        - `extend/`: Custom component development and testing (not core library contributions)
+        - `reference/`: Python and REST API documentation only
+        - `resources/`: Project information (licensing, FAQs)
+          - `resources/contributing/`: Development environment and contribution guides
+
+
+        Placement rules:
+
+        1. Component implementations always belong in `components/`, not `build-workflows/`
+        2. API documentation belongs only in `reference/`
+        3. Using remote MCP tools or A2A agents should be placed in `build-workflows/`
+        4. Serving workflows via MCP/A2A should be placed in `run-workflows/`
 
     - path: "examples/**/*"
       instructions: >-
@@ -104,6 +142,8 @@ reviews:
           digit version (ex: `~=1.0`).
         - Not all packages contain Python code, if they do they should also contain their own set of tests, in a
           `tests/` directory at the same level as the `pyproject.toml` file.
+        - When adding a new package, that new package name (as defined in the `pyproject.toml` file) should
+          be added as a dependency to the nvidia-nat-all package in `packages/nvidia_nat_all/pyproject.toml`
 
     - path: "tests/**/*.py"
       instructions: >-
@@ -115,6 +155,8 @@ reviews:
             @pytest.fixture(name="my_fixture")
             def fixture_my_fixture():
                 pass
+        - Do NOT add `@pytest.mark.asyncio` to any test. Async tests are automatically detected and run by the
+          async runner - the decorator is unnecessary clutter.
 
   auto_apply_labels: true
   suggested_labels: true

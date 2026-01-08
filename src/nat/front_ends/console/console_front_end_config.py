@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,3 +30,6 @@ class ConsoleFrontEndConfig(FrontEndBaseConfig, name="console"):
                                           description="A single input to submit the the workflow.")
     input_file: Path | None = Field(default=None,
                                     description="Path to a json file of inputs to submit to the workflow.")
+    user_id: str = Field(default="nat_run_user_id",
+                         description="User ID to use for the workflow session. "
+                         "Defaults to 'nat_run_user_id' for single-user CLI execution.")
