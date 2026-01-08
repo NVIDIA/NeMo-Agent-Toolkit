@@ -643,7 +643,7 @@ class EvaluationRun:
                 raise
             except Exception as e:
                 # Non-critical errors (missing packages, config issues) - warn but continue
-                logger.warning("LLM endpoint validation incomplete: %s. Continuing with evaluation...", e)
+                logger.warning("LLM endpoint validation incomplete: %s. Continuing with evaluation...", e, exc_info=True)
 
         # Run workflow and evaluate
         async with WorkflowEvalBuilder.from_config(config=config) as eval_workflow:
