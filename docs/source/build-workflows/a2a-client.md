@@ -43,7 +43,7 @@ uv pip install "nvidia-nat[a2a]"
 ```
 
 :::{note}
-**Authentication**: For connecting to OAuth2-protected A2A agents, see [A2A Authentication](../components/auth/a2a-auth.md) and the [OAuth2 Protected Math Assistant A2A example](../../../examples/A2A/math_assistant_a2a_protected/README.md).
+**Authentication**: For connecting to OAuth2-protected A2A agents, see [A2A Authentication](../components/auth/a2a-auth.md).
 :::
 
 ## A2A Client Configuration
