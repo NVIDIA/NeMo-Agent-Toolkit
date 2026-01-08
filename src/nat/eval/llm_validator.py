@@ -148,7 +148,7 @@ async def _validate_single_llm(
         start_time = time.time()
 
         # Add LLM to builder (handles all LLM types)
-        await asyncio.wait_for(builder.add_llm(llm_name, llm_config), timeout=VALIDATION_TIMEOUT_SECONDS)
+        builder.add_llm(llm_name, llm_config)
 
         # Get LangChain-wrapped LLM instance
         llm = await asyncio.wait_for(
