@@ -115,6 +115,7 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
             dask_logger.setLevel(dask_log_level)
 
             self._scheduler_address = self.front_end_config.scheduler_address
+            use_threads = False
             if self._scheduler_address is None:
                 try:
 
@@ -163,6 +164,7 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
                 os.environ.update({
                     "NAT_DASK_SCHEDULER_ADDRESS": self._scheduler_address,
                     "NAT_JOB_STORE_DB_URL": db_url,
+                    "NAT_USE_DASK_THREADS": str(int(use_threads)),
                 })
 
             # Write to YAML file
