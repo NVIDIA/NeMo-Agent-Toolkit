@@ -6091,6 +6091,7 @@ gunicorn = [
 ]
 huggingface = [
     { name = "accelerate" },
+    { name = "nvidia-nat-langchain" },
     { name = "torch" },
     { name = "transformers" },
 ]
@@ -6276,6 +6277,7 @@ requires-dist = [
     { name = "nvidia-nat-data-flywheel", marker = "extra == 'data-flywheel'", editable = "packages/nvidia_nat_data_flywheel" },
     { name = "nvidia-nat-data-flywheel", marker = "extra == 'telemetry'", editable = "packages/nvidia_nat_data_flywheel" },
     { name = "nvidia-nat-ingestion", marker = "extra == 'ingestion'", editable = "packages/nvidia_nat_ingestion" },
+    { name = "nvidia-nat-langchain", marker = "extra == 'huggingface'", editable = "packages/nvidia_nat_langchain" },
     { name = "nvidia-nat-langchain", marker = "extra == 'langchain'", editable = "packages/nvidia_nat_langchain" },
     { name = "nvidia-nat-llama-index", marker = "extra == 'llama-index'", editable = "packages/nvidia_nat_llama_index" },
     { name = "nvidia-nat-mcp", marker = "extra == 'mcp'", editable = "packages/nvidia_nat_mcp" },
