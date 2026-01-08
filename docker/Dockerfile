@@ -35,6 +35,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt upgrade -y && \
     apt-get install --no-install-recommends  -y \
         ca-certificates \
+        build-essential \
         git \
         tzdata && \
     apt clean && \
