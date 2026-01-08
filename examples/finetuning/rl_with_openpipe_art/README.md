@@ -63,7 +63,7 @@ The model learns to play against a **random opponent**, receiving rewards based 
 
    ```bash
    # Create a separate virtual environment for ART
-   uv venv art-env --python 3.11
+   uv venv art-env --python 3.13
    source art-env/bin/activate
    export HF_TOKEN=<your_huggingface_token>
    # Install OpenPipe ART
