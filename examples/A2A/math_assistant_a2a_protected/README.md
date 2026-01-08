@@ -202,15 +202,15 @@ Look for: `Listening on: http://0.0.0.0:8080`
 2. **Verify you're in the `master` realm** (top-left dropdown)
 
 3. **Create the `calculator_a2a_execute` scope (for the calculator agent):**
-   - Go to *Client scopes* (left sidebar)
-   - Click *Create client scope*
+   - Go to **Client scopes** (left sidebar)
+   - Click **Create client scope**
    - Fill in:
      - **Name**: `calculator_a2a_execute`
      - **Description**: `Permission to execute calculator operations`
      - **Type**: `Optional`
      - **Protocol**: `openid-connect`
      - **Include in token scope**: `On` ✅
-   - Click *Save*
+     - Click **Save**
 
 4. **Add audience mapper to the scope:**
 
@@ -218,8 +218,8 @@ Look for: `Listening on: http://0.0.0.0:8080`
 
    **Audience Mapper** (adds calculator URL to audience claim)
 
-   - Click *Add mapper* > *By configuration*
-   - Select *Audience* mapper type
+   - Click **Add mapper** > **By configuration**
+   - Select **Audience** mapper type
    - Configure the mapper:
      - **Name**: `calculator-audience`
      - **Included Client Audience**: Leave blank
@@ -227,7 +227,7 @@ Look for: `Listening on: http://0.0.0.0:8080`
      - **Add to ID token**: `Off`
      - **Add to access token**: `On` ✅
      - **Add to token introspection**: `On` ✅ (if available in your Keycloak version)
-   - Click *Save*
+   - Click **Save**
 
    This mapper ensures `http://localhost:10000` is included in the token's `aud` claim (required for JWT validation).
 
@@ -250,12 +250,12 @@ You have two options:
 
 #### Option A: Manual Client Registration (Recommended for Testing)
 
-1. In Keycloak Admin Console, go to *Clients* (left sidebar)
+1. In Keycloak Admin Console, go to **Clients** (left sidebar)
 2. Click *Create client*
 3. **General Settings:**
    - **Client ID**: `math-assistant-client`
    - **Client type**: `OpenID Connect`
-   - Click *Next*
+   - Click **Next**
 
 4. **Capability config:**
    - **Client authentication**: `On` (confidential client)
@@ -263,24 +263,24 @@ You have two options:
    - **Authentication flow:**
      - ✓ Standard flow (authorization code)
      - ✓ Direct access grants
-   - Click *Next*
+   - Click **Next**
 
 5. **Login settings:**
    - **Valid redirect URIs**: `http://localhost:8000/auth/redirect`
    - **Web origins**: `http://localhost:8000`
-   - Click *Save*
+   - Click **Save**
 
 6. **Get client credentials:**
-   - Go to *Credentials* tab
-   - Copy the *Client secret*
-   - Note the *Client ID*: `math-assistant-client`
+   - Go to **Credentials** tab
+   - Copy the **Client secret**
+   - Note the **Client ID**: `math-assistant-client`
 
 7. **Configure client scopes:**
-   - Go to *Client scopes* tab
-   - Click *Add client scope*
+   - Go to **Client scopes** tab
+   - Click **Add client scope**
    - Select `calculator_a2a_execute`
-   - Choose *Optional*
-   - Click *Add*
+   - Choose **Optional**
+   - Click **Add**
 
 #### Option B: Dynamic Client Registration (DCR)
 
