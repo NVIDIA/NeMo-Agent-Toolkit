@@ -527,7 +527,7 @@ class JobStore(DaskClientMixin):
 
             success = True
         except Exception:
-            logger.exception("Failed to expire %s", job_id)
+            logger.exception("Failed to fetch Dask Variable for job %s", job_id)
 
         finally:
             if var is not None:
@@ -547,8 +547,9 @@ class JobStore(DaskClientMixin):
         Updated_at is used instead of created_at to determine the most recent job. This is because jobs may not be
         processed in the order they are created.
         """
+        logger.info("Starting cleanup of expired jobs")
         now = datetime.now(UTC)
-
+        
         stmt = select(JobInfo).where(
             and_(JobInfo.is_expired == sa_expr.false(),
                  JobInfo.status.not_in(self.ACTIVE_STATUS))).order_by(JobInfo.updated_at.desc())
