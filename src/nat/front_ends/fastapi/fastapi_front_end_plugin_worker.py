@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import asyncio
-import gc
 import json
 import logging
 import os
@@ -110,7 +109,7 @@ async def run_generation(scheduler_address: str,
     except Exception as e:
         logger.exception("Error in async job %s", job_id)
         await job_store.update_status(job_id, JobStatus.FAILURE, error=str(e))
-
+    
     # Explicitly release the resources held by the job store
     del job_store
 
@@ -923,6 +922,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                  updated_at=job.updated_at,
                                                  expires_at=self._job_store.get_expires_at(job))
 
+
         def post_async_generation(request_type: type):
 
             async def start_async_generation(
@@ -974,14 +974,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 logger.info("Found job %s with status %s", job_id, job.status)
                 return _job_status_to_response(job)
-
-        async def cleanup(http_request: Request):
-            """Cleanup resources after request is done."""
-            logger.info("Cleaning up after request")
-            gc.collect()
-            logger.info("Cleanup completed")
-
-            return {"status": "cleanup completed"}
 
         async def websocket_endpoint(websocket: WebSocket):
 
@@ -1131,8 +1123,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         }, 500: response_500
                     },
                 )
-
-                app.add_api_route(path=f"{endpoint.path}/cleanup", endpoint=cleanup, methods=["POST"], description="Cleanup resources after request")
 
         if (endpoint.openai_api_path):
             if (endpoint.method == "GET"):
