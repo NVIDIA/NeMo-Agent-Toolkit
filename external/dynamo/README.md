@@ -188,10 +188,10 @@ Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimizat
 2. **NVIDIA Driver** with CUDA 12.0+ support
 4. **Hugging Face CLI** for model downloads (optional, if model not already downloaded)
 5. **Llama-3.3-70B-Instruct** model downloaded locally
-6. **Python UV environment** python version 3.11-3.13
+6. **Python uv environment** python version 3.11-3.13
 
 
-### Create a Python UV Environment
+### Create a Python uv Environment
 
 ```bash
 cd /path/to/NeMo-Agent-Toolkit
