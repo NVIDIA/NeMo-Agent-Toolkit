@@ -226,12 +226,12 @@ class TestNormalization:
 
     def test_module_prefix_stripping(self):
         """Verify module prefixes are stripped (e.g., banking_tools.report_lost_stolen_card)."""
-        assert normalize_tool_name("banking_tools.report_lost_stolen_card") == "reportloststolencard"
-        assert normalize_tool_name("module.submodule.tool_name") == "toolname"
+        assert normalize_tool_name("banking_tools__report_lost_stolen_card") == "reportloststolencard"
+        assert normalize_tool_name("module__submodule__tool_name") == "submoduletoolname"
 
     def test_module_prefix_matching(self):
         """Verify tools match even with module prefixes."""
-        actual = [{"tool": "banking_tools.report_lost_stolen_card"}]
+        actual = [{"tool": "banking_tools__report_lost_stolen_card"}]
         expected = [{"tool": "report_lost_stolen_card"}]
 
         accuracy = calculate_tool_accuracy(actual, expected)
