@@ -24,7 +24,9 @@ dependencies = [
   # Avoids an install error `No such file or directory: 'zig'` introduced with version 0.3.6, this is a transitive
   # dependency, remove the dependency when the issue is resolved in a future release.
   "ruamel-yaml-clibz==0.3.5", 
-  "semantic-kernel~=1.35"
+  "semantic-kernel~=1.36",
+  # transitive dependencies
+  "werkzeug~=3.1.4",
 ]
 requires-python = ">=3.11,<3.14"
 description = "Subpackage for Semantic-Kernel integration in NeMo Agent toolkit"
