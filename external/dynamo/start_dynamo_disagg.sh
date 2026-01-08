@@ -242,64 +242,111 @@ docker run -d \
     # Function to wait for worker initialization by checking ETCD registration
     # Dynamo workers register with ETCD, they don't expose HTTP health endpoints
     # For disaggregated mode, we track expected worker count
-    wait_for_worker() {
-        local worker_type=\$1
-        local pid=\$2
-        local expected_count=\${3:-1}  # Expected number of registered workers
-        local max_wait=300
-        local elapsed=0
-        local poll_interval=5
+    # wait_for_worker() {
+    #     local worker_type=\$1
+    #     local pid=\$2
+    #     local expected_count=\${3:-1}  # Expected number of registered workers
+    #     local max_wait=300
+    #     local elapsed=0
+    #     local poll_interval=5
 
-        echo \"Waiting for \$worker_type worker (PID \$pid) to initialize...\"
-        echo \"  Detection: ETCD worker registration (expecting \$expected_count worker(s))\"
-        echo \"  Timeout: \${max_wait}s\"
+    #     echo \"Waiting for \$worker_type worker (PID \$pid) to initialize...\"
+    #     echo \"  Detection: ETCD worker registration (expecting \$expected_count worker(s))\"
+    #     echo \"  Timeout: \${max_wait}s\"
 
-        while [ \$elapsed -lt \$max_wait ]; do
-            # Check if process is still running
-            if ! kill -0 \$pid 2>/dev/null; then
-                echo \"ERROR: \$worker_type worker process died!\"
-                return 1
-            fi
+    #     while [ \$elapsed -lt \$max_wait ]; do
+    #         # Check if process is still running
+    #         if ! kill -0 \$pid 2>/dev/null; then
+    #             echo \"ERROR: \$worker_type worker process died!\"
+    #             return 1
+    #         fi
 
-            # Check ETCD for registered workers using v3 API
-            # Query ALL keys to find where Dynamo registers (empty key "" with range_end "\0" = all keys)
-            # Base64: "" -> AA==, "\0" -> AA==  (we use keys_only to reduce response size)
-            local etcd_response=\$(curl -s --max-time 2 http://localhost:2379/v3/kv/range \
-                -X POST \
-                -H \"Content-Type: application/json\" \
-                -d '{\"key\":\"AA==\",\"range_end\":\"AA==\",\"keys_only\":true}' 2>&1)
+    #         # Check ETCD for registered workers using v3 API
+    #         # Query ALL keys to find where Dynamo registers (empty key "" with range_end "\0" = all keys)
+    #         # Base64: "" -> AA==, "\0" -> AA==  (we use keys_only to reduce response size)
+    #         local etcd_response=\$(curl -s --max-time 2 st \
+    #             -X POST \
+    #             -H \"Content-Type: application/json\" \
+    #             -d '{\"key\":\"AA==\",\"range_end\":\"AA==\",\"keys_only\":true}' 2>&1)
 
-            # Extract count from response and check if we have enough workers
-            local current_count=\$(echo \"\$etcd_response\" | grep -o '\"count\":\"[0-9]*\"' | grep -o '[0-9]*' || echo \"0\")
+    #         # Extract count from response and check if we have enough workers
+    #         local current_count=\$(echo \"\$etcd_response\" | grep -o '\"count\":\"[0-9]*\"' | grep -o '[0-9]*' || echo \"0\")
 
-            # Debug: Print ETCD response every 30s (truncated)
-            if [ \$((elapsed % 30)) -eq 0 ] && [ \$elapsed -gt 0 ]; then
-                echo \"  [DEBUG] ETCD keys found: \$(echo \"\$etcd_response\" | grep -o '\"key\":\"[^\"]*\"' | head -5)\"
-                echo \"  [DEBUG] ETCD count: \$(echo \"\$etcd_response\" | grep -o '\"count\":\"[^\"]*\"')\"
-            fi
+    #         # Debug: Print ETCD response every 30s (truncated)
+    #         if [ \$((elapsed % 30)) -eq 0 ] && [ \$elapsed -gt 0 ]; then
+    #             echo \"  [DEBUG] ETCD keys found: \$(echo \"\$etcd_response\" | grep -o '\"key\":\"[^\"]*\"' | head -5)\"
+    #             echo \"  [DEBUG] ETCD count: \$(echo \"\$etcd_response\" | grep -o '\"count\":\"[^\"]*\"')\"
+    #         fi
 
-            if [ \"\$current_count\" -ge \"\$expected_count\" ] 2>/dev/null; then
-                echo \"✓ \$worker_type worker is ready (registered with ETCD at \${elapsed}s, count=\$current_count)\"
-                return 0
-            fi
+    #         if [ \"\$current_count\" -ge \"\$expected_count\" ] 2>/dev/null; then
+    #             echo \"✓ \$worker_type worker is ready (registered with ETCD at \${elapsed}s, count=\$current_count)\"
+    #             return 0
+    #         fi
 
-            sleep \$poll_interval
-            elapsed=\$((elapsed + poll_interval))
-            if [ \$((elapsed % 30)) -eq 0 ]; then
-                echo \"  ... \${elapsed}s / \${max_wait}s (waiting for ETCD registration, current=\$current_count)\"
-            fi
-        done
+    #         sleep \$poll_interval
+    #         elapsed=\$((elapsed + poll_interval))
+    #         if [ \$((elapsed % 30)) -eq 0 ]; then
+    #             echo \"  ... \${elapsed}s / \${max_wait}s (waiting for ETCD registration, current=\$current_count)\"
+    #         fi
+    #     done
 
-        echo \"ERROR: \$worker_type worker failed to register with ETCD within \${max_wait}s\"
-        echo \"  Image: $IMAGE\"
-        echo \"  The model may require more time to load, or there may be a startup error.\"
-        echo \"  Check worker logs for details.\"
-        return 1
-    }
+    #     echo \"ERROR: \$worker_type worker failed to register with ETCD within \${max_wait}s\"
+    #     echo \"  Image: $IMAGE\"
+    #     echo \"  The model may require more time to load, or there may be a startup error.\"
+    #     echo \"  Check worker logs for details.\"
+    #     return 1
+    # }
+
+    # echo '========================================================='
+    # echo 'Step 1: Starting Prefill Worker (GPUs 0,1 = Host GPUs $PREFILL_GPUS)...'
+    # echo '========================================================='
+    # CUDA_VISIBLE_DEVICES=0,1 \
+    # python3 -m dynamo.sglang \
+    #   --model-path $MODEL \
+    #   --served-model-name $SERVED_MODEL_NAME \
+    #   --host 0.0.0.0 \
+    #   --port 30000 \
+    #   --tp $TP_SIZE \
+    #   --trust-remote-code \
+    #   --disaggregation-mode prefill \
+    #   --disaggregation-bootstrap-port $DISAGG_BOOTSTRAP_PORT \
+    #   --disaggregation-transfer-backend $DISAGG_TRANSFER_BACKEND \
+    #   --mem-fraction-static 0.8 &
+    # PREFILL_PID=\$!
+    # echo \"Prefill Worker PID: \$PREFILL_PID\"
+    # echo \"\"
+
+    # # Wait for prefill worker to initialize (expects 1 worker in ETCD)
+    # wait_for_worker \"Prefill\" \$PREFILL_PID 1 || exit 1
+
+    # echo ''
+    # echo '========================================================='
+    # echo 'Step 2: Starting Decode Worker (GPUs 2,3 = Host GPUs $DECODE_GPUS)...'
+    # echo '========================================================='
+    # CUDA_VISIBLE_DEVICES=2,3 \
+    # python3 -m dynamo.sglang \
+    #   --model-path $MODEL \
+    #   --served-model-name $SERVED_MODEL_NAME \
+    #   --host 0.0.0.0 \
+    #   --tp $TP_SIZE \
+    #   --trust-remote-code \
+    #   --disaggregation-mode decode \
+    #   --disaggregation-bootstrap-port $DISAGG_BOOTSTRAP_PORT \
+    #   --disaggregation-transfer-backend $DISAGG_TRANSFER_BACKEND \
+    #   --mem-fraction-static 0.8 &
+    # DECODE_PID=\$!
+    # echo \"Decode Worker PID: \$DECODE_PID\"
+    # echo \"\"
+
+    # # Wait for decode worker to initialize (expects 2 workers in ETCD - prefill + decode)
+    # wait_for_worker \"Decode\" \$DECODE_PID 2 || exit 1
 
     echo '========================================================='
-    echo 'Step 1: Starting Prefill Worker (GPUs 0,1 = Host GPUs $PREFILL_GPUS)...'
+    echo 'Steps 1 & 2: Starting Prefill & Decode Workers in PARALLEL...'
     echo '========================================================='
+
+    # Start Prefill Worker (background)
+    echo \"Starting Prefill Worker (GPUs 0,1 = Host GPUs $PREFILL_GPUS)...\"
     CUDA_VISIBLE_DEVICES=0,1 \
     python3 -m dynamo.sglang \
       --model-path $MODEL \
@@ -314,15 +361,9 @@ docker run -d \
       --mem-fraction-static 0.8 &
     PREFILL_PID=\$!
     echo \"Prefill Worker PID: \$PREFILL_PID\"
-    echo \"\"
 
-    # Wait for prefill worker to initialize (expects 1 worker in ETCD)
-    wait_for_worker \"Prefill\" \$PREFILL_PID 1 || exit 1
-
-    echo ''
-    echo '========================================================='
-    echo 'Step 2: Starting Decode Worker (GPUs 2,3 = Host GPUs $DECODE_GPUS)...'
-    echo '========================================================='
+    # Start Decode Worker (background) - immediately, no waiting for prefill
+    echo \"Starting Decode Worker (GPUs 2,3 = Host GPUs $DECODE_GPUS)...\"
     CUDA_VISIBLE_DEVICES=2,3 \
     python3 -m dynamo.sglang \
       --model-path $MODEL \
@@ -338,8 +379,50 @@ docker run -d \
     echo \"Decode Worker PID: \$DECODE_PID\"
     echo \"\"
 
-    # Wait for decode worker to initialize (expects 2 workers in ETCD - prefill + decode)
-    wait_for_worker \"Decode\" \$DECODE_PID 2 || exit 1
+    # Wait for BOTH workers to register (expects 2 workers in ETCD)
+    echo \"Waiting for both workers to initialize in parallel...\"
+    wait_for_workers_parallel() {
+        local max_wait=300
+        local elapsed=0
+        local poll_interval=5
+
+        echo \"  Detection: ETCD worker registration (expecting 2 workers)\"
+        echo \"  Timeout: \${max_wait}s\"
+
+        while [ \$elapsed -lt \$max_wait ]; do
+            # Check if both processes are still running
+            if ! kill -0 \$PREFILL_PID 2>/dev/null; then
+                echo \"ERROR: Prefill worker process died!\"
+                return 1
+            fi
+            if ! kill -0 \$DECODE_PID 2>/dev/null; then
+                echo \"ERROR: Decode worker process died!\"
+                return 1
+            fi
+
+            # Check ETCD for registered workers
+            local etcd_response=\$(curl -s --max-time 2 \
+                -X POST http://localhost:2379/v3/kv/range \
+                -H \"Content-Type: application/json\" \
+                -d '{\"key\":\"AA==\",\"range_end\":\"AA==\",\"keys_only\":true}' 2>&1)
+
+            local current_count=\$(echo \"\$etcd_response\" | grep -o '\"count\":\"[0-9]*\"' | grep -o '[0-9]*' || echo \"0\")
+
+            if [ \"\$current_count\" -ge 2 ] 2>/dev/null; then
+                echo \"✓ Both workers registered in ETCD (\$current_count workers)\"
+                return 0
+            fi
+
+            echo \"  [\${elapsed}s] Waiting... (ETCD workers: \${current_count:-0}/2)\"
+            sleep \$poll_interval
+            elapsed=\$((elapsed + poll_interval))
+        done
+
+        echo \"ERROR: Timeout waiting for workers to register\"
+        return 1
+    }
+
+    wait_for_workers_parallel || exit 1
 
     echo ''
     echo '========================================================='

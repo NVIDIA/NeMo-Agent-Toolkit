@@ -61,7 +61,7 @@ LOCAL_MODEL_DIR="${DYNAMO_MODEL_DIR}"
 
 # Repository directory - auto-detect from script location or use env var
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LOCAL_REPO_DIR="${DYNAMO_REPO_DIR:-$SCRIPT_DIR}"
+# LOCAL_REPO_DIR="${DYNAMO_REPO_DIR:-$SCRIPT_DIR}"
 # Custom dynamo components are always relative to the script location (external/dynamo/generalized)
 CUSTOM_DYNAMO_DIR="${SCRIPT_DIR}/generalized"
 
