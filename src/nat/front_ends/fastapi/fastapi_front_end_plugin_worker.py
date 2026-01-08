@@ -84,6 +84,26 @@ except ImportError:
     JobStatus = None
     JobStore = None
 
+async def run_generation(scheduler_address: str,
+                         db_url: str,
+                         config_file_path: str,
+                         job_id: str,
+                         payload: typing.Any):
+    """Background task to run the workflow."""
+    job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
+    try:
+        async with load_workflow(config_file_path) as local_session_manager:
+            result = await generate_single_response(
+                payload, local_session_manager, result_type=local_session_manager.workflow.single_output_schema)
+
+        del local_session_manager
+        await job_store.update_status(job_id, JobStatus.SUCCESS, output=result)
+    except Exception as e:
+        logger.exception("Error in async job %s", job_id)
+        await job_store.update_status(job_id, JobStatus.FAILURE, error=str(e))
+    
+    # Explicitly release the resources held by the job store
+    del job_store
 
 class FastApiFrontEndPluginWorkerBase(ABC):
 
@@ -732,25 +752,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                  updated_at=job.updated_at,
                                                  expires_at=self._job_store.get_expires_at(job))
 
-        async def run_generation(scheduler_address: str,
-                                 db_url: str,
-                                 config_file_path: str,
-                                 job_id: str,
-                                 payload: typing.Any):
-            """Background task to run the workflow."""
-            job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
-            try:
-                async with load_workflow(config_file_path) as local_session_manager:
-                    result = await generate_single_response(
-                        payload, local_session_manager, result_type=local_session_manager.workflow.single_output_schema)
-
-                await job_store.update_status(job_id, JobStatus.SUCCESS, output=result)
-            except Exception as e:
-                logger.exception("Error in async job %s", job_id)
-                await job_store.update_status(job_id, JobStatus.FAILURE, error=str(e))
-            
-            # Explicitly release the resources held by the job store
-            del job_store
 
         def post_async_generation(request_type: type):
 
