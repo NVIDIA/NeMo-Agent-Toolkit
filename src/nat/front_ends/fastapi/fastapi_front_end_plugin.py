@@ -75,8 +75,8 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
             await asyncio.sleep(sleep_time_sec)
 
             try:
-                await job_store.cleanup_expired_jobs()
-                logger.info("Expired jobs cleaned up")
+                num_expired = await job_store.cleanup_expired_jobs()
+                logger.info("Expired jobs cleaned up: %d", num_expired)
             except:  # noqa: E722
                 logger.exception("Error during job cleanup")
 

@@ -540,7 +540,7 @@ class JobStore(DaskClientMixin):
         
         return success
 
-    async def cleanup_expired_jobs(self):
+    async def cleanup_expired_jobs(self) -> int:
         """
         Cleanup expired jobs, keeping the most recent one.
 
@@ -574,7 +574,8 @@ class JobStore(DaskClientMixin):
                         elif os.path.isdir(job.output_path):
                             shutil.rmtree(job.output_path)
 
-            if len(expired_ids) > 0:
+            num_expired = len(expired_ids)
+            if num_expired > 0:
                 successfully_expired = []
                 for job_id in expired_ids:
                     if await self._delete_dask_variable(job_id, client, cancel_task=True):
@@ -582,6 +583,8 @@ class JobStore(DaskClientMixin):
 
                 await session.execute(
                     update(JobInfo).where(JobInfo.job_id.in_(successfully_expired)).values(is_expired=True))
+            
+            return num_expired
 
 
 def get_db_engine(db_url: str | None = None, echo: bool = False, use_async: bool = True) -> "Engine | AsyncEngine":
