@@ -94,6 +94,9 @@ async def validate_llm_endpoints(config: "Config") -> None:
                     logger.error(error_msg)
                     failed_llms.append((llm_name, error_msg))
                     continue
+                except (ConnectionError, OSError, TimeoutError) as conn_error:
+                    # Connection errors are critical - re-raise to be caught by outer handler
+                    raise
                 except Exception as list_error:
                     # Other errors might be okay (auth, rate limit, etc.) or endpoint doesn't support /models
                     logger.warning(

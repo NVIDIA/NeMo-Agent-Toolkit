@@ -66,13 +66,19 @@ class TestLLMEndpointValidation:
         # Should not raise any error
         await validate_llm_endpoints(config_without_llms)
 
-    async def test_validation_detects_unreachable_endpoint(self):
+    @patch("openai.OpenAI")
+    async def test_validation_detects_unreachable_endpoint(self, mock_openai_class):
         """Test that validation detects unreachable endpoints."""
+        # Mock connection error
+        mock_client = MagicMock()
+        mock_client.models.list.side_effect = ConnectionError("Connection refused")
+        mock_openai_class.return_value = mock_client
+
         config = Config()
         config.llms = {
             "unreachable_llm": OpenAIModelConfig(
                 model_name="test-model",
-                base_url="http://localhost:9999/v1"  # Non-existent endpoint
+                base_url="http://localhost:9999/v1"
             )
         }
 
@@ -83,10 +89,9 @@ class TestLLMEndpointValidation:
         assert "LLM endpoint validation failed" in error_msg
         assert "ACTION REQUIRED" in error_msg
 
-    @patch('nat.eval.llm_validator.openai')
-    async def test_validation_detects_model_not_found_404(self, mock_openai, config_with_openai_llm):
+    @patch("openai.OpenAI")
+    async def test_validation_detects_model_not_found_404(self, mock_openai_class, config_with_openai_llm):
         """Test that validation detects 404 errors when model doesn't exist."""
-        # Import after patching to get the right exception class
         import openai
 
         # Mock OpenAI client to raise NotFoundError (404)
@@ -96,7 +101,7 @@ class TestLLMEndpointValidation:
             response=MagicMock(status_code=404),
             body=None
         )
-        mock_openai.OpenAI.return_value = mock_client
+        mock_openai_class.return_value = mock_client
 
         with pytest.raises(RuntimeError) as exc_info:
             await validate_llm_endpoints(config_with_openai_llm)
@@ -110,15 +115,15 @@ class TestLLMEndpointValidation:
             "model has not been deployed"
         ])
 
-    @patch('nat.eval.llm_validator.openai')
-    async def test_validation_succeeds_with_accessible_endpoint(self, mock_openai, config_with_openai_llm):
+    @patch("openai.OpenAI")
+    async def test_validation_succeeds_with_accessible_endpoint(self, mock_openai_class, config_with_openai_llm):
         """Test that validation succeeds when endpoint is accessible."""
         # Mock successful connection
         mock_client = MagicMock()
         mock_models_response = MagicMock()
         mock_models_response.data = [MagicMock(id="test-model")]
         mock_client.models.list.return_value = mock_models_response
-        mock_openai.OpenAI.return_value = mock_client
+        mock_openai_class.return_value = mock_client
 
         # Should not raise any error
         await validate_llm_endpoints(config_with_openai_llm)
@@ -145,13 +150,13 @@ class TestLLMEndpointValidation:
         # Should not raise error, just skip validation
         await validate_llm_endpoints(config)
 
-    @patch('nat.eval.llm_validator.openai')
-    async def test_validation_fails_on_first_bad_endpoint(self, mock_openai, config_with_multiple_llms):
+    @patch("openai.OpenAI")
+    async def test_validation_fails_on_first_bad_endpoint(self, mock_openai_class, config_with_multiple_llms):
         """Test that validation fails fast on first bad endpoint."""
         # First endpoint fails
         mock_client = MagicMock()
         mock_client.models.list.side_effect = ConnectionError("Connection refused")
-        mock_openai.OpenAI.return_value = mock_client
+        mock_openai_class.return_value = mock_client
 
         with pytest.raises(RuntimeError) as exc_info:
             await validate_llm_endpoints(config_with_multiple_llms)
@@ -205,8 +210,8 @@ class TestLLMValidationErrorMessages:
                 "Ensure"
             ])
 
-    @patch('nat.eval.llm_validator.openai')
-    async def test_404_error_message_mentions_training_cancellation(self, mock_openai):
+    @patch("openai.OpenAI")
+    async def test_404_error_message_mentions_training_cancellation(self, mock_openai_class):
         """Test that 404 error message mentions potential training cancellation."""
         import openai
 
@@ -225,7 +230,7 @@ class TestLLMValidationErrorMessages:
             response=MagicMock(status_code=404),
             body=None
         )
-        mock_openai.OpenAI.return_value = mock_client
+        mock_openai_class.return_value = mock_client
 
         with pytest.raises(RuntimeError) as exc_info:
             await validate_llm_endpoints(config)
@@ -255,11 +260,23 @@ class TestLLMValidationIntegration:
         }
         return config
 
-    async def test_validation_scenario_after_canceled_training(self, config_for_finetuned_model):
+    @patch("openai.OpenAI")
+    async def test_validation_scenario_after_canceled_training(self, mock_openai_class, config_for_finetuned_model):
         """
         Test validation behavior in the scenario that caused the original bug:
         Training was canceled, model never deployed, user tries to run eval.
         """
+        import openai
+
+        # Simulate the exact bug: endpoint is up but model doesn't exist (404)
+        mock_client = MagicMock()
+        mock_client.models.list.side_effect = openai.NotFoundError(
+            message="Model not found",
+            response=MagicMock(status_code=404),
+            body=None
+        )
+        mock_openai_class.return_value = mock_client
+
         # This simulates the exact bug scenario:
         # 1. Training was canceled at 93.3%
         # 2. Model was never deployed
@@ -278,6 +295,6 @@ class TestLLMValidationIntegration:
         assert any(check in error_msg for check in [
             "LLM endpoint validation failed",
             "not found",
-            "not permitted"  # May get connection error instead
+            "404"
         ])
 
