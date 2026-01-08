@@ -24,6 +24,7 @@ from typing import cast
 import click
 from pydantic import BaseModel
 
+from nat.builder.function import FunctionGroup
 from nat.cli.commands.start import start_command
 
 logger = logging.getLogger(__name__)
@@ -311,7 +312,8 @@ async def list_tools_via_function_group(
 
         def to_tool_entry(full_name: str, fn_obj) -> dict[str, str | None]:
             # full_name like "mcp_client__<tool>"
-            name = full_name.split("__", 1)[1] if "__" in full_name else full_name
+            sep = FunctionGroup.SEPARATOR
+            name = full_name.split(sep, 1)[1] if sep in full_name else full_name
             schema = getattr(fn_obj, 'input_schema', None)
             if schema is None:
                 schema_str = None
@@ -327,7 +329,7 @@ async def list_tools_via_function_group(
             return {"name": name, "description": getattr(fn_obj, 'description', ''), "input_schema": schema_str}
 
         if tool_name:
-            full = f"mcp_client__{tool_name}"
+            full = f"mcp_client{FunctionGroup.SEPARATOR}{tool_name}"
             fn = fns.get(full)
             if fn is not None:
                 tools.append(to_tool_entry(full, fn))
@@ -910,7 +912,7 @@ async def call_tool_and_print(command: str | None,
 
         group = await builder.add_function_group("mcp_client", group_cfg)
         fns = await group.get_accessible_functions()
-        full = f"mcp_client__{tool_name}"
+        full = f"mcp_client{FunctionGroup.SEPARATOR}{tool_name}"
         fn = fns.get(full)
         if fn is None:
             raise RuntimeError(f"Tool '{tool_name}' not found. Available: {list(fns.keys())}")
