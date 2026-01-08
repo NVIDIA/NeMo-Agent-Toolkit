@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from pydantic import Field
 
 from nat.builder.builder import Builder
+from nat.builder.function import FunctionGroup
 from nat.builder.component_utils import WORKFLOW_COMPONENT_NAME
 from nat.builder.function_info import FunctionInfo
 from nat.builder.per_user_workflow_builder import PerUserWorkflowBuilder
@@ -1096,10 +1097,11 @@ async def test_per_user_builder_function_groups_expose_functions():
             assert "expose_fg" in per_user_builder._per_user_function_groups
 
             # Exposed function should be accessible with prefixed name (group_name.function_name)
-            assert "expose_fg__exposed_tool" in per_user_builder._per_user_functions
+            sep = FunctionGroup.SEPARATOR
+            assert f"expose_fg{sep}exposed_tool" in per_user_builder._per_user_functions
 
             # Should be able to get and call it using the prefixed name
-            exposed_fn = await per_user_builder.get_function("expose_fg__exposed_tool")
+            exposed_fn = await per_user_builder.get_function(f"expose_fg{sep}exposed_tool")
             result = await exposed_fn.ainvoke("test", to_type=str)
             assert result == "exposed: test"
 

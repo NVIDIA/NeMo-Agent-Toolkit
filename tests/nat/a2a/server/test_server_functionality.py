@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from nat.builder.function import FunctionGroup
 from nat.plugins.a2a.server.front_end_plugin import A2AFrontEndPlugin
 from nat.plugins.a2a.server.front_end_plugin_worker import A2AFrontEndPluginWorker
 
@@ -49,12 +50,13 @@ class TestA2AServerFunctionality:
 
         # Verify all functions are extracted
         assert len(functions) == 3
-        assert "calculator__add" in functions
-        assert "calculator__multiply" in functions
+        sep = FunctionGroup.SEPARATOR
+        assert f"calculator{sep}add" in functions
+        assert f"calculator{sep}multiply" in functions
         assert "current_datetime" in functions
 
         # Verify function objects are preserved
-        assert functions["calculator__add"].description == "Add two or more numbers together"
+        assert functions[f"calculator{sep}add"].description == "Add two or more numbers together"
 
     async def test_agent_executor_creation(self, mock_workflow_with_functions, mock_workflow_builder,
                                            a2a_server_config):

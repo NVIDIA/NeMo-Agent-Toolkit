@@ -47,14 +47,14 @@ def fixture_sample_agent_card() -> AgentCard:
         ),
         skills=[
             AgentSkill(
-                id="calculator__add",
+                id=f"calculator{FunctionGroup.SEPARATOR}add",
                 name="Add",
                 description="Add two or more numbers together",
                 examples=["Add 5 and 3", "What is 10 plus 20?"],
                 tags=["calculator", "math"],
             ),
             AgentSkill(
-                id="calculator__multiply",
+                id=f"calculator{FunctionGroup.SEPARATOR}multiply",
                 name="Multiply",
                 description="Multiply two or more numbers together",
                 examples=["Multiply 4 by 6", "What is 3 times 7?"],
