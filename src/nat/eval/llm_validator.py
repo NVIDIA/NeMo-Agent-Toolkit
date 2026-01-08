@@ -129,7 +129,7 @@ def _truncate_error_message(message: str, max_length: int = MAX_ERROR_MESSAGE_LE
 
 async def _validate_single_llm(
     builder: WorkflowBuilder, llm_name: str, llm_config: LLMBaseConfig
-) -> tuple[str, str | None, str | None]:
+) -> tuple[str | None, str | None]:
     """
     Validate a single LLM endpoint.
 
@@ -139,7 +139,7 @@ async def _validate_single_llm(
         llm_config: Configuration for the LLM.
 
     Returns:
-        Tuple of (llm_name, error_type, error_message):
+        Tuple of (error_type, error_message):
         - error_type: "404" for model not found, "warning" for non-critical, None for success
         - error_message: Description of the error, or None if successful
     """
@@ -169,12 +169,12 @@ async def _validate_single_llm(
         
         duration = time.time() - start_time
         logger.info("LLM '%s' validated successfully in %.2fs", llm_name, duration)
-        return (llm_name, None, None)
+        return (None, None)
 
     except TimeoutError:
         error_msg = f"Validation timed out after {VALIDATION_TIMEOUT_SECONDS}s"
         logger.warning("LLM '%s' validation timed out", llm_name)
-        return (llm_name, "warning", _truncate_error_message(error_msg))
+        return ("warning", _truncate_error_message(error_msg))
 
     except (KeyboardInterrupt, SystemExit):
         # Don't catch system-level interrupts
@@ -203,7 +203,7 @@ async def _validate_single_llm(
                 f"\nOriginal error: {_truncate_error_message(str(invoke_error))}"
             )
             logger.error(error_msg)
-            return (llm_name, "404", error_msg)
+            return ("404", error_msg)
 
         else:
             # Non-404 error - might be auth, rate limit, temporary issue, etc.
@@ -213,7 +213,7 @@ async def _validate_single_llm(
                 f"Evaluation will proceed, but may fail if the LLM is truly inaccessible."
             )
             logger.warning(error_msg)
-            return (llm_name, "warning", _truncate_error_message(str(invoke_error)))
+            return ("warning", _truncate_error_message(str(invoke_error)))
 
 
 async def validate_llm_endpoints(config: "Config") -> None:
@@ -269,28 +269,26 @@ async def validate_llm_endpoints(config: "Config") -> None:
 
             results = await asyncio.gather(*validation_tasks, return_exceptions=True)
 
-            # Process results
-            for result in results:
+            # Process results - zip with batch to maintain llm_name association
+            for (llm_name, llm_config), result in zip(batch, results):
                 if isinstance(result, BaseException):
                     # Re-raise system interrupts if they somehow got through
                     if isinstance(result, (KeyboardInterrupt, SystemExit)):
                         raise result
 
                     # Unexpected exception during validation
-                    # Note: SystemExit and KeyboardInterrupt should be re-raised in _validate_single_llm
-                    # but we check again here as a defensive measure
                     logger.warning("Unexpected error during validation: %s", _truncate_error_message(str(result)))
-                    validation_warnings.append(("unknown", _truncate_error_message(str(result))))
+                    validation_warnings.append((llm_name, _truncate_error_message(str(result))))
                 else:
-                    # Normal result: (llm_name, error_type, error_message)
-                    llm_name, error_type, error_message = result
+                    # Normal result: (error_type, error_message)
+                    error_type, error_message = result
 
                     if error_type == "404":
                         failed_llms.append((llm_name, error_message))
                     elif error_type == "warning":
                         validation_warnings.append((llm_name, error_message))
                     # If error_type is None, validation succeeded (no action needed)
-
+    
     # Calculate validation metrics
     total_llms = len(llm_items)
     succeeded_count = total_llms - len(failed_llms) - len(validation_warnings)
