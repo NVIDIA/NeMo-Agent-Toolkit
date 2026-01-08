@@ -150,14 +150,23 @@ async def _validate_single_llm(
         # Add LLM to builder (handles all LLM types)
         builder.add_llm(llm_name, llm_config)
 
-        # Get LangChain-wrapped LLM instance
-        llm = await asyncio.wait_for(
-            builder.get_llm(llm_name, LLMFrameworkEnum.LANGCHAIN), timeout=VALIDATION_TIMEOUT_SECONDS
-        )
+        # Try all frameworks to find one that works with this LLM
+        llm = None
+        for framework in LLMFrameworkEnum:
+            try:
+                llm = await builder.get_llm(llm_name, framework)
+                logger.debug("LLM '%s' successfully loaded with framework '%s'", llm_name, framework.value)
+                break  # Found a working framework
+            except Exception as e:
+                logger.debug("LLM '%s' failed with framework '%s': %s", llm_name, framework.value, e)
+                continue  # Try next framework
+
+        if llm is None:
+            return ("warning", "Could not instantiate LLM with any framework")
 
         # Test with minimal prompt - this will hit the endpoint
         await asyncio.wait_for(llm.ainvoke(VALIDATION_PROMPT), timeout=VALIDATION_TIMEOUT_SECONDS)
-
+        
         duration = time.time() - start_time
         logger.info("LLM '%s' validated successfully in %.2fs", llm_name, duration)
         return (llm_name, None, None)
