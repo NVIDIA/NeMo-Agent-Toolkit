@@ -748,6 +748,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             except Exception as e:
                 logger.exception("Error in async job %s", job_id)
                 await job_store.update_status(job_id, JobStatus.FAILURE, error=str(e))
+            
+            # Explicitly release the resources held by the job store
+            del job_store
 
         def post_async_generation(request_type: type):
 
