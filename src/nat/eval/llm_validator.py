@@ -23,57 +23,57 @@ logger = logging.getLogger(__name__)
 async def validate_llm_endpoints(config: "Config") -> None:  # noqa: F821
     """
     Validate that all LLM endpoints in the config are accessible.
-    
+
     This function checks OpenAI-compatible LLM endpoints to ensure they are
     reachable before running evaluation. This prevents cryptic 404 errors
     during evaluation when models are not deployed.
-    
+
     Args:
         config: The NAT configuration object containing LLM definitions.
-        
+
     Raises:
         RuntimeError: If any LLM endpoint validation fails.
     """
     if not config.llms:
         logger.debug("No LLMs defined in config, skipping validation")
         return
-    
+
     failed_llms = []
-    
+
     for llm_name, llm_config in config.llms.items():
         try:
             # Only validate OpenAI-compatible endpoints
             if llm_config.type not in ["openai", "nim"]:
                 logger.debug(f"Skipping validation for LLM '{llm_name}' (type: {llm_config.type})")
                 continue
-            
+
             base_url = getattr(llm_config, "base_url", None)
             model_name = getattr(llm_config, "model_name", None)
-            
+
             if not base_url:
                 logger.debug(f"LLM '{llm_name}' has no base_url, skipping validation")
                 continue
-            
+
             logger.info(f"Validating LLM endpoint '{llm_name}': {base_url}")
-            
+
             # Try to connect to the endpoint
             try:
                 import openai
-                
+
                 # Get API key if available
                 api_key = getattr(llm_config, "api_key", None) or "unused"
-                
+
                 # Create client and test connection
                 client = openai.OpenAI(base_url=base_url, api_key=api_key)
-                
+
                 # Simple connectivity check - list models
                 try:
                     models = client.models.list()
-                    logger.info(f"✓ LLM endpoint '{llm_name}' is accessible ({len(list(models.data))} models available)")
+                    logger.info(f"LLM endpoint '{llm_name}' is accessible ({len(list(models.data))} models available)")
                 except Exception as list_error:
                     # Some endpoints don't support /models, try a simple completion instead
                     logger.debug(f"Models list failed for '{llm_name}', trying completion test: {list_error}")
-                    
+
                     # Try a minimal completion request
                     try:
                         client.completions.create(
@@ -81,7 +81,7 @@ async def validate_llm_endpoints(config: "Config") -> None:  # noqa: F821
                             prompt="test",
                             max_tokens=1,
                         )
-                        logger.info(f"✓ LLM endpoint '{llm_name}' is accessible (completion test passed)")
+                        logger.info(f"LLM endpoint '{llm_name}' is accessible (completion test passed)")
                     except openai.NotFoundError as nf_error:
                         # 404 means endpoint is reachable but model doesn't exist
                         error_msg = (
@@ -108,11 +108,10 @@ async def validate_llm_endpoints(config: "Config") -> None:  # noqa: F821
                             f"LLM endpoint '{llm_name}' validation inconclusive: {comp_error}. "
                             f"Proceeding with evaluation (endpoint may still work)."
                         )
-                
+
             except ImportError:
                 logger.warning(
-                    f"Cannot validate LLM '{llm_name}': openai package not installed. "
-                    f"Install with: pip install openai"
+                    f"Cannot validate LLM '{llm_name}': openai package not installed. Install with: pip install openai"
                 )
             except Exception as e:
                 error_msg = (
@@ -125,21 +124,18 @@ async def validate_llm_endpoints(config: "Config") -> None:  # noqa: F821
                 )
                 logger.error(error_msg)
                 failed_llms.append((llm_name, error_msg))
-                
+
         except Exception as e:
             logger.warning(f"Error during validation of LLM '{llm_name}': {e}")
-    
+
     # If any critical LLMs failed, raise an error
     if failed_llms:
-        error_summary = "\n\n".join([
-            f"LLM '{name}':\n{msg}" for name, msg in failed_llms
-        ])
+        error_summary = "\n\n".join([f"LLM '{name}':\n{msg}" for name, msg in failed_llms])
         raise RuntimeError(
             f"LLM endpoint validation failed for {len(failed_llms)} LLM(s):\n\n"
             f"{error_summary}\n\n"
             f"Evaluation cannot proceed with inaccessible LLM endpoints. "
             f"Please resolve the issues above before retrying."
         )
-    
-    logger.info("✓ All LLM endpoints validated successfully")
 
+    logger.info("All LLM endpoints validated successfully")
