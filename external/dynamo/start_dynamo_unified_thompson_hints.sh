@@ -276,14 +276,19 @@ docker run -d \
 
     echo ''
 
-    # Function to wait for worker initialization
+    # Function to wait for worker initialization by checking ETCD registration
+    # Dynamo workers register with ETCD, they don't expose HTTP health endpoints
     wait_for_worker() {
         local worker_type=\$1
         local pid=\$2
         local max_wait=300
         local elapsed=0
+        local poll_interval=5
 
         echo \"Waiting for \$worker_type worker (PID \$pid) to initialize...\"
+        echo \"  Detection: ETCD worker registration\"
+        echo \"  Timeout: \${max_wait}s\"
+
         while [ \$elapsed -lt \$max_wait ]; do
             # Check if process is still running
             if ! kill -0 \$pid 2>/dev/null; then
@@ -291,21 +296,39 @@ docker run -d \
                 return 1
             fi
 
-            sleep 5
-            elapsed=\$((elapsed + 5))
-            if [ \$((elapsed % 15)) -eq 0 ]; then
-                echo \"  ... \${elapsed}s / \${max_wait}s\"
+            # Check ETCD for registered workers using v3 API
+            # Query ALL keys to find where Dynamo registers (empty key "" with range_end "\0" = all keys)
+            # Base64: "" -> AA==, "\0" -> AA==  (we use keys_only to reduce response size)
+            local etcd_response=\$(curl -s --max-time 2 http://localhost:2379/v3/kv/range \
+                -X POST \
+                -H \"Content-Type: application/json\" \
+                -d '{\"key\":\"AA==\",\"range_end\":\"AA==\",\"keys_only\":true}' 2>&1)
+
+            # Debug: Print ETCD response every 30s (truncated)
+            if [ \$((elapsed % 30)) -eq 0 ] && [ \$elapsed -gt 0 ]; then
+                echo \"  [DEBUG] ETCD keys found: \$(echo \"\$etcd_response\" | grep -o '\"key\":\"[^\"]*\"' | head -5)\"
+                echo \"  [DEBUG] ETCD count: \$(echo \"\$etcd_response\" | grep -o '\"count\":\"[^\"]*\"')\"
             fi
 
-            # After 60s, assume it's initialized (model loading takes time for 70B)
-            if [ \$elapsed -ge 60 ]; then
-                echo \"✓ \$worker_type worker should be initialized\"
-                return 0 # early exit if worker is initialized
+            # Check if we got any keys back (count > 0 means workers registered)
+            if echo \"\$etcd_response\" | grep -q '\"count\"' && \
+               ! echo \"\$etcd_response\" | grep -q '\"count\":\"0\"'; then
+                echo \"✓ \$worker_type worker is ready (registered with ETCD at \${elapsed}s)\"
+                return 0
+            fi
+
+            sleep \$poll_interval
+            elapsed=\$((elapsed + poll_interval))
+            if [ \$((elapsed % 30)) -eq 0 ]; then
+                echo \"  ... \${elapsed}s / \${max_wait}s (waiting for ETCD registration)\"
             fi
         done
 
-        echo \"WARNING: \$worker_type worker initialization timeout, proceeding anyway\"
-        return 0
+        echo \"ERROR: \$worker_type worker failed to register with ETCD within \${max_wait}s\"
+        echo \"  Image: $IMAGE\"
+        echo \"  The model may require more time to load, or there may be a startup error.\"
+        echo \"  Check worker logs for details.\"
+        return 1
     }
 
     echo '========================================================='
@@ -324,13 +347,8 @@ docker run -d \
     echo \"Unified Worker PID: \$WORKER_PID\"
     echo \"\"
 
-    # Wait for unified worker to initialize
+    # Wait for unified worker to initialize (checks ETCD registration)
     wait_for_worker \"Unified\" \$WORKER_PID || exit 1
-
-    # Give worker extra time to register with ETCD
-    echo ''
-    echo 'Waiting for worker to register with ETCD (30s)...'
-    sleep 30
 
     echo ''
     echo '========================================================='
@@ -557,19 +575,23 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo "Monitoring logs (Ctrl+C to exit, container continues)..."
     echo ""
 
-    # Wait for server to be ready
+    # Wait for server to be ready (check /health for custom frontend)
+    # Note: Custom frontend doesn't implement /v1/models, so we use /health
+    # Worker registration is already confirmed via ETCD check above
     echo "Checking for API availability (timeout=15 minutes)..."
     max_attempts=900
     attempt=0
 
     while [ $attempt -lt $max_attempts ]; do
-        if curl -s http://localhost:$HTTP_PORT/health > /dev/null 2>&1; then
-            echo "✓ Dynamo API is ready!"
+        # Check /health - custom frontend health endpoint
+        health_response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:$HTTP_PORT/health 2>/dev/null)
+        if [ "$health_response" = "200" ]; then
+            echo "✓ Dynamo API is ready! (frontend health check passed)"
             break
         fi
         attempt=$((attempt + 1))
         if [ $((attempt % 15)) -eq 0 ]; then
-            echo "  ... still waiting ($attempt/$max_attempts)"
+            echo "  ... still waiting ($attempt/$max_attempts) - health response: $health_response"
         fi
         sleep 1
     done

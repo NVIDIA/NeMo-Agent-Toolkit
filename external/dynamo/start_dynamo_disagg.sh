@@ -239,14 +239,21 @@ docker run -d \
 
     echo ''
 
-    # Function to wait for worker initialization
+    # Function to wait for worker initialization by checking ETCD registration
+    # Dynamo workers register with ETCD, they don't expose HTTP health endpoints
+    # For disaggregated mode, we track expected worker count
     wait_for_worker() {
         local worker_type=\$1
         local pid=\$2
+        local expected_count=\${3:-1}  # Expected number of registered workers
         local max_wait=300
         local elapsed=0
+        local poll_interval=5
 
         echo \"Waiting for \$worker_type worker (PID \$pid) to initialize...\"
+        echo \"  Detection: ETCD worker registration (expecting \$expected_count worker(s))\"
+        echo \"  Timeout: \${max_wait}s\"
+
         while [ \$elapsed -lt \$max_wait ]; do
             # Check if process is still running
             if ! kill -0 \$pid 2>/dev/null; then
@@ -254,21 +261,40 @@ docker run -d \
                 return 1
             fi
 
-            sleep 5
-            elapsed=\$((elapsed + 5))
-            if [ \$((elapsed % 15)) -eq 0 ]; then
-                echo \"  ... \${elapsed}s / \${max_wait}s\"
+            # Check ETCD for registered workers using v3 API
+            # Query ALL keys to find where Dynamo registers (empty key "" with range_end "\0" = all keys)
+            # Base64: "" -> AA==, "\0" -> AA==  (we use keys_only to reduce response size)
+            local etcd_response=\$(curl -s --max-time 2 http://localhost:2379/v3/kv/range \
+                -X POST \
+                -H \"Content-Type: application/json\" \
+                -d '{\"key\":\"AA==\",\"range_end\":\"AA==\",\"keys_only\":true}' 2>&1)
+
+            # Extract count from response and check if we have enough workers
+            local current_count=\$(echo \"\$etcd_response\" | grep -o '\"count\":\"[0-9]*\"' | grep -o '[0-9]*' || echo \"0\")
+
+            # Debug: Print ETCD response every 30s (truncated)
+            if [ \$((elapsed % 30)) -eq 0 ] && [ \$elapsed -gt 0 ]; then
+                echo \"  [DEBUG] ETCD keys found: \$(echo \"\$etcd_response\" | grep -o '\"key\":\"[^\"]*\"' | head -5)\"
+                echo \"  [DEBUG] ETCD count: \$(echo \"\$etcd_response\" | grep -o '\"count\":\"[^\"]*\"')\"
             fi
 
-            # After 60s, assume it's initialized (model loading takes time for 70B)
-            if [ \$elapsed -ge 60 ]; then
-                echo \"✓ \$worker_type worker should be initialized\"
-                return 0 # early exit if worker is initialized
+            if [ \"\$current_count\" -ge \"\$expected_count\" ] 2>/dev/null; then
+                echo \"✓ \$worker_type worker is ready (registered with ETCD at \${elapsed}s, count=\$current_count)\"
+                return 0
+            fi
+
+            sleep \$poll_interval
+            elapsed=\$((elapsed + poll_interval))
+            if [ \$((elapsed % 30)) -eq 0 ]; then
+                echo \"  ... \${elapsed}s / \${max_wait}s (waiting for ETCD registration, current=\$current_count)\"
             fi
         done
 
-        echo \"WARNING: \$worker_type worker initialization timeout, proceeding anyway\"
-        return 0
+        echo \"ERROR: \$worker_type worker failed to register with ETCD within \${max_wait}s\"
+        echo \"  Image: $IMAGE\"
+        echo \"  The model may require more time to load, or there may be a startup error.\"
+        echo \"  Check worker logs for details.\"
+        return 1
     }
 
     echo '========================================================='
@@ -290,8 +316,8 @@ docker run -d \
     echo \"Prefill Worker PID: \$PREFILL_PID\"
     echo \"\"
 
-    # Wait for prefill worker to initialize
-    wait_for_worker \"Prefill\" \$PREFILL_PID || exit 1
+    # Wait for prefill worker to initialize (expects 1 worker in ETCD)
+    wait_for_worker \"Prefill\" \$PREFILL_PID 1 || exit 1
 
     echo ''
     echo '========================================================='
@@ -312,13 +338,8 @@ docker run -d \
     echo \"Decode Worker PID: \$DECODE_PID\"
     echo \"\"
 
-    # Wait for decode worker to initialize
-    wait_for_worker \"Decode\" \$DECODE_PID || exit 1
-
-    # Give workers extra time to register with ETCD
-    echo ''
-    echo 'Waiting for workers to register with ETCD (30s)...'
-    sleep 30
+    # Wait for decode worker to initialize (expects 2 workers in ETCD - prefill + decode)
+    wait_for_worker \"Decode\" \$DECODE_PID 2 || exit 1
 
     echo ''
     echo '========================================================='
@@ -468,14 +489,16 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo "Monitoring logs (Ctrl+C to exit, container continues)..."
     echo ""
 
-    # Wait for server to be ready
+    # Wait for server to be ready (check /v1/models which only works when workers are discovered)
     echo "Checking for API availability (timeout=15 minutes)..."
     max_attempts=900
     attempt=0
 
     while [ $attempt -lt $max_attempts ]; do
-        if curl -s http://localhost:$HTTP_PORT/health > /dev/null 2>&1; then
-            echo "✓ SGLang API is ready!"
+        # Check /v1/models - only returns data when workers are registered
+        models_response=$(curl -s http://localhost:$HTTP_PORT/v1/models 2>/dev/null)
+        if echo "$models_response" | grep -q '"id"'; then
+            echo "✓ SGLang API is ready! (models discovered)"
             break
         fi
         attempt=$((attempt + 1))
