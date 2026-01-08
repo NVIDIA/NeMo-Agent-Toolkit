@@ -18,8 +18,8 @@ limitations under the License.
 
 This example demonstrates a complete end-to-end OAuth2-protected A2A setup with:
 - **Protected A2A Server**: Calculator service requiring OAuth2 authentication
-- **OAuth2 A2A Client**: Math assistant with per-user OAuth2 credentials
-- **Authorization Server**: Keycloak setup for testing OAuth2-protected A2A communication
+- **OAuth2 A2A Client**: Math assistant with per-user OAuth2 credentials that connects to the protected A2A server
+- **Authorization Server**: Keycloak authorization server for testing OAuth2-protected A2A communication
 
 ## Overview
 
@@ -32,18 +32,15 @@ This example combines two components to show OAuth2-protected agent-to-agent com
 
 **Client Side (Math Assistant)**
 - **Type**: Per-user A2A client workflow
-- **Authentication**: OAuth2 authorization code flow with per-user isolation
-- **Skills**: Connects to calculator server, local time operations, logic evaluator
+- **Authentication**: OAuth2 authorization code flow to obtain JWT tokens for authentication
+- **Functionality**: Connects to calculator server, local time operations, logic evaluator to answer math questions
 
 ## Key Features
 
 - **JWT Token Validation**: Validates access tokens using JWKS from authorization server
-- **Scope Enforcement**: Requires `calculator_a2a_execute` scope (configurable)
 - **Per-User A2A Client**: Each user gets isolated A2A client connections with separate authentication
-- **Public Agent Card**: Agent card is publicly accessible without authentication
 - **Protected Operations**: All calculator operations require valid authentication
 - **Multi-User Support**: Each user gets their own OAuth2 flow and authentication tokens
-- **Hybrid Tool Architecture**: Combines remote A2A tools with local MCP and custom functions
 
 This example is designed for **development and testing**. See [Production Considerations](#production-considerations) for deployment guidance.
 
@@ -97,8 +94,8 @@ graph TB
 
 3. **Keycloak (Authorization Server)**
    - Example OAuth2 server for testing OAuth2-protected A2A servers in NeMo Agent toolkit
-   - Authenticates users and manages consent
-   - Provides JWKS endpoint for token verification
+   - Provides OAuth2 endpoints for token exchange by the A2A client
+   - Provides JWKS endpoint for token verification by the A2A server
 
 **Per-User Architecture:** Each user identified by `nat-session` cookie gets their own:
 - A2A client connection with isolated state
@@ -403,44 +400,10 @@ This setup is for **development and testing only**. For production:
 
 ### Security
 
-1. **Use HTTPS Everywhere**
-   - Keycloak must use TLS
-   - All redirect URIs must be HTTPS
-   - A2A servers must use HTTPS
-
-2. **Secure Credentials**
-   - Store client secrets in a secrets manager (Vault, AWS Secrets Manager, etc.)
-   - Never commit secrets to version control
-   - Use environment variables only for development
-   - Rotate client secrets regularly
-
-3. **Token Configuration**
-   - Set short access token lifetime (5-15 minutes)
-   - Enable refresh tokens for long-running sessions
-   - Configure appropriate token expiration policies
-   - Implement token revocation
-
-4. **Realm Configuration**
-   - Don't use the `master` realm for applications
-   - Create dedicated realms per environment (dev, staging, prod)
-   - Configure proper user management and authentication policies
-
-### Per-User OAuth2 Considerations
-
-1. **Session Management**
-   - Configure appropriate `per_user_workflow_timeout` for token lifetime
-   - Consider refresh token strategies for long-running user sessions
-   - Implement proper session cleanup to avoid memory leaks
-
-2. **Token Storage**
-   - Each user's OAuth2 tokens are stored in memory per session
-   - Tokens are automatically cleaned up when user sessions expire
-   - Consider persistent token storage for production deployments
-
-3. **Concurrent Users**
-   - Each user maintains independent OAuth2 credentials
-   - Monitor memory usage with many concurrent users
-   - Plan capacity based on expected concurrent user load
+- **Use HTTPS everywhere**: Keycloak, redirect URIs, and A2A servers must all use TLS
+- **Secure credentials**: Store client secrets in a secrets manager, rotate regularly, never commit to version control
+- **Configure short-lived tokens**: Set short access token lifetime with refresh tokens for long sessions
+- **Use dedicated realms**: Don't use `master` realm; create separate realms per environment (dev, staging, prod)
 
 ## Related Examples
 
