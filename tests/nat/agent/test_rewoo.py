@@ -30,6 +30,7 @@ from nat.agent.rewoo_agent.agent import ReWOOEvidence
 from nat.agent.rewoo_agent.agent import ReWOOGraphState
 from nat.agent.rewoo_agent.agent import ReWOOPlanStep
 from nat.agent.rewoo_agent.register import ReWOOAgentWorkflowConfig
+from nat.builder.function import FunctionGroup
 
 
 async def test_state_schema():
@@ -489,7 +490,7 @@ def test_json_output_parsing_valid_format():
     valid_json_output = json.dumps([{
         "plan": "Calculate the result of 2023 minus 25.",
         "evidence": {
-            "placeholder": "#E1", "tool": "calculator__subtract", "tool_input": [2023, 25]
+            "placeholder": "#E1", "tool": f"calculator{FunctionGroup.SEPARATOR}subtract", "tool_input": [2023, 25]
         }
     },
                                     {
@@ -511,7 +512,7 @@ def test_json_output_parsing_valid_format():
     assert isinstance(first_step, ReWOOPlanStep)
     assert first_step.plan == "Calculate the result of 2023 minus 25."
     assert first_step.evidence.placeholder == "#E1"
-    assert first_step.evidence.tool == "calculator__subtract"
+    assert first_step.evidence.tool == f"calculator{FunctionGroup.SEPARATOR}subtract"
     assert first_step.evidence.tool_input == [2023, 25]
 
 

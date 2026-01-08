@@ -19,6 +19,7 @@ from pydantic import Field
 
 from nat.builder.builder import Builder
 from nat.builder.component_utils import WORKFLOW_COMPONENT_NAME
+from nat.builder.function import FunctionGroup
 from nat.builder.function_info import FunctionInfo
 from nat.builder.per_user_workflow_builder import PerUserWorkflowBuilder
 from nat.builder.workflow_builder import WorkflowBuilder
@@ -274,7 +275,6 @@ async def test_workflow_builder_validates_shared_fn_depends_on_per_user_function
     """Test that WorkflowBuilder._validate_dependencies() catches shared function->per-user function_group."""
     import typing
 
-    from nat.builder.function import FunctionGroup
     from nat.cli.register_workflow import register_per_user_function_group
 
     class SharedFnDependsOnPerUserFGConfig(FunctionBaseConfig, name="shared_fn_depends_per_user_fg"):
@@ -325,7 +325,6 @@ async def test_workflow_builder_validates_shared_fg_depends_on_per_user_function
     """Test that WorkflowBuilder._validate_dependencies() catches shared function_group->per-user function."""
     import typing
 
-    from nat.builder.function import FunctionGroup
     from nat.cli.register_workflow import register_function_group
 
     class SharedFGDependsOnPerUserFnConfig(FunctionGroupBaseConfig, name="shared_fg_depends_per_user_fn"):
@@ -365,7 +364,6 @@ async def test_workflow_builder_validates_shared_fg_depends_on_per_user_fg():
     """Test that WorkflowBuilder._validate_dependencies() catches shared function_group->per-user function_group."""
     import typing
 
-    from nat.builder.function import FunctionGroup
     from nat.cli.register_workflow import register_function_group
     from nat.cli.register_workflow import register_per_user_function_group
 
@@ -421,7 +419,6 @@ async def test_workflow_builder_validates_shared_workflow_depends_on_per_user_fg
     """Test that WorkflowBuilder._validate_dependencies() catches shared workflow->per-user function_group."""
     import typing
 
-    from nat.builder.function import FunctionGroup
     from nat.cli.register_workflow import register_per_user_function_group
 
     class PerUserFGForWorkflowTestConfig(FunctionGroupBaseConfig, name="per_user_fg_for_workflow_test"):
@@ -912,7 +909,6 @@ async def test_register_per_user_function_group():
     """Test that @register_per_user_function_group decorator works."""
     import typing
 
-    from nat.builder.function import FunctionGroup
     from nat.cli.register_workflow import register_per_user_function_group
     from nat.cli.type_registry import GlobalTypeRegistry
 
@@ -944,7 +940,6 @@ async def test_workflow_builder_skips_per_user_function_groups():
     """Test that WorkflowBuilder.populate_builder() skips per-user function groups."""
     import typing
 
-    from nat.builder.function import FunctionGroup
     from nat.cli.register_workflow import register_function_group
     from nat.cli.register_workflow import register_per_user_function_group
 
@@ -1005,7 +1000,6 @@ async def test_per_user_builder_builds_per_user_function_groups():
     """Test that PerUserWorkflowBuilder builds per-user function groups."""
     import typing
 
-    from nat.builder.function import FunctionGroup
     from nat.cli.register_workflow import register_per_user_function_group
 
     class TestPerUserFGConfig(FunctionGroupBaseConfig, name="test_pu_fg_build"):
@@ -1050,7 +1044,6 @@ async def test_per_user_builder_builds_per_user_function_groups():
 
 async def test_per_user_builder_function_groups_expose_functions():
     """Test that per-user function groups can expose functions."""
-    from nat.builder.function import FunctionGroup
     from nat.builder.function import LambdaFunction
     from nat.cli.register_workflow import register_per_user_function_group
 
@@ -1096,10 +1089,11 @@ async def test_per_user_builder_function_groups_expose_functions():
             assert "expose_fg" in per_user_builder._per_user_function_groups
 
             # Exposed function should be accessible with prefixed name (group_name.function_name)
-            assert "expose_fg__exposed_tool" in per_user_builder._per_user_functions
+            sep = FunctionGroup.SEPARATOR
+            assert f"expose_fg{sep}exposed_tool" in per_user_builder._per_user_functions
 
             # Should be able to get and call it using the prefixed name
-            exposed_fn = await per_user_builder.get_function("expose_fg__exposed_tool")
+            exposed_fn = await per_user_builder.get_function(f"expose_fg{sep}exposed_tool")
             result = await exposed_fn.ainvoke("test", to_type=str)
             assert result == "exposed: test"
 
@@ -1108,7 +1102,6 @@ async def test_per_user_builder_get_function_group_delegates_to_shared():
     """Test that PerUserWorkflowBuilder delegates to shared builder for shared function groups."""
     import typing
 
-    from nat.builder.function import FunctionGroup
     from nat.cli.register_workflow import register_function_group
 
     class TestSharedFGConfig(FunctionGroupBaseConfig, name="test_shared_fg_delegate"):
@@ -1147,7 +1140,6 @@ async def test_per_user_builder_get_function_group_config():
     """Test that PerUserWorkflowBuilder.get_function_group_config() works correctly."""
     import typing
 
-    from nat.builder.function import FunctionGroup
     from nat.cli.register_workflow import register_function_group
     from nat.cli.register_workflow import register_per_user_function_group
 
@@ -1211,7 +1203,6 @@ async def test_per_user_builder_build_merges_function_groups():
     """Test that PerUserWorkflowBuilder.build() merges shared and per-user function groups."""
     import typing
 
-    from nat.builder.function import FunctionGroup
     from nat.cli.register_workflow import register_function_group
     from nat.cli.register_workflow import register_per_user_function_group
 
@@ -1274,7 +1265,6 @@ async def test_per_user_builder_get_tools_with_function_groups():
     import typing
 
     from nat.builder.framework_enum import LLMFrameworkEnum
-    from nat.builder.function import FunctionGroup
     from nat.builder.function import LambdaFunction
     from nat.cli.register_workflow import register_function_group
     from nat.cli.register_workflow import register_per_user_function_group
@@ -1362,7 +1352,6 @@ async def test_per_user_builder_populate_builds_function_groups_before_functions
     """Test that populate_builder builds function groups before functions (dependency order)."""
     import typing
 
-    from nat.builder.function import FunctionGroup
     from nat.cli.register_workflow import register_per_user_function_group
 
     class OrderTestFGConfig(FunctionGroupBaseConfig, name="test_order_fg"):

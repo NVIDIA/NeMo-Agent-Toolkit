@@ -487,15 +487,16 @@ async def test_function_group_function_name_generation():
 
     # Test internal storage uses short name
     assert "test_func" in group._functions
-    assert "my_group__test_func" not in group._functions
+    assert f"my_group{FunctionGroup.SEPARATOR}test_func" not in group._functions
 
     # Test that generated full names are correct in returned functions
     accessible = await group.get_accessible_functions()
-    assert "my_group__test_func" in accessible
-    assert accessible["my_group__test_func"] is group._functions["test_func"]
+    sep = FunctionGroup.SEPARATOR
+    assert f"my_group{sep}test_func" in accessible
+    assert accessible[f"my_group{sep}test_func"] is group._functions["test_func"]
 
     # Test _get_fn_name method directly
-    assert group._get_fn_name("test_func") == "my_group__test_func"
+    assert group._get_fn_name("test_func") == f"my_group{sep}test_func"
 
 
 def test_function_group_both_include_and_exclude():
@@ -548,7 +549,7 @@ async def test_function_group_preserves_function_metadata():
 
     func = group._functions["test_func"]
     assert func.description == "Custom description"
-    assert func.instance_name == "test_function_group__test_func"
+    assert func.instance_name == f"test_function_group{FunctionGroup.SEPARATOR}test_func"
 
 
 def test_function_group_lambda_function_creation():
@@ -660,12 +661,13 @@ async def test_function_group_comprehensive_metadata():
     # Test all metadata is preserved
     assert func.description == "A complex function with all features"
     assert func.input_schema == CustomInput
-    assert func.instance_name == "comprehensive_test__complex_func"
+    assert func.instance_name == f"comprehensive_test{FunctionGroup.SEPARATOR}complex_func"
     assert func._converter is not None
     assert isinstance(func, LambdaFunction)
     assert isinstance(func.config, EmptyFunctionConfig)
 
     # Test function appears correctly in accessible functions
     accessible = await group.get_accessible_functions()
-    assert "comprehensive_test__complex_func" in accessible
-    assert accessible["comprehensive_test__complex_func"] is func
+    sep = FunctionGroup.SEPARATOR
+    assert f"comprehensive_test{sep}complex_func" in accessible
+    assert accessible[f"comprehensive_test{sep}complex_func"] is func
