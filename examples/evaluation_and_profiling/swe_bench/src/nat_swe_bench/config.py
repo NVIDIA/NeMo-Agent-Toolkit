@@ -31,14 +31,6 @@ class SweBenchPredictorBaseConfig(TypedBaseModel, BaseModelRegistryTag):
     description: str = "Swe Bench Problem Solver"
 
 
-class SweBenchPredictorFullConfig(SweBenchPredictorBaseConfig, name="full"):
-    llm_name: LLMRef = "nim_llm"
-    tool_names: list[FunctionRef] = []
-    # Temporary, key needs to be removed and read from the environment
-    openai_api_key: SerializableSecretStr = Field(
-        default_factory=lambda: SerializableSecretStr(""))  # OpenAI API key field
-
-
 class SweBenchPredictorGoldConfig(SweBenchPredictorBaseConfig, name="gold"):
     verbose: bool = True
 
@@ -48,8 +40,7 @@ class SweBenchPredictorSkeletonConfig(SweBenchPredictorBaseConfig, name="skeleto
 
 
 SweBenchPredictorConfig = typing.Annotated[
-    typing.Annotated[SweBenchPredictorFullConfig, Tag(SweBenchPredictorFullConfig.static_type())]
-    | typing.Annotated[SweBenchPredictorGoldConfig, Tag(SweBenchPredictorGoldConfig.static_type())]
+    typing.Annotated[SweBenchPredictorGoldConfig, Tag(SweBenchPredictorGoldConfig.static_type())]
     | typing.Annotated[SweBenchPredictorSkeletonConfig, Tag(SweBenchPredictorSkeletonConfig.static_type())],
     Discriminator(TypedBaseModel.discriminator)]
 
