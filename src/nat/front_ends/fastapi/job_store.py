@@ -376,6 +376,13 @@ class JobStore(DaskClientMixin):
                 output = json.dumps(output)
 
             job.output = output
+        
+        if status not in self.ACTIVE_STATUS:
+            # Job is now in a terminal state let's try and pro-actively clean up
+            logger.info("Job %s is in terminal state %s, cleaning up Dask variable", job_id, status)
+            async with self.client() as client:
+                 await self._delete_dask_variable(job_id, client, cancel_task=False)
+
 
     async def get_all_jobs(self) -> list[JobInfo]:
         """
@@ -502,6 +509,36 @@ class JobStore(DaskClientMixin):
             updated_at = updated_at.replace(tzinfo=UTC)
 
         return updated_at + timedelta(seconds=job.expiry_seconds)
+    
+    async def _delete_dask_variable(self, job_id: str, dask_client: DaskClient, cancel_task: bool) -> bool:
+        var = None
+        success = False
+        try:
+            var = Variable(name=job_id, client=dask_client)
+            try:
+                future = await var.get(timeout=5)
+                if isinstance(future, Future):
+                    if cancel_task:
+                        await dask_client.cancel([future], asynchronous=True, force=True)
+                    else:
+                        future.release()
+            except TimeoutError:
+                pass
+
+            success = True
+        except Exception:
+            logger.exception("Failed to expire %s", job_id)
+
+        finally:
+            if var is not None:
+                try:
+                    var.delete()
+                    logger.info("Deleted variable %s from Dask", job_id)
+                except Exception:
+                    logger.exception("Failed to delete variable %s", job_id)
+                del var
+        
+        return success
 
     async def cleanup_expired_jobs(self):
         """
@@ -540,28 +577,8 @@ class JobStore(DaskClientMixin):
             if len(expired_ids) > 0:
                 successfully_expired = []
                 for job_id in expired_ids:
-                    var = None
-                    try:
-                        var = Variable(name=job_id, client=client)
-                        try:
-                            future = await var.get(timeout=5)
-                            if isinstance(future, Future):
-                                await client.cancel([future], asynchronous=True, force=True)
-
-                        except TimeoutError:
-                            pass
-
+                    if await self._delete_dask_variable(job_id, client, cancel_task=True):
                         successfully_expired.append(job_id)
-                    except Exception:
-                        logger.exception("Failed to expire %s", job_id)
-
-                    finally:
-                        if var is not None:
-                            try:
-                                var.delete()
-                            except Exception:
-                                logger.exception("Failed to delete variable %s", job_id)
-                            del var
 
                 await session.execute(
                     update(JobInfo).where(JobInfo.job_id.in_(successfully_expired)).values(is_expired=True))
