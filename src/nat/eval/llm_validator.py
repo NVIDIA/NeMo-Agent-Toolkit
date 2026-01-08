@@ -241,16 +241,6 @@ async def validate_llm_endpoints(config: "Config") -> None:
         RuntimeError: If any LLM endpoint has a 404 error (model not deployed).
         ValueError: If config.llms is not properly structured.
     """
-    # Validate config structure
-    if not hasattr(config, "llms"):
-        raise ValueError("Config object does not have 'llms' attribute")
-
-    if not config.llms:
-        logger.debug("No LLMs defined in config, skipping validation")
-        return
-
-    if not isinstance(config.llms, dict):
-        raise ValueError(f"config.llms must be a dict, got {type(config.llms)}")
 
     failed_llms = []  # List of (llm_name, error_message) tuples for 404 errors
     validation_warnings = []  # List of (llm_name, warning_message) tuples for non-critical errors
