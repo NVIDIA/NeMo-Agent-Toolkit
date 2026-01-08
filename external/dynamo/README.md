@@ -795,6 +795,8 @@ The startup scripts support configuration through environment variables. Set the
 | `DYNAMO_HTTP_PORT` | Frontend HTTP port | `8099` |
 | `DYNAMO_ETCD_PORT` | `etcd` client port | `2389` |
 | `DYNAMO_NATS_PORT` | `nats` messaging port | `4232` |
+| `DYNAMO_METRICS_URL` | Prometheus metrics endpoint URL for the router | `http://localhost:9090/metrics` |
+| `ROUTER_METRICS_CSV` | Path to CSV file for router decision logging | `router_metrics.csv` |
 
 Example configuration:
 

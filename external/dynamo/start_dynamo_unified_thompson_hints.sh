@@ -44,7 +44,7 @@ TP_SIZE="${DYNAMO_TP_SIZE:-4}"
 HTTP_PORT="${DYNAMO_HTTP_PORT:-8099}"
 MODEL="/workspace/models/Llama-3.3-70B-Instruct"
 SERVED_MODEL_NAME="${DYNAMO_MODEL_NAME:-llama-3.3-70b}"
-IMAGE="nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.6.1"
+IMAGE="nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.7.1"
 SHM_SIZE="${DYNAMO_SHM_SIZE:-16g}"
 
 # Local paths - DYNAMO_MODEL_DIR must be set or script will error
