@@ -202,7 +202,7 @@ async def _validate_single_llm(
                 f"  4. Verify the model name matches the deployed model\n"
                 f"\nOriginal error: {_truncate_error_message(str(invoke_error))}"
             )
-            logger.error(error_msg)
+            logger.exception(error_msg)
             return ("404", error_msg)
 
         else:
