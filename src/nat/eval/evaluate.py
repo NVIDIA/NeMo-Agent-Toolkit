@@ -630,6 +630,16 @@ class EvaluationRun:
                                        config_effective_file=self.config_effective_file,
                                        config_metadata_file=self.config_metadata_file)
 
+        # Validate LLM endpoints before running evaluation
+        if not self.config.skip_workflow and not self.config.endpoint:
+            try:
+                from nat.eval.llm_validator import validate_llm_endpoints
+                logger.info("Validating LLM endpoints before evaluation...")
+                await validate_llm_endpoints(config)
+            except Exception as e:
+                logger.error(f"LLM endpoint validation failed: {e}")
+                raise
+
         # Run workflow and evaluate
         async with WorkflowEvalBuilder.from_config(config=config) as eval_workflow:
             # Initialize Weave integration
