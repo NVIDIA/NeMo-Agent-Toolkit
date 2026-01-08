@@ -28,8 +28,8 @@ def normalize_tool_name(tool_name: str) -> str:
         return ""
 
     # Strip module prefix (e.g., "banking_tools.report_lost_stolen_card" -> "report_lost_stolen_card")
-    if "." in tool_name:
-        tool_name = tool_name.rsplit(".", 1)[-1]
+    if "__" in tool_name:
+        _, tool_name = tool_name.split("__", maxsplit=1)
 
     return tool_name.lower().strip().replace("_", "").replace("-", "")
 

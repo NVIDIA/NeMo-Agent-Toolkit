@@ -394,6 +394,32 @@ class FunctionGroup:
     A group of functions that can be used together, sharing the same configuration, context, and resources.
     """
 
+    SEPARATOR: str = "__"
+    """The separator between the function group name and the function name."""
+
+    LEGACY_SEPARATOR: str = "."
+    """The legacy separator between the function group name and the function name."""
+
+    @staticmethod
+    def decompose(name: str, legacy_compat: bool = False) -> tuple[str, str]:
+        """
+        Decompose a function name into the function group name and the function name.
+
+        Parameters
+        ----------
+        name : str
+            The function name to decompose.
+        legacy_compat : bool, optional
+            Whether to use the legacy separator (period) instead of the new separator (double underscore).
+
+        Returns
+        -------
+        tuple[str, str]
+            The function group name and the function name.
+        """
+        g, f = name.split(FunctionGroup.LEGACY_SEPARATOR if legacy_compat else FunctionGroup.SEPARATOR, maxsplit=1)
+        return g, f
+
     def __init__(self,
                  *,
                  config: FunctionGroupBaseConfig,
@@ -492,9 +518,9 @@ class FunctionGroup:
         The function name of a function in a function group is the function name concatenated with
         the function group instance name separated with a separator string.
 
-        The separator is a double underscore (``__``), but was a period (``.``) in prior versions.
+        The separator is a double underscore (``__``).
         """
-        return f"{self._instance_name}__{name}"
+        return f"{self._instance_name}{FunctionGroup.SEPARATOR}{name}"
 
     async def _fn_should_be_included(self, name: str) -> bool:
         if name not in self._per_function_filter_fn:
@@ -761,12 +787,10 @@ class FunctionGroup:
         instance_name : str
             The instance name to set for the function group.
         """
+        old_name = self._instance_name
         self._instance_name = instance_name
         for func in self._functions.values():
-            current_instance_name = func.instance_name
-            suffix = current_instance_name.split('.')[-1]
-            new_instance_name = f"{instance_name}.{suffix}"
-            func.instance_name = new_instance_name
+            func.instance_name = func.instance_name.replace(old_name, instance_name, 1)
 
     @property
     def instance_name(self) -> str:
