@@ -16,15 +16,17 @@
 """Tests for LLM endpoint validation before evaluation."""
 
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from nat.data_models.config import Config
 from nat.llm.openai_llm import OpenAIModelConfig
-from nat.eval.llm_validator import validate_llm_endpoints
+from nat.llm.nim_llm import NIMModelConfig
+from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
+from nat.eval.llm_validator import validate_llm_endpoints, _is_404_error
 
 
 class TestLLMEndpointValidation:
-    """Tests for LLM endpoint validation functionality."""
+    """Tests for LLM endpoint validation functionality using WorkflowBuilder."""
 
     @pytest.fixture
     def config_with_openai_llm(self):
@@ -39,16 +41,40 @@ class TestLLMEndpointValidation:
         return config
 
     @pytest.fixture
-    def config_with_multiple_llms(self):
-        """Create config with multiple LLMs."""
+    def config_with_nim_llm(self):
+        """Create config with NIM LLM."""
         config = Config()
         config.llms = {
-            "llm1": OpenAIModelConfig(
-                model_name="model1",
+            "nim_llm": NIMModelConfig(
+                model_name="meta/llama-3.1-8b-instruct",
+                base_url="http://localhost:8000/v1"
+            )
+        }
+        return config
+
+    @pytest.fixture
+    def config_with_bedrock_llm(self):
+        """Create config with AWS Bedrock LLM."""
+        config = Config()
+        config.llms = {
+            "bedrock_llm": AWSBedrockModelConfig(
+                model_name="anthropic.claude-v2",
+                region_name="us-east-1"
+            )
+        }
+        return config
+
+    @pytest.fixture
+    def config_with_multiple_llms(self):
+        """Create config with multiple LLMs of different types."""
+        config = Config()
+        config.llms = {
+            "openai_llm": OpenAIModelConfig(
+                model_name="gpt-4",
                 base_url="http://localhost:8000/v1"
             ),
-            "llm2": OpenAIModelConfig(
-                model_name="model2",
+            "nim_llm": NIMModelConfig(
+                model_name="llama-3.1-8b-instruct",
                 base_url="http://localhost:8001/v1"
             )
         }
@@ -66,42 +92,49 @@ class TestLLMEndpointValidation:
         # Should not raise any error
         await validate_llm_endpoints(config_without_llms)
 
-    @patch("openai.OpenAI")
-    async def test_validation_detects_unreachable_endpoint(self, mock_openai_class):
-        """Test that validation detects unreachable endpoints."""
-        # Mock connection error
-        mock_client = MagicMock()
-        mock_client.models.list.side_effect = ConnectionError("Connection refused")
-        mock_openai_class.return_value = mock_client
+    @patch("nat.eval.llm_validator.WorkflowBuilder")
+    async def test_validation_succeeds_with_accessible_endpoint(self, mock_builder_class, config_with_openai_llm):
+        """Test that validation succeeds when LLM endpoint is accessible."""
+        # Mock the builder and LLM
+        mock_builder = AsyncMock()
+        mock_llm = AsyncMock()
+        mock_llm.ainvoke = AsyncMock(return_value="test response")
+        
+        mock_builder.add_llm = AsyncMock()
+        mock_builder.get_llm = AsyncMock(return_value=mock_llm)
+        mock_builder.__aenter__ = AsyncMock(return_value=mock_builder)
+        mock_builder.__aexit__ = AsyncMock(return_value=None)
+        
+        mock_builder_class.return_value = mock_builder
 
-        config = Config()
-        config.llms = {
-            "unreachable_llm": OpenAIModelConfig(
-                model_name="test-model",
-                base_url="http://localhost:9999/v1"
-            )
-        }
+        # Should not raise any error
+        await validate_llm_endpoints(config_with_openai_llm)
+        
+        # Verify builder was used correctly
+        mock_builder.add_llm.assert_called_once()
+        mock_builder.get_llm.assert_called_once()
+        mock_llm.ainvoke.assert_called_once()
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await validate_llm_endpoints(config)
-
-        error_msg = str(exc_info.value)
-        assert "LLM endpoint validation failed" in error_msg
-        assert "ACTION REQUIRED" in error_msg
-
-    @patch("openai.OpenAI")
-    async def test_validation_detects_model_not_found_404(self, mock_openai_class, config_with_openai_llm):
+    @patch("nat.eval.llm_validator.WorkflowBuilder")
+    async def test_validation_detects_404_error(self, mock_builder_class, config_with_openai_llm):
         """Test that validation detects 404 errors when model doesn't exist."""
-        import openai
-
-        # Mock OpenAI client to raise NotFoundError (404)
-        mock_client = MagicMock()
-        mock_client.models.list.side_effect = openai.NotFoundError(
-            message="Model not found",
-            response=MagicMock(status_code=404),
-            body=None
-        )
-        mock_openai_class.return_value = mock_client
+        # Mock 404 error from ainvoke
+        mock_builder = AsyncMock()
+        mock_llm = AsyncMock()
+        
+        # Simulate NotFoundError (404) - create actual NotFoundError class
+        class NotFoundError(Exception):
+            pass
+        
+        error_404 = NotFoundError("404: Model not found")
+        mock_llm.ainvoke = AsyncMock(side_effect=error_404)
+        
+        mock_builder.add_llm = AsyncMock()
+        mock_builder.get_llm = AsyncMock(return_value=mock_llm)
+        mock_builder.__aenter__ = AsyncMock(return_value=mock_builder)
+        mock_builder.__aexit__ = AsyncMock(return_value=None)
+        
+        mock_builder_class.return_value = mock_builder
 
         with pytest.raises(RuntimeError) as exc_info:
             await validate_llm_endpoints(config_with_openai_llm)
@@ -109,68 +142,161 @@ class TestLLMEndpointValidation:
         error_msg = str(exc_info.value)
         assert "404" in error_msg
         assert "not found" in error_msg.lower()
-        assert any(phrase in error_msg for phrase in [
-            "This typically means",
-            "ACTION REQUIRED",
-            "model has not been deployed"
-        ])
+        assert "ACTION REQUIRED" in error_msg
 
-    @patch("openai.OpenAI")
-    async def test_validation_succeeds_with_accessible_endpoint(self, mock_openai_class, config_with_openai_llm):
-        """Test that validation succeeds when endpoint is accessible."""
-        # Mock successful connection
-        mock_client = MagicMock()
-        mock_models_response = MagicMock()
-        mock_models_response.data = [MagicMock(id="test-model")]
-        mock_client.models.list.return_value = mock_models_response
-        mock_openai_class.return_value = mock_client
+    @patch("nat.eval.llm_validator.WorkflowBuilder")
+    async def test_validation_handles_auth_errors_gracefully(self, mock_builder_class, config_with_openai_llm):
+        """Test that validation warns but continues on auth errors (not 404s)."""
+        # Mock auth error from ainvoke
+        mock_builder = AsyncMock()
+        mock_llm = AsyncMock()
+        mock_llm.ainvoke = AsyncMock(side_effect=Exception("401: Unauthorized"))
+        
+        mock_builder.add_llm = AsyncMock()
+        mock_builder.get_llm = AsyncMock(return_value=mock_llm)
+        mock_builder.__aenter__ = AsyncMock(return_value=mock_builder)
+        mock_builder.__aexit__ = AsyncMock(return_value=None)
+        
+        mock_builder_class.return_value = mock_builder
 
-        # Should not raise any error
+        # Should not raise RuntimeError for non-404 errors
+        # (just logs warning)
         await validate_llm_endpoints(config_with_openai_llm)
 
-    async def test_validation_skips_non_openai_llm_types(self):
-        """Test that validation skips non-OpenAI compatible LLM types."""
-        config = Config()
-        # Mock a non-OpenAI LLM type
-        mock_llm = MagicMock()
-        mock_llm.type = "bedrock"  # Non-OpenAI type
-        config.llms = {"bedrock_llm": mock_llm}
+    @patch("nat.eval.llm_validator.WorkflowBuilder")
+    async def test_validation_works_for_nim_llm(self, mock_builder_class, config_with_nim_llm):
+        """Test that validation works for NIM LLM type."""
+        mock_builder = AsyncMock()
+        mock_llm = AsyncMock()
+        mock_llm.ainvoke = AsyncMock(return_value="test response")
+        
+        mock_builder.add_llm = AsyncMock()
+        mock_builder.get_llm = AsyncMock(return_value=mock_llm)
+        mock_builder.__aenter__ = AsyncMock(return_value=mock_builder)
+        mock_builder.__aexit__ = AsyncMock(return_value=None)
+        
+        mock_builder_class.return_value = mock_builder
 
-        # Should not raise error for non-OpenAI LLMs
-        await validate_llm_endpoints(config)
+        # Should validate NIM LLMs (not skip them)
+        await validate_llm_endpoints(config_with_nim_llm)
+        
+        mock_builder.add_llm.assert_called_once()
+        mock_llm.ainvoke.assert_called_once()
 
-    async def test_validation_handles_llm_without_base_url(self):
-        """Test that validation handles LLMs without base_url gracefully."""
-        config = Config()
-        mock_llm = MagicMock()
-        mock_llm.type = "openai"
-        mock_llm.base_url = None  # No base_url
-        config.llms = {"no_url_llm": mock_llm}
+    @patch("nat.eval.llm_validator.WorkflowBuilder")
+    async def test_validation_works_for_bedrock_llm(self, mock_builder_class, config_with_bedrock_llm):
+        """Test that validation works for AWS Bedrock LLM type (framework-agnostic)."""
+        mock_builder = AsyncMock()
+        mock_llm = AsyncMock()
+        mock_llm.ainvoke = AsyncMock(return_value="test response")
+        
+        mock_builder.add_llm = AsyncMock()
+        mock_builder.get_llm = AsyncMock(return_value=mock_llm)
+        mock_builder.__aenter__ = AsyncMock(return_value=mock_builder)
+        mock_builder.__aexit__ = AsyncMock(return_value=None)
+        
+        mock_builder_class.return_value = mock_builder
 
-        # Should not raise error, just skip validation
-        await validate_llm_endpoints(config)
+        # Should validate Bedrock LLMs (framework-agnostic approach)
+        await validate_llm_endpoints(config_with_bedrock_llm)
+        
+        mock_builder.add_llm.assert_called_once()
+        mock_llm.ainvoke.assert_called_once()
 
-    @patch("openai.OpenAI")
-    async def test_validation_fails_on_first_bad_endpoint(self, mock_openai_class, config_with_multiple_llms):
-        """Test that validation fails fast on first bad endpoint."""
-        # First endpoint fails
-        mock_client = MagicMock()
-        mock_client.models.list.side_effect = ConnectionError("Connection refused")
-        mock_openai_class.return_value = mock_client
+    @patch("nat.eval.llm_validator.WorkflowBuilder")
+    async def test_validation_with_multiple_llms(self, mock_builder_class, config_with_multiple_llms):
+        """Test that validation checks all configured LLMs."""
+        mock_builder = AsyncMock()
+        mock_llm = AsyncMock()
+        mock_llm.ainvoke = AsyncMock(return_value="test response")
+        
+        mock_builder.add_llm = AsyncMock()
+        mock_builder.get_llm = AsyncMock(return_value=mock_llm)
+        mock_builder.__aenter__ = AsyncMock(return_value=mock_builder)
+        mock_builder.__aexit__ = AsyncMock(return_value=None)
+        
+        mock_builder_class.return_value = mock_builder
+
+        await validate_llm_endpoints(config_with_multiple_llms)
+        
+        # Should have validated both LLMs
+        assert mock_builder.add_llm.call_count == 2
+        assert mock_builder.get_llm.call_count == 2
+        assert mock_llm.ainvoke.call_count == 2
+
+    @patch("nat.eval.llm_validator.WorkflowBuilder")
+    async def test_validation_collects_all_404_errors(self, mock_builder_class, config_with_multiple_llms):
+        """Test that validation collects all 404 errors before failing."""
+        # Create actual NotFoundError class
+        class NotFoundError(Exception):
+            pass
+        
+        mock_builder = AsyncMock()
+        
+        # First LLM succeeds, second LLM has 404
+        mock_llm_success = AsyncMock()
+        mock_llm_success.ainvoke = AsyncMock(return_value="ok")
+        
+        mock_llm_404 = AsyncMock()
+        error_404 = NotFoundError("404: Model not found")
+        mock_llm_404.ainvoke = AsyncMock(side_effect=error_404)
+        
+        # Return different LLMs for different calls
+        mock_builder.get_llm = AsyncMock(side_effect=[mock_llm_success, mock_llm_404])
+        mock_builder.add_llm = AsyncMock()
+        mock_builder.__aenter__ = AsyncMock(return_value=mock_builder)
+        mock_builder.__aexit__ = AsyncMock(return_value=None)
+        
+        mock_builder_class.return_value = mock_builder
 
         with pytest.raises(RuntimeError) as exc_info:
             await validate_llm_endpoints(config_with_multiple_llms)
 
         error_msg = str(exc_info.value)
-        # Should mention the first failing LLM
-        assert "llm1" in error_msg or "LLM endpoint validation failed" in error_msg
+        # Should mention the failing LLM
+        assert "nim_llm" in error_msg or "404" in error_msg
+
+
+class Test404ErrorDetection:
+    """Tests for the _is_404_error helper function."""
+
+    def test_detects_notfounderror_type(self):
+        """Test detection of NotFoundError exception type."""
+        class NotFoundError(Exception):
+            pass
+        
+        error = NotFoundError("Model not found")
+        assert _is_404_error(error)
+
+    def test_detects_404_in_message(self):
+        """Test detection of 404 in error message."""
+        error = Exception("HTTP 404: Model not found")
+        assert _is_404_error(error)
+
+    def test_detects_not_found_phrase(self):
+        """Test detection of 'not found' phrase."""
+        error = Exception("The model does not exist")
+        assert _is_404_error(error)
+
+    def test_does_not_detect_other_errors(self):
+        """Test that non-404 errors are not detected as 404s."""
+        auth_error = Exception("401: Unauthorized")
+        rate_limit_error = Exception("429: Rate limit exceeded")
+        
+        assert not _is_404_error(auth_error)
+        assert not _is_404_error(rate_limit_error)
 
 
 class TestLLMValidationErrorMessages:
     """Tests for error message quality and actionability."""
 
-    async def test_error_message_includes_endpoint_details(self):
+    @patch("nat.eval.llm_validator.WorkflowBuilder")
+    async def test_error_message_includes_endpoint_details(self, mock_builder_class):
         """Test that error messages include specific endpoint details."""
+        # Create actual NotFoundError class
+        class NotFoundError(Exception):
+            pass
+        
         config = Config()
         config.llms = {
             "training_llm": OpenAIModelConfig(
@@ -179,58 +305,57 @@ class TestLLMValidationErrorMessages:
             )
         }
 
-        try:
+        # Mock 404 error
+        mock_builder = AsyncMock()
+        mock_llm = AsyncMock()
+        error_404 = NotFoundError("404: Not found")
+        mock_llm.ainvoke = AsyncMock(side_effect=error_404)
+        
+        mock_builder.add_llm = AsyncMock()
+        mock_builder.get_llm = AsyncMock(return_value=mock_llm)
+        mock_builder.__aenter__ = AsyncMock(return_value=mock_builder)
+        mock_builder.__aexit__ = AsyncMock(return_value=None)
+        
+        mock_builder_class.return_value = mock_builder
+
+        with pytest.raises(RuntimeError) as exc_info:
             await validate_llm_endpoints(config)
-        except RuntimeError as e:
-            error_msg = str(e)
-            # Should include the LLM name
-            assert "training_llm" in error_msg
-            # Should include the base URL
-            assert "http://custom-host:8000/v1" in error_msg
 
-    async def test_error_message_provides_troubleshooting_steps(self):
-        """Test that error messages include actionable troubleshooting steps."""
-        config = Config()
-        config.llms = {
-            "test_llm": OpenAIModelConfig(
-                model_name="test-model",
-                base_url="http://localhost:9999/v1"
-            )
-        }
+        error_msg = str(exc_info.value)
+        # Should include the LLM name
+        assert "training_llm" in error_msg
+        # Should include the base URL
+        assert "http://custom-host:8000/v1" in error_msg
+        # Should include model name
+        assert "custom-model-name" in error_msg
 
-        try:
-            await validate_llm_endpoints(config)
-        except RuntimeError as e:
-            error_msg = str(e)
-            # Should include actionable guidance
-            assert any(keyword in error_msg for keyword in [
-                "ACTION REQUIRED",
-                "Check",
-                "Verify",
-                "Ensure"
-            ])
-
-    @patch("openai.OpenAI")
-    async def test_404_error_message_mentions_training_cancellation(self, mock_openai_class):
+    @patch("nat.eval.llm_validator.WorkflowBuilder")
+    async def test_404_error_message_mentions_training_cancellation(self, mock_builder_class):
         """Test that 404 error message mentions potential training cancellation."""
-        import openai
-
+        # Create actual NotFoundError class
+        class NotFoundError(Exception):
+            pass
+        
         config = Config()
         config.llms = {
-            "finetuned_model": OpenAIModelConfig(
+            "finetuned_model": NIMModelConfig(
                 model_name="finetuned-llama",
                 base_url="http://localhost:8000/v1"
             )
         }
 
         # Mock 404 error
-        mock_client = MagicMock()
-        mock_client.models.list.side_effect = openai.NotFoundError(
-            message="Not found",
-            response=MagicMock(status_code=404),
-            body=None
-        )
-        mock_openai_class.return_value = mock_client
+        mock_builder = AsyncMock()
+        mock_llm = AsyncMock()
+        error_404 = NotFoundError("404: Model not found")
+        mock_llm.ainvoke = AsyncMock(side_effect=error_404)
+        
+        mock_builder.add_llm = AsyncMock()
+        mock_builder.get_llm = AsyncMock(return_value=mock_llm)
+        mock_builder.__aenter__ = AsyncMock(return_value=mock_builder)
+        mock_builder.__aexit__ = AsyncMock(return_value=None)
+        
+        mock_builder_class.return_value = mock_builder
 
         with pytest.raises(RuntimeError) as exc_info:
             await validate_llm_endpoints(config)
@@ -243,6 +368,8 @@ class TestLLMValidationErrorMessages:
             "canceled",
             "model has not been deployed"
         ])
+        # Should include actionable guidance
+        assert "ACTION REQUIRED" in error_msg
 
 
 class TestLLMValidationIntegration:
@@ -253,48 +380,58 @@ class TestLLMValidationIntegration:
         """Create config simulating post-training scenario."""
         config = Config()
         config.llms = {
-            "training_llm": OpenAIModelConfig(
+            "training_llm": NIMModelConfig(
                 model_name="default/meta-llama-3.1-8b-instruct-nat-dpo",
                 base_url="http://nim-endpoint:8000/v1"
             )
         }
         return config
 
-    @patch("openai.OpenAI")
-    async def test_validation_scenario_after_canceled_training(self, mock_openai_class, config_for_finetuned_model):
+    @patch("nat.eval.llm_validator.WorkflowBuilder")
+    async def test_validation_scenario_after_canceled_training(self, mock_builder_class, config_for_finetuned_model):
         """
-        Test validation behavior in the scenario that caused the original bug:
+        Test validation behavior in the scenario that caused NVBug 5789819:
         Training was canceled, model never deployed, user tries to run eval.
+        
+        This should:
+        1. Detect the missing model BEFORE eval starts (0/24 cases)
+        2. Provide clear error about what went wrong
+        3. Give actionable next steps
         """
-        import openai
+        # Create actual NotFoundError class
+        class NotFoundError(Exception):
+            pass
+        
+        # Mock the exact bug scenario: endpoint is up but model doesn't exist (404)
+        mock_builder = AsyncMock()
+        mock_llm = AsyncMock()
+        
+        error_404 = NotFoundError("404: Model not found - the model default/meta-llama-3.1-8b-instruct-nat-dpo does not exist")
+        mock_llm.ainvoke = AsyncMock(side_effect=error_404)
+        
+        mock_builder.add_llm = AsyncMock()
+        mock_builder.get_llm = AsyncMock(return_value=mock_llm)
+        mock_builder.__aenter__ = AsyncMock(return_value=mock_builder)
+        mock_builder.__aexit__ = AsyncMock(return_value=None)
+        
+        mock_builder_class.return_value = mock_builder
 
-        # Simulate the exact bug: endpoint is up but model doesn't exist (404)
-        mock_client = MagicMock()
-        mock_client.models.list.side_effect = openai.NotFoundError(
-            message="Model not found",
-            response=MagicMock(status_code=404),
-            body=None
-        )
-        mock_openai_class.return_value = mock_client
-
-        # This simulates the exact bug scenario:
-        # 1. Training was canceled at 93.3%
-        # 2. Model was never deployed
-        # 3. User tries to run evaluation
-
+        # Validation should fail with detailed error
         with pytest.raises(RuntimeError) as exc_info:
             await validate_llm_endpoints(config_for_finetuned_model)
 
         error_msg = str(exc_info.value)
 
-        # Validation should:
-        # 1. Detect the missing model early (before eval starts)
-        # 2. Provide clear error about what went wrong
-        # 3. Give actionable next steps
-
+        # Validation should catch the issue BEFORE eval starts
         assert any(check in error_msg for check in [
             "LLM endpoint validation failed",
             "not found",
             "404"
         ])
-
+        
+        # Should mention training-related causes
+        assert any(phrase in error_msg.lower() for phrase in [
+            "training",
+            "canceled",
+            "deployed"
+        ])
