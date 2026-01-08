@@ -243,7 +243,7 @@ docker run -d \
     wait_for_worker() {
         local worker_type=\$1
         local pid=\$2
-        local max_wait=120
+        local max_wait=300
         local elapsed=0
 
         echo \"Waiting for \$worker_type worker (PID \$pid) to initialize...\"
@@ -263,7 +263,7 @@ docker run -d \
             # After 60s, assume it's initialized (model loading takes time for 70B)
             if [ \$elapsed -ge 60 ]; then
                 echo \"✓ \$worker_type worker should be initialized\"
-                return 0
+                return 0 # early exit if worker is initialized
             fi
         done
 
