@@ -79,7 +79,7 @@ git checkout eb3885f # tested on 12/2025 with NAT 1.4.0
 # Step 2: Navigate to the LangGraph agent
 cd samples/python/agents/langgraph
 
-# Step 3:Set the environment variables for the currency agent
+# Step 3: Set the environment variables for the currency agent
 # For OpenAI models:
 cat <<EOF > .env
 API_KEY=$OPENAI_API_KEY
