@@ -5196,6 +5196,16 @@ requires-dist = [
 ]
 
 [[package]]
+name = "nat-config-inheritance"
+source = { editable = "examples/config_inheritance" }
+dependencies = [
+    { name = "nvidia-nat", extra = ["langchain"] },
+]
+
+[package.metadata]
+requires-dist = [{ name = "nvidia-nat", extras = ["langchain"], editable = "." }]
+
+[[package]]
 name = "nat-currency-agent-a2a"
 source = { editable = "examples/A2A/currency_agent_a2a" }
 dependencies = [
@@ -5265,6 +5275,16 @@ requires-dist = [
     { name = "pypdf", specifier = "~=6.5.0" },
     { name = "trafilatura", specifier = "~=2.0.0" },
 ]
+
+[[package]]
+name = "nat-kaggle-mcp"
+source = { editable = "examples/MCP/kaggle_mcp" }
+dependencies = [
+    { name = "nvidia-nat", extra = ["mcp"] },
+]
+
+[package.metadata]
+requires-dist = [{ name = "nvidia-nat", extras = ["mcp"], editable = "." }]
 
 [[package]]
 name = "nat-math-assistant-a2a"
@@ -5368,6 +5388,16 @@ requires-dist = [
 [[package]]
 name = "nat-react-benchmark-agent"
 source = { editable = "examples/dynamo_integration/react_benchmark_agent" }
+dependencies = [
+    { name = "nvidia-nat", extra = ["langchain"] },
+]
+
+[package.metadata]
+requires-dist = [{ name = "nvidia-nat", extras = ["langchain"], editable = "." }]
+
+[[package]]
+name = "nat-retail-agent"
+source = { editable = "examples/safety_and_security/retail_agent" }
 dependencies = [
     { name = "nvidia-nat", extra = ["langchain"] },
 ]
@@ -6057,10 +6087,12 @@ examples = [
     { name = "nat-alert-triage-agent" },
     { name = "nat-autogen-demo" },
     { name = "nat-automated-description-generation" },
+    { name = "nat-config-inheritance" },
     { name = "nat-currency-agent-a2a" },
     { name = "nat-dpo-tic-tac-toe" },
     { name = "nat-email-phishing-analyzer" },
     { name = "nat-haystack-deep-research-agent" },
+    { name = "nat-kaggle-mcp" },
     { name = "nat-math-assistant-a2a" },
     { name = "nat-math-assistant-a2a-protected" },
     { name = "nat-multi-frameworks" },
@@ -6069,6 +6101,7 @@ examples = [
     { name = "nat-por-to-jiratickets" },
     { name = "nat-profiler-agent" },
     { name = "nat-react-benchmark-agent" },
+    { name = "nat-retail-agent" },
     { name = "nat-rl-with-openpipe-art" },
     { name = "nat-router-agent" },
     { name = "nat-semantic-kernel-demo" },
@@ -6236,10 +6269,12 @@ requires-dist = [
     { name = "nat-alert-triage-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/alert_triage_agent" },
     { name = "nat-autogen-demo", marker = "extra == 'examples'", editable = "examples/frameworks/nat_autogen_demo" },
     { name = "nat-automated-description-generation", marker = "extra == 'examples'", editable = "examples/custom_functions/automated_description_generation" },
+    { name = "nat-config-inheritance", marker = "extra == 'examples'", editable = "examples/config_inheritance" },
     { name = "nat-currency-agent-a2a", marker = "extra == 'examples'", editable = "examples/A2A/currency_agent_a2a" },
     { name = "nat-dpo-tic-tac-toe", marker = "extra == 'examples'", editable = "examples/finetuning/dpo_tic_tac_toe" },
     { name = "nat-email-phishing-analyzer", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/email_phishing_analyzer" },
     { name = "nat-haystack-deep-research-agent", marker = "extra == 'examples'", editable = "examples/frameworks/haystack_deep_research_agent" },
+    { name = "nat-kaggle-mcp", marker = "extra == 'examples'", editable = "examples/MCP/kaggle_mcp" },
     { name = "nat-math-assistant-a2a", marker = "extra == 'examples'", editable = "examples/A2A/math_assistant_a2a" },
     { name = "nat-math-assistant-a2a-protected", marker = "extra == 'examples'", editable = "examples/A2A/math_assistant_a2a_protected" },
     { name = "nat-multi-frameworks", marker = "extra == 'examples'", editable = "examples/frameworks/multi_frameworks" },
@@ -6248,6 +6283,7 @@ requires-dist = [
     { name = "nat-por-to-jiratickets", marker = "extra == 'examples'", editable = "examples/HITL/por_to_jiratickets" },
     { name = "nat-profiler-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/profiler_agent" },
     { name = "nat-react-benchmark-agent", marker = "extra == 'examples'", editable = "examples/dynamo_integration/react_benchmark_agent" },
+    { name = "nat-retail-agent", marker = "extra == 'examples'", editable = "examples/safety_and_security/retail_agent" },
     { name = "nat-rl-with-openpipe-art", marker = "extra == 'examples'", editable = "examples/finetuning/rl_with_openpipe_art" },
     { name = "nat-router-agent", marker = "extra == 'examples'", editable = "examples/control_flow/router_agent" },
     { name = "nat-semantic-kernel-demo", marker = "extra == 'examples'", editable = "examples/frameworks/semantic_kernel_demo" },
