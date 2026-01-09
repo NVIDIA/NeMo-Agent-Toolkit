@@ -109,10 +109,10 @@ function set_versions() {
 
    if [[ "${CI_CRON_NIGHTLY}" == "1" || "${IS_TAGGED}" == "1" ]]; then
       # For tagged releases and nightly builds, use the git tag as the version as-is
-      local NAT_VERSION="${GIT_TAG}"
+      NAT_VERSION="${GIT_TAG}"
    else
       set +e
-      local NAT_VERSION=$(python -m setuptools_scm)
+      NAT_VERSION=$(python -m setuptools_scm)
       local SETUPTOOLS_SCM_RESULT=$?
       set -e
 
