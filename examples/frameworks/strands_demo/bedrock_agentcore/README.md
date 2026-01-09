@@ -41,7 +41,7 @@ A comprehensive guide for deploying NVIDIA NeMo Agent toolkit with Strands on AW
   - [Install the Example Package](#install-the-example-package)
   - [Build the Docker Image](#build-the-docker-image)
   - [Run the Container Locally](#run-the-container-locally)
-  - [Test Local Deployment](#test-local-deployment)
+  - [Test Local Deployment](#test-local-deployment-arm-and-amd-builds)
 - [Step 5: Set Up ECR](#step-5-set-up-ecr)
   - [Create ECR Repository](#create-ecr-repository)
   - [Authenticate Docker with ECR](#authenticate-docker-with-ecr)
@@ -292,7 +292,7 @@ docker run \
 > [!NOTE]
 > The command above passes environment variables from your shell. Ensure they are exported before running. For SSO users, see [Troubleshooting](#troubleshooting) for how to export temporary credentials.
 
-### Test Local Deployment (arm and amd builds)
+### Test Local Deployment (ARM and AMD builds)
 
 <!-- path-check-skip-begin -->
 ```bash
@@ -345,7 +345,7 @@ Choose the appropriate build command for your target architecture:
 
 <!-- path-check-skip-begin -->
 
-#### Option A: Build and Push for ARM64 (AWS Graviton)
+#### Option A: Build and Push for ARM64 (Apple Silicon, AWS Graviton)
 
 ```bash
 docker build \
