@@ -15,6 +15,8 @@
 
 import logging
 
+LOG_FORMAT = "%(asctime)s - %(levelname)-8s - %(name)s:%(lineno)d - %(message)s"
+LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 class LogFilter(logging.Filter):
     """
@@ -40,6 +42,6 @@ def setup_logging(log_level: int):
     """Configure logging with the specified level"""
     logging.basicConfig(
         level=log_level,
-        format="%(asctime)s - %(levelname)-8s - %(name)s:%(lineno)d - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
+        format=LOG_FORMAT,
+        datefmt=LOG_DATE_FORMAT,
     )
