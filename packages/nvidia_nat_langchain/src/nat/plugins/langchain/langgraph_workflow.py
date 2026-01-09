@@ -107,15 +107,28 @@ class LanggraphWrapperFunction(Function[LanggraphWrapperInput, NoneType, Langgra
     async def _ainvoke(self, value: LanggraphWrapperInput) -> LanggraphWrapperOutput:
 
         try:
-            output = await self._graph.ainvoke(value.model_dump())
+            # Check if the graph is an async context manager (e.g., from @asynccontextmanager)
+            if hasattr(self._graph, '__aenter__') and hasattr(self._graph, '__aexit__'):
+                logger.info("Graph is an async context manager")
+                async with self._graph as graph:
+                    output = await graph.ainvoke(value.model_dump())
+            else:
+                output = await self._graph.ainvoke(value.model_dump())
             return LanggraphWrapperOutput.model_validate(output)
         except Exception as e:
             raise RuntimeError(f"Error in LangGraph workflow: {e}") from e
 
     async def _astream(self, value: LanggraphWrapperInput) -> AsyncGenerator[LanggraphWrapperOutput, None]:
         try:
-            async for output in self._graph.astream(value.model_dump()):
-                yield LanggraphWrapperOutput.model_validate(output)
+
+            if hasattr(self._graph, '__aenter__') and hasattr(self._graph, '__aexit__'):
+                logger.info("Graph is an async context manager")
+                async with self._graph as graph:
+                    async for output in graph.astream(value.model_dump()):
+                        yield LanggraphWrapperOutput.model_validate(output)
+            else:
+                async for output in self._graph.astream(value.model_dump()):
+                    yield LanggraphWrapperOutput.model_validate(output)
         except Exception as e:
             raise RuntimeError(f"Error in LangGraph workflow: {e}") from e
 
