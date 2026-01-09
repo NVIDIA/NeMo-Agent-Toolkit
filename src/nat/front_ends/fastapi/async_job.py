@@ -20,12 +20,14 @@ import asyncio
 import logging
 import typing
 
+
 def _configure_logging(configure_logging: bool, log_level: int) -> logging.Logger:
     from nat.utils.log_utils import setup_logging
     if configure_logging:
         setup_logging(log_level)
-    
+
     return logging.getLogger(__name__)
+
 
 async def run_generation(configure_logging: bool,
                          log_level: int,
@@ -80,7 +82,8 @@ async def run_generation(configure_logging: bool,
     del job_store
 
 
-async def periodic_cleanup(*, scheduler_address: str,
+async def periodic_cleanup(*,
+                           scheduler_address: str,
                            db_url: str,
                            sleep_time_sec: int = 300,
                            configure_logging: bool = True,
