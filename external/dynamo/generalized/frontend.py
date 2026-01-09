@@ -125,6 +125,10 @@ class FrontendRequestHandler:
         """
         self.processor_client = (await
                                  self.runtime.namespace("dynamo").component("processor").endpoint("process").client())
+        logger.info("Processor client created, waiting for instances...")
+        await self.processor_client.wait_for_instances()
+        logger.info("Processor client ready")
+        
         self.app = FastAPI(title="Dynamo")
         self.setup_routes()
         logging.info("Frontend initialized successfully")

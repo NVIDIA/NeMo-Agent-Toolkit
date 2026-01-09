@@ -394,8 +394,6 @@ bash stop_dynamo.sh
 - `processor.py` - Forwards hints to router, CSV metrics logging
 - `router.py` - Thompson Sampling, KV overlap calculations
 
-> **Note:** The custom `frontend.py` does not expose a `/metrics` endpoint. The `PrometheusMetricsClient` in `router.py` will log warnings about failed scrapes, but the router continues to function using Thompson Sampling, KV cache overlap, and feedback-based learning. Load-based balancing (queue depth, GPU cache usage) is unavailable in this mode.
-
 ### Option 3: Disaggregated Mode (High-Throughput)
 
 Separate `prefill` and `decode` workers for maximum throughput. More complex setup.

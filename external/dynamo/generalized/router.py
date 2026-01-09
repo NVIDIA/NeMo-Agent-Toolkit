@@ -1,17 +1,5 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA
 # SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 import argparse
 import asyncio
@@ -21,304 +9,50 @@ import logging
 import math
 import os
 import random
-import re
 import threading
 import time
 import uuid
 from collections import deque
-from dataclasses import dataclass
 from functools import wraps
 from typing import Any
 
-import aiohttp
 import numpy as np
 import uvloop
-from dynamo.llm import KvIndexer
-from dynamo.llm import OverlapScores
 from dynamo.runtime import DistributedRuntime
 from dynamo.runtime import dynamo_worker
 from dynamo.runtime.logging import configure_dynamo_logging
 from pydantic import BaseModel
 
+# Try to import KV routing classes from dynamo.llm, fallback to stubs if unavailable
+try:
+    from dynamo.llm import KvIndexer
+    from dynamo.llm import OverlapScores
+except ImportError:
+    logger_init = logging.getLogger(__name__)
+    logger_init.warning("dynamo.llm KV classes not available, using fallback implementations")
+
+    class OverlapScores:
+        """Fallback: KV cache overlap scores between a request and workers."""
+
+        def __init__(self, scores: dict[int, float] | None = None):
+            self.scores = scores if scores is not None else {}
+
+    class KvIndexer:
+        """Fallback: KV cache indexer for finding overlap between requests and workers."""
+
+        def __init__(self, engine: Any, block_size: int):
+            self.engine = engine
+            self.block_size = block_size
+
+        async def find_matches_for_request(self, tokens: list[int], min_overlap: int) -> OverlapScores:
+            """Find overlap scores for each worker. Returns empty scores (round-robin fallback)."""
+            return OverlapScores({})
+
+
 configure_dynamo_logging()
 logger = logging.getLogger(__name__)
 
 WorkerId = int
-
-
-# ---------------------- metrics shim for 0.7.1+ ---------------------- #
-# Replaces deprecated KvMetricsAggregator/AggregatedMetrics with Prometheus scraping
-@dataclass
-class EndpointMetrics:
-    """Per-worker metrics, compatible with old AggregatedMetrics.endpoints shape."""
-
-    worker_id: int
-    gpu_cache_usage_perc: float  # 0-100 scale
-    num_requests_waiting: int
-
-
-@dataclass
-class AggregatedMetricsShim:
-    """Shim to maintain API compatibility with old AggregatedMetrics."""
-
-    endpoints: list[EndpointMetrics]
-
-
-class PrometheusMetricsClient:
-    """
-    Scrapes Dynamo's Prometheus /metrics endpoint and provides per-worker
-    KV cache usage and queue depth in the format expected by WorkloadAwareRouter.
-
-    Metrics used (0.7.1+):
-      - dynamo_frontend_queued_requests{worker_id=...}
-      - dynamo_frontend_inflight_requests{worker_id=...}
-      - dynamo_frontend_model_total_kv_blocks{worker_id=...}
-      - dynamo_component_kv_blocks_used{worker_id=...} (if available)
-
-    Falls back to estimating KV usage from inflight requests if direct metrics unavailable.
-
-    WARNING: When using the custom frontend.py (Thompson Sampling mode), the /metrics
-    endpoint is not available. The built-in dynamo.frontend exposes metrics, but the
-    custom frontend does not. Additionally, dynamo.sglang workers communicate via NATS
-    and do not expose HTTP endpoints for metrics scraping. In this configuration,
-    scrape errors are expected and the router will continue to function using Thompson
-    Sampling, KV cache overlap, and feedback-based learning. Load-based balancing
-    (queue depth, GPU cache usage) will be unavailable.
-    """
-
-    # Prometheus metric patterns
-    _METRIC_PATTERN = re.compile(r'^(?P<name>[a-zA-Z_:][a-zA-Z0-9_:]*)'
-                                 r'(?:\{(?P<labels>[^}]*)\})?\s+'
-                                 r'(?P<value>[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?|NaN|[+-]Inf)$')
-    _LABEL_PATTERN = re.compile(r'(\w+)="([^"]*)"')
-
-    def __init__(
-        self,
-        metrics_url: str | None = None,
-        scrape_interval_seconds: float = 1.0,
-        request_timeout_seconds: float = 5.0,
-        default_total_kv_blocks: int = 8192,
-        estimated_kv_blocks_per_request: int = 128,
-    ):
-        """
-        Args:
-            metrics_url: Prometheus metrics endpoint URL (e.g., http://localhost:9090/metrics).
-                         If None, uses DYNAMO_METRICS_URL env var or defaults to localhost:9090.
-            scrape_interval_seconds: Minimum interval between scrapes to avoid hammering.
-            request_timeout_seconds: HTTP request timeout.
-            default_total_kv_blocks: Fallback total KV blocks if metric unavailable.
-            estimated_kv_blocks_per_request: Estimated KV blocks per inflight request for usage calc.
-        """
-        self.metrics_url = metrics_url or os.environ.get("DYNAMO_METRICS_URL", "http://localhost:9090/metrics")
-        self.scrape_interval = float(scrape_interval_seconds)
-        self.request_timeout = float(request_timeout_seconds)
-        self.default_total_kv_blocks = int(default_total_kv_blocks)
-        self.estimated_kv_per_request = int(estimated_kv_blocks_per_request)
-
-        # Cache for rate limiting
-        self._cache_lock = threading.Lock()
-        self._cached_metrics: AggregatedMetricsShim | None = None
-        self._last_scrape_time: float = 0.0
-
-        # Persistent session (created lazily)
-        self._session: aiohttp.ClientSession | None = None
-
-    async def _get_session(self) -> aiohttp.ClientSession:
-        if self._session is None or self._session.closed:
-            timeout = aiohttp.ClientTimeout(total=self.request_timeout)
-            self._session = aiohttp.ClientSession(timeout=timeout)
-        return self._session
-
-    async def close(self):
-        """Close the HTTP session."""
-        if self._session and not self._session.closed:
-            await self._session.close()
-            self._session = None
-
-    def _parse_prometheus_text(self, text: str) -> dict[str, list[tuple[dict[str, str], float]]]:
-        """
-        Parse Prometheus text format into structured data.
-        Returns: {metric_name: [(labels_dict, value), ...]}
-        """
-        result: dict[str, list[tuple[dict[str, str], float]]] = {}
-
-        for line in text.splitlines():
-            line = line.strip()
-            if not line or line.startswith('#'):
-                continue
-
-            match = self._METRIC_PATTERN.match(line)
-            if not match:
-                continue
-
-            name = match.group('name')
-            labels_str = match.group('labels') or ''
-            value_str = match.group('value')
-
-            # Parse labels
-            labels = dict(self._LABEL_PATTERN.findall(labels_str))
-
-            # Parse value
-            try:
-                if value_str == 'NaN':
-                    value = float('nan')
-                elif value_str in ('+Inf', 'Inf'):
-                    value = float('inf')
-                elif value_str == '-Inf':
-                    value = float('-inf')
-                else:
-                    value = float(value_str)
-            except ValueError:
-                continue
-
-            if name not in result:
-                result[name] = []
-            result[name].append((labels, value))
-
-        return result
-
-    def _extract_worker_id(self, labels: dict[str, str]) -> int | None:
-        """Extract worker_id from Prometheus labels."""
-        # Try various label names that might contain worker ID
-        for key in ('worker_id', 'instance_id', 'worker', 'instance', 'replica'):
-            if key in labels:
-                try:
-                    return int(labels[key])
-                except ValueError:
-                    # Try extracting number from string like "worker-0"
-                    match = re.search(r'(\d+)', labels[key])
-                    if match:
-                        return int(match.group(1))
-
-        # Fallback: In unified mode, metrics may only have 'model' label.
-        # Assign to worker 0 if no worker-specific label is found.
-        if 'model' in labels:
-            return 0
-
-        return None
-
-    def _build_metrics_from_prometheus(self, parsed: dict[str, list[tuple[dict[str, str],
-                                                                          float]]]) -> AggregatedMetricsShim:
-        """Build AggregatedMetricsShim from parsed Prometheus data."""
-
-        # Collect per-worker data
-        worker_data: dict[int, dict[str, float]] = {}
-
-        # Helper to ensure worker entry exists
-        def ensure_worker(wid: int):
-            if wid not in worker_data:
-                worker_data[wid] = {
-                    'queued': 0.0,
-                    'inflight': 0.0,
-                    'total_kv_blocks': float(self.default_total_kv_blocks),
-                    'used_kv_blocks': 0.0,
-                }
-
-        # Process queued requests
-        for labels, value in parsed.get('dynamo_frontend_queued_requests', []):
-            wid = self._extract_worker_id(labels)
-            if wid is not None:
-                ensure_worker(wid)
-                worker_data[wid]['queued'] = max(0.0, value)
-
-        # Process inflight requests
-        for labels, value in parsed.get('dynamo_frontend_inflight_requests', []):
-            wid = self._extract_worker_id(labels)
-            if wid is not None:
-                ensure_worker(wid)
-                worker_data[wid]['inflight'] = max(0.0, value)
-
-        # Process total KV blocks
-        for labels, value in parsed.get('dynamo_frontend_model_total_kv_blocks', []):
-            wid = self._extract_worker_id(labels)
-            if wid is not None:
-                ensure_worker(wid)
-                worker_data[wid]['total_kv_blocks'] = max(1.0, value)
-
-        # Process used KV blocks (if available)
-        for labels, value in parsed.get('dynamo_component_kv_blocks_used', []):
-            wid = self._extract_worker_id(labels)
-            if wid is not None:
-                ensure_worker(wid)
-                worker_data[wid]['used_kv_blocks'] = max(0.0, value)
-
-        # Also check gpu_cache_usage_perc if directly available
-        for labels, value in parsed.get('dynamo_frontend_gpu_cache_usage_perc', []):
-            wid = self._extract_worker_id(labels)
-            if wid is not None:
-                ensure_worker(wid)
-                worker_data[wid]['gpu_cache_usage_perc_direct'] = max(0.0, min(100.0, value))
-
-        # Build endpoint metrics
-        endpoints: list[EndpointMetrics] = []
-        for wid, data in worker_data.items():
-            # Calculate GPU cache usage percentage
-            if 'gpu_cache_usage_perc_direct' in data:
-                gpu_cache_usage = data['gpu_cache_usage_perc_direct']
-            elif data['used_kv_blocks'] > 0:
-                # Use actual used KV blocks if available
-                gpu_cache_usage = 100.0 * data['used_kv_blocks'] / data['total_kv_blocks']
-            else:
-                # Estimate from inflight requests
-                estimated_used = data['inflight'] * self.estimated_kv_per_request
-                gpu_cache_usage = 100.0 * min(estimated_used, data['total_kv_blocks']) / data['total_kv_blocks']
-
-            gpu_cache_usage = max(0.0, min(100.0, gpu_cache_usage))
-
-            endpoints.append(
-                EndpointMetrics(
-                    worker_id=wid,
-                    gpu_cache_usage_perc=gpu_cache_usage,
-                    num_requests_waiting=int(data['queued']),
-                ))
-
-        return AggregatedMetricsShim(endpoints=endpoints)
-
-    async def get_metrics(self) -> AggregatedMetricsShim:
-        """
-        Fetch and return aggregated metrics. Uses caching to rate-limit scrapes.
-        """
-        now = time.time()
-
-        # Check cache
-        with self._cache_lock:
-            if (self._cached_metrics is not None and (now - self._last_scrape_time) < self.scrape_interval):
-                return self._cached_metrics
-
-        # Scrape Prometheus
-        try:
-            session = await self._get_session()
-            async with session.get(self.metrics_url) as response:
-                if response.status != 200:
-                    logger.warning(
-                        "Prometheus scrape failed: HTTP %d from %s",
-                        response.status,
-                        self.metrics_url,
-                    )
-                    # Return cached or empty
-                    with self._cache_lock:
-                        return self._cached_metrics or AggregatedMetricsShim(endpoints=[])
-
-                text = await response.text()
-                parsed = self._parse_prometheus_text(text)
-                metrics = self._build_metrics_from_prometheus(parsed)
-
-                with self._cache_lock:
-                    self._cached_metrics = metrics
-                    self._last_scrape_time = now
-
-                return metrics
-
-        except TimeoutError:
-            logger.warning("Prometheus scrape timed out: %s", self.metrics_url)
-        except aiohttp.ClientError as e:
-            logger.warning("Prometheus scrape error: %s - %s", self.metrics_url, e)
-        except Exception as e:
-            logger.warning("Unexpected error scraping metrics: %s", e)
-
-        # Return cached or empty on error
-        with self._cache_lock:
-            return self._cached_metrics or AggregatedMetricsShim(endpoints=[])
 
 
 # ---------------------- request / response models ---------------------- #
@@ -435,7 +169,6 @@ class WorkloadAwareRouter:
         # clients / helpers (initialized later)
         self.engine_client = None
         self.indexer: KvIndexer | None = None
-        self.metrics: PrometheusMetricsClient | None = None
 
         # concurrency primitives
         self._init_lock = threading.Lock()
@@ -546,46 +279,24 @@ class WorkloadAwareRouter:
         return {"LOW": 1.5, "MEDIUM": 1.0, "HIGH": 0.6}[iat]
 
     # --------------------- init --------------------- #
-    async def initialize(
-        self,
-        metrics_url: str | None = None,
-        metrics_scrape_interval: float = 1.0,
-        metrics_timeout: float = 5.0,
-    ):
-        """
-        Initialize the router.
-
-        Args:
-            metrics_url: Optional Prometheus metrics endpoint URL.
-                         Falls back to DYNAMO_METRICS_URL env var or localhost:9090/metrics.
-            metrics_scrape_interval: Minimum seconds between metric scrapes.
-            metrics_timeout: HTTP timeout for metrics requests.
-        """
+    async def initialize(self):
+        """Initialize router by polling for backend workers."""
         engine = self.runtime.namespace("dynamo").component("backend")
-        logger.info("Getting engine client")
+        logger.info("Getting engine client for dynamo/backend/generate")
         self.engine_client = await engine.endpoint("generate").client()
+
+        logger.info("Waiting for backend workers...")
         await self.engine_client.wait_for_instances()
+        logger.info("Backend workers discovered: %s", list(self.engine_client.instance_ids()))
 
         self.indexer = KvIndexer(engine, self.block_size)
 
-        # Initialize Prometheus-based metrics client (replaces KvMetricsAggregator in 0.7.1+)
-        self.metrics = PrometheusMetricsClient(
-            metrics_url=metrics_url,
-            scrape_interval_seconds=metrics_scrape_interval,
-            request_timeout_seconds=metrics_timeout,
-        )
-        logger.info(
-            "Initialized PrometheusMetricsClient (url=%s, interval=%.1fs)",
-            self.metrics.metrics_url,
-            metrics_scrape_interval,
-        )
-        logger.warning("Note: When using custom frontend.py, the /metrics endpoint is unavailable. "
-                       "Scrape errors are expected. The router will continue using Thompson Sampling, "
-                       "KV overlap, and feedback learning. Load-based balancing is disabled.")
-
         self._initialize_bandits()
         self._initialize_contextual()
-        logger.info("WorkloadAwareRouter initialized")
+        logger.info(
+            "WorkloadAwareRouter initialized with %d backend worker(s)",
+            len(list(self.engine_client.instance_ids()))
+        )
 
         # Initialize router CSV logging (no cap)
         self._router_csv_lock = threading.Lock()
@@ -759,7 +470,7 @@ class WorkloadAwareRouter:
     def _feature_vector(
         self,
         wid: int,
-        metrics: AggregatedMetricsShim | None,
+        metrics: dict[str, Any] | None,
         scores: "OverlapScores",
         last_w: int | None,
         reuse_after: int,
@@ -769,11 +480,11 @@ class WorkloadAwareRouter:
     ) -> np.ndarray:
         gpu = 0.0
         queue = 0.0
-        if metrics and getattr(metrics, "endpoints", None):
-            for ep in metrics.endpoints:
-                if ep.worker_id == wid:
-                    gpu = float(getattr(ep, "gpu_cache_usage_perc", 0.0))
-                    queue = float(getattr(ep, "num_requests_waiting", 0.0))
+        if metrics and isinstance(metrics, dict) and "endpoints" in metrics:
+            for ep in metrics["endpoints"]:
+                if ep.get("worker_id") == wid:
+                    gpu = float(ep.get("gpu_cache_usage_perc", 0.0))
+                    queue = float(ep.get("num_requests_waiting", 0.0))
                     break
         inv_load = 1.0 / (1.0 + self.gpu_penalty_weight * max(0.0, gpu) + self.queue_penalty_weight * max(0.0, queue))
 
@@ -800,14 +511,14 @@ class WorkloadAwareRouter:
         ],
                         dtype=np.float64)
 
-    def _load_score(self, wid: int, metrics: AggregatedMetricsShim | None, job_cost_total: float) -> float:
+    def _load_score(self, wid: int, metrics: dict[str, Any] | None, job_cost_total: float) -> float:
         gpu = 0.0
         queue = 0.0
-        if metrics and getattr(metrics, "endpoints", None):
-            for ep in metrics.endpoints:
-                if ep.worker_id == wid:
-                    gpu = float(getattr(ep, "gpu_cache_usage_perc", 0.0))
-                    queue = float(getattr(ep, "num_requests_waiting", 0.0))
+        if metrics and isinstance(metrics, dict) and "endpoints" in metrics:
+            for ep in metrics["endpoints"]:
+                if ep.get("worker_id") == wid:
+                    gpu = float(ep.get("gpu_cache_usage_perc", 0.0))
+                    queue = float(ep.get("num_requests_waiting", 0.0))
                     break
         _, work_out = self._worker_outstanding(wid)
         penalty = (self.gpu_penalty_weight * gpu + self.queue_penalty_weight * queue +
@@ -830,7 +541,7 @@ class WorkloadAwareRouter:
         self,
         worker_ids,
         req: RouterRequest,
-        metrics: AggregatedMetricsShim,
+        metrics: dict[str, Any] | None,
         scores: OverlapScores,
     ) -> tuple[int, dict[str, float], dict[int, dict[str, float]], list[float], list[float]]:
         osl = self._norm_level(req.expected_osl, "MEDIUM")
@@ -1021,7 +732,8 @@ class WorkloadAwareRouter:
         now = time.time()
         self._sweep_pending(now)
 
-        metrics = await self.metrics.get_metrics()
+        # Metrics aggregation API changed - using None for now (router works without it)
+        metrics = None  # TODO: Replace with proper metrics query when API is available
         if self.router_type == "kv_load":
             wid, _ = self._get_underloaded(metrics)
             yield RouterResponse(worker_id=wid, prefix_hit_rate=0.0).model_dump()
@@ -1221,11 +933,11 @@ class WorkloadAwareRouter:
         return
 
     # --------------------- helpers --------------------- #
-    def _get_underloaded(self, metrics: AggregatedMetricsShim | None):
-        if not metrics or not metrics.endpoints:
+    def _get_underloaded(self, metrics: dict[str, Any] | None):
+        if not metrics or not metrics.get("endpoints"):
             wid = int(random.choice(self.engine_client.instance_ids()))
             return wid, 0.0
-        loads = {ep.worker_id: getattr(ep, "gpu_cache_usage_perc", 0.0) for ep in metrics.endpoints}
+        loads = {ep.get("worker_id"): ep.get("gpu_cache_usage_perc", 0.0) for ep in metrics["endpoints"]}
         min_val = min(loads.values())
         candidates = [wid for wid, v in loads.items() if v == min_val]
         return random.choice(candidates), min_val
@@ -1276,7 +988,7 @@ def parse_args():
     parser.add_argument("--pending-sweep-interval-seconds", type=float, default=5.0)
     parser.add_argument("--timeout-reward", type=float, default=0.0)
 
-    # Latency EMAThe
+    # Latency EMA
     parser.add_argument("--latency-ema-alpha", type=float, default=0.2)
 
     # Traces
@@ -1284,31 +996,11 @@ def parse_args():
     parser.add_argument("--debug-trace-dir", type=str, default="/tmp/dynamo_router_traces")
     parser.add_argument("--debug-buffer-size", type=int, default=2000)
 
-    # Prometheus metrics (0.7.1+)
-    parser.add_argument(
-        "--metrics-url",
-        type=str,
-        default=None,
-        help="Prometheus metrics endpoint URL (default: DYNAMO_METRICS_URL env or http://localhost:9090/metrics)",
-    )
-    parser.add_argument(
-        "--metrics-scrape-interval",
-        type=float,
-        default=1.0,
-        help="Minimum seconds between Prometheus scrapes (default: 1.0)",
-    )
-    parser.add_argument(
-        "--metrics-timeout",
-        type=float,
-        default=5.0,
-        help="HTTP timeout for Prometheus requests in seconds (default: 5.0)",
-    )
-
     return parser.parse_args()
 
 
 @dynamo_worker(static=False)
-async def worker(runtime: DistributedRuntime) -> None:
+async def worker(runtime: DistributedRuntime):
     args = parse_args()
 
     component = runtime.namespace("dynamo").component("router")
@@ -1349,24 +1041,13 @@ async def worker(runtime: DistributedRuntime) -> None:
         debug_trace_dir=args.debug_trace_dir,
         debug_buffer_size=args.debug_buffer_size,
     )
+    await router.initialize()
 
-    # Initialize with Prometheus metrics configuration (0.7.1+)
-    await router.initialize(
-        metrics_url=args.metrics_url,
-        metrics_scrape_interval=args.metrics_scrape_interval,
-        metrics_timeout=args.metrics_timeout,
+    # Selection endpoint
+    await asyncio.gather(
+        component.endpoint("find_worker").serve_endpoint(router.generate),
+        component.endpoint("feedback").serve_endpoint(router.feedback),
     )
-
-    try:
-        # Selection endpoint
-        await asyncio.gather(
-            component.endpoint("find_worker").serve_endpoint(router.generate),
-            component.endpoint("feedback").serve_endpoint(router.feedback),
-        )
-    finally:
-        # Cleanup metrics client session
-        if router.metrics:
-            await router.metrics.close()
 
 
 if __name__ == "__main__":

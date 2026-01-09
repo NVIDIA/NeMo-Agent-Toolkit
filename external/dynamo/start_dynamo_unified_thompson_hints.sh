@@ -382,12 +382,11 @@ docker run -d \
       --feedback-timeout-seconds 120.0 \
       --pending-sweep-interval-seconds 5.0 \
       --timeout-reward 0.0 \
-      --latency-ema-alpha 0.2 \
-      --metrics-url "http://localhost:30000/metrics" &
+      --latency-ema-alpha 0.2 &
     ROUTER_PID=\$!
     echo \"Router PID: \$ROUTER_PID\"
-    echo \"Waiting 10s for router to initialize...\"
-    sleep 10
+    echo \"Router will wait for backend workers internally via wait_for_instances()...\"
+    sleep 15  # Brief pause to let router start
     echo \"\"
 
     echo ''
@@ -399,8 +398,8 @@ docker run -d \
       --enable-router &
     PROCESSOR_PID=\$!
     echo \"Processor PID: \$PROCESSOR_PID\"
-    echo \"Waiting 10s for processor to initialize...\"
-    sleep 10
+    echo \"Processor will wait for router and backend internally via wait_for_instances()...\"
+    sleep 15  # Brief pause to let processor start
     echo \"\"
 
     echo ''
@@ -410,8 +409,8 @@ docker run -d \
     python3 /workspace/custom_dynamo/frontend.py &
     FRONTEND_PID=\$!
     echo \"Frontend PID: \$FRONTEND_PID\"
-    echo \"Waiting 15s for frontend to discover workers...\"
-    sleep 15
+    echo \"Frontend will wait for processor internally via wait_for_instances()...\"
+    sleep 15  # Brief pause to let frontend start
     echo \"\"
 
     echo ''
