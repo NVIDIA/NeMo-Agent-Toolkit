@@ -47,10 +47,7 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 
 
 # TODO: REVERT LATER
-RUN git clone --branch david-rel-13-cve-mem-leak https://github.com/dagardner-nv/NeMo-Agent-Toolkit.git /workspace && \
-    cd /workspace && \
-    git submodule update --init --recursive && \
-    git checkout ${NAT_VERSION}
+RUN git clone --branch david-rel-13-cve-mem-leak https://github.com/dagardner-nv/NeMo-Agent-Toolkit.git /workspace
 
 # Set working directory
 WORKDIR /workspace

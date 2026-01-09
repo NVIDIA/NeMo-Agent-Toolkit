@@ -579,6 +579,7 @@ class JobStore(DaskClientMixin):
             if num_expired > 0:
                 successfully_expired = []
                 for job_id in expired_ids:
+                    await self._delete_dask_variable(job_id, client, cancel_task=True)
                     successfully_expired.append(job_id)
 
                 await session.execute(
