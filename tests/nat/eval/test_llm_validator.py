@@ -263,7 +263,7 @@ class TestTimeoutAndParallelValidation:
     """Tests for timeout handling and parallel validation."""
 
     @patch("nat.eval.llm_validator.WorkflowBuilder")
-    async def test_validation_times_out_gracefully(self, mock_builder_class):
+    async def test_validation_times_out_gracefully(self, mock_builder_class, monkeypatch):
         """Test that validation handles timeouts without hanging."""
         config = Config()
         config.llms = {"slow_llm": OpenAIModelConfig(model_name="test-model", base_url="http://localhost:8000/v1")}
@@ -274,7 +274,7 @@ class TestTimeoutAndParallelValidation:
 
         # Make ainvoke hang (longer than timeout)
         async def slow_invoke(*args, **kwargs):
-            await asyncio.sleep(100)
+            await asyncio.sleep(1)
 
         mock_llm.ainvoke = slow_invoke
         mock_builder.add_llm = AsyncMock()
@@ -283,6 +283,8 @@ class TestTimeoutAndParallelValidation:
         mock_builder.__aexit__ = AsyncMock(return_value=None)
 
         mock_builder_class.return_value = mock_builder
+        # Shorten timeout so the test finishes quickly
+        monkeypatch.setattr("nat.eval.llm_validator.VALIDATION_TIMEOUT_SECONDS", 0.05, raising=True)
 
         # Should not raise, just warn about timeout
         await validate_llm_endpoints(config)
