@@ -377,13 +377,12 @@ class JobStore(DaskClientMixin):
                 output = json.dumps(output)
 
             job.output = output
-        
+
         if status not in self.ACTIVE_STATUS:
             # Job is now in a terminal state let's try and pro-actively clean up
             logger.info("Job %s is in terminal state %s, cleaning up Dask variable", job_id, status)
             async with self.client() as client:
-                 await self._delete_dask_variable(job_id, client, cancel_task=False)
-
+                await self._delete_dask_variable(job_id, client, cancel_task=False)
 
     async def get_all_jobs(self) -> list[JobInfo]:
         """
@@ -510,7 +509,7 @@ class JobStore(DaskClientMixin):
             updated_at = updated_at.replace(tzinfo=UTC)
 
         return updated_at + timedelta(seconds=job.expiry_seconds)
-    
+
     async def _delete_dask_variable(self, job_id: str, dask_client: DaskClient, cancel_task: bool) -> bool:
         var = None
         success = False
@@ -538,7 +537,7 @@ class JobStore(DaskClientMixin):
                 except Exception:
                     logger.exception("Failed to delete variable %s", job_id)
                 del var
-        
+
         return success
 
     async def cleanup_expired_jobs(self) -> int:
@@ -550,7 +549,7 @@ class JobStore(DaskClientMixin):
         """
         logger.info("Starting cleanup of expired jobs")
         now = datetime.now(UTC)
-        
+
         stmt = select(JobInfo).where(
             and_(JobInfo.is_expired == sa_expr.false(),
                  JobInfo.status.not_in(self.ACTIVE_STATUS))).order_by(JobInfo.updated_at.desc())
@@ -584,7 +583,7 @@ class JobStore(DaskClientMixin):
 
                 await session.execute(
                     update(JobInfo).where(JobInfo.job_id.in_(successfully_expired)).values(is_expired=True))
-            
+
             gc.collect()
             return num_expired
 

@@ -55,6 +55,7 @@ from nat.eval.config import EvaluationRunOutput
 from nat.eval.evaluate import EvaluationRun
 from nat.eval.evaluate import EvaluationRunConfig
 from nat.eval.evaluator.evaluator_model import EvalInput
+from nat.front_ends.fastapi.async_job import run_generation
 from nat.front_ends.fastapi.auth_flow_handlers.http_flow_handler import HTTPAuthenticationFlowHandler
 from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import FlowState
 from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
@@ -66,7 +67,6 @@ from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateRequest
 from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateResponse
 from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateStatusResponse
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
-from nat.front_ends.fastapi.async_job import run_generation
 from nat.front_ends.fastapi.message_handler import WebSocketMessageHandler
 from nat.front_ends.fastapi.response_helpers import generate_single_response
 from nat.front_ends.fastapi.response_helpers import generate_streaming_response_as_str
@@ -90,7 +90,6 @@ except ImportError:
     JobInfo = None
     JobStatus = None
     JobStore = None
-
 
 
 class FastApiFrontEndPluginWorkerBase(ABC):
@@ -901,7 +900,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                  created_at=job.created_at,
                                                  updated_at=job.updated_at,
                                                  expires_at=self._job_store.get_expires_at(job))
-
 
         def post_async_generation(request_type: type):
 
