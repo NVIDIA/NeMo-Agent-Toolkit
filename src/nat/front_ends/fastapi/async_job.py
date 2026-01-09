@@ -71,15 +71,10 @@ async def run_generation(configure_logging: bool,
                                                         session,
                                                         result_type=session.workflow.single_output_schema)
 
-        del session
-        del local_session_manager
         await job_store.update_status(job_id, JobStatus.SUCCESS, output=result)
     except Exception as e:
         logger.exception("Error in async job %s", job_id)
         await job_store.update_status(job_id, JobStatus.FAILURE, error=str(e))
-
-    # Explicitly release the resources held by the job store
-    del job_store
 
 
 async def periodic_cleanup(*,
