@@ -182,7 +182,7 @@ async def _validate_single_llm(
 
     except TimeoutError:
         error_msg = f"Validation timed out after {VALIDATION_TIMEOUT_SECONDS}s"
-        logger.exception("LLM '%s' validation timed out", llm_name)
+        logger.warning("LLM '%s' validation timed out", llm_name)
         return ("warning", _truncate_error_message(error_msg))
 
     except (KeyboardInterrupt, SystemExit):
@@ -211,7 +211,7 @@ async def _validate_single_llm(
                 f"  4. Verify the model name matches the deployed model\n"
                 f"\nOriginal error: {_truncate_error_message(str(invoke_error))}"
             )
-            logger.exception(error_msg)
+            logger.error(error_msg)
             return ("404", error_msg)
 
         else:
