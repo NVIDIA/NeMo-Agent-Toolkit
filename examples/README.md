@@ -132,7 +132,7 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 - **[`simple_calculator_custom_routes`](front_ends/simple_calculator_custom_routes/README.md)**: Simple calculator example with custom API routing and endpoint configuration
 - **[`per_user_workflow`](front_ends/per_user_workflow/README.md)**: Demonstrates the per-user workflow pattern in NeMo Agent toolkit. With this pattern, each user gets their own isolated workflow and function instances with separate state.
 
-## Memory
+### Memory
 - **[`redis`](memory/redis/README.md)**: Basic long-term memory example using redis
 
 ### Object Store
@@ -141,6 +141,9 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 ### Human In The Loop (HITL)
 - **[`por_to_jiratickets`](HITL/por_to_jiratickets/README.md)**: Project requirements to Jira ticket conversion with human oversight
 - **[`simple_calculator_hitl`](HITL/simple_calculator_hitl/README.md)**: Human-in-the-loop version of the basic simple calculator that requests approval from the user before allowing the agent to make additional tool calls
+
+## UI
+- **[`UI`](UI/README.md)**: Guide for integrating and using the web-based user interface of the NeMo Agent toolkit for interactive workflow management.
 
 ## Connecting and Orchestrating Agents
 
@@ -169,9 +172,6 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 ### Finetuning
 - **[`dpo_tic_tac_toe`](finetuning/dpo_tic_tac_toe/README.md)**: Demonstrates how to use the NeMo Agent toolkit Test Time Compute (TTC) pipeline to generate preference data for Direct Preference Optimization (DPO) training, and submit training jobs to NVIDIA NeMo Customizer
 - **[`rl_with_openpipe_art`](finetuning/rl_with_openpipe_art/README.md)**: Demonstrates how to use the NeMo Agent Toolkit finetuning harness with [OpenPipe ART](https://art.openpipe.ai/) (Agent Reinforcement Trainer) to improve an LLM's performance at playing Tic-Tac-Toe through reinforcement learning.
-
-## UI
-- **[`UI`](UI/README.md)**: Guide for integrating and using the web-based user interface of the NeMo Agent toolkit for interactive workflow management.
 
 ## Platform Integrations
 
