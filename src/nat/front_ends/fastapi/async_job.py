@@ -31,6 +31,7 @@ async def run_generation(scheduler_address: str,
     from nat.front_ends.fastapi.response_helpers import generate_single_response
     from nat.runtime.loader import load_workflow
 
+    logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
 
     job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
