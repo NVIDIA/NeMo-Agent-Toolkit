@@ -153,6 +153,7 @@ examples = [
   "nat_simple_web_query_eval",
   "nat_simple_calculator",
   "nat_math_assistant_a2a",
+  "nat_math_assistant_a2a_protected",
   "nat_simple_calculator_custom_routes",
   "nat_simple_calculator_eval",
   "nat_simple_calculator_mcp",
@@ -280,6 +281,7 @@ nat_simple_auth_mcp = { path = "examples/MCP/simple_auth_mcp", editable = true }
 nat_per_user_workflow = { path = "examples/front_ends/per_user_workflow", editable = true }
 nat_simple_calculator = { path = "examples/getting_started/simple_calculator", editable = true }
 nat_math_assistant_a2a = { path = "examples/A2A/math_assistant_a2a", editable = true }
+nat_math_assistant_a2a_protected = { path = "examples/A2A/math_assistant_a2a_protected", editable = true }
 nat_simple_calculator_custom_routes = { path = "examples/front_ends/simple_calculator_custom_routes", editable = true }
 nat_simple_calculator_eval = { path = "examples/evaluation_and_profiling/simple_calculator_eval", editable = true }
 nat_simple_calculator_hitl = { path = "examples/HITL/simple_calculator_hitl", editable = true }
