@@ -158,6 +158,14 @@ reviews:
         - Do NOT add `@pytest.mark.asyncio` to any test. Async tests are automatically detected and run by the
           async runner - the decorator is unnecessary clutter.
 
+    - path: "examples/README.md"
+      instructions: >-
+        - Ensure that the README.md file is up-to-date with the latest changes in the project.
+        - Ensure that there is an entry for each example under the examples directory which contains a README.md file in the examples list.
+        - Any added examples should be added to the README.md file.
+        - Any removed examples should be removed from the README.md file.
+        - Example entries should be categorized by the directory they are located in.
+
     - path: "pyproject.toml"
       instructions: >-
         # pyproject.toml example section review instructions
