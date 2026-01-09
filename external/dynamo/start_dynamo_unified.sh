@@ -408,6 +408,7 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo "Models Endpoint: http://localhost:$HTTP_PORT/v1/models"
     echo ""
     echo "Useful Commands:"
+    echo "  Interactive shell:    docker exec -it $CONTAINER_NAME bash"
     echo "  View Dynamo logs:     docker logs -f $CONTAINER_NAME"
     echo "  View ETCD logs:       docker logs -f etcd-dynamo"
     echo "  View NATS logs:       docker logs -f nats-dynamo"

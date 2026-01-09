@@ -342,6 +342,7 @@ docker run -d \
       --port 30000 \
       --tp $TP_SIZE \
       --trust-remote-code \
+      --enable-metrics \
       --mem-fraction-static 0.8 &
     WORKER_PID=\$!
     echo \"Unified Worker PID: \$WORKER_PID\"
@@ -381,7 +382,8 @@ docker run -d \
       --feedback-timeout-seconds 120.0 \
       --pending-sweep-interval-seconds 5.0 \
       --timeout-reward 0.0 \
-      --latency-ema-alpha 0.2 &
+      --latency-ema-alpha 0.2 \
+      --metrics-url "http://localhost:30000/metrics" &
     ROUTER_PID=\$!
     echo \"Router PID: \$ROUTER_PID\"
     echo \"Waiting 10s for router to initialize...\"
@@ -522,6 +524,7 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo "  x-prefix-iat: LOW|MEDIUM|HIGH"
     echo ""
     echo "Useful Commands:"
+    echo "  Interactive shell:    docker exec -it $CONTAINER_NAME bash"
     echo "  View Dynamo logs:     docker logs -f $CONTAINER_NAME"
     echo "  View ETCD logs:       docker logs -f etcd-dynamo"
     echo "  View NATS logs:       docker logs -f nats-dynamo"

@@ -18,7 +18,7 @@ limitations under the License.
 # Dynamo Backend Setup Guide
 
 > [!NOTE]
-> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
+> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice. We kindly ask that GitHub Issues are opened as bugs are issued quickly as features are subject to change.
 
 This guide covers setting up, running, and configuring the NVIDIA Dynamo backend for the React Benchmark Agent evaluations.
 
@@ -393,6 +393,8 @@ bash stop_dynamo.sh
 - `frontend.py` - Accepts x-prefix-* headers
 - `processor.py` - Forwards hints to router, CSV metrics logging
 - `router.py` - Thompson Sampling, KV overlap calculations
+
+> **Note:** The custom `frontend.py` does not expose a `/metrics` endpoint. The `PrometheusMetricsClient` in `router.py` will log warnings about failed scrapes, but the router continues to function using Thompson Sampling, KV cache overlap, and feedback-based learning. Load-based balancing (queue depth, GPU cache usage) is unavailable in this mode.
 
 ### Option 3: Disaggregated Mode (High-Throughput)
 
@@ -883,6 +885,94 @@ Option 2: Edit script directly:
 HTTP_PORT=8080
 ETCD_CLIENT_PORT=2379
 NATS_PORT=4222
+```
+
+---
+
+## Metrics CSV Files
+
+The Thompson Sampling router (`start_dynamo_unified_thompson_hints.sh`) produces three CSV files for monitoring and analysis. These files are located in `/workspace/metrics/` inside the container.
+
+### Accessing Metrics
+
+```bash
+# From the host
+docker exec dynamo-sglang cat /workspace/metrics/router_metrics.csv
+docker exec dynamo-sglang cat /workspace/metrics/processor_requests.csv
+docker exec dynamo-sglang cat /workspace/metrics/frontend_throughput.csv
+
+# From inside the container
+docker exec -it dynamo-sglang bash
+cat /workspace/metrics/router_metrics.csv
+```
+
+### router_metrics.csv
+
+Logs every routing decision made by the Thompson Sampling router.
+
+**Columns:**
+
+| Column | Description |
+|--------|-------------|
+| `ts_epoch_ms` | Timestamp in milliseconds since epoch |
+| `tokens_len` | Number of tokens in the request |
+| `prefix_id` | Unique prefix identifier (auto-generated or from header) |
+| `reuse_after` | Remaining reuse budget after this request |
+| `chosen_worker` | Integer ID of the selected worker |
+| `overlap_chosen` | KV cache overlap score (0.0-1.0) |
+| `decode_cost` | Estimated decode cost |
+| `prefill_cost` | Estimated prefill cost |
+| `iat_level` | Inter-arrival time hint (LOW, MEDIUM, or HIGH) |
+| `stickiness` | Worker affinity score |
+| `load_mod` | Load modifier applied |
+
+**Example output:**
+
+```csv
+ts_epoch_ms,tokens_len,prefix_id,reuse_after,chosen_worker,overlap_chosen,decode_cost,prefill_cost,iat_level,stickiness,load_mod
+1767923263058,38,auto-9e05dbb0682f458a89b82f64bb328011,0,7587892060544177931,0.000000,2.000000,0.037109,MEDIUM,0.000,1.000000
+```
+
+### processor_requests.csv
+
+Logs latency metrics for each processed request.
+
+**Columns:**
+
+| Column | Description |
+|--------|-------------|
+| `num_tokens` | Number of output tokens generated |
+| `latency_ms` | Total request latency in milliseconds |
+| `latency_ms_per_token` | Average latency per token |
+
+**Example output:**
+
+```csv
+num_tokens,latency_ms,latency_ms_per_token
+10,70152.021,7015.202100
+```
+
+### frontend_throughput.csv
+
+Logs throughput metrics at regular intervals (default: every 5 seconds).
+
+**Columns:**
+
+| Column | Description |
+|--------|-------------|
+| `ts_epoch_ms` | Timestamp in milliseconds since epoch |
+| `requests` | Number of requests completed in this interval |
+| `interval_s` | Length of the measurement interval in seconds |
+| `req_per_sec` | Computed requests per second |
+
+**Example output:**
+
+```csv
+ts_epoch_ms,requests,interval_s,req_per_sec
+1767923267849,0,5.000,0.000000
+1767923272850,0,5.000,0.000000
+1767923337856,1,5.000,0.200000
+1767923342856,0,5.000,0.000000
 ```
 
 ---

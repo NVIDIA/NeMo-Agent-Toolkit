@@ -76,6 +76,14 @@ class PrometheusMetricsClient:
       - dynamo_component_kv_blocks_used{worker_id=...} (if available)
 
     Falls back to estimating KV usage from inflight requests if direct metrics unavailable.
+
+    WARNING: When using the custom frontend.py (Thompson Sampling mode), the /metrics
+    endpoint is not available. The built-in dynamo.frontend exposes metrics, but the
+    custom frontend does not. Additionally, dynamo.sglang workers communicate via NATS
+    and do not expose HTTP endpoints for metrics scraping. In this configuration,
+    scrape errors are expected and the router will continue to function using Thompson
+    Sampling, KV cache overlap, and feedback-based learning. Load-based balancing
+    (queue depth, GPU cache usage) will be unavailable.
     """
 
     # Prometheus metric patterns
@@ -185,6 +193,12 @@ class PrometheusMetricsClient:
                     match = re.search(r'(\d+)', labels[key])
                     if match:
                         return int(match.group(1))
+
+        # Fallback: In unified mode, metrics may only have 'model' label.
+        # Assign to worker 0 if no worker-specific label is found.
+        if 'model' in labels:
+            return 0
+
         return None
 
     def _build_metrics_from_prometheus(
@@ -571,6 +585,11 @@ class WorkloadAwareRouter:
             "Initialized PrometheusMetricsClient (url=%s, interval=%.1fs)",
             self.metrics.metrics_url,
             metrics_scrape_interval,
+        )
+        logger.warning(
+            "Note: When using custom frontend.py, the /metrics endpoint is unavailable. "
+            "Scrape errors are expected. The router will continue using Thompson Sampling, "
+            "KV overlap, and feedback learning. Load-based balancing is disabled."
         )
 
         self._initialize_bandits()
