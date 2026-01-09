@@ -93,30 +93,30 @@ async def test_add_and_retrieve():
                     print(f"  First memory: {retrieved[0].memory or str(retrieved[0].conversation)}")
                     print(f"  Tags: {retrieved[0].tags}")
                 
-                # Test 2: Add semantic memory
+                # Test 2: Add direct memory (no conversation)
+                # All memories are added to both episodic and semantic memory types
                 print("\n" + "-" * 80)
-                print("Test 2: Adding semantic memory...")
-                semantic_memory = MemoryItem(
+                print("Test 2: Adding direct memory...")
+                direct_memory = MemoryItem(
                     conversation=None,
                     user_id=user_id,
                     memory="User prefers working in the morning and is allergic to peanuts",
                     metadata={
                         "session_id": session_id,
                         "agent_id": agent_id,
-                        "use_semantic_memory": True,
                         "test_timestamp": datetime.now().isoformat()
                     },
                     tags=["preference", "allergy", "schedule"]
                 )
                 
-                await memory_client.add_items([semantic_memory])
-                print("✓ Semantic memory added")
+                await memory_client.add_items([direct_memory])
+                print("✓ Direct memory added")
                 
                 # Wait for indexing
                 await asyncio.sleep(2)
                 
                 # Retrieve it
-                print("\nRetrieving semantic memory...")
+                print("\nRetrieving direct memory...")
                 retrieved = await memory_client.search(
                     query="morning work allergy peanuts",
                     top_k=10,

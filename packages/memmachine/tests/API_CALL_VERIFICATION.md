@@ -7,7 +7,7 @@ The tests in `test_memmachine_api_calls.py` verify that the MemMachine integrati
 1. **Exact SDK methods called** - Verifies the right methods are invoked
 2. **Parameter correctness** - Verifies parameters match SDK expectations
 3. **Data transformations** - Verifies NAT format → MemMachine format conversion
-4. **Memory type handling** - Verifies episodic vs semantic memory types
+4. **Memory type handling** - Verifies all memories are added to both episodic and semantic types
 
 ## What Gets Tested
 
@@ -17,15 +17,11 @@ The tests in `test_memmachine_api_calls.py` verify that the MemMachine integrati
 - ✅ Each message in conversation calls `memory.add()` separately
 - ✅ Messages preserve their roles (user/assistant/system)
 - ✅ Messages are added in the correct order
-- ✅ Default `episode_type` is "episodic" for conversations
+- ✅ All memories are added to both episodic and semantic memory types
 
-#### Semantic Memory
-- ✅ When `use_semantic_memory=True`, calls `add()` with `episode_type="semantic"`
-- ✅ When `use_semantic_memory=False`, calls `add()` with `episode_type="episodic"`
-
-#### Memory Text Only
+#### Direct Memory (No Conversation)
 - ✅ When `conversation=None`, uses `memory` field as content
-- ✅ Default `episode_type` is "semantic" for memory text
+- ✅ All memories are added to both episodic and semantic memory types
 - ✅ Default `role` is "user"
 
 #### Metadata Handling
@@ -114,13 +110,13 @@ MemoryItem(
 **Verified API Calls:**
 1. ✅ `create_project(org_id="default-org", project_id="default-project", ...)`
 2. ✅ `project.memory(user_id="user123", session_id="s1", agent_id="a1", group_id="default")`
-3. ✅ `memory.add(content="I like pizza", role="user", episode_type="episodic", metadata={"tags": ["food"]})`
-4. ✅ `memory.add(content="Great!", role="assistant", episode_type="episodic", metadata={"tags": ["food"]})`
+3. ✅ `memory.add(content="I like pizza", role="user", memory_types=[Episodic, Semantic], metadata={"tags": ["food"]})`
+4. ✅ `memory.add(content="Great!", role="assistant", memory_types=[Episodic, Semantic], metadata={"tags": ["food"]})`
 
 **What's Verified:**
 - ✅ Two `add()` calls (one per message)
 - ✅ Correct roles preserved
-- ✅ `episode_type="episodic"` (default for conversations)
+- ✅ All memories added to both episodic and semantic types
 - ✅ Tags in metadata
 - ✅ session_id/agent_id NOT in metadata (used for memory instance instead)
 - ✅ All parameters are keyword arguments

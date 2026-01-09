@@ -20,7 +20,7 @@ These tests use spies/wrappers to capture and verify:
 1. The exact SDK methods called
 2. The parameters passed to each method
 3. The data transformations (NAT MemoryItem → MemMachine format)
-4. The correct handling of episodic vs semantic memory types
+4. That all memories are added to both episodic and semantic memory types
 """
 
 from unittest.mock import Mock, patch
@@ -221,64 +221,66 @@ class TestAddItemsAPICalls:
         assert assistant_call['kwargs']['episode_type'] is None
         assert 'memory_types' in assistant_call['kwargs']
     
-    async def test_add_semantic_memory_calls_add_with_semantic_type(
+    async def test_add_direct_memory_calls_add_with_both_types(
         self,
         editor_with_spy: MemMachineEditor,
         api_spy: APICallSpy
     ):
-        """Verify that semantic memory calls add() with episode_type='semantic'."""
+        """Verify that direct memory (no conversation) calls add() with both memory types."""
         item = MemoryItem(
             conversation=None,
             user_id="user123",
             memory="User prefers working in the morning",
             metadata={
                 "session_id": "session1",
-                "agent_id": "agent1",
-                "use_semantic_memory": True
+                "agent_id": "agent1"
             },
             tags=["preference"]
         )
         
         await editor_with_spy.add_items([item])
         
-        # Verify add was called - now uses memory_types instead of episode_type
+        # Verify add was called with both memory types
         add_calls = api_spy.get_calls('add')
         assert len(add_calls) == 1
         assert add_calls[0]['kwargs']['content'] == "User prefers working in the morning"
         assert add_calls[0]['kwargs']['role'] == "user"
         assert add_calls[0]['kwargs']['episode_type'] is None
-        assert 'memory_types' in add_calls[0]['kwargs']
+        # Verify memory_types contains both Episodic and Semantic
+        memory_types = add_calls[0]['kwargs']['memory_types']
+        assert len(memory_types) == 2, "Should have both episodic and semantic memory types"
         
         # Verify metadata includes tags (as comma-separated string)
         assert add_calls[0]['kwargs']['metadata']['tags'] == "preference"
     
-    async def test_add_episodic_memory_calls_add_with_episodic_type(
+    async def test_add_conversation_memory_calls_add_with_both_types(
         self,
         editor_with_spy: MemMachineEditor,
         api_spy: APICallSpy
     ):
-        """Verify that episodic memory calls add() with memory_types for episodic."""
+        """Verify that conversation memory calls add() with both memory types."""
         item = MemoryItem(
             conversation=[{"role": "user", "content": "Hello"}],
             user_id="user123",
             memory="Test",
             metadata={
                 "session_id": "session1",
-                "agent_id": "agent1",
-                "use_semantic_memory": False  # Explicitly episodic
+                "agent_id": "agent1"
             },
             tags=[]
         )
         
         await editor_with_spy.add_items([item])
         
-        # Verify add was called - now uses memory_types instead of episode_type
+        # Verify add was called with both memory types
         add_calls = api_spy.get_calls('add')
         assert len(add_calls) == 1
         assert add_calls[0]['kwargs']['content'] == "Hello"
         assert add_calls[0]['kwargs']['role'] == "user"
         assert add_calls[0]['kwargs']['episode_type'] is None
-        assert 'memory_types' in add_calls[0]['kwargs']
+        # Verify memory_types contains both Episodic and Semantic
+        memory_types = add_calls[0]['kwargs']['memory_types']
+        assert len(memory_types) == 2, "Should have both episodic and semantic memory types"
     
     async def test_add_with_custom_project_org_calls_get_or_create_project(
         self,

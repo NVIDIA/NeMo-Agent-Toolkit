@@ -95,14 +95,17 @@ def sample_memory_item_fixture():
     )
 
 
-@pytest.fixture(name="sample_memory_item_with_semantic")
-def sample_memory_item_with_semantic_fixture():
-    """Fixture to provide a MemoryItem configured for semantic memory."""
+@pytest.fixture(name="sample_direct_memory_item")
+def sample_direct_memory_item_fixture():
+    """Fixture to provide a MemoryItem for direct memory (no conversation).
+    
+    Direct memories are added to both episodic and semantic memory types.
+    """
     return MemoryItem(
         conversation=None,
         user_id="user123",
         memory="I prefer working in the morning",
-        metadata={"use_semantic_memory": True, "session_id": "session456", "agent_id": "agent789"},
+        metadata={"session_id": "session456", "agent_id": "agent789"},
         tags=["preference"]
     )
 
@@ -173,15 +176,18 @@ async def test_add_items_with_conversation(
     assert assistant_call_data["episode_type"] is None
 
 
-async def test_add_items_with_semantic_memory(
+async def test_add_items_with_direct_memory(
     memmachine_editor_with_client: MemMachineEditor,
     mock_client: Mock,
     mock_project: Mock,
     mock_memory_instance: Mock,
-    sample_memory_item_with_semantic: MemoryItem
+    sample_direct_memory_item: MemoryItem
 ):
-    """Test adding MemoryItem configured for semantic memory."""
-    items = [sample_memory_item_with_semantic]
+    """Test adding MemoryItem for direct memory (no conversation).
+    
+    Direct memories are added to both episodic and semantic memory types.
+    """
+    items = [sample_direct_memory_item]
     await memmachine_editor_with_client.add_items(items)
 
     # Verify add was called
@@ -192,6 +198,8 @@ async def test_add_items_with_semantic_memory(
     assert call_kwargs["content"] == "I prefer working in the morning"
     assert call_kwargs["episode_type"] is None
     assert "memory_types" in call_kwargs
+    # Verify both memory types are included
+    assert len(call_kwargs["memory_types"]) == 2, "Should use both episodic and semantic memory types"
     assert call_kwargs["role"] == "user"
 
 

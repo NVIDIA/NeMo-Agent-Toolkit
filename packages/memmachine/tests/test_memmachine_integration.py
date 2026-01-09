@@ -134,41 +134,41 @@ async def test_add_and_retrieve_conversation_memory(
 
 @pytest.mark.integration
 @pytest.mark.slow
-async def test_add_and_retrieve_semantic_memory(
+async def test_add_and_retrieve_direct_memory(
     test_config: MemMachineMemoryClientConfig,
     test_user_id: str
 ):
-    """Test adding a semantic memory (fact/preference) and retrieving it."""
+    """Test adding a direct memory (fact/preference without conversation) and retrieving it.
+    
+    All memories are now added to both episodic and semantic memory types.
+    """
     general_config = GeneralConfig()
     async with WorkflowBuilder(general_config=general_config) as builder:
         await builder.add_memory_client("memmachine_memory", test_config)
         memory_client = await builder.get_memory_client("memmachine_memory")
         
-        # Create a semantic memory (fact/preference)
-        semantic_memory = MemoryItem(
+        # Create a direct memory (no conversation)
+        direct_memory = MemoryItem(
             conversation=None,
             user_id=test_user_id,
             memory="User prefers working in the morning and is allergic to peanuts",
             metadata={
                 "session_id": "test_session_2",
                 "agent_id": "test_agent_2",
-                "use_semantic_memory": True,  # Mark as semantic memory
-                "test_id": "semantic_test"
+                "test_id": "direct_test"
             },
             tags=["preference", "allergy"]
         )
         
         # Add the memory
-        await memory_client.add_items([semantic_memory])
+        await memory_client.add_items([direct_memory])
         
-        # Wait for semantic memory ingestion
-        # Semantic memories are processed asynchronously by MemMachine's background task
-        # which runs every ~2 seconds and processes messages in batches
-        # We need to wait longer for semantic memory to be ingested and searchable
+        # Wait for memory ingestion
+        # Memories are processed asynchronously by MemMachine's background task
         import asyncio
         await asyncio.sleep(5)  # Wait for background ingestion task
         
-        # Try searching multiple times with retries (semantic memory ingestion is async)
+        # Try searching multiple times with retries (memory ingestion is async)
         retrieved_memories = []
         for attempt in range(3):
             retrieved_memories = await memory_client.search(
@@ -182,9 +182,7 @@ async def test_add_and_retrieve_semantic_memory(
                 break
             await asyncio.sleep(2)  # Wait another 2 seconds before retry
         
-        # Note: Semantic memory returns processed "features" (summaries), not raw text
-        # So we may not find exact text matches, but should find related content
-        # Verify we got results (may be processed/summarized, not exact match)
+        # Verify we got results
         if len(retrieved_memories) == 0:
             # If no results, try a broader search
             retrieved_memories = await memory_client.search(
@@ -195,27 +193,24 @@ async def test_add_and_retrieve_semantic_memory(
                 agent_id="test_agent_2"
             )
         
-        # Semantic memory may return processed features, so we check for related keywords
-        # rather than exact text matches
+        # Check for related keywords
         found = False
         for mem in retrieved_memories:
             # Check by test_id or by content keywords
-            if mem.metadata.get("test_id") == "semantic_test":
+            if mem.metadata.get("test_id") == "direct_test":
                 found = True
                 break
-            # Also check if content relates to our semantic memory (processed features)
             content = mem.memory.lower() if mem.memory else ""
             if any(keyword in content for keyword in ["morning", "peanut", "allergy", "prefer"]):
                 found = True
                 break
         
-        # For semantic memory, it's acceptable if we don't find exact match immediately
-        # as it's processed asynchronously and may return summarized features
+        # It's acceptable if we don't find exact match immediately due to async processing
         if not found:
             pytest.skip(
-                "Semantic memory not found - this may be due to async processing delay. "
+                "Direct memory not found - this may be due to async processing delay. "
                 f"Found {len(retrieved_memories)} memories. "
-                "Semantic memory ingestion can take several seconds."
+                "Memory ingestion can take several seconds."
             )
 
 
@@ -278,17 +273,20 @@ async def test_add_multiple_and_retrieve_all(
 
 @pytest.mark.integration
 @pytest.mark.slow
-async def test_add_and_verify_episodic_content_match(
+async def test_add_and_verify_conversation_content_match(
     test_config: MemMachineMemoryClientConfig,
     test_user_id: str
 ):
-    """Test that episodic memory content can be retrieved (conversation-based)."""
+    """Test that conversation memory content can be retrieved.
+    
+    All memories are added to both episodic and semantic memory types.
+    """
     general_config = GeneralConfig()
     async with WorkflowBuilder(general_config=general_config) as builder:
         await builder.add_memory_client("memmachine_memory", test_config)
         memory_client = await builder.get_memory_client("memmachine_memory")
         
-        # Create an episodic memory (with conversation)
+        # Create a conversation memory
         original_content = "The user mentioned their favorite programming language is Python"
         original_tags = ["programming", "preference"]
         
@@ -299,8 +297,7 @@ async def test_add_and_verify_episodic_content_match(
             metadata={
                 "session_id": "test_session_4",
                 "agent_id": "test_agent_4",
-                "test_id": "episodic_content_test",
-                "use_semantic_memory": False  # Explicitly episodic
+                "test_id": "conversation_content_test"
             },
             tags=original_tags
         )
@@ -308,7 +305,7 @@ async def test_add_and_verify_episodic_content_match(
         # Add the memory
         await memory_client.add_items([memory_item])
         
-        # Wait for indexing (episodic is faster than semantic)
+        # Wait for indexing
         import asyncio
         await asyncio.sleep(2)
         
@@ -324,13 +321,13 @@ async def test_add_and_verify_episodic_content_match(
         # Find our memory
         found_memory = None
         for mem in retrieved_memories:
-            if mem.metadata.get("test_id") == "episodic_content_test":
+            if mem.metadata.get("test_id") == "conversation_content_test":
                 found_memory = mem
                 break
         
-        assert found_memory is not None, f"Should find the episodic memory. Found {len(retrieved_memories)} memories"
+        assert found_memory is not None, f"Should find the conversation memory. Found {len(retrieved_memories)} memories"
         
-        # Verify content (episodic should preserve content better)
+        # Verify content
         content = found_memory.memory.lower() if found_memory.memory else ""
         assert "python" in content or "programming" in content, \
             f"Retrieved memory should contain 'Python' or 'programming'. Got: {found_memory.memory}"
@@ -343,18 +340,21 @@ async def test_add_and_verify_episodic_content_match(
 
 @pytest.mark.integration
 @pytest.mark.slow
-async def test_episodic_vs_semantic_memory_types(
+async def test_conversation_and_direct_memory_both_retrievable(
     test_config: MemMachineMemoryClientConfig,
     test_user_id: str
 ):
-    """Test that episodic and semantic memories are stored correctly."""
+    """Test that both conversation and direct memories are stored and retrievable.
+    
+    All memories are now added to both episodic and semantic memory types.
+    """
     general_config = GeneralConfig()
     async with WorkflowBuilder(general_config=general_config) as builder:
         await builder.add_memory_client("memmachine_memory", test_config)
         memory_client = await builder.get_memory_client("memmachine_memory")
         
-        # Add episodic memory (conversation)
-        episodic_memory = MemoryItem(
+        # Add conversation memory
+        conversation_memory = MemoryItem(
             conversation=[
                 {"role": "user", "content": "What's the weather today?"},
                 {"role": "assistant", "content": "It's sunny and 75°F."}
@@ -364,35 +364,33 @@ async def test_episodic_vs_semantic_memory_types(
             metadata={
                 "session_id": "test_session_5",
                 "agent_id": "test_agent_5",
-                "test_id": "episodic_test",
-                "use_semantic_memory": False  # Explicitly episodic
+                "test_id": "conversation_type_test"
             },
             tags=["weather"]
         )
         
-        # Add semantic memory (fact)
-        semantic_memory = MemoryItem(
+        # Add direct memory (no conversation)
+        direct_memory = MemoryItem(
             conversation=None,
             user_id=test_user_id,
             memory="User lives in San Francisco and works as a software engineer",
             metadata={
                 "session_id": "test_session_5",
                 "agent_id": "test_agent_5",
-                "test_id": "semantic_type_test",
-                "use_semantic_memory": True  # Explicitly semantic
+                "test_id": "direct_type_test"
             },
             tags=["location", "occupation"]
         )
         
         # Add both
-        await memory_client.add_items([episodic_memory, semantic_memory])
+        await memory_client.add_items([conversation_memory, direct_memory])
         
-        # Wait for indexing (episodic is faster, semantic needs more time)
+        # Wait for indexing
         import asyncio
         await asyncio.sleep(2)
         
-        # Search for episodic memory
-        episodic_results = await memory_client.search(
+        # Search for conversation memory
+        conversation_results = await memory_client.search(
             query="weather sunny",
             top_k=10,
             user_id=test_user_id,
@@ -400,35 +398,34 @@ async def test_episodic_vs_semantic_memory_types(
             agent_id="test_agent_5"
         )
         
-        # Search for semantic memory (with retries due to async processing)
-        semantic_results = []
+        # Search for direct memory (with retries due to async processing)
+        direct_results = []
         for attempt in range(3):
-            semantic_results = await memory_client.search(
+            direct_results = await memory_client.search(
                 query="San Francisco software engineer",
                 top_k=10,
                 user_id=test_user_id,
                 session_id="test_session_5",
                 agent_id="test_agent_5"
             )
-            if len(semantic_results) > 0:
+            if len(direct_results) > 0:
                 break
-            await asyncio.sleep(3)  # Wait for semantic memory ingestion
+            await asyncio.sleep(3)  # Wait for memory ingestion
         
-        # Verify episodic memory can be retrieved
-        episodic_found = any(m.metadata.get("test_id") == "episodic_test" for m in episodic_results)
-        assert episodic_found or len(episodic_results) > 0, "Should find episodic memory"
+        # Verify conversation memory can be retrieved
+        conversation_found = any(m.metadata.get("test_id") == "conversation_type_test" for m in conversation_results)
+        assert conversation_found or len(conversation_results) > 0, "Should find conversation memory"
         
-        # For semantic memory, it may be processed into features, so we check more leniently
-        semantic_found = any(m.metadata.get("test_id") == "semantic_type_test" for m in semantic_results)
-        # Also check if any result contains related keywords (semantic memory may be summarized)
-        semantic_keywords_found = any(
+        # Check for direct memory
+        direct_found = any(m.metadata.get("test_id") == "direct_type_test" for m in direct_results)
+        direct_keywords_found = any(
             any(keyword in (m.memory or "").lower() for keyword in ["san francisco", "software", "engineer"])
-            for m in semantic_results
+            for m in direct_results
         )
         
-        # Semantic memory may not be immediately available due to async processing
-        if not semantic_found and not semantic_keywords_found:
+        # Direct memory may not be immediately available due to async processing
+        if not direct_found and not direct_keywords_found:
             pytest.skip(
-                "Semantic memory not found - may be due to async processing delay. "
-                "Semantic memories are processed asynchronously and may return processed features."
+                "Direct memory not found - may be due to async processing delay. "
+                "Memories are processed asynchronously."
             )

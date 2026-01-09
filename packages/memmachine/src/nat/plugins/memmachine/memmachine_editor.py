@@ -110,6 +110,8 @@ class MemMachineEditor(MemoryEditor):
         """
         Insert Multiple MemoryItems into the memory using the MemMachine SDK.
         Each MemoryItem is translated and uploaded through the MemMachine API.
+        
+        All memories are added to both episodic and semantic memory types.
         """
         # Run synchronous operations in thread pool to make them async
         tasks = []
@@ -128,18 +130,14 @@ class MemMachineEditor(MemoryEditor):
             group_id = item_meta.pop("group_id", "default")
             project_id = item_meta.pop("project_id", None)
             org_id = item_meta.pop("org_id", None)
-            
-            # Extract use_semantic_memory once per item (not per message)
-            # Store it before popping so we can use it in both conversation and memory_text paths
-            # Check if key exists to distinguish between "not set" (None) and "explicitly False"
-            use_semantic = item_meta.get("use_semantic_memory") if "use_semantic_memory" in item_meta else None
-            # Remove it from metadata so it doesn't get passed to MemMachine
-            item_meta.pop("use_semantic_memory", None)
 
             # Get memory instance using MemMachine SDK
             memory = self._get_memory_instance(
                 user_id, session_id, agent_id, group_id, project_id, org_id
             )
+            
+            # All memories are added to BOTH episodic and semantic memory types
+            memory_types = [MemoryType.Episodic, MemoryType.Semantic]
             
             # Prepare content for MemMachine
             # If we have a conversation, add each message separately
@@ -153,14 +151,6 @@ class MemMachineEditor(MemoryEditor):
                     if not msg_content:
                         continue
                     
-                    # Determine memory_types based on metadata
-                    # For conversations: if use_semantic_memory is True, use semantic; otherwise episodic (default)
-                    # MemMachine uses memory_types parameter, not episode_type, to distinguish episodic vs semantic
-                    if use_semantic is True:
-                        memory_types = [MemoryType.Semantic]
-                    else:
-                        memory_types = [MemoryType.Episodic]
-                    
                     # Add tags to metadata if present
                     # MemMachine SDK expects tags as a string, not a list
                     metadata = item_meta.copy() if item_meta else {}
@@ -171,7 +161,7 @@ class MemMachineEditor(MemoryEditor):
                     # Capture variables in closure to avoid late binding issues
                     def add_memory(content=msg_content, role=msg_role, mem_types=memory_types, meta=metadata):
                         # Use MemMachine SDK add() method
-                        # API: memory.add(content, role="user", metadata={}, memory_types=[MemoryType.Episodic])
+                        # API: memory.add(content, role="user", metadata={}, memory_types=[...])
                         # episode_type should be None (defaults to "message") or EpisodeType.MESSAGE
                         memory.add(
                             content=content,
@@ -184,16 +174,7 @@ class MemMachineEditor(MemoryEditor):
                     task = asyncio.to_thread(add_memory)
                     tasks.append(task)
             elif memory_text:
-                # Add as a single memory item
-                # For memory_text (non-conversation), default to semantic (facts/preferences)
-                # unless explicitly set to episodic via use_semantic_memory=False
-                # use_semantic was already extracted above
-                # If use_semantic is True or None (not set), use semantic; if False, use episodic
-                if use_semantic is False:
-                    memory_types = [MemoryType.Episodic]
-                else:
-                    memory_types = [MemoryType.Semantic]
-                
+                # Add as a single memory item (direct memory without conversation)
                 # Add tags to metadata if present
                 # MemMachine SDK expects tags as a string, not a list
                 metadata = item_meta.copy() if item_meta else {}
@@ -203,7 +184,7 @@ class MemMachineEditor(MemoryEditor):
                 
                 def add_memory():
                     # Use MemMachine SDK add() method
-                    # API: memory.add(content, role="user", metadata={}, memory_types=[MemoryType.Semantic])
+                    # API: memory.add(content, role="user", metadata={}, memory_types=[...])
                     memory.add(
                         content=memory_text,
                         role="user",
