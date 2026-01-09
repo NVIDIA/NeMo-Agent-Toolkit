@@ -14,15 +14,15 @@
 # limitations under the License.
 
 """
-LLM Endpoint Validator for NAT Evaluation.
+LLM Endpoint Validator for NeMo Agent Toolkit evaluation.
 
 This module provides functionality to validate LLM endpoints before running evaluation
 workflows. This helps catch deployment issues early (e.g., models not deployed after
 training cancellation) and provides actionable error messages.
 
-The validation uses NAT's WorkflowBuilder to instantiate LLMs in a framework-agnostic way,
-then tests them with a minimal ainvoke() call. This approach works for all LLM types
-(OpenAI, NIM, AWS Bedrock, vLLM, etc.) and respects NAT's native auth and config system.
+The validation uses the NeMo Agent Toolkit `WorkflowBuilder` to instantiate LLMs in a framework-agnostic way,
+then tests them with a minimal `ainvoke()` call. This approach works for all LLM types
+(OpenAI, NIM, AWS Bedrock, vLLM, etc.) and respects the auth and config system.
 
 Note: Validation invokes actual LLM endpoints with minimal test prompts. This may incur
 small API costs for cloud-hosted models.
@@ -123,6 +123,11 @@ def _truncate_error_message(message: str, max_length: int = MAX_ERROR_MESSAGE_LE
 
     # Keep first and last portions to preserve both error description and stack trace
     separator = " ... (truncated) ... "
+
+    # Guard for very small max_length values
+    if max_length <= len(separator) + 2:
+        return message[:max_length]
+
     keep_length = (max_length - len(separator)) // 2
     return f"{message[:keep_length]}{separator}{message[-keep_length:]}"
 
@@ -211,7 +216,7 @@ async def _validate_single_llm(
                 f"  4. Verify the model name matches the deployed model\n"
                 f"\nOriginal error: {_truncate_error_message(str(invoke_error))}"
             )
-            logger.error(error_msg)
+            logger.exception(error_msg)
             return ("404", error_msg)
 
         else:
@@ -222,7 +227,7 @@ async def _validate_single_llm(
                 f"Evaluation will proceed, but may fail if the LLM is truly inaccessible."
             )
             logger.exception(error_msg)
-            return ("warning", _truncate_error_message(str(invoke_error)))
+            return ("warning", _truncate_error_message(error_msg))
 
 
 async def validate_llm_endpoints(config: "Config") -> None:
@@ -251,6 +256,20 @@ async def validate_llm_endpoints(config: "Config") -> None:
         ValueError: If config.llms is not properly structured.
     """
 
+    # Validate config structure
+    if not hasattr(config, "llms"):
+        raise ValueError("Config does not have 'llms' attribute. Cannot validate LLM endpoints.")
+
+    if not isinstance(config.llms, dict):
+        raise ValueError(
+            f"Config.llms must be a dict, got {type(config.llms).__name__}. "
+            "Cannot validate LLM endpoints."
+        )
+
+    if not config.llms:
+        logger.info("No LLMs configured - skipping endpoint validation")
+        return
+
     failed_llms = []  # List of (llm_name, error_message) tuples for 404 errors
     validation_warnings = []  # List of (llm_name, warning_message) tuples for non-critical errors
 
@@ -269,7 +288,7 @@ async def validate_llm_endpoints(config: "Config") -> None:
             results = await asyncio.gather(*validation_tasks, return_exceptions=True)
 
             # Process results - zip with batch to maintain llm_name association
-            for (llm_name, llm_config), result in zip(batch, results):
+            for (llm_name, _llm_config), result in zip(batch, results, strict=True):
                 if isinstance(result, BaseException):
                     # Re-raise system interrupts if they somehow got through
                     if isinstance(result, KeyboardInterrupt | SystemExit):
