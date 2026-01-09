@@ -139,9 +139,15 @@ async def huggingface_provider(
     Yields:
         LLMProviderInfo: Provider information for the loaded model.
     """
-    import torch
-    from transformers import AutoModelForCausalLM
-    from transformers import AutoTokenizer
+    try:
+        import torch
+        from transformers import AutoModelForCausalLM
+        from transformers import AutoTokenizer
+    except ImportError:
+        raise ValueError("HuggingFace dependencies not installed. \n"
+                         "Install with:\n"
+                         "  `pip install nvidia-nat[huggingface]` (package) or\n"
+                         "  `uv pip install -e '.[huggingface]'` (source)\n")
 
     cache = ModelCache()
 

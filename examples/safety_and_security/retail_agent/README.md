@@ -540,6 +540,14 @@ After identifying vulnerabilities through red teaming, you can add defense middl
 | `content_safety_guard` | Detect harmful, violent, or unsafe content |
 | `output_verifier` | Detect manipulated or incorrect tool outputs |
 
+#### Required Dependencies
+
+NeMo Agent Toolkit has support to load local Huggingface models, but it is not installed by default. To install:
+
+```bash
+uv pip install -e '.[huggingface]'
+```
+
 #### Optional Dependencies
 
 To use the **PII Defense**, install the PII dependencies:

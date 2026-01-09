@@ -39,6 +39,7 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[all]` or `nvidia-nat-all` - Pseudo-package for installing **almost all** optional dependencies
 - `nvidia-nat[crewai]` or `nvidia-nat-crewai` - [CrewAI](https://www.crewai.com/).  Conflicts with `nvidia-nat[openpipe-art]`.
 - `nvidia-nat[data-flywheel]` or `nvidia-nat-data-flywheel` - [NeMo DataFlywheel](https://github.com/NVIDIA-AI-Blueprints/data-flywheel)
+- `nvidia-nat[huggingface]` - [Huggingface](https://huggingface.co/) local model integration
 - `nvidia-nat[ingestion]` or `nvidia-nat-ingestion` - Additional dependencies needed for data ingestion
 - `nvidia-nat[langchain]` or `nvidia-nat-langchain` - [LangChain](https://www.langchain.com/), [LangGraph](https://www.langchain.com/langgraph)
 - `nvidia-nat[llama-index]` or `nvidia-nat-llama-index` - [LlamaIndex](https://www.llamaindex.ai/)

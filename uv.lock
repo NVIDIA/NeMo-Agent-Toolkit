@@ -6042,7 +6042,6 @@ dependencies = [
     { name = "ragas" },
     { name = "rich" },
     { name = "tabulate" },
-    { name = "transformers", extra = ["accelerate", "torch"] },
     { name = "uvicorn", extra = ["standard"] },
     { name = "wikipedia" },
 ]
@@ -6116,6 +6115,9 @@ examples = [
 ]
 gunicorn = [
     { name = "gunicorn" },
+]
+huggingface = [
+    { name = "transformers", extra = ["accelerate", "torch"] },
 ]
 ingestion = [
     { name = "nvidia-nat-ingestion" },
@@ -6343,11 +6345,11 @@ requires-dist = [
     { name = "rich", specifier = ">=14.0.0,<15.0.0" },
     { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'async-endpoints'", specifier = "~=2.0" },
     { name = "tabulate", specifier = "~=0.9" },
-    { name = "transformers", extras = ["accelerate", "torch"], specifier = "~=4.57" },
+    { name = "transformers", extras = ["accelerate", "torch"], marker = "extra == 'huggingface'", specifier = "~=4.57" },
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.38" },
     { name = "wikipedia", specifier = "~=1.4" },
 ]
-provides-extras = ["all", "a2a", "adk", "agno", "autogen", "crewai", "data-flywheel", "ingestion", "langchain", "llama-index", "mcp", "mem0ai", "opentelemetry", "phoenix", "pii-defense", "profiling", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "strands", "telemetry", "test", "vanna", "weave", "zep-cloud", "openpipe-art", "nemo-customizer", "examples", "gunicorn", "async-endpoints", "nvidia-haystack", "litellm", "openai"]
+provides-extras = ["all", "a2a", "adk", "agno", "autogen", "crewai", "data-flywheel", "huggingface", "ingestion", "langchain", "llama-index", "mcp", "mem0ai", "opentelemetry", "phoenix", "pii-defense", "profiling", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "strands", "telemetry", "test", "vanna", "weave", "zep-cloud", "openpipe-art", "nemo-customizer", "examples", "gunicorn", "async-endpoints", "nvidia-haystack", "litellm", "openai"]
 
 [package.metadata.requires-dev]
 dev = [
