@@ -91,6 +91,11 @@ class EvalGeneralConfig(BaseModel):
     # Inference profiler
     profiler: ProfilerConfig | None = None
 
+    # When enabled, validates that all LLM endpoints are accessible before starting evaluation.
+    # This catches deployment issues early (e.g., 404 errors from canceled training jobs).
+    # Recommended for production workflows. Opt-in for now, may become default in future.
+    validate_llm_endpoints: bool = False
+
     # overwrite the output_dir with the output config if present
     @model_validator(mode="before")
     @classmethod
