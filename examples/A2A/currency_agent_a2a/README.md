@@ -17,7 +17,7 @@ limitations under the License.
 
 # Currency Agent A2A Example
 
-This example demonstrates a per-user workflow connecting to a third-party A2A service, the LangGraph-based currency agent, to perform currency conversions and financial queries with time-based context.
+This example demonstrates a NVIDIA NeMo Agent Toolkit workflow connecting to a third-party A2A server, the LangGraph-based currency agent. The workflow acts as an A2A client to perform currency conversions and financial queries with time-based context.
 
 ## Key Features
 
