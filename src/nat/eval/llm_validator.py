@@ -148,7 +148,7 @@ async def _validate_single_llm(
         start_time = time.time()
 
         # Add LLM to builder (handles all LLM types)
-        builder.add_llm(llm_name, llm_config)
+        await builder.add_llm(llm_name, llm_config)
 
         # Try all frameworks to find one that works with this LLM
         llm = None
@@ -182,7 +182,7 @@ async def _validate_single_llm(
 
     except TimeoutError:
         error_msg = f"Validation timed out after {VALIDATION_TIMEOUT_SECONDS}s"
-        logger.warning("LLM '%s' validation timed out", llm_name)
+        logger.exception("LLM '%s' validation timed out", llm_name)
         return ("warning", _truncate_error_message(error_msg))
 
     except (KeyboardInterrupt, SystemExit):
@@ -221,7 +221,7 @@ async def _validate_single_llm(
                 f"This might be due to auth requirements, rate limits, or temporary issues. "
                 f"Evaluation will proceed, but may fail if the LLM is truly inaccessible."
             )
-            logger.warning(error_msg)
+            logger.exception(error_msg)
             return ("warning", _truncate_error_message(str(invoke_error)))
 
 
