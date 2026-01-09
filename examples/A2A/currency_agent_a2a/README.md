@@ -58,10 +58,11 @@ Follow the instructions in the [Install Guide](../../../docs/source/get-started/
 
 ### Set Up API Keys
 
-Set your NVIDIA API key as an environment variable:
+Set your NVIDIA and OpenAI API keys as environment variables:
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
+export OPENAI_API_KEY=<YOUR_API_KEY>
 ```
 
 ### Set Up External A2A Server
