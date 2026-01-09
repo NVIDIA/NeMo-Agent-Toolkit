@@ -16,6 +16,7 @@
 
 import logging
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
 from typing import Any
 
 from pydantic import Field
@@ -28,6 +29,13 @@ from nat.data_models.llm import LLMBaseConfig
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class ModelCacheEntry:
+    model: Any
+    tokenizer: Any
+    torch: Any
+
+
 class ModelCache:
     """Singleton cache for loaded HuggingFace models.
 
@@ -38,7 +46,7 @@ class ModelCache:
     """
 
     _instance: "ModelCache | None" = None
-    _cache: dict[str, dict[str, Any]]
+    _cache: dict[str, ModelCacheEntry]
 
     def __new__(cls) -> "ModelCache":
         if cls._instance is None:
@@ -46,11 +54,11 @@ class ModelCache:
             cls._instance._cache = {}
         return cls._instance
 
-    def get(self, model_name: str) -> dict[str, Any] | None:
+    def get(self, model_name: str) -> ModelCacheEntry | None:
         """Return cached model data or None if not loaded."""
         return self._cache.get(model_name)
 
-    def set(self, model_name: str, data: dict[str, Any]) -> None:
+    def set(self, model_name: str, data: ModelCacheEntry) -> None:
         """Cache model data."""
         self._cache[model_name] = data
 
@@ -81,7 +89,7 @@ class HuggingFaceConfig(LLMBaseConfig, name="huggingface"):
     trust_remote_code: bool = Field(default=False, description="Trust remote code when loading model")
 
 
-def get_cached_model(model_name: str) -> dict[str, Any] | None:
+def get_cached_model(model_name: str) -> ModelCacheEntry | None:
     """Return cached model data (model, tokenizer, torch) or None if not loaded."""
     return ModelCache().get(model_name)
 
@@ -98,13 +106,16 @@ async def _cleanup_model(model_name: str) -> None:
 
         if cached is not None:
             # Move model to CPU to free GPU memory
-            if "model" in cached:
-                cached["model"].to("cpu")
-                del cached["model"]
+            if cached.model:
+                cached.model.to("cpu")
+                cached.model = None
 
             # Clear CUDA cache if available
-            if "torch" in cached and hasattr(cached["torch"].cuda, "empty_cache"):
-                cached["torch"].cuda.empty_cache()
+            if cached.torch and hasattr(cached.torch.cuda, "empty_cache"):
+                cached.torch.cuda.empty_cache()
+                cached.torch = None
+
+            cached.tokenizer = None
 
             # Remove from cache
             cache.remove(model_name)
@@ -128,13 +139,9 @@ async def huggingface_provider(
     Yields:
         LLMProviderInfo: Provider information for the loaded model.
     """
-    try:
-        import torch
-        from transformers import AutoModelForCausalLM
-        from transformers import AutoTokenizer
-    except ImportError as err:
-        raise ImportError(
-            "transformers and torch required. Install: pip install transformers torch accelerate") from err
+    import torch
+    from transformers import AutoModelForCausalLM
+    from transformers import AutoTokenizer
 
     cache = ModelCache()
 
@@ -152,7 +159,7 @@ async def huggingface_provider(
                                                      trust_remote_code=config.trust_remote_code)
 
         # Cache it
-        cache.set(config.model_name, {"model": model, "tokenizer": tokenizer, "torch": torch})
+        cache.set(config.model_name, ModelCacheEntry(model=model, tokenizer=tokenizer, torch=torch))
 
         logger.debug("Model loaded: %s on device: %s", config.model_name, config.device)
     else:

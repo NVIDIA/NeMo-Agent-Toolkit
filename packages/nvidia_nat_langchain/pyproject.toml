@@ -25,13 +25,13 @@ dependencies = [
   "langchain-aws~=1.1.0",
   "langchain-classic~=1.0.1",
   "langchain-core~=1.2.6",
+  "langchain-huggingface~=1.2.0",
   "langchain-litellm~=0.3.5",
   "langchain-milvus~=0.3.3",
   "langchain-nvidia-ai-endpoints~=1.0.1",
   "langchain-openai~=1.1.6",
   "langchain-tavily~=0.2.16",
   "langgraph~=1.0.5",
-  "transformers[torch,accelerate]~=4.57",
 ]
 requires-python = ">=3.11,<3.14"
 description = "Subpackage for LangChain/LangGraph integration in NeMo Agent toolkit"

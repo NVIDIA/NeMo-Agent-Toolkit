@@ -3846,6 +3846,20 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-huggingface"
+version = "1.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "huggingface-hub" },
+    { name = "langchain-core" },
+    { name = "tokenizers" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/67/2c/4fddeb3387baa05b6a95870ad514f649cafb46e0c0ef9caf949d974e55d2/langchain_huggingface-1.2.0.tar.gz", hash = "sha256:18a2d79955271261fb245b233fea6aa29625576e841f2b4f5bee41e51cc70949", size = 255602, upload-time = "2025-12-12T22:19:51.021Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/81/ce/502157ef7390a31cc67e5873ad66e737a25d1d33fcf6936e5c9a0a451409/langchain_huggingface-1.2.0-py3-none-any.whl", hash = "sha256:0ff6a17d3eb36ce2304f446e3285c74b59358703e8f7916c15bfcf9ec7b57bf1", size = 30671, upload-time = "2025-12-12T22:19:50.023Z" },
+]
+
+[[package]]
 name = "langchain-litellm"
 version = "0.3.5"
 source = { registry = "https://pypi.org/simple" }
@@ -6028,6 +6042,7 @@ dependencies = [
     { name = "ragas" },
     { name = "rich" },
     { name = "tabulate" },
+    { name = "transformers", extra = ["accelerate", "torch"] },
     { name = "uvicorn", extra = ["standard"] },
     { name = "wikipedia" },
 ]
@@ -6328,6 +6343,7 @@ requires-dist = [
     { name = "rich", specifier = ">=14.0.0,<15.0.0" },
     { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'async-endpoints'", specifier = "~=2.0" },
     { name = "tabulate", specifier = "~=0.9" },
+    { name = "transformers", extras = ["accelerate", "torch"], specifier = "~=4.57" },
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.38" },
     { name = "wikipedia", specifier = "~=1.4" },
 ]
@@ -6533,6 +6549,7 @@ dependencies = [
     { name = "langchain-aws" },
     { name = "langchain-classic" },
     { name = "langchain-core" },
+    { name = "langchain-huggingface" },
     { name = "langchain-litellm" },
     { name = "langchain-milvus" },
     { name = "langchain-nvidia-ai-endpoints" },
@@ -6540,7 +6557,6 @@ dependencies = [
     { name = "langchain-tavily" },
     { name = "langgraph" },
     { name = "nvidia-nat" },
-    { name = "transformers", extra = ["accelerate", "torch"] },
 ]
 
 [package.metadata]
@@ -6549,6 +6565,7 @@ requires-dist = [
     { name = "langchain-aws", specifier = "~=1.1.0" },
     { name = "langchain-classic", specifier = "~=1.0.1" },
     { name = "langchain-core", specifier = "~=1.2.6" },
+    { name = "langchain-huggingface", specifier = "~=1.2.0" },
     { name = "langchain-litellm", specifier = "~=0.3.5" },
     { name = "langchain-milvus", specifier = "~=0.3.3" },
     { name = "langchain-nvidia-ai-endpoints", specifier = "~=1.0.1" },
@@ -6556,7 +6573,6 @@ requires-dist = [
     { name = "langchain-tavily", specifier = "~=0.2.16" },
     { name = "langgraph", specifier = "~=1.0.5" },
     { name = "nvidia-nat", editable = "." },
-    { name = "transformers", extras = ["accelerate", "torch"], specifier = "~=4.57" },
 ]
 
 [[package]]

@@ -65,6 +65,7 @@ dependencies = [
   "ragas~=0.2.14", # If you update ragas be sure to update github links in docs/source/workflows/evaluate.md as well
   "rich>=14.0.0,<15.0.0",  # Upgraded from ~=13.9 to support strands-agents-tools (requires >=14.0.0,<15.0.0)
   "tabulate~=0.9",
+  "transformers[torch,accelerate]~=4.57",
   "uvicorn[standard]~=0.38",
   "wikipedia~=1.4",
 ]
