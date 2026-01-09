@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import logging
 import os
 import sys
@@ -21,6 +20,7 @@ import tempfile
 import typing
 
 from nat.builder.front_end import FrontEndBase
+from nat.front_ends.fastapi.async_job import periodic_cleanup
 from nat.front_ends.fastapi.dask_client_mixin import DaskClientMixin
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorkerBase
@@ -60,31 +60,11 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
 
         return get_class_name(worker_class)
 
-    @staticmethod
-    async def _periodic_cleanup(scheduler_address: str,
-                                db_url: str,
-                                sleep_time_sec: int = 300,
-                                log_level: int = logging.INFO):
-        from nat.front_ends.fastapi.job_store import JobStore
-
-        job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
-
-        logging.basicConfig(level=log_level)
-        logger.info("Starting periodic cleanup of expired jobs every %d seconds", sleep_time_sec)
-        while True:
-            await asyncio.sleep(sleep_time_sec)
-
-            try:
-                num_expired = await job_store.cleanup_expired_jobs()
-                logger.info("Expired jobs cleaned up: %d", num_expired)
-            except:  # noqa: E722
-                logger.exception("Error during job cleanup")
-
     async def _submit_cleanup_task(self, scheduler_address: str, db_url: str, log_level: int = logging.INFO):
         """Submit a cleanup task to the cluster to remove the job after expiry."""
         logger.info("Submitting periodic cleanup task to Dask cluster at %s", scheduler_address)
         async with self.client(self._scheduler_address) as client:
-            self._periodic_cleanup_future = client.submit(self._periodic_cleanup,
+            self._periodic_cleanup_future = client.submit(periodic_cleanup,
                                                           scheduler_address=self._scheduler_address,
                                                           db_url=db_url,
                                                           log_level=log_level)

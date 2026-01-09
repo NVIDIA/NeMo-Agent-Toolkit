@@ -12,19 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+The functions in this module are intentionally written to be submitted as Dask tasks, as such they are self-contained.
+"""
 
+import asyncio
 import logging
 import typing
 
-async def run_generation(scheduler_address: str,
-                         db_url: str,
-                         config_file_path: str,
-                         job_id: str,
-                         payload: typing.Any):
+
+async def run_generation(scheduler_address: str, db_url: str, config_file_path: str, job_id: str, payload: typing.Any):
     """
     Background async task to run the workflow.
-    
-    Note: this function is intentionally written in it's own module such that it is packaged easily in Dask
     """
     from nat.front_ends.fastapi.job_store import JobStatus
     from nat.front_ends.fastapi.job_store import JobStore
@@ -48,6 +47,27 @@ async def run_generation(scheduler_address: str,
     except Exception as e:
         logger.exception("Error in async job %s", job_id)
         await job_store.update_status(job_id, JobStatus.FAILURE, error=str(e))
-    
+
     # Explicitly release the resources held by the job store
     del job_store
+
+
+async def periodic_cleanup(scheduler_address: str,
+                           db_url: str,
+                           sleep_time_sec: int = 300,
+                           log_level: int = logging.INFO):
+    from nat.front_ends.fastapi.job_store import JobStore
+    logging.basicConfig(level=log_level)
+    logger = logging.getLogger(__name__)
+
+    job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
+
+    logger.info("Starting periodic cleanup of expired jobs every %d seconds", sleep_time_sec)
+    while True:
+        await asyncio.sleep(sleep_time_sec)
+
+        try:
+            num_expired = await job_store.cleanup_expired_jobs()
+            logger.info("Expired jobs cleaned up: %d", num_expired)
+        except:  # noqa: E722
+            logger.exception("Error during job cleanup")
