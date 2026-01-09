@@ -227,7 +227,7 @@ uv run huggingface-cli download "meta-llama/Llama-3.3-70B-Instruct" \
 
 ### Environment Setup
 
-Before running the Dynamo scripts, configure the following environment variables. See `env.example` for a complete list of all available options.
+Before running the Dynamo scripts, configure the following environment variables. See `.env.example` for a complete list of all available options.
 
 ```bash
 cd external/dynamo/
@@ -1014,7 +1014,7 @@ ss -tlnp | grep 8099
 
 ```bash
 # Check `etcd` health
-curl http://localhost:2379/health
+curl http://localhost:2389/health
 
 # Check `etcd` logs
 docker logs etcd-dynamo
@@ -1073,7 +1073,7 @@ watch -n 1 nvidia-smi
 external/dynamo/                                # Dynamo backend
 │
 ├── 📄 README.md                                # This file - Dynamo setup guide
-├── 📄 env.example                              # Example environment variables
+├── 📄 .env.example                              # Example environment variables
 ├── 🔧 start_dynamo_unified.sh                  # Start Dynamo (unified mode)
 ├── 🔧 start_dynamo_unified_thompson_hints.sh   # Start with Thompson router
 ├── 🔧 start_dynamo_disagg.sh                   # Start Dynamo (disaggregated)
