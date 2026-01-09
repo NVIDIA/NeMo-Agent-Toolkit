@@ -63,8 +63,9 @@ async def run_generation(configure_logging: bool,
 
     logger = _configure_logging(configure_logging, log_level)
 
-    job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
+    job_store = None
     try:
+        job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
         async with load_workflow(config_file_path) as local_session_manager:
             async with local_session_manager.session() as session:
                 result = await generate_single_response(payload,
@@ -74,7 +75,8 @@ async def run_generation(configure_logging: bool,
         await job_store.update_status(job_id, JobStatus.SUCCESS, output=result)
     except Exception as e:
         logger.exception("Error in async job %s", job_id)
-        await job_store.update_status(job_id, JobStatus.FAILURE, error=str(e))
+        if job_store is not None:
+            await job_store.update_status(job_id, JobStatus.FAILURE, error=str(e))
 
 
 async def periodic_cleanup(*,
