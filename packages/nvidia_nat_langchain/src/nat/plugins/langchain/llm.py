@@ -267,6 +267,7 @@ async def litellm_langchain(llm_config: LiteLlmModelConfig, _builder: Builder):
 @register_llm_client(config_type=HuggingFaceConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 async def huggingface_langchain(llm_config: HuggingFaceConfig, _builder: Builder):
 
+    from langchain_huggingface import ChatHuggingFace
     from langchain_huggingface import HuggingFacePipeline
     from transformers import pipeline
 
@@ -278,12 +279,21 @@ async def huggingface_langchain(llm_config: HuggingFaceConfig, _builder: Builder
         raise ValueError(f"HuggingFace model '{llm_config.model_name}' not loaded. "
                          "The provider should have loaded it first.")
 
-    pipe = pipeline("text-generation",
-                    model=cached.model,
-                    tokenizer=cached.tokenizer,
-                    torch_dtype=cached.torch.dtype,
-                    max_new_tokens=llm_config.max_new_tokens,
-                    device=cached.torch.device)
-    client = HuggingFacePipeline(pipeline=pipe)
+    model_param = next(cached.model.parameters())
+
+    pipe = pipeline(
+        "text-generation",
+        model=cached.model,
+        tokenizer=cached.tokenizer,
+        torch_dtype=model_param.dtype,
+        device=model_param.device,
+        max_new_tokens=llm_config.max_new_tokens,
+        do_sample=llm_config.temperature > 0,
+        temperature=llm_config.temperature if llm_config.temperature > 0 else None,
+        pad_token_id=cached.tokenizer.eos_token_id,
+    )
+
+    llm = HuggingFacePipeline(pipeline=pipe)
+    client = ChatHuggingFace(llm=llm)
 
     yield _patch_llm_based_on_config(client, llm_config)
