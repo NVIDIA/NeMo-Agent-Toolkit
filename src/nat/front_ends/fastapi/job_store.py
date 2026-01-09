@@ -563,7 +563,6 @@ class JobStore(DaskClientMixin):
                                 var.delete()
                             except Exception:
                                 logger.exception("Failed to delete variable %s", job_id)
-                            del var
 
                 await session.execute(
                     update(JobInfo).where(JobInfo.job_id.in_(successfully_expired)).values(is_expired=True))
