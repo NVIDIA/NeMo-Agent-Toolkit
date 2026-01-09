@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 
 import argparse
 import asyncio
@@ -307,9 +308,55 @@ class WorkloadAwareRouter:
         logger.info("Getting engine client for dynamo/backend/generate")
         self.engine_client = await engine.endpoint("generate").client()
 
-        logger.info("Waiting for backend workers...")
-        await self.engine_client.wait_for_instances()
-        logger.info("Backend workers discovered: %s", list(self.engine_client.instance_ids()))
+        min_workers = int(self.min_workers)
+        if min_workers < 0:
+            raise ValueError(f"min_workers must be >= 0, got {min_workers}")
+
+        timeout_s = float(os.environ.get("DYNAMO_ROUTER_WAIT_FOR_WORKERS_TIMEOUT_S", "300"))
+        if not math.isfinite(timeout_s) or timeout_s <= 0:
+            raise ValueError(
+                "DYNAMO_ROUTER_WAIT_FOR_WORKERS_TIMEOUT_S must be a finite number > 0 "
+                f"(got {timeout_s!r})"
+            )
+        deadline = time.monotonic() + timeout_s
+        backoff_s = 0.5
+
+        logger.info(
+            "Waiting for backend workers (min_workers=%d, timeout_s=%.1f)...",
+            min_workers,
+            timeout_s,
+        )
+        if min_workers == 0:
+            instance_ids_raw = list(self.engine_client.instance_ids())
+            logger.info("Backend workers discovered (min_workers=0): %s", instance_ids_raw)
+        else:
+            while True:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise TimeoutError(
+                        f"Timed out after {timeout_s}s waiting for >= {min_workers} backend worker(s) to register"
+                    )
+
+                try:
+                    await asyncio.wait_for(
+                        self.engine_client.wait_for_instances(),
+                        timeout=min(remaining, 10.0),
+                    )
+                except (asyncio.TimeoutError, TimeoutError):
+                    # We'll re-check instance IDs and retry with backoff until the global deadline.
+                    pass
+
+                instance_ids_raw = list(self.engine_client.instance_ids())
+                if len(instance_ids_raw) >= min_workers:
+                    try:
+                        instance_ids = [int(w) for w in instance_ids_raw]
+                    except Exception:
+                        instance_ids = instance_ids_raw
+                    logger.info("Backend workers discovered: %s", instance_ids)
+                    break
+
+                await asyncio.sleep(backoff_s)
+                backoff_s = min(backoff_s * 1.5, 5.0)
 
         self.indexer = KvIndexer(engine, self.block_size)
 
