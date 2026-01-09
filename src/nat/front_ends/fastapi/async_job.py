@@ -36,6 +36,23 @@ async def run_generation(configure_logging: bool,
                          payload: typing.Any):
     """
     Background async task to run the workflow.
+
+    Parameters
+    ----------
+    configure_logging : bool
+        Whether to configure logging.
+    log_level : int
+        The log level to use when `configure_logging` is `True`, ignored otherwise.
+    scheduler_address : str
+        The Dask scheduler address.
+    db_url : str
+        The database URL for the job store.
+    config_file_path : str
+        The path to the workflow configuration file.
+    job_id : str
+        The job ID.
+    payload : typing.Any
+        The input payload for the workflow.
     """
     from nat.front_ends.fastapi.job_store import JobStatus
     from nat.front_ends.fastapi.job_store import JobStore
@@ -68,6 +85,23 @@ async def periodic_cleanup(*, scheduler_address: str,
                            sleep_time_sec: int = 300,
                            configure_logging: bool = True,
                            log_level: int = logging.INFO):
+    """
+    Dask task to periodically clean up expired jobs from the job store. This task is intended to be submitted only
+    once to the Dask cluster and run indefinitely.
+
+    Parameters
+    ----------
+    scheduler_address : str
+        The Dask scheduler address.
+    db_url : str
+        The database URL for the job store.
+    sleep_time_sec : int
+        The sleep time between cleanup operations in seconds.
+    configure_logging : bool
+        Whether to configure logging.
+    log_level : int
+        The log level to use when `configure_logging` is `True`, ignored otherwise.
+    """
     from nat.front_ends.fastapi.job_store import JobStore
 
     logger = _configure_logging(configure_logging, log_level)
