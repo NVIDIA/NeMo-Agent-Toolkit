@@ -167,6 +167,11 @@ The HuggingFace LLM provider is defined by the {py:class}`~nat.llm.huggingface_l
 * `temperature` - Sampling temperature (default: `0.0`)
 * `trust_remote_code` - Whether to trust remote code when loading the model (default: `false`)
 
+:::{note}
+Huggingface is a built-in NeMo Agent Toolkit LLM provider, but requires `nvidia-nat[huggingface]` for it to be used.
+In a source installation, `uv pip install -e '.[huggingface]` can be specified to install the required dependencies.
+:::
+
 ### NVIDIA Dynamo (experimental)
 
 Dynamo is an inference engine agnostic LLM provider designed to optimize KV cache reuse of LLMs served on NVIDIA hardware. See the [ai-dynamo repository](https://github.com/ai-dynamo/dynamo) for instructions on how to use Dynamo.
