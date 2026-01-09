@@ -79,10 +79,11 @@ git checkout eb3885f # tested on 12/2025 with NAT 1.4.0
 cd samples/python/agents/langgraph
 
 # Step 3:Set the environment variables for the currency agent
-echo "API_KEY=$NVIDIA_API_KEY" > .env
-echo "model_source=nvidia" >> .env
-echo "TOOL_LLM_URL=https://integrate.api.nvidia.com/v1" >> .env
-echo "TOOL_LLM_NAME=meta/llama-3.3-70b-instruct" >> .env
+# For OpenAI models:
+echo "API_KEY=$OPENAI_API_KEY" > .env
+echo "model_source=openai" >> .env
+echo "TOOL_LLM_URL=https://api.openai.com/v1" >> .env
+echo "TOOL_LLM_NAME=gpt-3.5-turbo" >> .env  # Mini model
 
 # Step 4: Run the currency agent on port 11000
 uv run app --port 11000
