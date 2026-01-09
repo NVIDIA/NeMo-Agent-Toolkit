@@ -21,7 +21,7 @@ dependencies = [
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
   # Keep sorted!!!
   "nvidia-nat~=1.4",
-  "langchain~=1.2.2",
+  "langchain~=1.2.3",
   "langchain-aws~=1.1.0",
   "langchain-classic~=1.0.1",
   "langchain-core~=1.2.6",
