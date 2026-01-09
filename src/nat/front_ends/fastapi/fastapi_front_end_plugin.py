@@ -149,7 +149,7 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
                     "NAT_DASK_SCHEDULER_ADDRESS": self._scheduler_address,
                     "NAT_JOB_STORE_DB_URL": db_url,
                     "NAT_USE_DASK_THREADS": str(int(self._use_dask_threads)),
-                    "NAT_LOG_LEVEL": str(log_level),
+                    "NAT_FASTAPI_LOG_LEVEL": str(log_level),
                 })
 
             # Write to YAML file

@@ -109,7 +109,7 @@ class FastApiFrontEndPluginWorkerBase(ABC):
         self._db_url = os.environ.get("NAT_JOB_STORE_DB_URL")
         self._config_file_path = get_config_file_path()
         self._use_dask_threads = os.environ.get("NAT_USE_DASK_THREADS", "0") == "1"
-        self._log_level = int(os.environ.get("NAT_LOG_LEVEL", logging.INFO))
+        self._log_level = int(os.environ.get("NAT_FASTAPI_LOG_LEVEL", logging.INFO))
         setup_logging(self._log_level)
 
         if self._scheduler_address is not None:
