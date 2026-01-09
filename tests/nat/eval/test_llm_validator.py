@@ -98,7 +98,7 @@ class TestLLMEndpointValidation:
         # Config without llms attribute
         config = Config()
         delattr(config, "llms")
-        
+
         with pytest.raises(ValueError, match="does not have 'llms' attribute"):
             await validate_llm_endpoints(config)
 
@@ -106,7 +106,7 @@ class TestLLMEndpointValidation:
         """Test that validation rejects configs where llms is not a dict."""
         config = Config()
         config.llms = ["not", "a", "dict"]
-        
+
         with pytest.raises(ValueError, match="must be a dict"):
             await validate_llm_endpoints(config)
 
@@ -117,17 +117,17 @@ class TestLLMEndpointValidation:
         mock_builder = AsyncMock()
         mock_llm = AsyncMock()
         mock_llm.ainvoke = AsyncMock(return_value="test response")
-        
+
         mock_builder.add_llm = AsyncMock()
         mock_builder.get_llm = AsyncMock(return_value=mock_llm)
         mock_builder.__aenter__ = AsyncMock(return_value=mock_builder)
         mock_builder.__aexit__ = AsyncMock(return_value=None)
-        
+
         mock_builder_class.return_value = mock_builder
 
         # Should not raise any error
         await validate_llm_endpoints(config_with_openai_llm)
-        
+
         # Verify builder was used correctly
         mock_builder.add_llm.assert_called_once()
         mock_builder.get_llm.assert_called_once()
@@ -139,19 +139,19 @@ class TestLLMEndpointValidation:
         # Mock 404 error from ainvoke
         mock_builder = AsyncMock()
         mock_llm = AsyncMock()
-        
+
         # Simulate NotFoundError (404) - create actual NotFoundError class
         class NotFoundError(Exception):
             pass
-        
+
         error_404 = NotFoundError("404: Model not found")
         mock_llm.ainvoke = AsyncMock(side_effect=error_404)
-        
+
         mock_builder.add_llm = AsyncMock()
         mock_builder.get_llm = AsyncMock(return_value=mock_llm)
         mock_builder.__aenter__ = AsyncMock(return_value=mock_builder)
         mock_builder.__aexit__ = AsyncMock(return_value=None)
-        
+
         mock_builder_class.return_value = mock_builder
 
         with pytest.raises(RuntimeError) as exc_info:
@@ -169,12 +169,12 @@ class TestLLMEndpointValidation:
         mock_builder = AsyncMock()
         mock_llm = AsyncMock()
         mock_llm.ainvoke = AsyncMock(side_effect=Exception("401: Unauthorized"))
-        
+
         mock_builder.add_llm = AsyncMock()
         mock_builder.get_llm = AsyncMock(return_value=mock_llm)
         mock_builder.__aenter__ = AsyncMock(return_value=mock_builder)
         mock_builder.__aexit__ = AsyncMock(return_value=None)
-        
+
         mock_builder_class.return_value = mock_builder
 
         # Should not raise RuntimeError for non-404 errors
@@ -187,17 +187,17 @@ class TestLLMEndpointValidation:
         mock_builder = AsyncMock()
         mock_llm = AsyncMock()
         mock_llm.ainvoke = AsyncMock(return_value="test response")
-        
+
         mock_builder.add_llm = AsyncMock()
         mock_builder.get_llm = AsyncMock(return_value=mock_llm)
         mock_builder.__aenter__ = AsyncMock(return_value=mock_builder)
         mock_builder.__aexit__ = AsyncMock(return_value=None)
-        
+
         mock_builder_class.return_value = mock_builder
 
         # Should validate NIM LLMs (not skip them)
         await validate_llm_endpoints(config_with_nim_llm)
-        
+
         mock_builder.add_llm.assert_called_once()
         mock_llm.ainvoke.assert_called_once()
 
@@ -207,17 +207,17 @@ class TestLLMEndpointValidation:
         mock_builder = AsyncMock()
         mock_llm = AsyncMock()
         mock_llm.ainvoke = AsyncMock(return_value="test response")
-        
+
         mock_builder.add_llm = AsyncMock()
         mock_builder.get_llm = AsyncMock(return_value=mock_llm)
         mock_builder.__aenter__ = AsyncMock(return_value=mock_builder)
         mock_builder.__aexit__ = AsyncMock(return_value=None)
-        
+
         mock_builder_class.return_value = mock_builder
 
         # Should validate Bedrock LLMs (framework-agnostic approach)
         await validate_llm_endpoints(config_with_bedrock_llm)
-        
+
         mock_builder.add_llm.assert_called_once()
         mock_llm.ainvoke.assert_called_once()
 
@@ -227,16 +227,16 @@ class TestLLMEndpointValidation:
         mock_builder = AsyncMock()
         mock_llm = AsyncMock()
         mock_llm.ainvoke = AsyncMock(return_value="test response")
-        
+
         mock_builder.add_llm = AsyncMock()
         mock_builder.get_llm = AsyncMock(return_value=mock_llm)
         mock_builder.__aenter__ = AsyncMock(return_value=mock_builder)
         mock_builder.__aexit__ = AsyncMock(return_value=None)
-        
+
         mock_builder_class.return_value = mock_builder
 
         await validate_llm_endpoints(config_with_multiple_llms)
-        
+
         # Should have validated both LLMs
         assert mock_builder.add_llm.call_count == 2
         assert mock_builder.get_llm.call_count == 2
@@ -248,23 +248,23 @@ class TestLLMEndpointValidation:
         # Create actual NotFoundError class
         class NotFoundError(Exception):
             pass
-        
+
         mock_builder = AsyncMock()
-        
+
         # First LLM succeeds, second LLM has 404
         mock_llm_success = AsyncMock()
         mock_llm_success.ainvoke = AsyncMock(return_value="ok")
-        
+
         mock_llm_404 = AsyncMock()
         error_404 = NotFoundError("404: Model not found")
         mock_llm_404.ainvoke = AsyncMock(side_effect=error_404)
-        
+
         # Return different LLMs for different calls
         mock_builder.get_llm = AsyncMock(side_effect=[mock_llm_success, mock_llm_404])
         mock_builder.add_llm = AsyncMock()
         mock_builder.__aenter__ = AsyncMock(return_value=mock_builder)
         mock_builder.__aexit__ = AsyncMock(return_value=None)
-        
+
         mock_builder_class.return_value = mock_builder
 
         with pytest.raises(RuntimeError) as exc_info:
@@ -292,22 +292,22 @@ class TestTimeoutAndParallelValidation:
         # Mock builder that hangs
         mock_builder = AsyncMock()
         mock_llm = AsyncMock()
-        
+
         # Make ainvoke hang (longer than timeout)
         async def slow_invoke(*args, **kwargs):
             await asyncio.sleep(100)
-        
+
         mock_llm.ainvoke = slow_invoke
         mock_builder.add_llm = AsyncMock()
         mock_builder.get_llm = AsyncMock(return_value=mock_llm)
         mock_builder.__aenter__ = AsyncMock(return_value=mock_builder)
         mock_builder.__aexit__ = AsyncMock(return_value=None)
-        
+
         mock_builder_class.return_value = mock_builder
 
         # Should not raise, just warn about timeout
         await validate_llm_endpoints(config)
-        
+
         # Verify it completed quickly (not hung)
         # The actual timeout is handled by asyncio.wait_for in the implementation
 
@@ -326,16 +326,16 @@ class TestTimeoutAndParallelValidation:
         mock_builder = AsyncMock()
         mock_llm = AsyncMock()
         mock_llm.ainvoke = AsyncMock(return_value="ok")
-        
+
         mock_builder.add_llm = AsyncMock()
         mock_builder.get_llm = AsyncMock(return_value=mock_llm)
         mock_builder.__aenter__ = AsyncMock(return_value=mock_builder)
         mock_builder.__aexit__ = AsyncMock(return_value=None)
-        
+
         mock_builder_class.return_value = mock_builder
 
         await validate_llm_endpoints(config)
-        
+
         # All 10 LLMs should have been validated
         assert mock_builder.add_llm.call_count == 10
         assert mock_llm.ainvoke.call_count == 10
@@ -348,7 +348,7 @@ class Test404ErrorDetection:
         """Test detection of NotFoundError exception type."""
         class NotFoundError(Exception):
             pass
-        
+
         error = NotFoundError("Model not found")
         assert _is_404_error(error)
 
@@ -356,7 +356,7 @@ class Test404ErrorDetection:
         """Test detection of HTTP 404 in error message."""
         error = Exception("HTTP 404: Model not found")
         assert _is_404_error(error)
-        
+
         error2 = Exception("status code 404")
         assert _is_404_error(error2)
 
@@ -364,7 +364,7 @@ class Test404ErrorDetection:
         """Test detection of model-specific not found errors."""
         error = Exception("The model does not exist")
         assert _is_404_error(error)
-        
+
         error2 = Exception("Model not found on server")
         assert _is_404_error(error2)
 
@@ -373,7 +373,7 @@ class Test404ErrorDetection:
         auth_error = Exception("401: Unauthorized")
         rate_limit_error = Exception("429: Rate limit exceeded")
         config_error = Exception("Configuration key not found")
-        
+
         assert not _is_404_error(auth_error)
         assert not _is_404_error(rate_limit_error)
         assert not _is_404_error(config_error)  # Generic "not found" without "model"
@@ -382,7 +382,7 @@ class Test404ErrorDetection:
         """Test that generic 'not found' without model context is not classified as 404."""
         error = Exception("Resource not found in cache")
         assert not _is_404_error(error)
-        
+
         error2 = Exception("Service not deployed")
         assert not _is_404_error(error2)
 
@@ -396,7 +396,7 @@ class TestLLMValidationErrorMessages:
         # Create actual NotFoundError class
         class NotFoundError(Exception):
             pass
-        
+
         config = Config()
         config.llms = {
             "training_llm": OpenAIModelConfig(
@@ -410,12 +410,12 @@ class TestLLMValidationErrorMessages:
         mock_llm = AsyncMock()
         error_404 = NotFoundError("404: Not found")
         mock_llm.ainvoke = AsyncMock(side_effect=error_404)
-        
+
         mock_builder.add_llm = AsyncMock()
         mock_builder.get_llm = AsyncMock(return_value=mock_llm)
         mock_builder.__aenter__ = AsyncMock(return_value=mock_builder)
         mock_builder.__aexit__ = AsyncMock(return_value=None)
-        
+
         mock_builder_class.return_value = mock_builder
 
         with pytest.raises(RuntimeError) as exc_info:
@@ -435,7 +435,7 @@ class TestLLMValidationErrorMessages:
         # Create actual NotFoundError class
         class NotFoundError(Exception):
             pass
-        
+
         config = Config()
         config.llms = {
             "finetuned_model": NIMModelConfig(
@@ -449,12 +449,12 @@ class TestLLMValidationErrorMessages:
         mock_llm = AsyncMock()
         error_404 = NotFoundError("404: Model not found")
         mock_llm.ainvoke = AsyncMock(side_effect=error_404)
-        
+
         mock_builder.add_llm = AsyncMock()
         mock_builder.get_llm = AsyncMock(return_value=mock_llm)
         mock_builder.__aenter__ = AsyncMock(return_value=mock_builder)
         mock_builder.__aexit__ = AsyncMock(return_value=None)
-        
+
         mock_builder_class.return_value = mock_builder
 
         with pytest.raises(RuntimeError) as exc_info:
@@ -492,7 +492,7 @@ class TestLLMValidationIntegration:
         """
         Test validation behavior in the scenario that caused NVBug 5789819:
         Training was canceled, model never deployed, user tries to run eval.
-        
+
         This should:
         1. Detect the missing model BEFORE eval starts (0/24 cases)
         2. Provide clear error about what went wrong
@@ -501,19 +501,19 @@ class TestLLMValidationIntegration:
         # Create actual NotFoundError class
         class NotFoundError(Exception):
             pass
-        
+
         # Mock the exact bug scenario: endpoint is up but model doesn't exist (404)
         mock_builder = AsyncMock()
         mock_llm = AsyncMock()
-        
+
         error_404 = NotFoundError("404: Model not found - the model default/meta-llama-3.1-8b-instruct-nat-dpo does not exist")
         mock_llm.ainvoke = AsyncMock(side_effect=error_404)
-        
+
         mock_builder.add_llm = AsyncMock()
         mock_builder.get_llm = AsyncMock(return_value=mock_llm)
         mock_builder.__aenter__ = AsyncMock(return_value=mock_builder)
         mock_builder.__aexit__ = AsyncMock(return_value=None)
-        
+
         mock_builder_class.return_value = mock_builder
 
         # Validation should fail with detailed error
@@ -528,7 +528,7 @@ class TestLLMValidationIntegration:
             "not found",
             "404"
         ])
-        
+
         # Should mention training-related causes
         assert any(phrase in error_msg.lower() for phrase in [
             "training",

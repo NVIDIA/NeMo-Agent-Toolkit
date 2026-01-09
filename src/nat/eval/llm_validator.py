@@ -166,7 +166,7 @@ async def _validate_single_llm(
 
         # Test with minimal prompt - this will hit the endpoint
         await asyncio.wait_for(llm.ainvoke(VALIDATION_PROMPT), timeout=VALIDATION_TIMEOUT_SECONDS)
-        
+
         duration = time.time() - start_time
         logger.info("LLM '%s' validated successfully in %.2fs", llm_name, duration)
         return (None, None)
@@ -263,7 +263,7 @@ async def validate_llm_endpoints(config: "Config") -> None:
             for (llm_name, llm_config), result in zip(batch, results):
                 if isinstance(result, BaseException):
                     # Re-raise system interrupts if they somehow got through
-                    if isinstance(result, (KeyboardInterrupt, SystemExit)):
+                    if isinstance(result, KeyboardInterrupt | SystemExit):
                         raise result
 
                     # Unexpected exception during validation
@@ -278,7 +278,7 @@ async def validate_llm_endpoints(config: "Config") -> None:
                     elif error_type == "warning":
                         validation_warnings.append((llm_name, error_message))
                     # If error_type is None, validation succeeded (no action needed)
-    
+
     # Calculate validation metrics
     total_llms = len(llm_items)
     succeeded_count = total_llms - len(failed_llms) - len(validation_warnings)
