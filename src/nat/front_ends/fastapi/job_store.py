@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import gc
 import json
 import logging
 import os
@@ -569,7 +568,6 @@ class JobStore(DaskClientMixin):
                 await session.execute(
                     update(JobInfo).where(JobInfo.job_id.in_(successfully_expired)).values(is_expired=True))
 
-            gc.collect()
             return num_expired
 
 
