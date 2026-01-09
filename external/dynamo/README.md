@@ -55,7 +55,7 @@ Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimizat
 
 
                            CLIENT REQUEST
-                    (NAT eval, curl, Python)
+                        (eval, curl, Python)
                                 │
                                 │  POST /v1/chat/completions
                                 │  Headers:
@@ -385,7 +385,7 @@ bash stop_dynamo.sh
 
 After starting Dynamo with any of the above options, verify the integration is working.
 
-#### Quick Validation with NAT
+#### Quick Validation with NeMo Agent Toolkit
 
 Run simple workflows to test basic connectivity and prefix header support:
 
@@ -417,12 +417,12 @@ bash test_dynamo_integration.sh
 - `DYNAMO_PORT` - Frontend port (default: `8099`)
 
 **Tests performed:**
-1. NAT environment is active
+1. NeMo Agent toolkit environment is active
 2. Configuration files exist
 3. Dynamo frontend is responding on the configured port
 4. Basic chat completion request works
-5. NAT workflow with basic config runs successfully
-6. NAT workflow with prefix hints runs successfully
+5. Workflow with basic config runs successfully
+6. Workflow with prefix hints runs successfully
 
 **Expected output (all tests passing):**
 ```text
@@ -504,12 +504,12 @@ Stopping NATS container...
 
 ## Testing the Integration
 
-An integration test script validates your Dynamo setup with NAT:
+An integration test script validates your Dynamo setup with NeMo Agent toolkit:
 
 ```bash
 cd /path/to/NeMo-Agent-Toolkit/external/dynamo
 
-# Activate NAT environment first
+# Activate the environment first
 source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 
 # Run tests (do NOT use 'source')
@@ -520,12 +520,12 @@ source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 ```
 
 **What the test validates:**
-1. NAT environment is activated
+1. The environment is activated
 2. Configuration files exist
 3. Dynamo frontend is running on port 8099
 4. Dynamo endpoint responds correctly
-5. NAT workflow executes with basic config
-6. NAT workflow executes with prefix hints
+5. Workflow executes with basic config
+6. Workflow executes with prefix hints
 
 **Expected output:**
 ```text
@@ -544,7 +544,7 @@ Failed: 0
 
 ### Quick Manual Tests
 
-#### Using NAT (Recommended)
+#### Using NeMo Agent Toolkit (Recommended)
 
 ```bash
 cd /path/to/NeMo-Agent-Toolkit
@@ -715,7 +715,7 @@ llms:
 
 ### How It Works
 
-1. **NAT Configurations** uses `_type: dynamo` (prefix headers enabled by default)
+1. **NeMo Agent Toolkit Configurations** uses `_type: dynamo` (prefix headers enabled by default)
 2. **Dynamo LLM Provider** generates unique UUID per request using the template
 3. **Headers injected** into HTTP request:
    ```text
@@ -955,7 +955,7 @@ external/dynamo/                                # Dynamo backend
 | `./monitor_dynamo.sh` | Interactive monitoring |
 | `curl localhost:8099/health` | Health check |
 | `docker logs -f dynamo-sglang` | View logs |
-| `nat run --config_file examples/dynamo_integration/react_benchmark_agent/configs/config_dynamo_e2e_test.yml --input "..."` | Quick NAT validation |
+| `nat run --config_file examples/dynamo_integration/react_benchmark_agent/configs/config_dynamo_e2e_test.yml --input "..."` | Quick NeMo Agent toolkit validation |
 | `nat run --config_file examples/dynamo_integration/react_benchmark_agent/configs/config_dynamo_prefix_e2e_test.yml --input "..."` | Test with prefix headers |
 
 ### Containers

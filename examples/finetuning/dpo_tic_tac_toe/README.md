@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,7 @@ limitations under the License.
 
 # DPO Tic-Tac-Toe: Preference Learning with NeMo Customizer
 
-This example demonstrates how to use NAT's Test Time Compute (TTC) pipeline to generate preference data for Direct Preference Optimization (DPO) training, and submit training jobs to NVIDIA NeMo Customizer.
+This example demonstrates how to use the NeMo Agent toolkit Test Time Compute (TTC) pipeline to generate preference data for Direct Preference Optimization (DPO) training, and submit training jobs to NVIDIA NeMo Customizer.
 
 ## Table of Contents
 
@@ -141,7 +141,7 @@ export CUSTOMIZER_NIM_URL="https://your-nim-deployment-host"
 │  │    │                                                                 │   │
 │  │    └── For EACH turn (trained player AND opponent):                  │   │
 │  │                                                                      │   │
-│  │        ttc_move_selector (NAT Function)                              │   │
+│  │        ttc_move_selector (Function)                                  │   │
 │  │          │                                                           │   │
 │  │          ├── 1. SEARCH: move_searcher                                │   │
 │  │          │       └── Calls choose_move N times                       │   │
@@ -298,7 +298,7 @@ llms:
     # base_url: https://nim.example.com/v1
 ```
 
-### NAT Functions
+### Functions
 
 ```yaml
 functions:
@@ -684,7 +684,7 @@ trainer_adapters:
 
 **Cause**: Serialization issue with intermediate steps.
 
-**Solution**: Ensure you're using the latest NAT version with `SerializeAsAny` fix in `IntermediateStepPayload`.
+**Solution**: Ensure you're using the latest NeMo Agent toolkit version with `SerializeAsAny` fix in `IntermediateStepPayload`.
 
 ### Debug Logging
 
@@ -707,6 +707,6 @@ logging.getLogger("nat.plugins.customizer").setLevel(logging.DEBUG)
 
 ## See Also
 
-- [Finetuning Concepts](../../../docs/source/improve-workflows/finetuning/concepts.md) - NAT finetuning architecture
+- [Finetuning Concepts](../../../docs/source/improve-workflows/finetuning/concepts.md) - NeMo Agent toolkit finetuning architecture
 - [Test Time Compute](../../../docs/source/improve-workflows/test-time-compute.md) - TTC pipeline reference
 - [RL with OpenPipe ART](../rl_with_openpipe_art/) - Alternative RL-based finetuning example

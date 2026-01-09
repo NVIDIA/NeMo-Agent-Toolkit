@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,7 +33,7 @@ uv pip install "nvidia-nat[profiling]"
 
 ## Overview
 
-This guide assumes that you have an LLM hosted by an isolated GPU cluster, for which you want to perform the sizing calculations for.
+This guide assumes that you have an [LLM](../build-workflows/llms/index.md) hosted by an isolated GPU cluster, for which you want to perform the sizing calculations for.
 
 :::{note}
 Although you can run the sizing calculator against a publicly hosted LLM, the results may not be accurate due to the variability in the performance of public LLMs.

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -65,7 +65,8 @@ async def email_phishing_analyzer(config: EmailPhishingAnalyzerConfig, builder: 
 
         try:
             # Get response from LLM
-            response = await llm.apredict(config.prompt.replace("{body}", text))
+            response = await llm.ainvoke(config.prompt.replace("{body}", text))
+            response = str(response.content)
         except Exception as e:
             logger.error(f"Error during LLM prediction: {e}")
             return f"Error: LLM prediction failed {e}"

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,8 +34,10 @@ class LangfuseTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, n
     """A telemetry exporter to transmit traces to externally hosted langfuse service."""
 
     endpoint: str = Field(description="The langfuse OTEL endpoint (/api/public/otel/v1/traces)")
-    public_key: SerializableSecretStr = Field(description="The Langfuse public key", default="")
-    secret_key: SerializableSecretStr = Field(description="The Langfuse secret key", default="")
+    public_key: SerializableSecretStr = Field(description="The Langfuse public key",
+                                              default_factory=lambda: SerializableSecretStr(""))
+    secret_key: SerializableSecretStr = Field(description="The Langfuse secret key",
+                                              default_factory=lambda: SerializableSecretStr(""))
     resource_attributes: dict[str, str] = Field(default_factory=dict,
                                                 description="The resource attributes to add to the span")
 
@@ -72,7 +74,8 @@ class LangsmithTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, Telemet
         description="The langsmith OTEL endpoint",
         default="https://api.smith.langchain.com/otel/v1/traces",
     )
-    api_key: SerializableSecretStr = Field(description="The Langsmith API key", default="")
+    api_key: SerializableSecretStr = Field(description="The Langsmith API key",
+                                           default_factory=lambda: SerializableSecretStr(""))
     resource_attributes: dict[str, str] = Field(default_factory=dict,
                                                 description="The resource attributes to add to the span")
 
@@ -137,7 +140,8 @@ async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builde
 class PatronusTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="patronus"):
     """A telemetry exporter to transmit traces to Patronus service."""
 
-    api_key: SerializableSecretStr = Field(description="The Patronus API key", default="")
+    api_key: SerializableSecretStr = Field(description="The Patronus API key",
+                                           default_factory=lambda: SerializableSecretStr(""))
     resource_attributes: dict[str, str] = Field(default_factory=dict,
                                                 description="The resource attributes to add to the span")
 

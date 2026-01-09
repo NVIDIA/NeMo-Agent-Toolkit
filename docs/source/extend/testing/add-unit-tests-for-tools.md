@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,7 @@ limitations under the License.
 
 ## Overview
 
-Use `nat.test.ToolTestRunner` to test tools in complete isolation without requiring spinning up entire workflows, agents, and external services. This allows you to validate tool functionality quickly and reliably during development. Refer `tests/nat/tools/test_tool_test_runner.py` for a full example.
+Use `nat.test.ToolTestRunner` to test [tools](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) in complete isolation without requiring spinning up entire workflows, agents, and external services. This allows you to validate tool functionality quickly and reliably during development. Refer to `tests/nat/tools/test_tool_test_runner.py` for a full example.
 
 The `nvidia-nat-test` package must be installed to use the `ToolTestRunner`.
 
@@ -77,7 +77,7 @@ async def test_tool_error_handling():
 
 ### Testing Tools with Dependencies
 
-For tools that depend on LLMs, memory, retrievers, or other components, use the mocked dependencies context:
+For tools that depend on [LLMs](../../build-workflows/llms/index.md), [memory](../../build-workflows/memory.md), [retrievers](../../build-workflows/retrievers.md), or other components, use the mocked dependencies context:
 
 ```python
 from nat.test import with_mocked_dependencies

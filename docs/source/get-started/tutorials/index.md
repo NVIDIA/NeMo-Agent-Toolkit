@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 # NVIDIA NeMo Agent Toolkit Tutorials
-Learn how to use NeMo Agent toolkit tools by following these tutorials:
+Learn how to use NeMo Agent toolkit [tools](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) by following these tutorials:
 - [Customize a Workflow](./customize-a-workflow.md)
 - [Add Tools to a Workflow](./add-tools-to-a-workflow.md)
 - [Create a New Tool and Workflow](./create-a-new-workflow.md)

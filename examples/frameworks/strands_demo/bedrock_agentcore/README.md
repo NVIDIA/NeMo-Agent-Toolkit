@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,60 +15,167 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Running Strands with NAT on AWS AgentCore
+# Running Strands with NVIDIA NeMo Agent Toolkit on AWS AgentCore
 
-A comprehensive guide for deploying NVIDIA NeMo Agent toolkit (NAT) with Strands on AWS AgentCore, including OpenTelemetry instrumentation for monitoring.
+A comprehensive guide for deploying NVIDIA NeMo Agent toolkit with Strands on AWS AgentCore, including OpenTelemetry instrumentation for monitoring.
+
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+  - [Local Development Tools](#local-development-tools)
+  - [AWS Account Requirements](#aws-account-requirements)
+  - [IAM Permissions for Deployment](#iam-permissions-for-deployment)
+  - [AWS Console Access](#aws-console-access)
+  - [Additional Requirements](#additional-requirements)
+- [Step 1: Setup NeMo Agent Toolkit Environment](#step-1-setup-nemo-agent-toolkit-environment)
+- [Step 2: Configure AWS CLI](#step-2-configure-aws-cli)
+  - [Option A: Using Long-Term Credentials](#option-a-using-long-term-credentials)
+  - [Option B: Using AWS SSO (Recommended for Organizations)](#option-b-using-aws-sso-recommended-for-organizations)
+  - [Verify Your Credentials](#verify-your-credentials)
+  - [Setup AWS ENV Variables](#setup-aws-env-variables)
+- [Step 3: Create AWS Secrets Manager Entry for NVIDIA_API_KEY](#step-3-create-aws-secrets-manager-entry-for-nvidia_api_key)
+  - [Secrets Manager Prerequisites](#secrets-manager-prerequisites)
+  - [Create the Secret](#create-the-secret)
+  - [Verify the Secret](#verify-the-secret)
+- [Step 4: Install and Test the Agent Locally](#step-4-install-and-test-the-agent-locally)
+  - [Install the Example Package](#install-the-example-package)
+  - [Build the Docker Image](#build-the-docker-image)
+  - [Run the Container Locally](#run-the-container-locally)
+  - [Test Local Deployment](#test-local-deployment)
+- [Step 5: Set Up ECR](#step-5-set-up-ecr)
+  - [Create ECR Repository](#create-ecr-repository)
+  - [Authenticate Docker with ECR](#authenticate-docker-with-ecr)
+- [Step 6: Build and Deploy Agent in AWS AgentCore](#step-6-build-and-deploy-agent-in-aws-agentcore)
+  - [Build and Push Docker Image to ECR](#build-and-push-docker-image-to-ecr)
+  - [Deploy the Agent](#deploy-the-agent)
+  - [Test the Deployment](#test-the-deployment)
+- [Step 7: Instrument for OpenTelemetry](#step-7-instrument-for-opentelemetry)
+  - [Update `Dockerfile` Environment Variables](#update-dockerfile-environment-variables)
+  - [Enable OpenTelemetry Instrumentation](#enable-opentelemetry-instrumentation)
+  - [ReBuild and Push Docker Image to ECR](#rebuild-and-push-docker-image-to-ecr)
+  - [Update the Agent with New Version](#update-the-agent-with-new-version)
+  - [Final Test](#final-test)
+- [Troubleshooting](#troubleshooting)
+- [Appendices](#appendices)
+  - [Appendix 1: Creating an AWS AgentCore Runtime Role](#appendix-1-creating-an-aws-agentcore-runtime-role)
+  - [Appendix 2: Turning on OpenTelemetry Support in CloudWatch](#appendix-2-turning-on-opentelemetry-support-in-cloudwatch)
+- [`Dockerfile` Reference](#dockerfile-reference)
+- [Placeholder Reference](#placeholder-reference)
+- [Additional Resources](#additional-resources)
 
 ## Prerequisites
 
-Before you begin, ensure you have the following installed:
+Before you begin, ensure you have the following:
 
-- Docker
-- git
-- git Large File Storage (LFS)
-- uv
-- AWS CLI
+### Local Development Tools
+
+- **Docker** - For building and running container images
+- **git** - Version control
+- **git Large File Storage (LFS)** - For handling large files in the repository
+- **uv with Python 3.11-3.13** - Python environment manager. After installing uv, run: `uv pip install setuptools setuptools-scm`
+- **AWS CLI v2** - For interacting with AWS services
+
+### AWS Account Requirements
+
+- An active AWS account
+- Your 12-digit **AWS Account ID** (visible in the top-right corner of the AWS Console)
+- Access to a **supported region**: `us-west-2` or `us-east-1` only
+
+> **Important:** AWS Bedrock AgentCore is only available in specific regions. Using unsupported regions such as `us-west-1` will result in DNS resolution errors.
+
+### IAM Permissions for Deployment
+
+The user or role running this tutorial needs the following IAM permissions:
+
+| Service | Required Permissions | Purpose |
+|---------|---------------------|---------|
+| **Secrets Manager** | `secretsmanager:CreateSecret`, `secretsmanager:DescribeSecret` | Store NVIDIA API credentials |
+| **ECR** | `ecr:CreateRepository`, `ecr:GetAuthorizationToken`, `ecr:BatchCheckLayerAvailability`, `ecr:InitiateLayerUpload`, `ecr:UploadLayerPart`, `ecr:CompleteLayerUpload`, `ecr:PutImage` | Create repository and push container images |
+| **IAM** | `iam:CreateRole`, `iam:CreatePolicy`, `iam:AttachRolePolicy`, `iam:GetRole`, `iam:PassRole` | Create the AgentCore runtime role |
+| **Bedrock AgentCore** | `bedrock-agentcore:*`, `bedrock-agentcore-control:*` | Deploy and manage agent runtimes |
+| **CloudWatch** | `cloudwatch:PutMetricData`, `logs:*` | Enable observability and Transaction Search |
+| **STS** | `sts:GetCallerIdentity` | Verify credentials |
+
+> [!NOTE]
+> For a quick start, you can use the `AdministratorAccess` managed policy during initial setup, then scope down permissions for production use.
+
+### AWS Console Access
+
+You will need access to the following AWS Console services:
+
+- **IAM Console** - To create the `AgentCore_NAT` role and policy (see [Appendix 1](#appendix-1-creating-an-aws-agentcore-runtime-role))
+- **ECR Console** - To verify repository creation and image uploads
+- **Bedrock AgentCore Console** - To view and manage deployed agents
+- **CloudWatch Console** - To enable Transaction Search and view logs and traces (see [Appendix 2](#appendix-2-turning-on-opentelemetry-support-in-cloudwatch))
+- **Secrets Manager Console** - To manage the NVIDIA API credentials secret
+
+> NOTE: Detailed instructions for setting up IAM permissions in the AWS console are available in Appendix 1
+
+### Additional Requirements
+
+- **NVIDIA API Key** - Obtain from [NVIDIA NGC](https://ngc.nvidia.com/) or [build.NVIDIA](https://build.nvidia.com). This will be stored in AWS Secrets Manager during setup.
 
 ## Step 1: Setup NeMo Agent Toolkit Environment
 
-Follow the official NeMo Agent toolkit installation guide:
-
-```text
-https://docs.nvidia.com/nemo/agent-toolkit/1.2/get-started/installing.html
-```
+Follow the official NeMo Agent toolkit [installation guide](https://docs.nvidia.com/nemo/agent-toolkit/latest/quick-start/installing.html)
 
 ## Step 2: Configure AWS CLI
 
+### Option A: Using Long-Term Credentials
+
+If you have IAM user credentials, configure them with:
+
 ```bash
+unset AWS_ACCESS_KEY_ID      # these `unset` commands are non-breaking
+unset AWS_SECRET_ACCESS_KEY  # and will help with consistency across
+unset AWS_SESSION_TOKEN      # multiple runs. Alternatively,
+unset AWS_REGION             # `rm ~/.aws/credentials`  or `rm ~/.aws/config`
+unset AWS_DEFAULT_REGION
+unset AWS_PROFILE
 aws configure
 ```
-Enter your AWS ACCESS KEY, AWS SECRET ACCESS KEY, and REGION for your AWS Account.
+
+> Note: using `aws configure` requires preexisting long- or short-lived access keys for the permitted IAM user.
+
+Enter your AWS ACCESS KEY, AWS SECRET ACCESS KEY, and REGION when prompted.
+
+### Option B: Using AWS SSO (Recommended for Organizations)
+
+If you use AWS SSO, log in with your profile:
+
+```bash
+aws sso login --profile your-profile-name
+```
+> [!NOTE]
+> AWS Bedrock AgentCore is available only in specific regions. Use `us-west-2` or `us-east-1`. Other regions such as `us-west-1` are **not supported** and will result in DNS resolution errors.
+> Temporary credentials (SSO, assumed roles, session tokens) expire after 1-12 hours. If you receive `InvalidClientTokenId` or `UnrecognizedClientException`, refresh your credentials.
+
+### Verify Your Credentials
+
+```bash
+aws sts get-caller-identity
+```
+
+This command returns your AWS Account ID, User ARN, and User ID if authentication is successful.
 
 ### Setup AWS ENV Variables
 
 ```bash
-    export AWS_ACCESS_KEY_ID=$(aws configure get default.aws_access_key_id)
-    export AWS_SECRET_ACCESS_KEY=$(aws configure get default.aws_secret_access_key)
-    export AWS_DEFAULT_REGION=$(aws configure get default.region)
-```
-### Set Account for local configuration
-Replace <YOUR_ACCOUNT_ID HERE> with your AWS account number (example: 211123456789)
-
-```bash
-    export AWS_ACCOUNT_ID="<YOUR AWS ACCOUNT ID HERE>"
+eval $(aws configure export-credentials --format env)
+export AWS_ACCOUNT_ID="YOUR_AWS_ACCOUNT_ID"
+export AWS_DEFAULT_REGION="us-west-2"  # Use us-west-2 or us-east-1
 ```
 
-## Step 3 Create AWS Secrets Manager entry for NVIDIA_API_KEY
-for the NAT deployment scripts.
-This is security best practice
+## Step 3: Create AWS Secrets Manager Entry for NVIDIA_API_KEY
+This is needed for storing the API keys needed for running NeMo Agent toolkit workflow.
 
-## Secrets Manager Prerequisites
+### Secrets Manager Prerequisites
 
 - AWS CLI installed and configured
 - Appropriate IAM permissions to create secrets in AWS Secrets Manager
 - Your NVIDIA API key
 
-## Create the Secret
+### Create the Secret
 
 Use the following AWS CLI command to create the secret:
 
@@ -80,9 +187,12 @@ aws secretsmanager create-secret \
   --region $AWS_DEFAULT_REGION
 ```
 
-Replace `YOUR-NVIDIA-API-KEY-HERE` with your actual NVIDIA API key.
+Replace `<YOUR-NVIDIA-API-KEY-HERE>` with your actual NVIDIA API key.
 
-## Verify the Secret
+> [!WARNING]
+> This command will throw a `ResourceExistsException` if the secret already exists in this region.
+
+### Verify the Secret
 
 To verify the secret was created successfully:
 
@@ -111,9 +221,22 @@ docker build \
   --platform linux/arm64 \
   --load .
 ```
-<!-- path-check-skip-end -->
+
 
 ### Run the Container Locally
+
+> [!NOTE] 
+> If you built the image with `--platform linux/arm64`, you do not need to specify platform again at runtime.
+<!-- path-check-skip-end -->
+Run the following command to view and set Access Key ID, Secret Access Key, and Session Token
+```bash
+aws sts get-session-token --duration 3600 --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' --output text
+export AWS_ACCESS_KEY_ID="YOUR_AWS_ACCESS_KEY_ID_HERE"
+export AWS_SECRET_ACCESS_KEY="YOUR_AWS_SECRET_ACCESS_KEY_HERE"
+export AWS_SESSION_TOKEN="YOUR_AWS_SESSION_TOKEN_HERE"
+export AWS_DEFAULT_REGION="us-west-2"
+```
+
 <!-- path-check-skip-begin -->
 ```bash
 docker run \
@@ -122,11 +245,15 @@ docker run \
   -e NVIDIA_API_KEY \
   -e AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY \
+  -e AWS_SESSION_TOKEN \
   -e AWS_DEFAULT_REGION \
-  strands_demo \
+  strands_demo
   --platform linux/arm64
 ```
 <!-- path-check-skip-end -->
+
+> [!NOTE]
+> The command above passes environment variables from your shell. Ensure they are exported before running. For SSO users, see [Troubleshooting](#troubleshooting) for how to export temporary credentials.
 
 ### Test Local Deployment
 
@@ -141,14 +268,11 @@ curl -X 'POST' \
 <!-- path-check-skip-end -->
 
 **Expected Workflow Output**
-The workflow produces a large amount of output, the end of the output should contain something similar to the following:
+The question should be returned with the "value" key in the JSON response. For example:
 
-```console
-Workflow Result:
-['To answer your question about using the Strands Agents API, I\'ll need to search for the relevant documentation. Let me do that for you.Thank you for providing that information. To get the most relevant information about using the Strands Agents API, I\'ll fetch the content from the "strands_agent_loop" URL, as it seems to be the most relevant to your question about using the API.Based on the information from the Strands Agents documentation, I can provide you with an overview of how to use the Strands Agents API. Here\'s a summary of the key points:\n\n1. Initialization:\n   To use the Strands Agents API, you start by initializing an agent with the necessary components:\n\n   ```python\n   from strands import Agent\n   from strands_tools import calculator\n\n   agent = Agent(\n       tools=[calculator],\n       system_prompt="You are a helpful assistant."\n   )\n   ```\n\n   This sets up the agent with tools (like a calculator in this example) and a system prompt.\n\n2. Processing User Input:\n   You can then use the agent to process user input:\n\n   ```python\n   result = agent("Calculate 25 * 48")\n   ```\n\n3. Agent Loop:\n   The Strands Agents API uses an "agent loop" to process requests. This loop includes:\n   - Receiving user input and context\n   - Processing the input using a language model (LLM)\n   - Deciding whether to use tools to gather information or perform actions\n   - Executing tools and receiving results\n   - Continuing reasoning with new information\n   - Producing a final response or iterating through the loop again\n\n4. Tool Execution:\n   The agent can use tools as part of its processing. When the model decides to use a tool, it will format a request like this:\n\n   ```json\n   {\n     "role": "assistant",\n     "content": [\n       {\n         "toolUse": {\n           "toolUseId": "tool_123",\n           "name": "calculator",\n           "input": {\n             "expression": "25 * 48"\n           }\n         }\n       }\n     ]\n   }\n   ```\n\n   The API then executes the tool and returns the result to the model for further processing.\n\n5. Recursive Processing:\n   The agent loop can continue recursively if more tool executions or multi-step reasoning is required.\n\n6. Completion:\n   The loop completes when the model generates a final text response or when an unhandled exception occurs.\n\nTo effectively use the Strands Agents API, you should:\n- Initialize your agent with appropriate tools and system prompts\n- Design your tools carefully, considering token limits and complexity\n- Handle potential exceptions, such as the MaxTokensReachedException\n\nRemember that the API is designed to support complex, multi-step reasoning and actions with seamless integration of tools and language models. It\'s flexible enough to handle a wide range of tasks and can be customized to your specific needs.']
+```text
+{"value":"The Strands Agents API is a powerful tool for building autonomous agents that can perform complex tasks. The agent loop is the core concept that enables this, allowing models to reason and act in a recursive cycle. The loop operates on a simple principle: invoke the model, check if it wants to use a tool, execute the tool if so, then invoke the model again with the result. Repeat until the model produces a final response.\n\nTo use the Strands Agents API, you need to understand the agent loop and how it works. The loop has well-defined entry and exit points, and understanding these helps predict agent behavior and handle edge cases. The loop also has a lifecycle, with events emitted at key points that enable observation, metrics collection, and behavior modification.\n\nCommon problems that may arise when using the Strands Agents API include context window exhaustion, inappropriate tool selection, and MaxTokensReachedException. Solutions to these problems include reducing tool output verbosity, simplifying tool schemas, configuring a conversation manager with appropriate strategies, and decomposing large tasks into subtasks.\n\nThe Strands Agents API also provides higher-level patterns that build on top of the agent loop, such as conversation management strategies, hooks for observing and modifying agent behavior, multi-agent architectures, and evaluation frameworks. Understanding the loop deeply makes these advanced patterns more approachable.\n\nIn summary, the Strands Agents API is a powerful tool for building autonomous agents, and understanding the agent loop is key to using it effectively. By following the principles outlined in the documentation, you can build sophisticated agents that can perform complex tasks and achieve your goals."}
 ```
-
-
 
 ## Step 5: Set Up ECR
 
@@ -171,9 +295,8 @@ aws ecr get-login-password --region $AWS_DEFAULT_REGION | \
   --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
 ```
 
-### Create AgentCore IAM Role
-
-> **Note:** See Appendix 1 for detailed instructions on creating the AgentCore Runtime Role.
+> [!NOTE]
+> This step requires that Appendix 1 was previously followed to properly configure an IAM Role and Policy
 
 ## Step 6: Build and Deploy Agent in AWS AgentCore
 
@@ -192,57 +315,22 @@ docker build \
 ```
 <!-- path-check-skip-end -->
 
-### Verify Deployment Script
-Verify the REGION, ACCOUNT_ID, and ROLE are correct for your environment
+### Deploy the Agent
 
-**deploy_nat.py:**
+Verify your environment variables are set correctly:
 
-```python
-
-import boto3
-import os
-
-# Configuration
-AWS_REGION = os.environ['AWS_DEFAULT_REGION']
-AWS_ACCOUNT_ID = os.environ['AWS_ACCOUNT_ID']
-IAM_AGENTCORE_ROLE = f'arn:aws:iam::{os.environ.get("AWS_ACCOUNT_ID")}:role/AgentCore_NAT'
-CONTAINER_IMAGE = 'strands-demo'
-AGENT_NAME = 'strands_demo'
-
-client = boto3.client(
-    'bedrock-agentcore-control',
-    region_name=AWS_REGION
-)
-
-response = client.create_agent_runtime(
-    agentRuntimeName=AGENT_NAME,
-    agentRuntimeArtifact={
-        'containerConfiguration': {
-            'containerUri': (
-                f'{AWS_ACCOUNT_ID}.dkr.ecr.{AWS_REGION}'
-                f'.amazonaws.com/{CONTAINER_IMAGE}:latest'
-            )
-        }
-    },
-    networkConfiguration={"networkMode": "PUBLIC"},
-    roleArn=IAM_AGENTCORE_ROLE,
-    environmentVariables={
-        'AWS_DEFAULT_REGION': AWS_REGION
-    },
-)
-
-print("Agent Runtime created successfully!")
-print(f"Agent Runtime ARN: {response['agentRuntimeArn']}")
-print(f"export AGENT_RUNTIME_ARN={response['agentRuntimeArn']}")
-print(f"Status: {response['status']}")
-
+```bash
+echo "Account: $AWS_ACCOUNT_ID, Region: $AWS_DEFAULT_REGION"
 ```
 
-### Deploy the Agent
+Then run the deployment script:
 
 ```bash
 uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/deploy_nat.py
 ```
+
+> [!WARNING] 
+> The script will deploy an ECR instance, which will incur cost. Script source is located at [`scripts/deploy_nat.py`](scripts/deploy_nat.py) if you need to review or modify it.
 
 **Important:** Record the runtime ID from the output for the next steps. It will look something like: `strands_demo-abc123XYZ`
 
@@ -252,52 +340,8 @@ Copy and Paste the export command from output into your shell for easier configu
 
 You can test your agent in AgentCore with the following script:
 
-**test_nat.py:**
-
-```python
-
-import json
-import boto3
-import os
-
-# Configuration
-
-AWS_REGION = os.environ['AWS_DEFAULT_REGION']
-AWS_ACCOUNT_ID = os.environ['AWS_ACCOUNT_ID']
-RUNTIME_NAME = "strands_demo"
-
-cclient = boto3.client('bedrock-agentcore-control', region_name=AWS_REGION)
-cresponse = cclient.list_agent_runtimes()
-
-runtime_id = None
-for runtime in cresponse['agentRuntimes']:
-    if runtime['agentRuntimeName'] == RUNTIME_NAME:
-        runtime_id = runtime['agentRuntimeId']
-        print(f"Found runtime ID: {runtime_id}")
-        break
-
-if runtime_id is None:
-    raise RuntimeError(f"No AgentCore runtime named {RUNTIME_NAME!r} found in region {AWS_REGION}")
-
-
-client = boto3.client('bedrock-agentcore', region_name=AWS_REGION)
-payload = json.dumps({"inputs": "What is AWS AgentCore?"})
-
-response = client.invoke_agent_runtime(
-    agentRuntimeArn=f'arn:aws:bedrock-agentcore:{AWS_REGION}:{AWS_ACCOUNT_ID}:runtime/{runtime_id}',
-    payload=payload,
-    qualifier="DEFAULT"  # Optional
-)
-response_body = response['response'].read()
-response_data = json.loads(response_body)
-print("Agent Response:", response_data)
-```
-
-
-### Run the Test
-
 ```bash
-uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py
+uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/verify_nat.py
 ```
 
 ## Step 7: Instrument for OpenTelemetry
@@ -306,35 +350,15 @@ uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py
 
 For this step you will need your Runtime ID (obtained from Step 6) to update your `Dockerfile`:
 
-NOTE:  If you do not have the runtime ID, you can check the AWS Console or run the following script:
-```python
-import boto3
-import os
+NOTE:  If you do not have the runtime ID, you can check the AWS Console or run:
 
-# Configuration
-
-AWS_REGION = os.environ['AWS_DEFAULT_REGION']
-AWS_ACCOUNT_ID = os.environ['AWS_ACCOUNT_ID']
-RUNTIME_NAME = "strands_demo"
-
-cclient = boto3.client('bedrock-agentcore-control', region_name=AWS_REGION)
-cresponse = cclient.list_agent_runtimes()
-
-for runtime in cresponse['agentRuntimes']:
-    if runtime['agentRuntimeName'] == RUNTIME_NAME:
-        runtime_id = runtime['agentRuntimeId']
-        print(f"Found runtime ID: {runtime_id}")
-        break
-```
-
-You can run it here:
 ```bash
 uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/get_agentcore_runtime_id.py
 ```
 
 Update the following environment variables in the `Dockerfile` with your Runtime ID.
 
-The location of the `Dockerfile` is:
+The location of the [`Dockerfile`](./Dockerfile) is:
  `./examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile`
 
 ```dockerfile
@@ -380,79 +404,59 @@ docker build \
 
 Since you already have the agent deployed, you will need to run an update (rather than a deploy/create)
 
-**update_nat.py:**
-
-```python
-import boto3
-import os
-
-# Configuration
-CONTAINER_IMAGE = 'strands-demo:latest'
-
-AWS_REGION = os.environ['AWS_DEFAULT_REGION']
-AWS_ACCOUNT_ID = os.environ['AWS_ACCOUNT_ID']
-IAM_AGENTCORE_ROLE = f'arn:aws:iam::{os.environ.get("AWS_ACCOUNT_ID")}:role/AgentCore_NAT'
-
-RUNTIME_NAME = "strands_demo"
-
-cclient = boto3.client('bedrock-agentcore-control', region_name=AWS_REGION)
-cresponse = cclient.list_agent_runtimes()
-
-runtime_id = None
-for runtime in cresponse['agentRuntimes']:
-    if runtime['agentRuntimeName'] == RUNTIME_NAME:
-        runtime_id = runtime['agentRuntimeId']
-        print(f"Found runtime ID: {runtime_id}")
-        break
-
-if runtime_id is None:
-    raise RuntimeError(f"No AgentCore runtime named {RUNTIME_NAME!r} found in region {AWS_REGION}")
-
-client = boto3.client(
-    'bedrock-agentcore-control',
-    region_name=AWS_REGION
-)
-
-response = client.update_agent_runtime(
-    agentRuntimeId=runtime_id,
-    agentRuntimeArtifact={
-        'containerConfiguration': {
-            'containerUri': (
-                f'{AWS_ACCOUNT_ID}.dkr.ecr.{AWS_REGION}'
-                f'.amazonaws.com/{CONTAINER_IMAGE}'
-            )
-        }
-    },
-    networkConfiguration={"networkMode": "PUBLIC"},
-    roleArn=IAM_AGENTCORE_ROLE,
-    environmentVariables={
-        'AWS_DEFAULT_REGION': AWS_REGION
-    },
-)
-
-print("Agent Runtime updated successfully!")
-print(f"Agent Runtime ARN: {response['agentRuntimeArn']}")
-print(f"Status: {response['status']}")
-
-```
-
-### Run the Update Script
+[**`update_nat.py`**](scripts/update_nat.py)
 
 ```bash
 uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/update_nat.py
 ```
 
-### Final Test 
+### Final Test
 
 ```bash
-uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/test_nat.py
+uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/verify_nat.py
 ```
 
-> **Note:** If you do not see OpenTelemetry telemetry for your agent after a few test runs, please refer to Appendix 2 to ensure you have enabled OpenTelemetry support in CloudWatch.
+> [!NOTE] 
+> If you do not see OpenTelemetry telemetry for your agent after a few test runs, please refer to Appendix 2 to ensure you have enabled OpenTelemetry support in CloudWatch.
 
 ## 🎉 Success!
 
-You have successfully set up NAT using Strands running on AWS AgentCore with OpenTelemetry monitoring!
+You have successfully set up NeMo Agent toolkit using Strands running on AWS AgentCore with OpenTelemetry monitoring!
+
+---
+
+## Troubleshooting
+
+### "Unable to locate credentials" in Docker
+
+The container cannot access your host AWS credentials. Export them before running:
+
+```bash
+# For SSO users: export temporary credentials
+eval $(aws configure export-credentials --format env)
+```
+
+Then run the Docker container with `-e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_SESSION_TOKEN`.
+
+### "The security token included in the request is invalid"
+
+Your credentials have expired. Re-authenticate:
+
+```bash
+# For SSO
+aws sso login --profile your-profile-name
+
+# Then re-export credentials
+eval $(aws configure export-credentials --format env)
+```
+
+### "Failed to resolve 'bedrock-agentcore-control.REGION.amazonaws.com'"
+
+Bedrock AgentCore is not available in that region. Change to a supported region:
+
+```bash
+export AWS_DEFAULT_REGION="us-west-2"  # or us-east-1
+```
 
 ---
 
@@ -530,7 +534,7 @@ Before creating the role, ensure you have:
     "Version": "2012-10-17",
     "Statement": [
         {
-            "Sid": "AllowAccessToBedrockAgentcore",
+            "Sid": "AllowBedrockAgentCore",
             "Effect": "Allow",
             "Principal": {
                 "Service": "bedrock-agentcore.amazonaws.com"
@@ -547,7 +551,7 @@ Before creating the role, ensure you have:
 
 Since we need a custom policy, we'll create it now:
 
-1. Instead of selecting existing policies, click **Create policy** (this opens in a new browser tab)
+1. Instead of selecting existing policies, open IAM > Policies in a new tab and click **Create policy** (this opens in a new browser tab)
 2. In the new tab, click on the **JSON** tab
 3. Delete the default policy in the text editor
 4. Copy and paste the following policy:
@@ -572,15 +576,56 @@ Since we need a custom policy, we'll create it now:
             "Resource": "*"
         },
         {
+            "Sid": "CreateServiceLinkedRole",
+            "Effect": "Allow",
+            "Action": "iam:CreateServiceLinkedRole",
+            "Resource": "*"
+        },
+        {
+            "Sid": "BedrockAgentCoreControl",
+            "Effect": "Allow",
+            "Action": [
+                "bedrock:*",
+                "bedrock-agentcore:*"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "PassRoleToAgentCore",
+            "Effect": "Allow",
+            "Action": "iam:PassRole",
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "iam:PassedToService": "bedrock-agentcore.amazonaws.com"
+                }
+            }
+        },
+        {
             "Sid": "ECRImageAccess",
             "Effect": "Allow",
             "Action": [
                 "ecr:BatchGetImage",
-                "ecr:GetDownloadUrlForLayer"
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:InitiateLayerUpload",
+                "ecr:UploadLayerPart",
+                "ecr:CompleteLayerUpload",
+                "ecr:PutImage"
             ],
             "Resource": [
                 "arn:aws:ecr:<AWS_REGION>:<AWS_ACCOUNT_ID>:repository/*"
             ]
+        },
+        {
+            "Sid": "ECRRepoCreate",
+            "Effect": "Allow",
+            "Action": [
+                "ecr:CreateRepository",
+                "ecr:DescribeRepositories",
+                "ecr:ListImage"
+            ],
+            "Resource": "arn:aws:ecr:<AWS_REGION>:<AWS_ACCOUNT_ID>:repository/*"
         },
         {
             "Sid": "ECRTokenAccess",
@@ -656,9 +701,20 @@ Since we need a custom policy, we'll create it now:
             "Sid": "SecretsManagerAccess",
             "Effect": "Allow",
             "Action": [
-                "secretsmanager:GetSecretValue"
+                "secretsmanager:DescribeSecret",
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:PutSecretValue",
+                "secretsmanager:UpdateSecret"
             ],
-            "Resource": "arn:aws:secretsmanager:*:*:secret:nvidia-api-credentials"
+            "Resource": "arn:aws:secretsmanager:*:*:secret:nvidia-api-credentials*"
+        },
+        {
+            "Sid": "SecretsManagerCreate",
+            "Effect": "Allow",
+            "Action": [
+                "secretsmanager:CreateSecret"
+            ],
+            "Resource": "*"
         }
     ]
 }
@@ -695,7 +751,7 @@ Since we need a custom policy, we'll create it now:
 After the role is created, you'll be redirected to the Roles page:
 
 1. In the search box, type: `AgentCore_NAT`
-2. Click on the **AgentCore_NAT** role name
+2. Click on the `AgentCore_NAT` role name
 3. On the role summary page, locate and copy the **ARN** (Amazon Resource Name)
 
 The ARN will look like this:
@@ -704,6 +760,7 @@ arn:aws:iam::<AWS_ACCOUNT_ID>:role/AgentCore_NAT
 ```
 
 **Save this ARN** - you'll need it when deploying your AgentCore runtime!
+
 
 ---
 
@@ -756,7 +813,7 @@ The `Dockerfile` is organized into the following sections:
 
 1. **Base Image Configuration** - Ubuntu base with Python
 2. **Build Dependencies** - Compilers and build tools
-3. **Application Setup** - NAT package installation
+3. **Application Setup** - NeMo Agent toolkit package installation
 4. **OpenTelemetry Configuration** - Monitoring and observability
 5. **Runtime Configuration** - Entry point and environment
 
@@ -777,7 +834,7 @@ FROM ${BASE_IMAGE_URL}:${BASE_IMAGE_TAG}
 ARG PYTHON_VERSION
 ARG NAT_VERSION
 
-COPY --from=ghcr.io/astral-sh/uv:0.8.15 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.9.15 /uv /uvx /bin/
 
 ENV PYTHONDONTWRITEBYTECODE=1
 
@@ -870,31 +927,32 @@ Throughout this guide, replace the following placeholders with your actual value
 
 | Placeholder | Description | Example |
 |------------|-------------|---------|
-| `<AWS_ACCOUNT_ID>` | Your AWS account ID | `123456789012` |
+| `<AWS_ACCOUNT_ID>` | Your AWS account ID | `1234567891011` |
 | `<AWS_REGION>` | Your AWS region | `us-west-2`, `us-east-1`, `eu-west-1` |
 | `<RUNTIME_ID>` | AgentCore runtime ID | `strands_demo-abc123XYZ` |
 | `<NVIDIA_API_KEY>` | Your NVIDIA API key | Retrieve from secrets manager |
 | `<AWS_ACCESS_KEY_ID>` | AWS access key | Use IAM roles instead |
 | `<AWS_SECRET_ACCESS_KEY>` | AWS secret key | Use IAM roles instead |
 
-### Common AWS Regions
+### Supported AWS Regions for Bedrock AgentCore
 
-| Region Code | Region Name |
-|------------|-------------|
-| `us-east-1` | US East (N. Virginia) |
-| `us-east-2` | US East (Ohio) |
-| `us-west-1` | US West (N. California) |
-| `us-west-2` | US West (Oregon) |
-| `eu-west-1` | Europe (Ireland) |
-| `eu-central-1` | Europe (Frankfurt) |
-| `ap-southeast-1` | Asia Pacific (Singapore) |
-| `ap-northeast-1` | Asia Pacific (Tokyo) |
+> [!NOTE] 
+> Bedrock AgentCore is available in limited regions. The following are confirmed to work:
+
+| Region Code | Region Name | AgentCore Support |
+|------------|-------------|-------------------|
+| `us-east-1` | US East (N. Virginia) | ✅ Supported |
+| `us-west-2` | US West (Oregon) | ✅ Supported |
+| `us-east-2` | US East (Ohio) | ⚠️ Check availability |
+| `eu-west-1` | Europe (Ireland) | ⚠️ Check availability |
+
+Regions like `us-west-1` are **not supported** for Bedrock AgentCore.
 
 ---
 
 ## Additional Resources
 
-- [NVIDIA NeMo Agent Toolkit Documentation](https://docs.nvidia.com/nemo/agent-toolkit/1.2/)
+- [NVIDIA NeMo Agent Toolkit Documentation](https://docs.nvidia.com/nemo/agent-toolkit/latest/)
 - [AWS Bedrock AgentCore Documentation](https://docs.aws.amazon.com/bedrock/)
 - [OpenTelemetry Python Documentation](https://opentelemetry.io/docs/languages/python/)
 - [AWS CloudWatch Logs Documentation](https://docs.aws.amazon.com/cloudwatch/)

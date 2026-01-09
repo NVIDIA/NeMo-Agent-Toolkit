@@ -1,5 +1,5 @@
 #!/bin/bash
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,7 +57,10 @@ if [[ -z "${SKIP_MD_UPDATE}" ]]; then
    sed_runner "s|https:\/\/docs.nvidia.com\/nemo\/agent-toolkit\/\([0-9|\.]\+\)|https:\/\/docs.nvidia.com\/nemo\/agent-toolkit\/${NEXT_SHORT_TAG}|g" src/nat/meta/pypi.md
 fi
 
-
+mapfile -t NAT_NOTEBOOKS < <(find ./examples/notebooks -name "*.ipynb" | sort)
+for NOTEBOOK_FILE in "${NAT_NOTEBOOKS[@]}"; do
+   sed_runner "s|https:\/\/docs.nvidia.com\/nemo\/agent-toolkit\/\([0-9|\.]\+\)|https:\/\/docs.nvidia.com\/nemo\/agent-toolkit\/${NEXT_SHORT_TAG}|g" ${NOTEBOOK_FILE}
+done
 
 if [[ "${USE_FULL_VERSION}" == "1" ]]; then
    NAT_VERSION=${NEXT_VERSION}

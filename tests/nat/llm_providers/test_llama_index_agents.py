@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -58,7 +58,7 @@ async def create_minimal_agent(llm_name: str, llm_config: Any) -> ReActAgent:
                                        "Input should be a string containing a mathematical expression.")
         ]
 
-        return ReActAgent.from_tools(tools=tools, llm=llm, verbose=True)
+        return ReActAgent(tools=tools, llm=llm, verbose=True)
 
 
 @pytest.mark.integration
@@ -68,10 +68,10 @@ async def test_nim_minimal_agent():
     llm_config = NIMModelConfig(model_name="meta/llama-3.1-70b-instruct", temperature=0.0)
     agent = await create_minimal_agent("nim_llm", llm_config)
 
-    response = await agent.achat("What is 1+2?")
+    response = await agent.run("What is 1+2?")
     assert response is not None
     assert hasattr(response, 'response')
-    assert "3" in response.response.lower()
+    assert "3" in response.response.content.lower()
 
 
 @pytest.mark.integration
@@ -81,10 +81,10 @@ async def test_openai_minimal_agent():
     llm_config = OpenAIModelConfig(model_name="gpt-3.5-turbo", temperature=0.0)
     agent = await create_minimal_agent("openai_llm", llm_config)
 
-    response = await agent.achat("What is 1+2?")
+    response = await agent.run("What is 1+2?")
     assert response is not None
     assert hasattr(response, 'response')
-    assert "3" in response.response.lower()
+    assert "3" in response.response.content.lower()
 
 
 @pytest.mark.integration
@@ -102,10 +102,10 @@ async def test_aws_bedrock_minimal_agent():
                                        credentials_profile_name="default")
     agent = await create_minimal_agent("aws_bedrock_llm", llm_config)
 
-    response = await agent.achat("What is 1+2?")
+    response = await agent.run("What is 1+2?")
     assert response is not None
     assert hasattr(response, 'response')
-    assert "3" in response.response.lower()
+    assert "3" in response.response.content.lower()
 
 
 @pytest.mark.integration
@@ -128,7 +128,7 @@ async def test_azure_openai_minimal_agent(api_version: str | None):
     llm_config = AzureOpenAIModelConfig(**config_args)
     agent = await create_minimal_agent("azure_openai_llm", llm_config)
 
-    response = await agent.achat("What is 1+2?")
+    response = await agent.run("What is 1+2?")
     assert response is not None
     assert hasattr(response, 'response')
-    assert "3" in response.response.lower()
+    assert "3" in response.response.content.lower()

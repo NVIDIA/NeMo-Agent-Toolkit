@@ -1,4 +1,4 @@
-<!-- SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+<!-- SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Keycloak OAuth2 Setup Guide for NAT A2A
+# Keycloak OAuth2 Setup Guide for NeMo Agent Toolkit A2A
 
 This guide provides hands-on instructions for setting up Keycloak as an OAuth2 authorization server for testing OAuth2-protected A2A servers in NVIDIA NeMo Agent Toolkit.
 
@@ -67,19 +67,19 @@ graph TB
 
 **Components Overview:**
 
-1. **NAT Math Assistant (Client)**
-   - Per-user NAT workflow using `per_user_react_agent`
+1. **Math Assistant (Client)**
+   - Per-user workflow using `per_user_react_agent`
    - Each user gets isolated A2A client instance with separate OAuth2 credentials
    - Uses A2A client plugin to connect to calculator
    - Handles user authentication flow through browser
 
-2. **NAT Calculator A2A Server (Resource Server)**
+2. **Calculator A2A Server (Resource Server)**
    - Protected A2A server requiring authentication
    - Publishes agent card with security requirements
    - Validates JWT tokens before processing requests
 
 3. **Keycloak (Authorization Server)**
-   - Test OAuth2 server for testing OAuth2-protected A2A servers in NAT
+   - Test OAuth2 server for testing OAuth2-protected A2A servers in NeMo Agent toolkit
    - Authenticates users and manages consent
    - Provides JWKS endpoint for token verification
 
@@ -95,10 +95,10 @@ This example demonstrates the A2A protocol with OAuth 2.1 Authorization Code Flo
 
 ```mermaid
 sequenceDiagram
-    participant Client as NAT Math Assistant<br/>(A2A Client)
+    participant Client as Math Assistant<br/>(A2A Client)
     participant Browser as User Browser
     participant AuthServer as Keycloak<br/>(Auth Server)
-    participant Resource as NAT Calculator<br/>(A2A Server)
+    participant Resource as Calculator<br/>(A2A Server)
 
     Note over Client,Resource: 1. Discovery (Public - No Auth)
     Client->>Resource: GET /.well-known/agent-card.json
@@ -138,7 +138,7 @@ sequenceDiagram
 ## Prerequisites
 
 - Docker installed and running
-- NAT development environment set up
+- NeMo Agent toolkit development environment set up
 - No services running on port 8080
 
 ## Step 1: Start Keycloak
@@ -211,7 +211,7 @@ Look for: `Listening on: http://0.0.0.0:8080`
    - `jwks_uri`: `http://localhost:8080/realms/master/protocol/openid-connect/certs`
    - `introspection_endpoint`: `http://localhost:8080/realms/master/protocol/openid-connect/token/introspect`
 
-   **Note:** These endpoints use Keycloak's standard paths (`/protocol/openid-connect/*`), not generic `/oauth/*` paths. The NAT A2A client discovers these URLs automatically from the discovery endpoint.
+   **Note:** These endpoints use Keycloak's standard paths (`/protocol/openid-connect/*`), not generic `/oauth/*` paths. The NeMo Agent toolkit A2A client discovers these URLs automatically from the discovery endpoint.
 
 ## Step 3: Register Math Assistant Client
 
@@ -253,7 +253,7 @@ You have two options:
 
 ### Option B: Dynamic Client Registration (DCR)
 
-NAT's OAuth2 provider can use DCR if Keycloak is configured to allow it.See [Keycloak documentation](https://www.keycloak.org/securing-apps/client-registration) for details.
+The NeMo Agent toolkit OAuth2 provider can use DCR if Keycloak is configured to allow it.See [Keycloak documentation](https://www.keycloak.org/securing-apps/client-registration) for details.
 
 **Note:** For testing, manual registration (Option A) is simpler.
 
@@ -262,7 +262,7 @@ NAT's OAuth2 provider can use DCR if Keycloak is configured to allow it.See [Key
 After registering the client:
 
 ```bash
-# Set these in your terminal where you'll run the NAT client
+# Set these in your terminal where you'll run the nat client
 export CALCULATOR_CLIENT_ID="math-assistant-client"
 export CALCULATOR_CLIENT_SECRET="<paste-client-secret-from-keycloak>"
 

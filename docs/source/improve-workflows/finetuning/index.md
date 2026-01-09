@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,7 +24,7 @@ limitations under the License.
 **Experimental Feature**: The Finetuning Harness is experimental and may change in future releases. Future versions may introduce breaking changes without notice.
 :::
 
-The NeMo Agent Toolkit provides a powerful finetuning harness designed for **in-situ reinforcement learning** of agentic LLM workflows. This enables iterative improvement of agents through experience, allowing models to learn from their interactions with environments, tools, and users.
+The NeMo Agent Toolkit provides a powerful finetuning harness designed for **in-situ reinforcement learning** of agentic [LLM](../../build-workflows/llms/index.md) [workflows](../../build-workflows/about-building-workflows.md). This enables iterative improvement of [agents](../../components/agents/index.md) through experience, allowing models to learn from their interactions with environments, [tools](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools), and users.
 
 ## Overview
 
@@ -34,7 +34,7 @@ The finetuning harness is built on four foundational principles:
 |-----------|-------------|
 | **Decoupled Architecture** | Training logic is separated from backends, allowing you to use any RL framework (OpenPipe ART, NeMo Aligner, custom implementations) |
 | **In-Situ Training** | Train agents with the same workflow you run in production, without moving to a different development environment.|
-| **Flexible Targeting** | Finetune specific functions or entire workflows, enabling targeted improvements in complex agentic systems. |
+| **Flexible Targeting** | Finetune specific [functions](../../build-workflows/functions-and-function-groups/functions.md) or entire workflows, enabling targeted improvements in complex agentic systems. |
 | **Composable Components** | Three pluggable components (TrajectoryBuilder, TrainerAdapter, Trainer) can be mixed, matched, and customized |
 
 ## Architecture

@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,9 +17,9 @@ limitations under the License.
 
 # NVIDIA NeMo Agent Toolkit Workflow as an A2A Server
 
-[Agent-to-Agent (A2A) Protocol](https://a2aproject.org/) is an open standard from the Linux Foundation that enables agent-to-agent communication and collaboration. You can publish NeMo Agent toolkit workflows as A2A agents so they can be discovered and called by other A2A clients.
+[Agent-to-Agent (A2A) Protocol](https://a2aproject.org/) is an open standard from the Linux Foundation that enables agent-to-agent communication and collaboration. You can publish NeMo Agent toolkit [workflows](../build-workflows/about-building-workflows.md) as A2A [agents](../components/agents/index.md) so they can be discovered and called by other A2A clients.
 
-This guide covers how to publish NAT workflows as A2A servers. For information on connecting to remote A2A agents, refer to [A2A Client](../build-workflows/a2a-client.md).
+This guide covers how to publish NeMo Agent toolkit workflows as A2A servers. For information on connecting to remote A2A agents, refer to [A2A Client](../build-workflows/a2a-client.md).
 
 :::{note}
 **Read First**: This guide assumes familiarity with A2A client concepts. Please read [A2A Client](../build-workflows/a2a-client.md) first for foundational understanding.
@@ -46,7 +46,7 @@ nat a2a serve --config_file examples/getting_started/simple_calculator/configs/c
 This command:
 1. Loads the workflow configuration
 2. Starts an A2A server on `http://localhost:10000` (default)
-3. Publishes the workflow as an A2A agent with functions as skills
+3. Publishes the workflow as an A2A agent with [functions](../build-workflows/functions-and-function-groups/functions.md) as skills
 4. Exposes an Agent Card at `http://localhost:10000/.well-known/agent-card.json`
 
 ### Server Options
@@ -105,16 +105,16 @@ nat info components -t front_end -q a2a
 
 ## How Workflows Map to A2A Agents
 
-When you publish a NAT workflow as an A2A agent:
+When you publish a workflow as an A2A agent:
 
 1. **Workflow becomes an Agent**: The entire workflow is exposed as a single A2A agent
-2. **Functions become Skills**: Each tool (function) in the workflow becomes an A2A skill
+2. **Functions become Skills**: Each [tool](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) (function) in the workflow becomes an A2A skill
 3. **Agent Card is auto-generated**: Metadata is derived from workflow configuration
 4. **Natural language interface**: The agent accepts natural language queries and delegates to appropriate functions
 
 ### Example Mapping
 
-**NAT Configuration:**
+**Workflow Configuration:**
 ```yaml
 function_groups:
   calculator:
@@ -154,7 +154,7 @@ export A2A_SERVER_URL=http://localhost:10000
 # Using curl
 curl $A2A_SERVER_URL/.well-known/agent-card.json | jq
 
-# Using NAT CLI
+# Using nat CLI
 nat a2a client discover --url $A2A_SERVER_URL
 ```
 
@@ -182,7 +182,7 @@ The product of 42 and 67 is 2814.0
 
 The following example demonstrates A2A server usage:
 
-- Math Assistant A2A Example - NAT workflow published as an A2A server. See `examples/A2A/math_assistant_a2a/README.md`.
+- Math Assistant A2A Example - NeMo Agent toolkit workflow published as an A2A server. See `examples/A2A/math_assistant_a2a/README.md`.
 
 ## Troubleshooting
 

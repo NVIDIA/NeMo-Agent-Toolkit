@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -325,7 +325,6 @@ Please try again, addressing the issues identified above.
         assert "Tips: Test tip" in feedback
 
 
-@pytest.mark.slow
 @pytest.mark.integration
 class TestSelfEvaluatingAgentWithNIM:
     """
@@ -372,7 +371,6 @@ class TestSelfEvaluatingAgentWithNIM:
 
         return temp_config
 
-    @pytest.mark.asyncio
     async def test_self_evaluation_workflow_loads_with_nim(self, nim_self_eval_config):
         """Test that the self-evaluation workflow can be loaded with NIM backend."""
         from nat.builder.workflow_builder import WorkflowBuilder
@@ -384,7 +382,6 @@ class TestSelfEvaluatingAgentWithNIM:
             workflow = builder.get_workflow()
             assert workflow is not None
 
-    @pytest.mark.asyncio
     async def test_self_evaluation_rethinking_with_nim(self, nim_self_eval_config):
         """
         Test the self-evaluation re-thinking mechanism with NIM.
@@ -411,7 +408,6 @@ class TestSelfEvaluatingAgentWithNIM:
             assert result is not None
             assert len(result) > 0, "Expected non-empty response from self-evaluating agent"
 
-    @pytest.mark.asyncio
     async def test_self_evaluation_complex_question_with_nim(self, nim_self_eval_config):
         """
         Test self-evaluation with a more complex multi-step question.

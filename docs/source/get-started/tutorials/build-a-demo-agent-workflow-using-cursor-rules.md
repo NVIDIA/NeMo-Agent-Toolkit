@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,11 +17,11 @@ limitations under the License.
 
 # Build a Demo Agent Workflow Using Cursor Rules for NVIDIA NeMo Agent Toolkit
 
-Learn how to use Cursor rules for NeMo Agent toolkit development to create and run a demo agent workflow.
+Learn how to use Cursor rules for NeMo Agent toolkit development to create and run a demo [agent](../../components/agents/index.md) [workflow](../../build-workflows/about-building-workflows.md).
 
 ## About Cursor Rules
 Cursor rules in NeMo Agent toolkit act as an intelligent development that offers structured assistance for developers at all experience levels. The key functionalities of Cursor rules are as follows:
-* Streamline workflow creation with intelligent prompts: You can build complete agent workflows, integrate functions, and configure tools through natural language commands. It allows you to transform complex development tasks into simple conversational interactions.
+* Streamline workflow creation with intelligent prompts: You can build complete agent workflows, integrate functions, and configure [tools](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) through natural language commands. It allows you to transform complex development tasks into simple conversational interactions.
 * Accelerate development workflows: You can use Cursor rules to develop NeMo Agent toolkit efficiently and consistently as it provides streamlined workflows with established and tested patterns. It also enhances productivity by minimizing routine tasks, while applying best practices for coding, documentation, and configuration.
 * Learn and understand NeMo Agent toolkit quickly and simply: For less experienced developers, Cursor rules provide an interactive approach to mastering NeMo Agent toolkit through contextual assistance and comprehensive examples for typical development workflows.
 * Standardization: Ensures uniform development standards, such as formatting, type annotations, and documentation requirements, across development teams and projects. Thus, decreasing code review overhead during submissions.
