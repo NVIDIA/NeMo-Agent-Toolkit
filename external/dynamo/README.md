@@ -929,8 +929,8 @@ Logs every routing decision made by the Thompson Sampling router.
 | `reuse_after` | Remaining reuse budget after this request |
 | `chosen_worker` | Integer ID of the selected worker |
 | `overlap_chosen` | KV cache overlap score (0.0-1.0) |
-| `decode_cost` | Estimated decode cost |
-| `prefill_cost` | Estimated prefill cost |
+| `decode_cost` | Estimated `decode` cost |
+| `prefill_cost` | Estimated `prefill` cost |
 | `iat_level` | Inter-arrival time hint (LOW, MEDIUM, or HIGH) |
 | `stickiness` | Worker affinity score |
 | `load_mod` | Load modifier applied |
