@@ -542,7 +542,7 @@ After identifying vulnerabilities through red teaming, you can add defense middl
 
 #### Required Dependencies
 
-NeMo Agent Toolkit has support to load local Huggingface models, but it is not installed by default. To install:
+NeMo Agent Toolkit has support to load local HuggingFace models, but it is not installed by default. To install:
 
 ```bash
 uv pip install -e '.[huggingface]'
