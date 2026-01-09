@@ -3756,16 +3756,16 @@ wheels = [
 
 [[package]]
 name = "langchain"
-version = "1.2.0"
+version = "1.2.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "langchain-core" },
     { name = "langgraph" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b1/12/3a74c22abdfddd877dfc2ee666d516f9132877fcd25eb4dd694835c59c79/langchain-1.2.0.tar.gz", hash = "sha256:a087d1e2b2969819e29a91a6d5f98302aafe31bd49ba377ecee3bf5a5dcfe14a", size = 536126, upload-time = "2025-12-15T14:51:42.24Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c6/f0/9b4a23b59fbf2c61d8590bb58ef1c7428132602cdceef0430dd82706b2e9/langchain-1.2.2.tar.gz", hash = "sha256:3f49321cfbf821b3f541aa8a504c35b48ef5e9518a948efa8eeb20cb16eb95a8", size = 546512, upload-time = "2026-01-07T22:53:54.861Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/23/00/4e3fa0d90f5a5c376ccb8ca983d0f0f7287783dfac48702e18f01d24673b/langchain-1.2.0-py3-none-any.whl", hash = "sha256:82f0d17aa4fbb11560b30e1e7d4aeb75e3ad71ce09b85c90ab208b181a24ffac", size = 102828, upload-time = "2025-12-15T14:51:40.802Z" },
+    { url = "https://files.pythonhosted.org/packages/75/51/671b998b8b828603d7c3af854295a73f08731ff06e15dd94cdb68db5ee82/langchain-1.2.2-py3-none-any.whl", hash = "sha256:1aed3d6a3d7180d0db9b8789f38ea1c4f8c883248e86501ed580e7f5c3ca939f", size = 105837, upload-time = "2026-01-07T22:53:53.944Z" },
 ]
 
 [[package]]
@@ -3873,16 +3873,16 @@ wheels = [
 
 [[package]]
 name = "langchain-nvidia-ai-endpoints"
-version = "1.0.0"
+version = "1.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
     { name = "filetype" },
     { name = "langchain-core" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/43/73/72119007a7b3b2e927788c4c115074d8d45facb5ebb05c1612e8ff66d90c/langchain_nvidia_ai_endpoints-1.0.0.tar.gz", hash = "sha256:985f5597775b9ec652daa57ee65ec8bf82306326ff3f2d85ca60b57f83e45c19", size = 43257, upload-time = "2025-11-22T01:06:19.152Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/09/20/4886b32848fc3bb26a47b5f345c7da1ac162f01a16002d241b45ccd9bbb5/langchain_nvidia_ai_endpoints-1.0.1.tar.gz", hash = "sha256:a8a0aae81059593132e76e6fd1b67683cc1e1f511565cea2223be921c100cf1c", size = 45495, upload-time = "2026-01-06T20:49:46.77Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/84/7e/c8bc0f93fd2efd44abae08fa05040d8ca093d0d46b2eaaa34695a6027b33/langchain_nvidia_ai_endpoints-1.0.0-py3-none-any.whl", hash = "sha256:e8dc1dcd44d436752ba1a25563c6937ec9cdec7613faa28aca7d0ab0b4e3d3bd", size = 46652, upload-time = "2025-11-22T01:06:18.143Z" },
+    { url = "https://files.pythonhosted.org/packages/1b/fe/0d2e0aeefb4bb4d0999cc7d563e526c0f04aee6fae4482d1c9c9ebc170a8/langchain_nvidia_ai_endpoints-1.0.1-py3-none-any.whl", hash = "sha256:c8f9ecaa41dab9bca09acdc0e770bd2f03021c6528685db2c956a02de3d07eae", size = 49167, upload-time = "2026-01-06T20:49:45.428Z" },
 ]
 
 [[package]]
@@ -5282,6 +5282,20 @@ requires-dist = [
 ]
 
 [[package]]
+name = "nat-math-assistant-a2a-protected"
+source = { editable = "examples/A2A/math_assistant_a2a_protected" }
+dependencies = [
+    { name = "nat-math-assistant-a2a" },
+    { name = "nat-simple-calculator" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nat-math-assistant-a2a", editable = "examples/A2A/math_assistant_a2a" },
+    { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
+]
+
+[[package]]
 name = "nat-multi-frameworks"
 source = { editable = "examples/frameworks/multi_frameworks" }
 dependencies = [
@@ -6047,6 +6061,7 @@ examples = [
     { name = "nat-email-phishing-analyzer" },
     { name = "nat-haystack-deep-research-agent" },
     { name = "nat-math-assistant-a2a" },
+    { name = "nat-math-assistant-a2a-protected" },
     { name = "nat-multi-frameworks" },
     { name = "nat-per-user-workflow" },
     { name = "nat-plot-charts" },
@@ -6224,6 +6239,7 @@ requires-dist = [
     { name = "nat-email-phishing-analyzer", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/email_phishing_analyzer" },
     { name = "nat-haystack-deep-research-agent", marker = "extra == 'examples'", editable = "examples/frameworks/haystack_deep_research_agent" },
     { name = "nat-math-assistant-a2a", marker = "extra == 'examples'", editable = "examples/A2A/math_assistant_a2a" },
+    { name = "nat-math-assistant-a2a-protected", marker = "extra == 'examples'", editable = "examples/A2A/math_assistant_a2a_protected" },
     { name = "nat-multi-frameworks", marker = "extra == 'examples'", editable = "examples/frameworks/multi_frameworks" },
     { name = "nat-per-user-workflow", marker = "extra == 'examples'", editable = "examples/front_ends/per_user_workflow" },
     { name = "nat-plot-charts", marker = "extra == 'examples'", editable = "examples/custom_functions/plot_charts" },
@@ -6524,13 +6540,13 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "langchain", specifier = "~=1.2.0" },
+    { name = "langchain", specifier = "~=1.2.2" },
     { name = "langchain-aws", specifier = "~=1.1.0" },
     { name = "langchain-classic", specifier = "~=1.0.1" },
     { name = "langchain-core", specifier = "~=1.2.6" },
     { name = "langchain-litellm", specifier = "~=0.3.5" },
     { name = "langchain-milvus", specifier = "~=0.3.3" },
-    { name = "langchain-nvidia-ai-endpoints", specifier = "~=1.0.0" },
+    { name = "langchain-nvidia-ai-endpoints", specifier = "~=1.0.1" },
     { name = "langchain-openai", specifier = "~=1.1.6" },
     { name = "langchain-tavily", specifier = "~=0.2.16" },
     { name = "langgraph", specifier = "~=1.0.5" },
@@ -6746,13 +6762,15 @@ dependencies = [
     { name = "nvidia-nat" },
     { name = "ruamel-yaml-clibz" },
     { name = "semantic-kernel" },
+    { name = "werkzeug" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "nvidia-nat", editable = "." },
     { name = "ruamel-yaml-clibz", specifier = "==0.3.5" },
-    { name = "semantic-kernel", specifier = "~=1.35" },
+    { name = "semantic-kernel", specifier = "~=1.36" },
+    { name = "werkzeug", specifier = "~=3.1.4" },
 ]
 
 [[package]]
@@ -6949,7 +6967,7 @@ wheels = [
 
 [[package]]
 name = "openapi-core"
-version = "0.19.5"
+version = "0.19.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "isodate" },
@@ -6959,12 +6977,11 @@ dependencies = [
     { name = "openapi-schema-validator" },
     { name = "openapi-spec-validator" },
     { name = "parse" },
-    { name = "typing-extensions" },
     { name = "werkzeug" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b1/35/1acaa5f2fcc6e54eded34a2ec74b479439c4e469fc4e8d0e803fda0234db/openapi_core-0.19.5.tar.gz", hash = "sha256:421e753da56c391704454e66afe4803a290108590ac8fa6f4a4487f4ec11f2d3", size = 103264, upload-time = "2025-03-20T20:17:28.193Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/34/b9/a769ae516c7f016465b2d9abc6e8dc4d5a1b54c57ab99b3cc95e9587955f/openapi_core-0.19.4.tar.gz", hash = "sha256:1150d9daa5e7b4cacfd7d7e097333dc89382d7d72703934128dcf8a1a4d0df49", size = 109095, upload-time = "2024-09-02T14:10:26.937Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/27/6f/83ead0e2e30a90445ee4fc0135f43741aebc30cca5b43f20968b603e30b6/openapi_core-0.19.5-py3-none-any.whl", hash = "sha256:ef7210e83a59394f46ce282639d8d26ad6fc8094aa904c9c16eb1bac8908911f", size = 106595, upload-time = "2025-03-20T20:17:26.77Z" },
+    { url = "https://files.pythonhosted.org/packages/d2/b3/4534adc8bac68a5d743caa786f1443545faed4d7cc7a5650b2d49255adfc/openapi_core-0.19.4-py3-none-any.whl", hash = "sha256:38e8347b6ebeafe8d3beb588214ecf0171874bb65411e9d4efd23cb011687201", size = 103714, upload-time = "2024-09-02T14:10:25.408Z" },
 ]
 
 [[package]]
@@ -11328,14 +11345,14 @@ wheels = [
 
 [[package]]
 name = "werkzeug"
-version = "3.1.1"
+version = "3.1.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "markupsafe" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/32/af/d4502dc713b4ccea7175d764718d5183caf8d0867a4f0190d5d4a45cea49/werkzeug-3.1.1.tar.gz", hash = "sha256:8cd39dfbdfc1e051965f156163e2974e52c210f130810e9ad36858f0fd3edad4", size = 806453, upload-time = "2024-11-01T16:40:45.462Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5a/70/1469ef1d3542ae7c2c7b72bd5e3a4e6ee69d7978fa8a3af05a38eca5becf/werkzeug-3.1.5.tar.gz", hash = "sha256:6a548b0e88955dd07ccb25539d7d0cc97417ee9e179677d22c7041c8f078ce67", size = 864754, upload-time = "2026-01-08T17:49:23.247Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ee/ea/c67e1dee1ba208ed22c06d1d547ae5e293374bfc43e0eb0ef5e262b68561/werkzeug-3.1.1-py3-none-any.whl", hash = "sha256:a71124d1ef06008baafa3d266c02f56e1836a5984afd6dd6c9230669d60d9fb5", size = 224371, upload-time = "2024-11-01T16:40:43.994Z" },
+    { url = "https://files.pythonhosted.org/packages/ad/e4/8d97cca767bcc1be76d16fb76951608305561c6e056811587f36cb1316a8/werkzeug-3.1.5-py3-none-any.whl", hash = "sha256:5111e36e91086ece91f93268bb39b4a35c1e6f1feac762c9c822ded0a4e322dc", size = 225025, upload-time = "2026-01-08T17:49:21.859Z" },
 ]
 
 [[package]]

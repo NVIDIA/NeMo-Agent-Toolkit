@@ -179,4 +179,5 @@ curl http://localhost:11000/.well-known/agent-card.json | jq
 
 ## Related Examples
 
-- [Math Assistant A2A](../math_assistant_a2a/) - NeMo Agent toolkit A2A with hybrid tools
+- [Math Assistant A2A](../math_assistant_a2a/) - NeMo Agent toolkit A2A with hybrid tools (unprotected)
+- [OAuth2 Protected Math Assistant A2A](../math_assistant_a2a_protected/) - OAuth2-protected A2A example
