@@ -49,11 +49,13 @@ Each agent example contains its own installation and usage instructions. Navigat
 - **Tool Calling Agent**: See [tool_calling/README.md](tool_calling/README.md) for direct tool invocation agent
 - **Mixture of Agents**: See [mixture_of_agents/README.md](mixture_of_agents/README.md) for multi-agent orchestration
 - **ReWOO Agent**: See [rewoo/README.md](rewoo/README.md) for planning-based agent workflow
+- **Auto Memory Wrapper Agent**: See [auto_memory_wrapper/README.md](auto_memory_wrapper/README.md) for the automatic memory wrapper agent workflow
 
 ## Learn More
 
 For a deeper dive into the AI Agents utilized in the examples, refer to the component documentation:
+- [Automatic Memory Wrapper](../../docs/source/components/agents/auto-memory-wrapper/index.md)
 - [ReAct Agent](../../docs/source/components/agents/react-agent/index.md)
 - [Reasoning Agent](../../docs/source/components/agents/reasoning-agent/index.md)
-- [Tool Calling Agent](../../docs/source/components/agents/tool-calling-agent/index.md)
 - [ReWOO Agent](../../docs/source/components/agents/rewoo-agent/index.md)
+- [Tool Calling Agent](../../docs/source/components/agents/tool-calling-agent/index.md)
