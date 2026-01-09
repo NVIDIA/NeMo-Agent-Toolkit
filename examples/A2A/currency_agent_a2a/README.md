@@ -84,7 +84,7 @@ cd samples/python/agents/langgraph
 echo "API_KEY=$OPENAI_API_KEY" > .env
 echo "model_source=openai" >> .env
 echo "TOOL_LLM_URL=https://api.openai.com/v1" >> .env
-echo "TOOL_LLM_NAME=gpt-3.5-turbo" >> .env  # Mini model
+echo "TOOL_LLM_NAME=gpt-3.5-turbo" >> .env
 
 # Step 4: Run the currency agent on port 11000
 uv run app --port 11000
