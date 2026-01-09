@@ -66,6 +66,7 @@ from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateRequest
 from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateResponse
 from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateStatusResponse
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
+from nat.front_ends.fastapi.async_job import run_generation
 from nat.front_ends.fastapi.message_handler import WebSocketMessageHandler
 from nat.front_ends.fastapi.response_helpers import generate_single_response
 from nat.front_ends.fastapi.response_helpers import generate_streaming_response_as_str
@@ -90,28 +91,7 @@ except ImportError:
     JobStatus = None
     JobStore = None
 
-async def run_generation(scheduler_address: str,
-                         db_url: str,
-                         config_file_path: str,
-                         job_id: str,
-                         payload: typing.Any):
-    """Background task to run the workflow."""
-    job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
-    try:
-        async with load_workflow(config_file_path) as local_session_manager:
-            async with local_session_manager.session() as session:
-                result = await generate_single_response(payload,
-                                                        session,
-                                                        result_type=session.workflow.single_output_schema)
 
-        del local_session_manager
-        await job_store.update_status(job_id, JobStatus.SUCCESS, output=result)
-    except Exception as e:
-        logger.exception("Error in async job %s", job_id)
-        await job_store.update_status(job_id, JobStatus.FAILURE, error=str(e))
-    
-    # Explicitly release the resources held by the job store
-    del job_store
 
 class FastApiFrontEndPluginWorkerBase(ABC):
 
