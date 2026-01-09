@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import logging
 import os
 import sys
@@ -28,6 +29,7 @@ from nat.front_ends.fastapi.main import get_app
 from nat.front_ends.fastapi.utils import get_class_name
 from nat.utils.io.yaml_tools import yaml_dump
 from nat.utils.log_levels import LOG_LEVELS
+from nat.utils.log_utils import LOG_DATE_FORMAT
 
 if (typing.TYPE_CHECKING):
     from nat.data_models.config import Config
@@ -81,6 +83,7 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
         os.setsid()
 
     async def run(self):
+        log_level = logger.getEffectiveLevel()
 
         # Write the entire config to a temporary file
         with tempfile.NamedTemporaryFile(mode="w", prefix="nat_config", suffix=".yml", delete=False) as config_file:
@@ -136,7 +139,6 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
 
                 # If self.front_end_config.db_url is None, then we need to get the actual url from the engine
                 db_url = str(db_engine.url)
-                log_level = logger.getEffectiveLevel()
                 await self._submit_cleanup_task(scheduler_address=self._scheduler_address,
                                                 db_url=db_url,
                                                 log_level=log_level)
@@ -179,6 +181,12 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
                     # For non-macOS platforms
                     event_loop_policy = "auto"
 
+                # Start with the default uvicorn logging config, but override with our desired format
+                log_config = copy.deepcopy(uvicorn.config.LOGGING_CONFIG)
+                for formatter in log_config.get("formatters", {}).values():
+                    formatter["fmt"] = f"%(asctime)s - {formatter['fmt']}"
+                    formatter["datefmt"] = LOG_DATE_FORMAT
+
                 uvicorn.run("nat.front_ends.fastapi.main:get_app",
                             host=self.front_end_config.host,
                             port=self.front_end_config.port,
@@ -186,7 +194,9 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
                             reload=self.front_end_config.reload,
                             factory=True,
                             reload_excludes=reload_excludes,
-                            loop=event_loop_policy)
+                            loop=event_loop_policy,
+                            log_level=log_level,
+                            log_config=log_config)
 
             else:
                 app = get_app()
