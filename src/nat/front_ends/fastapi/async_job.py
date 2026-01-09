@@ -66,6 +66,7 @@ async def run_generation(configure_logging: bool,
     job_store = None
     try:
         job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
+        await job_store.update_status(job_id, JobStatus.RUNNING)
         async with load_workflow(config_file_path) as local_session_manager:
             async with local_session_manager.session() as session:
                 result = await generate_single_response(payload,
@@ -73,6 +74,10 @@ async def run_generation(configure_logging: bool,
                                                         result_type=session.workflow.single_output_schema)
 
         await job_store.update_status(job_id, JobStatus.SUCCESS, output=result)
+    except asyncio.CancelledError:
+        logger.info("Async job %s cancelled", job_id)
+        if job_store is not None:
+            await job_store.update_status(job_id, JobStatus.INTERRUPTED, error="cancelled")
     except Exception as e:
         logger.exception("Error in async job %s", job_id)
         if job_store is not None:
@@ -106,14 +111,18 @@ async def periodic_cleanup(*,
 
     logger = _configure_logging(configure_logging, log_level)
 
-    job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
+    job_store = None
 
     logger.info("Starting periodic cleanup of expired jobs every %d seconds", sleep_time_sec)
     while True:
         await asyncio.sleep(sleep_time_sec)
 
         try:
+            if job_store is None:
+                job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
+
             num_expired = await job_store.cleanup_expired_jobs()
             logger.info("Expired jobs cleaned up: %d", num_expired)
         except:  # noqa: E722
             logger.exception("Error during job cleanup")
+            job_store = None  # Reset job store to attempt re-creation on next iteration
