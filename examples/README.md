@@ -125,7 +125,7 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 - **[`multi_frameworks`](frameworks/multi_frameworks/README.md)**: Supervisor agent coordinating LangChain/LangGraph, LlamaIndex, and Haystack agents for research, RAG, and chitchat tasks
 - **[`semantic_kernel_demo`](frameworks/semantic_kernel_demo/README.md)**: Multi-agent travel planning system using Microsoft Semantic Kernel with specialized agents for itinerary creation, budget management, and report formatting, including long-term memory for user preferences
 - **[`strands_demo`](frameworks/strands_demo/README.md)**: A minimal example showcasing a Strands agent that answers questions about Strands documentation using a curated URL knowledge base and the native Strands `http_request` tool
-- **[`strands_demo/bedrock_agentcore`](frameworks/strands_demo/bedrock_agentcore/README.md)**: Deploying NVIDIA NeMo Agent toolkit with Strands on AWS AgentCore, including OpenTelemetry instrumentation for monitoring
+- **[`strands_demo - bedrock_agentcore`](frameworks/strands_demo/bedrock_agentcore/README.md)**: Deploying NVIDIA NeMo Agent toolkit with Strands on AWS AgentCore, including OpenTelemetry instrumentation for monitoring
 
 ### Front Ends
 - **[`simple_auth`](front_ends/simple_auth/README.md)**: Simple example demonstrating authentication and authorization using OAuth 2.0 Authorization Code Flow
@@ -177,7 +177,7 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 
 ### Dynamo Integration
 - **[`react_benchmark_agent`](dynamo_integration/react_benchmark_agent/README.md)**: Walks through the complete process of running decision-only evaluations using the `react_benchmark_agent`: downloading data, configuring evaluations, running experiments, and analyzing results.
-- **[`react_benchmark_agent/src/react_benchmark_agent`](dynamo_integration/react_benchmark_agent/src/react_benchmark_agent/README.md)**: Implementation guide that maps React Benchmark Agent configuration files to the underlying components, evaluators, and workflows.
+- **[`react_benchmark_agent - src - react_benchmark_agent`](dynamo_integration/react_benchmark_agent/src/react_benchmark_agent/README.md)**: Implementation guide that maps React Benchmark Agent configuration files to the underlying components, evaluators, and workflows.
 
 _See the [Dynamo Integration README](dynamo_integration/README.md) for additional information_
 
