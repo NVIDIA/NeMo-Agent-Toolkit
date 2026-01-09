@@ -106,20 +106,26 @@ function get_num_proc() {
 
 function set_versions() {
    # Update internal dependencies to the current git tag
-   set +e
-   local SETUPTOOLS_SCM_OUTPUT=$(python -m setuptools_scm)
-   local SETUPTOOLS_SCM_RESULT=$?
-   set -e
 
-   if [[ ${SETUPTOOLS_SCM_RESULT} -ne 0 ]]; then
-       rapids-logger "Error, setuptools_scm failed to determine the version: ${SETUPTOOLS_SCM_OUTPUT}"
-       exit ${SETUPTOOLS_SCM_RESULT}
+   if [[ "${CI_CRON_NIGHTLY}" == "1" || "${IS_TAGGED}" == "1" ]]; then
+      # For tagged releases and nightly builds, use the git tag as the version as-is
+      NAT_VERSION="${GIT_TAG}"
+   else
+      set +e
+      NAT_VERSION=$(python -m setuptools_scm)
+      local SETUPTOOLS_SCM_RESULT=$?
+      set -e
+
+      if [[ ${SETUPTOOLS_SCM_RESULT} -ne 0 ]]; then
+         rapids-logger "Error, setuptools_scm failed to determine the version: ${NAT_VERSION}"
+         exit ${SETUPTOOLS_SCM_RESULT}
+      fi
    fi
 
-   export SETUPTOOLS_SCM_PRETEND_VERSION="${SETUPTOOLS_SCM_OUTPUT}"
+   export SETUPTOOLS_SCM_PRETEND_VERSION="${NAT_VERSION}"
    export USE_FULL_VERSION="1"
 
-   SKIP_MD_UPDATE=1 ${PROJECT_ROOT}/ci/release/update-version.sh "${SETUPTOOLS_SCM_OUTPUT}"
+   SKIP_MD_UPDATE=1 ${PROJECT_ROOT}/ci/release/update-version.sh "${NAT_VERSION}"
 }
 
 function build_wheel() {
