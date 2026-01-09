@@ -162,7 +162,16 @@ async def _validate_single_llm(
                 continue  # Try next framework
 
         if llm is None:
-            return ("warning", "Could not instantiate LLM with any framework")
+            # Log all attempted frameworks for debugging
+            attempted = [f.value for f in LLMFrameworkEnum]
+            error_msg = (
+                f"Could not instantiate LLM '{llm_name}' with any known framework. "
+                f"Attempted: {', '.join(attempted)}. "
+                f"If this LLM uses a custom framework, this warning can be safely ignored. "
+                f"Otherwise, verify the LLM type '{llm_config.type}' is supported and configured correctly."
+            )
+            logger.warning("LLM '%s' - Framework instantiation failed: %s", llm_name, error_msg)
+            return ("warning", error_msg)
 
         # Test with minimal prompt - this will hit the endpoint
         await asyncio.wait_for(llm.ainvoke(VALIDATION_PROMPT), timeout=VALIDATION_TIMEOUT_SECONDS)
