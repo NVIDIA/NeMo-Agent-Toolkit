@@ -173,7 +173,7 @@ reviews:
           This is only necessary if the example added contains a pyproject.toml file (e.g. it is installable as a package)
         - Any added examples should be added to the `examples` list in the pyproject.toml file.
         - Any removed examples should be removed from the `examples` list in the pyproject.toml file.
-        - All added examples must have a `nat_` prefix. If the example does not have a `nat_` prefix, it should be added.
+        - All added examples must have a `nat_` prefix within the `uv.sources` name. The path to the example does NOT need to have this prefix. If the example does not have a `nat_` prefix, it should be added.
 
   auto_apply_labels: true
   suggested_labels: true
