@@ -684,6 +684,17 @@ Prefix headers help the router:
 - **Track prefix state** for optimal worker selection
 - **Improve throughput** through intelligent batching
 
+### KV overlap routing: requirements and failure mode
+
+Prefix headers do not include KV cache overlap. The router computes KV cache overlap scores by querying the backend through `dynamo.llm.KvIndexer`.
+
+If overlap scores are unavailable, the router cannot account for KV cache match when routing and will behave like a non-KV-aware router for that signal.
+
+This can happen in the following configuration:
+- You are using a Dynamo image or build that does not include `dynamo.llm` KV routing classes. In this case, the router logs a warning that `dynamo.llm` is not available and overlap scores will be empty.
+
+To confirm overlap scores are missing, check `router_metrics.csv` and verify that `overlap_chosen` is always `0.000000`.
+
 ### Configuration
 
 Use the `dynamo` LLM type in your eval config. Prefix headers are sent by default:

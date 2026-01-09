@@ -32,19 +32,29 @@ except ImportError:
     logger_init.warning("dynamo.llm KV classes not available, using fallback implementations")
 
     class OverlapScores:
-        """Fallback: KV cache overlap scores between a request and workers."""
+        """Fallback: KV cache overlap scores between a request and workers.
+
+        This fallback is used when `dynamo.llm` is unavailable. It always returns empty
+        scores, causing the router to fall back to round-robin selection without
+        considering KV cache overlap.
+        """
 
         def __init__(self, scores: dict[int, float] | None = None):
             self.scores = scores if scores is not None else {}
 
     class KvIndexer:
-        """Fallback: KV cache indexer for finding overlap between requests and workers."""
+        """Fallback: KV cache indexer for finding overlap between requests and workers.
+
+        This fallback is used when `dynamo.llm` is unavailable. The
+        `find_matches_for_request` method always returns empty overlap scores,
+        effectively disabling KV-aware routing.
+        """
 
         def __init__(self, engine: Any, block_size: int):
             self.engine = engine
             self.block_size = block_size
 
-        async def find_matches_for_request(self, tokens: list[int], min_overlap: int) -> OverlapScores:
+        async def find_matches_for_request(self, tokens: list[int], min_overlap: int) -> OverlapScores:  # noqa: ARG002
             """Find overlap scores for each worker. Returns empty scores (round-robin fallback)."""
             return OverlapScores({})
 
