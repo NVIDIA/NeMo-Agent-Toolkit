@@ -293,10 +293,8 @@ class WorkloadAwareRouter:
 
         self._initialize_bandits()
         self._initialize_contextual()
-        logger.info(
-            "WorkloadAwareRouter initialized with %d backend worker(s)",
-            len(list(self.engine_client.instance_ids()))
-        )
+        logger.info("WorkloadAwareRouter initialized with %d backend worker(s)",
+                    len(list(self.engine_client.instance_ids())))
 
         # Initialize router CSV logging (no cap)
         self._router_csv_lock = threading.Lock()
