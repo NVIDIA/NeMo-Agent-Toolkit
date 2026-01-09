@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import argparse
 import asyncio
 import csv
@@ -314,10 +313,8 @@ class WorkloadAwareRouter:
 
         timeout_s = float(os.environ.get("DYNAMO_ROUTER_WAIT_FOR_WORKERS_TIMEOUT_S", "300"))
         if not math.isfinite(timeout_s) or timeout_s <= 0:
-            raise ValueError(
-                "DYNAMO_ROUTER_WAIT_FOR_WORKERS_TIMEOUT_S must be a finite number > 0 "
-                f"(got {timeout_s!r})"
-            )
+            raise ValueError("DYNAMO_ROUTER_WAIT_FOR_WORKERS_TIMEOUT_S must be a finite number > 0 "
+                             f"(got {timeout_s!r})")
         deadline = time.monotonic() + timeout_s
         backoff_s = 0.5
 
@@ -334,15 +331,14 @@ class WorkloadAwareRouter:
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
                     raise TimeoutError(
-                        f"Timed out after {timeout_s}s waiting for >= {min_workers} backend worker(s) to register"
-                    )
+                        f"Timed out after {timeout_s}s waiting for >= {min_workers} backend worker(s) to register")
 
                 try:
                     await asyncio.wait_for(
                         self.engine_client.wait_for_instances(),
                         timeout=min(remaining, 10.0),
                     )
-                except (asyncio.TimeoutError, TimeoutError):
+                except TimeoutError:
                     # We'll re-check instance IDs and retry with backoff until the global deadline.
                     pass
 
