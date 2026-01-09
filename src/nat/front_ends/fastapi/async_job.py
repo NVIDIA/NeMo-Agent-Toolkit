@@ -20,8 +20,19 @@ import asyncio
 import logging
 import typing
 
+def _configure_logging(configure_logging: bool, log_level: int) -> logging.Logger:
+    if configure_logging:
+        logging.basicConfig(level=log_level)
+    
+    return logging.getLogger(__name__)
 
-async def run_generation(scheduler_address: str, db_url: str, config_file_path: str, job_id: str, payload: typing.Any):
+async def run_generation(configure_logging: bool,
+                         log_level: int,
+                         scheduler_address: str,
+                         db_url: str,
+                         config_file_path: str,
+                         job_id: str,
+                         payload: typing.Any):
     """
     Background async task to run the workflow.
     """
@@ -30,8 +41,7 @@ async def run_generation(scheduler_address: str, db_url: str, config_file_path: 
     from nat.front_ends.fastapi.response_helpers import generate_single_response
     from nat.runtime.loader import load_workflow
 
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger(__name__)
+    logger = _configure_logging(configure_logging, log_level)
 
     job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
     try:
@@ -52,13 +62,14 @@ async def run_generation(scheduler_address: str, db_url: str, config_file_path: 
     del job_store
 
 
-async def periodic_cleanup(scheduler_address: str,
+async def periodic_cleanup(*, scheduler_address: str,
                            db_url: str,
                            sleep_time_sec: int = 300,
+                           configure_logging: bool = True,
                            log_level: int = logging.INFO):
     from nat.front_ends.fastapi.job_store import JobStore
-    logging.basicConfig(level=log_level)
-    logger = logging.getLogger(__name__)
+
+    logger = _configure_logging(configure_logging, log_level)
 
     job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
 

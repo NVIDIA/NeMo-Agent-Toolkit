@@ -107,6 +107,8 @@ class FastApiFrontEndPluginWorkerBase(ABC):
         self._scheduler_address = os.environ.get("NAT_DASK_SCHEDULER_ADDRESS")
         self._db_url = os.environ.get("NAT_JOB_STORE_DB_URL")
         self._config_file_path = get_config_file_path()
+        self._use_dask_threads = os.environ.get("NAT_USE_DASK_THREADS", "0") == "1"
+        self._log_level = int(os.environ.get("NAT_LOG_LEVEL", logging.INFO))
 
         if self._scheduler_address is not None:
             if not _DASK_AVAILABLE:
@@ -923,6 +925,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         job_fn=run_generation,
                         sync_timeout=request.sync_timeout,
                         job_args=[
+                            not self._use_dask_threads,
+                            self._log_level,
                             self._scheduler_address,
                             self._db_url,
                             self._config_file_path,

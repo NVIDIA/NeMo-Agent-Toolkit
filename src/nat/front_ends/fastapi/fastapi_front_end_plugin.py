@@ -44,6 +44,7 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
         self._cluster = None
         self._periodic_cleanup_future = None
         self._scheduler_address = None
+        self._use_dask_threads = False
 
     def get_worker_class(self) -> type[FastApiFrontEndPluginWorkerBase]:
         from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
@@ -67,7 +68,8 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
             self._periodic_cleanup_future = client.submit(periodic_cleanup,
                                                           scheduler_address=self._scheduler_address,
                                                           db_url=db_url,
-                                                          log_level=log_level)
+                                                          log_level=log_level,
+                                                          configure_logging=not self._use_dask_threads)
 
     @staticmethod
     def _setup_worker():
@@ -100,17 +102,17 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
 
                     from dask.distributed import LocalCluster
 
-                    use_threads = self.front_end_config.dask_workers == 'threads'
+                    self._use_dask_threads = self.front_end_config.dask_workers == 'threads'
 
                     # set n_workers to max_running_async_jobs + 1 to allow for one worker to handle the cleanup task
-                    self._cluster = LocalCluster(processes=not use_threads,
+                    self._cluster = LocalCluster(processes=not self._use_dask_threads,
                                                  silence_logs=dask_log_level,
                                                  protocol="tcp",
                                                  n_workers=self.front_end_config.max_running_async_jobs + 1)
 
                     self._scheduler_address = self._cluster.scheduler.address
 
-                    if not use_threads and sys.platform != "win32":
+                    if not self._use_dask_threads and sys.platform != "win32":
                         with self.blocking_client(self._scheduler_address) as client:
                             # Client.run submits a function to be run on each worker
                             client.run(self._setup_worker)
@@ -134,15 +136,18 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
 
                 # If self.front_end_config.db_url is None, then we need to get the actual url from the engine
                 db_url = str(db_engine.url)
+                log_level = logger.getEffectiveLevel()
                 await self._submit_cleanup_task(scheduler_address=self._scheduler_address,
                                                 db_url=db_url,
-                                                log_level=dask_log_level)
+                                                log_level=log_level)
 
                 # Set environment variabls such that the worker subprocesses will know how to connect to dask and to
                 # the database
                 os.environ.update({
                     "NAT_DASK_SCHEDULER_ADDRESS": self._scheduler_address,
                     "NAT_JOB_STORE_DB_URL": db_url,
+                    "NAT_USE_DASK_THREADS": str(int(self._use_dask_threads)),
+                    "NAT_LOG_LEVEL": str(log_level),
                 })
 
             # Write to YAML file
