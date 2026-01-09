@@ -158,6 +158,15 @@ reviews:
         - Do NOT add `@pytest.mark.asyncio` to any test. Async tests are automatically detected and run by the
           async runner - the decorator is unnecessary clutter.
 
+    - path: "pyproject.toml"
+      instructions: >-
+        # pyproject.toml example section review instructions
+        - Ensure that for any examples that are added or removed, the examples list in the pyproject.toml file is updated accordingly.
+          This is only necessary if the example added contains a pyproject.toml file (e.g. it is installable as a package)
+        - Any added examples should be added to the `examples` list in the pyproject.toml file.
+        - Any removed examples should be removed from the `examples` list in the pyproject.toml file.
+        - All added examples must have a `nat_` prefix. If the example does not have a `nat_` prefix, it should be added.
+
   auto_apply_labels: true
   suggested_labels: true
   labeling_instructions:
