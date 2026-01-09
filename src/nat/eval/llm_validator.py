@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 LLM Endpoint Validator for NeMo Agent Toolkit evaluation.
 
@@ -76,9 +75,8 @@ def _is_404_error(exception: Exception) -> bool:
         return True
 
     # Check for model-specific not found errors
-    if "model" in exception_str and any(
-        phrase in exception_str for phrase in ["not found", "does not exist", "not deployed", "not available"]
-    ):
+    if "model" in exception_str and any(phrase in exception_str
+                                        for phrase in ["not found", "does not exist", "not deployed", "not available"]):
         return True
 
     return False
@@ -132,9 +130,8 @@ def _truncate_error_message(message: str, max_length: int = MAX_ERROR_MESSAGE_LE
     return f"{message[:keep_length]}{separator}{message[-keep_length:]}"
 
 
-async def _validate_single_llm(
-    builder: WorkflowBuilder, llm_name: str, llm_config: LLMBaseConfig
-) -> tuple[str | None, str | None]:
+async def _validate_single_llm(builder: WorkflowBuilder, llm_name: str,
+                               llm_config: LLMBaseConfig) -> tuple[str | None, str | None]:
     """
     Validate a single LLM endpoint.
 
@@ -169,12 +166,10 @@ async def _validate_single_llm(
         if llm is None:
             # Log all attempted frameworks for debugging
             attempted = [f.value for f in LLMFrameworkEnum]
-            error_msg = (
-                f"Could not instantiate LLM '{llm_name}' with any known framework. "
-                f"Attempted: {', '.join(attempted)}. "
-                f"If this LLM uses a custom framework, this warning can be safely ignored. "
-                f"Otherwise, verify the LLM type '{llm_config.type}' is supported and configured correctly."
-            )
+            error_msg = (f"Could not instantiate LLM '{llm_name}' with any known framework. "
+                         f"Attempted: {', '.join(attempted)}. "
+                         f"If this LLM uses a custom framework, this warning can be safely ignored. "
+                         f"Otherwise, verify the LLM type '{llm_config.type}' is supported and configured correctly.")
             logger.warning("LLM '%s' - Framework instantiation failed: %s", llm_name, error_msg)
             return ("warning", error_msg)
 
@@ -199,33 +194,29 @@ async def _validate_single_llm(
         if _is_404_error(invoke_error):
             base_url, model_name = _get_llm_endpoint_info(llm_config)
 
-            error_msg = (
-                f"LLM '{llm_name}' validation failed: Model not found (404).\n"
-                f"\nThis typically means:\n"
-                f"  1. The model has not been deployed yet\n"
-                f"  2. The model name is incorrect\n"
-                f"  3. A training job was canceled and the model was never deployed\n"
-                f"\nLLM Configuration:\n"
-                f"  Type: {str(llm_config.type)}\n"
-                f"  Endpoint: {base_url or 'N/A'}\n"
-                f"  Model: {model_name or 'N/A'}\n"
-                f"\nACTION REQUIRED:\n"
-                f"  1. Verify the model is deployed (check your deployment service)\n"
-                f"  2. If using NeMo Customizer, ensure training completed successfully\n"
-                f"  3. Check model deployment status in your platform\n"
-                f"  4. Verify the model name matches the deployed model\n"
-                f"\nOriginal error: {_truncate_error_message(str(invoke_error))}"
-            )
+            error_msg = (f"LLM '{llm_name}' validation failed: Model not found (404).\n"
+                         f"\nThis typically means:\n"
+                         f"  1. The model has not been deployed yet\n"
+                         f"  2. The model name is incorrect\n"
+                         f"  3. A training job was canceled and the model was never deployed\n"
+                         f"\nLLM Configuration:\n"
+                         f"  Type: {str(llm_config.type)}\n"
+                         f"  Endpoint: {base_url or 'N/A'}\n"
+                         f"  Model: {model_name or 'N/A'}\n"
+                         f"\nACTION REQUIRED:\n"
+                         f"  1. Verify the model is deployed (check your deployment service)\n"
+                         f"  2. If using NeMo Customizer, ensure training completed successfully\n"
+                         f"  3. Check model deployment status in your platform\n"
+                         f"  4. Verify the model name matches the deployed model\n"
+                         f"\nOriginal error: {_truncate_error_message(str(invoke_error))}")
             logger.exception(error_msg)
             return ("404", error_msg)
 
         else:
             # Non-404 error - might be auth, rate limit, temporary issue, etc.
-            error_msg = (
-                f"Could not fully validate LLM '{llm_name}': {_truncate_error_message(str(invoke_error))}. "
-                f"This might be due to auth requirements, rate limits, or temporary issues. "
-                f"Evaluation will proceed, but may fail if the LLM is truly inaccessible."
-            )
+            error_msg = (f"Could not fully validate LLM '{llm_name}': {_truncate_error_message(str(invoke_error))}. "
+                         f"This might be due to auth requirements, rate limits, or temporary issues. "
+                         f"Evaluation will proceed, but may fail if the LLM is truly inaccessible.")
             logger.exception(error_msg)
             return ("warning", _truncate_error_message(error_msg))
 
@@ -262,9 +253,7 @@ async def validate_llm_endpoints(config: "Config") -> None:
 
     if not isinstance(config.llms, dict):
         raise ValueError(
-            f"Config.llms must be a dict, got {type(config.llms).__name__}. "
-            "Cannot validate LLM endpoints."
-        )
+            f"Config.llms must be a dict, got {type(config.llms).__name__}. Cannot validate LLM endpoints.")
 
     if not config.llms:
         logger.info("No LLMs configured - skipping endpoint validation")
@@ -280,7 +269,7 @@ async def validate_llm_endpoints(config: "Config") -> None:
 
         # Validate in batches to respect rate limits
         for batch_start in range(0, len(llm_items), CONCURRENT_VALIDATION_BATCH_SIZE):
-            batch = llm_items[batch_start : batch_start + CONCURRENT_VALIDATION_BATCH_SIZE]
+            batch = llm_items[batch_start:batch_start + CONCURRENT_VALIDATION_BATCH_SIZE]
 
             # Validate batch in parallel
             validation_tasks = [_validate_single_llm(builder, llm_name, llm_config) for llm_name, llm_config in batch]
@@ -333,12 +322,10 @@ async def validate_llm_endpoints(config: "Config") -> None:
             len(failed_llms),
         )
 
-        raise RuntimeError(
-            f"LLM endpoint validation failed for {len(failed_llms)} LLM(s) with 404 errors:\n\n"
-            f"{error_summary}\n\n"
-            f"Evaluation cannot proceed with undeployed models. "
-            f"Please resolve the deployment issues above before retrying."
-        )
+        raise RuntimeError(f"LLM endpoint validation failed for {len(failed_llms)} LLM(s) with 404 errors:\n\n"
+                           f"{error_summary}\n\n"
+                           f"Evaluation cannot proceed with undeployed models. "
+                           f"Please resolve the deployment issues above before retrying.")
 
     # Log success metrics
     logger.info(

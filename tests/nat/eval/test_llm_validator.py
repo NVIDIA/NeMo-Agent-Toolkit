@@ -12,18 +12,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Tests for LLM endpoint validation before evaluation."""
 
 import asyncio
+from unittest.mock import AsyncMock
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from nat.data_models.config import Config
-from nat.llm.openai_llm import OpenAIModelConfig
-from nat.llm.nim_llm import NIMModelConfig
+from nat.eval.llm_validator import _is_404_error
+from nat.eval.llm_validator import validate_llm_endpoints
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
-from nat.eval.llm_validator import validate_llm_endpoints, _is_404_error, _validate_single_llm
+from nat.llm.nim_llm import NIMModelConfig
+from nat.llm.openai_llm import OpenAIModelConfig
 
 
 class TestLLMEndpointValidation:
@@ -33,12 +35,7 @@ class TestLLMEndpointValidation:
     def config_with_openai_llm(self):
         """Create config with OpenAI-compatible LLM."""
         config = Config()
-        config.llms = {
-            "test_llm": OpenAIModelConfig(
-                model_name="test-model",
-                base_url="http://localhost:8000/v1"
-            )
-        }
+        config.llms = {"test_llm": OpenAIModelConfig(model_name="test-model", base_url="http://localhost:8000/v1")}
         return config
 
     @pytest.fixture
@@ -46,10 +43,7 @@ class TestLLMEndpointValidation:
         """Create config with NIM LLM."""
         config = Config()
         config.llms = {
-            "nim_llm": NIMModelConfig(
-                model_name="meta/llama-3.1-8b-instruct",
-                base_url="http://localhost:8000/v1"
-            )
+            "nim_llm": NIMModelConfig(model_name="meta/llama-3.1-8b-instruct", base_url="http://localhost:8000/v1")
         }
         return config
 
@@ -57,12 +51,7 @@ class TestLLMEndpointValidation:
     def config_with_bedrock_llm(self):
         """Create config with AWS Bedrock LLM."""
         config = Config()
-        config.llms = {
-            "bedrock_llm": AWSBedrockModelConfig(
-                model_name="anthropic.claude-v2",
-                region_name="us-east-1"
-            )
-        }
+        config.llms = {"bedrock_llm": AWSBedrockModelConfig(model_name="anthropic.claude-v2", region_name="us-east-1")}
         return config
 
     @pytest.fixture
@@ -70,14 +59,8 @@ class TestLLMEndpointValidation:
         """Create config with multiple LLMs of different types."""
         config = Config()
         config.llms = {
-            "openai_llm": OpenAIModelConfig(
-                model_name="gpt-4",
-                base_url="http://localhost:8000/v1"
-            ),
-            "nim_llm": NIMModelConfig(
-                model_name="llama-3.1-8b-instruct",
-                base_url="http://localhost:8001/v1"
-            )
+            "openai_llm": OpenAIModelConfig(model_name="gpt-4", base_url="http://localhost:8000/v1"),
+            "nim_llm": NIMModelConfig(model_name="llama-3.1-8b-instruct", base_url="http://localhost:8001/v1")
         }
         return config
 
@@ -245,6 +228,7 @@ class TestLLMEndpointValidation:
     @patch("nat.eval.llm_validator.WorkflowBuilder")
     async def test_validation_collects_all_404_errors(self, mock_builder_class, config_with_multiple_llms):
         """Test that validation collects all 404 errors before failing."""
+
         # Create actual NotFoundError class
         class NotFoundError(Exception):
             pass
@@ -282,12 +266,7 @@ class TestTimeoutAndParallelValidation:
     async def test_validation_times_out_gracefully(self, mock_builder_class):
         """Test that validation handles timeouts without hanging."""
         config = Config()
-        config.llms = {
-            "slow_llm": OpenAIModelConfig(
-                model_name="test-model",
-                base_url="http://localhost:8000/v1"
-            )
-        }
+        config.llms = {"slow_llm": OpenAIModelConfig(model_name="test-model", base_url="http://localhost:8000/v1")}
 
         # Mock builder that hangs
         mock_builder = AsyncMock()
@@ -316,10 +295,7 @@ class TestTimeoutAndParallelValidation:
         """Test that multiple LLMs are validated in parallel batches."""
         config = Config()
         config.llms = {
-            f"llm_{i}": OpenAIModelConfig(
-                model_name=f"model-{i}",
-                base_url=f"http://localhost:800{i}/v1"
-            )
+            f"llm_{i}": OpenAIModelConfig(model_name=f"model-{i}", base_url=f"http://localhost:800{i}/v1")
             for i in range(10)
         }
 
@@ -346,6 +322,7 @@ class Test404ErrorDetection:
 
     def test_detects_notfounderror_type(self):
         """Test detection of NotFoundError exception type."""
+
         class NotFoundError(Exception):
             pass
 
@@ -393,16 +370,14 @@ class TestLLMValidationErrorMessages:
     @patch("nat.eval.llm_validator.WorkflowBuilder")
     async def test_error_message_includes_endpoint_details(self, mock_builder_class):
         """Test that error messages include specific endpoint details."""
+
         # Create actual NotFoundError class
         class NotFoundError(Exception):
             pass
 
         config = Config()
         config.llms = {
-            "training_llm": OpenAIModelConfig(
-                model_name="custom-model-name",
-                base_url="http://custom-host:8000/v1"
-            )
+            "training_llm": OpenAIModelConfig(model_name="custom-model-name", base_url="http://custom-host:8000/v1")
         }
 
         # Mock 404 error
@@ -432,16 +407,14 @@ class TestLLMValidationErrorMessages:
     @patch("nat.eval.llm_validator.WorkflowBuilder")
     async def test_404_error_message_mentions_training_cancellation(self, mock_builder_class):
         """Test that 404 error message mentions potential training cancellation."""
+
         # Create actual NotFoundError class
         class NotFoundError(Exception):
             pass
 
         config = Config()
         config.llms = {
-            "finetuned_model": NIMModelConfig(
-                model_name="finetuned-llama",
-                base_url="http://localhost:8000/v1"
-            )
+            "finetuned_model": NIMModelConfig(model_name="finetuned-llama", base_url="http://localhost:8000/v1")
         }
 
         # Mock 404 error
@@ -462,12 +435,8 @@ class TestLLMValidationErrorMessages:
 
         error_msg = str(exc_info.value)
         # Should mention training-related causes
-        assert any(phrase in error_msg.lower() for phrase in [
-            "training",
-            "deployed",
-            "canceled",
-            "model has not been deployed"
-        ])
+        assert any(phrase in error_msg.lower()
+                   for phrase in ["training", "deployed", "canceled", "model has not been deployed"])
         # Should include actionable guidance
         assert "ACTION REQUIRED" in error_msg
 
@@ -480,10 +449,9 @@ class TestLLMValidationIntegration:
         """Create config simulating post-training scenario."""
         config = Config()
         config.llms = {
-            "training_llm": NIMModelConfig(
-                model_name="default/meta-llama-3.1-8b-instruct-nat-dpo",
-                base_url="http://nim-endpoint:8000/v1"
-            )
+            "training_llm":
+                NIMModelConfig(model_name="default/meta-llama-3.1-8b-instruct-nat-dpo",
+                               base_url="http://nim-endpoint:8000/v1")
         }
         return config
 
@@ -498,6 +466,7 @@ class TestLLMValidationIntegration:
         2. Provide clear error about what went wrong
         3. Give actionable next steps
         """
+
         # Create actual NotFoundError class
         class NotFoundError(Exception):
             pass
@@ -506,7 +475,8 @@ class TestLLMValidationIntegration:
         mock_builder = AsyncMock()
         mock_llm = AsyncMock()
 
-        error_404 = NotFoundError("404: Model not found - the model default/meta-llama-3.1-8b-instruct-nat-dpo does not exist")
+        error_404 = NotFoundError(
+            "404: Model not found - the model default/meta-llama-3.1-8b-instruct-nat-dpo does not exist")
         mock_llm.ainvoke = AsyncMock(side_effect=error_404)
 
         mock_builder.add_llm = AsyncMock()
@@ -523,15 +493,7 @@ class TestLLMValidationIntegration:
         error_msg = str(exc_info.value)
 
         # Validation should catch the issue BEFORE eval starts
-        assert any(check in error_msg for check in [
-            "LLM endpoint validation failed",
-            "not found",
-            "404"
-        ])
+        assert any(check in error_msg for check in ["LLM endpoint validation failed", "not found", "404"])
 
         # Should mention training-related causes
-        assert any(phrase in error_msg.lower() for phrase in [
-            "training",
-            "canceled",
-            "deployed"
-        ])
+        assert any(phrase in error_msg.lower() for phrase in ["training", "canceled", "deployed"])
