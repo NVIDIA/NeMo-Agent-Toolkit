@@ -107,7 +107,7 @@ function get_num_proc() {
 function set_versions() {
    # Update internal dependencies to the current git tag
 
-   if [[ "${CI_CRON_NIGHTLY}" == "1" || ${IS_TAGGED} == "1" ]]; then
+   if [[ "${CI_CRON_NIGHTLY}" == "1" || "${IS_TAGGED}" == "1" ]]; then
       # For tagged releases and nightly builds, use the git tag as the version as-is
       local NAT_VERSION="${GIT_TAG}"
    else
