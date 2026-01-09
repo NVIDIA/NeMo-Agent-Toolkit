@@ -52,9 +52,10 @@ def mock_project_fixture(mock_memory_instance):
 @pytest.fixture(name="mock_client")
 def mock_client_fixture(mock_project):
     """Fixture to provide a mocked MemMachineClient instance."""
-    # Use spec to ensure create_project exists for hasattr checks
-    mock_client = Mock(spec=['create_project', 'base_url'])
+    # Use spec to ensure create_project and get_or_create_project exist for hasattr checks
+    mock_client = Mock(spec=['create_project', 'get_or_create_project', 'base_url'])
     mock_client.create_project = Mock(return_value=mock_project)
+    mock_client.get_or_create_project = Mock(return_value=mock_project)
     mock_client.base_url = "http://localhost:8080"
     return mock_client
 
@@ -118,7 +119,7 @@ async def test_add_items_with_conversation(
     await memmachine_editor_with_client.add_items(items)
 
     # Verify project was created/retrieved
-    mock_client.create_project.assert_called_once()
+    mock_client.get_or_create_project.assert_called_once()
     
     # Verify memory instance was created
     mock_project.memory.assert_called_once_with(
@@ -161,13 +162,15 @@ async def test_add_items_with_conversation(
     # Verify user message
     user_call_data = next(c for c in calls_data if c["role"] == "user")
     assert user_call_data["content"] == "Hi, I'm Alex. I'm a vegetarian and I'm allergic to nuts."
-    assert user_call_data["episode_type"] == "episodic"
+    # Now uses memory_types instead of episode_type
+    assert user_call_data["episode_type"] is None
     assert "tags" in user_call_data["metadata"]
     
     # Verify assistant message
     assistant_call_data = next(c for c in calls_data if c["role"] == "assistant")
     assert assistant_call_data["content"] == "Hello Alex! I've noted that you're a vegetarian and have a nut allergy."
-    assert assistant_call_data["episode_type"] == "episodic"
+    # Now uses memory_types instead of episode_type
+    assert assistant_call_data["episode_type"] is None
 
 
 async def test_add_items_with_semantic_memory(
@@ -184,10 +187,11 @@ async def test_add_items_with_semantic_memory(
     # Verify add was called
     assert mock_memory_instance.add.call_count == 1
     
-    # Verify semantic memory type was used
+    # Verify memory_types is used (episode_type is None)
     call_kwargs = mock_memory_instance.add.call_args.kwargs
     assert call_kwargs["content"] == "I prefer working in the morning"
-    assert call_kwargs["episode_type"] == "semantic"
+    assert call_kwargs["episode_type"] is None
+    assert "memory_types" in call_kwargs
     assert call_kwargs["role"] == "user"
 
 
@@ -222,10 +226,11 @@ async def test_add_items_with_memory_text_only(
     # Verify add was called once
     assert mock_memory_instance.add.call_count == 1
     
-    # Verify semantic memory type was used (default for memory_text)
+    # Verify memory_types is used (episode_type is None)
     call_kwargs = mock_memory_instance.add.call_args.kwargs
     assert call_kwargs["content"] == "This is a standalone memory"
-    assert call_kwargs["episode_type"] == "semantic"
+    assert call_kwargs["episode_type"] is None
+    assert "memory_types" in call_kwargs
 
 
 async def test_search_success(
@@ -235,23 +240,31 @@ async def test_search_success(
     mock_memory_instance: Mock
 ):
     """Test searching with a valid query and user ID."""
-    # Mock search results
-    # Note: MemMachine SDK returns tags as a comma-separated string, not a list
-    mock_memory_instance.search.return_value = {
-        "episodic_memory": [
-            {
-                "content": "I like pizza",
-                "metadata": {"key1": "value1", "tags": "food"}  # String, not list
+    # Mock search results with the new nested structure
+    # MemMachine SDK returns SearchResult with content containing nested episodic_memory
+    mock_search_result = Mock()
+    mock_search_result.content = {
+        "episodic_memory": {
+            "long_term_memory": {
+                "episodes": [
+                    {
+                        "content": "I like pizza",
+                        "metadata": {"key1": "value1", "tags": "food"}
+                    }
+                ]
+            },
+            "short_term_memory": {
+                "episodes": []
             }
-        ],
+        },
         "semantic_memory": [
             {
                 "feature": "User prefers Italian food",
                 "metadata": {"key2": "value2"}
             }
-        ],
-        "episode_summary": []
+        ]
     }
+    mock_memory_instance.search.return_value = mock_search_result
     
     result = await memmachine_editor_with_client.search(
         query="What do I like to eat?",
@@ -276,17 +289,25 @@ async def test_search_with_string_tags(
     mock_memory_instance: Mock
 ):
     """Test searching when tags come back as comma-separated string from SDK."""
-    # MemMachine SDK returns tags as comma-separated string
-    mock_memory_instance.search.return_value = {
-        "episodic_memory": [
-            {
-                "content": "I like pizza and pasta",
-                "metadata": {"tags": "food, preference, italian"}  # String format
+    # Mock search results with the new nested structure
+    mock_search_result = Mock()
+    mock_search_result.content = {
+        "episodic_memory": {
+            "long_term_memory": {
+                "episodes": [
+                    {
+                        "content": "I like pizza and pasta",
+                        "metadata": {"tags": "food, preference, italian"}  # String format
+                    }
+                ]
+            },
+            "short_term_memory": {
+                "episodes": []
             }
-        ],
-        "semantic_memory": [],
-        "episode_summary": []
+        },
+        "semantic_memory": []
     }
+    mock_memory_instance.search.return_value = mock_search_result
     
     result = await memmachine_editor_with_client.search(
         query="What do I like?",
@@ -304,11 +325,15 @@ async def test_search_empty_results(
     mock_memory_instance: Mock
 ):
     """Test searching with empty results."""
-    mock_memory_instance.search.return_value = {
-        "episodic_memory": [],
-        "semantic_memory": [],
-        "episode_summary": []
+    mock_search_result = Mock()
+    mock_search_result.content = {
+        "episodic_memory": {
+            "long_term_memory": {"episodes": []},
+            "short_term_memory": {"episodes": []}
+        },
+        "semantic_memory": []
     }
+    mock_memory_instance.search.return_value = mock_search_result
     
     result = await memmachine_editor_with_client.search(
         query="test query",
@@ -330,11 +355,15 @@ async def test_search_with_defaults(
     mock_memory_instance: Mock
 ):
     """Test searching with default session_id and agent_id."""
-    mock_memory_instance.search.return_value = {
-        "episodic_memory": [],
-        "semantic_memory": [],
-        "episode_summary": []
+    mock_search_result = Mock()
+    mock_search_result.content = {
+        "episodic_memory": {
+            "long_term_memory": {"episodes": []},
+            "short_term_memory": {"episodes": []}
+        },
+        "semantic_memory": []
     }
+    mock_memory_instance.search.return_value = mock_search_result
     
     await memmachine_editor_with_client.search(
         query="test query",
@@ -438,8 +467,8 @@ async def test_add_items_with_custom_project_and_org(
     
     await memmachine_editor_with_client.add_items([item])
     
-    # Verify project was created with custom org_id and project_id
-    mock_client.create_project.assert_called_once_with(
+    # Verify project was created/retrieved with custom org_id and project_id
+    mock_client.get_or_create_project.assert_called_once_with(
         org_id="custom_org",
         project_id="custom_project",
         description="Project for user123"
@@ -466,8 +495,8 @@ async def test_search_with_custom_project_and_org(
         org_id="custom_org"
     )
     
-    # Verify project was created with custom IDs
-    mock_client.create_project.assert_called_once_with(
+    # Verify project was created/retrieved with custom IDs
+    mock_client.get_or_create_project.assert_called_once_with(
         org_id="custom_org",
         project_id="custom_project",
         description="Project for user123"

@@ -1,6 +1,9 @@
 import asyncio
 from typing import Any
 
+import requests
+from memmachine.common.api import MemoryType
+
 from nat.memory.interfaces import MemoryEditor
 from nat.memory.models import MemoryItem
 
@@ -69,12 +72,25 @@ class MemMachineEditor(MemoryEditor):
         
         # If we have a client, get or create the project first
         if self._is_client:
-            # Use create_project which returns existing project if it exists
-            project = self._memmachine.create_project(
-                org_id=org_id,
-                project_id=project_id,
-                description=f"Project for {user_id}"
-            )
+            # Use get_or_create_project which handles existing projects gracefully
+            # It will get the project if it exists, or create it if it doesn't
+            try:
+                project = self._memmachine.get_or_create_project(
+                    org_id=org_id,
+                    project_id=project_id,
+                    description=f"Project for {user_id}"
+                )
+            except requests.HTTPError as e:
+                # If get_or_create_project fails with 409 conflict, project already exists
+                # Get the existing project instead
+                if e.response.status_code == 409:
+                    project = self._memmachine.get_project(
+                        org_id=org_id,
+                        project_id=project_id
+                    )
+                else:
+                    # Re-raise other HTTP errors
+                    raise
         elif self._is_project:
             # Use the project directly
             project = self._memmachine
@@ -137,9 +153,13 @@ class MemMachineEditor(MemoryEditor):
                     if not msg_content:
                         continue
                     
-                    # Determine episode_type based on metadata
+                    # Determine memory_types based on metadata
                     # For conversations: if use_semantic_memory is True, use semantic; otherwise episodic (default)
-                    episode_type = "semantic" if use_semantic is True else "episodic"
+                    # MemMachine uses memory_types parameter, not episode_type, to distinguish episodic vs semantic
+                    if use_semantic is True:
+                        memory_types = [MemoryType.Semantic]
+                    else:
+                        memory_types = [MemoryType.Episodic]
                     
                     # Add tags to metadata if present
                     # MemMachine SDK expects tags as a string, not a list
@@ -149,14 +169,16 @@ class MemMachineEditor(MemoryEditor):
                         metadata["tags"] = ", ".join(tags) if isinstance(tags, list) else str(tags)
                     
                     # Capture variables in closure to avoid late binding issues
-                    def add_memory(content=msg_content, role=msg_role, ep_type=episode_type, meta=metadata):
+                    def add_memory(content=msg_content, role=msg_role, mem_types=memory_types, meta=metadata):
                         # Use MemMachine SDK add() method
-                        # API: memory.add(content, role="user", metadata={}, episode_type="text")
+                        # API: memory.add(content, role="user", metadata={}, memory_types=[MemoryType.Episodic])
+                        # episode_type should be None (defaults to "message") or EpisodeType.MESSAGE
                         memory.add(
                             content=content,
                             role=role,
                             metadata=meta if meta else None,
-                            episode_type=ep_type
+                            memory_types=mem_types,
+                            episode_type=None  # Use default (MESSAGE)
                         )
                     
                     task = asyncio.to_thread(add_memory)
@@ -167,7 +189,10 @@ class MemMachineEditor(MemoryEditor):
                 # unless explicitly set to episodic via use_semantic_memory=False
                 # use_semantic was already extracted above
                 # If use_semantic is True or None (not set), use semantic; if False, use episodic
-                episode_type = "episodic" if use_semantic is False else "semantic"
+                if use_semantic is False:
+                    memory_types = [MemoryType.Episodic]
+                else:
+                    memory_types = [MemoryType.Semantic]
                 
                 # Add tags to metadata if present
                 # MemMachine SDK expects tags as a string, not a list
@@ -178,11 +203,13 @@ class MemMachineEditor(MemoryEditor):
                 
                 def add_memory():
                     # Use MemMachine SDK add() method
+                    # API: memory.add(content, role="user", metadata={}, memory_types=[MemoryType.Semantic])
                     memory.add(
                         content=memory_text,
                         role="user",
                         metadata=metadata if metadata else None,
-                        episode_type=episode_type
+                        memory_types=memory_types,
+                        episode_type=None  # Use default (MESSAGE)
                     )
                 
                 task = asyncio.to_thread(add_memory)
@@ -231,11 +258,35 @@ class MemMachineEditor(MemoryEditor):
         if not search_results:
             return memories
 
-        # MemMachine SDK returns a dict with episodic_memory and semantic_memory
-        # episodic_memory is a list of episodes
+        # MemMachine SDK returns a SearchResult Pydantic model with status and content fields
+        # The content field is a dict with episodic_memory and semantic_memory
+        # Extract the content dict from the SearchResult object
+        if hasattr(search_results, 'content'):
+            # SearchResult is a Pydantic model with content field
+            results_content = search_results.content
+        elif isinstance(search_results, dict):
+            # Fallback for dict response
+            results_content = search_results
+        else:
+            # Unknown format, return empty
+            return memories
+
+        # episodic_memory is a dict with long_term_memory and short_term_memory
+        # Each contains an 'episodes' list with the actual memory episodes
         # semantic_memory is a list of semantic features
-        episodic_results = search_results.get("episodic_memory", [])
-        semantic_results = search_results.get("semantic_memory", [])
+        episodic_memory_dict = results_content.get("episodic_memory", {})
+        semantic_results = results_content.get("semantic_memory", [])
+        
+        # Extract episodes from the nested structure
+        # episodic_memory = { 'long_term_memory': { 'episodes': [...] }, 'short_term_memory': { 'episodes': [...] } }
+        episodic_results = []
+        if isinstance(episodic_memory_dict, dict):
+            for memory_type in ['long_term_memory', 'short_term_memory']:
+                memory_data = episodic_memory_dict.get(memory_type, {})
+                if isinstance(memory_data, dict):
+                    episodes = memory_data.get('episodes', [])
+                    if isinstance(episodes, list):
+                        episodic_results.extend(episodes)
         
         # Process episodic memories - group by conversation if possible
         # Episodes from the same conversation should be grouped together

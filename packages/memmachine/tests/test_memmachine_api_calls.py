@@ -136,14 +136,19 @@ def spied_project_fixture(spied_memory_instance: Mock, api_spy: APICallSpy):
 
 @pytest.fixture(name="spied_client")
 def spied_client_fixture(spied_project: Mock, api_spy: APICallSpy):
-    """Create a client instance with spied create_project method."""
-    mock_client = Mock(spec=['create_project', 'base_url'])
+    """Create a client instance with spied create_project and get_or_create_project methods."""
+    mock_client = Mock(spec=['create_project', 'get_or_create_project', 'base_url'])
     
     def spied_create_project(*args, **kwargs):
         api_spy.record_call('create_project', args, kwargs)
         return spied_project
     
+    def spied_get_or_create_project(*args, **kwargs):
+        api_spy.record_call('get_or_create_project', args, kwargs)
+        return spied_project
+    
     mock_client.create_project = spied_create_project
+    mock_client.get_or_create_project = spied_get_or_create_project
     mock_client.base_url = "http://localhost:8080"
     return mock_client
 
@@ -197,7 +202,9 @@ class TestAddItemsAPICalls:
         assert user_call is not None, "Should have a call with role='user'"
         assert user_call['kwargs']['content'] == "I like pizza"
         assert user_call['kwargs']['role'] == "user"
-        assert user_call['kwargs']['episode_type'] == "episodic"
+        # Now uses memory_types instead of episode_type
+        assert user_call['kwargs']['episode_type'] is None
+        assert 'memory_types' in user_call['kwargs']
         assert 'tags' in user_call['kwargs'].get('metadata', {})
         # MemMachine SDK expects tags as comma-separated string
         assert user_call['kwargs']['metadata']['tags'] == "food, preference"
@@ -210,7 +217,9 @@ class TestAddItemsAPICalls:
         assert assistant_call is not None, "Should have a call with role='assistant'"
         assert assistant_call['kwargs']['content'] == "Great! What's your favorite topping?"
         assert assistant_call['kwargs']['role'] == "assistant"
-        assert assistant_call['kwargs']['episode_type'] == "episodic"
+        # Now uses memory_types instead of episode_type
+        assert assistant_call['kwargs']['episode_type'] is None
+        assert 'memory_types' in assistant_call['kwargs']
     
     async def test_add_semantic_memory_calls_add_with_semantic_type(
         self,
@@ -232,17 +241,15 @@ class TestAddItemsAPICalls:
         
         await editor_with_spy.add_items([item])
         
-        # Verify add was called with semantic type
-        api_spy.assert_called_with(
-            'add',
-            content="User prefers working in the morning",
-            role="user",
-            episode_type="semantic"
-        )
-        
-        # Verify metadata includes tags (as comma-separated string)
+        # Verify add was called - now uses memory_types instead of episode_type
         add_calls = api_spy.get_calls('add')
         assert len(add_calls) == 1
+        assert add_calls[0]['kwargs']['content'] == "User prefers working in the morning"
+        assert add_calls[0]['kwargs']['role'] == "user"
+        assert add_calls[0]['kwargs']['episode_type'] is None
+        assert 'memory_types' in add_calls[0]['kwargs']
+        
+        # Verify metadata includes tags (as comma-separated string)
         assert add_calls[0]['kwargs']['metadata']['tags'] == "preference"
     
     async def test_add_episodic_memory_calls_add_with_episodic_type(
@@ -250,7 +257,7 @@ class TestAddItemsAPICalls:
         editor_with_spy: MemMachineEditor,
         api_spy: APICallSpy
     ):
-        """Verify that episodic memory calls add() with episode_type='episodic'."""
+        """Verify that episodic memory calls add() with memory_types for episodic."""
         item = MemoryItem(
             conversation=[{"role": "user", "content": "Hello"}],
             user_id="user123",
@@ -265,20 +272,20 @@ class TestAddItemsAPICalls:
         
         await editor_with_spy.add_items([item])
         
-        # Verify add was called with episodic type
-        api_spy.assert_called_with(
-            'add',
-            content="Hello",
-            role="user",
-            episode_type="episodic"
-        )
+        # Verify add was called - now uses memory_types instead of episode_type
+        add_calls = api_spy.get_calls('add')
+        assert len(add_calls) == 1
+        assert add_calls[0]['kwargs']['content'] == "Hello"
+        assert add_calls[0]['kwargs']['role'] == "user"
+        assert add_calls[0]['kwargs']['episode_type'] is None
+        assert 'memory_types' in add_calls[0]['kwargs']
     
-    async def test_add_with_custom_project_org_calls_create_project(
+    async def test_add_with_custom_project_org_calls_get_or_create_project(
         self,
         editor_with_spy: MemMachineEditor,
         api_spy: APICallSpy
     ):
-        """Verify that custom project_id/org_id triggers create_project call."""
+        """Verify that custom project_id/org_id triggers get_or_create_project call."""
         item = MemoryItem(
             conversation=[{"role": "user", "content": "Test"}],
             user_id="user123",
@@ -293,9 +300,9 @@ class TestAddItemsAPICalls:
         
         await editor_with_spy.add_items([item])
         
-        # Verify create_project was called with custom IDs
+        # Verify get_or_create_project was called with custom IDs
         api_spy.assert_called_with(
-            'create_project',
+            'get_or_create_project',
             org_id="custom_org",
             project_id="custom_project",
             description="Project for user123"
@@ -384,7 +391,7 @@ class TestSearchAPICalls:
         api_spy: APICallSpy,
         spied_memory_instance: Mock
     ):
-        """Verify search with custom project/org calls create_project."""
+        """Verify search with custom project/org calls get_or_create_project."""
         spied_memory_instance.search.return_value = {
             "episodic_memory": [],
             "semantic_memory": [],
@@ -398,9 +405,9 @@ class TestSearchAPICalls:
             org_id="custom_org"
         )
         
-        # Verify create_project was called
+        # Verify get_or_create_project was called
         api_spy.assert_called_with(
-            'create_project',
+            'get_or_create_project',
             org_id="custom_org",
             project_id="custom_project",
             description="Project for user123"

@@ -72,7 +72,7 @@ async def test_memmachine_memory_client_success(
     mock_project: Mock
 ):
     """Test successful initialization of memmachine memory client."""
-    mock_memmachine_client.create_project.return_value = mock_project
+    mock_memmachine_client.get_or_create_project.return_value = mock_project
     
     # Patch where the import happens - inside the function
     with patch("memmachine.MemMachineClient", return_value=mock_memmachine_client):
@@ -80,7 +80,7 @@ async def test_memmachine_memory_client_success(
         async with memmachine_memory_client(config, mock_builder) as editor:
             assert editor is not None
             # Verify client was initialized correctly
-            mock_memmachine_client.create_project.assert_called_once_with(
+            mock_memmachine_client.get_or_create_project.assert_called_once_with(
                 org_id="test_org",
                 project_id="test_project",
                 description="NeMo Agent Toolkit project: test_project"
@@ -98,7 +98,7 @@ async def test_memmachine_memory_client_minimal_config(
         async with memmachine_memory_client(config_minimal, mock_builder) as editor:
             assert editor is not None
             # Should not create project if org_id/project_id not provided
-            mock_memmachine_client.create_project.assert_not_called()
+            mock_memmachine_client.get_or_create_project.assert_not_called()
 
 
 async def test_memmachine_memory_client_import_error(
@@ -139,7 +139,7 @@ async def test_memmachine_memory_client_project_creation_failure(
     mock_memmachine_client: Mock
 ):
     """Test that editor still works if project creation fails."""
-    mock_memmachine_client.create_project.side_effect = Exception("Project creation failed")
+    mock_memmachine_client.get_or_create_project.side_effect = Exception("Project creation failed")
     
     with patch("memmachine.MemMachineClient", return_value=mock_memmachine_client):
         # Should not raise exception, should fall back to using client directly
@@ -147,7 +147,7 @@ async def test_memmachine_memory_client_project_creation_failure(
         async with memmachine_memory_client(config, mock_builder) as editor:
             assert editor is not None
             # Project creation should have been attempted
-            mock_memmachine_client.create_project.assert_called_once()
+            mock_memmachine_client.get_or_create_project.assert_called_once()
 
 
 
@@ -172,7 +172,7 @@ async def test_memmachine_memory_client_with_retry_mixin(
     mock_project: Mock
 ):
     """Test that retry mixin is applied when config has retry settings."""
-    mock_memmachine_client.create_project.return_value = mock_project
+    mock_memmachine_client.get_or_create_project.return_value = mock_project
     
     # Add retry configuration
     config.num_retries = 5

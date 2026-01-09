@@ -13,3 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Namespace package - extend __path__ to include all nat.plugins locations
+# This allows plugins installed in different locations (e.g., site-packages, editable installs)
+# to be discovered as part of the same namespace
+from pkgutil import extend_path
+__path__ = extend_path(__path__, __name__)

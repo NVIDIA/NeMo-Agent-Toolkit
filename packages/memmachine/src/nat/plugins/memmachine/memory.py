@@ -75,7 +75,8 @@ async def memmachine_memory_client(config: MemMachineMemoryClientConfig, builder
     memmachine_instance = client
     if config.org_id and config.project_id:
         try:
-            project = client.create_project(
+            # Use get_or_create_project to handle existing projects gracefully
+            project = client.get_or_create_project(
                 org_id=config.org_id,
                 project_id=config.project_id,
                 description=f"NeMo Agent Toolkit project: {config.project_id}"
