@@ -81,10 +81,12 @@ cd samples/python/agents/langgraph
 
 # Step 3:Set the environment variables for the currency agent
 # For OpenAI models:
-echo "API_KEY=$OPENAI_API_KEY" > .env
-echo "model_source=openai" >> .env
-echo "TOOL_LLM_URL=https://api.openai.com/v1" >> .env
-echo "TOOL_LLM_NAME=gpt-3.5-turbo" >> .env
+cat <<EOF > .env
+API_KEY=$OPENAI_API_KEY
+model_source=openai
+TOOL_LLM_URL=https://api.openai.com/v1
+TOOL_LLM_NAME=gpt-4o-mini
+EOF
 
 # Step 4: Run the currency agent on port 11000
 uv run app --port 11000
