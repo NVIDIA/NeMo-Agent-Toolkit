@@ -21,8 +21,9 @@ import logging
 import typing
 
 def _configure_logging(configure_logging: bool, log_level: int) -> logging.Logger:
+    from nat.utils.log_utils import setup_logging
     if configure_logging:
-        logging.basicConfig(level=log_level)
+        setup_logging(log_level)
     
     return logging.getLogger(__name__)
 

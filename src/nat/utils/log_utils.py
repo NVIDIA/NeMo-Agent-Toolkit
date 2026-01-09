@@ -35,3 +35,11 @@ class LogFilter(logging.Filter):
         if any(match in record.getMessage() for match in self._filter_criteria):
             return False
         return True
+
+def setup_logging(log_level: int):
+    """Configure logging with the specified level"""
+    logging.basicConfig(
+        level=log_level,
+        format="%(asctime)s - %(levelname)-8s - %(name)s:%(lineno)d - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
