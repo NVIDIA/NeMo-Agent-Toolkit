@@ -109,7 +109,8 @@ You will need access to the following AWS Console services:
 - **CloudWatch Console** - To enable Transaction Search and view logs and traces (see [Appendix 2](#appendix-2-turning-on-opentelemetry-support-in-cloudwatch))
 - **Secrets Manager Console** - To manage the NVIDIA API credentials secret
 
-> NOTE: Detailed instructions for setting up IAM permissions in the AWS console are available in Appendix 1
+> [!NOTE]
+> Detailed instructions for setting up IAM permissions in the AWS console are available in Appendix 1
 
 ### Additional Requirements
 
@@ -212,23 +213,40 @@ uv pip install -e examples/frameworks/strands_demo
 
 ### Build the Docker Image
 
+Choose the appropriate build command for your target architecture:
+
 <!-- path-check-skip-begin -->
+
+#### Option A: Build for ARM64 (Apple Silicon, AWS Graviton)
+
 ```bash
 docker build \
   --build-arg NAT_VERSION=$(python -m setuptools_scm) \
-  -t strands_demo \
+  -t strands_demo:arm64 \
   -f ./examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile \
   --platform linux/arm64 \
   --load .
 ```
 
+#### Option B: Build for AMD64 (Intel/AMD x86_64)
+
+```bash
+docker build \
+  --build-arg NAT_VERSION=$(python -m setuptools_scm) \
+  -t strands_demo:amd64 \
+  -f ./examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile \
+  --platform linux/amd64 \
+  --load .
+```
+
+> [!NOTE]
+> You can build and test both architectures on the same machine. Docker Desktop (macOS/Windows) and Docker with QEMU (Linux) support cross-platform emulation. Emulated builds run slower than native builds.
 
 ### Run the Container Locally
 
-> [!NOTE] 
-> If you built the image with `--platform linux/arm64`, you do not need to specify platform again at runtime.
 <!-- path-check-skip-end -->
-Run the following command to view and set Access Key ID, Secret Access Key, and Session Token
+Run the following command to view and set Access Key ID, Secret Access Key, and Session Token:
+
 ```bash
 aws sts get-session-token --duration 3600 --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' --output text
 export AWS_ACCESS_KEY_ID="YOUR_AWS_ACCESS_KEY_ID_HERE"
@@ -237,7 +255,12 @@ export AWS_SESSION_TOKEN="YOUR_AWS_SESSION_TOKEN_HERE"
 export AWS_DEFAULT_REGION="us-west-2"
 ```
 
+Run the container using the image you built:
+
 <!-- path-check-skip-begin -->
+
+#### Option A: Run ARM64 Image
+
 ```bash
 docker run \
   -p 8080:8080 \
@@ -247,15 +270,29 @@ docker run \
   -e AWS_SECRET_ACCESS_KEY \
   -e AWS_SESSION_TOKEN \
   -e AWS_DEFAULT_REGION \
-  strands_demo
-  --platform linux/arm64
+  strands_demo:arm64
 ```
+
+#### Option B: Run AMD64 Image
+
+```bash
+docker run \
+  -p 8080:8080 \
+  -p 6006:6006 \
+  -e NVIDIA_API_KEY \
+  -e AWS_ACCESS_KEY_ID \
+  -e AWS_SECRET_ACCESS_KEY \
+  -e AWS_SESSION_TOKEN \
+  -e AWS_DEFAULT_REGION \
+  strands_demo:amd64
+```
+
 <!-- path-check-skip-end -->
 
 > [!NOTE]
 > The command above passes environment variables from your shell. Ensure they are exported before running. For SSO users, see [Troubleshooting](#troubleshooting) for how to export temporary credentials.
 
-### Test Local Deployment
+### Test Local Deployment (arm and amd builds)
 
 <!-- path-check-skip-begin -->
 ```bash
@@ -304,7 +341,12 @@ aws ecr get-login-password --region $AWS_DEFAULT_REGION | \
 
 > **Important:** Never pass credentials as build arguments. Use AWS IAM roles and environment variables instead. The example below shows the structure but credentials should be managed securely.
 
+Choose the appropriate build command for your target architecture:
+
 <!-- path-check-skip-begin -->
+
+#### Option A: Build and Push for ARM64 (AWS Graviton)
+
 ```bash
 docker build \
   --build-arg NAT_VERSION=$(python -m setuptools_scm) \
@@ -313,7 +355,22 @@ docker build \
   --platform linux/arm64 \
   --push .
 ```
+
+#### Option B: Build and Push for AMD64 (Intel/AMD x86_64)
+
+```bash
+docker build \
+  --build-arg NAT_VERSION=$(python -m setuptools_scm) \
+  -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/strands-demo:latest \
+  -f ./examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile \
+  --platform linux/amd64 \
+  --push .
+```
+
 <!-- path-check-skip-end -->
+
+> [!NOTE]
+> AWS Graviton instances (ARM64) often provide better price-performance for containerized workloads. AMD64 is widely compatible with traditional EC2 instance types.
 
 ### Deploy the Agent
 
@@ -383,11 +440,16 @@ ENTRYPOINT ["sh", "-c", "exec /workspace/examples/frameworks/strands_demo/bedroc
 Save the updated `Dockerfile`
 
 
-### ReBuild and Push Docker Image to ECR
+### Rebuild and Push Docker Image to ECR
 
 > **Important:** Never pass credentials as build arguments. Use AWS IAM roles and environment variables instead. The example below shows the structure but credentials should be managed securely.
 
+Use the same architecture you chose in Step 6:
+
 <!-- path-check-skip-begin -->
+
+#### Option A: Rebuild and Push for ARM64 (AWS Graviton)
+
 ```bash
 docker build \
   --build-arg NAT_VERSION=$(python -m setuptools_scm) \
@@ -396,6 +458,18 @@ docker build \
   --platform linux/arm64 \
   --push .
 ```
+
+#### Option B: Rebuild and Push for AMD64 (Intel/AMD x86_64)
+
+```bash
+docker build \
+  --build-arg NAT_VERSION=$(python -m setuptools_scm) \
+  -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/strands-demo:latest \
+  -f ./examples/frameworks/strands_demo/bedrock_agentcore/Dockerfile \
+  --platform linux/amd64 \
+  --push .
+```
+
 <!-- path-check-skip-end -->
 
 ### Update the Agent with New Version
@@ -844,8 +918,13 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 
-# Install AWS CLI v2
-RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip" && \
+# Install AWS CLI v2 (architecture-aware)
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then \
+      curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"; \
+    else \
+      curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip"; \
+    fi && \
     unzip awscliv2.zip && \
     ./aws/install && \
     rm -rf awscliv2.zip aws
@@ -867,10 +946,11 @@ RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
     export SETUPTOOLS_SCM_PRETEND_VERSION_NVIDIA_NAT_LANGCHAIN=${NAT_VERSION} && \
     export SETUPTOOLS_SCM_PRETEND_VERSION_NVIDIA_NAT_TEST=${NAT_VERSION} && \
     export SETUPTOOLS_SCM_PRETEND_VERSION_FOR_NAT_SIMPLE_CALCULATOR=${NAT_VERSION} && \
+    export SETUPTOOLS_SCM_PRETEND_VERSION_FOR_NAT_STRANDS_DEMO=${NAT_VERSION} && \
     uv venv --python ${PYTHON_VERSION} /workspace/.venv && \
     uv sync --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
     uv pip install -e '.[telemetry]' --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
-    uv pip install --link-mode=copy ./examples/frameworks/strands_demo && \
+    uv pip install -e ./examples/frameworks/strands_demo --link-mode=copy && \
     uv pip install boto3 aws-opentelemetry-distro && \
     find /workspace/.venv -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true && \
     find /workspace/.venv -type f -name "*.pyc" -delete && \
