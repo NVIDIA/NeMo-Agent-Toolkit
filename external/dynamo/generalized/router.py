@@ -87,11 +87,9 @@ class PrometheusMetricsClient:
     """
 
     # Prometheus metric patterns
-    _METRIC_PATTERN = re.compile(
-        r'^(?P<name>[a-zA-Z_:][a-zA-Z0-9_:]*)'
-        r'(?:\{(?P<labels>[^}]*)\})?\s+'
-        r'(?P<value>[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?|NaN|[+-]Inf)$'
-    )
+    _METRIC_PATTERN = re.compile(r'^(?P<name>[a-zA-Z_:][a-zA-Z0-9_:]*)'
+                                 r'(?:\{(?P<labels>[^}]*)\})?\s+'
+                                 r'(?P<value>[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?|NaN|[+-]Inf)$')
     _LABEL_PATTERN = re.compile(r'(\w+)="([^"]*)"')
 
     def __init__(
@@ -111,9 +109,7 @@ class PrometheusMetricsClient:
             default_total_kv_blocks: Fallback total KV blocks if metric unavailable.
             estimated_kv_blocks_per_request: Estimated KV blocks per inflight request for usage calc.
         """
-        self.metrics_url = metrics_url or os.environ.get(
-            "DYNAMO_METRICS_URL", "http://localhost:9090/metrics"
-        )
+        self.metrics_url = metrics_url or os.environ.get("DYNAMO_METRICS_URL", "http://localhost:9090/metrics")
         self.scrape_interval = float(scrape_interval_seconds)
         self.request_timeout = float(request_timeout_seconds)
         self.default_total_kv_blocks = int(default_total_kv_blocks)
@@ -201,9 +197,8 @@ class PrometheusMetricsClient:
 
         return None
 
-    def _build_metrics_from_prometheus(
-        self, parsed: dict[str, list[tuple[dict[str, str], float]]]
-    ) -> AggregatedMetricsShim:
+    def _build_metrics_from_prometheus(self, parsed: dict[str, list[tuple[dict[str, str],
+                                                                          float]]]) -> AggregatedMetricsShim:
         """Build AggregatedMetricsShim from parsed Prometheus data."""
 
         # Collect per-worker data
@@ -270,11 +265,12 @@ class PrometheusMetricsClient:
 
             gpu_cache_usage = max(0.0, min(100.0, gpu_cache_usage))
 
-            endpoints.append(EndpointMetrics(
-                worker_id=wid,
-                gpu_cache_usage_perc=gpu_cache_usage,
-                num_requests_waiting=int(data['queued']),
-            ))
+            endpoints.append(
+                EndpointMetrics(
+                    worker_id=wid,
+                    gpu_cache_usage_perc=gpu_cache_usage,
+                    num_requests_waiting=int(data['queued']),
+                ))
 
         return AggregatedMetricsShim(endpoints=endpoints)
 
@@ -286,10 +282,7 @@ class PrometheusMetricsClient:
 
         # Check cache
         with self._cache_lock:
-            if (
-                self._cached_metrics is not None
-                and (now - self._last_scrape_time) < self.scrape_interval
-            ):
+            if (self._cached_metrics is not None and (now - self._last_scrape_time) < self.scrape_interval):
                 return self._cached_metrics
 
         # Scrape Prometheus
@@ -316,7 +309,7 @@ class PrometheusMetricsClient:
 
                 return metrics
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("Prometheus scrape timed out: %s", self.metrics_url)
         except aiohttp.ClientError as e:
             logger.warning("Prometheus scrape error: %s - %s", self.metrics_url, e)
@@ -586,11 +579,9 @@ class WorkloadAwareRouter:
             self.metrics.metrics_url,
             metrics_scrape_interval,
         )
-        logger.warning(
-            "Note: When using custom frontend.py, the /metrics endpoint is unavailable. "
-            "Scrape errors are expected. The router will continue using Thompson Sampling, "
-            "KV overlap, and feedback learning. Load-based balancing is disabled."
-        )
+        logger.warning("Note: When using custom frontend.py, the /metrics endpoint is unavailable. "
+                       "Scrape errors are expected. The router will continue using Thompson Sampling, "
+                       "KV overlap, and feedback learning. Load-based balancing is disabled.")
 
         self._initialize_bandits()
         self._initialize_contextual()
