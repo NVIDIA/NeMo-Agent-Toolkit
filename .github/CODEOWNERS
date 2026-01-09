@@ -5,4 +5,4 @@
 uv.lock @nvidia/nat-dep-approvers
 
 # Dataset changes
-examples/**/data/**/* @nvidia/nat-data-approvers
+examples/**/data/**/* @nvidia/nat-dep-approvers
