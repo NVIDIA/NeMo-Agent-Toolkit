@@ -311,7 +311,7 @@ class WorkloadAwareRouter:
         if min_workers < 0:
             raise ValueError(f"min_workers must be >= 0, got {min_workers}")
 
-        timeout_s = float(os.environ.get("DYNAMO_ROUTER_WAIT_FOR_WORKERS_TIMEOUT_S", "300"))
+        timeout_s = float(os.environ.get("DYNAMO_ROUTER_WAIT_FOR_WORKERS_TIMEOUT_S", "600"))
         if not math.isfinite(timeout_s) or timeout_s <= 0:
             raise ValueError("DYNAMO_ROUTER_WAIT_FOR_WORKERS_TIMEOUT_S must be a finite number > 0 "
                              f"(got {timeout_s!r})")

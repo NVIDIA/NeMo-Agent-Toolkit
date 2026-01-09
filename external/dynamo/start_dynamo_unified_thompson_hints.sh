@@ -46,6 +46,7 @@ MODEL="/workspace/models/Llama-3.3-70B-Instruct"
 SERVED_MODEL_NAME="${DYNAMO_MODEL_NAME:-llama-3.3-70b}"
 IMAGE="nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.7.1"
 SHM_SIZE="${DYNAMO_SHM_SIZE:-16g}"
+WORKER_INIT_TIMEOUT_S="${DYNAMO_WORKER_INIT_TIMEOUT_S:-600}"
 
 # Local paths - DYNAMO_MODEL_DIR must be set or script will error
 if [ -z "${DYNAMO_MODEL_DIR}" ]; then
@@ -56,6 +57,32 @@ if [ -z "${DYNAMO_MODEL_DIR}" ]; then
     echo ""
     echo "Then run this script again."
     exit 1
+fi
+# If directory exists, validate it's a proper model directory (NVBug 5756833)
+# If it doesn't exist, the download workflow later will handle it
+if [ -d "${DYNAMO_MODEL_DIR}" ]; then
+    if [ ! -f "${DYNAMO_MODEL_DIR}/config.json" ]; then
+        echo "ERROR: ${DYNAMO_MODEL_DIR} exists but is not a valid model directory"
+        echo ""
+        echo "Missing: config.json"
+        echo ""
+        echo "Common mistake - pointing to cache root instead of model snapshot:"
+        echo "   Wrong: ~/.cache/huggingface/"
+        echo "   Right: ~/.cache/huggingface/hub/models--meta-llama--Llama-3.3-70B-Instruct/snapshots/<hash>"
+        echo ""
+        echo "Find it: find ~/.cache/huggingface/hub -name config.json -path '*Llama-3.3-70B*'"
+        exit 1
+    fi
+
+    # Verify config.json has model_type field (exact error from NVBug 5756833)
+    if ! grep -q '"model_type"' "${DYNAMO_MODEL_DIR}/config.json" 2>/dev/null; then
+        echo "ERROR: ${DYNAMO_MODEL_DIR}/config.json is missing 'model_type' field"
+        echo ""
+        echo "This usually means incomplete/corrupted download. Try:"
+        echo "  rm -rf ${DYNAMO_MODEL_DIR}"
+        echo "  huggingface-cli download meta-llama/Llama-3.3-70B-Instruct --local-dir ${DYNAMO_MODEL_DIR}"
+        exit 1
+    fi
 fi
 LOCAL_MODEL_DIR="${DYNAMO_MODEL_DIR}"
 
@@ -281,7 +308,8 @@ docker run -d \
     wait_for_worker() {
         local worker_type=\$1
         local pid=\$2
-        local max_wait=300
+        # local max_wait=300
+        local max_wait=${WORKER_INIT_TIMEOUT_S:-600}
         local elapsed=0
         local poll_interval=5
 
