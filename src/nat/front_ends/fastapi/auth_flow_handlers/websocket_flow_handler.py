@@ -135,7 +135,7 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
         try:
             token = await asyncio.wait_for(flow_state.future, timeout=self._auth_timeout_seconds)
         except TimeoutError as exc:
-            raise RuntimeError("Authentication flow timed out after 5 minutes.") from exc
+            raise RuntimeError(f"Authentication flow timed out after {self._auth_timeout_seconds} seconds.") from exc
         finally:
 
             await self._remove_flow_cb(state)
