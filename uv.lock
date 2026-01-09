@@ -5282,6 +5282,20 @@ requires-dist = [
 ]
 
 [[package]]
+name = "nat-math-assistant-a2a-protected"
+source = { editable = "examples/A2A/math_assistant_a2a_protected" }
+dependencies = [
+    { name = "nat-math-assistant-a2a" },
+    { name = "nat-simple-calculator" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nat-math-assistant-a2a", editable = "examples/A2A/math_assistant_a2a" },
+    { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
+]
+
+[[package]]
 name = "nat-multi-frameworks"
 source = { editable = "examples/frameworks/multi_frameworks" }
 dependencies = [
@@ -6057,6 +6071,7 @@ examples = [
     { name = "nat-email-phishing-analyzer" },
     { name = "nat-haystack-deep-research-agent" },
     { name = "nat-math-assistant-a2a" },
+    { name = "nat-math-assistant-a2a-protected" },
     { name = "nat-multi-frameworks" },
     { name = "nat-per-user-workflow" },
     { name = "nat-plot-charts" },
@@ -6229,6 +6244,7 @@ requires-dist = [
     { name = "nat-email-phishing-analyzer", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/email_phishing_analyzer" },
     { name = "nat-haystack-deep-research-agent", marker = "extra == 'examples'", editable = "examples/frameworks/haystack_deep_research_agent" },
     { name = "nat-math-assistant-a2a", marker = "extra == 'examples'", editable = "examples/A2A/math_assistant_a2a" },
+    { name = "nat-math-assistant-a2a-protected", marker = "extra == 'examples'", editable = "examples/A2A/math_assistant_a2a_protected" },
     { name = "nat-multi-frameworks", marker = "extra == 'examples'", editable = "examples/frameworks/multi_frameworks" },
     { name = "nat-per-user-workflow", marker = "extra == 'examples'", editable = "examples/front_ends/per_user_workflow" },
     { name = "nat-plot-charts", marker = "extra == 'examples'", editable = "examples/custom_functions/plot_charts" },

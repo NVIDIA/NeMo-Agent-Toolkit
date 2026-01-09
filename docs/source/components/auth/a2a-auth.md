@@ -21,7 +21,7 @@ NVIDIA NeMo Agent Toolkit provides OAuth2 authentication capabilities for A2A pr
 
 A2A authentication is `agent card-driven`; clients discover security requirements by fetching the agent's public metadata (agent card) without authentication, then dynamically initiate the appropriate authentication flow. This allows agents to advertise their security requirements upfront, enabling clients to adapt their authentication strategy accordingly.
 
-For a complete, hands-on guide to setting up OAuth2 authentication with Keycloak, see `examples/A2A/math_assistant_a2a/oauth2-keycloak-setup.md`.
+For a complete, hands-on guide to setting up OAuth2 authentication with Keycloak, see `examples/A2A/math_assistant_a2a_protected/README.md`.
 
 ## Supported Capabilities
 
@@ -233,9 +233,7 @@ The Math Assistant A2A example demonstrates end-to-end OAuth2-protected A2A comm
 - **Math Assistant Client**: A2A client that discovers security requirements and authenticates via OAuth2
 - **OAuth2 Keycloak Setup Guide**: Complete guide for setting up Keycloak as authorization server
 
-**Example Location**: `examples/A2A/math_assistant_a2a/`
-
-**Setup Guide**: `examples/A2A/math_assistant_a2a/oauth2-keycloak-setup.md`
+**Example Location**: `examples/A2A/math_assistant_a2a_protected/`
 
 This example includes:
 - Complete Keycloak configuration instructions
