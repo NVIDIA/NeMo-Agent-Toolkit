@@ -17,7 +17,7 @@ limitations under the License.
 
 # Currency Agent A2A Example
 
-This example demonstrates a per-user workflow connecting to a third-party A2A service, the LangGraph-based currency agent, to perform currency conversions and financial queries with time-based context.
+This example demonstrates a NVIDIA NeMo Agent Toolkit workflow connecting to a third-party A2A server, the LangGraph-based currency agent. The workflow acts as an A2A client to perform currency conversions and financial queries with time-based context.
 
 ## Key Features
 
@@ -51,9 +51,19 @@ flowchart LR
 
 ## Installation and Setup
 
+
 ### Prerequisites
 
 Follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+
+### Set Up API Keys
+
+Set your NVIDIA and OpenAI API keys as environment variables:
+
+```bash
+export NVIDIA_API_KEY=<YOUR_API_KEY>
+export OPENAI_API_KEY=<YOUR_API_KEY>
+```
 
 ### Set Up External A2A Server
 
@@ -69,7 +79,16 @@ git checkout eb3885f # tested on 12/2025 with NAT 1.4.0
 # Step 2: Navigate to the LangGraph agent
 cd samples/python/agents/langgraph
 
-# Step 3: Run the currency agent on port 11000
+# Step 3: Set the environment variables for the currency agent
+# For OpenAI models:
+cat <<EOF > .env
+API_KEY=$OPENAI_API_KEY
+model_source=openai
+TOOL_LLM_URL=https://api.openai.com/v1
+TOOL_LLM_NAME=gpt-4o-mini
+EOF
+
+# Step 4: Run the currency agent on port 11000
 uv run app --port 11000
 ```
 
@@ -81,19 +100,6 @@ From the root directory of the NeMo Agent toolkit library, install this example:
 uv pip install -e examples/A2A/currency_agent_a2a
 ```
 
-### Set Up API Keys
-
-Set your NVIDIA API key as an environment variable:
-
-```bash
-export NVIDIA_API_KEY=<YOUR_API_KEY>
-```
-
-The currency agent requires a Google Gemini API key. Get one by following the instructions in the [Google Gemini API key documentation](https://ai.google.dev/gemini-api/docs/api-key).
-
-```bash
-export GOOGLE_API_KEY=<YOUR_GOOGLE_API_KEY>
-```
 
 ## Usage
 
