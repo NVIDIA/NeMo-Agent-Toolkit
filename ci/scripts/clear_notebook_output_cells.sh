@@ -22,6 +22,5 @@ else
 fi
 
 for NOTEBOOK_FILE in ${NOTEBOOK_FILES[@]}; do
-    echo "Clearing output cells in notebook: ${NOTEBOOK_FILE}"
     jupyter nbconvert --clear-output "${NOTEBOOK_FILE}"
 done
