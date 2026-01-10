@@ -15,8 +15,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-NOTEBOOK_FILES=$(git ls-files "*.ipynb" | xargs)
+if [ $# -gt 0 ]; then
+    NOTEBOOK_FILES="$@"
+else
+    NOTEBOOK_FILES=$(git ls-files "*.ipynb")
+fi
 
 for NOTEBOOK_FILE in ${NOTEBOOK_FILES[@]}; do
+    echo "Clearing output cells in notebook: ${NOTEBOOK_FILE}"
     jupyter nbconvert --clear-output "${NOTEBOOK_FILE}"
 done
