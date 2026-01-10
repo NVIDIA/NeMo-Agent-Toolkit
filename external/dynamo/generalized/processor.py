@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -131,6 +131,7 @@ class ProcessorRequestHandler:
 
     # ---- init ----
     async def initialize(self):
+        """Initialize processor by polling for router and backend."""
         logger.info(f"Loading tokenizer for {self.model_name}")
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
         if self.tokenizer.pad_token is None:
@@ -140,10 +141,14 @@ class ProcessorRequestHandler:
             ns = self.runtime.namespace("dynamo").component("router")
             self.router_pick_client = await ns.endpoint("find_worker").client()
             self.router_feedback_client = await ns.endpoint("feedback").client()
-            logger.info("Router clients initialized")
+            logger.info("Router clients created, waiting for instances...")
+            await self.router_pick_client.wait_for_instances()
+            logger.info("Router clients initialized successfully")
 
-        # engine client
-        self.engine_client = (await self.runtime.namespace("dynamo").component("backend").endpoint("generate").client())
+        # Engine client
+        self.engine_client = await self.runtime.namespace("dynamo").component("backend").endpoint("generate").client()
+        logger.info("Engine client created, waiting for backend instances...")
+        await self.engine_client.wait_for_instances()
         logger.info("Processor initialized successfully")
 
         # Initialize metrics CSV with header if file doesn't exist
@@ -217,6 +222,7 @@ class ProcessorRequestHandler:
 
     async def _pick_worker(self, token_ids: list[int], prefix_id: str, reuse_budget: int, osl: str,
                            iat: str) -> tuple[int | None, str | None]:
+        """Pick a worker via the router."""
         if not self.router_pick_client:
             return None, None
 

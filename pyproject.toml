@@ -67,6 +67,8 @@ dependencies = [
   "tabulate~=0.9",
   "uvicorn[standard]~=0.38",
   "wikipedia~=1.4",
+  # transitive dependencies
+  "urllib3~=2.6.3",
 ]
 requires-python = ">=3.11,<3.14"
 description = "NVIDIA NeMo Agent toolkit"
@@ -96,7 +98,9 @@ agno = ["nvidia-nat-agno"]
 autogen = ["nvidia-nat-autogen"]
 crewai = ["nvidia-nat-crewai"]
 data-flywheel = ["nvidia-nat-data-flywheel"]
-huggingface = ["transformers", "torch", "accelerate"]
+huggingface = [
+  "transformers[torch,accelerate]~=4.57",
+]
 ingestion = ["nvidia-nat-ingestion"] # meta-package
 langchain = ["nvidia-nat-langchain"]
 llama-index = ["nvidia-nat-llama-index"]
@@ -338,6 +342,8 @@ dev = [
   "twine~=6.0",
   "vale~=3.12",
   "yapf==0.43.*",
+  # transitive dependencies
+  "werkzeug~=3.1.5",
 ]
 
 [project.entry-points.'nat.components']

@@ -1,5 +1,5 @@
 #!/bin/bash
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,7 @@
 
 # Dynamo SGLang FULL STACK with Unified Worker
 # Architecture: ETCD + NATS + Dynamo Frontend (API) → SGLang Backend Worker (Unified)
-# 
+#
 # This script manages ALL required components:
 #   - ETCD (metadata and worker discovery)
 #   - NATS (message queue for requests)
@@ -37,13 +37,14 @@ TP_SIZE="${DYNAMO_TP_SIZE:-4}"
 HTTP_PORT="${DYNAMO_HTTP_PORT:-8099}"
 MODEL="/workspace/models/Llama-3.3-70B-Instruct"
 SERVED_MODEL_NAME="${DYNAMO_MODEL_NAME:-llama-3.3-70b}"
-IMAGE="nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.6.1"
+IMAGE="nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.7.1"
 SHM_SIZE="${DYNAMO_SHM_SIZE:-16g}"
 
 # Infrastructure ports (can be overridden via environment variables)
 ETCD_CLIENT_PORT="${DYNAMO_ETCD_PORT:-2379}"
 ETCD_PEER_PORT="${DYNAMO_ETCD_PEER_PORT:-2390}"
 NATS_PORT="${DYNAMO_NATS_PORT:-4222}"
+WORKER_INIT_TIMEOUT_S="${DYNAMO_WORKER_INIT_TIMEOUT_S:-600}"
 
 # Compute container-internal GPU indices (GPUs are renumbered 0,1,2,... inside the container)
 NUM_GPUS=$(echo "$WORKER_GPUS" | tr ',' '\n' | wc -l)
@@ -58,6 +59,32 @@ if [ -z "${DYNAMO_MODEL_DIR}" ]; then
     echo ""
     echo "Then run this script again."
     exit 1
+fi
+# If directory exists, validate it's a proper model directory (NVBug 5756833)
+# If it doesn't exist, the download workflow later will handle it
+if [ -d "${DYNAMO_MODEL_DIR}" ]; then
+    if [ ! -f "${DYNAMO_MODEL_DIR}/config.json" ]; then
+        echo "ERROR: ${DYNAMO_MODEL_DIR} exists but is not a valid model directory"
+        echo ""
+        echo "Missing: config.json"
+        echo ""
+        echo "Common mistake - pointing to cache root instead of model snapshot:"
+        echo "   Wrong: ~/.cache/huggingface/"
+        echo "   Right: ~/.cache/huggingface/hub/models--meta-llama--Llama-3.3-70B-Instruct/snapshots/<hash>"
+        echo ""
+        echo "Find it: find ~/.cache/huggingface/hub -name config.json -path '*Llama-3.3-70B*'"
+        exit 1
+    fi
+
+    # Verify config.json has model_type field (exact error from NVBug 5756833)
+    if ! grep -q '"model_type"' "${DYNAMO_MODEL_DIR}/config.json" 2>/dev/null; then
+        echo "ERROR: ${DYNAMO_MODEL_DIR}/config.json is missing 'model_type' field"
+        echo ""
+        echo "This usually means incomplete/corrupted download. Try:"
+        echo "  rm -rf ${DYNAMO_MODEL_DIR}"
+        echo "  huggingface-cli download meta-llama/Llama-3.3-70B-Instruct --local-dir ${DYNAMO_MODEL_DIR}"
+        exit 1
+    fi
 fi
 LOCAL_MODEL_DIR="${DYNAMO_MODEL_DIR}"
 
@@ -168,7 +195,7 @@ if [ -z "$HF_TOKEN" ]; then
         echo "✗ Local model NOT found and no HF_TOKEN to download it"
         echo ""
         read -p "Please enter your HuggingFace token (or press Enter to skip): " HF_TOKEN
-        
+
         if [ -z "$HF_TOKEN" ]; then
             echo ""
             echo "WARNING: Proceeding without HF_TOKEN. This may fail if the model needs to be downloaded."
@@ -220,11 +247,11 @@ docker run -d \
   $IMAGE \
   bash -c "
     set -e  # Exit on any error
-    
+
     echo '========================================================='
     echo 'Verifying external infrastructure services...'
     echo '========================================================='
-    
+
     # Verify ETCD is accessible
     if curl -s http://localhost:$ETCD_CLIENT_PORT/health > /dev/null 2>&1; then
         echo \"✓ ETCD accessible at localhost:$ETCD_CLIENT_PORT\"
@@ -233,7 +260,7 @@ docker run -d \
         echo '  Make sure ETCD container is running with --network host'
         exit 1
     fi
-    
+
     # Verify NATS is accessible (basic TCP check)
     if timeout 2 bash -c '</dev/tcp/localhost/$NATS_PORT' 2>/dev/null; then
         echo \"✓ NATS accessible at localhost:$NATS_PORT\"
@@ -242,41 +269,65 @@ docker run -d \
         echo '  Make sure NATS container is running with --network host'
         exit 1
     fi
-    
+
     echo ''
-    
-    # Function to wait for worker initialization
+
+    # Function to wait for worker initialization by checking ETCD registration
+    # Dynamo workers register with ETCD, they don't expose HTTP health endpoints
     wait_for_worker() {
         local worker_type=\$1
         local pid=\$2
-        local max_wait=120
+        # local max_wait=300
+        local max_wait=${DYNAMO_WORKER_INIT_TIMEOUT_S:-600}
         local elapsed=0
-        
+        local poll_interval=5
+
         echo \"Waiting for \$worker_type worker (PID \$pid) to initialize...\"
+        echo \"  Detection: ETCD worker registration\"
+        echo \"  Timeout: \${max_wait}s\"
+
         while [ \$elapsed -lt \$max_wait ]; do
             # Check if process is still running
             if ! kill -0 \$pid 2>/dev/null; then
                 echo \"ERROR: \$worker_type worker process died!\"
                 return 1
             fi
-            
-            sleep 5
-            elapsed=\$((elapsed + 5))
-            if [ \$((elapsed % 15)) -eq 0 ]; then
-                echo \"  ... \${elapsed}s / \${max_wait}s\"
+
+            # Check ETCD for registered workers using v3 API
+            # Query ALL keys to find where Dynamo registers (empty key "" with range_end "\0" = all keys)
+            # Base64: "" -> AA==, "\0" -> AA==  (we use keys_only to reduce response size)
+            local etcd_response=\$(curl -s --max-time 2 http://localhost:$ETCD_CLIENT_PORT/v3/kv/range \
+                -X POST \
+                -H \"Content-Type: application/json\" \
+                -d '{\"key\":\"AA==\",\"range_end\":\"AA==\",\"keys_only\":true}' 2>&1)
+
+            # Debug: Print ETCD response every 30s (truncated)
+            if [ \$((elapsed % 30)) -eq 0 ] && [ \$elapsed -gt 0 ]; then
+                echo \"  [DEBUG] ETCD keys found: \$(echo \"\$etcd_response\" | grep -o '\"key\":\"[^\"]*\"' | head -5)\"
+                echo \"  [DEBUG] ETCD count: \$(echo \"\$etcd_response\" | grep -o '\"count\":\"[^\"]*\"')\"
             fi
-            
-            # After 60s, assume it's initialized (model loading takes time for 70B)
-            if [ \$elapsed -ge 60 ]; then
-                echo \"✓ \$worker_type worker should be initialized\"
+
+            # Check if we got any keys back (count > 0 means workers registered)
+            if echo \"\$etcd_response\" | grep -q '\"count\"' && \
+               ! echo \"\$etcd_response\" | grep -q '\"count\":\"0\"'; then
+                echo \"✓ \$worker_type worker is ready (registered with ETCD at \${elapsed}s)\"
                 return 0
             fi
+
+            sleep \$poll_interval
+            elapsed=\$((elapsed + poll_interval))
+            if [ \$((elapsed % 30)) -eq 0 ]; then
+                echo \"  ... \${elapsed}s / \${max_wait}s (waiting for ETCD registration)\"
+            fi
         done
-        
-        echo \"WARNING: \$worker_type worker initialization timeout, proceeding anyway\"
-        return 0
+
+        echo \"ERROR: \$worker_type worker failed to register with ETCD within \${max_wait}s\"
+        echo \"  Image: $IMAGE\"
+        echo \"  The model may require more time to load, or there may be a startup error.\"
+        echo \"  Check worker logs for details.\"
+        return 1
     }
-    
+
     echo '========================================================='
     echo 'Step 1: Starting Unified Worker (Host GPUs $WORKER_GPUS -> Container GPUs $CONTAINER_GPU_INDICES)...'
     echo '========================================================='
@@ -292,15 +343,10 @@ docker run -d \
     WORKER_PID=\$!
     echo \"Unified Worker PID: \$WORKER_PID\"
     echo \"\"
-    
-    # Wait for unified worker to initialize
+
+    # Wait for unified worker to initialize (checks ETCD registration)
     wait_for_worker \"Unified\" \$WORKER_PID || exit 1
-    
-    # Give worker extra time to register with ETCD
-    echo ''
-    echo 'Waiting for worker to register with ETCD (30s)...'
-    sleep 30
-    
+
     echo ''
     echo '========================================================='
     echo 'Step 2: Starting Dynamo Frontend (HTTP API on port $HTTP_PORT)...'
@@ -314,7 +360,7 @@ docker run -d \
     echo \"Waiting 15s for frontend to discover workers...\"
     sleep 15
     echo \"\"
-    
+
     echo ''
     echo '========================================================='
     echo '✓ All components started successfully!'
@@ -336,7 +382,7 @@ docker run -d \
     echo '         ↓'
     echo '  Response'
     echo '========================================================='
-    
+
     # Monitor all processes
     while true; do
         # Check if any critical process died
@@ -390,6 +436,7 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo "Models Endpoint: http://localhost:$HTTP_PORT/v1/models"
     echo ""
     echo "Useful Commands:"
+    echo "  Interactive shell:    docker exec -it $CONTAINER_NAME bash"
     echo "  View Dynamo logs:     docker logs -f $CONTAINER_NAME"
     echo "  View ETCD logs:       docker logs -f etcd-dynamo"
     echo "  View NATS logs:       docker logs -f nats-dynamo"
@@ -432,27 +479,29 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo ""
     echo "========================================================="
     echo ""
-    echo "Waiting for SGLang to initialize (this may take 90-120 seconds for 70B model)..."
+    echo "Waiting for SGLang to initialize (this will likely take 5-10 minutes for a 70B model)..."
     echo "Monitoring logs (Ctrl+C to exit, container continues)..."
     echo ""
-    
-    # Wait for server to be ready
-    echo "Checking for API availability..."
-    max_attempts=90
+
+    # Wait for server to be ready (check /v1/models which only works when workers are discovered)
+    echo "Checking for API availability (timeout=15 minutes)..."
+    max_attempts=900
     attempt=0
-    
+
     while [ $attempt -lt $max_attempts ]; do
-        if curl -s http://localhost:$HTTP_PORT/health > /dev/null 2>&1; then
-            echo "✓ SGLang API is ready!"
+        # Check /v1/models - only returns data when workers are registered
+        models_response=$(curl -s http://localhost:$HTTP_PORT/v1/models 2>/dev/null)
+        if echo "$models_response" | grep -q '"id"'; then
+            echo "✓ SGLang API is ready! (models discovered)"
             break
         fi
         attempt=$((attempt + 1))
         if [ $((attempt % 15)) -eq 0 ]; then
             echo "  ... still waiting ($attempt/$max_attempts)"
         fi
-        sleep 2
+        sleep 1
     done
-    
+
     if [ $attempt -ge $max_attempts ]; then
         echo ""
         echo "⚠ Timeout waiting for API. Check logs with: docker logs $CONTAINER_NAME"
@@ -468,7 +517,7 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
             "messages": [{"role": "user", "content": "Say hello"}],
             "max_tokens": 20
           }' | jq '.choices[0].message.content, .usage'
-        
+
         echo ""
         echo "========================================================="
         echo "Container is running. View logs with:"
