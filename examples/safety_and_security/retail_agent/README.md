@@ -358,7 +358,7 @@ The generated report is more reliable if the red teaming scenarios are repeated 
 nat red-team --red_team_config examples/safety_and_security/retail_agent/configs/red-teaming.yml --reps 5
 ```
 
-> **Note**: Running with multiple repetitions might take some time.
+> **Note**: Running with multiple repetitions might take some time. Most `nat red-team` commands take several minutes to run due to their complex workflows.
 
 ### Red Teaming Configuration
 
@@ -526,9 +526,7 @@ The report includes:
 - **Per-scenario breakdown**: Individual scores, reasoning, and evaluated outputs
 - **Filtering by tags and groups**: Interactive exploration of results
 
-```bash
-open .tmp/red_teaming_evaluation_results/report.html
-```
+Example report path: `.tmp/red_teaming_evaluation_results/report.html`
 
 ### Adding Defenses
 
@@ -542,13 +540,15 @@ After identifying vulnerabilities through red teaming, you can add defense middl
 | `content_safety_guard` | Detect harmful, violent, or unsafe content |
 | `output_verifier` | Detect manipulated or incorrect tool outputs |
 
-#### Optional Dependencies
+#### Required Dependencies
 
-To use Hugging Face guard models (such as Qwen Guard), install the Hugging Face dependencies:
+NeMo Agent Toolkit has support to load local HuggingFace models, but it is not installed by default. To install:
 
 ```bash
 uv pip install -e '.[huggingface]'
 ```
+
+#### Optional Dependencies
 
 To use the **PII Defense**, install the PII dependencies:
 
