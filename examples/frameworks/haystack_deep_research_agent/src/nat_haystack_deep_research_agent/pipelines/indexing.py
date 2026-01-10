@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import typing
 from pathlib import Path
 
 from haystack.components.converters.pypdf import PyPDFToDocument
@@ -24,6 +25,9 @@ from haystack.core.pipeline import Pipeline
 from haystack.document_stores.types import DuplicatePolicy
 from haystack_integrations.components.embedders.nvidia import NvidiaDocumentEmbedder
 
+if typing.TYPE_CHECKING:
+    from haystack.core.component import Component
+
 
 def _gather_sources(base_dir: Path) -> tuple[list[Path], list[Path]]:
     pdfs = list(base_dir.glob("**/*.pdf"))
@@ -31,7 +35,7 @@ def _gather_sources(base_dir: Path) -> tuple[list[Path], list[Path]]:
     return pdfs, texts
 
 
-def _build_indexing_pipeline(document_store, embedder_model: str) -> Pipeline:
+def _build_indexing_pipeline(document_store, embedder_model: str, component_name: str, component_instance: "Component") -> Pipeline:
     p = Pipeline()
     p.add_component("cleaner", DocumentCleaner())
     p.add_component(
@@ -46,6 +50,14 @@ def _build_indexing_pipeline(document_store, embedder_model: str) -> Pipeline:
         "writer",
         DocumentWriter(document_store=document_store, policy=DuplicatePolicy.SKIP),
     )
+
+    p.add_component(component_name, component_instance)
+    p.connect(f"{component_name}.documents", "cleaner.documents")
+    p.connect("cleaner.documents", "splitter.documents")
+    p.connect("splitter.documents", "embedder.documents")
+    p.connect("embedder.documents", "writer.documents")
+    p.warm_up()
+
     return p
 
 
@@ -89,23 +101,13 @@ def run_startup_indexing(
                 len(text_sources),
             )
 
-            indexing_pipeline = _build_indexing_pipeline(document_store, embedder_model)
-            indexing_pipeline.add_component("pdf_converter", PyPDFToDocument())
-            indexing_pipeline.add_component("text_converter", TextFileToDocument(encoding="utf-8"))
-
-            indexing_pipeline.connect("pdf_converter.documents", "cleaner.documents")
-            indexing_pipeline.connect("text_converter.documents", "cleaner.documents")
-            indexing_pipeline.connect("cleaner.documents", "splitter.documents")
-            indexing_pipeline.connect("splitter.documents", "embedder.documents")
-            indexing_pipeline.connect("embedder.documents", "writer.documents")
-
-            indexing_pipeline.warm_up()
-
             if pdf_sources:
-                res_pdf = indexing_pipeline.run({"pdf_converter": {"sources": pdf_sources}})
+                pdf_pipeline = _build_indexing_pipeline(document_store, embedder_model, "pdf_converter", PyPDFToDocument())
+                res_pdf = pdf_pipeline.run({"pdf_converter": {"sources": pdf_sources}})
                 total_written += int(res_pdf.get("writer", {}).get("documents_written", 0))
             if text_sources:
-                res_text = indexing_pipeline.run({"text_converter": {"sources": text_sources}})
+                text_pipeline = _build_indexing_pipeline(document_store, embedder_model, "text_converter", TextFileToDocument(encoding="utf-8"))
+                res_text = text_pipeline.run({"text_converter": {"sources": text_sources}})
                 total_written += int(res_text.get("writer", {}).get("documents_written", 0))
 
             logger.info("Indexing complete. Documents written: %s", total_written)
