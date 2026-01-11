@@ -185,7 +185,14 @@ class TestToolWrapper:
         agno_tool_wrapper("test_tool", mock_function, mock_builder)
 
         # Verify that get_running_loop was called
-        mock_get_running_loop.assert_called_once()
+        # Known behavior: 1 call on amd64, 3 calls on arm64
+        # (due to pydantic-core C extension architecture differences in function introspection)
+        call_count = mock_get_running_loop.call_count
+        assert call_count in [1, 3], (
+            f"Expected 1 call (amd64) or 3 calls (arm64), but got {call_count}. "
+            f"This may indicate a pydantic-core or agno library update. "
+            f"Verify the integration still works correctly and update this test if the new behavior is expected."
+        )
 
     @patch("nat.plugins.agno.tool_wrapper.asyncio.new_event_loop")
     @patch("nat.plugins.agno.tool_wrapper.asyncio.set_event_loop")
