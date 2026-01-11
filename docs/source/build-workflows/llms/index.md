@@ -162,7 +162,7 @@ The HuggingFace LLM provider is defined by the {py:class}`~nat.llm.huggingface_l
 
 * `model_name` - The HuggingFace model name or path (for example, `Qwen/Qwen3Guard-Gen-0.6B`)
 * `device` - Device for model execution: `cpu`, `cuda`, `cuda:0`, or `auto` (default: `auto`)
-* `torch_dtype` - Torch data type: `float16`, `bfloat16`, `float32`, or `auto` (default: `auto`)
+* `dtype` - Torch data type: `float16`, `bfloat16`, `float32`, or `auto` (default: `auto`)
 * `max_new_tokens` - Maximum number of new tokens to generate (default: `128`)
 * `temperature` - Sampling temperature (default: `0.0`)
 * `trust_remote_code` - Whether to trust remote code when loading the model (default: `false`)

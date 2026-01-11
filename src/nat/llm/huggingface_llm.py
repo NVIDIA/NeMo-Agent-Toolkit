@@ -78,8 +78,7 @@ class HuggingFaceConfig(LLMBaseConfig, name="huggingface"):
 
     device: str = Field(default="auto", description="Device: 'cpu', 'cuda', 'cuda:0', or 'auto'")
 
-    torch_dtype: str | None = Field(default="auto",
-                                    description="Torch dtype: 'float16', 'bfloat16', 'float32', or 'auto'")
+    dtype: str | None = Field(default="auto", description="Torch dtype: 'float16', 'bfloat16', 'float32', or 'auto'")
 
     max_new_tokens: int = Field(default=128, description="Maximum number of new tokens to generate")
 
@@ -160,7 +159,7 @@ async def huggingface_provider(
 
         # Load model
         model = AutoModelForCausalLM.from_pretrained(config.model_name,
-                                                     torch_dtype=config.torch_dtype,
+                                                     dtype=config.dtype,
                                                      device_map=config.device,
                                                      trust_remote_code=config.trust_remote_code)
 
