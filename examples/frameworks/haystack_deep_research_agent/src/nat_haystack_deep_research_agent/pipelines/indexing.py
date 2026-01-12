@@ -92,24 +92,24 @@ def run_startup_indexing(
             )
 
             indexing_pipeline = _build_indexing_pipeline(document_store, embedder_model)
-            indexing_pipeline.add_component("pdf_converter", PyPDFToDocument())
-            indexing_pipeline.add_component("text_converter", TextFileToDocument(encoding="utf-8"))
 
-            indexing_pipeline.connect("pdf_converter.documents", "joiner.documents")
-            indexing_pipeline.connect("text_converter.documents", "joiner.documents")
+            pipeline_data = {}
+            if len(pdf_sources) > 0:
+                pipeline_data["pdf_converter"] = {"sources": pdf_sources}
+                indexing_pipeline.add_component("pdf_converter", PyPDFToDocument())
+                indexing_pipeline.connect("pdf_converter.documents", "joiner.documents")
+
+            if len(text_sources) > 0:
+                pipeline_data["text_converter"] = {"sources": text_sources}
+                indexing_pipeline.add_component("text_converter", TextFileToDocument(encoding="utf-8"))
+                indexing_pipeline.connect("text_converter.documents", "joiner.documents")
+
             indexing_pipeline.connect("joiner.documents", "cleaner.documents")
             indexing_pipeline.connect("cleaner.documents", "splitter.documents")
             indexing_pipeline.connect("splitter.documents", "embedder.documents")
             indexing_pipeline.connect("embedder.documents", "writer.documents")
 
             indexing_pipeline.warm_up()
-
-            pipeline_data = {}
-            if pdf_sources:
-                pipeline_data["pdf_converter"] = {"sources": pdf_sources}
-
-            if text_sources:
-                pipeline_data["text_converter"] = {"sources": text_sources}
 
             pipeline_result = indexing_pipeline.run(data=pipeline_data)
             total_written += int(pipeline_result.get("writer", {}).get("documents_written", 0))
