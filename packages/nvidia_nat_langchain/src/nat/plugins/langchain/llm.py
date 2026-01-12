@@ -16,6 +16,7 @@
 
 import logging
 from collections.abc import Sequence
+from typing import Any
 from typing import TypeVar
 
 from nat.builder.builder import Builder
@@ -143,7 +144,7 @@ async def azure_openai_langchain(llm_config: AzureOpenAIModelConfig, _builder: B
                                 by_alias=True,
                                 exclude_none=True,
                                 exclude_unset=True),
-        api_version=llm_config.api_version,
+        api_version=llm_config.api_version,  # type: ignore[call-arg]
     )
 
     yield _patch_llm_based_on_config(client, llm_config)
@@ -267,6 +268,10 @@ async def litellm_langchain(llm_config: LiteLlmModelConfig, _builder: Builder):
 @register_llm_client(config_type=HuggingFaceConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 async def huggingface_langchain(llm_config: HuggingFaceConfig, _builder: Builder):
 
+    import asyncio
+
+    from langchain_core.callbacks.manager import AsyncCallbackManagerForLLMRun
+    from langchain_core.messages import BaseMessage
     from langchain_huggingface import ChatHuggingFace
     from langchain_huggingface import HuggingFacePipeline
     from transformers import pipeline
@@ -281,19 +286,42 @@ async def huggingface_langchain(llm_config: HuggingFaceConfig, _builder: Builder
 
     model_param = next(cached.model.parameters())
 
-    pipe = pipeline(
-        "text-generation",
-        model=cached.model,
-        tokenizer=cached.tokenizer,
-        torch_dtype=model_param.dtype,
-        device=model_param.device,
-        max_new_tokens=llm_config.max_new_tokens,
-        do_sample=llm_config.temperature > 0,
-        temperature=llm_config.temperature if llm_config.temperature > 0 else None,
-        pad_token_id=cached.tokenizer.eos_token_id,
-    )
+    # Avoid passing an explicit device when the model is sharded via accelerate;
+    # transformers raises if device is provided alongside an accelerate-loaded model.
+    extra_kwargs = {}
+    if getattr(cached.model, "hf_device_map", None) is None:
+        extra_kwargs["device"] = model_param.device
+
+    pipe = pipeline("text-generation",
+                    model=cached.model,
+                    tokenizer=cached.tokenizer,
+                    dtype=model_param.dtype,
+                    max_new_tokens=llm_config.max_new_tokens,
+                    do_sample=llm_config.temperature > 0,
+                    temperature=llm_config.temperature if llm_config.temperature > 0 else None,
+                    pad_token_id=cached.tokenizer.eos_token_id,
+                    **extra_kwargs)
 
     llm = HuggingFacePipeline(pipeline=pipe)
-    client = ChatHuggingFace(llm=llm)
+
+    class AsyncChatHuggingFace(ChatHuggingFace):
+        """Adds async support for local HuggingFacePipeline-backed chat models."""
+
+        async def _agenerate(self,
+                             messages: list[BaseMessage],
+                             stop: list[str] | None = None,
+                             run_manager: AsyncCallbackManagerForLLMRun | None = None,
+                             stream: bool | None = None,
+                             **kwargs: Any):
+            return await asyncio.to_thread(
+                self._generate,
+                messages,
+                stop,
+                run_manager.get_sync() if run_manager else None,
+                stream,
+                **kwargs,
+            )
+
+    client = AsyncChatHuggingFace(llm=llm)
 
     yield _patch_llm_based_on_config(client, llm_config)
