@@ -190,15 +190,15 @@ class TestToolWrapper:
         # (due to pydantic-core C extension architecture differences in function introspection)
         call_count = mock_get_running_loop.call_count
         machine = platform.machine().lower()
-        
+
         # Define expected call counts based on architecture
         expected_counts = {
             'arm64': 3,
             'aarch64': 3,  # ARM 64-bit (Linux naming)
-            'x86_64': 1,   # AMD/Intel 64-bit (Linux/macOS naming)
-            'amd64': 1,    # AMD/Intel 64-bit (Windows naming)
+            'x86_64': 1,  # AMD/Intel 64-bit (Linux/macOS naming)
+            'amd64': 1,  # AMD/Intel 64-bit (Windows naming)
         }
-        
+
         if machine in expected_counts:
             expected_count = expected_counts[machine]
             assert call_count == expected_count, (
