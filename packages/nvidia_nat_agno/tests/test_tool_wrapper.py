@@ -204,19 +204,19 @@ class TestToolWrapper:
         # For Python 3.14+, the fallback [1, 3] will be used until we add explicit entries
         expected_counts = {
             # ARM architectures
-            ('arm64', '3', '11'): [1],      # macOS ARM Python 3.11 (assumed same as Linux)
-            ('arm64', '3', '12'): [1, 3],   # macOS ARM Python 3.12+ (not yet confirmed in CI)
-            ('arm64', '3', '13'): [1, 3],   # macOS ARM Python 3.13+ (not yet confirmed in CI)
-            ('aarch64', '3', '11'): [1],    # Linux ARM Python 3.11 (confirmed: CI job 60115041673)
-            ('aarch64', '3', '12'): [1, 3], # Linux ARM Python 3.12+ (not yet confirmed - job cancelled)
-            ('aarch64', '3', '13'): [1, 3], # Linux ARM Python 3.13+ (not yet confirmed - job cancelled)
+            ('arm64', '3', '11'): [1],  # macOS ARM Python 3.11 (assumed same as Linux)
+            ('arm64', '3', '12'): [1, 3],  # macOS ARM Python 3.12+ (not yet confirmed in CI)
+            ('arm64', '3', '13'): [1, 3],  # macOS ARM Python 3.13+ (not yet confirmed in CI)
+            ('aarch64', '3', '11'): [1],  # Linux ARM Python 3.11 (confirmed: CI job 60115041673)
+            ('aarch64', '3', '12'): [1, 3],  # Linux ARM Python 3.12+ (not yet confirmed - job cancelled)
+            ('aarch64', '3', '13'): [1, 3],  # Linux ARM Python 3.13+ (not yet confirmed - job cancelled)
             # x86_64 architectures - consistently return 1 call
-            ('x86_64', '3', '11'): [1],     # Linux/macOS x86_64 (confirmed: CI job 60115041674)
-            ('x86_64', '3', '12'): [1],     # Linux/macOS x86_64 (assumed same as 3.11/3.13)
-            ('x86_64', '3', '13'): [1],     # Linux/macOS x86_64 (confirmed: CI job 60115041704)
-            ('amd64', '3', '11'): [1],      # Windows x86_64 (assumed same as Linux x86_64)
-            ('amd64', '3', '12'): [1],      # Windows x86_64 (assumed same as Linux x86_64)
-            ('amd64', '3', '13'): [1],      # Windows x86_64 (assumed same as Linux x86_64)
+            ('x86_64', '3', '11'): [1],  # Linux/macOS x86_64 (confirmed: CI job 60115041674)
+            ('x86_64', '3', '12'): [1],  # Linux/macOS x86_64 (assumed same as 3.11/3.13)
+            ('x86_64', '3', '13'): [1],  # Linux/macOS x86_64 (confirmed: CI job 60115041704)
+            ('amd64', '3', '11'): [1],  # Windows x86_64 (assumed same as Linux x86_64)
+            ('amd64', '3', '12'): [1],  # Windows x86_64 (assumed same as Linux x86_64)
+            ('amd64', '3', '13'): [1],  # Windows x86_64 (assumed same as Linux x86_64)
         }
 
         key = (machine, py_major, py_minor)
