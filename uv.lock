@@ -5210,16 +5210,6 @@ requires-dist = [
 ]
 
 [[package]]
-name = "nat-config-inheritance"
-source = { editable = "examples/config_inheritance" }
-dependencies = [
-    { name = "nvidia-nat", extra = ["langchain"] },
-]
-
-[package.metadata]
-requires-dist = [{ name = "nvidia-nat", extras = ["langchain"], editable = "." }]
-
-[[package]]
 name = "nat-currency-agent-a2a"
 source = { editable = "examples/A2A/currency_agent_a2a" }
 dependencies = [
@@ -6101,7 +6091,6 @@ examples = [
     { name = "nat-alert-triage-agent" },
     { name = "nat-autogen-demo" },
     { name = "nat-automated-description-generation" },
-    { name = "nat-config-inheritance" },
     { name = "nat-currency-agent-a2a" },
     { name = "nat-dpo-tic-tac-toe" },
     { name = "nat-email-phishing-analyzer" },
@@ -6280,7 +6269,6 @@ requires-dist = [
     { name = "nat-alert-triage-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/alert_triage_agent" },
     { name = "nat-autogen-demo", marker = "extra == 'examples'", editable = "examples/frameworks/nat_autogen_demo" },
     { name = "nat-automated-description-generation", marker = "extra == 'examples'", editable = "examples/custom_functions/automated_description_generation" },
-    { name = "nat-config-inheritance", marker = "extra == 'examples'", editable = "examples/config_inheritance" },
     { name = "nat-currency-agent-a2a", marker = "extra == 'examples'", editable = "examples/A2A/currency_agent_a2a" },
     { name = "nat-dpo-tic-tac-toe", marker = "extra == 'examples'", editable = "examples/finetuning/dpo_tic_tac_toe" },
     { name = "nat-email-phishing-analyzer", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/email_phishing_analyzer" },

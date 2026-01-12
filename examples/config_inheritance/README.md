@@ -27,7 +27,7 @@ This example demonstrates how to use YAML configuration inheritance in the NeMo 
   - [Variant Configuration](#variant-configuration)
   - [Chained Inheritance](#chained-inheritance)
 - [Installation and Setup](#installation-and-setup)
-  - [Install this Workflow](#install-this-workflow)
+  - [Install Dependent Workflow](#install-dependent-workflow)
   - [Set Up API Keys](#set-up-api-keys)
   - [Run Workflows with Variant Configurations](#run-workflows-with-variant-configurations)
 - [Use Cases](#use-cases)
@@ -131,12 +131,12 @@ Configuration files can also reference base configurations in other directories 
 
 If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install the NeMo Agent toolkit.
 
-### Install this Workflow
+### Install Dependent Workflow
 
 From the root directory of the NeMo Agent toolkit library, run the following commands:
 
 ```bash
-uv pip install -e examples/config_inheritance
+uv pip install -e examples/getting_started/simple_calculator
 ```
 
 ### Set Up API Keys
