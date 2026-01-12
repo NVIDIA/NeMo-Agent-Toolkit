@@ -184,7 +184,11 @@ class MCPFrontEndPluginWorkerBase(ABC):
 
         # Register each function with MCP, passing SessionManager for observability
         for function_name, session_manager in session_managers.items():
-            register_function_with_mcp(mcp, function_name, session_manager, self.memory_profiler)
+            register_function_with_mcp(mcp,
+                                       function_name,
+                                       session_manager,
+                                       self.memory_profiler,
+                                       function=functions.get(function_name))
 
         # Add a simple fallback function if no functions were found
         if not session_managers:

@@ -87,10 +87,8 @@ async def autogen_team(config: AutoGenFunctionConfig, builder: Builder) -> Async
                 final_response_agent = AssistantAgent(
                     name=config.final_response_agent_name,
                     model_client=llm_client,
-                    tools=tools,  # Give FinalResponseAgent tools to fetch missing data
+                    tools=[],  # No tools - only review and format the data collected by other agents
                     system_message=config.final_response_agent_instructions,
-                    reflect_on_tool_use=True,
-                    max_tool_iterations=3,
                 )
 
                 # Create a new team for each invocation
