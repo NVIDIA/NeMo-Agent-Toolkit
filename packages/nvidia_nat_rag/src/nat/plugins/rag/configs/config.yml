@@ -1,0 +1,45 @@
+# NVIDIA RAG Integration - Sample Configuration
+# This configuration demonstrates how to use NVIDIA RAG tools with NeMo Agent Toolkit
+
+# RAG configuration file path (used by nvidia_rag library)
+# Make sure this file exists and is properly configured for your environment
+# See: https://github.com/NVIDIA-AI-Blueprints/rag/blob/main/notebooks/config.yaml
+
+functions:
+  # RAG Query Tool - Query documents and get AI-generated responses
+  rag_query:
+    _type: nvidia_rag_query
+    config_file: config.yaml  # Path to nvidia_rag config file
+    collection_names: ["test_library"]
+    vdb_endpoint: "http://localhost:19530"
+    use_knowledge_base: true
+    # embedding_endpoint: "localhost:9080"  # Uncomment for on-prem embeddings
+
+  # RAG Search Tool - Search for relevant document chunks
+  rag_search:
+    _type: nvidia_rag_search
+    config_file: config.yaml
+    collection_names: ["test_library"]
+    vdb_endpoint: "http://localhost:19530"
+    reranker_top_k: 3  # Reduced to avoid token limit issues with large documents
+    vdb_top_k: 20
+
+  # Utility tool
+  current_datetime:
+    _type: current_datetime
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.0
+
+workflow:
+  _type: react_agent
+  tool_names:
+    - rag_query
+    - rag_search
+    - current_datetime
+  llm_name: nim_llm
+  verbose: true
+  parse_agent_response_max_retries: 3
