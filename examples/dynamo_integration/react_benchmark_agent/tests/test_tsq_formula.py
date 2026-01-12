@@ -21,15 +21,18 @@ across various edge cases and known scenarios.
 
 import pytest
 
+from nat.builder.function import FunctionGroup
+
 
 def normalize_tool_name(tool_name: str) -> str:
     """Normalize tool names for comparison (matches tsq_evaluator.py)."""
     if not tool_name:
         return ""
 
-    # Strip module prefix (e.g., "banking_tools.report_lost_stolen_card" -> "report_lost_stolen_card")
-    if "." in tool_name:
-        tool_name = tool_name.rsplit(".", 1)[-1]
+    # Strip module prefix (e.g., "banking_tools__report_lost_stolen_card" -> "report_lost_stolen_card")
+    sep = FunctionGroup.SEPARATOR
+    if sep in tool_name:
+        _, tool_name = tool_name.split(sep, maxsplit=1)
 
     return tool_name.lower().strip().replace("_", "").replace("-", "")
 
@@ -225,13 +228,14 @@ class TestNormalization:
         assert accuracy == 1.0
 
     def test_module_prefix_stripping(self):
-        """Verify module prefixes are stripped (e.g., banking_tools.report_lost_stolen_card)."""
-        assert normalize_tool_name("banking_tools.report_lost_stolen_card") == "reportloststolencard"
-        assert normalize_tool_name("module.submodule.tool_name") == "toolname"
+        """Verify module prefixes are stripped (e.g., banking_tools__report_lost_stolen_card)."""
+        sep = FunctionGroup.SEPARATOR
+        assert normalize_tool_name(f"banking_tools{sep}report_lost_stolen_card") == "reportloststolencard"
+        assert normalize_tool_name(f"module{sep}submodule{sep}tool_name") == "submoduletoolname"
 
     def test_module_prefix_matching(self):
         """Verify tools match even with module prefixes."""
-        actual = [{"tool": "banking_tools.report_lost_stolen_card"}]
+        actual = [{"tool": f"banking_tools{FunctionGroup.SEPARATOR}report_lost_stolen_card"}]
         expected = [{"tool": "report_lost_stolen_card"}]
 
         accuracy = calculate_tool_accuracy(actual, expected)

@@ -15,12 +15,12 @@
 
 # This config demonstrates NESTED TOOL CALLS for testing parent-child span tracking.
 #
-# The power_of_two tool internally calls calculator.multiply, creating a hierarchy:
-#   react_agent -> power_of_two -> calculator.multiply
+# The power_of_two tool internally calls calculator__multiply, creating a hierarchy:
+#   react_agent -> power_of_two -> calculator__multiply
 #
 # In Phoenix, you can filter spans by parent:
 #   - nat.function.parent_name = "react_agent" -> shows power_of_two (agent-selected tool)
-#   - nat.function.parent_name = "power_of_two" -> shows calculator.multiply (nested call)
+#   - nat.function.parent_name = "power_of_two" -> shows calculator__multiply (nested call)
 
 general:
   telemetry:
@@ -48,11 +48,11 @@ function_groups:
   calculator:
     _type: calculator
 
-# The power_of_two function wraps calculator.multiply to create nested calls
+# The power_of_two function wraps calculator__multiply to create nested calls
 functions:
   power_of_two:
     _type: power_of_two
-    multiply_fn: calculator.multiply
+    multiply_fn: calculator__multiply
 
 llms:
   nim_llm:

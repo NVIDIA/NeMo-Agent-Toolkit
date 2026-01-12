@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -96,6 +96,17 @@ class FrontendRequestHandler:
         self.tokenizers: dict[str, AutoTokenizer] = {}
         # Regex to find one or more JSON objects optionally separated by semicolons
 
+        # Load model mapping from environment (model_name -> model_path)
+        # e.g., FRONTEND_MODEL_MAPPING='{"llama-3.3-70b": "/workspace/models/Llama-3.3-70B-Instruct"}'
+        self.model_mapping: dict[str, str] = {}
+        try:
+            mapping_str = os.environ.get("FRONTEND_MODEL_MAPPING", "{}")
+            self.model_mapping = json.loads(mapping_str)
+            if self.model_mapping:
+                logger.info("Loaded model mapping: %s", self.model_mapping)
+        except Exception as e:
+            logger.warning("Failed to parse FRONTEND_MODEL_MAPPING: %s", e)
+
         # Throughput (requests/sec) tracking
         self._tps_lock = asyncio.Lock()
         self._tps_count = 0
@@ -114,6 +125,10 @@ class FrontendRequestHandler:
         """
         self.processor_client = (await
                                  self.runtime.namespace("dynamo").component("processor").endpoint("process").client())
+        logger.info("Processor client created, waiting for instances...")
+        await self.processor_client.wait_for_instances()
+        logger.info("Processor client ready")
+
         self.app = FastAPI(title="Dynamo")
         self.setup_routes()
         logging.info("Frontend initialized successfully")
@@ -138,7 +153,9 @@ class FrontendRequestHandler:
     def _get_tokenizer(self, model: str) -> AutoTokenizer:
         tok = self.tokenizers.get(model)
         if tok is None:
-            tok = AutoTokenizer.from_pretrained(model)
+            # Use model mapping to resolve model name to path
+            model_path = self.model_mapping.get(model, model)
+            tok = AutoTokenizer.from_pretrained(model_path)
             if tok.pad_token is None:
                 tok.pad_token = tok.eos_token
             self.tokenizers[model] = tok

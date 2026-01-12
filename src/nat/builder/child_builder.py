@@ -14,15 +14,20 @@
 # limitations under the License.
 
 import typing
+from collections.abc import Generator
 from collections.abc import Sequence
+from contextlib import contextmanager
 
 from nat.authentication.interfaces import AuthProviderBase
 from nat.builder.builder import Builder
 from nat.builder.builder import UserManagerHolder
+from nat.builder.builder import _current_builder_context
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function import Function
 from nat.builder.function import FunctionGroup
+from nat.builder.sync_builder import SyncBuilder
 from nat.data_models.authentication import AuthProviderBaseConfig
+from nat.data_models.common import TypedBaseModel
 from nat.data_models.component_ref import FunctionGroupRef
 from nat.data_models.component_ref import FunctionRef
 from nat.data_models.component_ref import MiddlewareRef
@@ -64,6 +69,11 @@ class ChildBuilder(Builder):
         self._workflow_builder = workflow_builder
 
         self._dependencies = FunctionDependencies()
+
+    @override
+    @property
+    def sync_builder(self) -> SyncBuilder:
+        return SyncBuilder(self)
 
     @property
     def dependencies(self) -> FunctionDependencies:
@@ -336,3 +346,40 @@ class ChildBuilder(Builder):
     def get_middleware_config(self, middleware_name: str | MiddlewareRef) -> MiddlewareBaseConfig:
         """Get the configuration for middleware."""
         return self._workflow_builder.get_middleware_config(middleware_name)
+
+    @staticmethod
+    @contextmanager
+    def use(config: TypedBaseModel, builder: Builder) -> Generator["ChildBuilder", None, None]:
+        """
+        Context manager for temporarily setting the Builder object.
+
+        Parameters
+        ----------
+        config : TypedBaseModel
+            The configuration to use within the context. Note: Not used for now, but required by the interface
+            and will be used in the future.
+        builder : Builder
+            The Builder instance to use within the context.
+
+        Yields
+        ------
+        ChildBuilder
+            The Builder instance that was set.
+
+        Examples
+        --------
+        >>> with ChildBuilder.use(config, my_builder) as builder:
+        ...     # builder is active in this context
+        ...     assert Builder.current() == builder
+        >>> # Original builder is restored here
+
+        """
+
+        inner_builder = ChildBuilder(workflow_builder=builder)
+
+        previous = _current_builder_context.get()
+        _current_builder_context.set(inner_builder)
+        try:
+            yield inner_builder
+        finally:
+            _current_builder_context.set(previous)

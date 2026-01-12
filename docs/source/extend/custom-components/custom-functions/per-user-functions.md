@@ -150,13 +150,13 @@ When using the FastAPI front end with `nat serve`, users are identified by the `
 curl -X POST http://localhost:8000/generate \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=alice" \
-  -d '{"message": "Hello"}'
+  -d ''{"messages": [{"role": "user", "content": "Hello"}]}''
 
 # User "bob" makes a request (isolated from alice)
 curl -X POST http://localhost:8000/generate \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=bob" \
-  -d '{"message": "Hello"}'
+  -d ''{"messages": [{"role": "user", "content": "Hello"}]}''
 ```
 
 ### Lifecycle
@@ -175,6 +175,25 @@ The following configuration options control per-user function behavior:
 |--------|---------|-------------|
 | `per_user_workflow_timeout` | 30 minutes | How long inactive user sessions are kept |
 | `per_user_workflow_cleanup_interval` | 5 minutes | How often to check for inactive sessions |
+| `enable_per_user_monitoring` | false | Enable the `/monitor/users` endpoint for resource monitoring |
+
+### Monitoring Per-User Workflows
+
+The NVIDIA NeMo Agent toolkit provides a built-in monitoring endpoint for per-user workflows that exposes real-time resource usage metrics. To enable it, set `enable_per_user_monitoring` to `true` in your configuration:
+
+```yaml
+general:
+  enable_per_user_monitoring: true
+```
+
+The `/monitor/users` endpoint provides metrics including:
+
+- **Session lifecycle**: Creation time, last activity, active status
+- **Request metrics**: Total requests, active requests, average latency, error count
+- **LLM usage**: Token counts (prompt, completion, total), LLM API calls
+- **Resource counts**: Number of per-user functions and function groups built
+
+For complete API documentation and usage examples, refer to [Per-User Workflow Monitoring Endpoint](../../../reference/rest-api/api-server-endpoints.md#per-user-workflow-monitoring-endpoint).
 
 ## Dependency Rules
 

@@ -1,5 +1,5 @@
 <!--
-Copyright (c) 2025 NVIDIA Corporation
+Copyright (c) 2025-2026 NVIDIA Corporation
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ limitations under the License.
 # Dynamo Backend Setup Guide
 
 > [!NOTE]
-> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
+> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice. We kindly ask that GitHub Issues are opened as bugs are issued quickly as features are subject to change.
 
 This guide covers setting up, running, and configuring the NVIDIA Dynamo backend for the React Benchmark Agent evaluations.
 
@@ -188,12 +188,50 @@ Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimizat
 2. **NVIDIA Driver** with CUDA 12.0+ support
 4. **Hugging Face CLI** for model downloads (optional, if model not already downloaded)
 5. **Llama-3.3-70B-Instruct** model downloaded locally
+6. **Python uv environment** python version 3.11-3.13
+
+
+### Create a Python uv Environment
+
+```bash
+cd /path/to/NeMo-Agent-Toolkit
+uv venv "${HOME}/.venvs/nat_dynamo_eval" --python 3.13
+source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
+```
+
+### Download model weights (can skip if already done)
+
+```bash
+# Set your desired model directory
+export DYNAMO_MODEL_DIR="${HOME}/models/Llama-3.3-70B-Instruct"
+
+# Create the directory
+# mkdir -p "$(dirname "$DYNAMO_MODEL_DIR")"
+mkdir -p $DYNAMO_MODEL_DIR
+
+# We will download the model weights directly from HuggingFace. Usage of
+# llama models from requires approval from Meta. See `Access Notes` below.
+# You will need to create a HuggingFace Access Token with read access in
+# order to download the model. On the huggingface website visit:
+# "Access Tokens" -> "+ Create access token" to generate a token starting
+# with "hf_". Enter your token when prompted.
+# Respond "n" when asked "Add token as git credential? (Y/n)"
+uv pip install huggingface_hub
+uv run huggingface-cli login  # Enter your HF token
+
+uv run huggingface-cli download "meta-llama/Llama-3.3-70B-Instruct" \
+  --local-dir "$DYNAMO_MODEL_DIR"
+```
+
+> **Access Note**: The Llama-3.3-70B-Instruct model requires approval from Meta. Request access at [huggingface.co/meta-llama/Llama-3.3-70B-Instruct](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct) before downloading.
 
 ### Environment Setup
 
-Before running the Dynamo scripts, configure the following environment variables. See `env.example` for a complete list of all available options.
+Before running the Dynamo scripts, configure the following environment variables. See `.env.example` for a complete list of all available options.
 
 ```bash
+cd external/dynamo/
+
 # Copy and customize the example environment file
 cp .env.example .env
 
@@ -216,26 +254,6 @@ export DYNAMO_REPO_DIR="/path/to/NeMo-Agent-Toolkit"
 # Optional: Configure GPU devices (default: 0,1,2,3)
 export DYNAMO_GPU_DEVICES="0,1,2,3"
 ```
-
-### Download Model (if needed)
-
-```bash
-# Set your desired model directory
-export DYNAMO_MODEL_DIR="${HOME}/models/Llama-3.3-70B-Instruct"
-
-# Create the directory
-mkdir -p "$(dirname "$DYNAMO_MODEL_DIR")"
-
-# Download using Hugging Face CLI
-# Note: Requires Hugging Face account with Llama access approval
-pip install huggingface_hub
-huggingface-cli login  # Enter your HF token
-
-huggingface-cli download "meta-llama/Llama-3.3-70B-Instruct" \
-  --local-dir "$DYNAMO_MODEL_DIR"
-```
-
-> **Access Note**: The Llama-3.3-70B-Instruct model requires approval from Meta. Request access at [huggingface.co/meta-llama/Llama-3.3-70B-Instruct](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct) before downloading.
 
 ### Verify GPU Access
 
@@ -260,22 +278,48 @@ Example output for an 8x H100 system:
 |                                         |                        |               MIG M. |
 |=========================================+========================+======================|
 |   0  NVIDIA B200                    On  |   00000000:1B:00.0 Off |                    0 |
-| None  29C    P0            139W / 1000W |       0MiB / 183359MiB |      0%      Default |
+| N/A   31C    P0            187W / 1000W |  169082MiB / 183359MiB |      0%      Default |
 |                                         |                        |             Disabled |
 +-----------------------------------------+------------------------+----------------------+
 |   1  NVIDIA B200                    On  |   00000000:43:00.0 Off |                    0 |
-| None  29C    P0            138W / 1000W |       0MiB / 183359MiB |      0%      Default |
+| N/A   31C    P0            187W / 1000W |  169178MiB / 183359MiB |      0%      Default |
 |                                         |                        |             Disabled |
 +-----------------------------------------+------------------------+----------------------+
 |   2  NVIDIA B200                    On  |   00000000:52:00.0 Off |                    0 |
-| None  33C    P0            142W / 1000W |       0MiB / 183359MiB |      0%      Default |
+| N/A   36C    P0            193W / 1000W |  169230MiB / 183359MiB |      0%      Default |
 |                                         |                        |             Disabled |
 +-----------------------------------------+------------------------+----------------------+
 |   3  NVIDIA B200                    On  |   00000000:61:00.0 Off |                    0 |
-| None  34C    P0            143W / 1000W |       0MiB / 183359MiB |      0%      Default |
+| N/A   36C    P0            195W / 1000W |  169230MiB / 183359MiB |      0%      Default |
 |                                         |                        |             Disabled |
 +-----------------------------------------+------------------------+----------------------+
-...
+|   4  NVIDIA B200                    On  |   00000000:9D:00.0 Off |                    0 |
+| N/A   32C    P0            139W / 1000W |       4MiB / 183359MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   5  NVIDIA B200                    On  |   00000000:C3:00.0 Off |                    0 |
+| N/A   30C    P0            139W / 1000W |       4MiB / 183359MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   6  NVIDIA B200                    On  |   00000000:D1:00.0 Off |                    0 |
+| N/A   34C    P0            141W / 1000W |       4MiB / 183359MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   7  NVIDIA B200                    On  |   00000000:DF:00.0 Off |                    0 |
+| N/A   35C    P0            139W / 1000W |       4MiB / 183359MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    0   N/A  N/A         2700092      C   VLLM::Worker_TP0_EP0                  16901... |
+|    1   N/A  N/A         2700093      C   VLLM::Worker_TP1_EP1                  16901... |
+|    2   N/A  N/A         2700094      C   VLLM::Worker_TP2_EP2                  16901... |
+|    3   N/A  N/A         2700095      C   VLLM::Worker_TP3_EP3                  16901... |
++-----------------------------------------------------------------------------------------+
 ```
 
 ### Verify Docker and NVIDIA Container Toolkit
@@ -289,7 +333,7 @@ docker info
 
 ## Starting Dynamo
 
-All startup scripts are located in this directory (`external/dynamo/`).
+Startup scripts can be found in the same directory (`NeMo-Agent-Toolkit/external/dynamo/`) at this `README.md`
 
 ### Option 1: Unified Mode (Development)
 
@@ -356,6 +400,9 @@ Separate `prefill` and `decode` workers for maximum throughput. More complex set
 
 ```bash
 cd /path/to/NeMo-Agent-Toolkit/external/dynamo
+
+export DYNAMO_PREFILL_GPUS="0,1"
+export DYNAMO_DECODE_GPUS="2,3"
 
 # Start Dynamo disaggregated
 bash start_dynamo_disagg.sh > startup_output.txt 2>&1
@@ -637,6 +684,17 @@ Prefix headers help the router:
 - **Track prefix state** for optimal worker selection
 - **Improve throughput** through intelligent batching
 
+### KV overlap routing: requirements and failure mode
+
+Prefix headers do not include KV cache overlap. The router computes KV cache overlap scores by querying the backend through `dynamo.llm.KvIndexer`.
+
+If overlap scores are unavailable, the router cannot account for KV cache match when routing and will behave like a non-KV-aware router for that signal.
+
+This can happen in the following configuration:
+- You are using a Dynamo image or build that does not include `dynamo.llm` KV routing classes. In this case, the router logs a warning that `dynamo.llm` is not available and overlap scores will be empty.
+
+To confirm overlap scores are missing, check `router_metrics.csv` and verify that `overlap_chosen` is always `0.000000`.
+
 ### Configuration
 
 Use the `dynamo` LLM type in your eval config. Prefix headers are sent by default:
@@ -648,7 +706,7 @@ llms:
     model_name: llama-3.3-70b
     base_url: http://localhost:8099/v1
     api_key: dummy
-    
+
     # Prefix headers are enabled by default with template "nat-dynamo-{uuid}"
     # Optional: customize the template or routing hints
     # prefix_template: "react-benchmark-{uuid}"  # Custom template
@@ -748,6 +806,8 @@ The startup scripts support configuration through environment variables. Set the
 | `DYNAMO_HTTP_PORT` | Frontend HTTP port | `8099` |
 | `DYNAMO_ETCD_PORT` | `etcd` client port | `2389` |
 | `DYNAMO_NATS_PORT` | `nats` messaging port | `4232` |
+| `DYNAMO_METRICS_URL` | Prometheus metrics endpoint URL for the router | `http://localhost:9090/metrics` |
+| `ROUTER_METRICS_CSV` | Path to CSV file for router decision logging | `router_metrics.csv` |
 
 Example configuration:
 
@@ -838,6 +898,94 @@ NATS_PORT=4222
 
 ---
 
+## Metrics CSV Files
+
+The Thompson Sampling router (`start_dynamo_unified_thompson_hints.sh`) produces three CSV files for monitoring and analysis. These files are located in `/workspace/metrics/` inside the container.
+
+### Accessing Metrics
+
+```bash
+# From the host
+docker exec dynamo-sglang cat /workspace/metrics/router_metrics.csv
+docker exec dynamo-sglang cat /workspace/metrics/processor_requests.csv
+docker exec dynamo-sglang cat /workspace/metrics/frontend_throughput.csv
+
+# From inside the container
+docker exec -it dynamo-sglang bash
+cat /workspace/metrics/router_metrics.csv
+```
+
+### router_metrics.csv
+
+Logs every routing decision made by the Thompson Sampling router.
+
+**Columns:**
+
+| Column | Description |
+|--------|-------------|
+| `ts_epoch_ms` | Timestamp in milliseconds since epoch |
+| `tokens_len` | Number of tokens in the request |
+| `prefix_id` | Unique prefix identifier (auto-generated or from header) |
+| `reuse_after` | Remaining reuse budget after this request |
+| `chosen_worker` | Integer ID of the selected worker |
+| `overlap_chosen` | KV cache overlap score (0.0-1.0) |
+| `decode_cost` | Estimated `decode` cost |
+| `prefill_cost` | Estimated `prefill` cost |
+| `iat_level` | Inter-arrival time hint (LOW, MEDIUM, or HIGH) |
+| `stickiness` | Worker affinity score |
+| `load_mod` | Load modifier applied |
+
+**Example output:**
+
+```csv
+ts_epoch_ms,tokens_len,prefix_id,reuse_after,chosen_worker,overlap_chosen,decode_cost,prefill_cost,iat_level,stickiness,load_mod
+1767923263058,38,auto-9e05dbb0682f458a89b82f64bb328011,0,7587892060544177931,0.000000,2.000000,0.037109,MEDIUM,0.000,1.000000
+```
+
+### processor_requests.csv
+
+Logs latency metrics for each processed request.
+
+**Columns:**
+
+| Column | Description |
+|--------|-------------|
+| `num_tokens` | Number of output tokens generated |
+| `latency_ms` | Total request latency in milliseconds |
+| `latency_ms_per_token` | Average latency per token |
+
+**Example output:**
+
+```csv
+num_tokens,latency_ms,latency_ms_per_token
+10,70152.021,7015.202100
+```
+
+### frontend_throughput.csv
+
+Logs throughput metrics at regular intervals (default: every 5 seconds).
+
+**Columns:**
+
+| Column | Description |
+|--------|-------------|
+| `ts_epoch_ms` | Timestamp in milliseconds since epoch |
+| `requests` | Number of requests completed in this interval |
+| `interval_s` | Length of the measurement interval in seconds |
+| `req_per_sec` | Computed requests per second |
+
+**Example output:**
+
+```csv
+ts_epoch_ms,requests,interval_s,req_per_sec
+1767923267849,0,5.000,0.000000
+1767923272850,0,5.000,0.000000
+1767923337856,1,5.000,0.200000
+1767923342856,0,5.000,0.000000
+```
+
+---
+
 ## Troubleshooting
 
 ### Container Failed to Start
@@ -866,7 +1014,7 @@ ss -tlnp | grep 8099
 
 ```bash
 # Check `etcd` health
-curl http://localhost:2379/health 
+curl http://localhost:2389/health
 
 # Check `etcd` logs
 docker logs etcd-dynamo
@@ -925,7 +1073,7 @@ watch -n 1 nvidia-smi
 external/dynamo/                                # Dynamo backend
 │
 ├── 📄 README.md                                # This file - Dynamo setup guide
-├── 📄 env.example                              # Example environment variables
+├── 📄 .env.example                              # Example environment variables
 ├── 🔧 start_dynamo_unified.sh                  # Start Dynamo (unified mode)
 ├── 🔧 start_dynamo_unified_thompson_hints.sh   # Start with Thompson router
 ├── 🔧 start_dynamo_disagg.sh                   # Start Dynamo (disaggregated)

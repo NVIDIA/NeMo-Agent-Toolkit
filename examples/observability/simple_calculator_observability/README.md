@@ -79,7 +79,7 @@ Phoenix provides local tracing capabilities perfect for development and testing.
 
 ### Phoenix Tracing with Nested Tool Calls
 
-This configuration demonstrates **parent-child span tracking** for nested tool calls. The `power_of_two` tool internally calls `calculator.multiply`, creating a hierarchy that you can filter in Phoenix.
+This configuration demonstrates **parent-child span tracking** for nested tool calls. The `power_of_two` tool internally calls `calculator__multiply`, creating a hierarchy that you can filter in Phoenix.
 
 1. Run the workflow with nested tool tracing:
 
@@ -99,7 +99,7 @@ This configuration demonstrates **parent-child span tracking** for nested tool c
     ```text
     react_agent (root)
     └── power_of_two (parent: react_agent)
-        └── calculator.multiply (parent: power_of_two)
+        └── calculator__multiply (parent: power_of_two)
     ```
 
 This is useful for filtering out internal tool calls when analyzing agent behavior, allowing you to focus on only the tools the agent directly selected.

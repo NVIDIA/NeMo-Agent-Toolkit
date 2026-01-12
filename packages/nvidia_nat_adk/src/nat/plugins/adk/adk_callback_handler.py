@@ -40,7 +40,7 @@ class ADKProfilerHandler(BaseProfilerCallback):
       - LLMs
 
     to collect usage statistics (tokens, inputs, outputs, time intervals, etc.)
-    and store them in NeMo Agent Toolkit's usage_stats queue for subsequent analysis.
+    and store them in the usage_stats queue for subsequent analysis.
     """
 
     _instance: "ADKProfilerHandler | None" = None

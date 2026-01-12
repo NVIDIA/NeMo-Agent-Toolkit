@@ -55,6 +55,7 @@ from nat.eval.config import EvaluationRunOutput
 from nat.eval.evaluate import EvaluationRun
 from nat.eval.evaluate import EvaluationRunConfig
 from nat.eval.evaluator.evaluator_model import EvalInput
+from nat.front_ends.fastapi.async_job import run_generation
 from nat.front_ends.fastapi.auth_flow_handlers.http_flow_handler import HTTPAuthenticationFlowHandler
 from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import FlowState
 from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
@@ -75,6 +76,7 @@ from nat.front_ends.fastapi.utils import get_config_file_path
 from nat.object_store.models import ObjectStoreItem
 from nat.runtime.loader import load_workflow
 from nat.runtime.session import SessionManager
+from nat.utils.log_utils import setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +108,9 @@ class FastApiFrontEndPluginWorkerBase(ABC):
         self._scheduler_address = os.environ.get("NAT_DASK_SCHEDULER_ADDRESS")
         self._db_url = os.environ.get("NAT_JOB_STORE_DB_URL")
         self._config_file_path = get_config_file_path()
+        self._use_dask_threads = os.environ.get("NAT_USE_DASK_THREADS", "0") == "1"
+        self._log_level = int(os.environ.get("NAT_FASTAPI_LOG_LEVEL", logging.INFO))
+        setup_logging(self._log_level)
 
         if self._scheduler_address is not None:
             if not _DASK_AVAILABLE:
@@ -335,6 +340,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         await self.add_static_files_route(app, builder)
         await self.add_authorization_route(app)
         await self.add_mcp_client_tool_list_route(app, builder)
+        await self.add_monitor_route(app)
 
         for ep in self.front_end_config.endpoints:
 
@@ -899,25 +905,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                  updated_at=job.updated_at,
                                                  expires_at=self._job_store.get_expires_at(job))
 
-        async def run_generation(scheduler_address: str,
-                                 db_url: str,
-                                 config_file_path: str,
-                                 job_id: str,
-                                 payload: typing.Any):
-            """Background task to run the workflow."""
-            job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
-            try:
-                async with load_workflow(config_file_path) as local_session_manager:
-                    async with local_session_manager.session() as session:
-                        result = await generate_single_response(payload,
-                                                                session,
-                                                                result_type=session.workflow.single_output_schema)
-
-                await job_store.update_status(job_id, JobStatus.SUCCESS, output=result)
-            except Exception as e:
-                logger.exception("Error in async job %s", job_id)
-                await job_store.update_status(job_id, JobStatus.FAILURE, error=str(e))
-
         def post_async_generation(request_type: type):
 
             async def start_async_generation(
@@ -940,6 +927,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         job_fn=run_generation,
                         sync_timeout=request.sync_timeout,
                         job_args=[
+                            not self._use_dask_threads,
+                            self._log_level,
                             self._scheduler_address,
                             self._db_url,
                             self._config_file_path,
@@ -1273,7 +1262,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     if configured_group.config.type != "mcp_client":
                         continue
 
-                    from nat.plugins.mcp.client_config import MCPClientConfig
+                    from nat.plugins.mcp.client.client_config import MCPClientConfig
 
                     config = configured_group.config
                     assert isinstance(config, MCPClientConfig)
@@ -1421,6 +1410,107 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     "description": "Internal Server Error"
                 }
             })
+
+    async def add_monitor_route(self, app: FastAPI):
+        """Add the per-user monitoring endpoint to the FastAPI app.
+
+        Security Warning:
+            This endpoint exposes per-user identifiers and usage metrics. It should be
+            protected by deploying behind an internal network, a reverse proxy with
+            authentication, or similar access controls to prevent exposure to untrusted callers.
+        """
+        # Check if monitoring is enabled in config
+        if not self._config.general.enable_per_user_monitoring:
+            logger.debug("Per-user monitoring disabled, skipping /monitor/users endpoint")
+            return
+
+        from nat.runtime.metrics import PerUserMetricsCollector
+        from nat.runtime.metrics import PerUserMonitorResponse
+        from nat.runtime.metrics import PerUserResourceUsage
+
+        async def get_per_user_metrics(user_id: str | None = None) -> PerUserMonitorResponse:
+            """
+            Get resource usage metrics for per-user workflows.
+
+            Args:
+                user_id: Optional user ID to filter metrics for a specific user
+
+            Returns:
+                PerUserMonitorResponse with metrics for all or specified users
+            """
+            # Collect metrics from all session managers that have per-user workflows
+            all_users: list[PerUserResourceUsage] = []
+
+            for session_manager in self._session_managers:
+                if not session_manager.is_workflow_per_user:
+                    continue
+
+                collector = PerUserMetricsCollector(session_manager)
+
+                if user_id is not None:
+                    # Filter for specific user
+                    user_metrics = await collector.collect_user_metrics(user_id)
+                    if user_metrics:
+                        all_users.append(user_metrics)
+                else:
+                    # Get all users
+                    response = await collector.collect_all_metrics()
+                    all_users.extend(response.users)
+
+            from datetime import datetime
+            return PerUserMonitorResponse(
+                timestamp=datetime.now(),
+                total_active_users=len(all_users),
+                users=all_users,
+            )
+
+        # Register the monitoring endpoint
+        app.add_api_route(path="/monitor/users",
+                          endpoint=get_per_user_metrics,
+                          methods=["GET"],
+                          response_model=PerUserMonitorResponse,
+                          description="Get resource usage metrics for per-user workflows",
+                          tags=["Monitoring"],
+                          responses={
+                              200: {
+                                  "description": "Successfully retrieved per-user metrics",
+                                  "content": {
+                                      "application/json": {
+                                          "example": {
+                                              "timestamp":
+                                                  "2025-12-16T10:30:00Z",
+                                              "total_active_users":
+                                                  2,
+                                              "users": [{
+                                                  "user_id": "alice",
+                                                  "session": {
+                                                      "created_at": "2025-12-16T09:00:00Z",
+                                                      "last_activity": "2025-12-16T10:29:55Z",
+                                                      "ref_count": 1,
+                                                      "is_active": True
+                                                  },
+                                                  "requests": {
+                                                      "total_requests": 42,
+                                                      "active_requests": 1,
+                                                      "avg_latency_ms": 1250.5,
+                                                      "error_count": 2
+                                                  },
+                                                  "memory": {
+                                                      "per_user_functions_count": 2,
+                                                      "per_user_function_groups_count": 1,
+                                                      "exit_stack_size": 3
+                                                  }
+                                              }]
+                                          }
+                                      }
+                                  }
+                              },
+                              500: {
+                                  "description": "Internal Server Error"
+                              }
+                          })
+
+        logger.info("Added per-user monitoring endpoint at /monitor/users")
 
     async def _add_flow(self, state: str, flow_state: FlowState):
         async with self._outstanding_flows_lock:

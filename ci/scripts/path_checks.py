@@ -45,6 +45,10 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/observability/simple_calculator_observability",
     ),
     (
+        r"^examples/config_inheritance/README.md",
+        r"^examples/getting_started/simple_calculator",
+    ),
+    (
         r"^examples/documentation_guides/workflows/text_file_ingest/.*/config.yml",
         r"^examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json",
     ),
@@ -114,6 +118,16 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/A2A/math_assistant_a2a/oauth2-keycloak-setup.md",
         r"^examples/A2A/calculator_a2a/configs/config-protected-oauth2.yml",
     ),
+    # Allow retail_agent src configs to reference root configs and data
+    (
+        r"^examples/safety_and_security/retail_agent/.*configs/",
+        r"^examples/safety_and_security/retail_agent/(configs|data)/",
+    ),
+    # Allow Deep Research eval config to reference data
+    (
+        r"^examples/frameworks/auto_wrapper/langchain_deep_research/configs/config_with_eval.yml",
+        r"^examples/frameworks/auto_wrapper/langchain_deep_research/data/DeepConsult_top10.csv",
+    ),
 }
 
 ALLOWLISTED_WORDS: set[str] = {
@@ -143,6 +157,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "LangChain/LangGraph.",
     "LangChain/LangGraph-based",
     "LTE/5G",
+    "N/A",
     "output/jobs/job_",
     "POST/PUT",
     "predictions/forecasts",
@@ -164,6 +179,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "try/except",
     "user/assistant",
     "validate/sanitize",
+    "walmart.com/garden-trowels",
     "Workflows/tools",
     "Yes/No",  #
     # numbers
@@ -183,7 +199,8 @@ ALLOWLISTED_WORDS: set[str] = {
     "ghcr\\.io/.*",  # Container registry references
     # anything starting with nvcr.io
     "nvcr\\.io/.*",  # anything starting with default/
-    "default/.*",
+    "default/.*",  # Models with their prefixes
+    "(azure|openai|gcp|google)/.*",
 }
 
 IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
