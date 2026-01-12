@@ -82,7 +82,6 @@ def run_startup_indexing(
             used_dir = fallback_data_dir
             pdf_sources, text_sources = _gather_sources(fallback_data_dir)
 
-        total_written = 0
         if pdf_sources or text_sources:
             logger.info(
                 "Indexing local files into OpenSearch from '%s' (pdf=%d, text/md=%d)",
@@ -112,7 +111,7 @@ def run_startup_indexing(
             indexing_pipeline.warm_up()
 
             pipeline_result = indexing_pipeline.run(data=pipeline_data)
-            total_written += int(pipeline_result.get("writer", {}).get("documents_written", 0))
+            total_written = int(pipeline_result.get("writer", {}).get("documents_written", 0))
 
             logger.info("Indexing complete. Documents written: %s", total_written)
         else:
