@@ -45,6 +45,10 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/observability/simple_calculator_observability",
     ),
     (
+        r"^examples/config_inheritance/README.md",
+        r"^examples/getting_started/simple_calculator",
+    ),
+    (
         r"^examples/documentation_guides/workflows/text_file_ingest/.*/config.yml",
         r"^examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json",
     ),
