@@ -377,11 +377,14 @@ class TestRegisterFunctionWithMcp:
     @patch('nat.plugins.mcp.server.tool_converter.create_function_wrapper')
     @patch('nat.plugins.mcp.server.tool_converter.get_function_description')
     @patch('nat.plugins.mcp.server.tool_converter.logger')
-    def test_register_function_with_mcp(self, mock_logger, mock_get_desc, mock_create_wrapper):
+    def test_register_function_with_mcp_uses_function_metadata(self, mock_logger, mock_get_desc, mock_create_wrapper):
         """Test registering a function with MCP using SessionManager."""
         # Arrange
         mock_mcp = MagicMock()
         mock_workflow = MagicMock(spec=Workflow)
+        mock_workflow.input_schema = "workflow_schema"
+        mock_function = MagicMock(spec=Function)
+        mock_function.input_schema = "function_schema"
         mock_session_manager = MagicMock(spec=SessionManager)
         mock_session_manager.workflow = mock_workflow
         function_name = "test_function"
@@ -391,25 +394,26 @@ class TestRegisterFunctionWithMcp:
         mock_create_wrapper.return_value = mock_wrapper
 
         # Act
-        register_function_with_mcp(mock_mcp, function_name, mock_session_manager)
+        register_function_with_mcp(mock_mcp, function_name, mock_session_manager, function=mock_function)
 
         # Assert - Check that logging happened
         assert mock_logger.info.call_count >= 1
-        mock_get_desc.assert_called_once_with(mock_workflow)
+        mock_get_desc.assert_called_once_with(mock_function)
         mock_create_wrapper.assert_called_once_with(function_name,
                                                     mock_session_manager,
-                                                    mock_workflow.input_schema,
+                                                    mock_function.input_schema,
                                                     None)  # memory_profiler defaults to None
         mock_mcp.tool.assert_called_once_with(name=function_name, description="Test description")
 
     @patch('nat.plugins.mcp.server.tool_converter.create_function_wrapper')
     @patch('nat.plugins.mcp.server.tool_converter.get_function_description')
     @patch('nat.plugins.mcp.server.tool_converter.logger')
-    def test_register_workflow_with_mcp(self, mock_logger, mock_get_desc, mock_create_wrapper):
+    def test_register_workflow_with_mcp_falls_back_to_workflow(self, mock_logger, mock_get_desc, mock_create_wrapper):
         """Test registering a workflow with MCP using SessionManager."""
         # Arrange
         mock_mcp = MagicMock()
         mock_workflow = MagicMock(spec=Workflow)
+        mock_workflow.input_schema = "workflow_schema"
         mock_session_manager = MagicMock(spec=SessionManager)
         mock_session_manager.workflow = mock_workflow
         function_name = "test_workflow"
