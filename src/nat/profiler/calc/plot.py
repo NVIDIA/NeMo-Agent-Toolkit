@@ -92,10 +92,37 @@ class PlotConfig:
     TITLE_FONTWEIGHT = 'bold'
 
 
+def _validate_columns(df: pd.DataFrame, required_columns: list[str], context: str = "") -> None:
+    """Validate that required columns exist in the DataFrame.
+
+    Args:
+        df: DataFrame to validate.
+        required_columns: List of column names that must exist.
+        context: Optional context string for error message.
+
+    Raises:
+        ValueError: If any required column is missing.
+    """
+    missing = [col for col in required_columns if col not in df.columns]
+    if missing:
+        available = list(df.columns)
+        ctx = f" in {context}" if context else ""
+        raise ValueError(f"Missing required column(s){ctx}: {missing}. Available columns: {available}")
+
+
 def plot_concurrency_vs_time_metrics_simple(df: pd.DataFrame, output_dir: Path) -> None:
+    """Save a simple plot of concurrency vs. p95 LLM latency and workflow runtime.
+
+    Args:
+        df: DataFrame with concurrency and latency metrics.
+        output_dir: Directory to save the plot.
+
+    Raises:
+        ValueError: If required columns are missing from the DataFrame.
     """
-    Save a simple plot of concurrency vs. p95 LLM latency and workflow runtime.
-    """
+    required = ["concurrency", "llm_latency_p95", "workflow_runtime_p95"]
+    _validate_columns(df, required, "plot_concurrency_vs_time_metrics_simple")
+
     plt.figure(figsize=PlotConfig.SIMPLE_FIGSIZE)
     plt.plot(df["concurrency"],
              df["llm_latency_p95"],

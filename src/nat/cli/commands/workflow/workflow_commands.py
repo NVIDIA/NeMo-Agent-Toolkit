@@ -19,6 +19,7 @@ import shutil
 import subprocess
 from pathlib import Path
 from urllib.parse import urlparse
+from urllib.request import url2pathname
 
 import click
 from jinja2 import Environment
@@ -151,7 +152,7 @@ def find_package_root(package_name: str) -> Path | None:
             logger.error("Invalid URL scheme in direct_url.json: %s", url)
             return None
 
-        package_root = Path(parsed_url.path).resolve()
+        package_root = Path(url2pathname(parsed_url.path)).resolve()
 
         # Ensure the path exists and is within an allowed base directory
         if not package_root.exists() or not package_root.is_dir():

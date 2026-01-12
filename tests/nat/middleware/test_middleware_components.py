@@ -54,9 +54,10 @@ class _TestMiddleware(FunctionMiddleware):
     async def post_invoke(self, context):
         return None
 
-    async def function_middleware_invoke(self, value, call_next, context):
+    async def function_middleware_invoke(self, *args, call_next, context, **kwargs):
+        value = args[0] if args else None
         self.call_order.append(f"{self.test_param}_pre")
-        result = await call_next(value)
+        result = await call_next(value, *args[1:], **kwargs)
         self.call_order.append(f"{self.test_param}_post")
         return result
 
@@ -431,7 +432,7 @@ class TestFunctionGroupMiddlewares:
             functions = await group.get_accessible_functions()
 
             # Test that middlewares are applied to func1
-            func1 = functions["test_group.func1"]
+            func1 = functions["test_group__func1"]
             result = await func1.ainvoke(5)
             assert result == 10  # 5 * 2
 
@@ -442,7 +443,7 @@ class TestFunctionGroupMiddlewares:
             call_order.clear()
 
             # Test that middlewares are applied to func2
-            func2 = functions["test_group.func2"]
+            func2 = functions["test_group__func2"]
             result = await func2.ainvoke(5)
             assert result == 15  # 5 + 10
 
@@ -616,8 +617,8 @@ class TestFunctionGroupMiddlewares:
 
             # Get functions
             functions = await group.get_accessible_functions()
-            func1 = functions["cached_group.func1"]
-            func2 = functions["cached_group.func2"]
+            func1 = functions["cached_group__func1"]
+            func2 = functions["cached_group__func2"]
 
             # Test func1 caching
             result1 = await func1.ainvoke("test1")
@@ -667,14 +668,15 @@ class TestFunctionGroupMiddlewares:
             async def post_invoke(self, context):
                 return None
 
-            async def function_middleware_invoke(self, value, call_next, context):
+            async def function_middleware_invoke(self, *args, call_next, context, **kwargs):
+                value = args[0] if args else None
                 results.append(f"{self.name}_pre")
                 # Modify value based on middleware name
                 if self.name == "first":
                     value = value * 2
                 elif self.name == "second":
                     value = value + 10
-                result = await call_next(value)
+                result = await call_next(value, *args[1:], **kwargs)
                 results.append(f"{self.name}_post")
                 return result
 

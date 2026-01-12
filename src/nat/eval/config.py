@@ -62,3 +62,8 @@ class EvaluationRunOutput(BaseModel):
     evaluation_results: list[tuple[str, EvalOutput]]
     usage_stats: UsageStats | None = None
     profiler_results: ProfilerResults
+
+    # Configuration files written to output directory
+    config_original_file: Path | None = None
+    config_effective_file: Path | None = None
+    config_metadata_file: Path | None = None

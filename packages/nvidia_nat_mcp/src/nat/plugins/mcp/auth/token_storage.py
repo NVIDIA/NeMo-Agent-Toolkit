@@ -206,7 +206,7 @@ class ObjectStoreTokenStorage(TokenStorageBase):
 
 class InMemoryTokenStorage(TokenStorageBase):
     """
-    In-memory token storage using NeMo Agent toolkit's built-in object store.
+    In-memory token storage using the built-in object store provided by the NeMo Agent toolkit.
 
     This implementation uses the in-memory object store for token persistence,
     which provides a secure default option that doesn't require external storage

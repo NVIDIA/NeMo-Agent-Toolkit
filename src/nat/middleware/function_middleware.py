@@ -86,6 +86,42 @@ class FunctionMiddleware(Middleware):
                 return None  # Pass through unchanged
     """
 
+    @property
+    def enabled(self) -> bool:
+        """Check if this middleware is enabled.
+
+        Returns:
+            True if the middleware should be applied, False otherwise.
+            Default implementation always returns True.
+        """
+        return True
+
+    async def pre_invoke(self, context: InvocationContext) -> InvocationContext | None:
+        """Pre-invocation hook called before the function is invoked.
+
+        Args:
+            context: Invocation context containing function metadata and args
+
+        Returns:
+            InvocationContext if modified, or None to pass through unchanged.
+            Default implementation does nothing.
+        """
+        del context  # Unused by default implementation
+        return None
+
+    async def post_invoke(self, context: InvocationContext) -> InvocationContext | None:
+        """Post-invocation hook called after the function returns.
+
+        Args:
+            context: Invocation context containing function metadata, args, and output
+
+        Returns:
+            InvocationContext if modified, or None to pass through unchanged.
+            Default implementation does nothing.
+        """
+        del context  # Unused by default implementation
+        return None
+
     # ==================== Middleware Delegation ====================
     async def middleware_invoke(self,
                                 *args: Any,
@@ -124,13 +160,13 @@ class FunctionMiddleware(Middleware):
         You do NOT need to check ``enabled`` yourself.
 
         Args:
-            args: Positional arguments for the function
-            call_next: Callable to invoke next middleware or target function
-            context: Static function metadata
-            kwargs: Keyword arguments for the function
+            args: Positional arguments for the function (first arg is typically the input value).
+            call_next: Callable to invoke next middleware or target function.
+            context: Static function metadata.
+            kwargs: Keyword arguments for the function.
 
         Returns:
-            The (potentially transformed) function output
+            The (potentially transformed) function output.
         """
         # Build invocation context with frozen originals + mutable current
         # output starts as None (pre-invoke phase)
@@ -177,13 +213,13 @@ class FunctionMiddleware(Middleware):
         You do NOT need to check ``enabled`` yourself.
 
         Args:
-            args: Positional arguments for the function
-            call_next: Callable to invoke next middleware or target stream
-            context: Static function metadata
-            kwargs: Keyword arguments for the function
+            args: Positional arguments for the function (first arg is typically the input value).
+            call_next: Callable to invoke next middleware or target stream.
+            context: Static function metadata.
+            kwargs: Keyword arguments for the function.
 
         Yields:
-            Stream chunks (potentially transformed by post_invoke)
+            Stream chunks (potentially transformed by post_invoke).
         """
         # Build invocation context with frozen originals + mutable current
         # output starts as None (pre-invoke phase)

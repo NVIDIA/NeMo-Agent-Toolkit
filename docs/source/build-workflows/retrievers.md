@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NVIDIA NeMo Agent Toolkit Retrievers
+# Retrievers in NVIDIA NeMo Agent Toolkit
 
 Retrievers are an important component of Retrieval Augmented Generation (RAG) [workflows](./about-building-workflows.md) which allow [LLMs](./llms/index.md) to search a data store for content which is semantically similar to a query, which can be used as context by the LLM when providing a response to the query. Within NeMo Agent toolkit, retrievers are a configurable component that can be used within [functions](./functions-and-function-groups/functions.md), similar to LLMs and [embedders](./embedders.md), to provide a consistent read-only interface for connecting to different data store providers.
 

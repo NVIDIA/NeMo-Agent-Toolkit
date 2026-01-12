@@ -38,6 +38,7 @@ from nat.authentication.interfaces import AuthProviderBase
 from nat.data_models.authentication import AuthResult
 from nat.data_models.authentication import BasicAuthCred
 from nat.data_models.authentication import BearerTokenCred
+from nat.data_models.authentication import CredentialKind
 from nat.data_models.authentication import HeaderCred
 from nat.plugins.a2a.auth.credential_service import A2ACredentialService
 
@@ -50,7 +51,7 @@ class MockAuthProvider(AuthProviderBase):
     """Generic mock auth provider for testing."""
 
     def __init__(self, auth_result: AuthResult | None = None):
-        super().__init__(Mock())
+        super().__init__(Mock())  # type: ignore[arg-type]
         self.auth_result = auth_result
         self.authenticate_called_with = []
 
@@ -68,7 +69,7 @@ def mock_auth_provider():
     def _create(provider_name: str, auth_result: AuthResult | None = None):
 
         def mock_init(self, result):
-            AuthProviderBase.__init__(self, Mock())
+            AuthProviderBase.__init__(self, Mock())  # type: ignore[arg-type]
             self.auth_result = result
             self.authenticate_called_with = []
 
@@ -83,7 +84,7 @@ def mock_auth_provider():
             '__init__': mock_init,
             'authenticate': mock_authenticate,
         })
-        return cls(auth_result)
+        return cls(auth_result)  # type: ignore[call-arg]
 
     return _create
 
@@ -106,7 +107,7 @@ def oidc_scheme():
     """OpenID Connect security scheme fixture."""
     return SecurityScheme(root=OpenIdConnectSecurityScheme(
         type="openIdConnect",
-        openIdConnectUrl="https://auth.example.com/.well-known/openid-configuration",
+        open_id_connect_url="https://auth.example.com/.well-known/openid-configuration",
     ))
 
 
@@ -197,7 +198,8 @@ async def test_bearer_token_mapping(
 
 async def test_header_credential_with_api_key_scheme(api_key_scheme, mock_auth_provider, sample_agent_card):
     """Test HeaderCred maps to APIKeySecurityScheme in header."""
-    auth_result = AuthResult(credentials=[HeaderCred(kind="header", name="X-API-Key", value=SecretStr("test-api-key"))])
+    auth_result = AuthResult(
+        credentials=[HeaderCred(kind=CredentialKind.HEADER, name="X-API-Key", value=SecretStr("test-api-key"))])
     provider = mock_auth_provider("MockAPIKeyProvider", auth_result)
 
     card = sample_agent_card({"api_key": api_key_scheme})

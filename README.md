@@ -38,15 +38,15 @@ limitations under the License.
 
 ## 🔥 New Features
 
-- [**Automatic Hyperparameter Tuning:**](docs/source/improve-workflows/optimizer.md) Automatically tune the parameters and prompts of your agents, tools, and workflows to maximize performance, minimize cost, and increase accuracy.
-
-- [**Google ADK Support:**](./docs/source/components/integrations/frameworks.md#adk-google-agent-development-kit) Users of Google's Agent Development Kit (ADK) framework are now supported in NeMo Agent Toolkit.
-
-- [**MCP Authorization:**](./docs/source/components/auth/mcp-auth/index.md) NeMo Agent Toolkit now supports MCP authorization. This allows you to use NeMo Agent Toolkit with MCP authorization when using the streamable HTTP protocol.
-
-- [**Function Groups:**](./docs/source/build-workflows/functions-and-function-groups/function-groups.md) NeMo Agent Toolkit now supports Function Groups, allowing you to package multiple related functions together to share configuration, context, and resources.
+- [**A2A Support**](./docs/source/components/integrations/a2a.md) NeMo Agent Toolkit now supports deploying and consuming agents using the A2A protocol.
 
 - [**Amazon Bedrock AgentCore and Strands Agents Support:**](./docs/source/components/integrations/frameworks.md#strands) NeMo Agent Toolkit now supports building agents using Strands Agents framework and deploying them securely on Amazon Bedrock AgentCore runtime.
+
+- [**LangChain Agent Automatic Wrapper:**](./examples/frameworks/auto_wrapper/langchain_deep_research/README.md) NeMo Agent Toolkit now supports automatic wrapping of existing LangChain/LangGraph Agents.
+
+- [**Microsoft AutoGen Support**](./docs/source/components/integrations/frameworks.md#autogen) NeMo Agent Toolkit now supports building agents using AutoGen framework.
+
+- [**Initial NVIDIA Dynamo Integration:**](https://docs.nvidia.com/dynamo/latest/) NeMo Agent Toolkit now has initial Dynamo support for end-to-end deployment acceleration of agentic workflows.
 
 ## ✨ Key Features
 
@@ -87,13 +87,13 @@ NeMo Agent Toolkit has many optional dependencies which can be installed with th
 pip install "nvidia-nat[langchain]"
 ```
 
-Or for all optional dependencies:
+Or for **almost all** optional dependencies:
 
 ```bash
 pip install "nvidia-nat[all]"
 ```
 
-Detailed installation instructions, including the full list of optional dependencies, can be found in the [Installation Guide](./docs/source/get-started/installation.md).
+Detailed installation instructions, including the full list of optional dependencies and their conflicts, can be found in the [Installation Guide](./docs/source/get-started/installation.md).
 
 ## 🌟 Hello World Example
 
@@ -160,9 +160,9 @@ Before getting started, it's possible to run this simple workflow and many other
 
 ## 🛣️ Roadmap
 
-- [ ] Automatic Reinforcement Learning (RL) to fine-tune LLMs for a specific agent.
+- [x] Automatic Reinforcement Learning (RL) to fine-tune LLMs for a specific agent.
 - [ ] Integration with [NeMo Guardrails](https://github.com/NVIDIA/NeMo-Guardrails) to secure any function in an agent workflow.
-- [ ] End-to-end acceleration using intelligent integrations with [NVIDIA Dynamo](https://github.com/ai-dynamo/dynamo).
+- [x] End-to-end acceleration using intelligent integrations with [NVIDIA Dynamo](https://github.com/ai-dynamo/dynamo).
 
 ## 💬 Feedback
 
@@ -174,17 +174,21 @@ We would like to thank the following groups for their contribution to the toolki
 
 - [Synopsys](https://www.synopsys.com/)
   - Google ADK framework support.
+  - Microsoft AutoGen framework support.
 - [W&B Weave Team](https://wandb.ai/site/weave/)
   - Contributions to the evaluation and telemetry system.
 
 In addition, we would like to thank the following open source projects that made NeMo Agent Toolkit possible:
 
+- [Agent2Agent (A2A) Protocol](https://github.com/a2aproject/A2A)
 - [CrewAI](https://github.com/crewAIInc/crewAI)
+- [Dynamo](https://github.com/ai-dynamo/dynamo)
 - [FastAPI](https://github.com/tiangolo/fastapi)
 - [Google Agent Development Kit (ADK)](https://github.com/google/adk-python)
 - [LangChain](https://github.com/langchain-ai/langchain)
 - [Llama-Index](https://github.com/run-llama/llama_index)
 - [Mem0ai](https://github.com/mem0ai/mem0)
+- [Microsoft AutoGen](https://github.com/microsoft/autogen)
 - [MinIO](https://github.com/minio/minio)
 - [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol/modelcontextprotocol)
 - [OpenTelemetry](https://github.com/open-telemetry/opentelemetry-python)
@@ -192,5 +196,6 @@ In addition, we would like to thank the following open source projects that made
 - [Ragas](https://github.com/explodinggradients/ragas)
 - [Redis](https://github.com/redis/redis-py)
 - [Semantic Kernel](https://github.com/microsoft/semantic-kernel)
+- [Strands](https://github.com/strands-agents/sdk-python)
 - [uv](https://github.com/astral-sh/uv)
 - [Weave](https://github.com/wandb/weave)
