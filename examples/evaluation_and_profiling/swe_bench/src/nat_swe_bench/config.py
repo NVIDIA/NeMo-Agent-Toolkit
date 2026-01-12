@@ -16,15 +16,26 @@
 import typing
 
 from pydantic import Discriminator
+from pydantic import Field
 from pydantic import Tag
 
 from nat.data_models.common import BaseModelRegistryTag
+from nat.data_models.common import SerializableSecretStr
 from nat.data_models.common import TypedBaseModel
+from nat.data_models.component_ref import FunctionRef
+from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
 
 
 class SweBenchPredictorBaseConfig(TypedBaseModel, BaseModelRegistryTag):
     description: str = "Swe Bench Problem Solver"
+
+
+class SweBenchPredictorFullConfig(SweBenchPredictorBaseConfig, name="full"):
+    llm_name: LLMRef = "nim_llm"
+    tool_names: list[FunctionRef] = Field(default_factory=list)
+    # Temporary, key needs to be removed and read from the environment
+    openai_api_key: SerializableSecretStr = Field(default_factory=SerializableSecretStr)  # OpenAI API key field
 
 
 class SweBenchPredictorGoldConfig(SweBenchPredictorBaseConfig, name="gold"):
@@ -35,12 +46,11 @@ class SweBenchPredictorSkeletonConfig(SweBenchPredictorBaseConfig, name="skeleto
     verbose: bool = False
 
 
-SweBenchPredictorConfig = typing.Annotated[typing.Annotated[SweBenchPredictorGoldConfig,
-                                                            Tag(SweBenchPredictorGoldConfig.static_type())]
-                                           | typing.Annotated[SweBenchPredictorSkeletonConfig,
-                                                              Tag(SweBenchPredictorSkeletonConfig.static_type())],
-                                           Discriminator(TypedBaseModel.discriminator)]
-
+SweBenchPredictorConfig = typing.Annotated[
+    typing.Annotated[SweBenchPredictorFullConfig, Tag(SweBenchPredictorFullConfig.static_type())]
+    | typing.Annotated[SweBenchPredictorGoldConfig, Tag(SweBenchPredictorGoldConfig.static_type())]
+    | typing.Annotated[SweBenchPredictorSkeletonConfig, Tag(SweBenchPredictorSkeletonConfig.static_type())],
+    Discriminator(TypedBaseModel.discriminator)]
 
 class SweBenchWorkflowConfig(FunctionBaseConfig, name="swe_bench"):
     predictor: SweBenchPredictorConfig
