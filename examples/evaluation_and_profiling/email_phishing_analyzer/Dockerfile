@@ -28,6 +28,16 @@ COPY --from=ghcr.io/astral-sh/uv:0.9.15 /uv /uvx /bin/
 
 ENV PYTHONDONTWRITEBYTECODE=1
 
+# Install CA certificates for SSL verification
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates && \
+    update-ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set SSL environment variables
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+
 # Set working directory
 WORKDIR /workspace
 
@@ -43,7 +53,7 @@ RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
     export SETUPTOOLS_SCM_PRETEND_VERSION_NVIDIA_NAT_LANGCHAIN=${NAT_VERSION} && \
     export SETUPTOOLS_SCM_PRETEND_VERSION_FOR_NAT_EMAIL_PHISHING_ANALYZER=${NAT_VERSION} && \
     uv venv --python ${PYTHON_VERSION} /workspace/.venv && \
-    uv sync --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
+    uv sync --link-mode=copy --python ${PYTHON_VERSION} && \
     uv pip install --link-mode=copy ./examples/evaluation_and_profiling/email_phishing_analyzer
 
 # Set the config file environment variable
