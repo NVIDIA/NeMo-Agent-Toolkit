@@ -133,6 +133,8 @@ If you have not already done so, follow the instructions in the [Install Guide](
 
 ### Install Dependent Workflow
 
+This example relies on the calculator function group part of the `simple_calculator` example.
+
 From the root directory of the NeMo Agent toolkit library, run the following commands:
 
 ```bash
