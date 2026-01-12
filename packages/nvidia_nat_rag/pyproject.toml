@@ -51,7 +51,7 @@ config-settings = { editable_mode = "compat" }
 
 [tool.uv.sources]
 nvidia-nat = { workspace = true }
-nvidia-rag = { path = "/home/pranjald/Code/github/rag/dist/nvidia_rag-2.4.0.dev0-py3-none-any.whl" }
+nvidia-rag = { path = "vendor/nvidia_rag-2.4.0.dev0-py3-none-any.whl" }
 
 
 [project.entry-points.'nat.components']
