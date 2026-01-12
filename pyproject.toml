@@ -67,6 +67,8 @@ dependencies = [
   "tabulate~=0.9",
   "uvicorn[standard]~=0.38",
   "wikipedia~=1.4",
+  # transitive dependencies
+  "urllib3~=2.6.3",
 ]
 requires-python = ">=3.11,<3.14"
 description = "NVIDIA NeMo Agent toolkit"
@@ -96,7 +98,9 @@ agno = ["nvidia-nat-agno"]
 autogen = ["nvidia-nat-autogen"]
 crewai = ["nvidia-nat-crewai"]
 data-flywheel = ["nvidia-nat-data-flywheel"]
-huggingface = ["transformers", "torch", "accelerate"]
+huggingface = [
+  "transformers[torch,accelerate]~=4.57",
+]
 ingestion = ["nvidia-nat-ingestion"] # meta-package
 langchain = ["nvidia-nat-langchain"]
 llama-index = ["nvidia-nat-llama-index"]
@@ -132,7 +136,6 @@ examples = [
   "nat_alert_triage_agent",
   "nat_autogen_demo",
   "nat_automated_description_generation",
-  "nat_config_inheritance",
   "nat_currency_agent_a2a",
   "nat_dpo_tic_tac_toe",
   "nat_email_phishing_analyzer",
@@ -265,7 +268,6 @@ nat_agno_personal_finance = { path = "examples/frameworks/agno_personal_finance"
 nat_alert_triage_agent = { path = "examples/advanced_agents/alert_triage_agent", editable = true }
 nat_autogen_demo = { path = "examples/frameworks/nat_autogen_demo", editable = true }
 nat_automated_description_generation = { path = "examples/custom_functions/automated_description_generation", editable = true }
-nat_config_inheritance = { path = "examples/config_inheritance", editable = true }
 nat_currency_agent_a2a = { path = "examples/A2A/currency_agent_a2a", editable = true }
 nat_dpo_tic_tac_toe = { path = "examples/finetuning/dpo_tic_tac_toe", editable = true }
 nat_email_phishing_analyzer = { path = "examples/evaluation_and_profiling/email_phishing_analyzer", editable = true }
@@ -338,6 +340,8 @@ dev = [
   "twine~=6.0",
   "vale~=3.12",
   "yapf==0.43.*",
+  # transitive dependencies
+  "werkzeug~=3.1.5",
 ]
 
 [project.entry-points.'nat.components']

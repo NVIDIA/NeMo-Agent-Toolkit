@@ -16,31 +16,22 @@ limitations under the License.
 
 # OAuth2-Protected Math Assistant A2A Example
 
-This example demonstrates a complete end-to-end OAuth2-protected A2A setup with:
-- **Protected A2A Server**: Calculator service requiring OAuth2 authentication
-- **OAuth2 A2A Client**: Math assistant with per-user OAuth2 credentials that connects to the protected A2A server
+This example demonstrates an end-to-end OAuth2-protected A2A workflow with NVIDIA NeMo Agent Toolkit functioning as both A2A client and server. The workflow performs mathematical calculations integrated with time queries and logical reasoning, with added OAuth2 authentication for secure per-user agent-to-agent communication:
+- **Protected A2A Server**: NeMo Agent toolkit calculator service requiring OAuth2 authentication
+- **OAuth2 A2A Client**: NeMo Agent toolkit math assistant with per-user OAuth2 credentials that connects to the protected A2A server
 - **Authorization Server**: Keycloak authorization server for testing OAuth2-protected A2A communication
 
-## Overview
-
-This example combines two components to show OAuth2-protected agent-to-agent communication:
+## Key Features
 
 ### Protected Calculator A2A Server
-- **Type**: A2A Server (Resource Server)
+- **Type**: A2A Server (Resource Server) hosted by NeMo Agent Toolkit
 - **Authentication**: OAuth2 with JWT validation
 - **Skills**: Basic arithmetic operations (add, subtract, multiply, divide, compare)
 
 ### Math Assistant A2A Client
-- **Type**: Per-user A2A client workflow
+- **Type**: Per-user A2A client workflow hosted by NeMo Agent Toolkit
 - **Authentication**: OAuth2 authorization code flow to obtain JWT tokens for authentication
 - **Functionality**: Connects to calculator server, local time operations, logic evaluator to answer math questions
-
-## Key Features
-
-- **JWT Token Validation**: Validates access tokens using JWKS from authorization server
-- **Per-User A2A Client**: Each user gets isolated A2A client connections with separate authentication
-- **Protected Operations**: All calculator operations require valid authentication
-- **Multi-User Support**: Each user gets their own OAuth2 flow and authentication tokens
 
 This example is designed for **development and testing**. See [Production Considerations](#production-considerations) for deployment guidance.
 
