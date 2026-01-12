@@ -28,8 +28,11 @@ class ConsoleFrontEndConfig(FrontEndBaseConfig, name="console"):
     input_query: list[str] | None = Field(default=None,
                                           alias="input",
                                           description="A single input to submit the the workflow.")
-    input_file: Path | None = Field(default=None,
-                                    description="Path to a json file of inputs to submit to the workflow.")
+    input_file: Path | None = Field(
+        default=None,
+        description="Path to a plain text file containing a single input to submit to the workflow. "
+        "Intended for verbose inputs that are better stored in a file than passed on the command line. "
+        "For batch evaluation of multiple inputs, use 'nat eval' instead.")
     user_id: str = Field(default="nat_run_user_id",
                          description="User ID to use for the workflow session. "
                          "Defaults to 'nat_run_user_id' for single-user CLI execution.")
