@@ -15,7 +15,7 @@
     limitations under the License.
 -->
 
-# Agent Spec Workflow (Milestone 1)
+# Agent Spec Workflow
 
 This workflow allows running an [Agent Spec] configuration inside NeMo Agent Toolkit by converting it to a LangGraph component via the Agent Spec → LangGraph adapter.
 
@@ -45,7 +45,7 @@ Exactly one of `agentspec_yaml`, `agentspec_json`, or `agentspec_path` must be p
 
 - Tools: NAT tools provided in `tool_names` are exposed to the adapter `tool_registry` by name. If the Agent Spec also defines tools, the registries are merged; duplicate names are overwritten by NAT tools.
 - I/O: Inputs are standard `ChatRequest` messages; the workflow returns a `ChatResponse`.
-- Streaming: Non‑streaming response in M1.
-- Checkpointing: Not wired in M1.
+- Streaming: Non supported. 
+- Checkpointing: Not supported.
 
 [Agent Spec]: https://github.com/oracle/agent-spec
