@@ -32,6 +32,7 @@ import nest_asyncio2
 from dotenv import load_dotenv
 
 from nat.utils.log_levels import LOG_LEVELS
+from nat.utils.log_utils import setup_logging as log_utils_setup_logging
 
 from .plugin_loader import discover_and_load_cli_plugins
 
@@ -45,11 +46,7 @@ nest_asyncio2.apply()
 def setup_logging(log_level: str):
     """Configure logging with the specified level"""
     numeric_level = LOG_LEVELS.get(log_level.upper(), logging.INFO)
-    logging.basicConfig(
-        level=numeric_level,
-        format="%(asctime)s - %(levelname)-8s - %(name)s:%(lineno)d - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
+    log_utils_setup_logging(numeric_level)
     return numeric_level
 
 
