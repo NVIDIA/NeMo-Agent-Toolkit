@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import asyncio
+import platform
 import threading
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
@@ -184,15 +185,34 @@ class TestToolWrapper:
         # Call the function under test
         agno_tool_wrapper("test_tool", mock_function, mock_builder)
 
-        # Verify that get_running_loop was called
-        # Known behavior: 1 call on amd64, 3 calls on arm64
+        # Verify that get_running_loop was called with architecture-specific expectations
+        # Known behavior: 1 call on x86_64/amd64, 3 calls on arm64/aarch64
         # (due to pydantic-core C extension architecture differences in function introspection)
         call_count = mock_get_running_loop.call_count
-        assert call_count in [1, 3], (
-            f"Expected 1 call (amd64) or 3 calls (arm64), but got {call_count}. "
-            f"This may indicate a pydantic-core or agno library update. "
-            f"Verify the integration still works correctly and update this test if the new behavior is expected."
-        )
+        machine = platform.machine().lower()
+        
+        # Define expected call counts based on architecture
+        expected_counts = {
+            'arm64': 3,
+            'aarch64': 3,  # ARM 64-bit (Linux naming)
+            'x86_64': 1,   # AMD/Intel 64-bit (Linux/macOS naming)
+            'amd64': 1,    # AMD/Intel 64-bit (Windows naming)
+        }
+        
+        if machine in expected_counts:
+            expected_count = expected_counts[machine]
+            assert call_count == expected_count, (
+                f"Expected {expected_count} call(s) on {machine}, but got {call_count}. "
+                f"This may indicate a pydantic-core or agno library update. "
+                f"Verify the integration still works correctly and update this test if the new behavior is expected."
+            )
+        else:
+            # For unknown architectures, accept known values but provide guidance
+            assert call_count in [1, 3], (
+                f"Unknown architecture '{machine}' returned {call_count} call(s). "
+                f"Expected 1 (x86_64) or 3 (arm64) based on known platforms. "
+                f"Please verify this is correct and update the expected_counts dict in this test."
+            )
 
     @patch("nat.plugins.agno.tool_wrapper.asyncio.new_event_loop")
     @patch("nat.plugins.agno.tool_wrapper.asyncio.set_event_loop")
