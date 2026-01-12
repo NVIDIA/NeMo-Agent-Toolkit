@@ -196,7 +196,8 @@ async def nvidia_rag_search(config: NvidiaRAGSearchConfig, builder: Builder):
                 doc_name = getattr(citation, "document_name", f"Document {idx + 1}")
                 content = getattr(citation, "content", "")
                 doc_type = getattr(citation, "document_type", "text")
-                description = getattr(citation, "metadata", {}).get("description", "")
+                description = getattr(citation, "metadata", {}).description
+                print(description)
 
                 results.append(f"**{doc_name}** (type: {doc_type}):\n{description}")
 
