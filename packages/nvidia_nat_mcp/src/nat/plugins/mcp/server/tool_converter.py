@@ -257,7 +257,8 @@ def get_function_description(function: FunctionBase) -> str:
 def register_function_with_mcp(mcp: FastMCP,
                                function_name: str,
                                session_manager: 'SessionManager',
-                               memory_profiler: 'MemoryProfiler | None' = None) -> None:
+                               memory_profiler: 'MemoryProfiler | None' = None,
+                               function: FunctionBase | None = None) -> None:
     """Register a NAT Function as an MCP tool using SessionManager.
 
     Each function is wrapped in a SessionManager
@@ -274,12 +275,15 @@ def register_function_with_mcp(mcp: FastMCP,
     # Get the workflow from the session manager
     workflow = session_manager.workflow
 
-    # Get the input schema from the workflow
-    input_schema = workflow.input_schema
+    # Prefer the function's schema/description when available, fall back to workflow
+    target_function = function or workflow
+
+    # Get the input schema from the most specific object available
+    input_schema = getattr(target_function, "input_schema", workflow.input_schema)
     logger.info("Function %s has input schema: %s", function_name, input_schema)
 
     # Get function description
-    function_description = get_function_description(workflow)
+    function_description = get_function_description(target_function)
 
     # Create and register the wrapper function with MCP
     wrapper_func = create_function_wrapper(function_name, session_manager, input_schema, memory_profiler)
