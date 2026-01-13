@@ -71,7 +71,7 @@ export NGC_API_KEY=<PASTE_API_KEY_HERE>
 export LOCAL_NIM_CACHE=~/.cache/nim
 mkdir -p "$LOCAL_NIM_CACHE"
 docker run -it --rm \
-    --gpus 0 \
+    --gpus '"device=0"' \
     --shm-size=16GB \
     -e NGC_API_KEY \
     -v "$LOCAL_NIM_CACHE:/opt/nim/.cache" \
@@ -85,7 +85,7 @@ Open a new terminal and run the embedding model container, listening on port 800
 export NGC_API_KEY=<PASTE_API_KEY_HERE>
 export LOCAL_NIM_CACHE=~/.cache/nim
 docker run -it --rm \
-    --gpus 1 \
+    --gpus '"device=1"' \
     --shm-size=16GB \
     -e NGC_API_KEY \
     -v "$LOCAL_NIM_CACHE:/opt/nim/.cache" \
