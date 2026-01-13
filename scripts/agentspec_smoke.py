@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) <year>, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,6 +30,7 @@ async def main():
 
     # Create a fake adapter module that returns a stub component
     class StubComponent:
+
         async def ainvoke(self, value):
             if isinstance(value, dict) and "messages" in value:
                 msgs = value["messages"]
@@ -38,6 +39,7 @@ async def main():
             return {"output": str(value)}
 
     class StubLoader:
+
         def __init__(self, *args, **kwargs):
             pass
 

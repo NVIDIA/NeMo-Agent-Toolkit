@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) <year>, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,10 +39,18 @@ def test_agentspec_config_exactly_one_source_path(tmp_path):
     "kwargs",
     [
         {},
-        {"agentspec_yaml": "a", "agentspec_json": "{}"},
-        {"agentspec_yaml": "a", "agentspec_path": "p"},
-        {"agentspec_json": "{}", "agentspec_path": "p"},
-        {"agentspec_yaml": "a", "agentspec_json": "{}", "agentspec_path": "p"},
+        {
+            "agentspec_yaml": "a", "agentspec_json": "{}"
+        },
+        {
+            "agentspec_yaml": "a", "agentspec_path": "p"
+        },
+        {
+            "agentspec_json": "{}", "agentspec_path": "p"
+        },
+        {
+            "agentspec_yaml": "a", "agentspec_json": "{}", "agentspec_path": "p"
+        },
     ],
 )
 def test_agentspec_config_validation_errors(kwargs):

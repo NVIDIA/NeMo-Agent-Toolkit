@@ -1,5 +1,5 @@
 <!--
-    SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+    SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
     SPDX-License-Identifier: Apache-2.0
 
     Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,6 +33,7 @@ pip install 'nvidia-nat[agentspec]'
 workflow:
   _type: agent_spec
   description: Agent Spec workflow
+  <!-- path-check-skip-next-line -->
   agentspec_path: path/to/agent_spec.yaml  # or agentspec_yaml / agentspec_json
   tool_names: [pretty_formatting]
   max_history: 15
@@ -43,7 +44,7 @@ Exactly one of `agentspec_yaml`, `agentspec_json`, or `agentspec_path` must be p
 
 ## Notes and limitations
 
-- Tools: NAT tools provided in `tool_names` are exposed to the adapter `tool_registry` by name. If the Agent Spec also defines tools, the registries are merged; duplicate names are overwritten by NAT tools.
+- Tools: NeMo Agent toolkit built-in tools provided in `tool_names` are exposed to the adapter `tool_registry` by name. If the Agent Spec also defines tools, the registries are merged; duplicate names are overwritten by built-in tools.
 - I/O: Inputs are standard `ChatRequest` messages; the workflow returns a `ChatResponse`.
 - Streaming: Non supported. 
 - Checkpointing: Not supported.

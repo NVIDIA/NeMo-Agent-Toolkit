@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) <year>, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,9 +20,14 @@ from typing import Any
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
-from nat.data_models.api_server import ChatRequest, ChatRequestOrMessage, ChatResponse, Message, Usage
+from nat.data_models.api_server import ChatRequest
+from nat.data_models.api_server import ChatRequestOrMessage
+from nat.data_models.api_server import ChatResponse
+from nat.data_models.api_server import Usage
 from nat.utils.type_converter import GlobalTypeConverter
-from .config import AgentSpecWorkflowConfig, read_agentspec_payload
+
+from .config import AgentSpecWorkflowConfig
+from .config import read_agentspec_payload
 
 logger = logging.getLogger(__name__)
 
@@ -71,9 +76,7 @@ async def agent_spec_workflow(config: AgentSpecWorkflowConfig, builder):
     try:
         from langgraph_agentspec_adapter.agentspecloader import AgentSpecLoader  # type: ignore
     except Exception as e:  # pragma: no cover - import error path
-        raise ImportError(
-            "Agent Spec adapter not installed. Install with: pip install 'nvidia-nat[agentspec]'"
-        ) from e
+        raise ImportError("Agent Spec adapter not installed. Install with: pip install 'nvidia-nat[agentspec]'") from e
 
     # Build tool registry from NAT tool names if provided
     tools = await builder.get_tools(tool_names=config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
@@ -89,8 +92,9 @@ async def agent_spec_workflow(config: AgentSpecWorkflowConfig, builder):
         component = loader.load_json(payload)
 
     async def _response_fn(chat_request_or_message: ChatRequestOrMessage) -> ChatResponse | str:
-        from nat.agent.base import AGENT_LOG_PREFIX
         from langchain_core.messages import trim_messages  # lazy import with LANGCHAIN wrapper
+
+        from nat.agent.base import AGENT_LOG_PREFIX
 
         try:
             message = GlobalTypeConverter.get().convert(chat_request_or_message, to_type=ChatRequest)
@@ -136,7 +140,8 @@ async def agent_spec_workflow(config: AgentSpecWorkflowConfig, builder):
 
             prompt_tokens = sum(len(str(msg.content).split()) for msg in message.messages)
             completion_tokens = len(content.split()) if content else 0
-            usage = Usage(prompt_tokens=prompt_tokens, completion_tokens=completion_tokens,
+            usage = Usage(prompt_tokens=prompt_tokens,
+                          completion_tokens=completion_tokens,
                           total_tokens=prompt_tokens + completion_tokens)
             response = ChatResponse.from_string(content, usage=usage)
             if chat_request_or_message.is_string:

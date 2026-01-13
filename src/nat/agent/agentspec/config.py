@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) <year>, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,10 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from pathlib import Path
-from pydantic import Field, model_validator
+
+from pydantic import Field
+from pydantic import model_validator
 
 from nat.data_models.agent import AgentBaseConfig
-from nat.data_models.component_ref import FunctionGroupRef, FunctionRef
+from nat.data_models.component_ref import FunctionGroupRef
+from nat.data_models.component_ref import FunctionRef
 
 
 class AgentSpecWorkflowConfig(AgentBaseConfig, name="agent_spec"):
@@ -34,8 +37,7 @@ class AgentSpecWorkflowConfig(AgentBaseConfig, name="agent_spec"):
     agentspec_path: str | None = Field(default=None, description="Path to an Agent Spec YAML/JSON file")
 
     tool_names: list[FunctionRef | FunctionGroupRef] = Field(
-        default_factory=list, description="Optional list of tool names/groups to expose to the Agent Spec runtime."
-    )
+        default_factory=list, description="Optional list of tool names/groups to expose to the Agent Spec runtime.")
 
     max_history: int = Field(default=15, description="Maximum number of messages to keep in conversation history.")
 
@@ -60,4 +62,3 @@ def read_agentspec_payload(config: AgentSpecWorkflowConfig) -> tuple[str, str]:
     ext = path.suffix.lower()
     fmt = "json" if ext == ".json" else "yaml"
     return (fmt, text)
-
