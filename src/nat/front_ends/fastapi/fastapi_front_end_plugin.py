@@ -107,10 +107,27 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
 
                     self._use_dask_threads = self.front_end_config.dask_workers == 'threads'
 
+                    # Convert memory limit string to the appropriate type for Dask
+                    # per https://docs.dask.org/en/stable/deploying-python.html#reference
+                    # Dask treats the memory_limit parameter differently depending on the type, and specifically it
+                    # treats int (bytes) and float (fraction of total memory) differently.
+                    memory_limit = self.front_end_config.dask_worker_memory_limit
+                    if memory_limit.strip() == "":
+                        memory_limit = "auto"
+                    elif memory_limit.isdigit():
+                        memory_limit = int(memory_limit)
+                    else:
+                        # Try to convert to number if possible, otherwise leave as a string
+                        try:
+                            memory_limit = float(memory_limit)
+                        except Exception:
+                            pass  # Keep as string (e.g., "auto", "4GB")
+
                     # set n_workers to max_running_async_jobs + 1 to allow for one worker to handle the cleanup task
                     self._cluster = LocalCluster(processes=not self._use_dask_threads,
                                                  silence_logs=dask_log_level,
                                                  protocol="tcp",
+                                                 memory_limit=memory_limit,
                                                  n_workers=self.front_end_config.max_running_async_jobs + 1)
 
                     self._scheduler_address = self._cluster.scheduler.address
