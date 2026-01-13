@@ -68,7 +68,7 @@ After the server is running, you can make HTTP requests to interact with the wor
 
 ```bash
 curl --request POST \
-  --url http://localhost:8000/generate \
+  --url http://localhost:8000/v1/workflow \
   --header 'Content-Type: application/json' \
   --data '{
     "input_message": "Is 4 + 4 greater than the current hour of the day?"

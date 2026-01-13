@@ -107,7 +107,7 @@ Use the following curl command to test the deployed API:
 
 ```bash
 curl -X 'POST' \
-  'http://localhost:8000/generate' \
+  'http://localhost:8000/v1/workflow' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d '{"input_message": "Is the product of 2 * 4 greater than the current hour of the day?"}'

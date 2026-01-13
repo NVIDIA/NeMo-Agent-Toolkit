@@ -17,6 +17,7 @@ import asyncio
 import importlib.resources
 import inspect
 import json
+import socket
 import subprocess
 import time
 import typing
@@ -100,7 +101,8 @@ async def serve_workflow(*,
                          pipeline_timeout: int = 60,
                          request_timeout: int = 30) -> dict:
     """
-    Execute a workflow using `nat serve`, and issue a POST request to the `/generate` endpoint with the given question.
+    Execute a workflow using `nat serve`, and issue a POST request to the `/v1/workflow`
+    endpoint with the given question.
 
     Intended to be analogous to `run_workflow` but for the REST API serving mode.
     """
@@ -112,11 +114,12 @@ async def serve_workflow(*,
 
     response_payload = {}
     try:
+        wait_for_port(host="localhost", port=port, timeout=10.0)
         deadline = time.time() + pipeline_timeout  # timeout waiting for the workflow to respond
         response = None
         while response is None and time.time() < deadline:
             try:
-                response = requests.post(url=f"{workflow_url}/generate",
+                response = requests.post(url=f"{workflow_url}/v1/workflow",
                                          json={"messages": [{
                                              "role": "user", "content": question
                                          }]},
@@ -154,6 +157,20 @@ async def serve_workflow(*,
         assert proc.poll() is not None, "NAT server process failed to terminate"
 
     return response_payload
+
+
+def wait_for_port(*, host: str, port: int, timeout: float) -> None:
+    """Wait for a TCP port to accept connections within a timeout."""
+    deadline = time.time() + timeout
+    last_error: OSError | None = None
+    while time.time() < deadline:
+        try:
+            with socket.create_connection((host, port), timeout=0.5):
+                return
+        except OSError as exc:
+            last_error = exc
+            time.sleep(0.1)
+    raise AssertionError(f"Server did not become ready on {host}:{port} after {timeout}s: {last_error}")
 
 
 @asynccontextmanager

@@ -266,7 +266,7 @@ nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jir
 
 User Alice:
 ```bash
-curl -X POST http://localhost:8000/generate \
+curl -X POST http://localhost:8000/v1/workflow \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=user-alice" \
   -d '{"messages": [{"role": "user", "content": "What is status of AIQ-2342?"}]}'
@@ -274,7 +274,7 @@ curl -X POST http://localhost:8000/generate \
 
 User Bob (has a separate MCP client instance):
 ```bash
-curl -X POST http://localhost:8000/generate \
+curl -X POST http://localhost:8000/v1/workflow \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=user-bob" \
   -d '{"messages": [{"role": "user", "content": "What is status of AIQ-2507?"}]}'

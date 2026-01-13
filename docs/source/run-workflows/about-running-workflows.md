@@ -76,7 +76,7 @@ The `--input_file` option accepts a plain text file containing a single input, n
 ## Using the `nat serve` Command
 The `nat serve` command starts a web server that listens for incoming requests and runs the specified workflow. The server can be accessed with a web browser or by sending a POST request to the server's endpoint. Similar to the `nat run` command, the `nat serve` command requires a configuration file specified by the `--config_file` flag.
 
-The following command runs the `examples/getting_started/simple_web_query` workflow on a web server listening to the default port `8000` and default endpoint of `/generate`:
+The following command runs the `examples/getting_started/simple_web_query` workflow on a web server listening to the default port `8000` and default endpoint of `/v1/workflow`:
 ```bash
 nat serve --config_file examples/getting_started/simple_web_query/configs/config.yml
 ```
@@ -84,7 +84,7 @@ nat serve --config_file examples/getting_started/simple_web_query/configs/config
 In a separate terminal, run the following command to send a POST request to the server:
 ```bash
 curl --request POST \
-  --url http://localhost:8000/generate \
+  --url http://localhost:8000/v1/workflow \
   --header 'Content-Type: application/json' \
   --data '{
     "input_message": "What is LangSmith?"

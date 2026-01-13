@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,15 +12,5 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-app:
-  host: "localhost"
-  ws: "websocket"
-  port: 8000
-  config_filepath: 'examples/getting_started/simple_web_query/configs/config.yml'
-  input: "Can you provide me with the most read content about LangSmith?"
-
-endpoint:
-  v1_workflow: "/v1/workflow"
-  v1_workflow_stream: "/v1/workflow/stream"
-  v1_chat_completions: "/v1/chat/completions"
+#
+# Route registration helpers grouped by endpoint surface.

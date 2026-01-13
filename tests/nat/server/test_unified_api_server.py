@@ -81,10 +81,9 @@ class AppConfig(BaseModel):
 
 
 class EndpointConfig(BaseModel):
-    generate: str
-    chat: str
-    generate_stream: str
-    chat_stream: str
+    v1_workflow: str
+    v1_workflow_stream: str
+    v1_chat_completions: str
 
 
 class Config(BaseModel):
@@ -99,7 +98,7 @@ class TEST(BaseModel):
 # ======== Raw WebSocket Message Schemas ========
 user_message = {
     "type": "user_message",
-    "schema_type": "chat",
+    "schema_type": "openai_api_v1",
     "id": "string",
     "conversation_id": "string",
     "content": {
@@ -331,28 +330,28 @@ async def client_fixture(config):
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
-async def test_generate_endpoint(client: httpx.AsyncClient, config: Config):
+async def test_v1_workflow_endpoint(client: httpx.AsyncClient, config: Config):
     """Tests generate endpoint to verify it responds successfully."""
     input_message = {"input_message": f"{config.app.input}"}
-    response = await client.post(f"{config.endpoint.generate}", json=input_message)
+    response = await client.post(f"{config.endpoint.v1_workflow}", json=input_message)
     assert response.status_code == 200
 
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
-async def test_generate_stream_endpoint(client: httpx.AsyncClient, config: Config):
+async def test_v1_workflow_stream_endpoint(client: httpx.AsyncClient, config: Config):
     """Tests generate stream endpoint to verify it responds successfully."""
     input_message = {"input_message": f"{config.app.input}"}
-    response = await client.post(f"{config.endpoint.generate_stream}", json=input_message)
+    response = await client.post(f"{config.endpoint.v1_workflow_stream}", json=input_message)
     assert response.status_code == 200
 
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
-async def test_chat_endpoint(client: httpx.AsyncClient, config: Config):
+async def test_v1_chat_completions_endpoint(client: httpx.AsyncClient, config: Config):
     """Tests chat endpoint to verify it responds successfully."""
     input_message = {"messages": [{"role": "user", "content": f"{config.app.input}"}], "use_knowledge_base": True}
-    response = await client.post(f"{config.endpoint.chat}", json=input_message)
+    response = await client.post(f"{config.endpoint.v1_chat_completions}", json=input_message)
     assert response.status_code == 200
     validated_response = ChatResponse(**response.json())
     assert isinstance(validated_response, ChatResponse)
@@ -360,10 +359,14 @@ async def test_chat_endpoint(client: httpx.AsyncClient, config: Config):
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
-async def test_chat_stream_endpoint(client: httpx.AsyncClient, config: Config):
+async def test_v1_chat_completions_stream_endpoint(client: httpx.AsyncClient, config: Config):
     """Tests chat stream endpoint to verify it responds successfully."""
-    input_message = {"messages": [{"role": "user", "content": f"{config.app.input}"}], "use_knowledge_base": True}
-    response = await client.post(f"{config.endpoint.chat_stream}", json=input_message)
+    input_message = {
+        "messages": [{
+            "role": "user", "content": f"{config.app.input}"
+        }], "use_knowledge_base": True, "stream": True
+    }
+    response = await client.post(f"{config.endpoint.v1_chat_completions}", json=input_message)
     assert response.status_code == 200
     # only match the explicit `data:` json response
     data_match: re.Match[str] | None = re.search(r'\bdata:\s*(.[^\n]*)\n', response.text)
@@ -375,9 +378,14 @@ async def test_chat_stream_endpoint(client: httpx.AsyncClient, config: Config):
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
-async def test_chat_stream_endpoint_observability_trace_id_integration(client: httpx.AsyncClient, config: Config):
+async def test_v1_chat_completions_stream_endpoint_observability_trace_id_integration(
+        client: httpx.AsyncClient, config: Config):
     """Tests that chat stream endpoint sends observability_trace_id as a separate SSE event."""
-    input_message = {"messages": [{"role": "user", "content": f"{config.app.input}"}], "use_knowledge_base": True}
+    input_message = {
+        "messages": [{
+            "role": "user", "content": f"{config.app.input}"
+        }], "use_knowledge_base": True, "stream": True
+    }
 
     # Set the observability_trace_id directly on the ContextState's ContextVar
     # This avoids breaking Context.get() which the workflow depends on
@@ -386,7 +394,7 @@ async def test_chat_stream_endpoint_observability_trace_id_integration(client: h
     token = context_state.observability_trace_id.set("integration-stream-observability-id")
 
     try:
-        response = await client.post(f"{config.endpoint.chat_stream}", json=input_message)
+        response = await client.post(f"{config.endpoint.v1_chat_completions}", json=input_message)
         assert response.status_code == 200
 
         # Verify the observability trace is sent as a separate SSE event
@@ -432,7 +440,7 @@ async def test_user_attributes_from_http_request(client: httpx.AsyncClient, conf
     with patch("nat.runtime.session.SessionManager.set_metadata_from_http_request",
                mock_set_metadata_from_http_request):
         response = await client.post(
-            f"{config.endpoint.generate}",
+            f"{config.endpoint.v1_workflow}",
             json=input_message,
             headers=headers,
             params=query_params,

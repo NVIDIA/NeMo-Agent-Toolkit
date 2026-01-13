@@ -23,7 +23,6 @@ general:
       path: /invocations
       description: "Execute the main NAT workflow"
       websocket_path: /websocket
-      openai_api_path: /chat
       openai_api_v1_path: /v1/chat/completions
     endpoints:
       - path: /ping

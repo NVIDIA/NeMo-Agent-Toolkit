@@ -217,10 +217,10 @@ class WeaveExporter(SpanExporter[Span, Span]):
         Supported output formats for message content include:
 
         - output.choices[0].message.content     /chat endpoint
-        - output.value                          /generate endpoint
+        - output.value                          /v1/workflow endpoint
         - output[0].choices[0].message.content  chat WS schema
         - output[0].choices[0].delta.content    chat_stream WS schema, /chat/stream endpoint
-        - output[0].value                       generate & generate_stream WS schema, /generate/stream endpoint
+        - output[0].value                       generate & generate_stream WS schema, /v1/workflow/stream endpoint
 
         Args:
             output_data: The raw output data from the response
@@ -232,7 +232,7 @@ class WeaveExporter(SpanExporter[Span, Span]):
             outputs["output_message"] = truncate_string(choices[0].message.content)
             return
 
-        # Handle value-keyed output object for union types common for /generate completion endpoint
+        # Handle value-keyed output object for union types common for /v1/workflow completion endpoint
         value = getattr(output_data, 'value', None)
         if value:
             outputs["output_message"] = truncate_string(value)
@@ -256,7 +256,7 @@ class WeaveExporter(SpanExporter[Span, Span]):
                 outputs["output_preview"] = truncate_string(getattr(delta, 'content', None))
                 return
 
-        # generate & generate_stream websocket schema, and /generate/stream completion endpoint
+        # generate & generate_stream websocket schema, and /v1/workflow/stream completion endpoint
         value = getattr(output_data[0], 'value', None)
         if value:
             outputs["output_preview"] = truncate_string(str(value))

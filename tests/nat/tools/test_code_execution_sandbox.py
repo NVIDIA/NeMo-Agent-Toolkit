@@ -268,7 +268,7 @@ def run_workflow_code(config_path: Path,
         response = None
         while response is None and time.time() < deadline:
             try:
-                response = _mk_request(url=f"{workflow_url.rstrip('/')}/generate",
+                response = _mk_request(url=f"{workflow_url.rstrip('/')}/v1/workflow",
                                        code=code,
                                        timeout=timeout,
                                        language=language)

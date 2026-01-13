@@ -537,7 +537,7 @@ Options:
   --skip_completed_entries    Skip the dataset entries that have a generated
                               answer.
   --endpoint TEXT             Use endpoint for running the workflow. Example:
-                              http://localhost:8000/generate
+                              http://localhost:8000/v1/workflow
   --endpoint_timeout INTEGER  HTTP response timeout in seconds. Only relevant
                               if endpoint is specified.  [default: 300]
   --reps INTEGER              Number of repetitions for the evaluation.
@@ -582,7 +582,7 @@ Options:
                                   example, '$.output' will extract the 'output'
                                   field from the result.  [default: $]
   --endpoint TEXT                 Use endpoint for running the workflow.
-                                  Example: http://localhost:8000/generate
+                                  Example: http://localhost:8000/v1/workflow
   --endpoint_timeout INTEGER      HTTP response timeout in seconds. Only
                                   relevant if endpoint is specified.
                                   [default: 300]
@@ -649,7 +649,7 @@ Use a remote endpoint for workflow execution:
 <!-- path-check-skip-begin -->
 ```bash
 nat finetune --config_file=configs/finetune.yml \
-    --endpoint=http://localhost:8000/generate \
+    --endpoint=http://localhost:8000/v1/workflow \
     --endpoint_timeout=600
 ```
 <!-- path-check-skip-end -->
@@ -678,7 +678,7 @@ Options:
                               '$.output' will extract the 'output' field from
                               the result.  [default: $]
   --endpoint TEXT             Use endpoint for running the workflow. Example:
-                              http://localhost:8000/generate
+                              http://localhost:8000/v1/workflow
   --endpoint_timeout INTEGER  HTTP response timeout in seconds. Only relevant
                               if endpoint is specified.  [default: 300]
   --help                      Show this message and exit.

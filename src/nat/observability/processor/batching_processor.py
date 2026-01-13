@@ -98,6 +98,7 @@ class BatchingProcessor(CallbackProcessor[T, list[T]], Generic[T]):
         # Batching state
         self._batch_queue: deque[T] = deque()
         self._last_flush_time = time.time()
+        self._batch_start_time: float | None = None
         self._flush_task: asyncio.Task | None = None
         self._batch_lock = asyncio.Lock()
         self._shutdown_requested = False
@@ -153,16 +154,21 @@ class BatchingProcessor(CallbackProcessor[T, list[T]], Generic[T]):
                 if forced_batch:
                     # Add current item to queue and return the forced batch
                     self._batch_queue.append(item)
+                    self._batch_start_time = time.time()
                     self._items_processed += 1
+                    if self._flush_task is None or self._flush_task.done():
+                        self._flush_task = asyncio.create_task(self._schedule_flush())
                     return forced_batch
 
             # Add item to batch queue
+            queue_was_empty = not self._batch_queue
             self._batch_queue.append(item)
             self._items_processed += 1
+            if queue_was_empty:
+                self._batch_start_time = time.time()
 
             # Check flush conditions
-            should_flush = (len(self._batch_queue) >= self._batch_size
-                            or (time.time() - self._last_flush_time) >= self._flush_interval)
+            should_flush = len(self._batch_queue) >= self._batch_size
 
             if should_flush:
                 return await self._create_batch()
@@ -185,18 +191,23 @@ class BatchingProcessor(CallbackProcessor[T, list[T]], Generic[T]):
             await asyncio.sleep(self._flush_interval)
             async with self._batch_lock:
                 if not self._shutdown_requested and self._batch_queue:
-                    batch = await self._create_batch()
-                    if batch:
-                        # Route scheduled batches through pipeline via callback
-                        if self._done_callback is not None:
-                            try:
-                                await self._done_callback(batch)
-                                logger.debug("Scheduled flush routed batch of %d items through pipeline", len(batch))
-                            except Exception as e:
-                                logger.exception("Error routing scheduled batch through pipeline: %s", e)
-                        else:
-                            logger.warning("Scheduled flush created batch of %d items but no pipeline callback set",
-                                           len(batch))
+                    if self._batch_start_time is None:
+                        self._batch_start_time = time.time()
+                    elapsed = time.time() - self._batch_start_time
+                    if elapsed >= self._flush_interval:
+                        batch = await self._create_batch()
+                        if batch:
+                            # Route scheduled batches through pipeline via callback
+                            if self._done_callback is not None:
+                                try:
+                                    await self._done_callback(batch)
+                                    logger.debug("Scheduled flush routed batch of %d items through pipeline",
+                                                 len(batch))
+                                except Exception as e:
+                                    logger.exception("Error routing scheduled batch through pipeline: %s", e)
+                            else:
+                                logger.warning("Scheduled flush created batch of %d items but no pipeline callback set",
+                                               len(batch))
         except asyncio.CancelledError:
             pass
         except Exception as e:
@@ -210,6 +221,7 @@ class BatchingProcessor(CallbackProcessor[T, list[T]], Generic[T]):
         batch = list(self._batch_queue)
         self._batch_queue.clear()
         self._last_flush_time = time.time()
+        self._batch_start_time = None
         self._batches_created += 1
 
         logger.debug("Created batch of %d items (total: %d items in %d batches)",

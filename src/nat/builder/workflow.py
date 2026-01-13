@@ -95,17 +95,34 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
         return self._exporter_manager.get()
 
     @asynccontextmanager
-    async def run(self, message: InputT, runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE):
+    async def run(self,
+                  message: InputT,
+                  runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE,
+                  parent_id: str | None = None,
+                  parent_name: str | None = None):
         """
         Called each time we start a new workflow run. We'll create
         a new top-level workflow span here.
+
+        Parameters
+        ----------
+        message : InputT
+            The input message for the workflow
+        runtime_type : RuntimeTypeEnum
+            The runtime type (RUN_OR_SERVE, EVALUATE, OTHER)
+        parent_id : str | None
+            Optional parent invocation ID to set on the root InvocationNode
+        parent_name : str | None
+            Optional parent invocation name to set on the root InvocationNode
         """
 
         async with Runner(input_message=message,
                           entry_fn=self._entry_fn,
                           context_state=self._context_state,
                           exporter_manager=self.exporter_manager,
-                          runtime_type=runtime_type) as runner:
+                          runtime_type=runtime_type,
+                          parent_id=parent_id,
+                          parent_name=parent_name) as runner:
 
             # The caller can `yield runner` so they can do `runner.result()` or `runner.result_stream()`
             yield runner

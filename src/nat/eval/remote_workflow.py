@@ -21,13 +21,11 @@ import aiohttp
 from pydantic import ValidationError
 from tqdm import tqdm
 
-from nat.data_models.api_server import ResponseIntermediateStep
-from nat.data_models.intermediate_step import IntermediateStep
-from nat.data_models.intermediate_step import IntermediateStepPayload
-from nat.data_models.invocation_node import InvocationNode
 from nat.eval.config import EvaluationRunConfig
 from nat.eval.evaluator.evaluator_model import EvalInput
 from nat.eval.evaluator.evaluator_model import EvalInputItem
+from nat.observability.trace_merge import merge_trace_events
+from nat.runtime.session import inject_observability_headers
 
 logger = logging.getLogger(__name__)
 
@@ -50,11 +48,12 @@ class EvaluationRemoteWorkflowHandler:
         question = item.input_obj
         # generate request format
         payload = {"input_message": question}
+        headers = inject_observability_headers()
 
         try:
             # Use the streaming endpoint
-            endpoint = f"{self.config.endpoint}/generate/full"
-            async with session.post(endpoint, json=payload) as response:
+            endpoint = f"{self.config.endpoint}/v1/workflow/full"
+            async with session.post(endpoint, json=payload, headers=headers) as response:
                 response.raise_for_status()  # Raise an exception for HTTP errors
 
                 # Initialize variables to store the response
@@ -71,24 +70,20 @@ class EvaluationRemoteWorkflowHandler:
                         # This is a generate response chunk
                         try:
                             chunk_data = json.loads(line[len(DATA_PREFIX):])
-                            if chunk_data.get("value"):
-                                final_response = chunk_data.get("value")
+                            if (val := chunk_data.get("value")):
+                                final_response = val
+                            # Merge child trace events if present
+                            if (trace := chunk_data.get("_trace")):
+                                intermediate_steps.extend(merge_trace_events(trace))
                         except json.JSONDecodeError as e:
                             logger.exception("Failed to parse generate response chunk: %s", e)
                             continue
                     elif line.startswith(INTERMEDIATE_DATA_PREFIX):
                         # This is an intermediate step
                         try:
-                            step_data = json.loads(line[len(INTERMEDIATE_DATA_PREFIX):])
-                            response_intermediate = ResponseIntermediateStep.model_validate(step_data)
-                            # The payload is expected to be IntermediateStepPayload
-                            payload = IntermediateStepPayload.model_validate_json(response_intermediate.payload)
-                            intermediate_step = IntermediateStep(parent_id="remote",
-                                                                 function_ancestry=InvocationNode(
-                                                                     function_name=payload.name or "remote_function",
-                                                                     function_id=payload.UUID or "remote_function_id"),
-                                                                 payload=payload)
-                            intermediate_steps.append(intermediate_step)
+                            event = json.loads(line[len(INTERMEDIATE_DATA_PREFIX):])
+                            step_data = {"events": [event]}
+                            intermediate_steps.extend(merge_trace_events(step_data))
                         except (json.JSONDecodeError, ValidationError) as e:
                             logger.exception("Failed to parse intermediate step: %s", e)
                             continue
@@ -118,6 +113,7 @@ class EvaluationRemoteWorkflowHandler:
         Sends inputs to a workflow hosted on a remote endpoint.
         """
         timeout = aiohttp.ClientTimeout(total=self.config.endpoint_timeout)
+        pbar = None
         try:
             pbar = tqdm(total=len(eval_input.eval_input_items), desc="Running workflow", unit="item")
             async with aiohttp.ClientSession(timeout=timeout) as session:
@@ -128,6 +124,7 @@ class EvaluationRemoteWorkflowHandler:
                 await asyncio.gather(*tasks)
 
         finally:
-            pbar.close()
+            if pbar:
+                pbar.close()
 
         return eval_input

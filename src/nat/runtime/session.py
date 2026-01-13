@@ -23,6 +23,7 @@ from collections.abc import Callable
 from contextlib import asynccontextmanager
 from contextlib import nullcontext
 from datetime import datetime
+from uuid import uuid4
 
 from fastapi import WebSocket
 from pydantic import BaseModel
@@ -47,6 +48,42 @@ if typing.TYPE_CHECKING:
     from nat.builder.workflow_builder import WorkflowBuilder
 
 logger = logging.getLogger(__name__)
+
+
+def build_observability_headers(context_state: ContextState) -> dict[str, str]:
+    """
+    Construct observability propagation headers (W3C + NAT) from the current context state.
+    """
+    headers: dict[str, str] = {}
+
+    trace_id = context_state.workflow_trace_id.get()
+    span_stack = context_state._active_span_id_stack.get() or []
+    span_id = span_stack[-1] if span_stack else f"{uuid4().int:016x}"[:16]
+
+    if trace_id is not None:
+        trace_id_hex = f"{trace_id:032x}"
+        traceparent = f"00-{trace_id_hex}-{span_id}-01"
+        headers["traceparent"] = traceparent
+        headers["X-NAT-Trace-ID"] = trace_id_hex
+
+    workflow_run_id = context_state.workflow_run_id.get()
+    if workflow_run_id:
+        headers["X-NAT-Workflow-Run-ID"] = workflow_run_id
+
+    # If span id came from stack, propagate it as parent
+    if span_stack:
+        headers["X-NAT-Span-ID"] = span_id
+
+    return headers
+
+
+def inject_observability_headers(headers: dict[str, str] | None = None) -> dict[str, str]:
+    """
+    Convenience helper to inject observability headers into an outbound request headers dict.
+    """
+    base = headers.copy() if headers else {}
+    base.update(build_observability_headers(ContextState.get()))
+    return base
 
 
 class PerUserBuilderInfo(BaseModel):
@@ -126,19 +163,28 @@ class Session:
         return self._session_manager
 
     @asynccontextmanager
-    async def run(self, message, runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE):
+    async def run(self,
+                  message,
+                  runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE,
+                  parent_id: str | None = None,
+                  parent_name: str | None = None):
         """
         Start a workflow run using this session's workflow.
 
         Args:
             message: Input message for the workflow
             runtime_type: Runtime type (defaults to SessionManager's runtime_type)
+            parent_id: Optional parent invocation ID to set on the root InvocationNode
+            parent_name: Optional parent invocation name to set on the root InvocationNode
 
         Yields:
             Runner instance for the workflow execution
         """
         async with self._semaphore:
-            async with self._workflow.run(message, runtime_type=runtime_type) as runner:
+            async with self._workflow.run(message,
+                                          runtime_type=runtime_type,
+                                          parent_id=parent_id,
+                                          parent_name=parent_name) as runner:
                 yield runner
 
 
@@ -521,15 +567,31 @@ class SessionManager:
                 self._context_state.user_auth_callback.reset(token_user_authentication)
 
     @asynccontextmanager
-    async def run(self, message, runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE):
+    async def run(self,
+                  message,
+                  runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE,
+                  parent_id: str | None = None,
+                  parent_name: str | None = None):
         """
         Start a workflow run
+
+        Args:
+            message: Input message for the workflow
+            runtime_type: Runtime type (defaults to SessionManager's runtime_type)
+            parent_id: Optional parent invocation ID to set on the root InvocationNode
+            parent_name: Optional parent invocation name to set on the root InvocationNode
+
+        Yields:
+            Runner instance for the workflow execution
         """
         if self._is_workflow_per_user:
             raise ValueError("Cannot use SessionManager.run() with per-user workflows. "
                              "Use 'async with session_manager.session() as session' then 'session.run()' instead.")
         async with self._semaphore:
-            async with self._shared_workflow.run(message, runtime_type=runtime_type) as runner:
+            async with self._shared_workflow.run(message,
+                                                 runtime_type=runtime_type,
+                                                 parent_id=parent_id,
+                                                 parent_name=parent_name) as runner:
                 yield runner
 
     async def shutdown(self) -> None:
@@ -608,6 +670,28 @@ class SessionManager:
         workflow_run_id = request.headers.get("workflow-run-id")
         if workflow_run_id:
             self._context_state.workflow_run_id.set(workflow_run_id)
+
+        # NAT observability headers (do not overwrite if already set)
+        nat_trace_id = request.headers.get("x-nat-trace-id")
+        if nat_trace_id and not self._context_state.workflow_trace_id.get():
+            try:
+                self._context_state.workflow_trace_id.set(int(nat_trace_id, 16))
+            except Exception:
+                pass
+
+        nat_span_id = request.headers.get("x-nat-span-id")
+        if nat_span_id:
+            try:
+                # Copy the current stack to avoid mutating a shared list from ContextVar
+                current = list(self._context_state._active_span_id_stack.get() or [])
+                current.append(nat_span_id)
+                self._context_state._active_span_id_stack.set(current)
+            except Exception:
+                pass
+
+        nat_workflow_run = request.headers.get("x-nat-workflow-run-id")
+        if nat_workflow_run:
+            self._context_state.workflow_run_id.set(nat_workflow_run)
 
     def set_metadata_from_websocket(self,
                                     websocket: WebSocket,

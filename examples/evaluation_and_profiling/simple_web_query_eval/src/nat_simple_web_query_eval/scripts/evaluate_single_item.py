@@ -22,7 +22,7 @@ Suitable for: trajectory_accuracy evaluator
 For simpler evaluations: Use evaluate_single_item_simple.py instead
 
 This script shows how to evaluate a single workflow execution by:
-1. Running a query via /generate/full endpoint
+1. Running a query via /v1/workflow/full endpoint
 2. Parsing the streaming response (output + intermediate steps/trajectory)
 3. Evaluating the result via /evaluate/item endpoint
 
@@ -41,7 +41,7 @@ Before running this script, you must start the workflow server with evaluators c
 
 WHAT IT DOES:
 -------------
-- Sends a question about LangSmith to the /generate/full endpoint
+- Sends a question about LangSmith to the /v1/workflow/full endpoint
 - Captures the agent's response and intermediate steps (trajectory)
 - Evaluates the response using the "accuracy" evaluator
 - Displays the evaluation score and reasoning
@@ -131,7 +131,7 @@ async def run_workflow_and_evaluate(base_url: str, input_message: str, expected_
 
     async with aiohttp.ClientSession() as session:
         # ========================================================================
-        # STEP 1: Run the workflow via /generate/full
+        # STEP 1: Run the workflow via /v1/workflow/full
         # ========================================================================
         logger.info("=" * 70)
         logger.info("STEP 1: Running workflow")
@@ -139,7 +139,7 @@ async def run_workflow_and_evaluate(base_url: str, input_message: str, expected_
         logger.info(f"Question: {input_message}")
 
         payload = {"input_message": input_message}
-        endpoint = f"{base_url}/generate/full"
+        endpoint = f"{base_url}/v1/workflow/full"
 
         final_response = None
         intermediate_steps = []

@@ -142,7 +142,7 @@ Once the server is running, you can make HTTP requests to interact with the work
 
 ```bash
 curl --request POST \
-  --url http://localhost:8000/generate \
+  --url http://localhost:8000/v1/workflow \
   --header 'Content-Type: application/json' \
   --data '{"messages": [{"role": "user", "content": "What are LLMs?"}]}'
 ```
@@ -153,7 +153,7 @@ curl --request POST \
 
 ```bash
 curl --request POST \
-  --url http://localhost:8000/generate/stream \
+  --url http://localhost:8000/v1/workflow/stream \
   --header 'Content-Type: application/json' \
   --data '{"messages": [{"role": "user", "content": "What are LLMs?"}]}'
 ```

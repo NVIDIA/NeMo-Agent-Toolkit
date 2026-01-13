@@ -99,9 +99,9 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
         super().__init__()
         self._lock = threading.Lock()
         self.last_call_ts = time.time()
-        self.step_manager = Context.get().intermediate_step_manager
         self._patched = PatchedClients()
         self._instrumented = False
+        self.step_manager = Context.get().intermediate_step_manager
 
     def instrument(self) -> None:
         """Monkey-patch AutoGen methods with usage-stat collection logic.
@@ -251,6 +251,10 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
         except Exception:
             return "unknown_model"
 
+    def _get_step_manager(self):
+        """Resolve the current Context's step manager at call time."""
+        return Context.get().intermediate_step_manager
+
     def _extract_input_text(self, messages: list[Any]) -> str:
         """Extract text content from message list.
 
@@ -368,6 +372,7 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
             model_name = handler._extract_model_name(client) if client else "unknown_model"
             messages = kwargs.get("messages", [])
             model_input = handler._extract_input_text(messages)
+            step_manager = handler._get_step_manager()
 
             # Push LLM_START event
             start_payload = IntermediateStepPayload(
@@ -383,21 +388,21 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
                 ),
             )
             start_uuid = start_payload.UUID
-            handler.step_manager.push_intermediate_step(start_payload)
+            step_manager.push_intermediate_step(start_payload)
 
             # Call original function
             try:
                 output = await original_func(*args, **kwargs)
             except Exception as e:
                 logger.error("Error during LLM call: %s", e)
-                handler.step_manager.push_intermediate_step(
+                step_manager.push_intermediate_step(
                     IntermediateStepPayload(
                         event_type=IntermediateStepType.LLM_END,
                         span_event_timestamp=time.time(),
                         framework=LLMFrameworkEnum.AUTOGEN,
                         name=model_name,
                         data=StreamEventData(input=model_input, output=str(e)),
-                        metadata=TraceMetadata(error=str(e)),
+                        metadata=TraceMetadata(provided_metadata={"error": str(e)}),
                         usage_info=UsageInfo(token_usage=TokenUsageBaseModel()),
                         UUID=start_uuid,
                     ))
@@ -412,7 +417,7 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
 
             # Push LLM_END event
             end_time = time.time()
-            handler.step_manager.push_intermediate_step(
+            step_manager.push_intermediate_step(
                 IntermediateStepPayload(
                     event_type=IntermediateStepType.LLM_END,
                     span_event_timestamp=end_time,
@@ -456,6 +461,7 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
             model_name = handler._extract_model_name(client) if client else "unknown_model"
             messages = kwargs.get("messages", [])
             model_input = handler._extract_input_text(messages)
+            step_manager = handler._get_step_manager()
 
             # Push LLM_START event
             start_payload = IntermediateStepPayload(
@@ -471,7 +477,7 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
                 ),
             )
             start_uuid = start_payload.UUID
-            handler.step_manager.push_intermediate_step(start_payload)
+            step_manager.push_intermediate_step(start_payload)
 
             # Collect streaming output
             output_chunks: list[str] = []
@@ -496,7 +502,7 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
                 # Success path - push LLM_END event after stream completes
                 end_time = time.time()
                 model_output = "".join(output_chunks)
-                handler.step_manager.push_intermediate_step(
+                step_manager.push_intermediate_step(
                     IntermediateStepPayload(
                         event_type=IntermediateStepType.LLM_END,
                         span_event_timestamp=end_time,
@@ -517,14 +523,14 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
             except Exception as e:
                 # Error path - push error LLM_END event
                 logger.error("Error during streaming LLM call: %s", e)
-                handler.step_manager.push_intermediate_step(
+                step_manager.push_intermediate_step(
                     IntermediateStepPayload(
                         event_type=IntermediateStepType.LLM_END,
                         span_event_timestamp=time.time(),
                         framework=LLMFrameworkEnum.AUTOGEN,
                         name=model_name,
                         data=StreamEventData(input=model_input, output=str(e)),
-                        metadata=TraceMetadata(error=str(e)),
+                        metadata=TraceMetadata(provided_metadata={"error": str(e)}),
                         usage_info=UsageInfo(token_usage=TokenUsageBaseModel()),
                         UUID=start_uuid,
                     ))
@@ -568,6 +574,7 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
                         tool_input = str(call_data.get("kwargs", {}))
             except Exception:
                 logger.debug("Error extracting tool input")
+            step_manager = handler._get_step_manager()
 
             # Push TOOL_START event
             start_payload = IntermediateStepPayload(
@@ -583,21 +590,21 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
                 ),
             )
             start_uuid = start_payload.UUID
-            handler.step_manager.push_intermediate_step(start_payload)
+            step_manager.push_intermediate_step(start_payload)
 
             # Call original function
             try:
                 output = await original_func(*args, **kwargs)
             except Exception as e:
                 logger.error("Tool execution failed: %s", e)
-                handler.step_manager.push_intermediate_step(
+                step_manager.push_intermediate_step(
                     IntermediateStepPayload(
                         event_type=IntermediateStepType.TOOL_END,
                         span_event_timestamp=time.time(),
                         framework=LLMFrameworkEnum.AUTOGEN,
                         name=tool_name,
                         data=StreamEventData(input=tool_input, output=str(e)),
-                        metadata=TraceMetadata(error=str(e)),
+                        metadata=TraceMetadata(provided_metadata={"error": str(e)}),
                         usage_info=UsageInfo(token_usage=TokenUsageBaseModel()),
                         UUID=start_uuid,
                     ))
@@ -607,7 +614,7 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
 
             # Push TOOL_END event
             end_time = time.time()
-            handler.step_manager.push_intermediate_step(
+            step_manager.push_intermediate_step(
                 IntermediateStepPayload(
                     event_type=IntermediateStepType.TOOL_END,
                     span_event_timestamp=end_time,

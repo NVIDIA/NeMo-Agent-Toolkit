@@ -36,7 +36,7 @@ SETUP (REQUIRED):
 
 WHAT IT DOES:
 -------------
-- Sends a question to /generate/full endpoint (without intermediate steps)
+- Sends a question to /v1/workflow/full endpoint (without intermediate steps)
 - Captures the agent's response
 - Evaluates using /evaluate/item endpoint
 - Displays the evaluation score and reasoning
@@ -104,7 +104,7 @@ async def run_and_evaluate_simple(base_url: str, input_message: str, expected_ou
         logger.info("Question: %s", input_message)
 
         # Use filter_steps=none to suppress intermediate steps for speed
-        endpoint = f"{base_url}/generate/full?filter_steps=none"
+        endpoint = f"{base_url}/v1/workflow/full?filter_steps=none"
         payload = {"input_message": input_message}
 
         final_response = None

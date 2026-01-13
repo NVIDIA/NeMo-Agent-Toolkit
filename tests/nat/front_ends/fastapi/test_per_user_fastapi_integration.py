@@ -116,7 +116,7 @@ def _register_components():
 def create_shared_workflow_config() -> Config:
     """Create a config with shared workflow."""
     front_end = FastApiFrontEndConfig(root_path="",
-                                      workflow=FastApiFrontEndConfig.EndpointBase(path="/generate",
+                                      workflow=FastApiFrontEndConfig.EndpointBase(path="/v1/workflow",
                                                                                   method="POST",
                                                                                   description="Test endpoint"))
     return Config(general=GeneralConfig(front_end=front_end), workflow=SharedWorkflowConfig())
@@ -232,7 +232,7 @@ class TestSharedWorkflowEndpoint:
         # Use LifespanManager to properly trigger lifespan events (route registration)
         async with LifespanManager(app):
             async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-                response = await client.post("/generate", json={"message": "hello"})
+                response = await client.post("/v1/workflow", json={"message": "hello"})
 
                 assert response.status_code == 200
                 data = response.json()
@@ -246,8 +246,8 @@ class TestSharedWorkflowEndpoint:
 
         async with LifespanManager(app):
             async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-                response1 = await client.post("/generate", json={"message": "first"})
-                response2 = await client.post("/generate", json={"message": "second"})
+                response1 = await client.post("/v1/workflow", json={"message": "first"})
+                response2 = await client.post("/v1/workflow", json={"message": "second"})
 
                 assert response1.status_code == 200
                 assert response2.status_code == 200

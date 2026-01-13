@@ -161,7 +161,7 @@ nat serve --config_file examples/front_ends/simple_calculator_custom_routes/conf
 
 The server starts with both standard and custom endpoints:
 
-- **Standard endpoint**: `POST /generate` - Default Agent toolkit workflow endpoint
+- **Standard endpoint**: `POST /v1/workflow` - Default Agent toolkit workflow endpoint
 - **Custom endpoint**: `POST /get_request_metadata` - Demonstrates metadata access
 
 Access comprehensive request metadata:

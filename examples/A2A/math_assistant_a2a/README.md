@@ -156,13 +156,13 @@ nat serve --config_file examples/A2A/math_assistant_a2a/configs/config.yml
 
 ```bash
 # User "Alice" makes a request on terminal 3
-curl -X POST http://localhost:8000/generate \
+curl -X POST http://localhost:8000/v1/workflow \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=Alice" \
   -d '{"messages": [{"role": "user", "content": "Is the sum of 5 and 3 greater than the current hour of the day?"}]}' | jq
 
 # User "Hatter" makes a request on terminal 3 (isolated from Alice)
-curl -X POST http://localhost:8000/generate \
+curl -X POST http://localhost:8000/v1/workflow \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=Hatter" \
   -d '{"messages": [{"role": "user", "content": "Is the product of 3 and 2 greater than the current hour of the day?"}]}' | jq

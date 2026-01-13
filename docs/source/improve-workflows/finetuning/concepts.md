@@ -634,7 +634,7 @@ nat finetune --config_file=configs/finetune.yml \
 
 # Using remote endpoint
 nat finetune --config_file=configs/finetune.yml \
-    --endpoint=http://localhost:8000/generate \
+    --endpoint=http://localhost:8000/v1/workflow \
     --endpoint_timeout=600
 ```
 

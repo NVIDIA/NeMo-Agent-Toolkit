@@ -161,7 +161,7 @@ The workflow server can be triggered using the following curl command:
 
 ```bash
 curl --request POST \
-  --url http://localhost:8000/generate \
+  --url http://localhost:8000/v1/workflow \
   --header 'Content-Type: application/json' \
   --data '{"input_message": "create a line chart showing trends over time"}'
 ```

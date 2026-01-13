@@ -147,13 +147,13 @@ When using the FastAPI front end with `nat serve`, users are identified by the `
 
 ```bash
 # User "alice" makes a request
-curl -X POST http://localhost:8000/generate \
+curl -X POST http://localhost:8000/v1/workflow \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=alice" \
   -d ''{"messages": [{"role": "user", "content": "Hello"}]}''
 
 # User "bob" makes a request (isolated from alice)
-curl -X POST http://localhost:8000/generate \
+curl -X POST http://localhost:8000/v1/workflow \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=bob" \
   -d ''{"messages": [{"role": "user", "content": "Hello"}]}''

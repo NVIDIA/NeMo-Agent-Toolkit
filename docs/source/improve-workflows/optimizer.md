@@ -471,7 +471,7 @@ nat optimize --config_file <path_to_config>
 -   `--config_file`: (Required) Path to the JSON or YAML configuration file for your workflow, for example, `config.yaml`. This file should contain the `optimizer` section as described above.
 -   `--dataset`: (Optional) Path to a JSON file containing the dataset for evaluation, such as `eval_dataset.json`. This will override any dataset path specified in the config file. The dataset should be a list of dictionaries, where each dictionary represents a data point and includes the necessary inputs for your workflow and the ground truth for evaluation.
 -   `--result_json_path`: A `JSONPath` expression to extract the result from the workflow's output. Defaults to `$`.
--   `--endpoint`: If you are running your workflow as a service, you can provide the endpoint URL. For example, `http://localhost:8000/generate`.
+-   `--endpoint`: If you are running your workflow as a service, you can provide the endpoint URL. For example, `http://localhost:8000/v1/workflow`.
 -   `--endpoint_timeout`: The timeout in seconds for requests to the endpoint. Defaults to `300`.
 
 Example:

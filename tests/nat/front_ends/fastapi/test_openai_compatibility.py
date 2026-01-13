@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 from httpx_sse import aconnect_sse
 
 from nat.data_models.api_server import ChatRequest
@@ -168,80 +167,52 @@ def test_nat_chat_response_timestamp_serialization():
     assert chunk_json["created"] == 1704110400
 
 
-@pytest.mark.parametrize("openai_api_v1_path", ["/v1/chat/completions", None])
-async def test_legacy_vs_openai_v1_mode_endpoints(openai_api_v1_path: str | None):
+async def test_openai_v1_mode_endpoints():
     """Test that endpoints are created correctly for both legacy and OpenAI v1 compatible modes"""
 
     # Configure with the specified mode
     front_end_config = FastApiFrontEndConfig()
-    front_end_config.workflow.openai_api_v1_path = openai_api_v1_path
-    front_end_config.workflow.openai_api_path = "/v1/chat/completions"
+    front_end_config.workflow.openai_api_v1_path = "/v1/chat/completions"
 
     config = Config(
         general=GeneralConfig(front_end=front_end_config),
-        workflow=EchoFunctionConfig(use_openai_api=True),
+        workflow=EchoFunctionConfig(use_openai_v1_api=True),
     )
 
     async with build_nat_client(config) as client:
         base_path = "/v1/chat/completions"
 
-        if openai_api_v1_path:
-            # OpenAI v1 Compatible Mode: single endpoint handles both streaming and non-streaming
+        # OpenAI v1 Compatible Mode: single endpoint handles both streaming and non-streaming
 
-            # Test non-streaming request
-            response = await client.post(base_path,
-                                         json={
-                                             "messages": [{
-                                                 "content": "Hello", "role": "user"
-                                             }], "stream": False
-                                         })
-            assert response.status_code == 200
-            chat_response = ChatResponse.model_validate(response.json())
-            assert chat_response.choices[0].message.content == "Hello"
-            assert chat_response.object == "chat.completion"
+        # Test non-streaming request
+        response = await client.post(base_path,
+                                     json={
+                                         "messages": [{
+                                             "content": "Hello", "role": "user"
+                                         }], "stream": False
+                                     })
+        assert response.status_code == 200
+        chat_response = ChatResponse.model_validate(response.json())
+        assert chat_response.choices[0].message.content == "Hello"
+        assert chat_response.object == "chat.completion"
 
-            # Test streaming request
-            response_chunks = []
-            async with aconnect_sse(client,
-                                    "POST",
-                                    base_path,
-                                    json={
-                                        "messages": [{
-                                            "content": "World", "role": "user"
-                                        }], "stream": True
-                                    }) as event_source:
-                async for sse in event_source.aiter_sse():
-                    if sse.data != "[DONE]":
-                        chunk = ChatResponseChunk.model_validate(sse.json())
-                        response_chunks.append(chunk)
-
-            assert event_source.response.status_code == 200
-            assert len(response_chunks) > 0
-
-        else:
-            # Legacy Mode: separate endpoints for streaming and non-streaming
-
-            # Test non-streaming endpoint (base path)
-            response = await client.post(base_path, json={"messages": [{"content": "Hello", "role": "user"}]})
-            assert response.status_code == 200
-            chat_response = ChatResponse.model_validate(response.json())
-            assert chat_response.choices[0].message.content == "Hello"
-
-            # Test streaming endpoint (base path + /stream)
-            response_chunks = []
-            async with aconnect_sse(client,
-                                    "POST",
-                                    f"{base_path}/stream",
-                                    json={"messages": [{
+        # Test streaming request
+        response_chunks = []
+        async with aconnect_sse(client,
+                                "POST",
+                                base_path,
+                                json={
+                                    "messages": [{
                                         "content": "World", "role": "user"
-                                    }]}) as event_source:
-                async for sse in event_source.aiter_sse():
-                    if sse.data != "[DONE]":
-                        chunk = ChatResponseChunk.model_validate(sse.json())
-                        response_chunks.append(chunk)
+                                    }], "stream": True
+                                }) as event_source:
+            async for sse in event_source.aiter_sse():
+                if sse.data != "[DONE]":
+                    chunk = ChatResponseChunk.model_validate(sse.json())
+                    response_chunks.append(chunk)
 
-            assert event_source.response.status_code == 200
-            assert len(response_chunks) > 0
+        assert event_source.response.status_code == 200
+        assert len(response_chunks) > 0
 
 
 async def test_openai_compatible_mode_stream_parameter():
@@ -249,12 +220,11 @@ async def test_openai_compatible_mode_stream_parameter():
 
     front_end_config = FastApiFrontEndConfig()
     front_end_config.workflow.openai_api_v1_path = "/v1/chat/completions"
-    front_end_config.workflow.openai_api_path = "/v1/chat/completions"
 
     # Use streaming config since that's what's available
     config = Config(
         general=GeneralConfig(front_end=front_end_config),
-        workflow=StreamingEchoFunctionConfig(use_openai_api=True),
+        workflow=StreamingEchoFunctionConfig(use_openai_v1_api=True),
     )
 
     async with build_nat_client(config) as client:
@@ -268,162 +238,28 @@ async def test_openai_compatible_mode_stream_parameter():
                                 json={
                                     "messages": [{
                                         "content": "Hello", "role": "user"
-                                    }], "stream": True
+                                    }],
+                                    "stream": True,
+                                    "stream_options": {
+                                        "include_usage": True
+                                    }
                                 }) as event_source:
             chunks_received = 0
+            usage_chunks = 0
             async for sse in event_source.aiter_sse():
                 if sse.data != "[DONE]":
                     chunk = ChatResponseChunk.model_validate(sse.json())
                     assert chunk.object == "chat.completion.chunk"
                     chunks_received += 1
+                    # usage summary may appear as plain JSON dict; detect by keys
+                    if isinstance(sse.json(), dict) and "prompt_tokens" in sse.json():
+                        usage_chunks += 1
                     if chunks_received >= 2:  # Stop after receiving a few chunks
                         break
 
         assert event_source.response.status_code == 200
         assert event_source.response.headers["content-type"] == "text/event-stream; charset=utf-8"
-
-
-async def test_legacy_non_streaming_response_format():
-    """Test non-streaming legacy endpoint response format matches exact OpenAI structure"""
-
-    front_end_config = FastApiFrontEndConfig()
-    front_end_config.workflow.openai_api_path = "/chat"
-
-    # Use EchoFunctionConfig with specific content to match expected response
-    config = Config(
-        general=GeneralConfig(front_end=front_end_config),
-        workflow=EchoFunctionConfig(use_openai_api=True),
-    )
-
-    async with build_nat_client(config) as client:
-        # Send request to legacy OpenAI endpoint
-        response = await client.post("/chat",
-                                     json={
-                                         "messages": [{
-                                             "role": "user", "content": "Hello! How can I assist you today?"
-                                         }],
-                                         "stream": False
-                                     })
-
-        assert response.status_code == 200
-        data = response.json()
-
-        # Validate response structure exactly matches OpenAI ChatCompletion format
-        assert "id" in data
-        assert data["object"] == "chat.completion"
-        assert "created" in data
-        assert isinstance(data["created"], int)
-        assert "model" in data
-        assert "choices" in data
-        assert len(data["choices"]) == 1
-
-        # Verify choices array structure (OpenAI spec: array of choice objects)
-        choice = data["choices"][0]
-
-        # Essential choice fields per OpenAI spec
-        assert choice["index"] == 0, "Choice index should be 0 for single completion"
-        assert "message" in choice, "Choice must contain message object"
-        assert "finish_reason" in choice, "Choice must contain finish_reason"
-
-        # Message structure validation
-        message = choice["message"]
-        assert "role" in message, "Message must contain role"
-        assert message["role"] == "assistant", "Response message role should be assistant"
-        assert "content" in message, "Message must contain content"
-        assert isinstance(message["content"], str), "Message content must be string"
-
-        # Finish reason validation
-        finish_reason = choice["finish_reason"]
-        valid_finish_reasons = {"stop", "length", "content_filter", "tool_calls", "function_call"}
-        assert finish_reason in valid_finish_reasons, f"Invalid finish_reason: {finish_reason}"
-
-        # Usage validation (OpenAI spec requires usage field for non-streaming)
-        assert "usage" in data, "Non-streaming response must include usage"
-        usage = data["usage"]
-        assert "prompt_tokens" in usage, "Usage must include prompt_tokens"
-        assert "completion_tokens" in usage, "Usage must include completion_tokens"
-        assert "total_tokens" in usage, "Usage must include total_tokens"
-
-        # Validate token counts are non-negative integers
-        assert isinstance(usage["prompt_tokens"], int), "prompt_tokens must be integer"
-        assert isinstance(usage["completion_tokens"], int), "completion_tokens must be integer"
-        assert isinstance(usage["total_tokens"], int), "total_tokens must be integer"
-        assert usage["prompt_tokens"] >= 0, "prompt_tokens must be non-negative"
-        assert usage["completion_tokens"] >= 0, "completion_tokens must be non-negative"
-        assert usage["total_tokens"] >= 0, "total_tokens must be non-negative"
-
-        # Validate total_tokens = prompt_tokens + completion_tokens
-        assert usage["total_tokens"] == usage["prompt_tokens"] + usage["completion_tokens"], \
-            "total_tokens must equal prompt_tokens + completion_tokens"
-
-
-async def test_legacy_streaming_response_format():
-    """
-    Validate only the required structural shape of legacy streaming
-    (/chat/stream).
-    """
-    front_end_config = FastApiFrontEndConfig()
-    front_end_config.workflow.openai_api_path = "/chat"
-
-    config = Config(
-        general=GeneralConfig(front_end=front_end_config),
-        workflow=StreamingEchoFunctionConfig(use_openai_api=True),
-    )
-
-    async with build_nat_client(config) as client:
-        async with aconnect_sse(client,
-                                "POST",
-                                "/chat/stream",
-                                json={
-                                    "messages": [{
-                                        "role": "user", "content": "Hello"
-                                    }], "stream": True
-                                }) as event_source:
-
-            chunks = []
-            async for sse in event_source.aiter_sse():
-                if sse.data == "[DONE]":
-                    break
-                chunks.append(sse.json())
-
-            # Transport-level checks
-            assert event_source.response.status_code == 200
-            ct = event_source.response.headers.get("content-type", "")
-            assert ct.startswith("text/event-stream"), f"Unexpected Content-Type: {ct}"
-            assert len(chunks) > 0, "Expected at least one JSON chunk before [DONE]"
-
-    # ---- Structural validation of chunks ----
-    valid_final_reason_seen = False
-    valid_finish_reasons = {"stop", "length", "content_filter", "tool_calls", "function_call"}
-
-    for i, chunk in enumerate(chunks):
-        # Required root fields for a streaming chunk
-        assert chunk.get("object") == "chat.completion.chunk", f"Chunk {i}: wrong object"
-        assert chunk.get("id"), f"Chunk {i}: missing id"
-        assert "created" in chunk, f"Chunk {i}: missing created"
-        assert chunk.get("model"), f"Chunk {i}: missing model"
-        assert "choices" in chunk, f"Chunk {i}: missing choices"
-
-        # choices can be empty on a usage-only summary chunk
-        if not chunk["choices"]:
-            continue
-
-        for c_idx, choice in enumerate(chunk["choices"]):
-            # Required choice fields in streaming
-            assert "index" in choice, f"Chunk {i} choice {c_idx}: missing index"
-            assert "delta" in choice, f"Chunk {i} choice {c_idx}: missing delta"
-            # Must NOT include full message in streaming
-            assert "message" not in choice, f"Chunk {i} choice {c_idx}: message must not appear in streaming"
-            # finish_reason must exist; may be null until final chunk
-            assert "finish_reason" in choice, f"Chunk {i} choice {c_idx}: missing finish_reason"
-
-            fr = choice.get("finish_reason")
-            if fr is not None:
-                assert fr in valid_finish_reasons, f"Chunk {i} choice {c_idx}: invalid finish_reason {fr}"
-                valid_final_reason_seen = True
-
-    # At least one non-null finish_reason should appear across the stream (finalization)
-    assert valid_final_reason_seen, "Expected a final chunk with non-null finish_reason"
+        assert usage_chunks in {0, 1}
 
 
 async def test_openai_compatible_non_streaming_response_format():
@@ -435,7 +271,7 @@ async def test_openai_compatible_non_streaming_response_format():
     # Use EchoFunctionConfig with specific content to match expected response
     config = Config(
         general=GeneralConfig(front_end=front_end_config),
-        workflow=EchoFunctionConfig(use_openai_api=True),
+        workflow=EchoFunctionConfig(use_openai_v1_api=True),
     )
 
     async with build_nat_client(config) as client:
@@ -499,6 +335,13 @@ async def test_openai_compatible_non_streaming_response_format():
         assert "prompt_tokens" in usage, "Usage must include prompt_tokens"
         assert "completion_tokens" in usage, "Usage must include completion_tokens"
         assert "total_tokens" in usage, "Usage must include total_tokens"
+        # Ensure usage fields are non-negative ints
+        assert isinstance(usage["prompt_tokens"], int)
+        assert isinstance(usage["completion_tokens"], int)
+        assert isinstance(usage["total_tokens"], int)
+        assert usage["prompt_tokens"] >= 0
+        assert usage["completion_tokens"] >= 0
+        assert usage["total_tokens"] >= 0
 
 
 async def test_openai_compatible_streaming_response_format():
@@ -511,7 +354,7 @@ async def test_openai_compatible_streaming_response_format():
 
     config = Config(
         general=GeneralConfig(front_end=front_end_config),
-        workflow=StreamingEchoFunctionConfig(use_openai_api=True),
+        workflow=StreamingEchoFunctionConfig(use_openai_v1_api=True),
     )
 
     async with build_nat_client(config) as client:

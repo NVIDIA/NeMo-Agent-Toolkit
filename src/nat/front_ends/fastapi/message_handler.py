@@ -76,10 +76,10 @@ class WebSocketMessageHandler:
         self._flow_handler: FlowHandlerBase | None = None
 
         self._schema_output_mapping: dict[str, type[BaseModel] | type[None]] = {
-            WorkflowSchemaType.GENERATE: self._session_manager.get_workflow_single_output_schema(),
-            WorkflowSchemaType.CHAT: ChatResponse,
-            WorkflowSchemaType.CHAT_STREAM: ChatResponseChunk,
-            WorkflowSchemaType.GENERATE_STREAM: self._session_manager.get_workflow_streaming_output_schema(),
+            WorkflowSchemaType.WORKFLOW: self._session_manager.get_workflow_single_output_schema(),
+            WorkflowSchemaType.WORKFLOW_STREAM: self._session_manager.get_workflow_streaming_output_schema(),
+            WorkflowSchemaType.OPENAI_API_V1: ChatResponse,
+            WorkflowSchemaType.OPENAI_API_V1_STREAM: ChatResponseChunk,
         }
 
     def set_flow_handler(self, flow_handler: FlowHandlerBase) -> None:
@@ -158,10 +158,10 @@ class WebSocketMessageHandler:
         """
         Processes a WebSocketUserMessage based on schema type.
         """
-        if self._workflow_schema_type in [WorkflowSchemaType.CHAT, WorkflowSchemaType.CHAT_STREAM]:
+        if self._workflow_schema_type in [WorkflowSchemaType.OPENAI_API_V1, WorkflowSchemaType.OPENAI_API_V1_STREAM]:
             return ChatRequest(**user_content.content.model_dump(include={"messages"}))
 
-        elif self._workflow_schema_type in [WorkflowSchemaType.GENERATE, WorkflowSchemaType.GENERATE_STREAM]:
+        elif self._workflow_schema_type in [WorkflowSchemaType.WORKFLOW, WorkflowSchemaType.WORKFLOW_STREAM]:
             return self._extract_last_user_message_content(user_content.content.messages).text
 
         raise ValueError("Unsupported workflow schema type for WebSocketUserMessage")

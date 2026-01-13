@@ -23,7 +23,7 @@ from nat.data_models.intermediate_step import IntermediateStep
 logger = logging.getLogger(__name__)
 
 
-async def pull_intermediate(_q, adapter):
+async def pull_intermediate(_q, adapter, on_step=None):
     """
     Subscribes to the runner's event stream (which is now a simplified Observable)
     using direct callbacks. Processes each event with the adapter and enqueues
@@ -64,6 +64,8 @@ async def pull_intermediate(_q, adapter):
             adapted = adapter.process(item)
 
         if adapted is not None:
+            if on_step:
+                on_step(adapted)
             loop.create_task(_q.put(adapted))
 
     def on_error_cb(exc: Exception):

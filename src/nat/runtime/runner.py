@@ -51,7 +51,9 @@ class Runner:
                  entry_fn: Function,
                  context_state: ContextState,
                  exporter_manager: ExporterManager,
-                 runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE):
+                 runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE,
+                 parent_id: str | None = None,
+                 parent_name: str | None = None):
         """
         The Runner class is used to run a workflow. It handles converting input and output data types and running the
         workflow with the specified concurrency.
@@ -68,6 +70,10 @@ class Runner:
             The exporter manager to use
         runtime_type : RuntimeTypeEnum
             The runtime type (RUN_OR_SERVE, EVALUATE, OTHER)
+        parent_id : str | None
+            Optional parent invocation ID to set on the root InvocationNode
+        parent_name : str | None
+            Optional parent invocation name to set on the root InvocationNode
         """
 
         if (entry_fn is None):
@@ -89,6 +95,9 @@ class Runner:
         self._runtime_type = runtime_type
         self._runtime_type_token = None
 
+        self._parent_id = parent_id
+        self._parent_name = parent_name
+
     @property
     def context(self) -> Context:
         return self._context
@@ -103,10 +112,13 @@ class Runner:
 
         # Create reactive event stream
         self._context_state.event_stream.set(Subject())
-        self._context_state.active_function.set(InvocationNode(
-            function_name="root",
-            function_id="root",
-        ))
+        self._context_state.active_function.set(
+            InvocationNode(
+                function_name="root",
+                function_id="root",
+                parent_id=self._parent_id,
+                parent_name=self._parent_name,
+            ))
 
         self._runtime_type_token = self._context_state.runtime_type.set(self._runtime_type)
 

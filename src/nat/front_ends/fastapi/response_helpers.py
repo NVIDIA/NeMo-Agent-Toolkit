@@ -14,8 +14,11 @@
 # limitations under the License.
 
 import asyncio
+import json
 import typing
 from collections.abc import AsyncGenerator
+
+from pydantic import BaseModel
 
 from nat.data_models.api_server import ResponseIntermediateStep
 from nat.data_models.api_server import ResponsePayloadOutput
@@ -33,7 +36,9 @@ async def generate_streaming_response_as_str(payload: typing.Any,
                                              streaming: bool,
                                              step_adaptor: StepAdaptor = StepAdaptor(StepAdaptorConfig()),
                                              result_type: type | None = None,
-                                             output_type: type | None = None) -> AsyncGenerator[str]:
+                                             output_type: type | None = None,
+                                             send_done: bool = False,
+                                             include_usage: bool = False) -> AsyncGenerator[str]:
 
     async for item in generate_streaming_response(payload,
                                                   session=session,
@@ -42,35 +47,41 @@ async def generate_streaming_response_as_str(payload: typing.Any,
                                                   result_type=result_type,
                                                   output_type=output_type):
 
-        if (isinstance(item, ResponseSerializable)):
+        if isinstance(item, ResponseSerializable):
             yield item.get_stream_data()
         else:
             raise ValueError("Unexpected item type in stream. Expected ChatResponseSerializable, got: " +
                              str(type(item)))
 
+    # Usage emission requires runner stats; not available here. Reserved for future extension.
 
-async def generate_streaming_response(payload: typing.Any,
-                                      *,
-                                      session: Session,
-                                      streaming: bool,
-                                      step_adaptor: StepAdaptor = StepAdaptor(StepAdaptorConfig()),
-                                      result_type: type | None = None,
-                                      output_type: type | None = None) -> AsyncGenerator[ResponseSerializable]:
+
+async def generate_streaming_response(
+        payload: typing.Any,
+        *,
+        session: Session,
+        streaming: bool,
+        step_adaptor: StepAdaptor = StepAdaptor(StepAdaptorConfig()),
+        result_type: type | None = None,
+        output_type: type | None = None,
+        trace_collector: list[ResponseSerializable] | None = None,
+        http_headers: dict[str, str] | None = None) -> AsyncGenerator[ResponseSerializable]:
 
     async with session.run(payload) as runner:
 
         q: AsyncIOProducerConsumerQueue[ResponseSerializable] = AsyncIOProducerConsumerQueue()
 
         # Start the intermediate stream
-        intermediate_complete = await pull_intermediate(q, step_adaptor)
+        intermediate_complete = await pull_intermediate(
+            q, step_adaptor, on_step=trace_collector.append if trace_collector is not None else None)
 
         async def pull_result():
             if session.workflow.has_streaming_output and streaming:
-                async for chunk in runner.result_stream(to_type=output_type):
+                async for chunk in runner.result_stream(to_type=output_type):  # type: ignore[arg-type]
                     await q.put(chunk)
             else:
-                result = await runner.result(to_type=result_type)
-                await q.put(runner.convert(result, output_type))
+                result = await runner.result(to_type=result_type)  # type: ignore[arg-type]
+                await q.put(runner.convert(result, output_type))  # type: ignore[arg-type]
 
             # Wait until the intermediate subscription is done before closing q
             # But we have no direct "intermediate_done" reference here
@@ -115,16 +126,18 @@ async def generate_single_response(
         raise ValueError("Cannot get a single output value for streaming workflows")
 
     async with session.run(payload) as runner:
-        return await runner.result(to_type=result_type)
+        return await runner.result(to_type=result_type)  # type: ignore[arg-type]
 
 
-async def generate_streaming_response_full(payload: typing.Any,
-                                           *,
-                                           session: Session,
-                                           streaming: bool,
-                                           result_type: type | None = None,
-                                           output_type: type | None = None,
-                                           filter_steps: str | None = None) -> AsyncGenerator[ResponseSerializable]:
+async def generate_streaming_response_full(
+        payload: typing.Any,
+        *,
+        session: Session,
+        streaming: bool,
+        result_type: type | None = None,
+        output_type: type | None = None,
+        filter_steps: str | None = None,
+        trace_collector: list[ResponseSerializable] | None = None) -> AsyncGenerator[ResponseSerializable]:
     """
     Similar to generate_streaming_response but provides raw ResponseIntermediateStep objects
     without any step adaptor translations.
@@ -142,15 +155,16 @@ async def generate_streaming_response_full(payload: typing.Any,
         q: AsyncIOProducerConsumerQueue[ResponseSerializable] = AsyncIOProducerConsumerQueue()
 
         # Start the intermediate stream without step adaptor
-        intermediate_complete = await pull_intermediate(q, None)
+        intermediate_complete = await pull_intermediate(
+            q, None, on_step=trace_collector.append if trace_collector is not None else None)
 
         async def pull_result():
             if session.workflow.has_streaming_output and streaming:
-                async for chunk in runner.result_stream(to_type=output_type):
+                async for chunk in runner.result_stream(to_type=output_type):  # type: ignore[arg-type]
                     await q.put(chunk)
             else:
-                result = await runner.result(to_type=result_type)
-                await q.put(runner.convert(result, output_type))
+                result = await runner.result(to_type=result_type)  # type: ignore[arg-type]
+                await q.put(runner.convert(result, output_type))  # type: ignore[arg-type]
 
             await intermediate_complete.wait()
             await q.close()
@@ -179,18 +193,32 @@ async def generate_streaming_response_full_as_str(payload: typing.Any,
                                                   streaming: bool,
                                                   result_type: type | None = None,
                                                   output_type: type | None = None,
-                                                  filter_steps: str | None = None) -> AsyncGenerator[str]:
+                                                  filter_steps: str | None = None,
+                                                  send_done: bool = False,
+                                                  include_usage: bool = False,
+                                                  include_trace: bool = False) -> AsyncGenerator[str]:
     """
     Similar to generate_streaming_response but converts the response to a string format.
     """
+    trace_collector: list[ResponseSerializable] | None = [] if include_trace else None
+
     async for item in generate_streaming_response_full(payload,
                                                        session=session,
                                                        streaming=streaming,
                                                        result_type=result_type,
                                                        output_type=output_type,
-                                                       filter_steps=filter_steps):
+                                                       filter_steps=filter_steps,
+                                                       trace_collector=trace_collector):
         if (isinstance(item, ResponseIntermediateStep) or isinstance(item, ResponsePayloadOutput)):
             yield item.get_stream_data()
         else:
             raise ValueError("Unexpected item type in stream. Expected ChatResponseSerializable, got: " +
                              str(type(item)))
+
+    if include_trace and trace_collector is not None:
+        events = []
+        for e in trace_collector:
+            if isinstance(e, BaseModel):
+                events.append(e.model_dump())
+        summary = {"_trace": {"events": events}}
+        yield f"data: {json.dumps(summary)}\n\n"

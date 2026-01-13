@@ -74,7 +74,7 @@ Test requests with different users:
 
 User Alice:
 ```bash
-curl -X POST http://localhost:8000/generate \
+curl -X POST http://localhost:8000/v1/workflow \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=user-alice" \
   -d '{"messages": [{"role": "user", "content": "Search for titanic datasets"}]}'
@@ -82,7 +82,7 @@ curl -X POST http://localhost:8000/generate \
 
 User Bob (has a separate MCP client instance):
 ```bash
-curl -X POST http://localhost:8000/generate \
+curl -X POST http://localhost:8000/v1/workflow \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=user-bob" \
   -d '{"messages": [{"role": "user", "content": "What competitions are active?"}]}'

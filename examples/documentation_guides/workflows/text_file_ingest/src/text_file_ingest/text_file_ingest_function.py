@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import logging
 import os
 
@@ -43,28 +44,40 @@ async def text_file_ingest_tool(config: TextFileIngestFunctionConfig, builder: B
     from langchain_core.embeddings import Embeddings
     from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-    embeddings: Embeddings = await builder.get_embedder(config.embedder_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    retriever_tool = None
+    retriever_lock = asyncio.Lock()
 
-    logger.info("Ingesting documents from: %s", config.ingest_glob)
-    (ingest_dir, ingest_glob) = os.path.split(config.ingest_glob)
-    loader = DirectoryLoader(ingest_dir, glob=ingest_glob, loader_cls=TextLoader)
+    async def _get_retriever_tool():
+        nonlocal retriever_tool
+        if retriever_tool is not None:
+            return retriever_tool
+        async with retriever_lock:
+            if retriever_tool is not None:
+                return retriever_tool
+            embeddings: Embeddings = await builder.get_embedder(config.embedder_name,
+                                                                wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
-    docs = [document async for document in loader.alazy_load()]
+            logger.info("Ingesting documents from: %s", config.ingest_glob)
+            (ingest_dir, ingest_glob) = os.path.split(config.ingest_glob)
+            loader = DirectoryLoader(ingest_dir, glob=ingest_glob, loader_cls=TextLoader)
 
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=config.chunk_size)
-    documents = text_splitter.split_documents(docs)
-    vector = await USearch.afrom_documents(documents, embeddings)
+            docs = [document async for document in loader.alazy_load()]
 
-    retriever = vector.as_retriever()
+            text_splitter = RecursiveCharacterTextSplitter(chunk_size=config.chunk_size)
+            documents = text_splitter.split_documents(docs)
+            vector = await USearch.afrom_documents(documents, embeddings)
 
-    retriever_tool = create_retriever_tool(
-        retriever,
-        "text_file_ingest",
-        config.description,
-    )
+            retriever = vector.as_retriever()
+
+            retriever_tool = create_retriever_tool(
+                retriever,
+                "text_file_ingest",
+                config.description,
+            )
+            return retriever_tool
 
     async def _inner(query: str) -> str:
-
-        return await retriever_tool.arun(query)
+        tool = await _get_retriever_tool()
+        return await tool.arun(query)
 
     yield FunctionInfo.from_fn(_inner, description=config.description)

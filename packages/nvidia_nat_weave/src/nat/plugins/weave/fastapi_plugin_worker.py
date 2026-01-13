@@ -26,6 +26,8 @@ from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontE
 from nat.runtime.session import SessionManager
 from nat.utils.type_utils import override
 
+from .register import WeaveTelemetryExporter
+
 logger = logging.getLogger(__name__)
 
 
@@ -72,9 +74,9 @@ class WeaveFastAPIPluginWorker(FastApiFrontEndPluginWorker):
         """Add the Weave feedback endpoint if Weave telemetry is configured."""
 
         # Find Weave telemetry exporter configuration
-        weave_config = None
+        weave_config: WeaveTelemetryExporter | None = None
         for exporter_config in builder._telemetry_exporters.values():
-            if exporter_config.config.__class__.__name__ == 'WeaveTelemetryExporter':
+            if isinstance(exporter_config.config, WeaveTelemetryExporter):
                 weave_config = exporter_config.config
                 break
 

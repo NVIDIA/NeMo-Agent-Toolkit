@@ -65,7 +65,7 @@ logger = logging.getLogger(__name__)
     "--endpoint",
     type=str,
     default=None,
-    help="Use endpoint for running the workflow. Example: http://localhost:8000/generate",
+    help="Use endpoint for running the workflow. Example: http://localhost:8000/v1/workflow",
 )
 @click.option(
     "--endpoint_timeout",

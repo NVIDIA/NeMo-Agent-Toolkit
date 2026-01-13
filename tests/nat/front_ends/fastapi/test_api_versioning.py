@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,15 +12,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-app:
-  host: "localhost"
-  ws: "websocket"
-  port: 8000
-  config_filepath: 'examples/getting_started/simple_web_query/configs/config.yml'
-  input: "Can you provide me with the most read content about LangSmith?"
+from fastapi import Response
 
-endpoint:
-  v1_workflow: "/v1/workflow"
-  v1_workflow_stream: "/v1/workflow/stream"
-  v1_chat_completions: "/v1/chat/completions"
+from nat.front_ends.fastapi.api_versioning import VersioningOptions
+from nat.front_ends.fastapi.api_versioning import apply_version_headers
+
+
+def test_apply_version_headers_sets_version_header():
+    response = Response()
+    opts = VersioningOptions(api_version_header=True, version="3")
+
+    apply_version_headers(response, opts)
+
+    assert response.headers["X-API-Version"] == "3"
+    assert "Deprecation" not in response.headers

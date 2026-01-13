@@ -545,10 +545,10 @@ class WorkflowSchemaType(str, Enum):
     """
     WorkflowSchemaType is an Enum that represents Workkflow response types.
     """
-    GENERATE_STREAM = "generate_stream"
-    CHAT_STREAM = "chat_stream"
-    GENERATE = "generate"
-    CHAT = "chat"
+    WORKFLOW = "workflow"
+    WORKFLOW_STREAM = "workflow_stream"
+    OPENAI_API_V1 = "openai_api_v1"
+    OPENAI_API_V1_STREAM = "openai_api_v1_stream"
 
 
 class WebSocketMessageStatus(str, Enum):

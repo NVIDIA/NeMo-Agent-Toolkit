@@ -39,13 +39,13 @@ nat serve --config_file examples/getting_started/simple_calculator/configs/confi
 ```
 
 ## Generate Non-Streaming Transaction
-- **Route:** `/generate`
+- **Route:** `/v1/workflow`
 - **Description:** A non-streaming transaction that waits until all workflow data is available before sending the
 result back to the client. The transaction schema is defined by the workflow.
 - HTTP Request Example:
   ```bash
   curl --request POST \
-    --url http://localhost:8000/generate \
+    --url http://localhost:8000/v1/workflow \
     --header 'Content-Type: application/json' \
     --data '{
       "input_message": "Is 4 + 4 greater than the current hour of the day"
@@ -78,7 +78,7 @@ When processes are used Dask workers, standard output and standard error from th
 :::
 
 
-- **Route:** `/generate/async`
+- **Route:** `/v1/workflow/async`
 - **Description:** A non-streaming transaction that submits a workflow to run in the background.
 - **Optional Fields:**
   - `job_id`: A unique identifier for the job. If not provided, a UUID will be generated. It can be any string value. However, it is the caller's responsibility to ensure uniqueness. If `job_id` already exists, the server will return the latest status for that job.
@@ -89,7 +89,7 @@ When processes are used Dask workers, standard output and standard error from th
 - HTTP Request Example:
   ```bash
   curl --request POST \
-    --url http://localhost:8000/generate/async \
+    --url http://localhost:8000/v1/workflow/async \
     --header 'Content-Type: application/json' \
     --data '{
       "input_message": "Is 4 + 4 greater than the current hour of the day"
@@ -108,7 +108,7 @@ When processes are used Dask workers, standard output and standard error from th
 - HTTP Request Example:
   ```bash
   curl --request POST \
-    --url http://localhost:8000/generate/async \
+    --url http://localhost:8000/v1/workflow/async \
     --header 'Content-Type: application/json' \
     --data '{
       "input_message": "Is 4 + 4 greater than the current hour of the day",
@@ -132,13 +132,13 @@ When processes are used Dask workers, standard output and standard error from th
   ```
 
 ## Generate Streaming Transaction
-  - **Route:** `/generate/stream`
+  - **Route:** `/v1/workflow/stream`
   - **Description:** A streaming transaction that allows data to be sent in chunks as it becomes available from the
     workflow, rather than waiting for the complete response to be available.
 - HTTP Request Example:
   ```bash
   curl --request POST \
-    --url http://localhost:8000/generate/stream \
+    --url http://localhost:8000/v1/workflow/stream \
     --header 'Content-Type: application/json' \
     --data '{
       "input_message": "Is 4 + 4 greater than the current hour of the day"
@@ -191,14 +191,14 @@ When processes are used Dask workers, standard output and standard error from th
   "data": { "value": "No, 4 + 4 (which is 8) is not greater than the current hour of the day (which is 15)." }
   ```
 ## Generate Streaming Full Transaction
-  - **Route:** `/generate/full`
-  - **Description:** Same as `/generate/stream` but provides raw `IntermediateStep` objects
+  - **Route:** `/v1/workflow/full`
+  - **Description:** Same as `/v1/workflow/stream` but provides raw `IntermediateStep` objects
     without any step adaptor translations. Use the `filter_steps` query parameter to filter
     steps by type (comma-separated list) or set to 'none' to suppress all intermediate steps.
   - **HTTP Request Example:**
     ```bash
     curl --request POST \
-    --url http://localhost:8000/generate/full \
+    --url http://localhost:8000/v1/workflow/full \
     --header 'Content-Type: application/json' \
     --data '{
       "input_message": "Is 4 + 4 greater than the current hour of the day"
@@ -218,14 +218,14 @@ When processes are used Dask workers, standard output and standard error from th
   Suppress all intermediate steps (only get final output):
   ```bash
   curl --request POST \
-    --url 'http://localhost:8000/generate/full?filter_steps=none' \
+    --url 'http://localhost:8000/v1/workflow/full?filter_steps=none' \
     --header 'Content-Type: application/json' \
     --data '{"input_message": "Is 4 + 4 greater than the current hour of the day"}'
   ```
   Get only specific step types:
   ```bash
   curl --request POST \
-    --url 'http://localhost:8000/generate/full?filter_steps=LLM_END,TOOL_END' \
+    --url 'http://localhost:8000/v1/workflow/full?filter_steps=LLM_END,TOOL_END' \
     --header 'Content-Type: application/json' \
     --data '{"input_message": "Is 4 + 4 greater than the current hour of the day"}'
   ```
@@ -384,8 +384,140 @@ general:
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `openai_api_v1_path` | string | `null` | Path for the OpenAI v1 compatible endpoint |
-| `openai_api_path` | string | `/chat` | Path for legacy OpenAI endpoints |
 | `method` | string | `POST` | HTTP method for the endpoint |
+
+### FastAPI Front-End Controls
+
+Use the `general.front_end` section to control versioning headers, human-in-the-loop HTTP/SSE routes, and observability trace embedding:
+
+```yaml
+general:
+  front_end:
+    _type: fastapi
+    versioning:
+      disable_legacy_routes: false
+    hitl:
+      enable_http: true
+      enable_sse: true
+    observability:
+      enable_header_propagation: true
+      embed_trace_in_response: false
+```
+
+Versioning options:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `versioning.version` | integer | `1` | API version used for `/v{n}` prefixed routes |
+| `versioning.disable_legacy_routes` | boolean | `false` | Remove unversioned legacy routes when `true` |
+| `versioning.api_version_header` | boolean | `true` | Emit `X-API-Version` response header |
+
+Human-in-the-loop HTTP surface:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `hitl.enable_http` | boolean | `true` | Enable polling endpoints under `/v1/hitl` |
+| `hitl.enable_sse` | boolean | `true` | Enable Server-Sent Events stream at `/v1/hitl/stream` |
+| `hitl.polling_timeout_seconds` | integer | `30` | Long-poll timeout for pending prompts |
+| `hitl.interaction_timeout_seconds` | integer | `300` | Maximum wait time for a human response before timeout |
+
+Observability and trace embedding:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `observability.enable_header_propagation` | boolean | `true` | Allow inbound observability headers to flow into downstream workflow calls |
+| `observability.embed_trace_in_response` | boolean | `false` | Include the optional `_trace` payload on streaming responses |
+
+## Human-in-the-Loop HTTP Endpoints
+
+When `hitl.enable_http` or `hitl.enable_sse` is enabled, the NeMo Agent toolkit provides HTTP endpoints for Human-in-the-Loop (HITL) interactions. These endpoints allow external clients to poll for pending interaction prompts and submit responses.
+
+### Session Identification
+
+All HITL endpoints require a session identifier. The session ID is resolved in the following order:
+1. Query parameter: `?session_id=<id>`
+2. Cookie: `nat-session`
+3. Header: `X-Session-Id`
+4. Auto-generated UUID if none provided
+
+### Get Pending Prompts
+
+- **Route:** `/v1/hitl/pending`
+- **Method:** GET
+- **Description:** Returns pending Human-in-the-Loop interaction prompts for the current session. Supports long-polling based on the `polling_timeout_seconds` configuration.
+- **HTTP Request Example:**
+  ```bash
+  curl --request GET \
+    --url 'http://localhost:8000/v1/hitl/pending?session_id=my-session-123'
+  ```
+- **HTTP Response Example (prompts pending):**
+  ```json
+  {
+    "session_id": "my-session-123",
+    "pending": [
+      {
+        "id": "interaction-uuid-1234",
+        "prompt": "Please confirm the following action: Delete file 'data.csv'?",
+        "options": ["yes", "no"],
+        "metadata": {}
+      }
+    ]
+  }
+  ```
+- **HTTP Response Example (no prompts):** Returns HTTP 204 No Content
+
+### Submit Response
+
+- **Route:** `/v1/hitl/{interaction_id}/respond`
+- **Method:** POST
+- **Description:** Submit a human response to a pending interaction prompt.
+- **HTTP Request Example:**
+  ```bash
+  curl --request POST \
+    --url 'http://localhost:8000/v1/hitl/interaction-uuid-1234/respond?session_id=my-session-123' \
+    --header 'Content-Type: application/json' \
+    --data '{
+      "response": "yes",
+      "metadata": {}
+    }'
+  ```
+- **HTTP Response Example:**
+  ```json
+  {
+    "status": "accepted",
+    "session_id": "my-session-123",
+    "interaction_id": "interaction-uuid-1234"
+  }
+  ```
+- **Error Response (interaction not found):** Returns HTTP 404 with detail message
+
+### HITL SSE Stream
+
+- **Route:** `/v1/hitl/stream`
+- **Method:** GET
+- **Description:** Server-Sent Events (SSE) stream that pushes new interaction prompts as they arrive. This provides real-time notifications without polling.
+- **HTTP Request Example:**
+  ```bash
+  curl --request GET \
+    --url 'http://localhost:8000/v1/hitl/stream?session_id=my-session-123' \
+    --header 'Accept: text/event-stream'
+  ```
+- **SSE Event Example:**
+  ```
+  data: {"id": "interaction-uuid-5678", "prompt": "Approve data export?", "options": ["approve", "reject"], "metadata": {}}
+
+  ```
+
+### HITL Workflow Integration
+
+To use HITL in your workflows, the workflow must be configured to request human input at specific points. When a workflow reaches a point requiring human input:
+
+1. The workflow pauses and creates an `InteractionPrompt`
+2. The prompt appears in `/v1/hitl/pending` or is pushed through `/v1/hitl/stream`
+3. The client submits a response through `/v1/hitl/{interaction_id}/respond`
+4. The workflow resumes with the human-provided response
+
+The `interaction_timeout_seconds` configuration controls how long the workflow waits for a response before timing out.
 
 ### Endpoint Behavior
 
@@ -398,12 +530,6 @@ Creates a single endpoint that handles both streaming and non-streaming requests
 - **Content-Type**: `application/json`
 - **Behavior**: Routes to streaming or non-streaming based on `stream` parameter
 
-#### Legacy Mode (`openai_api_v1_path` not configured)
-
-Creates separate endpoints for different request types:
-
-- **Non-streaming**: `/<openai_api_path>`
-- **Streaming**: `<openai_api_path>/stream`
 
 ### Request Format
 

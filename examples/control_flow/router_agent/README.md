@@ -199,7 +199,7 @@ Once the server is running, you can make HTTP requests to interact with the work
 
 ```bash
 curl --request POST \
-  --url http://localhost:8000/generate \
+  --url http://localhost:8000/v1/workflow \
   --header 'Content-Type: application/json' \
   --data '{"input_message": "I want a yellow fruit"}'
 ```
@@ -210,7 +210,7 @@ curl --request POST \
 
 ```bash
 curl --request POST \
-  --url http://localhost:8000/generate/stream \
+  --url http://localhost:8000/v1/workflow/stream \
   --header 'Content-Type: application/json' \
   --data '{"input_message": "I want a yellow fruit"}'
 ```

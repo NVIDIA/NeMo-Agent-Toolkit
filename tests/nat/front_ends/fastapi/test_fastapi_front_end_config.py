@@ -18,13 +18,16 @@ from pydantic import BaseModel
 
 from nat.data_models.step_adaptor import StepAdaptorConfig
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
+from nat.front_ends.fastapi.fastapi_front_end_config import HitlHttpConfig
+from nat.front_ends.fastapi.fastapi_front_end_config import ObservabilityPropagationConfig
+from nat.front_ends.fastapi.fastapi_front_end_config import VersioningConfig
 
 ENDPOINT_BASE_ALL_VALUES = {
     "method": "GET",
     "description": "all values provided",
     "path": "/test",
     "websocket_path": "/ws",
-    "openai_api_path": "/openai"
+    "openai_api_v1_path": "/v1/chat/completions"
 }
 
 ENDPOINT_BASE_REQUIRED_VALUES = {"method": "POST", "description": "only required values"}
@@ -51,6 +54,18 @@ FAST_API_FRONT_END_CONFIG_ALL_VALUES = {
     "port": 8080,
     "reload": True,
     "workers": 4,
+    "versioning": {
+        "version": 2,
+        "disable_legacy_routes": True,
+        "api_version_header": False,
+    },
+    "hitl": {
+        "enable_http": False, "enable_sse": True, "polling_timeout_seconds": 15, "interaction_timeout_seconds": 120
+    },
+    "observability": {
+        "enable_header_propagation": False,
+        "embed_trace_in_response": True,
+    },
     "step_adaptor": {
         "mode": "custom", "custom_event_types": ["CUSTOM_START", "CUSTOM_END"]
     },
@@ -95,7 +110,7 @@ def test_endpoint_base(endpoint_kwargs: dict):
 
 def test_endpoint_base_invalid_method():
     with pytest.raises(ValueError, match=r"validation error for EndpointBase\s+method"):
-        FastApiFrontEndConfig.EndpointBase(method="INVALID", description="test")
+        FastApiFrontEndConfig.EndpointBase(method="INVALID", description="test")  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize("endpoint_kwargs", [ENDPOINT_ALL_VALUES.copy(), ENDPOINT_REQUIRED_VALUES.copy()],
@@ -138,6 +153,9 @@ def test_fast_api_front_end_config(config_kwargs: dict):
         assert isinstance(model.workflow, FastApiFrontEndConfig.EndpointBase)
         assert isinstance(model.endpoints, list)
         assert isinstance(model.cors, FastApiFrontEndConfig.CrossOriginResourceSharing)
+        assert isinstance(model.versioning, VersioningConfig)
+        assert isinstance(model.hitl, HitlHttpConfig)
+        assert isinstance(model.observability, ObservabilityPropagationConfig)
         assert isinstance(model.use_gunicorn, bool)
         assert (isinstance(model.runner_class, str) or model.runner_class is None)
         assert (isinstance(model.object_store, str) or model.object_store is None)

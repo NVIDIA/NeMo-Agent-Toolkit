@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import logging
 
 from nat.builder.builder import Builder
@@ -41,29 +42,41 @@ async def webquery_tool(config: WebQueryToolConfig, builder: Builder):
     from langchain_core.embeddings import Embeddings
     from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-    logger.info("Generating docs for the webpage: %s", config.webpage_url)
+    retriever_tool = None
+    retriever_lock = asyncio.Lock()
 
-    embeddings: Embeddings = await builder.get_embedder(config.embedder_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    async def _get_retriever_tool():
+        nonlocal retriever_tool
+        if retriever_tool is not None:
+            return retriever_tool
+        async with retriever_lock:
+            if retriever_tool is not None:
+                return retriever_tool
+            logger.info("Generating docs for the webpage: %s", config.webpage_url)
 
-    loader = WebBaseLoader(config.webpage_url)
+            embeddings: Embeddings = await builder.get_embedder(config.embedder_name,
+                                                                wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
-    # Cant use `aload` because its implemented incorrectly and is not async
-    docs = [document async for document in loader.alazy_load()]
+            loader = WebBaseLoader(config.webpage_url)
 
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=config.chunk_size)
-    documents = text_splitter.split_documents(docs)
-    vector = await USearch.afrom_documents(documents, embeddings)
+            # Cant use `aload` because its implemented incorrectly and is not async
+            docs = [document async for document in loader.alazy_load()]
 
-    retriever = vector.as_retriever()
+            text_splitter = RecursiveCharacterTextSplitter(chunk_size=config.chunk_size)
+            documents = text_splitter.split_documents(docs)
+            vector = await USearch.afrom_documents(documents, embeddings)
 
-    retriever_tool = create_retriever_tool(
-        retriever,
-        "webpage_search",
-        config.description,
-    )
+            retriever = vector.as_retriever()
+
+            retriever_tool = create_retriever_tool(
+                retriever,
+                "webpage_search",
+                config.description,
+            )
+            return retriever_tool
 
     async def _inner(query: str) -> str:
-
-        return await retriever_tool.arun(query)
+        tool = await _get_retriever_tool()
+        return await tool.arun(query)
 
     yield FunctionInfo.from_fn(_inner, description=config.description)

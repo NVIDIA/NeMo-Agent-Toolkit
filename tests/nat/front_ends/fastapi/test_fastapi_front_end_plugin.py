@@ -50,18 +50,18 @@ class CustomWorker(FastApiFrontEndPluginWorker):
             return {"message": "This is a custom route"}
 
 
-@pytest.mark.parametrize("fn_use_openai_api", [True, False])
-async def test_generate_and_openai_single(fn_use_openai_api: bool):
+@pytest.mark.parametrize("fn_use_openai_v1_api", [True, False])
+async def test_generate_and_openai_single(fn_use_openai_v1_api: bool):
 
     front_end_config = FastApiFrontEndConfig()
 
     config = Config(
         general=GeneralConfig(front_end=front_end_config),
-        workflow=EchoFunctionConfig(use_openai_api=fn_use_openai_api),
+        workflow=EchoFunctionConfig(use_openai_v1_api=fn_use_openai_v1_api),
     )
 
     workflow_path = front_end_config.workflow.path
-    oai_path = front_end_config.workflow.openai_api_path
+    oai_path = front_end_config.workflow.openai_api_v1_path
 
     assert workflow_path is not None
     assert oai_path is not None
@@ -69,9 +69,9 @@ async def test_generate_and_openai_single(fn_use_openai_api: bool):
     async with build_nat_client(config) as client:
 
         # Test both the function accepting OAI and also using the OAI API
-        if (fn_use_openai_api):
+        if (fn_use_openai_v1_api):
             response = await client.post(
-                workflow_path, json=ChatRequest(messages=[Message(content="Hello", role="user")]).model_dump())
+                oai_path, json=ChatRequest(messages=[Message(content="Hello", role="user")]).model_dump())
 
             assert response.status_code == 200
             assert ChatResponse.model_validate(response.json()).choices[0].message.content == "Hello"
@@ -82,31 +82,23 @@ async def test_generate_and_openai_single(fn_use_openai_api: bool):
             assert response.status_code == 200
             assert response.json() == {"value": "Hello"}
 
-        response = await client.post(oai_path,
-                                     json=ChatRequest(messages=[Message(content="Hello", role="user")]).model_dump())
 
-        assert response.status_code == 200
-        oai_response = ChatResponse.model_validate(response.json())
+@pytest.mark.parametrize("fn_use_openai_v1_api", [True, False])
+async def test_generate_and_openai_stream(fn_use_openai_v1_api: bool):
 
-        assert oai_response.choices[0].message.content == "Hello"
-
-
-@pytest.mark.parametrize("fn_use_openai_api", [True, False])
-async def test_generate_and_openai_stream(fn_use_openai_api: bool):
-
-    if (fn_use_openai_api):
-        values = ChatRequest(messages=[Message(content="Hello", role="user")]).model_dump()
+    if (fn_use_openai_v1_api):
+        values = ChatRequest(messages=[Message(content="Hello", role="user")], stream=True).model_dump()
     values = ["a", "b", "c", "d"]
 
     front_end_config = FastApiFrontEndConfig()
 
     config = Config(
         general=GeneralConfig(front_end=front_end_config),
-        workflow=StreamingEchoFunctionConfig(use_openai_api=fn_use_openai_api),
+        workflow=StreamingEchoFunctionConfig(use_openai_v1_api=fn_use_openai_v1_api),
     )
 
     workflow_path = front_end_config.workflow.path
-    oai_path = front_end_config.workflow.openai_api_path
+    oai_path = front_end_config.workflow.openai_api_v1_path
 
     assert workflow_path is not None
     assert oai_path is not None
@@ -115,12 +107,12 @@ async def test_generate_and_openai_stream(fn_use_openai_api: bool):
 
         response = []
 
-        if (fn_use_openai_api):
+        if (fn_use_openai_v1_api):
             async with aconnect_sse(client,
                                     "POST",
-                                    f"{workflow_path}/stream",
-                                    json=ChatRequest(messages=[Message(content=x, role="user")
-                                                               for x in values]).model_dump()) as event_source:
+                                    f"{oai_path}",
+                                    json=ChatRequest(messages=[Message(content=x, role="user") for x in values],
+                                                     stream=True).model_dump()) as event_source:
                 async for sse in event_source.aiter_sse():
                     response.append(ChatResponseChunk.model_validate(sse.json()).choices[0].delta.content or "")
 
@@ -135,19 +127,6 @@ async def test_generate_and_openai_stream(fn_use_openai_api: bool):
 
                 assert event_source.response.status_code == 200
                 assert response == values
-
-        response_oai: list[str] = []
-
-        async with aconnect_sse(client,
-                                "POST",
-                                f"{oai_path}/stream",
-                                json=ChatRequest(messages=[Message(content=x, role="user")
-                                                           for x in values]).model_dump()) as event_source:
-            async for sse in event_source.aiter_sse():
-                response_oai.append(ChatResponseChunk.model_validate(sse.json()).choices[0].delta.content or "")
-
-            assert event_source.response.status_code == 200
-            assert response_oai == values
 
 
 async def test_custom_endpoint():
@@ -193,34 +172,24 @@ async def test_specified_endpoints():
 
 
 @pytest.mark.parametrize("use_sync_timeout", [True, False])
-@pytest.mark.parametrize("fn_use_openai_api", [True, False])
-async def test_generate_async(fn_use_openai_api: bool, use_sync_timeout: bool):
-    if (fn_use_openai_api):
+@pytest.mark.parametrize("fn_use_openai_v1_api", [True, False])
+async def test_generate_async(fn_use_openai_v1_api: bool, use_sync_timeout: bool):
+    if (fn_use_openai_v1_api):
         pytest.skip("Async support for OpenAI API is not implemented yet")
 
     front_end_config = FastApiFrontEndConfig()
 
     config = Config(
         general=GeneralConfig(front_end=front_end_config),
-        workflow=EchoFunctionConfig(use_openai_api=fn_use_openai_api),
+        workflow=EchoFunctionConfig(use_openai_v1_api=fn_use_openai_v1_api),
     )
 
-    job_id = f"test_generate_async_{use_sync_timeout}_{fn_use_openai_api}"
+    job_id = f"test_generate_async_{use_sync_timeout}_{fn_use_openai_v1_api}"
 
     workflow_path = f"{front_end_config.workflow.path}/async"
-    # oai_path = front_end_config.workflow.openai_api_path
     async with build_nat_client(config) as client:
 
-        # Test both the function accepting OAI and also using the OAI API
-        if (fn_use_openai_api):
-            # response = await client.post(
-            #     workflow_path, json=ChatRequest(messages=[Message(content="Hello", role="user")]).model_dump())
-
-            # assert response.status_code == 200
-            # assert ChatResponse.model_validate(response.json()).choices[0].message.content == "Hello"
-            assert True  # TODO: Implement async support in the EchoFunctionConfig
-
-        else:
+        if not fn_use_openai_v1_api:
             payload = {"message": "Hello", "job_id": job_id}
             if use_sync_timeout:
                 payload["sync_timeout"] = 10
@@ -236,6 +205,9 @@ async def test_generate_async(fn_use_openai_api: bool, use_sync_timeout: bool):
             else:
                 assert response.status_code == 202
                 assert response.json() == {"job_id": job_id, "status": "submitted"}
+        else:
+            # Test the OpenAI API compatible endpoint
+            assert True  # TODO: Implement async support in the EchoFunctionConfig
 
         expected_status_values = ("running", "success", "submitted")
         status_path = f"{workflow_path}/job/{job_id}"
@@ -261,7 +233,7 @@ async def test_async_job_status_not_found():
 
     config = Config(
         general=GeneralConfig(front_end=front_end_config),
-        workflow=EchoFunctionConfig(use_openai_api=False),
+        workflow=EchoFunctionConfig(use_openai_v1_api=False),
     )
 
     workflow_path = f"{front_end_config.workflow.path}/async"

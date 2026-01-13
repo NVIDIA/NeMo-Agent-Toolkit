@@ -84,7 +84,7 @@ commands in a separate terminal.
 
 ```bash
 # Add a note as User 1
-curl -X POST http://localhost:8000/generate \
+curl -X POST http://localhost:8000/v1/workflow \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=alice" \
   -d '{"command": "note", "action": "add", "param1": "Alices first note"}'
@@ -97,7 +97,7 @@ curl -X POST http://localhost:8000/generate \
 
 # List notes as User 1
 ```bash
-curl -X POST http://localhost:8000/generate \
+curl -X POST http://localhost:8000/v1/workflow \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=alice" \
   -d '{"command": "note", "action": "list"}'
@@ -112,7 +112,7 @@ curl -X POST http://localhost:8000/generate \
 
 ```bash
 # List notes as User 2 (should be empty - isolated from User 1)
-curl -X POST http://localhost:8000/generate \
+curl -X POST http://localhost:8000/v1/workflow \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=bob" \
   -d '{"command": "note", "action": "list"}'
@@ -125,7 +125,7 @@ curl -X POST http://localhost:8000/generate \
 
 # Add a note as User 2
 ```bash
-curl -X POST http://localhost:8000/generate \
+curl -X POST http://localhost:8000/v1/workflow \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=bob" \
   -d '{"command": "note", "action": "add", "param1": "Bobs note"}'
@@ -140,7 +140,7 @@ curl -X POST http://localhost:8000/generate \
 
 ```bash
 # Set a preference as User 1
-curl -X POST http://localhost:8000/generate \
+curl -X POST http://localhost:8000/v1/workflow \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=alice" \
   -d '{"command": "pref", "action": "set", "param1": "theme", "param2": "light"}'
@@ -153,7 +153,7 @@ curl -X POST http://localhost:8000/generate \
 
 # Check User 2's theme (should still be "dark" from defaults)
 ```bash
-curl -X POST http://localhost:8000/generate \
+curl -X POST http://localhost:8000/v1/workflow \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=bob" \
   -d '{"command": "pref", "action": "get", "param1": "theme"}'
@@ -168,7 +168,7 @@ curl -X POST http://localhost:8000/generate \
 
 ```bash
 # Get help
-curl -X POST http://localhost:8000/generate \
+curl -X POST http://localhost:8000/v1/workflow \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=alice" \
   -d '{"command": "help"}'
@@ -181,7 +181,7 @@ curl -X POST http://localhost:8000/generate \
 
 # Get session stats (tracks commands per user)
 ```bash
-curl -X POST http://localhost:8000/generate \
+curl -X POST http://localhost:8000/v1/workflow \
   -H "Content-Type: application/json" \
   -H "Cookie: nat-session=alice" \
   -d '{"command": "stats"}'

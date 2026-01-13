@@ -26,7 +26,7 @@ from nat.data_models.function import FunctionBaseConfig
 
 
 class EchoFunctionConfig(FunctionBaseConfig, name="test_echo"):
-    use_openai_api: bool = False
+    use_openai_v1_api: bool = False
 
 
 @register_function(config_type=EchoFunctionConfig)
@@ -45,14 +45,14 @@ async def echo_function(config: EchoFunctionConfig, builder: Builder):
         usage = Usage(prompt_tokens=prompt_tokens, completion_tokens=completion_tokens, total_tokens=total_tokens)
         return ChatResponse.from_string(content, usage=usage)
 
-    if (config.use_openai_api):
+    if (config.use_openai_v1_api):
         yield inner_oai
     else:
         yield inner
 
 
 class StreamingEchoFunctionConfig(FunctionBaseConfig, name="test_streaming_echo"):
-    use_openai_api: bool = False
+    use_openai_v1_api: bool = False
 
 
 @register_function(config_type=StreamingEchoFunctionConfig)
@@ -69,7 +69,7 @@ async def streaming_function(config: StreamingEchoFunctionConfig, builder: Build
         for value in oai_to_list(message):
             yield ChatResponseChunk.from_string(value)
 
-    yield FunctionInfo.from_fn(inner_oai if config.use_openai_api else inner, converters=[oai_to_list])
+    yield FunctionInfo.from_fn(inner_oai if config.use_openai_v1_api else inner, converters=[oai_to_list])
 
 
 class ConstantFunctionConfig(FunctionBaseConfig, name="test_constant"):

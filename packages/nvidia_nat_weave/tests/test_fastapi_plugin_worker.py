@@ -129,6 +129,6 @@ async def test_weave_worker_adds_standard_routes() -> None:
 
     async with build_nat_client(config, worker_class=WeaveFastAPIPluginWorker) as client:
         # Test that standard workflow endpoint exists
-        response = await client.post("/generate", json={"message": "Hello"})
+        response = await client.post("/v1/workflow", json={"message": "Hello"})
         assert response.status_code == 200
         assert response.json() == {"value": "Hello"}

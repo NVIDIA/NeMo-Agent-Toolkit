@@ -111,7 +111,7 @@ After the container starts, you can access the agent at http://localhost:8000.
 
 ```bash
 curl -X 'POST' \
-  'http://localhost:8000/generate' \
+  'http://localhost:8000/v1/workflow' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d '{"input_message": "What is LangSmith?"}'
