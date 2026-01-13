@@ -93,6 +93,7 @@ check:style:
 
 test:python_tests:
   stage: test
+  timeout: 2 hours
   services:
     - name: clickhouse/clickhouse-server
       alias: clickhouse
