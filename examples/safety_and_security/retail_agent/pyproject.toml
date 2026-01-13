@@ -9,7 +9,7 @@ root = "../../.."
 [project]
 name = "nat_retail_agent"
 dynamic = ["version"]
-dependencies = ["nvidia-nat[langchain]~=1.4"]
+dependencies = ["nvidia-nat[langchain]~=1.5"]
 requires-python = ">=3.11,<3.14"
 description = "Retail Agent NeMo Agent toolkit example"
 keywords = ["ai", "agents", "retail"]
