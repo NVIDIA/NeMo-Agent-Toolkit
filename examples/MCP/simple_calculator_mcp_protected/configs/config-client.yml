@@ -17,7 +17,7 @@
 # This config demonstrates connecting to an OAuth2-protected MCP server.
 #
 # Usage:
-#   nat run --config config-mcp-client.yml --input "Calculate 5 + 3"
+#   nat run --config_file examples/MCP/simple_calculator_mcp_protected/configs/config-client.yml --input "Calculate 5 + 3"
 
 function_groups:
   # Protected MCP Calculator Server

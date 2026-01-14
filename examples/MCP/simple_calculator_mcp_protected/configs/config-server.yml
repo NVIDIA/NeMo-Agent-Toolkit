@@ -17,7 +17,7 @@
 # This configuration demonstrates OAuth2 protection for MCP servers.
 #
 # Start the protected server:
-#   nat mcp serve --config examples/MCP/simple_calculator_mcp_protected/configs/config-mcp-server.yml
+#   nat mcp serve --config_file examples/MCP/simple_calculator_mcp_protected/configs/config-server.yml
 
 general:
   front_end:
