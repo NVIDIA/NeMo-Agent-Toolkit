@@ -52,32 +52,34 @@ The output must be a valid JSON array that can be parsed directly.
 
 Here is an example of how a valid JSON output should look:
 
+Note: {{ and }} are used for template escaping and will render as single braces { and } in the final prompt.
+
 [
-  \'{{
+  {{
     "plan": "Find Alex's schedule on Sep 25, 2025",
-    "evidence": \'{{
+    "evidence": {{
       "placeholder": "#E1",
       "tool": "search_calendar",
-      "tool_input": ("Alex", "09/25/2025")
-    }}\'
-  }}\',
-  \'{{
+      "tool_input": ["Alex", "09/25/2025"]
+    }}
+  }},
+  {{
     "plan": "Find Bill's schedule on sep 25, 2025",
-    "evidence": \'{{
+    "evidence": {{
       "placeholder": "#E2",
       "tool": "search_calendar",
-      "tool_input": ("Bill", "09/25/2025")
-    }}\'
-  }}\',
-  \'{{
+      "tool_input": ["Bill", "09/25/2025"]
+    }}
+  }},
+  {{
     "plan": "Suggest a time for 1-hour meeting given Alex's and Bill's schedule.",
-    "evidence": \'{{
+    "evidence": {{
       "placeholder": "#E3",
       "tool": "llm_chat",
       "tool_input": "Find a common 1-hour time slot for Alex and Bill given their schedules. \
 Alex's schedule: #E1; Bill's schedule: #E2?"
-    }}\'
-  }}\'
+    }}
+  }}
 ]
 
 Begin!
