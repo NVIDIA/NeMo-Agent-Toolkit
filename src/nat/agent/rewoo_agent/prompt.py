@@ -54,6 +54,7 @@ Here is an example of how a valid JSON output should look:
 
 Note: {{ and }} are used for template escaping and will render as single braces { and } in the final prompt.
 
+```json
 [
   {{
     "plan": "Find Alex's schedule on Sep 25, 2025",
@@ -81,6 +82,7 @@ Alex's schedule: #E1; Bill's schedule: #E2?"
     }}
   }}
 ]
+```
 
 Begin!
 """
