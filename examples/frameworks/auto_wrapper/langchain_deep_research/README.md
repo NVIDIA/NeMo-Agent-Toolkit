@@ -39,7 +39,7 @@ Ensure NeMo Agent toolkit is installed. If not, follow the [Installation Guide](
 
 ### API Keys
 
-- **NVIDIA Build API Key**: Required for sections 3.0 onwards (configurable LLMs)
+- **NVIDIA Build API Key**: Required for section 3.0
 - **Tavily API Key**: Required for web search functionality
 - **Anthropic API Key** (optional): Required only for Section 2.0, which runs the original Deep Research agent with its default Claude model. You can skip Section 2.0 and start directly from Section 3.0 if you don't have an Anthropic API key.
 
