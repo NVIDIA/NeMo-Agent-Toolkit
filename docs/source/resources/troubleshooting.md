@@ -21,6 +21,8 @@ limitations under the License.
 
 - **Workflow Not Found**: Ensure that your workflow is correctly registered and that the `_type` in your configuration file matches the workflow's `_type`.
 
+- **Component Not Found**: If NeMo Agent Toolkit reports that a given component is missing, and you know that the corresponding package is installed, then there is likely an issue with your Python environment. Ensure that there is no active conda python environment. Only create vanilla Python virtual environments through `python -m venv` or `uv venv` with no other active environments. One key indication of this will be a shell prompt prefixed with `(base)` or the result of `which python` pointing to a conda/Anaconda-managed python.
+
 - **Requested {category} type is ambiguous**: This error might arise when the `_type` in your configuration file is not unique. Please ensure that the `_type` is unique for each workflow. It can also occur after upgrading the toolkit from a previous version in-place when developing. To fix this issue, run the following commands:
 
     <!-- path-check-skip-begin -->
