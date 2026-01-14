@@ -159,6 +159,7 @@ That information is only used for evaluation. Using it can taint the predictor a
 These predictors are provided in this NeMo Agent Toolkit example:
 - `gold` - Uses the patch from the `SWEBenchInput` instance, bypassing problem-solving logic. See [predict_gold_stub.py](src/nat_swe_bench/predictors/predict_gold/predict_gold_stub.py) and configuration file `examples/evaluation_and_profiling/swe_bench/configs/config_gold.yml`.
 - `skeleton` - Skeleton code for creating a problem-solving workflow. This code can be copied to create a net-new predictor. See [predict_skeleton.py](src/nat_swe_bench/predictors/predict_skeleton/predict_skeleton.py) and configuration file `examples/evaluation_and_profiling/swe_bench/configs/config_skeleton.yml`.
+- `iterative` - Iterative agent that solves problems by executing bash commands step-by-step, observing results, and generating patches. See [predict_iterative.py](src/nat_swe_bench/predictors/predict_iterative/predict_iterative.py) and configuration file `examples/evaluation_and_profiling/swe_bench/configs/config_iterative.yml`.
 
 ### Adding a net new predictor
 To add a new predictor:

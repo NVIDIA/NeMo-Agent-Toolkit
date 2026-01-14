@@ -17,3 +17,4 @@
 
 # Import the predictor classes to register them
 from nat_swe_bench.predictors.predict_gold.predict_gold_stub import SweBenchPredictor as GoldPredictor
+from nat_swe_bench.predictors.predict_iterative.predict_iterative import SweBenchPredictor as IterativePredictor

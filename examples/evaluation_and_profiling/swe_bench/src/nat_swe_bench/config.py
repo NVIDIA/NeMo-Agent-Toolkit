@@ -16,10 +16,13 @@
 import typing
 
 from pydantic import Discriminator
+from pydantic import Field
 from pydantic import Tag
 
 from nat.data_models.common import BaseModelRegistryTag
 from nat.data_models.common import TypedBaseModel
+from nat.data_models.component_ref import FunctionRef
+from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
 
 
@@ -34,13 +37,16 @@ class SweBenchPredictorGoldConfig(SweBenchPredictorBaseConfig, name="gold"):
 class SweBenchPredictorSkeletonConfig(SweBenchPredictorBaseConfig, name="skeleton"):
     verbose: bool = False
 
+class SweBenchPredictorIterativeConfig(SweBenchPredictorBaseConfig, name="iterative"):
+    llm_name: LLMRef = Field(description="LLM to use for iterative agent")
+    step_limit: int = Field(default=250, description="Maximum number of agent steps")
+    timeout: int = Field(default=60, description="Command execution timeout in seconds")
 
-SweBenchPredictorConfig = typing.Annotated[typing.Annotated[SweBenchPredictorGoldConfig,
-                                                            Tag(SweBenchPredictorGoldConfig.static_type())]
-                                           | typing.Annotated[SweBenchPredictorSkeletonConfig,
-                                                              Tag(SweBenchPredictorSkeletonConfig.static_type())],
-                                           Discriminator(TypedBaseModel.discriminator)]
-
+SweBenchPredictorConfig = typing.Annotated[
+    typing.Annotated[SweBenchPredictorGoldConfig, Tag(SweBenchPredictorGoldConfig.static_type())]
+    | typing.Annotated[SweBenchPredictorSkeletonConfig, Tag(SweBenchPredictorSkeletonConfig.static_type())]
+    | typing.Annotated[SweBenchPredictorIterativeConfig, Tag(SweBenchPredictorIterativeConfig.static_type())],
+    Discriminator(TypedBaseModel.discriminator)]
 
 class SweBenchWorkflowConfig(FunctionBaseConfig, name="swe_bench"):
     predictor: SweBenchPredictorConfig
