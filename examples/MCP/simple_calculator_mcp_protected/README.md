@@ -17,7 +17,7 @@ limitations under the License.
 
 # Simple Calculator MCP - Protected
 
-This example demonstrates how to set up an OAuth2-protected NVIDIA NeMo Agent Toolkit MCP server. This complements the unprotected [Simple Calculator MCP](../simple_calculator_mcp/) example to demonstrate both authenticated and unauthenticated MCP server setups.
+This example demonstrates how to set up an OAuth2-protected NVIDIA NeMo Agent toolkit MCP server. This complements the unprotected [Simple Calculator MCP](../simple_calculator_mcp/) example to demonstrate both authenticated and unauthenticated MCP server setups.
 
 This example uses **per-user mode**, enabling complete per-user isolation while accessing the same protected MCP calculator tools.
 
@@ -58,7 +58,7 @@ graph TB
 
 ## Prerequisites
 
-- NeMo Agent Toolkit installed (see [Installation Guide](../../../docs/source/get-started/installation.md))
+- NeMo Agent toolkit installed (see [Installation Guide](../../../docs/source/get-started/installation.md))
 - Keycloak server running locally (see setup instructions below)
 - Basic understanding of OAuth2 and JWT tokens
 
