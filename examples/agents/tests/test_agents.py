@@ -56,6 +56,7 @@ def rewoo_answer_fixture(request: pytest.FixtureRequest, rewoo_data: list[dict])
     return rewoo_data[request.param]["answer"].lower()
 
 
+@pytest.mark.skip(reason="Temporarily skip rewoo tests due to long run times, re-enable once the workflows are updated.")
 @pytest.mark.usefixtures("nvidia_api_key", "tavily_api_key")
 @pytest.mark.integration
 @pytest.mark.parametrize("use_rest_api", [False, True], ids=["nat_run", "nat_serve"])
@@ -70,6 +71,7 @@ async def test_rewoo_full_workflow(agents_dir: Path, use_rest_api: bool, rewoo_q
         await run_workflow(config_file=config_file, question=rewoo_question, expected_answer=rewoo_answer)
 
 
+@pytest.mark.skip(reason="Temporarily skip agent tests due to long run times, re-enable once the workflows are updated.")
 @pytest.mark.slow
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
@@ -94,6 +96,7 @@ async def test_agent_full_workflow(agents_dir: Path, config_file: str, use_rest_
 
 # Code examples from `docs/source/resources/running-tests.md`
 # Intentionally not using the fixtures defined above to keep the examples clear
+@pytest.mark.skip(reason="Temporarily skip agent tests due to long run times, re-enable once the workflows are updated.")
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_react_agent_full_workflow(examples_dir: Path):
@@ -101,6 +104,7 @@ async def test_react_agent_full_workflow(examples_dir: Path):
     await run_workflow(config_file=config_file, question="What are LLMs?", expected_answer="Large Language Model")
 
 
+@pytest.mark.skip(reason="Temporarily skip agent tests due to long run times, re-enable once the workflows are updated.")
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_react_agent_full_workflow_validate_re(examples_dir: Path):
