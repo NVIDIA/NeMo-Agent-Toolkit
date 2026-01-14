@@ -127,11 +127,6 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
                     if self.front_end_config.dask_threads_per_worker > 0:
                         dask_kwargs["threads_per_worker"] = self.front_end_config.dask_threads_per_worker
 
-                    # TODO: Remove this log statement prior to merging
-                    logger.info("Creating local Dask cluster with %s %d workers and %d threads per worker",
-                                self.front_end_config.dask_workers,
-                                self.front_end_config.max_running_async_jobs + 1,
-                                self.front_end_config.dask_threads_per_worker)
                     # set n_workers to max_running_async_jobs + 1 to allow for one worker to handle the cleanup task
                     self._cluster = LocalCluster(processes=not self._use_dask_threads,
                                                  silence_logs=dask_log_level,
