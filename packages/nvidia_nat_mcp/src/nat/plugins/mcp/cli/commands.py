@@ -26,6 +26,7 @@ from pydantic import BaseModel
 
 from nat.builder.function import FunctionGroup
 from nat.cli.commands.start import start_command
+from nat.plugins.mcp.client.client_config import MCPClientBaseConfig
 
 logger = logging.getLogger(__name__)
 
@@ -194,8 +195,10 @@ async def _create_mcp_client_config(
     auth_redirect_uri: str | None,
     auth_user_id: str | None,
     auth_scopes: list[str] | None,
-):
+    per_user: bool = False,
+) -> tuple[str, MCPClientBaseConfig]:
     from nat.plugins.mcp.client.client_config import MCPClientConfig
+    from nat.plugins.mcp.client.client_config import PerUserMCPClientConfig
 
     if url and transport == "streamable-http" and auth_redirect_uri:
         try:
@@ -214,8 +217,14 @@ async def _create_mcp_client_config(
                 "[WARNING] MCP OAuth2 authentication requires nvidia-nat-mcp package.",
                 err=True,
             )
+    if per_user:
+        group_cfg = PerUserMCPClientConfig(server=server_cfg)
+        group_name = "per_user_mcp_client"
+    else:
+        group_cfg = MCPClientConfig(server=server_cfg)
+        group_name = "mcp_client"
 
-    return MCPClientConfig(server=server_cfg)
+    return group_name, group_cfg
 
 
 async def _create_bearer_token_auth_config(
@@ -274,9 +283,7 @@ async def list_tools_via_function_group(
     try:
         # Ensure the registration side-effects are loaded
         from nat.builder.workflow_builder import WorkflowBuilder
-        from nat.plugins.mcp.client.client_config import MCPClientConfig
         from nat.plugins.mcp.client.client_config import MCPServerConfig
-        from nat.plugins.mcp.client.client_config import PerUserMCPClientConfig
     except ImportError:
         click.echo(
             "MCP client functionality requires nvidia-nat-mcp package. Install with: uv pip install nvidia-nat-mcp",
@@ -295,14 +302,6 @@ async def list_tools_via_function_group(
         env=env if transport == 'stdio' else None,
     )
 
-    # Use per-user config if requested
-    if per_user:
-        group_cfg = PerUserMCPClientConfig(server=server_cfg)
-        group_name = "per_user_mcp_client"
-    else:
-        group_cfg = MCPClientConfig(server=server_cfg)
-        group_name = "mcp_client"
-
     tools: list[dict[str, str | None]] = []
 
     async with WorkflowBuilder() as builder:  # type: ignore
@@ -314,13 +313,14 @@ async def list_tools_via_function_group(
             logger.debug(f"Set user_id in context: {user_id}")
 
         # Add auth provider if url is provided and auth_redirect_uri is given (only for streamable-http)
-        group_cfg = await _create_mcp_client_config(builder,
-                                                    server_cfg,
-                                                    url,
-                                                    transport,
-                                                    auth_redirect_uri,
-                                                    auth_user_id,
-                                                    auth_scopes)
+        group_name, group_cfg = await _create_mcp_client_config(builder,
+                                                               server_cfg,
+                                                               url,
+                                                               transport,
+                                                               auth_redirect_uri,
+                                                               auth_user_id,
+                                                               auth_scopes,
+                                                               per_user)
         group = await builder.add_function_group(group_name, group_cfg)
 
         # Access functions exposed by the group
@@ -918,38 +918,28 @@ async def call_tool_and_print(command: str | None,
             context_state.user_id.set(user_id)
             logger.debug(f"Set user_id in context: {user_id}")
 
-        # Configure authentication if provided
-        if per_user:
-            ConfigClass = PerUserMCPClientConfig
-            group_name = "per_user_mcp_client"
-        else:
-            ConfigClass = MCPClientConfig
-            group_name = "mcp_client"
-
         if bearer_token or bearer_token_env:
             # Use bearer token auth
             try:
                 await _create_bearer_token_auth_config(builder, server_cfg, bearer_token, bearer_token_env)
-                group_cfg = ConfigClass(server=server_cfg)
+                if per_user:
+                    group_cfg = PerUserMCPClientConfig(server=server_cfg)
+                    group_name = "per_user_mcp_client"
+                else:
+                    group_cfg = MCPClientConfig(server=server_cfg)
+                    group_name = "mcp_client"
             except Exception as e:
                 click.echo(f"[ERROR] Failed to configure bearer token authentication: {e}", err=True)
                 return ""
-        elif url and transport == 'streamable-http' and auth_redirect_uri:
-            # Use OAuth2 auth
-            try:
-                group_cfg = await _create_mcp_client_config(builder,
-                                                            server_cfg,
-                                                            url,
-                                                            transport,
-                                                            auth_redirect_uri,
-                                                            auth_user_id,
-                                                            auth_scopes)
-            except ImportError:
-                click.echo("[WARNING] MCP OAuth2 authentication requires nvidia-nat-mcp package.", err=True)
-                group_cfg = ConfigClass(server=server_cfg)
         else:
-            # No auth
-            group_cfg = ConfigClass(server=server_cfg)
+            group_name, group_cfg = await _create_mcp_client_config(builder,
+                                                         server_cfg,
+                                                         url,
+                                                         transport,
+                                                         auth_redirect_uri,
+                                                         auth_user_id,
+                                                         auth_scopes,
+                                                         per_user)
 
         group = await builder.add_function_group(group_name, group_cfg)
         fns = await group.get_accessible_functions()
