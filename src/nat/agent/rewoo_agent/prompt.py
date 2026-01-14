@@ -52,7 +52,6 @@ The output must be a valid JSON array that can be parsed directly.
 
 Here is an example of how a valid JSON output should look:
 
-Note: {{ and }} are used for template escaping and will render as single braces { and } in the final prompt.
 
 [
   {{
