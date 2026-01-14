@@ -242,6 +242,12 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
         description=("Memory limit for each Dask worker. Can be 'auto', a memory string like '4GB' or a float "
                      "representing a fraction of the system memory. "
                      "Refer to https://docs.dask.org/en/stable/deploying-python.html#reference for details."))
+
+    dask_threads_per_worker: int = Field(
+        default=0,
+        description=(
+            "Number of threads to use per worker when dask_workers is set to 'processes'. This parameter is only used "
+            "when the value is greater than 0 and scheduler_address is `None` and a local Dask cluster is created."))
     step_adaptor: StepAdaptorConfig = StepAdaptorConfig()
 
     workflow: typing.Annotated[EndpointBase, Field(description="Endpoint for the default workflow.")] = EndpointBase(
