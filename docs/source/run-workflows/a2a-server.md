@@ -209,9 +209,8 @@ A2A servers can be protected using OAuth2 authentication with JWT token validati
 - **Scopes**: Validates required scopes are present in the token
 - **Audience**: Ensures token is intended for this specific server
 
-For detailed authentication setup and configuration, see:
-- [A2A Authentication Documentation](../components/auth/a2a-auth.md)
-- OAuth2 Keycloak Setup: `examples/A2A/math_assistant_a2a/oauth2-keycloak-setup.md`
+For detailed authentication setup and configuration, see [A2A Authentication Documentation](../components/auth/a2a-auth.md).
+
 
 ### Best Practices
 

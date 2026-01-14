@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+from typing import Any
 
 import pytest
 from langchain_core.messages import AIMessage
@@ -26,7 +27,7 @@ from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 
 try:
-    from nat.llm.huggingface_llm import HuggingFaceConfig
+    from nat.llm.huggingface_llm import HuggingFaceConfig  # noqa: F401
     HAS_HUGGINGFACE = True
 except ImportError:
     HAS_HUGGINGFACE = False
@@ -119,7 +120,7 @@ async def test_azure_openai_langchain_agent(api_version: str | None):
     """
     prompt = ChatPromptTemplate.from_messages([("system", "You are a helpful AI assistant."), ("human", "{input}")])
 
-    config_args = {"azure_deployment": os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4.1")}
+    config_args: dict[str, Any] = {"azure_deployment": os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4.1")}
     if api_version is not None:
         config_args["api_version"] = api_version
     llm_config = AzureOpenAIModelConfig(**config_args)
@@ -152,13 +153,13 @@ async def test_huggingface_langchain_agent():
     """
     Test HuggingFace LLM with LangChain/LangGraph agent.
     Requires transformers and torch to be installed (optional dependencies).
-    Uses a small model for testing. Set HUGGINGFACE_MODEL_NAME environment variable to override.
     """
+    from nat.llm.huggingface_llm import HuggingFaceConfig
+
     prompt = ChatPromptTemplate.from_messages([("system", "You are a helpful AI assistant."), ("human", "{input}")])
 
-    # Use a small, fast model for testing, or allow override via env var
-    model_name = os.environ.get("HUGGINGFACE_MODEL_NAME", "gpt2")
-    llm_config = HuggingFaceConfig(model_name=model_name, temperature=0.0, max_new_tokens=50)  # type: ignore[misc]
+    # Use a small, fast model for testing
+    llm_config = HuggingFaceConfig(model_name="TinyLlama/TinyLlama-1.1B-Chat-v1.0", temperature=0.0, max_new_tokens=50)
 
     async with WorkflowBuilder() as builder:
         await builder.add_llm("huggingface_llm", llm_config)
@@ -170,5 +171,4 @@ async def test_huggingface_langchain_agent():
         assert isinstance(response, AIMessage)
         assert response.content is not None
         assert isinstance(response.content, str)
-        # For small models like gpt2, we just verify we got a response
-        assert len(response.content) > 0
+        assert "3" in response.content.lower()

@@ -38,6 +38,7 @@ from nat.eval.dataset_handler.dataset_handler import DatasetHandler
 from nat.eval.evaluator.evaluator_model import EvalInput
 from nat.eval.evaluator.evaluator_model import EvalInputItem
 from nat.eval.evaluator.evaluator_model import EvalOutput
+from nat.eval.llm_validator import validate_llm_endpoints
 from nat.eval.usage_stats import UsageStats
 from nat.eval.usage_stats import UsageStatsItem
 from nat.eval.usage_stats import UsageStatsLLM
@@ -629,6 +630,21 @@ class EvaluationRun:
                                        config_original_file=self.config_original_file,
                                        config_effective_file=self.config_effective_file,
                                        config_metadata_file=self.config_metadata_file)
+
+        # Validate LLM endpoints before running evaluation (opt-in via config)
+        if (not self.config.skip_workflow and not self.config.endpoint and config.eval.general.validate_llm_endpoints):
+            try:
+                logger.info("Validating LLM endpoints before evaluation (enabled via config)...")
+                await validate_llm_endpoints(config)
+            except RuntimeError as e:
+                # Critical validation errors (404, connection failures) - fail fast
+                logger.error("LLM endpoint validation failed: %s", e)
+                raise
+            except Exception as e:
+                # Non-critical errors (missing packages, config issues) - warn but continue
+                logger.warning("LLM endpoint validation incomplete: %s. Continuing with evaluation...",
+                               e,
+                               exc_info=True)
 
         # Run workflow and evaluate
         async with WorkflowEvalBuilder.from_config(config=config) as eval_workflow:

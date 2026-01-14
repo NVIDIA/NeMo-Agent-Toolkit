@@ -212,8 +212,8 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
            (name in self._shared_builder._functions) or \
            (name in self._shared_builder._function_groups):
             raise ValueError(f"Function `{name}` already exists in the list of functions or function groups")
-        if any(name.startswith(k + "__") for k in self._per_user_function_groups.keys()) or \
-            any(name.startswith(k + "__") for k in self._shared_builder._function_groups.keys()):
+        if any(name.startswith(k + FunctionGroup.SEPARATOR) for k in self._per_user_function_groups.keys()) or \
+            any(name.startswith(k + FunctionGroup.SEPARATOR) for k in self._shared_builder._function_groups.keys()):
             raise ValueError(f"A Function name starts with a Function Group name: `{name}`")
 
         registration = self._registry.get_function(type(config))
@@ -228,12 +228,11 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
     def _check_backwards_compatibility_function_name(self, name: str) -> str:
         if name in self._per_user_functions:
             return name
-        compat_name = name.replace(".", "__")
-        if compat_name in self._per_user_functions:
+        new_name = name.replace(FunctionGroup.LEGACY_SEPARATOR, FunctionGroup.SEPARATOR)
+        if new_name in self._per_user_functions:
             logger.warning(
-                f"Function `{name}` is deprecated and will be removed in a future release. Use `{compat_name}` instead."
-            )
-            return compat_name
+                f"Function `{name}` is deprecated and will be removed in a future release. Use `{new_name}` instead.")
+            return new_name
         return name
 
     @override
@@ -276,8 +275,8 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
             (name in self._shared_builder._function_groups) or \
             (name in self._shared_builder._functions):
             raise ValueError(f"Function group `{name}` already exists in the list of function groups or functions")
-        if any(k.startswith(name + "__") for k in self._per_user_functions.keys()) or \
-           any(k.startswith(name + "__") for k in self._shared_builder._functions.keys()):
+        if any(k.startswith(name + FunctionGroup.SEPARATOR) for k in self._per_user_functions.keys()) or \
+           any(k.startswith(name + FunctionGroup.SEPARATOR) for k in self._shared_builder._functions.keys()):
             raise ValueError(f"A Function name starts with a Function Group name: `{name}`")
 
         registration = self._registry.get_function_group(type(config))

@@ -67,6 +67,8 @@ dependencies = [
   "tabulate~=0.9",
   "uvicorn[standard]~=0.38",
   "wikipedia~=1.4",
+  # transitive dependencies
+  "urllib3~=2.6.3",
 ]
 requires-python = ">=3.11,<3.14"
 description = "NVIDIA NeMo Agent toolkit"
@@ -96,7 +98,9 @@ agno = ["nvidia-nat-agno"]
 autogen = ["nvidia-nat-autogen"]
 crewai = ["nvidia-nat-crewai"]
 data-flywheel = ["nvidia-nat-data-flywheel"]
-huggingface = ["transformers", "torch", "accelerate"]
+huggingface = [
+  "transformers[torch,accelerate]~=4.57",
+]
 ingestion = ["nvidia-nat-ingestion"] # meta-package
 langchain = ["nvidia-nat-langchain"]
 llama-index = ["nvidia-nat-llama-index"]
@@ -129,36 +133,39 @@ nemo-customizer = ["nvidia-nat-nemo-customizer"]
 examples = [
   "nat_adk_demo",
   "nat_agno_personal_finance",
-  "nat_haystack_deep_research_agent",
   "nat_alert_triage_agent",
   "nat_autogen_demo",
   "nat_automated_description_generation",
   "nat_currency_agent_a2a",
   "nat_dpo_tic_tac_toe",
   "nat_email_phishing_analyzer",
+  "nat_haystack_deep_research_agent",
+  "nat_kaggle_mcp",
+  "nat_math_assistant_a2a",
+  "nat_math_assistant_a2a_protected",
   "nat_multi_frameworks",
+  "nat_per_user_workflow",
   "nat_plot_charts",
   "nat_por_to_jiratickets",
   "nat_profiler_agent",
   "nat_react_benchmark_agent",
-  "nat_router_agent",
+  "nat_retail_agent",
   "nat_rl_with_openpipe_art",
+  "nat_router_agent",
   "nat_semantic_kernel_demo",
   "nat_sequential_executor",
   "nat_service_account_auth_mcp",
   "nat_simple_auth",
   "nat_simple_auth_mcp",
-  "nat_per_user_workflow",
-  "nat_simple_web_query",
-  "nat_simple_web_query_eval",
   "nat_simple_calculator",
-  "nat_math_assistant_a2a",
   "nat_simple_calculator_custom_routes",
   "nat_simple_calculator_eval",
+  "nat_simple_calculator_hitl",
   "nat_simple_calculator_mcp",
   "nat_simple_calculator_observability",
-  "nat_simple_calculator_hitl",
   "nat_simple_rag",
+  "nat_simple_web_query",
+  "nat_simple_web_query_eval",
   "nat_strands_demo",
   "nat_swe_bench",
   "nat_user_report",
@@ -208,7 +215,7 @@ config-settings = { editable_mode = "compat" }
 # distribution (thus included in both nvidia-nat-all and nvidia-nat[all])
 #
 # Long-term solutions include better package isolation and testing, which is on the roadmap.
-# 
+#
 override-dependencies = [
   # Override tenacity version to resolve conflict between ragaai-catalyst ("tenacity==8.3.0")
   #   and strands-agents-tools ("tenacity>=9.1.2")
@@ -263,23 +270,26 @@ nat_autogen_demo = { path = "examples/frameworks/nat_autogen_demo", editable = t
 nat_automated_description_generation = { path = "examples/custom_functions/automated_description_generation", editable = true }
 nat_currency_agent_a2a = { path = "examples/A2A/currency_agent_a2a", editable = true }
 nat_dpo_tic_tac_toe = { path = "examples/finetuning/dpo_tic_tac_toe", editable = true }
-nat_haystack_deep_research_agent = { path = "examples/frameworks/haystack_deep_research_agent", editable = true }
 nat_email_phishing_analyzer = { path = "examples/evaluation_and_profiling/email_phishing_analyzer", editable = true }
+nat_haystack_deep_research_agent = { path = "examples/frameworks/haystack_deep_research_agent", editable = true }
+nat_kaggle_mcp = { path = "examples/MCP/kaggle_mcp", editable = true }
+nat_math_assistant_a2a = { path = "examples/A2A/math_assistant_a2a", editable = true }
+nat_math_assistant_a2a_protected = { path = "examples/A2A/math_assistant_a2a_protected", editable = true }
 nat_multi_frameworks = { path = "examples/frameworks/multi_frameworks", editable = true }
+nat_per_user_workflow = { path = "examples/front_ends/per_user_workflow", editable = true }
 nat_plot_charts = { path = "examples/custom_functions/plot_charts", editable = true }
 nat_por_to_jiratickets = { path = "examples/HITL/por_to_jiratickets", editable = true }
 nat_profiler_agent = { path = "examples/advanced_agents/profiler_agent", editable = true }
 nat_react_benchmark_agent = { path = "examples/dynamo_integration/react_benchmark_agent", editable = true }
-nat_router_agent = { path = "examples/control_flow/router_agent", editable = true }
+nat_retail_agent = { path = "examples/safety_and_security/retail_agent", editable = true }
 nat_rl_with_openpipe_art = { path = "examples/finetuning/rl_with_openpipe_art", editable = true }
+nat_router_agent = { path = "examples/control_flow/router_agent", editable = true }
 nat_semantic_kernel_demo = { path = "examples/frameworks/semantic_kernel_demo", editable = true }
 nat_sequential_executor = { path = "examples/control_flow/sequential_executor", editable = true }
 nat_service_account_auth_mcp = { path = "examples/MCP/service_account_auth_mcp", editable = true }
 nat_simple_auth = { path = "examples/front_ends/simple_auth", editable = true }
 nat_simple_auth_mcp = { path = "examples/MCP/simple_auth_mcp", editable = true }
-nat_per_user_workflow = { path = "examples/front_ends/per_user_workflow", editable = true }
 nat_simple_calculator = { path = "examples/getting_started/simple_calculator", editable = true }
-nat_math_assistant_a2a = { path = "examples/A2A/math_assistant_a2a", editable = true }
 nat_simple_calculator_custom_routes = { path = "examples/front_ends/simple_calculator_custom_routes", editable = true }
 nat_simple_calculator_eval = { path = "examples/evaluation_and_profiling/simple_calculator_eval", editable = true }
 nat_simple_calculator_hitl = { path = "examples/HITL/simple_calculator_hitl", editable = true }
@@ -325,10 +335,13 @@ dev = [
   "sphinx-copybutton>=0.5",
   "sphinx_design~=0.6",
   "sphinx-mermaid",
+  "sphinx-reredirects~=1.1",
   "tomlkit~=0.13.2",
   "twine~=6.0",
   "vale~=3.12",
   "yapf==0.43.*",
+  # transitive dependencies
+  "werkzeug~=3.1.5",
 ]
 
 [project.entry-points.'nat.components']
@@ -352,6 +365,22 @@ nat_front_ends = "nat.front_ends.register"
 
 [project.entry-points.'nat.registry_handlers']
 nat_registry_handlers = "nat.registry_handlers.register"
+
+
+[project.entry-points.'nat.cli']
+configure = "nat.cli.commands.configure.configure:configure_command"
+eval = "nat.cli.commands.evaluate:eval_command"
+finetune = "nat.cli.commands.finetune:finetune_command"
+info = "nat.cli.commands.info.info:info_command"
+object-store = "nat.cli.commands.object_store.object_store:object_store_command"
+optimize = "nat.cli.commands.optimize:optimizer_command"
+red-team = "nat.cli.commands.red_teaming.red_teaming:red_team_command"
+registry = "nat.cli.commands.registry.registry:registry_command"
+sizing = "nat.cli.commands.sizing.sizing:sizing"
+start = "nat.cli.commands.start:start_command"
+uninstall = "nat.cli.commands.uninstall:uninstall_command"
+validate = "nat.cli.commands.validate:validate_command"
+workflow = "nat.cli.commands.workflow.workflow:workflow_command"
 
 
 [project.scripts]

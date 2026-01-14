@@ -498,8 +498,8 @@ the swe-bench evaluator:
 eval:
   general:
     dataset:
-      _type: json
-      file_path: examples/evaluation_and_profiling/swe_bench/data/test_dataset_lite.json
+      _type: parquet
+      file_path: hf://datasets/princeton-nlp/SWE-bench_Lite/data/test-00000-of-00001.parquet
       id_key: instance_id
       structure: # For swe-bench the entire row is the input
         disable: true
@@ -521,8 +521,8 @@ and `sympy__sympy-21055`. The evaluation iteratively develops and debugs the wor
 ```yaml
 eval:
     dataset:
-      _type: json
-      file_path: examples/evaluation_and_profiling/swe_bench/data/test_dataset_verified.json
+      _type: parquet
+      file_path: hf://datasets/princeton-nlp/SWE-bench_Verified/data/test-00000-of-00001.parquet
       id_key: instance_id
       structure:
         disable: true
@@ -539,8 +539,8 @@ You can also skip entries from the dataset. Here is an example configuration to 
 ```yaml
 eval:
     dataset:
-      _type: json
-      file_path: examples/evaluation_and_profiling/swe_bench/data/test_dataset_verified.json
+      _type: parquet
+      file_path: hf://datasets/princeton-nlp/SWE-bench_Verified/data/test-00000-of-00001.parquet
       id_key: instance_id
       structure:
         disable: true
@@ -700,8 +700,8 @@ Workflows can use the swe-bench evaluator to solve swe-bench problems. To evalua
 eval:
   general:
     dataset:
-      _type: json
-      file_path: examples/evaluation_and_profiling/swe_bench/data/test_dataset_lite.json
+      _type: parquet
+      file_path: hf://datasets/princeton-nlp/SWE-bench_Lite/data/test-00000-of-00001.parquet
       id_key: instance_id
       structure: # For swe-bench the entire row is the input
         disable: true

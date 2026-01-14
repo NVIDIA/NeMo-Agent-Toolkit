@@ -56,16 +56,22 @@ A typical invocation of the `nat run` command follows this pattern:
 nat run --config_file <path/to/config.yml> [--input "question?" | --input_file <path/to/input.txt>]
 ```
 
+Where `--input_file` accepts a plain text file containing a single input string.
+
 The following command runs the `examples/getting_started/simple_web_query` workflow with a single input question "What is LangSmith?":
 ```bash
 nat run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith?"
 ```
 
-The following command runs the same workflow with the input question provided in a file:
+The following command runs the same workflow with the input question provided in a plain text file. The `--input_file` option is intended for single (typically verbose) inputs that are better stored in a file than passed on the command line:
 ```bash
 echo "What is LangSmith?" > .tmp/input.txt
 nat run --config_file examples/getting_started/simple_web_query/configs/config.yml --input_file .tmp/input.txt
 ```
+
+:::{note}
+The `--input_file` option accepts a plain text file containing a single input, not an array of inputs. For batch evaluation of multiple inputs, use `nat eval` instead.
+:::
 
 ## Using the `nat serve` Command
 The `nat serve` command starts a web server that listens for incoming requests and runs the specified workflow. The server can be accessed with a web browser or by sending a POST request to the server's endpoint. Similar to the `nat run` command, the `nat serve` command requires a configuration file specified by the `--config_file` flag.

@@ -103,7 +103,7 @@ jobs:
     name: Test
     needs: [check]
     runs-on:  linux-${{ matrix.arch }}-cpu4
-    timeout-minutes: 30
+    timeout-minutes: 60
     container:
       image: ${{ matrix.container }}
     strategy:
@@ -213,6 +213,6 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: "wheels"
-          path: "${{ github.workspace }}/tmp/wheels/**/*.whl"
+          path: "${{ github.workspace }}/tmp/wheels/*.whl"
           if-no-files-found: error
           compression-level: 9

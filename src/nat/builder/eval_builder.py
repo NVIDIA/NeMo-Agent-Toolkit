@@ -22,6 +22,7 @@ from pathlib import Path
 from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.function import FunctionGroup
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.builder.workflow_builder import _log_build_failure
 from nat.cli.type_registry import TypeRegistry
@@ -97,13 +98,13 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
 
         async def get_tool(fn_name: str):
             # Maintain backwards compatibility with the old function group name format
-            compat_name = fn_name.replace(".", "__")
-            if (fn_name not in self._functions) and (compat_name in self._functions):
+            new_fn_name = fn_name.replace(FunctionGroup.LEGACY_SEPARATOR, FunctionGroup.SEPARATOR)
+            if (fn_name not in self._functions) and (new_fn_name in self._functions):
                 logger.warning(
                     f"Function `{fn_name}` is deprecated and will be removed in a future release." + \
-                        f"Use `{compat_name}` instead."
+                        f"Use `{new_fn_name}` instead."
                 )
-                fn_name = compat_name
+                fn_name = new_fn_name
             # end of backwards compatibility check
 
             fn = await self.get_function(fn_name)

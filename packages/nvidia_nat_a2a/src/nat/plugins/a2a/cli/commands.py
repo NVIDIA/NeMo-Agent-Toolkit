@@ -353,18 +353,27 @@ async def get_a2a_function_group(
     try:
         from datetime import timedelta
 
+        from nat.builder.context import ContextState
         from nat.builder.workflow_builder import WorkflowBuilder
         from nat.plugins.a2a.client.client_config import A2AClientConfig
 
         builder = WorkflowBuilder()
         await builder.__aenter__()
 
+        # Set user_id in context before creating function group (similar to nat run)
+        # This is required for per-user function groups after multi-user support
+        if user_id is None:
+            user_id = "nat_a2a_cli_user_id"  # Default user_id for CLI operations
+
+        context_state = ContextState()
+        context_state.user_id.set(user_id)
+        logger.debug(f"Set user_id in context: {user_id}")
+
         # Create A2A config with optional auth
         config = A2AClientConfig(
             url=url,
             task_timeout=timedelta(seconds=timeout),
             auth_provider=auth_provider_name,
-            default_user_id=user_id,
         )
 
         # Add function group
@@ -372,6 +381,7 @@ async def get_a2a_function_group(
 
         # Get accessible functions
         fns = await group.get_accessible_functions()
+        logger.debug(f"Available functions: {list(fns.keys())}")
 
         return builder, group, fns
 
@@ -456,7 +466,8 @@ def format_call_response_display(message: str, response: str, elapsed: float):
 @click.option('--url', required=True, callback=validate_url, help='A2A agent URL (e.g., http://localhost:9999)')
 @click.option('--json-output', is_flag=True, help='Output as JSON')
 @click.option('--timeout', default=30, show_default=True, help='Timeout in seconds')
-def a2a_client_get_info(url: str, json_output: bool, timeout: int):
+@click.option('--user-id', help='User ID for authentication (optional)')
+def a2a_client_get_info(url: str, json_output: bool, timeout: int, user_id: str | None):
     """Get agent metadata including name, version, provider, and capabilities.
 
     This command connects to an A2A agent and retrieves its metadata.
@@ -465,24 +476,26 @@ def a2a_client_get_info(url: str, json_output: bool, timeout: int):
         url: A2A agent URL (e.g., http://localhost:9999)
         json_output: Output as JSON instead of formatted display
         timeout: Timeout in seconds for agent connection
+        user_id: User ID for authentication (optional)
 
     Examples:
         nat a2a client get_info --url http://localhost:9999
         nat a2a client get_info --url http://localhost:9999 --json-output
+        nat a2a client get_info --url http://localhost:9999 --user-id alice
     """
 
     async def run():
         builder = None
         try:
             # Load A2A function group
-            builder, group, fns = await get_a2a_function_group(url, timeout=timeout)
+            builder, group, fns = await get_a2a_function_group(url, timeout=timeout, user_id=user_id)
             if not builder:
                 return
 
             # Get the get_info function
-            fn = fns.get("a2a_client.get_info")
+            fn = fns.get("a2a_client__get_info")
             if not fn:
-                click.echo("[ERROR] get_info function not found", err=True)
+                click.echo(f"[ERROR] get_info function not found. Available: {list(fns.keys())}", err=True)
                 return
 
             # Call the function
@@ -507,7 +520,8 @@ def a2a_client_get_info(url: str, json_output: bool, timeout: int):
 @click.option('--url', required=True, callback=validate_url, help='A2A agent URL (e.g., http://localhost:9999)')
 @click.option('--json-output', is_flag=True, help='Output as JSON')
 @click.option('--timeout', default=30, show_default=True, help='Timeout in seconds')
-def a2a_client_get_skills(url: str, json_output: bool, timeout: int):
+@click.option('--user-id', help='User ID for authentication (optional)')
+def a2a_client_get_skills(url: str, json_output: bool, timeout: int, user_id: str | None):
     """Get detailed list of agent skills and capabilities.
 
     This command connects to an A2A agent and retrieves all available skills
@@ -517,24 +531,26 @@ def a2a_client_get_skills(url: str, json_output: bool, timeout: int):
         url: A2A agent URL (e.g., http://localhost:9999)
         json_output: Output as JSON instead of formatted display
         timeout: Timeout in seconds for agent connection
+        user_id: User ID for authentication (optional)
 
     Examples:
         nat a2a client get_skills --url http://localhost:9999
         nat a2a client get_skills --url http://localhost:9999 --json-output
+        nat a2a client get_skills --url http://localhost:9999 --user-id alice
     """
 
     async def run():
         builder = None
         try:
             # Load A2A function group
-            builder, group, fns = await get_a2a_function_group(url, timeout=timeout)
+            builder, group, fns = await get_a2a_function_group(url, timeout=timeout, user_id=user_id)
             if not builder:
                 return
 
             # Get the get_skills function
-            fn = fns.get("a2a_client.get_skills")
+            fn = fns.get("a2a_client__get_skills")
             if not fn:
-                click.echo("[ERROR] get_skills function not found", err=True)
+                click.echo(f"[ERROR] get_skills function not found. Available: {list(fns.keys())}", err=True)
                 return
 
             # Call the function
@@ -697,26 +713,33 @@ def a2a_client_call(url: str,
                 # Auth was configured, use existing builder
                 from datetime import timedelta
 
+                from nat.builder.context import ContextState
                 from nat.plugins.a2a.client.client_config import A2AClientConfig
+
+                # Set user_id in context before creating function group (similar to nat run)
+                # This is required for per-user function groups after multi-user support
+                resolved_user_id = user_id if user_id else "nat_a2a_cli_user_id"
+                context_state = ContextState()
+                context_state.user_id.set(resolved_user_id)
+                logger.debug(f"Set user_id in context: {resolved_user_id}")
 
                 config = A2AClientConfig(
                     url=url,
                     task_timeout=timedelta(seconds=timeout),
                     auth_provider=auth_provider_name,
-                    default_user_id=user_id,
                 )
                 group = await builder.add_function_group("a2a_client", config)
                 fns = await group.get_accessible_functions()
             else:
                 # No auth, use helper function
-                builder, group, fns = await get_a2a_function_group(url, timeout=timeout)
+                builder, group, fns = await get_a2a_function_group(url, timeout=timeout, user_id=user_id)
                 if not builder:
                     return
 
             # Get the call function
-            fn = fns.get("a2a_client.call")
+            fn = fns.get("a2a_client__call")
             if not fn:
-                click.echo("[ERROR] call function not found", err=True)
+                click.echo(f"[ERROR] call function not found. Available: {list(fns.keys())}", err=True)
                 return
 
             # Call the agent with the message

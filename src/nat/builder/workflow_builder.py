@@ -656,7 +656,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         if (name in self._functions or name in self._function_groups):
             raise ValueError(f"Function `{name}` already exists in the list of functions or function groups")
-        if any(name.startswith(k + "__") for k in self._function_groups.keys()):
+        if any(name.startswith(k + FunctionGroup.SEPARATOR) for k in self._function_groups.keys()):
             raise ValueError(f"A Function name starts with a Function Group name: `{name}`")
 
         build_result = await self._build_function(name=name, config=config)
@@ -672,7 +672,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         if (name in self._function_groups or name in self._functions):
             raise ValueError(f"Function group `{name}` already exists in the list of function groups or functions")
-        if any(k.startswith(name + "__") for k in self._functions.keys()):
+        if any(k.startswith(name + FunctionGroup.SEPARATOR) for k in self._functions.keys()):
             raise ValueError(f"A Function name starts with a Function Group name: `{name}`")
 
         # Build the function group
@@ -696,12 +696,11 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
     def _check_backwards_compatibility_function_name(self, name: str) -> str:
         if name in self._functions:
             return name
-        compat_name = name.replace(".", "__")
-        if compat_name in self._functions:
+        new_name = name.replace(FunctionGroup.LEGACY_SEPARATOR, FunctionGroup.SEPARATOR)
+        if new_name in self._functions:
             logger.warning(
-                f"Function `{name}` is deprecated and will be removed in a future release. Use `{compat_name}` instead."
-            )
-            return compat_name
+                f"Function `{name}` is deprecated and will be removed in a future release. Use `{new_name}` instead.")
+            return new_name
         return name
 
     @override

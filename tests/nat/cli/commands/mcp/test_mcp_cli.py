@@ -24,6 +24,7 @@ import pytest
 # pyright: reportMissingImports=false, reportAttributeAccessIssue=false
 from click.testing import CliRunner
 
+from nat.builder.function import FunctionGroup
 from nat.plugins.mcp.cli.commands import MCPPingResult
 from nat.plugins.mcp.cli.commands import call_tool_and_print
 from nat.plugins.mcp.cli.commands import call_tool_direct
@@ -663,7 +664,7 @@ def test_call_tool_and_print_group_success(monkeypatch):
     class _Group:
 
         async def get_accessible_functions(self):
-            return {"mcp_client.echo": _Fn()}
+            return {f"mcp_client{FunctionGroup.SEPARATOR}echo": _Fn()}
 
     fake_builder_mod = ModuleType("nat.builder.workflow_builder")
 
@@ -714,7 +715,7 @@ def test_call_tool_and_print_group_tool_not_found(monkeypatch):
     class _Group:
 
         async def get_accessible_functions(self):
-            return {"mcp_client.other": object()}
+            return {f"mcp_client{FunctionGroup.SEPARATOR}other": object()}
 
     fake_builder_mod = ModuleType("nat.builder.workflow_builder")
 

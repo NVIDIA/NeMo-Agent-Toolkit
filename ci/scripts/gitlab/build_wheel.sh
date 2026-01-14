@@ -24,19 +24,13 @@ GIT_TAG=$(get_git_tag)
 IS_TAGGED=$(is_current_commit_release_tagged)
 rapids-logger "Git Version: ${GIT_TAG} - Is Tagged: ${IS_TAGGED}"
 
-if [[ "${CI_CRON_NIGHTLY}" == "1" || ( ${IS_TAGGED} == "1" && "${CI_COMMIT_BRANCH}" != "main" ) ]]; then
-    export SETUPTOOLS_SCM_PRETEND_VERSION="${GIT_TAG}"
-    export USE_FULL_VERSION="1"
+create_env group:dev extra:all
 
-    create_env group:dev
-    export SKIP_MD_UPDATE=1
-    ${PROJECT_ROOT}/ci/release/update-version.sh "${GIT_TAG}"
-fi
+# Update internal dependencies to the current git tag
+set_versions
 
 WHEELS_BASE_DIR="${CI_PROJECT_DIR}/.tmp/wheels"
 WHEELS_DIR="${WHEELS_BASE_DIR}/nvidia-nat"
-
-create_env extra:all
 
 build_wheel . "nvidia-nat/${GIT_TAG}"
 
@@ -59,6 +53,10 @@ if [[ "${BUILD_NAT_COMPAT}" == "true" ]]; then
     done
 fi
 
+# When we perform a release, the tag is created from the main branch, this triggers two CI pipelines.
+# The first for the main branch, and the second for the tag. Gitlab's internal package registry will reject uploads
+# of duplicate versions, so we only want one of these pipelines to perform the upload.
+# Note: A hotfix for an older release is the exception to this and the tag will be created from the release/X.Y branch
 if [[ "${CI_COMMIT_BRANCH}" == "${CI_DEFAULT_BRANCH}" || "${CI_COMMIT_BRANCH}" == "main" || "${CI_COMMIT_BRANCH}" == "release/"* ]]; then
     rapids-logger "Uploading Wheels"
 

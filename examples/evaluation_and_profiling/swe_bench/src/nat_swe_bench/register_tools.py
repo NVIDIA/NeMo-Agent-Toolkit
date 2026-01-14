@@ -16,4 +16,3 @@
 # flake8: noqa: F401, pylint: disable=unused-import
 
 # imports tools to register them
-from nat_swe_bench.predictors.predict_full.tools.register import git_repo_tool

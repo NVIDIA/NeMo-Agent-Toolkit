@@ -16,14 +16,14 @@ limitations under the License.
 
 # Math Assistant A2A Example
 
-This example demonstrates a per-user math assistant workflow that connects to a NeMo Agent toolkit calculator server while integrating with local tools, showcasing end-to-end A2A communication with per-user isolation and hybrid tool composition.
+This example demonstrates an end-to-end A2A workflow with NVIDIA NeMo Agent Toolkit functioning as both A2A client and server. The workflow performs mathematical calculations integrated with time queries and logical reasoning, combining remote calculator operations with local time services and conditional evaluation tools.
+
 
 ## Key Features
 
 - **Per-User A2A Client**: Each user gets isolated A2A client connections with separate authentication and session state
 - **A2A Protocol Integration**: Connects to a remote calculator workflow using A2A protocol
 - **Hybrid Tool Architecture**: Combines remote A2A tools with local MCP and custom functions
-- **OAuth2 Authentication**: Optional OAuth2-protected A2A server setup for secure per-user agent-to-agent communication
 - **Multi-User Support**: Demonstrates user isolation with different session cookies
 
 ## Architecture Overview
@@ -105,8 +105,17 @@ nat run --config_file examples/A2A/math_assistant_a2a/configs/config.yml \
 
 ### Additional Examples
 
-For comprehensive examples demonstrating different capabilities (basic calculations, time-integrated math, multi-step problems), see [`data/sample_queries.json`](data/sample_queries.json).
+For more query examples, see [`data/sample_queries.json`](data/sample_queries.json).
 
+**Run a specific query by its ID:**
+
+```bash
+# Run query by ID (e.g., ID 4)
+QUERY_ID=4
+QUESTION=$(jq -r --arg id "$QUERY_ID" '.[] | select(.id == ($id | tonumber)) | .question' examples/A2A/math_assistant_a2a/data/sample_queries.json)
+echo "Question: $QUESTION"
+nat run --config_file examples/A2A/math_assistant_a2a/configs/config.yml --input "$QUESTION"
+```
 
 ## Per-User Workflow Architecture
 
@@ -180,26 +189,7 @@ Is the sum of 5 and 3 greater than the current hour of the day?
 Yes, the sum of 5 and 3 is greater than the current hour of the day.
 ```
 
-## OAuth2 Protected Setup
-
-For production scenarios requiring authentication:
-
-- **Architecture and Concepts**: [A2A Authentication Documentation](../../../docs/source/components/auth/a2a-auth.md)
-- **Hands-on Setup Guide**: [OAuth2 Keycloak Setup Guide](oauth2-keycloak-setup.md)
-
-The OAuth2 setup demonstrates:
-- End-to-end OAuth2 authorization code flow
-- Protected A2A server with JWT token validation
-- Keycloak integration for testing secure A2A communication
-
-This setup uses the OAuth2-enabled configuration (`configs/config-client-oauth2.yml`) instead of the basic configuration.
-
 ## Configuration Details
-
-### Available Configurations
-
-- **`config.yml`**: Basic setup with unprotected calculator server
-- **`config-client-oauth2.yml`**: OAuth2-protected setup with per-user authentication (requires Keycloak - see [OAuth2 guide](oauth2-keycloak-setup.md))
 
 ### Workflow Configuration
 
@@ -254,6 +244,14 @@ curl http://localhost:10000/.well-known/agent-card.json | jq
 - Increase `task_timeout` in config if calculations take longer
 - Check network connectivity to remote services
 
+## OAuth2 Protected Setup
+
+For production scenarios requiring authentication, see the [OAuth2 Protected Math Assistant A2A](../math_assistant_a2a_protected/) example, which demonstrates:
+- End-to-end OAuth2 authorization code flow
+- Protected A2A server with JWT token validation
+- Keycloak integration for testing secure A2A communication
+
 ## Related Examples
 
+- [OAuth2 Protected Math Assistant A2A](../math_assistant_a2a_protected/) - OAuth2-protected A2A example
 - [Currency Agent A2A](../currency_agent_a2a/) - External A2A service integration example

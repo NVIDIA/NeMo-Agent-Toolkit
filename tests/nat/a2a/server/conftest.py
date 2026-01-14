@@ -17,6 +17,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from nat.builder.function import FunctionGroup
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
 from nat.plugins.a2a.server.front_end_config import A2AFrontEndConfig
@@ -34,13 +35,14 @@ def fixture_mock_workflow_with_functions() -> MagicMock:
     mock_workflow = MagicMock()
 
     # Create mock functions with realistic attributes
+    sep = FunctionGroup.SEPARATOR
     add_fn = MagicMock()
-    add_fn.name = "calculator__add"
+    add_fn.name = f"calculator{sep}add"
     add_fn.description = "Add two or more numbers together"
     add_fn.input_schema = {"type": "object", "properties": {"numbers": {"type": "array"}}}
 
     multiply_fn = MagicMock()
-    multiply_fn.name = "calculator__multiply"
+    multiply_fn.name = f"calculator{sep}multiply"
     multiply_fn.description = "Multiply two or more numbers together"
     multiply_fn.input_schema = {"type": "object", "properties": {"numbers": {"type": "array"}}}
 
@@ -50,7 +52,7 @@ def fixture_mock_workflow_with_functions() -> MagicMock:
     datetime_fn.input_schema = {"type": "object", "properties": {}}
 
     mock_workflow.functions = {
-        "calculator__add": add_fn, "calculator__multiply": multiply_fn, "current_datetime": datetime_fn
+        f"calculator{sep}add": add_fn, f"calculator{sep}multiply": multiply_fn, "current_datetime": datetime_fn
     }
     mock_workflow.function_groups = {}
 

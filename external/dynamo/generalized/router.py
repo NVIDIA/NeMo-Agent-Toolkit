@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,14 +30,46 @@ from typing import Any
 
 import numpy as np
 import uvloop
-from dynamo.llm import AggregatedMetrics
-from dynamo.llm import KvIndexer
-from dynamo.llm import KvMetricsAggregator
-from dynamo.llm import OverlapScores
 from dynamo.runtime import DistributedRuntime
 from dynamo.runtime import dynamo_worker
 from dynamo.runtime.logging import configure_dynamo_logging
 from pydantic import BaseModel
+
+# Try to import KV routing classes from dynamo.llm, fallback to stubs if unavailable
+try:
+    from dynamo.llm import KvIndexer
+    from dynamo.llm import OverlapScores
+except ImportError:
+    logger_init = logging.getLogger(__name__)
+    logger_init.warning("dynamo.llm KV classes not available, using fallback implementations")
+
+    class OverlapScores:
+        """Fallback: KV cache overlap scores between a request and workers.
+
+        This fallback is used when `dynamo.llm` is unavailable. It always returns empty
+        scores, causing the router to fall back to round-robin selection without
+        considering KV cache overlap.
+        """
+
+        def __init__(self, scores: dict[int, float] | None = None):
+            self.scores = scores if scores is not None else {}
+
+    class KvIndexer:
+        """Fallback: KV cache indexer for finding overlap between requests and workers.
+
+        This fallback is used when `dynamo.llm` is unavailable. The
+        `find_matches_for_request` method always returns empty overlap scores,
+        effectively disabling KV-aware routing.
+        """
+
+        def __init__(self, engine: Any, block_size: int):
+            self.engine = engine
+            self.block_size = block_size
+
+        async def find_matches_for_request(self, tokens: list[int], min_overlap: int) -> OverlapScores:  # noqa: ARG002
+            """Find overlap scores for each worker. Returns empty scores (round-robin fallback)."""
+            return OverlapScores({})
+
 
 configure_dynamo_logging()
 logger = logging.getLogger(__name__)
@@ -159,7 +191,6 @@ class WorkloadAwareRouter:
         # clients / helpers (initialized later)
         self.engine_client = None
         self.indexer: KvIndexer | None = None
-        self.metrics: KvMetricsAggregator | None = None
 
         # concurrency primitives
         self._init_lock = threading.Lock()
@@ -271,17 +302,64 @@ class WorkloadAwareRouter:
 
     # --------------------- init --------------------- #
     async def initialize(self):
+        """Initialize router by polling for backend workers."""
         engine = self.runtime.namespace("dynamo").component("backend")
-        logger.info("Getting engine client")
+        logger.info("Getting engine client for dynamo/backend/generate")
         self.engine_client = await engine.endpoint("generate").client()
-        await self.engine_client.wait_for_instances()
+
+        min_workers = int(self.min_workers)
+        if min_workers < 0:
+            raise ValueError(f"min_workers must be >= 0, got {min_workers}")
+
+        timeout_s = float(os.environ.get("DYNAMO_ROUTER_WAIT_FOR_WORKERS_TIMEOUT_S", "600"))
+        if not math.isfinite(timeout_s) or timeout_s <= 0:
+            raise ValueError("DYNAMO_ROUTER_WAIT_FOR_WORKERS_TIMEOUT_S must be a finite number > 0 "
+                             f"(got {timeout_s!r})")
+        deadline = time.monotonic() + timeout_s
+        backoff_s = 0.5
+
+        logger.info(
+            "Waiting for backend workers (min_workers=%d, timeout_s=%.1f)...",
+            min_workers,
+            timeout_s,
+        )
+        if min_workers == 0:
+            instance_ids_raw = list(self.engine_client.instance_ids())
+            logger.info("Backend workers discovered (min_workers=0): %s", instance_ids_raw)
+        else:
+            while True:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise TimeoutError(
+                        f"Timed out after {timeout_s}s waiting for >= {min_workers} backend worker(s) to register")
+
+                try:
+                    await asyncio.wait_for(
+                        self.engine_client.wait_for_instances(),
+                        timeout=min(remaining, 10.0),
+                    )
+                except TimeoutError:
+                    # We'll re-check instance IDs and retry with backoff until the global deadline.
+                    pass
+
+                instance_ids_raw = list(self.engine_client.instance_ids())
+                if len(instance_ids_raw) >= min_workers:
+                    try:
+                        instance_ids = [int(w) for w in instance_ids_raw]
+                    except Exception:
+                        instance_ids = instance_ids_raw
+                    logger.info("Backend workers discovered: %s", instance_ids)
+                    break
+
+                await asyncio.sleep(backoff_s)
+                backoff_s = min(backoff_s * 1.5, 5.0)
 
         self.indexer = KvIndexer(engine, self.block_size)
-        self.metrics = KvMetricsAggregator(engine)
 
         self._initialize_bandits()
         self._initialize_contextual()
-        logger.info("WorkloadAwareRouter initialized")
+        logger.info("WorkloadAwareRouter initialized with %d backend worker(s)",
+                    len(list(self.engine_client.instance_ids())))
 
         # Initialize router CSV logging (no cap)
         self._router_csv_lock = threading.Lock()
@@ -455,7 +533,7 @@ class WorkloadAwareRouter:
     def _feature_vector(
         self,
         wid: int,
-        metrics: AggregatedMetrics | None,
+        metrics: dict[str, Any] | None,
         scores: "OverlapScores",
         last_w: int | None,
         reuse_after: int,
@@ -465,11 +543,11 @@ class WorkloadAwareRouter:
     ) -> np.ndarray:
         gpu = 0.0
         queue = 0.0
-        if metrics and getattr(metrics, "endpoints", None):
-            for ep in metrics.endpoints:
-                if ep.worker_id == wid:
-                    gpu = float(getattr(ep, "gpu_cache_usage_perc", 0.0))
-                    queue = float(getattr(ep, "num_requests_waiting", 0.0))
+        if metrics and isinstance(metrics, dict) and "endpoints" in metrics:
+            for ep in metrics["endpoints"]:
+                if ep.get("worker_id") == wid:
+                    gpu = float(ep.get("gpu_cache_usage_perc", 0.0))
+                    queue = float(ep.get("num_requests_waiting", 0.0))
                     break
         inv_load = 1.0 / (1.0 + self.gpu_penalty_weight * max(0.0, gpu) + self.queue_penalty_weight * max(0.0, queue))
 
@@ -496,14 +574,14 @@ class WorkloadAwareRouter:
         ],
                         dtype=np.float64)
 
-    def _load_score(self, wid: int, metrics: AggregatedMetrics | None, job_cost_total: float) -> float:
+    def _load_score(self, wid: int, metrics: dict[str, Any] | None, job_cost_total: float) -> float:
         gpu = 0.0
         queue = 0.0
-        if metrics and getattr(metrics, "endpoints", None):
-            for ep in metrics.endpoints:
-                if ep.worker_id == wid:
-                    gpu = float(getattr(ep, "gpu_cache_usage_perc", 0.0))
-                    queue = float(getattr(ep, "num_requests_waiting", 0.0))
+        if metrics and isinstance(metrics, dict) and "endpoints" in metrics:
+            for ep in metrics["endpoints"]:
+                if ep.get("worker_id") == wid:
+                    gpu = float(ep.get("gpu_cache_usage_perc", 0.0))
+                    queue = float(ep.get("num_requests_waiting", 0.0))
                     break
         _, work_out = self._worker_outstanding(wid)
         penalty = (self.gpu_penalty_weight * gpu + self.queue_penalty_weight * queue +
@@ -526,7 +604,7 @@ class WorkloadAwareRouter:
         self,
         worker_ids,
         req: RouterRequest,
-        metrics: AggregatedMetrics,
+        metrics: dict[str, Any] | None,
         scores: OverlapScores,
     ) -> tuple[int, dict[str, float], dict[int, dict[str, float]], list[float], list[float]]:
         osl = self._norm_level(req.expected_osl, "MEDIUM")
@@ -717,7 +795,8 @@ class WorkloadAwareRouter:
         now = time.time()
         self._sweep_pending(now)
 
-        metrics = await self.metrics.get_metrics()
+        # Metrics aggregation API changed - using None for now (router works without it)
+        metrics = None  # TODO: Replace with proper metrics query when API is available
         if self.router_type == "kv_load":
             wid, _ = self._get_underloaded(metrics)
             yield RouterResponse(worker_id=wid, prefix_hit_rate=0.0).model_dump()
@@ -917,11 +996,11 @@ class WorkloadAwareRouter:
         return
 
     # --------------------- helpers --------------------- #
-    def _get_underloaded(self, metrics: AggregatedMetrics | None):
-        if not metrics or not metrics.endpoints:
+    def _get_underloaded(self, metrics: dict[str, Any] | None):
+        if not metrics or not metrics.get("endpoints"):
             wid = int(random.choice(self.engine_client.instance_ids()))
             return wid, 0.0
-        loads = {ep.worker_id: getattr(ep, "gpu_cache_usage_perc", 0.0) for ep in metrics.endpoints}
+        loads = {ep.get("worker_id"): ep.get("gpu_cache_usage_perc", 0.0) for ep in metrics["endpoints"]}
         min_val = min(loads.values())
         candidates = [wid for wid, v in loads.items() if v == min_val]
         return random.choice(candidates), min_val
@@ -972,7 +1051,7 @@ def parse_args():
     parser.add_argument("--pending-sweep-interval-seconds", type=float, default=5.0)
     parser.add_argument("--timeout-reward", type=float, default=0.0)
 
-    # Latency EMAThe
+    # Latency EMA
     parser.add_argument("--latency-ema-alpha", type=float, default=0.2)
 
     # Traces
@@ -984,7 +1063,7 @@ def parse_args():
 
 
 @dynamo_worker(static=False)
-async def worker(runtime: DistributedRuntime) -> None:
+async def worker(runtime: DistributedRuntime):
     args = parse_args()
 
     component = runtime.namespace("dynamo").component("router")

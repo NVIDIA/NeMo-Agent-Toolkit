@@ -66,6 +66,12 @@ reviews:
         - Verify that documentation and comments are free of spelling mistakes, ensure the documentation doesn't contain any
           words listed in the `ci/vale/styles/config/vocabularies/nat/reject.txt` file, words that might appear to be
           spelling mistakes but are listed in the `ci/vale/styles/config/vocabularies/nat/accept.txt` file are OK.
+        - Documentation in Markdown files should not contain usage of a possessive 's with inanimate objects
+          (ex: "the system's performance" should be "the performance of the system").
+        - Documentation in Markdown files should not use NAT as an acronym, always spell out NeMo Agent Toolkit.
+          The exception to this rule is when referring to package names or code identifiers that contain "nat", these
+          should always be surrounded by backticks (ex: `nvidia-nat`), and be lowercase.
+
 
         # Misc.
         - All code (except .mdc files that contain Cursor rules) should be licensed under the Apache License 2.0,
@@ -151,6 +157,23 @@ reviews:
                 pass
         - Do NOT add `@pytest.mark.asyncio` to any test. Async tests are automatically detected and run by the
           async runner - the decorator is unnecessary clutter.
+
+    - path: "examples/README.md"
+      instructions: >-
+        - Ensure that the README.md file is up-to-date with the latest changes in the project.
+        - Ensure that there is an entry for each example under the examples directory which contains a README.md file in the examples list.
+        - Any added examples should be added to the README.md file.
+        - Any removed examples should be removed from the README.md file.
+        - Example entries should be categorized by the directory they are located in.
+
+    - path: "pyproject.toml"
+      instructions: >-
+        # pyproject.toml example section review instructions
+        - Ensure that for any examples that are added or removed, the examples list in the pyproject.toml file is updated accordingly.
+          This is only necessary if the example added contains a pyproject.toml file (e.g. it is installable as a package)
+        - Any added examples should be added to the `examples` list in the pyproject.toml file.
+        - Any removed examples should be removed from the `examples` list in the pyproject.toml file.
+        - All added examples must have a `nat_` prefix within the `uv.sources` name. The path to the example does NOT need to have this prefix. If the example does not have a `nat_` prefix, it should be added.
 
   auto_apply_labels: true
   suggested_labels: true

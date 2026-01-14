@@ -20,6 +20,7 @@ from unittest.mock import patch
 
 from pydantic import BaseModel
 
+from nat.builder.function import FunctionGroup
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.plugins.mcp.client.client_base import MCPBaseClient
 from nat.plugins.mcp.client.client_config import MCPClientConfig
@@ -122,7 +123,7 @@ async def test_mcp_client_function_group_includes_respected():
 
         async with mcp_client_function_group(client_cfg, mock_builder) as group:
             accessible = await group.get_accessible_functions()
-            assert set(accessible.keys()) == {"mcp_client__fake_tool_1"}
+            assert set(accessible.keys()) == {f"mcp_client{FunctionGroup.SEPARATOR}fake_tool_1"}
 
 
 async def test_mcp_client_function_group_applies_overrides():
@@ -141,8 +142,8 @@ async def test_mcp_client_function_group_applies_overrides():
 
         async with mcp_client_function_group(client_cfg, mock_builder) as group:
             accessible = await group.get_accessible_functions()
-            assert set(accessible.keys()) == {"mcp_client__alias_raw"}
-            assert accessible["mcp_client__alias_raw"].description == "new desc"
+            assert set(accessible.keys()) == {f"mcp_client{FunctionGroup.SEPARATOR}alias_raw"}
+            assert accessible[f"mcp_client{FunctionGroup.SEPARATOR}alias_raw"].description == "new desc"
 
 
 async def test_mcp_client_function_group_no_include_exposes_all():
@@ -157,4 +158,5 @@ async def test_mcp_client_function_group_no_include_exposes_all():
 
         async with mcp_client_function_group(client_cfg, mock_builder) as group:
             accessible = await group.get_accessible_functions()
-            assert set(accessible.keys()) == {"mcp_client__a", "mcp_client__b"}
+            sep = FunctionGroup.SEPARATOR
+            assert set(accessible.keys()) == {f"mcp_client{sep}a", f"mcp_client{sep}b"}

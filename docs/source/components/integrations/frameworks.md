@@ -37,7 +37,7 @@ NeMo Agent toolkit integrates with the following frameworks:
 NeMo Agent toolkit provides different levels of support for each framework across the following dimensions:
 
 ### LLM Provider Support
-The ability to use various large language model providers with a framework, including NVIDIA NIM, OpenAI, Azure OpenAI, AWS Bedrock, and LiteLLM.
+The ability to use various large language model providers with a framework, including NVIDIA NIM, OpenAI, Azure OpenAI, AWS Bedrock, LiteLLM, and HuggingFace.
 
 ### Embedder Provider Support
 The ability to use embedding model providers for vector representations, including NVIDIA NIM embeddings, OpenAI embeddings, and Azure OpenAI embeddings.
@@ -153,7 +153,7 @@ For more information, visit the [LangChain website](https://www.langchain.com/).
 
 | Capability              | Providers / Details                                                                 |
 |-------------------------|-------------------------------------------------------------------------------------|
-| **LLM Providers**       | NVIDIA NIM, OpenAI, Azure OpenAI, AWS Bedrock, LiteLLM                              |
+| **LLM Providers**       | NVIDIA NIM, OpenAI, Azure OpenAI, AWS Bedrock, LiteLLM, HuggingFace                 |
 | **Embedder Providers**  | NVIDIA NIM, OpenAI, Azure OpenAI                                                    |
 | **Retriever Providers** | NeMo Retriever, Milvus                                                              |
 | **Tool Calling**        | Fully supported through LangChain's `StructuredTool` interface                      |

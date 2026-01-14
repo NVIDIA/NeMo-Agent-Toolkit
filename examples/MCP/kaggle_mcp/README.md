@@ -54,7 +54,7 @@ Run the workflow with a query:
 
 ```bash
 nat run --config_file examples/MCP/kaggle_mcp/configs/config.yml \
-  --input "Find the most popular datasets about natural language processing"
+  --input "list the IMDB datasets"
 ```
 
 Example queries:

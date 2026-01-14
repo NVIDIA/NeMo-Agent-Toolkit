@@ -23,7 +23,7 @@ general:
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+    model_name: meta/llama-3.3-70b-instruct
     api_key: ${NVIDIA_API_KEY}
     base_url: https://integrate.api.nvidia.com/v1
     temperature: 0.0
@@ -42,43 +42,44 @@ llms:
     api_key: ${AZURE_OPENAI_API_KEY:-placeholder}
     temperature: 0.0
 
-# MCP tools defined as individual functions to avoid AutoGen's dot naming limitation.
-# Function groups prefix tools as "group.tool" but AutoGen doesn't allow dots in tool names.
+function_groups:
+  mcp_functions:
+    _type: mcp_client
+    server:
+      transport: streamable-http
+      url: "http://localhost:9901/mcp"
+    include:
+      - current_datetime
+
 functions:
   weather_update_tool:
     _type: nat_autogen_demo/weather_update_autogen
     description: "Get the current weather for a specified city"
-  
-  current_datetime:
-    _type: mcp_tool_wrapper
-    transport: streamable-http
-    url: "http://localhost:9901/mcp"
-    mcp_tool_name: current_datetime
-    description: "Get the current date and time. Pass any string value for the 'unused' parameter (e.g., 'now')."
 
 workflow:
   _type: autogen_team
   llm_name: nim_llm
   description: "To get the current weather and time in a specific city"
-  tool_names: [weather_update_tool, current_datetime]
+  tool_names: [weather_update_tool, mcp_functions__current_datetime]
   query_processing_agent_name: WeatherAndTimeAgent
   query_processing_agent_instructions: |
     You are an agent that provides the current weather and time information.
     You MUST use your available tools to get accurate information - do NOT make up or guess any data.
     
-    REQUIRED WORKFLOW when asked about weather AND time:
-    1. FIRST call weather_update_tool with the city name
-    2. THEN call current_datetime with any string (e.g., "now") to get the current time
-    3. ONLY after calling BOTH tools, say 'DONE'
+    WORKFLOW:
+    1. Call weather_update_tool with the city name to get weather
+    2. Call mcp_functions__current_datetime with any string (e.g., "now") to get the current time
+    3. After calling BOTH tools, clearly report the results you received
     
-    CRITICAL: You must call BOTH tools before finishing. Do NOT say 'DONE' until you have results from BOTH tools.
+    CRITICAL: After getting results from both tools, summarize the data clearly like this:
+    "RESULTS: Weather in [city] is [weather details]. Current time is [time]. DONE"
     
-    If asked about only weather: call weather_update_tool, then say 'DONE'.
-    If asked about only time: call current_datetime, then say 'DONE'.
+    If asked about only weather: call weather_update_tool, report the result, then say 'DONE'.
+    If asked about only time: call mcp_functions__current_datetime, report the result, then say 'DONE'.
     If asked about anything else, respond with 'I can only provide weather and time information.'
   final_response_agent_name: FinalResponseAgent
   final_response_agent_instructions: |
     You are the final response agent.
-    Your role is to provide a concise and clear answer based on the information provided by other agents.
-    Once you are done, reply with the final answer and then say 'APPROVE'.
-    
+    The WeatherAndTimeAgent has already collected the data using tools - DO NOT call any tools yourself.
+    Your role is to provide a polished, user-friendly response based on the information already gathered.
+    Format the data nicely for the user, then say 'APPROVE'.

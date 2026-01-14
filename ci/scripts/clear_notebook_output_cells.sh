@@ -1,4 +1,6 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#!/bin/bash
+
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,3 +14,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+if [ $# -gt 0 ]; then
+    NOTEBOOK_FILES="$@"
+else
+    NOTEBOOK_FILES=$(git ls-files "*.ipynb")
+fi
+
+for NOTEBOOK_FILE in ${NOTEBOOK_FILES[@]}; do
+    jupyter nbconvert --clear-output "${NOTEBOOK_FILE}"
+done

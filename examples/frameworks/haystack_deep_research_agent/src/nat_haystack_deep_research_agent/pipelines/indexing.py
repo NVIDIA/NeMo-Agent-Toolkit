@@ -17,6 +17,7 @@ from pathlib import Path
 
 from haystack.components.converters.pypdf import PyPDFToDocument
 from haystack.components.converters.txt import TextFileToDocument
+from haystack.components.joiners.document_joiner import DocumentJoiner
 from haystack.components.preprocessors import DocumentCleaner
 from haystack.components.preprocessors import DocumentSplitter
 from haystack.components.writers import DocumentWriter
@@ -33,6 +34,7 @@ def _gather_sources(base_dir: Path) -> tuple[list[Path], list[Path]]:
 
 def _build_indexing_pipeline(document_store, embedder_model: str) -> Pipeline:
     p = Pipeline()
+    p.add_component("joiner", DocumentJoiner())
     p.add_component("cleaner", DocumentCleaner())
     p.add_component(
         "splitter",
@@ -80,7 +82,6 @@ def run_startup_indexing(
             used_dir = fallback_data_dir
             pdf_sources, text_sources = _gather_sources(fallback_data_dir)
 
-        total_written = 0
         if pdf_sources or text_sources:
             logger.info(
                 "Indexing local files into OpenSearch from '%s' (pdf=%d, text/md=%d)",
@@ -90,23 +91,27 @@ def run_startup_indexing(
             )
 
             indexing_pipeline = _build_indexing_pipeline(document_store, embedder_model)
-            indexing_pipeline.add_component("pdf_converter", PyPDFToDocument())
-            indexing_pipeline.add_component("text_converter", TextFileToDocument(encoding="utf-8"))
 
-            indexing_pipeline.connect("pdf_converter.documents", "cleaner.documents")
-            indexing_pipeline.connect("text_converter.documents", "cleaner.documents")
+            pipeline_data = {}
+            if len(pdf_sources) > 0:
+                pipeline_data["pdf_converter"] = {"sources": pdf_sources}
+                indexing_pipeline.add_component("pdf_converter", PyPDFToDocument())
+                indexing_pipeline.connect("pdf_converter.documents", "joiner.documents")
+
+            if len(text_sources) > 0:
+                pipeline_data["text_converter"] = {"sources": text_sources}
+                indexing_pipeline.add_component("text_converter", TextFileToDocument(encoding="utf-8"))
+                indexing_pipeline.connect("text_converter.documents", "joiner.documents")
+
+            indexing_pipeline.connect("joiner.documents", "cleaner.documents")
             indexing_pipeline.connect("cleaner.documents", "splitter.documents")
             indexing_pipeline.connect("splitter.documents", "embedder.documents")
             indexing_pipeline.connect("embedder.documents", "writer.documents")
 
             indexing_pipeline.warm_up()
 
-            if pdf_sources:
-                res_pdf = indexing_pipeline.run({"pdf_converter": {"sources": pdf_sources}})
-                total_written += int(res_pdf.get("writer", {}).get("documents_written", 0))
-            if text_sources:
-                res_text = indexing_pipeline.run({"text_converter": {"sources": text_sources}})
-                total_written += int(res_text.get("writer", {}).get("documents_written", 0))
+            pipeline_result = indexing_pipeline.run(data=pipeline_data)
+            total_written = int(pipeline_result.get("writer", {}).get("documents_written", 0))
 
             logger.info("Indexing complete. Documents written: %s", total_written)
         else:
