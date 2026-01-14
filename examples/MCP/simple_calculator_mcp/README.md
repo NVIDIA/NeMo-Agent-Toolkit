@@ -21,7 +21,7 @@ This example demonstrates how to integrate the NVIDIA NeMo Agent toolkit with [M
 
 This example uses **shared workflow** mode, allowing multiple users to interact concurrently using the same unprotected MCP calculator tools. This is useful for development and testing purposes.
 
-For production use see the [simple_calculator_mcp_protected](../simple_calculator_mcp_protected/) example, which demonstrates how to set up an OAuth2-protected MCP server and securely access it in a per-user workflow.
+For production use see the [Simple Calculator MCP Protected](../simple_calculator_mcp_protected/) example, which demonstrates how to set up an OAuth2-protected MCP server and securely access it in a per-user workflow.
 
 ## Prerequisites
 

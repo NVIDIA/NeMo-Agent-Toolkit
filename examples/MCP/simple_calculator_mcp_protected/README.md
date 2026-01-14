@@ -324,7 +324,7 @@ workflow:
 
 ## Related Examples
 
-- [simple_calculator_mcp](../simple_calculator_mcp/): Unprotected MCP calculator example
+- [Simple Calculator MCP](../simple_calculator_mcp/): Unprotected MCP calculator example
 
 ## References
 - [MCP Authentication](../../../docs/source/components/auth/mcp-auth/index.md) - Learn about configuring MCP authentication
