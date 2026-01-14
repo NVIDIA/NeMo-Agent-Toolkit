@@ -17,7 +17,7 @@ limitations under the License.
 
 # Simple Calculator MCP - Protected
 
-This example demonstrates how to set up an OAuth2-protected NVIDIA NeMo Agent Toolkit MCP server. This complements the unprotected [simple_calculator_mcp](../simple_calculator_mcp/) example to demonstrate both authenticated and unauthenticated MCP server setups.
+This example demonstrates how to set up an OAuth2-protected NVIDIA NeMo Agent Toolkit MCP server. This complements the unprotected [Simple Calculator MCP](../simple_calculator_mcp/) example to demonstrate both authenticated and unauthenticated MCP server setups.
 
 This example uses **per-user mode**, enabling complete per-user isolation while accessing the same protected MCP calculator tools.
 
