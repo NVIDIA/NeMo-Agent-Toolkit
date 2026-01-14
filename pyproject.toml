@@ -407,6 +407,9 @@ filterwarnings = [
 testpaths = ["tests", "examples/**/tests", "packages/**/tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
+
+# Global timeout of 5 minutes per test to catch hanging tests.
+# Individual tests can override with @pytest.mark.timeout(seconds) or disable with @pytest.mark.timeout(0)
 timeout = 300
 
 
