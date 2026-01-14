@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 
 # Docs: https://docs.coderabbit.ai/getting-started/configure-coderabbit/
 language: "en-US"
@@ -67,11 +66,25 @@ reviews:
         - Verify that documentation and comments are free of spelling mistakes, ensure the documentation doesn't contain any
           words listed in the `ci/vale/styles/config/vocabularies/nat/reject.txt` file, words that might appear to be
           spelling mistakes but are listed in the `ci/vale/styles/config/vocabularies/nat/accept.txt` file are OK.
+        - Documentation in Markdown files should not contain usage of a possessive 's with inanimate objects
+          (ex: "the system's performance" should be "the performance of the system").
+        - Documentation in Markdown files should not use NAT as an acronym, always spell out NeMo Agent Toolkit.
+          The exception to this rule is when referring to package names or code identifiers that contain "nat", these
+          should always be surrounded by backticks (ex: `nvidia-nat`), and be lowercase.
+
 
         # Misc.
         - All code (except .mdc files that contain Cursor rules) should be licensed under the Apache License 2.0,
           and should contain an Apache License 2.0 header comment at the top of each file.
         - Confirm that copyright years are up-to date whenever a file is changed.
+
+        # Common Bugs to Look For
+        - Pydantic models using one of the `SecretStr`, `SerializableSecretStr`, or `OptionalSecretStr` with a default
+          defined as `default=""`, creates a bug where the field will be initialized as `str` and not as an instance of
+          `SecretStr`. Instead, use `default=None` for optional secret fields such as `OptionalSecretStr` or with a
+          `default_factory=lambda: SerializableSecretStr("")` for non-optional secret fields such as `SerializableSecretStr`.
+          The `default_factory` approach is preferred for non-optional secret fields to ensure that the field is always
+          returns a unique instance.
 
     - path: "docs/source/**/*"
       instructions: >-
@@ -129,7 +142,7 @@ reviews:
           digit version (ex: `~=1.0`).
         - Not all packages contain Python code, if they do they should also contain their own set of tests, in a
           `tests/` directory at the same level as the `pyproject.toml` file.
-        - When adding a new package, that new package name (as defined in the `pyproject.toml` file) should 
+        - When adding a new package, that new package name (as defined in the `pyproject.toml` file) should
           be added as a dependency to the nvidia-nat-all package in `packages/nvidia_nat_all/pyproject.toml`
 
     - path: "tests/**/*.py"
@@ -142,6 +155,25 @@ reviews:
             @pytest.fixture(name="my_fixture")
             def fixture_my_fixture():
                 pass
+        - Do NOT add `@pytest.mark.asyncio` to any test. Async tests are automatically detected and run by the
+          async runner - the decorator is unnecessary clutter.
+
+    - path: "examples/README.md"
+      instructions: >-
+        - Ensure that the README.md file is up-to-date with the latest changes in the project.
+        - Ensure that there is an entry for each example under the examples directory which contains a README.md file in the examples list.
+        - Any added examples should be added to the README.md file.
+        - Any removed examples should be removed from the README.md file.
+        - Example entries should be categorized by the directory they are located in.
+
+    - path: "pyproject.toml"
+      instructions: >-
+        # pyproject.toml example section review instructions
+        - Ensure that for any examples that are added or removed, the examples list in the pyproject.toml file is updated accordingly.
+          This is only necessary if the example added contains a pyproject.toml file (e.g. it is installable as a package)
+        - Any added examples should be added to the `examples` list in the pyproject.toml file.
+        - Any removed examples should be removed from the `examples` list in the pyproject.toml file.
+        - All added examples must have a `nat_` prefix within the `uv.sources` name. The path to the example does NOT need to have this prefix. If the example does not have a `nat_` prefix, it should be added.
 
   auto_apply_labels: true
   suggested_labels: true

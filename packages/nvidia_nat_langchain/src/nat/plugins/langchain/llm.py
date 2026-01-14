@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,7 @@
 
 import logging
 from collections.abc import Sequence
+from typing import Any
 from typing import TypeVar
 
 from nat.builder.builder import Builder
@@ -27,6 +28,9 @@ from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
+from nat.llm.dynamo_llm import DynamoModelConfig
+from nat.llm.dynamo_llm import create_httpx_client_with_dynamo_hooks
+from nat.llm.huggingface_llm import HuggingFaceConfig
 from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
@@ -140,7 +144,7 @@ async def azure_openai_langchain(llm_config: AzureOpenAIModelConfig, _builder: B
                                 by_alias=True,
                                 exclude_none=True,
                                 exclude_unset=True),
-        api_version=llm_config.api_version,
+        api_version=llm_config.api_version,  # type: ignore[call-arg]
     )
 
     yield _patch_llm_based_on_config(client, llm_config)
@@ -195,6 +199,59 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
     yield _patch_llm_based_on_config(client, llm_config)
 
 
+@register_llm_client(config_type=DynamoModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+async def dynamo_langchain(llm_config: DynamoModelConfig, _builder: Builder):
+    """
+    Create a LangChain ChatOpenAI client for Dynamo with automatic prefix header injection.
+
+    This client injects Dynamo prefix headers at the HTTP transport level using httpx event hooks,
+    enabling KV cache optimization and request routing.
+    """
+    from langchain_openai import ChatOpenAI
+
+    # Build config dict excluding Dynamo-specific and NAT-specific fields
+    config_dict = llm_config.model_dump(
+        exclude={"type", "thinking", "api_type", *DynamoModelConfig.get_dynamo_field_names()},
+        by_alias=True,
+        exclude_none=True,
+        exclude_unset=True,
+    )
+
+    # Initialize http_async_client to None for proper cleanup
+    http_async_client = None
+
+    try:
+        # If prefix_template is set, create a custom httpx client with Dynamo hooks
+        if llm_config.prefix_template is not None:
+            http_async_client = create_httpx_client_with_dynamo_hooks(
+                prefix_template=llm_config.prefix_template,
+                total_requests=llm_config.prefix_total_requests,
+                osl=llm_config.prefix_osl,
+                iat=llm_config.prefix_iat,
+                timeout=llm_config.request_timeout,
+            )
+            config_dict["http_async_client"] = http_async_client
+            logger.info(
+                "Dynamo prefix headers enabled: template=%s, total_requests=%d, osl=%s, iat=%s",
+                llm_config.prefix_template,
+                llm_config.prefix_total_requests,
+                llm_config.prefix_osl,
+                llm_config.prefix_iat,
+            )
+
+        # Create the ChatOpenAI client
+        if llm_config.api_type == APITypeEnum.RESPONSES:
+            client = ChatOpenAI(stream_usage=True, use_responses_api=True, use_previous_response_id=True, **config_dict)
+        else:
+            client = ChatOpenAI(stream_usage=True, **config_dict)
+
+        yield _patch_llm_based_on_config(client, llm_config)
+    finally:
+        # Ensure the httpx client is properly closed to avoid resource leaks
+        if http_async_client is not None:
+            await http_async_client.aclose()
+
+
 @register_llm_client(config_type=LiteLlmModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 async def litellm_langchain(llm_config: LiteLlmModelConfig, _builder: Builder):
 
@@ -204,5 +261,67 @@ async def litellm_langchain(llm_config: LiteLlmModelConfig, _builder: Builder):
 
     client = ChatLiteLLM(**llm_config.model_dump(
         exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True, exclude_unset=True))
+
+    yield _patch_llm_based_on_config(client, llm_config)
+
+
+@register_llm_client(config_type=HuggingFaceConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+async def huggingface_langchain(llm_config: HuggingFaceConfig, _builder: Builder):
+
+    import asyncio
+
+    from langchain_core.callbacks.manager import AsyncCallbackManagerForLLMRun
+    from langchain_core.messages import BaseMessage
+    from langchain_huggingface import ChatHuggingFace
+    from langchain_huggingface import HuggingFacePipeline
+    from transformers import pipeline
+
+    from nat.llm.huggingface_llm import get_cached_model
+
+    cached = get_cached_model(llm_config.model_name)
+
+    if cached is None:
+        raise ValueError(f"HuggingFace model '{llm_config.model_name}' not loaded. "
+                         "The provider should have loaded it first.")
+
+    model_param = next(cached.model.parameters())
+
+    # Avoid passing an explicit device when the model is sharded via accelerate;
+    # transformers raises if device is provided alongside an accelerate-loaded model.
+    extra_kwargs = {}
+    if getattr(cached.model, "hf_device_map", None) is None:
+        extra_kwargs["device"] = model_param.device
+
+    pipe = pipeline("text-generation",
+                    model=cached.model,
+                    tokenizer=cached.tokenizer,
+                    dtype=model_param.dtype,
+                    max_new_tokens=llm_config.max_new_tokens,
+                    do_sample=llm_config.temperature > 0,
+                    temperature=llm_config.temperature if llm_config.temperature > 0 else None,
+                    pad_token_id=cached.tokenizer.eos_token_id,
+                    **extra_kwargs)
+
+    llm = HuggingFacePipeline(pipeline=pipe)
+
+    class AsyncChatHuggingFace(ChatHuggingFace):
+        """Adds async support for local HuggingFacePipeline-backed chat models."""
+
+        async def _agenerate(self,
+                             messages: list[BaseMessage],
+                             stop: list[str] | None = None,
+                             run_manager: AsyncCallbackManagerForLLMRun | None = None,
+                             stream: bool | None = None,
+                             **kwargs: Any):
+            return await asyncio.to_thread(
+                self._generate,
+                messages,
+                stop,
+                run_manager.get_sync() if run_manager else None,
+                stream,
+                **kwargs,
+            )
+
+    client = AsyncChatHuggingFace(llm=llm)
 
     yield _patch_llm_based_on_config(client, llm_config)

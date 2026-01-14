@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -215,12 +215,6 @@ class GeneralConfig(BaseModel):
 
     telemetry: TelemetryConfig = TelemetryConfig()
 
-    default_user_id: str = Field(
-        default="default_user_id",
-        description="Default user ID for per-user workflows when "
-        "no session is available (for example, when using 'nat run'). This value identifies "
-        "the workflow instances. For multi-user deployments with 'nat serve', the 'nat-session' "
-        "cookie overrides this value. Must be a non-empty string when used as a fallback user ID.")
     per_user_workflow_timeout: timedelta = Field(
         default=timedelta(minutes=30),
         description="Time after which inactive per-user workflows are cleaned up. "
@@ -229,6 +223,10 @@ class GeneralConfig(BaseModel):
         default=timedelta(minutes=5),
         description="Interval for running cleanup of inactive per-user workflows. "
         "Only applies when workflow is per-user. Defaults to 5 minutes.")
+    enable_per_user_monitoring: bool = Field(
+        default=False,
+        description="Enable the /monitor/users endpoint for per-user workflow resource monitoring. "
+        "When enabled, exposes metrics like request counts, latency, LLM usage, and memory for each user.")
 
     # FrontEnd Configuration
     front_end: FrontEndBaseConfig = FastApiFrontEndConfig()

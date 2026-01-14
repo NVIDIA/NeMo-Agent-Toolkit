@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,7 +32,7 @@ Regardless of the model you choose, the process is the same for downloading the 
 
 ### Install the Simple Web Query Example
 
-First, ensure the current working directory is the root of the NeMo Agent toolkit repository. Then, install NAT and the simple web query example.
+First, ensure the current working directory is the root of the NeMo Agent toolkit repository. Then, install NeMo Agent toolkit and the simple web query example.
 
 ```bash
 uv pip install -e .
@@ -71,7 +71,7 @@ export NGC_API_KEY=<PASTE_API_KEY_HERE>
 export LOCAL_NIM_CACHE=~/.cache/nim
 mkdir -p "$LOCAL_NIM_CACHE"
 docker run -it --rm \
-    --gpus 0 \
+    --gpus '"device=0"' \
     --shm-size=16GB \
     -e NGC_API_KEY \
     -v "$LOCAL_NIM_CACHE:/opt/nim/.cache" \
@@ -85,7 +85,7 @@ Open a new terminal and run the embedding model container, listening on port 800
 export NGC_API_KEY=<PASTE_API_KEY_HERE>
 export LOCAL_NIM_CACHE=~/.cache/nim
 docker run -it --rm \
-    --gpus 1 \
+    --gpus '"device=1"' \
     --shm-size=16GB \
     -e NGC_API_KEY \
     -v "$LOCAL_NIM_CACHE:/opt/nim/.cache" \
@@ -148,7 +148,7 @@ Similar to the previous example we will be using the same [`nvidia/Llama-3.1-Nem
 
 ### Install the Simple Web Query Example
 
-First, ensure the current working directory is the root of the NeMo Agent toolkit repository. Then, install NAT and the simple web query example.
+First, ensure the current working directory is the root of the NeMo Agent toolkit repository. Then, install NeMo Agent toolkit and the simple web query example.
 
 ```bash
 uv pip install -e .

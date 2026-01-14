@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,6 +31,7 @@ from nat.builder.component_utils import build_dependency_sequence
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function import Function
 from nat.builder.function import FunctionGroup
+from nat.builder.sync_builder import SyncBuilder
 from nat.builder.workflow import Workflow
 from nat.builder.workflow_builder import ConfiguredFunction
 from nat.builder.workflow_builder import ConfiguredFunctionGroup
@@ -133,6 +134,11 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
                 "Exit stack not initialized. Did you forget to call `async with PerUserWorkflowBuilder() as builder`?")
         return self._exit_stack
 
+    @override
+    @property
+    def sync_builder(self) -> SyncBuilder:
+        return SyncBuilder(self)
+
     @property
     def user_id(self) -> str:
         return self._user_id
@@ -201,8 +207,14 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
         if isinstance(name, FunctionRef):
             name = str(name)
 
-        if name in self._per_user_functions:
-            raise ValueError(f"Function `{name}` already exists in the list of per-user functions")
+        if (name in self._per_user_functions) or \
+           (name in self._per_user_function_groups) or \
+           (name in self._shared_builder._functions) or \
+           (name in self._shared_builder._function_groups):
+            raise ValueError(f"Function `{name}` already exists in the list of functions or function groups")
+        if any(name.startswith(k + FunctionGroup.SEPARATOR) for k in self._per_user_function_groups.keys()) or \
+            any(name.startswith(k + FunctionGroup.SEPARATOR) for k in self._shared_builder._function_groups.keys()):
+            raise ValueError(f"A Function name starts with a Function Group name: `{name}`")
 
         registration = self._registry.get_function(type(config))
         if registration.is_per_user:
@@ -211,37 +223,61 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
 
             return build_result.instance
 
-        return await self._shared_builder.get_function(name)
+        return await self._shared_builder.add_function(name, config)
+
+    def _check_backwards_compatibility_function_name(self, name: str) -> str:
+        if name in self._per_user_functions:
+            return name
+        new_name = name.replace(FunctionGroup.LEGACY_SEPARATOR, FunctionGroup.SEPARATOR)
+        if new_name in self._per_user_functions:
+            logger.warning(
+                f"Function `{name}` is deprecated and will be removed in a future release. Use `{new_name}` instead.")
+            return new_name
+        return name
 
     @override
     async def get_function(self, name: str | FunctionRef) -> Function:
         if isinstance(name, FunctionRef):
             name = str(name)
 
+        old_name = name
+        # Check for backwards compatibility with the old function name format
+        name = self._check_backwards_compatibility_function_name(name)
+
         # Check per-user cache first
         if name in self._per_user_functions:
             return self._per_user_functions[name].instance
 
         # Delegate to shared builder
-        return await self._shared_builder.get_function(name)
+        return await self._shared_builder.get_function(old_name)
 
     @override
     def get_function_config(self, name: str | FunctionRef) -> FunctionBaseConfig:
         if isinstance(name, FunctionRef):
             name = str(name)
 
+        old_name = name
+        # Check for backwards compatibility with the old function name format
+        name = self._check_backwards_compatibility_function_name(name)
+
         if name in self._per_user_functions:
             return self._per_user_functions[name].config
 
-        return self._shared_builder.get_function_config(name)
+        return self._shared_builder.get_function_config(old_name)
 
     @override
     async def add_function_group(self, name: str | FunctionGroupRef, config: FunctionGroupBaseConfig) -> FunctionGroup:
         if isinstance(name, FunctionGroupRef):
             name = str(name)
 
-        if (name in self._per_user_function_groups or name in self._per_user_functions):
+        if (name in self._per_user_function_groups) or \
+            (name in self._per_user_functions) or \
+            (name in self._shared_builder._function_groups) or \
+            (name in self._shared_builder._functions):
             raise ValueError(f"Function group `{name}` already exists in the list of function groups or functions")
+        if any(k.startswith(name + FunctionGroup.SEPARATOR) for k in self._per_user_functions.keys()) or \
+           any(k.startswith(name + FunctionGroup.SEPARATOR) for k in self._shared_builder._functions.keys()):
+            raise ValueError(f"A Function name starts with a Function Group name: `{name}`")
 
         registration = self._registry.get_function_group(type(config))
         if registration.is_per_user:
@@ -253,7 +289,7 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
             # If the function group exposes functions, add them to the per-user function registry
             included_functions = await build_result.instance.get_included_functions()
             for k in included_functions:
-                if k in self._per_user_functions:
+                if k in self._per_user_functions or k in self._shared_builder._functions:
                     raise ValueError(f"Exposed function `{k}` from group `{name}` conflicts with an existing function")
             self._per_user_functions.update({
                 k: ConfiguredFunction(config=v.config, instance=v)
@@ -263,7 +299,7 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
             return build_result.instance
         else:
             # Shared function group - delegate to shared builder
-            return await self._shared_builder.get_function_group(name)
+            return await self._shared_builder.add_function_group(name, config)
 
     @override
     async def get_function_group(self, name: str | FunctionGroupRef) -> FunctionGroup:
@@ -323,9 +359,13 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
         if isinstance(fn_name, FunctionRef):
             fn_name = str(fn_name)
 
+        old_fn_name = fn_name
+        # Check for backwards compatibility with the old function name format
+        fn_name = self._check_backwards_compatibility_function_name(fn_name)
+
         if fn_name in self.per_user_function_dependencies:
             return self.per_user_function_dependencies[fn_name]
-        return self._shared_builder.get_function_dependencies(fn_name)
+        return self._shared_builder.get_function_dependencies(old_fn_name)
 
     @override
     def get_function_group_dependencies(self, fn_name: str | FunctionGroupRef) -> FunctionDependencies:
@@ -392,6 +432,11 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
     async def get_tool(self, fn_name: str | FunctionRef, wrapper_type: LLMFrameworkEnum | str) -> typing.Any:
         if isinstance(fn_name, FunctionRef):
             fn_name = str(fn_name)
+
+        old_fn_name = fn_name
+        # Check for backwards compatibility with the old function name format
+        fn_name = self._check_backwards_compatibility_function_name(fn_name)
+
         if fn_name in self._per_user_functions:
             fn = self._per_user_functions[fn_name]
             try:
@@ -400,7 +445,7 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
             except Exception as e:
                 logger.error("Error fetching tool `%s`: %s", fn_name, e)
                 raise
-        return await self._shared_builder.get_tool(fn_name, wrapper_type)
+        return await self._shared_builder.get_tool(old_fn_name, wrapper_type)
 
     @override
     async def add_llm(self, name: str, config: LLMBaseConfig) -> None:

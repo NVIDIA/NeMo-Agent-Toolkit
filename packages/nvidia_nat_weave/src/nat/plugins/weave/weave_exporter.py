@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -172,6 +172,13 @@ class WeaveExporter(SpanExporter[Span, Span]):
             attributes=attributes,
             display_name=op_name,
         )
+
+        # Compute the root call
+        root_call = existing_call if existing_call is not None else call
+
+        # Set the root weave call id in the context state if not already set
+        if self._context_state.observability_trace_id.get() is None:
+            self._context_state.observability_trace_id.set(root_call.id)
 
         # Store the call with step UUID as key
         self._weave_calls[step.UUID] = call

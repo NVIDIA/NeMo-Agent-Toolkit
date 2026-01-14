@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,10 +40,10 @@ llms:
     max_tokens: 1024
 
 workflow:
-  _type: react_agent
+  _type: per_user_react_agent
   tool_names:
-    - mcp_date_time.get_current_time_mcp_tool
-    - currency_agent
+    - mcp_date_time__get_current_time_mcp_tool
+    - currency_agent  # External A2A service (per-user)
   llm_name: nim_llm
   verbose: true
   retry_parsing_errors: true

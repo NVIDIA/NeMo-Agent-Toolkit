@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +14,9 @@
 # limitations under the License.
 
 import logging
+
+LOG_FORMAT = "%(asctime)s - %(levelname)-8s - %(name)s:%(lineno)d - %(message)s"
+LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 class LogFilter(logging.Filter):
@@ -35,3 +38,12 @@ class LogFilter(logging.Filter):
         if any(match in record.getMessage() for match in self._filter_criteria):
             return False
         return True
+
+
+def setup_logging(log_level: int):
+    """Configure logging with the specified level"""
+    logging.basicConfig(
+        level=log_level,
+        format=LOG_FORMAT,
+        datefmt=LOG_DATE_FORMAT,
+    )

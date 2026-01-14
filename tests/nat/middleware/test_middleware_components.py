@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,6 @@ import pytest
 from pydantic import Field
 
 # Register built-in middlewares
-import nat.middleware.cache_middleware  # noqa: F401
 from nat.builder.builder import Builder
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.cli.register_workflow import register_function
@@ -45,9 +44,20 @@ class _TestMiddleware(FunctionMiddleware):
         self.test_param = test_param
         self.call_order = call_order
 
-    async def function_middleware_invoke(self, value, call_next, context):
+    @property
+    def enabled(self) -> bool:
+        return True
+
+    async def pre_invoke(self, context):
+        return None
+
+    async def post_invoke(self, context):
+        return None
+
+    async def function_middleware_invoke(self, *args, call_next, context, **kwargs):
+        value = args[0] if args else None
         self.call_order.append(f"{self.test_param}_pre")
-        result = await call_next(value)
+        result = await call_next(value, *args[1:], **kwargs)
         self.call_order.append(f"{self.test_param}_post")
         return result
 
@@ -269,7 +279,7 @@ class TestCacheMiddlewareComponent:
 
     async def test_cache_middleware_registration(self):
         """Test that cache middleware is registered."""
-        from nat.middleware.register import CacheMiddlewareConfig
+        from nat.middleware.cache.cache_middleware_config import CacheMiddlewareConfig
 
         registry = GlobalTypeRegistry.get()
         registration = registry.get_middleware(CacheMiddlewareConfig)
@@ -279,7 +289,7 @@ class TestCacheMiddlewareComponent:
 
     async def test_cache_middleware_from_yaml(self):
         """Test building cache middleware from YAML."""
-        from nat.middleware.cache_middleware import CacheMiddleware
+        from nat.middleware.cache.cache_middleware import CacheMiddleware
 
         config_dict = {
             "middleware": {
@@ -300,7 +310,7 @@ class TestCacheMiddlewareComponent:
 
     async def test_cache_middleware_with_different_configs(self):
         """Test cache middleware with various configurations."""
-        from nat.middleware.cache_middleware import CacheMiddleware
+        from nat.middleware.cache.cache_middleware import CacheMiddleware
 
         configs = [
             {
@@ -422,7 +432,7 @@ class TestFunctionGroupMiddlewares:
             functions = await group.get_accessible_functions()
 
             # Test that middlewares are applied to func1
-            func1 = functions["test_group.func1"]
+            func1 = functions["test_group__func1"]
             result = await func1.ainvoke(5)
             assert result == 10  # 5 * 2
 
@@ -433,7 +443,7 @@ class TestFunctionGroupMiddlewares:
             call_order.clear()
 
             # Test that middlewares are applied to func2
-            func2 = functions["test_group.func2"]
+            func2 = functions["test_group__func2"]
             result = await func2.ainvoke(5)
             assert result == 15  # 5 + 10
 
@@ -607,8 +617,8 @@ class TestFunctionGroupMiddlewares:
 
             # Get functions
             functions = await group.get_accessible_functions()
-            func1 = functions["cached_group.func1"]
-            func2 = functions["cached_group.func2"]
+            func1 = functions["cached_group__func1"]
+            func2 = functions["cached_group__func2"]
 
             # Test func1 caching
             result1 = await func1.ainvoke("test1")
@@ -648,14 +658,25 @@ class TestFunctionGroupMiddlewares:
                 super().__init__()
                 self.name = name
 
-            async def function_middleware_invoke(self, value, call_next, context):
+            @property
+            def enabled(self) -> bool:
+                return True
+
+            async def pre_invoke(self, context):
+                return None
+
+            async def post_invoke(self, context):
+                return None
+
+            async def function_middleware_invoke(self, *args, call_next, context, **kwargs):
+                value = args[0] if args else None
                 results.append(f"{self.name}_pre")
                 # Modify value based on middleware name
                 if self.name == "first":
                     value = value * 2
                 elif self.name == "second":
                     value = value + 10
-                result = await call_next(value)
+                result = await call_next(value, *args[1:], **kwargs)
                 results.append(f"{self.name}_post")
                 return result
 

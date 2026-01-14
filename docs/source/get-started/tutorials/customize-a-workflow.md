@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -64,7 +64,7 @@ workflow:
   parse_agent_response_max_retries: 3
 ```
 
-The workflow contains two tools: one that queries the LangSmith User Guide, and another that returns the current date and time. It also contains two models: an embedding model and an LLM model. After running the workflow, you can query it for information about LangSmith. This tutorial demonstrates how to customize this workflow.
+The workflow contains two [tools](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools): one that queries the LangSmith User Guide, and another that returns the current date and time. It also contains two models: an embedding model and an [LLM](../../build-workflows/llms/index.md) model. After running the workflow, you can query it for information about LangSmith. This tutorial demonstrates how to customize this workflow.
 
 Each workflow contains several configuration parameters that can be modified to customize the workflow. While copying and modifying the file is possible, it is not always necessary as some parameters can be overridden using the `--override` flag.
 

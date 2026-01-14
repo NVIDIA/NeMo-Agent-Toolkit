@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,7 @@ limitations under the License.
 
 # Functions
 
-This is not an exhaustive list of functions and function groups included with NeMo Agent toolkit. For a complete list of functions run the following command:
+This is not an exhaustive list of [functions](../../build-workflows/functions-and-function-groups/functions.md) and [function groups](../../build-workflows/functions-and-function-groups/function-groups.md) included with NeMo Agent toolkit. For a complete list of functions run the following command:
 
 ```bash
 nat info components -t function

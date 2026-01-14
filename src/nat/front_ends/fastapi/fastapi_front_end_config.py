@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -237,6 +237,11 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
         default="WARNING",
         description="Logging level for Dask.",
     )
+    dask_worker_memory_limit: str = Field(
+        default="auto",
+        description=("Memory limit for each Dask worker. Can be 'auto', a memory string like '4GB' or a float "
+                     "representing a fraction of the system memory. "
+                     "Refer to https://docs.dask.org/en/stable/deploying-python.html#reference for details."))
     step_adaptor: StepAdaptorConfig = StepAdaptorConfig()
 
     workflow: typing.Annotated[EndpointBase, Field(description="Endpoint for the default workflow.")] = EndpointBase(

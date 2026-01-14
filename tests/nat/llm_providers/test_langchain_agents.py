@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+from typing import Any
 
 import pytest
 from langchain_core.messages import AIMessage
@@ -24,6 +25,12 @@ from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+
+try:
+    from nat.llm.huggingface_llm import HuggingFaceConfig  # noqa: F401
+    HAS_HUGGINGFACE = True
+except ImportError:
+    HAS_HUGGINGFACE = False
 
 
 @pytest.mark.integration
@@ -113,7 +120,7 @@ async def test_azure_openai_langchain_agent(api_version: str | None):
     """
     prompt = ChatPromptTemplate.from_messages([("system", "You are a helpful AI assistant."), ("human", "{input}")])
 
-    config_args = {"azure_deployment": os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4.1")}
+    config_args: dict[str, Any] = {"azure_deployment": os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4.1")}
     if api_version is not None:
         config_args["api_version"] = api_version
     llm_config = AzureOpenAIModelConfig(**config_args)
@@ -138,3 +145,30 @@ async def test_azure_openai_react_e2e(test_data_dir: str):
 
     config_file = os.path.join(test_data_dir, "azure_openai_e2e.yaml")
     await run_workflow(config_file=config_file, question="What is 1+2?", expected_answer="3")
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not HAS_HUGGINGFACE, reason="HuggingFace dependencies (transformers, torch) not installed")
+async def test_huggingface_langchain_agent():
+    """
+    Test HuggingFace LLM with LangChain/LangGraph agent.
+    Requires transformers and torch to be installed (optional dependencies).
+    """
+    from nat.llm.huggingface_llm import HuggingFaceConfig
+
+    prompt = ChatPromptTemplate.from_messages([("system", "You are a helpful AI assistant."), ("human", "{input}")])
+
+    # Use a small, fast model for testing
+    llm_config = HuggingFaceConfig(model_name="TinyLlama/TinyLlama-1.1B-Chat-v1.0", temperature=0.0, max_new_tokens=50)
+
+    async with WorkflowBuilder() as builder:
+        await builder.add_llm("huggingface_llm", llm_config)
+        llm = await builder.get_llm("huggingface_llm", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+
+        prompt_result = await prompt.ainvoke({"input": "What is 1+2?"})
+        response = await llm.ainvoke(prompt_result.to_messages())
+
+        assert isinstance(response, AIMessage)
+        assert response.content is not None
+        assert isinstance(response.content, str)
+        assert "3" in response.content.lower()

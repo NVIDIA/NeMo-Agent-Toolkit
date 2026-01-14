@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
+import copy
 import logging
 import os
 import sys
@@ -21,6 +21,7 @@ import tempfile
 import typing
 
 from nat.builder.front_end import FrontEndBase
+from nat.front_ends.fastapi.async_job import periodic_cleanup
 from nat.front_ends.fastapi.dask_client_mixin import DaskClientMixin
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorkerBase
@@ -28,6 +29,7 @@ from nat.front_ends.fastapi.main import get_app
 from nat.front_ends.fastapi.utils import get_class_name
 from nat.utils.io.yaml_tools import yaml_dump
 from nat.utils.log_levels import LOG_LEVELS
+from nat.utils.log_utils import LOG_DATE_FORMAT
 
 if (typing.TYPE_CHECKING):
     from nat.data_models.config import Config
@@ -44,6 +46,7 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
         self._cluster = None
         self._periodic_cleanup_future = None
         self._scheduler_address = None
+        self._use_dask_threads = False
 
     def get_worker_class(self) -> type[FastApiFrontEndPluginWorkerBase]:
         from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
@@ -60,34 +63,15 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
 
         return get_class_name(worker_class)
 
-    @staticmethod
-    async def _periodic_cleanup(scheduler_address: str,
-                                db_url: str,
-                                sleep_time_sec: int = 300,
-                                log_level: int = logging.INFO):
-        from nat.front_ends.fastapi.job_store import JobStore
-
-        job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
-
-        logging.basicConfig(level=log_level)
-        logger.info("Starting periodic cleanup of expired jobs every %d seconds", sleep_time_sec)
-        while True:
-            await asyncio.sleep(sleep_time_sec)
-
-            try:
-                await job_store.cleanup_expired_jobs()
-                logger.debug("Expired jobs cleaned up")
-            except:  # noqa: E722
-                logger.exception("Error during job cleanup")
-
     async def _submit_cleanup_task(self, scheduler_address: str, db_url: str, log_level: int = logging.INFO):
         """Submit a cleanup task to the cluster to remove the job after expiry."""
-        logger.debug("Submitting periodic cleanup task to Dask cluster at %s", scheduler_address)
+        logger.info("Submitting periodic cleanup task to Dask cluster at %s", scheduler_address)
         async with self.client(self._scheduler_address) as client:
-            self._periodic_cleanup_future = client.submit(self._periodic_cleanup,
+            self._periodic_cleanup_future = client.submit(periodic_cleanup,
                                                           scheduler_address=self._scheduler_address,
                                                           db_url=db_url,
-                                                          log_level=log_level)
+                                                          log_level=log_level,
+                                                          configure_logging=not self._use_dask_threads)
 
     @staticmethod
     def _setup_worker():
@@ -99,6 +83,7 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
         os.setsid()
 
     async def run(self):
+        log_level = logger.getEffectiveLevel()
 
         # Write the entire config to a temporary file
         with tempfile.NamedTemporaryFile(mode="w", prefix="nat_config", suffix=".yml", delete=False) as config_file:
@@ -120,17 +105,34 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
 
                     from dask.distributed import LocalCluster
 
-                    use_threads = self.front_end_config.dask_workers == 'threads'
+                    self._use_dask_threads = self.front_end_config.dask_workers == 'threads'
+
+                    # Convert memory limit string to the appropriate type for Dask
+                    # per https://docs.dask.org/en/stable/deploying-python.html#reference
+                    # Dask treats the memory_limit parameter differently depending on the type, and specifically it
+                    # treats int (bytes) and float (fraction of total memory) differently.
+                    memory_limit = self.front_end_config.dask_worker_memory_limit
+                    if memory_limit.strip() == "":
+                        memory_limit = "auto"
+                    elif memory_limit.isdigit():
+                        memory_limit = int(memory_limit)
+                    else:
+                        # Try to convert to number if possible, otherwise leave as a string
+                        try:
+                            memory_limit = float(memory_limit)
+                        except Exception:
+                            pass  # Keep as string (e.g., "auto", "4GB")
 
                     # set n_workers to max_running_async_jobs + 1 to allow for one worker to handle the cleanup task
-                    self._cluster = LocalCluster(processes=not use_threads,
+                    self._cluster = LocalCluster(processes=not self._use_dask_threads,
                                                  silence_logs=dask_log_level,
                                                  protocol="tcp",
+                                                 memory_limit=memory_limit,
                                                  n_workers=self.front_end_config.max_running_async_jobs + 1)
 
                     self._scheduler_address = self._cluster.scheduler.address
 
-                    if not use_threads and sys.platform != "win32":
+                    if not self._use_dask_threads and sys.platform != "win32":
                         with self.blocking_client(self._scheduler_address) as client:
                             # Client.run submits a function to be run on each worker
                             client.run(self._setup_worker)
@@ -156,13 +158,15 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
                 db_url = str(db_engine.url)
                 await self._submit_cleanup_task(scheduler_address=self._scheduler_address,
                                                 db_url=db_url,
-                                                log_level=dask_log_level)
+                                                log_level=log_level)
 
                 # Set environment variabls such that the worker subprocesses will know how to connect to dask and to
                 # the database
                 os.environ.update({
                     "NAT_DASK_SCHEDULER_ADDRESS": self._scheduler_address,
                     "NAT_JOB_STORE_DB_URL": db_url,
+                    "NAT_USE_DASK_THREADS": str(int(self._use_dask_threads)),
+                    "NAT_FASTAPI_LOG_LEVEL": str(log_level),
                 })
 
             # Write to YAML file
@@ -194,6 +198,12 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
                     # For non-macOS platforms
                     event_loop_policy = "auto"
 
+                # Start with the default uvicorn logging config, but override with our desired format
+                log_config = copy.deepcopy(uvicorn.config.LOGGING_CONFIG)
+                for formatter in log_config.get("formatters", {}).values():
+                    formatter["fmt"] = f"%(asctime)s - {formatter['fmt']}"
+                    formatter["datefmt"] = LOG_DATE_FORMAT
+
                 uvicorn.run("nat.front_ends.fastapi.main:get_app",
                             host=self.front_end_config.host,
                             port=self.front_end_config.port,
@@ -201,7 +211,9 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
                             reload=self.front_end_config.reload,
                             factory=True,
                             reload_excludes=reload_excludes,
-                            loop=event_loop_policy)
+                            loop=event_loop_policy,
+                            log_level=log_level,
+                            log_config=log_config)
 
             else:
                 app = get_app()

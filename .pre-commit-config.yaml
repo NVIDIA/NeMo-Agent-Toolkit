@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,6 +31,14 @@ repos:
     rev: 0.6.2
     hooks:
       - id: uv-lock
+
+  - repo: local
+    hooks:
+      - id: clear-notebook-output-cells
+        name: Clear Jupyter Notebook Output Cells
+        entry: ci/scripts/clear_notebook_output_cells.sh
+        files: "\\.ipynb$"
+        language: unsupported_script
 
   - repo: https://github.com/tcort/markdown-link-check
     rev: v3.14.1

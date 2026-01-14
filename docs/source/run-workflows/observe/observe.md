@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,7 @@ limitations under the License.
 
 # Observe Workflows
 
-The NeMo Agent toolkit uses a flexible, plugin-based observability system that provides comprehensive support for configuring logging, tracing, and metrics for workflows. Users can configure multiple telemetry exporters simultaneously from the available options or create custom integrations. The observability system:
+The NeMo Agent toolkit uses a flexible, plugin-based observability system that provides comprehensive support for configuring logging, tracing, and metrics for [workflows](../../build-workflows/about-building-workflows.md). Users can configure multiple telemetry exporters simultaneously from the available options or create custom integrations. The observability system:
 
 - Uses an event-driven architecture with `IntermediateStepManager` publishing workflow events to a reactive stream
 - Supports multiple concurrent telemetry exporters processing events asynchronously
@@ -158,7 +158,7 @@ The NeMo Agent toolkit observability system uses a generic, plugin-based archite
 
 #### Event Stream Architecture
 
-- **`IntermediateStepManager`**: Publishes workflow events (`IntermediateStep` objects) to a reactive event stream, tracking function execution boundaries, LLM calls, tool usage, and intermediate operations.
+- **`IntermediateStepManager`**: Publishes workflow events (`IntermediateStep` objects) to a reactive event stream, tracking function execution boundaries, [LLM](../../build-workflows/llms/index.md) calls, [tool](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) usage, and intermediate operations.
 - **Event Stream**: A reactive stream that broadcasts `IntermediateStep` events to all subscribed telemetry exporters, enabling real-time observability.
 - **Asynchronous Processing**: All telemetry exporters process events asynchronously in background tasks, keeping observability "off the hot path" for optimal performance.
 

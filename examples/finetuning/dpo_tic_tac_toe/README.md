@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,7 @@ limitations under the License.
 
 # DPO Tic-Tac-Toe: Preference Learning with NeMo Customizer
 
-This example demonstrates how to use NAT's Test Time Compute (TTC) pipeline to generate preference data for Direct Preference Optimization (DPO) training, and submit training jobs to NVIDIA NeMo Customizer.
+This example demonstrates how to use the NeMo Agent toolkit Test Time Compute (TTC) pipeline to generate preference data for Direct Preference Optimization (DPO) training, and submit training jobs to NVIDIA NeMo Customizer.
 
 ## Table of Contents
 
@@ -141,7 +141,7 @@ export CUSTOMIZER_NIM_URL="https://your-nim-deployment-host"
 │  │    │                                                                 │   │
 │  │    └── For EACH turn (trained player AND opponent):                  │   │
 │  │                                                                      │   │
-│  │        ttc_move_selector (NAT Function)                              │   │
+│  │        ttc_move_selector (Function)                                  │   │
 │  │          │                                                           │   │
 │  │          ├── 1. SEARCH: move_searcher                                │   │
 │  │          │       └── Calls choose_move N times                       │   │
@@ -271,15 +271,13 @@ For non-terminal positions without forced outcomes, the scorer uses these featur
 
 ## Installation
 
+This example is meant to be run using a NeMo Agent Toolkit installation from source. You 
+can follow the [NeMo Agent Toolkit Installation Guide](../../../docs/source/get-started/installation.md) to set up your environment.
+
+Then: 
+
 ```bash
-# Navigate to the example directory
-cd examples/finetuning/dpo_tic_tac_toe
-
-# Install dependencies with uv
-uv sync
-
-# Or with pip
-pip install -e .
+uv pip install -e examples/finetuning/dpo_tic_tac_toe
 ```
 
 ## Configuration Reference
@@ -298,7 +296,7 @@ llms:
     # base_url: https://nim.example.com/v1
 ```
 
-### NAT Functions
+### Functions
 
 ```yaml
 functions:
@@ -519,7 +517,7 @@ To test data collection without submitting training jobs:
 
 ```bash
 # Run evaluation and collect DPO data
-nat eval --config_file=configs/config.yml
+nat eval --config_file examples/finetuning/dpo_tic_tac_toe/configs/config.yml
 
 # Results saved to .tmp/nat/dpo_tic_tac_toe/eval/
 ```
@@ -539,7 +537,7 @@ To collect data and submit training to NeMo Customizer:
 export NGC_API_KEY="your-ngc-api-key"
 
 # Run finetuning pipeline
-nat finetune --config_file=configs/config.yml
+nat finetune --config_file examples/finetuning/dpo_tic_tac_toe/configs/config.yml
 ```
 
 This will:
@@ -684,7 +682,7 @@ trainer_adapters:
 
 **Cause**: Serialization issue with intermediate steps.
 
-**Solution**: Ensure you're using the latest NAT version with `SerializeAsAny` fix in `IntermediateStepPayload`.
+**Solution**: Ensure you're using the latest NeMo Agent toolkit version with `SerializeAsAny` fix in `IntermediateStepPayload`.
 
 ### Debug Logging
 
@@ -707,6 +705,6 @@ logging.getLogger("nat.plugins.customizer").setLevel(logging.DEBUG)
 
 ## See Also
 
-- [Finetuning Concepts](../../../docs/source/improve-workflows/finetuning/concepts.md) - NAT finetuning architecture
+- [Finetuning Concepts](../../../docs/source/improve-workflows/finetuning/concepts.md) - NeMo Agent toolkit finetuning architecture
 - [Test Time Compute](../../../docs/source/improve-workflows/test-time-compute.md) - TTC pipeline reference
 - [RL with OpenPipe ART](../rl_with_openpipe_art/) - Alternative RL-based finetuning example

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,7 +40,7 @@ class ADKProfilerHandler(BaseProfilerCallback):
       - LLMs
 
     to collect usage statistics (tokens, inputs, outputs, time intervals, etc.)
-    and store them in NeMo Agent Toolkit's usage_stats queue for subsequent analysis.
+    and store them in the usage_stats queue for subsequent analysis.
     """
 
     _instance: "ADKProfilerHandler | None" = None

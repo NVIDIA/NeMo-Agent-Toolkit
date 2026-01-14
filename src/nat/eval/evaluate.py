@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,17 +14,21 @@
 # limitations under the License.
 
 import asyncio
+import json
 import logging
 import shutil
 import warnings
+from datetime import UTC
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+import yaml
 from pydantic import BaseModel
 from tqdm import tqdm
 
-from nat.builder.context import ContextState
+from nat.data_models.config import Config
 from nat.data_models.evaluate import EvalConfig
 from nat.data_models.evaluate import JobEvictionPolicy
 from nat.data_models.runtime_enum import RuntimeTypeEnum
@@ -34,6 +38,7 @@ from nat.eval.dataset_handler.dataset_handler import DatasetHandler
 from nat.eval.evaluator.evaluator_model import EvalInput
 from nat.eval.evaluator.evaluator_model import EvalInputItem
 from nat.eval.evaluator.evaluator_model import EvalOutput
+from nat.eval.llm_validator import validate_llm_endpoints
 from nat.eval.usage_stats import UsageStats
 from nat.eval.usage_stats import UsageStatsItem
 from nat.eval.usage_stats import UsageStatsLLM
@@ -63,6 +68,7 @@ class EvaluationRun:
         # Run-specific configuration
         self.config: EvaluationRunConfig = config
         self.eval_config: EvalConfig | None = None
+        self.effective_config: Config | None = None  # Stores the complete config after applying overrides
 
         # Helpers
         self.intermediate_step_adapter: IntermediateStepAdapter = IntermediateStepAdapter()
@@ -97,6 +103,11 @@ class EvaluationRun:
 
         # evaluation output files
         self.evaluator_output_files: list[Path] = []
+
+        # configuration output files
+        self.config_original_file: Path | None = None
+        self.config_effective_file: Path | None = None
+        self.config_metadata_file: Path | None = None
 
     def _compute_usage_stats(self, item: EvalInputItem):
         """Compute usage stats for a single item using the intermediate steps"""
@@ -170,14 +181,9 @@ class EvaluationRun:
             if stop_event.is_set():
                 return "", []
 
-            # Set user_id in context if provided
-            user_id_token = None
-            if self.config.user_id:
-                user_id_token = ContextState().user_id.set(self.config.user_id)
-
-            try:
-                async with session_manager.run(item.input_obj, runtime_type=RuntimeTypeEnum.EVALUATE) as runner:
-                    if not session_manager.workflow.has_single_output:
+            async with session_manager.session(user_id=self.config.user_id) as session:
+                async with session.run(item.input_obj, runtime_type=RuntimeTypeEnum.EVALUATE) as runner:
+                    if not session.workflow.has_single_output:
                         # raise an error if the workflow has multiple outputs
                         raise NotImplementedError("Multiple outputs are not supported")
 
@@ -234,10 +240,6 @@ class EvaluationRun:
 
                     self.weave_eval.log_prediction(item, output)
                     await self.weave_eval.log_usage_stats(item, usage_stats_item)
-            finally:
-                # Reset user_id context if it was set
-                if user_id_token is not None:
-                    ContextState().user_id.reset(user_id_token)
 
         async def wrapped_run(item: EvalInputItem) -> None:
             await run_one(item)
@@ -342,9 +344,98 @@ class EvaluationRun:
             except Exception as e:
                 logger.exception("Failed to delete old job directory: %s: %s", dir_to_delete, e)
 
+    def write_configuration(self) -> None:
+        """Save the configuration used for this evaluation run to the output directory.
+
+        This saves three files:
+        1. config_original.yml - The original configuration file
+        2. config_effective.yml - The configuration with all overrides applied
+        3. config_metadata.json - Metadata about the evaluation run and overrides
+        """
+        output_dir = self.eval_config.general.output_dir
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        try:
+            # 1. Save original configuration
+            config_original_file = output_dir / "config_original.yml"
+            if isinstance(self.config.config_file, Path):
+                # Copy original file if it exists
+                if self.config.config_file.exists():
+                    shutil.copy2(self.config.config_file, config_original_file)
+                    self.config_original_file = config_original_file
+                    logger.info("Original config file copied to %s", config_original_file)
+                else:
+                    logger.warning("Original config file not found at %s", self.config.config_file)
+            elif isinstance(self.config.config_file, BaseModel):
+                # Serialize programmatic config, using mode='json' to handle special types like timedelta
+                config_dict = self.config.config_file.model_dump(mode='json')
+                with open(config_original_file, "w", encoding="utf-8") as f:
+                    yaml.safe_dump(config_dict, f, default_flow_style=False, sort_keys=False)
+                self.config_original_file = config_original_file
+                logger.info("Programmatic config saved to %s", config_original_file)
+
+            # 2. Save effective configuration (with overrides applied)
+            config_effective_file = output_dir / "config_effective.yml"
+            if self.effective_config is not None:
+                effective_config_dict = self.effective_config.model_dump(mode='json') if self.effective_config else {}
+                with open(config_effective_file, "w", encoding="utf-8") as f:
+                    yaml.safe_dump(effective_config_dict, f, default_flow_style=False, sort_keys=False)
+                self.config_effective_file = config_effective_file
+                logger.info("Effective config (with overrides) saved to %s", config_effective_file)
+            else:
+                logger.warning("Effective config not available, skipping config_effective.yml")
+
+            # 3. Save metadata about the run
+            config_metadata_file = output_dir / "config_metadata.json"
+            metadata = {
+                "config_file":
+                    str(self.config.config_file),
+                "config_file_type":
+                    "Path" if isinstance(self.config.config_file, Path) else "BaseModel",
+                "overrides": [{
+                    "path": path, "value": value
+                } for path, value in self.config.override] if self.config.override else [],
+                "dataset":
+                    self.config.dataset,
+                "result_json_path":
+                    self.config.result_json_path,
+                "skip_workflow":
+                    self.config.skip_workflow,
+                "skip_completed_entries":
+                    self.config.skip_completed_entries,
+                "reps":
+                    self.config.reps,
+                "endpoint":
+                    self.config.endpoint,
+                "endpoint_timeout":
+                    self.config.endpoint_timeout,
+                "adjust_dataset_size":
+                    self.config.adjust_dataset_size,
+                "num_passes":
+                    self.config.num_passes,
+                "export_timeout":
+                    self.config.export_timeout,
+                "user_id":
+                    self.config.user_id,
+                "timestamp":
+                    datetime.now(tz=UTC).isoformat(),
+            }
+
+            with open(config_metadata_file, "w", encoding="utf-8") as f:
+                json.dump(metadata, f, indent=2)
+            self.config_metadata_file = config_metadata_file
+            logger.info("Configuration metadata saved to %s", config_metadata_file)
+
+        except Exception:
+            logger.exception("Failed to write configuration files")
+            # Don't raise - this is not critical enough to fail the entire evaluation
+
     def write_output(self, dataset_handler: DatasetHandler, profiler_results: ProfilerResults):
         workflow_output_file = self.eval_config.general.output_dir / "workflow_output.json"
         workflow_output_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # Write the configuration files (original, effective, and metadata)
+        self.write_configuration()
 
         # Write the workflow output to a file (this can be used for re-running the evaluation)
 
@@ -472,7 +563,7 @@ class EvaluationRun:
         from nat.runtime.loader import load_config
 
         # Load and override the config
-        config = None
+        config: Config | None = None
         if isinstance(self.config.config_file, BaseModel):
             config = self.config.config_file
         elif self.config.override:
@@ -480,6 +571,8 @@ class EvaluationRun:
         else:
             config = load_config(self.config.config_file)
 
+        # Store the effective configuration for later saving to output directory
+        self.effective_config = config
         self.eval_config = config.eval
         workflow_alias = self._get_workflow_alias(config.workflow.type)
         logger.debug("Loaded %s evaluation configuration: %s", workflow_alias, self.eval_config)
@@ -511,7 +604,10 @@ class EvaluationRun:
                                        eval_input=EvalInput(eval_input_items=[]),
                                        evaluation_results=[],
                                        usage_stats=UsageStats(),
-                                       profiler_results=ProfilerResults())
+                                       profiler_results=ProfilerResults(),
+                                       config_original_file=self.config_original_file,
+                                       config_effective_file=self.config_effective_file,
+                                       config_metadata_file=self.config_metadata_file)
 
         custom_pre_eval_process_function = self.eval_config.general.output.custom_pre_eval_process_function \
             if self.eval_config.general.output else None
@@ -530,7 +626,25 @@ class EvaluationRun:
                                        eval_input=self.eval_input,
                                        evaluation_results=self.evaluation_results,
                                        usage_stats=self.usage_stats,
-                                       profiler_results=ProfilerResults())
+                                       profiler_results=ProfilerResults(),
+                                       config_original_file=self.config_original_file,
+                                       config_effective_file=self.config_effective_file,
+                                       config_metadata_file=self.config_metadata_file)
+
+        # Validate LLM endpoints before running evaluation (opt-in via config)
+        if (not self.config.skip_workflow and not self.config.endpoint and config.eval.general.validate_llm_endpoints):
+            try:
+                logger.info("Validating LLM endpoints before evaluation (enabled via config)...")
+                await validate_llm_endpoints(config)
+            except RuntimeError as e:
+                # Critical validation errors (404, connection failures) - fail fast
+                logger.error("LLM endpoint validation failed: %s", e)
+                raise
+            except Exception as e:
+                # Non-critical errors (missing packages, config issues) - warn but continue
+                logger.warning("LLM endpoint validation incomplete: %s. Continuing with evaluation...",
+                               e,
+                               exc_info=True)
 
         # Run workflow and evaluate
         async with WorkflowEvalBuilder.from_config(config=config) as eval_workflow:
@@ -592,4 +706,7 @@ class EvaluationRun:
                                    eval_input=self.eval_input,
                                    evaluation_results=self.evaluation_results,
                                    usage_stats=self.usage_stats,
-                                   profiler_results=profiler_results)
+                                   profiler_results=profiler_results,
+                                   config_original_file=self.config_original_file,
+                                   config_effective_file=self.config_effective_file,
+                                   config_metadata_file=self.config_metadata_file)

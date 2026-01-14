@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,7 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
+from nat.llm.dynamo_llm import DynamoModelConfig
 from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
@@ -122,5 +123,83 @@ async def openai_adk(config: OpenAIModelConfig, _builder: Builder):
     )
     if config.base_url:
         config_dict["api_base"] = config.base_url
+
+    yield LiteLlm(config.model_name, **config_dict)
+
+
+@register_llm_client(config_type=DynamoModelConfig, wrapper_type=LLMFrameworkEnum.ADK)
+async def dynamo_adk(config: DynamoModelConfig, _builder: Builder):
+    """Create and yield a Google ADK LiteLlm client for Dynamo with prefix header support.
+
+    This client configures Dynamo routing hints via LiteLLM's extra_headers parameter.
+    Unlike the LangChain implementation which injects headers per-request via httpx hooks,
+    LiteLLM sets headers at initialization time.
+
+    For dynamic prefix IDs (e.g., per-evaluation-question), use the DynamoPrefixContext class::
+
+        from nat.llm.dynamo_llm import DynamoPrefixContext
+
+        DynamoPrefixContext.set("my-prefix-id")
+        # ... run LLM calls ...
+        DynamoPrefixContext.clear()
+
+        # Or use the context manager:
+        with DynamoPrefixContext.scope("my-prefix-id"):
+            # ... run LLM calls ...
+
+    Note: The context variable approach requires custom integration as LiteLLM's headers
+    are static. For full dynamic prefix ID support, consider using the LangChain client.
+
+    Args:
+        config (DynamoModelConfig): The configuration for the Dynamo model.
+        _builder (Builder): The NAT builder instance.
+    """
+    import uuid
+
+    from google.adk.models.lite_llm import LiteLlm
+
+    validate_no_responses_api(config, LLMFrameworkEnum.ADK)
+
+    config_dict = config.model_dump(
+        exclude={
+            "type",
+            "max_retries",
+            "thinking",
+            "model_name",
+            "model",
+            "base_url",
+            "api_type",
+            *DynamoModelConfig.get_dynamo_field_names()
+        },
+        by_alias=True,
+        exclude_none=True,
+        exclude_unset=True,
+    )
+
+    if config.base_url:
+        config_dict["api_base"] = config.base_url
+
+    # Build Dynamo prefix headers if prefix_template is configured
+    if config.prefix_template is not None:
+        # Generate a static prefix ID for this LLM instance
+        # For dynamic prefix IDs, users should use the LangChain client or manage sessions manually
+        unique_id = uuid.uuid4().hex[:16]
+        prefix_id = config.prefix_template.format(uuid=unique_id)
+
+        extra_headers = {
+            "x-prefix-id": prefix_id,
+            "x-prefix-total-requests": str(config.prefix_total_requests),
+            "x-prefix-osl": config.prefix_osl.upper(),
+            "x-prefix-iat": config.prefix_iat.upper(),
+        }
+        config_dict["extra_headers"] = extra_headers
+
+        logger.info(
+            "Dynamo prefix headers configured for ADK: prefix_id=%s, total_requests=%d, osl=%s, iat=%s",
+            prefix_id,
+            config.prefix_total_requests,
+            config.prefix_osl,
+            config.prefix_iat,
+        )
 
     yield LiteLlm(config.model_name, **config_dict)

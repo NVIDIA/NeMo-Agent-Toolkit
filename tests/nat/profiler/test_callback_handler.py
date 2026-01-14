@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,16 +51,16 @@ async def test_langchain_handler(reactive_stream: Subject):
 
     await handler.on_llm_start(serialized={}, prompts=prompts, run_id=run_id)
 
-    # Simulate a fake sleep for 1 second
-    await asyncio.sleep(1)
+    # Simulate a fake sleep for 0.05 second
+    await asyncio.sleep(0.05)
 
     # Simulate receiving new tokens with delay between them
     await handler.on_llm_new_token("hello", run_id=run_id)
-    await asyncio.sleep(0.1)  # Ensure a small delay between token events
+    await asyncio.sleep(0.05)  # Ensure a small delay between token events
     await handler.on_llm_new_token(" world", run_id=run_id)
 
     # Simulate a delay before ending
-    await asyncio.sleep(0.1)
+    await asyncio.sleep(0.05)
 
     # Build a fake LLMResult
     from langchain_core.messages import AIMessage
@@ -87,9 +87,8 @@ async def test_langchain_handler(reactive_stream: Subject):
     assert all_stats[1].event_timestamp <= all_stats[2].event_timestamp
     assert all_stats[2].event_timestamp <= all_stats[3].event_timestamp
 
-    # Check that there's a significant delay between start and first token
-    assert all_stats[1].event_timestamp - all_stats[
-        0].event_timestamp > 0.5  # 0.5 second between LLM start and new token
+    # Check that there's a delay between start and first token
+    assert all_stats[1].event_timestamp - all_stats[0].event_timestamp > 0.05
 
     # Check that the first usage stat has the correct chat_inputs
     assert all_stats[0].payload.metadata.chat_inputs == prompts
@@ -134,6 +133,7 @@ async def test_llama_index_handler_order(reactive_stream: Subject):
     # chat_responses is a bit short in this test, but we confirm at least we get something
 
 
+@pytest.mark.slow
 async def test_crewai_handler_time_between_calls(reactive_stream: Subject):
     """
     Test CrewAIProfilerHandler ensures seconds_between_calls is properly set for consecutive calls.
@@ -201,6 +201,7 @@ async def test_crewai_handler_time_between_calls(reactive_stream: Subject):
     assert results[2].usage_info.seconds_between_calls == 7
 
 
+@pytest.mark.slow
 async def test_semantic_kernel_handler_tool_call(reactive_stream: Subject):
     """
     Test that the SK callback logs tool usage events.
@@ -348,7 +349,7 @@ async def test_agno_handler_llm_call(reactive_stream: Subject):
             result = captured_orig_func(*args, **kwargs)
 
             # Small delay to ensure events are processed in order
-            time.sleep(0.05)
+            time.sleep(0.01)
 
             # Create the end event
             end_payload = IntermediateStepPayload(
@@ -381,7 +382,7 @@ async def test_agno_handler_llm_call(reactive_stream: Subject):
     result = direct_wrapped(messages=messages, model="gpt-4")
 
     # Wait a small amount of time to ensure the reactive stream has time to process
-    time.sleep(0.5)  # Increase wait time to make sure events are processed
+    time.sleep(0.05)  # Wait briefly to allow reactive stream processing
 
     # Check the all_stats list from the subscription
     print(f"all_stats has {len(all_stats)} items")
@@ -405,55 +406,30 @@ async def test_agno_handler_llm_call(reactive_stream: Subject):
     # Find IntermediateStep objects in all_stats
     intermediate_steps = [event for event in all_stats if hasattr(event, 'payload')]
 
-    # If we don't have IntermediateStep objects, check step_manager
-    if len(intermediate_steps) < 2:
-        print("Not enough IntermediateStep objects in all_stats, checking step_manager...")
-        steps = step_manager.get_intermediate_steps()
-        print(f"Found {len(steps)} steps in step_manager")
-        for i, step in enumerate(steps):
-            print(f"Step {i}: {step.event_type}")
+    assert len(intermediate_steps) >= 2, "Expected at least 2 events in reactive stream"
 
-        # Verify steps in step_manager
-        assert len(steps) >= 2, f"Expected at least 2 steps in step_manager, got {len(steps)}"
+    # Find the START and END events in our intermediate steps
+    start_events = [e for e in intermediate_steps if e.payload.event_type == IntermediateStepType.LLM_START]
+    end_events = [e for e in intermediate_steps if e.payload.event_type == IntermediateStepType.LLM_END]
 
-        # Find the START and END events from step_manager
-        start_events = [s for s in steps if s.event_type == IntermediateStepType.LLM_START]
-        end_events = [s for s in steps if s.event_type == IntermediateStepType.LLM_END]
+    assert len(start_events) > 0, "No LLM_START events found in intermediate steps"
+    assert len(end_events) > 0, "No LLM_END events found in intermediate steps"
 
-        assert len(start_events) > 0, "No LLM_START events found in step_manager"
-        assert len(end_events) > 0, "No LLM_END events found in step_manager"
+    # Use the latest events for our test
+    start_event = start_events[-1]
+    end_event = end_events[-1]
 
-        # Use the latest events for our test
-        start_event = start_events[-1]
-        end_event = end_events[-1]
+    # Verify event types
+    assert start_event.payload.event_type == IntermediateStepType.LLM_START
+    assert end_event.payload.event_type == IntermediateStepType.LLM_END
 
-        # Check token usage values in the end event
-        assert end_event.usage_info.token_usage.prompt_tokens == token_usage_obj.prompt_tokens
-        assert end_event.usage_info.token_usage.completion_tokens == token_usage_obj.completion_tokens
-        assert end_event.usage_info.token_usage.total_tokens == token_usage_obj.total_tokens
-    else:
-        # Find the START and END events in our intermediate steps
-        start_events = [e for e in intermediate_steps if e.payload.event_type == IntermediateStepType.LLM_START]
-        end_events = [e for e in intermediate_steps if e.payload.event_type == IntermediateStepType.LLM_END]
+    # Check token usage values in the end event
+    assert end_event.payload.usage_info.token_usage.prompt_tokens == token_usage_obj.prompt_tokens
+    assert end_event.payload.usage_info.token_usage.completion_tokens == token_usage_obj.completion_tokens
+    assert end_event.payload.usage_info.token_usage.total_tokens == token_usage_obj.total_tokens
 
-        assert len(start_events) > 0, "No LLM_START events found in intermediate steps"
-        assert len(end_events) > 0, "No LLM_END events found in intermediate steps"
-
-        # Use the latest events for our test
-        start_event = start_events[-1]
-        end_event = end_events[-1]
-
-        # Verify event types
-        assert start_event.payload.event_type == IntermediateStepType.LLM_START
-        assert end_event.payload.event_type == IntermediateStepType.LLM_END
-
-        # Check token usage values in the end event
-        assert end_event.payload.usage_info.token_usage.prompt_tokens == token_usage_obj.prompt_tokens
-        assert end_event.payload.usage_info.token_usage.completion_tokens == token_usage_obj.completion_tokens
-        assert end_event.payload.usage_info.token_usage.total_tokens == token_usage_obj.total_tokens
-
-        # Verify the model output was captured correctly
-        assert "test output" in end_event.payload.data.output
+    # Verify the model output was captured correctly
+    assert "test output" in end_event.payload.data.output
 
 
 async def test_agno_handler_tool_execution(reactive_stream: Subject):
@@ -569,7 +545,7 @@ async def test_agno_handler_tool_execution(reactive_stream: Subject):
     result = execute_agno_tool(sample_tool, *tool_args, **tool_kwargs)
 
     # Wait for events to propagate
-    time.sleep(0.5)
+    time.sleep(0.05)
 
     # Check the results
     print(f"all_stats has {len(all_stats)} items for tool execution")

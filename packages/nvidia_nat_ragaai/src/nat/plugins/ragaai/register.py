@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,8 +31,10 @@ logger = logging.getLogger(__name__)
 class CatalystTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="catalyst"):
     """A telemetry exporter to transmit traces to RagaAI catalyst."""
     endpoint: str = Field(description="The RagaAI Catalyst endpoint", default="https://catalyst.raga.ai/api")
-    access_key: SerializableSecretStr = Field(description="The RagaAI Catalyst API access key", default="")
-    secret_key: SerializableSecretStr = Field(description="The RagaAI Catalyst API secret key", default="")
+    access_key: SerializableSecretStr = Field(description="The RagaAI Catalyst API access key",
+                                              default_factory=lambda: SerializableSecretStr(""))
+    secret_key: SerializableSecretStr = Field(description="The RagaAI Catalyst API secret key",
+                                              default_factory=lambda: SerializableSecretStr(""))
     dataset: str | None = Field(description="The RagaAI Catalyst dataset name", default=None)
     tracer_type: str = Field(description="The RagaAI Catalyst tracer type", default="agentic/nemo-framework")
 

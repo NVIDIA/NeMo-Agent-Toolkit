@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,13 +17,15 @@ limitations under the License.
 
 # Currency Agent A2A Example
 
-This example demonstrates connecting to a third-party A2A service, the LangGraph-based currency agent, to perform currency conversions and financial queries with time-based context.
+This example demonstrates a NVIDIA NeMo Agent Toolkit workflow connecting to a third-party A2A server, the LangGraph-based currency agent. The workflow acts as an A2A client to perform currency conversions and financial queries with time-based context.
 
 ## Key Features
 
+- **Per-User A2A Client**: Each user gets isolated A2A client connections to external services
 - **External A2A Integration**: Connects to a third-party LangGraph currency agent
 - **Hybrid Tool Architecture**: Combines A2A currency tools with MCP time services
 - **Simple Real-world Use Case**: Currency conversion with historical date context
+- **Multi-User Support**: Demonstrates user isolation with different session cookies
 
 ## Architecture Overview
 
@@ -49,9 +51,19 @@ flowchart LR
 
 ## Installation and Setup
 
+
 ### Prerequisites
 
 Follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+
+### Set Up API Keys
+
+Set your NVIDIA and OpenAI API keys as environment variables:
+
+```bash
+export NVIDIA_API_KEY=<YOUR_API_KEY>
+export OPENAI_API_KEY=<YOUR_API_KEY>
+```
 
 ### Set Up External A2A Server
 
@@ -67,7 +79,16 @@ git checkout eb3885f # tested on 12/2025 with NAT 1.4.0
 # Step 2: Navigate to the LangGraph agent
 cd samples/python/agents/langgraph
 
-# Step 3: Run the currency agent on port 11000
+# Step 3: Set the environment variables for the currency agent
+# For OpenAI models:
+cat <<EOF > .env
+API_KEY=$OPENAI_API_KEY
+model_source=openai
+TOOL_LLM_URL=https://api.openai.com/v1
+TOOL_LLM_NAME=gpt-4o-mini
+EOF
+
+# Step 4: Run the currency agent on port 11000
 uv run app --port 11000
 ```
 
@@ -79,19 +100,6 @@ From the root directory of the NeMo Agent toolkit library, install this example:
 uv pip install -e examples/A2A/currency_agent_a2a
 ```
 
-### Set Up API Keys
-
-Set your NVIDIA API key as an environment variable:
-
-```bash
-export NVIDIA_API_KEY=<YOUR_API_KEY>
-```
-
-The currency agent requires a Google Gemini API key. Get one by following the instructions in the [Google Gemini API key documentation](https://ai.google.dev/gemini-api/docs/api-key).
-
-```bash
-export GOOGLE_API_KEY=<YOUR_GOOGLE_API_KEY>
-```
 
 ## Usage
 
@@ -118,17 +126,38 @@ nat run --config_file examples/A2A/currency_agent_a2a/configs/config.yml \
 
 For comprehensive examples, see [`data/sample_queries.json`](data/sample_queries.json).
 
+## Per-User Workflow Architecture
+
+This example uses a **per-user workflow** pattern because A2A clients are per-user function groups:
+
+- Each user gets isolated connections to the external A2A service
+- Independent session state and request tracking per user
+
 ## Configuration Details
+
+### Workflow Configuration
+
+The workflow is configured to use the core per-user ReAct agent:
+
+```yaml
+workflow:
+  _type: per_user_react_agent  # Per-user ReAct agent
+  tool_names:
+    - mcp_date_time.get_current_time_mcp_tool
+    - currency_agent  # Per-user A2A client to external service
+  llm_name: nim_llm
+```
 
 ### Tool Composition
 
 The configuration demonstrates two types of tool integration:
 
-1. **A2A Client Tools** (`currency_agent`):
+1. **A2A Client Tools** (`currency_agent`) - **Per-User**:
    - Connects to external LangGraph currency agent
+   - Each user gets isolated connection to the external service
    - Provides currency conversion and exchange rate queries
 
-2. **MCP Client Tools** (`mcp_date_time`):
+2. **MCP Client Tools** (`mcp_date_time`) - **Shared**:
    - Local MCP server for time operations
    - Provides: `get_current_time_mcp_tool` function
 
@@ -156,4 +185,5 @@ curl http://localhost:11000/.well-known/agent-card.json | jq
 
 ## Related Examples
 
-- [Math Assistant A2A](../math_assistant_a2a/) - NAT-to-NAT A2A with hybrid tools
+- [Math Assistant A2A](../math_assistant_a2a/) - NeMo Agent toolkit A2A with hybrid tools (unprotected)
+- [OAuth2 Protected Math Assistant A2A](../math_assistant_a2a_protected/) - OAuth2-protected A2A example

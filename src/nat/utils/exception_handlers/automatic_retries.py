@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -178,8 +178,8 @@ def _retry_decorator(
     clear_tracebacks: bool = True,  # Clear exception tracebacks
     instance_context_aware: bool = False,
 ) -> Callable[[Callable[..., T]], Callable[..., T]]:
-    """"
-    Build a decorator that retries with exponential back-off *iff*:
+    """
+    Build a decorator that retries with exponential back-off if:
 
       • the raised exception is an instance of one of `retry_on`
       • AND `_want_retry()` returns True (i.e. matches codes/messages filters)

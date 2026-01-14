@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -400,12 +400,50 @@ class NeMoCustomizerTrainerAdapter(TrainerAdapter):
                     TrainingStatusEnum.FAILED,
                     TrainingStatusEnum.CANCELED,
             ):
-                # Handle deployment if configured
-                if (status.status == TrainingStatusEnum.COMPLETED and self.adapter_config.deploy_on_completion):
-                    await self._deploy_model(ref)
-
-                # Clean up active job tracking
+                # Clean up active job tracking first
                 self._active_jobs.pop(ref.run_id, None)
+
+                # Handle non-successful completions with clear error messages
+                if status.status == TrainingStatusEnum.FAILED:
+                    error_msg = status.message or "Training job failed"
+                    logger.error(f"Training job {ref.run_id} FAILED: {error_msg}")
+                    raise RuntimeError(f"Training job {ref.run_id} failed: {error_msg}. "
+                                       f"Model was not trained and cannot be deployed. "
+                                       f"Please check the job logs for details and retry the training.")
+
+                if status.status == TrainingStatusEnum.CANCELED:
+                    error_msg = status.message or "Training job was canceled"
+                    logger.error(f"Training job {ref.run_id} CANCELED: {error_msg}")
+
+                    # Format progress safely
+                    progress_str = f"{status.progress:.1f}%" if status.progress is not None else "unknown progress"
+
+                    # If deployment was expected, raise an error
+                    if self.adapter_config.deploy_on_completion:
+                        raise RuntimeError(f"Training job {ref.run_id} was canceled at {progress_str}: {error_msg}. "
+                                           f"Model was not trained and will NOT be deployed. "
+                                           f"Evaluation will fail because the model does not exist. "
+                                           f"\n\nACTION REQUIRED:"
+                                           f"\n1. Check if the job was manually canceled or timed out"
+                                           f"\n2. Review NeMo MS platform health and resource availability"
+                                           f"\n3. Consider increasing deployment_timeout_seconds in config"
+                                           f"\n4. Use a fresh namespace to avoid conflicts: namespace: nat-dpo-test-v2"
+                                           f"\n5. Retry training: nat finetune --config_file=...")
+                    else:
+                        # Just log warning if deployment wasn't expected
+                        logger.warning(f"Training job {ref.run_id} was canceled at {progress_str}. "
+                                       f"No deployment was configured (deploy_on_completion=False).")
+                        return status
+
+                # Handle successful completion with deployment
+                if status.status == TrainingStatusEnum.COMPLETED:
+                    if self.adapter_config.deploy_on_completion:
+                        logger.info(f"Training job {ref.run_id} completed successfully. Deploying model...")
+                        await self._deploy_model(ref)
+                        logger.info(f"Model deployed successfully for job {ref.run_id}")
+                    else:
+                        logger.info(f"Training job {ref.run_id} completed successfully. "
+                                    f"Skipping deployment (deploy_on_completion=False).")
 
                 return status
 

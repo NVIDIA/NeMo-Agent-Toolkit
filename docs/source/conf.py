@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2021-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -111,6 +111,7 @@ extensions = [
     'nbsphinx',
     'sphinx_copybutton',
     'sphinx_design',
+    'sphinx_reredirects',
     'sphinx.ext.doctest',
     'sphinx.ext.graphviz',
     'sphinx.ext.intersphinx',
@@ -183,7 +184,6 @@ numpydoc_class_members_toctree = False
 # mysql.com  reports a 403 when requested by linkcheck
 # api.service.com is a placeholder for a service example
 # Ignore example.com/mcp as it is inaccessible when building the docs
-# Once v1.2 is merged into main, remove the ignore for the banner.png
 linkcheck_ignore = [
     r'http://localhost:\d+',
     r'https://localhost:\d+',
@@ -357,6 +357,166 @@ default_role = "py:obj"
 # versions of Pydantic.
 PYDANTIC_DEFAULT_DOCSTRING = "A base class for creating Pydantic models."
 
+# Configuration for sphinx-reredirects
+# Mapping of old document paths to new document paths, the key is the old path relative to the docs/source directory
+# without any extensions, and the value is the new path relative to the source or absolute, but with an html extension.
+# When adding new redirects, please add a new comment explaining the reason for the redirect followed by a block of
+# redirects related to that reason.
+redirects = {
+    # These redirects cover the documentation restructuring that happened between versions 1.3 and 1.4
+    'extend/adding-a-retriever':
+        '/extend/custom-components/adding-a-retriever.html',
+    'extend/adding-an-authentication-provider':
+        '/extend/custom-components/adding-an-authentication-provider.html',
+    'extend/adding-an-llm-provider':
+        '/extend/custom-components/adding-an-llm-provider.html',
+    'extend/cursor-rules-developer-guide':
+        '/resources/contributing/cursor/cursor-rules-developer-guide.html',
+    'extend/custom-evaluator':
+        '/extend/custom-components/custom-evaluator.html',
+    'extend/function-groups':
+        '/extend/custom-components/custom-functions/function-groups.html',
+    'extend/functions':
+        '/extend/custom-components/custom-functions/functions.html',
+    'extend/gated-fields':
+        '/extend/custom-components/gated-fields.html',
+    'extend/integrating-aws-bedrock-models':
+        '/components/integrations/integrating-aws-bedrock-models.html',
+    'extend/memory':
+        '/extend/custom-components/memory.html',
+    'extend/object-store':
+        '/extend/custom-components/object-store.html',
+    'extend/sharing-components':
+        '/components/sharing-components.html',
+    'extend/telemetry-exporters':
+        '/extend/custom-components/telemetry-exporters.html',
+    'quick-start/index':
+        '/get-started/quick-start.html',
+    'quick-start/installing':
+        '/get-started/installation.html',
+    'quick-start/launching-ui':
+        '/run-workflows/launching-ui.html',
+    'reference/api-authentication':
+        '/components/auth/api-authentication.html',
+    'reference/api-server-endpoints':
+        '/reference/rest-api/api-server-endpoints.html',
+    'reference/cursor-rules-reference':
+        '/resources/contributing/cursor/cursor-rules-reference.html',
+    'reference/evaluate-api':
+        '/reference/rest-api/evaluate-api.html',
+    'reference/evaluate':
+        '/improve-workflows/evaluate.html',
+    'reference/frameworks-overview':
+        '/components/integrations/frameworks.html',
+    'reference/interactive-models':
+        '/build-workflows/advanced/interactive-workflows.html',
+    'reference/optimizer':
+        '/improve-workflows/optimizer.html',
+    'reference/test-time-compute':
+        '/improve-workflows/test-time-compute.html',
+    'reference/websockets':
+        '/reference/rest-api/websockets.html',
+    'resources/code-of-conduct':
+        '/resources/contributing/code-of-conduct.html',
+    'resources/contributing':
+        '/resources/contributing/index.html',
+    'resources/licensing':
+        '/resources/contributing/licensing.html',
+    'resources/running-ci-locally':
+        '/resources/contributing/testing/running-ci-locally.html',
+    'resources/running-tests':
+        '/resources/contributing/testing/running-tests.html',
+    'store-and-retrieve/memory':
+        '/build-workflows/memory.html',
+    'store-and-retrieve/object-store':
+        '/build-workflows/object-store.html',
+    'store-and-retrieve/retrievers':
+        '/build-workflows/retrievers.html',
+    'support':
+        '/resources/support.html',
+    'troubleshooting':
+        '/resources/troubleshooting.html',
+    'tutorials/add-tools-to-a-workflow':
+        '/get-started/tutorials/add-tools-to-a-workflow.html',
+    'tutorials/build-a-demo-agent-workflow-using-cursor-rules':
+        '/get-started/tutorials/build-a-demo-agent-workflow-using-cursor-rules.html',
+    'tutorials/create-a-new-workflow':
+        '/get-started/tutorials/create-a-new-workflow.html',
+    'tutorials/customize-a-workflow':
+        '/get-started/tutorials/customize-a-workflow.html',
+    'tutorials/index':
+        '/get-started/tutorials/index.html',
+    'tutorials/test-with-nat-test-llm':
+        '/extend/testing/test-with-nat-test-llm.html',
+    'workflows/about/index':
+        '/build-workflows/about-building-workflows.html',
+    'workflows/about/react-agent':
+        '/components/agents/react-agent/index.html',
+    'workflows/about/reasoning-agent':
+        '/components/agents/reasoning-agent/index.html',
+    'workflows/about/rewoo-agent':
+        '/components/agents/rewoo-agent/index.html',
+    'workflows/about/router-agent':
+        '/components/agents/router-agent/index.html',
+    'workflows/about/sequential-executor':
+        '/components/agents/sequential-executor/index.html',
+    'workflows/about/tool-calling-agent':
+        '/components/agents/tool-calling-agent/index.html',
+    'workflows/add-unit-tests-for-tools':
+        '/extend/testing/add-unit-tests-for-tools.html',
+    'workflows/embedders':
+        '/build-workflows/embedders.html',
+    'workflows/evaluate':
+        '/improve-workflows/evaluate.html',
+    'workflows/function-groups':
+        '/build-workflows/functions-and-function-groups/function-groups.html',
+    'workflows/functions/code-execution':
+        '/components/functions/code-execution.html',
+    'workflows/functions/index':
+        '/build-workflows/functions-and-function-groups/functions.html',
+    'workflows/llms/index':
+        '/build-workflows/llms/index.html',
+    'workflows/llms/using-local-llms':
+        '/build-workflows/llms/using-local-llms.html',
+    'workflows/mcp/index':
+        '/build-workflows/mcp-client.html',
+    'workflows/mcp/mcp-auth-token-storage':
+        '/components/auth/mcp-auth/mcp-auth-token-storage.html',
+    'workflows/mcp/mcp-auth':
+        '/components/auth/mcp-auth/index.html',
+    'workflows/mcp/mcp-client':
+        '/build-workflows/mcp-client.html',
+    'workflows/mcp/mcp-server':
+        '/run-workflows/mcp-server.html',
+    'workflows/observe/index':
+        '/run-workflows/observe/observe.html',
+    'workflows/observe/observe-workflow-with-catalyst':
+        '/run-workflows/observe/observe.html?provider=Catalyst#provider-integration-guides',
+    'workflows/observe/observe-workflow-with-data-flywheel':
+        '/run-workflows/observe/observe.html?provider=Data-Flywheel#provider-integration-guides',
+    'workflows/observe/observe-workflow-with-dynatrace':
+        '/run-workflows/observe/observe.html?provider=Dynatrace#provider-integration-guides',
+    'workflows/observe/observe-workflow-with-galileo':
+        '/run-workflows/observe/observe.html?provider=Galileo#provider-integration-guides',
+    'workflows/observe/observe-workflow-with-otel-collector':
+        '/run-workflows/observe/observe.html?provider=OTel-collector#provider-integration-guides',
+    'workflows/observe/observe-workflow-with-phoenix':
+        '/run-workflows/observe/observe.html?provider=Phoenix#provider-integration-guides',
+    'workflows/observe/observe-workflow-with-weave':
+        '/run-workflows/observe/observe.html?provider=Wandb-Weave#provider-integration-guides',
+    'workflows/profiler':
+        '/improve-workflows/profiler.html',
+    'workflows/retrievers':
+        '/build-workflows/retrievers.html',
+    'workflows/run-workflows':
+        '/run-workflows/about-running-workflows.html',
+    'workflows/sizing-calc':
+        '/improve-workflows/sizing-calc.html',
+    'workflows/workflow-configuration':
+        '/build-workflows/workflow-configuration.html'
+    # End of v1.3 -> v1.4 documentation restructuring redirects
+}
+
 if build_api_docs:
 
     def skip_pydantic_special_attrs(app: object,
@@ -374,6 +534,52 @@ if build_api_docs:
 
         return skip
 
+    def clean_markdown_from_docstrings(app: object, docname: str, source: list[str]) -> None:
+        """Clean up Markdown syntax that doesn't work in RST.
+
+        Some inherited docstrings (for example, from LangChain) use Markdown syntax like
+        triple backticks for code blocks and !!! for admonitions. These cause RST
+        parsing warnings. This function converts or removes such patterns.
+        """
+        import re
+        if not docname.startswith('api/'):
+            return
+
+        content = source[0]
+
+        # Remove MkDocs-style admonition blocks: !!! type "title"\n    content
+        # These span multiple lines and are complex to convert, so we remove them
+        content = re.sub(r'^\s*!!!\s+\w+\s+"[^"]*"\s*\n(?:\s{4,}.*\n)*', '', content, flags=re.MULTILINE)
+
+        # Convert Markdown code fences to RST code blocks
+        # Match ```language\n...code...\n``` and convert to :: block
+        def convert_code_fence(match: re.Match[str]) -> str:
+            indent = match.group(1)
+            lang = match.group(2) or ''
+            code = match.group(3)
+            # Create RST code block with proper indentation
+            if lang:
+                header = f"{indent}.. code-block:: {lang}\n\n"
+            else:
+                header = f"{indent}::\n\n"
+            # Indent the code content
+            indented_code = '\n'.join(f"{indent}   {line}" if line.strip() else '' for line in code.split('\n'))
+            return header + indented_code + '\n'
+
+        # Handle code fences with optional language - match ``` at any indentation
+        content = re.sub(r'^(\s*)```(\w*)\n(.*?)^\s*```\s*$',
+                         convert_code_fence,
+                         content,
+                         flags=re.MULTILINE | re.DOTALL)
+
+        # Escape **kwargs and **args patterns that appear in function signatures
+        # These get interpreted as RST bold/strong markup
+        content = re.sub(r'\*\*(kwargs|args|kw)', r'\\*\\*\1', content)
+
+        source[0] = content
+
     def setup(sphinx):
         # Work-around for for Pydantic docstrings that trigger parsing warnings
         sphinx.connect("autoapi-skip-member", skip_pydantic_special_attrs)
+        # Clean up Markdown syntax in auto-generated API docs
+        sphinx.connect("source-read", clean_markdown_from_docstrings)

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -133,7 +133,6 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
             return
 
         logger.info(f"Building middleware for function '{self.instance_name}' in order of: {middleware_tuple}")
-
         context = FunctionMiddlewareContext(name=self.instance_name,
                                             config=self.config,
                                             description=self.description,
@@ -395,6 +394,32 @@ class FunctionGroup:
     A group of functions that can be used together, sharing the same configuration, context, and resources.
     """
 
+    SEPARATOR: str = "__"
+    """The separator between the function group name and the function name."""
+
+    LEGACY_SEPARATOR: str = "."
+    """The legacy separator between the function group name and the function name."""
+
+    @staticmethod
+    def decompose(name: str, legacy_compat: bool = False) -> tuple[str, str]:
+        """
+        Decompose a function name into the function group name and the function name.
+
+        Parameters
+        ----------
+        name : str
+            The function name to decompose.
+        legacy_compat : bool, optional
+            Whether to use the legacy separator (period) instead of the new separator (double underscore).
+
+        Returns
+        -------
+        tuple[str, str]
+            The function group name and the function name.
+        """
+        g, f = name.split(FunctionGroup.LEGACY_SEPARATOR if legacy_compat else FunctionGroup.SEPARATOR, maxsplit=1)
+        return g, f
+
     def __init__(self,
                  *,
                  config: FunctionGroupBaseConfig,
@@ -489,7 +514,13 @@ class FunctionGroup:
         return self._config
 
     def _get_fn_name(self, name: str) -> str:
-        return f"{self._instance_name}.{name}"
+        """
+        The function name of a function in a function group is the function name concatenated with
+        the function group instance name separated with a separator string.
+
+        The separator is a double underscore (``__``).
+        """
+        return f"{self._instance_name}{FunctionGroup.SEPARATOR}{name}"
 
     async def _fn_should_be_included(self, name: str) -> bool:
         if name not in self._per_function_filter_fn:
@@ -747,13 +778,19 @@ class FunctionGroup:
     def set_instance_name(self, instance_name: str):
         """
         Sets the instance name for the function group.
+        Also updates all child function instance names to match the new group instance name,
+        preserving each function's suffix. This ensures naming consistency and prevents
+        mismatched names when the workflow builder assigns an instance name to the function group.
 
         Parameters
         ----------
         instance_name : str
             The instance name to set for the function group.
         """
+        old_name = self._instance_name
         self._instance_name = instance_name
+        for func in self._functions.values():
+            func.instance_name = func.instance_name.replace(old_name, instance_name, 1)
 
     @property
     def instance_name(self) -> str:

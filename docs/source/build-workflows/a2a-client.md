@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,11 +17,22 @@ limitations under the License.
 
 # NVIDIA NeMo Agent Toolkit Workflow as an A2A Client
 
-[Agent-to-Agent (A2A) Protocol](https://a2aproject.org/) is an open standard from the Linux Foundation that enables agent-to-agent communication and collaboration. The protocol standardizes how agents discover capabilities, delegate tasks, and exchange information.
+[Agent-to-Agent (A2A) Protocol](https://a2aproject.org/) is an open standard from the Linux Foundation that enables agent-to-agent communication and collaboration. The protocol standardizes how [agents](../components/agents/index.md) discover capabilities, delegate tasks, and exchange information.
 
-You can create a workflow that connects to remote A2A agents and provides a function interface for interacting with their capabilities.
+You can create a [workflow](./about-building-workflows.md) that connects to remote A2A agents and provides a function interface for interacting with their capabilities.
 
 This guide covers how to use NeMo Agent toolkit as an A2A client. For information on publishing workflows as A2A servers, refer to [A2A Server](../run-workflows/a2a-server.md).
+
+:::important
+**Per-User A2A Clients**
+
+A2A clients are per-user [function groups](./functions-and-function-groups/function-groups.md), which means:
+- Each user gets their own isolated A2A client instance with separate connections, authentication, and session state
+- Workflows using A2A clients **must** be registered as per-user using `@register_per_user_function` or use one of the builtin per-user workflows (such as `per_user_react_agent`)
+- Shared workflows (such as `react_agent`) **cannot** use A2A client function groups directly
+
+For multi-user deployments, this provides automatic isolation between users. See [Writing Per-User Functions](../extend/custom-components/custom-functions/per-user-functions.md) for details on creating per-user workflows.
+:::
 
 ## Installation
 
@@ -32,12 +43,12 @@ uv pip install "nvidia-nat[a2a]"
 ```
 
 :::{note}
-**Coming Soon**: Authentication support for protected A2A agents is in progress and will be available shortly.
+**Authentication**: For connecting to OAuth2-protected A2A agents, see [A2A Authentication](../components/auth/a2a-auth.md).
 :::
 
 ## A2A Client Configuration
 
-NeMo Agent toolkit enables workflows to interact with remote A2A agents through function groups.
+NeMo Agent toolkit enables workflows to interact with remote A2A agents through [function groups](./functions-and-function-groups/function-groups.md).
 
 ### Basic Configuration
 
@@ -49,13 +60,15 @@ function_groups:
     task_timeout: 60
 
 workflow:
-  _type: react_agent
+  _type: per_user_react_agent  # Per-user workflow required for A2A clients
   tool_names:
     - currency_agent
   llm_name: nim_llm
 ```
 
 The `a2a_client` function group connects to a remote A2A agent, discovers its skills through the [Agent Card](https://a2a-protocol.org/latest/topics/agent-discovery/), and provides a function interface for invoking those skills.
+
+**Note**: Since A2A clients are per-user, the workflow must also be per-user. The example above uses `per_user_react_agent`, which is the per-user version of the builtin [ReAct agent](../components/agents/react-agent/react-agent.md). See the [examples](#examples) section for complete implementations.
 
 ### Configuration Options
 
@@ -67,7 +80,7 @@ The `a2a_client` function group supports the following configuration options:
 | `agent_card_path` | string | Path to agent card endpoint | `/.well-known/agent-card.json` |
 | `task_timeout` | int | Task timeout in seconds | 300 |
 | `include_skills_in_description` | boolean | Embed discovered skills in function description | `true` |
-| `auth_provider` | string | Reference to authentication provider | None |
+| `auth_provider` | string | Reference to [authentication provider](../components/auth/api-authentication.md) | None |
 
 **Note**: You can get the complete list of configuration options and their schemas by running:
 ```bash
@@ -76,7 +89,7 @@ nat info components -t function_group -q a2a_client
 
 ### Multiple A2A Clients
 
-You can connect to multiple A2A agents in the same workflow:
+You can connect to multiple A2A agents in the same per-user workflow:
 
 ```yaml
 function_groups:
@@ -89,11 +102,13 @@ function_groups:
     url: http://localhost:11000
 
 workflow:
-  _type: react_agent
+  _type: per_user_react_agent  # Per-user workflow required for A2A clients
   tool_names:
     - calculator_agent
     - currency_agent
 ```
+
+**Note**: All A2A clients in a workflow will be per-user, providing isolated connections for each user.
 
 ## Three-Level API Architecture
 
@@ -105,7 +120,7 @@ flowchart TB
         AC[Agent Card<br/>Skills & Metadata]
     end
 
-    AC -->|discovers| FG[NAT Function Group<br/>agent_name]
+    AC -->|discovers| FG[Function Group<br/>agent_name]
 
     subgraph "Three-Level API"
         L1["Level 1: High-Level<br/>agent_name.call(query)<br/>Natural language interface"]
@@ -126,7 +141,7 @@ flowchart TB
 
 **Function**: `agent_name.call(query: str) -> str`
 
-The high-level API provides a natural language interface optimized for LLM-based agents. This is the recommended approach for most use cases.
+The high-level API provides a natural language interface optimized for [LLM-based](./llms/index.md) agents. This is the recommended approach for most use cases.
 
 **When to use:**
 - Standard LLM-based agents (most common)
@@ -212,7 +227,7 @@ flowchart TB
         AC --> S2
     end
 
-    AC ==>|discovers & maps to| FG[NAT Function Group<br/>dice_agent]
+    AC ==>|discovers & maps to| FG[Function Group<br/>dice_agent]
 
     subgraph "Three-Level API"
         L1["Level 1: High-Level<br/>dice_agent.call(query)<br/>Natural language interface<br/>Skills optionally embedded in description"]
@@ -236,7 +251,7 @@ flowchart TB
 1. Client fetches Agent Card from `{url}/.well-known/agent-card.json`
 2. Parses agent metadata (name, version, description)
 3. Extracts skills with their descriptions and examples
-4. Maps skills to NAT function group with three API levels
+4. Maps skills to a [function group](./functions-and-function-groups/function-groups.md) with three API levels
 5. Optionally embeds skill details in high-level function description
 
 ## Transport Support
@@ -257,7 +272,7 @@ For most use cases, the high-level `call()` function is sufficient. Use `send_me
 
 The following examples demonstrate A2A client usage:
 
-- Math Assistant A2A Example - NAT-to-NAT A2A communication with hybrid tool composition. See `examples/A2A/math_assistant_a2a/README.md`.
+- Math Assistant A2A Example - A2A communication with hybrid tool composition. Refer to `examples/A2A/math_assistant_a2a/README.md`.
 - Currency Agent A2A Example - Connecting to external third-party A2A services. See `examples/A2A/currency_agent_a2a/README.md`.
 
 ## CLI Utilities
@@ -327,5 +342,5 @@ The A2A client is built on the official [A2A Python SDK](https://github.com/a2ap
 
 ## Related Documentation
 
-- [A2A Server Guide](../run-workflows/a2a-server.md) - Publishing NAT workflows as A2A agents
-- [Function Groups](./functions-and-function-groups//function-groups.md) - Understanding NAT function groups
+- [A2A Server Guide](../run-workflows/a2a-server.md) - Publishing workflows as A2A agents
+- [Function Groups](./functions-and-function-groups//function-groups.md) - Understanding function groups

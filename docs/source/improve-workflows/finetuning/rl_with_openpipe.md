@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,7 @@ limitations under the License.
 
 # OpenPipe ART Integration
 
-This guide covers the integration between NAT's finetuning harness and [OpenPipe ART](https://art.openpipe.ai/) (Agent Reinforcement Trainer), an open-source framework for teaching LLMs through reinforcement learning.
+This guide covers the integration between the NVIDIA NeMo Agent toolkit finetuning harness and [OpenPipe ART](https://art.openpipe.ai/) (Agent Reinforcement Trainer), an open-source framework for teaching [LLMs](../../build-workflows/llms/index.md) through reinforcement learning.
 
 ## About OpenPipe ART
 
@@ -46,7 +46,7 @@ ART is well-suited for scenarios where:
 │                           Your Application                              │
 │                                                                         │
 │   ┌─────────────────────┐                                               │
-│   │   NAT Workflow      │ ◄──── Uses model for inference                │
+│   │    Workflow         │ ◄──── Uses model for inference                │
 │   └─────────────────────┘                                               │
 │            │                                                            │
 │            │ Trajectories                                               │
@@ -70,7 +70,19 @@ The ART backend runs on GPU infrastructure and provides:
 - **vLLM Inference Engine**: Serves the model for inference with log probability support
 - **GRPO Trainer**: Performs weight updates based on submitted trajectories
 
-NAT connects to this backend through the `ARTTrainerAdapter`, which handles the protocol for submitting trajectories and monitoring training.
+NeMo Agent toolkit connects to this backend through the `ARTTrainerAdapter`, which handles the protocol for submitting trajectories and monitoring training.
+
+### Supported Agent Frameworks
+
+The following table highlights the current support matrix for using ART with different agent frameworks in the NeMo Agent toolkit:
+
+| Agent Framework        | Support | 
+|------------------------|--------------------------------------------------|
+| LangChain or LangGraph | ✅ Supported                                      |
+| Google ADK             | ✅ Supported                                      |
+| LlamaIndex             | ✅ Supported                                      |
+| All others             | 🛠️ In Progress                                   |
+
 
 ## Installation
 
@@ -234,7 +246,7 @@ The trainer has no additional configuration options; it uses the shared `finetun
 
 ### ARTTrajectoryBuilder
 
-The `ARTTrajectoryBuilder` collects training trajectories through NAT's evaluation system:
+The `ARTTrajectoryBuilder` collects training trajectories through the NeMo Agent toolkit evaluation system:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -286,7 +298,7 @@ The `ARTTrajectoryBuilder` collects training trajectories through NAT's evaluati
 
 ### The `ARTTrainerAdapter` Class
 
-The `ARTTrainerAdapter` converts NAT trajectories to ART's format and manages training:
+The `ARTTrainerAdapter` converts NeMo Agent toolkit trajectories to ART's format and manages training:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -335,9 +347,9 @@ The `ARTTrainerAdapter` converts NAT trajectories to ART's format and manages tr
 
 1. **ART Client Management**: The adapter maintains an `art.Backend` client and `art.TrainableModel` instance that persist across epochs.
 
-2. **Trajectory Conversion**: NAT's `Trajectory` objects are converted to ART's `art.Trajectory` format:
+2. **Trajectory Conversion**: NeMo Agent toolkit `Trajectory` objects are converted to ART's `art.Trajectory` format:
    ```python
-   # NAT format
+   # NeMo Agent toolkit format
    EpisodeItem(role=EpisodeItemRole.ASSISTANT, content="...", logprobs=...)
 
    # Converted to ART format
@@ -552,7 +564,7 @@ finetuning:
 
 1. Ensure your LLM provider returns logprobs
 2. For vLLM: verify `--enable-log-probs` flag
-3. Check your NAT LLM configuration
+3. Check your LLM configuration
 
 ### Out of Memory
 

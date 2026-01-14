@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,7 @@ limitations under the License.
 
 # Secure Token Storage for Model Context Protocol (MCP) Authentication
 
-The NVIDIA NeMo Agent toolkit provides a configurable, secure token storage mechanism for Model Context Protocol (MCP) OAuth2 authentication. You can store tokens securely using the object store infrastructure, which provides encryption at rest, access controls, and persistence across service restarts.
+The NVIDIA NeMo Agent toolkit provides a configurable, secure token storage mechanism for Model Context Protocol (MCP) OAuth2 authentication. You can store tokens securely using the [object store](../../../build-workflows/object-store.md) infrastructure, which provides encryption at rest, access controls, and persistence across service restarts.
 
 ## Overview
 

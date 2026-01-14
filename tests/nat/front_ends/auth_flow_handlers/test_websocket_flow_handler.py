@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -199,6 +199,7 @@ async def test_websocket_oauth2_flow_error_handling(monkeypatch, mock_server, tm
         add_flow_cb=worker._add_flow,
         remove_flow_cb=worker._remove_flow,
         web_socket_message_handler=_DummyWSHandler(),
+        auth_timeout_seconds=0.05,
     )
 
     # Use a config that will pass pydantic validation but fail OAuth client creation

@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,7 @@ limitations under the License.
 
 # Adding a Memory Provider
 
-This documentation presumes familiarity with the NeMo Agent toolkit plugin architecture, the concept of "function registration" using `@register_function`, and how we define tool/workflow configurations in the NeMo Agent toolkit config described in the [Creating a New Tool and Workflow](../../get-started/tutorials/create-a-new-workflow.md) tutorial.
+This documentation presumes familiarity with the NeMo Agent toolkit [memory module](../../build-workflows/memory.md), [plugin architecture](../plugins.md), the concept of "function registration" using `@register_function`, and how we define [tool](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) and workflow configurations in the NeMo Agent toolkit config described in the [Creating a New Tool and Workflow](../../get-started/tutorials/create-a-new-workflow.md) tutorial.
 
 ## Key Memory Module Components
 
@@ -214,6 +214,10 @@ Explanation:
 - We define a memory entry named `saas_memory` with `_type: mem0_memory`, using the [Mem0](https://mem0.ai/) provider included in the [`nvidia-nat-mem0ai`](https://pypi.org/project/nvidia-nat-mem0ai/) plugin.
 - Then we define two tools (functions in NeMo Agent toolkit terminology) that reference `saas_memory`: `add_memory` and `get_memory`.
 - Finally, the `agent_memory` workflow references these two tool names.
+
+### Automatic Memory with the Auto-Memory Wrapper
+
+For convenient memory persistence, you can use the [automatic memory wrapper](../../components/agents/auto-memory-wrapper/auto-memory-wrapper.md). This wrapper automatically handles storing and retrieving conversation history from your memory backend, eliminating the need to manually manage memory operations in your agent workflows.
 
 ---
 

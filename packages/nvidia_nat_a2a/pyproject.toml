@@ -20,7 +20,7 @@ dependencies = [
   # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
   # Keep sorted!!!
-  "nvidia-nat~=1.4",
+  "nvidia-nat~=1.5",
   "a2a-sdk~=0.3.20",
 ]
 requires-python = ">=3.11,<3.14"
@@ -56,3 +56,6 @@ nat_a2a_client = "nat.plugins.a2a.client.client_impl"
 
 [project.entry-points.'nat.front_ends']
 nat_a2a_server = "nat.plugins.a2a.server.register_frontend"
+
+[project.entry-points.'nat.cli']
+a2a = "nat.plugins.a2a.cli.commands:a2a_command"

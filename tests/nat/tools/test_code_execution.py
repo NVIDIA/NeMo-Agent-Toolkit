@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -96,7 +96,7 @@ async def test_code_gen(httpserver: HTTPServer):
     assert resp.get("stderr") == ""
 
     # Check Timeout
-    resp = await client.execute_code(generated_code="import time; time.sleep(5)", timeout_seconds=2)
+    resp = await client.execute_code(generated_code="import time; time.sleep(0.2)", timeout_seconds=0.05)
     assert resp.get("process_status") == "timeout"
     assert resp.get("stdout") == ""
     assert resp.get("stderr").rstrip() == "Timed out"

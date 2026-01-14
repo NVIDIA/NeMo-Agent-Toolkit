@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,6 +43,10 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
     (
         r"^examples/advanced_agents/profiler_agent/README.md",
         r"^examples/observability/simple_calculator_observability",
+    ),
+    (
+        r"^examples/config_inheritance/README.md",
+        r"^examples/getting_started/simple_calculator",
     ),
     (
         r"^examples/documentation_guides/workflows/text_file_ingest/.*/config.yml",
@@ -105,6 +109,25 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/finetuning/dpo_tic_tac_toe/.*/configs/config.*\.yml$",
         r"^examples/finetuning/dpo_tic_tac_toe/(.*/)?data/",
     ),
+    # Allow A2A example cross-references for OAuth2 setup guide
+    (
+        r"^examples/A2A/calculator_a2a/README.md",
+        r"^examples/A2A/math_assistant_a2a/oauth2-keycloak-setup.md",
+    ),
+    (
+        r"^examples/A2A/math_assistant_a2a/oauth2-keycloak-setup.md",
+        r"^examples/A2A/calculator_a2a/configs/config-protected-oauth2.yml",
+    ),
+    # Allow retail_agent src configs to reference root configs and data
+    (
+        r"^examples/safety_and_security/retail_agent/.*configs/",
+        r"^examples/safety_and_security/retail_agent/(configs|data)/",
+    ),
+    # Allow Deep Research eval config to reference data
+    (
+        r"^examples/frameworks/auto_wrapper/langchain_deep_research/configs/config_with_eval.yml",
+        r"^examples/frameworks/auto_wrapper/langchain_deep_research/data/DeepConsult_top10.csv",
+    ),
 }
 
 ALLOWLISTED_WORDS: set[str] = {
@@ -119,6 +142,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "copy/paste",
     "delete/recreate",
     "edit/score",
+    "Enable/disable",
     "file/console",
     "files/functions",
     "I/O",
@@ -131,7 +155,9 @@ ALLOWLISTED_WORDS: set[str] = {
     "JSON/YAML",
     "LangChain/LangGraph",
     "LangChain/LangGraph.",
+    "LangChain/LangGraph-based",
     "LTE/5G",
+    "N/A",
     "output/jobs/job_",
     "POST/PUT",
     "predictions/forecasts",
@@ -153,6 +179,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "try/except",
     "user/assistant",
     "validate/sanitize",
+    "walmart.com/garden-trowels",
     "Workflows/tools",
     "Yes/No",  #
     # numbers
@@ -172,7 +199,8 @@ ALLOWLISTED_WORDS: set[str] = {
     "ghcr\\.io/.*",  # Container registry references
     # anything starting with nvcr.io
     "nvcr\\.io/.*",  # anything starting with default/
-    "default/.*",
+    "default/.*",  # Models with their prefixes
+    "(azure|openai|gcp|google)/.*",
 }
 
 IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {

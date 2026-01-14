@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,10 @@ limitations under the License.
 # Simple Calculator - Model Context Protocol (MCP)
 
 This example demonstrates how to integrate the NVIDIA NeMo Agent toolkit with [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol/modelcontextprotocol) servers. You'll learn to use remote tools through MCP and publish Agent toolkit functions as MCP services.
+
+This example uses **shared workflow** mode, allowing multiple users to interact concurrently using the same unprotected MCP calculator tools. This is useful for development and testing purposes.
+
+For production use see the [Simple Calculator MCP Protected](../simple_calculator_mcp_protected/) example, which demonstrates how to set up an OAuth2-protected MCP server and securely access it in a per-user workflow.
 
 ## Prerequisites
 
@@ -50,9 +54,7 @@ You can publish the simple calculator tools using MCP using the `nat mcp serve` 
 ### MCP Client Configuration
 NeMo Agent toolkit enables workflows to use MCP tools as functions. The library handles the MCP server connection, tool discovery, and function registration. This allows the workflow to use MCP tools as regular functions.
 
-Tools served by remote MCP servers can be leveraged as NeMo Agent toolkit functions in one of two ways:
-- `mcp_client`: A flexible configuration using function groups, that allows you to connect to a MCP server, dynamically discover the tools it serves, and register them as NeMo Agent toolkit functions. `config-mcp-client.yml` example demonstrates how to use the `mcp_client` function group with both local and remote MCP servers.
-- `mcp_tool_wrapper`: A simple configuration that allows you to wrap a single MCP tool as a NeMo Agent toolkit function. `config-mcp-tool-wrapper.yml` example demonstrates how to use the `mcp_tool_wrapper` function group with a remote MCP server.
+Tools served by remote MCP servers can be leveraged as NeMo Agent toolkit functions using `mcp_client`, a flexible configuration using function groups that allows you to connect to an MCP server, dynamically discover the tools it serves, and register them as NeMo Agent toolkit functions. The `config-mcp-client.yml` example demonstrates how to use the `mcp_client` function group with both local and remote MCP servers.
 
 ### Running the example
 The `config-mcp-client.yml` example demonstrates how to use the `mcp_client` function group with both local and remote MCP servers. This configuration shows how to use multiple MCP servers with different transports in the same workflow.

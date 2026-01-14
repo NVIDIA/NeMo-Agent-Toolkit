@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,7 @@
 
 import asyncio
 import logging
+import time
 import typing
 import uuid
 from collections.abc import Awaitable
@@ -64,6 +65,24 @@ class PerUserBuilderInfo(BaseModel):
                                     description="The timestamp of the last access to this builder")
     ref_count: int = Field(default=0, ge=0, description="The reference count of this builder")
     lock: asyncio.Lock = Field(default_factory=asyncio.Lock, description="Lock for thread-safe ref_count updates")
+
+    # Monitoring metrics
+    created_at: datetime = Field(default_factory=datetime.now, description="When the per-user workflow was created")
+    total_requests: int = Field(default=0, ge=0, description="Total number of requests processed")
+    error_count: int = Field(default=0, ge=0, description="Total number of failed requests")
+    total_latency_ms: float = Field(default=0.0, ge=0, description="Total latency of all requests in milliseconds")
+
+    def record_request(self, latency_ms: float, success: bool) -> None:
+        """Record metrics for a completed request.
+
+        Args:
+            latency_ms: Request latency in milliseconds
+            success: Whether the request was successful
+        """
+        self.total_requests += 1
+        self.total_latency_ms += latency_ms
+        if not success:
+            self.error_count += 1
 
 
 class Session:
@@ -436,19 +455,19 @@ class SessionManager:
             self.set_metadata_from_http_request(http_connection)
 
         builder_info: PerUserBuilderInfo | None = None
+        request_start_time: float | None = None
+        request_success = True
 
         if self._is_workflow_per_user:
-            # Resolve user_id: explicit param > context > default
+            # Resolve user_id: explicit param > context
             if user_id is None:
                 user_id = self._get_user_id_from_context()
             if user_id is None:
-                user_id = self._config.general.default_user_id
-                if user_id:
-                    logger.info(f"Using default_user_id='{user_id}' for per-user workflow")
-            if user_id is None:
                 raise ValueError("user_id is required for per-user workflow but could not be determined. "
-                                 "Ensure 'nat-session' cookie is set, pass user_id explicitly, or set "
-                                 "'general.default_user_id' in config.")
+                                 "Ensure 'nat-session' cookie is set or pass user_id explicitly.")
+
+            # To ensure the user_id is set in the context before the per-user builder is created
+            self._context_state.user_id.set(user_id)
 
             # Get or create per-user builder
             logger.debug(f"Getting or creating per-user builder for user {user_id}")
@@ -459,15 +478,27 @@ class SessionManager:
                 logger.debug(f"Incremented ref_count for user {user_id} to {builder_info.ref_count}")
             # Use per-user semaphore for concurrency control
             semaphore = builder_info.semaphore
+            # Start request timing for metrics
+            request_start_time = time.perf_counter()
         else:
             workflow = self._shared_workflow
             # Use shared semaphore for concurrency control
             semaphore = self._semaphore
 
+        # TODO: this logic needs to be cleaned up since it is a duplicated setting of the user_id
+        # But we need to keep it for now to maintain the token_user_id
+        token_user_id = None
+        if user_id is not None:
+            token_user_id = self._context_state.user_id.set(user_id)
+
         try:
             session = Session(session_manager=self, user_id=user_id, workflow=workflow, semaphore=semaphore)
 
             yield session
+
+        except Exception:
+            request_success = False
+            raise
 
         finally:
             if builder_info is not None:
@@ -475,6 +506,13 @@ class SessionManager:
                     builder_info.ref_count -= 1
                     builder_info.last_activity = datetime.now()
 
+                    # Record request metrics
+                    if request_start_time is not None:
+                        latency_ms = (time.perf_counter() - request_start_time) * 1000
+                        builder_info.record_request(latency_ms, request_success)
+
+            if token_user_id is not None:
+                self._context_state.user_id.reset(token_user_id)
             if token_user_manager is not None:
                 self._context_state.user_manager.reset(token_user_manager)
             if token_user_input is not None:

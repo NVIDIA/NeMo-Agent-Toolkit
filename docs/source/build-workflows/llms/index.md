@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,8 @@ limitations under the License.
 
 # LLMs
 
+[Large language models (LLMs)](https://www.nvidia.com/en-us/glossary/large-language-models/)  are deep learning algorithms that can recognize, summarize, translate, predict, and generate content using very large datasets.
+
 ## Supported LLM Providers
 
 NVIDIA NeMo Agent toolkit supports the following LLM providers:
@@ -27,6 +29,7 @@ NVIDIA NeMo Agent toolkit supports the following LLM providers:
 | [AWS Bedrock](https://aws.amazon.com/bedrock/) | `aws_bedrock` | AWS Bedrock API |
 | [Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/quickstart) | `azure_openai` | Azure OpenAI API |
 | [LiteLLM](https://github.com/BerriAI/litellm) | `litellm` | LiteLLM API |
+| [HuggingFace](https://huggingface.co) | `huggingface` | HuggingFace API |
 
 
 ## LLM Configuration
@@ -51,6 +54,9 @@ llms:
   litellm_llm:
     _type: litellm
     model_name: gpt-4o
+  huggingface_llm:
+    _type: huggingface
+    model_name: Qwen/Qwen3Guard-Gen-0.6B
 ```
 
 ### NVIDIA NIM
@@ -147,6 +153,44 @@ The LiteLLM LLM provider is defined by the {py:class}`~nat.llm.litellm_llm.LiteL
 * `top_p` - The top-p value to use for the model
 * `max_retries` - The maximum number of retries for the request
 
+### HuggingFace
+
+HuggingFace is a general-purpose LLM provider that can be used with any model supported by the HuggingFace API.
+See the [HuggingFace documentation](https://huggingface.co/docs) for more information.
+
+The HuggingFace LLM provider is defined by the {py:class}`~nat.llm.huggingface_llm.HuggingFaceConfig` class.
+
+* `model_name` - The HuggingFace model name or path (for example, `Qwen/Qwen3Guard-Gen-0.6B`)
+* `device` - Device for model execution: `cpu`, `cuda`, `cuda:0`, or `auto` (default: `auto`)
+* `dtype` - Torch data type: `float16`, `bfloat16`, `float32`, or `auto` (default: `auto`)
+* `max_new_tokens` - Maximum number of new tokens to generate (default: `128`)
+* `temperature` - Sampling temperature (default: `0.0`)
+* `trust_remote_code` - Whether to trust remote code when loading the model (default: `false`)
+
+:::{note}
+HuggingFace is a built-in NeMo Agent Toolkit LLM provider, but requires `nvidia-nat[huggingface]` for it to be used.
+In a source installation, `uv pip install -e '.[huggingface]'` can be specified to install the required dependencies.
+:::
+
+### NVIDIA Dynamo (experimental)
+
+Dynamo is an inference engine agnostic LLM provider designed to optimize KV cache reuse of LLMs served on NVIDIA hardware. See the [ai-dynamo repository](https://github.com/ai-dynamo/dynamo) for instructions on how to use Dynamo.
+
+The Dynamo LLM provider is defined by the {py:class}`~nat.llm.dynamo_llm.DynamoModelConfig` class. The provider mirrors the implementation of the OpenAI provider, with additional prefix hints for Dynamo inference optimizations.
+
+* `model_name` - The name of the model to use
+* `temperature` - The temperature to use for the model
+* `top_p` - The top-p value to use for the model
+* `max_tokens` - The maximum number of tokens to generate
+* `seed` - The seed to use for the model
+* `api_key` - The API key to use for the model
+* `base_url` - The base URL to use for the model
+* `max_retries` - The maximum number of retries for the request
+* `prefix_template` - a template for conversation prefix IDs. Setting to null will disable use of `prefix_template`, `prefix_total_requests`, `prefix_osl`, and `prefix_iat`
+* `prefix_total_requests` - Expected number of requests for this conversation
+* `prefix_osl` - Output sequence length for the Dynamo router
+* `prefix_iat` - Inter-arrival time hint for the Dynamo router
+* `request_timeout` - HTTP request timeout in seconds for Dynamo LLM requests
 
 ## Testing Provider
 ### `nat_test_llm`

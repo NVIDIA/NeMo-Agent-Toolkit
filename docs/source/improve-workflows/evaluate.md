@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,15 +17,13 @@ limitations under the License.
 
 # Evaluating NVIDIA NeMo Agent Toolkit Workflows
 
-:::{warning}
-**Experimental Feature**: The Evaluation API is experimental and may change in future releases. Future versions may introduce breaking changes without notice.
-:::
+Evaluation is the process of executing [workflows](../build-workflows/about-building-workflows.md) ([agents](../components/agents/index.md), [tools](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools), or pipelines) on curated test data and measuring their quality using quantitative metrics such as accuracy, reliability, and latency. Each of these metrics in turn is produced by an evaluator.
 
 NeMo Agent toolkit provides a set of evaluators to run and evaluate workflows. In addition to the built-in evaluators, the toolkit provides a plugin system to add custom evaluators.
 
 ## Prerequisites
 
-In addition to the base `nvidia-nat` package, you need to install the `profiling` sub-package to use the `nat eval` command.
+In addition to the base `nvidia-nat` package, you need to install the [`profiling`](./profiler.md) sub-package to use the `nat eval` command.
 
 If you are installing from source, you can install the sub-package by running the following command from the root directory of the NeMo Agent toolkit repository:
 ```bash
@@ -53,7 +51,7 @@ If you encounter rate limiting (`[429] Too Many Requests`) during evaluation, yo
 1. **Reduce concurrency**: Set the `eval.general.max_concurrency` value either in the YAML directly or through the command line with: `--override eval.general.max_concurrency 1`.
 2. **Deploy NIM locally**: Download and deploy NIM on your local machine to avoid rate limitations entirely. To deploy NIM locally:
    - Follow the [NVIDIA NIM deployment guide](https://docs.nvidia.com/nim/large-language-models/latest/getting-started.html) to download and run NIM containers locally
-   - Update your configuration to point to your local NIM endpoint by setting the `base_url` parameter in the LLM configuration:
+   - Update your configuration to point to your local NIM endpoint by setting the `base_url` parameter in the [LLM](../build-workflows/llms/index.md) configuration:
      ```yaml
      llms:
        nim_rag_eval_llm:
@@ -86,10 +84,22 @@ eval:
 The dataset section specifies the dataset to use for running the workflow. The dataset can be of type `json`, `jsonl`, `csv`, `xls`, or `parquet`. The dataset file path is specified using the `file_path` key.
 
 ## Evaluation outputs (what you will get)
-Running `nat eval` produces a set of artifacts in the configured output directory. These files fall into three groups: workflow outputs, evaluator outputs, and profiler observability outputs.
+Running `nat eval` produces a set of artifacts in the configured output directory. These files fall into four groups: workflow outputs, configuration outputs, evaluator outputs, and profiler observability outputs.
 
 ### Workflow outputs (always available)
 - `workflow_output.json`: Per-sample execution results including question, expected `answer`, `generated_answer`, and `intermediate_steps`. Use this to inspect or debug individual runs.
+
+### Configuration outputs (always available)
+For reproducibility and debugging, the evaluation system saves the configuration used for each run:
+- `config_original.yml`: The original configuration file as provided, before any modifications
+- `config_effective.yml`: The final configuration with all command-line overrides applied (the actual configuration used to run the evaluation)
+- `config_metadata.json`: Metadata about the evaluation run, including all command-line arguments such as `--override` flags, `--dataset`, `--reps`, `--endpoint`, and a timestamp
+
+These files allow you to reproduce the exact evaluation conditions or compare configurations between different runs.
+
+:::{note}
+When evaluating remote workflows using the `--endpoint` flag, the saved configuration captures the evaluation settings (dataset, evaluators, endpoint URL) but does not reflect the workflow configuration running on the remote server. To fully reproduce a remote evaluation, you need both the saved evaluation configuration and access to the same workflow configuration on the remote endpoint.
+:::
 
 ### Evaluator outputs (only when configured)
 
@@ -227,7 +237,7 @@ eval:
       llm_name: nim_trajectory_eval_llm
 ```
 
-A judge LLM is used to evaluate the trajectory produced by the workflow, taking into account the tools available during execution. It returns a floating-point score between 0 and 1, where 1.0 indicates a perfect trajectory.
+A judge LLM is used to evaluate the trajectory produced by the workflow, taking into account the [tools](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) available during execution. It returns a floating-point score between 0 and 1, where 1.0 indicates a perfect trajectory.
 
 To configure the judge LLM, define it in the `llms` section of the configuration file, and reference it in the evaluator configuration using the `llm_name` key.
 
@@ -488,8 +498,8 @@ the swe-bench evaluator:
 eval:
   general:
     dataset:
-      _type: json
-      file_path: examples/evaluation_and_profiling/swe_bench/data/test_dataset_lite.json
+      _type: parquet
+      file_path: hf://datasets/princeton-nlp/SWE-bench_Lite/data/test-00000-of-00001.parquet
       id_key: instance_id
       structure: # For swe-bench the entire row is the input
         disable: true
@@ -511,8 +521,8 @@ and `sympy__sympy-21055`. The evaluation iteratively develops and debugs the wor
 ```yaml
 eval:
     dataset:
-      _type: json
-      file_path: examples/evaluation_and_profiling/swe_bench/data/test_dataset_verified.json
+      _type: parquet
+      file_path: hf://datasets/princeton-nlp/SWE-bench_Verified/data/test-00000-of-00001.parquet
       id_key: instance_id
       structure:
         disable: true
@@ -529,8 +539,8 @@ You can also skip entries from the dataset. Here is an example configuration to 
 ```yaml
 eval:
     dataset:
-      _type: json
-      file_path: examples/evaluation_and_profiling/swe_bench/data/test_dataset_verified.json
+      _type: parquet
+      file_path: hf://datasets/princeton-nlp/SWE-bench_Verified/data/test-00000-of-00001.parquet
       id_key: instance_id
       structure:
         disable: true
@@ -690,8 +700,8 @@ Workflows can use the swe-bench evaluator to solve swe-bench problems. To evalua
 eval:
   general:
     dataset:
-      _type: json
-      file_path: examples/evaluation_and_profiling/swe_bench/data/test_dataset_lite.json
+      _type: parquet
+      file_path: hf://datasets/princeton-nlp/SWE-bench_Lite/data/test-00000-of-00001.parquet
       id_key: instance_id
       structure: # For swe-bench the entire row is the input
         disable: true

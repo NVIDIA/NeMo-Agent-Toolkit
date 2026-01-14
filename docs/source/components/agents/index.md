@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,11 @@ limitations under the License.
 
 # Agents
 
-An agent is a system that can use an LLM to reason through a problem, create a plan to solve the problem, and execute the plan with the help of a set of tools. Refer to [Introduction to LLM Agents](https://developer.nvidia.com/blog/introduction-to-llm-agents/) for more details on this. NeMo Agent toolkit includes several agents out of the box to choose from. In addition to this NeMo Agent toolkit makes it easy to write a custom agent, for an example of this refer to the Alert Triage example (`examples/advanced_agents/alert_triage_agent`) in the [repository](https://github.com/NVIDIA/NeMo-Agent-Toolkit).
+An [agent](https://developer.nvidia.com/blog/introduction-to-llm-agents/#what_is_an_ai_agent) is a system that can use an [LLM](../../build-workflows/llms/index.md) to reason through a problem, create a plan to solve the problem, and execute the plan with the help of a set of [tools](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools). Refer to [Introduction to LLM Agents](https://developer.nvidia.com/blog/introduction-to-llm-agents/) for more details on this. In NeMo Agent toolkit, agents are implemented as a special type of [function](../../build-workflows/functions-and-function-groups/functions.md) that can orchestrate other functions.
+
+NeMo Agent toolkit includes several agents out of the box to choose from. In addition to this NeMo Agent toolkit makes it easy to write a custom agent, for an example of this refer to the Alert Triage example (`examples/advanced_agents/alert_triage_agent`) in the [repository](https://github.com/NVIDIA/NeMo-Agent-Toolkit).
+
+NeMo Agent Toolkit also provides an [Automatic Memory Wrapper](./auto-memory-wrapper/index.md) that enhances any existing agent with automatic memory capture and retrieval capabilities.
 
 
 ```{toctree}
@@ -30,4 +34,5 @@ Responses API and Agent <./responses-api-and-agent/index.md>
 Router Agent <./router-agent/index.md>
 Sequential Executor <./sequential-executor/index.md>
 Tool Calling Agent <./tool-calling-agent/index.md>
+Automatic Memory Wrapper <./auto-memory-wrapper/index.md>
 ```

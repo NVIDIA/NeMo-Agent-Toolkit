@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -52,6 +52,7 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
     # Advanced options
     use_pkce: bool = Field(default=True, description="Use PKCE for authorization code flow")
 
+    # These fields are only used for shared workflow (not per-user workflows)
     default_user_id: str | None = Field(default=None, description="Default user ID for authentication")
     allow_default_user_id_for_tool_calls: bool = Field(default=True, description="Allow default user ID for tool calls")
 

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -195,16 +195,19 @@ def process_nat_eval(
                                "have a partially completed dataset.")
 
     # Create the configuration object
-    config = EvaluationRunConfig(
-        config_file=config_file,
-        dataset=str(dataset) if dataset else None,
-        result_json_path=result_json_path,
-        skip_workflow=skip_workflow,
-        skip_completed_entries=skip_completed_entries,
-        endpoint=endpoint,
-        endpoint_timeout=endpoint_timeout,
-        reps=reps,
-        override=override,
-        user_id=user_id,
-    )
+    # Only include user_id if explicitly provided via CLI, otherwise use the default
+    config_kwargs = {
+        "config_file": config_file,
+        "dataset": str(dataset) if dataset else None,
+        "result_json_path": result_json_path,
+        "skip_workflow": skip_workflow,
+        "skip_completed_entries": skip_completed_entries,
+        "endpoint": endpoint,
+        "endpoint_timeout": endpoint_timeout,
+        "reps": reps,
+        "override": override,
+    }
+    if user_id is not None:
+        config_kwargs["user_id"] = user_id
+    config = EvaluationRunConfig(**config_kwargs)
     asyncio.run(run_and_evaluate(config))

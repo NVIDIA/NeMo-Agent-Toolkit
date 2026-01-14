@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -208,13 +208,14 @@ class JobStore(DaskClientMixin):
         AsyncSession
             An active SQLAlchemy async session with an open transaction.
         """
-        async with self._session() as session:
-            async with session.begin():
-                yield session
-
-        # Removes the current task key from the session registry, preventing
-        # potential memory leaks
-        await self._session.remove()
+        try:
+            async with self._session() as session:
+                async with session.begin():
+                    yield session
+        finally:
+            # Removes the current task key from the session registry, preventing
+            # potential memory leaks
+            await self._session.remove()
 
     def ensure_job_id(self, job_id: str | None) -> str:
         """
@@ -502,13 +503,14 @@ class JobStore(DaskClientMixin):
 
         return updated_at + timedelta(seconds=job.expiry_seconds)
 
-    async def cleanup_expired_jobs(self):
+    async def cleanup_expired_jobs(self) -> int:
         """
         Cleanup expired jobs, keeping the most recent one.
 
         Updated_at is used instead of created_at to determine the most recent job. This is because jobs may not be
         processed in the order they are created.
         """
+        logger.info("Starting cleanup of expired jobs")
         now = datetime.now(UTC)
 
         stmt = select(JobInfo).where(
@@ -536,9 +538,11 @@ class JobStore(DaskClientMixin):
                         elif os.path.isdir(job.output_path):
                             shutil.rmtree(job.output_path)
 
-            if len(expired_ids) > 0:
+            num_expired = len(expired_ids)
+            if num_expired > 0:
                 successfully_expired = []
                 for job_id in expired_ids:
+                    var = None
                     try:
                         var = Variable(name=job_id, client=client)
                         try:
@@ -549,13 +553,21 @@ class JobStore(DaskClientMixin):
                         except TimeoutError:
                             pass
 
-                        var.delete()
                         successfully_expired.append(job_id)
                     except Exception:
                         logger.exception("Failed to expire %s", job_id)
 
+                    finally:
+                        if var is not None:
+                            try:
+                                var.delete()
+                            except Exception:
+                                logger.exception("Failed to delete variable %s", job_id)
+
                 await session.execute(
                     update(JobInfo).where(JobInfo.job_id.in_(successfully_expired)).values(is_expired=True))
+
+            return num_expired
 
 
 def get_db_engine(db_url: str | None = None, echo: bool = False, use_async: bool = True) -> "Engine | AsyncEngine":

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -90,6 +90,11 @@ class EvalGeneralConfig(BaseModel):
 
     # Inference profiler
     profiler: ProfilerConfig | None = None
+
+    # When enabled, validates that all LLM endpoints are accessible before starting evaluation.
+    # This catches deployment issues early (e.g., 404 errors from canceled training jobs).
+    # Recommended for production workflows. Opt-in for now, may become default in future.
+    validate_llm_endpoints: bool = False
 
     # overwrite the output_dir with the output config if present
     @model_validator(mode="before")

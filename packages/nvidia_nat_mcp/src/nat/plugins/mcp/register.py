@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,8 @@
 # flake8: noqa
 # isort:skip_file
 
-# Import any providers which need to be automatically registered here
+# Register client components
+from .client import client_impl
 
-from . import client_impl
-from . import tool
+# Register server/frontend components
+from .server import register_frontend

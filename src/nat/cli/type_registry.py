@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -125,12 +125,17 @@ EmbedderClientRegisteredCallableT = Callable[[EmbedderBaseConfigT, Builder], Abs
 EmbedderProviderRegisteredCallableT = Callable[[EmbedderBaseConfigT, Builder],
                                                AbstractAsyncContextManager[EmbedderProviderInfo]]
 EvaluatorRegisteredCallableT = Callable[[EvaluatorBaseConfigT, EvalBuilder], AbstractAsyncContextManager[EvaluatorInfo]]
+TrainerRegisteredCallableT = Callable[[TrainerConfigT, Builder], AbstractAsyncContextManager[Trainer]]
+TrainerAdapterRegisteredCallableT = Callable[[TrainerAdapterConfigT, Builder],
+                                             AbstractAsyncContextManager[TrainerAdapter]]
+TrajectoryBuilderRegisteredCallableT = Callable[[TrajectoryBuilderConfigT, Builder],
+                                                AbstractAsyncContextManager[TrajectoryBuilder]]
 FrontEndRegisteredCallableT = Callable[[FrontEndConfigT, Config], AbstractAsyncContextManager[FrontEndBase]]
 FunctionRegisteredCallableT = Callable[[FunctionConfigT, Builder],
                                        AbstractAsyncContextManager[FunctionInfo | Callable | FunctionBase]]
 FunctionGroupRegisteredCallableT = Callable[[FunctionGroupConfigT, Builder], AbstractAsyncContextManager[FunctionGroup]]
 MiddlewareRegisteredCallableT = Callable[[MiddlewareBaseConfigT, Builder], AbstractAsyncContextManager[Middleware]]
-TTCStrategyRegisterCallableT = Callable[[TTCStrategyBaseConfigT, Builder], AbstractAsyncContextManager[StrategyBase]]
+TTCStrategyRegisteredCallableT = Callable[[TTCStrategyBaseConfigT, Builder], AbstractAsyncContextManager[StrategyBase]]
 LLMClientRegisteredCallableT = Callable[[LLMBaseConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
 LLMProviderRegisteredCallableT = Callable[[LLMBaseConfigT, Builder], AbstractAsyncContextManager[LLMProviderInfo]]
 LoggingMethodRegisteredCallableT = Callable[[LoggingMethodConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
@@ -194,7 +199,7 @@ class RegisteredTrainerInfo(RegisteredInfo[TrainerConfig]):
     Represents a registered Trainer. Trainers are responsible for fine-tuning LLMs.
     """
 
-    build_fn: TrainerBuildCallableT = Field(repr=False)
+    build_fn: TrainerRegisteredCallableT = Field(repr=False)
 
 
 class RegisteredTrainerAdapterInfo(RegisteredInfo[TrainerAdapterConfig]):
@@ -203,7 +208,7 @@ class RegisteredTrainerAdapterInfo(RegisteredInfo[TrainerAdapterConfig]):
     different frameworks.
     """
 
-    build_fn: TrainerAdapterBuildCallableT = Field(repr=False)
+    build_fn: TrainerAdapterRegisteredCallableT = Field(repr=False)
 
 
 class RegisteredTrajectoryBuilderInfo(RegisteredInfo[TrajectoryBuilderConfig]):
@@ -212,7 +217,7 @@ class RegisteredTrajectoryBuilderInfo(RegisteredInfo[TrajectoryBuilderConfig]):
     fine-tuning.
     """
 
-    build_fn: TrajectoryBuilderBuildCallableT = Field(repr=False)
+    build_fn: TrajectoryBuilderRegisteredCallableT = Field(repr=False)
 
 
 class RegisteredFrontEndInfo(RegisteredInfo[FrontEndBaseConfig]):
@@ -362,7 +367,7 @@ class RegisteredTTCStrategyInfo(RegisteredInfo[TTCStrategyBaseConfig]):
     Represents a registered TTC strategy.
     """
 
-    build_fn: TTCStrategyRegisterCallableT = Field(repr=False)
+    build_fn: TTCStrategyRegisteredCallableT = Field(repr=False)
 
 
 class RegisteredToolWrapper(BaseModel):

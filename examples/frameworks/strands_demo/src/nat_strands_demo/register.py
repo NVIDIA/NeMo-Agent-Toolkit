@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -56,9 +56,8 @@ async def strands_demo(config: StrandsDemoConfig, builder: Builder) -> AsyncGene
     """
     Create a Strands agent workflow that queries documentation URLs.
 
-    This workflow demonstrates NeMo Agent toolkit's Strands integration
-    by creating an agent that uses a URL directory and HTTP request tool
-    to answer questions about Strands documentation.
+    This workflow demonstrates the Strands integration provided by the NeMo Agent toolkit by creating an agent that uses
+    a URL directory and HTTP request tool to answer questions about Strands documentation.
 
     Args:
         config: Configuration specifying LLM, tools, and system prompt
