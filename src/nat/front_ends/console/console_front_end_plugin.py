@@ -90,9 +90,10 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
 
             # Run the workflow
             with open(self.front_end_config.input_file, encoding="utf-8") as f:
-                async with session_manager.session(user_id=self.front_end_config.user_id) as session:
-                    async with session.run(f) as runner:
-                        runner_outputs = await runner.result(to_type=str)
+                input_content = f.read()
+            async with session_manager.session(user_id=self.front_end_config.user_id) as session:
+                async with session.run(input_content) as runner:
+                    runner_outputs = await runner.result(to_type=str)
         else:
             assert False, "Should not reach here. Should have been caught by pre_run"
 
