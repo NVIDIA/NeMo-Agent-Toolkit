@@ -148,10 +148,11 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 ## Connecting and Orchestrating Agents
 
 ### Model Context Protocol (MCP)
-- **[`simple_auth_mcp`](MCP/simple_auth_mcp/README.md)**: Demonstrates how to use the NVIDIA NeMo Agent toolkit with MCP servers that require authentication using OAuth2 flows
-- **[`simple_calculator_mcp`](MCP/simple_calculator_mcp/README.md)**: Demonstrates Model Context Protocol support using the basic simple calculator example
+- **[`simple_calculator_mcp`](MCP/simple_calculator_mcp/README.md)**: Demonstrates an end-to-end MCP workflow with NVIDIA NeMo Agent Toolkit functioning as both MCP client and server. The MCP server is unprotected and intended for development and testing purposes
+- **[`simple_calculator_mcp_protected`](MCP/simple_calculator_mcp_protected/README.md)**: Demonstrates an end-to-end OAuth2-protected MCP workflow with NVIDIA NeMo Agent Toolkit functioning as both MCP client and server. Demonstrates the use of per-user workflows to securely access the protected MCP server
+- **[`simple_auth_mcp`](MCP/simple_auth_mcp/README.md)**: Demonstrates a NVIDIA NeMo Agent Toolkit workflow connecting to a third-party MCP server that requires authentication using OAuth2 flows
+- **[`service_account_auth_mcp`](MCP/service_account_auth_mcp/README.md)**: Demonstrates how to use the NVIDIA NeMo Agent toolkit with third-party MCP servers that support service account authentication
 - **[`kaggle_mcp`](MCP/kaggle_mcp/README.md)**: Demonstrates how to use the Kaggle MCP server with NVIDIA NeMo Agent Toolkit to interact with Kaggle's datasets, notebooks, models, and competitions
-- **[`service_account_auth_mcp`](MCP/service_account_auth_mcp/README.md)**: Demonstrates how to use the NVIDIA NeMo Agent toolkit with MCP servers that support service account authentication
 
 ### Agent2Agent Protocol (A2A)
 - **[`currency_agent_a2a`](./A2A/currency_agent_a2a/README.md)**: Demonstrates a NVIDIA NeMo Agent Toolkit workflow connecting to a third-party A2A server, the LangGraph-based currency agent. The workflow acts as an A2A client to perform currency conversions and financial queries with time-based context

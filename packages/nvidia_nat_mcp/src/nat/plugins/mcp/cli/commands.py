@@ -26,6 +26,7 @@ from pydantic import BaseModel
 
 from nat.builder.function import FunctionGroup
 from nat.cli.commands.start import start_command
+from nat.plugins.mcp.client.client_config import MCPClientBaseConfig
 
 logger = logging.getLogger(__name__)
 
@@ -194,8 +195,10 @@ async def _create_mcp_client_config(
     auth_redirect_uri: str | None,
     auth_user_id: str | None,
     auth_scopes: list[str] | None,
-):
+    per_user: bool = False,
+) -> tuple[str, MCPClientBaseConfig]:
     from nat.plugins.mcp.client.client_config import MCPClientConfig
+    from nat.plugins.mcp.client.client_config import PerUserMCPClientConfig
 
     if url and transport == "streamable-http" and auth_redirect_uri:
         try:
@@ -214,8 +217,14 @@ async def _create_mcp_client_config(
                 "[WARNING] MCP OAuth2 authentication requires nvidia-nat-mcp package.",
                 err=True,
             )
+    if per_user:
+        group_cfg = PerUserMCPClientConfig(server=server_cfg)
+        group_name = "per_user_mcp_client"
+    else:
+        group_cfg = MCPClientConfig(server=server_cfg)
+        group_name = "mcp_client"
 
-    return MCPClientConfig(server=server_cfg)
+    return group_name, group_cfg
 
 
 async def _create_bearer_token_auth_config(
@@ -263,6 +272,8 @@ async def list_tools_via_function_group(
     auth_redirect_uri: str | None = None,
     auth_user_id: str | None = None,
     auth_scopes: list[str] | None = None,
+    per_user: bool = False,
+    user_id: str | None = None,
 ) -> list[dict[str, str | None]]:
     """List tools by constructing the mcp_client function group and introspecting functions.
 
@@ -272,7 +283,6 @@ async def list_tools_via_function_group(
     try:
         # Ensure the registration side-effects are loaded
         from nat.builder.workflow_builder import WorkflowBuilder
-        from nat.plugins.mcp.client.client_config import MCPClientConfig
         from nat.plugins.mcp.client.client_config import MCPServerConfig
     except ImportError:
         click.echo(
@@ -292,20 +302,26 @@ async def list_tools_via_function_group(
         env=env if transport == 'stdio' else None,
     )
 
-    group_cfg = MCPClientConfig(server=server_cfg)
-
     tools: list[dict[str, str | None]] = []
 
     async with WorkflowBuilder() as builder:  # type: ignore
+        # Set user_id in context for per-user workflows
+        if per_user:
+            from nat.builder.context import ContextState
+            context_state = ContextState()
+            context_state.user_id.set(user_id)
+            logger.debug(f"Set user_id in context: {user_id}")
+
         # Add auth provider if url is provided and auth_redirect_uri is given (only for streamable-http)
-        group_cfg = await _create_mcp_client_config(builder,
-                                                    server_cfg,
-                                                    url,
-                                                    transport,
-                                                    auth_redirect_uri,
-                                                    auth_user_id,
-                                                    auth_scopes)
-        group = await builder.add_function_group("mcp_client", group_cfg)
+        group_name, group_cfg = await _create_mcp_client_config(builder,
+                                                               server_cfg,
+                                                               url,
+                                                               transport,
+                                                               auth_redirect_uri,
+                                                               auth_user_id,
+                                                               auth_scopes,
+                                                               per_user)
+        group = await builder.add_function_group(group_name, group_cfg)
 
         # Access functions exposed by the group
         fns = await group.get_accessible_functions()
@@ -329,7 +345,7 @@ async def list_tools_via_function_group(
             return {"name": name, "description": getattr(fn_obj, 'description', ''), "input_schema": schema_str}
 
         if tool_name:
-            full = f"mcp_client{FunctionGroup.SEPARATOR}{tool_name}"
+            full = f"{group_name}{FunctionGroup.SEPARATOR}{tool_name}"
             fn = fns.get(full)
             if fn is not None:
                 tools.append(to_tool_entry(full, fn))
@@ -539,6 +555,10 @@ def mcp_client_tool_group():
               help='OAuth2 redirect URI for authentication (streamable-http only, not with --direct)')
 @click.option('--auth-user-id', help='User ID for authentication (streamable-http only, not with --direct)')
 @click.option('--auth-scopes', help='OAuth2 scopes (comma-separated, streamable-http only, not with --direct)')
+@click.option('--per-user', is_flag=True, help='Use per-user function group instead of shared function group')
+@click.option('--user-id',
+              default='nat_mcp_cli_user_id',
+              help='User ID for per-user workflows (defaults to nat_mcp_cli_user_id)')
 @click.pass_context
 def mcp_client_tool_list(ctx,
                          direct,
@@ -553,7 +573,9 @@ def mcp_client_tool_list(ctx,
                          auth,
                          auth_redirect_uri,
                          auth_user_id,
-                         auth_scopes):
+                         auth_scopes,
+                         per_user,
+                         user_id):
     """List MCP tool names (default) or show detailed tool information.
 
     Use --detail for full output including descriptions and input schemas.
@@ -619,7 +641,9 @@ def mcp_client_tool_list(ctx,
                                           env=stdio_env,
                                           auth_redirect_uri=auth_redirect_uri,
                                           auth_user_id=auth_user_id,
-                                          auth_scopes=auth_scopes_list))
+                                          auth_scopes=auth_scopes_list,
+                                          per_user=per_user,
+                                          user_id=user_id))
 
     if json_output:
         click.echo(json.dumps(tools, indent=2))
@@ -836,7 +860,9 @@ async def call_tool_and_print(command: str | None,
                               auth_user_id: str | None = None,
                               auth_scopes: list[str] | None = None,
                               bearer_token: str | None = None,
-                              bearer_token_env: str | None = None) -> str:
+                              bearer_token_env: str | None = None,
+                              per_user: bool = False,
+                              user_id: str | None = None) -> str:
     """Call an MCP tool either directly or via the function group and return output.
 
     When ``direct`` is True, uses the raw MCP protocol client (bypassing the
@@ -869,6 +895,7 @@ async def call_tool_and_print(command: str | None,
         from nat.builder.workflow_builder import WorkflowBuilder
         from nat.plugins.mcp.client.client_config import MCPClientConfig
         from nat.plugins.mcp.client.client_config import MCPServerConfig
+        from nat.plugins.mcp.client.client_config import PerUserMCPClientConfig
     except ImportError:
         click.echo(
             "MCP client functionality requires nvidia-nat-mcp package. Install with: uv pip install nvidia-nat-mcp",
@@ -884,35 +911,39 @@ async def call_tool_and_print(command: str | None,
     )
 
     async with WorkflowBuilder() as builder:  # type: ignore
-        # Configure authentication if provided
+        # Set user_id in context for per-user workflows
+        if per_user:
+            from nat.builder.context import ContextState
+            context_state = ContextState()
+            context_state.user_id.set(user_id)
+            logger.debug(f"Set user_id in context: {user_id}")
+
         if bearer_token or bearer_token_env:
             # Use bearer token auth
             try:
                 await _create_bearer_token_auth_config(builder, server_cfg, bearer_token, bearer_token_env)
-                group_cfg = MCPClientConfig(server=server_cfg)
+                if per_user:
+                    group_cfg = PerUserMCPClientConfig(server=server_cfg)
+                    group_name = "per_user_mcp_client"
+                else:
+                    group_cfg = MCPClientConfig(server=server_cfg)
+                    group_name = "mcp_client"
             except Exception as e:
                 click.echo(f"[ERROR] Failed to configure bearer token authentication: {e}", err=True)
                 return ""
-        elif url and transport == 'streamable-http' and auth_redirect_uri:
-            # Use OAuth2 auth
-            try:
-                group_cfg = await _create_mcp_client_config(builder,
-                                                            server_cfg,
-                                                            url,
-                                                            transport,
-                                                            auth_redirect_uri,
-                                                            auth_user_id,
-                                                            auth_scopes)
-            except ImportError:
-                click.echo("[WARNING] MCP OAuth2 authentication requires nvidia-nat-mcp package.", err=True)
-                group_cfg = MCPClientConfig(server=server_cfg)
         else:
-            # No auth
-            group_cfg = MCPClientConfig(server=server_cfg)
+            group_name, group_cfg = await _create_mcp_client_config(builder,
+                                                         server_cfg,
+                                                         url,
+                                                         transport,
+                                                         auth_redirect_uri,
+                                                         auth_user_id,
+                                                         auth_scopes,
+                                                         per_user)
 
-        group = await builder.add_function_group("mcp_client", group_cfg)
+        group = await builder.add_function_group(group_name, group_cfg)
         fns = await group.get_accessible_functions()
-        full = f"mcp_client{FunctionGroup.SEPARATOR}{tool_name}"
+        full = f"{group_name}{FunctionGroup.SEPARATOR}{tool_name}"
         fn = fns.get(full)
         if fn is None:
             raise RuntimeError(f"Tool '{tool_name}' not found. Available: {list(fns.keys())}")
@@ -949,6 +980,10 @@ async def call_tool_and_print(command: str | None,
 @click.option('--bearer-token', help='Bearer token for authentication (streamable-http only, not with --direct)')
 @click.option('--bearer-token-env',
               help='Environment variable name containing bearer token (e.g., KAGGLE_BEARER_TOKEN)')
+@click.option('--per-user', is_flag=True, help='Use per-user function group instead of shared function group')
+@click.option('--user-id',
+              default='nat_mcp_cli_user_id',
+              help='User ID for per-user workflows (defaults to nat_mcp_cli_user_id)')
 def mcp_client_tool_call(tool_name: str,
                          direct: bool,
                          url: str | None,
@@ -962,7 +997,9 @@ def mcp_client_tool_call(tool_name: str,
                          auth_user_id: str | None,
                          auth_scopes: str | None,
                          bearer_token: str | None,
-                         bearer_token_env: str | None) -> None:
+                         bearer_token_env: str | None,
+                         per_user: bool,
+                         user_id: str | None) -> None:
     """Call an MCP tool by name with optional JSON arguments.
 
     Validates transport parameters, parses ``--json-args`` into a dictionary,
@@ -1046,6 +1083,8 @@ def mcp_client_tool_call(tool_name: str,
                 auth_scopes=auth_scopes_list,
                 bearer_token=bearer_token,
                 bearer_token_env=bearer_token_env,
+                per_user=per_user,
+                user_id=user_id,
             ))
         if output:
             click.echo(output)

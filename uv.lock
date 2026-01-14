@@ -5562,6 +5562,21 @@ requires-dist = [
 ]
 
 [[package]]
+name = "nat-simple-calculator-mcp-protected"
+source = { editable = "examples/MCP/simple_calculator_mcp_protected" }
+dependencies = [
+    { name = "nat-simple-calculator" },
+    { name = "nvidia-nat", extra = ["langchain", "mcp"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
+    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
+    { name = "nvidia-nat", extras = ["mcp"], editable = "." },
+]
+
+[[package]]
 name = "nat-simple-calculator-observability"
 source = { editable = "examples/observability/simple_calculator_observability" }
 dependencies = [
@@ -6117,6 +6132,7 @@ examples = [
     { name = "nat-simple-calculator-eval" },
     { name = "nat-simple-calculator-hitl" },
     { name = "nat-simple-calculator-mcp" },
+    { name = "nat-simple-calculator-mcp-protected" },
     { name = "nat-simple-calculator-observability" },
     { name = "nat-simple-rag" },
     { name = "nat-simple-web-query" },
@@ -6295,6 +6311,7 @@ requires-dist = [
     { name = "nat-simple-calculator-eval", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/simple_calculator_eval" },
     { name = "nat-simple-calculator-hitl", marker = "extra == 'examples'", editable = "examples/HITL/simple_calculator_hitl" },
     { name = "nat-simple-calculator-mcp", marker = "extra == 'examples'", editable = "examples/MCP/simple_calculator_mcp" },
+    { name = "nat-simple-calculator-mcp-protected", marker = "extra == 'examples'", editable = "examples/MCP/simple_calculator_mcp_protected" },
     { name = "nat-simple-calculator-observability", marker = "extra == 'examples'", editable = "examples/observability/simple_calculator_observability" },
     { name = "nat-simple-rag", marker = "extra == 'examples'", editable = "examples/RAG/simple_rag" },
     { name = "nat-simple-web-query", marker = "extra == 'examples'", editable = "examples/getting_started/simple_web_query" },
