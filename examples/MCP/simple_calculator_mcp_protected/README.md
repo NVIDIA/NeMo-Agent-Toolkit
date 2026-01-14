@@ -273,7 +273,7 @@ docker rm -f keycloak
 
 ### Server Configuration (`configs/config-server.yml`)
 
-This configures the protected MCP server with OAuth2 resource server authentication:
+This configures the protected MCP server frontend with OAuth2 resource server authentication:
 
 ```yaml
 general:
@@ -285,14 +285,7 @@ general:
       issuer_url: http://localhost:8080/realms/master
       scopes: [calculator_mcp_execute]
       audience: http://localhost:9902
-
-function_groups:
-  calculator:
-    _type: calculator
-
-workflow:
-  _type: react_agent
-  tool_names: [calculator]
+      jwks_uri: http://localhost:8080/realms/master/protocol/openid-connect/certs
 ```
 
 ### Client Configuration (`configs/config-client.yml`)
