@@ -248,9 +248,9 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
     dask_threads_per_worker: int = Field(
         default=1,
         description=(
-            "Number of threads to use per worker when dask_workers is set to 'processes'. This parameter is only used "
-            "when the value is greater than 0 and scheduler_address is `None` and a local Dask cluster is created. "
-            "When set to 0 the value uses the Dask default."))
+            "Number of threads to use per worker. This parameter is only used when the value is greater than 0 and "
+            "scheduler_address is `None` and a local Dask cluster is created. When set to 0 the value uses the Dask "
+            "default."))
     step_adaptor: StepAdaptorConfig = StepAdaptorConfig()
 
     workflow: typing.Annotated[EndpointBase, Field(description="Endpoint for the default workflow.")] = EndpointBase(
