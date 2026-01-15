@@ -381,7 +381,7 @@ class NeMoCustomizerTrainerAdapter(TrainerAdapter):
 
         last_status: str | None = None
         consecutive_status_failures = 0
-        max_status_failures = 3
+        max_status_failures = self.adapter_config.max_consecutive_status_failures
 
         while True:
             status = await self.status(ref)
@@ -392,14 +392,21 @@ class NeMoCustomizerTrainerAdapter(TrainerAdapter):
 
             if is_status_check_failure:
                 consecutive_status_failures += 1
-                logger.warning(f"Failed to get status for job {ref.run_id} "
-                               f"(attempt {consecutive_status_failures}/{max_status_failures}): {status.message}")
                 if consecutive_status_failures >= max_status_failures:
-                    logger.error(f"Giving up after {max_status_failures} consecutive status check failures")
+                    logger.error(f"Failed to get status for job {ref.run_id} after {max_status_failures} "
+                                 f"consecutive attempts. Last error: {status.message}. "
+                                 f"This may indicate a persistent NeMo Customizer service issue. "
+                                 f"Check service health at {self.adapter_config.entity_host}/health")
                     # Fall through to let the normal failure handling take over
                 else:
-                    # Continue polling - don't treat this as a real failure yet
-                    await asyncio.sleep(interval)
+                    logger.warning(f"Transient failure checking status for job {ref.run_id} "
+                                   f"(attempt {consecutive_status_failures}/{max_status_failures}). "
+                                   f"Error: {status.message}. "
+                                   f"This is likely a temporary NeMo Customizer service issue. Retrying...")
+                    # Exponential backoff: wait longer on repeated failures
+                    backoff_multiplier = 1.5**consecutive_status_failures
+                    wait_time = interval * backoff_multiplier
+                    await asyncio.sleep(wait_time)
                     continue
             else:
                 # Reset counter on successful status check
