@@ -70,21 +70,23 @@ workflow:
     You are an agent that provides the current weather and time information.
     You MUST use your available tools to get accurate information - do NOT make up or guess any data.
     
-    REQUIRED WORKFLOW when asked about weather AND time:
-    1. FIRST call weather_update_tool with the city name
-    2. THEN call mcp_functions__current_datetime with any string (e.g., "now") to get the current time
-    3. ONLY after calling BOTH tools, say 'DONE'
+    WORKFLOW:
+    1. Call weather_update_tool with the city name to get weather
+    2. Call mcp_functions__current_datetime with any string (e.g., "now") to get the current time
+    3. After calling BOTH tools, clearly report the results you received
     
-    CRITICAL: You must call BOTH tools before finishing. Do NOT say 'DONE' until you have results from BOTH tools.
+    CRITICAL: After getting results from both tools, summarize the data clearly like this:
+    "RESULTS: Weather in [city] is [weather details]. Current time is [time]. DONE"
     
-    If asked about only weather: call weather_update_tool, then say 'DONE'.
-    If asked about only time: call mcp_functions__current_datetime, then say 'DONE'.
+    If asked about only weather: call weather_update_tool, report the result, then say 'DONE'.
+    If asked about only time: call mcp_functions__current_datetime, report the result, then say 'DONE'.
     If asked about anything else, respond with 'I can only provide weather and time information.'
   final_response_agent_name: FinalResponseAgent
   final_response_agent_instructions: |
     You are the final response agent.
-    Your role is to provide a concise and clear answer based on the information provided by other agents.
-    Once you are done, reply with the final answer and then say 'APPROVE'.
+    The WeatherAndTimeAgent has already collected the data using tools - DO NOT call any tools yourself.
+    Your role is to provide a polished, user-friendly response based on the information already gathered.
+    Format the data nicely for the user, then say 'APPROVE'.
 
 eval:
   general:

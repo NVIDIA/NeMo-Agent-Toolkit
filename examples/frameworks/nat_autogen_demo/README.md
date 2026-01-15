@@ -82,9 +82,11 @@ uv pip install matplotlib
 
 If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/get-started/installation.md#obtain-api-keys) instructions to obtain API keys.
 
-For NVIDIA NIM, export the following:
+For NVIDIA NIM, set the following environment variable:
 
-- `NVIDIA_API_KEY`
+```
+export NVIDIA_API_KEY="YOUR-NVIDIA-API-KEY-HERE"
+```
 
 ## Run the Workflow
 
@@ -97,6 +99,9 @@ In a separate terminal, or in the background, run the MCP server with this comma
 ```bash
 nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml --tool_names current_datetime
 ```
+
+> [!NOTE]
+> If the MCP server is not started as a background task (using the `&` operator), you will need to open a new terminal session, activate the uv environment, and export NVIDIA_API_KEY again.
 
 Then, run the workflow with the CLI provided by the toolkit:
 
@@ -167,6 +172,9 @@ phoenix serve
 ```
 
 Phoenix runs on `http://localhost:6006` with the tracing endpoint at `http://localhost:6006/v1/traces`.
+
+> [!NOTE]
+> If Phoenix is not started as a background task (using the `&` operator), you will need to open a new terminal session, activate the uv environment, and export NVIDIA_API_KEY again.
 
 ### Run with Tracing Enabled
 
