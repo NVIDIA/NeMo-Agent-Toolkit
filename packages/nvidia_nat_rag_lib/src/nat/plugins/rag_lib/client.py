@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,294 +13,179 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import logging
-import os
-from pathlib import Path
-from typing import Literal
+from logging import Logger
 
+from nvidia_rag.utils.configuration import EmbeddingConfig as NvidiaRAGEmbeddingConfig
+from nvidia_rag.utils.configuration import FilterExpressionGeneratorConfig as NvidiaRAGFilterGeneratorConfig
+from nvidia_rag.utils.configuration import LLMConfig as NvidiaRAGLLMConfig
+from nvidia_rag.utils.configuration import NvidiaRAGConfig
+from nvidia_rag.utils.configuration import QueryDecompositionConfig as NvidiaRAGQueryDecompositionConfig
+from nvidia_rag.utils.configuration import QueryRewriterConfig as NvidiaRAGQueryRewriterConfig
+from nvidia_rag.utils.configuration import ReflectionConfig as NvidiaRAGReflectionConfig
+from nvidia_rag.utils.configuration import VectorStoreConfig as NvidiaRAGVectorStoreConfig
+from nvidia_rag.utils.configuration import VLMConfig as NvidiaRAGVLMConfig
 from pydantic import Field
-from pydantic import HttpUrl
+from pydantic import SecretStr
 
 from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_function
 from nat.data_models.component_ref import EmbedderRef
 from nat.data_models.component_ref import LLMRef
+from nat.data_models.component_ref import RetrieverRef
 from nat.data_models.function import FunctionBaseConfig
-from nat.data_models.retry_mixin import RetryMixin
+from nat.embedder.nim_embedder import NIMEmbedderModelConfig
+from nat.llm.nim_llm import NIMModelConfig
+from nat.plugins.rag_lib.config import EmbedderConfigType
+from nat.plugins.rag_lib.config import LLMConfigType
+from nat.plugins.rag_lib.config import RAGPipelineConfig
+from nat.plugins.rag_lib.config import RetrieverConfigType
+from nat.retriever.milvus.register import MilvusRetrieverConfig
+from nat.retriever.nemo_retriever.register import NemoRetrieverConfig
 
-logger = logging.getLogger(__name__)
+logger: Logger = logging.getLogger(__name__)
 
 
-class NvidiaRAGLibConfig(FunctionBaseConfig, RetryMixin, name="nvidia_rag_lib"):
-    """Configuration for NVIDIA RAG Library integration.
+class NvidiaRAGLibConfig(FunctionBaseConfig, name="nvidia_rag_lib"):
+    """Configuration for NVIDIA RAG Library.
 
-    This configuration manages the setup and instantiation of the NVIDIA RAG library,
-    providing retrieval-augmented generation capabilities including document ingestion,
-    vector search, reranking, and response generation. The configuration handles
-    environment setup, model references, deployment modes, and operational parameters.
+    All component configs are optional - NvidiaRAGConfig provides defaults.
     """
 
-    # Core RAG configuration
-    vdb_endpoint: HttpUrl = Field(default=HttpUrl("http://localhost:19530"), description="Vector database endpoint URL")
-    reranker_top_k: int = Field(default=10, description="Number of top results to rerank")
-    vdb_top_k: int = Field(default=100, description="Number of top results from vector database")
-    collection_names: list[str] | None = Field(default=None, description="List of collection names to use for queries")
+    llm: LLMConfigType = Field(default=None, description="LLM configuration")
+    embedder: EmbedderConfigType = Field(default=None, description="Embedder configuration")
+    retriever: RetrieverConfigType = Field(default=None, description="Vector store configuration")
 
-    # Document processing
-    chunk_size: int = Field(default=512, description="Size of document chunks for processing")
-    chunk_overlap: int = Field(default=150, description="Overlap between document chunks")
-    generate_summary: bool = Field(default=False, description="Whether to generate document summaries")
-    blocking_upload: bool = Field(default=False, description="Whether to use blocking upload for documents")
-
-    # Infrastructure
-    vectorstore_gpu_device_id: str | None = Field(default="0", description="GPU device ID for vector store")
-    model_directory: str | None = Field(default="~/.cache/model-cache", description="Directory for model cache")
-
-    # Model configuration (NAT component references)
-    llm_name: LLMRef | None = Field(default=None, description="Reference to the LLM to use for responses")
-    embedder_name: EmbedderRef | None = Field(default=None,
-                                              description="Reference to the embedder to use for embeddings")
-    ranking_modelname: str | None = Field(default=None, description="Name of the ranking model")
-
-    # Service endpoints
-    app_embeddings_serverurl: str | None = Field(default="", description="Embeddings service URL")
-    app_llm_serverurl: str | None = Field(default="", description="LLM service URL")
-    app_ranking_serverurl: str | None = Field(default=None, description="Ranking service URL")
-
-    # Deployment and operational
-    deployment_mode: Literal["on_prem", "hosted", "mixed"] = Field(default="hosted",
-                                                                   description="Deployment mode for the RAG system")
-    timeout: float | None = Field(default=60.0, description="Timeout for operations in seconds")
-
-    # Setup and management options
-    env_library_path: str | None = Field(default=None, description="Path to .env_library file for environment setup")
-    use_accuracy_profile: bool = Field(default=False, description="Load accuracy profile settings")
-    use_perf_profile: bool = Field(default=False, description="Load performance profile settings")
-    verify_prerequisites: bool = Field(default=True, description="Verify prerequisites before initialization")
-    health_check_dependencies: bool = Field(default=True, description="Perform health check on dependent services")
-    health_check_timeout: float = Field(default=30.0, description="Timeout in seconds for health check operations")
+    rag_pipeline: RAGPipelineConfig = Field(default_factory=RAGPipelineConfig)
 
 
-async def _load_env_library(config: NvidiaRAGLibConfig) -> None:
-    """Load environment variables from a specified .env_library file.
-
-    This function loads environment variables from an external environment
-    library file if specified in the configuration. This allows for
-    centralized environment management across multiple RAG deployments.
-
-    Args:
-        config: Configuration containing the path to the environment library file
-    """
-    if not config.env_library_path:
-        return
-
-    env_path = Path(config.env_library_path).expanduser()
-    if not env_path.exists():
-        logger.warning("Environment library file not found: %s", env_path)
-        return
-
-    try:
-        from dotenv import load_dotenv
-        load_dotenv(env_path)
-        logger.info("Loaded environment library: %s", env_path)
-    except ImportError:
-        logger.warning("python-dotenv not available, skipping .env_library loading")
-
-
-async def _setup_environment_variables(config: NvidiaRAGLibConfig, builder: Builder) -> None:
-    """Configure environment variables required by the NVIDIA RAG library.
-
-    This function sets up all necessary environment variables that the NVIDIA RAG
-    library expects, including vector database endpoints, model configurations,
-    document processing parameters, and infrastructure settings. Model names are
-    dynamically extracted from NAT component references when available.
-
-    Args:
-        config: Configuration containing RAG parameters and component references
-        builder: NAT builder instance for accessing LLM and embedder configurations
-    """
-    # Core configuration
-    if config.vdb_endpoint:
-        os.environ["VDB_ENDPOINT"] = str(config.vdb_endpoint)
-
-    os.environ["RERANKER_TOP_K"] = str(config.reranker_top_k)
-    os.environ["VDB_TOP_K"] = str(config.vdb_top_k)
-
-    if config.collection_names:
-        os.environ["COLLECTION_NAMES"] = ",".join(config.collection_names)
-
-    # Document processing
-    os.environ["CHUNK_SIZE"] = str(config.chunk_size)
-    os.environ["CHUNK_OVERLAP"] = str(config.chunk_overlap)
-    os.environ["GENERATE_SUMMARY"] = str(config.generate_summary).lower()
-    os.environ["BLOCKING_UPLOAD"] = str(config.blocking_upload).lower()
-
-    # Infrastructure
-    if config.vectorstore_gpu_device_id is not None:
-        os.environ["VECTORSTORE_GPU_DEVICE_ID"] = config.vectorstore_gpu_device_id
-
-    if config.model_directory:
-        model_dir = Path(config.model_directory).expanduser()
-        os.environ["MODEL_DIRECTORY"] = str(model_dir)
-
-    # Model names from NAT component references
-    if config.llm_name:
-        try:
-            llm_config = builder.get_llm_config(config.llm_name)
-            model_name = getattr(llm_config, 'model_name', None)
-            if model_name:
-                os.environ["APP_LLM_MODELNAME"] = str(model_name)
-                logger.debug("Set APP_LLM_MODELNAME from LLM reference: %s", model_name)
-        except Exception as e:
-            logger.warning("Failed to get LLM config for %s: %s", config.llm_name, e)
-
-    if config.embedder_name:
-        try:
-            embedder_config = builder.get_embedder_config(config.embedder_name)
-            model_name = getattr(embedder_config, 'model_name', None)
-            if model_name:
-                os.environ["APP_EMBEDDINGS_MODELNAME"] = str(model_name)
-                logger.debug("Set APP_EMBEDDINGS_MODELNAME from embedder reference: %s", model_name)
-        except Exception as e:
-            logger.warning("Failed to get embedder config for %s: %s", config.embedder_name, e)
-
-    if config.ranking_modelname:
-        os.environ["APP_RANKING_MODELNAME"] = config.ranking_modelname
-
-    # Service URLs
-    if config.app_embeddings_serverurl is not None:
-        os.environ["APP_EMBEDDINGS_SERVERURL"] = config.app_embeddings_serverurl
-    if config.app_llm_serverurl is not None:
-        os.environ["APP_LLM_SERVERURL"] = config.app_llm_serverurl
-    if config.app_ranking_serverurl is not None:
-        os.environ["APP_RANKING_SERVERURL"] = config.app_ranking_serverurl
-
-    # Deployment mode
-    os.environ["DEPLOYMENT_MODE"] = config.deployment_mode
-
-
-async def _load_profiles(config: NvidiaRAGLibConfig) -> None:
-    """Load accuracy and performance optimization profiles.
-
-    This function loads predefined environment configurations for accuracy
-    or performance optimization. These profiles contain environment variable
-    settings that optimize the RAG system for specific use cases.
-
-    Args:
-        config: Configuration specifying which profiles to load
-    """
-    if config.use_accuracy_profile:
-        accuracy_profile_path = Path("accuracy_profile.env")
-        if accuracy_profile_path.exists():
-            try:
-                from dotenv import load_dotenv
-                load_dotenv(accuracy_profile_path)
-                logger.info("Loaded accuracy profile")
-            except ImportError:
-                logger.warning("python-dotenv not available, skipping accuracy profile")
-        else:
-            logger.warning("Accuracy profile file not found: %s", accuracy_profile_path)
-
-    if config.use_perf_profile:
-        perf_profile_path = Path("perf_profile.env")
-        if perf_profile_path.exists():
-            try:
-                from dotenv import load_dotenv
-                load_dotenv(perf_profile_path)
-                logger.info("Loaded performance profile")
-            except ImportError:
-                logger.warning("python-dotenv not available, skipping performance profile")
-        else:
-            logger.warning("Performance profile file not found: %s", perf_profile_path)
-
-
-def _verify_prerequisites(config: NvidiaRAGLibConfig) -> None:
-    """Verify that all required prerequisites are met before initialization.
-
-    This function checks that necessary directories exist, dependencies are
-    available, and the system is properly configured for RAG operations.
-
-    Args:
-        config: Configuration containing prerequisite specifications
-    """
-    # Check model directory
-    if config.model_directory:
-        model_dir = Path(config.model_directory).expanduser()
-        if not model_dir.exists():
-            logger.warning("Model directory does not exist: %s", model_dir)
-
-
-@register_function(config_type=NvidiaRAGLibConfig)
+@register_function(config_type=NvidiaRAGLibConfig)  # type: ignore[arg-type]
 async def nvidia_rag_lib(config: NvidiaRAGLibConfig, builder: Builder):
-    """
-    Initialize and configure the NVIDIA RAG library client.
-
-    This function orchestrates the complete setup process for the NVIDIA RAG library,
-    including environment configuration, profile loading, prerequisite verification,
-    and service health checks. It yields a query function that provides access to
-    the fully configured RAG system for retrieval-augmented generation operations.
-
-    Args:
-        config: Configuration parameters for the NVIDIA RAG library
-        builder: NAT builder instance for accessing other components
-
-    Yields:
-        NvidiaRAG: Fully configured NVIDIA RAG library client instance
-
-    Raises:
-        ImportError: If the nvidia-rag library is not installed
-        RuntimeError: If required prerequisites are not met
-    """
-    logger.info("Starting NVIDIA RAG setup...")
-
+    """Initialize NVIDIA RAG with flexible config resolution."""
     try:
-        # Step 1: Load .env_library if available
-        if config.env_library_path:
-            logger.debug("Loading environment library: %s", config.env_library_path)
-            await _load_env_library(config)
-
-        # Step 2: Set up environment variables
-        logger.debug("Setting up environment variables...")
-        await _setup_environment_variables(config, builder)
-
-        # Step 3: Load profiles if requested
-        if config.use_accuracy_profile or config.use_perf_profile:
-            logger.debug("Loading performance profiles...")
-            await _load_profiles(config)
-
-        # Step 4: Verify prerequisites
-        if config.verify_prerequisites:
-            logger.debug("Verifying prerequisites...")
-            _verify_prerequisites(config)
-
-        # Step 5: Import and instantiate the NVIDIA RAG library
-        logger.debug("Importing NVIDIA RAG library...")
         from nvidia_rag import NvidiaRAG
-
-        rag = NvidiaRAG()
-
-        # Step 6: Health check if requested
-        if config.health_check_dependencies:
-            logger.debug("Performing health check...")
-            try:
-                health_status = await asyncio.wait_for(rag.health(check_dependencies=True),
-                                                       timeout=config.health_check_timeout)
-                logger.info("Health check completed: %s", health_status)
-            except TimeoutError:
-                logger.warning("Health check timed out after %ss, but continuing", config.health_check_timeout)
-            except Exception as e:
-                logger.warning("Health check failed, but continuing: %s", e)
-
-        # Yield the RAG instance
-        yield rag
-
     except ImportError as e:
-        logger.error("nvidia_rag library not available. Install with: pip install nvidia-rag. Error: %s", e)
-        raise ImportError("nvidia-rag is required for this function. "
-                          "Follow installation steps: pip install nvidia-rag --force-reinstall") from e
-    except Exception as e:
-        logger.error("Failed to set up NVIDIA RAG: %s", e)
-        raise
-    finally:
-        pass
+        raise ImportError("nvidia-rag package is not installed.") from e
+
+    rag_config: NvidiaRAGConfig = await build_nvidia_rag_config(config, builder)
+    logger.info("NVIDIA RAG initialized")
+    yield NvidiaRAG(config=rag_config)
+
+
+async def build_nvidia_rag_config(config: NvidiaRAGLibConfig, builder: Builder) -> NvidiaRAGConfig:
+    """Build NvidiaRAGConfig by resolving NAT refs/components to nvidia_rag configs."""
+
+    pipeline: RAGPipelineConfig = config.rag_pipeline
+
+    # Create base config with pipeline settings and defaults
+    rag_config: NvidiaRAGConfig = NvidiaRAGConfig(
+        ranking=pipeline.ranking,
+        retriever=pipeline.search_settings,
+        vlm=pipeline.vlm or NvidiaRAGVLMConfig(),
+        query_rewriter=pipeline.query_rewriter or NvidiaRAGQueryRewriterConfig(),
+        filter_expression_generator=pipeline.filter_generator or NvidiaRAGFilterGeneratorConfig(),
+        query_decomposition=pipeline.query_decomposition or NvidiaRAGQueryDecompositionConfig(),
+        reflection=pipeline.reflection or NvidiaRAGReflectionConfig(),
+        enable_citations=pipeline.enable_citations,
+        enable_guardrails=pipeline.enable_guardrails,
+        enable_vlm_inference=pipeline.enable_vlm_inference,
+        vlm_to_llm_fallback=pipeline.vlm_to_llm_fallback,
+        default_confidence_threshold=pipeline.default_confidence_threshold,
+    )
+
+    # Resolve and map each component's fields (mutates rag_config)
+    await _resolve_llm_config(config.llm, builder, rag_config)
+    await _resolve_embedder_config(config.embedder, builder, rag_config)
+    await _resolve_retriever_config(config.retriever, builder, rag_config)
+
+    return rag_config
+
+
+async def _resolve_llm_config(llm: LLMConfigType, builder: Builder, rag_config: NvidiaRAGConfig) -> None:
+    """Resolve LLM config and map all fields to NvidiaRAGConfig.llm."""
+
+    if llm is None:
+        return
+
+    if isinstance(llm, NvidiaRAGLLMConfig):
+        rag_config.llm = llm
+        return
+
+    if isinstance(llm, LLMRef):
+        llm = builder.get_llm_config(llm)
+
+    if isinstance(llm, NIMModelConfig):
+        rag_config.llm.model_name = llm.model_name
+        if llm.base_url:
+            rag_config.llm.server_url = llm.base_url
+        if llm.api_key:
+            rag_config.llm.api_key = llm.api_key
+        if llm.temperature is not None:
+            rag_config.llm.parameters.temperature = llm.temperature
+        if llm.top_p is not None:
+            rag_config.llm.parameters.top_p = llm.top_p
+        if llm.max_tokens is not None:
+            rag_config.llm.parameters.max_tokens = llm.max_tokens
+        return
+
+    raise ValueError(f"Unsupported LLM config type: {type(llm)}")
+
+
+async def _resolve_embedder_config(embedder: EmbedderConfigType, builder: Builder, rag_config: NvidiaRAGConfig) -> None:
+    """Resolve embedder config and map all fields to NvidiaRAGConfig.embeddings."""
+
+    if embedder is None:
+        return
+
+    if isinstance(embedder, NvidiaRAGEmbeddingConfig):
+        rag_config.embeddings = embedder
+        return
+
+    if isinstance(embedder, EmbedderRef):
+        embedder = builder.get_embedder_config(embedder)
+
+    if isinstance(embedder, NIMEmbedderModelConfig):
+        rag_config.embeddings.model_name = embedder.model_name
+        if embedder.base_url:
+            rag_config.embeddings.server_url = embedder.base_url
+        if embedder.api_key:
+            rag_config.embeddings.api_key = embedder.api_key
+        return
+
+    raise ValueError(f"Unsupported embedder config type: {type(embedder)}")
+
+
+async def _resolve_retriever_config(retriever: RetrieverConfigType, builder: Builder,
+                                    rag_config: NvidiaRAGConfig) -> None:
+    """Resolve retriever config and map all fields to NvidiaRAGConfig.vector_store."""
+
+    if retriever is None:
+        return
+
+    if isinstance(retriever, NvidiaRAGVectorStoreConfig):
+        rag_config.vector_store = retriever
+        return
+
+    if isinstance(retriever, RetrieverRef):
+        retriever = await builder.get_retriever_config(retriever)
+
+    if isinstance(retriever, MilvusRetrieverConfig):
+        rag_config.vector_store.url = str(retriever.uri)
+        if retriever.collection_name:
+            rag_config.vector_store.default_collection_name = retriever.collection_name
+        if retriever.connection_args:
+            if "user" in retriever.connection_args:
+                rag_config.vector_store.username = retriever.connection_args["user"]
+            if "password" in retriever.connection_args:
+                rag_config.vector_store.password = SecretStr(retriever.connection_args["password"])
+        return
+
+    if isinstance(retriever, NemoRetrieverConfig):
+        rag_config.vector_store.url = str(retriever.uri)
+        if retriever.collection_name:
+            rag_config.vector_store.default_collection_name = retriever.collection_name
+        if retriever.nvidia_api_key:
+            rag_config.vector_store.api_key = retriever.nvidia_api_key
+        return
+
+    raise ValueError(f"Unsupported retriever config type: {type(retriever)}")

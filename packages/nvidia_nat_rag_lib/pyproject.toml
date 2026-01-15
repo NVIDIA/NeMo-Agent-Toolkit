@@ -9,7 +9,7 @@ include = ["nat.*"]
 
 
 [tool.setuptools_scm]
-git_describe_command = ["git", "describe", "--long", "--first-parent"]
+git_describe_command = "git describe --long --first-parent"
 root = "../.."
 
 
@@ -17,11 +17,14 @@ root = "../.."
 name = "nvidia-nat-rag-lib"
 dynamic = ["version"]
 dependencies = [
-  "nvidia-nat~=1.4",
-  "nvidia-rag>=2.4.0",
+  # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
+  # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
+  # Keep sorted!!!
+  "nvidia-nat~=1.5",
+  "nvidia-rag>=2.4.0",  # TODO: Update version constraint when nvidia-rag is published to PyPI
 ]
 requires-python = ">=3.11,<3.14"
-description = "Subpackage for NVIDIA RAG library integration in NeMo Agent Toolkit"
+description = "Subpackage for NVIDIA RAG library in NeMo Agent toolkit"
 readme = "src/nat/meta/pypi.md"
 keywords = ["ai", "rag", "agents", "retrieval"]
 license = { text = "Apache-2.0" }
@@ -46,7 +49,6 @@ config-settings = { editable_mode = "compat" }
 
 [tool.uv.sources]
 nvidia-nat = { workspace = true }
-nvidia-rag = { path = "vendor/nvidia_rag-2.4.0.dev0-py3-none-any.whl" } # TODO EE: Remove this local path override once nvidia-rag>=2.4.0 is published to PyPI
 
 
 [project.entry-points.'nat.components']
