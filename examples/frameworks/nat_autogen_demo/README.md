@@ -210,12 +210,6 @@ The evaluation dataset contains three test cases with different cities:
 
 The dataset is located at `examples/frameworks/nat_autogen_demo/data/eval_dataset.json`.
 
-> [!NOTE]
-> The `data` directory is a symlink to `src/nat_autogen_demo/data`. This symlink may not work correctly on Windows or when downloading the repository as a ZIP file. If you encounter issues, navigate directly to the source directory or clone the repository using Git.
-
-> [!NOTE]
-> The evaluation dataset is tracked with Git LFS. If you see a pointer file instead of the actual JSON content, ensure Git LFS is installed and run `git lfs pull` to download the full dataset.
-
 ### Run the Evaluation
 
 Ensure both the MCP server and Phoenix are running, then execute the evaluation:
