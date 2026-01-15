@@ -380,9 +380,37 @@ class NeMoCustomizerTrainerAdapter(TrainerAdapter):
         interval = poll_interval or self.adapter_config.poll_interval_seconds
 
         last_status: str | None = None
+        consecutive_status_failures = 0
+        max_status_failures = self.adapter_config.max_consecutive_status_failures
 
         while True:
             status = await self.status(ref)
+
+            # Check if this was a status check failure (not an actual job failure)
+            is_status_check_failure = (status.status == TrainingStatusEnum.FAILED and status.message
+                                       and status.message.startswith("Error getting status:"))
+
+            if is_status_check_failure:
+                consecutive_status_failures += 1
+                if consecutive_status_failures >= max_status_failures:
+                    logger.error(f"Failed to get status for job {ref.run_id} after {max_status_failures} "
+                                 f"consecutive attempts. Last error: {status.message}. "
+                                 f"This may indicate a persistent NeMo Customizer service issue. "
+                                 f"Check service health at {self.adapter_config.entity_host}/health")
+                    # Fall through to let the normal failure handling take over
+                else:
+                    logger.warning(f"Transient failure checking status for job {ref.run_id} "
+                                   f"(attempt {consecutive_status_failures}/{max_status_failures}). "
+                                   f"Error: {status.message}. "
+                                   f"This is likely a temporary NeMo Customizer service issue. Retrying...")
+                    # Exponential backoff: wait longer on repeated failures
+                    backoff_multiplier = 1.5**consecutive_status_failures
+                    wait_time = interval * backoff_multiplier
+                    await asyncio.sleep(wait_time)
+                    continue
+            else:
+                # Reset counter on successful status check
+                consecutive_status_failures = 0
 
             # Log when status changes
             current_status = status.status.value
