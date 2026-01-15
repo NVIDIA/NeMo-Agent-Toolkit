@@ -41,7 +41,7 @@ MODEL="/workspace/models/Llama-3.3-70B-Instruct"
 SERVED_MODEL_NAME="${DYNAMO_MODEL_NAME:-llama-3.3-70b}"
 IMAGE="nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.7.1"
 SHM_SIZE="${DYNAMO_SHM_SIZE:-16g}"
-WORKER_INIT_TIMEOUT_S="${DYNAMO_WORKER_INIT_TIMEOUT_S:-600}"
+WORKER_INIT_TIMEOUT_S="${DYNAMO_WORKER_INIT_TIMEOUT_S:-1800}"
 
 # Disaggregation configuration
 DISAGG_BOOTSTRAP_PORT="${DYNAMO_DISAGG_BOOTSTRAP_PORT:-12345}"
@@ -602,8 +602,8 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo ""
 
     # Wait for server to be ready (check /v1/models which only works when workers are discovered)
-    echo "Checking for API availability (timeout=15 minutes)..."
-    max_attempts=900
+    echo "Checking for API availability (timeout=${WORKER_INIT_TIMEOUT_S}s)..."
+    max_attempts=$WORKER_INIT_TIMEOUT_S
     attempt=0
 
     while [ $attempt -lt $max_attempts ]; do

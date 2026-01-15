@@ -44,7 +44,7 @@ SHM_SIZE="${DYNAMO_SHM_SIZE:-16g}"
 ETCD_CLIENT_PORT="${DYNAMO_ETCD_PORT:-2379}"
 ETCD_PEER_PORT="${DYNAMO_ETCD_PEER_PORT:-2390}"
 NATS_PORT="${DYNAMO_NATS_PORT:-4222}"
-WORKER_INIT_TIMEOUT_S="${DYNAMO_WORKER_INIT_TIMEOUT_S:-600}"
+WORKER_INIT_TIMEOUT_S="${DYNAMO_WORKER_INIT_TIMEOUT_S:-1800}"
 
 # Compute container-internal GPU indices (GPUs are renumbered 0,1,2,... inside the container)
 NUM_GPUS=$(echo "$WORKER_GPUS" | tr ',' '\n' | wc -l)
@@ -484,8 +484,8 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo ""
 
     # Wait for server to be ready (check /v1/models which only works when workers are discovered)
-    echo "Checking for API availability (timeout=15 minutes)..."
-    max_attempts=900
+    echo "Checking for API availability (timeout=${WORKER_INIT_TIMEOUT_S}s)..."
+    max_attempts=$WORKER_INIT_TIMEOUT_S
     attempt=0
 
     while [ $attempt -lt $max_attempts ]; do

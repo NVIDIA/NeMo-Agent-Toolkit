@@ -52,38 +52,48 @@ uv pip install matplotlib scipy
 cd examples/dynamo_integration/react_benchmark_agent # NeMo-Agent-Toolkit/examples/dynamo_integration/react_benchmark_agent
 uv pip install -e .
 
+# 3. Source environment variables
+cd ../ # NeMo-Agent-Toolkit/examples/dynamo_integration
+source .env
+
 # 3. Download the dataset (requires HuggingFace account)
 # <!-- path-check-skip-next-line -->
-cd ../ # NeMo-Agent-Toolkit/examples/dynamo_integration
-export HF_TOKEN=<your_huggingface_token>
-export HF_HOME=<your-user-path/.cache/huggingface>
 python scripts/download_agent_leaderboard_v2.py --domains banking
+
+# 4. Download the model weights (requires HuggingFace account)
+cd $(dirname $DYNAMO_MODEL_DIR) # parent directory of the intended model weights directory
+huggingface-cli download meta-llama/Llama-3.3-70B-Instruct --local-dir $DYNAMO_MODEL_DIR
 
 # 4. Start Dynamo backend (see Dynamo README for details)
 # <!-- path-check-skip-next-line -->
-cd ../../external/dynamo # NeMo-Agent-Toolkit/external/dynamo
-bash start_dynamo_unified.sh # wait ~5 minutes for the server to start
+cd /path/to/NeMo-Agent-Toolkit/external/dynamo # NeMo-Agent-Toolkit/external/dynamo
+bash start_dynamo_unified.sh > startup_output.txt 2>&1 # wait ~5 minutes for the server to start
 
 # Requirements for start_dynamo_unified.sh:
 #   - Docker with NVIDIA Container Toolkit (nvidia-docker)
-#   - 4x NVIDIA GPUs (default: device IDs 4,5,6,7, configurable via WORKER_GPUS)
-#   - Model weights: either local path or HF_TOKEN to download Llama-3.3-70B-Instruct
-#   - Ports available: 8099 (HTTP API), 2389 (ETCD), 4232 (NATS)
-#   - curl and jq for health checks
-
-# Note: To customize GPU workers and tensor parallelism, edit the configuration
-# variables at the top of external/dynamo/start_dynamo_unified.sh:
-#   WORKER_GPUS="4,5,6,7"  # GPU device IDs to use (e.g., "0,1" for first 2 GPUs)
-#   TP_SIZE=4              # Tensor parallel size (must match number of GPUs)
-#   HTTP_PORT=8099         # API endpoint port
-#   LOCAL_MODEL_DIR="..."  # Path to your local model weights
+#   - 4x NVIDIA GPUs (set WORKER_GPUS to teh available set of machines)
+#   - Model weights: downloaded per previous instructions
+#   - Check that default ports are available: 8099 (HTTP API), 2389 (ETCD), 4232 (NATS)
 
 # 5. Run evaluation
 cd ../../ # NeMo-Agent-Toolkit/
 nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs/eval_config_no_rethinking_full_test.yml
 ```
 
+> [!WARNING]
+> The first load of model weights to `SGLang` workers can take significant time.
+
+> [!NOTE]
+> To customize GPU workers and tensor parallelism, edit the configuration variables at the top of external/dynamo/start_dynamo_unified.sh.
+
 After running this end-to-end evaluation, you will have confirmed functional model services on Dynamo, dataset access, and agent execution.
+
+## Quick Stop
+```
+# 1. When testing is complete don't forget to stop workers and free GPU memory
+cd /path/to/NeMo-Agent-Toolkit/external/dynamo # NeMo-Agent-Toolkit/external/dynamo
+bash stop_dynamo.sh
+```
 
 ### Understanding Evaluation Artifacts
 
@@ -163,7 +173,6 @@ examples/dynamo_integration/
     │   ├── banking_tools.py           # Tool stub registration
     │   ├── tool_intent_stubs.py       # Intent capture system
     │   ├── self_evaluating_agent_with_feedback.py  # Self-evaluation wrapper
-    │   ├── prefix_utils.py            # Prefix header utilities
     │   └── evaluators/
     │       ├── __init__.py            # Evaluators package
     │       ├── tsq_evaluator.py       # Tool Selection Quality evaluator
@@ -172,10 +181,9 @@ examples/dynamo_integration/
     ├── tests/                         # Unit tests
     │   ├── test_tsq_formula.py        # TSQ calculation tests
     │   ├── test_self_evaluation.py    # Self-evaluation tests
-    │   ├── test_prefix_utils.py       # Prefix utilities tests
-    │   └── validate_prefix_config.py  # Prefix configuration validation
+    │   └── test_tool_intent_buffer.py # Tool intent buffer tests
     │
-    └── outputs/                       # Evaluation results
+    └── outputs/                       # Evaluation results (generated at runtime)
         ├── benchmarks/                # Concurrency benchmark results
         │   └── <benchmark_run>/
         │       ├── benchmark_report.md
