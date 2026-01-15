@@ -387,8 +387,7 @@ class NeMoCustomizerTrainerAdapter(TrainerAdapter):
             status = await self.status(ref)
 
             # Check if this was a status check failure (not an actual job failure)
-            is_status_check_failure = (status.status == TrainingStatusEnum.FAILED and status.message
-                                       and status.message.startswith("Error getting status:"))
+            is_status_check_failure = (status.status == TrainingStatusEnum.FAILED)
 
             if is_status_check_failure:
                 consecutive_status_failures += 1
