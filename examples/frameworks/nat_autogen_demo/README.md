@@ -84,7 +84,7 @@ If you have not already done so, follow the [Obtaining API Keys](../../../docs/s
 
 For NVIDIA NIM, set the following environment variable:
 
-```
+```bash
 export NVIDIA_API_KEY="YOUR-NVIDIA-API-KEY-HERE"
 ```
 
