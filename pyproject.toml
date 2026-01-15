@@ -324,10 +324,11 @@ dev = [
   "nvidia-nat_test",
   "nvidia-sphinx-theme>=0.0.9",
   "pre-commit>=4.0,<5.0",
-  "pytest_httpserver==1.1.*",
+  "pytest~=8.3",
   "pytest-asyncio==0.24.*",
   "pytest-cov~=6.1",
-  "pytest~=8.3",
+  "pytest_httpserver==1.1.*",
+  "pytest-timeout~=2.4",
   "python-docx~=1.1.0",
   "ruff~=0.12",
   "setuptools >= 64",
@@ -408,6 +409,10 @@ filterwarnings = [
 testpaths = ["tests", "examples/**/tests", "packages/**/tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
+
+# Global timeout of 5 minutes per test to catch hanging tests.
+# Individual tests can override with @pytest.mark.timeout(seconds) or disable with @pytest.mark.timeout(0)
+timeout = 300
 
 
 [tool.ruff]
