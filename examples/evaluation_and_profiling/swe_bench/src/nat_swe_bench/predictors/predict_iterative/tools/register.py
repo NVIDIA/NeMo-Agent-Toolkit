@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,10 +39,16 @@ async def git_repo_tool(tool_config: GitRepoToolConfig, builder: Builder):
 
     # Simple async function that accepts a JSON string
     async def git_operations(args_str: str) -> str:
-        args = json.loads(args_str)
+        try:
+            args = json.loads(args_str)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON input: {e}") from e
+
         operation = args.get('operation')
 
         if operation == "setup":
+            if 'repo_url' not in args or 'base_commit' not in args:
+                raise ValueError("setup operation requires 'repo_url' and 'base_commit'")
             context = await repo_manager.setup_repository(args['repo_url'], args['base_commit'])
             return str(context.repo_path)
 
@@ -50,7 +56,7 @@ async def git_repo_tool(tool_config: GitRepoToolConfig, builder: Builder):
             await repo_manager.cleanup()
             return "Cleanup complete"
 
-        raise ValueError(f"Unknown operation: {operation}")
+        raise ValueError(f"Unknown operation: {operation}. Supported: 'setup', 'cleanup'")
 
     try:
         yield FunctionInfo.from_fn(git_operations,

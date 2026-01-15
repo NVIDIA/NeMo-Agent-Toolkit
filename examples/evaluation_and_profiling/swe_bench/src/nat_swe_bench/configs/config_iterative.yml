@@ -1,3 +1,25 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+llms:
+ nim_llm:
+   _type: nim
+   model_name: mistralai/mistral-nemotron
+   temperature: 0.6
+   max_tokens: 4096    
+
 llms:
   claude_sonnet_llm:
     _type: litellm
@@ -11,14 +33,6 @@ llms:
 #     model_name: openai/gpt-5.2
 #     temperature: 0.0
 #     api_key: "${OPENAI_API_KEY}"  # Set this environment variable before running
-
-
-# llms:
-#  nim_llm:
-#    _type: nim
-#    model_name: meta/llama-3.3-70b-instruct
-#    temperature: 0.6
-#    max_tokens: 4096    
 
 workflow:
   _type: swe_bench
@@ -49,18 +63,15 @@ eval:
           field:
             instance_id:
               - sympy__sympy-20590
-              #- sympy__sympy-21055
-              #- sympy__sympy-11400
-              #- sympy__sympy-11870
-              #- astropy__astropy-12907
-              #- astropy__astropy-6938
-              #- django__django-15781
-              #- django__django-11001
-              #- matplotlib__matplotlib-25332
-              #- mwaskom__seaborn-3010
-              #- pallets__flask-4045
-              #- psf__requests-1963
-              #- pydata__xarray-3364
+              # - sympy__sympy-21055
+              # - sympy__sympy-11400
+              # - astropy__astropy-12907
+              # - astropy__astropy-6938
+              # - django__django-15781
+              # - django__django-11001
+              # - mwaskom__seaborn-3010
+              # - pallets__flask-4045
+              # - psf__requests-1963
 
   evaluators:
     swe_bench:

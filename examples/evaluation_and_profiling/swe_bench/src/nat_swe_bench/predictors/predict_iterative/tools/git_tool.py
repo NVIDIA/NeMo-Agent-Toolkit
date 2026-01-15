@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -69,17 +70,23 @@ class RepoManager:
 
 def get_repo_path(workspace_dir: str, repo_url: str) -> Path:
     """Generate a unique path for the repository."""
-    repo_name = repo_url.split('/')[-1].replace('.git', '')
-    return Path(workspace_dir) / repo_name
+    parts = repo_url.rstrip('/').split('/')
+    repo_name = parts[-1].replace('.git', '')
+    org_name = parts[-2]  # Organization name
+    
+    # Return: workspace_dir/org/repo
+    return Path(workspace_dir) / org_name / repo_name
 
 
 async def clone_repository(repo_url: str, target_path: Path) -> Repo:
     """Clone a repository to the specified path."""
     logger.info("Cloning repository %s to %s", repo_url, target_path)
-    return Repo.clone_from(repo_url, target_path)
+    # Use asyncio.to_thread to avoid blocking the event loop during clone operation
+    return await asyncio.to_thread(Repo.clone_from, repo_url, target_path)
 
 
 async def checkout_commit(repo: Repo, commit_hash: str):
     """Checkout a specific commit in the repository."""
     logger.info("Checking out commit %s", commit_hash)
-    repo.git.checkout(commit_hash)
+    # Use asyncio.to_thread to avoid blocking the event loop during checkout
+    await asyncio.to_thread(repo.git.checkout, commit_hash)
