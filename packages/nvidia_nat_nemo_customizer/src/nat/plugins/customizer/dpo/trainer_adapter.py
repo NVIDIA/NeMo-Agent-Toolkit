@@ -380,9 +380,30 @@ class NeMoCustomizerTrainerAdapter(TrainerAdapter):
         interval = poll_interval or self.adapter_config.poll_interval_seconds
 
         last_status: str | None = None
+        consecutive_status_failures = 0
+        max_status_failures = 3
 
         while True:
             status = await self.status(ref)
+
+            # Check if this was a status check failure (not an actual job failure)
+            is_status_check_failure = (status.status == TrainingStatusEnum.FAILED and status.message
+                                       and status.message.startswith("Error getting status:"))
+
+            if is_status_check_failure:
+                consecutive_status_failures += 1
+                logger.warning(f"Failed to get status for job {ref.run_id} "
+                               f"(attempt {consecutive_status_failures}/{max_status_failures}): {status.message}")
+                if consecutive_status_failures >= max_status_failures:
+                    logger.error(f"Giving up after {max_status_failures} consecutive status check failures")
+                    # Fall through to let the normal failure handling take over
+                else:
+                    # Continue polling - don't treat this as a real failure yet
+                    await asyncio.sleep(interval)
+                    continue
+            else:
+                # Reset counter on successful status check
+                consecutive_status_failures = 0
 
             # Log when status changes
             current_status = status.status.value
