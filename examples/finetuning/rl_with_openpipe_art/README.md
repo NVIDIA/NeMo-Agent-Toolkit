@@ -67,7 +67,7 @@ The model learns to play against a **random opponent**, receiving rewards based 
    source art-env/bin/activate
    export HF_TOKEN=<your_huggingface_token>
    # Install OpenPipe ART
-   uv pip install --no-cache openpipe-art[backend]==0.4.11
+   uv pip install --no-cache 'openpipe-art[backend]==0.4.11'
 
    # Verify installation
    art --help
