@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 class MultiFrameworksWorkflowConfig(FunctionBaseConfig, name="multi_frameworks"):
     # Add your custom configuration parameters here
     llm: LLMRef = LLMRef("nim_llm")
-    data_dir: str = "/home/coder/dev/ai-query-engine/examples/frameworks/multi_frameworks/data/"
+    data_dir: str = ""
     research_tool: FunctionRef
     rag_tool: FunctionRef
     chitchat_agent: FunctionRef
@@ -52,6 +52,12 @@ async def multi_frameworks_workflow(config: MultiFrameworksWorkflowConfig, build
     from langchain_core.runnables.history import RunnableWithMessageHistory
     from langgraph.graph import END
     from langgraph.graph import StateGraph
+
+    # Validate data_dir is not empty
+    if not config.data_dir or config.data_dir.strip() == "":
+        raise ValueError(
+            "data_dir configuration parameter is required but was not set. "
+            "Please set data_dir in your configuration file to point to the README.md file for RAG ingestion.")
 
     # Use builder to generate framework specific tools and llms
     logger.info("workflow config = %s", config)
@@ -130,11 +136,11 @@ async def multi_frameworks_workflow(config: MultiFrameworksWorkflowConfig, build
         worker_choice = state["chosen_worker_agent"]
         logger.info("========== inside **workers node**  current status = \n %s, %s", Fore.YELLOW, state)
         if "retrieve" in worker_choice.lower():
-            out = (await rag_tool.ainvoke(query))
+            out = (await rag_tool.ainvoke({"inputs": query}))
             output = out
             logger.info("**using rag_tool via llama_index_rag_agent >>> output:  \n %s, %s", output, Fore.RESET)
         elif "general" in worker_choice.lower():
-            output = (await chitchat_agent.ainvoke(query))
+            output = (await chitchat_agent.ainvoke({"inputs": query}))
             logger.info("**using general chitchat chain >>> output:  \n %s, %s", output, Fore.RESET)
         elif 'research' in worker_choice.lower():
             inputs = {"inputs": query}
