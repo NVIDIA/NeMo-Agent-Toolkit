@@ -22,6 +22,8 @@ limitations under the License.
 
 # Mixture of Agents Example
 
+**Complexity:** 🟨 Intermediate
+
 An example of a Mixture of Agents (naive Mixture of Experts / naive Agent Hypervisor). This agent leverages the NeMo Agent toolkit plugin system and `WorkflowBuilder` to integrate pre-built and custom tools into the workflows, and workflows as tools. Key elements are summarized below:
 
 ## Table of Contents

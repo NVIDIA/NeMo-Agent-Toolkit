@@ -17,6 +17,8 @@ limitations under the License.
 
 # Haystack Deep Research Agent
 
+**Complexity:** 🟨 Intermediate
+
 This example demonstrates how to build a deep research agent using Haystack framework  that combines web search and Retrieval Augmented Generation (RAG) capabilities using the NeMo-Agent-Toolkit.
 
 ## Overview

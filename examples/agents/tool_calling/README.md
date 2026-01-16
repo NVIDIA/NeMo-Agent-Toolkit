@@ -22,6 +22,8 @@ limitations under the License.
 
 # Tool Calling Agent
 
+**Complexity:** 🟢 Beginner
+
 A configurable Tool Calling agent. This agent leverages the NeMo Agent toolkit plugin system and `WorkflowBuilder` to integrate pre-built and custom tools into the workflow. Key elements are summarized below:
 
 ## Table of Contents

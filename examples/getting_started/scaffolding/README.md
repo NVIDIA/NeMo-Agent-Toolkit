@@ -17,6 +17,8 @@ limitations under the License.
 
 # Workflow Scaffolding and Project Generation
 
+**Complexity:** 🟢 Beginner
+
 This guide demonstrates how to quickly scaffold and generate new NVIDIA NeMo Agent toolkit workflows using automated commands and intelligent code generation. Learn to create structured projects with proper configuration, dependencies, and Cursor rules integration for enhanced development experience.
 
 ## Key Features
