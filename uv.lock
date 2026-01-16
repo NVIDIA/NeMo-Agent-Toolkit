@@ -5189,11 +5189,11 @@ requires-dist = [
 name = "nat-autogen-demo"
 source = { editable = "examples/frameworks/nat_autogen_demo" }
 dependencies = [
-    { name = "nvidia-nat", extra = ["autogen"] },
+    { name = "nvidia-nat", extra = ["autogen", "mcp"] },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "nvidia-nat", extras = ["autogen"], editable = "." }]
+requires-dist = [{ name = "nvidia-nat", extras = ["autogen", "mcp"], editable = "." }]
 
 [[package]]
 name = "nat-automated-description-generation"

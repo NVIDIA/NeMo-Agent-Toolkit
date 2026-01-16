@@ -119,7 +119,7 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 ### Frameworks
 - **[`adk_demo`](frameworks/adk_demo/README.md)**: Minimal example using Google Agent Development Kit showcasing a simple weather time agent that can call tools (a function tool and an MCP tool) **[🟢 Beginner]**
 - **[`agno_personal_finance`](frameworks/agno_personal_finance/README.md)**: Personal finance planning agent built with Agno framework that researches and creates tailored financial plans **[🟢 Beginner]**
-- **[`autogen_demo`](frameworks/nat_autogen_demo/README.md)**: Minimal example using Microsoft AutoGen showcasing a simple weather time agent that can call tools (a function tool and an MCP tool) **[🟨 Intermediate]**
+- **[`autogen_demo`](frameworks/nat_autogen_demo/README.md)**: Minimal example using Microsoft AutoGen showcasing a traffic estimator agent that can call tools (a function tool and an MCP tool) and orchestrate multiple AutoGen agents **[🟨 Intermediate]**
 - **[`haystack_deep_research_agent`](frameworks/haystack_deep_research_agent/README.md)**: Deep research agent using Haystack framework that combines web search and Retrieval Augmented Generation (RAG) capabilities with SerperDev API and OpenSearch **[🟨 Intermediate]**
 - **[`langchain_deep_research`](frameworks/auto_wrapper/langchain_deep_research/README.md)**: An example that integrates any existing LangGraph agent with NeMo Agent toolkit using the `langgraph_wrapper` workflow type **[🟨 Intermediate]**
 - **[`multi_frameworks`](frameworks/multi_frameworks/README.md)**: Supervisor agent coordinating LangChain/LangGraph, LlamaIndex, and Haystack agents for research, RAG, and chitchat tasks **[🟨 Intermediate]**

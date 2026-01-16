@@ -26,7 +26,7 @@ root = "../../.."
 name = "nat_autogen_demo"
 dynamic = ["version"]
 dependencies = [
-  "nvidia-nat[autogen]~=1.4",
+  "nvidia-nat[autogen,mcp]~=1.4",
 ]
 requires-python = ">=3.11,<3.14"
 description = "AutoGen Workflow Example"
