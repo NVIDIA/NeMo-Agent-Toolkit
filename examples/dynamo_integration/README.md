@@ -61,9 +61,9 @@ source .env
 python scripts/download_agent_leaderboard_v2.py --domains banking
 
 # 5. Download the model weights (requires HuggingFace account)
-cd "$(dirname $DYNAMO_MODEL_DIR)" # parent directory of the intended model weights directory
+cd "$(dirname "$DYNAMO_MODEL_DIR")" # parent directory of the intended model weights directory
 # <!-- path-check-skip-next-line -->
-hf download meta-llama/Llama-3.3-70B-Instruct --local-dir $DYNAMO_MODEL_DIR
+hf download meta-llama/Llama-3.3-70B-Instruct --local-dir "$DYNAMO_MODEL_DIR"
 
 # 6. Start Dynamo backend (see Dynamo README for details)
 # <!-- path-check-skip-next-line -->
