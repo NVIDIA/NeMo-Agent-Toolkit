@@ -15,6 +15,9 @@
 
 # path-check-skip-file
 
+# This config demonstrates an AutoGen multi-agent workflow that retrieves
+# Los Angeles traffic information based on the current time of day.
+
 general:
   telemetry:
     logging:
@@ -56,44 +59,50 @@ function_groups:
       - current_datetime
 
 functions:
-  weather_update_tool:
-    _type: nat_autogen_demo/weather_update_autogen
-    description: "Get the current weather for a specified city"
+  traffic_status_tool:
+    _type: nat_autogen_demo/traffic_status_autogen
+    description: "Get the traffic status for a Los Angeles highway given the current hour"
 
 workflow:
   _type: autogen_team
   llm_name: nim_llm
-  description: "To get the current weather and time in a specific city"
-  tool_names: [weather_update_tool, mcp_functions__current_datetime]
-  query_processing_agent_name: WeatherAndTimeAgent
+  description: "To get the current traffic status for Los Angeles highways"
+  tool_names: [mcp_functions__current_datetime, traffic_status_tool]
+  query_processing_agent_name: TrafficAgent
   query_processing_agent_instructions: |
-    You are an agent that provides the current weather and time information.
+    You are an agent that provides current traffic information for Los Angeles highways.
     You MUST use your available tools to get accurate information - do NOT make up or guess any data.
-    
-    REQUIRED WORKFLOW when asked about weather AND time:
-    1. FIRST call weather_update_tool with the city name
-    2. THEN call mcp_functions__current_datetime with any string (e.g., "now") to get the current time
-    3. ONLY after calling BOTH tools, say 'DONE'
-    
-    CRITICAL: You must call BOTH tools before finishing. Do NOT say 'DONE' until you have results from BOTH tools.
-    
-    If asked about only weather: call weather_update_tool, then say 'DONE'.
-    If asked about only time: call mcp_functions__current_datetime, then say 'DONE'.
-    If asked about anything else, respond with 'I can only provide weather and time information.'
+
+    WORKFLOW:
+    1. First, call mcp_functions__current_datetime with any string (e.g., "now") to get the current time
+    2. Extract the HOUR (0-23) from the datetime result
+    3. Extract the highway name and direction from the user's question (e.g., "405 South", "10 West")
+    4. Call traffic_status_tool with the highway name AND the hour (as an integer)
+    5. After getting the result, clearly report the traffic status
+
+    CRITICAL: You MUST call BOTH tools:
+    - First: mcp_functions__current_datetime to get current time
+    - Second: traffic_status_tool with the highway and hour extracted from the datetime
+
+    After getting results, summarize the data clearly like this:
+    "RESULTS: Current time is [time]. Traffic on [highway] is [status details]. DONE"
+
+    If asked about anything other than LA traffic, respond with 'I can only provide Los Angeles traffic information.'
   final_response_agent_name: FinalResponseAgent
   final_response_agent_instructions: |
     You are the final response agent.
-    Your role is to provide a concise and clear answer based on the information provided by other agents.
-    Once you are done, reply with the final answer and then say 'APPROVE'.
+    The TrafficAgent has already collected the traffic data using tools - DO NOT call any tools yourself.
+    Your role is to provide a polished, user-friendly response based on the information already gathered.
+    Format the traffic information nicely for the user, then say 'APPROVE'.
 
 eval:
   general:
     output:
-      dir: ./.tmp/nat/examples/frameworks/nat_autogen_demo/eval/
+      dir: ./.tmp/nat/examples/frameworks/nat_autogen_demo/traffic_eval/
       cleanup: true
     dataset:
       _type: json
-      file_path: examples/frameworks/nat_autogen_demo/data/eval_dataset.json
+      file_path: examples/frameworks/nat_autogen_demo/data/toy_data.json
     profiler:
       token_uniqueness_forecast: true
       workflow_runtime_forecast: true
