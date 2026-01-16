@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,7 +49,11 @@ async def git_repo_tool(tool_config: GitRepoToolConfig, builder: Builder):
         if operation == "setup":
             if 'repo_url' not in args or 'base_commit' not in args:
                 raise ValueError("setup operation requires 'repo_url' and 'base_commit'")
-            context = await repo_manager.setup_repository(args['repo_url'], args['base_commit'])
+            # instance_id is optional - when provided, creates isolated workspace per instance
+            instance_id = args.get('instance_id')
+            context = await repo_manager.setup_repository(
+                args['repo_url'], args['base_commit'], instance_id
+            )
             return str(context.repo_path)
 
         if operation == "cleanup":

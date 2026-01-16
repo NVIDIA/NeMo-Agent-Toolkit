@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -414,7 +414,7 @@ You cannot continue working (reading, editing, testing) in any way on this task 
         except (TimeoutError, subprocess.TimeoutExpired) as e:
             # Extract output from exception if available (only subprocess.TimeoutExpired has output attribute)
             if isinstance(e, subprocess.TimeoutExpired) and hasattr(e, "output") and e.output:
-                output = e.output.decode("utf-8", errors="replace")
+                output = e.output if isinstance(e.output, str) else e.output.decode("utf-8", errors="replace")
             else:
                 output = ""
             # Format timeout message using template
@@ -446,16 +446,17 @@ class SweBenchPredictor(SweBenchPredictorBase):
                 wrapper_type=LLMFrameworkEnum.LANGCHAIN
             )
 
-        repo_name = swebench_input.instance_id.split('-')[0]
+        repo_name = swebench_input.instance_id.rsplit('-', 1)[0]   # eg. scikit-learn__scikit-learn-14520
         org, repo = repo_name.split('__')
         repo_url = f"https://github.com/{org}/{repo}"
 
-        # Setup repo
+        # Setup repo with instance_id for workspace isolation
         try:
             repo_path_str = await self.git_tool.arun(json.dumps({
                 "operation": "setup",
                 "repo_url": repo_url,
-                "base_commit": swebench_input.base_commit
+                "base_commit": swebench_input.base_commit,
+                "instance_id": swebench_input.instance_id  # Isolate workspace per instance
             }))
             repo_path = Path(repo_path_str)
             logger.info("Repository setup at %s", repo_path)

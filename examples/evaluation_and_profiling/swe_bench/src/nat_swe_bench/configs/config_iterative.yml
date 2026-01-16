@@ -14,32 +14,28 @@
 # limitations under the License.
 
 llms:
- nim_llm:
-   _type: nim
-   model_name: mistralai/mistral-nemotron
-   temperature: 0.6
-   max_tokens: 4096    
-
-llms:
+  nim_llm:
+    _type: nim
+    model_name: mistralai/mistral-nemotron
+    temperature: 0.0
+    max_tokens: 4096
   claude_sonnet_llm:
     _type: litellm
     model_name: anthropic/claude-sonnet-4-5-20250929
     temperature: 0.0
-    api_key: "${ANTHROPIC_API_KEY}"  # Set this environment variable before running
-
-# llms:
-#   openai_llm:
-#     _type: litellm
-#     model_name: openai/gpt-5.2
-#     temperature: 0.0
-#     api_key: "${OPENAI_API_KEY}"  # Set this environment variable before running
+    api_key: "${ANTHROPIC_API_KEY}"
+  openai_llm:
+    _type: litellm
+    model_name: openai/gpt-5.2
+    temperature: 0.0
+    api_key: "${OPENAI_API_KEY}"
 
 workflow:
   _type: swe_bench
   predictor:
     _type: iterative
-    llm_name: "claude_sonnet_llm"
-    step_limit: 250
+    llm_name: "claude_sonnet_llm"   # "nim_llm" or "claude_sonnet_llm" or "openai_llm"
+    step_limit: 100
     timeout: 60
 
 functions:
@@ -51,7 +47,7 @@ functions:
 eval:
   general:
     output_dir: .tmp/nat/examples/evaluation_and_profiling/swe_bench/iterative/
-    max_concurrency: 1
+    max_concurrency: 5
     dataset:
       _type: parquet
       file_path: hf://datasets/princeton-nlp/SWE-bench_Lite/data/test-00000-of-00001.parquet
@@ -63,15 +59,15 @@ eval:
           field:
             instance_id:
               - sympy__sympy-20590
-              # - sympy__sympy-21055
-              # - sympy__sympy-11400
-              # - astropy__astropy-12907
-              # - astropy__astropy-6938
-              # - django__django-15781
-              # - django__django-11001
-              # - mwaskom__seaborn-3010
-              # - pallets__flask-4045
-              # - psf__requests-1963
+              - sympy__sympy-21055
+              - sympy__sympy-11400
+              - astropy__astropy-12907
+              - django__django-15781
+              - astropy__astropy-6938
+              - django__django-11001
+              - mwaskom__seaborn-3010
+              - pallets__flask-4045
+              - psf__requests-1963
 
   evaluators:
     swe_bench:

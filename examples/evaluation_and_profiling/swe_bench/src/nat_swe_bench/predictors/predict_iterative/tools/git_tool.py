@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,7 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlparse
 
 from git import Repo
 
@@ -27,12 +28,8 @@ logger = logging.getLogger(__name__)
 class RepoContext:
     """Context manager for repository operations."""
     repo_url: str
-    base_path: Path
+    repo_path: Path  # Actual path where the repo is cloned
     repo: Repo | None = None
-
-    def __post_init__(self):
-        self.repo_name = self.repo_url.split('/')[-1].replace('.git', '')
-        self.repo_path = self.base_path / self.repo_name
 
 
 class RepoManager:
@@ -42,9 +39,18 @@ class RepoManager:
         self.workspace.mkdir(parents=True, exist_ok=True)
         self.active_repos = {}
 
-    async def setup_repository(self, repo_url: str, base_commit: str) -> RepoContext:
-        """Setup a repository at a specific commit."""
-        repo_path = get_repo_path(str(self.workspace), repo_url)
+    async def setup_repository(
+        self, repo_url: str, base_commit: str, instance_id: str | None = None
+    ) -> RepoContext:
+        """Setup a repository at a specific commit.
+
+        Args:
+            repo_url: URL of the repository to clone
+            base_commit: Commit hash to checkout
+            instance_id: Optional instance ID for workspace isolation. When provided,
+                         each instance gets its own clean workspace directory.
+        """
+        repo_path = get_repo_path(str(self.workspace), repo_url, instance_id)
 
         if str(repo_path) in self.active_repos:
             context = self.active_repos[str(repo_path)]
@@ -54,7 +60,7 @@ class RepoManager:
         repo = await clone_repository(repo_url, repo_path)
         await checkout_commit(repo, base_commit)
 
-        context = RepoContext(repo_url=repo_url, base_path=self.workspace, repo=repo)
+        context = RepoContext(repo_url=repo_url, repo_path=repo_path, repo=repo)
         self.active_repos[str(repo_path)] = context
         return context
 
@@ -68,13 +74,33 @@ class RepoManager:
         self.active_repos.clear()
 
 
-def get_repo_path(workspace_dir: str, repo_url: str) -> Path:
-    """Generate a unique path for the repository."""
-    parts = repo_url.rstrip('/').split('/')
+def get_repo_path(workspace_dir: str, repo_url: str, instance_id: str | None = None) -> Path:
+    """Generate a unique path for the repository.
+
+    Args:
+        workspace_dir: Base workspace directory
+        repo_url: URL of the repository
+        instance_id: Optional instance ID for unique workspace isolation
+
+    Returns:
+        Path to the repository. If instance_id is provided, returns
+        workspace_dir/instance_id/org/repo for complete isolation.
+        Otherwise returns workspace_dir/org/repo.
+    """
+    if "://" in repo_url:
+        path = urlparse(repo_url).path
+    else:
+        # SSH form: git@host:org/repo.git
+        path = repo_url.split(":", 1)[-1]
+    parts = path.strip("/").split("/")
     repo_name = parts[-1].replace('.git', '')
     org_name = parts[-2]  # Organization name
-    
-    # Return: workspace_dir/org/repo
+
+    # If instance_id is provided, create isolated workspace per instance
+    if instance_id:
+        return Path(workspace_dir) / instance_id / org_name / repo_name
+
+    # Default: workspace_dir/org/repo
     return Path(workspace_dir) / org_name / repo_name
 
 
