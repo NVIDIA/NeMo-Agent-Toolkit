@@ -220,9 +220,9 @@ nat eval --config_file examples/frameworks/nat_autogen_demo/configs/config-eval.
 
 The evaluation runs the workflow against all three test cases and evaluates results using:
 
-- **Answer Accuracy**: Measures how accurately the agent answers the questions
-- **Response Groundedness**: Evaluates whether responses are grounded in the tool outputs
-- **Trajectory Accuracy**: Assesses the agent's decision-making path and tool usage
+- **Answer `Accuracy`**: Measures how accurately the agent answers the questions
+- **Response `Groundedness`**: Evaluates whether responses are grounded in the tool outputs
+- **Trajectory `Accuracy`**: Assesses the agent's decision-making path and tool usage
 
 ### Understanding Evaluation Results
 
