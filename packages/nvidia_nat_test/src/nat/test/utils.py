@@ -86,7 +86,9 @@ async def run_workflow(*,
     result = await nat_run_workflow(config=config, config_file=config_file, prompt=question, to_type=str, **kwargs)
 
     if assert_expected_answer:
-        assert expected_answer.lower() in result.lower(), f"Expected '{expected_answer}' in '{result}'"
+        # sometimes LLMs use fancy unicode space characters like \u202f, normalize before comparing
+        normalized_result = ' '.join(result.split())
+        assert expected_answer.lower() in normalized_result.lower(), f"Expected '{expected_answer}' in '{result}'"
 
     return result
 
