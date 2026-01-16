@@ -38,11 +38,11 @@ This guide covers setting up, running, and configuring the NVIDIA Dynamo backend
 
 ## Overview
 
-Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimization. Scope of the current integration is based around two core aspects. First, we have implemented a [Dynamo LLM](../../src/nat/llm/dynamo_llm.py) support for NeMo Agent toolkit inference on Dynamo runtimes. Second, we provide a set of startup scripts for NVIDIA Hopper and Blackwell GPU servers supporting NAT runtimes at scale. The following **Table** defines each script: 
+Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimization. The scope of the current integration is based around two core aspects. First, we have implemented a [Dynamo LLM](../../src/nat/llm/dynamo_llm.py) support for NeMo Agent toolkit inference on Dynamo runtimes. Second, we provide a set of startup scripts for NVIDIA Hopper and Blackwell GPU servers supporting NeMo Agent toolkit runtimes at scale. The following **Table** defines each script: 
 
 | Mode | Script | Description | Best For |
 |------|--------|-------------|----------|
-| **Unified** | `start_dynamo_unified.sh` | Workers responsible for both prefill and decode | Development, testing |
+| **Unified** | `start_dynamo_unified.sh` | Workers responsible for both `prefill` and `decode` | Development, testing |
 | **Unified + Thompson** | `start_dynamo_unified_thompson_hints.sh` | Unified with a predictive KV-aware router | Production, KV optimization |
 | **Disaggregated** | `start_dynamo_disagg.sh` | Separate `prefill` and `decode` workers | High-throughput production |
 
@@ -204,12 +204,10 @@ source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 ```bash
 source .env
 
-# Create the directory
-# mkdir -p "$(dirname "$DYNAMO_MODEL_DIR")"
-cd $(dirname $DYNAMO_MODEL_DIR)
+# Change to the target model directory (create it if still needed)
+cd "$(dirname "$DYNAMO_MODEL_DIR")"
 
-# We will download the model weights directly from HuggingFace. Usage of
-# llama models from requires approval from Meta. See `NOTE` below.
+# We will download the model weights directly from HuggingFace. See `NOTE` below.
 uv pip install huggingface_hub
 uv run huggingface-cli login  # Enter your HF token
 
@@ -217,7 +215,7 @@ uv run huggingface-cli download "meta-llama/Llama-3.3-70B-Instruct" --local-dir 
 ```
 
 > [!NOTE]
-> The Llama-3.3-70B-Instruct model requires approval from Meta. Request access at [huggingface.co/meta-llama/Llama-3.3-70B-Instruct](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct) before downloading. You will need to create a HuggingFace Access Token with read access in order to download the model. On the huggingface website visit: "Access Tokens" -> "+ Create access token" to generate a token starting with "hf_". Enter your token when prompted. Respond "n" when asked "Add token as git credential? (Y/n)". Set HF_HOME and HF_TOKEN in .env..
+> The Llama-3.3-70B-Instruct model requires approval from Meta. Request access at [huggingface.co/meta-llama/Llama-3.3-70B-Instruct](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct) before downloading. You will need to create a HuggingFace Access Token with read access in order to download the model. On the `HuggingFace` website visit: "Access Tokens" -> "+ Create access token" to generate a token starting with `hf_`. Enter your token when prompted. Respond "n" when asked "Add token as git credential? (Y/n)". Set HF_HOME and HF_TOKEN in .env..
 
 ### Environment Setup
 
@@ -307,17 +305,6 @@ Example output for an 8x H100 system:
 | N/A   35C    P0            139W / 1000W |       4MiB / 183359MiB |      0%      Default |
 |                                         |                        |             Disabled |
 +-----------------------------------------+------------------------+----------------------+
-
-+-----------------------------------------------------------------------------------------+
-| Processes:                                                                              |
-|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
-|        ID   ID                                                               Usage      |
-|=========================================================================================|
-|    0   N/A  N/A         2700092      C   VLLM::Worker_TP0_EP0                  16901... |
-|    1   N/A  N/A         2700093      C   VLLM::Worker_TP1_EP1                  16901... |
-|    2   N/A  N/A         2700094      C   VLLM::Worker_TP2_EP2                  16901... |
-|    3   N/A  N/A         2700095      C   VLLM::Worker_TP3_EP3                  16901... |
-+-----------------------------------------------------------------------------------------+
 ```
 
 ### Verify Docker and NVIDIA Container Toolkit

@@ -82,7 +82,7 @@ if [ -d "${DYNAMO_MODEL_DIR}" ]; then
         echo ""
         echo "This usually means incomplete/corrupted download. Try:"
         echo "  rm -rf ${DYNAMO_MODEL_DIR}"
-        echo "  huggingface-cli download meta-llama/Llama-3.3-70B-Instruct --local-dir ${DYNAMO_MODEL_DIR}"
+        echo "  hf download meta-llama/Llama-3.3-70B-Instruct --local-dir ${DYNAMO_MODEL_DIR}"
         exit 1
     fi
 fi
@@ -217,7 +217,7 @@ if [ ! -d "$LOCAL_MODEL_DIR" ]; then
     echo "WARNING: Model directory not found at: $LOCAL_MODEL_DIR"
     echo ""
     echo "To download the model, run:"
-    echo "  huggingface-cli download meta-llama/Llama-3.3-70B-Instruct --local-dir $LOCAL_MODEL_DIR"
+    echo "  hf download meta-llama/Llama-3.3-70B-Instruct --local-dir $LOCAL_MODEL_DIR"
     echo ""
     read -p "Continue anyway (model will be downloaded from HuggingFace)? [y/N] " -n 1 -r
     echo
@@ -277,8 +277,8 @@ docker run -d \
     wait_for_worker() {
         local worker_type=\$1
         local pid=\$2
-        # local max_wait=300
-        local max_wait=${DYNAMO_WORKER_INIT_TIMEOUT_S:-600}
+        # Use WORKER_INIT_TIMEOUT_S (defaults to 1800s / 30 min)
+        local max_wait=$WORKER_INIT_TIMEOUT_S
         local elapsed=0
         local poll_interval=5
 

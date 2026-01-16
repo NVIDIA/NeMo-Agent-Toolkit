@@ -48,10 +48,11 @@ uv pip install matplotlib scipy
 
 # 2. Install the workflow package
 # <!-- path-check-skip-next-line -->
-cd examples/dynamo_integration/react_benchmark_agent # NeMo-Agent-Toolkit/examples/dynamo_integration/react_benchmark_agent
+cd examples/dynamo_integration/react_benchmark_agent
 uv pip install -e .
 
 # 3. Source environment variables
+# <!-- path-check-skip-next-line -->
 cd ../ # NeMo-Agent-Toolkit/examples/dynamo_integration
 source .env
 
@@ -60,8 +61,9 @@ source .env
 python scripts/download_agent_leaderboard_v2.py --domains banking
 
 # 5. Download the model weights (requires HuggingFace account)
-cd $(dirname $DYNAMO_MODEL_DIR) # parent directory of the intended model weights directory
-huggingface-cli download meta-llama/Llama-3.3-70B-Instruct --local-dir $DYNAMO_MODEL_DIR
+cd "$(dirname $DYNAMO_MODEL_DIR)" # parent directory of the intended model weights directory
+# <!-- path-check-skip-next-line -->
+hf download meta-llama/Llama-3.3-70B-Instruct --local-dir $DYNAMO_MODEL_DIR
 
 # 6. Start Dynamo backend (see Dynamo README for details)
 # <!-- path-check-skip-next-line -->
@@ -83,7 +85,7 @@ nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs
 > The first load of model weights to `SGLang` workers can take significant time.
 
 > [!NOTE]
-> To customize GPU workers and tensor parallelism, edit the configuration variables at the top of external/dynamo/start_dynamo_unified.sh.
+> To customize GPU workers and tensor parallelism, edit the configuration variables at the top of [start_dynamo_unified.sh](../../external/dynamo/start_dynamo_unified.sh).
 
 After running this end-to-end evaluation, you will have confirmed functional model services on Dynamo, dataset access, and agent execution.
 
