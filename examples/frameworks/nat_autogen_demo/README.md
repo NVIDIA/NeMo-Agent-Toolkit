@@ -51,7 +51,7 @@ A quick example using the AutoGen framework from Microsoft, showcasing a multi-a
 - **Multi-Agent Collaboration:** Shows two specialized agents working together - a TrafficAgent for data retrieval and a FinalResponseAgent for response formatting.
 - **Time-Aware Traffic Status:** Provides realistic traffic information that varies based on time of day (morning rush, evening rush, off-peak hours).
 - **Unified Tool Integration:** Uses the unified abstraction provided by the toolkit to integrate both local tools (traffic status) and MCP tools (time service) without framework-specific code. MCP servers are hosted using the native MCP server included in the toolkit and integrated with AutoGen as a function.
-- **Round-Robin Group Chat:** Uses AutoGen's RoundRobinGroupChat for structured agent communication with termination conditions.
+- **Round-Robin Group Chat:** Uses the AutoGen `RoundRobinGroupChat` for structured agent communication with termination conditions.
 
 ## Prerequisites
 
