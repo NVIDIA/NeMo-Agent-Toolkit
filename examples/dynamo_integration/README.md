@@ -54,27 +54,27 @@ uv pip install -e .
 # 3. Source environment variables
 # <!-- path-check-skip-next-line -->
 cd ../ # NeMo-Agent-Toolkit/examples/dynamo_integration
-source .env
+[ -f .env ] && source .env || { echo "Warning: .env not found" >&2; false; }
 
 # 4. Download the dataset (requires HuggingFace account)
 # <!-- path-check-skip-next-line -->
 python scripts/download_agent_leaderboard_v2.py --domains banking
 
 # 5. Download the model weights (requires HuggingFace account)
-cd "$(dirname "$DYNAMO_MODEL_DIR")" # parent directory of the intended model weights directory
+mkdir -p "$(dirname "$DYNAMO_MODEL_DIR")"
 # <!-- path-check-skip-next-line -->
 hf download meta-llama/Llama-3.3-70B-Instruct --local-dir "$DYNAMO_MODEL_DIR"
 
 # 6. Start Dynamo backend (see Dynamo README for details)
 # <!-- path-check-skip-next-line -->
-cd /path/to/NeMo-Agent-Toolkit/external/dynamo # NeMo-Agent-Toolkit/external/dynamo
+cd "$DYNAMO_REPO_DIR" # cd /path/to/NeMo-Agent-Toolkit/external/dynamo
 bash start_dynamo_unified.sh > startup_output.txt 2>&1 # wait ~5 minutes for the server to start
 
 # Requirements for start_dynamo_unified.sh:
 #   - Docker with NVIDIA Container Toolkit (nvidia-docker)
 #   - 4x NVIDIA GPUs (set WORKER_GPUS to the available set of machines)
 #   - Model weights: downloaded per previous instructions
-#   - Check that default ports are available: 8099 (HTTP API), 2389 (ETCD), 4232 (NATS)
+#   - Check that default ports are available: 8099 (HTTP API), 2379 (ETCD), 4222 (NATS)
 
 # 7. Run evaluation
 cd ../../ # NeMo-Agent-Toolkit/

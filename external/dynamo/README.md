@@ -202,7 +202,7 @@ source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 ### Download model weights (can skip if already done)
 
 ```bash
-source .env
+[ -f .env ] && source .env || { echo "Warning: .env not found" >&2; false; }
 
 # Change to the target model directory (create it if still needed)
 cd "$(dirname "$DYNAMO_MODEL_DIR")"
