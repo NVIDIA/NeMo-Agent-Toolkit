@@ -67,7 +67,7 @@ The model learns to play against a **random opponent**, receiving rewards based 
    source art-env/bin/activate
    export HF_TOKEN=<your_huggingface_token>
    # Install OpenPipe ART
-   uv pip install openpipe-art[backend]==0.4.11
+   uv pip install --no-cache 'openpipe-art[backend]==0.4.11'
 
    # Verify installation
    art --help
@@ -75,7 +75,7 @@ The model learns to play against a **random opponent**, receiving rewards based 
 
    For detailed installation instructions, see the [OpenPipe ART Getting Started Guide](https://art.openpipe.ai/getting-started/about).
 
-4. **This example package**:
+4. **This example package in your NeMo Agent Toolkit environment**:
    ```bash
    uv pip install -e examples/finetuning/rl_with_openpipe_art
    ```
