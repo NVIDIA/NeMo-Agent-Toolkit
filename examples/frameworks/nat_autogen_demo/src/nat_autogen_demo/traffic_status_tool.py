@@ -51,9 +51,12 @@ TRAFFIC_DATA = {
         "off_peak": "Traffic on the 405 South is light between Mulholland Drive and LAX.",
     },
     "405-north": {
-        "morning_rush": "Traffic on the 405 North is light between Westchester and Culver City.",
-        "evening_rush": "Traffic on the 405 North is heavy between Westchester and Culver City due to evening commuters.",
-        "off_peak": "Traffic on the 405 North is light between Westchester and Culver City.",
+        "morning_rush":
+            "Traffic on the 405 North is light between Westchester and Culver City.",
+        "evening_rush":
+            "Traffic on the 405 North is heavy between Westchester and Culver City due to evening commuters.",
+        "off_peak":
+            "Traffic on the 405 North is light between Westchester and Culver City.",
     },
     "110-south": {
         "morning_rush": "Traffic on the 110 South is heavy between Dodger Stadium and Downtown LA due to morning rush.",

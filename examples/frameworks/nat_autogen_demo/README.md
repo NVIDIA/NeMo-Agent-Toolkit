@@ -70,20 +70,14 @@ If you have not already done so, follow the instructions in the [Install Guide](
 From the root directory of the NeMo Agent toolkit repository, run the following commands:
 
 ```bash
-# Install the core NeMo Agent toolkit and required plugins from local source
-# Note: Order matters - install core first, then plugins, then the demo
-uv pip install -e .
-uv pip install -e packages/nvidia_nat_autogen
-uv pip install -e packages/nvidia_nat_mcp
-
-# Install the demo workflow and its dependencies
+# Install the demo workflow and its dependencies (this also installs the core toolkit and required plugins)
 uv pip install -e examples/frameworks/nat_autogen_demo
 
 # Required to run the current_datetime MCP tool used in the example workflow
 uv pip install -e examples/getting_started/simple_calculator
 
 # Optional: Install Phoenix for observability and tracing
-uv pip install -e packages/nvidia_nat_phoenix
+uv pip install -e '.[phoenix]'
 uv pip install arize-phoenix
 
 uv pip install matplotlib
