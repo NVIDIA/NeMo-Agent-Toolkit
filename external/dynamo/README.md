@@ -38,12 +38,12 @@ This guide covers setting up, running, and configuring the NVIDIA Dynamo backend
 
 ## Overview
 
-Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimization. This project provides three deployment modes:
+Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimization. Scope of the current integration is based around two core aspects. First, we have implemented a [Dynamo LLM](../../src/nat/llm/dynamo_llm.py) support for NeMo Agent toolkit inference on Dynamo runtimes. Second, we provide a set of startup scripts for NVIDIA Hopper and Blackwell GPU servers supporting NAT runtimes at scale. The following **Table** defines each script: 
 
 | Mode | Script | Description | Best For |
 |------|--------|-------------|----------|
-| **Unified** | `start_dynamo_unified.sh` | Single worker, all operations | Development, testing |
-| **Unified + Thompson** | `start_dynamo_unified_thompson_hints.sh` | Unified with predictive KV-aware router | Production, KV optimization |
+| **Unified** | `start_dynamo_unified.sh` | Workers responsible for both prefill and decode | Development, testing |
+| **Unified + Thompson** | `start_dynamo_unified_thompson_hints.sh` | Unified with a predictive KV-aware router | Production, KV optimization |
 | **Disaggregated** | `start_dynamo_disagg.sh` | Separate `prefill` and `decode` workers | High-throughput production |
 
 ### Architecture Overview
@@ -175,7 +175,7 @@ Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimizat
 
 | Component | Minimum | Recommended |
 |-----------|---------|-------------|
-| **GPU Architecture** | NVIDIA Hopper (H100) or Blackwell (B200) | B200 for optimal performance |
+| **GPU Architecture** | NVIDIA Hopper (H100) or Blackwell (B200) | B200 for higher throughput |
 | **GPU Count** | 2 GPUs for small models (2 workers) | 8 GPUs for optimal performance |
 | **GPU Memory** | 80GB per GPU (H100) | 192GB per GPU (B200) |
 | **System RAM** | 256GB | 512GB+ |
@@ -202,28 +202,22 @@ source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 ### Download model weights (can skip if already done)
 
 ```bash
-# Set your desired model directory
-export DYNAMO_MODEL_DIR="${HOME}/models/Llama-3.3-70B-Instruct"
+source .env
 
 # Create the directory
 # mkdir -p "$(dirname "$DYNAMO_MODEL_DIR")"
-mkdir -p $DYNAMO_MODEL_DIR
+cd $(dirname $DYNAMO_MODEL_DIR)
 
 # We will download the model weights directly from HuggingFace. Usage of
-# llama models from requires approval from Meta. See `Access Notes` below.
-# You will need to create a HuggingFace Access Token with read access in
-# order to download the model. On the huggingface website visit:
-# "Access Tokens" -> "+ Create access token" to generate a token starting
-# with "hf_". Enter your token when prompted.
-# Respond "n" when asked "Add token as git credential? (Y/n)"
+# llama models from requires approval from Meta. See `NOTE` below.
 uv pip install huggingface_hub
 uv run huggingface-cli login  # Enter your HF token
 
-uv run huggingface-cli download "meta-llama/Llama-3.3-70B-Instruct" \
-  --local-dir "$DYNAMO_MODEL_DIR"
+uv run huggingface-cli download "meta-llama/Llama-3.3-70B-Instruct" --local-dir "$DYNAMO_MODEL_DIR"
 ```
 
-> **Access Note**: The Llama-3.3-70B-Instruct model requires approval from Meta. Request access at [huggingface.co/meta-llama/Llama-3.3-70B-Instruct](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct) before downloading.
+> [!NOTE]
+> The Llama-3.3-70B-Instruct model requires approval from Meta. Request access at [huggingface.co/meta-llama/Llama-3.3-70B-Instruct](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct) before downloading. You will need to create a HuggingFace Access Token with read access in order to download the model. On the huggingface website visit: "Access Tokens" -> "+ Create access token" to generate a token starting with "hf_". Enter your token when prompted. Respond "n" when asked "Add token as git credential? (Y/n)". Set HF_HOME and HF_TOKEN in .env..
 
 ### Environment Setup
 
@@ -245,11 +239,15 @@ source .env
 Or set variables directly:
 
 ```bash
+export HF_HOME=/path/to/local/storage/.cache/huggingface
+
+export HF_TOKEN=<my_huggingface_read_token>
+
 # Required: Set your model directory path
 export DYNAMO_MODEL_DIR="/path/to/your/models/Llama-3.3-70B-Instruct" # or Llama-3.1-3B-Instruct for QA on H100 machines
 
 # Optional: Set repository directory (for Thompson Sampling router)
-export DYNAMO_REPO_DIR="/path/to/NeMo-Agent-Toolkit"
+export DYNAMO_REPO_DIR="/path/to/NeMo-Agent-Toolkit/external/dynamo"
 
 # Optional: Configure GPU devices (default: 0,1,2,3)
 export DYNAMO_GPU_DEVICES="0,1,2,3"
@@ -361,7 +359,7 @@ bash stop_dynamo.sh
 - `nats` container (`nats-dynamo`) on port 4232
 - Dynamo container (`dynamo-sglang`) with unified worker on GPUs 0,1,2,3 (TP=4)
 
-**Startup time**: ~5 minutes seconds for 70B model
+**Startup time**: Startup time may vary between 5-20 minutes for a 70B model, depending on the state of the system cache.
 
 ### Option 2: Unified + Thompson Sampling Router (Production)
 

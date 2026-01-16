@@ -46,7 +46,6 @@ source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 uv pip install -e ".[langchain]"
 uv pip install matplotlib scipy
 
-
 # 2. Install the workflow package
 # <!-- path-check-skip-next-line -->
 cd examples/dynamo_integration/react_benchmark_agent # NeMo-Agent-Toolkit/examples/dynamo_integration/react_benchmark_agent
