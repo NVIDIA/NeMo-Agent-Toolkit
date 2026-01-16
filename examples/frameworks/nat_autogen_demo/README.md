@@ -20,7 +20,7 @@ limitations under the License.
 
 **Complexity:** 🟨 Intermediate
 
-A quick example using Microsoft's AutoGen framework showcasing a multi-agent Los Angeles traffic information system where agents collaborate through AutoGen's conversation system to provide real-time traffic status for highways based on the current time of day.
+A quick example using the AutoGen framework from Microsoft, showcasing a multi-agent Los Angeles traffic information system where agents collaborate through the AutoGen conversation system to provide real-time traffic status for highways based on the current time of day.  
 
 ## Table of Contents
 

@@ -14,4 +14,4 @@
 # limitations under the License.
 
 from . import autogen_team  # noqa: F401 # pylint: disable=W0611     #imported for side effects (registration)
-from . import traffic_status_tool  # noqa: F401 # pylint: disable=W0611     #imported for side effects (registration)
+from . import traffic_status_tool  # pylint: disable=W0611  # imported for side effects (registration)
