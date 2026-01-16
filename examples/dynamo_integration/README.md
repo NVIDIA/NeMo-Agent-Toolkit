@@ -48,44 +48,55 @@ source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 uv pip install -e ".[langchain]"
 uv pip install matplotlib scipy
 
-
 # 2. Install the workflow package
 # <!-- path-check-skip-next-line -->
-cd examples/dynamo_integration/react_benchmark_agent # NeMo-Agent-Toolkit/examples/dynamo_integration/react_benchmark_agent
+cd examples/dynamo_integration/react_benchmark_agent
 uv pip install -e .
 
-# 3. Download the dataset (requires HuggingFace account)
+# 3. Source environment variables
 # <!-- path-check-skip-next-line -->
 cd ../ # NeMo-Agent-Toolkit/examples/dynamo_integration
-export HF_TOKEN=<your_huggingface_token>
-export HF_HOME=<your-user-path/.cache/huggingface>
+[ -f .env ] && source .env || { echo "Warning: .env not found" >&2; false; }
+
+# 4. Download the dataset (requires HuggingFace account)
+# <!-- path-check-skip-next-line -->
 python scripts/download_agent_leaderboard_v2.py --domains banking
 
-# 4. Start Dynamo backend (see Dynamo README for details)
+# 5. Download the model weights (requires HuggingFace account)
+mkdir -p "$(dirname "$DYNAMO_MODEL_DIR")"
 # <!-- path-check-skip-next-line -->
-cd ../../external/dynamo # NeMo-Agent-Toolkit/external/dynamo
-bash start_dynamo_unified.sh # wait ~5 minutes for the server to start
+hf download meta-llama/Llama-3.3-70B-Instruct --local-dir "$DYNAMO_MODEL_DIR"
+
+# 6. Start Dynamo backend (see Dynamo README for details)
+# <!-- path-check-skip-next-line -->
+cd "$DYNAMO_REPO_DIR" # cd /path/to/NeMo-Agent-Toolkit/external/dynamo
+bash start_dynamo_unified.sh > startup_output.txt 2>&1 # wait ~5 minutes for the server to start
 
 # Requirements for start_dynamo_unified.sh:
 #   - Docker with NVIDIA Container Toolkit (nvidia-docker)
-#   - 4x NVIDIA GPUs (default: device IDs 4,5,6,7, configurable via WORKER_GPUS)
-#   - Model weights: either local path or HF_TOKEN to download Llama-3.3-70B-Instruct
-#   - Ports available: 8099 (HTTP API), 2389 (ETCD), 4232 (NATS)
-#   - curl and jq for health checks
+#   - 4x NVIDIA GPUs (set WORKER_GPUS to the available set of machines)
+#   - Model weights: downloaded per previous instructions
+#   - Check that default ports are available: 8099 (HTTP API), 2379 (ETCD), 4222 (NATS)
 
-# Note: To customize GPU workers and tensor parallelism, edit the configuration
-# variables at the top of external/dynamo/start_dynamo_unified.sh:
-#   WORKER_GPUS="4,5,6,7"  # GPU device IDs to use (e.g., "0,1" for first 2 GPUs)
-#   TP_SIZE=4              # Tensor parallel size (must match number of GPUs)
-#   HTTP_PORT=8099         # API endpoint port
-#   LOCAL_MODEL_DIR="..."  # Path to your local model weights
-
-# 5. Run evaluation
+# 7. Run evaluation
 cd ../../ # NeMo-Agent-Toolkit/
 nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs/eval_config_no_rethinking_full_test.yml
 ```
 
+> [!WARNING]
+> The first load of model weights to `SGLang` workers can take significant time.
+> [!NOTE]
+> To customize GPU workers and tensor parallelism, edit the configuration variables at the top of [start_dynamo_unified.sh](../../external/dynamo/start_dynamo_unified.sh).
+
 After running this end-to-end evaluation, you will have confirmed functional model services on Dynamo, dataset access, and agent execution.
+
+## Quick Stop
+```bash
+# 1. When testing is complete don't forget to stop workers and free GPU memory
+# <!-- path-check-skip-next-line -->
+cd /path/to/NeMo-Agent-Toolkit/external/dynamo # NeMo-Agent-Toolkit/external/dynamo
+bash stop_dynamo.sh
+```
 
 ### Understanding Evaluation Artifacts
 
@@ -165,7 +176,6 @@ examples/dynamo_integration/
     │   ├── banking_tools.py           # Tool stub registration
     │   ├── tool_intent_stubs.py       # Intent capture system
     │   ├── self_evaluating_agent_with_feedback.py  # Self-evaluation wrapper
-    │   ├── prefix_utils.py            # Prefix header utilities
     │   └── evaluators/
     │       ├── __init__.py            # Evaluators package
     │       ├── tsq_evaluator.py       # Tool Selection Quality evaluator
@@ -174,10 +184,9 @@ examples/dynamo_integration/
     ├── tests/                         # Unit tests
     │   ├── test_tsq_formula.py        # TSQ calculation tests
     │   ├── test_self_evaluation.py    # Self-evaluation tests
-    │   ├── test_prefix_utils.py       # Prefix utilities tests
-    │   └── validate_prefix_config.py  # Prefix configuration validation
+    │   └── test_tool_intent_buffer.py # Tool intent buffer tests
     │
-    └── outputs/                       # Evaluation results
+    └── outputs/                       # Evaluation results (generated at runtime)
         ├── benchmarks/                # Concurrency benchmark results
         │   └── <benchmark_run>/
         │       ├── benchmark_report.md
@@ -270,7 +279,7 @@ If you see `PermissionError: [Errno 13] Permission denied` when downloading the 
 
 ```bash
 export HF_HOME=/path/to/local/storage/.cache/huggingface
-export HF_TOKEN=<my_huggingface_read_token>
+export HF_TOKEN=my_huggingface_read_token
 ```
 
 ## Support
