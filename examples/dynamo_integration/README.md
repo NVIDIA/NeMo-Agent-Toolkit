@@ -83,7 +83,6 @@ nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs
 
 > [!WARNING]
 > The first load of model weights to `SGLang` workers can take significant time.
-
 > [!NOTE]
 > To customize GPU workers and tensor parallelism, edit the configuration variables at the top of [start_dynamo_unified.sh](../../external/dynamo/start_dynamo_unified.sh).
 
