@@ -91,6 +91,7 @@ After running this end-to-end evaluation, you will have confirmed functional mod
 ## Quick Stop
 ```bash
 # 1. When testing is complete don't forget to stop workers and free GPU memory
+# <!-- path-check-skip-next-line -->
 cd /path/to/NeMo-Agent-Toolkit/external/dynamo # NeMo-Agent-Toolkit/external/dynamo
 bash stop_dynamo.sh
 ```
