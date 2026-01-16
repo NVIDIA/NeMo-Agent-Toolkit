@@ -16,6 +16,8 @@ limitations under the License.
 
 # NVIDIA NeMo Agent Toolkit and Dynamo Integration
 
+**Complexity:** 🛑 Advanced
+
 > [!NOTE]
 > ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
 

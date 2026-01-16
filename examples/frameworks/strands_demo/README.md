@@ -17,6 +17,8 @@ limitations under the License.
 
 # Strands Example
 
+**Complexity:** 🟢 Beginner
+
 A minimal example showcasing a Strands agent that answers questions about Strands documentation using a curated URL knowledge base and the native Strands `http_request` tool.
 
 ## Table of Contents

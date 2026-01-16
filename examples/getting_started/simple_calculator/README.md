@@ -17,6 +17,8 @@ limitations under the License.
 
 # A Simple LLM Calculator
 
+**Complexity:** 🟢 Beginner
+
 This example demonstrates an end-to-end (E2E) agentic workflow using the NeMo Agent toolkit library, fully configured through a YAML file. It showcases the NeMo Agent toolkit plugin system and `Builder` to seamlessly integrate pre-built and custom tools into workflows.
 
 ## Table of Contents

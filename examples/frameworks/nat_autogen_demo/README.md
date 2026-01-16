@@ -18,6 +18,8 @@ limitations under the License.
 
 # AutoGen Framework Example
 
+**Complexity:** 🟨 Intermediate
+
 A quick example using Microsoft's AutoGen framework showcasing a multi-agent weather and time information system where agents collaborate through AutoGen's conversation system to provide accurate weather and time data for specified cities.
 
 ## Table of Contents

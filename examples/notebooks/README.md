@@ -21,15 +21,15 @@ Through this series of notebooks, we demonstrate how you can use the NVIDIA NeMo
 
 We showcase the building blocks that make up the agentic system, including tools, agents, workflows, and observability.
 
-1. [Hello World](hello_world.ipynb) - A simple "Hello World" example using NeMo Agent toolkit
-2. [Getting Started](getting_started_with_nat.ipynb) - Getting started with the NeMo Agent toolkit
-3. [Bringing Your Own Agent](bringing_your_own_agent.ipynb) - Bringing your own agent to the NeMo Agent toolkit
-4. [Adding Tools and Agents](adding_tools_to_agents.ipynb) - Adding tools to your agentic workflow
-5. [MCP Client and Servers Setup](mcp_setup_and_integration.ipynb) - Deploy and integrate MCP clients and servers with NeMo Agent toolkit workflows
-6. [Multi-Agent Orchestration](multi_agent_orchestration.ipynb) - Setting up a multi-agent orchestration workflow
-7. [Observability, Evaluation, and Profiling](observability_evaluation_and_profiling.ipynb) - Instrumenting with observability, evaluation and profiling tools
-8. [Optimizing Model Selection, Parameters, and Prompts](optimize_model_selection.ipynb) - Use NeMo Agent toolkit Optimizer to compare models, parameters, and prompt variations
-   
+1. [Hello World](hello_world.ipynb) - Installing NeMo Agent toolkit and running a configuration-only workflow **[🟢 Beginner]**
+2. [Getting Started](getting_started_with_nat.ipynb) - Getting started with the NeMo Agent toolkit **[🟢 Beginner]**
+3. [Bringing Your Own Agent](bringing_your_own_agent.ipynb) - Bringing your own agent to the NeMo Agent toolkit **[🟢 Beginner]**
+4. [Adding Tools and Agents](adding_tools_to_agents.ipynb) - Adding tools to your agentic workflow **[🟢 Beginner]**
+5. [MCP Client and Servers Setup](mcp_setup_and_integration.ipynb) - Deploy and integrate MCP clients and servers with NeMo Agent toolkit workflows **[🟢 Beginner]**
+6. [Multi-Agent Orchestration](multi_agent_orchestration.ipynb) - Setting up a multi-agent orchestration workflow **[🟨 Intermediate]**
+7. [Observability, Evaluation, and Profiling](observability_evaluation_and_profiling.ipynb) - Instrumenting with observability, evaluation and profiling tools **[🟨 Intermediate]**
+8. [Optimizing Model Selection, Parameters, and Prompts](optimize_model_selection.ipynb) - Use the NeMo Agent toolkit Optimizer to compare models, parameters, and prompt variations **[🛑 Advanced]**
+
 We recommend opening these notebooks in a Jupyter Lab environment or Google Colab environment.
 
 We also have a set of notebooks that are designed to be run in a Brev environment. See the [Brev Launchables](./launchables/README.md) for more details.

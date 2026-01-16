@@ -17,6 +17,8 @@ limitations under the License.
 
 # Configuration Inheritance
 
+**Complexity:** 🟢 Beginner
+
 This example demonstrates how to use YAML configuration inheritance in the NeMo Agent toolkit to reduce duplication across similar configuration files.
 
 ## Table of Contents

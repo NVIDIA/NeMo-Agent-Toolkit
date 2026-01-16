@@ -17,6 +17,8 @@ limitations under the License.
 
 # Report Tool for NVIDIA NeMo Agent Toolkit
 
+**Complexity:** 🟨 Intermediate
+
 And example tool in the NeMo Agent toolkit that makes use of an Object Store to retrieve data.
 
 ## Table of Contents

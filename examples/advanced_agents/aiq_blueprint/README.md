@@ -18,6 +18,8 @@ limitations under the License.
 <!-- This document is explicitly retaining the name "AIQ" -->
 # AIQ Blueprint - Enterprise Research Agent
 
+**Complexity:** 🛑 Advanced
+
 ## Overview
 
 This documentation points to the official NVIDIA AIQ Blueprint for building an AI agent designed for enterprise research use cases.

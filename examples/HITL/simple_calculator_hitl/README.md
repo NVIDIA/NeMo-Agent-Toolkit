@@ -17,6 +17,8 @@ limitations under the License.
 
 # Simple Calculator - Human in the Loop
 
+**Complexity:** 🟢 Beginner
+
 This example demonstrates **human in the loop capabilities** of the NeMo Agent toolkit using the Simple Calculator workflow. Learn how to reuse a registered function that leverages the human in the loop capabilities of the toolkit to gate agent behavior. In this case, user approval will be requested to allow the agent to make additional tool calls to reach a final answer.
 
 ## Table of Contents

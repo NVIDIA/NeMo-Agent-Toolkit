@@ -17,6 +17,8 @@ limitations under the License.
 
 # Sequential Executor
 
+**Complexity:** 🟢 Beginner
+
 This example demonstrates how to use the sequential executor functionality with the NVIDIA NeMo Agent toolkit. The sequential executor is a control flow component that chains multiple functions together, where each function's output becomes the input for the next function. This creates a linear tool execution pipeline that executes functions in a predetermined sequence.
 
 The NeMo Agent toolkit provides a [`sequential_executor`](../../../src/nat/control_flow/sequential_executor.py) tool to implement this functionality.
