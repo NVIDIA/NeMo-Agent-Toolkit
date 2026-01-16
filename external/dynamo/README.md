@@ -241,16 +241,16 @@ Or set variables directly:
 ```bash
 export HF_HOME=/path/to/local/storage/.cache/huggingface
 
-export HF_TOKEN=<my_huggingface_read_token>
+export HF_TOKEN=my_huggingface_read_token
 
 # Required: Set your model directory path
-export DYNAMO_MODEL_DIR="/path/to/your/models/Llama-3.3-70B-Instruct" # or Llama-3.1-3B-Instruct for QA on H100 machines
+export DYNAMO_MODEL_DIR=/path/to/your/models/Llama-3.3-70B-Instruct # or Llama-3.1-3B-Instruct for QA on H100 machines
 
 # Optional: Set repository directory (for Thompson Sampling router)
-export DYNAMO_REPO_DIR="/path/to/NeMo-Agent-Toolkit/external/dynamo"
+export DYNAMO_REPO_DIR=/path/to/NeMo-Agent-Toolkit/external/dynamo
 
 # Optional: Configure GPU devices (default: 0,1,2,3)
-export DYNAMO_GPU_DEVICES="0,1,2,3"
+export DYNAMO_GPU_DEVICES=0,1,2,3
 ```
 
 ### Verify GPU Access
@@ -399,8 +399,8 @@ Separate `prefill` and `decode` workers for maximum throughput. More complex set
 ```bash
 cd /path/to/NeMo-Agent-Toolkit/external/dynamo
 
-export DYNAMO_PREFILL_GPUS="0,1"
-export DYNAMO_DECODE_GPUS="2,3"
+export DYNAMO_PREFILL_GPUS=0,1
+export DYNAMO_DECODE_GPUS=2,3
 
 # Start Dynamo disaggregated
 bash start_dynamo_disagg.sh > startup_output.txt 2>&1
@@ -811,9 +811,9 @@ Example configuration:
 
 ```bash
 # Configure environment before running scripts
-export DYNAMO_MODEL_DIR="/path/to/models/Llama-3.3-70B-Instruct"
-export DYNAMO_GPU_DEVICES="0,1,2,3"
-export DYNAMO_HTTP_PORT="8099"
+export DYNAMO_MODEL_DIR=/path/to/models/Llama-3.3-70B-Instruct
+export DYNAMO_GPU_DEVICES=0,1,2,3
+export DYNAMO_HTTP_PORT=8099
 
 # Then start Dynamo
 bash start_dynamo_unified.sh
@@ -847,7 +847,7 @@ LOCAL_MODEL_DIR="${DYNAMO_MODEL_DIR:?Error: DYNAMO_MODEL_DIR environment variabl
 Option 1: Use environment variable (recommended):
 
 ```bash
-export DYNAMO_GPU_DEVICES="0,1,2,3"
+export DYNAMO_GPU_DEVICES=0,1,2,3
 bash start_dynamo_unified.sh
 ```
 
@@ -880,9 +880,9 @@ TP_SIZE=2  # Smaller models may need fewer GPUs
 Option 1: Use environment variables:
 
 ```bash
-export DYNAMO_HTTP_PORT="8080"
-export DYNAMO_ETCD_PORT="2379"
-export DYNAMO_NATS_PORT="4222"
+export DYNAMO_HTTP_PORT=8080
+export DYNAMO_ETCD_PORT=2379
+export DYNAMO_NATS_PORT=4222
 bash start_dynamo_unified.sh
 ```
 

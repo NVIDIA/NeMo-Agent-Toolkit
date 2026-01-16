@@ -55,26 +55,26 @@ uv pip install -e .
 cd ../ # NeMo-Agent-Toolkit/examples/dynamo_integration
 source .env
 
-# 3. Download the dataset (requires HuggingFace account)
+# 4. Download the dataset (requires HuggingFace account)
 # <!-- path-check-skip-next-line -->
 python scripts/download_agent_leaderboard_v2.py --domains banking
 
-# 4. Download the model weights (requires HuggingFace account)
+# 5. Download the model weights (requires HuggingFace account)
 cd $(dirname $DYNAMO_MODEL_DIR) # parent directory of the intended model weights directory
 huggingface-cli download meta-llama/Llama-3.3-70B-Instruct --local-dir $DYNAMO_MODEL_DIR
 
-# 4. Start Dynamo backend (see Dynamo README for details)
+# 6. Start Dynamo backend (see Dynamo README for details)
 # <!-- path-check-skip-next-line -->
 cd /path/to/NeMo-Agent-Toolkit/external/dynamo # NeMo-Agent-Toolkit/external/dynamo
 bash start_dynamo_unified.sh > startup_output.txt 2>&1 # wait ~5 minutes for the server to start
 
 # Requirements for start_dynamo_unified.sh:
 #   - Docker with NVIDIA Container Toolkit (nvidia-docker)
-#   - 4x NVIDIA GPUs (set WORKER_GPUS to teh available set of machines)
+#   - 4x NVIDIA GPUs (set WORKER_GPUS to the available set of machines)
 #   - Model weights: downloaded per previous instructions
 #   - Check that default ports are available: 8099 (HTTP API), 2389 (ETCD), 4232 (NATS)
 
-# 5. Run evaluation
+# 7. Run evaluation
 cd ../../ # NeMo-Agent-Toolkit/
 nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs/eval_config_no_rethinking_full_test.yml
 ```
@@ -88,7 +88,7 @@ nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs
 After running this end-to-end evaluation, you will have confirmed functional model services on Dynamo, dataset access, and agent execution.
 
 ## Quick Stop
-```
+```bash
 # 1. When testing is complete don't forget to stop workers and free GPU memory
 cd /path/to/NeMo-Agent-Toolkit/external/dynamo # NeMo-Agent-Toolkit/external/dynamo
 bash stop_dynamo.sh
@@ -275,7 +275,7 @@ If you see `PermissionError: [Errno 13] Permission denied` when downloading the 
 
 ```bash
 export HF_HOME=/path/to/local/storage/.cache/huggingface
-export HF_TOKEN=<my_huggingface_read_token>
+export HF_TOKEN=my_huggingface_read_token
 ```
 
 ## Support
