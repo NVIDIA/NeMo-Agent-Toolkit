@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -353,7 +353,7 @@ You cannot continue working (reading, editing, testing) in any way on this task 
     async def _query_llm(self) -> str:
         """Query LLM and return response content."""
         try:
-            response = await self.llm.ainvoke(self.messages)
+            response = await self.llm.ainvoke(self.messages)                    
             content = response.content if hasattr(response, 'content') else str(response)
             self.add_message("assistant", content)
             return content

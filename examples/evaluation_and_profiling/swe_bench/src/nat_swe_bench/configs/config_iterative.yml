@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,7 @@
 llms:
   nim_llm:
     _type: nim
-    model_name: mistralai/mistral-nemotron
+    model_name: nvidia/nemotron-3-nano-30b-a3b
     temperature: 0.0
     max_tokens: 4096
   claude_sonnet_llm:
@@ -25,8 +25,8 @@ llms:
     temperature: 0.0
     api_key: "${ANTHROPIC_API_KEY}"
   openai_llm:
-    _type: litellm
-    model_name: openai/gpt-5.2
+    _type: openai
+    model_name: gpt-5.2
     temperature: 0.0
     api_key: "${OPENAI_API_KEY}"
 
@@ -34,7 +34,7 @@ workflow:
   _type: swe_bench
   predictor:
     _type: iterative
-    llm_name: "claude_sonnet_llm"   # "nim_llm" or "claude_sonnet_llm" or "openai_llm"
+    llm_name: "openai_llm"   # "nim_llm" or "claude_sonnet_llm" or "openai_llm"
     step_limit: 100
     timeout: 60
 
@@ -59,15 +59,15 @@ eval:
           field:
             instance_id:
               - sympy__sympy-20590
-              - sympy__sympy-21055
-              - sympy__sympy-11400
-              - astropy__astropy-12907
-              - django__django-15781
-              - astropy__astropy-6938
-              - django__django-11001
-              - mwaskom__seaborn-3010
-              - pallets__flask-4045
-              - psf__requests-1963
+              # - sympy__sympy-21055
+              # - sympy__sympy-11400
+              # - astropy__astropy-12907
+              # - django__django-15781
+              # - astropy__astropy-6938
+              # - django__django-11001
+              # - mwaskom__seaborn-3010
+              # - pallets__flask-4045
+              # - psf__requests-1963
 
   evaluators:
     swe_bench:
