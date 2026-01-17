@@ -3887,16 +3887,16 @@ wheels = [
 
 [[package]]
 name = "langchain-nvidia-ai-endpoints"
-version = "1.0.1"
+version = "1.0.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
     { name = "filetype" },
     { name = "langchain-core" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/09/20/4886b32848fc3bb26a47b5f345c7da1ac162f01a16002d241b45ccd9bbb5/langchain_nvidia_ai_endpoints-1.0.1.tar.gz", hash = "sha256:a8a0aae81059593132e76e6fd1b67683cc1e1f511565cea2223be921c100cf1c", size = 45495, upload-time = "2026-01-06T20:49:46.77Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7b/2d/de43a24e85d7c42b1fcbed24d8fff48b7855d4662cc779ac6edb45c526e5/langchain_nvidia_ai_endpoints-1.0.2.tar.gz", hash = "sha256:8478e1abd3f73f539cb8151574f44d44ff67de59e2a7e39aba5d0b9d0233dbb8", size = 46091, upload-time = "2026-01-17T00:30:13.98Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1b/fe/0d2e0aeefb4bb4d0999cc7d563e526c0f04aee6fae4482d1c9c9ebc170a8/langchain_nvidia_ai_endpoints-1.0.1-py3-none-any.whl", hash = "sha256:c8f9ecaa41dab9bca09acdc0e770bd2f03021c6528685db2c956a02de3d07eae", size = 49167, upload-time = "2026-01-06T20:49:45.428Z" },
+    { url = "https://files.pythonhosted.org/packages/43/b0/ca7e772b207f88ba465d0a24137d9cf1a4e24fc45eb88fcfb5689c8312b6/langchain_nvidia_ai_endpoints-1.0.2-py3-none-any.whl", hash = "sha256:2519017205578ee6df792dcf57745b7c86013e104a00c5e0d2c16357bc71c078", size = 49769, upload-time = "2026-01-17T00:30:12.947Z" },
 ]
 
 [[package]]
@@ -6588,7 +6588,7 @@ requires-dist = [
     { name = "langchain-huggingface", specifier = "~=1.2.0" },
     { name = "langchain-litellm", specifier = "~=0.3.5" },
     { name = "langchain-milvus", specifier = "~=0.3.3" },
-    { name = "langchain-nvidia-ai-endpoints", specifier = "~=1.0.1" },
+    { name = "langchain-nvidia-ai-endpoints", specifier = "~=1.0.2" },
     { name = "langchain-openai", specifier = "~=1.1.6" },
     { name = "langchain-tavily", specifier = "~=0.2.16" },
     { name = "langgraph", specifier = "~=1.0.5" },
