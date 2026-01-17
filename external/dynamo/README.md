@@ -38,12 +38,12 @@ This guide covers setting up, running, and configuring the NVIDIA Dynamo backend
 
 ## Overview
 
-Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimization. This project provides three deployment modes:
+Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimization. The scope of the current integration is based around two core aspects. First, we have implemented a [Dynamo LLM](../../src/nat/llm/dynamo_llm.py) support for NeMo Agent toolkit inference on Dynamo runtimes. Second, we provide a set of startup scripts for NVIDIA Hopper and Blackwell GPU servers supporting NeMo Agent toolkit runtimes at scale. The following **Table** defines each script: 
 
 | Mode | Script | Description | Best For |
 |------|--------|-------------|----------|
-| **Unified** | `start_dynamo_unified.sh` | Single worker, all operations | Development, testing |
-| **Unified + Thompson** | `start_dynamo_unified_thompson_hints.sh` | Unified with predictive KV-aware router | Production, KV optimization |
+| **Unified** | `start_dynamo_unified.sh` | Workers responsible for both `prefill` and `decode` | Development, testing |
+| **Unified + Thompson** | `start_dynamo_unified_thompson_hints.sh` | Unified with a predictive KV-aware router | Production, KV optimization |
 | **Disaggregated** | `start_dynamo_disagg.sh` | Separate `prefill` and `decode` workers | High-throughput production |
 
 ### Architecture Overview
@@ -175,7 +175,7 @@ Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimizat
 
 | Component | Minimum | Recommended |
 |-----------|---------|-------------|
-| **GPU Architecture** | NVIDIA Hopper (H100) or Blackwell (B200) | B200 for optimal performance |
+| **GPU Architecture** | NVIDIA Hopper (H100) or Blackwell (B200) | B200 for higher throughput |
 | **GPU Count** | 2 GPUs for small models (2 workers) | 8 GPUs for optimal performance |
 | **GPU Memory** | 80GB per GPU (H100) | 192GB per GPU (B200) |
 | **System RAM** | 256GB | 512GB+ |
@@ -202,28 +202,20 @@ source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 ### Download model weights (can skip if already done)
 
 ```bash
-# Set your desired model directory
-export DYNAMO_MODEL_DIR="${HOME}/models/Llama-3.3-70B-Instruct"
+[ -f .env ] && source .env || { echo "Warning: .env not found" >&2; false; }
 
-# Create the directory
-# mkdir -p "$(dirname "$DYNAMO_MODEL_DIR")"
-mkdir -p $DYNAMO_MODEL_DIR
+# Change to the target model directory (create it if still needed)
+cd "$(dirname "$DYNAMO_MODEL_DIR")"
 
-# We will download the model weights directly from HuggingFace. Usage of
-# llama models from requires approval from Meta. See `Access Notes` below.
-# You will need to create a HuggingFace Access Token with read access in
-# order to download the model. On the huggingface website visit:
-# "Access Tokens" -> "+ Create access token" to generate a token starting
-# with "hf_". Enter your token when prompted.
-# Respond "n" when asked "Add token as git credential? (Y/n)"
+# We will download the model weights directly from HuggingFace. See `NOTE` below.
 uv pip install huggingface_hub
 uv run huggingface-cli login  # Enter your HF token
 
-uv run huggingface-cli download "meta-llama/Llama-3.3-70B-Instruct" \
-  --local-dir "$DYNAMO_MODEL_DIR"
+uv run huggingface-cli download "meta-llama/Llama-3.3-70B-Instruct" --local-dir "$DYNAMO_MODEL_DIR"
 ```
 
-> **Access Note**: The Llama-3.3-70B-Instruct model requires approval from Meta. Request access at [huggingface.co/meta-llama/Llama-3.3-70B-Instruct](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct) before downloading.
+> [!NOTE]
+> The Llama-3.3-70B-Instruct model requires approval from Meta. Request access at [huggingface.co/meta-llama/Llama-3.3-70B-Instruct](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct) before downloading. You will need to create a HuggingFace Access Token with read access in order to download the model. On the `HuggingFace` website visit: "Access Tokens" -> "+ Create access token" to generate a token starting with `hf_`. Enter your token when prompted. Respond "n" when asked "Add token as git credential? (Y/n)". Set HF_HOME and HF_TOKEN in .env..
 
 ### Environment Setup
 
@@ -245,14 +237,18 @@ source .env
 Or set variables directly:
 
 ```bash
+export HF_HOME=/path/to/local/storage/.cache/huggingface
+
+export HF_TOKEN=my_huggingface_read_token
+
 # Required: Set your model directory path
-export DYNAMO_MODEL_DIR="/path/to/your/models/Llama-3.3-70B-Instruct" # or Llama-3.1-3B-Instruct for QA on H100 machines
+export DYNAMO_MODEL_DIR=/path/to/your/models/Llama-3.3-70B-Instruct # or Llama-3.1-3B-Instruct for QA on H100 machines
 
 # Optional: Set repository directory (for Thompson Sampling router)
-export DYNAMO_REPO_DIR="/path/to/NeMo-Agent-Toolkit"
+export DYNAMO_REPO_DIR=/path/to/NeMo-Agent-Toolkit/external/dynamo
 
 # Optional: Configure GPU devices (default: 0,1,2,3)
-export DYNAMO_GPU_DEVICES="0,1,2,3"
+export DYNAMO_GPU_DEVICES=0,1,2,3
 ```
 
 ### Verify GPU Access
@@ -309,17 +305,6 @@ Example output for an 8x H100 system:
 | N/A   35C    P0            139W / 1000W |       4MiB / 183359MiB |      0%      Default |
 |                                         |                        |             Disabled |
 +-----------------------------------------+------------------------+----------------------+
-
-+-----------------------------------------------------------------------------------------+
-| Processes:                                                                              |
-|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
-|        ID   ID                                                               Usage      |
-|=========================================================================================|
-|    0   N/A  N/A         2700092      C   VLLM::Worker_TP0_EP0                  16901... |
-|    1   N/A  N/A         2700093      C   VLLM::Worker_TP1_EP1                  16901... |
-|    2   N/A  N/A         2700094      C   VLLM::Worker_TP2_EP2                  16901... |
-|    3   N/A  N/A         2700095      C   VLLM::Worker_TP3_EP3                  16901... |
-+-----------------------------------------------------------------------------------------+
 ```
 
 ### Verify Docker and NVIDIA Container Toolkit
@@ -361,7 +346,7 @@ bash stop_dynamo.sh
 - `nats` container (`nats-dynamo`) on port 4232
 - Dynamo container (`dynamo-sglang`) with unified worker on GPUs 0,1,2,3 (TP=4)
 
-**Startup time**: ~5 minutes seconds for 70B model
+**Startup time**: Startup time may vary between 5-20 minutes for a 70B model, depending on the state of the system cache.
 
 ### Option 2: Unified + Thompson Sampling Router (Production)
 
@@ -401,8 +386,8 @@ Separate `prefill` and `decode` workers for maximum throughput. More complex set
 ```bash
 cd /path/to/NeMo-Agent-Toolkit/external/dynamo
 
-export DYNAMO_PREFILL_GPUS="0,1"
-export DYNAMO_DECODE_GPUS="2,3"
+export DYNAMO_PREFILL_GPUS=0,1
+export DYNAMO_DECODE_GPUS=2,3
 
 # Start Dynamo disaggregated
 bash start_dynamo_disagg.sh > startup_output.txt 2>&1
@@ -813,9 +798,9 @@ Example configuration:
 
 ```bash
 # Configure environment before running scripts
-export DYNAMO_MODEL_DIR="/path/to/models/Llama-3.3-70B-Instruct"
-export DYNAMO_GPU_DEVICES="0,1,2,3"
-export DYNAMO_HTTP_PORT="8099"
+export DYNAMO_MODEL_DIR=/path/to/models/Llama-3.3-70B-Instruct
+export DYNAMO_GPU_DEVICES=0,1,2,3
+export DYNAMO_HTTP_PORT=8099
 
 # Then start Dynamo
 bash start_dynamo_unified.sh
@@ -849,7 +834,7 @@ LOCAL_MODEL_DIR="${DYNAMO_MODEL_DIR:?Error: DYNAMO_MODEL_DIR environment variabl
 Option 1: Use environment variable (recommended):
 
 ```bash
-export DYNAMO_GPU_DEVICES="0,1,2,3"
+export DYNAMO_GPU_DEVICES=0,1,2,3
 bash start_dynamo_unified.sh
 ```
 
@@ -882,9 +867,9 @@ TP_SIZE=2  # Smaller models may need fewer GPUs
 Option 1: Use environment variables:
 
 ```bash
-export DYNAMO_HTTP_PORT="8080"
-export DYNAMO_ETCD_PORT="2379"
-export DYNAMO_NATS_PORT="4222"
+export DYNAMO_HTTP_PORT=8080
+export DYNAMO_ETCD_PORT=2379
+export DYNAMO_NATS_PORT=4222
 bash start_dynamo_unified.sh
 ```
 

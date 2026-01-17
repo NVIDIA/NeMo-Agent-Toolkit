@@ -17,6 +17,8 @@ limitations under the License.
 
 # NVIDIA Brev Launchables for NeMo Agent Toolkit
 
+**Complexity:** 🛑 Advanced
+
 Brev Launchables are an easy way to bundle a hardware and software environment into an easily shareable link, allowing for simple demos of GPU-powered software. Click **Deploy Now** to get started!
 
 NeMo Agent Toolkit offers the following notebooks in Brev Launchable format:

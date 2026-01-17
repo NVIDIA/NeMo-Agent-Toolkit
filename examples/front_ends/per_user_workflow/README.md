@@ -16,6 +16,8 @@ limitations under the License.
 -->
 # Per-User Workflow Example
 
+**Complexity:** 🟢 Beginner
+
 This example demonstrates the **per-user workflow pattern** in NeMo Agent toolkit. With this pattern, each user gets their own isolated workflow and function instances with separate state.
 
 ## Overview

@@ -20,6 +20,8 @@ limitations under the License.
 
 # Agent Leaderboard v2 - Evaluation Guide
 
+**Complexity:** 🛑 Advanced
+
 This guide walks through the complete process of running decision-only evaluations using the `react_benchmark_agent`: downloading data, configuring evaluations, running experiments, and analyzing results.
 
 Currently this agent supports evaluation exclusively for the [Galileo Agent Leaderboard v2](https://huggingface.co/datasets/galileo-ai/agent-leaderboard-v2). However, we plan to extend the set of evaluation tool sets and benchmarks and will update this document accordingly.

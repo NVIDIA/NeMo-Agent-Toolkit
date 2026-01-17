@@ -19,6 +19,8 @@ limitations under the License.
 
 # Reinforcement Learning with OpenPipe ART: Tic-Tac-Toe Example
 
+**Complexity:** 🛑 Advanced
+
 This example demonstrates how to use the NeMo Agent Toolkit finetuning harness with [OpenPipe ART](https://art.openpipe.ai/) (Agent Reinforcement Trainer) to improve an LLM's performance at playing Tic-Tac-Toe through reinforcement learning.
 
 The model learns to play against a **random opponent**, receiving rewards based on game-theoretic position evaluation rather than simple win/loss outcomes. This continuous reward signal enables more effective learning than sparse binary rewards.
@@ -67,7 +69,7 @@ The model learns to play against a **random opponent**, receiving rewards based 
    source art-env/bin/activate
    export HF_TOKEN=<your_huggingface_token>
    # Install OpenPipe ART
-   uv pip install openpipe-art[backend]==0.4.11
+   uv pip install --no-cache 'openpipe-art[backend]==0.4.11'
 
    # Verify installation
    art --help
@@ -75,7 +77,7 @@ The model learns to play against a **random opponent**, receiving rewards based 
 
    For detailed installation instructions, see the [OpenPipe ART Getting Started Guide](https://art.openpipe.ai/getting-started/about).
 
-4. **This example package**:
+4. **This example package in your NeMo Agent Toolkit environment**:
    ```bash
    uv pip install -e examples/finetuning/rl_with_openpipe_art
    ```

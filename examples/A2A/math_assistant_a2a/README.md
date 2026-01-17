@@ -16,6 +16,8 @@ limitations under the License.
 
 # Math Assistant A2A Example
 
+**Complexity:** 🟨 Intermediate
+
 This example demonstrates an end-to-end A2A workflow with NVIDIA NeMo Agent Toolkit functioning as both A2A client and server. The workflow performs mathematical calculations integrated with time queries and logical reasoning, combining remote calculator operations with local time services and conditional evaluation tools.
 
 

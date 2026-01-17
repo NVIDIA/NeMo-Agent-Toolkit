@@ -16,6 +16,8 @@ limitations under the License.
 
 # OAuth2-Protected Math Assistant A2A Example
 
+**Complexity:** 🟨 Intermediate
+
 This example demonstrates an end-to-end OAuth2-protected A2A workflow with NVIDIA NeMo Agent Toolkit functioning as both A2A client and server. The workflow performs mathematical calculations integrated with time queries and logical reasoning, with added OAuth2 authentication for secure per-user agent-to-agent communication:
 - **Protected A2A Server**: NeMo Agent toolkit calculator service requiring OAuth2 authentication
 - **OAuth2 A2A Client**: NeMo Agent toolkit math assistant with per-user OAuth2 credentials that connects to the protected A2A server

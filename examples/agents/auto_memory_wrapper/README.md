@@ -17,6 +17,8 @@ limitations under the License.
 
 # Automatic Memory Wrapper for NeMo Agent Toolkit Agents
 
+**Complexity:** 🟨 Intermediate
+
 The `auto_memory_agent` wraps any agent to provide **automatic memory capture and retrieval** without requiring the LLM to invoke memory tools.
 
 ## Why Use This?

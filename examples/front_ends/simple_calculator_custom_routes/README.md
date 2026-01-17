@@ -17,6 +17,8 @@ limitations under the License.
 
 # Simple Calculator - Custom Routes and Metadata Access
 
+**Complexity:** 🟢 Beginner
+
 This example demonstrates how to extend NVIDIA NeMo Agent toolkit applications with custom API routes and HTTP request metadata access. Build sophisticated APIs that capture rich request context for authentication, routing, and specialized business logic.
 
 ## Table of Contents

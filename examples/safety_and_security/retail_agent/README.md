@@ -17,6 +17,8 @@ limitations under the License.
 
 # NeMo Agent Safety and Security Engine (NASSE)
 
+**Complexity:** 🛑 Advanced
+
 ### Demonstrated Through Retail Agent Example
 
 ---

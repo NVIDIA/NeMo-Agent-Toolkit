@@ -17,6 +17,9 @@ limitations under the License.
 
 
 # Simple RAG Example
+
+**Complexity:** 🛑 Advanced
+
 This is a simple example RAG application to showcase how one can configure and use the  Retriever component. This example includes:
  - The config file to run the workflow
  - A docker compose deployment for standing up Milvus

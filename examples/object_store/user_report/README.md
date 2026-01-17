@@ -17,6 +17,8 @@ limitations under the License.
 
 # Report Tool for NVIDIA NeMo Agent Toolkit
 
+**Complexity:** 🟨 Intermediate
+
 And example tool in the NeMo Agent toolkit that makes use of an Object Store to retrieve data.
 
 ## Table of Contents
@@ -257,7 +259,7 @@ Tool's input: {"user_id": "67890", "date": null}
 <snipped for brevity>
 
 Workflow Result:
-['The latest report of user 67890 is:\n\n{\n    "user_id": "67890",\n    "timestamp": "2025-04-21T15:40:00Z",\n    "system": {\n      "os": "macOS 14.1",\n      "cpu_usage": "43%",\n      "memory_usage": "8.1 GB / 16 GB",\n      "disk_space": "230 GB free of 512 GB"\n    },\n    "network": {\n      "latency_ms": 95,\n      "packet_loss": "0%",\n      "vpn_connected": true\n    },\n    "errors": [],\n    "recommendations": [\n      "System operating normally",\n      "No action required"\n    ]\n}']
+['The latest report of user 67890 is:\n\n{\n    "user_id": "35791",\n    "timestamp": "2025-05-02T14:27:45Z",\n    "system": {\n        "os": "Windows 11",\n        "cpu_usage": "73%",\n        "memory_usage": "9.2 GB / 16 GB",\n        "disk_space": "400 GB free of 500 GB"\n    },\n    "network": {\n        "latency_ms": 67,\n        "packet_loss": "0.0%",\n        "vpn_connected": false\n    },\n    "errors": [],\n    "recommendations": [\n        "Regular system check completed",\n        "All services running optimally"\n    ]\n}']
 ```
 
 In the case of a non-existent report, the workflow will return an error message.

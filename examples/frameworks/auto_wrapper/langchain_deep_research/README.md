@@ -18,6 +18,8 @@ limitations under the License.
 
 # Integrating Existing LangGraph Agents with NVIDIA NeMo Agent Toolkit
 
+**Complexity:** 🟨 Intermediate
+
 This example demonstrates how to integrate any existing LangGraph agent with NeMo Agent toolkit using the `langgraph_wrapper` workflow type.
 
 We use LangGraph's **Deep Research agent** as a comprehensive example—a sophisticated multi-agent system for conducting web research with planning, sub-agent coordination, and synthesis. The integration techniques shown here apply to any LangGraph agent.

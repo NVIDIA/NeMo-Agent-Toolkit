@@ -18,6 +18,8 @@ limitations under the License.
 
 # Personal Finance
 
+**Complexity:** 🟢 Beginner
+
 <!-- Note: "Agno" is the official product name despite Vale spelling checker warnings -->
 Built on [Agno](https://github.com/agno-agi/agno) and NeMo Agent toolkit, this workflow is a personal financial planner that generates personalized financial plans using NVIDIA NIM (can be customized to use OpenAI models). It automates the process of researching, planning, and creating tailored budgets, investment strategies, and savings goals, empowering you to take control of your financial future with ease.
 

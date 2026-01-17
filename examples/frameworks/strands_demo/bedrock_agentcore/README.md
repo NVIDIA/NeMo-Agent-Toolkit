@@ -16,6 +16,7 @@ limitations under the License.
 -->
 
 # Running Strands with NVIDIA NeMo Agent Toolkit on AWS AgentCore
+**Complexity:** 🛑 Advanced
 
 A comprehensive guide for deploying NVIDIA NeMo Agent toolkit with Strands on AWS AgentCore, including OpenTelemetry instrumentation for monitoring.
 
