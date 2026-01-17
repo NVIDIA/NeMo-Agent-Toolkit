@@ -301,7 +301,7 @@ curl -X 'POST' \
   'http://localhost:8080/invocations' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
-  -d '{"inputs" : "How do I use the Strands Agents API?"}'
+  -d '{"inputs" : "Use the provided tools and cite information about how to use the Strands API from the tool call results"}'
 ```
 <!-- path-check-skip-end -->
 
