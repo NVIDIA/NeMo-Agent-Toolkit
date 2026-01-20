@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
+import inspect
 import json
 import os
 import time
@@ -312,6 +314,84 @@ async def test_run_workflow_local_workflow_interrupted(evaluation_run, eval_inpu
     # Check if workflow_interrupted is set to True
     await evaluation_run.run_workflow_local(session_manager)
     assert evaluation_run.workflow_interrupted, "Expected workflow_interrupted to be True after failure"
+
+
+async def test_run_workflow_local_reuse_coroutine_on_error(evaluation_run, eval_input, session_manager):
+    """Document coroutine reuse error after workflow failure."""
+    evaluation_run.eval_input = eval_input
+
+    mock_error_runner = AsyncMock()
+
+    async def mock_result():
+        raise RuntimeError("Simulated workflow timeout")
+
+    failing_coro = mock_result()
+    mock_error_runner.result = MagicMock(return_value=failing_coro)
+
+    @asynccontextmanager
+    async def mock_error_run(_message, runtime_type=None):
+        """Mock async context manager for runner."""
+        yield mock_error_runner
+
+    @asynccontextmanager
+    async def mock_error_session(user_id=None):
+        mock_session = MagicMock()
+        mock_session.run = mock_error_run
+        mock_session.workflow = session_manager.workflow
+        yield mock_session
+
+    session_manager.session = mock_error_session
+
+    # This should not raise a "cannot reuse already awaited coroutine" error
+    try:
+        await evaluation_run.run_workflow_local(session_manager)
+    except RuntimeError as e:
+        assert "cannot reuse already awaited coroutine" not in str(e), (
+            f"Did not expect coroutine reuse error, but got: {e}")
+
+
+async def test_run_workflow_local_cancels_pending_intermediate(evaluation_run, eval_input, session_manager):
+    """Test that pending intermediate futures are cancelled when workflow execution fails."""
+    evaluation_run.eval_input = eval_input
+    pending_future: asyncio.Future[list[dict]] = asyncio.Future()
+    intermediate_source: asyncio.Future[list[dict]] = asyncio.Future()
+
+    # Create a mock runner that will raise an exception when awaited
+    mock_error_runner = AsyncMock()
+
+    async def mock_result():
+        raise RuntimeError("Simulated workflow failure")
+
+    mock_error_runner.result = AsyncMock(side_effect=mock_result)
+
+    @asynccontextmanager
+    async def mock_error_run(_message, runtime_type=None):
+        """Mock async context manager for runner."""
+        yield mock_error_runner
+
+    @asynccontextmanager
+    async def mock_error_session(user_id=None):
+        mock_session = MagicMock()
+        mock_session.run = mock_error_run
+        mock_session.workflow = session_manager.workflow
+        yield mock_session
+
+    session_manager.session = mock_error_session
+
+    def ensure_future_stub(coro):
+        coro.close()
+        return pending_future
+
+    with patch("nat.eval.runtime_event_subscriber.pull_intermediate",
+               AsyncMock(return_value=intermediate_source)) as mock_pull_intermediate, \
+         patch("nat.eval.evaluate.asyncio.ensure_future", side_effect=ensure_future_stub) as mock_ensure_future:
+        await evaluation_run.run_workflow_local(session_manager)
+
+    assert evaluation_run.workflow_interrupted, "Expected workflow_interrupted to be True after failure"
+    mock_pull_intermediate.assert_called_once()
+    mock_ensure_future.assert_called_once()
+    assert inspect.iscoroutine(mock_ensure_future.call_args.args[0])
+    assert pending_future.cancelled(), "Pending intermediate future should be cancelled"
 
 
 async def test_run_workflow_remote_success(evaluation_run, generated_answer):
