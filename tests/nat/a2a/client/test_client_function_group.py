@@ -14,6 +14,8 @@
 # limitations under the License.
 """Test A2A client function group registration and behavior."""
 
+from nat.builder.function import FunctionGroup
+
 
 class TestA2AClientFunctionGroup:
     """Test A2A client function group registration and behavior."""
@@ -28,17 +30,18 @@ class TestA2AClientFunctionGroup:
         functions = await group.get_accessible_functions()
 
         # High-level function
-        assert "test_agent.call" in functions, "High-level call function should be registered"
+        sep = FunctionGroup.SEPARATOR
+        assert f"test_agent{sep}call" in functions, "High-level call function should be registered"
 
         # Helper functions
-        assert "test_agent.get_skills" in functions, "get_skills helper should be registered"
-        assert "test_agent.get_info" in functions, "get_info helper should be registered"
-        assert "test_agent.get_task" in functions, "get_task helper should be registered"
-        assert "test_agent.cancel_task" in functions, "cancel_task helper should be registered"
+        assert f"test_agent{sep}get_skills" in functions, "get_skills helper should be registered"
+        assert f"test_agent{sep}get_info" in functions, "get_info helper should be registered"
+        assert f"test_agent{sep}get_task" in functions, "get_task helper should be registered"
+        assert f"test_agent{sep}cancel_task" in functions, "cancel_task helper should be registered"
 
         # Low-level functions
-        assert "test_agent.send_message" in functions, "send_message low-level function should be registered"
-        assert "test_agent.send_message_streaming" in functions, "send_message_streaming should be registered"
+        assert f"test_agent{sep}send_message" in functions, "send_message low-level function should be registered"
+        assert f"test_agent{sep}send_message_streaming" in functions, "send_message_streaming should be registered"
 
         # Verify total count
         assert len(functions) == 7, "Should have exactly 7 functions registered"
@@ -47,25 +50,27 @@ class TestA2AClientFunctionGroup:
         """Test function names follow expected conventions.
 
         Verifies that all function names follow the pattern:
-        {function_group_name}.{function_name}
+        {function_group_name}__{function_name}
         """
         group, _ = a2a_function_group
         functions = await group.get_accessible_functions()
 
         # All functions should start with the function group name
+        sep = FunctionGroup.SEPARATOR
+        prefix = f"test_agent{sep}"
         for func_name in functions.keys():
-            assert func_name.startswith("test_agent."), \
-                f"Function {func_name} should start with 'test_agent.'"
+            assert func_name.startswith(prefix), \
+                f"Function {func_name} should start with '{prefix}'"
 
         # Verify specific naming patterns
         expected_names = [
-            "test_agent.call",
-            "test_agent.get_skills",
-            "test_agent.get_info",
-            "test_agent.get_task",
-            "test_agent.cancel_task",
-            "test_agent.send_message",
-            "test_agent.send_message_streaming",
+            f"test_agent{sep}call",
+            f"test_agent{sep}get_skills",
+            f"test_agent{sep}get_info",
+            f"test_agent{sep}get_task",
+            f"test_agent{sep}cancel_task",
+            f"test_agent{sep}send_message",
+            f"test_agent{sep}send_message_streaming",
         ]
 
         for expected in expected_names:
@@ -101,7 +106,8 @@ class TestA2AClientFunctionGroup:
         functions = await group.get_accessible_functions()
 
         # Test high-level call function signature
-        call_fn = functions["test_agent.call"]
+        sep = FunctionGroup.SEPARATOR
+        call_fn = functions[f"test_agent{sep}call"]
         assert call_fn.input_schema is not None
 
         # Verify call function accepts 'query' parameter
@@ -110,7 +116,7 @@ class TestA2AClientFunctionGroup:
         assert schema_props["query"]["type"] == "string"
 
         # Test send_message function signature
-        send_msg_fn = functions["test_agent.send_message"]
+        send_msg_fn = functions[f"test_agent{sep}send_message"]
         schema_props = send_msg_fn.input_schema.model_json_schema()["properties"]
         assert "query" in schema_props
         # Optional parameters
@@ -127,7 +133,8 @@ class TestA2AClientFunctionGroup:
         functions = await group.get_accessible_functions()
 
         # Test get_skills return type
-        get_skills_fn = functions["test_agent.get_skills"]
+        sep = FunctionGroup.SEPARATOR
+        get_skills_fn = functions[f"test_agent{sep}get_skills"]
         skills_result = await get_skills_fn.acall_invoke()
 
         assert isinstance(skills_result, dict)
@@ -144,7 +151,7 @@ class TestA2AClientFunctionGroup:
             assert "tags" in skill
 
         # Test get_info return type
-        get_info_fn = functions["test_agent.get_info"]
+        get_info_fn = functions[f"test_agent{sep}get_info"]
         info_result = await get_info_fn.acall_invoke()
 
         assert isinstance(info_result, dict)

@@ -12,7 +12,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Embedders
+# Embedders in NVIDIA NeMo Agent Toolkit
 
 An embedder, or [embedding model](https://www.nvidia.com/en-us/glossary/vector-database#nv-title-fcf2efe582), is a model that transforms diverse data, such as text, images, charts, and video, into numerical vectors in a way that captures their meaning and nuance in a multidimensional vector space.
 

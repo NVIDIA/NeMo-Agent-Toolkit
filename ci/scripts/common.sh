@@ -104,6 +104,30 @@ function get_num_proc() {
    echo "${NUM_PROC}"
 }
 
+function set_versions() {
+   # Update internal dependencies to the current git tag
+
+   if [[ "${CI_CRON_NIGHTLY}" == "1" || "${IS_TAGGED}" == "1" ]]; then
+      # For tagged releases and nightly builds, use the git tag as the version as-is
+      NAT_VERSION="${GIT_TAG}"
+   else
+      set +e
+      NAT_VERSION=$(python -m setuptools_scm)
+      local SETUPTOOLS_SCM_RESULT=$?
+      set -e
+
+      if [[ ${SETUPTOOLS_SCM_RESULT} -ne 0 ]]; then
+         rapids-logger "Error, setuptools_scm failed to determine the version: ${NAT_VERSION}"
+         exit ${SETUPTOOLS_SCM_RESULT}
+      fi
+   fi
+
+   export SETUPTOOLS_SCM_PRETEND_VERSION="${NAT_VERSION}"
+   export USE_FULL_VERSION="1"
+
+   SKIP_MD_UPDATE=1 ${PROJECT_ROOT}/ci/release/update-version.sh "${NAT_VERSION}"
+}
+
 function build_wheel() {
     rapids-logger "Building Wheel for $1"
     uv build --wheel --no-progress --out-dir "${WHEELS_DIR}/$2" --directory $1
@@ -146,7 +170,17 @@ function create_env() {
 
     rapids-logger "Creating Environment with extras: ${@}"
 
-    UV_SYNC_STDERROUT=$(uv sync --active ${extras[@]} 2>&1)
+    set +e
+    UV_SYNC_STDERROUT=$(uv sync --active "${extras[@]}" 2>&1)
+    UV_RESULT=$?
+    set -e
+
+    if [[ ${UV_RESULT} -ne 0 ]]; then
+        echo "Error, uv sync failed with exit code ${UV_RESULT}"
+        echo "StdErr output:"
+        echo "${UV_SYNC_STDERROUT}"
+        exit ${UV_RESULT}
+    fi
 
     # Explicitly filter the warning about multiple packages providing a tests module, work-around for issue #611
     UV_SYNC_STDERROUT=$(echo "${UV_SYNC_STDERROUT}" | grep -v "warning: The module \`tests\` is provided by more than one package")

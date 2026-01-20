@@ -1,0 +1,22 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+[tool.setuptools_scm]
+git_describe_command = "git describe --long --first-parent"
+root = "../../.."
+
+[project]
+name = "nat_retail_agent"
+dynamic = ["version"]
+dependencies = ["nvidia-nat[langchain]~=1.5"]
+requires-python = ">=3.11,<3.14"
+description = "Retail Agent NeMo Agent toolkit example"
+keywords = ["ai", "agents", "retail"]
+classifiers = ["Programming Language :: Python"]
+
+[tool.uv.sources]
+nvidia-nat = { path = "../../..", editable = true }
+
+[project.entry-points.'nat.components']
+nat_retail_agent = "nat_retail_agent.register"

@@ -175,17 +175,21 @@ class TestToolWrapper:
         assert result == "test_result"
 
     @patch("nat.plugins.agno.tool_wrapper.asyncio.get_running_loop")
-    def test_get_event_loop_called(self, mock_get_running_loop, mock_function, mock_builder):
-        """Test that get_running_loop is called when agno_tool_wrapper is executed."""
-        # Set up the mock event loop
+    def test_event_loop_is_accessed(self, mock_get_running_loop, mock_function, mock_builder):
+        """
+        Test that agno_tool_wrapper accesses the event loop.
+
+        Note: We only verify the event loop is accessed, not the exact call count.
+        The call count varies by architecture (ARM vs x86), Python version, and
+        library versions (pydantic-core). This is an implementation detail that
+        doesn't affect functionality.
+        """
         mock_loop = MagicMock()
         mock_get_running_loop.return_value = mock_loop
 
-        # Call the function under test
         agno_tool_wrapper("test_tool", mock_function, mock_builder)
 
-        # Verify that get_running_loop was called
-        mock_get_running_loop.assert_called_once()
+        assert mock_get_running_loop.called, ("get_running_loop should be called to access the event loop")
 
     @patch("nat.plugins.agno.tool_wrapper.asyncio.new_event_loop")
     @patch("nat.plugins.agno.tool_wrapper.asyncio.set_event_loop")

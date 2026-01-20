@@ -21,6 +21,7 @@ from nat.middleware.middleware import CallNext
 from nat.middleware.middleware import CallNextStream
 from nat.middleware.middleware import FunctionMiddlewareContext
 from nat.middleware.middleware import Middleware
+from nat.middleware.red_teaming.red_teaming_middleware import RedTeamingMiddleware
 
 __all__ = [
     "CallNext",
@@ -29,5 +30,6 @@ __all__ = [
     "FunctionMiddlewareChain",
     "FunctionMiddlewareContext",
     "Middleware",
+    "RedTeamingMiddleware",
     "validate_middleware",
 ]

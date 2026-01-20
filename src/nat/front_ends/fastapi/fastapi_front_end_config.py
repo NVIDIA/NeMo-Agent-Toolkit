@@ -223,7 +223,9 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
     max_running_async_jobs: int = Field(
         default=10,
         description=(
-            "Maximum number of async jobs to run concurrently, this controls the number of dask workers created. "
+            "Maximum number of Dask workers to create for running async jobs, the name of this parameter is "
+            "misleading as the actual number of concurrent async jobs is: "
+            "`max_running_async_jobs * dask_threads_per_worker` ."
             "This parameter is only used when scheduler_address is `None` and a Dask local cluster is created."),
         ge=1)
     dask_workers: typing.Literal["threads", "processes"] = Field(
@@ -237,6 +239,18 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
         default="WARNING",
         description="Logging level for Dask.",
     )
+    dask_worker_memory_limit: str = Field(
+        default="auto",
+        description=("Memory limit for each Dask worker. Can be 'auto', a memory string like '4GB' or a float "
+                     "representing a fraction of the system memory. "
+                     "Refer to https://docs.dask.org/en/stable/deploying-python.html#reference for details."))
+
+    dask_threads_per_worker: int = Field(
+        default=1,
+        description=(
+            "Number of threads to use per worker. This parameter is only used when the value is greater than 0 and "
+            "scheduler_address is `None` and a local Dask cluster is created. When set to 0 the value uses the Dask "
+            "default."))
     step_adaptor: StepAdaptorConfig = StepAdaptorConfig()
 
     workflow: typing.Annotated[EndpointBase, Field(description="Endpoint for the default workflow.")] = EndpointBase(

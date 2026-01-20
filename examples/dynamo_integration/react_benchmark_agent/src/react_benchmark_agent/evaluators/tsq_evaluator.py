@@ -28,6 +28,7 @@ from pydantic import Field
 
 from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
+from nat.builder.function import FunctionGroup
 from nat.cli.register_workflow import register_evaluator
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.evaluator import EvaluatorBaseConfig
@@ -161,8 +162,8 @@ async def tsq_evaluator_function(config: TSQEvaluatorConfig, builder: EvalBuilde
             return ""
 
         # Strip module prefix (e.g., "banking_tools.report_lost_stolen_card" -> "report_lost_stolen_card")
-        if "." in tool_name:
-            tool_name = tool_name.rsplit(".", 1)[-1]
+        if FunctionGroup.SEPARATOR in tool_name:
+            _, tool_name = FunctionGroup.decompose(tool_name)
 
         return tool_name.lower().strip().replace("_", "").replace("-", "")
 

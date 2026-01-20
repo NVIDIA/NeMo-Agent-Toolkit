@@ -1,0 +1,85 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+general:
+  telemetry:
+    logging:
+      console:
+        _type: console
+        level: debug
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    api_key: ${NVIDIA_API_KEY}
+    base_url: https://integrate.api.nvidia.com/v1
+    temperature: 0.0
+    max_tokens: 1024
+
+  openai_llm:
+    _type: openai
+    model_name: gpt-4o-mini
+    api_key: ${OPENAI_API_KEY}
+    temperature: 0.0
+
+  azure_openai_llm:
+    _type: azure_openai
+    azure_deployment: ${AZURE_OPENAI_DEPLOYMENT:-your-deployment-name}
+    azure_endpoint: ${AZURE_OPENAI_ENDPOINT:-https://your-resource.openai.azure.com/}
+    api_key: ${AZURE_OPENAI_API_KEY:-placeholder}
+    temperature: 0.0
+
+function_groups:
+  mcp_functions:
+    _type: mcp_client
+    server:
+      transport: streamable-http
+      url: "http://localhost:9901/mcp"
+    include:
+      - current_datetime
+
+functions:
+  weather_update_tool:
+    _type: nat_autogen_demo/weather_update_autogen
+    description: "Get the current weather for a specified city"
+
+workflow:
+  _type: autogen_team
+  llm_name: nim_llm
+  description: "To get the current weather and time in a specific city"
+  tool_names: [weather_update_tool, mcp_functions__current_datetime]
+  query_processing_agent_name: WeatherAndTimeAgent
+  query_processing_agent_instructions: |
+    You are an agent that provides the current weather and time information.
+    You MUST use your available tools to get accurate information - do NOT make up or guess any data.
+    
+    WORKFLOW:
+    1. Call weather_update_tool with the city name to get weather
+    2. Call mcp_functions__current_datetime with any string (e.g., "now") to get the current time
+    3. After calling BOTH tools, clearly report the results you received
+    
+    CRITICAL: After getting results from both tools, summarize the data clearly like this:
+    "RESULTS: Weather in [city] is [weather details]. Current time is [time]. DONE"
+    
+    If asked about only weather: call weather_update_tool, report the result, then say 'DONE'.
+    If asked about only time: call mcp_functions__current_datetime, report the result, then say 'DONE'.
+    If asked about anything else, respond with 'I can only provide weather and time information.'
+  final_response_agent_name: FinalResponseAgent
+  final_response_agent_instructions: |
+    You are the final response agent.
+    The WeatherAndTimeAgent has already collected the data using tools - DO NOT call any tools yourself.
+    Your role is to provide a polished, user-friendly response based on the information already gathered.
+    Format the data nicely for the user, then say 'APPROVE'.

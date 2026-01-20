@@ -22,7 +22,7 @@ dependencies = [
   # Keep sorted!!!
   "nvidia-nat~=1.5",
   "aiorwlock~=1.5.0",
-  "mcp~=1.14",
+  "mcp~=1.25",
 ]
 requires-python = ">=3.11,<3.14"
 description = "Subpackage for MCP client integration in NeMo Agent toolkit"
@@ -55,3 +55,9 @@ nvidia-nat = { workspace = true }
 [project.entry-points.'nat.components']
 nat_mcp = "nat.plugins.mcp.register"
 nat_mcp_auth = "nat.plugins.mcp.auth.register"
+
+[project.entry-points.'nat.front_ends']
+nat_mcp_server = "nat.plugins.mcp.server.register_frontend"
+
+[project.entry-points.'nat.cli']
+mcp = "nat.plugins.mcp.cli.commands:mcp_command"

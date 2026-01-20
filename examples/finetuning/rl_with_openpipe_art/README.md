@@ -53,10 +53,9 @@ The model learns to play against a **random opponent**, receiving rewards based 
 
 1. **Python 3.11+**
 
-2. **NeMo Agent Toolkit** with the OpenPipe ART plugin:
-   ```bash
-   pip install nvidia-nat[openpipe-art]
-   ```
+2. **NeMo Agent Toolkit** with the OpenPipe ART plugin. This example is meant to be run using a NeMo Agent Toolkit
+   installation from source. You can follow the [NeMo Agent Toolkit Installation Guide](../../../docs/source/get-started/installation.md) to set up your environment.
+
 
 3. **OpenPipe ART** installed in a **separate virtual environment**:
 
@@ -64,7 +63,7 @@ The model learns to play against a **random opponent**, receiving rewards based 
 
    ```bash
    # Create a separate virtual environment for ART
-   uv venv art-env --python 3.11
+   uv venv art-env --python 3.13
    source art-env/bin/activate
    export HF_TOKEN=<your_huggingface_token>
    # Install OpenPipe ART
@@ -78,9 +77,11 @@ The model learns to play against a **random opponent**, receiving rewards based 
 
 4. **This example package**:
    ```bash
-   cd examples/finetuning/rl_with_openpipe_art
-   uv pip install -e .
+   uv pip install -e examples/finetuning/rl_with_openpipe_art
    ```
+   
+5. The rest of this example assumes you are in the root of the NeMo Agent Toolkit repository. Please execute
+   all commands from there.
 
 ---
 
@@ -198,11 +199,8 @@ curl http://localhost:8000/v1/models
 In a **separate terminal** with your NeMo Agent toolkit environment activated:
 
 ```bash
-# Navigate to the example directory
-cd examples/finetuning/rl_with_openpipe_art
-
 # Run the pre-training evaluation
-nat eval --config_file=src/rl_with_openpipe_art/configs/config_pre_train.yml --reps 3
+nat eval --config_file examples/finetuning/rl_with_openpipe_art/configs/config_pre_train.yml --reps 3
 ```
 
 This runs 72 games (12 as X, 12 as O, 3 times each) and reports the win percentage.
@@ -318,9 +316,7 @@ finetuning:
 In your **NeMo Agent toolkit environment**:
 
 ```bash
-cd examples/finetuning/rl_with_openpipe_art
-
-nat finetune --config_file=src/rl_with_openpipe_art/configs/config.yml
+nat finetune --config_file examples/finetuning/rl_with_openpipe_art/configs/config.yml
 ```
 
 ### 3.3 Monitor Training Progress
@@ -573,7 +569,7 @@ The ART server continues serving the finetuned model weights. Do not restart it,
 ### 6.2 Run Post-Training Evaluation
 
 ```bash
-nat eval --config_file=src/rl_with_openpipe_art/configs/config_post_train.yml --reps 3
+nat eval --config_file examples/finetuning/rl_with_openpipe_art/configs/config_post_train.yml --reps 3
 ```
 
 Compare the post-training win percentage against the pre-training baseline. You should see a notable improvement.

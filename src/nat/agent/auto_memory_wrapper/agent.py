@@ -1,0 +1,278 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import logging
+from collections.abc import Awaitable
+from collections.abc import Callable
+from typing import Any
+
+from langchain_core.messages import AIMessage
+from langchain_core.messages import BaseMessage
+from langchain_core.messages import HumanMessage
+from langchain_core.messages import SystemMessage
+from langgraph.graph import StateGraph
+from langgraph.graph.state import CompiledStateGraph
+
+from nat.builder.context import Context
+from nat.data_models.api_server import ChatRequest
+from nat.data_models.api_server import Message
+from nat.data_models.api_server import UserMessageContentRoleType
+from nat.memory.interfaces import MemoryEditor
+from nat.memory.models import MemoryItem
+
+from .state import AutoMemoryWrapperState
+
+logger = logging.getLogger(__name__)
+
+
+class AutoMemoryWrapperGraph:
+    """
+    Wraps any NAT agent to add automatic memory capture and retrieval.
+
+    The wrapper treats the inner agent as a black-box function that receives
+    a ChatRequest with multiple messages (including system messages with memory
+    context). The inner agent manages its own internal state (ReActGraphState,
+    ReWOOGraphState, etc.) - the wrapper never sees it.
+    """
+
+    def __init__(
+        self,
+        inner_agent_fn: Callable[
+            [ChatRequest], Awaitable[Any]],  # Inner agent as a Function (receives ChatRequest with multiple messages)
+        memory_editor: MemoryEditor,  # Zep/Mem0/Redis memory client
+        save_user_messages: bool = True,  # Auto-save user messages
+        retrieve_memory: bool = True,  # Auto-retrieve before agent
+        save_ai_responses: bool = True,  # Auto-save agent responses
+        search_params: dict[str, Any] | None = None,  # Backend-specific search parameters
+        add_params: dict[str, Any] | None = None  # Backend-specific add parameters
+    ):
+        self.inner_agent_fn = inner_agent_fn
+        self.memory_editor = memory_editor
+        self.save_user_messages = save_user_messages
+        self.retrieve_memory = retrieve_memory
+        self.save_ai_responses = save_ai_responses
+        self.search_params = search_params or {}
+        self.add_params = add_params or {}
+        self._context = Context.get()
+
+    def _get_user_id_from_context(self) -> str:
+        """
+        Extract user_id from runtime context.
+
+        Priority order:
+        1. user_manager.get_id() - For authenticated sessions (set via SessionManager.session())
+        2. X-User-ID HTTP header - For testing/simple auth without middleware
+        3. "default_user" - Fallback for development/testing without authentication
+
+        Returns:
+            str: The user ID for memory operations
+        """
+        # Priority 1: Get user_id from user_manager (for authenticated sessions)
+        user_manager = self._context.user_manager
+        if user_manager and hasattr(user_manager, 'get_id'):
+            try:
+                user_id = user_manager.get_id()
+                if user_id:
+                    logger.debug(f"Using user_id from user_manager: {user_id}")
+                    return user_id
+            except Exception as e:
+                logger.debug(f"Failed to get user_id from user_manager: {e}")
+
+        # Priority 2: Extract from X-User-ID HTTP header (temporary workaround for testing)
+        if self._context.metadata and self._context.metadata.headers:
+            user_id = self._context.metadata.headers.get("x-user-id")
+            if user_id:
+                logger.debug(f"Using user_id from X-User-ID header: {user_id}")
+                return user_id
+
+        # Fallback: default for development/testing
+        logger.debug("Using default user_id: default_user")
+        return "default_user"
+
+    def get_wrapper_node_count(self) -> int:
+        """
+        Calculate the number of wrapper nodes that will be added to the graph.
+
+        This is used to determine the recursion_limit overhead that the wrapper
+        adds on top of the inner agent's recursion needs.
+
+        Returns:
+            int: Number of nodes in the wrapper graph (1-4 depending on configuration)
+        """
+        count = 1  # inner_agent node is always present
+        if self.save_user_messages:
+            count += 1  # capture_user_message node
+        if self.retrieve_memory:
+            count += 1  # memory_retrieve node
+        if self.save_ai_responses:
+            count += 1  # capture_ai_response node
+        return count
+
+    @staticmethod
+    def _langchain_message_to_nat_message(lc_message: BaseMessage) -> Message:
+        """
+        Convert LangChain message to NAT Message format.
+
+        This is necessary to construct a proper ChatRequest with all messages
+        (including system messages with memory context) to pass to the inner agent.
+        """
+        if isinstance(lc_message, HumanMessage):
+            role = UserMessageContentRoleType.USER
+        elif isinstance(lc_message, AIMessage):
+            role = UserMessageContentRoleType.ASSISTANT
+        elif isinstance(lc_message, SystemMessage):
+            role = UserMessageContentRoleType.SYSTEM
+        else:
+            # Default to user for unknown message types
+            role = UserMessageContentRoleType.USER
+
+        return Message(role=role, content=str(lc_message.content))
+
+    async def capture_user_message_node(self, state: AutoMemoryWrapperState) -> AutoMemoryWrapperState:
+        """Captures user message to memory thread"""
+        if not self.save_user_messages or not state.messages:
+            return state
+
+        # Get the latest user message
+        user_message = state.messages[-1]
+        if isinstance(user_message, HumanMessage):
+            # Get user_id from runtime context
+            user_id = self._get_user_id_from_context()
+
+            # Add to memory
+            await self.memory_editor.add_items(
+                [MemoryItem(conversation=[{
+                    "role": "user", "content": str(user_message.content)
+                }], user_id=user_id)],
+                **self.add_params)
+        return state
+
+    async def memory_retrieve_node(self, state: AutoMemoryWrapperState) -> AutoMemoryWrapperState:
+        """Retrieves relevant memory from memory store"""
+        if not self.retrieve_memory or not state.messages:
+            return state
+
+        # Get the latest user message
+        user_message = state.messages[-1]
+
+        # Get user_id from runtime context
+        user_id = self._get_user_id_from_context()
+
+        # Retrieve memory from memory provider
+        memory_items = await self.memory_editor.search(
+            query=user_message.content,  # Reasonable default for memory retrieval
+            user_id=user_id,
+            **self.search_params  # User-configured params (e.g., top_k, mode)
+        )
+
+        # Extract memory strings and inject as system message if available
+        if memory_items:
+            # Extract memory field from each MemoryItem
+            memory_strings = [item.memory for item in memory_items if item.memory]
+            if memory_strings:
+                memory_text = "\n".join(memory_strings)
+                memory_message = SystemMessage(content=f"Relevant context from memory:\n{memory_text}")
+                # Insert before the last user message
+                state.messages.insert(-1, memory_message)
+
+        return state
+
+    async def inner_agent_node(self, state: AutoMemoryWrapperState) -> AutoMemoryWrapperState:
+        """
+        Calls the inner agent with a ChatRequest containing all messages.
+
+        The inner agent receives a ChatRequest with multiple messages (including
+        system messages with memory context), processes them using its own internal
+        state (ReActGraphState, ReWOOGraphState, etc.), and returns a ChatResponse.
+        """
+        # Convert all LangChain messages to NAT Message format
+        nat_messages = [self._langchain_message_to_nat_message(msg) for msg in state.messages]
+        chat_request = ChatRequest(messages=nat_messages)
+
+        # Call inner agent with ChatRequest - it manages its own state internally
+        response = await self.inner_agent_fn.ainvoke(chat_request)
+
+        # Extract content from response based on type
+        if hasattr(response, 'choices') and response.choices:
+            # ChatResponse object - extract from choices[0].message.content
+            response_text = response.choices[0].message.content or ""
+        elif hasattr(response, 'output'):
+            # GenerateResponse object - use output field
+            response_text = response.output
+        elif hasattr(response, 'value'):
+            # Some other response type with value field
+            response_text = str(response.value)
+        elif isinstance(response, str):
+            # Already a string
+            response_text = response
+        else:
+            # Last resort: convert to string
+            response_text = str(response)
+
+        # Add response to wrapper state
+        state.messages.append(AIMessage(content=response_text))
+        return state
+
+    async def capture_ai_response_node(self, state: AutoMemoryWrapperState) -> AutoMemoryWrapperState:
+        """Captures agent response to memory"""
+        if not self.save_ai_responses or not state.messages:
+            return state
+
+        # Get the latest AI message
+        ai_message = state.messages[-1]
+        if isinstance(ai_message, AIMessage):
+            # Get user_id from runtime context
+            user_id = self._get_user_id_from_context()
+
+            # Add to memory
+            await self.memory_editor.add_items(
+                [MemoryItem(conversation=[{
+                    "role": "assistant", "content": str(ai_message.content)
+                }], user_id=user_id)],
+                **self.add_params)
+        return state
+
+    def build_graph(self) -> CompiledStateGraph:
+        """Wraps inner agent with memory nodes"""
+        workflow = StateGraph(AutoMemoryWrapperState)
+
+        # Add nodes
+        if self.save_user_messages:
+            workflow.add_node("capture_user_message", self.capture_user_message_node)
+        if self.retrieve_memory:
+            workflow.add_node("memory_retrieve", self.memory_retrieve_node)
+        workflow.add_node("inner_agent", self.inner_agent_node)
+        if self.save_ai_responses:
+            workflow.add_node("capture_ai_response", self.capture_ai_response_node)
+
+        # Connect nodes based on enabled features
+        workflow.set_entry_point("capture_user_message" if self.save_user_messages else "memory_retrieve" if self.
+                                 retrieve_memory else "inner_agent")
+
+        if self.save_user_messages and self.retrieve_memory:
+            workflow.add_edge("capture_user_message", "memory_retrieve")
+            workflow.add_edge("memory_retrieve", "inner_agent")
+        elif self.save_user_messages:
+            workflow.add_edge("capture_user_message", "inner_agent")
+        elif self.retrieve_memory:
+            workflow.add_edge("memory_retrieve", "inner_agent")
+
+        if self.save_ai_responses:
+            workflow.add_edge("inner_agent", "capture_ai_response")
+            workflow.set_finish_point("capture_ai_response")
+        else:
+            workflow.set_finish_point("inner_agent")
+
+        return workflow.compile()

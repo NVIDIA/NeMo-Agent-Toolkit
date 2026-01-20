@@ -23,6 +23,7 @@ dependencies = [
   "nvidia-nat[async_endpoints,gunicorn]~=1.5",
   "nvidia-nat-adk",
   "nvidia-nat-agno",
+  "nvidia-nat-autogen",
   "nvidia-nat-crewai",
   "nvidia-nat-langchain",
   "nvidia-nat-llama-index",
@@ -30,11 +31,13 @@ dependencies = [
   "nvidia-nat-mem0ai",
   "nvidia-nat-mysql",
   "nvidia-nat-nemo-customizer",
-  "nvidia-nat-openpipe-art",
+  # nvidia-nat-openpipe-art cannot be part of all due to conflicts with nvidia-nat-crewai
+  # "nvidia-nat-openpipe-art",
   "nvidia-nat-opentelemetry",
   "nvidia-nat-phoenix",
   "nvidia-nat-profiling",
-  "nvidia-nat-ragaai",
+  # nvidia-nat-ragaai cannot be part of all due to conflicts with nvidia-nat-strands
+  # "nvidia-nat-ragaai",
   "nvidia-nat-redis",
   "nvidia-nat-s3",
   "nvidia-nat-semantic-kernel",
@@ -71,6 +74,7 @@ config-settings = { editable_mode = "compat" }
 [tool.uv.sources]
 nvidia-nat = { workspace = true }
 nvidia-nat-agno = { workspace = true }
+nvidia-nat-autogen = { workspace = true }
 nvidia-nat-crewai = { workspace = true }
 nvidia-nat-langchain = { workspace = true }
 nvidia-nat-llama-index = { workspace = true }

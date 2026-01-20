@@ -175,7 +175,7 @@ class A2AFrontEndPluginWorker:
 
         for function_name, function in functions.items():
             # Create skill from function metadata
-            skill_name = function_name.replace('_', ' ').replace('.', ' - ').title()
+            skill_name = function_name.replace('__', ' - ').replace('_', ' ').title()
             skill_description = function.description or f"Execute {function_name}"
 
             skill = AgentSkill(

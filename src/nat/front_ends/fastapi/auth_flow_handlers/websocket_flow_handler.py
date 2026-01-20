@@ -49,14 +49,18 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
     def __init__(self,
                  add_flow_cb: Callable[[str, FlowState], Awaitable[None]],
                  remove_flow_cb: Callable[[str], Awaitable[None]],
-                 web_socket_message_handler: WebSocketMessageHandler):
+                 web_socket_message_handler: WebSocketMessageHandler,
+                 auth_timeout_seconds: float = 300.0):
 
         self._add_flow_cb: Callable[[str, FlowState], Awaitable[None]] = add_flow_cb
         self._remove_flow_cb: Callable[[str], Awaitable[None]] = remove_flow_cb
         self._web_socket_message_handler: WebSocketMessageHandler = web_socket_message_handler
+        self._auth_timeout_seconds: float = auth_timeout_seconds
 
-    async def authenticate(self, config: OAuth2AuthCodeFlowProviderConfig,
-                           method: AuthFlowType) -> AuthenticatedContext:
+    async def authenticate(
+            self,
+            config: OAuth2AuthCodeFlowProviderConfig,  # type: ignore[override]
+            method: AuthFlowType) -> AuthenticatedContext:
         if method == AuthFlowType.OAUTH2_AUTHORIZATION_CODE:
             return await self._handle_oauth2_auth_code_flow(config)
 
@@ -80,8 +84,8 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
                                   client: AsyncOAuth2Client,
                                   config: OAuth2AuthCodeFlowProviderConfig,
                                   state: str,
-                                  verifier: str = None,
-                                  challenge: str = None) -> str:
+                                  verifier: str | None = None,
+                                  challenge: str | None = None) -> str:
         """
         Create OAuth authorization URL with proper error handling.
 
@@ -129,9 +133,9 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
         await self._web_socket_message_handler.create_websocket_message(_HumanPromptOAuthConsent(text=authorization_url)
                                                                         )
         try:
-            token = await asyncio.wait_for(flow_state.future, timeout=300)
+            token = await asyncio.wait_for(flow_state.future, timeout=self._auth_timeout_seconds)
         except TimeoutError as exc:
-            raise RuntimeError("Authentication flow timed out after 5 minutes.") from exc
+            raise RuntimeError(f"Authentication flow timed out after {self._auth_timeout_seconds} seconds.") from exc
         finally:
 
             await self._remove_flow_cb(state)

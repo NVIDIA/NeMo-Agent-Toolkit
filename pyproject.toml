@@ -1,3 +1,19 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES.
+# All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 [build-system]
 build-backend = "setuptools.build_meta"
 requires = ["setuptools >= 64", "setuptools-scm>=8"]
@@ -28,7 +44,6 @@ dependencies = [
   "httpx~=0.27",
   "jinja2~=3.1",
   "jsonpath-ng~=1.7",
-  "mcp~=1.13",
   "nest-asyncio2==1.7.1",
   "networkx~=3.4",
   # langchain-aws pins numpy to 1.* for Python <3.12 -- remove once package is updated
@@ -37,10 +52,12 @@ dependencies = [
   "openinference-semantic-conventions~=0.1.14",
   "openpyxl~=3.1",
   "optuna~=4.4.0",
+  "pandas~=2.2",
   "pip>=24.3.1",
   "pkce==1.0.3",
   "pkginfo~=1.12",
   "platformdirs~=4.3",
+  "plotly~=6.0",
   "pydantic~=2.11",
   "pymilvus~=2.6",
   "python-dotenv~=1.1.1",
@@ -50,6 +67,8 @@ dependencies = [
   "tabulate~=0.9",
   "uvicorn[standard]~=0.38",
   "wikipedia~=1.4",
+  # transitive dependencies
+  "urllib3~=2.6.3",
 ]
 requires-python = ">=3.11,<3.14"
 description = "NVIDIA NeMo Agent toolkit"
@@ -76,8 +95,12 @@ all = ["nvidia-nat-all"] # meta-package
 a2a = ["nvidia-nat-a2a"]
 adk = ["nvidia-nat-adk"]
 agno = ["nvidia-nat-agno"]
+autogen = ["nvidia-nat-autogen"]
 crewai = ["nvidia-nat-crewai"]
 data-flywheel = ["nvidia-nat-data-flywheel"]
+huggingface = [
+  "transformers[torch,accelerate]~=4.57",
+]
 ingestion = ["nvidia-nat-ingestion"] # meta-package
 langchain = ["nvidia-nat-langchain"]
 llama-index = ["nvidia-nat-llama-index"]
@@ -85,6 +108,7 @@ mcp = ["nvidia-nat-mcp"]
 mem0ai = ["nvidia-nat-mem0ai"]
 opentelemetry = ["nvidia-nat-opentelemetry"]
 phoenix = ["nvidia-nat-phoenix"]
+pii-defense = ["presidio-analyzer", "presidio-anonymizer"]
 profiling = ["nvidia-nat-profiling"] # meta-package
 ragaai = ["nvidia-nat-ragaai"]
 mysql = ["nvidia-nat-mysql"]
@@ -109,35 +133,40 @@ nemo-customizer = ["nvidia-nat-nemo-customizer"]
 examples = [
   "nat_adk_demo",
   "nat_agno_personal_finance",
-  "nat_haystack_deep_research_agent",
   "nat_alert_triage_agent",
+  "nat_autogen_demo",
   "nat_automated_description_generation",
   "nat_currency_agent_a2a",
   "nat_dpo_tic_tac_toe",
   "nat_email_phishing_analyzer",
+  "nat_haystack_deep_research_agent",
+  "nat_kaggle_mcp",
+  "nat_math_assistant_a2a",
+  "nat_math_assistant_a2a_protected",
   "nat_multi_frameworks",
+  "nat_per_user_workflow",
   "nat_plot_charts",
   "nat_por_to_jiratickets",
   "nat_profiler_agent",
   "nat_react_benchmark_agent",
-  "nat_router_agent",
+  "nat_retail_agent",
   "nat_rl_with_openpipe_art",
+  "nat_router_agent",
   "nat_semantic_kernel_demo",
   "nat_sequential_executor",
   "nat_service_account_auth_mcp",
   "nat_simple_auth",
   "nat_simple_auth_mcp",
-  "nat_per_user_workflow",
-  "nat_simple_web_query",
-  "nat_simple_web_query_eval",
   "nat_simple_calculator",
-  "nat_math_assistant_a2a",
   "nat_simple_calculator_custom_routes",
   "nat_simple_calculator_eval",
-  "nat_simple_calculator_mcp",
-  "nat_simple_calculator_observability",
   "nat_simple_calculator_hitl",
+  "nat_simple_calculator_mcp",
+  "nat_simple_calculator_mcp_protected",
+  "nat_simple_calculator_observability",
   "nat_simple_rag",
+  "nat_simple_web_query",
+  "nat_simple_web_query_eval",
   "nat_strands_demo",
   "nat_swe_bench",
   "nat_user_report",
@@ -170,20 +199,39 @@ openai = [
 [tool.uv]
 managed = true
 config-settings = { editable_mode = "compat" }
+
+# Only use override-dependencies as a temporary workaround across package version resolution.
+#
+# We currently have all packages part of the same workspace, which means a single lockfile is in
+# use across all packages. However, subsets of packages currently conflict:
+#
+# nvidia-nat-openpipe-art <> nvidia-nat-crewai**
+# - these packages conflict due to a litellm conflict
+#
+# nvidia-nat-ragaai <> nvidia-nat-strands**
+# - these packages conflict due to a tenacity conflict
+#
+# All conflicts have specific resolutions below, namely conforming to the package which is kept
+# in nvidia-nat-all. Packages denoted with ** are those which are preferred as part of an "all"
+# distribution (thus included in both nvidia-nat-all and nvidia-nat[all])
+#
+# Long-term solutions include better package isolation and testing, which is on the roadmap.
+#
 override-dependencies = [
-  # TODO: remove this when ragaai-catalsty supports tenacity version ~=9.0
-  # Override tenacity version to resolve conflict between ragaai-catalyst ("tenacity==8.3.0"). and strands-agents-tools ("tenacity>=9.1.2")
+  # Override tenacity version to resolve conflict between ragaai-catalyst ("tenacity==8.3.0")
+  #   and strands-agents-tools ("tenacity>=9.1.2")
   # tenacity 9.x maintains API compatibility with 8.x except for the statistics attribute (breaking change in 9.0.0)
   # See: https://github.com/jd/tenacity/releases
   "tenacity>=9.1.2,<10.0.0",
+
   # Override dependencies that nvidia-nat-openpipe-art would otherwise regress.
   # This keeps status-quo for other packages.
   "litellm==1.74.9",
   "openai>=1.106,<2.dev0",
-  # Override pdfminer.six version (transitive dependency of pdfplumber)
+
+  # Override pdfminer.six version (transitive dependency of polyfill-weave)
   "pdfminer.six>=20251229"
 ]
-
 
 [tool.uv.sources]
 # Workspace members
@@ -191,6 +239,7 @@ nvidia-nat-all = { workspace = true }
 nvidia-nat-a2a = { workspace = true }
 nvidia-nat-agno = { workspace = true }
 nvidia-nat-adk = { workspace = true }
+nvidia-nat-autogen = { workspace = true }
 nvidia-nat-crewai = { workspace = true }
 nvidia-nat-data-flywheel = { workspace = true }
 nvidia-nat-ingestion = { workspace = true }
@@ -217,31 +266,36 @@ nvidia-nat-nemo-customizer = { workspace = true }
 # All examples here
 nat_adk_demo = { path = "examples/frameworks/adk_demo", editable = true }
 nat_agno_personal_finance = { path = "examples/frameworks/agno_personal_finance", editable = true }
+nat_alert_triage_agent = { path = "examples/advanced_agents/alert_triage_agent", editable = true }
+nat_autogen_demo = { path = "examples/frameworks/nat_autogen_demo", editable = true }
+nat_automated_description_generation = { path = "examples/custom_functions/automated_description_generation", editable = true }
 nat_currency_agent_a2a = { path = "examples/A2A/currency_agent_a2a", editable = true }
 nat_dpo_tic_tac_toe = { path = "examples/finetuning/dpo_tic_tac_toe", editable = true }
-nat_haystack_deep_research_agent = { path = "examples/frameworks/haystack_deep_research_agent", editable = true }
-nat_alert_triage_agent = { path = "examples/advanced_agents/alert_triage_agent", editable = true }
-nat_automated_description_generation = { path = "examples/custom_functions/automated_description_generation", editable = true }
 nat_email_phishing_analyzer = { path = "examples/evaluation_and_profiling/email_phishing_analyzer", editable = true }
+nat_haystack_deep_research_agent = { path = "examples/frameworks/haystack_deep_research_agent", editable = true }
+nat_kaggle_mcp = { path = "examples/MCP/kaggle_mcp", editable = true }
+nat_math_assistant_a2a = { path = "examples/A2A/math_assistant_a2a", editable = true }
+nat_math_assistant_a2a_protected = { path = "examples/A2A/math_assistant_a2a_protected", editable = true }
 nat_multi_frameworks = { path = "examples/frameworks/multi_frameworks", editable = true }
+nat_per_user_workflow = { path = "examples/front_ends/per_user_workflow", editable = true }
 nat_plot_charts = { path = "examples/custom_functions/plot_charts", editable = true }
 nat_por_to_jiratickets = { path = "examples/HITL/por_to_jiratickets", editable = true }
 nat_profiler_agent = { path = "examples/advanced_agents/profiler_agent", editable = true }
 nat_react_benchmark_agent = { path = "examples/dynamo_integration/react_benchmark_agent", editable = true }
-nat_router_agent = { path = "examples/control_flow/router_agent", editable = true }
+nat_retail_agent = { path = "examples/safety_and_security/retail_agent", editable = true }
 nat_rl_with_openpipe_art = { path = "examples/finetuning/rl_with_openpipe_art", editable = true }
+nat_router_agent = { path = "examples/control_flow/router_agent", editable = true }
 nat_semantic_kernel_demo = { path = "examples/frameworks/semantic_kernel_demo", editable = true }
 nat_sequential_executor = { path = "examples/control_flow/sequential_executor", editable = true }
 nat_service_account_auth_mcp = { path = "examples/MCP/service_account_auth_mcp", editable = true }
 nat_simple_auth = { path = "examples/front_ends/simple_auth", editable = true }
 nat_simple_auth_mcp = { path = "examples/MCP/simple_auth_mcp", editable = true }
-nat_per_user_workflow = { path = "examples/front_ends/per_user_workflow", editable = true }
 nat_simple_calculator = { path = "examples/getting_started/simple_calculator", editable = true }
-nat_math_assistant_a2a = { path = "examples/A2A/math_assistant_a2a", editable = true }
 nat_simple_calculator_custom_routes = { path = "examples/front_ends/simple_calculator_custom_routes", editable = true }
 nat_simple_calculator_eval = { path = "examples/evaluation_and_profiling/simple_calculator_eval", editable = true }
 nat_simple_calculator_hitl = { path = "examples/HITL/simple_calculator_hitl", editable = true }
 nat_simple_calculator_mcp = { path = "examples/MCP/simple_calculator_mcp", editable = true }
+nat_simple_calculator_mcp_protected = { path = "examples/MCP/simple_calculator_mcp_protected", editable = true }
 nat_simple_calculator_observability = { path = "examples/observability/simple_calculator_observability", editable = true }
 nat_simple_rag = { path = "examples/RAG/simple_rag", editable = true }
 nat_simple_web_query = { path = "examples/getting_started/simple_web_query", editable = true }
@@ -270,10 +324,11 @@ dev = [
   "nvidia-nat_test",
   "nvidia-sphinx-theme>=0.0.9",
   "pre-commit>=4.0,<5.0",
-  "pytest_httpserver==1.1.*",
+  "pytest~=8.3",
   "pytest-asyncio==0.24.*",
   "pytest-cov~=6.1",
-  "pytest~=8.3",
+  "pytest_httpserver==1.1.*",
+  "pytest-timeout~=2.4",
   "python-docx~=1.1.0",
   "ruff~=0.12",
   "setuptools >= 64",
@@ -283,10 +338,13 @@ dev = [
   "sphinx-copybutton>=0.5",
   "sphinx_design~=0.6",
   "sphinx-mermaid",
+  "sphinx-reredirects~=1.1",
   "tomlkit~=0.13.2",
   "twine~=6.0",
   "vale~=3.12",
   "yapf==0.43.*",
+  # transitive dependencies
+  "werkzeug~=3.1.5",
 ]
 
 [project.entry-points.'nat.components']
@@ -312,6 +370,22 @@ nat_front_ends = "nat.front_ends.register"
 nat_registry_handlers = "nat.registry_handlers.register"
 
 
+[project.entry-points.'nat.cli']
+configure = "nat.cli.commands.configure.configure:configure_command"
+eval = "nat.cli.commands.evaluate:eval_command"
+finetune = "nat.cli.commands.finetune:finetune_command"
+info = "nat.cli.commands.info.info:info_command"
+object-store = "nat.cli.commands.object_store.object_store:object_store_command"
+optimize = "nat.cli.commands.optimize:optimizer_command"
+red-team = "nat.cli.commands.red_teaming.red_teaming:red_team_command"
+registry = "nat.cli.commands.registry.registry:registry_command"
+sizing = "nat.cli.commands.sizing.sizing:sizing"
+start = "nat.cli.commands.start:start_command"
+uninstall = "nat.cli.commands.uninstall:uninstall_command"
+validate = "nat.cli.commands.validate:validate_command"
+workflow = "nat.cli.commands.workflow.workflow:workflow_command"
+
+
 [project.scripts]
 aiq = "nat.cli.main:run_cli_aiq_compat"
 nat = "nat.cli.main:run_cli"
@@ -335,6 +409,10 @@ filterwarnings = [
 testpaths = ["tests", "examples/**/tests", "packages/**/tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
+
+# Global timeout of 5 minutes per test to catch hanging tests.
+# Individual tests can override with @pytest.mark.timeout(seconds) or disable with @pytest.mark.timeout(0)
+timeout = 300
 
 
 [tool.ruff]
@@ -380,6 +458,7 @@ force-single-line = true
 known-first-party = ["aiq", "nat", "nat_*", "_utils"]
 known-third-party = [
   "agno",
+  "autogen",
   "crewai",
   "google",
   "langchain",

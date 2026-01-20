@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from nat.builder.function import FunctionGroup
 from nat.plugins.a2a.server.front_end_plugin_worker import A2AFrontEndPluginWorker
 
 
@@ -36,23 +37,25 @@ class TestAgentCardGeneration:
         assert len(agent_card.skills) == 3
 
         skill_ids = [skill.id for skill in agent_card.skills]
-        assert "calculator.add" in skill_ids
-        assert "calculator.multiply" in skill_ids
+        sep = FunctionGroup.SEPARATOR
+        assert f"calculator{sep}add" in skill_ids
+        assert f"calculator{sep}multiply" in skill_ids
         assert "current_datetime" in skill_ids
 
     async def test_skill_names_formatted_correctly(self, mock_workflow_with_functions, a2a_server_config):
         """Test skill names are formatted from function names.
 
-        Verifies the transformation: "calculator.add" -> "Calculator - Add"
+        Verifies the transformation: "calculator__add" -> "Calculator - Add"
         This makes skill names more human-readable in the agent card.
         """
         worker = A2AFrontEndPluginWorker(a2a_server_config)
         agent_card = await worker.create_agent_card(mock_workflow_with_functions)
 
-        # Find the calculator.add skill
-        add_skill = next(s for s in agent_card.skills if s.id == "calculator.add")
+        # Find the calculator__add skill
+        sep = FunctionGroup.SEPARATOR
+        add_skill = next(s for s in agent_card.skills if s.id == f"calculator{sep}add")
 
-        # Verify name transformation: calculator.add -> Calculator - Add
+        # Verify name transformation: calculator__add -> Calculator - Add
         assert add_skill.name == "Calculator - Add"
 
         # Find the current_datetime skill
@@ -70,10 +73,11 @@ class TestAgentCardGeneration:
         worker = A2AFrontEndPluginWorker(a2a_server_config)
         agent_card = await worker.create_agent_card(mock_workflow_with_functions)
 
-        add_skill = next(s for s in agent_card.skills if s.id == "calculator.add")
+        sep = FunctionGroup.SEPARATOR
+        add_skill = next(s for s in agent_card.skills if s.id == f"calculator{sep}add")
         assert add_skill.description == "Add two or more numbers together"
 
-        multiply_skill = next(s for s in agent_card.skills if s.id == "calculator.multiply")
+        multiply_skill = next(s for s in agent_card.skills if s.id == f"calculator{sep}multiply")
         assert multiply_skill.description == "Multiply two or more numbers together"
 
     async def test_agent_card_metadata_from_config(self, mock_workflow_with_functions, a2a_server_config):
