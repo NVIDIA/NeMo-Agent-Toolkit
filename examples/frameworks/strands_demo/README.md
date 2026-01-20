@@ -17,19 +17,22 @@ limitations under the License.
 
 # Strands Example
 
-**Complexity:** 🟢 Beginner
+**Complexity:** 🟨 Intermediate
 
 A minimal example showcasing a Strands agent that answers questions about Strands documentation using a curated URL knowledge base and the native Strands `http_request` tool.
+
+> [!NOTE]
+> The CLI `optimize` workflow at the end of this example can take 10-20 minutes to run.
 
 ## Table of Contents
 
 - [Key Features](#key-features)
 - [Prerequisites](#prerequisites)
   - [Local Development Tools](#local-development-tools)
-  - [NeMo Agent Toolkit](#nemo-agent-toolkit)
+  - [NeMo Agent toolkit](#nemo-agent-toolkit)
   - [API Keys](#api-keys)
 - [Installation and Setup](#installation-and-setup)
-  - [Install NeMo Agent Toolkit and Workflow](#install-nemo-agent-toolkit-and-workflow)
+  - [Install NeMo Agent toolkit and Workflow](#install-nemo-agent-toolkit-and-workflow)
   - [Set Up API Keys](#set-up-api-keys)
 - [Run the Workflow locally](#run-the-workflow-locally)
   - [1) Run the workflow (config.yml)](#1-run-the-workflow-configyml)
@@ -40,7 +43,7 @@ A minimal example showcasing a Strands agent that answers questions about Strand
 
 ## Key Features
 
-- **Strands framework integration**: Demonstrates support for Strands Agents in the NeMo Agent Toolkit.
+- **Strands framework integration**: Demonstrates support for Strands Agents in the NeMo Agent toolkit.
 - **AgentCore Integration**: Demonstrates an agent that can be run on Amazon Bedrock AgentCore runtime.
 - **Evaluation and Performance Metrics**: Runs dataset-driven evaluation and performance analysis via `nat eval`.
 - **Support for Model Providers**: Configuration includes NIM, OpenAI, and AWS Bedrock options.
@@ -103,7 +106,7 @@ The `configs/` directory contains five ready-to-use configurations. Use the comm
 
 ```bash
 nat run --config_file examples/frameworks/strands_demo/configs/config.yml \
-  --input "How do I use the Strands Agents API?"
+  --input "Use the provided tools and cite information about how to use the Strands API from the tool call results"
 ```
 
 **Expected Workflow Output**
@@ -111,34 +114,37 @@ The workflow produces a large amount of output, the end of the output should con
 
 ```console
 Workflow Result:
-['To answer your question about using the Strands Agents API, I\'ll need to search for the relevant documentation. Let me do that for you.Thank you for providing that information. To get the most relevant information about using the Strands Agents API, I\'ll fetch the content from the "strands_agent_loop" URL, as it seems to be the most relevant to your question about using the API.Based on the information from the Strands Agents documentation, I can provide you with an overview of how to use the Strands Agents API. Here\'s a summary of the key points:\n\n1. Initialization:\n   To use the Strands Agents API, you start by initializing an agent with the necessary components:\n\n   ```python\n   from strands import Agent\n   from strands_tools import calculator\n\n   agent = Agent(\n       tools=[calculator],\n       system_prompt="You are a helpful assistant."\n   )\n   ```\n\n   This sets up the agent with tools (like a calculator in this example) and a system prompt.\n\n2. Processing User Input:\n   You can then use the agent to process user input:\n\n   ```python\n   result = agent("Calculate 25 * 48")\n   ```\n\n3. Agent Loop:\n   The Strands Agents API uses an "agent loop" to process requests. This loop includes:\n   - Receiving user input and context\n   - Processing the input using a language model (LLM)\n   - Deciding whether to use tools to gather information or perform actions\n   - Executing tools and receiving results\n   - Continuing reasoning with new information\n   - Producing a final response or iterating through the loop again\n\n4. Tool Execution:\n   The agent can use tools as part of its processing. When the model decides to use a tool, it will format a request like this:\n\n   ```json\n   {\n     "role": "assistant",\n     "content": [\n       {\n         "toolUse": {\n           "toolUseId": "tool_123",\n           "name": "calculator",\n           "input": {\n             "expression": "25 * 48"\n           }\n         }\n       }\n     ]\n   }\n   ```\n\n   The API then executes the tool and returns the result to the model for further processing.\n\n5. Recursive Processing:\n   The agent loop can continue recursively if more tool executions or multi-step reasoning is required.\n\n6. Completion:\n   The loop completes when the model generates a final text response or when an unhandled exception occurs.\n\nTo effectively use the Strands Agents API, you should:\n- Initialize your agent with appropriate tools and system prompts\n- Design your tools carefully, considering token limits and complexity\n- Handle potential exceptions, such as the MaxTokensReachedException\n\nRemember that the API is designed to support complex, multi-step reasoning and actions with seamless integration of tools and language models. It\'s flexible enough to handle a wide range of tasks and can be customized to your specific needs.']
+-----------------------------
+Workflow Result:
+['The provided information is about the Strands API and its usage. The Strands API is a platform for building conversational AI models, and it provides a range of tools and features for developers to create and deploy their own conversational AI models.\n\nTo use the Strands API, developers can start by creating an account on the Strands website and obtaining an API key. They can then use the API key to authenticate their requests to the Strands API.\n\nThe Strands API provides a range of endpoints for different tasks, such as creating and managing models, training and testing models, and deploying models to production. Developers can use these endpoints to build and deploy their own conversational AI models using the Strands API.\n\nIn addition to the API endpoints, the Strands API also provides a range of tools and features for developers, such as a model builder, a testing framework, and a deployment platform. These tools and features can help developers to build, test, and deploy their conversational AI models more efficiently and effectively.\n\nOverall, the Strands API is a powerful platform for building conversational AI models, and it provides a range of tools and features for developers to create and deploy their own conversational AI models.']
+--------------------------------------------------
 ```
 
 ### 2) Evaluate accuracy and performance (eval_config.yml)
 
-Runs the workflow over a dataset and computes evaluation and performance metrics.  Refer to the the [evaluation](../../../docs/source/improve-workflows/evaluate.md) and [profiling](../../../docs/source/improve-workflows/profiler.md) guides in the documentation for more information.
+Runs the workflow over a dataset and computes evaluation and performance metrics.  Refer to the [evaluation](../../../docs/source/improve-workflows/evaluate.md) and [profiling](../../../docs/source/improve-workflows/profiler.md) guides in the documentation for more information.
 
 ```bash
 nat eval --config_file examples/frameworks/strands_demo/configs/eval_config.yml
 ```
+
 > [!NOTE]
 > If you hit rate limits, lower concurrency: `--override eval.general.max_concurrency 1`
 > Refer to [the evaluation guide](../../../docs/source/improve-workflows/evaluate.md) for more details on evaluation metrics and configuration options.
 
 ### 3) Optimize workflow parameters (optimizer_config.yml)
 
-Automatically finds optimal LLM parameters (temperature, top_p, max_tokens) through systematic experimentation. The optimizer evaluates multiple parameter combinations across multiple trials and repetitions, balancing accuracy, groundedness, relevance, trajectory correctness, latency, and token efficiency.
+Automatically finds optimal LLM parameters (`temperature`, `top_p`, `max_tokens`) through systematic experimentation. The optimizer evaluates multiple parameter combinations across multiple trials and repetitions, balancing accuracy, groundedness, relevance, trajectory correctness, latency, and token efficiency.
 
 ```bash
 nat optimize --config_file examples/frameworks/strands_demo/configs/optimizer_config.yml
 ```
 
 **What it optimizes:**
-- **temperature**: Tests values from 0.1 to 0.7
-- **top_p**: Tests values from 0.7 to 1.0
-- **max_tokens**: Tests values from 4096 to 8192
+- **`temperature`**: Tests values from 0.0 to 0.6 (step: 0.2)
+- **`max_tokens`**: Tests values from 4096 to 8192 (step: 2048)
 
-The optimizer runs 20 trials with 3 repetitions each for statistical stability and generates a report showing the best parameter combination based on weighted multi-objective scoring.
+The optimizer runs a grid search with 3 repetitions each combination for statistical stability and generates a report showing the best parameter combination based on weighted multi-objective scoring.
 
 > [!NOTE]
 > Optimization can take significant time. Reduce `n_trials` or adjust the search space in the config for faster experimentation.
@@ -199,4 +205,20 @@ This configuration serves the workflow locally with the [endpoints](https://docs
 nat serve --config_file examples/frameworks/strands_demo/configs/agentcore_config.yml
 ```
 
-Next, to deploy the AgentCore-compatible NeMo Agent Toolkit workflow on Amazon Bedrock AgentCore, follow [Running Strands with NeMo Agent Toolkit on AWS AgentCore](./bedrock_agentcore/README.md).
+**Test the endpoints:**
+
+In a separate terminal, verify the service is running with the health check endpoint:
+
+```bash
+curl http://localhost:8080/ping
+```
+
+Call the main workflow via the `/invocations` endpoint:
+
+```bash
+curl -X POST http://localhost:8080/invocations \
+  -H "Content-Type: application/json" \
+  -d '{"inputs": "What is the Strands agent loop?"}'
+```
+
+Next, to deploy the AgentCore-compatible NeMo Agent toolkit workflow on Amazon Bedrock AgentCore, follow [Running Strands with NeMo Agent toolkit on AWS AgentCore](./bedrock_agentcore/README.md).

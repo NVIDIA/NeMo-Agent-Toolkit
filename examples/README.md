@@ -124,7 +124,7 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 - **[`langchain_deep_research`](frameworks/auto_wrapper/langchain_deep_research/README.md)**: An example that integrates any existing LangGraph agent with NeMo Agent toolkit using the `langgraph_wrapper` workflow type **[🟨 Intermediate]**
 - **[`multi_frameworks`](frameworks/multi_frameworks/README.md)**: Supervisor agent coordinating LangChain/LangGraph, LlamaIndex, and Haystack agents for research, RAG, and chitchat tasks **[🟨 Intermediate]**
 - **[`semantic_kernel_demo`](frameworks/semantic_kernel_demo/README.md)**: Multi-agent travel planning system using Microsoft Semantic Kernel with specialized agents for itinerary creation, budget management, and report formatting, including long-term memory for user preferences **[🟢 Beginner]**
-- **[`strands_demo`](frameworks/strands_demo/README.md)**: A minimal example showcasing a Strands agent that answers questions about Strands documentation using a curated URL knowledge base and the native Strands `http_request` tool **[🟢 Beginner]**
+- **[`strands_demo`](frameworks/strands_demo/README.md)**: A minimal example showcasing a Strands agent that answers questions about Strands documentation using a curated URL knowledge base and the native Strands `http_request` tool **[🟨 Intermediate]**
 - **[`strands_demo - bedrock_agentcore`](frameworks/strands_demo/bedrock_agentcore/README.md)**: Deploying NVIDIA NeMo Agent toolkit with Strands on AWS AgentCore, including OpenTelemetry instrumentation for monitoring **[🛑 Advanced]**
 
 ### Front Ends

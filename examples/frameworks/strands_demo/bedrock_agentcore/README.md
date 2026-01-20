@@ -28,7 +28,7 @@ A comprehensive guide for deploying NVIDIA NeMo Agent toolkit with Strands on AW
   - [IAM Permissions for Deployment](#iam-permissions-for-deployment)
   - [AWS Console Access](#aws-console-access)
   - [Additional Requirements](#additional-requirements)
-- [Step 1: Setup NeMo Agent Toolkit Environment](#step-1-setup-nemo-agent-toolkit-environment)
+- [Step 1: Setup NeMo Agent toolkit Environment](#step-1-setup-nemo-agent-toolkit-environment)
 - [Step 2: Configure AWS CLI](#step-2-configure-aws-cli)
   - [Option A: Using Long-Term Credentials](#option-a-using-long-term-credentials)
   - [Option B: Using AWS SSO (Recommended for Organizations)](#option-b-using-aws-sso-recommended-for-organizations)
@@ -301,7 +301,7 @@ curl -X 'POST' \
   'http://localhost:8080/invocations' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
-  -d '{"inputs" : "How do I use the Strands Agents API?"}'
+  -d '{"inputs" : "Use the provided tools and cite information about how to use the Strands API from the tool call results"}'
 ```
 <!-- path-check-skip-end -->
 
@@ -1033,7 +1033,7 @@ Regions like `us-west-1` are **not supported** for Bedrock AgentCore.
 
 ## Additional Resources
 
-- [NVIDIA NeMo Agent Toolkit Documentation](https://docs.nvidia.com/nemo/agent-toolkit/latest/)
+- [NVIDIA NeMo Agent toolkit Documentation](https://docs.nvidia.com/nemo/agent-toolkit/latest/)
 - [AWS Bedrock AgentCore Documentation](https://docs.aws.amazon.com/bedrock/)
 - [OpenTelemetry Python Documentation](https://opentelemetry.io/docs/languages/python/)
 - [AWS CloudWatch Logs Documentation](https://docs.aws.amazon.com/cloudwatch/)
