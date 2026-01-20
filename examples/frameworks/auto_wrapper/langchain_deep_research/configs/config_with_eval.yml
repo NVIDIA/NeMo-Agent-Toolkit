@@ -23,14 +23,14 @@ general:
 
 llms:
   agent:
-    _type: openai
+    _type: nim
     model: nvidia/nemotron-3-nano-30b-a3b
-    base_url: ${OPENAI_BASE_URL:-https://integrate.api.nvidia.com/v1}
+    base_url: https://integrate.api.nvidia.com/v1
     api_key: ${NVIDIA_API_KEY}
   judge:
-    _type: openai
+    _type: nim
     model: nvidia/nemotron-3-nano-30b-a3b
-    base_url: ${OPENAI_BASE_URL:-https://integrate.api.nvidia.com/v1}
+    base_url: https://integrate.api.nvidia.com/v1
     api_key: ${NVIDIA_API_KEY}
 
 workflow:
