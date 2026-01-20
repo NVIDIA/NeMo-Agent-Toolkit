@@ -15,6 +15,7 @@
 
 import logging
 from logging import Logger
+from typing import TYPE_CHECKING
 
 from nvidia_rag.utils.configuration import EmbeddingConfig as NvidiaRAGEmbeddingConfig
 from nvidia_rag.utils.configuration import FilterExpressionGeneratorConfig as NvidiaRAGFilterGeneratorConfig
@@ -29,11 +30,12 @@ from pydantic import Field
 from pydantic import SecretStr
 
 from nat.builder.builder import Builder
-from nat.cli.register_workflow import register_function
+from nat.builder.function import FunctionGroup
+from nat.cli.register_workflow import register_function_group
 from nat.data_models.component_ref import EmbedderRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.component_ref import RetrieverRef
-from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.function import FunctionGroupBaseConfig
 from nat.embedder.nim_embedder import NIMEmbedderModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.plugins.rag_lib.config import EmbedderConfigType
@@ -43,10 +45,21 @@ from nat.plugins.rag_lib.config import RetrieverConfigType
 from nat.retriever.milvus.register import MilvusRetrieverConfig
 from nat.retriever.nemo_retriever.register import NemoRetrieverConfig
 
+if TYPE_CHECKING:
+    from nvidia_rag import NvidiaRAG
+
 logger: Logger = logging.getLogger(__name__)
 
 
-class NvidiaRAGLibConfig(FunctionBaseConfig, name="nvidia_rag_lib"):
+class NvidiaRAGFunctionGroup(FunctionGroup):
+    """FunctionGroup wrapper that exposes the NvidiaRAG client."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.rag_client: NvidiaRAG | None = None
+
+
+class NvidiaRAGLibConfig(FunctionGroupBaseConfig, name="nvidia_rag_lib"):
     """Configuration for NVIDIA RAG Library.
 
     All component configs are optional - NvidiaRAGConfig provides defaults.
@@ -59,20 +72,24 @@ class NvidiaRAGLibConfig(FunctionBaseConfig, name="nvidia_rag_lib"):
     rag_pipeline: RAGPipelineConfig = Field(default_factory=RAGPipelineConfig)
 
 
-@register_function(config_type=NvidiaRAGLibConfig)  # type: ignore[arg-type]
+@register_function_group(config_type=NvidiaRAGLibConfig)
 async def nvidia_rag_lib(config: NvidiaRAGLibConfig, builder: Builder):
-    """Initialize NVIDIA RAG with flexible config resolution."""
+    """Initialize NVIDIA RAG client and expose via FunctionGroup."""
     try:
         from nvidia_rag import NvidiaRAG
     except ImportError as e:
         raise ImportError("nvidia-rag package is not installed.") from e
 
-    rag_config: NvidiaRAGConfig = await build_nvidia_rag_config(config, builder)
-    logger.info("NVIDIA RAG initialized")
-    yield NvidiaRAG(config=rag_config)
+    group = NvidiaRAGFunctionGroup(config=config)
+
+    rag_config: NvidiaRAGConfig = await _build_nvidia_rag_config(config, builder)
+    group.rag_client = NvidiaRAG(config=rag_config)
+    logger.info("NVIDIA RAG client initialized")
+
+    yield group
 
 
-async def build_nvidia_rag_config(config: NvidiaRAGLibConfig, builder: Builder) -> NvidiaRAGConfig:
+async def _build_nvidia_rag_config(config: NvidiaRAGLibConfig, builder: Builder) -> NvidiaRAGConfig:
     """Build NvidiaRAGConfig by resolving NAT refs/components to nvidia_rag configs."""
 
     pipeline: RAGPipelineConfig = config.rag_pipeline
@@ -126,6 +143,30 @@ async def _resolve_llm_config(llm: LLMConfigType, builder: Builder, rag_config: 
             rag_config.llm.parameters.top_p = llm.top_p
         if llm.max_tokens is not None:
             rag_config.llm.parameters.max_tokens = llm.max_tokens
+
+        # Propagate LLM values to query_rewriter when not set, instead of using library defaults.
+        if "model_name" not in rag_config.query_rewriter.model_fields_set:
+            rag_config.query_rewriter.model_name = llm.model_name
+        if "server_url" not in rag_config.query_rewriter.model_fields_set and llm.base_url:
+            rag_config.query_rewriter.server_url = llm.base_url
+        if "api_key" not in rag_config.query_rewriter.model_fields_set and llm.api_key:
+            rag_config.query_rewriter.api_key = llm.api_key
+
+        # Propagate LLM values to reflection when not set, instead of using library defaults.
+        if "model_name" not in rag_config.reflection.model_fields_set:
+            rag_config.reflection.model_name = llm.model_name
+        if "server_url" not in rag_config.reflection.model_fields_set and llm.base_url:
+            rag_config.reflection.server_url = llm.base_url
+        if "api_key" not in rag_config.reflection.model_fields_set and llm.api_key:
+            rag_config.reflection.api_key = llm.api_key
+
+        # Propagate LLM values to filter_expression_generator when not set, instead of using library defaults.
+        if "model_name" not in rag_config.filter_expression_generator.model_fields_set:
+            rag_config.filter_expression_generator.model_name = llm.model_name
+        if "server_url" not in rag_config.filter_expression_generator.model_fields_set and llm.base_url:
+            rag_config.filter_expression_generator.server_url = llm.base_url
+        if "api_key" not in rag_config.filter_expression_generator.model_fields_set and llm.api_key:
+            rag_config.filter_expression_generator.api_key = llm.api_key
         return
 
     raise ValueError(f"Unsupported LLM config type: {type(llm)}")
@@ -150,6 +191,8 @@ async def _resolve_embedder_config(embedder: EmbedderConfigType, builder: Builde
             rag_config.embeddings.server_url = embedder.base_url
         if embedder.api_key:
             rag_config.embeddings.api_key = embedder.api_key
+        if embedder.dimensions is not None:
+            rag_config.embeddings.dimensions = embedder.dimensions
         return
 
     raise ValueError(f"Unsupported embedder config type: {type(embedder)}")

@@ -1,0 +1,90 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0
+    max_tokens: 4096
+    top_p: 1
+
+embedders:
+  nim_embedder:
+    _type: nim
+    model_name: nvidia/llama-3.2-nv-embedqa-1b-v2
+    truncate: "END"
+
+retrievers:
+  milvus_retriever:
+    _type: milvus_retriever
+    uri: http://localhost:19530
+    collection_name: cuda_docs
+    embedding_model: nim_embedder
+    top_k: 100
+
+function_groups:
+  rag_client:
+    _type: nvidia_rag_lib
+    llm: nim_llm
+    embedder: nim_embedder
+    retriever: milvus_retriever
+    rag_pipeline:
+      enable_citations: true
+      default_confidence_threshold: 0.25
+
+      ranking:
+        top_k: 10
+        enable_reranker: true
+        model_name: nvidia/llama-3.2-nv-rerankqa-1b-v2
+
+      # TODO: Re-enable once library bug is fixed.
+      # BUG: enable_reflection breaks search() in nvidia_rag.
+      # Missing 'await' on check_context_relevance() at nvidia_rag/rag_server/main.py:1112
+      # reflection:
+      #   enable_reflection: true
+      #   max_loops: 2
+      #   context_relevance_threshold: 1
+      #   response_groundedness_threshold: 1
+
+functions:
+  search:
+    _type: rag_lib_search
+    rag_client: rag_client
+    topic: NVIDIA technologies
+    description: "Search NVIDIA documentation (CUDA, MCP) with AI-enhanced query understanding. Use for any technical question."
+    collection_names:
+      - cuda_docs
+      - mcp_docs
+    reranker_top_k: 10
+
+  generate:
+    _type: rag_lib_generate
+    rag_client: rag_client
+    topic: NVIDIA technologies
+    description: "Generate a high-quality, self-verified answer with citations. Uses reflection to reduce errors."
+    collection_names:
+      - cuda_docs
+      - mcp_docs
+    use_knowledge_base: true
+    enable_citations: true
+
+workflow:
+  _type: react_agent
+  tool_names:
+    - search
+    - generate
+  verbose: true
+  llm_name: nim_llm

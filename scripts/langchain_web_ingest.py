@@ -131,6 +131,7 @@ if __name__ == "__main__":
     parser.add_argument("--collection_name", "-n", default=CUDA_COLLECTION_NAME, help="Collection name for the data.")
     parser.add_argument("--milvus_uri", "-u", default=DEFAULT_URI, help="Milvus host URI")
     parser.add_argument("--clean_cache", default=False, help="If true, deletes local files", action="store_true")
+    parser.add_argument("--embedding_model", "-e", default="nvidia/nv-embedqa-e5-v5", help="Embedding model to use")
     args = parser.parse_args()
 
     if len(args.urls) == 0:
@@ -142,4 +143,5 @@ if __name__ == "__main__":
             milvus_uri=args.milvus_uri,
             collection_name=args.collection_name,
             clean_cache=args.clean_cache,
+            embedding_model=args.embedding_model,
         ))
