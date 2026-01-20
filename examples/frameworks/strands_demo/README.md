@@ -29,10 +29,10 @@ A minimal example showcasing a Strands agent that answers questions about Strand
 - [Key Features](#key-features)
 - [Prerequisites](#prerequisites)
   - [Local Development Tools](#local-development-tools)
-  - [NeMo Agent Toolkit](#nemo-agent-toolkit)
+  - [NeMo Agent toolkit](#nemo-agent-toolkit)
   - [API Keys](#api-keys)
 - [Installation and Setup](#installation-and-setup)
-  - [Install NeMo Agent Toolkit and Workflow](#install-nemo-agent-toolkit-and-workflow)
+  - [Install NeMo Agent toolkit and Workflow](#install-nemo-agent-toolkit-and-workflow)
   - [Set Up API Keys](#set-up-api-keys)
 - [Run the Workflow locally](#run-the-workflow-locally)
   - [1) Run the workflow (config.yml)](#1-run-the-workflow-configyml)
@@ -43,7 +43,7 @@ A minimal example showcasing a Strands agent that answers questions about Strand
 
 ## Key Features
 
-- **Strands framework integration**: Demonstrates support for Strands Agents in the NeMo Agent Toolkit.
+- **Strands framework integration**: Demonstrates support for Strands Agents in the NeMo Agent toolkit.
 - **AgentCore Integration**: Demonstrates an agent that can be run on Amazon Bedrock AgentCore runtime.
 - **Evaluation and Performance Metrics**: Runs dataset-driven evaluation and performance analysis via `nat eval`.
 - **Support for Model Providers**: Configuration includes NIM, OpenAI, and AWS Bedrock options.
@@ -122,7 +122,7 @@ Workflow Result:
 
 ### 2) Evaluate accuracy and performance (eval_config.yml)
 
-Runs the workflow over a dataset and computes evaluation and performance metrics.  Refer to the the [evaluation](../../../docs/source/improve-workflows/evaluate.md) and [profiling](../../../docs/source/improve-workflows/profiler.md) guides in the documentation for more information.
+Runs the workflow over a dataset and computes evaluation and performance metrics.  Refer to the [evaluation](../../../docs/source/improve-workflows/evaluate.md) and [profiling](../../../docs/source/improve-workflows/profiler.md) guides in the documentation for more information.
 
 ```bash
 nat eval --config_file examples/frameworks/strands_demo/configs/eval_config.yml
@@ -134,15 +134,15 @@ nat eval --config_file examples/frameworks/strands_demo/configs/eval_config.yml
 
 ### 3) Optimize workflow parameters (optimizer_config.yml)
 
-Automatically finds optimal LLM parameters (temperature, top_p, max_tokens) through systematic experimentation. The optimizer evaluates multiple parameter combinations across multiple trials and repetitions, balancing accuracy, groundedness, relevance, trajectory correctness, latency, and token efficiency.
+Automatically finds optimal LLM parameters (`temperature`, `top_p`, `max_tokens`) through systematic experimentation. The optimizer evaluates multiple parameter combinations across multiple trials and repetitions, balancing accuracy, groundedness, relevance, trajectory correctness, latency, and token efficiency.
 
 ```bash
 nat optimize --config_file examples/frameworks/strands_demo/configs/optimizer_config.yml
 ```
 
 **What it optimizes:**
-- **temperature**: Tests values from 0.0 to 0.6 (step: 0.2)
-- **max_tokens**: Tests values from 4096 to 8192 (step: 2048)
+- **`temperature`**: Tests values from 0.0 to 0.6 (step: 0.2)
+- **`max_tokens`**: Tests values from 4096 to 8192 (step: 2048)
 
 The optimizer runs a grid search with 3 repetitions each combination for statistical stability and generates a report showing the best parameter combination based on weighted multi-objective scoring.
 
@@ -221,4 +221,4 @@ curl -X POST http://localhost:8080/invocations \
   -d '{"inputs": "What is the Strands agent loop?"}'
 ```
 
-Next, to deploy the AgentCore-compatible NeMo Agent Toolkit workflow on Amazon Bedrock AgentCore, follow [Running Strands with NeMo Agent Toolkit on AWS AgentCore](./bedrock_agentcore/README.md).
+Next, to deploy the AgentCore-compatible NeMo Agent toolkit workflow on Amazon Bedrock AgentCore, follow [Running Strands with NeMo Agent toolkit on AWS AgentCore](./bedrock_agentcore/README.md).

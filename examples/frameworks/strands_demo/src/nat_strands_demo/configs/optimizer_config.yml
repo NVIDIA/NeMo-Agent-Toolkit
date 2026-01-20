@@ -106,7 +106,7 @@ optimizer:
   # Numeric optimization (Optuna)
   numeric:
     enabled: true
-    sampler: grid             # Use TPE (Bayesian) sampling
+    sampler: grid
  
   # Evaluation settings
   reps_per_param_set: 3      # Run each config 3 times for stability
