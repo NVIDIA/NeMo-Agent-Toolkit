@@ -36,6 +36,8 @@ class MemoryItem(BaseModel):
         Metadata providing context and utility for management operations.
     memory : str or None
         Optional memory string. Helpful when returning a memory.
+    similarity_score : float or None
+        Optional similarity score from semantic search. Lower scores indicate higher similarity
     """
     # yapf: disable
     model_config = ConfigDict(
@@ -82,6 +84,8 @@ class MemoryItem(BaseModel):
     metadata: dict[str, typing.Any] = Field(description="Metadata about the memory item.", default={})
     user_id: str = Field(description="The user's ID.")
     memory: str | None = Field(default=None)
+    similarity_score: float | None = Field(
+        description="Similarity score from semantic search. Lower scores indicate higher similarity.", default=None)
 
 
 class SearchMemoryInput(BaseModel):

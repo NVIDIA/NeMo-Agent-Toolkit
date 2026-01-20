@@ -109,6 +109,10 @@ class RedisEditor(MemoryEditor):
             query (str): The query string to match.
             top_k (int): Maximum number of items to return.
             kwargs (dict): Keyword arguments to pass to the search method.
+                - user_id (str): User ID for filtering results.
+                - similarity_threshold (float, optional): Maximum similarity score threshold.
+                  Results with scores above this threshold will be filtered out. Lower scores
+                  indicate higher similarity. If not specified, all top_k results are returned.
 
         Returns:
             list[MemoryItem]: The most relevant MemoryItems for the given query.
@@ -116,7 +120,8 @@ class RedisEditor(MemoryEditor):
         logger.debug("Search called with query: %s, top_k: %d, kwargs: %s", query, top_k, kwargs)
 
         user_id = kwargs.get("user_id", "redis")  # TODO: remove this fallback username
-        logger.debug("Using user_id: %s", user_id)
+        similarity_threshold = kwargs.get("similarity_threshold", None)
+        logger.debug("Using user_id: %s, similarity_threshold: %s", user_id, similarity_threshold)
 
         # Perform vector search using Redis search
         logger.debug("Using embedder for vector search")
@@ -171,19 +176,30 @@ class RedisEditor(MemoryEditor):
             for i, doc in enumerate(results.docs):
                 try:
                     logger.debug("Processing result %d/%d", i + 1, len(results.docs))
-                    logger.debug("Similarity score: %d", getattr(doc, 'score', 0))
+
+                    # Extract similarity score
+                    similarity_score = float(getattr(doc, 'score', 0.0))
+                    logger.debug("Similarity score: %.4f", similarity_score)
+
+                    # Apply similarity threshold filtering if specified
+                    if similarity_threshold is not None and similarity_score > similarity_threshold:
+                        logger.debug("Filtering out result %d due to score %.4f > threshold %.4f",
+                                     i + 1,
+                                     similarity_score,
+                                     similarity_threshold)
+                        continue
 
                     # Get the full document data
                     full_doc = await self._client.json().get(doc.id)
                     logger.debug("Extracted data for result %d: %s", i + 1, full_doc)
-                    memory_item = self._create_memory_item(dict(full_doc), user_id)
+                    memory_item = self._create_memory_item(dict(full_doc), user_id, similarity_score)
                     memories.append(memory_item)
                     logger.debug("Successfully created MemoryItem for result %d", i + 1)
                 except Exception as e:
                     logger.error("Failed to process result %d: %s", i + 1, e)
                     raise
 
-            logger.debug("Successfully processed all %d results", len(memories))
+            logger.debug("Successfully processed %d results (filtered from %d)", len(memories), len(results.docs))
             return memories
         except redis_exceptions.ResponseError as e:
             logger.error("Search failed with ResponseError: %s", e)
@@ -195,7 +211,7 @@ class RedisEditor(MemoryEditor):
             logger.error("Unexpected error during search: %s", e)
             raise
 
-    def _create_memory_item(self, memory_data: dict, user_id: str) -> MemoryItem:
+    def _create_memory_item(self, memory_data: dict, user_id: str, similarity_score: float | None = None) -> MemoryItem:
         """Helper method to create a MemoryItem from Redis data."""
         # Ensure tags is always a list
         tags = memory_data.get("tags", [])
@@ -209,7 +225,8 @@ class RedisEditor(MemoryEditor):
                           user_id=user_id,
                           memory=memory_data.get("memory", ""),
                           tags=tags,
-                          metadata=memory_data.get("metadata", {}))
+                          metadata=memory_data.get("metadata", {}),
+                          similarity_score=similarity_score)
 
     async def remove_items(self, **kwargs):
         """
