@@ -565,7 +565,7 @@ Stopping NATS container...
 
 ---
 
-### Quick Manual Tests
+## Testing the Integration
 
 > **Note**: NeMo Agent toolkit commands require the virtual environment to be active.
 
