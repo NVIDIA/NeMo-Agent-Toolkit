@@ -189,10 +189,11 @@ def extract_worst_reasoning(
             # For minimize: higher is worse, negate so high values sort first
             if direction == "minimize":
                 score = -score
-
-            # Higher weight = more important failures, so multiply by weight
-            # (lower weighted score = higher priority for worst items)
-            priority_score = score / max(evaluator_weight, 0.01)
+                # For negative scores, multiply so higher weight increases priority (more negative -> earlier)
+                priority_score = score * max(evaluator_weight, 0.01)
+            else:
+                # For positive scores, divide so higher weight increases priority (smaller -> earlier)
+                priority_score = score / max(evaluator_weight, 0.01)
             weighted_items.append((priority_score, reasoning_str, name))
 
     # Sort by priority (worst weighted failures first)
