@@ -1,8 +1,11 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
+import json
 import statistics
 from typing import Any
+
+from pydantic import BaseModel as PydanticBaseModel
 
 
 def build_oracle_feedback(reasoning_list: list[str], max_chars: int) -> str | None:
@@ -28,7 +31,7 @@ def build_oracle_feedback(reasoning_list: list[str], max_chars: int) -> str | No
         if current_length + len(entry) > max_chars:
             remaining = max_chars - current_length
             if remaining > 20:  # Only add if meaningful space left
-                feedback_parts.append(entry[:remaining - 3] + "...")
+                feedback_parts.append(entry[: remaining - 3] + "...")
             else:
                 truncated = True
             break
@@ -123,3 +126,78 @@ def check_adaptive_triggers(
             return {"triggered": True, "reason": "diversity_collapse"}
 
     return {"triggered": False, "reason": None}
+
+
+def _reasoning_to_string(reasoning: Any) -> str:
+    """
+    Convert reasoning to a string, handling various types.
+
+    Args:
+        reasoning: The reasoning value (str, dict, list, BaseModel, etc.)
+
+    Returns:
+        String representation of the reasoning.
+    """
+    if reasoning is None:
+        return ""
+    if isinstance(reasoning, str):
+        return reasoning
+    if isinstance(reasoning, PydanticBaseModel):
+        return reasoning.model_dump_json()
+    if isinstance(reasoning, (dict, list)):
+        return json.dumps(reasoning)
+    return str(reasoning)
+
+
+def extract_worst_reasoning(
+    *,
+    evaluation_results: list[tuple[str, Any]],
+    weights_by_name: dict[str, float],
+    directions_by_name: dict[str, str],
+    worst_n: int,
+) -> list[str]:
+    """
+    Extract reasoning from worst-performing evaluation items.
+
+    Args:
+        evaluation_results: List of (evaluator_name, EvalOutput) tuples.
+        weights_by_name: Metric weights by evaluator name.
+        directions_by_name: Optimization direction ('maximize' or 'minimize') by evaluator name.
+        worst_n: Number of worst items to extract.
+
+    Returns:
+        List of formatted reasoning strings with evaluator labels.
+    """
+    # Collect items with evaluator weights: (priority_score, reasoning, evaluator_name)
+    weighted_items: list[tuple[float, str, str]] = []
+
+    for name, result in evaluation_results:
+        evaluator_weight = weights_by_name.get(name, 1.0)
+        direction = directions_by_name.get(name, "maximize")
+
+        for item in result.eval_output_items:
+            if not item.reasoning:
+                continue
+
+            # Convert reasoning to string (handles dict, BaseModel, list, etc.)
+            reasoning_str = _reasoning_to_string(item.reasoning)
+            if not reasoning_str:
+                continue
+
+            score = float(item.score)
+            # For maximize: lower is worse, use score directly (low values sort first)
+            # For minimize: higher is worse, negate so high values sort first
+            if direction == "minimize":
+                score = -score
+
+            # Higher weight = more important failures, so multiply by weight
+            # (lower weighted score = higher priority for worst items)
+            priority_score = score / max(evaluator_weight, 0.01)
+            weighted_items.append((priority_score, reasoning_str, name))
+
+    # Sort by priority (worst weighted failures first)
+    weighted_items.sort(key=lambda x: x[0])
+    worst = weighted_items[:worst_n]
+
+    # Format with evaluator context
+    return [f"[{evaluator}] {reasoning}" for _, reasoning, evaluator in worst]
