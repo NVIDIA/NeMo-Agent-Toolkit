@@ -504,7 +504,7 @@ optimizer:
 > **Reasoning Quality**
 > - Better reasoning = better mutations
 > - Ensure evaluators explain *why* items failed, not just *that* they failed
-> - Reasoning can be strings, dicts, or Pydantic models (all are converted to strings)
+> - Reasoning can be strings, dictionaries, or Pydantic models (all are converted to strings)
 >
 > **Character Limit**
 > - Default 4000 chars protects context window
@@ -517,7 +517,7 @@ optimizer:
 
 During GA prompt optimization, the optimizer saves:
 
-- `optimized_prompts_gen<N>.json`: Best prompt set after generation N.
+- `optimized_prompts_gen<N>.json`: Best prompt set after each generation.
 - `optimized_prompts.json`: Final best prompt set after all generations.
 - `ga_history_prompts.csv`: Per-individual fitness and metric history across generations.
 
