@@ -20,6 +20,7 @@ general:
         _type: phoenix
         endpoint: http://localhost:6006/v1/traces
         project: lc_deepagents
+        timeout: 60 # seconds
 
 llms:
   agent:
