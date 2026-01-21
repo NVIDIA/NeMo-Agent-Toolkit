@@ -53,6 +53,10 @@ class NIMModelConfig(LLMBaseConfig, RetryMixin, OptimizableMixin, ThinkingMixin,
                                            le=1.0,
                                            description="Top-p for distribution sampling.",
                                            space=SearchSpace(high=1.0, low=0.5, step=0.1))
+    reasoning_budget: int | None = Field(
+        default=None,
+        description="Reasoning budget for Nemotron models. Limits the number of thinking tokens. "
+                    "Set to a small value (e.g., 1024) to reduce overthinking, or None to disable.")
 
 
 @register_llm_provider(config_type=NIMModelConfig)
