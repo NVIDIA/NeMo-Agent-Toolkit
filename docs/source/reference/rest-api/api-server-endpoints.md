@@ -395,7 +395,7 @@ general:
   front_end:
     _type: fastapi
     versioning:
-      disable_legacy_routes: false
+      enable_legacy_routes: true
     hitl:
       enable_http: true
       enable_sse: true
@@ -409,7 +409,7 @@ Versioning options:
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `versioning.version` | integer | `1` | API version used for `/v{n}` prefixed routes |
-| `versioning.disable_legacy_routes` | boolean | `false` | Remove unversioned legacy routes when `true` |
+| `versioning.enable_legacy_routes` | boolean | `true` | Add unversioned legacy routes when `true` |
 | `versioning.api_version_header` | boolean | `true` | Emit `X-API-Version` response header |
 
 Human-in-the-loop HTTP surface:

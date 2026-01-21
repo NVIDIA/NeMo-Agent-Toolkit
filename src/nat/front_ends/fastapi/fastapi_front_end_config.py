@@ -152,8 +152,7 @@ class VersioningConfig(BaseModel):
     """Configuration for API versioning and legacy route handling."""
 
     version: int = Field(default=1, description="Current API version for versioned routes")
-    disable_legacy_routes: bool = Field(default=False,
-                                        description="Disable unversioned legacy routes when set to True.")
+    enable_legacy_routes: bool = Field(default=True, description="Enable unversioned legacy routes when set to True.")
     api_version_header: bool = Field(default=True, description="Emit X-API-Version response header when True.")
 
 

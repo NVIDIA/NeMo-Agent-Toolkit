@@ -495,3 +495,45 @@ async def register_workflow_route(worker: "FastApiFrontEndPluginWorker",
             )
         else:
             raise ValueError(f"Unsupported method {endpoint.method}")
+
+    legacy_enabled = worker.front_end_config.versioning.enable_legacy_routes
+    is_default_endpoint = not hasattr(endpoint, "function_name")
+    if legacy_enabled and is_default_endpoint and endpoint.method == "POST":
+
+        def _add_legacy_api_route(path: str, **kwargs):
+            app.add_api_route(path=path, **kwargs)
+
+        _add_legacy_api_route(
+            path="/generate",
+            endpoint=post_single_endpoint(request_type=RequestBodyType, result_type=SingleResponseType),
+            methods=[endpoint.method],
+            response_model=SingleResponseModel,
+            description=f"{endpoint.description} (legacy)",
+            responses={500: response_500},
+        )
+
+        _add_legacy_api_route(
+            path="/generate/stream",
+            endpoint=post_streaming_endpoint(request_type=RequestBodyType,
+                                             streaming=True,
+                                             result_type=StreamResponseType,
+                                             output_type=StreamResponseType),
+            methods=[endpoint.method],
+            response_model=StreamResponseModel,
+            description=f"{endpoint.description} (legacy stream)",
+            responses={500: response_500},
+        )
+
+        _add_legacy_api_route(
+            path="/generate/full",
+            endpoint=post_streaming_raw_endpoint(request_type=RequestBodyType,
+                                                 streaming=True,
+                                                 result_type=StreamResponseType,
+                                                 output_type=StreamResponseType),
+            methods=[endpoint.method],
+            response_model=StreamResponseModel,
+            description="Stream raw intermediate steps without any step adaptor translations.\n"
+            "Use filter_steps query parameter to filter steps by type (comma-separated list) or "
+            "                        set to 'none' to suppress all intermediate steps.",
+            responses={500: response_500},
+        )

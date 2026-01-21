@@ -334,14 +334,14 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
     def _register_api_route(self, app: FastAPI, *, path: str, **kwargs) -> None:
         """Register route on legacy + versioned paths depending on config."""
-        if not self.front_end_config.versioning.disable_legacy_routes:
+        if self.front_end_config.versioning.enable_legacy_routes:
             app.add_api_route(path=path, **kwargs)
         versioned = self._versioned_path(path)
         if versioned != path:
             app.add_api_route(path=versioned, **kwargs)
 
     def _register_websocket_route(self, app: FastAPI, *, path: str, endpoint) -> None:
-        if not self.front_end_config.versioning.disable_legacy_routes:
+        if self.front_end_config.versioning.enable_legacy_routes:
             app.add_websocket_route(path, endpoint)
         versioned = self._versioned_path(path)
         if versioned != path:

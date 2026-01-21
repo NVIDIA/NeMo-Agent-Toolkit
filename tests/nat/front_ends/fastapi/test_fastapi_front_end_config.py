@@ -56,7 +56,7 @@ FAST_API_FRONT_END_CONFIG_ALL_VALUES = {
     "workers": 4,
     "versioning": {
         "version": 2,
-        "disable_legacy_routes": True,
+        "enable_legacy_routes": True,
         "api_version_header": False,
     },
     "hitl": {

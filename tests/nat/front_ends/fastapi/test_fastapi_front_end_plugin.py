@@ -17,6 +17,7 @@ import io
 import time
 
 import pytest
+from asgi_lifespan import LifespanManager
 from fastapi import FastAPI
 from httpx_sse import aconnect_sse
 
@@ -127,6 +128,89 @@ async def test_generate_and_openai_stream(fn_use_openai_v1_api: bool):
 
                 assert event_source.response.status_code == 200
                 assert response == values
+
+
+async def test_routes_exposed():
+    front_end_config = FastApiFrontEndConfig()
+    config = Config(
+        general=GeneralConfig(front_end=front_end_config),
+        workflow=EchoFunctionConfig(),
+    )
+    worker = FastApiFrontEndPluginWorker(config)
+    app = worker.build_app()
+
+    async with LifespanManager(app):
+
+        paths = {route.path for route in app.router.routes if hasattr(route, "path")}
+        assert "/v1/workflow" in paths
+        assert "/v1/workflow/stream" in paths
+        assert "/v1/workflow/full" in paths
+        assert "/v1/websocket" in paths
+        assert "/v1/chat/completions" in paths
+
+
+async def test_legacy_route_aliases_exposed():
+    front_end_config = FastApiFrontEndConfig()
+    config = Config(
+        general=GeneralConfig(front_end=front_end_config),
+        workflow=EchoFunctionConfig(),
+    )
+    worker = FastApiFrontEndPluginWorker(config)
+    app = worker.build_app()
+
+    async with LifespanManager(app):
+        paths = {route.path for route in app.router.routes if hasattr(route, "path")}
+        assert "/generate" in paths
+        assert "/generate/stream" in paths
+        assert "/generate/full" in paths
+        assert "/websocket" in paths
+
+
+async def test_legacy_generate_endpoints():
+    config = Config(
+        general=GeneralConfig(front_end=FastApiFrontEndConfig()),
+        workflow=EchoFunctionConfig(),
+    )
+
+    async with build_nat_client(config) as client:
+        response = await client.post("/generate", json={"message": "Hello"})
+        assert response.status_code == 200
+        assert response.json() == {"value": "Hello"}
+
+
+async def test_legacy_generate_stream_endpoint():
+    values = ["a", "b", "c", "d"]
+    config = Config(
+        general=GeneralConfig(front_end=FastApiFrontEndConfig()),
+        workflow=StreamingEchoFunctionConfig(),
+    )
+
+    async with build_nat_client(config) as client:
+        response = []
+        async with aconnect_sse(client, "POST", "/generate/stream", json={"message": values}) as event_source:
+            async for sse in event_source.aiter_sse():
+                response.append(sse.json()["value"])
+        assert event_source.response.status_code == 200
+        assert response == values
+
+
+async def test_legacy_generate_full_endpoint():
+    import json
+    values = ["a", "b", "c", "d"]
+    config = Config(
+        general=GeneralConfig(front_end=FastApiFrontEndConfig()),
+        workflow=StreamingEchoFunctionConfig(),
+    )
+
+    async with build_nat_client(config) as client:
+        response = []
+        async with aconnect_sse(client, "POST", "/generate/full?filter_steps=none",
+                                json={"message": values}) as event_source:
+            async for sse in event_source.aiter_sse():
+                if sse.data:
+                    response.append(sse.data)
+        assert event_source.response.status_code == 200
+        assert response == [json.dumps({"value": x}, separators=(",", ":")) for x in values]
 
 
 async def test_custom_endpoint():
