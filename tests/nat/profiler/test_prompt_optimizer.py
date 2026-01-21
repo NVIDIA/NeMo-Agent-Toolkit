@@ -30,6 +30,10 @@ from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerMetric
 from nat.data_models.optimizer import OptimizerRunConfig
 from nat.profiler.parameter_optimization.prompt_optimizer import optimize_prompts
+from nat.profiler.parameter_optimization.prompt_optimizer import PromptOptimizerInputSchema
+
+# Module-level tracking for oracle feedback verification in tests
+oracle_feedback_received: dict[str, typing.Any] = {"count": 0, "values": []}
 
 
 def _make_optimizer_config(tmp_path: Path) -> OptimizerConfig:
@@ -98,15 +102,13 @@ async def _register_prompt_optimizer_functions():
     @register_function(config_type=InitFunctionConfig)
     async def _register_init(_config: InitFunctionConfig, _b: Builder):  # noqa: ARG001
 
-        async def _init_fn(value: typing.Any) -> str:  # noqa: ANN001
-            # Support both model and dict inputs
-            if hasattr(value, "original_prompt"):
-                msg = value.original_prompt
-            elif isinstance(value, dict):
-                msg = value.get("original_prompt", "")
-            else:
-                msg = str(value)
-            return f"mut({msg})"
+        async def _init_fn(value: PromptOptimizerInputSchema) -> str:
+            # Track oracle feedback for test verification
+            if value.oracle_feedback:
+                oracle_feedback_received["count"] += 1
+                oracle_feedback_received["values"].append(value.oracle_feedback)
+
+            return f"mut({value.original_prompt})"
 
         yield FunctionInfo.from_fn(_init_fn)
 
@@ -225,3 +227,72 @@ async def test_optimize_prompts_happy_path_without_recombine(tmp_path: Path):
     assert (optimizer_config.output_path / "optimized_prompts.json").exists()
     assert (optimizer_config.output_path / "ga_history_prompts.csv").exists()
     assert (optimizer_config.output_path / "optimized_prompts_gen1.json").exists()
+
+
+async def test_optimize_prompts_with_oracle_feedback(tmp_path: Path):
+    """Test that oracle feedback is extracted and passed to mutations."""
+    # Reset the oracle feedback tracker
+    oracle_feedback_received["count"] = 0
+    oracle_feedback_received["values"] = []
+
+    await _register_prompt_optimizer_functions()
+    base_cfg = Config()
+    optimizer_config = _make_optimizer_config(tmp_path)
+
+    # Enable oracle feedback
+    optimizer_config.prompt.oracle_feedback_mode = "always"
+    optimizer_config.prompt.oracle_feedback_worst_n = 2
+    optimizer_config.prompt.oracle_feedback_max_chars = 1000
+
+    # Enable mutations so feedback gets passed (default config has mutation_rate=0.0)
+    optimizer_config.prompt.ga_mutation_rate = 1.0  # Always mutate
+    optimizer_config.prompt.ga_generations = 2  # Need 2+ generations for offspring with feedback
+
+    full_space = {"prompt_param": SearchSpace(is_prompt=True, prompt="Base", prompt_purpose="Greet")}
+    run_cfg = _make_run_config(base_cfg)
+    base_cfg.functions = {
+        "init_fn": InitFunctionConfig(),
+        "recombine_fn": RecombineFunctionConfig(),
+    }
+    base_cfg.workflow = InitFunctionConfig()
+
+    class _EvalRun:
+
+        def __init__(self, config):  # noqa: ANN001
+            self.config = config
+
+        async def run_and_evaluate(self):
+            from nat.eval.evaluator.evaluator_model import EvalOutput
+            from nat.eval.evaluator.evaluator_model import EvalOutputItem
+
+            items = [
+                EvalOutputItem(id=1, score=0.2, reasoning="Failed to greet properly"),
+                EvalOutputItem(id=2, score=0.8, reasoning="Good greeting"),
+            ]
+            eval_output = EvalOutput(average_score=0.5, eval_output_items=items)
+            return SimpleNamespace(evaluation_results=[("Accuracy", eval_output)])
+
+    def fake_apply_suggestions(cfg, prompts):  # noqa: ANN001
+        _ = (cfg, prompts)
+        return Config()
+
+    with patch("nat.profiler.parameter_optimization.prompt_optimizer.EvaluationRun", _EvalRun), \
+         patch("nat.profiler.parameter_optimization.prompt_optimizer.apply_suggestions",
+               side_effect=fake_apply_suggestions):
+
+        await optimize_prompts(
+            base_cfg=base_cfg,
+            full_space=full_space,
+            optimizer_config=optimizer_config,
+            opt_run_config=run_cfg,
+        )
+
+    # Verify output files created
+    assert (optimizer_config.output_path / "optimized_prompts.json").exists()
+
+    # Verify oracle feedback was passed to at least one mutation
+    # With mutation_rate=1.0 and generations=2, feedback should be passed to offspring
+    assert oracle_feedback_received["count"] > 0, "Oracle feedback should have been passed to at least one mutation"
+    # Verify the feedback content contains the expected reasoning from worst-scoring items
+    assert any("Failed to greet properly" in fb for fb in oracle_feedback_received["values"]), \
+        "Feedback should contain reasoning from worst-scoring evaluation items"
