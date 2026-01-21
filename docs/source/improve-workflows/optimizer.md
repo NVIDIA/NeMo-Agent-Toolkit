@@ -444,6 +444,73 @@ All LLM calls and evaluations are executed asynchronously with a concurrency lim
 > - `ga_parallel_evaluations`: Tune based on your environment to balance throughput and rate limits.
 > - **Tip**: Start with 8 and increase until hitting rate limits.
 
+### Oracle Feedback Configuration
+
+Oracle feedback enables context-grounded improvement by extracting reasoning from poorly-performing evaluation items and feeding it back into the mutation process. Instead of blind evolution, the optimizer learns *why* certain prompts failed.
+
+#### Configuration Options
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `oracle_feedback_mode` | `"never"` | When to inject feedback: `"never"`, `"always"`, `"failing_only"`, `"adaptive"` |
+| `oracle_feedback_worst_n` | `5` | Number of worst-scoring items to extract reasoning from |
+| `oracle_feedback_max_chars` | `4000` | Maximum characters for feedback in mutation prompt |
+| `oracle_feedback_fitness_threshold` | `0.3` | For `failing_only`: threshold below which feedback is injected |
+| `oracle_feedback_stagnation_generations` | `3` | For `adaptive`: generations without improvement before enabling |
+| `oracle_feedback_fitness_variance_threshold` | `0.01` | For `adaptive`: variance threshold for collapse detection |
+| `oracle_feedback_diversity_threshold` | `0.5` | For `adaptive`: prompt duplication ratio threshold |
+
+#### Feedback Modes
+
+- **`never`** (default): No feedback injection, original behavior
+- **`always`**: Every mutation receives feedback from the parent's worst evaluation items
+- **`failing_only`**: Only individuals below the fitness threshold receive feedback
+- **`adaptive`**: Starts without feedback, enables when fitness stagnates or diversity collapses
+
+#### Evaluator Requirements
+
+For oracle feedback to work effectively, your evaluators must populate the `reasoning` field in `EvalOutputItem`:
+
+```python
+EvalOutputItem(
+    id="item_123",
+    score=0.2,
+    reasoning="The response failed to address the user's question about pricing. "
+              "Instead, it provided generic product information."
+)
+```
+
+The reasoning should explain *why* an item scored poorly, not just the score itself. This explanation is then used to guide prompt mutations toward addressing the identified issues.
+
+#### Example Configuration
+
+```yaml
+optimizer:
+  prompt:
+    enabled: true
+    oracle_feedback_mode: "adaptive"
+    oracle_feedback_worst_n: 5
+    oracle_feedback_max_chars: 4000
+```
+
+> ### 🎯 Oracle Feedback Tuning
+>
+> **Mode Selection**
+> - Use `"never"` for baseline comparisons or when evaluators lack reasoning
+> - Use `"always"` when you have high-quality reasoning and want maximum guidance
+> - Use `"failing_only"` to focus feedback on struggling prompts
+> - Use `"adaptive"` for hands-off optimization that self-corrects when stuck
+>
+> **Reasoning Quality**
+> - Better reasoning = better mutations
+> - Ensure evaluators explain *why* items failed, not just *that* they failed
+> - Reasoning can be strings, dicts, or Pydantic models (all are converted to strings)
+>
+> **Character Limit**
+> - Default 4000 chars protects context window
+> - Increase for complex multi-evaluator setups
+> - Decrease if mutations become too verbose
+
 ---
 
 ### Outputs

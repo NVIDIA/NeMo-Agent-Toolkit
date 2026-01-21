@@ -31,6 +31,10 @@ from nat.data_models.optimizer import OptimizerRunConfig
 from nat.eval.evaluate import EvaluationRun
 from nat.eval.evaluate import EvaluationRunConfig
 from nat.experimental.decorators.experimental_warning_decorator import experimental
+from nat.profiler.parameter_optimization.oracle_feedback import build_oracle_feedback
+from nat.profiler.parameter_optimization.oracle_feedback import check_adaptive_triggers
+from nat.profiler.parameter_optimization.oracle_feedback import extract_worst_reasoning
+from nat.profiler.parameter_optimization.oracle_feedback import should_inject_feedback
 from nat.profiler.parameter_optimization.update_helpers import apply_suggestions
 
 logger = logging.getLogger(__name__)
@@ -57,6 +61,7 @@ async def optimize_prompts(
         prompts: dict[str, str]  # param_name -> prompt text
         metrics: dict[str, float] | None = None  # evaluator_name -> average score
         scalar_fitness: float | None = None
+        worst_items_reasoning: list[str] | None = None  # reasoning from worst items for oracle feedback
 
     def _normalize_generation(
         individuals: Sequence[Individual],
@@ -176,14 +181,39 @@ async def optimize_prompts(
         max_eval_concurrency = max(1, int(optimizer_config.prompt.ga_parallel_evaluations))
         diversity_lambda = float(optimizer_config.prompt.ga_diversity_lambda)
 
+        # ------------- oracle feedback configuration ------------- #
+        oracle_feedback_mode = optimizer_config.prompt.oracle_feedback_mode
+        oracle_feedback_worst_n = optimizer_config.prompt.oracle_feedback_worst_n
+        oracle_feedback_max_chars = optimizer_config.prompt.oracle_feedback_max_chars
+        oracle_feedback_fitness_threshold = optimizer_config.prompt.oracle_feedback_fitness_threshold
+        oracle_feedback_stagnation_generations = optimizer_config.prompt.oracle_feedback_stagnation_generations
+        oracle_feedback_fitness_variance_threshold = optimizer_config.prompt.oracle_feedback_fitness_variance_threshold
+        oracle_feedback_diversity_threshold = optimizer_config.prompt.oracle_feedback_diversity_threshold
+
+        # Adaptive feedback state tracking (use list for mutability in nested functions)
+        best_fitness_history: list[float] = []
+        adaptive_state = {"enabled": False}  # Mutable container for nonlocal-like behavior
+
         # ------------- population init ------------- #
-        async def _mutate_prompt(original_prompt: str, purpose: str) -> str:
-            # Use LLM-based optimizer with no feedback
+        async def _mutate_prompt(original_prompt: str, purpose: str, parent: Individual | None = None) -> str:
+            # Build oracle feedback if applicable
+            feedback = None
+            if parent and should_inject_feedback(
+                    mode=oracle_feedback_mode,
+                    scalar_fitness=parent.scalar_fitness or 0.0,
+                    fitness_threshold=oracle_feedback_fitness_threshold,
+                    adaptive_enabled=adaptive_state["enabled"],
+            ):
+                feedback = build_oracle_feedback(
+                    parent.worst_items_reasoning or [],
+                    oracle_feedback_max_chars,
+                )
+
             return await init_fn.acall_invoke(
                 PromptOptimizerInputSchema(
                     original_prompt=original_prompt,
                     objective=purpose,
-                    oracle_feedback=None,
+                    oracle_feedback=feedback,
                 ))
 
         async def _recombine_prompts(a: str, b: str, purpose: str) -> str:
@@ -253,6 +283,18 @@ async def optimize_prompts(
                             break
                 metrics[metric_name] = float(sum(scores) / len(scores)) if scores else 0.0
             ind.metrics = metrics
+
+            # Extract reasoning from worst items (use last run's results)
+            if all_results and oracle_feedback_mode != "never":
+                weights_by_name = {v.evaluator_name: v.weight for v in metric_cfg.values()}
+                directions_by_name = {v.evaluator_name: v.direction for v in metric_cfg.values()}
+                ind.worst_items_reasoning = extract_worst_reasoning(
+                    evaluation_results=all_results[-1],
+                    weights_by_name=weights_by_name,
+                    directions_by_name=directions_by_name,
+                    worst_n=oracle_feedback_worst_n,
+                )
+
             return ind
 
         async def _evaluate_population(pop: list[Individual]) -> list[Individual]:
@@ -263,6 +305,7 @@ async def optimize_prompts(
                 # in-place update
                 for ind, ev in zip(unevaluated, evaluated):
                     ind.metrics = ev.metrics
+                    ind.worst_items_reasoning = ev.worst_items_reasoning
             # Scalarize
             norm_per_ind = _normalize_generation(pop, eval_metrics, directions)
             penalties = _apply_diversity_penalty(pop, diversity_lambda)
@@ -285,10 +328,10 @@ async def optimize_prompts(
                     except Exception as e:
                         logger.warning("Recombination failed for %s: %s; falling back to parent.", param, e)
                         child = random.choice([pa, pb])
-                # mutation
+                # mutation (pass parent for oracle feedback)
                 if random.random() < mutation_rate:
                     try:
-                        child = await _mutate_prompt(child, purpose)
+                        child = await _mutate_prompt(child, purpose, parent=parent_a)
                     except Exception as e:
                         logger.warning("Mutation failed for %s: %s; keeping child as-is.", param, e)
                 child_prompts[param] = child
@@ -309,6 +352,24 @@ async def optimize_prompts(
             with checkpoint_path.open("w") as fh:
                 json.dump(checkpoint, fh, indent=2)
             logger.info("[GA] Saved checkpoint: %s (fitness=%.4f)", checkpoint_path, best.scalar_fitness or 0.0)
+
+            # Check adaptive triggers for oracle feedback
+            if oracle_feedback_mode == "adaptive" and not adaptive_state["enabled"]:
+                prompt_keys = [tuple(sorted(ind.prompts.items())) for ind in population]
+                fitness_values = [ind.scalar_fitness or 0.0 for ind in population]
+                trigger_result = check_adaptive_triggers(
+                    best_fitness_history=best_fitness_history,
+                    population_fitness_values=fitness_values,
+                    population_prompt_keys=prompt_keys,
+                    stagnation_generations=oracle_feedback_stagnation_generations,
+                    fitness_variance_threshold=oracle_feedback_fitness_variance_threshold,
+                    diversity_threshold=oracle_feedback_diversity_threshold,
+                )
+                if trigger_result["triggered"]:
+                    adaptive_state["enabled"] = True
+                    logger.info("[GA] Adaptive oracle feedback ENABLED (reason=%s)", trigger_result["reason"])
+
+            best_fitness_history.append(best.scalar_fitness or 0.0)
 
             # Append history
             for idx, ind in enumerate(population):

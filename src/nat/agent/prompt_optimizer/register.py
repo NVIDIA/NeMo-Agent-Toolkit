@@ -49,6 +49,7 @@ async def prompt_optimizer_function(config: PromptOptimizerConfig, builder: Buil
         from langchain_core.prompts import PromptTemplate
 
         from .prompt import mutator_prompt
+        from .prompt import oracle_feedback_template
     except ImportError as exc:
         raise ImportError("langchain-core is not installed. Please install it to use MultiLLMPlanner.\n"
                           "This error can be resolve by installing \"nvidia-nat[langchain]\".") from exc
@@ -60,22 +61,30 @@ async def prompt_optimizer_function(config: PromptOptimizerConfig, builder: Buil
                               validate_template=True)
 
     base_prompt: str = (await template.ainvoke(input={"system_objective": config.system_objective})).to_string()
-    prompt_extension_template = PromptTemplate(template=mutator_prompt,
-                                               input_variables=["original_prompt", "objective"],
-                                               validate_template=True)
+    prompt_extension_template = PromptTemplate(
+        template=mutator_prompt,
+        input_variables=["original_prompt", "objective", "oracle_feedback_section"],
+        validate_template=True)
 
     async def _inner(input_message: PromptOptimizerInputSchema) -> str:
         """
         Optimize the prompt using the provided LLM.
         """
-
         original_prompt = input_message.original_prompt
         prompt_objective = input_message.objective
+        oracle_feedback = input_message.oracle_feedback
 
-        prompt_extension = (await prompt_extension_template.ainvoke(input={
-            "original_prompt": original_prompt,
-            "objective": prompt_objective,
-        })).to_string()
+        # Build feedback section conditionally
+        feedback_section = ""
+        if oracle_feedback:
+            feedback_section = oracle_feedback_template.format(oracle_feedback=oracle_feedback)
+
+        prompt_extension = (await prompt_extension_template.ainvoke(
+            input={
+                "original_prompt": original_prompt,
+                "objective": prompt_objective,
+                "oracle_feedback_section": feedback_section,
+            })).to_string()
 
         prompt = f"{base_prompt}\n\n{prompt_extension}"
 
