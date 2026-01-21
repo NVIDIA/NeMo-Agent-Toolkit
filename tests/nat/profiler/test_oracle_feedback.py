@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from nat.profiler.parameter_optimization.oracle_feedback import build_oracle_feedback
+from nat.profiler.parameter_optimization.oracle_feedback import check_adaptive_triggers
 from nat.profiler.parameter_optimization.oracle_feedback import should_inject_feedback
 
 
@@ -114,3 +115,70 @@ class TestShouldInjectFeedback:
             fitness_threshold=0.3,
             adaptive_enabled=True,
         ) is False
+
+
+class TestCheckAdaptiveTriggers:
+    """Tests for adaptive trigger detection."""
+
+    def test_no_trigger_with_improving_fitness(self):
+        """No trigger when fitness is improving."""
+        result = check_adaptive_triggers(
+            best_fitness_history=[0.5, 0.6, 0.7, 0.8],
+            population_fitness_values=[0.5, 0.7, 0.9, 0.6],  # variance ~0.029 > 0.01
+            population_prompt_keys=[("a", ), ("b", ), ("c", ), ("d", )],
+            stagnation_generations=3,
+            fitness_variance_threshold=0.01,
+            diversity_threshold=0.5,
+        )
+        assert result["triggered"] is False
+
+    def test_stagnation_trigger(self):
+        """Triggers when fitness stagnates."""
+        result = check_adaptive_triggers(
+            best_fitness_history=[0.5, 0.5, 0.5, 0.5],
+            population_fitness_values=[0.4, 0.45, 0.5, 0.48],
+            population_prompt_keys=[("a", ), ("b", ), ("c", ), ("d", )],
+            stagnation_generations=3,
+            fitness_variance_threshold=0.01,
+            diversity_threshold=0.5,
+        )
+        assert result["triggered"] is True
+        assert result["reason"] == "stagnation"
+
+    def test_fitness_variance_collapse_trigger(self):
+        """Triggers when fitness variance collapses."""
+        result = check_adaptive_triggers(
+            best_fitness_history=[0.5, 0.6, 0.7],
+            population_fitness_values=[0.7, 0.7, 0.7, 0.7],  # No variance
+            population_prompt_keys=[("a", ), ("b", ), ("c", ), ("d", )],
+            stagnation_generations=3,
+            fitness_variance_threshold=0.01,
+            diversity_threshold=0.5,
+        )
+        assert result["triggered"] is True
+        assert result["reason"] == "fitness_variance_collapse"
+
+    def test_diversity_collapse_trigger(self):
+        """Triggers when prompt diversity collapses."""
+        result = check_adaptive_triggers(
+            best_fitness_history=[0.5, 0.6, 0.7],
+            population_fitness_values=[0.3, 0.6, 0.9, 0.5],  # variance ~0.063 > 0.01
+            population_prompt_keys=[("a", ), ("a", ), ("a", ), ("a", )],  # 100% duplicates, unique_ratio=0.25
+            stagnation_generations=3,
+            fitness_variance_threshold=0.01,
+            diversity_threshold=0.5,
+        )
+        assert result["triggered"] is True
+        assert result["reason"] == "diversity_collapse"
+
+    def test_insufficient_history_no_stagnation_check(self):
+        """No stagnation check with insufficient history."""
+        result = check_adaptive_triggers(
+            best_fitness_history=[0.5, 0.5],  # Only 2 generations
+            population_fitness_values=[0.3, 0.5, 0.7, 0.6],  # variance ~0.029 > 0.01
+            population_prompt_keys=[("a", ), ("b", ), ("c", ), ("d", )],
+            stagnation_generations=3,
+            fitness_variance_threshold=0.01,
+            diversity_threshold=0.5,
+        )
+        assert result["triggered"] is False
