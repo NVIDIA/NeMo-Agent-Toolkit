@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2021-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,7 @@
 
 from enum import Enum
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -109,6 +110,45 @@ class PromptGAOptimizationConfig(BaseModel):
         description="Strength of diversity penalty (0 disables). Penalizes identical/near-identical prompts.",
         default=0.0,
         ge=0.0,
+    )
+
+    # Oracle feedback configuration
+    oracle_feedback_mode: Literal["never", "always", "failing_only", "adaptive"] = Field(
+        description="When to inject failure reasoning into mutations: "
+        "'never' (default), 'always', 'failing_only' (below threshold), 'adaptive' (on plateau).",
+        default="never",
+    )
+    oracle_feedback_worst_n: int = Field(
+        description="Number of worst-scoring items to extract reasoning from.",
+        default=5,
+        ge=1,
+    )
+    oracle_feedback_max_chars: int = Field(
+        description="Maximum characters for oracle feedback in mutation prompt.",
+        default=4000,
+        ge=1,
+    )
+    oracle_feedback_fitness_threshold: float = Field(
+        description="For 'failing_only' mode: normalized fitness threshold below which feedback is injected.",
+        default=0.3,
+        ge=0.0,
+        le=1.0,
+    )
+    oracle_feedback_stagnation_generations: int = Field(
+        description="For 'adaptive' mode: generations without improvement before enabling feedback.",
+        default=3,
+        ge=1,
+    )
+    oracle_feedback_fitness_variance_threshold: float = Field(
+        description="For 'adaptive' mode: fitness variance threshold for collapse detection.",
+        default=0.01,
+        ge=0.0,
+    )
+    oracle_feedback_diversity_threshold: float = Field(
+        description="For 'adaptive' mode: prompt duplication ratio threshold (0-1).",
+        default=0.5,
+        ge=0.0,
+        le=1.0,
     )
 
 
