@@ -56,6 +56,8 @@ uv pip install -e .
 # 3. Source environment variables
 # <!-- path-check-skip-next-line -->
 cd ../ # NeMo-Agent-Toolkit/examples/dynamo_integration
+cp .env.example .env
+vi .env # update the environment variables then source
 [ -f .env ] && source .env || { echo "Warning: .env not found" >&2; false; }
 
 # 4. Download the dataset (requires HuggingFace account)

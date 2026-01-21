@@ -199,24 +199,6 @@ uv venv "${HOME}/.venvs/nat_dynamo_eval" --python 3.13
 source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 ```
 
-### Download model weights (can skip if already done)
-
-```bash
-[ -f .env ] && source .env || { echo "Warning: .env not found" >&2; false; }
-
-# Change to the target model directory (create it if still needed)
-cd "$(dirname "$DYNAMO_MODEL_DIR")"
-
-# We will download the model weights directly from HuggingFace. See `NOTE` below.
-uv pip install huggingface_hub
-uv run huggingface-cli login  # Enter your HF token
-
-uv run huggingface-cli download "meta-llama/Llama-3.3-70B-Instruct" --local-dir "$DYNAMO_MODEL_DIR"
-```
-
-> [!NOTE]
-> The Llama-3.3-70B-Instruct model requires approval from Meta. Request access at [huggingface.co/meta-llama/Llama-3.3-70B-Instruct](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct) before downloading. You will need to create a HuggingFace Access Token with read access in order to download the model. On the `HuggingFace` website visit: "Access Tokens" -> "+ Create access token" to generate a token starting with `hf_`. Enter your token when prompted. Respond "n" when asked "Add token as git credential? (Y/n)". Set HF_HOME and HF_TOKEN in .env..
-
 ### Environment Setup
 
 Before running the Dynamo scripts, configure the following environment variables. See `.env.example` for a complete list of all available options.
@@ -250,6 +232,24 @@ export DYNAMO_REPO_DIR=/path/to/NeMo-Agent-Toolkit/external/dynamo
 # Optional: Configure GPU devices (default: 0,1,2,3)
 export DYNAMO_GPU_DEVICES=0,1,2,3
 ```
+
+### Download model weights (can skip if already done)
+
+```bash
+[ -f .env ] && source .env || { echo "Warning: .env not found" >&2; false; }
+
+# Change to the target model directory (create it if still needed)
+cd "$(dirname "$DYNAMO_MODEL_DIR")"
+
+# We will download the model weights directly from HuggingFace. See `NOTE` below.
+uv pip install huggingface_hub
+uv run huggingface-cli login  # Enter your HF token
+
+uv run huggingface-cli download "meta-llama/Llama-3.3-70B-Instruct" --local-dir "$DYNAMO_MODEL_DIR"
+```
+
+> [!NOTE]
+> The Llama-3.3-70B-Instruct model requires approval from Meta. Request access at [huggingface.co/meta-llama/Llama-3.3-70B-Instruct](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct) before downloading. You will need to create a HuggingFace Access Token with read access in order to download the model. On the `HuggingFace` website visit: "Access Tokens" -> "+ Create access token" to generate a token starting with `hf_`. Enter your token when prompted. Respond "n" when asked "Add token as git credential? (Y/n)". Set HF_HOME and HF_TOKEN in .env..
 
 ### Verify GPU Access
 
