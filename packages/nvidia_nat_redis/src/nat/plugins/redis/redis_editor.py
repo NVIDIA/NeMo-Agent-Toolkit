@@ -109,10 +109,13 @@ class RedisEditor(MemoryEditor):
             query (str): The query string to match.
             top_k (int): Maximum number of items to return.
             kwargs (dict): Keyword arguments to pass to the search method.
+
                 - user_id (str): User ID for filtering results.
-                - similarity_threshold (float, optional): Maximum similarity score threshold.
-                  Results with scores above this threshold will be filtered out. Lower scores
-                  indicate higher similarity. If not specified, all top_k results are returned.
+                - similarity_threshold (float, optional): Maximum similarity score threshold
+                  based on L2 (Euclidean) distance metric. Results with scores above this threshold
+                  are filtered out; if not specified, all top_k results are returned.
+                  Lower scores indicate higher similarity (0.0 = identical). Typical ranges:
+                  0.0-0.5 (very similar), 0.5-1.0 (moderately similar), >1.0 (loosely related).
 
         Returns:
             list[MemoryItem]: The most relevant MemoryItems for the given query.
