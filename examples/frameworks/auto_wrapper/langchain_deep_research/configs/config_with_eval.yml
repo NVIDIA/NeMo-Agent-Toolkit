@@ -30,8 +30,6 @@ llms:
   judge:
     _type: nim
     model: nvidia/nvidia-nemotron-nano-9b-v2
-    max_tokens: 4096
-    reasoning_budget: 1024
 
 workflow:
   _type: langgraph_wrapper
