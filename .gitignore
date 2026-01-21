@@ -220,3 +220,6 @@ examples/notebooks/examples/retail_sales_agent/deploy/volumes/
 
 # End of https://www.gitignore.io/api/vim,c++,cmake,python,synology
 /.idea
+
+# Git worktrees
+.worktrees/
