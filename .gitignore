@@ -31,6 +31,9 @@ public/
 # and user settings will go in .vscode/
 .vscode/
 
+# Git worktrees
+.worktrees/
+
 ##### Do not alter the items below this line! #####
 ########## They are managed by a script! ##########
 
@@ -220,6 +223,3 @@ examples/notebooks/examples/retail_sales_agent/deploy/volumes/
 
 # End of https://www.gitignore.io/api/vim,c++,cmake,python,synology
 /.idea
-
-# Git worktrees
-.worktrees/

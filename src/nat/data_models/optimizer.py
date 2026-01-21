@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import typing
 from enum import Enum
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -113,7 +113,7 @@ class PromptGAOptimizationConfig(BaseModel):
     )
 
     # Oracle feedback configuration
-    oracle_feedback_mode: typing.Literal["never", "always", "failing_only", "adaptive"] = Field(
+    oracle_feedback_mode: Literal["never", "always", "failing_only", "adaptive"] = Field(
         description="When to inject failure reasoning into mutations: "
         "'never' (default), 'always', 'failing_only' (below threshold), 'adaptive' (on plateau).",
         default="never",

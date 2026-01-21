@@ -1,5 +1,13 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+"""
+Oracle feedback utilities for prompt optimization.
+
+This module provides functions to extract, format, and inject failure reasoning
+from evaluation results into the prompt optimization genetic algorithm. The oracle
+feedback system enables context-grounded prompt evolution by learning from specific
+evaluation failures.
+"""
 
 import json
 import statistics
@@ -110,7 +118,7 @@ def check_adaptive_triggers(
     # Check stagnation
     if len(best_fitness_history) >= stagnation_generations:
         recent = best_fitness_history[-stagnation_generations:]
-        if (max(recent) - min(recent)) < 0.001:
+        if (max(recent) - min(recent)) < 0.001:  # Consider stagnant if fitness varies by less than 0.1%
             return {"triggered": True, "reason": "stagnation"}
 
     # Check fitness variance collapse
@@ -144,7 +152,7 @@ def _reasoning_to_string(reasoning: Any) -> str:
         return reasoning
     if isinstance(reasoning, PydanticBaseModel):
         return reasoning.model_dump_json()
-    if isinstance(reasoning, dict) or isinstance(reasoning, list):
+    if isinstance(reasoning, dict | list):
         return json.dumps(reasoning)
     return str(reasoning)
 

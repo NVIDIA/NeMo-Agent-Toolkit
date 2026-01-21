@@ -353,6 +353,9 @@ async def optimize_prompts(
                 json.dump(checkpoint, fh, indent=2)
             logger.info("[GA] Saved checkpoint: %s (fitness=%.4f)", checkpoint_path, best.scalar_fitness or 0.0)
 
+            # Append current generation's fitness BEFORE checking adaptive triggers
+            best_fitness_history.append(best.scalar_fitness or 0.0)
+
             # Check adaptive triggers for oracle feedback
             if oracle_feedback_mode == "adaptive" and not adaptive_state["enabled"]:
                 prompt_keys = [tuple(sorted(ind.prompts.items())) for ind in population]
@@ -368,8 +371,6 @@ async def optimize_prompts(
                 if trigger_result["triggered"]:
                     adaptive_state["enabled"] = True
                     logger.info("[GA] Adaptive oracle feedback ENABLED (reason=%s)", trigger_result["reason"])
-
-            best_fitness_history.append(best.scalar_fitness or 0.0)
 
             # Append history
             for idx, ind in enumerate(population):

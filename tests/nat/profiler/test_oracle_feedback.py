@@ -1,5 +1,11 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+"""
+Unit tests for oracle feedback functionality.
+
+Tests cover feedback extraction, formatting, injection logic, adaptive triggers,
+and type conversions for various reasoning formats.
+"""
 
 from nat.eval.evaluator.evaluator_model import EvalOutput
 from nat.eval.evaluator.evaluator_model import EvalOutputItem
