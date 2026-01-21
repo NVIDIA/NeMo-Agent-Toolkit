@@ -94,7 +94,7 @@ def create_job(test_client: TestClient, config_file: str, job_id: str | None = N
     if job_id:
         payload["job_id"] = job_id
 
-    return test_client.post("/evaluate", json=payload)
+    return test_client.post("/v1/evaluate", json=payload)
 
 
 @pytest.mark.asyncio
@@ -125,7 +125,7 @@ async def test_get_job_status(test_client: TestClient, eval_config_file: str):
 
 def test_get_job_status_not_found(test_client: TestClient):
     """Test getting status of a non-existent job."""
-    response = test_client.get("/evaluate/job/non-existent-id")
+    response = test_client.get("/v1/evaluate/job/non-existent-id")
     assert response.status_code == 404
     assert response.json()["detail"] == "Job non-existent-id not found"
 
@@ -138,7 +138,7 @@ async def test_get_last_job(test_client: TestClient, eval_config_file: str):
         create_job(test_client, eval_config_file, job_id=job_id)
         await await_job(job_id)
 
-    response = test_client.get("/evaluate/job/last")
+    response = test_client.get("/v1/evaluate/job/last")
     assert response.status_code == 200
     data = response.json()
     assert data["job_id"] == "job-2"
@@ -146,7 +146,7 @@ async def test_get_last_job(test_client: TestClient, eval_config_file: str):
 
 def test_get_last_job_not_found(test_client: TestClient):
     """Test getting last job when no jobs exist."""
-    response = test_client.get("/evaluate/job/last")
+    response = test_client.get("/v1/evaluate/job/last")
     assert response.status_code == 404
     assert response.json()["detail"] == "No jobs found"
 
@@ -161,7 +161,7 @@ async def test_get_all_jobs(test_client: TestClient, eval_config_file: str, set_
         job_id = create_response.json()["job_id"]
         await await_job(job_id)
 
-    response = test_client.get("/evaluate/jobs")
+    response = test_client.get("/v1/evaluate/jobs")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 3
@@ -178,7 +178,7 @@ async def test_get_jobs_by_status(test_client: TestClient, eval_config_file: str
         response = create_job(test_client, eval_config_file)
         await await_job(response.json()["job_id"])
 
-    response = test_client.get(f"/evaluate/jobs?status={status}")
+    response = test_client.get(f"/v1/evaluate/jobs?status={status}")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == expected_count
@@ -190,7 +190,7 @@ async def test_get_jobs_by_status(test_client: TestClient, eval_config_file: str
 @pytest.mark.asyncio
 async def test_create_job_with_reps(test_client: TestClient, eval_config_file: str):
     """Test creating a new evaluation job with custom repetitions."""
-    response = test_client.post("/evaluate", json={"config_file": eval_config_file, "reps": 3})
+    response = test_client.post("/v1/evaluate", json={"config_file": eval_config_file, "reps": 3})
     assert response.status_code == 200
     data = response.json()
     assert "job_id" in data
@@ -202,7 +202,7 @@ async def test_create_job_with_reps(test_client: TestClient, eval_config_file: s
 async def test_create_job_with_expiry(test_client: TestClient, eval_config_file: str):
     """Test creating a new evaluation job with custom expiry time."""
     response = test_client.post(
-        "/evaluate",
+        "/v1/evaluate",
         json={
             "config_file": eval_config_file,
             "expiry_seconds": 1800  # 30 minutes
@@ -218,7 +218,7 @@ async def test_create_job_with_expiry(test_client: TestClient, eval_config_file:
 async def test_create_job_with_job_id(test_client: TestClient, eval_config_file: str):
     """Test creating a new evaluation job with a specific job ID."""
     job_id = "test-job-123"
-    response = test_client.post("/evaluate", json={"config_file": eval_config_file, "job_id": job_id})
+    response = test_client.post("/v1/evaluate", json={"config_file": eval_config_file, "job_id": job_id})
     assert response.status_code == 200
     data = response.json()
     assert data["job_id"] == job_id
@@ -230,7 +230,7 @@ async def test_create_job_with_job_id(test_client: TestClient, eval_config_file:
                                     "../relative", "/"])
 def test_invalid_job_id(test_client: TestClient, eval_config_file: str, job_id: str):
     """Test creating a job with an invalid job ID."""
-    response = test_client.post("/evaluate", json={"config_file": eval_config_file, "job_id": job_id})
+    response = test_client.post("/v1/evaluate", json={"config_file": eval_config_file, "job_id": job_id})
 
     # We aren't concerned about the exact status code, but it should be in the 4xx range
     assert response.status_code >= 400 and response.status_code < 500
@@ -238,7 +238,7 @@ def test_invalid_job_id(test_client: TestClient, eval_config_file: str, job_id: 
 
 def test_invalid_config_file_doesnt_exist(test_client: TestClient):
     """Test creating a job with a config file that doesn't exist."""
-    response = test_client.post("/evaluate", json={"config_file": "doesnt/exist/config.json"})
+    response = test_client.post("/v1/evaluate", json={"config_file": "doesnt/exist/config.json"})
     # We aren't concerned about the exact status code, but it should be in the 4xx range
     assert response.status_code >= 400 and response.status_code < 500
 
@@ -250,7 +250,7 @@ async def test_config_file_outside_curdir(test_client: TestClient, eval_config_f
     shutil.copy(eval_config_file, dest_config_file)
     assert dest_config_file.exists()
 
-    response = test_client.post("/evaluate", json={"config_file": str(dest_config_file)})
+    response = test_client.post("/v1/evaluate", json={"config_file": str(dest_config_file)})
     # We aren't concerned about the exact status code, but it should be in the 4xx range
     assert response.status_code == 200
     data = response.json()
@@ -275,7 +275,7 @@ async def evaluate_item_client_fixture() -> TestClient:
 
     config = Config()
     config.general.front_end = FastApiFrontEndConfig(evaluate_item=FastApiFrontEndConfig.EndpointBase(
-        path="/evaluate/item", method="POST", description="Test evaluate item endpoint"))
+        path="/v1/evaluate/item", method="POST", description="Test evaluate item endpoint"))
 
     worker = FastApiFrontEndPluginWorker(config)
     app = FastAPI()
@@ -315,7 +315,7 @@ def test_evaluate_item_success(evaluate_item_client: TestClient):
         }
     }
 
-    response = evaluate_item_client.post("/evaluate/item", json=payload)
+    response = evaluate_item_client.post("/v1/evaluate/item", json=payload)
     assert response.status_code == 200
 
     data = response.json()
@@ -340,7 +340,7 @@ def test_evaluate_item_not_found(evaluate_item_client: TestClient):
         }
     }
 
-    response = evaluate_item_client.post("/evaluate/item", json=payload)
+    response = evaluate_item_client.post("/v1/evaluate/item", json=payload)
     assert response.status_code == 404
     assert "nonexistent" in response.json()["detail"]
 
@@ -354,7 +354,7 @@ async def evaluate_item_client_with_error_fixture() -> TestClient:
 
     config = Config()
     config.general.front_end = FastApiFrontEndConfig(evaluate_item=FastApiFrontEndConfig.EndpointBase(
-        path="/evaluate/item", method="POST", description="Test evaluate item endpoint"))
+        path="/v1/evaluate/item", method="POST", description="Test evaluate item endpoint"))
 
     worker = FastApiFrontEndPluginWorker(config)
     app = FastAPI()
@@ -388,7 +388,7 @@ def test_evaluate_item_evaluation_error(evaluate_item_client_with_error: TestCli
         }
     }
 
-    response = evaluate_item_client_with_error.post("/evaluate/item", json=payload)
+    response = evaluate_item_client_with_error.post("/v1/evaluate/item", json=payload)
     assert response.status_code == 200
 
     data = response.json()
@@ -400,5 +400,5 @@ def test_evaluate_item_evaluation_error(evaluate_item_client_with_error: TestCli
 def test_evaluate_item_invalid_payload(evaluate_item_client: TestClient):
     """Test with invalid request payload."""
     # Missing required 'item' field
-    response = evaluate_item_client.post("/evaluate/item", json={"evaluator_name": "accuracy"})
+    response = evaluate_item_client.post("/v1/evaluate/item", json={"evaluator_name": "accuracy"})
     assert response.status_code == 422  # Unprocessable Entity

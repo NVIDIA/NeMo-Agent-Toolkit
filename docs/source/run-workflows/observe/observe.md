@@ -251,3 +251,8 @@ For complete information about developing and integrating custom telemetry expor
 
 ::::
 
+```{toctree}
+:titlesonly:
+
+Observability Propagation <./observability-propagation.md>
+```

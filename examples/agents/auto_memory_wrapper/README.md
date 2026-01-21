@@ -143,7 +143,7 @@ async def handle_request(request):
 For quick testing without custom middleware:
 
 ```bash
-curl -X POST http://localhost:8000/chat \
+curl -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "X-User-ID: test_user_123" \
   -H "conversation-id: test_conv_001" \

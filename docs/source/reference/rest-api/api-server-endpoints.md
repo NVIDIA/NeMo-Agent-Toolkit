@@ -17,11 +17,25 @@ limitations under the License.
 
 # NVIDIA NeMo Agent Toolkit API Server Endpoints
 
-There are currently five workflow transactions that can be initiated using HTTP or WebSocket when the NeMo Agent toolkit server is running: `generate non-streaming`, `generate async`, `generate streaming`, `chat non-streaming`, and `chat streaming`. The following are types of interfaces you can use to interact with your running workflows.
-  - **Generate Interface:** Uses the transaction schema defined by your workflow. The interface documentation is accessible
+There are currently four workflow transactions that can be initiated using HTTP or WebSocket when the NeMo Agent toolkit server is running: `workflow non-streaming`, `workflow async`, `workflow streaming`, and `workflow streaming full`. The following are types of interfaces you can use to interact with your running workflows.
+  - **Workflow Interface:** Uses the transaction schema defined by your workflow. The interface documentation is accessible
     using Swagger while the server is running [`http://localhost:8000/docs`](http://localhost:8000/docs).
   - **Chat Interface:** [OpenAI API Documentation](https://platform.openai.com/docs/guides/text?api-mode=chat) provides
-    details on chat formats compatible with the NeMo Agent toolkit server.
+    details on chat formats compatible with the NeMo Agent toolkit server. Use the OpenAI-compatible endpoint at
+    `/v1/chat/completions`, which supports streaming and non-streaming requests based on the `stream` parameter.
+
+All HTTP routes are versioned under `/v1` by default. When `versioning.enable_legacy_routes` is set to `true`, the server
+also exposes legacy paths such as `/generate`, `/generate/stream`, `/generate/full`, and `/websocket`.
+
+:::{warning}
+**⚠️ Breaking Change (since v1.5):**
+
+The endpoints `/chat` and `/chat/completions` have been **removed** in NeMo Agent Toolkit v1.5 and later.
+ 
+- The only OpenAI-compatible chat endpoint now is **`/v1/chat/completions`** (configurable via `openai_api_v1_path`).
+- If you have client code or scripts that use the legacy `/chat` or `/chat/completions` routes, update them to use `/v1/chat/completions`.
+- This ensures strict versioning and better alignment with OpenAI API conventions. 
+:::
 
 
 ## Start the NeMo Agent Toolkit Server
@@ -230,126 +244,6 @@ When processes are used Dask workers, standard output and standard error from th
     --data '{"input_message": "Is 4 + 4 greater than the current hour of the day"}'
   ```
 
-## Chat Non-Streaming Transaction
-  - **Route:** `/chat`
-  - **Description:** An OpenAI compatible non-streaming chat transaction.
-  - **HTTP Request Example:**
-    ```bash
-    curl --request POST \
-    --url http://localhost:8000/chat \
-    --header 'Content-Type: application/json' \
-    --data '{
-      "messages": [
-        {
-          "role": "user",
-          "content":  "Is 4 + 4 greater than the current hour of the day"
-        }
-      ]
-    }'
-    ```
-- **HTTP Response Example:**
-  ```json
-  {
-    "id": "b92d1f05-200a-4540-a9f1-c1487bfb3685",
-    "object": "chat.completion",
-    "model": "",
-    "created": "2025-03-11T21:12:43.671665Z",
-    "choices": [
-        {
-            "message": {
-                "content": "No, 4 + 4 (which is 8) is not greater than the current hour of the day (which is 16).",
-                "role": null
-            },
-            "finish_reason": "stop",
-            "index": 0
-        }
-    ],
-    "usage": {
-        "prompt_tokens": 0,
-        "completion_tokens": 20,
-        "total_tokens": 20
-    }
-  }
-  ```
-## Chat Streaming Transaction
-  - **Route:** `/chat/stream`
-  - **Description:** An OpenAI compatible streaming chat transaction.
-  - **HTTP Request Example:**
-    ```bash
-    curl --request POST \
-    --url http://localhost:8000/chat/stream \
-    --header 'Content-Type: application/json' \
-    --data '{
-      "messages": [
-        {
-          "role": "user",
-          "content":  "Is 4 + 4 greater than the current hour of the day"
-        }
-      ]
-    }'
-    ```
-- **HTTP Intermediate Step Example:**
-  ```json
-  "intermediate_data": {
-    "id": "9ed4bce7-191c-41cb-be08-7a72d30166cc",
-    "parent_id": "136edafb-797b-42cd-bd11-29153359b193",
-    "type": "markdown",
-    "name": "meta/llama-3.1-70b-instruct",
-    "payload": "**Input:**\n```python\n[SystemMessage(content='\\nAnswer the following questions as best you can. You
-                may ask the human to use the following tools:\\n\\ncalculator_multiply: This is a mathematical tool used to multiply
-                two numbers together. It takes 2 numbers as an input and computes their numeric product as the output.. . Arguments
-                must be provided as a valid JSON object following this format: {\\'text\\': FieldInfo(annotation=str,
-                required=True)}\\ncalculator_inequality: This is a mathematical tool used to perform an inequality comparison
-                between two numbers. It takes two numbers as an input and determines if one is greater or are equal.. .
-                Arguments must be provided as a valid JSON object following this format: {\\'text\\': FieldInfo(annotation=str,
-                required=True)}\\ncurrent_datetime: Returns the current date and time in human readable format.. . Arguments
-                must be provided as a valid JSON object following this format: {\\'unused\\': FieldInfo(annotation=str,
-                required=True)}\\ncalculator_divide: This is a mathematical tool used to divide one number by another. It takes
-                2 numbers as an input and computes their numeric quotient as the output.. . Arguments must be provided as a
-                valid JSON object following this format: {\\'text\\': FieldInfo(annotation=str, required=True)}\\n\\nYou may
-                respond in one of two formats.\\nUse the following format exactly to ask the human to use a tool:\\n\\nQuestion:
-                the input question you must answer\\nThought: you should always think about what to do\\nAction: the action to
-                take, should be one of [calculator_multiply,calculator_inequality,current_datetime,calculator_divide]\\nAction
-                Input: the input to the action (if there is no required input, include \"Action Input: None\")  \\nObservation:
-                wait for the human to respond with the result from the tool, do not assume the response\\n\\n...
-                (this Thought/Action/Action Input/Observation can repeat N times. If you do not need to use a tool, or after
-                asking the human to use any tools and waiting for the human to respond, you might know the final answer.)\\nUse
-                the following format once you have the final answer:\\n\\nThought: I now know the final answer\\nFinal Answer:
-                the final answer to the original input question\\n', additional_kwargs={}, response_metadata={}),
-                HumanMessage(content='\\nQuestion: Is 4 + 4 greater than the current hour of the day\\n', additional_kwargs={},
-                response_metadata={}), AIMessage(content='Thought: To answer this question, I need to know the current hour of
-                the day and compare it to 4 + 4.\\n\\nAction: current_datetime\\nAction Input: None\\n\\n', additional_kwargs={},
-                response_metadata={}), HumanMessage(content='The current time of day is 2025-03-11 16:24:52',
-                additional_kwargs={}, response_metadata={}), AIMessage(content=\"Thought: Now that I have the current time, I can
-                extract the hour and compare it to 4 + 4.\\n\\nAction: calculator_multiply\\nAction Input: {'text': '4 + 4'}\",
-                additional_kwargs={}, response_metadata={}), HumanMessage(content='The product of 4 * 4 is 16',
-                additional_kwargs={}, response_metadata={}), AIMessage(content=\"Thought: Now that I have the result of 4 + 4,
-                which is 8, I can compare it to the current hour.\\n\\nAction: calculator_inequality\\nAction Input:
-                {'text': '8 &gt; 16'}\", additional_kwargs={}, response_metadata={}), HumanMessage(content='First number 8 is
-                less than the second number 16', additional_kwargs={}, response_metadata={})]\n```\n\n**Output:**\nThought: I now
-                know the final answer\n\nFinal Answer: No, 4 + 4 (which is 8) is not greater than the current hour of the day
-                (which is 16)."
-  }
-  ```
-- **HTTP Response Example:**
-  ```json
-  "data": {
-    "id": "194d22dc-6c1b-44ee-a8d7-bf2b59c1cb6b",
-    "choices": [
-        {
-            "message": {
-                "content": "No, 4 + 4 (which is 8) is not greater than the current hour of the day (which is 16).",
-                "role": null
-            },
-            "finish_reason": "stop",
-            "index": 0
-        }
-    ],
-    "created": "2025-03-11T21:24:56.961939Z",
-    "model": "",
-    "object": "chat.completion.chunk"
-  }
-  ```
 
 ## OpenAI Chat Completions API Compatible Endpoint
 
@@ -388,7 +282,7 @@ general:
 
 ### FastAPI Front-End Controls
 
-Use the `general.front_end` section to control versioning headers, human-in-the-loop HTTP/SSE routes, and observability trace embedding:
+Use the `general.front_end` section to control versioning headers, human-in-the-loop HTTP and SSE routes, and observability trace embedding:
 
 ```yaml
 general:
@@ -409,7 +303,7 @@ Versioning options:
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `versioning.version` | integer | `1` | API version used for `/v{n}` prefixed routes |
-| `versioning.enable_legacy_routes` | boolean | `true` | Add unversioned legacy routes when `true` |
+| `versioning.enable_legacy_routes` | boolean | `true` | Add legacy routes when `true` |
 | `versioning.api_version_header` | boolean | `true` | Emit `X-API-Version` response header |
 
 Human-in-the-loop HTTP surface:

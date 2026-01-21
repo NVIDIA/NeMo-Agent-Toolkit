@@ -40,7 +40,7 @@ The following are the key features and improvements in this release:
 * [Introductory Notebook Improvements](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/examples/notebooks/README.md): Reorganizes getting started notebooks and adds Open in Colab links.
 * [LLM Improvements](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/docs/source/workflows/llms/index.md)
   - Adds LiteLLM Provider
-  - Supports GPT-5 (`/chat/completions` endpoint only)
+  - Supports GPT-5
   - Adds Nemotron thinking configuration
 * [MCP Improvements](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/docs/source/workflows/mcp/index.md)
   - Supports `streamable-http` - `sse` is no longer the default transport type.

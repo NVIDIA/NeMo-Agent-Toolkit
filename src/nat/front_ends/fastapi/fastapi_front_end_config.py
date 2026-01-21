@@ -23,6 +23,7 @@ from pathlib import Path
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import field_validator
+from pydantic import model_validator
 
 from nat.data_models.component_ref import ObjectStoreRef
 from nat.data_models.front_end import FrontEndBaseConfig
@@ -181,7 +182,6 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
     """
 
     class EndpointBase(BaseModel):
-
         method: typing.Literal["GET", "POST", "PUT", "DELETE"]
         description: str
         path: str | None = Field(
@@ -199,6 +199,12 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
                          "non-streaming requests based on the 'stream' parameter, following the "
                          "OpenAI Chat Completions API specification exactly."),
         )
+
+        @model_validator(mode="after")
+        def _validate_path(self):
+            if self.path is None and self.websocket_path is None and self.openai_api_v1_path is None:
+                raise ValueError("At least one of path, websocket_path or openai_api_v1_path must be provided.")
+            return self
 
     class Endpoint(EndpointBase):
         function_name: str = Field(description="The name of the function to call for this endpoint")
@@ -278,26 +284,25 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
     hitl: HitlHttpConfig = Field(default_factory=HitlHttpConfig)
     observability: ObservabilityPropagationConfig = Field(default_factory=ObservabilityPropagationConfig)
 
-    workflow: typing.Annotated[EndpointBase, Field(description="Endpoint for the default workflow.")] = EndpointBase(
+    workflow: EndpointBase = Field(default_factory=lambda: FastApiFrontEndConfig.EndpointBase(
         method="POST",
         path="/v1/workflow",
-        websocket_path="/websocket",
+        websocket_path="/v1/websocket",
         openai_api_v1_path="/v1/chat/completions",
-        description="Executes the default NAT workflow from the loaded configuration",
-    )
+        description="Executes the default NAT workflow from the loaded configuration", ),
+                                   description="Endpoint for the default workflow.")
 
-    evaluate: typing.Annotated[EndpointBase, Field(description="Endpoint for evaluating workflows.")] = EndpointBase(
+    evaluate: EndpointBase = Field(default_factory=lambda: FastApiFrontEndConfig.EndpointBase(
         method="POST",
-        path="/evaluate",
-        description="Evaluates the performance and accuracy of the workflow on a dataset",
-    )
+        path="/v1/evaluate",
+        description="Evaluates the performance and accuracy of the workflow on a dataset", ),
+                                   description="Endpoint for evaluating workflows.")
 
-    evaluate_item: typing.Annotated[EndpointBase,
-                                    Field(description="Endpoint for evaluating a single item.")] = EndpointBase(
-                                        method="POST",
-                                        path="/evaluate/item",
-                                        description="Evaluate a single item with a specified evaluator",
-                                    )
+    evaluate_item: EndpointBase = Field(default_factory=lambda: FastApiFrontEndConfig.EndpointBase(
+        method="POST",
+        path="/v1/evaluate/item",
+        description="Evaluate a single item with a specified evaluator", ),
+                                        description="Endpoint for evaluating a single item.")
 
     oauth2_callback_path: str | None = Field(
         default="/auth/redirect",

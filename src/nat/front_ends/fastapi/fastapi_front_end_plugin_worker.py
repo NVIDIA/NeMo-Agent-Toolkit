@@ -369,14 +369,14 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         app: FastAPI,
                         endpoint: FastApiFrontEndConfig.EndpointBase,
                         session_manager: SessionManager):
-        """Register workflow/chat/OpenAI endpoints for the configured endpoint."""
+        """Register workflow and OpenAI-compatible chat endpoints for the configured endpoint."""
         from nat.front_ends.fastapi.routes.websocket import register_websocket_route
         from nat.front_ends.fastapi.routes.workflow import register_workflow_route
         await register_workflow_route(self, app, endpoint, session_manager)
         await register_websocket_route(self, app, endpoint, session_manager)
 
     async def add_routes(self, app: FastAPI, builder: WorkflowBuilder):
-        """Register all HTTP/SSE/WebSocket routes."""
+        """Register all HTTP, SSE and WebSocket routes."""
         from nat.front_ends.fastapi.routes.auth import register_auth_routes
         from nat.front_ends.fastapi.routes.monitor import register_monitor_routes
         from nat.front_ends.fastapi.routes.static_files import register_static_file_routes

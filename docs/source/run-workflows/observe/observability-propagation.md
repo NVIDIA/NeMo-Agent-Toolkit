@@ -57,9 +57,9 @@ When a child workflow is served via the FastAPI front end, trace context is auto
 | Header | Description |
 |--------|-------------|
 | `traceparent` | W3C Trace Context header: `00-<trace-id>-<span-id>-<flags>` |
-| `X-NAT-Trace-ID` | NAT-specific trace identifier (32-character hex string) |
-| `X-NAT-Span-ID` | NAT-specific span identifier for parent-child linking |
-| `X-NAT-Workflow-Run-ID` | Stable workflow run identifier (UUID string) |
+| `X-NAT-Trace-ID` | NeMo Agent Toolkit specific trace identifier (32-character hex string) |
+| `X-NAT-Span-ID` | NeMo Agent Toolkit specific span identifier for parent-child linking |
+| `X-NAT-Workflow-Run-ID` | Stable NeMo Agent Toolkit workflow run identifier (UUID string) |
 
 Legacy headers are also supported for backward compatibility:
 
@@ -104,7 +104,7 @@ headers = inject_observability_headers(existing_headers)
 
 ### Explicit Parent ID in Workflow Runner
 
-When using NAT programmatically (not through HTTP), you can explicitly pass parent information to the workflow runner:
+When using NeMo Agent Toolkit programmatically (not through HTTP), you can explicitly pass parent information to the workflow runner:
 
 ```python
 from nat.runtime.session import Session
@@ -123,15 +123,15 @@ This approach is useful when:
 
 - Calling workflows from within other workflows programmatically
 - Building custom orchestration logic
-- Integrating NAT workflows into existing applications
+- Integrating NeMo Agent Toolkit workflows into existing applications
 
 ## Child to Parent: Aggregating Trace Data
 
 After a child workflow completes, trace data can be returned to the parent workflow for aggregation.
 
-### Automatic Return via `/v1/workflow/full`
+### Automatic Return through `/v1/workflow/full`
 
-The `/v1/workflow/full` endpoint (previously `/v1/workflow/full`) streams raw intermediate steps without step adaptor translations. When `embed_trace_in_response` is enabled in the configuration, the response includes a final `_trace` payload:
+The `/v1/workflow/full` endpoint (legacy `/generate/full` when `versioning.enable_legacy_routes` is `true`) streams raw intermediate steps without step adaptor translations. When `embed_trace_in_response` is enabled in the configuration, the response includes a final `_trace` payload:
 
 ```yaml
 front_end:
@@ -300,7 +300,7 @@ For advanced use cases, you can implement custom trace aggregation by:
 
 The `merge_trace_events()` function provides a foundation, but you may need additional logic for:
 
-- Deduplicating events across retries
+- Removing duplicate events across retries
 - Handling partial failures in distributed calls
 - Custom trace correlation strategies
 

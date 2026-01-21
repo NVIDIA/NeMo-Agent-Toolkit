@@ -135,22 +135,22 @@ Configure the settings by selecting the *Settings* icon located on the bottom le
 - `HTTP Endpoint`: Select API endpoint type:
   - **Chat Completions — Streaming** - Real-time OpenAI Chat Completions compatible API endpoint with streaming responses (recommended for intermediate results)
   - **Chat Completions — Non-Streaming** - Standard OpenAI Chat Completions compatible API endpoint
-  - **Generate — Streaming** - Text generation with streaming
-  - **Generate — Non-Streaming** - Standard text generation
+  - **Workflow — Streaming** - Text generation with streaming
+  - **Workflow — Non-Streaming** - Standard text generation
 - `Optional Generation Parameters`: OpenAI Chat Completions compatible JSON parameters that can be added to the request body (available for chat endpoints)
 
 **WebSocket Configuration:**
 
-The WebSocket path defaults to `websocket`.
+The WebSocket path defaults to `/v1/websocket`. When `versioning.enable_legacy_routes` is set to `true`, `/websocket` is also available.
 
 - `WebSocket Schema`: Select schema for real-time connections:
   - **Chat Completions — Streaming** - Streaming chat over WebSocket (recommended for intermediate results)
   - **Chat Completions — Non-Streaming** - Non-streaming chat over WebSocket
-  - **Generate — Streaming** - Streaming generation over WebSocket
-  - **Generate — Non-Streaming** - Non-streaming generation over WebSocket
+  - **Workflow — Streaming** - Streaming generation over WebSocket
+  - **Workflow — Non-Streaming** - Non-streaming generation over WebSocket
 
 :::note
-For intermediate results streaming, use **Chat Completions — Streaming** or **Generate — Streaming**.
+For intermediate results streaming, use **Chat Completions — Streaming** or **Workflow — Streaming**.
 :::
 
 ### Simple Calculator Example Conversation
