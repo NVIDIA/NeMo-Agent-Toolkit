@@ -123,12 +123,17 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
                         except Exception:
                             pass  # Keep as string (e.g., "auto", "4GB")
 
+                    dask_kwargs = {}
+                    if self.front_end_config.dask_threads_per_worker > 0:
+                        dask_kwargs["threads_per_worker"] = self.front_end_config.dask_threads_per_worker
+
                     # set n_workers to max_running_async_jobs + 1 to allow for one worker to handle the cleanup task
                     self._cluster = LocalCluster(processes=not self._use_dask_threads,
                                                  silence_logs=dask_log_level,
                                                  protocol="tcp",
                                                  memory_limit=memory_limit,
-                                                 n_workers=self.front_end_config.max_running_async_jobs + 1)
+                                                 n_workers=self.front_end_config.max_running_async_jobs + 1,
+                                                 **dask_kwargs)
 
                     self._scheduler_address = self._cluster.scheduler.address
 
