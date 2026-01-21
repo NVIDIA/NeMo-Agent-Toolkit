@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from nat.profiler.parameter_optimization.oracle_feedback import build_oracle_feedback
+from nat.profiler.parameter_optimization.oracle_feedback import should_inject_feedback
 
 
 class TestBuildOracleFeedback:
@@ -46,3 +47,70 @@ class TestBuildOracleFeedback:
         result = build_oracle_feedback(reasons, max_chars=4000)
         assert "[Accuracy]" in result
         assert "[Relevance]" in result
+
+
+class TestShouldInjectFeedback:
+    """Tests for should_inject_feedback function."""
+
+    def test_never_mode_returns_false(self):
+        """Never mode always returns False."""
+        assert should_inject_feedback(
+            mode="never",
+            scalar_fitness=0.1,
+            fitness_threshold=0.3,
+            adaptive_enabled=True,
+        ) is False
+
+    def test_always_mode_returns_true(self):
+        """Always mode always returns True."""
+        assert should_inject_feedback(
+            mode="always",
+            scalar_fitness=0.9,
+            fitness_threshold=0.3,
+            adaptive_enabled=False,
+        ) is True
+
+    def test_failing_only_below_threshold(self):
+        """Failing_only returns True when below threshold."""
+        assert should_inject_feedback(
+            mode="failing_only",
+            scalar_fitness=0.2,
+            fitness_threshold=0.3,
+            adaptive_enabled=False,
+        ) is True
+
+    def test_failing_only_above_threshold(self):
+        """Failing_only returns False when above threshold."""
+        assert should_inject_feedback(
+            mode="failing_only",
+            scalar_fitness=0.5,
+            fitness_threshold=0.3,
+            adaptive_enabled=False,
+        ) is False
+
+    def test_adaptive_when_enabled(self):
+        """Adaptive returns True when adaptive_enabled is True."""
+        assert should_inject_feedback(
+            mode="adaptive",
+            scalar_fitness=0.9,
+            fitness_threshold=0.3,
+            adaptive_enabled=True,
+        ) is True
+
+    def test_adaptive_when_not_enabled(self):
+        """Adaptive returns False when adaptive_enabled is False."""
+        assert should_inject_feedback(
+            mode="adaptive",
+            scalar_fitness=0.1,
+            fitness_threshold=0.3,
+            adaptive_enabled=False,
+        ) is False
+
+    def test_unknown_mode_returns_false(self):
+        """Unknown mode returns False as safe default."""
+        assert should_inject_feedback(
+            mode="unknown",
+            scalar_fitness=0.5,
+            fitness_threshold=0.3,
+            adaptive_enabled=True,
+        ) is False

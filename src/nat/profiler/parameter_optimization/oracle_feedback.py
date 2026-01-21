@@ -42,3 +42,37 @@ def build_oracle_feedback(reasoning_list: list[str], max_chars: int) -> str | No
         result = result.rstrip("\n") + "...\n"
 
     return result
+
+
+def should_inject_feedback(
+    *,
+    mode: str,
+    scalar_fitness: float,
+    fitness_threshold: float,
+    adaptive_enabled: bool,
+) -> bool:
+    """
+    Determine if oracle feedback should be injected for this mutation.
+
+    Args:
+        mode: Feedback mode ('never', 'always', 'failing_only', 'adaptive').
+        scalar_fitness: The individual's normalized fitness score.
+        fitness_threshold: Threshold for 'failing_only' mode.
+        adaptive_enabled: Whether adaptive feedback has been triggered.
+
+    Returns:
+        True if feedback should be injected, False otherwise.
+    """
+    if mode == "never":
+        return False
+
+    if mode == "always":
+        return True
+
+    if mode == "failing_only":
+        return scalar_fitness < fitness_threshold
+
+    if mode == "adaptive":
+        return adaptive_enabled
+
+    return False
