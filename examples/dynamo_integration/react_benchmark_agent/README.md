@@ -107,6 +107,12 @@ cd examples/dynamo_integration/react_benchmark_agent
 uv pip install -e .
 ```
 
+**To activate an existing environment:**
+
+```bash
+source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
+```
+
 ### Environment Configuration
 
 If not already configured from running [../README.md](../README.md), copy `.env.example` to a new `.env`, update the environment variable values, and source it in the current terminal
@@ -147,10 +153,12 @@ See [Dynamo Setup Guide](../../../external/dynamo/README.md) for detailed config
 
 ### Download and Preprocess
 
+> [!NOTE]
+> Requires the virtual environment to be active. See [Environment Setup](#environment-setup).
+
 <!-- path-check-skip-begin -->
 ```bash
 cd ../../examples/dynamo_integration
-source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 export HF_TOKEN=<your_huggingface_token>
 
 python scripts/download_agent_leaderboard_v2.py --domains banking
@@ -348,10 +356,8 @@ eval:
 
 ## Running Evaluations
 
-> **Note**: All commands in this section assume the virtual environment is active. If not already activated, run:
-> ```bash
-> source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
-> ```
+> [!NOTE]
+> Commands in this section require the virtual environment to be active. See [Environment Setup](#environment-setup).
 
 ### Verify Dynamo is Running
 
@@ -373,9 +379,7 @@ If Dynamo isn't running, see [Dynamo Setup Guide](../../../external/dynamo/READM
 > ```
 
 ```bash
-# cd /path/to/NeMo-Agent-Toolkit
-source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
-
+cd /path/to/NeMo-Agent-Toolkit
 nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs/eval_config_no_rethinking_minimal_test.yml
 ```
 
@@ -615,11 +619,8 @@ f1_score  = 2 × (0.667 × 0.500) / (0.667 + 0.500) = 0.571
 
 ## Performance Analysis
 
-> **Note**: All commands in this section assume the virtual environment is active and you are in the repository root. If not already set up:
-> ```bash
-> cd /path/to/NeMo-Agent-Toolkit
-> source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
-> ```
+> [!NOTE]
+> Commands in this section require the virtual environment to be active. See [Environment Setup](#environment-setup).
 
 ### Throughput Analysis
 
@@ -694,10 +695,8 @@ python scripts/plot_throughput_histograms_per_request.py \
 
 ## Concurrency Benchmarking
 
-> **Note**: All commands in this section assume the virtual environment is active. If not already activated, run:
-> ```bash
-> source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
-> ```
+> [!NOTE]
+> Commands in this section require the virtual environment to be active. See [Environment Setup](#environment-setup).
 
 The `scripts/run_concurrency_benchmark.sh` script automates performance testing across different concurrency levels.
 
@@ -872,12 +871,8 @@ See [Dynamo Setup Guide](../../../external/dynamo/README.md) for detailed troubl
 
 ## Quick Reference
 
-All commands should be run from the NeMo-Agent-Toolkit repository root with the virtual environment active:
-
-```bash
-cd /path/to/NeMo-Agent-Toolkit
-source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
-```
+> [!NOTE]
+> All commands should be run from the repository root with the virtual environment active. See [Environment Setup](#environment-setup).
 
 ### End-to-End Tests (Workflow Runs)
 

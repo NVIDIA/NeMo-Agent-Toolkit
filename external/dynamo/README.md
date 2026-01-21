@@ -180,7 +180,7 @@ Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimizat
 | **GPU Memory** | 80GB per GPU (H100) | 192GB per GPU (B200) |
 | **System RAM** | 256GB | 512GB+ |
 
-> **Note**: The [Llama-3.3-70B-Instruct](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct) model requires approximately 140GB of GPU memory when loaded with TP=4 (tensor parallelism across 4 GPUs). Ensure your GPU configuration has sufficient aggregate memory. If the Llama-3.3-70B-Instruct does not fit into your GPU memory, follow the same steps with The [Llama-3.1-3B-Instruct](https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct) for QA validation.
+> **Note**: The [Llama-3.3-70B-Instruct](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct) model requires approximately 140GB of GPU memory when loaded with TP=4 (tensor parallelism across 4 GPUs). Ensure your GPU configuration has sufficient aggregate memory. If the Llama-3.3-70B-Instruct does not fit into your GPU memory, follow the same steps with the [Llama-3.1-8B-Instruct](https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct) for QA validation.
 
 ### Software Requirements
 
@@ -199,7 +199,7 @@ Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimizat
 5. **Python uv environment** python version 3.11-3.13
 
 
-### Create a Python uv Environment
+### uv Python Environment
 
 ```bash
 cd /path/to/NeMo-Agent-Toolkit
@@ -211,7 +211,13 @@ uv pip install -e ".[langchain]"
 uv pip install -e examples/dynamo_integration/react_benchmark_agent
 ```
 
-### Environment Setup
+To activate an existing environment:
+
+```bash
+source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
+```
+
+### Environment Variables
 
 Before running the Dynamo scripts, configure the following environment variables. See `.env.example` for a complete list of all available options.
 
@@ -277,7 +283,7 @@ nvidia-smi
 # - Sufficient free memory per GPU
 ```
 
-Example output for an 8x H100 system:
+Example output for an 8-GPU system:
 
 ```text
 +-----------------------------------------------------------------------------------------+
@@ -431,7 +437,8 @@ bash stop_dynamo.sh
 
 After starting Dynamo with any of the above options, verify the integration is working.
 
-> **Note**: The NeMo Agent toolkit commands in this section require the virtual environment to be active. Each code block includes the activation command for completeness.
+> [!NOTE]
+> Commands in this section require the virtual environment to be active. See [uv Python Environment](#uv-python-environment).
 
 #### Quick Validation with NeMo Agent Toolkit
 
@@ -439,8 +446,6 @@ Run simple workflows to test basic connectivity and prefix header support:
 
 ```bash
 cd /path/to/NeMo-Agent-Toolkit
-source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
-
 
 # Test basic Dynamo connectivity
 nat run --config_file examples/dynamo_integration/react_benchmark_agent/configs/config_dynamo_e2e_test.yml \
@@ -455,13 +460,10 @@ nat run --config_file examples/dynamo_integration/react_benchmark_agent/configs/
 
 For comprehensive validation, run the integration test script:
 
+> [!NOTE]
+> Requires the virtual environment to be active. See [uv Python Environment](#uv-python-environment).
+
 ```bash
-cd /path/to/NeMo-Agent-Toolkit
-source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
-
-uv pip install -e ".[langchain]"
-uv pip install -e examples/dynamo_integration/react_benchmark_agent
-
 cd /path/to/NeMo-Agent-Toolkit/external/dynamo
 bash test_dynamo_integration.sh
 ```
@@ -567,13 +569,13 @@ Stopping NATS container...
 
 ## Testing the Integration
 
-> **Note**: NeMo Agent toolkit commands require the virtual environment to be active.
+> [!NOTE]
+> Commands in this section require the virtual environment to be active. See [uv Python Environment](#uv-python-environment).
 
 #### Using NeMo Agent Toolkit (Recommended)
 
 ```bash
 cd /path/to/NeMo-Agent-Toolkit
-source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 
 # Basic Dynamo test
 nat run --config_file examples/dynamo_integration/react_benchmark_agent/configs/config_dynamo_e2e_test.yml \

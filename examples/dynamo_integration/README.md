@@ -40,6 +40,9 @@ Most of these examples could be tested using a managed LLM service, like an NVID
 
 ## Quick Start
 
+> [!NOTE]
+> For detailed environment setup instructions, see the [Complete Evaluation Guide](react_benchmark_agent/README.md#environment-setup).
+
 ```bash
 # 1. Setup environment
 cd /path/to/NeMo-Agent-Toolkit
