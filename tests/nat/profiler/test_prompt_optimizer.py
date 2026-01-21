@@ -29,8 +29,8 @@ from nat.data_models.optimizable import SearchSpace
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerMetric
 from nat.data_models.optimizer import OptimizerRunConfig
-from nat.profiler.parameter_optimization.prompt_optimizer import optimize_prompts
 from nat.profiler.parameter_optimization.prompt_optimizer import PromptOptimizerInputSchema
+from nat.profiler.parameter_optimization.prompt_optimizer import optimize_prompts
 
 # Module-level tracking for oracle feedback verification in tests
 oracle_feedback_received: dict[str, typing.Any] = {"count": 0, "values": []}

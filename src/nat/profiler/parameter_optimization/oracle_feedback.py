@@ -31,7 +31,7 @@ def build_oracle_feedback(reasoning_list: list[str], max_chars: int) -> str | No
         if current_length + len(entry) > max_chars:
             remaining = max_chars - current_length
             if remaining > 20:  # Only add if meaningful space left
-                feedback_parts.append(entry[: remaining - 3] + "...")
+                feedback_parts.append(entry[:remaining - 3] + "...")
             else:
                 truncated = True
             break
@@ -144,7 +144,7 @@ def _reasoning_to_string(reasoning: Any) -> str:
         return reasoning
     if isinstance(reasoning, PydanticBaseModel):
         return reasoning.model_dump_json()
-    if isinstance(reasoning, (dict, list)):
+    if isinstance(reasoning, dict) or isinstance(reasoning, list):
         return json.dumps(reasoning)
     return str(reasoning)
 

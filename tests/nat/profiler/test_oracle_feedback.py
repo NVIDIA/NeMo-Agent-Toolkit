@@ -59,87 +59,66 @@ class TestShouldInjectFeedback:
 
     def test_never_mode_returns_false(self):
         """Never mode always returns False."""
-        assert (
-            should_inject_feedback(
-                mode="never",
-                scalar_fitness=0.1,
-                fitness_threshold=0.3,
-                adaptive_enabled=True,
-            )
-            is False
-        )
+        assert (should_inject_feedback(
+            mode="never",
+            scalar_fitness=0.1,
+            fitness_threshold=0.3,
+            adaptive_enabled=True,
+        ) is False)
 
     def test_always_mode_returns_true(self):
         """Always mode always returns True."""
-        assert (
-            should_inject_feedback(
-                mode="always",
-                scalar_fitness=0.9,
-                fitness_threshold=0.3,
-                adaptive_enabled=False,
-            )
-            is True
-        )
+        assert (should_inject_feedback(
+            mode="always",
+            scalar_fitness=0.9,
+            fitness_threshold=0.3,
+            adaptive_enabled=False,
+        ) is True)
 
     def test_failing_only_below_threshold(self):
         """Failing_only returns True when below threshold."""
-        assert (
-            should_inject_feedback(
-                mode="failing_only",
-                scalar_fitness=0.2,
-                fitness_threshold=0.3,
-                adaptive_enabled=False,
-            )
-            is True
-        )
+        assert (should_inject_feedback(
+            mode="failing_only",
+            scalar_fitness=0.2,
+            fitness_threshold=0.3,
+            adaptive_enabled=False,
+        ) is True)
 
     def test_failing_only_above_threshold(self):
         """Failing_only returns False when above threshold."""
-        assert (
-            should_inject_feedback(
-                mode="failing_only",
-                scalar_fitness=0.5,
-                fitness_threshold=0.3,
-                adaptive_enabled=False,
-            )
-            is False
-        )
+        assert (should_inject_feedback(
+            mode="failing_only",
+            scalar_fitness=0.5,
+            fitness_threshold=0.3,
+            adaptive_enabled=False,
+        ) is False)
 
     def test_adaptive_when_enabled(self):
         """Adaptive returns True when adaptive_enabled is True."""
-        assert (
-            should_inject_feedback(
-                mode="adaptive",
-                scalar_fitness=0.9,
-                fitness_threshold=0.3,
-                adaptive_enabled=True,
-            )
-            is True
-        )
+        assert (should_inject_feedback(
+            mode="adaptive",
+            scalar_fitness=0.9,
+            fitness_threshold=0.3,
+            adaptive_enabled=True,
+        ) is True)
 
     def test_adaptive_when_not_enabled(self):
         """Adaptive returns False when adaptive_enabled is False."""
-        assert (
-            should_inject_feedback(
-                mode="adaptive",
-                scalar_fitness=0.1,
-                fitness_threshold=0.3,
-                adaptive_enabled=False,
-            )
-            is False
-        )
+        assert (should_inject_feedback(
+            mode="adaptive",
+            scalar_fitness=0.1,
+            fitness_threshold=0.3,
+            adaptive_enabled=False,
+        ) is False)
 
     def test_unknown_mode_returns_false(self):
         """Unknown mode returns False as safe default."""
-        assert (
-            should_inject_feedback(
-                mode="unknown",
-                scalar_fitness=0.5,
-                fitness_threshold=0.3,
-                adaptive_enabled=True,
-            )
-            is False
-        )
+        assert (should_inject_feedback(
+            mode="unknown",
+            scalar_fitness=0.5,
+            fitness_threshold=0.3,
+            adaptive_enabled=True,
+        ) is False)
 
 
 class TestCheckAdaptiveTriggers:
@@ -150,7 +129,7 @@ class TestCheckAdaptiveTriggers:
         result = check_adaptive_triggers(
             best_fitness_history=[0.5, 0.6, 0.7, 0.8],
             population_fitness_values=[0.5, 0.7, 0.9, 0.6],  # variance ~0.029 > 0.01
-            population_prompt_keys=[("a",), ("b",), ("c",), ("d",)],
+            population_prompt_keys=[("a", ), ("b", ), ("c", ), ("d", )],
             stagnation_generations=3,
             fitness_variance_threshold=0.01,
             diversity_threshold=0.5,
@@ -162,7 +141,7 @@ class TestCheckAdaptiveTriggers:
         result = check_adaptive_triggers(
             best_fitness_history=[0.5, 0.5, 0.5, 0.5],
             population_fitness_values=[0.4, 0.45, 0.5, 0.48],
-            population_prompt_keys=[("a",), ("b",), ("c",), ("d",)],
+            population_prompt_keys=[("a", ), ("b", ), ("c", ), ("d", )],
             stagnation_generations=3,
             fitness_variance_threshold=0.01,
             diversity_threshold=0.5,
@@ -175,7 +154,7 @@ class TestCheckAdaptiveTriggers:
         result = check_adaptive_triggers(
             best_fitness_history=[0.5, 0.6, 0.7],
             population_fitness_values=[0.7, 0.7, 0.7, 0.7],  # No variance
-            population_prompt_keys=[("a",), ("b",), ("c",), ("d",)],
+            population_prompt_keys=[("a", ), ("b", ), ("c", ), ("d", )],
             stagnation_generations=3,
             fitness_variance_threshold=0.01,
             diversity_threshold=0.5,
@@ -188,7 +167,7 @@ class TestCheckAdaptiveTriggers:
         result = check_adaptive_triggers(
             best_fitness_history=[0.5, 0.6, 0.7],
             population_fitness_values=[0.3, 0.6, 0.9, 0.5],  # variance ~0.063 > 0.01
-            population_prompt_keys=[("a",), ("a",), ("a",), ("a",)],  # 100% duplicates, unique_ratio=0.25
+            population_prompt_keys=[("a", ), ("a", ), ("a", ), ("a", )],  # 100% duplicates, unique_ratio=0.25
             stagnation_generations=3,
             fitness_variance_threshold=0.01,
             diversity_threshold=0.5,
@@ -201,7 +180,7 @@ class TestCheckAdaptiveTriggers:
         result = check_adaptive_triggers(
             best_fitness_history=[0.5, 0.5],  # Only 2 generations
             population_fitness_values=[0.3, 0.5, 0.7, 0.6],  # variance ~0.029 > 0.01
-            population_prompt_keys=[("a",), ("b",), ("c",), ("d",)],
+            population_prompt_keys=[("a", ), ("b", ), ("c", ), ("d", )],
             stagnation_generations=3,
             fitness_variance_threshold=0.01,
             diversity_threshold=0.5,
@@ -295,7 +274,9 @@ class TestExtractWorstReasoning:
     def test_converts_dict_reasoning_to_string(self):
         """Converts dict reasoning to JSON string."""
         items = [
-            EvalOutputItem(id=1, score=0.2, reasoning={"error": "Failed", "details": "Missing info"}),
+            EvalOutputItem(id=1, score=0.2, reasoning={
+                "error": "Failed", "details": "Missing info"
+            }),
         ]
         eval_output = EvalOutput(average_score=0.2, eval_output_items=items)
 
@@ -358,8 +339,12 @@ class TestExtractWorstReasoning:
 
         result = extract_worst_reasoning(
             evaluation_results=[("Accuracy", eval_acc), ("Relevance", eval_rel)],
-            weights_by_name={"Accuracy": 2.0, "Relevance": 1.0},
-            directions_by_name={"Accuracy": "maximize", "Relevance": "maximize"},
+            weights_by_name={
+                "Accuracy": 2.0, "Relevance": 1.0
+            },
+            directions_by_name={
+                "Accuracy": "maximize", "Relevance": "maximize"
+            },
             worst_n=2,
         )
         # Higher weight means more important, so Accuracy fail should be first

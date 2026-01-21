@@ -1,8 +1,8 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-from nat.agent.prompt_optimizer.register import PromptOptimizerInputSchema
 from nat.agent.prompt_optimizer.prompt import oracle_feedback_template
+from nat.agent.prompt_optimizer.register import PromptOptimizerInputSchema
 
 
 class TestPromptOptimizerInputSchema:
