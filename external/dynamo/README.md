@@ -175,49 +175,49 @@ Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimizat
 
 | Component | Minimum | Recommended |
 |-----------|---------|-------------|
-| **GPU Architecture** | NVIDIA Hopper (H100) or Blackwell (B200) | B200 for higher throughput |
+| **GPU Architecture** | NVIDIA Hopper (H100) | B200 for higher throughput |
 | **GPU Count** | 2 GPUs for small models (2 workers) | 8 GPUs for optimal performance |
 | **GPU Memory** | 80GB per GPU (H100) | 192GB per GPU (B200) |
 | **System RAM** | 256GB | 512GB+ |
 
-> **Note**: The [Llama-3.3-70B-Instruct](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct) model requires approximately 140GB of GPU memory when loaded with TP=4 (tensor parallelism across 4 GPUs). Ensure your GPU configuration has sufficient aggregate memory. If the Llama-3.3-70B-Instruct does not fit into your GPU memory, follow the same steps with The [Llama-3.1-3B-Instruct](https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct) for QA validation.
+> **Note**: The [Llama-3.3-70B-Instruct](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct) model requires approximately 140GB of GPU memory when loaded with TP=4 (tensor parallelism across 4 GPUs). Ensure your GPU configuration has sufficient aggregate memory. If the Llama-3.3-70B-Instruct does not fit into your GPU memory, follow the same steps with the [Llama-3.1-8B-Instruct](https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct) for QA validation.
 
 ### Software Requirements
 
-1. **Docker** installed and running (version 24.0+)
-2. **NVIDIA Driver** with CUDA 12.0+ support
-4. **Hugging Face CLI** for model downloads (optional, if model not already downloaded)
-5. **Llama-3.3-70B-Instruct** model downloaded locally
-6. **Python uv environment** python version 3.11-3.13
+1. **Docker** installed and running (version 24.0+), with NVIDIA Container Toolkit
+2. **NVIDIA Driver** with CUDA 12.0+ support, `nvidia-fabricmanager` enabled matching `NVIDIA-SMI` version. Verify with:
+
+    ```bash
+    docker run --rm --gpus all nvidia/cuda:12.4.0-runtime-ubuntu22.04 \
+      bash -c "apt-get update && apt-get install -y python3-pip && pip3 install torch && python3 -c 'import torch; print(torch.cuda.is_available())'"
+    ```
+
+    The output should show `True`. If it shows `False` with error 802, ensure `nvidia-fabricmanager` is installed, running, and matches your driver version.
+
+3. **Hugging Face CLI** for model downloads (optional, if model not already downloaded)
+4. **Llama-3.3-70B-Instruct** model downloaded locally
+5. **Python uv environment** python version 3.11-3.13
 
 
-### Create a Python uv Environment
+### uv Python Environment
 
 ```bash
 cd /path/to/NeMo-Agent-Toolkit
 uv venv "${HOME}/.venvs/nat_dynamo_eval" --python 3.13
 source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
+
+# install the NeMo Agent toolkit
+uv pip install -e ".[langchain]"
+uv pip install -e examples/dynamo_integration/react_benchmark_agent
 ```
 
-### Download model weights (can skip if already done)
+To activate an existing environment:
 
 ```bash
-[ -f .env ] && source .env || { echo "Warning: .env not found" >&2; false; }
-
-# Change to the target model directory (create it if still needed)
-cd "$(dirname "$DYNAMO_MODEL_DIR")"
-
-# We will download the model weights directly from HuggingFace. See `NOTE` below.
-uv pip install huggingface_hub
-uv run huggingface-cli login  # Enter your HF token
-
-uv run huggingface-cli download "meta-llama/Llama-3.3-70B-Instruct" --local-dir "$DYNAMO_MODEL_DIR"
+source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 ```
 
-> [!NOTE]
-> The Llama-3.3-70B-Instruct model requires approval from Meta. Request access at [huggingface.co/meta-llama/Llama-3.3-70B-Instruct](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct) before downloading. You will need to create a HuggingFace Access Token with read access in order to download the model. On the `HuggingFace` website visit: "Access Tokens" -> "+ Create access token" to generate a token starting with `hf_`. Enter your token when prompted. Respond "n" when asked "Add token as git credential? (Y/n)". Set HF_HOME and HF_TOKEN in .env..
-
-### Environment Setup
+### Environment Variables
 
 Before running the Dynamo scripts, configure the following environment variables. See `.env.example` for a complete list of all available options.
 
@@ -234,7 +234,7 @@ vi .env
 source .env
 ```
 
-Or set variables directly:
+**OR** set variables directly:
 
 ```bash
 export HF_HOME=/path/to/local/storage/.cache/huggingface
@@ -251,6 +251,26 @@ export DYNAMO_REPO_DIR=/path/to/NeMo-Agent-Toolkit/external/dynamo
 export DYNAMO_GPU_DEVICES=0,1,2,3
 ```
 
+### Download model weights (can skip if already done)
+
+```bash
+[ -f .env ] && source .env || { echo "Warning: .env not found" >&2; false; }
+
+# Change to the target model directory (create it if still needed)
+cd "$(dirname "$DYNAMO_MODEL_DIR")"
+
+# We will download the model weights directly from HuggingFace. See `NOTE` below.
+uv pip install huggingface_hub
+uv run huggingface-cli login  # Set or enter your HF token.
+# OR: run it with python: `python -c "from huggingface_hub import login; login()"`
+
+uv run huggingface-cli download "meta-llama/Llama-3.3-70B-Instruct" --local-dir "$DYNAMO_MODEL_DIR"
+# OR: run it with python: `python -c "from huggingface_hub import snapshot_download; snapshot_download('meta-llama/Llama-3.3-70B-Instruct', local_dir='$DYNAMO_MODEL_DIR')"`
+```
+
+> [!NOTE]
+> The Llama-3.3-70B-Instruct model requires approval from Meta. Request access at [huggingface.co/meta-llama/Llama-3.3-70B-Instruct](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct) before downloading. You will need to create a HuggingFace Access Token with read access in order to download the model. On the `HuggingFace` website visit: "Access Tokens" -> "+ Create access token" to generate a token starting with `hf_`. Enter your token when prompted. Respond "n" when asked "Add token as git credential? (Y/n)". Set HF_HOME and HF_TOKEN in .env..
+
 ### Verify GPU Access
 
 ```bash
@@ -263,7 +283,7 @@ nvidia-smi
 # - Sufficient free memory per GPU
 ```
 
-Example output for an 8x H100 system:
+Example output for an 8-GPU system:
 
 ```text
 +-----------------------------------------------------------------------------------------+
@@ -417,13 +437,15 @@ bash stop_dynamo.sh
 
 After starting Dynamo with any of the above options, verify the integration is working.
 
+> [!NOTE]
+> Commands in this section require the virtual environment to be active. See [uv Python Environment](#uv-python-environment).
+
 #### Quick Validation with NeMo Agent Toolkit
 
 Run simple workflows to test basic connectivity and prefix header support:
 
 ```bash
 cd /path/to/NeMo-Agent-Toolkit
-source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 
 # Test basic Dynamo connectivity
 nat run --config_file examples/dynamo_integration/react_benchmark_agent/configs/config_dynamo_e2e_test.yml \
@@ -437,6 +459,9 @@ nat run --config_file examples/dynamo_integration/react_benchmark_agent/configs/
 #### Full Integration Test Suite
 
 For comprehensive validation, run the integration test script:
+
+> [!NOTE]
+> Requires the virtual environment to be active. See [uv Python Environment](#uv-python-environment).
 
 ```bash
 cd /path/to/NeMo-Agent-Toolkit/external/dynamo
@@ -494,6 +519,14 @@ Failed: 0
 ✓ All tests passed!
 ```
 
+**What the test validates:**
+1. The environment is activated
+2. Configuration files exist
+3. Dynamo frontend is running on port 8099
+4. Dynamo endpoint responds correctly
+5. Workflow executes with basic config
+6. Workflow executes with prefix hints
+
 If any tests fail, the script provides guidance on how to fix the issue.
 
 ---
@@ -536,51 +569,13 @@ Stopping NATS container...
 
 ## Testing the Integration
 
-An integration test script validates your Dynamo setup with NeMo Agent toolkit:
-
-```bash
-cd /path/to/NeMo-Agent-Toolkit/external/dynamo
-
-# Activate the environment first
-source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
-
-# Run tests (do NOT use 'source')
-./test_dynamo_integration.sh
-
-# Show help
-./test_dynamo_integration.sh --help
-```
-
-**What the test validates:**
-1. The environment is activated
-2. Configuration files exist
-3. Dynamo frontend is running on port 8099
-4. Dynamo endpoint responds correctly
-5. Workflow executes with basic config
-6. Workflow executes with prefix hints
-
-**Expected output:**
-```text
-==========================================
-Test Summary
-==========================================
-Total tests: 6
-Passed: 6
-Failed: 0
-
-✓ All tests passed!
-==========================================
-```
-
-**Important**: Run the script directly with `./test_dynamo_integration.sh`, **NOT** with `source test_dynamo_integration.sh`. Using `source` will cause the script's `exit` commands to close your terminal.
-
-### Quick Manual Tests
+> [!NOTE]
+> Commands in this section require the virtual environment to be active. See [uv Python Environment](#uv-python-environment).
 
 #### Using NeMo Agent Toolkit (Recommended)
 
 ```bash
 cd /path/to/NeMo-Agent-Toolkit
-source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 
 # Basic Dynamo test
 nat run --config_file examples/dynamo_integration/react_benchmark_agent/configs/config_dynamo_e2e_test.yml \

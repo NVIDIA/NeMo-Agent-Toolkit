@@ -47,8 +47,17 @@ Currently this agent supports evaluation exclusively for the [Galileo Agent Lead
 
 1. **Python 3.11, 3.12, or 3.13** installed
 2. **NeMo Agent toolkit** repository cloned
-3. **Docker**
-4. **Hugging Face account** with access to Llama-3.3-70B-Instruct model
+3. **Docker** with NVIDIA Container Toolkit
+4. **NVIDIA Driver** with CUDA 12.0+ support, `nvidia-fabricmanager` enabled matching your driver version. Verify with:
+
+    ```bash
+    docker run --rm --gpus all nvidia/cuda:12.4.0-runtime-ubuntu22.04 \
+      bash -c "apt-get update && apt-get install -y python3-pip && pip3 install torch && python3 -c 'import torch; print(torch.cuda.is_available())'"
+    ```
+
+    The output should show `True`. If it shows `False` with error 802, ensure `nvidia-fabricmanager` is installed, running, and matches your driver version.
+
+5. **Hugging Face account** with access to Llama-3.3-70B-Instruct model
 
 ### Hardware Requirements (Dynamo Backend)
 
@@ -56,9 +65,9 @@ Running these evaluations requires a Dynamo backend with adequate GPU resources.
 
 | Component | Minimum | Recommended |
 |-----------|---------|-------------|
-| **GPU Architecture** | NVIDIA Hopper (H100) or Blackwell (B200) | B200 for optimal performance |
+| **GPU Architecture** | NVIDIA Hopper (H100) | B200 for optimal performance |
 | **GPU Count** | 4 GPUs (TP=4 for 70B model) | 8 GPUs for optimal performance |
-| **GPU Memory** | 80GB per GPU (H100) | 192GB per GPU (B200) |
+| **GPU Memory** | 96GB per GPU (H100) | 192GB per GPU (B200) |
 
 > **Note**: The Llama-3.3-70B-Instruct model requires approximately 140GB of GPU memory when loaded with TP=4 (tensor parallelism across 4 GPUs). Ensure your GPU configuration has sufficient aggregate memory.
 
@@ -98,15 +107,22 @@ cd examples/dynamo_integration/react_benchmark_agent
 uv pip install -e .
 ```
 
-### Environment Configuration
-
-Key environment variables:
+**To activate an existing environment:**
 
 ```bash
-# Hugging Face configuration (required for gated datasets)
-# Set HF_HOME to a local directory if your home is on NFS (avoids file locking issues)
-export HF_HOME=/path/to/local/storage/.cache/huggingface
-export HF_TOKEN=<your_huggingface_token>
+source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
+```
+
+### Environment Configuration
+
+If not already configured from running [../README.md](../README.md), copy `.env.example` to a new `.env`, update the environment variable values, and source it in the current terminal
+
+```bash
+# <!-- path-check-skip-next-line -->
+cd ../ # NeMo-Agent-Toolkit/examples/dynamo_integration
+cp .env.example .env
+vi .env # update the environment variables then source
+[ -f .env ] && source .env || { echo "Warning: .env not found" >&2; false; }
 ```
 
 > **Note:** Dynamo-specific environment variables (`DYNAMO_BACKEND`, `DYNAMO_MODEL`, `DYNAMO_PORT`) are used by the test scripts in `external/dynamo/` and are not required for running evaluations. See [Dynamo Setup Guide](../../../external/dynamo/README.md) for those options.
@@ -117,7 +133,7 @@ Before running evaluations, ensure Dynamo is running:
 
 <!-- path-check-skip-begin -->
 ```bash
-cd ../../../external/dynamo/ # NeMo-Agent-Toolkit/external/dynamo
+cd ../../external/dynamo/ # NeMo-Agent-Toolkit/external/dynamo
 bash start_dynamo_unified.sh
 bash test_dynamo_integration.sh
 ```
@@ -137,13 +153,17 @@ See [Dynamo Setup Guide](../../../external/dynamo/README.md) for detailed config
 
 ### Download and Preprocess
 
+> [!NOTE]
+> Requires the virtual environment to be active. See [Environment Setup](#environment-setup).
+
+<!-- path-check-skip-begin -->
 ```bash
-cd ../../../examples/dynamo_integration
-source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
+cd ../../examples/dynamo_integration
 export HF_TOKEN=<your_huggingface_token>
 
 python scripts/download_agent_leaderboard_v2.py --domains banking
 ```
+<!-- path-check-skip-end -->
 
 **Creates**:
 - `data/agent_leaderboard_v2_banking.json` - 100 enriched scenarios
@@ -336,6 +356,9 @@ eval:
 
 ## Running Evaluations
 
+> [!NOTE]
+> Commands in this section require the virtual environment to be active. See [Environment Setup](#environment-setup).
+
 ### Verify Dynamo is Running
 
 ```bash
@@ -356,9 +379,7 @@ If Dynamo isn't running, see [Dynamo Setup Guide](../../../external/dynamo/READM
 > ```
 
 ```bash
-# cd /path/to/NeMo-Agent-Toolkit
-source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
-
+cd /path/to/NeMo-Agent-Toolkit
 nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs/eval_config_no_rethinking_minimal_test.yml
 ```
 
@@ -598,6 +619,9 @@ f1_score  = 2 × (0.667 × 0.500) / (0.667 + 0.500) = 0.571
 
 ## Performance Analysis
 
+> [!NOTE]
+> Commands in this section require the virtual environment to be active. See [Environment Setup](#environment-setup).
+
 ### Throughput Analysis
 
 After evaluation, analyze token generation performance:
@@ -670,6 +694,9 @@ python scripts/plot_throughput_histograms_per_request.py \
 ---
 
 ## Concurrency Benchmarking
+
+> [!NOTE]
+> Commands in this section require the virtual environment to be active. See [Environment Setup](#environment-setup).
 
 The `scripts/run_concurrency_benchmark.sh` script automates performance testing across different concurrency levels.
 
@@ -844,7 +871,8 @@ See [Dynamo Setup Guide](../../../external/dynamo/README.md) for detailed troubl
 
 ## Quick Reference
 
-All commands should be run from the NeMo-Agent-Toolkit repository root.
+> [!NOTE]
+> All commands should be run from the repository root with the virtual environment active. See [Environment Setup](#environment-setup).
 
 ### End-to-End Tests (Workflow Runs)
 
@@ -916,13 +944,3 @@ nat optimize --config_file examples/dynamo_integration/react_benchmark_agent/con
 # all others across all objectives - these form the Pareto frontier.
 nat profile --config_file examples/dynamo_integration/react_benchmark_agent/configs/profile_rethinking_full_test.yml
 ```
-
----
-
-## Next Steps
-
-1. **Start small**: Test with `eval_config_no_rethinking_minimal_test.yml` first
-2. **Enable self-evaluation**: Try `eval_config_rethinking_full_test.yml` for quality improvement
-3. **Benchmark concurrency**: Run `scripts/run_concurrency_benchmark.sh` to find optimal settings on your machine
-4. **Analyze results**: Use throughput analysis scripts to identify bottlenecks
-5. **Iterate**: Tune prompts, temperature, and retry settings for your use case

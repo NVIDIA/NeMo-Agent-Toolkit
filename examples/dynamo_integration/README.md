@@ -40,6 +40,9 @@ Most of these examples could be tested using a managed LLM service, like an NVID
 
 ## Quick Start
 
+> [!NOTE]
+> For detailed environment setup instructions, see the [Complete Evaluation Guide](react_benchmark_agent/README.md#environment-setup).
+
 ```bash
 # 1. Setup environment
 cd /path/to/NeMo-Agent-Toolkit
@@ -56,6 +59,8 @@ uv pip install -e .
 # 3. Source environment variables
 # <!-- path-check-skip-next-line -->
 cd ../ # NeMo-Agent-Toolkit/examples/dynamo_integration
+cp .env.example .env
+vi .env # update the environment variables then source
 [ -f .env ] && source .env || { echo "Warning: .env not found" >&2; false; }
 
 # 4. Download the dataset (requires HuggingFace account)
@@ -253,7 +258,16 @@ See [Evaluation Guide](react_benchmark_agent/README.md) for complete configurati
 ### Software Requirements
 
 - **Python 3.11, 3.12, or 3.13**
-- **Docker**
+- **Docker** with NVIDIA Container Toolkit
+- **NVIDIA Driver** with CUDA 12.0+ support, `nvidia-fabricmanager` enabled matching your driver version. Verify with:
+
+    ```bash
+    docker run --rm --gpus all nvidia/cuda:12.4.0-runtime-ubuntu22.04 \
+      bash -c "apt-get update && apt-get install -y python3-pip && pip3 install torch && python3 -c 'import torch; print(torch.cuda.is_available())'"
+    ```
+
+    The output should show `True`. If it shows `False` with error 802, ensure `nvidia-fabricmanager` is installed, running, and matches your driver version.
+
 - **NeMo Agent toolkit** with LangChain integration (`uv pip install -e ".[langchain]"`)
 - **Hugging Face account** with access to Llama-3.3-70B-Instruct model (for dataset download and model weights)
 
@@ -263,9 +277,9 @@ These experiments are designed to run against a Dynamo backend for LLM inference
 
 | Component | Minimum | Recommended |
 |-----------|---------|-------------|
-| **GPU Architecture** | NVIDIA Hopper (H100) or Blackwell (B200) | B200 for optimal performance |
+| **GPU Architecture** | NVIDIA Hopper (H100) | B200 for optimal performance |
 | **GPU Count** | 4 GPUs (TP=4 for 70B model) | 8 GPUs for optimal performance |
-| **GPU Memory** | 80GB per GPU (H100) | 192GB per GPU (B200) |
+| **GPU Memory** | 96GB per GPU (H100) | 192GB per GPU (B200) |
 
 > **Important**: The Llama-3.3-70B-Instruct model requires approximately 140GB of GPU memory when loaded with TP=4. While it is possible to run evaluations against a managed LLM service (such as NVIDIA NIM), the intended performance analysis requires hosting Dynamo on your own GPU cluster to measure latency, throughput, and KV cache optimization metrics.
 
