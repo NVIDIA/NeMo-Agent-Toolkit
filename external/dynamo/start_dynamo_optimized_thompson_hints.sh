@@ -50,11 +50,14 @@
 set -euo pipefail
 
 # Configuration Variables (can be overridden via environment variables)
-CONTAINER_NAME="dynamo-sglang-optimized"
+CONTAINER_NAME="dynamo-sglang"
 WORKER_GPUS="${DYNAMO_GPU_DEVICES:-0,1,2,3}"
 TP_SIZE="${DYNAMO_TP_SIZE:-4}"
 HTTP_PORT="${DYNAMO_HTTP_PORT:-8000}"
-METRICS_PORT="${DYNAMO_METRICS_PORT:-8081}"
+# Metrics ports - each component gets its own port to avoid conflicts
+WORKER_METRICS_PORT="${DYNAMO_WORKER_METRICS_PORT:-8081}"
+ROUTER_METRICS_PORT="${DYNAMO_ROUTER_METRICS_PORT:-8082}"
+PROCESSOR_METRICS_PORT="${DYNAMO_PROCESSOR_METRICS_PORT:-8083}"
 MODEL="/workspace/models/Llama-3.3-70B-Instruct"
 SERVED_MODEL_NAME="${DYNAMO_MODEL_NAME:-llama-3.3-70b}"
 IMAGE="nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.7.1"
@@ -104,12 +107,15 @@ echo "========================================================="
 echo "Model: Llama-3.3-70B-Instruct"
 echo "Container: $CONTAINER_NAME"
 echo "HTTP Port: $HTTP_PORT (default Dynamo frontend)"
-echo "Metrics Port: $METRICS_PORT (Prometheus)"
+echo "Metrics Ports:"
+echo "  - Worker:    $WORKER_METRICS_PORT (KV cache, internal)"
+echo "  - Router:    $ROUTER_METRICS_PORT (Thompson routing)"
+echo "  - Processor: $PROCESSOR_METRICS_PORT (KVE metrics)"
 echo ""
 echo "Architecture Differences (vs generalized):"
 echo "  - Default Dynamo frontend (not custom frontend.py)"
 echo "  - Hints via nvext.annotations (not HTTP headers)"
-echo "  - Prometheus metrics (not CSV files)"
+echo "  - Prometheus metrics on separate ports per component"
 echo ""
 echo "Components:"
 echo "  - ETCD (metadata and discovery)"
@@ -258,8 +264,10 @@ docker run -d \
   -e RUST_BACKTRACE=1 \
   -e PYTHONUNBUFFERED=1 \
   -e DYN_HTTP_PORT=$HTTP_PORT \
-  -e DYN_SYSTEM_PORT=$METRICS_PORT \
   -e DYN_ROUTER_MODE=round-robin \
+  -e WORKER_METRICS_PORT=$WORKER_METRICS_PORT \
+  -e ROUTER_METRICS_PORT=$ROUTER_METRICS_PORT \
+  -e PROCESSOR_METRICS_PORT=$PROCESSOR_METRICS_PORT \
   $IMAGE \
   bash -c "
     set -e
@@ -336,7 +344,9 @@ docker run -d \
     # CRITICAL: Register worker at dynamo.worker.generate (not default backend.generate)
     # This allows the custom Processor to register as backend.generate and intercept
     # frontend requests, then forward to these workers after Thompson Sampling routing.
+    # DYN_SYSTEM_PORT sets the Prometheus metrics port for this component
     CUDA_VISIBLE_DEVICES=0,1,2,3 \
+    DYN_SYSTEM_PORT=\$WORKER_METRICS_PORT \
     python3 -m dynamo.sglang \
       --model-path $MODEL \
       --served-model-name $SERVED_MODEL_NAME \
@@ -350,6 +360,7 @@ docker run -d \
     WORKER_PID=\$!
     echo \"Unified Worker PID: \$WORKER_PID\"
     echo \"Registered at: dynamo.worker.generate\"
+    echo \"Metrics at: http://localhost:\$WORKER_METRICS_PORT/metrics\"
     echo \"\"
 
     # Wait for unified worker to initialize
@@ -361,10 +372,13 @@ docker run -d \
     echo '========================================================='
     # Router uses config.yaml for all parameters
     # Override specific values with --affinity-base, --temp-base, --lints-v, or --override
+    # DYN_SYSTEM_PORT sets the Prometheus metrics port for this component
+    DYN_SYSTEM_PORT=\$ROUTER_METRICS_PORT \
     python3 /workspace/custom_dynamo/router.py \
       --config /workspace/custom_dynamo/config.yaml &
     ROUTER_PID=\$!
     echo \"Router PID: \$ROUTER_PID\"
+    echo \"Metrics at: http://localhost:\$ROUTER_METRICS_PORT/metrics\"
     sleep 15
     echo \"\"
 
@@ -376,6 +390,8 @@ docker run -d \
     # Processor registers as dynamo.backend.generate AND calls register_llm()
     # to advertise a model card in ETCD. The frontend's ModelWatcher discovers
     # this and routes requests to us.
+    # DYN_SYSTEM_PORT sets the Prometheus metrics port for this component
+    DYN_SYSTEM_PORT=\$PROCESSOR_METRICS_PORT \
     python3 /workspace/custom_dynamo/processor.py \
       --enable-router \
       --model-path $MODEL \
@@ -385,6 +401,7 @@ docker run -d \
     echo \"Model: $SERVED_MODEL_NAME (from $MODEL)\"
     echo \"Registered at: dynamo.backend.generate (discovered via ETCD model card)\"
     echo \"Forwards to: dynamo.worker.generate (actual SGLang workers)\"
+    echo \"Metrics at: http://localhost:\$PROCESSOR_METRICS_PORT/metrics\"
     sleep 15
     echo \"\"
 
@@ -417,12 +434,16 @@ docker run -d \
     echo \"Dynamo Components (This Container):\"
     echo \"  Unified Worker: PID \$WORKER_PID  (GPUs $WORKER_GPUS, TP=$TP_SIZE)\"
     echo \"    → Registered at: dynamo.worker.generate\"
+    echo \"    → Metrics: http://localhost:\$WORKER_METRICS_PORT/metrics\"
     echo \"  Router: PID \$ROUTER_PID  (Thompson Sampling + Prometheus)\"
     echo \"    → Registered at: dynamo.router.{find_worker,feedback}\"
+    echo \"    → Metrics: http://localhost:\$ROUTER_METRICS_PORT/metrics\"
     echo \"  Processor: PID \$PROCESSOR_PID  (NVExt annotation extraction)\"
     echo \"    → Registered at: dynamo.backend.generate (model card in ETCD)\"
+    echo \"    → Metrics: http://localhost:\$PROCESSOR_METRICS_PORT/metrics\"
     echo \"  Frontend: PID \$FRONTEND_PID  (Default Dynamo HTTP API on port $HTTP_PORT)\"
     echo \"    → Discovery: ETCD ModelWatcher (finds processor's model card)\"
+    echo \"    → Metrics: http://localhost:$HTTP_PORT/metrics\"
     echo ''
     echo 'Request Flow (Dynamic Discovery Mode):'
     echo '  Client → Default Frontend API (port $HTTP_PORT)'
@@ -440,11 +461,11 @@ docker run -d \
     echo '         ↓'
     echo '  Response + Feedback to Router'
     echo ''
-    echo 'Prometheus Metrics:'
-    echo '  - Frontend: http://localhost:$HTTP_PORT/metrics'
-    echo '  - Backend: http://localhost:$METRICS_PORT/metrics'
-    echo '  - Router: thompson_router_* metrics'
-    echo '  - Processor: thompson_processor_* metrics'
+    echo 'Prometheus Metrics Endpoints:'
+    echo '  - Frontend:  http://localhost:$HTTP_PORT/metrics (latency, throughput)'
+    echo '  - Worker:    http://localhost:\$WORKER_METRICS_PORT/metrics (KV cache, internal)'
+    echo '  - Router:    http://localhost:\$ROUTER_METRICS_PORT/metrics (thompson_router_*)'
+    echo '  - Processor: http://localhost:\$PROCESSOR_METRICS_PORT/metrics (thompson_* KVE)'
     echo '========================================================='
 
     # Monitor all processes
@@ -513,9 +534,11 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo "  ETCD: etcd-dynamo container, localhost:2379"
     echo "  NATS: nats-dynamo container, localhost:4222"
     echo ""
-    echo "Prometheus Metrics:"
-    echo "  Frontend: http://localhost:$HTTP_PORT/metrics"
-    echo "  Backend/Router/Processor: http://localhost:$METRICS_PORT/metrics"
+    echo "Prometheus Metrics Endpoints:"
+    echo "  Frontend:  http://localhost:$HTTP_PORT/metrics (latency, throughput)"
+    echo "  Worker:    http://localhost:$WORKER_METRICS_PORT/metrics (KV cache)"
+    echo "  Router:    http://localhost:$ROUTER_METRICS_PORT/metrics (routing)"
+    echo "  Processor: http://localhost:$PROCESSOR_METRICS_PORT/metrics (KVE)"
     echo ""
     echo "API Endpoint: http://localhost:$HTTP_PORT/v1/chat/completions"
     echo "Health Check: http://localhost:$HTTP_PORT/health"
@@ -538,9 +561,11 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo "  GPU usage:            watch -n 2 nvidia-smi"
     echo "  Stop all:             bash stop_dynamo.sh"
     echo ""
-    echo "Prometheus Metrics:"
-    echo "  curl http://localhost:$HTTP_PORT/metrics | grep dynamo"
-    echo "  curl http://localhost:$METRICS_PORT/metrics | grep thompson"
+    echo "Query Metrics:"
+    echo "  curl http://localhost:$HTTP_PORT/metrics | grep dynamo_frontend"
+    echo "  curl http://localhost:$WORKER_METRICS_PORT/metrics | grep kvstats"
+    echo "  curl http://localhost:$ROUTER_METRICS_PORT/metrics | grep thompson_router"
+    echo "  curl http://localhost:$PROCESSOR_METRICS_PORT/metrics | grep thompson_kve"
     echo ""
     echo "========================================================="
     echo "Test Request (with nvext annotations):"

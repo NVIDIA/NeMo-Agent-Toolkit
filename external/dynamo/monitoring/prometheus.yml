@@ -1,0 +1,49 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Prometheus configuration for Dynamo metrics collection
+#
+# Metrics Endpoints:
+#   - Frontend (8000): User-facing latency, throughput, tokens
+#   - Worker (8081): KV cache stats, NATS metrics, internal stats
+#   - Router (8082): Thompson Sampling routing metrics
+#   - Processor (8083): Thompson Sampling KVE metrics
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Dynamo Frontend metrics (user-facing latency, throughput)
+  - job_name: 'dynamo-frontend'
+    static_configs:
+      - targets: ['localhost:8000']
+    metrics_path: /metrics
+    scrape_interval: 5s
+
+  # Dynamo Worker metrics (KV cache, internal stats)
+  - job_name: 'dynamo-worker'
+    static_configs:
+      - targets: ['localhost:8081']
+    metrics_path: /metrics
+    scrape_interval: 5s
+
+  # Thompson Sampling Router metrics
+  - job_name: 'dynamo-router'
+    static_configs:
+      - targets: ['localhost:8082']
+    metrics_path: /metrics
+    scrape_interval: 5s
+
+  # Thompson Sampling Processor metrics (KVE)
+  - job_name: 'dynamo-processor'
+    static_configs:
+      - targets: ['localhost:8083']
+    metrics_path: /metrics
+    scrape_interval: 5s
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
