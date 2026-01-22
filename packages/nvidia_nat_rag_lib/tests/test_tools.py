@@ -15,142 +15,132 @@
 
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import pytest
 from nvidia_rag.rag_server.response_generator import Citations
 
 from nat.builder.builder import Builder
-from nat.builder.function import LambdaFunction
-from nat.data_models.component_ref import FunctionGroupRef
-from nat.plugins.rag_lib.client import NvidiaRAGFunctionGroup
 from nat.plugins.rag_lib.client import NvidiaRAGLibConfig
+from nat.plugins.rag_lib.client import nvidia_rag_lib
 from nat.plugins.rag_lib.models import RAGGenerateResult
 from nat.plugins.rag_lib.models import RAGSearchResult
-from nat.plugins.rag_lib.tools.generate import RAGLibGenerateConfig
-from nat.plugins.rag_lib.tools.generate import rag_lib_generate
-from nat.plugins.rag_lib.tools.search import RAGLibSearchConfig
-from nat.plugins.rag_lib.tools.search import rag_lib_search
 
 
-class TestNvidiaRAGSearchTool:
+class TestNvidiaRAGLib:
 
     @pytest.fixture
     def mock_builder(self) -> MagicMock:
-        return MagicMock(spec=Builder)
+        builder = MagicMock(spec=Builder)
+        builder.get_llm_config = MagicMock(return_value=None)
+        builder.get_embedder_config = MagicMock(return_value=None)
+        builder.get_retriever_config = AsyncMock(return_value=None)
+        return builder
 
     @pytest.fixture
-    def tool_config(self) -> RAGLibSearchConfig:
-        return RAGLibSearchConfig(
-            rag_client=FunctionGroupRef("rag_client"),
-            collection_names=["test_collection"],
-            reranker_top_k=5,
-        )
+    def config(self) -> NvidiaRAGLibConfig:
+        return NvidiaRAGLibConfig(collection_names=["test_collection"], )
 
     @pytest.fixture
-    def function_group(self) -> NvidiaRAGFunctionGroup:
-        config = NvidiaRAGLibConfig()
-        group = NvidiaRAGFunctionGroup(config=config)
-        group.rag_client = MagicMock()
-        return group
+    def mock_rag_client(self) -> MagicMock:
+        client = MagicMock()
+        client.search = AsyncMock(return_value=Citations(total_results=3, results=[]))
+        return client
 
     async def test_search_returns_results(self,
-                                          tool_config: RAGLibSearchConfig,
+                                          config: NvidiaRAGLibConfig,
                                           mock_builder: MagicMock,
-                                          function_group: NvidiaRAGFunctionGroup) -> None:
-        function_group.rag_client.search = AsyncMock(return_value=Citations(total_results=3, results=[]))
-        mock_builder.get_function_group = AsyncMock(return_value=function_group)
+                                          mock_rag_client: MagicMock) -> None:
+        with patch("nvidia_rag.NvidiaRAG", return_value=mock_rag_client):
+            async with nvidia_rag_lib(config, mock_builder) as group:
+                functions = await group.get_all_functions()
+                search_fn = next((f for name, f in functions.items() if name.endswith("search")), None)
+                assert search_fn is not None
 
-        async with rag_lib_search(tool_config, mock_builder) as fn_info:
-            tool = LambdaFunction.from_info(config=tool_config, info=fn_info, instance_name="search")
-            result = await tool.acall_invoke(query="test query")
+                result = await search_fn.acall_invoke(query="test query")
 
-            assert isinstance(result, RAGSearchResult)
-            assert result.citations.total_results == 3
+                assert isinstance(result, RAGSearchResult)
+                assert result.citations.total_results == 3
 
     async def test_search_handles_error(self,
-                                        tool_config: RAGLibSearchConfig,
+                                        config: NvidiaRAGLibConfig,
                                         mock_builder: MagicMock,
-                                        function_group: NvidiaRAGFunctionGroup) -> None:
-        function_group.rag_client.search = AsyncMock(side_effect=Exception("Search failed"))
-        mock_builder.get_function_group = AsyncMock(return_value=function_group)
+                                        mock_rag_client: MagicMock) -> None:
+        mock_rag_client.search = AsyncMock(side_effect=Exception("Search failed"))
 
-        async with rag_lib_search(tool_config, mock_builder) as fn_info:
-            tool = LambdaFunction.from_info(config=tool_config, info=fn_info, instance_name="search")
-            result = await tool.acall_invoke(query="test query")
+        with patch("nvidia_rag.NvidiaRAG", return_value=mock_rag_client):
+            async with nvidia_rag_lib(config, mock_builder) as group:
+                functions = await group.get_all_functions()
+                search_fn = next((f for name, f in functions.items() if name.endswith("search")), None)
+                result = await search_fn.acall_invoke(query="test query")
 
-            assert isinstance(result, RAGSearchResult)
-            assert result.citations.total_results == 0
-
-
-class TestNvidiaRAGGenerateTool:
-
-    @pytest.fixture
-    def mock_builder(self) -> MagicMock:
-        return MagicMock(spec=Builder)
-
-    @pytest.fixture
-    def tool_config(self) -> RAGLibGenerateConfig:
-        return RAGLibGenerateConfig(
-            rag_client=FunctionGroupRef("rag_client"),
-            use_knowledge_base=True,
-            enable_citations=True,
-        )
-
-    @pytest.fixture
-    def function_group(self) -> NvidiaRAGFunctionGroup:
-        config = NvidiaRAGLibConfig()
-        group = NvidiaRAGFunctionGroup(config=config)
-        group.rag_client = MagicMock()
-        return group
+                assert isinstance(result, RAGSearchResult)
+                assert result.citations.total_results == 0
 
     async def test_generate_returns_answer(self,
-                                           tool_config: RAGLibGenerateConfig,
+                                           config: NvidiaRAGLibConfig,
                                            mock_builder: MagicMock,
-                                           function_group: NvidiaRAGFunctionGroup) -> None:
+                                           mock_rag_client: MagicMock) -> None:
 
         async def mock_stream():
             yield 'data: {"id": "1", "model": "m", "choices": [{"delta": {"content": "Hello"}}]}'
             yield 'data: {"id": "1", "model": "m", "choices": [{"delta": {"content": " world"}}]}'
             yield 'data: [DONE]'
 
-        function_group.rag_client.generate = AsyncMock(return_value=mock_stream())
-        mock_builder.get_function_group = AsyncMock(return_value=function_group)
+        mock_rag_client.generate = AsyncMock(return_value=mock_stream())
 
-        async with rag_lib_generate(tool_config, mock_builder) as fn_info:
-            tool = LambdaFunction.from_info(config=tool_config, info=fn_info, instance_name="generate")
-            result = await tool.acall_invoke(query="test")
+        with patch("nvidia_rag.NvidiaRAG", return_value=mock_rag_client):
+            async with nvidia_rag_lib(config, mock_builder) as group:
+                functions = await group.get_all_functions()
+                generate_fn = next((f for name, f in functions.items() if name.endswith("generate")), None)
+                assert generate_fn is not None
 
-            assert isinstance(result, RAGGenerateResult)
-            assert result.answer == "Hello world"
+                result = await generate_fn.acall_invoke(query="test")
+
+                assert isinstance(result, RAGGenerateResult)
+                assert result.answer == "Hello world"
 
     async def test_generate_handles_error(self,
-                                          tool_config: RAGLibGenerateConfig,
+                                          config: NvidiaRAGLibConfig,
                                           mock_builder: MagicMock,
-                                          function_group: NvidiaRAGFunctionGroup) -> None:
-        function_group.rag_client.generate = AsyncMock(side_effect=Exception("Generate failed"))
-        mock_builder.get_function_group = AsyncMock(return_value=function_group)
+                                          mock_rag_client: MagicMock) -> None:
+        mock_rag_client.generate = AsyncMock(side_effect=Exception("Generate failed"))
 
-        async with rag_lib_generate(tool_config, mock_builder) as fn_info:
-            tool = LambdaFunction.from_info(config=tool_config, info=fn_info, instance_name="generate")
-            result = await tool.acall_invoke(query="test")
+        with patch("nvidia_rag.NvidiaRAG", return_value=mock_rag_client):
+            async with nvidia_rag_lib(config, mock_builder) as group:
+                functions = await group.get_all_functions()
+                generate_fn = next((f for name, f in functions.items() if name.endswith("generate")), None)
+                result = await generate_fn.acall_invoke(query="test")
 
-            assert isinstance(result, RAGGenerateResult)
-            assert "Error generating answer" in result.answer
+                assert isinstance(result, RAGGenerateResult)
+                assert "Error generating answer" in result.answer
 
     async def test_generate_handles_empty_stream(self,
-                                                 tool_config: RAGLibGenerateConfig,
+                                                 config: NvidiaRAGLibConfig,
                                                  mock_builder: MagicMock,
-                                                 function_group: NvidiaRAGFunctionGroup) -> None:
+                                                 mock_rag_client: MagicMock) -> None:
 
         async def mock_empty_stream():
             yield 'data: [DONE]'
 
-        function_group.rag_client.generate = AsyncMock(return_value=mock_empty_stream())
-        mock_builder.get_function_group = AsyncMock(return_value=function_group)
+        mock_rag_client.generate = AsyncMock(return_value=mock_empty_stream())
 
-        async with rag_lib_generate(tool_config, mock_builder) as fn_info:
-            tool = LambdaFunction.from_info(config=tool_config, info=fn_info, instance_name="generate")
-            result = await tool.acall_invoke(query="test")
+        with patch("nvidia_rag.NvidiaRAG", return_value=mock_rag_client):
+            async with nvidia_rag_lib(config, mock_builder) as group:
+                functions = await group.get_all_functions()
+                generate_fn = next((f for name, f in functions.items() if name.endswith("generate")), None)
+                result = await generate_fn.acall_invoke(query="test")
 
-            assert isinstance(result, RAGGenerateResult)
-            assert result.answer == "No response generated."
+                assert isinstance(result, RAGGenerateResult)
+                assert result.answer == "No response generated."
+
+    async def test_group_exposes_both_tools(self,
+                                            config: NvidiaRAGLibConfig,
+                                            mock_builder: MagicMock,
+                                            mock_rag_client: MagicMock) -> None:
+        with patch("nvidia_rag.NvidiaRAG", return_value=mock_rag_client):
+            async with nvidia_rag_lib(config, mock_builder) as group:
+                functions = await group.get_all_functions()
+                function_names = list(functions.keys())
+                assert any(name.endswith("search") for name in function_names)
+                assert any(name.endswith("generate") for name in function_names)

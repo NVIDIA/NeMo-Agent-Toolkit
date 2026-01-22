@@ -19,4 +19,3 @@
 # Import any providers which need to be automatically registered here
 
 from . import client
-from .tools import register

@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+from collections.abc import AsyncGenerator
 from logging import Logger
 from typing import TYPE_CHECKING
 
@@ -35,6 +36,7 @@ from nat.cli.register_workflow import register_function_group
 from nat.data_models.component_ref import EmbedderRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.component_ref import RetrieverRef
+from nat.data_models.finetuning import OpenAIMessage
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.embedder.nim_embedder import NIMEmbedderModelConfig
 from nat.llm.nim_llm import NIMModelConfig
@@ -42,50 +44,121 @@ from nat.plugins.rag_lib.config import EmbedderConfigType
 from nat.plugins.rag_lib.config import LLMConfigType
 from nat.plugins.rag_lib.config import RAGPipelineConfig
 from nat.plugins.rag_lib.config import RetrieverConfigType
+from nat.plugins.rag_lib.models import RAGGenerateResult
+from nat.plugins.rag_lib.models import RAGSearchResult
 from nat.retriever.milvus.register import MilvusRetrieverConfig
 from nat.retriever.nemo_retriever.register import NemoRetrieverConfig
 
 if TYPE_CHECKING:
-    from nvidia_rag import NvidiaRAG
+    from nvidia_rag.rag_server.response_generator import RAGResponse
 
 logger: Logger = logging.getLogger(__name__)
-
-
-class NvidiaRAGFunctionGroup(FunctionGroup):
-    """FunctionGroup wrapper that exposes the NvidiaRAG client."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.rag_client: NvidiaRAG | None = None
 
 
 class NvidiaRAGLibConfig(FunctionGroupBaseConfig, name="nvidia_rag_lib"):
     """Configuration for NVIDIA RAG Library.
 
-    All component configs are optional - NvidiaRAGConfig provides defaults.
+    Exposes search and generate tools that share a single RAG client.
     """
 
     llm: LLMConfigType = Field(default=None, description="LLM configuration")
     embedder: EmbedderConfigType = Field(default=None, description="Embedder configuration")
     retriever: RetrieverConfigType = Field(default=None, description="Vector store configuration")
-
     rag_pipeline: RAGPipelineConfig = Field(default_factory=RAGPipelineConfig)
+
+    topic: str | None = Field(default=None, description="Topic for tool descriptions.")
+    collection_names: list[str] | None = Field(default=None, description="Collections to query.")
+    reranker_top_k: int = Field(default=10, ge=1, description="Number of results after reranking.")
 
 
 @register_function_group(config_type=NvidiaRAGLibConfig)
 async def nvidia_rag_lib(config: NvidiaRAGLibConfig, builder: Builder):
-    """Initialize NVIDIA RAG client and expose via FunctionGroup."""
+    """NVIDIA RAG Library - exposes search and generate tools."""
     try:
         from nvidia_rag import NvidiaRAG
     except ImportError as e:
         raise ImportError("nvidia-rag package is not installed.") from e
 
-    group = NvidiaRAGFunctionGroup(config=config)
-
     rag_config: NvidiaRAGConfig = await _build_nvidia_rag_config(config, builder)
-    group.rag_client = NvidiaRAG(config=rag_config)
+    rag_client: NvidiaRAG = NvidiaRAG(config=rag_config)
     logger.info("NVIDIA RAG client initialized")
 
+    topic_str: str = f" about {config.topic}" if config.topic else ""
+
+    async def search(query: str) -> RAGSearchResult:
+        """Search for relevant documents."""
+        from nvidia_rag.rag_server.response_generator import Citations
+
+        try:
+            citations: Citations = await rag_client.search(
+                query=query,
+                collection_names=config.collection_names,
+                reranker_top_k=config.reranker_top_k,
+            )
+            return RAGSearchResult(citations=citations)
+        except Exception:
+            logger.exception("RAG search failed")
+            return RAGSearchResult(citations=Citations(total_results=0, results=[]))
+
+    async def generate(query: str) -> RAGGenerateResult:
+        """Generate an answer using the knowledge base."""
+        from nvidia_rag.rag_server.response_generator import ChainResponse
+        from nvidia_rag.rag_server.response_generator import Citations
+
+        chunks: list[str] = []
+        final_citations: Citations | None = None
+
+        try:
+            response: RAGResponse = await rag_client.generate(
+                messages=[OpenAIMessage(role="user", content=query).model_dump()],
+                collection_names=config.collection_names,
+                reranker_top_k=config.reranker_top_k,
+            )
+
+            stream: AsyncGenerator[str, None] = (response.generator if hasattr(response, "generator") else response)
+
+            async for raw_chunk in stream:
+                if raw_chunk.startswith("data: "):
+                    raw_chunk = raw_chunk[len("data: "):].strip()
+                if not raw_chunk or raw_chunk == "[DONE]":
+                    continue
+                try:
+                    parsed: ChainResponse = ChainResponse.model_validate_json(raw_chunk)
+                    if parsed.choices:
+                        choice = parsed.choices[0]
+                        if choice.delta and choice.delta.content:
+                            content = choice.delta.content
+                            if isinstance(content, str):
+                                chunks.append(content)
+                    if parsed.citations and parsed.citations.results:
+                        final_citations = parsed.citations
+                except Exception:
+                    continue
+
+            answer: str = "".join(chunks) if chunks else "No response generated."
+            return RAGGenerateResult(answer=answer, citations=final_citations)
+
+        except Exception:
+            logger.exception("RAG generate failed")
+            return RAGGenerateResult(answer="Error generating answer. Please try again.")
+
+    group = FunctionGroup(config=config)
+
+    group.add_function(
+        "search",
+        search,
+        description=(
+            f"Retrieve grounded excerpts{topic_str}. "
+            "Returns document chunks from indexed sources - use this to ground your response in cited source material "
+            "rather than general knowledge."),
+    )
+    group.add_function(
+        "generate",
+        generate,
+        description=(f"Generate a grounded, cited answer{topic_str}. "
+                     "Synthesizes an answer from retrieved documents, ensuring the response is grounded in cited "
+                     "source material rather than general knowledge."),
+    )
     yield group
 
 
@@ -94,7 +167,6 @@ async def _build_nvidia_rag_config(config: NvidiaRAGLibConfig, builder: Builder)
 
     pipeline: RAGPipelineConfig = config.rag_pipeline
 
-    # Create base config with pipeline settings and defaults
     rag_config: NvidiaRAGConfig = NvidiaRAGConfig(
         ranking=pipeline.ranking,
         retriever=pipeline.search_settings,
@@ -110,7 +182,6 @@ async def _build_nvidia_rag_config(config: NvidiaRAGLibConfig, builder: Builder)
         default_confidence_threshold=pipeline.default_confidence_threshold,
     )
 
-    # Resolve and map each component's fields (mutates rag_config)
     await _resolve_llm_config(config.llm, builder, rag_config)
     await _resolve_embedder_config(config.embedder, builder, rag_config)
     await _resolve_retriever_config(config.retriever, builder, rag_config)
@@ -144,7 +215,6 @@ async def _resolve_llm_config(llm: LLMConfigType, builder: Builder, rag_config: 
         if llm.max_tokens is not None:
             rag_config.llm.parameters.max_tokens = llm.max_tokens
 
-        # Propagate LLM values to query_rewriter when not set, instead of using library defaults.
         if "model_name" not in rag_config.query_rewriter.model_fields_set:
             rag_config.query_rewriter.model_name = llm.model_name
         if "server_url" not in rag_config.query_rewriter.model_fields_set and llm.base_url:
@@ -152,7 +222,6 @@ async def _resolve_llm_config(llm: LLMConfigType, builder: Builder, rag_config: 
         if "api_key" not in rag_config.query_rewriter.model_fields_set and llm.api_key:
             rag_config.query_rewriter.api_key = llm.api_key
 
-        # Propagate LLM values to reflection when not set, instead of using library defaults.
         if "model_name" not in rag_config.reflection.model_fields_set:
             rag_config.reflection.model_name = llm.model_name
         if "server_url" not in rag_config.reflection.model_fields_set and llm.base_url:
@@ -160,7 +229,6 @@ async def _resolve_llm_config(llm: LLMConfigType, builder: Builder, rag_config: 
         if "api_key" not in rag_config.reflection.model_fields_set and llm.api_key:
             rag_config.reflection.api_key = llm.api_key
 
-        # Propagate LLM values to filter_expression_generator when not set, instead of using library defaults.
         if "model_name" not in rag_config.filter_expression_generator.model_fields_set:
             rag_config.filter_expression_generator.model_name = llm.model_name
         if "server_url" not in rag_config.filter_expression_generator.model_fields_set and llm.base_url:
@@ -200,7 +268,7 @@ async def _resolve_embedder_config(embedder: EmbedderConfigType, builder: Builde
 
 async def _resolve_retriever_config(retriever: RetrieverConfigType, builder: Builder,
                                     rag_config: NvidiaRAGConfig) -> None:
-    """Resolve retriever config and map all fields to NvidiaRAGConfig.vector_store."""
+    """Resolve retriever config and map fields to NvidiaRAGConfig.vector_store and retriever."""
 
     if retriever is None:
         return
@@ -221,6 +289,8 @@ async def _resolve_retriever_config(retriever: RetrieverConfigType, builder: Bui
                 rag_config.vector_store.username = retriever.connection_args["user"]
             if "password" in retriever.connection_args:
                 rag_config.vector_store.password = SecretStr(retriever.connection_args["password"])
+        if retriever.top_k:
+            rag_config.retriever.top_k = retriever.top_k
         return
 
     if isinstance(retriever, NemoRetrieverConfig):
@@ -229,6 +299,8 @@ async def _resolve_retriever_config(retriever: RetrieverConfigType, builder: Bui
             rag_config.vector_store.default_collection_name = retriever.collection_name
         if retriever.nvidia_api_key:
             rag_config.vector_store.api_key = retriever.nvidia_api_key
+        if retriever.top_k:
+            rag_config.retriever.top_k = retriever.top_k
         return
 
     raise ValueError(f"Unsupported retriever config type: {type(retriever)}")
