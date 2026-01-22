@@ -17,14 +17,14 @@ llms:
   agent:
     _type: nim
     model: nvidia/nemotron-3-nano-30b-a3b
-    max_tokens: 8192
+    max_tokens: 16384
     extra_body:
       chat_template_kwargs:
         reasoning_budget: 1024
   judge:
     _type: nim
     model: nvidia/nvidia-nemotron-nano-9b-v2
-    max_tokens: 8192
+    max_tokens: 16384
 
 workflow:
   _type: langgraph_wrapper
