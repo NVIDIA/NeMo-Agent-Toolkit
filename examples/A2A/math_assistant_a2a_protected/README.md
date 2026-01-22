@@ -363,7 +363,7 @@ Workflow Result:
 ## Troubleshooting
 
 ### Ensure all services are reachable
-Use the following checks to confirm each service is reachable. If you are running the services elsewhere, replace `localhost` with the appropriate hostname and use `https` instead of `http` for public endpoints.
+Use the following checks to confirm each service is reachable. If you are running the services elsewhere, replace `localhost` with the appropriate host name and use `https` instead of `http` for public endpoints.
 
 #### Verify Keycloak
 ```bash
