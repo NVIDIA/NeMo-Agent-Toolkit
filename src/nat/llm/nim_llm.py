@@ -56,7 +56,7 @@ class NIMModelConfig(LLMBaseConfig, RetryMixin, OptimizableMixin, ThinkingMixin,
     reasoning_budget: int | None = Field(
         default=None,
         description="Reasoning budget for Nemotron models. Limits the number of thinking tokens. "
-                    "Set to a small value (e.g., 1024) to reduce overthinking, or None to disable.")
+        "Set to a small value (e.g., 1024) to reduce overthinking, or None to disable.")
 
 
 @register_llm_provider(config_type=NIMModelConfig)

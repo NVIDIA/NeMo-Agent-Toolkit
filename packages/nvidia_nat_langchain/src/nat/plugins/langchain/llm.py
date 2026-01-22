@@ -173,7 +173,6 @@ async def nim_langchain(llm_config: NIMModelConfig, _builder: Builder):
     if model_kwargs:
         client_kwargs["model_kwargs"] = model_kwargs
 
-
     client = ChatNVIDIA(**client_kwargs)
 
     yield _patch_llm_based_on_config(client, llm_config)
