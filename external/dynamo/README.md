@@ -184,6 +184,9 @@ Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimizat
 
 ### Software Requirements
 
+> [!WARNING]
+> This example requires a CUDA-compatible device with NVIDIA drivers installed. It cannot be run on systems without NVIDIA GPU hardware. You do not need to install ai-dynamo packages separately; the provided Docker images include them.
+
 1. **Docker** installed and running (version 24.0+), with NVIDIA Container Toolkit
 2. **NVIDIA Driver** with CUDA 12.0+ support, `nvidia-fabricmanager` enabled matching `NVIDIA-SMI` version. Verify with:
 
