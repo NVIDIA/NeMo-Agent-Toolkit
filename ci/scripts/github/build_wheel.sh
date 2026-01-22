@@ -100,7 +100,7 @@ for whl in "${MOVED_WHEELS[@]}"; do
             rapids-logger "Error, failed to import nat from wheel ${whl} with Python ${pyver}"
             echo "${PYTHON_IMPORT_OUT}"
             exit ${IMPORT_TEST_RESULT}
-         fi
+        fi
 
         REPORTED_VERSION=$(nat --version 2>&1)
         NAT_CMD_EXIT_CODE=$?
