@@ -162,6 +162,7 @@ examples = [
   "nat_simple_calculator_eval",
   "nat_simple_calculator_hitl",
   "nat_simple_calculator_mcp",
+  "nat_simple_calculator_mcp_protected",
   "nat_simple_calculator_observability",
   "nat_simple_rag",
   "nat_simple_web_query",
@@ -294,6 +295,7 @@ nat_simple_calculator_custom_routes = { path = "examples/front_ends/simple_calcu
 nat_simple_calculator_eval = { path = "examples/evaluation_and_profiling/simple_calculator_eval", editable = true }
 nat_simple_calculator_hitl = { path = "examples/HITL/simple_calculator_hitl", editable = true }
 nat_simple_calculator_mcp = { path = "examples/MCP/simple_calculator_mcp", editable = true }
+nat_simple_calculator_mcp_protected = { path = "examples/MCP/simple_calculator_mcp_protected", editable = true }
 nat_simple_calculator_observability = { path = "examples/observability/simple_calculator_observability", editable = true }
 nat_simple_rag = { path = "examples/RAG/simple_rag", editable = true }
 nat_simple_web_query = { path = "examples/getting_started/simple_web_query", editable = true }

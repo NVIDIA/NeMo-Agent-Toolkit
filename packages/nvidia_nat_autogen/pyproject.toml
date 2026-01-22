@@ -40,7 +40,7 @@ dependencies = [
   "autogen-agentchat~=0.7",
   "autogen-core~=0.7",
   "autogen-ext[anthropic]~=0.7",
-  "nvidia-nat~=1.4",
+  "nvidia-nat~=1.5",
 ]
 requires-python = ">=3.11,<3.14"
 description = "Subpackage for AutoGen integration in NeMo Agent toolkit"

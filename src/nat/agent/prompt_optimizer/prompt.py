@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -63,6 +63,18 @@ Here is the prompt to mutate:
 The prompt must acheive the following objective:
 {objective}
 
+{oracle_feedback_section}
+
 The modified prompt is: \n
 
+"""
+
+oracle_feedback_template = """
+## FAILURE ANALYSIS
+The following are examples of cases where the current prompt performed poorly,
+along with reasoning explaining why. Use these insights to improve the prompt:
+
+{oracle_feedback}
+
+Focus on addressing the root causes identified above while maintaining the original objective.
 """
