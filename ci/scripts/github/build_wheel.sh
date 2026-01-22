@@ -106,7 +106,7 @@ for whl in "${MOVED_WHEELS[@]}"; do
         fi
 
         # run a simple command to verify installation
-        PYTHON_IMPORT_OUT=$(PYTHON_IMPpython -c "import nat" 2>&1)
+        PYTHON_IMPORT_OUT=$(python -c "import nat" 2>&1)
         IMPORT_TEST_RESULT=$?
 
        if [[ ${IMPORT_TEST_RESULT} -ne 0 ]]; then
