@@ -251,7 +251,6 @@ You can register the client manually or use the dynamic client registration (DCR
    - **Authentication flow:**
      - ✓ Standard flow (authorization code)
      - ✓ Direct access grants
-     - ✓ Consent required
    - Click **Next**
 
 5. **Login settings:**
@@ -259,14 +258,19 @@ You can register the client manually or use the dynamic client registration (DCR
    - **Web origins**: `http://localhost:8000`
    - Click **Save**
 
-6. **Add client scope if not already added:**
+6. **Add client scope if not added by default:**
    - Go to **Client scopes** tab
    - Click **Add client scope**
    - Select `calculator_a2a_execute`
    - Choose **Optional**
    - Click **Add**
 
-7. **Get client credentials:**
+7. **Set Consent required**:
+   - Go to **Settings** tab
+   - Toggle **Consent required** to `On` (scroll down to the bottom of the page to see the setting)
+   - Click **Save**
+
+8. **Get client credentials:**
    - Go to **Credentials** tab
    - Copy the **Client secret**
    - Note the **Client ID**: `math-assistant-client`
@@ -321,6 +325,10 @@ The per-user architecture allows each user to have their own OAuth2 authenticati
 1. Start the math assistant as a server:
 ```bash
 # Terminal 2: Start the math assistant as a server
+# Make sure environment variables are set
+export CALCULATOR_CLIENT_ID="math-assistant-client"
+export CALCULATOR_CLIENT_SECRET="<your-client-secret>"
+
 nat serve --config_file examples/A2A/math_assistant_a2a_protected/configs/config-client.yml
 ```
 
@@ -351,6 +359,44 @@ Workflow Result:
 - Each new user session triggers its own OAuth2 authorization flow
 - Different users authenticate independently with their own Keycloak credentials
 - Each user maintains separate JWT tokens and workflow instances
+
+## Troubleshooting
+
+### Ensure all services are reachable
+Use the following checks to confirm each service is reachable. Replace `localhost` if you are running the services elsewhere.
+
+#### Verify Keycloak
+```bash
+curl -sS http://localhost:8080/realms/master/.well-known/openid-configuration | python3 -m json.tool
+```
+
+#### Verify the Protected Calculator A2A Server
+
+```bash
+curl -sS http://localhost:10000/.well-known/agent-card.json | python3 -m json.tool
+```
+
+#### Verify the Math Assistant Client FastAPI Service
+
+If you started the math assistant with `nat serve`, verify the server is reachable:
+
+```bash
+curl -sS http://localhost:8080/openapi.json | python3 -m json.tool
+```
+
+If you prefer a quick HTTP status check, follow redirects:
+
+```bash
+curl -iL http://localhost:8000/
+```
+
+#### Verify the UI
+
+If you started the UI, confirm it is serving content:
+
+```bash
+curl -i http://localhost:3000/
+```
 
 ## Cleanup
 
