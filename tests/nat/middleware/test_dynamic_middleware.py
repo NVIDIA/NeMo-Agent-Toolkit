@@ -493,10 +493,10 @@ def test_unregister_component_method_raises_error_if_not_registered():
     middleware = DynamicFunctionMiddleware(config=config, builder=Mock(_functions={}))
 
     # Create a registered component method object that's not actually registered
-    fake_registered = RegisteredComponentMethod(key="fake.method",
+    fake_registered = RegisteredComponentMethod(key="fake__method",
                                                 component_instance=Mock(),
                                                 function_name="method",
                                                 original_callable=lambda: None)
 
-    with pytest.raises(ValueError, match=r"'fake\.method' is not registered"):
+    with pytest.raises(ValueError, match=r"'fake__method' is not registered"):
         middleware.unregister(fake_registered)

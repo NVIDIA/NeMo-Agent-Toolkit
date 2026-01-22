@@ -44,7 +44,7 @@ SHM_SIZE="${DYNAMO_SHM_SIZE:-16g}"
 ETCD_CLIENT_PORT="${DYNAMO_ETCD_PORT:-2379}"
 ETCD_PEER_PORT="${DYNAMO_ETCD_PEER_PORT:-2390}"
 NATS_PORT="${DYNAMO_NATS_PORT:-4222}"
-WORKER_INIT_TIMEOUT_S="${DYNAMO_WORKER_INIT_TIMEOUT_S:-600}"
+WORKER_INIT_TIMEOUT_S="${DYNAMO_WORKER_INIT_TIMEOUT_S:-1800}"
 
 # Compute container-internal GPU indices (GPUs are renumbered 0,1,2,... inside the container)
 NUM_GPUS=$(echo "$WORKER_GPUS" | tr ',' '\n' | wc -l)
@@ -82,7 +82,7 @@ if [ -d "${DYNAMO_MODEL_DIR}" ]; then
         echo ""
         echo "This usually means incomplete/corrupted download. Try:"
         echo "  rm -rf ${DYNAMO_MODEL_DIR}"
-        echo "  huggingface-cli download meta-llama/Llama-3.3-70B-Instruct --local-dir ${DYNAMO_MODEL_DIR}"
+        echo "  hf download meta-llama/Llama-3.3-70B-Instruct --local-dir ${DYNAMO_MODEL_DIR}"
         exit 1
     fi
 fi
@@ -217,7 +217,7 @@ if [ ! -d "$LOCAL_MODEL_DIR" ]; then
     echo "WARNING: Model directory not found at: $LOCAL_MODEL_DIR"
     echo ""
     echo "To download the model, run:"
-    echo "  huggingface-cli download meta-llama/Llama-3.3-70B-Instruct --local-dir $LOCAL_MODEL_DIR"
+    echo "  hf download meta-llama/Llama-3.3-70B-Instruct --local-dir $LOCAL_MODEL_DIR"
     echo ""
     read -p "Continue anyway (model will be downloaded from HuggingFace)? [y/N] " -n 1 -r
     echo
@@ -277,8 +277,8 @@ docker run -d \
     wait_for_worker() {
         local worker_type=\$1
         local pid=\$2
-        # local max_wait=300
-        local max_wait=${DYNAMO_WORKER_INIT_TIMEOUT_S:-600}
+        # Use WORKER_INIT_TIMEOUT_S (defaults to 1800s / 30 min)
+        local max_wait=$WORKER_INIT_TIMEOUT_S
         local elapsed=0
         local poll_interval=5
 
@@ -484,8 +484,8 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo ""
 
     # Wait for server to be ready (check /v1/models which only works when workers are discovered)
-    echo "Checking for API availability (timeout=15 minutes)..."
-    max_attempts=900
+    echo "Checking for API availability (timeout=${WORKER_INIT_TIMEOUT_S}s)..."
+    max_attempts=$WORKER_INIT_TIMEOUT_S
     attempt=0
 
     while [ $attempt -lt $max_attempts ]; do

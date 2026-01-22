@@ -44,7 +44,7 @@ middleware:
   # PII Defense: Detect and sanitize PII in tool outputs
   pii_defense_tools:
     _type: pii_defense
-    target_function_or_group: retail_tools.get_product_info
+    target_function_or_group: retail_tools__get_product_info
     action: redirection
     target_location: output
     target_field: $.reviews[*].review
@@ -58,7 +58,7 @@ middleware:
   content_safety_guard_tools:
     _type: content_safety_guard
     llm_name: guard_llm
-    target_function_or_group: retail_tools.get_product_info
+    target_function_or_group: retail_tools__get_product_info
     action: redirection
     target_location: output
     target_field: $.reviews[*].review
@@ -68,7 +68,7 @@ middleware:
   output_verifier_tools:
     _type: output_verifier
     llm_name: nim_llm
-    target_function_or_group: retail_tools.get_product_info
+    target_function_or_group: retail_tools__get_product_info
     action: redirection
     target_location: output
     target_field: $.reviews[*].review

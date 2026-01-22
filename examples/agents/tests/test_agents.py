@@ -109,4 +109,4 @@ async def test_react_agent_full_workflow_validate_re(examples_dir: Path):
                                 question="What are LLMs?",
                                 expected_answer="",
                                 assert_expected_answer=False)
-    assert re.match(r".*large language model.*", result, re.IGNORECASE) is not None
+    assert re.search(r"large language model", result, re.IGNORECASE) is not None

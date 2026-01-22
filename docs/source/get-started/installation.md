@@ -113,6 +113,10 @@ The full list of optional dependencies can be found [here](#framework-integratio
 
 ## Install From Source
 
+:::{warning}
+Using Conda environments is not recommended and may cause component resolution issues. Only create vanilla Python virtual environments through `python -m venv` or `uv venv` with no other active environments. For more information, see the [Troubleshooting Guide](../resources/troubleshooting.md#workflow-issues).
+:::
+
 Installing from source is required to run any examples provided in the repository or to contribute to the project.
 
 1. Clone the NeMo Agent toolkit repository to your local machine.
@@ -121,19 +125,19 @@ Installing from source is required to run any examples provided in the repositor
     cd nemo-agent-toolkit
     ```
 
-1. Initialize, fetch, and update submodules in the Git repository.
+2. Initialize, fetch, and update submodules in the Git repository.
     ```bash
     git submodule update --init --recursive
     ```
 
-1. Fetch the data sets by downloading the LFS files.
+3. Fetch the data sets by downloading the LFS files.
     ```bash
     git lfs install
     git lfs fetch
     git lfs pull
     ```
 
-1. Create a Python environment.
+4. Create a Python environment.
     ```bash
     uv venv --python 3.13 --seed .venv
     source .venv/bin/activate
@@ -142,7 +146,7 @@ Installing from source is required to run any examples provided in the repositor
     Python 3.11 and 3.12 are also supported simply replace `3.13` with `3.11` or `3.12` in the `uv` command above.
     :::
 
-1. Install the NeMo Agent toolkit library.
+5. Install the NeMo Agent toolkit library.
     To install the NeMo Agent toolkit library along with all of the optional dependencies. Including developer tools (`--all-groups`) and all of the dependencies needed for profiling and plugins (`--all-extras`) in the source repository, run the following:
     ```bash
     uv sync --all-groups --all-extras
@@ -167,7 +171,7 @@ Installing from source is required to run any examples provided in the repositor
     ```bash
     uv pip install -e '.[profiling]'
     ```
-1. Verify that you've installed the NeMo Agent toolkit library.
+6. Verify that you've installed the NeMo Agent toolkit library.
 
      ```bash
      nat --help

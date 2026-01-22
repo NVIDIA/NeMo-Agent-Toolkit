@@ -20,6 +20,8 @@ limitations under the License.
 
 # React Benchmark Agent - Implementation Guide
 
+**Complexity:** 🛑 Advanced
+
 This document details the source code implementation of the React Benchmark Agent, explaining how the different configuration files map to the underlying components, evaluators, and workflows.
 
 ## Table of Contents

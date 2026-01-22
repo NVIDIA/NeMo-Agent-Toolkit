@@ -16,6 +16,9 @@ limitations under the License.
 -->
 
 # Solving problems in a SWE bench dataset using NeMo Agent Toolkit
+
+**Complexity:** 🛑 Advanced
+
 This example provides a skeleton workflow which can be used to implement predictors to solve problems in a SWE bench dataset.
 
 ## Table of Contents

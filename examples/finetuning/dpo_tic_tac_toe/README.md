@@ -19,6 +19,8 @@ limitations under the License.
 
 # DPO Tic-Tac-Toe: Preference Learning with NeMo Customizer
 
+**Complexity:** 🛑 Advanced
+
 This example demonstrates how to use the NeMo Agent toolkit Test Time Compute (TTC) pipeline to generate preference data for Direct Preference Optimization (DPO) training, and submit training jobs to NVIDIA NeMo Customizer.
 
 ## Table of Contents
