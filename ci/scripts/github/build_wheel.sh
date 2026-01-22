@@ -90,7 +90,8 @@ for whl in "${MOVED_WHEELS[@]}"; do
         UV_VENV_RESULT=$?
 
         if [[ ${UV_VENV_RESULT} -ne 0 ]]; then
-            rapids-logger "Error, failed to create uv venv with Python ${pyver} for wheel ${whl} : ${UV_VENV_OUT}"
+            rapids-logger "Error, failed to create uv venv with Python ${pyver} for wheel ${whl}"
+            echo "${UV_VENV_OUT}"
             exit ${UV_VENV_RESULT}
         fi
 
@@ -101,7 +102,8 @@ for whl in "${MOVED_WHEELS[@]}"; do
         INSTALL_RESULT=$?
 
         if [[ ${INSTALL_RESULT} -ne 0 ]]; then
-            rapids-logger "Error, failed to install wheel ${whl} with Python ${pyver} : ${UV_PIP_OUT}"
+            rapids-logger "Error, failed to install wheel ${whl} with Python ${pyver}"
+            echo "${UV_PIP_OUT}"
             exit ${INSTALL_RESULT}
         fi
 
@@ -110,7 +112,8 @@ for whl in "${MOVED_WHEELS[@]}"; do
         IMPORT_TEST_RESULT=$?
 
        if [[ ${IMPORT_TEST_RESULT} -ne 0 ]]; then
-            rapids-logger "Error, failed to import nat from wheel ${whl} with Python ${pyver} : ${PYTHON_IMPORT_OUT}"
+            rapids-logger "Error, failed to import nat from wheel ${whl} with Python ${pyver}"
+            echo "${PYTHON_IMPORT_OUT}"
             exit ${IMPORT_TEST_RESULT}
         fi
 
@@ -118,7 +121,8 @@ for whl in "${MOVED_WHEELS[@]}"; do
         NAT_CMD_EXIT_CODE=$?
 
         if [[ ${NAT_CMD_EXIT_CODE} -ne 0 ]]; then
-            rapids-logger "Error 'nat --version' command failed exit code ${NAT_CMD_EXIT_CODE} from wheel ${whl} with Python ${pyver} : ${REPORTED_VERSION}"
+            rapids-logger "Error 'nat --version' command failed exit code ${NAT_CMD_EXIT_CODE} from wheel ${whl} with Python ${pyver}"
+            echo "${REPORTED_VERSION}"
             exit ${NAT_CMD_EXIT_CODE}
         fi
 
