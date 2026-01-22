@@ -93,6 +93,20 @@ def fixture_middleware_context():
                                      stream_output_schema=type(None))
 
 
+def test_separator_constant_value():
+    """
+    Guardrail: Alerts when FunctionGroup.SEPARATOR changes.
+
+    Defense middleware uses this separator to match target_function_or_group
+    in YAML configs against runtime function names.
+    """
+    assert FunctionGroup.SEPARATOR == "__", (
+        f"FunctionGroup.SEPARATOR changed to '{FunctionGroup.SEPARATOR}'! "
+        "Update defense YAML configs: change 'target_function_or_group' values "
+        "(e.g., 'group__func' must use the new separator)."
+    )
+
+
 class TestDefenseMiddlewareTargeting:
     """Test defense middleware targeting logic."""
 
