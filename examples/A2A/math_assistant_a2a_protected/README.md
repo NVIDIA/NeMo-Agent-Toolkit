@@ -381,7 +381,7 @@ curl -sS http://localhost:10000/.well-known/agent-card.json | python3 -m json.to
 If you started the math assistant with `nat serve`, verify the server is reachable:
 
 ```bash
-curl -sS http://localhost:8080/openapi.json | python3 -m json.tool
+curl -sS http://localhost:8000/openapi.json | python3 -m json.tool
 ```
 
 If you prefer a quick HTTP status check, follow redirects:
