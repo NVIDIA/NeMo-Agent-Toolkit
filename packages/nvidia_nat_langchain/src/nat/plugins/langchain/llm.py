@@ -169,9 +169,14 @@ async def nim_langchain(llm_config: NIMModelConfig, _builder: Builder):
         exclude_none=True,
         exclude_unset=True,
     )
+
+    # Merge injected model_kwargs with any user-provided model_kwargs (user takes precedence)
+    existing = client_kwargs.get("model_kwargs", {})
+    merged = {**model_kwargs, **existing}
+    if merged:
+        client_kwargs["model_kwargs"] = merged
+
     client_kwargs["max_completion_tokens"] = llm_config.max_tokens
-    if model_kwargs:
-        client_kwargs["model_kwargs"] = model_kwargs
 
     client = ChatNVIDIA(**client_kwargs)
 
