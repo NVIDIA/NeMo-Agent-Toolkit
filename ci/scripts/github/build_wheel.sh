@@ -82,12 +82,20 @@ for whl in ${BUILT_WHEELS}; do
         fi
 
         # run a simple command to verify installation
-        python -c "import nat; print(nat.__version__)"
+        python -c "import nat"
         IMPORT_TEST_RESULT=$?
 
-        if [[ ${IMPORT_TEST_RESULT} -ne 0 ]]; then
+       if [[ ${IMPORT_TEST_RESULT} -ne 0 ]]; then
             rapids-logger "Error, failed to import nat from wheel ${whl} with Python ${pyver}"
             exit ${IMPORT_TEST_RESULT}
+        fi
+
+        REPORTED_VERSION=$(nat --version 2>&1)
+        NAT_CMD_EXIT_CODE=$?
+
+        if [[ ${NAT_CMD_EXIT_CODE} -ne 0 ]]; then
+            rapids-logger "Error 'nat --version' command failed exit code ${NAT_CMD_EXIT_CODE} from wheel ${whl} with Python ${pyver} : ${REPORTED_VERSION}"
+            exit ${NAT_CMD_EXIT_CODE}
         fi
 
         set -e
