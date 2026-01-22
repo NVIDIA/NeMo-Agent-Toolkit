@@ -96,11 +96,11 @@ for whl in "${MOVED_WHEELS[@]}"; do
         PYTHON_IMPORT_OUT=$(python -c "import nat" 2>&1)
         IMPORT_TEST_RESULT=$?
 
-       if [[ ${IMPORT_TEST_RESULT} -ne 0 ]]; then
+        if [[ ${IMPORT_TEST_RESULT} -ne 0 ]]; then
             rapids-logger "Error, failed to import nat from wheel ${whl} with Python ${pyver}"
             echo "${PYTHON_IMPORT_OUT}"
             exit ${IMPORT_TEST_RESULT}
-        fi
+         fi
 
         REPORTED_VERSION=$(nat --version 2>&1)
         NAT_CMD_EXIT_CODE=$?
