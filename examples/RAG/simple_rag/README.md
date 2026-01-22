@@ -46,11 +46,7 @@ This is a simple example RAG application to showcase how one can configure and u
     - [What the Library Provides](#what-the-library-provides)
     - [Prerequisites](#prerequisites-1)
     - [Bootstrap Data](#bootstrap-data-1)
-    - [How the Pipeline Works](#how-the-pipeline-works)
-      - [Two-Stage Retrieval](#two-stage-retrieval)
-      - [Query Rewriting](#query-rewriting)
-      - [Confidence Filtering](#confidence-filtering)
-      - [Structured Citations](#structured-citations)
+    - [Key Capabilities](#key-capabilities)
     - [Integration with NeMo Agent Toolkit Components](#integration-with-nemo-agent-toolkit-components)
     - [RAG-Specific Configuration](#rag-specific-configuration)
     - [Example Configuration](#example-configuration)
@@ -372,13 +368,13 @@ The final workflow result should look similar to the following:
 
 ## Advanced RAG with NVIDIA RAG Library
 
-The NVIDIA RAG Library plugin (`nvidia_rag_lib`) integrates the [NVIDIA RAG Blueprint](https://github.com/NVIDIA-AI-Blueprints/rag) pipeline into NeMo Agent Toolkit. The NVIDIA RAG Blueprint is NVIDIA's reference solution for building production RAG systems that ground AI responses in enterprise knowledge, reducing hallucinations and ensuring accuracy.
+The NVIDIA RAG Library (`nvidia_rag_lib`) integrates the [NVIDIA RAG Blueprint](https://github.com/NVIDIA-AI-Blueprints/rag) pipeline into NeMo Agent Toolkit.
 
 The library handles the complexity of multi-stage retrieval, semantic reranking, and query optimization, allowing you to focus on building your application rather than implementing RAG infrastructure.
 
 ### What the Library Provides
 
-The `nvidia_rag_lib` plugin provides agent tools powered by the NVIDIA RAG pipeline.
+The `nvidia_rag_lib` library provides agent tools powered by the NVIDIA RAG pipeline.
 
 - **Multi-stage retrieval** with configurable candidate pools and reranking
 - **Semantic reranking** using NeMo Retriever models
@@ -391,7 +387,7 @@ All of these features are managed by the library and configured declaratively in
 
 ### Prerequisites
 
-Install the NVIDIA RAG Library plugin:
+Install the NVIDIA RAG Library:
 ```bash
 uv pip install -e packages/nvidia_nat_rag_lib
 ```
@@ -407,40 +403,18 @@ python scripts/langchain_web_ingest.py \
     --drop_collection
 ```
 
-### How the Pipeline Works
+### Key Capabilities
 
-The `nvidia_rag_lib` plugin orchestrates a multi-stage retrieval pipeline based on the NVIDIA RAG Blueprint. Each stage is handled automatically based on your configuration.
+The `nvidia_rag_lib` library orchestrates a multi-stage retrieval pipeline with the following capabilities:
 
-#### Two-Stage Retrieval
-
-A recall-then-precision approach balances thoroughness with relevance:
-
-1. **Stage 1 - Vector Search (Recall):** A large candidate pool is retrieved using embedding similarity, casting a wide net to ensure relevant documents are not missed.
-
-2. **Stage 2 - Reranking (Precision):** Candidates pass through a semantic reranker that scores relevance to the query, narrowing down to the most relevant results.
-
-```text
-Query → Embed → Retrieve candidates → Rerank → Final results
-```
-
-#### Query Rewriting
-
-When enabled, an LLM reformulates user queries before searching. This helps when:
-- User queries are conversational or ambiguous
-- Technical terminology varies across documents
-- Queries benefit from expansion or clarification
-
-#### Confidence Filtering
-
-Results below a confidence threshold are automatically filtered out, preventing low-quality matches from reaching the agent.
-
-#### Structured Citations
-
-Search results include document metadata (document name, relevance score) in a structured format, enabling source attribution and traceability in responses.
+- **Two-stage retrieval:** Combines broad vector search (recall) with semantic reranking (precision) to surface the most relevant results
+- **Query rewriting:** LLM reformulates ambiguous or conversational queries before searching
+- **Confidence filtering:** Automatically filters out low-quality matches below a configurable threshold
+- **Structured citations:** Returns document metadata (name, relevance score) for source attribution
 
 ### Integration with NeMo Agent Toolkit Components
 
-The `nvidia_rag_lib` plugin integrates with standard NeMo Agent toolkit components. You configure `llms`, `embedders`, and `retrievers` sections as usual. The plugin references these components by name:
+The `nvidia_rag_lib` library integrates with standard NeMo Agent toolkit components. You configure `llms`, `embedders`, and `retrievers` sections as usual. The library references these components by name:
 
 ```yaml
 function_groups:
@@ -455,7 +429,7 @@ This means you can reuse existing NeMo Agent toolkit infrastructure definitions 
 
 ### RAG-Specific Configuration
 
-The plugin adds configuration specific to the RAG pipeline. These fields differ from a standard NeMo Agent toolkit retriever setup:
+The library adds configuration specific to the RAG pipeline. These fields differ from a standard NeMo Agent toolkit retriever setup:
 
 | Field | Purpose |
 |-------|---------|
