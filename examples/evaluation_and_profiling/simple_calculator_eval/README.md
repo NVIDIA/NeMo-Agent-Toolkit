@@ -17,6 +17,8 @@ limitations under the License.
 
 # Simple Calculator - Evaluation and Profiling
 
+**Complexity:** 🟨 Intermediate
+
 This example demonstrates how to evaluate and profile AI agent performance using the NVIDIA NeMo Agent toolkit. You'll learn to systematically measure your agent's accuracy and analyze its behavior using the Simple Calculator workflow.
 
 ## Key Features

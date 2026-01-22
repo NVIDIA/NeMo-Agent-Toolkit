@@ -17,6 +17,8 @@ limitations under the License.
 
 # Simple Calculator with Observability and Tracing
 
+**Complexity:** 🟨 Intermediate
+
 This example demonstrates how to implement **observability and tracing capabilities** using the NVIDIA NeMo Agent toolkit. You'll learn to monitor, trace, and analyze your AI agent's behavior in real-time using the Simple Calculator workflow.
 
 ## Key Features

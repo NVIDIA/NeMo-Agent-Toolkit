@@ -22,6 +22,7 @@ from unittest.mock import patch
 import pytest
 from pydantic import BaseModel
 
+from nat.builder.function import FunctionGroup
 from nat.middleware.defense.defense_middleware_pii import PIIDefenseMiddleware
 from nat.middleware.defense.defense_middleware_pii import PIIDefenseMiddlewareConfig
 from nat.middleware.middleware import FunctionMiddlewareContext
@@ -47,7 +48,7 @@ def fixture_mock_builder():
 @pytest.fixture(name="middleware_context")
 def fixture_middleware_context():
     """Create a test FunctionMiddlewareContext."""
-    return FunctionMiddlewareContext(name="my_calculator.get_random_string",
+    return FunctionMiddlewareContext(name=f"my_calculator{FunctionGroup.SEPARATOR}get_random_string",
                                      config=MagicMock(),
                                      description="Get random string",
                                      input_schema=_TestInput,
@@ -377,8 +378,9 @@ class TestPIIDefenseInvoke:
         assert result == "content"
 
         # Test specific function targeting
-        config = PIIDefenseMiddlewareConfig(target_function_or_group="my_calculator.get_random_string",
-                                            action="partial_compliance")
+        config = PIIDefenseMiddlewareConfig(
+            target_function_or_group=f"my_calculator{FunctionGroup.SEPARATOR}get_random_string",
+            action="partial_compliance")
         middleware = PIIDefenseMiddleware(config, mock_builder)
         middleware._analyzer = mock_analyzer
         middleware._anonymizer = MagicMock()
@@ -389,7 +391,7 @@ class TestPIIDefenseInvoke:
         assert result == "content"
 
         # Test non-targeted function skips defense
-        config = PIIDefenseMiddlewareConfig(target_function_or_group="calculator.invalid_func",
+        config = PIIDefenseMiddlewareConfig(target_function_or_group=f"calculator{FunctionGroup.SEPARATOR}invalid_func",
                                             action="partial_compliance")
         middleware = PIIDefenseMiddleware(config, mock_builder)
         mock_analyzer.analyze.reset_mock()

@@ -17,6 +17,8 @@ limitations under the License.
 
 # NeMo Agent Toolkit Profiler Agent
 
+**Complexity:** 🟨 Intermediate
+
 The profiler agent is a tool that allows you to analyze the performance of NeMo Agent toolkit workflows. It uses the Phoenix server to store and retrieve traces of workflow runs.
 
 ## Table of Contents

@@ -18,7 +18,9 @@ limitations under the License.
 
 # AutoGen Framework Example
 
-A quick example using Microsoft's AutoGen framework showcasing a multi-agent weather and time information system where agents collaborate through AutoGen's conversation system to provide accurate weather and time data for specified cities.
+**Complexity:** 🟨 Intermediate
+
+A quick example using the AutoGen framework from Microsoft, showcasing a multi-agent Los Angeles traffic information system where agents collaborate through the AutoGen conversation system to provide real-time traffic status for highways based on the current time of day.  
 
 ## Table of Contents
 
@@ -33,7 +35,6 @@ A quick example using Microsoft's AutoGen framework showcasing a multi-agent wea
     - [Set up the MCP Server](#set-up-the-mcp-server)
     - [Expected Output](#expected-output)
   - [Observability with Phoenix](#observability-with-phoenix)
-    - [Install Phoenix Dependencies](#install-phoenix-dependencies)
     - [Start Phoenix Server](#start-phoenix-server)
     - [Run with Tracing Enabled](#run-with-tracing-enabled)
     - [View Traces in Phoenix](#view-traces-in-phoenix)
@@ -47,9 +48,10 @@ A quick example using Microsoft's AutoGen framework showcasing a multi-agent wea
 ## Key Features
 
 - **AutoGen Framework Integration:** Demonstrates the NVIDIA NeMo Agent toolkit support for Microsoft's AutoGen framework alongside other frameworks like LangChain/LangGraph and Semantic Kernel.
-- **Multi-Agent Collaboration:** Shows two specialized agents working together - a WeatherAndTimeAgent for data retrieval and a FinalResponseAgent for response formatting.
-- **Unified Tool Integration:** Uses the unified abstraction provided by the toolkit to integrate both local tools (weather updates) and MCP tools (time service) without framework-specific code. MCP servers are hosted using the native MCP server included in the toolkit and integrated with AutoGen as a function.
-- **Round-Robin Group Chat:** Uses AutoGen's RoundRobinGroupChat for structured agent communication with termination conditions.
+- **Multi-Agent Collaboration:** Shows two specialized agents working together - a TrafficAgent for data retrieval and a FinalResponseAgent for response formatting.
+- **Time-Aware Traffic Status:** Provides realistic traffic information that varies based on time of day (morning rush, evening rush, off-peak hours).
+- **Unified Tool Integration:** Uses the unified abstraction provided by the toolkit to integrate both local tools (traffic status) and MCP tools (time service) without framework-specific code. MCP servers are hosted using the native MCP server included in the toolkit and integrated with AutoGen as a function.
+- **Round-Robin Group Chat:** Uses the AutoGen `RoundRobinGroupChat` for structured agent communication with termination conditions.
 
 ## Prerequisites
 
@@ -68,12 +70,15 @@ If you have not already done so, follow the instructions in the [Install Guide](
 From the root directory of the NeMo Agent toolkit repository, run the following commands:
 
 ```bash
+# Install the demo workflow and its dependencies (this also installs the core toolkit and required plugins)
+uv pip install -e examples/frameworks/nat_autogen_demo
+
 # Required to run the current_datetime MCP tool used in the example workflow
 uv pip install -e examples/getting_started/simple_calculator
 
-uv pip install -e ".[mcp]"
-
-uv pip install -e examples/frameworks/nat_autogen_demo
+# Optional: Install Phoenix for observability and tracing
+uv pip install -e '.[phoenix]'
+uv pip install arize-phoenix
 
 uv pip install matplotlib
 ```
@@ -82,9 +87,11 @@ uv pip install matplotlib
 
 If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/get-started/installation.md#obtain-api-keys) instructions to obtain API keys.
 
-For NVIDIA NIM, export the following:
+For NVIDIA NIM, set the following environment variable:
 
-- `NVIDIA_API_KEY`
+```bash
+export NVIDIA_API_KEY="YOUR-NVIDIA-API-KEY-HERE"
+```
 
 ## Run the Workflow
 
@@ -98,27 +105,32 @@ In a separate terminal, or in the background, run the MCP server with this comma
 nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml --tool_names current_datetime
 ```
 
+> [!NOTE]
+> If the MCP server is not started as a background task (using the `&` operator), you will need to open a new terminal session, activate the uv environment, and export NVIDIA_API_KEY again.
+
 Then, run the workflow with the CLI provided by the toolkit:
 
 ```bash
-nat run --config_file examples/frameworks/nat_autogen_demo/configs/config.yml --input "What is the weather and time in New York today?"
+nat run --config_file examples/frameworks/nat_autogen_demo/configs/config.yml --input "What is the current traffic on the 405 South?"
 ```
 
 ### Expected Output
 
 ```console
-2025-10-07 14:34:28,122 - nat.cli.commands.start - INFO - Starting NAT from config file: 'examples/frameworks/nat_autogen_demo/configs/config.yml'
-2025-10-07 14:34:30,285 - mcp.client.streamable_http - INFO - Received session ID: 652a05b6646c4ddb945cf2adf0b3ec18
-Received session ID: 652a05b6646c4ddb945cf2adf0b3ec18
-2025-10-07 14:34:30,287 - mcp.client.streamable_http - INFO - Negotiated protocol version: 2025-06-18
-Negotiated protocol version: 2025-06-18
+% nat run --config_file examples/frameworks/nat_autogen_demo/configs/config.yml --input "What is the current traffic on the 405 South?"
+2026-01-16 11:30:54 - INFO     - nat.cli.commands.start:192 - Starting NAT from config file: 'examples/frameworks/nat_autogen_demo/configs/config.yml'
+2026-01-16 11:30:54 - INFO     - nat.plugins.mcp.client.client_impl:569 - Configured to use MCP server at streamable-http:http://localhost:9901/mcp
+2026-01-16 11:30:54 - INFO     - mcp.client.streamable_http:181 - Received session ID: 2bcaa3850f3f47258ac2d379811aff58
+2026-01-16 11:30:54 - INFO     - mcp.client.streamable_http:193 - Negotiated protocol version: 2025-11-25
+2026-01-16 11:30:54 - WARNING  - nat.builder.function_info:455 - Using provided input_schema for multi-argument function
+2026-01-16 11:30:54 - INFO     - nat.plugins.mcp.client.client_impl:618 - Adding tool current_datetime to group
 
 Configuration Summary:
 --------------------
 Workflow Type: autogen_team
 Number of Functions: 1
-Number of Function Groups: 0
-Number of LLMs: 1
+Number of Function Groups: 1
+Number of LLMs: 3
 Number of Embedders: 0
 Number of Memory: 0
 Number of Object Stores: 0
@@ -126,37 +138,17 @@ Number of Retrievers: 0
 Number of TTC Strategies: 0
 Number of Authentication Providers: 0
 
-2025-10-07 14:34:30,301 - nat.observability.exporter_manager - INFO - Started exporter 'otelcollector'
-2025-10-07 14:34:46,704 - nat.front_ends.console.console_front_end_plugin - INFO -
-.
-.
-.
-<snipped for brevity>
-.
-.
-.
+<Intermediate logs snipped for brevity>
+
 --------------------------------------------------
 Workflow Result:
-['New York weather: Sunny, around 25°C (77°F).\nCurrent local time in New York: 5:34 PM EDT (UTC−4) on October 7, 2025.\n\nAPPROVE']
---------------------------------------------------
+["The current traffic conditions on the 405 South are as follows:\n\n* Time: 7:30 PM (January 16, 2026)\n* Segment: Mulholland Drive to LAX\n* Traffic Conditions: Light\n\nIt appears that traffic is relatively clear on the 405 South, likely due to commuters heading in the opposite direction (north). You should expect a smooth drive if you're traveling on this segment.\n\nAPPROVE"]
 
 ```
 
 ## Observability with Phoenix
 
-This section demonstrates how to enable distributed tracing using Phoenix to monitor and analyze the AutoGen workflow execution.
-
-### Install Phoenix Dependencies
-
-Phoenix requires the NeMo Agent toolkit Phoenix plugin and the Phoenix server. Install them with:
-
-```bash
-# Install NAT Phoenix plugin for tracing integration
-uv pip install "nvidia-nat[phoenix]"
-
-# Install Phoenix server
-uv pip install arize-phoenix
-```
+This section demonstrates how to enable distributed tracing using Phoenix to monitor and analyze the AutoGen workflow execution. Phoenix dependencies are included in the installation steps above.
 
 ### Start Phoenix Server
 
@@ -168,21 +160,24 @@ phoenix serve
 
 Phoenix runs on `http://localhost:6006` with the tracing endpoint at `http://localhost:6006/v1/traces`.
 
+> [!NOTE]
+> If Phoenix is not started as a background task (using the `&` operator), you will need to open a new terminal session, activate the uv environment, and export NVIDIA_API_KEY again.
+
 ### Run with Tracing Enabled
 
 With Phoenix running, execute the workflow using the evaluation config which has tracing enabled:
 
 ```bash
 nat run --config_file examples/frameworks/nat_autogen_demo/configs/config-eval.yml \
-  --input "What is the weather and time in New York?"
+  --input "What is the current traffic on the 10 West?"
 ```
 
 ### View Traces in Phoenix
 
 Open your browser to `http://localhost:6006` to explore traces in the Phoenix UI. You can see:
 
-- **Agent execution flow**: Track the conversation between WeatherAndTimeAgent and FinalResponseAgent
-- **Tool invocations**: Monitor calls to `weather_update_tool` and `current_datetime`
+- **Agent execution flow**: Track the conversation between TrafficAgent and FinalResponseAgent
+- **Tool invocations**: Monitor calls to `traffic_status_tool` and `current_datetime`
 - **LLM interactions**: View prompts, completions, and token usage
 - **Timing metrics**: Analyze latency across different workflow components
 
@@ -192,15 +187,21 @@ NeMo Agent toolkit provides a comprehensive evaluation framework to assess your 
 
 ### Evaluation Dataset
 
-The evaluation dataset contains three test cases with different cities:
+The evaluation dataset contains three test cases with different Los Angeles highways:
 
-| ID | City | Description |
-|----|------|-------------|
-| 1 | New York | Weather and time in Eastern Time zone |
-| 2 | London | Weather and time in British Time zone |
-| 3 | Tokyo | Weather and time in Japan Standard Time zone |
+| ID | Highway | Direction | Description |
+|----|---------|-----------|-------------|
+| 1 | 405 | South | Major freeway connecting San Fernando Valley to LAX |
+| 2 | 10 | West | Santa Monica Freeway from Downtown LA to Santa Monica |
+| 3 | 110 | North | Harbor Freeway from Long Beach to Pasadena |
 
-The dataset is located at `examples/frameworks/nat_autogen_demo/data/eval_dataset.json`.
+The dataset is located at `examples/frameworks/nat_autogen_demo/data/toy_data.json`.
+
+Traffic status varies by time period:
+
+- **Morning Rush (7-9 AM):** Inbound routes (405-South, 110-South, 10-East, 210-East) are heavy
+- **Evening Rush (4-7 PM):** Outbound routes (405-North, 110-North, 10-West, 210-West) are heavy
+- **Off-Peak:** All routes are light
 
 ### Run the Evaluation
 
@@ -208,10 +209,10 @@ Ensure both the MCP server and Phoenix are running, then execute the evaluation:
 
 ```bash
 # Terminal 1: Start MCP server (if not already running)
-nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml --tool_names current_datetime
+# nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml --tool_names current_datetime
 
 # Terminal 2: Start Phoenix server (if not already running)
-phoenix serve
+# phoenix serve
 
 # Terminal 3: Run evaluation
 nat eval --config_file examples/frameworks/nat_autogen_demo/configs/config-eval.yml
@@ -219,13 +220,13 @@ nat eval --config_file examples/frameworks/nat_autogen_demo/configs/config-eval.
 
 The evaluation runs the workflow against all three test cases and evaluates results using:
 
-- **Answer Accuracy**: Measures how accurately the agent answers the questions
-- **Response groundedness**: Evaluates whether responses are grounded in the tool outputs
-- **Trajectory Accuracy**: Assesses the agent's decision-making path and tool usage
+- **Answer `Accuracy`**: Measures how accurately the agent answers the questions
+- **Response `Groundedness`**: Evaluates whether responses are grounded in the tool outputs
+- **Trajectory `Accuracy`**: Assesses the agent's decision-making path and tool usage
 
 ### Understanding Evaluation Results
 
-The `nat eval` command produces several output files in `.tmp/nat/examples/frameworks/nat_autogen_demo/eval/`:
+The `nat eval` command produces several output files in `.tmp/nat/examples/frameworks/nat_autogen_demo/traffic_eval/`:
 
 - **`workflow_output.json`**: Raw outputs from the workflow for each input
 - **Evaluator-specific files**: Each configured evaluator generates its own output file with scores and reasoning
@@ -242,7 +243,7 @@ accuracy: 0.85
 groundedness: 0.90
 trajectory_accuracy: 0.88
 
-Detailed results saved to: .tmp/nat/examples/frameworks/nat_autogen_demo/eval/
+Detailed results saved to: .tmp/nat/examples/frameworks/nat_autogen_demo/traffic_eval/
 ```
 
 Each evaluator provides:
@@ -257,9 +258,9 @@ View detailed traces for each evaluation run in Phoenix at `http://localhost:600
 
 The AutoGen workflow consists of two main agents:
 
-1. **WeatherAndTimeAgent**: Retrieves weather and time information using tools
-   - Uses the `weather_update_tool` for current weather conditions
-   - Uses the `mcp_time` tool group for accurate time information (configured through the MCP client provided by the toolkit)
+1. **TrafficAgent**: Retrieves traffic information using tools
+   - Uses the `current_datetime` MCP tool to get the current time
+   - Uses the `traffic_status_tool` to get traffic conditions for LA highways based on the hour
    - Responds with "DONE" when task is completed
 
 2. **FinalResponseAgent**: Formats and presents the final response
@@ -273,7 +274,7 @@ The agents communicate through AutoGen's RoundRobinGroupChat system, which manag
 
 This example demonstrates the unified approach to tool integration provided by NeMo Agent toolkit:
 
-- **Local tools** (like `weather_update_tool`) are defined as functions in the toolkit
-- **MCP tools** (like `mcp_time`) are configured in YAML using the `mcp_client` function group provided by the toolkit
+- **Local tools** (like `traffic_status_tool`) are defined as functions in the toolkit and provide time-aware traffic data for Los Angeles highways
+- **MCP tools** (like `current_datetime`) are configured in YAML using the `mcp_client` function group provided by the toolkit
 
 Both types of tools are passed to AutoGen agents through the `builder.get_tools()` method included in the toolkit, which automatically wraps them for the target framework. This eliminates the need for framework-specific MCP integration code and provides a consistent interface across all supported frameworks (AutoGen, LangChain, Semantic Kernel, and others).

@@ -17,6 +17,8 @@ limitations under the License.
 <!-- path-check-skip-file -->
 # Google Agent Development Kit (ADK) Example
 
+**Complexity:** 🟢 Beginner
+
 A minimal example using Agent Development Kit showcasing a simple weather and time agent that can call multiple tools.
 
 ## Installation and Setup

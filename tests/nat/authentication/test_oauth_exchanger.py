@@ -20,6 +20,7 @@ from datetime import datetime
 from datetime import timedelta
 
 import pytest
+from pydantic import SecretStr
 
 from nat.authentication.oauth2.oauth2_auth_code_flow_provider import OAuth2AuthCodeFlowProvider
 from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
@@ -49,7 +50,7 @@ def _patch_context(
 @pytest.fixture()
 def cfg() -> OAuth2AuthCodeFlowProviderConfig:
     return OAuth2AuthCodeFlowProviderConfig(client_id="cid",
-                                            client_secret="secret",
+                                            client_secret=SecretStr("secret"),
                                             authorization_url="https://example.com/auth",
                                             token_url="https://example.com/token",
                                             scopes=["openid", "profile"],
@@ -75,7 +76,7 @@ def _bearer_ctx(token: str, expires_at: datetime) -> AuthenticatedContext:
 def test_config_redirect_uri_defaults():
     cfg = OAuth2AuthCodeFlowProviderConfig(
         client_id="id",
-        client_secret="sec",
+        client_secret=SecretStr("sec"),
         authorization_url="a",
         token_url="t",
         redirect_uri="http://localhost:8000/auth/redirect",
@@ -143,9 +144,13 @@ async def test_authenticate_caches(monkeypatch, cfg):
 async def test_refresh_expired_token(monkeypatch, cfg):
     future_ts = int((datetime.now(UTC) + timedelta(minutes=20)).timestamp())
 
+    REF_TOKEN = "refTok"
+    NEW_TOKEN = "newTok"
+    USER = "bob"
+
     class _DummyAuthlibClient:
 
-        def __init__(self, *args, **kwargs):  # ← NEW
+        def __init__(self, *_args, **_kwargs):
             pass
 
         def __enter__(self):
@@ -154,10 +159,11 @@ async def test_refresh_expired_token(monkeypatch, cfg):
         def __exit__(self, *_):
             return False
 
-        def refresh_token(self, token_url, refresh_token):
+        def refresh_token(self, token_url, client_id, refresh_token):
             assert token_url == cfg.token_url
-            assert refresh_token == "refTok"
-            return {"access_token": "newTok", "expires_at": future_ts}
+            assert refresh_token == REF_TOKEN
+            assert client_id == cfg.client_id
+            return {"access_token": NEW_TOKEN, "expires_at": future_ts}
 
     # **fixed patch line**
     monkeypatch.setattr(
@@ -174,15 +180,17 @@ async def test_refresh_expired_token(monkeypatch, cfg):
     client = OAuth2AuthCodeFlowProvider(cfg)
     past = datetime.now(UTC) - timedelta(seconds=1)
     await client._token_storage.store(
-        "bob",
+        USER,
         AuthResult(
             credentials=[BearerTokenCred(token="stale")],  # type: ignore[arg-type]
             token_expires_at=past,
-            raw={"refresh_token": "refTok"},
+            raw={"refresh_token": REF_TOKEN},
         ))
 
-    res = await client.authenticate("bob")
-    assert res.credentials[0].token.get_secret_value() == "newTok"
+    res = await client.authenticate(USER)
+    cred = res.credentials[0]
+    assert isinstance(cred, BearerTokenCred)
+    assert cred.token.get_secret_value() == NEW_TOKEN
 
 
 # --------------------------------------------------------------------------- #
@@ -192,7 +200,7 @@ async def test_refresh_fallback_to_callback(monkeypatch, cfg):
 
     class _RaisingClient:
 
-        def __init__(self, *args, **kwargs):  # ← NEW
+        def __init__(self, *_args, **_kwargs):
             pass
 
         def __enter__(self):
@@ -234,7 +242,9 @@ async def test_refresh_fallback_to_callback(monkeypatch, cfg):
 
     res = await client.authenticate("eve")
     assert hits["n"] == 1
-    assert res.credentials[0].token.get_secret_value() == "fallbackTok"
+    cred = res.credentials[0]
+    assert isinstance(cred, BearerTokenCred)
+    assert cred.token.get_secret_value() == "fallbackTok"
 
 
 # --------------------------------------------------------------------------- #

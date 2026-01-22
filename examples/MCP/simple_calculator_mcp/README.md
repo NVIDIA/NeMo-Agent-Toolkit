@@ -17,6 +17,8 @@ limitations under the License.
 
 # Simple Calculator - Model Context Protocol (MCP)
 
+**Complexity:** 🟢 Beginner
+
 This example demonstrates how to integrate the NVIDIA NeMo Agent toolkit with [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol/modelcontextprotocol) servers. You'll learn to use remote tools through MCP and publish Agent toolkit functions as MCP services.
 
 This example uses **shared workflow** mode, allowing multiple users to interact concurrently using the same unprotected MCP calculator tools. This is useful for development and testing purposes.

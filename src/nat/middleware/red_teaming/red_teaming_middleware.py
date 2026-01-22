@@ -123,11 +123,13 @@ class RedTeamingMiddleware(FunctionMiddleware):
         """Check if this function should be attacked based on targeting configuration.
 
         Args:
-            context_name: The name of the function from context (e.g., "calculator.add")
+            context_name: The name of the function from context (e.g., "calculator__add")
 
         Returns:
             True if the function should be attacked, False otherwise
         """
+        from nat.builder.function import FunctionGroup
+
         # If no target specified, attack all functions
         if self._target_function_or_group is None:
             return True
@@ -135,15 +137,15 @@ class RedTeamingMiddleware(FunctionMiddleware):
         target = self._target_function_or_group
 
         # Group targeting - match if context starts with the group name
-        # Handle both "group.function" and just "function" in context
-        if "." in context_name and "." not in target:
-            context_group = context_name.split(".", 1)[0]
+        # Handle both "group__function" and just "function" in context
+        if FunctionGroup.SEPARATOR in context_name and FunctionGroup.SEPARATOR not in target:
+            context_group = context_name.split(FunctionGroup.SEPARATOR, 1)[0]
             return context_group == target
 
         if context_name == "<workflow>":
             return target in {"<workflow>", "workflow"}
 
-        # If context has no dot, match if it equals the target exactly
+        # Exact match for specific function
         return context_name == target
 
     def _find_middle_sentence_index(self, text: str) -> int:
