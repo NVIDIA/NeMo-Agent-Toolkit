@@ -49,6 +49,7 @@ config-settings = { editable_mode = "compat" }
 
 [tool.uv.sources]
 nvidia-nat = { workspace = true }
+nvidia-rag = { path = "vendor/nvidia_rag-2.4.0.dev0-py3-none-any.whl" }  # TODO: Remove when nvidia-rag>=2.4.0 is on PyPI
 
 
 [project.entry-points.'nat.components']
