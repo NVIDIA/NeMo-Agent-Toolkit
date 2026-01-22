@@ -65,6 +65,20 @@ TEMP_INSTALL_LOCATION="${WORKSPACE_TMP}/wheel_test_env"
 
 PYTHON_VERSIONS_TO_TEST=("3.11" "3.12" "3.13")
 BUILT_WHEELS=$(ls -1 "${WHEELS_BASE_DIR}"/*.whl)
+
+for pyver in "${PYTHON_VERSIONS_TO_TEST[@]}"; do
+    set +e
+    uv python find ${pyver} &> /dev/null
+    PYTHON_FIND_RESULT=$?
+    set -e
+    if [[ ${PYTHON_FIND_RESULT} -ne 0 ]]; then
+        rapids-logger "Downloading Python version ${pyver} for testing"
+
+        # In common.sh we set this to never, we want to override that for testing
+        UV_PYTHON_DOWNLOADS="manual" uv python install ${pyver}
+    fi
+done
+
 for whl in ${BUILT_WHEELS}; do
 
     for pyver in "${PYTHON_VERSIONS_TO_TEST[@]}"; do
