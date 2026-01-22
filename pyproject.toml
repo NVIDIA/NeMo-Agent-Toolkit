@@ -60,7 +60,7 @@ dependencies = [
   "plotly~=6.0",
   "pydantic~=2.11",
   "pymilvus~=2.6",
-  "python-dotenv>=1.1.1",
+  "python-dotenv>=1.1.1,<2.0.0",
   "PyYAML~=6.0",
   "ragas>=0.2.14,<1.0.0", # If you update ragas be sure to update github links in docs/source/workflows/evaluate.md as well
   "rich>=14.0.0,<15.0.0",  # Upgraded from ~=13.9 to support strands-agents-tools (requires >=14.0.0,<15.0.0)
