@@ -83,7 +83,7 @@ for whl in "${MOVED_WHEELS[@]}"; do
         source "${TEMP_INSTALL_LOCATION}/bin/activate"
 
         set +e
-        UV_PIP_OUT=$(uv pip install -q --prerelease=allow --no-build --find-links "${WHEELS_BASE_DIR}" "${whl}" 2>&1)
+        UV_PIP_OUT=$(uv pip install -q --prerelease=allow --find-links "${WHEELS_BASE_DIR}" "${whl}" 2>&1)
         INSTALL_RESULT=$?
 
         if [[ ${INSTALL_RESULT} -ne 0 ]]; then
