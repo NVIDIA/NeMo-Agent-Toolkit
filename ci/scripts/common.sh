@@ -222,6 +222,7 @@ function get_lfs_files() {
     git lfs ls-files
 }
 
+
 function cleanup {
    # Restore the original directory
    popd &> /dev/null

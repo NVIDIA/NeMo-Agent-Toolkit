@@ -54,8 +54,11 @@ fi
 
 # Flatten out the wheels into a single directory for upload
 BUILT_WHEELS=$(find "${WHEELS_BASE_DIR}"/**/ -type f -name "*.whl")
+MOVED_WHEELS=()
 for whl in ${BUILT_WHEELS}; do
-    mv "${whl}" "${WHEELS_BASE_DIR}/"
+    dest_wheel_name="${WHEELS_BASE_DIR}/$(basename "${whl}")"
+    mv "${whl}" "${dest_wheel_name}"
+    MOVED_WHEELS+=("${dest_wheel_name}")
 done
 
 
@@ -64,8 +67,6 @@ deactivate
 TEMP_INSTALL_LOCATION="${WORKSPACE_TMP}/wheel_test_env"
 
 PYTHON_VERSIONS_TO_TEST=("3.11" "3.12" "3.13")
-BUILT_WHEELS=$(ls -1 "${WHEELS_BASE_DIR}"/*.whl)
-
 for pyver in "${PYTHON_VERSIONS_TO_TEST[@]}"; do
     set +e
     uv python find ${pyver} &> /dev/null
@@ -79,7 +80,7 @@ for pyver in "${PYTHON_VERSIONS_TO_TEST[@]}"; do
     fi
 done
 
-for whl in ${BUILT_WHEELS}; do
+for whl in "${MOVED_WHEELS[@]}"; do
 
     for pyver in "${PYTHON_VERSIONS_TO_TEST[@]}"; do
         rapids-logger "Testing wheel: ${whl} with Python ${pyver}"
