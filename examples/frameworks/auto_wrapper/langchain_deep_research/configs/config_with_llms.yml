@@ -17,6 +17,7 @@ llms:
   agent:
     _type: nim
     model: nvidia/nemotron-3-nano-30b-a3b
+    max_tokens: 4096
     extra_body:
       chat_template_kwargs:
         reasoning_budget: 1024
