@@ -14,33 +14,16 @@
 # limitations under the License.
 """Configuration models and type aliases for NVIDIA RAG integration."""
 
-from nvidia_rag.utils.configuration import EmbeddingConfig as NvidiaRAGEmbeddingConfig
+from pydantic import BaseModel
+from pydantic import Field
+
+from nvidia_rag.utils.configuration import RetrieverConfig as NvidiaRAGRetrieverConfig
 from nvidia_rag.utils.configuration import FilterExpressionGeneratorConfig as NvidiaRAGFilterGeneratorConfig
-from nvidia_rag.utils.configuration import LLMConfig as NvidiaRAGLLMConfig
 from nvidia_rag.utils.configuration import QueryDecompositionConfig as NvidiaRAGQueryDecompositionConfig
 from nvidia_rag.utils.configuration import QueryRewriterConfig as NvidiaRAGQueryRewriterConfig
 from nvidia_rag.utils.configuration import RankingConfig as NvidiaRAGRankingConfig
 from nvidia_rag.utils.configuration import ReflectionConfig as NvidiaRAGReflectionConfig
-from nvidia_rag.utils.configuration import RetrieverConfig as NvidiaRAGRetrieverConfig
-from nvidia_rag.utils.configuration import VectorStoreConfig as NvidiaRAGVectorStoreConfig
 from nvidia_rag.utils.configuration import VLMConfig as NvidiaRAGVLMConfig
-from pydantic import BaseModel
-from pydantic import Field
-
-from nat.data_models.component_ref import EmbedderRef
-from nat.data_models.component_ref import LLMRef
-from nat.data_models.component_ref import RetrieverRef
-from nat.embedder.nim_embedder import NIMEmbedderModelConfig
-from nat.llm.nim_llm import NIMModelConfig
-from nat.retriever.milvus.register import MilvusRetrieverConfig
-from nat.retriever.nemo_retriever.register import NemoRetrieverConfig
-
-# Type aliases for component configuration
-LLMConfigType = NIMModelConfig | NvidiaRAGLLMConfig | LLMRef | None
-
-EmbedderConfigType = NIMEmbedderModelConfig | NvidiaRAGEmbeddingConfig | EmbedderRef | None
-
-RetrieverConfigType = MilvusRetrieverConfig | NemoRetrieverConfig | NvidiaRAGVectorStoreConfig | RetrieverRef | None
 
 
 class RAGPipelineConfig(BaseModel):
@@ -51,24 +34,23 @@ class RAGPipelineConfig(BaseModel):
     """
 
     # Search behavior
-    search_settings: NvidiaRAGRetrieverConfig = Field(
-        default_factory=NvidiaRAGRetrieverConfig)  # type: ignore[arg-type]
-    ranking: NvidiaRAGRankingConfig = Field(default_factory=NvidiaRAGRankingConfig)  # type: ignore[arg-type]
+    search_settings: NvidiaRAGRetrieverConfig = Field(default_factory=lambda: NvidiaRAGRetrieverConfig())
+    ranking: NvidiaRAGRankingConfig = Field(default_factory=lambda: NvidiaRAGRankingConfig())
 
     # Query preprocessing (optional)
-    query_rewriter: NvidiaRAGQueryRewriterConfig | None = None
-    filter_generator: NvidiaRAGFilterGeneratorConfig | None = None
-    query_decomposition: NvidiaRAGQueryDecompositionConfig | None = None
+    query_rewriter: NvidiaRAGQueryRewriterConfig | None = Field(default=None)
+    filter_generator: NvidiaRAGFilterGeneratorConfig | None = Field(default=None)
+    query_decomposition: NvidiaRAGQueryDecompositionConfig | None = Field(default=None)
 
     # Response quality (optional)
-    reflection: NvidiaRAGReflectionConfig | None = None
+    reflection: NvidiaRAGReflectionConfig | None = Field(default=None)
 
     # Multimodal (optional)
-    vlm: NvidiaRAGVLMConfig | None = None
+    vlm: NvidiaRAGVLMConfig | None = Field(default=None)
 
     # Pipeline flags
-    enable_citations: bool = True
-    enable_guardrails: bool = False
-    enable_vlm_inference: bool = False
-    vlm_to_llm_fallback: bool = True
-    default_confidence_threshold: float = 0.0
+    enable_citations: bool = Field(default=True)
+    enable_guardrails: bool = Field(default=False)
+    enable_vlm_inference: bool = Field(default=False)
+    vlm_to_llm_fallback: bool = Field(default=True)
+    default_confidence_threshold: float = Field(default=0.0)

@@ -16,6 +16,7 @@
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
+from pydantic import ConfigDict
 
 if TYPE_CHECKING:
     from nvidia_rag.rag_server.response_generator import Citations
@@ -23,13 +24,11 @@ if TYPE_CHECKING:
 
 class RAGResultBase(BaseModel):
     """Base model for RAG tool results."""
-
-    model_config = {"arbitrary_types_allowed": True}
+    model_config = ConfigDict(extra="allow")
 
 
 class RAGSearchResult(RAGResultBase):
     """RAG search result."""
-
     citations: "Citations"
 
     def __str__(self) -> str:
@@ -38,7 +37,6 @@ class RAGSearchResult(RAGResultBase):
 
 class RAGGenerateResult(RAGResultBase):
     """RAG generation result."""
-
     answer: str
     citations: "Citations | None" = None
 
