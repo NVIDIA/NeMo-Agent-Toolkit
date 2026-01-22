@@ -72,9 +72,9 @@ for pyver in "${PYTHON_VERSIONS_TO_TEST[@]}"; do
     PYTHON_FIND_RESULT=$?
     set -e
     if [[ ${PYTHON_FIND_RESULT} -ne 0 ]]; then
-        rapids-logger "Downloading Python version ${pyver} for testing"
+        rapids-logger "Downloading Python version ${pyver}"
 
-        # In common.sh we set this to never, we want to override that for testing
+        # In common.sh we set this to never, we want to override that here
         UV_PYTHON_DOWNLOADS="manual" uv python install ${pyver}
     fi
 done
@@ -87,7 +87,7 @@ for whl in ${BUILT_WHEELS}; do
         source "${TEMP_INSTALL_LOCATION}/bin/activate"
 
         set +e
-        uv pip install --find-links "${WHEELS_BASE_DIR}" "${whl}"
+        uv pip install --prerelease=allow --find-links "${WHEELS_BASE_DIR}" "${whl}"
         INSTALL_RESULT=$?
 
         if [[ ${INSTALL_RESULT} -ne 0 ]]; then
