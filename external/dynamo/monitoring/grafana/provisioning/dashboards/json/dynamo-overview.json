@@ -28,7 +28,7 @@
               {"color": "red", "value": 10}
             ]
           },
-          "unit": "short"
+          "unit": "none"
         },
         "overrides": []
       },
@@ -50,7 +50,7 @@
       "targets": [
         {
           "expr": "dynamo_frontend_inflight_requests",
-          "legendFormat": "Inflight Requests",
+          "legendFormat": "Inflight Requests (dynamo_frontend_inflight_requests)",
           "refId": "A"
         }
       ],
@@ -74,7 +74,7 @@
               {"color": "green", "value": null}
             ]
           },
-          "unit": "short"
+          "unit": "reqpm"
         },
         "overrides": []
       },
@@ -95,8 +95,8 @@
       "pluginVersion": "10.2.2",
       "targets": [
         {
-          "expr": "increase(dynamo_frontend_requests_total[1m])",
-          "legendFormat": "Requests/min",
+          "expr": "sum(increase(dynamo_frontend_requests_total[5s]))",
+          "legendFormat": "Total Requests/min (dynamo_frontend_requests_total)",
           "refId": "A"
         }
       ],
@@ -143,8 +143,8 @@
       "pluginVersion": "10.2.2",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, rate(dynamo_frontend_time_to_first_token_seconds_bucket[5m]))",
-          "legendFormat": "P95 TTFT",
+          "expr": "histogram_quantile(0.95, rate(dynamo_frontend_time_to_first_token_seconds_bucket[5s]))",
+          "legendFormat": "P95 TTFT (dynamo_frontend_time_to_first_token_seconds)",
           "refId": "A"
         }
       ],
@@ -180,7 +180,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": ["mean"],
           "fields": "",
           "values": false
         },
@@ -190,11 +190,11 @@
       "targets": [
         {
           "expr": "sglang:cache_hit_rate * 100",
-          "legendFormat": "Cache Hit Rate",
+          "legendFormat": "Cache Hit Rate ({{instance}}) [sglang:cache_hit_rate * 100]",
           "refId": "A"
         }
       ],
-      "title": "Cache Hit Rate %",
+      "title": "KVES Proxy (Cache Hit Rate %)",
       "type": "stat"
     },
     {
@@ -244,18 +244,18 @@
       "pluginVersion": "10.2.2",
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, rate(dynamo_frontend_time_to_first_token_seconds_bucket[1m]))",
-          "legendFormat": "P50",
+          "expr": "histogram_quantile(0.5, rate(dynamo_frontend_time_to_first_token_seconds_bucket[5s]))",
+          "legendFormat": "P50 (dynamo_frontend_time_to_first_token_seconds)",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, rate(dynamo_frontend_time_to_first_token_seconds_bucket[1m]))",
-          "legendFormat": "P95",
+          "expr": "histogram_quantile(0.95, rate(dynamo_frontend_time_to_first_token_seconds_bucket[5s]))",
+          "legendFormat": "P95 (dynamo_frontend_time_to_first_token_seconds)",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, rate(dynamo_frontend_time_to_first_token_seconds_bucket[1m]))",
-          "legendFormat": "P99",
+          "expr": "histogram_quantile(0.99, rate(dynamo_frontend_time_to_first_token_seconds_bucket[5s]))",
+          "legendFormat": "P99 (dynamo_frontend_time_to_first_token_seconds)",
           "refId": "C"
         }
       ],
@@ -309,18 +309,18 @@
       "pluginVersion": "10.2.2",
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, rate(dynamo_frontend_inter_token_latency_seconds_bucket[1m]))",
-          "legendFormat": "P50",
+          "expr": "histogram_quantile(0.5, rate(dynamo_frontend_inter_token_latency_seconds_bucket[5s]))",
+          "legendFormat": "P50 (dynamo_frontend_inter_token_latency_seconds)",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, rate(dynamo_frontend_inter_token_latency_seconds_bucket[1m]))",
-          "legendFormat": "P95",
+          "expr": "histogram_quantile(0.95, rate(dynamo_frontend_inter_token_latency_seconds_bucket[5s]))",
+          "legendFormat": "P95 (dynamo_frontend_inter_token_latency_seconds)",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, rate(dynamo_frontend_inter_token_latency_seconds_bucket[1m]))",
-          "legendFormat": "P99",
+          "expr": "histogram_quantile(0.99, rate(dynamo_frontend_inter_token_latency_seconds_bucket[5s]))",
+          "legendFormat": "P99 (dynamo_frontend_inter_token_latency_seconds)",
           "refId": "C"
         }
       ],
@@ -361,7 +361,7 @@
             "mode": "absolute",
             "steps": [{"color": "green", "value": null}]
           },
-          "unit": "short"
+          "unit": "tps"
         },
         "overrides": []
       },
@@ -374,9 +374,19 @@
       "pluginVersion": "10.2.2",
       "targets": [
         {
-          "expr": "rate(dynamo_frontend_output_tokens_total[1m])",
-          "legendFormat": "Output Tokens/s",
+          "expr": "sglang:gen_throughput",
+          "legendFormat": "Worker ({{instance}}) [sglang:gen_throughput]",
           "refId": "A"
+        },
+        {
+          "expr": "sum(sglang:gen_throughput)",
+          "legendFormat": "Total Workers (sum) [sum(sglang:gen_throughput)]",
+          "refId": "C"
+        },
+        {
+          "expr": "rate(dynamo_frontend_output_tokens_total{job=\"dynamo-frontend\"}[5s])",
+          "legendFormat": "Frontend Output (delivered) [rate(dynamo_frontend_output_tokens_total[5s])]",
+          "refId": "B"
         }
       ],
       "title": "Token Throughput",
@@ -429,22 +439,17 @@
       "pluginVersion": "10.2.2",
       "targets": [
         {
-          "expr": "sglang:cache_hit_rate * 100",
-          "legendFormat": "Cache Hit Rate % (SGLang)",
+          "expr": "sglang:token_usage * 100",
+          "legendFormat": "KV Cache % ({{instance}}) [sglang:token_usage * 100]",
           "refId": "A"
         },
         {
-          "expr": "sglang:token_usage * 100",
-          "legendFormat": "Token Usage % (SGLang)",
+          "expr": "sglang:cache_hit_rate * 100",
+          "legendFormat": "Prefix Cache % ({{instance}}) [sglang:cache_hit_rate * 100]",
           "refId": "B"
-        },
-        {
-          "expr": "dynamo_component_kvstats_gpu_cache_usage_percent",
-          "legendFormat": "KV Cache Usage % (Dynamo)",
-          "refId": "C"
         }
       ],
-      "title": "KV Cache Stats",
+      "title": "KV Cache Usage",
       "type": "timeseries"
     },
     {
@@ -481,11 +486,11 @@
             "mode": "absolute",
             "steps": [{"color": "green", "value": null}]
           },
-          "unit": "percent"
+          "unit": "none"
         },
         "overrides": []
       },
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
       "id": 9,
       "options": {
         "legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true},
@@ -494,17 +499,12 @@
       "pluginVersion": "10.2.2",
       "targets": [
         {
-          "expr": "sglang:cache_hit_rate * 100",
-          "legendFormat": "SGLang Cache Hit Rate %",
+          "expr": "sglang:num_used_tokens",
+          "legendFormat": "Tokens in KV Cache ({{instance}}) [sglang:num_used_tokens]",
           "refId": "A"
-        },
-        {
-          "expr": "rate(dynamo_component_thompson_kve_cached_tokens_total[5m]) / rate(dynamo_component_thompson_kve_prompt_tokens_total[5m]) * 100",
-          "legendFormat": "Thompson KVE % (if available)",
-          "refId": "B"
         }
       ],
-      "title": "KV Efficiency",
+      "title": "KV Cache Tokens",
       "type": "timeseries"
     },
     {
@@ -541,11 +541,11 @@
             "mode": "absolute",
             "steps": [{"color": "green", "value": null}]
           },
-          "unit": "short"
+          "unit": "ops"
         },
         "overrides": []
       },
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
       "id": 10,
       "options": {
         "legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true},
@@ -554,12 +554,37 @@
       "pluginVersion": "10.2.2",
       "targets": [
         {
-          "expr": "rate(dynamo_component_thompson_routing_decisions_total[5m])",
-          "legendFormat": "Routing Decisions/sec",
+          "expr": "sum(rate(dynamo_frontend_requests_total[5s]))",
+          "legendFormat": "1. Frontend (total) [sum(rate(dynamo_frontend_requests_total[5s]))]",
           "refId": "A"
+        },
+        {
+          "expr": "sum(rate(dynamo_component_requests_total{dynamo_namespace=\"dynamo\",dynamo_component=\"backend\"}[5s]))",
+          "legendFormat": "2. Processor (backend) [sum(rate(dynamo_component_requests_total{backend}[5s]))]",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(rate(dynamo_component_requests_total{dynamo_namespace=\"dynamo\",dynamo_component=\"router\",dynamo_endpoint=\"find_worker\"}[5s]))",
+          "legendFormat": "3. Router (find_worker) [sum(rate(dynamo_component_requests_total{router}[5s]))]",
+          "refId": "C"
+        },
+        {
+          "expr": "rate(dynamo_component_requests_total{dynamo_namespace=\"workers\",dynamo_component=\"worker\",instance=\"localhost:18081\"}[5s])",
+          "legendFormat": "4. Worker 0 (18081) [rate(dynamo_component_requests_total{worker:18081}[5s])]",
+          "refId": "D"
+        },
+        {
+          "expr": "rate(dynamo_component_requests_total{dynamo_namespace=\"workers\",dynamo_component=\"worker\",instance=\"localhost:18082\"}[5s])",
+          "legendFormat": "4. Worker 1 (18082) [rate(dynamo_component_requests_total{worker:18082}[5s])]",
+          "refId": "E"
+        },
+        {
+          "expr": "sum(rate(dynamo_component_requests_total{dynamo_namespace=\"workers\",dynamo_component=\"worker\"}[5s]))",
+          "legendFormat": "4. Workers (total) [sum(rate(dynamo_component_requests_total{workers}[5s]))]",
+          "refId": "F"
         }
       ],
-      "title": "Routing Decisions (Thompson Sampling)",
+      "title": "Request Flow (Frontend → Processor → Router → Workers)",
       "type": "timeseries"
     },
     {
@@ -600,7 +625,7 @@
               {"color": "red", "value": 50}
             ]
           },
-          "unit": "short"
+          "unit": "none"
         },
         "overrides": []
       },
@@ -614,13 +639,8 @@
       "targets": [
         {
           "expr": "sglang:num_queue_reqs",
-          "legendFormat": "Queue Depth",
+          "legendFormat": "Queue Depth ({{instance}}) [sglang:num_queue_reqs]",
           "refId": "A"
-        },
-        {
-          "expr": "sglang:num_running_reqs",
-          "legendFormat": "Running Requests",
-          "refId": "B"
         }
       ],
       "title": "SGLang Queue Depth",
@@ -660,7 +680,7 @@
             "mode": "absolute",
             "steps": [{"color": "green", "value": null}]
           },
-          "unit": "percentunit"
+          "unit": "none"
         },
         "overrides": []
       },
@@ -673,21 +693,255 @@
       "pluginVersion": "10.2.2",
       "targets": [
         {
-          "expr": "sglang:utilization",
-          "legendFormat": "Worker Utilization",
+          "expr": "sglang:num_running_reqs",
+          "legendFormat": "Running Requests ({{instance}}) [sglang:num_running_reqs]",
+          "refId": "A"
+        }
+      ],
+      "title": "Worker Activity (SGLang)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Detailed KV cache metrics per worker including KVES proxy (prefix hit rate), memory usage, token counts, and capacity.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {"legend": false, "tooltip": false, "viz": false},
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {"type": "linear"},
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {"group": "A", "mode": "none"},
+            "thresholdsStyle": {"mode": "off"}
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{"color": "green", "value": null}]
+          },
+          "unit": "percent"
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byRegexp", "options": ".*Tokens.*"},
+            "properties": [
+              {"id": "unit", "value": "none"},
+              {"id": "custom.axisPlacement", "value": "right"}
+            ]
+          },
+          {
+            "matcher": {"id": "byRegexp", "options": ".*Blocks.*"},
+            "properties": [
+              {"id": "unit", "value": "none"},
+              {"id": "custom.axisPlacement", "value": "right"},
+              {"id": "custom.drawStyle", "value": "bars"},
+              {"id": "custom.fillOpacity", "value": 30}
+            ]
+          },
+          {
+            "matcher": {"id": "byRegexp", "options": ".*Block Size.*"},
+            "properties": [
+              {"id": "unit", "value": "none"},
+              {"id": "custom.axisPlacement", "value": "hidden"},
+              {"id": "custom.drawStyle", "value": "points"},
+              {"id": "custom.pointSize", "value": 8}
+            ]
+          }
+        ]
+      },
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 36},
+      "id": 13,
+      "options": {
+        "legend": {"calcs": ["mean", "last", "max"], "displayMode": "table", "placement": "right", "showLegend": true},
+        "tooltip": {"mode": "multi", "sort": "desc"}
+      },
+      "pluginVersion": "10.2.2",
+      "targets": [
+        {
+          "expr": "avg_over_time(sglang:cache_hit_rate[1m]) * 100",
+          "legendFormat": "KVES: Prefix Hit Rate % ({{instance}})",
           "refId": "A"
         },
         {
-          "expr": "sglang:token_usage",
-          "legendFormat": "Token Usage",
+          "expr": "avg_over_time(sglang:token_usage[1m]) * 100",
+          "legendFormat": "KV Usage % ({{instance}})",
           "refId": "B"
+        },
+        {
+          "expr": "last_over_time(sglang:num_used_tokens[1m])",
+          "legendFormat": "KV Tokens Used ({{instance}})",
+          "refId": "C"
+        },
+        {
+          "expr": "last_over_time(dynamo_component_kvstats_total_blocks[1m])",
+          "legendFormat": "KV Capacity Blocks ({{instance}})",
+          "refId": "D"
+        },
+        {
+          "expr": "max(dynamo_frontend_model_kv_cache_block_size{job=\"dynamo-frontend\"})",
+          "legendFormat": "Frontend Block Size (tokens)",
+          "refId": "E"
         }
       ],
-      "title": "Worker Utilization (SGLang)",
+      "title": "KV Cache Details (Per-Worker)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "KV Cache Efficiency Score (KVES) proxy using SGLang's native prefix cache hit rate. KVES ∈ [0,1]: 0 = no cache benefit, 1 = full reuse. This is a simplified proxy for the full KVES equation (which requires CPU/disk hit metrics not currently available in SGLang).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {"legend": false, "tooltip": false, "viz": false},
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {"type": "linear"},
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {"group": "A", "mode": "none"},
+            "thresholdsStyle": {"mode": "off"}
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "orange", "value": 0.2},
+              {"color": "yellow", "value": 0.4},
+              {"color": "light-green", "value": 0.6},
+              {"color": "green", "value": 0.8}
+            ]
+          },
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 46},
+      "id": 14,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "lastNotNull"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {"mode": "multi", "sort": "none"}
+      },
+      "pluginVersion": "10.2.2",
+      "targets": [
+        {
+          "expr": "sglang:cache_hit_rate",
+          "legendFormat": "Worker ({{instance}})",
+          "refId": "A"
+        }
+      ],
+      "title": "KVES Proxy by Worker",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "KV cache memory utilization per worker. Shows how much of the allocated KV cache memory is currently in use.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {"legend": false, "tooltip": false, "viz": false},
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {"type": "linear"},
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {"group": "A", "mode": "none"},
+            "thresholdsStyle": {"mode": "off"}
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 70},
+              {"color": "orange", "value": 85},
+              {"color": "red", "value": 95}
+            ]
+          },
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 46},
+      "id": 15,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "lastNotNull"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {"mode": "multi", "sort": "none"}
+      },
+      "pluginVersion": "10.2.2",
+      "targets": [
+        {
+          "expr": "sglang:token_usage * 100",
+          "legendFormat": "Worker ({{instance}})",
+          "refId": "A"
+        }
+      ],
+      "title": "KV Cache Memory Usage % by Worker",
       "type": "timeseries"
     }
   ],
-  "refresh": "5s",
+  "refresh": "2s",
   "schemaVersion": 38,
   "style": "dark",
   "tags": ["dynamo", "llm", "inference"],

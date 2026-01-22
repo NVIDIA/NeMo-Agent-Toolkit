@@ -35,7 +35,7 @@ its ModelWatcher. This is the forward-compatible approach.
 1. **This Processor registers as `dynamo.backend.generate`** - Dynamically with instance ID
 2. **Processor calls `register_llm()`** - Advertises model card in ETCD
 3. **Frontend's ModelWatcher discovers us** - Routes requests to our endpoint
-4. **SGLang Worker registers as `dynamo.worker.generate`** - We forward to actual workers
+4. **SGLang Worker registers as `workers.worker.generate`** - We forward to actual workers
 
 ## Request Flow
 
@@ -45,14 +45,14 @@ Frontend (discovers backends via ETCD ModelWatcher)
     → THIS PROCESSOR (discovered via model card!)
         → extracts hints from nvext annotations
         → queries Thompson Sampling router → worker_id
-        → forwards to dynamo.worker.generate (actual SGLang workers)
+        → forwards to workers.worker.generate (actual SGLang workers)
 ```
 
 Key differences from generalized/processor.py:
 - Uses dynamic discovery (no --static-endpoint on frontend)
 - Registers model card via register_llm() for ETCD discovery
 - Registers as `dynamo.backend.generate` (not `dynamo.processor.process`)
-- Forwards to `dynamo.worker.generate` (not `dynamo.backend.generate`)
+- Forwards to `workers.worker.generate` (workers in separate namespace)
 - Receives PreprocessedRequest instead of ChatCompletionRequest
 - Extracts hints from nvext annotations (prefix_id:value format)
 - Uses Dynamo metrics API for Prometheus integration (auto-exposed at /metrics)
@@ -110,8 +110,11 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 import uvloop
-from dynamo.llm import ModelInput, ModelType, register_llm
-from dynamo.runtime import DistributedRuntime, dynamo_worker
+from dynamo.llm import ModelInput
+from dynamo.llm import ModelType
+from dynamo.llm import register_llm
+from dynamo.runtime import DistributedRuntime
+from dynamo.runtime import dynamo_worker
 from dynamo.runtime.logging import configure_dynamo_logging
 from pydantic import BaseModel
 
@@ -349,25 +352,23 @@ class ProcessorRequestHandler:
             await self.router_pick_client.wait_for_instances()
             logger.info("Router clients initialized successfully")
 
-        # Connect to actual workers at dynamo.worker.generate
-        # (We register as "backend" to intercept frontend requests, but actual SGLang
-        # workers register as "worker" so we can forward to them after routing)
-        worker_component = self.runtime.namespace("dynamo").component("worker")
+        # Connect to actual workers at workers.worker.generate
+        # Workers are in the "workers" namespace (hidden from frontend discovery)
+        # while this processor is in "dynamo" namespace (frontend discovers us)
+        worker_component = self.runtime.namespace("workers").component("worker")
         self.engine_client = await worker_component.endpoint("generate").client()
         logger.info("Engine client created, waiting for worker instances...")
         await self.engine_client.wait_for_instances()
-        logger.info("Processor initialized successfully (routing to dynamo.worker.generate)")
+        logger.info("Processor initialized successfully (routing to workers.worker.generate)")
 
     # ---- annotation extraction ----
     @staticmethod
-    def _extract_annotation(
-        annotations: list[str], key: str, default: str | None = None
-    ) -> str | None:
+    def _extract_annotation(annotations: list[str], key: str, default: str | None = None) -> str | None:
         """Extract value from annotations list (format: 'key:value')."""
         prefix = f"{key}:"
         for ann in annotations:
             if ann.startswith(prefix):
-                return ann[len(prefix) :]
+                return ann[len(prefix):]
         return default
 
     def _extract_hints(self, request: dict[str, Any]) -> tuple[str, int, str, str]:
@@ -480,9 +481,7 @@ class ProcessorRequestHandler:
             if worker_id is not None:
                 self._metrics.routing_decisions_total.inc({"worker_id": str(worker_id)})
             else:
-                logger.warning(
-                    "Router stream ended without worker_id; falling back to engine load balancing."
-                )
+                logger.warning("Router stream ended without worker_id; falling back to engine load balancing.")
 
             return worker_id, decision_id
 
@@ -602,9 +601,7 @@ class ProcessorRequestHandler:
                 # Handle engine errors
                 if "error" in data:
                     latency_ms = (time.perf_counter() - t0) * 1000.0
-                    await self._send_feedback_safely(
-                        decision_id, latency_ms, False, tokens_in, tokens_out, "error"
-                    )
+                    await self._send_feedback_safely(decision_id, latency_ms, False, tokens_in, tokens_out, "error")
                     self._metrics.engine_errors_total.inc()
                     yield {"error": data["error"]}
                     return
@@ -630,9 +627,12 @@ class ProcessorRequestHandler:
                     latency_ms = latency_seconds * 1000.0
 
                     # Send feedback to router (this is already fire-and-forget)
-                    await self._send_feedback_safely(
-                        decision_id, latency_ms, True, tokens_in, tokens_out, finish_reason
-                    )
+                    await self._send_feedback_safely(decision_id,
+                                                     latency_ms,
+                                                     True,
+                                                     tokens_in,
+                                                     tokens_out,
+                                                     finish_reason)
 
                     # Update core Prometheus metrics (fast atomic operations)
                     self._metrics.request_latency_seconds.observe(latency_seconds)
@@ -648,9 +648,7 @@ class ProcessorRequestHandler:
 
         except Exception as e:
             latency_ms = (time.perf_counter() - t0) * 1000.0
-            await self._send_feedback_safely(
-                decision_id, latency_ms, False, tokens_in, tokens_out, "exception"
-            )
+            await self._send_feedback_safely(decision_id, latency_ms, False, tokens_in, tokens_out, "exception")
             self._metrics.engine_errors_total.inc()
             logger.exception("Engine stream exception")
             yield {"error": str(e)}
@@ -699,9 +697,7 @@ class ProcessorRequestHandler:
             reuse_budget = await self._update_prefix_state(prefix_id, total_requests)
 
             # Pick worker via Thompson Sampling router
-            worker_id, decision_id = await self._pick_worker(
-                token_ids, prefix_id, reuse_budget, osl, iat
-            )
+            worker_id, decision_id = await self._pick_worker(token_ids, prefix_id, reuse_budget, osl, iat)
 
             logger.info(
                 "Routing decision: worker=%s decision=%s reuse_budget=%d",
@@ -749,7 +745,7 @@ def parse_args():
     return parser.parse_args()
 
 
-@dynamo_worker(static=False)  # Dynamic mode for ETCD discovery by frontend
+@dynamo_worker(static=False)  # Dynamic mode - required to call router/workers which are also dynamic
 async def worker(runtime: DistributedRuntime):
     """
     Main worker entry point for the Thompson Sampling processor.
@@ -769,7 +765,7 @@ async def worker(runtime: DistributedRuntime):
     #   1. We register as dynamo.backend.generate (dynamically with instance ID)
     #   2. We call register_llm() to advertise ourselves in ETCD
     #   3. Frontend's ModelWatcher discovers us and routes requests to us
-    #   4. We forward to actual workers at dynamo.worker.generate
+    #   4. We forward to actual workers at workers.worker.generate
 
     component = runtime.namespace("dynamo").component("backend")
     await component.create_service()
@@ -784,12 +780,15 @@ async def worker(runtime: DistributedRuntime):
         args.model_name,
         args.model_path,
     )
+    # IMPORTANT: kv_cache_block_size must match what workers use (default page_size=1)
+    # Otherwise checksums will differ and frontend will reject the processor's model card
     await register_llm(
         model_input=ModelInput.Tokens,  # We accept tokenized input from frontend
         model_type=ModelType.Chat | ModelType.Completions,  # Chat and completions endpoints
         endpoint=endpoint,
         model_path=args.model_path,
         model_name=args.model_name,
+        kv_cache_block_size=1,  # Must match worker page_size to ensure same checksum
     )
     logger.info("Model card registered successfully - frontend can now discover us via ETCD")
 

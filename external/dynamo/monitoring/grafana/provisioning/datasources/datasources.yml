@@ -11,5 +11,7 @@ datasources:
     url: http://localhost:9090
     isDefault: true
     editable: true
+    jsonData:
+      timeInterval: 2s
 
 

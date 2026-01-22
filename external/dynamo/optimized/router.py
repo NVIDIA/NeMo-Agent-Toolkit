@@ -279,101 +279,100 @@ def apply_cli_overrides(config: dict, args: argparse.Namespace) -> dict:
     return config
 
 
-# Prometheus metrics - initialized lazily
-_prometheus_initialized = False
-_metrics = {}
-
-
 def _init_prometheus_metrics():
     """Initialize Prometheus metrics lazily."""
-    global _prometheus_initialized, _metrics
-    if _prometheus_initialized:
-        return _metrics
+    import functools
 
-    try:
-        from prometheus_client import Counter, Histogram, Gauge, REGISTRY
+    @functools.lru_cache(maxsize=1)
+    def _init() -> dict:
+        metrics: dict = {}
+        try:
+            from prometheus_client import REGISTRY
+            from prometheus_client import Counter
+            from prometheus_client import Gauge
+            from prometheus_client import Histogram
 
-        _metrics["decisions_total"] = Counter(
-            "thompson_router_decisions_total",
-            "Total routing decisions by worker",
-            ["worker_id"],
-            registry=REGISTRY,
-        )
-        _metrics["kv_overlap"] = Gauge(
-            "thompson_router_kv_overlap",
-            "KV cache overlap score for last decision by worker",
-            ["worker_id"],
-            registry=REGISTRY,
-        )
-        _metrics["feedback_latency"] = Histogram(
-            "thompson_router_feedback_latency_seconds",
-            "Latency from feedback by worker",
-            ["worker_id"],
-            buckets=[0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0],
-            registry=REGISTRY,
-        )
-        _metrics["reward"] = Gauge(
-            "thompson_router_reward",
-            "Last computed reward by worker",
-            ["worker_id"],
-            registry=REGISTRY,
-        )
-        _metrics["pending_decisions"] = Gauge(
-            "thompson_router_pending_decisions",
-            "Number of pending decisions awaiting feedback",
-            registry=REGISTRY,
-        )
-        _metrics["timeout_penalties"] = Counter(
-            "thompson_router_timeout_penalties_total",
-            "Total timeout penalties applied",
-            registry=REGISTRY,
-        )
-        _metrics["sticky_decisions"] = Counter(
-            "thompson_router_sticky_decisions_total",
-            "Decisions that stayed on the same worker (sticky)",
-            registry=REGISTRY,
-        )
-        _metrics["switch_decisions"] = Counter(
-            "thompson_router_switch_decisions_total",
-            "Decisions that switched to a different worker",
-            registry=REGISTRY,
-        )
-        _metrics["beta_alpha"] = Gauge(
-            "thompson_router_beta_alpha",
-            "Beta distribution alpha parameter by worker",
-            ["worker_id"],
-            registry=REGISTRY,
-        )
-        _metrics["beta_beta"] = Gauge(
-            "thompson_router_beta_beta",
-            "Beta distribution beta parameter by worker",
-            ["worker_id"],
-            registry=REGISTRY,
-        )
-        _metrics["prefix_state_size"] = Gauge(
-            "thompson_router_prefix_state_size",
-            "Number of active prefix states",
-            registry=REGISTRY,
-        )
-        _metrics["reuse_budget"] = Histogram(
-            "thompson_router_reuse_budget",
-            "Distribution of reuse_budget values",
-            buckets=[0, 1, 2, 5, 10, 20, 50, 100],
-            registry=REGISTRY,
-        )
-        _metrics["tokens_per_request"] = Histogram(
-            "thompson_router_tokens_per_request",
-            "Distribution of input token counts",
-            buckets=[32, 64, 128, 256, 512, 1024, 2048, 4096, 8192],
-            registry=REGISTRY,
-        )
-        _prometheus_initialized = True
-        logger.info("Prometheus metrics initialized for router")
-    except ImportError:
-        logger.warning("prometheus_client not available, metrics disabled")
-        _prometheus_initialized = True  # Don't retry
+            metrics["decisions_total"] = Counter(
+                "thompson_router_decisions_total",
+                "Total routing decisions by worker",
+                ["worker_id"],
+                registry=REGISTRY,
+            )
+            metrics["kv_overlap"] = Gauge(
+                "thompson_router_kv_overlap",
+                "KV cache overlap score for last decision by worker",
+                ["worker_id"],
+                registry=REGISTRY,
+            )
+            metrics["feedback_latency"] = Histogram(
+                "thompson_router_feedback_latency_seconds",
+                "Latency from feedback by worker",
+                ["worker_id"],
+                buckets=[0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0],
+                registry=REGISTRY,
+            )
+            metrics["reward"] = Gauge(
+                "thompson_router_reward",
+                "Last computed reward by worker",
+                ["worker_id"],
+                registry=REGISTRY,
+            )
+            metrics["pending_decisions"] = Gauge(
+                "thompson_router_pending_decisions",
+                "Number of pending decisions awaiting feedback",
+                registry=REGISTRY,
+            )
+            metrics["timeout_penalties"] = Counter(
+                "thompson_router_timeout_penalties_total",
+                "Total timeout penalties applied",
+                registry=REGISTRY,
+            )
+            metrics["sticky_decisions"] = Counter(
+                "thompson_router_sticky_decisions_total",
+                "Decisions that stayed on the same worker (sticky)",
+                registry=REGISTRY,
+            )
+            metrics["switch_decisions"] = Counter(
+                "thompson_router_switch_decisions_total",
+                "Decisions that switched to a different worker",
+                registry=REGISTRY,
+            )
+            metrics["beta_alpha"] = Gauge(
+                "thompson_router_beta_alpha",
+                "Beta distribution alpha parameter by worker",
+                ["worker_id"],
+                registry=REGISTRY,
+            )
+            metrics["beta_beta"] = Gauge(
+                "thompson_router_beta_beta",
+                "Beta distribution beta parameter by worker",
+                ["worker_id"],
+                registry=REGISTRY,
+            )
+            metrics["prefix_state_size"] = Gauge(
+                "thompson_router_prefix_state_size",
+                "Number of active prefix states",
+                registry=REGISTRY,
+            )
+            metrics["reuse_budget"] = Histogram(
+                "thompson_router_reuse_budget",
+                "Distribution of reuse_budget values",
+                buckets=[0, 1, 2, 5, 10, 20, 50, 100],
+                registry=REGISTRY,
+            )
+            metrics["tokens_per_request"] = Histogram(
+                "thompson_router_tokens_per_request",
+                "Distribution of input token counts",
+                buckets=[32, 64, 128, 256, 512, 1024, 2048, 4096, 8192],
+                registry=REGISTRY,
+            )
+            logger.info("Prometheus metrics initialized for router")
+        except ImportError:
+            logger.warning("prometheus_client not available, metrics disabled")
 
-    return _metrics
+        return metrics
+
+    return _init()
 
 
 # ---------------------- request / response models ---------------------- #
@@ -410,13 +409,17 @@ class FeedbackAck(BaseModel):
 
 # ---------------------- helper decorator ---------------------- #
 def safe_update(lock_name: str):
+
     def decorator(fn):
+
         @wraps(fn)
         def wrapper(self, *args, **kwargs):
             lock = getattr(self, lock_name)
             with lock:
                 return fn(self, *args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
@@ -591,10 +594,11 @@ class WorkloadAwareRouter:
         # Initialize Prometheus metrics
         self._metrics = _init_prometheus_metrics()
 
-        # Connect to actual SGLang workers at dynamo.worker.generate
+        # Connect to actual SGLang workers at workers.worker.generate
+        # Workers are in the "workers" namespace (hidden from frontend discovery)
         # (NOT backend.generate - that's where the Processor registers to intercept frontend)
-        engine = self.runtime.namespace("dynamo").component("worker")
-        logger.info("Getting engine client for dynamo/worker/generate")
+        engine = self.runtime.namespace("workers").component("worker")
+        logger.info("Getting engine client for workers/worker/generate")
         self.engine_client = await engine.endpoint("generate").client()
 
         min_workers = int(self.min_workers)
@@ -617,9 +621,7 @@ class WorkloadAwareRouter:
             while True:
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
-                    raise TimeoutError(
-                        f"Timed out after {timeout_s}s waiting for >= {min_workers} backend worker(s)"
-                    )
+                    raise TimeoutError(f"Timed out after {timeout_s}s waiting for >= {min_workers} backend worker(s)")
 
                 try:
                     await asyncio.wait_for(
@@ -846,7 +848,8 @@ class WorkloadAwareRouter:
             prefill_norm,
             iat_norm,
             reuse_norm,
-        ], dtype=np.float64)
+        ],
+                        dtype=np.float64)
 
     def _load_score(self, wid: int, metrics: dict[str, Any] | None, job_cost_total: float) -> float:
         gpu = 0.0
@@ -1023,15 +1026,17 @@ class WorkloadAwareRouter:
             if self._metrics.get("timeout_penalties"):
                 self._metrics["timeout_penalties"].inc()
 
-            self._emit_trace("timeout", {
-                "decision_id": did,
-                "wid": wid,
-                "reward": reward,
-                "age": self.feedback_timeout_seconds,
-                "prefix_id": rec.get("prefix_id"),
-                "osl": rec.get("osl"),
-                "prefill_bin": rec.get("prefill_bin"),
-            })
+            self._emit_trace(
+                "timeout",
+                {
+                    "decision_id": did,
+                    "wid": wid,
+                    "reward": reward,
+                    "age": self.feedback_timeout_seconds,
+                    "prefix_id": rec.get("prefix_id"),
+                    "osl": rec.get("osl"),
+                    "prefill_bin": rec.get("prefill_bin"),
+                })
             logger.warning("Timeout feedback: wid=%s decision=%s reward=%.3f", wid, did, reward)
 
     # --------------------- main endpoint: find_worker --------------------- #
@@ -1121,9 +1126,8 @@ class WorkloadAwareRouter:
             if chosen == last_w:
                 if self._metrics.get("sticky_decisions"):
                     self._metrics["sticky_decisions"].inc()
-            else:
-                if self._metrics.get("switch_decisions"):
-                    self._metrics["switch_decisions"].inc()
+            elif self._metrics.get("switch_decisions"):
+                self._metrics["switch_decisions"].inc()
 
         # Decision trace
         if self.debug_traces:
@@ -1136,16 +1140,26 @@ class WorkloadAwareRouter:
                 }
                 for i, wid in enumerate(worker_list)
             }
-            self._emit_trace("decision", {
-                "decision_id": decision_id,
-                "prefix_id": req.prefix_id,
-                "chosen": int(chosen),
-                "workers": details,
-            })
+            self._emit_trace("decision",
+                             {
+                                 "decision_id": decision_id,
+                                 "prefix_id": req.prefix_id,
+                                 "chosen": int(chosen),
+                                 "workers": details,
+                             })
 
         logger.info(
-            "Router picked worker=%s decision=%s prefix=%s (last=%s reuse_after=%s osl=%s prefill_cost=%.3f iat=%s overlap=%.3f)",
-            chosen, decision_id, req.prefix_id, last_w, req.reuse_budget, osl, prefill_cost_chosen, iat, overlap_chosen,
+            "Router picked worker=%s decision=%s prefix=%s (last=%s reuse_after=%s osl=%s "
+            "prefill_cost=%.3f iat=%s overlap=%.3f)",
+            chosen,
+            decision_id,
+            req.prefix_id,
+            last_w,
+            req.reuse_budget,
+            osl,
+            prefill_cost_chosen,
+            iat,
+            overlap_chosen,
         )
 
         resp = RouterResponse(worker_id=chosen, prefix_hit_rate=overlap_chosen, decision_id=decision_id)
@@ -1200,23 +1214,31 @@ class WorkloadAwareRouter:
         if self._metrics.get("reward"):
             self._metrics["reward"].labels(worker_id=str(wid)).set(reward)
 
-        self._emit_trace("feedback", {
-            "decision_id": fb.decision_id,
-            "wid": wid,
-            "latency_ms": float(fb.latency_ms),
-            "tokens_out": tokens_out,
-            "metric": metric,
-            "per_tok": per_tok,
-            "baseline_used": baseline_before,
-            "baseline_after": baseline_after,
-            "reward": reward,
-            "success": bool(fb.success),
-            "finish_reason": fb.finish_reason or "",
-        })
+        self._emit_trace(
+            "feedback",
+            {
+                "decision_id": fb.decision_id,
+                "wid": wid,
+                "latency_ms": float(fb.latency_ms),
+                "tokens_out": tokens_out,
+                "metric": metric,
+                "per_tok": per_tok,
+                "baseline_used": baseline_before,
+                "baseline_after": baseline_after,
+                "reward": reward,
+                "success": bool(fb.success),
+                "finish_reason": fb.finish_reason or "",
+            })
 
         logger.info(
             "Feedback: wid=%s decision=%s metric=%.3f%s baseline=%.3f reward=%.3f success=%s",
-            wid, fb.decision_id, metric, " ms/tok" if per_tok else " ms", baseline_before, reward, fb.success,
+            wid,
+            fb.decision_id,
+            metric,
+            " ms/tok" if per_tok else " ms",
+            baseline_before,
+            reward,
+            fb.success,
         )
 
         ack = FeedbackAck(ok=True, used_baseline=float(baseline_before), reward=float(reward), worker_id=wid)
@@ -1372,4 +1394,3 @@ async def worker(runtime: DistributedRuntime):
 if __name__ == "__main__":
     uvloop.install()
     asyncio.run(worker())
-

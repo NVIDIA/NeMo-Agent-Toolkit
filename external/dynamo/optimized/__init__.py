@@ -25,4 +25,3 @@ Components:
 
 See ARCHITECTURE.md for detailed documentation.
 """
-
