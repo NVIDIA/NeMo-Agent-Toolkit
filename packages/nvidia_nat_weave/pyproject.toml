@@ -27,7 +27,7 @@ dependencies = [
   # Both eval and trace exporting must be tested on any version change
   "weave==0.52.22",
   # transitive dependencies
-  "fickling~=0.1.7",
+  "fickling>=0.1.7,<1.0.0",
 ]
 requires-python = ">=3.11,<3.14"
 description = "Subpackage for Weave integration in NeMo Agent toolkit"
