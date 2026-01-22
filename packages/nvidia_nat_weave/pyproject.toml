@@ -29,8 +29,8 @@ dependencies = [
   # transitive dependencies
   # Without this pin, anyone installing nvidia-nat-weave with Python 3.13 gets blis 0.7.11 which doesn't contain a
   # pre-built binary wheel for Python 3.13, leading to a build from source that fails to build.
-  "blis~=1.3"
-  "fickling>=0.1.7,<1.0.0",
+  "blis~=1.3",
+  "fickling>=0.1.7,<1.0.0"
 ]
 requires-python = ">=3.11,<3.14"
 description = "Subpackage for Weave integration in NeMo Agent toolkit"
