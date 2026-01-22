@@ -142,6 +142,10 @@ Installing from source is required to run any examples provided in the repositor
     Python 3.11 and 3.12 are also supported simply replace `3.13` with `3.11` or `3.12` in the `uv` command above.
     :::
 
+    :::{warning}
+    Using Conda environments is not recommended and may cause component resolution issues. Only create vanilla Python virtual environments through `python -m venv` or `uv venv` with no other active environments. For more information, see the [Troubleshooting Guide](../resources/troubleshooting.md#workflow-issues).
+    :::
+
 1. Install the NeMo Agent toolkit library.
     To install the NeMo Agent toolkit library along with all of the optional dependencies. Including developer tools (`--all-groups`) and all of the dependencies needed for profiling and plugins (`--all-extras`) in the source repository, run the following:
     ```bash
