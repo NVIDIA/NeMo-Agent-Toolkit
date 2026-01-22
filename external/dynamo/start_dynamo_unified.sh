@@ -478,7 +478,7 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo ""
     echo "========================================================="
     echo "Test Request:"
-    echo "========================================================="
+    echo "=====================================ca===================="
     echo ""
     echo "# Basic test"
     echo "curl http://localhost:$HTTP_PORT/v1/chat/completions \\"

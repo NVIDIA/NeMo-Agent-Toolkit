@@ -3,15 +3,19 @@
 
 # Prometheus configuration for Dynamo metrics collection
 #
-# Metrics Endpoints:
+# Metrics Endpoints (using 18xxx range to avoid conflicts):
 #   - Frontend (8000): User-facing latency, throughput, tokens
-#   - Worker (8081): KV cache stats, NATS metrics, internal stats
-#   - Router (8082): Thompson Sampling routing metrics
-#   - Processor (8083): Thompson Sampling KVE metrics
+#   - Workers (18081-180xx): KV cache stats, NATS metrics, internal stats (one per worker)
+#   - Router (18090): Thompson Sampling routing metrics
+#   - Processor (18091): Thompson Sampling KVE metrics
+#
+# Note: Worker ports are sequential starting at 18081. With 2 workers: 18081, 18082.
+#       With 4 workers: 18081, 18082, 18083, 18084. With 8 workers: 18081-18088.
+#       Add more targets below if you run more than 8 workers.
 
 global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
+  scrape_interval: 2s
+  evaluation_interval: 2s
 
 scrape_configs:
   # Dynamo Frontend metrics (user-facing latency, throughput)
@@ -19,28 +23,38 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:8000']
     metrics_path: /metrics
-    scrape_interval: 5s
+    scrape_interval: 2s
 
   # Dynamo Worker metrics (KV cache, internal stats)
+  # Multiple workers use sequential ports starting at 18081
+  # Add/remove targets based on your NUM_WORKERS setting
   - job_name: 'dynamo-worker'
     static_configs:
-      - targets: ['localhost:8081']
+      - targets:
+          - 'localhost:18081'
+          - 'localhost:18082'
+          - 'localhost:18083'
+          - 'localhost:18084'
+          - 'localhost:18085'
+          - 'localhost:18086'
+          - 'localhost:18087'
+          - 'localhost:18088'
     metrics_path: /metrics
-    scrape_interval: 5s
+    scrape_interval: 2s
 
   # Thompson Sampling Router metrics
   - job_name: 'dynamo-router'
     static_configs:
-      - targets: ['localhost:8082']
+      - targets: ['localhost:18090']
     metrics_path: /metrics
-    scrape_interval: 5s
+    scrape_interval: 2s
 
   # Thompson Sampling Processor metrics (KVE)
   - job_name: 'dynamo-processor'
     static_configs:
-      - targets: ['localhost:8083']
+      - targets: ['localhost:18091']
     metrics_path: /metrics
-    scrape_interval: 5s
+    scrape_interval: 2s
 
   # Prometheus self-monitoring
   - job_name: 'prometheus'

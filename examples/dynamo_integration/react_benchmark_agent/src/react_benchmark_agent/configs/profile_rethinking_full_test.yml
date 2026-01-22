@@ -26,11 +26,23 @@
 # - Bottleneck analysis with nested call stacks
 # - Concurrency spike detection
 # - Prompt caching prefix identification
+# - Dynamo inference stack metrics (KVE, TTFT, ITL from Prometheus)
+#
+# Core Dynamo Optimization Metrics:
+# 1. KV Efficiency (KVE) = cached_tokens / prompt_tokens
+#    - Measures fraction of computational work saved via KV cache
+#    - Higher is better (0.8 = 80% of tokens from cache)
+# 2. Time to First Token (TTFT) - User-perceived initial latency
+# 3. Inter-Token Latency (ITL) - Streaming smoothness
 #
 # Combines self-evaluating agent with detailed profiler for:
 # - Understanding performance characteristics of rethinking
 # - Identifying optimization opportunities
 # - Generating data for throughput analysis scripts
+#
+# Prerequisites:
+#   - Prometheus running at localhost:9090 (for Dynamo metrics)
+#   - Dynamo stack with monitoring enabled
 #
 # Usage:
 #   nat profile --config_file configs/profile_rethinking_full_test.yml
@@ -130,7 +142,7 @@ llms:
   dynamo_llm:
     _type: dynamo
     model_name: llama-3.3-70b
-    base_url: http://localhost:8099/v1
+    base_url: http://localhost:8000/v1
     api_key: dummy
     temperature: 0.0
     max_tokens: 8192
@@ -151,7 +163,7 @@ llms:
   eval_llm:
     _type: dynamo
     model_name: llama-3.3-70b
-    base_url: http://localhost:8099/v1
+    base_url: http://localhost:8000/v1
     api_key: dummy
     temperature: 0.0
     max_tokens: 1024
@@ -187,7 +199,7 @@ workflow:
 
 eval:
   general:
-    max_concurrency: 36
+    max_concurrency: 8
     
     output:
       dir: ./examples/dynamo_integration/react_benchmark_agent/outputs/dynamo_evals/rethinking_full_test_for_profiling/
@@ -228,6 +240,25 @@ eval:
       # Use with run_with_prediction_trie.yml for optimized routing
       prediction_trie:
         enable: true
+      # Dynamo inference stack metrics - collect from Prometheus
+      # Core optimization metrics: KV Efficiency, TTFT, ITL
+      dynamo_metrics:
+        enable: true
+        prometheus_url: http://localhost:9090
+        # Time range for rate calculations - should match experiment duration
+        # Minimum: 15s (Prometheus scrapes every 5s, need ≥3 points for reliable rates)
+        # Options: 15s (very short), 30s, 1m, 2m, 5m
+        # Shorter = more accurate for brief experiments, but noisier
+        # Longer = smoother averages, but may include pre-experiment data
+        query_range: 30s
+        # Core metrics (primary optimization targets)
+        collect_kv_cache: true   # KVE = cached_tokens/prompt_tokens (work saved)
+        collect_ttft: true       # Time to First Token (P50/P95/P99)
+        collect_itl: true        # Inter-Token Latency (P50/P95/P99)
+        # Supplementary metrics (context and diagnostics)
+        collect_inflight_requests: true
+        collect_throughput: true
+        collect_token_throughput: true
 
   evaluators:
     tool_selection_quality:

@@ -17,6 +17,37 @@
 # Dynamo SGLang Shutdown Script
 # Stops all components: Dynamo worker container, ETCD, and NATS
 # Works for: UNIFIED, THOMPSON SAMPLING, and DISAGGREGATED modes
+#
+# Usage:
+#   bash stop_dynamo.sh                  # Stop Dynamo, ETCD, NATS only
+#   bash stop_dynamo.sh --kill-metrics   # Also stop Prometheus and Grafana
+#   bash stop_dynamo.sh --clear-metrics  # Stop monitoring stack AND remove Prometheus data volume
+
+# Parse command line arguments
+KILL_METRICS=false
+CLEAR_METRICS=false
+for arg in "$@"; do
+    case $arg in
+        --kill-metrics)
+            KILL_METRICS=true
+            shift
+            ;;
+        --clear-metrics)
+            KILL_METRICS=true
+            CLEAR_METRICS=true
+            shift
+            ;;
+        -h|--help)
+            echo "Usage: bash stop_dynamo.sh [OPTIONS]"
+            echo ""
+            echo "Options:"
+            echo "  --kill-metrics     Also stop Prometheus and Grafana containers"
+            echo "  --clear-metrics    Stop monitoring stack AND remove Prometheus data volume (clears old metrics)"
+            echo "  -h, --help         Show this help message"
+            exit 0
+            ;;
+    esac
+done
 
 echo "========================================================="
 echo "Stopping Dynamo SGLang FULL STACK"
@@ -68,13 +99,56 @@ else
     echo "  (NATS container not running)"
 fi
 
+# Stop monitoring stack if --kill-metrics flag is set
+if [ "$KILL_METRICS" = true ]; then
+    echo ""
+    echo "========================================================="
+    echo "Stopping Monitoring Stack (--kill-metrics)"
+    echo "========================================================="
+    
+    # Stop Prometheus
+    if docker ps --format '{{.Names}}' | grep -q "^dynamo-prometheus$"; then
+        echo ""
+        echo "Stopping Prometheus container..."
+        docker stop dynamo-prometheus
+        docker rm dynamo-prometheus
+        echo "✓ Prometheus container stopped and removed"
+    else
+        echo "  (Prometheus container not running)"
+    fi
+    
+    # Stop Grafana
+    if docker ps --format '{{.Names}}' | grep -q "^dynamo-grafana$"; then
+        echo ""
+        echo "Stopping Grafana container..."
+        docker stop dynamo-grafana
+        docker rm dynamo-grafana
+        echo "✓ Grafana container stopped and removed"
+    else
+        echo "  (Grafana container not running)"
+    fi
+    
+    # Clear Prometheus data volume if --clear-metrics flag is set
+    if [ "$CLEAR_METRICS" = true ]; then
+        echo ""
+        echo "Clearing Prometheus data volume..."
+        docker volume rm monitoring_prometheus_data && echo "✓ Prometheus data volume removed (old metrics cleared)"
+    fi
+fi
+
 echo ""
 echo "========================================================="
 echo "✓ All components stopped!"
+if [ "$KILL_METRICS" = true ]; then
+    echo "  (including monitoring stack)"
+fi
+if [ "$CLEAR_METRICS" = true ]; then
+    echo "  (Prometheus data volume cleared)"
+fi
 echo "========================================================="
 echo ""
 echo "To restart:"
 echo "  Standard Unified:     bash start_dynamo_unified.sh"
-echo "  Thompson Sampling:    bash start_dynamo_unified_thompson_hints.sh"
+echo "  Thompson Sampling:    bash start_dynamo_optimized_thompson_hints.sh"
 echo ""
 
