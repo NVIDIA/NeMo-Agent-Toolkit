@@ -65,26 +65,11 @@ done
 # Test the built wheels
 deactivate
 TEMP_INSTALL_LOCATION="${WORKSPACE_TMP}/wheel_test_env"
-
-PYTHON_VERSIONS_TO_TEST=("3.11" "3.12" "3.13")
-for pyver in "${PYTHON_VERSIONS_TO_TEST[@]}"; do
-    set +e
-    # The managed python flag is needed since the OS's copy of python does not include C headers needed to build some
-    # dependencies, specifically ruamel-yaml-clibz which is needed for semantic-kernel
-    uv python find --managed-python ${pyver} &> /dev/null
-    PYTHON_FIND_RESULT=$?
-    set -e
-    if [[ ${PYTHON_FIND_RESULT} -ne 0 ]]; then
-        rapids-logger "Downloading Python version ${pyver}"
-
-        # In common.sh we set this to never, we want to override that here
-        UV_PYTHON_DOWNLOADS="manual" uv python install --managed-python ${pyver}
-    fi
-done
+install_python_versions
 
 for whl in "${MOVED_WHEELS[@]}"; do
 
-    for pyver in "${PYTHON_VERSIONS_TO_TEST[@]}"; do
+    for pyver in "${SUPPORTED_PYTHON_VERSIONS[@]}"; do
         rapids-logger "Testing wheel: ${whl} with Python ${pyver}"
         UV_VENV_OUT=$(uv venv -p ${pyver} --seed "${TEMP_INSTALL_LOCATION}" 2>&1)
         UV_VENV_RESULT=$?

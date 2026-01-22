@@ -15,6 +15,8 @@
 
 export SCRIPT_DIR=${SCRIPT_DIR:-"$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"}
 
+export SUPPORTED_PYTHON_VERSIONS=("3.11" "3.12" "3.13")
+
 # The root to the NAT repo
 export PROJECT_ROOT=${PROJECT_ROOT:-"$(realpath ${SCRIPT_DIR}/../..)"}
 
@@ -222,6 +224,24 @@ function get_lfs_files() {
     git lfs ls-files
 }
 
+function install_python_versions() {
+   # This is not normally needed as our containers contain the needed python version. This is only needed for CI stages
+   # which need to support multiple python versions in a single stage, such as the build_wheel stage.
+   for pyver in "${SUPPORTED_PYTHON_VERSIONS[@]}"; do
+      set +e
+      # The managed python flag is needed since the OS's copy of python does not include C headers needed to build some
+      # dependencies, specifically ruamel-yaml-clibz which is needed for semantic-kernel
+      uv python find --managed-python ${pyver} &> /dev/null
+      PYTHON_FIND_RESULT=$?
+      set -e
+      if [[ ${PYTHON_FIND_RESULT} -ne 0 ]]; then
+         rapids-logger "Downloading Python version ${pyver}"
+
+         # In common.sh we set this to never, we want to override that here
+         UV_PYTHON_DOWNLOADS="manual" uv python install --managed-python ${pyver}
+      fi
+   done
+}
 
 function cleanup {
    # Restore the original directory
