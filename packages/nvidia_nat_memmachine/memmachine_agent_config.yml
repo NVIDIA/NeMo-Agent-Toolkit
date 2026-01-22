@@ -1,0 +1,57 @@
+general:
+  telemetry:
+    enabled: false
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.7
+    max_tokens: 1024
+
+memory:
+  memmachine_memory:
+    _type: memmachine_memory
+    base_url: "http://localhost:8080"
+    org_id: "demo_org_08cc9b99"
+    project_id: "demo_project_08cc9b99"
+
+functions:
+  get_memory:
+    _type: get_memory
+    memory: memmachine_memory
+    description: |
+      Retrieve memories relevant to a query. Always call this tool first to check for existing user preferences or facts.
+      Use the exact JSON format with user_id, query, and top_k parameters.
+
+  add_memory:
+    _type: add_memory
+    memory: memmachine_memory
+    description: |
+      Add facts about user preferences or information to long-term memory.
+      Use the exact JSON format with user_id, memory, conversation (optional), metadata, and tags.
+
+workflow:
+  _type: react_agent
+  tool_names: [add_memory, get_memory]
+  description: "A chat agent that can remember and recall user preferences using MemMachine memory"
+  llm_name: nim_llm
+  verbose: true
+  max_tool_calls: 5
+  system_prompt: |
+    You are a helpful assistant with access to memory tools. Always use user_id "demo_user_08cc9b99" for memory operations.
+
+    {tools}
+
+    Use this format:
+
+    Question: the input question you must answer
+    Thought: think about what to do
+    Action: the action to take, one of [{tool_names}]
+    Action Input: {{"key": "value"}}
+    Observation: the result of the action
+    ... (repeat Thought/Action/Action Input/Observation as needed)
+    Thought: I now know the final answer
+    Final Answer: your final answer
+
+    CRITICAL: Action Input must be ONLY valid JSON on a single line. No extra text before or after the JSON.
