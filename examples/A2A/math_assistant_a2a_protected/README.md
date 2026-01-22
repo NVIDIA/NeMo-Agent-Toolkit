@@ -386,6 +386,7 @@ This setup is for **development and testing only**. For production:
 
 ## References
 
+- [A2A Introduction](../../../docs/source/components/integrations/a2a.md)
 - [A2A Authentication Documentation](../../../docs/source/components/auth/a2a-auth.md)
 - [A2A Client Documentation](../../../docs/source/build-workflows/a2a-client.md)
 - [A2A Server Documentation](../../../docs/source/run-workflows/a2a-server.md)
