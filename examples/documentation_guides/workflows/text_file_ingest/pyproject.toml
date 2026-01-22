@@ -12,7 +12,7 @@ dynamic = ["version"]
 dependencies = [
     "nvidia-nat[langchain]~=1.4",
     "beautifulsoup4~=4.13",
-    "usearch~=2.21.0",
+    "usearch~=2.21",
 ]
 requires-python = ">=3.11,<3.14"
 description = "Ingest data from text files"
