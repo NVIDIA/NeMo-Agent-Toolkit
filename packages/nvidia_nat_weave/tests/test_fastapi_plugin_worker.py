@@ -42,6 +42,8 @@ def fixture_setup_env() -> None:
 def fixture_mock_weave(monkeypatch):
     """Mock weave.init and weave client context to avoid authentication issues in unit tests."""
     mock_weave_client = MagicMock()
+    mock_weave_client.__enter__.return_value = mock_weave_client
+    mock_weave_client.__exit__.return_value = None
 
     # Mock weave.init
     monkeypatch.setattr("weave.init", lambda *args, **kwargs: mock_weave_client, raising=False)

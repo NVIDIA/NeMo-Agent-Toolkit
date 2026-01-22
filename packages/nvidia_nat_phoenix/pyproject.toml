@@ -21,7 +21,7 @@ dependencies = [
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
   # Keep sorted!!!
   "nvidia-nat[opentelemetry]~=1.4",
-  "arize-phoenix-otel~=0.13.1",
+  "arize-phoenix-otel>=0.13.1,<1.0.0",
   "openinference-instrumentation", # version determined by arize-phoenix-otel
 ]
 requires-python = ">=3.11,<3.14"
