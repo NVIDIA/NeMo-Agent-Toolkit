@@ -226,7 +226,7 @@ function get_lfs_files() {
 
 function install_python_versions() {
    # This is the version of python currently installed
-   local current_python_version=$(python --version | awk '{split($0, a, "."); print a[1]"."a[2]}')
+   local current_python_version=$(echo ${PYTHON_VERSION} | awk '{split($0, a, "."); print a[1]"."a[2]}')
 
    # This is not normally needed as our containers contain the needed python version. This is only needed for CI stages
    # which need to support multiple python versions in a single stage, such as the build_wheel stage.
