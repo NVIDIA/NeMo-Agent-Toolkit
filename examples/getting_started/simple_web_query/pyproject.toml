@@ -12,7 +12,7 @@ dynamic = ["version"]
 dependencies = [
   "nvidia-nat[langchain]~=1.4",
   "nvidia-nat[telemetry]~=1.4",
-  "usearch~=2.21.0",
+  "usearch~=2.21",
 ]
 requires-python = ">=3.11,<3.14"
 description = "Simple NeMo Agent toolkit example"

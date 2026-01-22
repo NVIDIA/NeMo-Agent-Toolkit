@@ -148,7 +148,7 @@ class DefenseMiddleware(FunctionMiddleware):
         consistent behavior between attack and defense middleware.
 
         Args:
-            context_name: The name of the function from context (e.g., "calculator.add").
+            context_name: The name of the function from context (e.g., "calculator__add").
                 For workflow-level middleware, this will be "<workflow>"
 
         Returns:
@@ -157,9 +157,11 @@ class DefenseMiddleware(FunctionMiddleware):
         Examples:
             - target=None → defends all functions and workflow
             - target="my_calculator" → defends all functions in my_calculator group
-            - target="my_calculator.divide" → defends only the divide function
+            - target="my_calculator__divide" → defends only the divide function
             - target="<workflow>" or "workflow" → defends only at workflow level
         """
+        from nat.builder.function import FunctionGroup
+
         # If no target specified, defend all functions
         if self.config.target_function_or_group is None:
             return True
@@ -167,9 +169,9 @@ class DefenseMiddleware(FunctionMiddleware):
         target = self.config.target_function_or_group
 
         # Group targeting - match if context starts with the group name
-        # Handle both "group.function" and just "function" in context
-        if "." in context_name and "." not in target:
-            context_group = context_name.split(".", 1)[0]
+        # Handle both "group__function" and just "function" in context
+        if FunctionGroup.SEPARATOR in context_name and FunctionGroup.SEPARATOR not in target:
+            context_group = context_name.split(FunctionGroup.SEPARATOR, 1)[0]
             return context_group == target
 
         if context_name == "<workflow>":
