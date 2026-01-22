@@ -21,6 +21,9 @@ limitations under the License.
 > [!NOTE]
 > ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
 
+> [!WARNING]
+> This example requires a CUDA-compatible device with NVIDIA drivers installed. It cannot be run on systems without NVIDIA GPU hardware. You do not need to install ai-dynamo packages separately; the provided Docker images include them.
+
 ## Overview
 
 **This set of example agents and evaluations demonstrate the capability to integrate NeMo Agent toolkit agents with LLM inference accelerated by NVIDIA Dynamo-hosted LLM endpoints.**

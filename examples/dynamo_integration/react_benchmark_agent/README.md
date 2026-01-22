@@ -45,6 +45,9 @@ Currently this agent supports evaluation exclusively for the [Galileo Agent Lead
 
 ### Software Requirements
 
+> [!WARNING]
+> This example requires a CUDA-compatible device with NVIDIA drivers installed. It cannot be run on systems without NVIDIA GPU hardware. You do not need to install ai-dynamo packages separately; the provided Docker images include them.
+
 1. **Python 3.11, 3.12, or 3.13** installed
 2. **NeMo Agent toolkit** repository cloned
 3. **Docker** with NVIDIA Container Toolkit
