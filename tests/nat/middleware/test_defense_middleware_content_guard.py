@@ -23,6 +23,7 @@ from unittest.mock import patch
 import pytest
 from pydantic import BaseModel
 
+from nat.builder.function import FunctionGroup
 from nat.middleware.defense.defense_middleware_content_guard import ContentSafetyGuardMiddleware
 from nat.middleware.defense.defense_middleware_content_guard import ContentSafetyGuardMiddlewareConfig
 from nat.middleware.middleware import FunctionMiddlewareContext
@@ -48,7 +49,7 @@ def fixture_mock_builder():
 @pytest.fixture(name="middleware_context")
 def fixture_middleware_context():
     """Create a test FunctionMiddlewareContext."""
-    return FunctionMiddlewareContext(name="my_calculator.get_random_string",
+    return FunctionMiddlewareContext(name=f"my_calculator{FunctionGroup.SEPARATOR}get_random_string",
                                      config=MagicMock(),
                                      description="Get random string",
                                      input_schema=_TestInput,
@@ -406,9 +407,10 @@ class TestContentSafetyGuardInvoke:
         assert result == "content"
 
         # Test specific function targeting
-        config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm",
-                                                    target_function_or_group="my_calculator.get_random_string",
-                                                    action="partial_compliance")
+        config = ContentSafetyGuardMiddlewareConfig(
+            llm_name="test_llm",
+            target_function_or_group=f"my_calculator{FunctionGroup.SEPARATOR}get_random_string",
+            action="partial_compliance")
         middleware = ContentSafetyGuardMiddleware(config, mock_builder)
         middleware._llm = mock_llm
         mock_llm.ainvoke.reset_mock()
@@ -418,9 +420,10 @@ class TestContentSafetyGuardInvoke:
         assert result == "content"
 
         # Test non-targeted function skips defense
-        config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm",
-                                                    target_function_or_group="calculator.invalid_func",
-                                                    action="partial_compliance")
+        config = ContentSafetyGuardMiddlewareConfig(
+            llm_name="test_llm",
+            target_function_or_group=f"calculator{FunctionGroup.SEPARATOR}invalid_func",
+            action="partial_compliance")
         middleware = ContentSafetyGuardMiddleware(config, mock_builder)
         mock_llm.ainvoke.reset_mock()
 
