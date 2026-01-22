@@ -110,7 +110,7 @@ async def clone_repository(repo_url: str, target_path: Path) -> Repo:
     """Clone a repository to the specified path."""
     logger.info("Cloning repository %s to %s", repo_url, target_path)
     if os.path.exists(target_path):
-        shutil.rmtree(target_path)    
+        await asyncio.to_thread(shutil.rmtree, target_path)
     # Use asyncio.to_thread to avoid blocking the event loop during clone operation
     return await asyncio.to_thread(Repo.clone_from, repo_url, target_path)
 
