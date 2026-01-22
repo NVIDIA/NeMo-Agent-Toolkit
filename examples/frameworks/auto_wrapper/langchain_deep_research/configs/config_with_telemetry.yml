@@ -27,9 +27,8 @@ llms:
     _type: nim
     model: nvidia/nemotron-3-nano-30b-a3b
     max_tokens: 16384
-    extra_body:
-      chat_template_kwargs:
-        reasoning_budget: 1024
+    chat_template_kwargs:
+      reasoning_budget: 1024
 
 workflow:
   _type: langgraph_wrapper
