@@ -98,6 +98,8 @@ for whl in "${MOVED_WHEELS[@]}"; do
 
         if [[ ${IMPORT_TEST_RESULT} -ne 0 ]]; then
             rapids-logger "Error, failed to import nat from wheel ${whl} with Python ${pyver}"
+            rapids-logger "This may indicate missing dependencies, Python version incompatibility, or build issues"
+            rapids-logger "Check if the wheel includes all necessary binary extensions for this Python version"
             echo "${PYTHON_IMPORT_OUT}"
             exit ${IMPORT_TEST_RESULT}
          fi
