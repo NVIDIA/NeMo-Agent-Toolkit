@@ -86,24 +86,31 @@ for whl in "${MOVED_WHEELS[@]}"; do
 
     for pyver in "${PYTHON_VERSIONS_TO_TEST[@]}"; do
         rapids-logger "Testing wheel: ${whl} with Python ${pyver}"
-        uv venv -p ${pyver} --seed "${TEMP_INSTALL_LOCATION}"
+        UV_VENV_OUT=$(uv venv -p ${pyver} --seed "${TEMP_INSTALL_LOCATION}" 2>&1)
+        UV_VENV_RESULT=$?
+
+        if [[ ${UV_VENV_RESULT} -ne 0 ]]; then
+            rapids-logger "Error, failed to create uv venv with Python ${pyver} for wheel ${whl} : ${UV_VENV_OUT}"
+            exit ${UV_VENV_RESULT}
+        fi
+
         source "${TEMP_INSTALL_LOCATION}/bin/activate"
 
         set +e
-        uv pip install --prerelease=allow --find-links "${WHEELS_BASE_DIR}" "${whl}"
+        UV_PIP_OUT=$(uv pip install --prerelease=allow --find-links "${WHEELS_BASE_DIR}" "${whl}" 2>&1)
         INSTALL_RESULT=$?
 
         if [[ ${INSTALL_RESULT} -ne 0 ]]; then
-            rapids-logger "Error, failed to install wheel ${whl} with Python ${pyver}"
+            rapids-logger "Error, failed to install wheel ${whl} with Python ${pyver} : ${UV_PIP_OUT}"
             exit ${INSTALL_RESULT}
         fi
 
         # run a simple command to verify installation
-        python -c "import nat"
+        PYTHON_IMPORT_OUT=$(PYTHON_IMPpython -c "import nat" 2>&1)
         IMPORT_TEST_RESULT=$?
 
        if [[ ${IMPORT_TEST_RESULT} -ne 0 ]]; then
-            rapids-logger "Error, failed to import nat from wheel ${whl} with Python ${pyver}"
+            rapids-logger "Error, failed to import nat from wheel ${whl} with Python ${pyver} : ${PYTHON_IMPORT_OUT}"
             exit ${IMPORT_TEST_RESULT}
         fi
 
