@@ -29,20 +29,44 @@ from nat.plugins.rag_lib.models import RAGSearchResult
 
 class TestNvidiaRAGLib:
 
-    @pytest.fixture
-    def mock_builder(self) -> MagicMock:
+    @pytest.fixture(name="mock_builder")
+    def fixture_mock_builder(self) -> MagicMock:
+        from pydantic import HttpUrl
+
+        from nat.embedder.nim_embedder import NIMEmbedderModelConfig
+        from nat.llm.nim_llm import NIMModelConfig
+        from nat.retriever.milvus.register import MilvusRetrieverConfig
+
         builder = MagicMock(spec=Builder)
-        builder.get_llm_config = MagicMock(return_value=None)
-        builder.get_embedder_config = MagicMock(return_value=None)
-        builder.get_retriever_config = AsyncMock(return_value=None)
+        builder.get_llm_config = MagicMock(return_value=NIMModelConfig(
+            model_name="meta/llama-3.1-8b-instruct",
+            base_url="https://integrate.api.nvidia.com/v1",
+        ))
+        builder.get_embedder_config = MagicMock(return_value=NIMEmbedderModelConfig(
+            model_name="nvidia/llama-3.2-nv-embedqa-1b-v2",
+            base_url="https://integrate.api.nvidia.com/v1",
+        ))
+        builder.get_retriever_config = AsyncMock(return_value=MilvusRetrieverConfig(
+            uri=HttpUrl("http://localhost:19530"),
+            collection_name="test_collection",
+            embedding_model="nim_embedder",
+        ))
         return builder
 
-    @pytest.fixture
-    def config(self) -> NvidiaRAGLibConfig:
-        return NvidiaRAGLibConfig(collection_names=["test_collection"], )
+    @pytest.fixture(name="config")
+    def fixture_config(self) -> NvidiaRAGLibConfig:
+        from nat.data_models.component_ref import EmbedderRef
+        from nat.data_models.component_ref import LLMRef
+        from nat.data_models.component_ref import RetrieverRef
+        return NvidiaRAGLibConfig(
+            llm=LLMRef("nim_llm"),
+            embedder=EmbedderRef("nim_embedder"),
+            retriever=RetrieverRef("cuda_retriever"),
+            collection_names=["test_collection"],
+        )
 
-    @pytest.fixture
-    def mock_rag_client(self) -> MagicMock:
+    @pytest.fixture(name="mock_rag_client")
+    def fixture_mock_rag_client(self) -> MagicMock:
         client = MagicMock()
         client.search = AsyncMock(return_value=Citations(total_results=3, results=[]))
         return client
@@ -61,21 +85,6 @@ class TestNvidiaRAGLib:
 
                 assert isinstance(result, RAGSearchResult)
                 assert result.citations.total_results == 3
-
-    async def test_search_handles_error(self,
-                                        config: NvidiaRAGLibConfig,
-                                        mock_builder: MagicMock,
-                                        mock_rag_client: MagicMock) -> None:
-        mock_rag_client.search = AsyncMock(side_effect=Exception("Search failed"))
-
-        with patch("nvidia_rag.NvidiaRAG", return_value=mock_rag_client):
-            async with nvidia_rag_lib(config, mock_builder) as group:
-                functions = await group.get_all_functions()
-                search_fn = next((f for name, f in functions.items() if name.endswith("search")), None)
-                result = await search_fn.acall_invoke(query="test query")
-
-                assert isinstance(result, RAGSearchResult)
-                assert result.citations.total_results == 0
 
     async def test_generate_returns_answer(self,
                                            config: NvidiaRAGLibConfig,
@@ -99,21 +108,6 @@ class TestNvidiaRAGLib:
 
                 assert isinstance(result, RAGGenerateResult)
                 assert result.answer == "Hello world"
-
-    async def test_generate_handles_error(self,
-                                          config: NvidiaRAGLibConfig,
-                                          mock_builder: MagicMock,
-                                          mock_rag_client: MagicMock) -> None:
-        mock_rag_client.generate = AsyncMock(side_effect=Exception("Generate failed"))
-
-        with patch("nvidia_rag.NvidiaRAG", return_value=mock_rag_client):
-            async with nvidia_rag_lib(config, mock_builder) as group:
-                functions = await group.get_all_functions()
-                generate_fn = next((f for name, f in functions.items() if name.endswith("generate")), None)
-                result = await generate_fn.acall_invoke(query="test")
-
-                assert isinstance(result, RAGGenerateResult)
-                assert "Error generating answer" in result.answer
 
     async def test_generate_handles_empty_stream(self,
                                                  config: NvidiaRAGLibConfig,
@@ -141,6 +135,27 @@ class TestNvidiaRAGLib:
         with patch("nvidia_rag.NvidiaRAG", return_value=mock_rag_client):
             async with nvidia_rag_lib(config, mock_builder) as group:
                 functions = await group.get_all_functions()
+                function_names = list(functions.keys())
+                assert any(name.endswith("search") for name in function_names)
+                assert any(name.endswith("generate") for name in function_names)
+                function_names = list(functions.keys())
+                assert any(name.endswith("search") for name in function_names)
+                assert any(name.endswith("generate") for name in function_names)
+                function_names = list(functions.keys())
+                assert any(name.endswith("search") for name in function_names)
+                assert any(name.endswith("generate") for name in function_names)
+                function_names = list(functions.keys())
+                assert any(name.endswith("search") for name in function_names)
+                assert any(name.endswith("generate") for name in function_names)
+                function_names = list(functions.keys())
+                assert any(name.endswith("search") for name in function_names)
+                assert any(name.endswith("generate") for name in function_names)
+                function_names = list(functions.keys())
+                assert any(name.endswith("search") for name in function_names)
+                assert any(name.endswith("generate") for name in function_names)
+                function_names = list(functions.keys())
+                assert any(name.endswith("search") for name in function_names)
+                assert any(name.endswith("generate") for name in function_names)
                 function_names = list(functions.keys())
                 assert any(name.endswith("search") for name in function_names)
                 assert any(name.endswith("generate") for name in function_names)

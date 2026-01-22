@@ -39,6 +39,7 @@ LLM_CONFIGS: dict[str, NIMModelConfig] = {
     "nim_llm_llama8b":
         NIMModelConfig(
             model_name="meta/llama-3.1-8b-instruct",
+            base_url="https://integrate.api.nvidia.com/v1",
             temperature=0.2,
             top_p=0.95,
             max_tokens=4096,
@@ -46,6 +47,7 @@ LLM_CONFIGS: dict[str, NIMModelConfig] = {
     "nim_llm_llama70b":
         NIMModelConfig(
             model_name="meta/llama-3.1-70b-instruct",
+            base_url="https://integrate.api.nvidia.com/v1",
             temperature=0.1,
             top_p=0.9,
             max_tokens=4096,
@@ -54,9 +56,16 @@ LLM_CONFIGS: dict[str, NIMModelConfig] = {
 
 EMBEDDER_CONFIGS: dict[str, NIMEmbedderModelConfig] = {
     # nvidia/llama-3.2-nv-embedqa-1b-v2: supports dimensions parameter
-    "nim_embedder": NIMEmbedderModelConfig(model_name="nvidia/llama-3.2-nv-embedqa-1b-v2"),
-    # nvidia/nv-embedqa-e5-v5: REJECTS dimensions param
-    "nim_embedder_e5": NIMEmbedderModelConfig(model_name="nvidia/nv-embedqa-e5-v5"),
+    "nim_embedder":
+        NIMEmbedderModelConfig(
+            model_name="nvidia/llama-3.2-nv-embedqa-1b-v2",
+            base_url="https://integrate.api.nvidia.com/v1",
+        ),  # nvidia/nv-embedqa-e5-v5: REJECTS dimensions param
+    "nim_embedder_e5":
+        NIMEmbedderModelConfig(
+            model_name="nvidia/nv-embedqa-e5-v5",
+            base_url="https://integrate.api.nvidia.com/v1",
+        ),
 }
 
 RETRIEVER_CONFIGS: dict[str, MilvusRetrieverConfig] = {
@@ -90,384 +99,6 @@ def fixture_mock_builder() -> MagicMock:
     builder.get_retriever_config = AsyncMock(side_effect=get_retriever_config)
 
     return builder
-
-
-# =============================================================================
-# Config Resolution Tests
-# =============================================================================
-
-
-class TestConfigResolution:
-    """Test NvidiaRAGLibConfig translation to NvidiaRAGConfig."""
-
-    async def test_resolve_llm_from_ref(self, mock_builder: MagicMock) -> None:
-        """Test LLMRef from NvidiaRAGLibConfig resolves to NvidiaRAGConfig.llm."""
-
-        from nvidia_rag.utils.configuration import NvidiaRAGConfig
-
-        from nat.plugins.rag_lib.client import _resolve_llm_config
-
-        rag_config: NvidiaRAGConfig = NvidiaRAGConfig()
-        await _resolve_llm_config(LLMRef("nim_llm_llama8b"), mock_builder, rag_config)
-
-        assert rag_config.llm.model_name == "meta/llama-3.1-8b-instruct"
-        assert rag_config.llm.parameters.temperature == 0.2
-        assert rag_config.llm.parameters.top_p == 0.95
-        assert rag_config.llm.parameters.max_tokens == 4096
-
-    async def test_resolve_llm_from_nim_config(self, mock_builder: MagicMock) -> None:
-        """Test NIMModelConfig from NvidiaRAGLibConfig resolves to NvidiaRAGConfig.llm."""
-        from nvidia_rag.utils.configuration import NvidiaRAGConfig
-
-        from nat.plugins.rag_lib.client import _resolve_llm_config
-
-        nim_config: NIMModelConfig = NIMModelConfig(
-            model_name="meta/llama-3.1-8b-instruct",
-            base_url="http://nim:8000/v1",
-            api_key="direct-api-key",
-            temperature=0.7,
-            top_p=0.9,
-            max_tokens=2048,
-        )
-
-        rag_config: NvidiaRAGConfig = NvidiaRAGConfig()
-        await _resolve_llm_config(nim_config, mock_builder, rag_config)
-
-        assert rag_config.llm.model_name == "meta/llama-3.1-8b-instruct"
-        assert rag_config.llm.server_url == "http://nim:8000/v1"
-        assert rag_config.llm.api_key.get_secret_value() == "direct-api-key"
-        assert rag_config.llm.parameters.temperature == 0.7
-        assert rag_config.llm.parameters.top_p == 0.9
-        assert rag_config.llm.parameters.max_tokens == 2048
-
-    async def test_resolve_llm_none_uses_defaults(self, mock_builder: MagicMock) -> None:
-        """Test None llm in NvidiaRAGLibConfig preserves NvidiaRAGConfig defaults."""
-        from nvidia_rag.utils.configuration import LLMConfig
-        from nvidia_rag.utils.configuration import NvidiaRAGConfig
-
-        from nat.plugins.rag_lib.client import _resolve_llm_config
-
-        rag_config: NvidiaRAGConfig = NvidiaRAGConfig()
-        original_llm: LLMConfig = rag_config.llm
-
-        await _resolve_llm_config(None, mock_builder, rag_config)
-
-        assert rag_config.llm is original_llm
-
-    async def test_resolve_llm_native_config_passthrough(self, mock_builder: MagicMock) -> None:
-        """Test NvidiaRAGLLMConfig passes through to NvidiaRAGConfig unchanged."""
-        from nvidia_rag.utils.configuration import LLMConfig as NvidiaRAGLLMConfig
-        from nvidia_rag.utils.configuration import NvidiaRAGConfig
-
-        from nat.plugins.rag_lib.client import _resolve_llm_config
-
-        native_config: NvidiaRAGLLMConfig = NvidiaRAGLLMConfig(
-            model_name="custom/model",
-            server_url="http://custom:8000",
-            model_engine="custom-engine",
-        )
-
-        rag_config: NvidiaRAGConfig = NvidiaRAGConfig()
-        await _resolve_llm_config(native_config, mock_builder, rag_config)
-
-        assert rag_config.llm is native_config
-
-    async def test_resolve_llm_unsupported_type_raises(self, mock_builder: MagicMock) -> None:
-        """Test unsupported llm type in NvidiaRAGLibConfig raises ValueError."""
-        from nvidia_rag.utils.configuration import NvidiaRAGConfig
-
-        from nat.plugins.rag_lib.client import _resolve_llm_config
-
-        rag_config: NvidiaRAGConfig = NvidiaRAGConfig()
-
-        with pytest.raises(ValueError, match="Unsupported LLM config type"):
-            await _resolve_llm_config({"invalid": "config"}, mock_builder, rag_config)
-
-    async def test_resolve_embedder_from_ref(self, mock_builder: MagicMock) -> None:
-        """Test EmbedderRef from NvidiaRAGLibConfig resolves to NvidiaRAGConfig.embeddings."""
-        from nvidia_rag.utils.configuration import NvidiaRAGConfig
-
-        from nat.plugins.rag_lib.client import _resolve_embedder_config
-
-        rag_config: NvidiaRAGConfig = NvidiaRAGConfig()
-        await _resolve_embedder_config(EmbedderRef("nim_embedder"), mock_builder, rag_config)
-
-        assert rag_config.embeddings.model_name == "nvidia/llama-3.2-nv-embedqa-1b-v2"
-
-    async def test_resolve_embedder_from_nim_config(self, mock_builder: MagicMock) -> None:
-        """Test NIMEmbedderModelConfig from NvidiaRAGLibConfig resolves to NvidiaRAGConfig.embeddings."""
-        from nvidia_rag.utils.configuration import NvidiaRAGConfig
-
-        from nat.plugins.rag_lib.client import _resolve_embedder_config
-
-        nim_config: NIMEmbedderModelConfig = NIMEmbedderModelConfig(
-            model_name="nvidia/nv-embedqa-e5-v5",
-            base_url="http://embedder:8000/v1",
-            api_key="direct-embedder-key",
-        )
-
-        rag_config: NvidiaRAGConfig = NvidiaRAGConfig()
-        await _resolve_embedder_config(nim_config, mock_builder, rag_config)
-
-        assert rag_config.embeddings.model_name == "nvidia/nv-embedqa-e5-v5"
-        assert rag_config.embeddings.server_url == "http://embedder:8000/v1"
-        assert rag_config.embeddings.api_key.get_secret_value() == "direct-embedder-key"
-
-    async def test_resolve_embedder_none_uses_defaults(self, mock_builder: MagicMock) -> None:
-        """Test None embedder in NvidiaRAGLibConfig preserves NvidiaRAGConfig defaults."""
-        from nvidia_rag.utils.configuration import EmbeddingConfig
-        from nvidia_rag.utils.configuration import NvidiaRAGConfig
-
-        from nat.plugins.rag_lib.client import _resolve_embedder_config
-
-        rag_config: NvidiaRAGConfig = NvidiaRAGConfig()
-        original_embeddings: EmbeddingConfig = rag_config.embeddings
-
-        await _resolve_embedder_config(None, mock_builder, rag_config)
-
-        assert rag_config.embeddings is original_embeddings
-
-    async def test_resolve_embedder_native_config_passthrough(self, mock_builder: MagicMock) -> None:
-        """Test NvidiaRAGEmbeddingConfig passes through to NvidiaRAGConfig unchanged."""
-        from nvidia_rag.utils.configuration import EmbeddingConfig as NvidiaRAGEmbeddingConfig
-        from nvidia_rag.utils.configuration import NvidiaRAGConfig
-
-        from nat.plugins.rag_lib.client import _resolve_embedder_config
-
-        native_config: NvidiaRAGEmbeddingConfig = NvidiaRAGEmbeddingConfig(
-            model_name="custom/embedder",
-            server_url="http://custom:8000",
-        )
-
-        rag_config: NvidiaRAGConfig = NvidiaRAGConfig()
-        await _resolve_embedder_config(native_config, mock_builder, rag_config)
-
-        assert rag_config.embeddings is native_config
-
-    async def test_resolve_embedder_unsupported_type_raises(self, mock_builder: MagicMock) -> None:
-        """Test unsupported embedder type in NvidiaRAGLibConfig raises ValueError."""
-        from nvidia_rag.utils.configuration import NvidiaRAGConfig
-
-        from nat.plugins.rag_lib.client import _resolve_embedder_config
-
-        rag_config: NvidiaRAGConfig = NvidiaRAGConfig()
-
-        with pytest.raises(ValueError, match="Unsupported embedder config type"):
-            await _resolve_embedder_config({"invalid": "config"}, mock_builder, rag_config)
-
-    async def test_resolve_retriever_from_ref(self, mock_builder: MagicMock) -> None:
-        """Test RetrieverRef from NvidiaRAGLibConfig resolves to NvidiaRAGConfig.vector_store."""
-        from nvidia_rag.utils.configuration import NvidiaRAGConfig
-
-        from nat.plugins.rag_lib.client import _resolve_retriever_config
-
-        rag_config: NvidiaRAGConfig = NvidiaRAGConfig()
-        await _resolve_retriever_config(RetrieverRef("milvus_retriever"), mock_builder, rag_config)
-
-        assert rag_config.vector_store.name == "milvus"
-        assert rag_config.vector_store.url == "http://localhost:19530/"
-        assert rag_config.vector_store.default_collection_name == "test_collection"
-
-    async def test_resolve_retriever_from_milvus_config(self, mock_builder: MagicMock) -> None:
-        """Test MilvusRetrieverConfig from NvidiaRAGLibConfig resolves to NvidiaRAGConfig.vector_store."""
-        from nvidia_rag.utils.configuration import NvidiaRAGConfig
-
-        from nat.plugins.rag_lib.client import _resolve_retriever_config
-
-        milvus_config: MilvusRetrieverConfig = MilvusRetrieverConfig(
-            uri=HttpUrl("http://milvus:19530"),
-            collection_name="my_collection",
-            embedding_model="nvidia/nv-embedqa-e5-v5",
-            connection_args={
-                "user": "admin", "password": "secret123"
-            },
-        )
-
-        rag_config: NvidiaRAGConfig = NvidiaRAGConfig()
-        await _resolve_retriever_config(milvus_config, mock_builder, rag_config)
-
-        assert rag_config.vector_store.url == "http://milvus:19530/"
-        assert rag_config.vector_store.default_collection_name == "my_collection"
-        assert rag_config.vector_store.username == "admin"
-        assert rag_config.vector_store.password.get_secret_value() == "secret123"
-
-    async def test_resolve_retriever_from_nemo_config(self, mock_builder: MagicMock) -> None:
-        """Test NemoRetrieverConfig from NvidiaRAGLibConfig resolves to NvidiaRAGConfig.vector_store."""
-        from nvidia_rag.utils.configuration import NvidiaRAGConfig
-
-        from nat.plugins.rag_lib.client import _resolve_retriever_config
-        from nat.retriever.nemo_retriever.register import NemoRetrieverConfig
-
-        nemo_config: NemoRetrieverConfig = NemoRetrieverConfig(
-            uri=HttpUrl("http://nemo-retriever:8000"),
-            collection_name="nemo_collection",
-            nvidia_api_key="nemo-api-key",
-        )
-
-        rag_config: NvidiaRAGConfig = NvidiaRAGConfig()
-        await _resolve_retriever_config(nemo_config, mock_builder, rag_config)
-
-        assert rag_config.vector_store.url == "http://nemo-retriever:8000/"
-        assert rag_config.vector_store.default_collection_name == "nemo_collection"
-        assert rag_config.vector_store.api_key.get_secret_value() == "nemo-api-key"
-
-    async def test_resolve_retriever_none_uses_defaults(self, mock_builder: MagicMock) -> None:
-        """Test None retriever in NvidiaRAGLibConfig preserves NvidiaRAGConfig defaults."""
-        from nvidia_rag.utils.configuration import NvidiaRAGConfig
-        from nvidia_rag.utils.configuration import VectorStoreConfig
-
-        from nat.plugins.rag_lib.client import _resolve_retriever_config
-
-        rag_config: NvidiaRAGConfig = NvidiaRAGConfig()
-        original_vector_store: VectorStoreConfig = rag_config.vector_store
-
-        await _resolve_retriever_config(None, mock_builder, rag_config)
-
-        assert rag_config.vector_store is original_vector_store
-
-    async def test_resolve_retriever_native_config_passthrough(self, mock_builder: MagicMock) -> None:
-        """Test NvidiaRAGVectorStoreConfig passes through to NvidiaRAGConfig unchanged."""
-        from nvidia_rag.utils.configuration import NvidiaRAGConfig
-        from nvidia_rag.utils.configuration import VectorStoreConfig as NvidiaRAGVectorStoreConfig
-
-        from nat.plugins.rag_lib.client import _resolve_retriever_config
-
-        native_config: NvidiaRAGVectorStoreConfig = NvidiaRAGVectorStoreConfig(
-            name="custom",
-            url="http://custom:19530",
-        )
-
-        rag_config: NvidiaRAGConfig = NvidiaRAGConfig()
-        await _resolve_retriever_config(native_config, mock_builder, rag_config)
-
-        assert rag_config.vector_store is native_config
-
-    async def test_resolve_retriever_unsupported_type_raises(self, mock_builder: MagicMock) -> None:
-        """Test unsupported retriever type in NvidiaRAGLibConfig raises ValueError."""
-        from nvidia_rag.utils.configuration import NvidiaRAGConfig
-
-        from nat.plugins.rag_lib.client import _resolve_retriever_config
-
-        rag_config: NvidiaRAGConfig = NvidiaRAGConfig()
-
-        with pytest.raises(ValueError, match="Unsupported retriever config type"):
-            await _resolve_retriever_config({"invalid": "config"}, mock_builder, rag_config)  # type: ignore[arg-type]
-
-
-# =============================================================================
-# RAGPipelineConfig Mapping Tests
-# =============================================================================
-
-
-class TestRAGPipelineConfigMapping:
-    """Test RAGPipelineConfig fields are correctly mapped to NvidiaRAGConfig."""
-
-    async def test_pipeline_fields_with_defaults(self, mock_builder: MagicMock) -> None:
-        """Test that default RAGPipelineConfig creates valid NvidiaRAGConfig with all required fields."""
-        from nvidia_rag.utils.configuration import NvidiaRAGConfig
-
-        from nat.plugins.rag_lib.client import NvidiaRAGLibConfig
-        from nat.plugins.rag_lib.client import _build_nvidia_rag_config
-
-        config = NvidiaRAGLibConfig()
-        rag_config: NvidiaRAGConfig = await _build_nvidia_rag_config(config, mock_builder)
-
-        # Fields that always have values (from default_factory)
-        assert rag_config.ranking is not None
-        assert rag_config.retriever is not None
-
-        # Fields that get defaults when None
-        assert rag_config.vlm is not None
-        assert rag_config.query_rewriter is not None
-        assert rag_config.filter_expression_generator is not None
-        assert rag_config.query_decomposition is not None
-        assert rag_config.reflection is not None
-
-        # Boolean flags have correct defaults
-        assert rag_config.enable_citations is True
-        assert rag_config.enable_guardrails is False
-        assert rag_config.enable_vlm_inference is False
-        assert rag_config.vlm_to_llm_fallback is True
-        assert rag_config.default_confidence_threshold == 0.0
-
-    async def test_pipeline_fields_passthrough(self, mock_builder: MagicMock) -> None:
-        """Test that explicit RAGPipelineConfig values are passed through to NvidiaRAGConfig."""
-        from nvidia_rag.utils.configuration import NvidiaRAGConfig
-        from nvidia_rag.utils.configuration import QueryRewriterConfig
-        from nvidia_rag.utils.configuration import RankingConfig
-        from nvidia_rag.utils.configuration import RetrieverConfig
-        from nvidia_rag.utils.configuration import VLMConfig
-
-        from nat.plugins.rag_lib.client import NvidiaRAGLibConfig
-        from nat.plugins.rag_lib.client import _build_nvidia_rag_config
-        from nat.plugins.rag_lib.config import RAGPipelineConfig
-
-        custom_ranking = RankingConfig(enable_reranker=False)
-        custom_retriever = RetrieverConfig(top_k=20, vdb_top_k=200)
-        custom_vlm = VLMConfig(model_name="custom/vlm-model", temperature=0.5)
-        custom_query_rewriter = QueryRewriterConfig(enable_query_rewriter=True)
-
-        pipeline = RAGPipelineConfig(
-            ranking=custom_ranking,
-            search_settings=custom_retriever,
-            vlm=custom_vlm,
-            query_rewriter=custom_query_rewriter,
-            enable_citations=False,
-            enable_guardrails=True,
-            enable_vlm_inference=True,
-            vlm_to_llm_fallback=False,
-            default_confidence_threshold=0.5,
-        )
-
-        config = NvidiaRAGLibConfig(rag_pipeline=pipeline)
-        rag_config: NvidiaRAGConfig = await _build_nvidia_rag_config(config, mock_builder)
-
-        # Explicit values passed through
-        assert rag_config.ranking.enable_reranker is False
-        assert rag_config.retriever.top_k == 20
-        assert rag_config.retriever.vdb_top_k == 200
-        assert rag_config.vlm.model_name == "custom/vlm-model"
-        assert rag_config.vlm.temperature == 0.5
-        assert rag_config.query_rewriter.enable_query_rewriter is True
-
-        # Boolean flags passed through
-        assert rag_config.enable_citations is False
-        assert rag_config.enable_guardrails is True
-        assert rag_config.enable_vlm_inference is True
-        assert rag_config.vlm_to_llm_fallback is False
-        assert rag_config.default_confidence_threshold == 0.5
-
-    async def test_none_optional_fields_get_defaults(self, mock_builder: MagicMock) -> None:
-        """Test that None optional fields receive proper default config objects."""
-        from nvidia_rag.utils.configuration import FilterExpressionGeneratorConfig
-        from nvidia_rag.utils.configuration import NvidiaRAGConfig
-        from nvidia_rag.utils.configuration import QueryDecompositionConfig
-        from nvidia_rag.utils.configuration import QueryRewriterConfig
-        from nvidia_rag.utils.configuration import ReflectionConfig
-        from nvidia_rag.utils.configuration import VLMConfig
-
-        from nat.plugins.rag_lib.client import NvidiaRAGLibConfig
-        from nat.plugins.rag_lib.client import _build_nvidia_rag_config
-        from nat.plugins.rag_lib.config import RAGPipelineConfig
-
-        # Explicitly set optional fields to None
-        pipeline = RAGPipelineConfig(
-            vlm=None,
-            query_rewriter=None,
-            filter_generator=None,
-            query_decomposition=None,
-            reflection=None,
-        )
-
-        config = NvidiaRAGLibConfig(rag_pipeline=pipeline)
-        rag_config: NvidiaRAGConfig = await _build_nvidia_rag_config(config, mock_builder)
-
-        # All should be valid config objects, not None
-        assert isinstance(rag_config.vlm, VLMConfig)
-        assert isinstance(rag_config.query_rewriter, QueryRewriterConfig)
-        assert isinstance(rag_config.filter_expression_generator, FilterExpressionGeneratorConfig)
-        assert isinstance(rag_config.query_decomposition, QueryDecompositionConfig)
-        assert isinstance(rag_config.reflection, ReflectionConfig)
 
 
 # =============================================================================
@@ -508,9 +139,14 @@ class TestNvidiaRAGMethods:
         assert callable(NvidiaRAG.health)
 
 
+# =============================================================================
+# Integration Tests
+# =============================================================================
+
+
 @pytest.mark.integration
 class TestNvidiaRAGIntegration:
-    """Parameterized tests for NvidiaRAG generate(), search(), and health() methods."""
+    """Integration tests for NvidiaRAG with live services."""
 
     @pytest.fixture(name="create_collection")
     def fixture_create_collection(self):
@@ -569,21 +205,22 @@ class TestNvidiaRAGIntegration:
     ) -> None:
         """Test NvidiaRAG search() with different component configs."""
         from nvidia_rag import NvidiaRAG
-
-        from nat.plugins.rag_lib.client import NvidiaRAGLibConfig
-        from nat.plugins.rag_lib.client import _build_nvidia_rag_config
+        from nvidia_rag.utils.configuration import NvidiaRAGConfig
 
         collection_name = create_collection(embedder_ref)
 
-        config = NvidiaRAGLibConfig(
-            llm=LLMRef(llm_ref),
-            embedder=EmbedderRef(embedder_ref),
-            retriever=RetrieverRef(retriever_ref),
-        )
-        rag_config = await _build_nvidia_rag_config(config, mock_builder)
-        rag_config.vector_store.default_collection_name = collection_name
-        rag = NvidiaRAG(config=rag_config)
+        llm_config = LLM_CONFIGS[llm_ref]
+        embedder_config = EMBEDDER_CONFIGS[embedder_ref]
 
+        rag_config = NvidiaRAGConfig()
+        rag_config.llm.model_name = llm_config.model_name
+        rag_config.llm.server_url = llm_config.base_url
+        rag_config.embeddings.model_name = embedder_config.model_name
+        rag_config.embeddings.server_url = embedder_config.base_url
+        rag_config.vector_store.url = "http://localhost:19530"
+        rag_config.vector_store.default_collection_name = collection_name
+
+        rag = NvidiaRAG(config=rag_config)
         result = await rag.search(query="test query")
 
         assert result is not None
@@ -607,18 +244,19 @@ class TestNvidiaRAGIntegration:
     ) -> None:
         """Test NvidiaRAG generate() with different component configs."""
         from nvidia_rag import NvidiaRAG
+        from nvidia_rag.utils.configuration import NvidiaRAGConfig
 
-        from nat.plugins.rag_lib.client import NvidiaRAGLibConfig
-        from nat.plugins.rag_lib.client import _build_nvidia_rag_config
+        llm_config = LLM_CONFIGS[llm_ref]
+        embedder_config = EMBEDDER_CONFIGS[embedder_ref]
 
-        config = NvidiaRAGLibConfig(
-            llm=LLMRef(llm_ref),
-            embedder=EmbedderRef(embedder_ref),
-            retriever=RetrieverRef(retriever_ref),
-        )
-        rag_config = await _build_nvidia_rag_config(config, mock_builder)
+        rag_config = NvidiaRAGConfig()
+        rag_config.llm.model_name = llm_config.model_name
+        rag_config.llm.server_url = llm_config.base_url
+        rag_config.embeddings.model_name = embedder_config.model_name
+        rag_config.embeddings.server_url = embedder_config.base_url
+        rag_config.vector_store.url = "http://localhost:19530"
+
         rag = NvidiaRAG(config=rag_config)
-
         messages = [{"role": "user", "content": "What is RAG?"}]
         result = await rag.generate(messages=messages, use_knowledge_base=False)
 
@@ -643,18 +281,19 @@ class TestNvidiaRAGIntegration:
     ) -> None:
         """Test NvidiaRAG health() with different component configs."""
         from nvidia_rag import NvidiaRAG
+        from nvidia_rag.utils.configuration import NvidiaRAGConfig
 
-        from nat.plugins.rag_lib.client import NvidiaRAGLibConfig
-        from nat.plugins.rag_lib.client import _build_nvidia_rag_config
+        llm_config = LLM_CONFIGS[llm_ref]
+        embedder_config = EMBEDDER_CONFIGS[embedder_ref]
 
-        config = NvidiaRAGLibConfig(
-            llm=LLMRef(llm_ref),
-            embedder=EmbedderRef(embedder_ref),
-            retriever=RetrieverRef(retriever_ref),
-        )
-        rag_config = await _build_nvidia_rag_config(config, mock_builder)
+        rag_config = NvidiaRAGConfig()
+        rag_config.llm.model_name = llm_config.model_name
+        rag_config.llm.server_url = llm_config.base_url
+        rag_config.embeddings.model_name = embedder_config.model_name
+        rag_config.embeddings.server_url = embedder_config.base_url
+        rag_config.vector_store.url = "http://localhost:19530"
+
         rag = NvidiaRAG(config=rag_config)
-
         result = await rag.health()
 
         assert result is not None

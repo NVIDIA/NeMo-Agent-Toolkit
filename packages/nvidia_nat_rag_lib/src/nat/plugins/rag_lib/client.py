@@ -41,7 +41,7 @@ class NvidiaRAGLibConfig(FunctionGroupBaseConfig, name="nvidia_rag_lib"):
     retriever: RetrieverRef = Field(description="Retriever reference")
     rag_pipeline: RAGPipelineConfig = Field(default_factory=RAGPipelineConfig)
     topic: str | None = Field(default=None, description="Topic for tool descriptions.")
-    collection_names: list[str] | None = Field(default=None, description="Collections to query.")
+    collection_names: list[str] = Field(min_length=1, description="Collections to query.")
     reranker_top_k: int = Field(default=10, ge=1, description="Number of results after reranking.")
 
 
@@ -49,22 +49,23 @@ class NvidiaRAGLibConfig(FunctionGroupBaseConfig, name="nvidia_rag_lib"):
 async def nvidia_rag_lib(config: NvidiaRAGLibConfig, builder: Builder) -> AsyncGenerator[FunctionGroup, None]:
     """NVIDIA RAG Library - exposes search and generate tools."""
     from pydantic import SecretStr
-    from nat.plugins.rag_lib.models import RAGGenerateResult
+
     from nat.data_models.finetuning import OpenAIMessage
     from nat.embedder.nim_embedder import NIMEmbedderModelConfig
     from nat.llm.nim_llm import NIMModelConfig
+    from nat.plugins.rag_lib.models import RAGGenerateResult
     from nat.retriever.milvus.register import MilvusRetrieverConfig
     from nat.retriever.nemo_retriever.register import NemoRetrieverConfig
     try:
         from nvidia_rag import NvidiaRAG
+        from nvidia_rag.rag_server.response_generator import ChainResponse
+        from nvidia_rag.rag_server.response_generator import Citations
         from nvidia_rag.utils.configuration import FilterExpressionGeneratorConfig
         from nvidia_rag.utils.configuration import NvidiaRAGConfig
         from nvidia_rag.utils.configuration import QueryDecompositionConfig
         from nvidia_rag.utils.configuration import QueryRewriterConfig
         from nvidia_rag.utils.configuration import ReflectionConfig
         from nvidia_rag.utils.configuration import VLMConfig
-        from nvidia_rag.rag_server.response_generator import Citations
-        from nvidia_rag.rag_server.response_generator import ChainResponse
     except ImportError as e:
         raise ImportError("nvidia-rag package is not installed.") from e
 
@@ -154,7 +155,7 @@ async def nvidia_rag_lib(config: NvidiaRAGLibConfig, builder: Builder) -> AsyncG
             return RAGSearchResult(citations=citations)
         except Exception:
             logger.exception("RAG search failed")
-            return RAGSearchResult(citations=Citations(total_results=0, results=[]))
+            raise
 
     DATA_PREFIX = "data: "
     DATA_PREFIX_WIDTH = len(DATA_PREFIX)
@@ -184,7 +185,8 @@ async def nvidia_rag_lib(config: NvidiaRAGLibConfig, builder: Builder) -> AsyncG
                                 chunks.append(content)
                     if parsed.citations and parsed.citations.results:
                         final_citations = parsed.citations
-                except Exception:
+                except (ValueError, TypeError, KeyError) as e:
+                    logger.debug("Failed to parse RAG response chunk: %s - %s", type(e).__name__, e)
                     continue
 
             answer: str = "".join(chunks) if chunks else "No response generated."
@@ -192,7 +194,7 @@ async def nvidia_rag_lib(config: NvidiaRAGLibConfig, builder: Builder) -> AsyncG
 
         except Exception:
             logger.exception("RAG generate failed")
-            return RAGGenerateResult(answer="Error generating answer. Please try again.")
+            raise
 
     group = FunctionGroup(config=config)
 

@@ -18,6 +18,7 @@ llms:
   nim_llm:
     _type: nim
     model_name: meta/llama-3.3-70b-instruct
+    base_url: https://integrate.api.nvidia.com/v1
     temperature: 0
     max_tokens: 4096
     top_p: 1
@@ -26,6 +27,7 @@ embedders:
   nim_embedder:
     _type: nim
     model_name: nvidia/llama-3.2-nv-embedqa-1b-v2
+    base_url: https://integrate.api.nvidia.com/v1
     truncate: "END"
 
 retrievers:
