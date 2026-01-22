@@ -23,6 +23,7 @@ import pytest
 from jsonpath_ng import parse
 from pydantic import BaseModel
 
+from nat.builder.function import FunctionGroup
 from nat.middleware.defense.defense_middleware import DefenseMiddleware
 from nat.middleware.defense.defense_middleware import DefenseMiddlewareConfig
 from nat.middleware.defense.defense_middleware import MultipleTargetFieldMatchesError
@@ -84,7 +85,7 @@ class _TestInput(BaseModel):
 @pytest.fixture(name="middleware_context")
 def fixture_middleware_context():
     """Create a test FunctionMiddlewareContext."""
-    return FunctionMiddlewareContext(name="my_calculator.multiply",
+    return FunctionMiddlewareContext(name=f"my_calculator{FunctionGroup.SEPARATOR}multiply",
                                      config=MagicMock(),
                                      description="Test function",
                                      input_schema=_TestInput,
@@ -101,27 +102,27 @@ class TestDefenseMiddlewareTargeting:
         middleware = _TestDefenseMiddleware(config, mock_builder)
 
         assert middleware._should_apply_defense("any_function") is True
-        assert middleware._should_apply_defense("my_calculator.add") is True
-        assert middleware._should_apply_defense("other_group.func") is True
+        assert middleware._should_apply_defense(f"my_calculator{FunctionGroup.SEPARATOR}add") is True
+        assert middleware._should_apply_defense(f"other_group{FunctionGroup.SEPARATOR}func") is True
 
     def test_targeting_specific_group(self, mock_builder):
         """Test targeting a specific function group."""
         config = DefenseMiddlewareConfig(target_function_or_group="my_calculator")
         middleware = _TestDefenseMiddleware(config, mock_builder)
 
-        assert middleware._should_apply_defense("my_calculator.multiply") is True
-        assert middleware._should_apply_defense("my_calculator.add") is True
-        assert middleware._should_apply_defense("other_calculator.add") is False
+        assert middleware._should_apply_defense(f"my_calculator{FunctionGroup.SEPARATOR}multiply") is True
+        assert middleware._should_apply_defense(f"my_calculator{FunctionGroup.SEPARATOR}add") is True
+        assert middleware._should_apply_defense(f"other_calculator{FunctionGroup.SEPARATOR}add") is False
         assert middleware._should_apply_defense("my_calculator") is True
 
     def test_targeting_specific_function(self, mock_builder):
         """Test targeting a specific function."""
-        config = DefenseMiddlewareConfig(target_function_or_group="my_calculator.multiply")
+        config = DefenseMiddlewareConfig(target_function_or_group=f"my_calculator{FunctionGroup.SEPARATOR}multiply")
         middleware = _TestDefenseMiddleware(config, mock_builder)
 
-        assert middleware._should_apply_defense("my_calculator.multiply") is True
-        assert middleware._should_apply_defense("my_calculator.add") is False
-        assert middleware._should_apply_defense("other_calculator.multiply") is False
+        assert middleware._should_apply_defense(f"my_calculator{FunctionGroup.SEPARATOR}multiply") is True
+        assert middleware._should_apply_defense(f"my_calculator{FunctionGroup.SEPARATOR}add") is False
+        assert middleware._should_apply_defense(f"other_calculator{FunctionGroup.SEPARATOR}multiply") is False
 
     def test_targeting_workflow(self, mock_builder):
         """Test targeting workflow-level functions."""
@@ -129,14 +130,14 @@ class TestDefenseMiddlewareTargeting:
         middleware = _TestDefenseMiddleware(config, mock_builder)
 
         assert middleware._should_apply_defense("<workflow>") is True
-        assert middleware._should_apply_defense("my_calculator.multiply") is False
+        assert middleware._should_apply_defense(f"my_calculator{FunctionGroup.SEPARATOR}multiply") is False
 
         # Also test "workflow" as target
         config2 = DefenseMiddlewareConfig(target_function_or_group="workflow")
         middleware2 = _TestDefenseMiddleware(config2, mock_builder)
 
         assert middleware2._should_apply_defense("<workflow>") is True
-        assert middleware2._should_apply_defense("my_calculator.multiply") is False
+        assert middleware2._should_apply_defense(f"my_calculator{FunctionGroup.SEPARATOR}multiply") is False
 
 
 class TestDefenseMiddlewareFieldExtraction:
@@ -420,13 +421,14 @@ class TestDefenseMiddlewareEndToEnd:
 
     async def test_extract_nested_output_field(self, mock_builder):
         """Test extracting nested field from output in actual invoke scenario."""
-        config = DefenseMiddlewareConfig(target_field="$.result", target_function_or_group="my_calculator.multiply")
+        config = DefenseMiddlewareConfig(target_field="$.result",
+                                         target_function_or_group=f"my_calculator{FunctionGroup.SEPARATOR}multiply")
         middleware = _TestDefenseMiddleware(config, mock_builder)
 
         output_value = _TestOutputModel(result=42.0, operation="multiply", message="Success")
         mock_call_next = AsyncMock(return_value=output_value)
 
-        context = FunctionMiddlewareContext(name="my_calculator.multiply",
+        context = FunctionMiddlewareContext(name=f"my_calculator{FunctionGroup.SEPARATOR}multiply",
                                             config=MagicMock(),
                                             description="Multiply",
                                             input_schema=_TestInput,
@@ -447,13 +449,14 @@ class TestDefenseMiddlewareEndToEnd:
             data: dict
             status: str
 
-        config = DefenseMiddlewareConfig(target_field="$.data.message.text", target_function_or_group="service.process")
+        config = DefenseMiddlewareConfig(target_field="$.data.message.text",
+                                         target_function_or_group=f"service{FunctionGroup.SEPARATOR}process")
         middleware = _TestDefenseMiddleware(config, mock_builder)
 
         output_value = NestedOutput(data={"message": {"text": "Hello world", "metadata": "ignored"}}, status="ok")
         mock_call_next = AsyncMock(return_value=output_value)
 
-        context = FunctionMiddlewareContext(name="service.process",
+        context = FunctionMiddlewareContext(name=f"service{FunctionGroup.SEPARATOR}process",
                                             config=MagicMock(),
                                             description="Process",
                                             input_schema=_TestInput,
@@ -474,7 +477,7 @@ class TestDefenseMiddlewareEndToEnd:
         output_value = _TestOutputModel(result=42.0, operation="multiply", message="Success")
         mock_call_next = AsyncMock(return_value=output_value)
 
-        context = FunctionMiddlewareContext(name="my_calculator.multiply",
+        context = FunctionMiddlewareContext(name=f"my_calculator{FunctionGroup.SEPARATOR}multiply",
                                             config=MagicMock(),
                                             description="Multiply",
                                             input_schema=_TestInput,
@@ -496,13 +499,13 @@ class TestDefenseMiddlewareEndToEnd:
 
         config = DefenseMiddlewareConfig(target_field="$.results[*]",
                                          target_field_resolution_strategy="all",
-                                         target_function_or_group="processor.batch")
+                                         target_function_or_group=f"processor{FunctionGroup.SEPARATOR}batch")
         middleware = _TestDefenseMiddleware(config, mock_builder)
 
         output_value = MultiFieldOutput(results=[10.0, 20.0, 30.0], status="ok")
         mock_call_next = AsyncMock(return_value=output_value)
 
-        context = FunctionMiddlewareContext(name="processor.batch",
+        context = FunctionMiddlewareContext(name=f"processor{FunctionGroup.SEPARATOR}batch",
                                             config=MagicMock(),
                                             description="Batch process",
                                             input_schema=_TestInput,
@@ -525,13 +528,13 @@ class TestDefenseMiddlewareEndToEnd:
 
         config = DefenseMiddlewareConfig(target_field="$.results[*]",
                                          target_field_resolution_strategy="first",
-                                         target_function_or_group="processor.batch")
+                                         target_function_or_group=f"processor{FunctionGroup.SEPARATOR}batch")
         middleware = _TestDefenseMiddleware(config, mock_builder)
 
         output_value = MultiFieldOutput(results=[10.0, 20.0, 30.0], status="ok")
         mock_call_next = AsyncMock(return_value=output_value)
 
-        context = FunctionMiddlewareContext(name="processor.batch",
+        context = FunctionMiddlewareContext(name=f"processor{FunctionGroup.SEPARATOR}batch",
                                             config=MagicMock(),
                                             description="Batch process",
                                             input_schema=_TestInput,
@@ -554,13 +557,13 @@ class TestDefenseMiddlewareEndToEnd:
 
         config = DefenseMiddlewareConfig(target_field="$.results[*]",
                                          target_field_resolution_strategy="error",
-                                         target_function_or_group="processor.batch")
+                                         target_function_or_group=f"processor{FunctionGroup.SEPARATOR}batch")
         middleware = _TestDefenseMiddleware(config, mock_builder)
 
         output_value = MultiFieldOutput(results=[10.0, 20.0, 30.0], status="ok")
         mock_call_next = AsyncMock(return_value=output_value)
 
-        context = FunctionMiddlewareContext(name="processor.batch",
+        context = FunctionMiddlewareContext(name=f"processor{FunctionGroup.SEPARATOR}batch",
                                             config=MagicMock(),
                                             description="Batch process",
                                             input_schema=_TestInput,
