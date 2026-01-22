@@ -246,6 +246,7 @@ function install_python_versions() {
 
          # In common.sh we set this to never, we want to override that here
          UV_PYTHON_DOWNLOADS="manual" uv python install --managed-python ${pyver}
+         rapids-logger "✓ Successfully installed Python ${pyver}"
       fi
    done
 }
