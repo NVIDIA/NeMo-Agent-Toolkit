@@ -57,3 +57,41 @@ BUILT_WHEELS=$(find "${WHEELS_BASE_DIR}"/**/ -type f -name "*.whl")
 for whl in ${BUILT_WHEELS}; do
     mv "${whl}" "${WHEELS_BASE_DIR}/"
 done
+
+
+# Test the built wheels
+deactivate
+TEMP_INSTALL_LOCATION="${WORKSPACE_TMP}/wheel_test_env"
+
+PYTHON_VERSIONS_TO_TEST=("3.11" "3.12" "3.13")
+BUILT_WHEELS=$(ls -1 "${WHEELS_BASE_DIR}"/*.whl)
+for whl in ${BUILT_WHEELS}; do
+
+    for pyver in "${PYTHON_VERSIONS_TO_TEST[@]}"; do
+        rapids-logger "Testing wheel: ${whl} with Python ${pyver}"
+        uv venv -p ${pyver} --seed "${TEMP_INSTALL_LOCATION}"
+        source "${TEMP_INSTALL_LOCATION}/bin/activate"
+
+        set +e
+        uv pip install --find-links "${WHEELS_BASE_DIR}" "${whl}"
+        INSTALL_RESULT=$?
+
+        if [[ ${INSTALL_RESULT} -ne 0 ]]; then
+            rapids-logger "Error, failed to install wheel ${whl} with Python ${pyver}"
+            exit ${INSTALL_RESULT}
+        fi
+
+        # run a simple command to verify installation
+        python -c "import nat; print(nat.__version__)"
+        IMPORT_TEST_RESULT=$?
+
+        if [[ ${IMPORT_TEST_RESULT} -ne 0 ]]; then
+            rapids-logger "Error, failed to import nat from wheel ${whl} with Python ${pyver}"
+            exit ${IMPORT_TEST_RESULT}
+        fi
+
+        set -e
+        deactivate
+        rm -rf "${TEMP_INSTALL_LOCATION}"
+    done
+done
