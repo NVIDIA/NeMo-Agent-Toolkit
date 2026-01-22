@@ -24,6 +24,7 @@ llms:
   judge:
     _type: nim
     model: nvidia/nvidia-nemotron-nano-9b-v2
+    max_tokens: 8192
 
 workflow:
   _type: langgraph_wrapper
