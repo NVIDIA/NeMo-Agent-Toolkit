@@ -238,7 +238,7 @@ function install_python_versions() {
       set +e
       # The managed python flag is needed since the OS's copy of python does not include C headers needed to build some
       # dependencies, specifically ruamel-yaml-clibz which is needed for semantic-kernel
-      uv python find --managed-python ${pyver} &> /dev/null
+      uv python find --managed-python "${pyver}" &> /dev/null
       PYTHON_FIND_RESULT=$?
       set -e
       if [[ ${PYTHON_FIND_RESULT} -ne 0 ]]; then
