@@ -18,15 +18,6 @@ from collections.abc import AsyncGenerator
 from logging import Logger
 from typing import TYPE_CHECKING
 
-from nvidia_rag.utils.configuration import EmbeddingConfig as NvidiaRAGEmbeddingConfig
-from nvidia_rag.utils.configuration import FilterExpressionGeneratorConfig as NvidiaRAGFilterGeneratorConfig
-from nvidia_rag.utils.configuration import LLMConfig as NvidiaRAGLLMConfig
-from nvidia_rag.utils.configuration import NvidiaRAGConfig
-from nvidia_rag.utils.configuration import QueryDecompositionConfig as NvidiaRAGQueryDecompositionConfig
-from nvidia_rag.utils.configuration import QueryRewriterConfig as NvidiaRAGQueryRewriterConfig
-from nvidia_rag.utils.configuration import ReflectionConfig as NvidiaRAGReflectionConfig
-from nvidia_rag.utils.configuration import VectorStoreConfig as NvidiaRAGVectorStoreConfig
-from nvidia_rag.utils.configuration import VLMConfig as NvidiaRAGVLMConfig
 from pydantic import Field
 from pydantic import SecretStr
 
@@ -51,6 +42,7 @@ from nat.retriever.nemo_retriever.register import NemoRetrieverConfig
 
 if TYPE_CHECKING:
     from nvidia_rag.rag_server.response_generator import RAGResponse
+    from nvidia_rag.utils.configuration import NvidiaRAGConfig
 
 logger: Logger = logging.getLogger(__name__)
 
@@ -72,7 +64,7 @@ class NvidiaRAGLibConfig(FunctionGroupBaseConfig, name="nvidia_rag_lib"):
 
 
 @register_function_group(config_type=NvidiaRAGLibConfig)
-async def nvidia_rag_lib(config: NvidiaRAGLibConfig, builder: Builder):
+async def nvidia_rag_lib(config: NvidiaRAGLibConfig, builder: Builder) -> AsyncGenerator[FunctionGroup, None]:
     """NVIDIA RAG Library - exposes search and generate tools."""
     try:
         from nvidia_rag import NvidiaRAG
@@ -162,19 +154,25 @@ async def nvidia_rag_lib(config: NvidiaRAGLibConfig, builder: Builder):
     yield group
 
 
-async def _build_nvidia_rag_config(config: NvidiaRAGLibConfig, builder: Builder) -> NvidiaRAGConfig:
+async def _build_nvidia_rag_config(config: NvidiaRAGLibConfig, builder: Builder) -> "NvidiaRAGConfig":
     """Build NvidiaRAGConfig by resolving NAT refs/components to nvidia_rag configs."""
+    from nvidia_rag.utils.configuration import FilterExpressionGeneratorConfig
+    from nvidia_rag.utils.configuration import NvidiaRAGConfig
+    from nvidia_rag.utils.configuration import QueryDecompositionConfig
+    from nvidia_rag.utils.configuration import QueryRewriterConfig
+    from nvidia_rag.utils.configuration import ReflectionConfig
+    from nvidia_rag.utils.configuration import VLMConfig
 
     pipeline: RAGPipelineConfig = config.rag_pipeline
 
     rag_config: NvidiaRAGConfig = NvidiaRAGConfig(
         ranking=pipeline.ranking,
         retriever=pipeline.search_settings,
-        vlm=pipeline.vlm or NvidiaRAGVLMConfig(),
-        query_rewriter=pipeline.query_rewriter or NvidiaRAGQueryRewriterConfig(),
-        filter_expression_generator=pipeline.filter_generator or NvidiaRAGFilterGeneratorConfig(),
-        query_decomposition=pipeline.query_decomposition or NvidiaRAGQueryDecompositionConfig(),
-        reflection=pipeline.reflection or NvidiaRAGReflectionConfig(),
+        vlm=pipeline.vlm or VLMConfig(),
+        query_rewriter=pipeline.query_rewriter or QueryRewriterConfig(),
+        filter_expression_generator=pipeline.filter_generator or FilterExpressionGeneratorConfig(),
+        query_decomposition=pipeline.query_decomposition or QueryDecompositionConfig(),
+        reflection=pipeline.reflection or ReflectionConfig(),
         enable_citations=pipeline.enable_citations,
         enable_guardrails=pipeline.enable_guardrails,
         enable_vlm_inference=pipeline.enable_vlm_inference,
@@ -189,8 +187,9 @@ async def _build_nvidia_rag_config(config: NvidiaRAGLibConfig, builder: Builder)
     return rag_config
 
 
-async def _resolve_llm_config(llm: LLMConfigType, builder: Builder, rag_config: NvidiaRAGConfig) -> None:
+async def _resolve_llm_config(llm: LLMConfigType, builder: Builder, rag_config: "NvidiaRAGConfig") -> None:
     """Resolve LLM config and map all fields to NvidiaRAGConfig.llm."""
+    from nvidia_rag.utils.configuration import LLMConfig as NvidiaRAGLLMConfig
 
     if llm is None:
         return
@@ -240,8 +239,10 @@ async def _resolve_llm_config(llm: LLMConfigType, builder: Builder, rag_config: 
     raise ValueError(f"Unsupported LLM config type: {type(llm)}")
 
 
-async def _resolve_embedder_config(embedder: EmbedderConfigType, builder: Builder, rag_config: NvidiaRAGConfig) -> None:
+async def _resolve_embedder_config(embedder: EmbedderConfigType, builder: Builder,
+                                   rag_config: "NvidiaRAGConfig") -> None:
     """Resolve embedder config and map all fields to NvidiaRAGConfig.embeddings."""
+    from nvidia_rag.utils.configuration import EmbeddingConfig as NvidiaRAGEmbeddingConfig
 
     if embedder is None:
         return
@@ -267,8 +268,9 @@ async def _resolve_embedder_config(embedder: EmbedderConfigType, builder: Builde
 
 
 async def _resolve_retriever_config(retriever: RetrieverConfigType, builder: Builder,
-                                    rag_config: NvidiaRAGConfig) -> None:
+                                    rag_config: "NvidiaRAGConfig") -> None:
     """Resolve retriever config and map fields to NvidiaRAGConfig.vector_store and retriever."""
+    from nvidia_rag.utils.configuration import VectorStoreConfig as NvidiaRAGVectorStoreConfig
 
     if retriever is None:
         return

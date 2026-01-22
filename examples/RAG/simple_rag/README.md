@@ -51,7 +51,7 @@ This is a simple example RAG application to showcase how one can configure and u
       - [Query Rewriting](#query-rewriting)
       - [Confidence Filtering](#confidence-filtering)
       - [Structured Citations](#structured-citations)
-    - [Integration with NAT Components](#integration-with-nat-components)
+    - [Integration with NeMo Agent Toolkit Components](#integration-with-nemo-agent-toolkit-components)
     - [RAG-Specific Configuration](#rag-specific-configuration)
     - [Example Configuration](#example-configuration)
     - [Run the Workflow](#run-the-workflow-1)
@@ -419,7 +419,7 @@ A recall-then-precision approach balances thoroughness with relevance:
 
 2. **Stage 2 - Reranking (Precision):** Candidates pass through a semantic reranker that scores relevance to the query, narrowing down to the most relevant results.
 
-```
+```text
 Query → Embed → Retrieve candidates → Rerank → Final results
 ```
 
@@ -438,9 +438,9 @@ Results below a confidence threshold are automatically filtered out, preventing 
 
 Search results include document metadata (document name, relevance score) in a structured format, enabling source attribution and traceability in responses.
 
-### Integration with NAT Components
+### Integration with NeMo Agent Toolkit Components
 
-The `nvidia_rag_lib` plugin integrates with standard NeMo Agent Toolkit components. You configure `llms`, `embedders`, and `retrievers` sections as usual. The plugin references these components by name:
+The `nvidia_rag_lib` plugin integrates with standard NeMo Agent toolkit components. You configure `llms`, `embedders`, and `retrievers` sections as usual. The plugin references these components by name:
 
 ```yaml
 function_groups:
@@ -451,11 +451,11 @@ function_groups:
     retriever: cuda_retriever # References retrievers.cuda_retriever
 ```
 
-This means you can reuse existing NAT infrastructure definitions and swap in the RAG library without changing your LLM, embedder, or retriever configurations.
+This means you can reuse existing NeMo Agent toolkit infrastructure definitions and swap in the RAG library without changing your LLM, embedder, or retriever configurations.
 
 ### RAG-Specific Configuration
 
-The plugin adds configuration specific to the RAG pipeline. These fields differ from a standard NAT retriever setup:
+The plugin adds configuration specific to the RAG pipeline. These fields differ from a standard NeMo Agent toolkit retriever setup:
 
 | Field | Purpose |
 |-------|---------|

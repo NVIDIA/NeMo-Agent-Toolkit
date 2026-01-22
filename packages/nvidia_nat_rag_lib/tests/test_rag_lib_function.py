@@ -12,24 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Tests for NVIDIA RAG library integration.
-
-KNOWN ISSUE - Embedding Model Compatibility:
-    nvidia_rag.EmbeddingConfig always passes a `dimensions` parameter to the embedding API.
-    Some models (e.g., nvidia/nv-embedqa-e5-v5) reject this parameter entirely, causing errors:
-        "This model does not support 'dimensions', but a value of '2048' was provided."
-
-    Compatible models: nvidia/llama-3.2-nv-embedqa-1b-v2 (supports dimensions param)
-    Incompatible models: nvidia/nv-embedqa-e5-v5 (fixed 1024-dim, rejects dimensions param)
-
-    Upstream fix needed: nvidia_rag should allow dimensions=None to not pass the parameter.
-
-TODO: Add integration tests to catch config compatibility issues:
-    - Test search/generate with different embedding models
-    - Test with different LLM providers
-    - Test with different retriever configs (Milvus, NeMo)
-    - Parametrize tests across model combinations to catch API rejections early
-"""
+"""Tests for NVIDIA RAG library integration."""
 
 from __future__ import annotations
 
@@ -508,21 +491,21 @@ class TestNvidiaRAGMethods:
         from nvidia_rag import NvidiaRAG
 
         assert hasattr(NvidiaRAG, "generate")
-        assert callable(getattr(NvidiaRAG, "generate"))
+        assert callable(NvidiaRAG.generate)
 
     def test_search_method_exists(self) -> None:
         """NvidiaRAG should have a search method."""
         from nvidia_rag import NvidiaRAG
 
         assert hasattr(NvidiaRAG, "search")
-        assert callable(getattr(NvidiaRAG, "search"))
+        assert callable(NvidiaRAG.search)
 
     def test_health_method_exists(self) -> None:
         """NvidiaRAG should have a health method."""
         from nvidia_rag import NvidiaRAG
 
         assert hasattr(NvidiaRAG, "health")
-        assert callable(getattr(NvidiaRAG, "health"))
+        assert callable(NvidiaRAG.health)
 
 
 @pytest.mark.integration
@@ -571,8 +554,9 @@ class TestNvidiaRAGIntegration:
         "embedder_ref",
         [
             "nim_embedder",
-            # TODO: nvidia_rag always passes dimensions param which nv-embedqa-e5-v5 rejects
-            # "nim_embedder_e5",
+            pytest.param(
+                "nim_embedder_e5",
+                marks=pytest.mark.xfail(reason="nvidia_rag passes dimensions param which nv-embedqa-e5-v5 rejects")),
         ])
     @pytest.mark.parametrize("retriever_ref", list(RETRIEVER_CONFIGS.keys()))
     async def test_search(
@@ -609,8 +593,9 @@ class TestNvidiaRAGIntegration:
         "embedder_ref",
         [
             "nim_embedder",
-            # TODO: nvidia_rag always passes dimensions param which nv-embedqa-e5-v5 rejects
-            # "nim_embedder_e5",
+            pytest.param(
+                "nim_embedder_e5",
+                marks=pytest.mark.xfail(reason="nvidia_rag passes dimensions param which nv-embedqa-e5-v5 rejects")),
         ])
     @pytest.mark.parametrize("retriever_ref", list(RETRIEVER_CONFIGS.keys()))
     async def test_generate(
@@ -644,8 +629,9 @@ class TestNvidiaRAGIntegration:
         "embedder_ref",
         [
             "nim_embedder",
-            # TODO: nvidia_rag always passes dimensions param which nv-embedqa-e5-v5 rejects
-            # "nim_embedder_e5",
+            pytest.param(
+                "nim_embedder_e5",
+                marks=pytest.mark.xfail(reason="nvidia_rag passes dimensions param which nv-embedqa-e5-v5 rejects")),
         ])
     @pytest.mark.parametrize("retriever_ref", list(RETRIEVER_CONFIGS.keys()))
     async def test_health(
