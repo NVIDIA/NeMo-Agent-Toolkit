@@ -71,7 +71,7 @@ for whl in "${MOVED_WHEELS[@]}"; do
 
     for pyver in "${SUPPORTED_PYTHON_VERSIONS[@]}"; do
         rapids-logger "Testing wheel: ${whl} with Python ${pyver}"
-        UV_VENV_OUT=$(uv venv -p ${pyver} --seed "${TEMP_INSTALL_LOCATION}" 2>&1)
+        UV_VENV_OUT=$(uv venv -q -p ${pyver} --seed "${TEMP_INSTALL_LOCATION}" 2>&1)
         UV_VENV_RESULT=$?
 
         if [[ ${UV_VENV_RESULT} -ne 0 ]]; then
@@ -83,7 +83,7 @@ for whl in "${MOVED_WHEELS[@]}"; do
         source "${TEMP_INSTALL_LOCATION}/bin/activate"
 
         set +e
-        UV_PIP_OUT=$(uv pip install --prerelease=allow --find-links "${WHEELS_BASE_DIR}" "${whl}" 2>&1)
+        UV_PIP_OUT=$(uv pip install -q --prerelease=allow --find-links "${WHEELS_BASE_DIR}" "${whl}" 2>&1)
         INSTALL_RESULT=$?
 
         if [[ ${INSTALL_RESULT} -ne 0 ]]; then

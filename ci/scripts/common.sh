@@ -225,9 +225,16 @@ function get_lfs_files() {
 }
 
 function install_python_versions() {
+   # This is the version of python currently installed
+   local current_python_version=$(python --version | awk '{split($0, a, "."); print a[1]"."a[2]}')
+
    # This is not normally needed as our containers contain the needed python version. This is only needed for CI stages
    # which need to support multiple python versions in a single stage, such as the build_wheel stage.
    for pyver in "${SUPPORTED_PYTHON_VERSIONS[@]}"; do
+      if [[ "${pyver}" == "${current_python_version}" ]]; then
+         continue
+      fi
+
       set +e
       # The managed python flag is needed since the OS's copy of python does not include C headers needed to build some
       # dependencies, specifically ruamel-yaml-clibz which is needed for semantic-kernel
