@@ -157,28 +157,16 @@ async def nim_langchain(llm_config: NIMModelConfig, _builder: Builder):
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.LANGCHAIN)
 
-    # Build model_kwargs for Nemotron reasoning budget control
-    model_kwargs: dict[str, Any] = {}
-    if llm_config.reasoning_budget is not None:
-        model_kwargs["chat_template_kwargs"] = {"reasoning_budget": llm_config.reasoning_budget}
-
     # prefer max_completion_tokens over max_tokens
-    client_kwargs: dict[str, Any] = llm_config.model_dump(
-        exclude={"type", "max_tokens", "thinking", "api_type", "reasoning_budget"},
-        by_alias=True,
-        exclude_none=True,
-        exclude_unset=True,
+    client = ChatNVIDIA(
+        **llm_config.model_dump(
+            exclude={"type", "max_tokens", "thinking", "api_type"},
+            by_alias=True,
+            exclude_none=True,
+            exclude_unset=True,
+        ),
+        max_completion_tokens=llm_config.max_tokens,
     )
-
-    # Merge injected model_kwargs with any user-provided model_kwargs (user takes precedence)
-    existing = client_kwargs.get("model_kwargs", {})
-    merged = {**model_kwargs, **existing}
-    if merged:
-        client_kwargs["model_kwargs"] = merged
-
-    client_kwargs["max_completion_tokens"] = llm_config.max_tokens
-
-    client = ChatNVIDIA(**client_kwargs)
 
     yield _patch_llm_based_on_config(client, llm_config)
 
