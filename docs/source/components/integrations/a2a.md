@@ -30,6 +30,22 @@ The Agent-to-Agent (A2A) Protocol is an open standard from the Linux Foundation 
 - **Delegate tasks** to other agents
 - **Exchange information** using a common protocol
 
+## Why Use A2A?
+
+Multiple agents are useful when you want to:
+
+- Group logic by domain or function and keep responsibilities clear.
+- Reuse specialized agents without duplicating logic.
+- Scale or replace parts of the system independently.
+
+A2A makes multi-agent systems easier to manage by:
+
+- Discovering remote capabilities through Agent Cards.
+- Providing a consistent protocol for communication.
+- Delegating tasks to specialized agents across different stacks.
+
+If you already have a multi-agent use case, A2A provides a standard interface that keeps integrations predictable and easier to maintain. If you are exploring options, A2A is a good fit when you expect to add or swap agents over time.
+
 ## Key Concepts
 
 ### A2A Agent
