@@ -43,7 +43,7 @@ class PhoenixMixin:
                 super().__init__(endpoint=endpoint, project=project, **kwargs)
     """
 
-    def __init__(self, *args, endpoint: str, project: str, timeout: float = 30.0, **kwargs):
+    def __init__(self, *args, endpoint: str, project: str, timeout: float = 60.0, **kwargs):
         """Initialize the Phoenix exporter.
 
         Args:
