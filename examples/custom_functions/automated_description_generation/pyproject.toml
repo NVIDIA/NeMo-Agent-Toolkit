@@ -11,7 +11,7 @@ name = "nat_automated_description_generation"
 dynamic = ["version"]
 dependencies = [
     "nvidia-nat[ingestion,langchain]~=1.5",
-    "usearch~=2.21.0",
+    "usearch~=2.21",
 ]
 requires-python = ">=3.11,<3.14"
 description = "Automated Description Generation NAT example"

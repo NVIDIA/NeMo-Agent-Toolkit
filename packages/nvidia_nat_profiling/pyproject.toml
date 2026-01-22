@@ -22,7 +22,7 @@ dependencies = [
   # Keep sorted!!!
   "nvidia-nat~=1.5",
   "matplotlib~=3.9",
-  "prefixspan~=0.5.2",
+  "prefixspan>=0.5.2,<1.0.0",
   "scikit-learn~=1.6",
 ]
 requires-python = ">=3.11,<3.14"
