@@ -37,10 +37,10 @@ dependencies = [
   "aioboto3>=11.0.0",
   "authlib>=1.6.5,<2.0.0",
   "click~=8.1",
-  "colorama~=0.4.6",
+  "colorama>=0.4.6,<1.0.0",
   "datasets~=4.4", # workaround for uv's solver choosing different versions of datasets based on sys_platform
   "expandvars~=1.0",
-  "fastapi~=0.119.0",
+  "fastapi~=0.119",
   "httpx~=0.27",
   "jinja2~=3.1",
   "jsonpath-ng~=1.7",
@@ -49,9 +49,9 @@ dependencies = [
   # langchain-aws pins numpy to 1.* for Python <3.12 -- remove once package is updated
   "numpy~=1.26; python_version < '3.12'",
   "numpy~=2.3; python_version >= '3.12'",
-  "openinference-semantic-conventions~=0.1.14",
+  "openinference-semantic-conventions>=0.1.14,<1.0.0",
   "openpyxl~=3.1",
-  "optuna~=4.4.0",
+  "optuna~=4.4",
   "pandas~=2.2",
   "pip>=24.3.1",
   "pkce==1.0.3",
@@ -60,15 +60,15 @@ dependencies = [
   "plotly~=6.0",
   "pydantic~=2.11",
   "pymilvus~=2.6",
-  "python-dotenv~=1.1.1",
+  "python-dotenv>=1.1.1,<2.0.0",
   "PyYAML~=6.0",
-  "ragas~=0.2.14", # If you update ragas be sure to update github links in docs/source/workflows/evaluate.md as well
+  "ragas>=0.2.14,<1.0.0", # If you update ragas be sure to update github links in docs/source/workflows/evaluate.md as well
   "rich>=14.0.0,<15.0.0",  # Upgraded from ~=13.9 to support strands-agents-tools (requires >=14.0.0,<15.0.0)
   "tabulate~=0.9",
   "uvicorn[standard]~=0.38",
   "wikipedia~=1.4",
   # transitive dependencies
-  "urllib3~=2.6.3",
+  "urllib3>=2.6.3,<3.0.0",
 ]
 requires-python = ">=3.11,<3.14"
 description = "NVIDIA NeMo Agent toolkit"
@@ -188,7 +188,7 @@ async_endpoints = [
 
 # specific versions of shared packages within optional subpackages
 nvidia_haystack = [
-  "nvidia-haystack~=0.3.0",
+  "nvidia-haystack~=0.3",
 ]
 litellm = [
   "litellm==1.74.9"
@@ -331,7 +331,7 @@ dev = [
   "pytest-cov~=6.1",
   "pytest_httpserver==1.1.*",
   "pytest-timeout~=2.4",
-  "python-docx~=1.1.0",
+  "python-docx~=1.1",
   "ruff~=0.12",
   "setuptools >= 64",
   "setuptools_scm>=8",
@@ -341,12 +341,12 @@ dev = [
   "sphinx_design~=0.6",
   "sphinx-mermaid",
   "sphinx-reredirects~=1.1",
-  "tomlkit~=0.13.2",
+  "tomlkit>=0.13.2",
   "twine~=6.0",
   "vale~=3.12",
   "yapf==0.43.*",
   # transitive dependencies
-  "werkzeug~=3.1.5",
+  "werkzeug>=3.1.5",
 ]
 
 [project.entry-points.'nat.components']
