@@ -46,13 +46,10 @@ class ReActAgentParsingFailedError(RuntimeError):
         self.observation = observation
         self.llm_output = llm_output
         self.attempts = attempts
-        super().__init__(
-            f"Failed to parse agent output after {attempts} attempts. "
-            f"Error: {observation}. LLM output: {llm_output[:200]}..."
-            if len(llm_output) > 200 else
-            f"Failed to parse agent output after {attempts} attempts. "
-            f"Error: {observation}. LLM output: {llm_output}"
-        )
+        super().__init__(f"Failed to parse agent output after {attempts} attempts. "
+                         f"Error: {observation}. LLM output: {llm_output[:200]}..." if len(llm_output) >
+                         200 else f"Failed to parse agent output after {attempts} attempts. "
+                         f"Error: {observation}. LLM output: {llm_output}")
 
 
 class ReActOutputParserException(ValueError, LangChainException):
