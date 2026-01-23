@@ -23,6 +23,7 @@ from langchain_core.exceptions import LangChainException
 from .prompt import SYSTEM_PROMPT
 
 FINAL_ANSWER_ACTION = "Final Answer:"
+FINAL_ANSWER_PATTERN = re.compile(r"final\s+answer\s*:", re.IGNORECASE)
 MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE = "Invalid Format: Missing 'Action:' after 'Thought:'"
 MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE = "Invalid Format: Missing 'Action Input:' after 'Action:'"
 FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE = ("Parsing LLM output produced both a final answer and a parse-able "
@@ -73,9 +74,17 @@ class ReActOutputParser(AgentOutputParser):
         return SYSTEM_PROMPT
 
     def parse(self, text: str) -> AgentAction | AgentFinish:
-        includes_answer = FINAL_ANSWER_ACTION in text
-        regex = r"Action\s*\d*\s*:[\s]*(.*?)\s*Action\s*\d*\s*Input\s*\d*\s*:[\s]*(.*?)(?=\s*[\n|\s]\s*Observation\b|$)"
-        action_match = re.search(regex, text, re.DOTALL)
+        includes_answer = bool(FINAL_ANSWER_PATTERN.search(text))
+
+        # More lenient regex patterns (case-insensitive):
+        # 1. Primary pattern: "Action: X Action Input: Y" or "Action: X Input: Y"
+        # 2. Accepts variations in whitespace and optional "Action" prefix before "Input"
+        regex_primary = (
+            r"action\s*\d*\s*:\s*(.*?)\s*"  # "Action:" (case-insensitive)
+            r"(?:action\s*\d*\s*)?input\s*\d*\s*:\s*"  # "Action Input:" or just "Input:"
+            r"(.*?)(?=\s*[\n|\s]\s*observation\b|$)"  # Until "Observation" or end
+        )
+        action_match = re.search(regex_primary, text, re.DOTALL | re.IGNORECASE)
         if action_match:
             if includes_answer:
                 raise ReActOutputParserException(
@@ -89,12 +98,18 @@ class ReActOutputParser(AgentOutputParser):
             return AgentAction(action, tool_input, text)
 
         if includes_answer:
+            # Use case-insensitive split for final answer extraction
+            final_answer_match = FINAL_ANSWER_PATTERN.search(text)
+            if final_answer_match:
+                answer_text = text[final_answer_match.end():].strip()
+                return AgentFinish({"output": answer_text}, text)
             return AgentFinish({"output": text.split(FINAL_ANSWER_ACTION)[-1].strip()}, text)
 
-        if not re.search(r"Action\s*\d*\s*:[\s]*(.*?)", text, re.DOTALL):
+        # Check for missing components with case-insensitive patterns
+        if not re.search(r"action\s*\d*\s*:\s*(.*?)", text, re.DOTALL | re.IGNORECASE):
             raise ReActOutputParserException(observation=MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE,
                                              missing_action=True)
-        if not re.search(r"[\s]*Action\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)", text, re.DOTALL):
+        if not re.search(r"[\s]*(?:action\s*\d*\s*)?input\s*\d*\s*:\s*(.*)", text, re.DOTALL | re.IGNORECASE):
             raise ReActOutputParserException(observation=MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE,
                                              missing_action_input=True)
         raise ReActOutputParserException(f"Could not parse LLM output: `{text}`")
