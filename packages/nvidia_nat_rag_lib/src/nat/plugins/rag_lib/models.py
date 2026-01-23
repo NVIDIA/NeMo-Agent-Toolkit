@@ -13,13 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING
-
+from nvidia_rag.rag_server.response_generator import Citations
 from pydantic import BaseModel
 from pydantic import ConfigDict
-
-if TYPE_CHECKING:
-    from nvidia_rag.rag_server.response_generator import Citations
 
 
 class RAGResultBase(BaseModel):
@@ -29,7 +25,7 @@ class RAGResultBase(BaseModel):
 
 class RAGSearchResult(RAGResultBase):
     """RAG search result."""
-    citations: "Citations"
+    citations: Citations
 
     def __str__(self) -> str:
         return self.citations.model_dump_json()
@@ -38,7 +34,7 @@ class RAGSearchResult(RAGResultBase):
 class RAGGenerateResult(RAGResultBase):
     """RAG generation result."""
     answer: str
-    citations: "Citations | None" = None
+    citations: Citations | None = None
 
     def __str__(self) -> str:
         return self.model_dump_json(exclude_none=True)

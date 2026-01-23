@@ -14,16 +14,15 @@
 # limitations under the License.
 """Configuration models and type aliases for NVIDIA RAG integration."""
 
-from pydantic import BaseModel
-from pydantic import Field
-
-from nvidia_rag.utils.configuration import RetrieverConfig as NvidiaRAGRetrieverConfig
 from nvidia_rag.utils.configuration import FilterExpressionGeneratorConfig as NvidiaRAGFilterGeneratorConfig
 from nvidia_rag.utils.configuration import QueryDecompositionConfig as NvidiaRAGQueryDecompositionConfig
 from nvidia_rag.utils.configuration import QueryRewriterConfig as NvidiaRAGQueryRewriterConfig
 from nvidia_rag.utils.configuration import RankingConfig as NvidiaRAGRankingConfig
 from nvidia_rag.utils.configuration import ReflectionConfig as NvidiaRAGReflectionConfig
+from nvidia_rag.utils.configuration import RetrieverConfig as NvidiaRAGRetrieverConfig
 from nvidia_rag.utils.configuration import VLMConfig as NvidiaRAGVLMConfig
+from pydantic import BaseModel
+from pydantic import Field
 
 
 class RAGPipelineConfig(BaseModel):
@@ -38,19 +37,25 @@ class RAGPipelineConfig(BaseModel):
     ranking: NvidiaRAGRankingConfig = Field(default_factory=lambda: NvidiaRAGRankingConfig())
 
     # Query preprocessing (optional)
-    query_rewriter: NvidiaRAGQueryRewriterConfig | None = Field(default=None)
-    filter_generator: NvidiaRAGFilterGeneratorConfig | None = Field(default=None)
-    query_decomposition: NvidiaRAGQueryDecompositionConfig | None = Field(default=None)
+    query_rewriter: NvidiaRAGQueryRewriterConfig | None = Field(
+        default=None, description="Rewrites queries for improved retrieval accuracy.")
+    filter_generator: NvidiaRAGFilterGeneratorConfig | None = Field(
+        default=None, description="Generates metadata filters from natural language queries.")
+    query_decomposition: NvidiaRAGQueryDecompositionConfig | None = Field(
+        default=None, description="Decomposes complex queries into simpler sub-queries.")
 
     # Response quality (optional)
-    reflection: NvidiaRAGReflectionConfig | None = Field(default=None)
+    reflection: NvidiaRAGReflectionConfig | None = Field(
+        default=None, description="Enables self-reflection to improve response quality.")
 
     # Multimodal (optional)
-    vlm: NvidiaRAGVLMConfig | None = Field(default=None)
+    vlm: NvidiaRAGVLMConfig | None = Field(default=None,
+                                           description="Vision-language model config for multimodal content.")
 
     # Pipeline flags
-    enable_citations: bool = Field(default=True)
-    enable_guardrails: bool = Field(default=False)
-    enable_vlm_inference: bool = Field(default=False)
-    vlm_to_llm_fallback: bool = Field(default=True)
-    default_confidence_threshold: float = Field(default=0.0)
+    enable_citations: bool = Field(default=True, description="Include source citations in responses.")
+    enable_guardrails: bool = Field(default=False, description="Enable content safety guardrails.")
+    enable_vlm_inference: bool = Field(default=False, description="Enable vision-language model inference.")
+    vlm_to_llm_fallback: bool = Field(default=True, description="Fall back to LLM if VLM fails.")
+    default_confidence_threshold: float = Field(default=0.0,
+                                                description="Minimum confidence score to include retrieved results.")

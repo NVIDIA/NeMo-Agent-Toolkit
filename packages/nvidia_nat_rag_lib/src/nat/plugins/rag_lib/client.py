@@ -36,10 +36,11 @@ class NvidiaRAGLibConfig(FunctionGroupBaseConfig, name="nvidia_rag_lib"):
 
     Exposes search and generate tools that share a single RAG client.
     """
-    llm: LLMRef = Field(description="LLM reference")
-    embedder: EmbedderRef = Field(description="Embedder reference")
-    retriever: RetrieverRef = Field(description="Retriever reference")
-    rag_pipeline: RAGPipelineConfig = Field(default_factory=RAGPipelineConfig)
+    llm: LLMRef = Field(description="LLM for response generation and query rewriting.")
+    embedder: EmbedderRef = Field(description="Embedder for query and document vectorization.")
+    retriever: RetrieverRef = Field(description="Vector store retriever for document search.")
+    rag_pipeline: RAGPipelineConfig = Field(default_factory=RAGPipelineConfig,
+                                            description="Advanced RAG pipeline settings.")
     topic: str | None = Field(default=None, description="Topic for tool descriptions.")
     collection_names: list[str] = Field(min_length=1, description="Collections to query.")
     reranker_top_k: int = Field(default=10, ge=1, description="Number of results after reranking.")
@@ -93,7 +94,7 @@ async def nvidia_rag_lib(config: NvidiaRAGLibConfig, builder: Builder) -> AsyncG
 
     base_dict = nim_llm_config.model_dump(include={"base_url", "model_name", "api_key"}, exclude_none=True)
     if "base_url" not in base_dict:
-        raise ValueError("base_url is required for LLM config specified in in NVIDIA RAG Config.")
+        raise ValueError("base_url is required for LLM config specified in NVIDIA RAG Config.")
     base_dict["server_url"] = base_dict.pop("base_url")
 
     rag_config.llm.parameters = rag_config.llm.parameters.model_copy(
@@ -110,7 +111,7 @@ async def nvidia_rag_lib(config: NvidiaRAGLibConfig, builder: Builder) -> AsyncG
     base_dict = nim_embedder_config.model_dump(include={"base_url", "model_name", "api_key", "dimensions"},
                                                exclude_none=True)
     if "base_url" not in base_dict:
-        raise ValueError("base_url is required for embedder config specified in in NVIDIA RAG Config.")
+        raise ValueError("base_url is required for embedder config specified in NVIDIA RAG Config.")
     base_dict["server_url"] = base_dict.pop("base_url")
     rag_config.embeddings = rag_config.embeddings.model_copy(update=base_dict)
 
