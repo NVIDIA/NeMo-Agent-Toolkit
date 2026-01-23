@@ -31,6 +31,7 @@ class PhoenixTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, Telemetry
 
     endpoint: str = Field(
         description="Phoenix server endpoint for trace export (e.g., 'http://localhost:6006/v1/traces'")
+    timeout: float = Field(default=30.0, description="Timeout in seconds for HTTP requests to Phoenix server")
 
 
 @register_telemetry_exporter(config_type=PhoenixTelemetryExporter)
@@ -43,6 +44,7 @@ async def phoenix_telemetry_exporter(config: PhoenixTelemetryExporter, builder: 
         # Create the exporter
         yield PhoenixOtelExporter(endpoint=config.endpoint,
                                   project=config.project,
+                                  timeout=config.timeout,
                                   batch_size=config.batch_size,
                                   flush_interval=config.flush_interval,
                                   max_queue_size=config.max_queue_size,

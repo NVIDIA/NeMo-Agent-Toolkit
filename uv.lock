@@ -6892,6 +6892,7 @@ requires-dist = [
 name = "nvidia-nat-weave"
 source = { editable = "packages/nvidia_nat_weave" }
 dependencies = [
+    { name = "blis" },
     { name = "fickling" },
     { name = "nvidia-nat" },
     { name = "presidio-analyzer" },
@@ -6901,6 +6902,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "blis", specifier = "~=1.3" },
     { name = "fickling", specifier = ">=0.1.7,<1.0.0" },
     { name = "nvidia-nat", editable = "." },
     { name = "presidio-analyzer", specifier = "~=2.2" },
