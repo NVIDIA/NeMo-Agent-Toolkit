@@ -43,6 +43,7 @@ from nat.builder.context import Context
 from nat.builder.eval_builder import WorkflowEvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.function import Function
+from nat.builder.function import FunctionGroup
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
@@ -1286,7 +1287,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                             session_healthy = False
 
                         # Get workflow function group configuration (configured client-side tools)
-                        configured_short_names: set[str] = set()
+                        configured_short_names: list[str] = []
                         configured_full_to_fn: dict[str, Function] = {}
                         try:
                             # Pass a no-op filter function to bypass any default filtering that might check
@@ -1297,7 +1298,14 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                             accessible_functions = await group_instance.get_accessible_functions(
                                 filter_fn=pass_through_filter)
                             configured_full_to_fn = accessible_functions
-                            configured_short_names = {name.split('.', 1)[1] for name in accessible_functions.keys()}
+                            configured_short_names = []
+                            for name in accessible_functions.keys():
+                                if FunctionGroup.SEPARATOR in name:
+                                    configured_short_names.append(name.split(FunctionGroup.SEPARATOR, 1)[1])
+                                elif FunctionGroup.LEGACY_SEPARATOR in name:
+                                    configured_short_names.append(name.split(FunctionGroup.LEGACY_SEPARATOR, 1)[1])
+                                else:
+                                    configured_short_names.append(name)
                         except Exception as e:
                             logger.exception(f"Failed to get accessible functions for group {group_name}: {e}")
 
@@ -1318,7 +1326,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         # Create tool info list (always return configured tools; mark availability)
                         tools_info: list[dict[str, Any]] = []
                         available_count = 0
-                        for wf_fn, fn_short in zip(configured_full_to_fn.values(), configured_short_names):
+                        for full_name, wf_fn in configured_full_to_fn.items():
+                            if FunctionGroup.SEPARATOR in full_name:
+                                fn_short = full_name.split(FunctionGroup.SEPARATOR, 1)[1]
+                            elif FunctionGroup.LEGACY_SEPARATOR in full_name:
+                                fn_short = full_name.split(FunctionGroup.LEGACY_SEPARATOR, 1)[1]
+                            else:
+                                fn_short = full_name
                             orig_name = alias_to_original.get(fn_short, fn_short)
                             available = session_healthy and (orig_name in server_tools)
                             if available:
