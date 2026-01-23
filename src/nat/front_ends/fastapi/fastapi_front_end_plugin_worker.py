@@ -342,6 +342,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         await self.add_authorization_route(app)
         await self.add_mcp_client_tool_list_route(app, builder)
         await self.add_monitor_route(app)
+        await self.add_health_route(app)
 
         for ep in self.front_end_config.endpoints:
 
@@ -1525,6 +1526,37 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                           })
 
         logger.info("Added per-user monitoring endpoint at /monitor/users")
+
+    async def add_health_route(self, app: FastAPI) -> None:
+        """Add a health check endpoint to the FastAPI app."""
+
+        class HealthResponse(BaseModel):
+            status: str = Field(description="Health status of the server")
+
+        async def health_check() -> HealthResponse:
+            """Health check endpoint for liveness/readiness probes."""
+            return HealthResponse(status="healthy")
+
+        app.add_api_route(path="/health",
+                          endpoint=health_check,
+                          methods=["GET"],
+                          response_model=HealthResponse,
+                          description="Health check endpoint for liveness/readiness probes",
+                          tags=["Health"],
+                          responses={
+                              200: {
+                                  "description": "Server is healthy",
+                                  "content": {
+                                      "application/json": {
+                                          "example": {
+                                              "status": "healthy"
+                                          }
+                                      }
+                                  }
+                              }
+                          })
+
+        logger.info("Added health check endpoint at /health")
 
     async def _add_flow(self, state: str, flow_state: FlowState):
         async with self._outstanding_flows_lock:
