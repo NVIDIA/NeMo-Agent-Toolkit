@@ -37,7 +37,7 @@ This example demonstrates how to evaluate and profile AI agent performance using
 ## Key Features
 
 - **Web Query Agent Evaluation:** Demonstrates comprehensive evaluation of the `simple_web_query` agent that retrieves and processes LangSmith documentation using `webpage_query` tools and `react_agent` reasoning.
-- **Multi-Model Performance Testing:** Shows systematic comparison across different LLM providers including OpenAI models and NVIDIA Nemotron models to identify optimal configurations for documentation retrieval tasks.
+- **Multi-Model Performance Testing:** Shows systematic comparison across different LLM providers including OpenAI models, NVIDIA Nemotron models, Llama 3.1, and Llama 3.3 to identify optimal configurations for documentation retrieval tasks.
 - **Evaluation Framework Integration:** Uses the NeMo Agent toolkit `nat eval` command with various evaluation configurations to measure response quality, accuracy scores, and documentation retrieval effectiveness.
 - **Question-by-Question Analysis:** Provides detailed breakdown of individual agent responses with comprehensive metrics for identifying failure patterns in LangSmith documentation queries.
 - **Dataset Management Workflow:** Demonstrates working with evaluation datasets for consistent testing and performance tracking over time, including evaluation-only modes and result upload capabilities.
@@ -46,7 +46,7 @@ This example demonstrates how to evaluate and profile AI agent performance using
 
 - **Accuracy Evaluation**: Measure and validate agent responses using various evaluation methods
 - **Performance Analysis**: Understand agent behavior through systematic evaluation
-- **Multi-Model Testing**: Compare performance across different LLM providers (OpenAI, NVIDIA Nemotron)
+- **Multi-Model Testing**: Compare performance across different LLM providers (OpenAI, NVIDIA Nemotron, Llama 3.1, Llama 3.3)
 - **Dataset Management**: Work with evaluation datasets for consistent testing
 - **Results Interpretation**: Analyze evaluation metrics to improve agent performance
 
@@ -94,6 +94,16 @@ nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/c
 #### OpenAI Model Evaluation
 ```bash
 nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config_openai.yml
+```
+
+#### Llama 3.1 Model Evaluation
+```bash
+nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config_llama31.yml
+```
+
+#### Llama 3.3 Model Evaluation
+```bash
+nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config_llama33.yml
 ```
 
 #### Evaluation-Only Mode
@@ -196,8 +206,10 @@ For detailed descriptions of each output file, refer to the [Evaluation outputs 
 
 | Configuration | Description |
 |--------------|-------------|
-| `eval_config.yml` | Standard evaluation with NVIDIA Nemotron models |
+| `eval_config.yml` | Standard evaluation with NVIDIA Nemotron models (default) |
 | `eval_config_openai.yml` | Evaluation using OpenAI models |
+| `eval_config_llama31.yml` | Evaluation using Llama 3.1 model |
+| `eval_config_llama33.yml` | Evaluation using Llama 3.3 model |
 | `eval_only_config.yml` | Evaluation-only mode without running the workflow |
 | `eval_upload.yml` | Evaluation with automatic result upload |
 
