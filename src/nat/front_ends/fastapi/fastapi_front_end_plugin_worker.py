@@ -43,6 +43,7 @@ from nat.builder.context import Context
 from nat.builder.eval_builder import WorkflowEvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.function import Function
+from nat.builder.function import FunctionGroup
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
@@ -1297,7 +1298,10 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                             accessible_functions = await group_instance.get_accessible_functions(
                                 filter_fn=pass_through_filter)
                             configured_full_to_fn = accessible_functions
-                            configured_short_names = {name.split('__', 1)[1] for name in accessible_functions.keys()}
+                            configured_short_names = {
+                                name.split(FunctionGroup.SEPARATOR, 1)[1]
+                                for name in accessible_functions.keys()
+                            }
                         except Exception as e:
                             logger.exception(f"Failed to get accessible functions for group {group_name}: {e}")
 
