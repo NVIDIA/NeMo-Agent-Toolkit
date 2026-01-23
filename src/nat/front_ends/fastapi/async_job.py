@@ -18,6 +18,7 @@ The functions in this module are intentionally written to be submitted as Dask t
 
 import asyncio
 import logging
+import os
 import typing
 
 
@@ -126,3 +127,12 @@ async def periodic_cleanup(*,
         except:  # noqa: E722
             logger.exception("Error during job cleanup")
             job_store = None  # Reset job store to attempt re-creation on next iteration
+
+
+def _setup_worker():
+    """
+    Setup function to be run in each worker process. This moves each worker into it's own process group.
+    This fixes an issue where a Ctrl-C in the terminal sends a SIGINT to all workers, which then causes the
+    workers to exit before the main process can shutdown the cluster gracefully.
+    """
+    os.setsid()

@@ -21,6 +21,7 @@ import tempfile
 import typing
 
 from nat.builder.front_end import FrontEndBase
+from nat.front_ends.fastapi.async_job import _setup_worker
 from nat.front_ends.fastapi.async_job import periodic_cleanup
 from nat.front_ends.fastapi.dask_client_mixin import DaskClientMixin
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
@@ -72,15 +73,6 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
                                                           db_url=db_url,
                                                           log_level=log_level,
                                                           configure_logging=not self._use_dask_threads)
-
-    @staticmethod
-    def _setup_worker():
-        """
-        Setup function to be run in each worker process. This moves each worker into it's own process group.
-        This fixes an issue where a Ctrl-C in the terminal sends a SIGINT to all workers, which then causes the
-        workers to exit before the main process can shutdown the cluster gracefully.
-        """
-        os.setsid()
 
     async def run(self):
         log_level = logger.getEffectiveLevel()
@@ -140,7 +132,7 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
                     if not self._use_dask_threads and sys.platform != "win32":
                         with self.blocking_client(self._scheduler_address) as client:
                             # Client.run submits a function to be run on each worker
-                            client.run(self._setup_worker)
+                            client.run(_setup_worker)
 
                     logger.info("Created local Dask cluster with scheduler at %s using %s workers",
                                 self._scheduler_address,
