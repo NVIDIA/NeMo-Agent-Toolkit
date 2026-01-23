@@ -44,6 +44,7 @@ from nat.agent.base import NO_INPUT_ERROR_MESSAGE
 from nat.agent.base import TOOL_NOT_FOUND_ERROR_MESSAGE
 from nat.agent.base import AgentDecision
 from nat.agent.dual_node import DualNodeAgent
+from nat.agent.react_agent.output_parser import ReActAgentParsingFailedError
 from nat.agent.react_agent.output_parser import ReActOutputParser
 from nat.agent.react_agent.output_parser import ReActOutputParserException
 from nat.agent.react_agent.prompt import SYSTEM_PROMPT
@@ -80,7 +81,8 @@ class ReActAgentGraph(DualNodeAgent):
                  parse_agent_response_max_retries: int = 1,
                  tool_call_max_retries: int = 1,
                  pass_tool_call_errors_to_agent: bool = True,
-                 normalize_tool_input_quotes: bool = True):
+                 normalize_tool_input_quotes: bool = True,
+                 raise_on_parsing_failure: bool = False):
         super().__init__(llm=llm,
                          tools=tools,
                          callbacks=callbacks,
@@ -91,6 +93,7 @@ class ReActAgentGraph(DualNodeAgent):
         self.tool_call_max_retries = tool_call_max_retries
         self.pass_tool_call_errors_to_agent = pass_tool_call_errors_to_agent
         self.normalize_tool_input_quotes = normalize_tool_input_quotes
+        self.raise_on_parsing_failure = raise_on_parsing_failure
         logger.debug(
             "%s Filling the prompt variables 'tools' and 'tool_names', using the tools provided in the config.",
             AGENT_LOG_PREFIX)
@@ -233,6 +236,13 @@ class ReActAgentGraph(DualNodeAgent):
                             "increasing parse_agent_response_max_retries",
                             AGENT_LOG_PREFIX,
                             attempt)
+                        # If configured to raise on parsing failure, raise an exception
+                        # so callers can programmatically detect failures
+                        if self.raise_on_parsing_failure:
+                            raise ReActAgentParsingFailedError(observation=str(ex.observation),
+                                                               llm_output=str(output_message.content),
+                                                               attempts=attempt) from ex
+                        # Otherwise, return the error message as the answer (backward compatible behavior)
                         # the final answer goes in the "messages" state channel
                         combined_content = str(ex.observation) + '\n' + str(output_message.content)
                         output_message.content = combined_content

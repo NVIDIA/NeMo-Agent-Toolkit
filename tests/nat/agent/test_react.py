@@ -29,6 +29,7 @@ from nat.agent.react_agent.agent import create_react_agent_prompt
 from nat.agent.react_agent.output_parser import FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE
 from nat.agent.react_agent.output_parser import MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE
 from nat.agent.react_agent.output_parser import MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE
+from nat.agent.react_agent.output_parser import ReActAgentParsingFailedError
 from nat.agent.react_agent.output_parser import ReActOutputParser
 from nat.agent.react_agent.output_parser import ReActOutputParserException
 from nat.agent.react_agent.register import ReActAgentWorkflowConfig
@@ -967,3 +968,191 @@ async def test_quote_normalization_json_parsing_logic(mock_config_react_agent, m
     # Should receive the raw string (JSON parsing failed due to no normalization)
     # The full JSON string should be passed as the query parameter
     assert tool_input_single in response_content and "type: str" in response_content
+
+
+# Tests for raise_on_parsing_failure functionality (GitHub Issue #1309)
+class TestReActAgentParsingFailedError:
+    """Tests for the ReActAgentParsingFailedError exception class."""
+
+    def test_exception_attributes(self):
+        """Test that the exception has correct attributes."""
+        error = ReActAgentParsingFailedError(
+            observation="Invalid Format: Missing 'Action:'",
+            llm_output="Thought: I should do something",
+            attempts=3
+        )
+        assert error.observation == "Invalid Format: Missing 'Action:'"
+        assert error.llm_output == "Thought: I should do something"
+        assert error.attempts == 3
+
+    def test_exception_message_short_output(self):
+        """Test exception message with short LLM output."""
+        error = ReActAgentParsingFailedError(
+            observation="Invalid Format",
+            llm_output="Short output",
+            attempts=2
+        )
+        assert "Failed to parse agent output after 2 attempts" in str(error)
+        assert "Invalid Format" in str(error)
+        assert "Short output" in str(error)
+
+    def test_exception_message_long_output_truncated(self):
+        """Test exception message truncates long LLM output."""
+        long_output = "x" * 300
+        error = ReActAgentParsingFailedError(
+            observation="Invalid Format",
+            llm_output=long_output,
+            attempts=1
+        )
+        assert "..." in str(error)
+        # Should only include first 200 chars of LLM output
+        assert len(str(error)) < 400
+
+    def test_exception_is_runtime_error(self):
+        """Test that the exception is a RuntimeError."""
+        error = ReActAgentParsingFailedError(
+            observation="test",
+            llm_output="test",
+            attempts=1
+        )
+        assert isinstance(error, RuntimeError)
+
+
+class TestRaiseOnParsingFailure:
+    """Tests for the raise_on_parsing_failure configuration option."""
+
+    def test_config_default_value(self):
+        """Test that raise_on_parsing_failure defaults to False."""
+        config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test')
+        assert config.raise_on_parsing_failure is False
+
+    def test_config_explicit_true(self):
+        """Test that raise_on_parsing_failure can be set to True."""
+        config = ReActAgentWorkflowConfig(
+            tool_names=['test'],
+            llm_name='test',
+            raise_on_parsing_failure=True
+        )
+        assert config.raise_on_parsing_failure is True
+
+    def test_config_explicit_false(self):
+        """Test that raise_on_parsing_failure can be explicitly set to False."""
+        config = ReActAgentWorkflowConfig(
+            tool_names=['test'],
+            llm_name='test',
+            raise_on_parsing_failure=False
+        )
+        assert config.raise_on_parsing_failure is False
+
+
+@pytest.fixture(name='mock_react_agent_raise_on_failure')
+def fixture_mock_agent_raise_on_failure(mock_config_react_agent, mock_llm, mock_tool):
+    """Create a mock ReAct agent with raise_on_parsing_failure=True."""
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+    agent = ReActAgentGraph(
+        llm=mock_llm,
+        prompt=prompt,
+        tools=tools,
+        detailed_logs=mock_config_react_agent.verbose,
+        raise_on_parsing_failure=True
+    )
+    return agent
+
+
+async def test_agent_raises_exception_on_parsing_failure(mock_react_agent_raise_on_failure):
+    """Test that agent raises ReActAgentParsingFailedError when raise_on_parsing_failure=True."""
+    # Send a message that will fail to parse (no Action/Final Answer in mock response)
+    with pytest.raises(ReActAgentParsingFailedError) as exc_info:
+        await mock_react_agent_raise_on_failure.agent_node(ReActGraphState(messages=[HumanMessage('hi')]))
+
+    error = exc_info.value
+    assert MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE in error.observation
+    assert error.attempts == 1
+
+
+async def test_agent_returns_error_message_when_not_raising(mock_react_agent):
+    """Test that agent returns error message when raise_on_parsing_failure=False (default)."""
+    # Verify the default agent does NOT raise on parsing failure
+    assert mock_react_agent.raise_on_parsing_failure is False
+
+    # Should NOT raise, but return error message in the response
+    response = await mock_react_agent.agent_node(ReActGraphState(messages=[HumanMessage('hi')]))
+    response = response.messages[-1]
+
+    assert isinstance(response, AIMessage)
+    assert MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE in response.content
+
+
+async def test_agent_exception_contains_llm_output(mock_react_agent_raise_on_failure):
+    """Test that the exception contains the original LLM output."""
+    with pytest.raises(ReActAgentParsingFailedError) as exc_info:
+        await mock_react_agent_raise_on_failure.agent_node(
+            ReActGraphState(messages=[HumanMessage('test query')])
+        )
+
+    error = exc_info.value
+    # The mock LLM echoes back the input in format "Question: test query\n..."
+    assert 'test query' in error.llm_output
+
+
+async def test_graph_raises_exception_when_configured(mock_config_react_agent, mock_llm, mock_tool):
+    """Test that the full graph raises exception when raise_on_parsing_failure=True."""
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+    agent = ReActAgentGraph(
+        llm=mock_llm,
+        prompt=prompt,
+        tools=tools,
+        detailed_logs=False,
+        raise_on_parsing_failure=True
+    )
+    graph = await agent.build_graph()
+
+    with pytest.raises(ReActAgentParsingFailedError):
+        await graph.ainvoke(ReActGraphState(messages=[HumanMessage('this will fail parsing')]))
+
+
+def test_agent_init_with_raise_on_parsing_failure_param(mock_config_react_agent, mock_llm, mock_tool):
+    """Test that ReActAgentGraph initialization respects the raise_on_parsing_failure parameter."""
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+
+    # Test with raise_on_parsing_failure enabled
+    agent_enabled = ReActAgentGraph(
+        llm=mock_llm,
+        prompt=prompt,
+        tools=tools,
+        detailed_logs=False,
+        raise_on_parsing_failure=True
+    )
+    assert agent_enabled.raise_on_parsing_failure is True
+
+    # Test with raise_on_parsing_failure disabled (default)
+    agent_disabled = ReActAgentGraph(
+        llm=mock_llm,
+        prompt=prompt,
+        tools=tools,
+        detailed_logs=False,
+        raise_on_parsing_failure=False
+    )
+    assert agent_disabled.raise_on_parsing_failure is False
+
+    # Test default value
+    agent_default = ReActAgentGraph(
+        llm=mock_llm,
+        prompt=prompt,
+        tools=tools,
+        detailed_logs=False
+    )
+    assert agent_default.raise_on_parsing_failure is False
+
+
+async def test_exception_chaining_preserves_original_error(mock_react_agent_raise_on_failure):
+    """Test that the raised exception chains the original ReActOutputParserException."""
+    with pytest.raises(ReActAgentParsingFailedError) as exc_info:
+        await mock_react_agent_raise_on_failure.agent_node(ReActGraphState(messages=[HumanMessage('hi')]))
+
+    # Check that the exception was chained with 'from'
+    assert exc_info.value.__cause__ is not None
+    assert isinstance(exc_info.value.__cause__, ReActOutputParserException)

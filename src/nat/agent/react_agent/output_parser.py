@@ -29,6 +29,32 @@ FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE = ("Parsing LLM output produced b
                                                   "action:")
 
 
+class ReActAgentParsingFailedError(RuntimeError):
+    """
+    Raised when the ReAct agent fails to parse the LLM output after exhausting all retries.
+
+    This exception allows callers to programmatically detect parsing failures instead of
+    receiving error messages as "successful" answers.
+
+    Attributes:
+        observation: The error message describing the parsing failure.
+        llm_output: The original LLM output that failed to parse.
+        attempts: The number of parsing attempts made before failing.
+    """
+
+    def __init__(self, observation: str, llm_output: str, attempts: int):
+        self.observation = observation
+        self.llm_output = llm_output
+        self.attempts = attempts
+        super().__init__(
+            f"Failed to parse agent output after {attempts} attempts. "
+            f"Error: {observation}. LLM output: {llm_output[:200]}..."
+            if len(llm_output) > 200 else
+            f"Failed to parse agent output after {attempts} attempts. "
+            f"Error: {observation}. LLM output: {llm_output}"
+        )
+
+
 class ReActOutputParserException(ValueError, LangChainException):
 
     def __init__(self,
