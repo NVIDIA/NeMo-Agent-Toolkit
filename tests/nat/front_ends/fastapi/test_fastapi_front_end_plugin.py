@@ -335,3 +335,17 @@ async def test_static_file_endpoints():
         # GET: Should now 404
         response = await client.get(f"/static/{file_path}")
         assert response.status_code == 404
+
+
+async def test_health_endpoint():
+    """Test that the health endpoint returns healthy status."""
+    config = Config(
+        general=GeneralConfig(front_end=FastApiFrontEndConfig()),
+        workflow=EchoFunctionConfig(),
+    )
+
+    async with build_nat_client(config) as client:
+        response = await client.get("/health")
+
+        assert response.status_code == 200
+        assert response.json() == {"status": "healthy"}
