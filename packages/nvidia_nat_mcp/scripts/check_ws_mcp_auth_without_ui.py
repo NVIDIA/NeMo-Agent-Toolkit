@@ -17,15 +17,22 @@ Test script to send a websocket message without UI.
 
 This script is used to test the websocket MCP authentication without UI.
 - It sends a websocket message to the server and waits for the response.
--It also handles the OAuth consent window if needed.
+- It also handles the OAuth consent window if needed.
 
 Sample usage:
+1. Start the NAT server, for example:
 ```bash
+# Terminal 1
+nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira-per-user.yml
+```
+2. Run the script to test the websocket MCP authentication without UI:
+```bash
+# Terminal 2
 # Run with default user ID and input message
-python3 test_ws_auth_without_ui.py
+python3 check_ws_mcp_auth_without_ui.py
 
 # Run with specific user ID and input message
-python3 test_ws_auth_without_ui.py --user-id Alice --input "What is the status of AIQ-1935?"
+python3 check_ws_mcp_auth_without_ui.py --user-id Alice --input "What is the status of AIQ-1935?"
 ```
 """
 
