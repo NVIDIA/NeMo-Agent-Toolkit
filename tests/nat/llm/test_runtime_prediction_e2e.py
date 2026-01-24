@@ -118,10 +118,10 @@ async def test_e2e_prediction_headers_injected_correctly():
                 request1 = MockRequest()
                 await hook(request1)
 
-                # Should have call 1 predictions: 2 remaining
-                assert request1.headers["x-nat-remaining-llm-calls"] == "2"
-                assert request1.headers["x-nat-interarrival-ms"] == "500"
-                assert request1.headers["x-nat-expected-output-tokens"] == "200"
+                # Should have call 1 predictions: remaining_calls.mean=2.0, output_tokens.p90=200
+                assert request1.headers["x-prefix-total-requests"] == "2"
+                assert request1.headers["x-prefix-osl"] == "LOW"  # 200 tokens < 256
+                assert request1.headers["x-prefix-iat"] == "HIGH"  # 500ms >= 500
 
                 # Simulate second LLM call
                 step_manager.push_intermediate_step(
@@ -134,10 +134,10 @@ async def test_e2e_prediction_headers_injected_correctly():
                 request2 = MockRequest()
                 await hook(request2)
 
-                # Should have call 2 predictions: 1 remaining
-                assert request2.headers["x-nat-remaining-llm-calls"] == "1"
-                assert request2.headers["x-nat-interarrival-ms"] == "300"
-                assert request2.headers["x-nat-expected-output-tokens"] == "150"
+                # Should have call 2 predictions: remaining_calls.mean=1.0, output_tokens.p90=150
+                assert request2.headers["x-prefix-total-requests"] == "1"
+                assert request2.headers["x-prefix-osl"] == "LOW"  # 150 tokens < 256
+                assert request2.headers["x-prefix-iat"] == "MEDIUM"  # 300ms is 100-500
 
                 # Simulate third LLM call
                 step_manager.push_intermediate_step(
@@ -150,9 +150,9 @@ async def test_e2e_prediction_headers_injected_correctly():
                 request3 = MockRequest()
                 await hook(request3)
 
-                # Should have call 3 predictions: 0 remaining
-                assert request3.headers["x-nat-remaining-llm-calls"] == "0"
-                assert request3.headers["x-nat-expected-output-tokens"] == "120"
+                # Should have call 3 predictions: remaining_calls.mean=0.0, output_tokens.p90=120
+                assert request3.headers["x-prefix-total-requests"] == "0"
+                assert request3.headers["x-prefix-osl"] == "LOW"  # 120 tokens < 256
 
 
 async def test_e2e_fallback_to_root():
@@ -179,6 +179,6 @@ async def test_e2e_fallback_to_root():
         request = MockRequest()
         await hook(request)
 
-        # Should fall back to root aggregated predictions
-        assert "x-nat-remaining-llm-calls" in request.headers
-        assert request.headers["x-nat-remaining-llm-calls"] == "1"  # aggregated mean
+        # Should fall back to root aggregated predictions (remaining_calls.mean=1.0, output_tokens.p90=160
+        assert "x-prefix-total-requests" in request.headers
+        assert request.headers["x-prefix-total-requests"] == "1"  # aggregated mean

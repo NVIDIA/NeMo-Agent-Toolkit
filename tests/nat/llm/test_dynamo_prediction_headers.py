@@ -37,11 +37,15 @@ async def test_prediction_headers_injected():
     except Exception:
         pass
 
-    assert "x-nat-remaining-llm-calls" in captured_headers
-    assert captured_headers["x-nat-remaining-llm-calls"] == "3"
-    assert "x-nat-interarrival-ms" in captured_headers
-    assert captured_headers["x-nat-interarrival-ms"] == "500"
-    assert "x-nat-expected-output-tokens" in captured_headers
-    assert captured_headers["x-nat-expected-output-tokens"] == "200"  # p90 value
+    # Prediction hook overrides x-prefix-* headers with prediction-derived values
+    # remaining_calls.mean=3.0 → x-prefix-total-requests="3"
+    assert "x-prefix-total-requests" in captured_headers
+    assert captured_headers["x-prefix-total-requests"] == "3"
+    # output_tokens.p90=200.0 (< 256) → x-prefix-osl="LOW"
+    assert "x-prefix-osl" in captured_headers
+    assert captured_headers["x-prefix-osl"] == "LOW"
+    # interarrival_ms.mean=500.0 (>= 500) → x-prefix-iat="HIGH"
+    assert "x-prefix-iat" in captured_headers
+    assert captured_headers["x-prefix-iat"] == "HIGH"
 
     await client.aclose()
