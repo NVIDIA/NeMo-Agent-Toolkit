@@ -170,7 +170,23 @@ class DynamoPrefixContext(metaclass=Singleton):
     @classmethod
     def get(cls) -> str | None:
         """Get the current Dynamo prefix ID from context, if any."""
-        return cls._current_prefix_id.get()
+        cur_prefix = cls._current_prefix_id.get()
+
+        if not cur_prefix:
+
+            import uuid
+
+            from nat.builder.context import Context
+            logger.debug("No Dynamo prefix ID set in context")
+            if not Context.workflow_run_id:
+                logger.warning("No workflow_run_id in context; using unique prefix ID.")
+                prefix = str(uuid.uuid4().hex[:16])
+            else:
+                prefix = Context.workflow_run_id
+            cls.set(prefix)
+            return prefix
+
+        return cur_prefix
 
     @classmethod
     def is_set(cls) -> bool:
@@ -344,16 +360,6 @@ def _create_dynamo_request_hook(
         """Inject Dynamo prefix headers before each request."""
         # Check context variable first (allows per-question override in batch evaluation)
 
-        if not DynamoPrefixContext.is_set():
-            if not Context.workflow_run_id:
-                logger.warning("No workflow_run_id in context; using unique prefix ID.")
-                import uuid
-                prefix = str(uuid.uuid4().hex[:16])
-            else:
-                prefix = Context.workflow_run_id
-
-            DynamoPrefixContext.set(prefix)
-
         context_prefix_id = DynamoPrefixContext.get()
 
         if context_prefix_id:
@@ -483,7 +489,6 @@ def _create_dynamic_prediction_hook(
 
     async def on_request(request: "httpx.Request") -> None:
         """Look up prediction from context and override x-prefix-* headers."""
-        from nat.builder.context import Context
         from nat.llm.prediction_context import get_call_tracker
 
         try:
