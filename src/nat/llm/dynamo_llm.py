@@ -330,6 +330,7 @@ def create_httpx_client_with_dynamo_hooks(
     osl: str,
     iat: str,
     timeout: float = 600.0,
+    prediction_lookup: "PredictionTrieLookup | None" = None,
 ) -> "httpx.AsyncClient":
     """
     Create an httpx.AsyncClient with Dynamo prefix header injection.
@@ -343,16 +344,26 @@ def create_httpx_client_with_dynamo_hooks(
         osl: Output sequence length hint (LOW/MEDIUM/HIGH)
         iat: Inter-arrival time hint (LOW/MEDIUM/HIGH)
         timeout: HTTP request timeout in seconds
+        prediction_lookup: Optional PredictionTrieLookup for dynamic header injection
 
     Returns:
         An httpx.AsyncClient configured with Dynamo header injection.
     """
     import httpx
 
-    request_hook = _create_dynamo_request_hook(prefix_template, total_requests, osl, iat)
+    hooks: list[Callable] = []
+
+    # Add Dynamo prefix hook
+    prefix_hook = _create_dynamo_request_hook(prefix_template, total_requests, osl, iat)
+    hooks.append(prefix_hook)
+
+    # Add dynamic prediction hook if lookup provided
+    if prediction_lookup is not None:
+        prediction_hook = _create_dynamic_prediction_hook(prediction_lookup)
+        hooks.append(prediction_hook)
 
     return httpx.AsyncClient(
-        event_hooks={"request": [request_hook]},
+        event_hooks={"request": hooks},
         timeout=httpx.Timeout(timeout),
     )
 

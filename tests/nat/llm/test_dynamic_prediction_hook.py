@@ -5,6 +5,7 @@ import pytest
 
 from nat.builder.context import Context
 from nat.llm.dynamo_llm import _create_dynamic_prediction_hook
+from nat.llm.dynamo_llm import create_httpx_client_with_dynamo_hooks
 from nat.llm.prediction_context import get_call_tracker
 from nat.profiler.prediction_trie import PredictionTrieLookup
 from nat.profiler.prediction_trie.data_models import LLMCallPrediction
@@ -136,3 +137,35 @@ async def test_dynamic_hook_no_prediction_found():
 
         # Headers should not be injected when no prediction found
         assert "x-nat-remaining-llm-calls" not in request.headers
+
+
+async def test_client_includes_prediction_hook_when_lookup_provided(sample_trie_lookup):
+    """Test that client includes prediction hook when trie_lookup is provided."""
+    client = create_httpx_client_with_dynamo_hooks(
+        prefix_template="test-{uuid}",
+        total_requests=10,
+        osl="MEDIUM",
+        iat="LOW",
+        prediction_lookup=sample_trie_lookup,
+    )
+
+    # Should have 2 hooks: dynamo prefix + prediction
+    assert len(client.event_hooks["request"]) == 2
+
+    await client.aclose()
+
+
+async def test_client_works_without_prediction_lookup():
+    """Test that client works when prediction_lookup is None."""
+    client = create_httpx_client_with_dynamo_hooks(
+        prefix_template="test-{uuid}",
+        total_requests=10,
+        osl="MEDIUM",
+        iat="LOW",
+        prediction_lookup=None,
+    )
+
+    # Should have 1 hook: dynamo prefix only
+    assert len(client.event_hooks["request"]) == 1
+
+    await client.aclose()
