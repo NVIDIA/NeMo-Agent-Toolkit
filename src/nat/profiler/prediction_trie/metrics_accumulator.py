@@ -16,6 +16,10 @@ class MetricsAccumulator:
         """Add a sample value to the accumulator."""
         self._samples.append(value)
 
+    def has_samples(self) -> bool:
+        """Return True if any samples have been added."""
+        return len(self._samples) > 0
+
     def compute_metrics(self) -> PredictionMetrics:
         """Compute aggregated metrics from accumulated samples."""
         if not self._samples:
