@@ -49,9 +49,6 @@ Install this evaluation example:
 uv pip install -e examples/evaluation_and_profiling/simple_calculator_eval
 ```
 
-> [!NOTE]
-> If you encounter rate limiting (`[429] Too Many Requests`) during evaluation, try setting the `eval.general.max_concurrency` value either in the YAML directly or via the command line with: `--override eval.general.max_concurrency 1`.
-
 ## Run the Workflow
 
 ### Running Evaluation
@@ -61,6 +58,9 @@ Evaluate the Simple Calculator agent's accuracy against a test dataset:
 ```bash
 nat eval --config_file examples/evaluation_and_profiling/simple_calculator_eval/configs/config-tunable-rag-eval.yml
 ```
+
+> [!NOTE]
+> If you encounter rate limiting (`[429] Too Many Requests`) during evaluation, try setting the `eval.general.max_concurrency` value either in the YAML directly or via the command line with: `--override eval.general.max_concurrency 1`.
 
 The configuration file specified above contains configurations for the NeMo Agent Toolkit `evaluation` and `profiler` capabilities. Additional documentation for evaluation configuration can be found in the [evaluation guide](../../../docs/source/improve-workflows/evaluate.md). Furthermore, similar documentation for profiling configuration can be found in the [profiling guide](../../../docs/source/improve-workflows/profiler.md).
 

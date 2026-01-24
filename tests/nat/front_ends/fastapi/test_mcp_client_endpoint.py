@@ -18,6 +18,7 @@ import pytest_asyncio
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from nat.builder.function import FunctionGroup
 from nat.data_models.config import Config
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
 
@@ -100,7 +101,8 @@ async def test_mcp_client_tool_list_success_with_alias(app_worker):
 
     # Workflow configured function uses the alias name
     group_name = "mcp_group"
-    group_instance = _GroupInstanceStub(client, {f"{group_name}.alias_tool": _FnStub("Overridden desc")})
+    group_instance = _GroupInstanceStub(
+        client, {f"{group_name}{FunctionGroup.SEPARATOR}alias_tool": _FnStub("Overridden desc")})
     configured_group = _ConfiguredGroupStub(cfg, group_instance)
     builder = _BuilderStub({group_name: configured_group})
 
