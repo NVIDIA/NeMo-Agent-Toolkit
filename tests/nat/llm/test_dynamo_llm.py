@@ -149,26 +149,37 @@ class TestDynamoModelConfig:
 class TestDynamoPrefixContext:
     """Tests for DynamoPrefixContext singleton class."""
 
-    def test_set_and_get_prefix_id(self):
-        """Test setting and getting prefix ID."""
-        # Ensure clean state
+    def test_auto_generates_depth_based_prefix(self):
+        """Test that get() auto-generates a depth-based prefix when no override is set."""
         DynamoPrefixContext.clear()
-        assert DynamoPrefixContext.get() is None
 
-        # Set and get
+        # get() always returns a value - auto-generated if no override
+        prefix = DynamoPrefixContext.get()
+        assert prefix is not None
+        assert "-d0" in prefix  # Depth 0 at root level
+
+    def test_set_and_get_override_prefix_id(self):
+        """Test setting and getting an override prefix ID."""
+        DynamoPrefixContext.clear()
+
+        # Set override
         DynamoPrefixContext.set("test-prefix-123")
         assert DynamoPrefixContext.get() == "test-prefix-123"
 
         # Clean up
         DynamoPrefixContext.clear()
 
-    def test_clear_prefix_id(self):
-        """Test clearing prefix ID."""
+    def test_clear_removes_override_but_auto_generates(self):
+        """Test that clear() removes override but get() still returns auto-generated value."""
         DynamoPrefixContext.set("test-prefix-456")
         assert DynamoPrefixContext.get() == "test-prefix-456"
 
         DynamoPrefixContext.clear()
-        assert DynamoPrefixContext.get() is None
+        # After clear, get() returns auto-generated depth-based prefix
+        prefix = DynamoPrefixContext.get()
+        assert prefix is not None
+        assert prefix != "test-prefix-456"
+        assert "-d0" in prefix
 
     def test_overwrite_prefix_id(self):
         """Test that setting a new prefix ID overwrites the old one."""
@@ -183,18 +194,19 @@ class TestDynamoPrefixContext:
         DynamoPrefixContext.clear()
 
     def test_scope_context_manager(self):
-        """Test the scope context manager for automatic cleanup."""
+        """Test the scope context manager with override prefix."""
         DynamoPrefixContext.clear()
-        assert DynamoPrefixContext.get() is None
 
         with DynamoPrefixContext.scope("scoped-prefix-789"):
             assert DynamoPrefixContext.get() == "scoped-prefix-789"
 
-        # Should be cleared after exiting context
-        assert DynamoPrefixContext.get() is None
+        # After exiting scope, returns to auto-generated
+        prefix = DynamoPrefixContext.get()
+        assert prefix != "scoped-prefix-789"
+        assert "-d0" in prefix
 
     def test_scope_context_manager_cleanup_on_exception(self):
-        """Test that scope context manager clears prefix ID even on exception."""
+        """Test that scope context manager restores state even on exception."""
         DynamoPrefixContext.clear()
 
         with pytest.raises(ValueError):
@@ -202,22 +214,31 @@ class TestDynamoPrefixContext:
                 assert DynamoPrefixContext.get() == "error-prefix"
                 raise ValueError("Test exception")
 
-        # Should still be cleared after exception
-        assert DynamoPrefixContext.get() is None
+        # After exception, returns to auto-generated
+        prefix = DynamoPrefixContext.get()
+        assert prefix != "error-prefix"
+        assert "-d0" in prefix
 
-    def test_scope_nested_replaces_then_clears(self):
-        """Test that nested scopes work but outer scope is lost after inner exits."""
+    def test_scope_nested_restores_outer(self):
+        """Test that nested scopes properly restore outer scope value."""
         DynamoPrefixContext.clear()
 
         with DynamoPrefixContext.scope("outer"):
             assert DynamoPrefixContext.get() == "outer"
             with DynamoPrefixContext.scope("inner"):
                 assert DynamoPrefixContext.get() == "inner"
-            # After inner scope exits, it clears - outer value is lost
-            assert DynamoPrefixContext.get() is None
+            # After inner scope exits, outer value is restored
+            assert DynamoPrefixContext.get() == "outer"
 
-        # Still None after outer exits
-        assert DynamoPrefixContext.get() is None
+        # After outer scope exits, returns to auto-generated
+        prefix = DynamoPrefixContext.get()
+        assert prefix != "outer"
+        assert "-d0" in prefix
+
+    def test_is_set_always_true(self):
+        """Test that is_set() always returns True since IDs are auto-generated."""
+        DynamoPrefixContext.clear()
+        assert DynamoPrefixContext.is_set() is True
 
 
 # ---------------------------------------------------------------------------
@@ -251,15 +272,16 @@ class TestDynamoRequestHook:
 
         await hook(mock_request)
 
+        # Prefix ID comes from DynamoPrefixContext (depth-based)
         assert "x-prefix-id" in mock_request.headers
-        assert mock_request.headers["x-prefix-id"].startswith("test-")
+        assert "-d0" in mock_request.headers["x-prefix-id"]  # Depth 0
         assert mock_request.headers["x-prefix-total-requests"] == "15"
         assert mock_request.headers["x-prefix-osl"] == "HIGH"
         assert mock_request.headers["x-prefix-iat"] == "LOW"
 
     @pytest.mark.asyncio
     async def test_hook_uses_context_prefix_id(self):
-        """Test that the hook uses context variable prefix ID when set."""
+        """Test that the hook uses context override prefix ID when set."""
         hook = _create_dynamo_request_hook(
             prefix_template="template-{uuid}",
             total_requests=10,
@@ -267,7 +289,7 @@ class TestDynamoRequestHook:
             iat="MEDIUM",
         )
 
-        # Set context prefix ID
+        # Set context override prefix ID
         DynamoPrefixContext.set("context-prefix-abc")
 
         mock_request = MagicMock()
@@ -275,16 +297,16 @@ class TestDynamoRequestHook:
 
         await hook(mock_request)
 
-        # Should use context prefix ID, not generate from template
+        # Should use context override prefix ID
         assert mock_request.headers["x-prefix-id"] == "context-prefix-abc"
 
     @pytest.mark.asyncio
-    async def test_hook_uses_same_id_for_all_requests(self):
-        """Test that the hook uses the same prefix ID for all requests from the same client.
+    async def test_hook_uses_same_id_for_same_depth(self):
+        """Test that the hook uses the same prefix ID for all requests at the same depth.
 
         This ensures Dynamo's KV cache optimization works across multi-turn conversations.
-        All requests from the same client (created with the same hook) should share
-        the same prefix ID to enable KV cache reuse.
+        All requests at the same depth within a workflow run should share the same
+        prefix ID to enable KV cache reuse.
         """
         hook = _create_dynamo_request_hook(
             prefix_template="session-{uuid}",
@@ -300,14 +322,14 @@ class TestDynamoRequestHook:
             await hook(mock_request)
             prefix_ids.add(mock_request.headers["x-prefix-id"])
 
-        # All requests should share the SAME prefix ID (for KV cache optimization)
+        # All requests at the same depth should share the SAME prefix ID
         assert len(prefix_ids) == 1
-        # And it should start with our template
-        assert list(prefix_ids)[0].startswith("session-")
+        # Should contain depth marker
+        assert "-d0" in list(prefix_ids)[0]
 
     @pytest.mark.asyncio
-    async def test_different_hooks_have_different_ids(self):
-        """Test that different hooks (different clients) get different prefix IDs."""
+    async def test_hooks_share_id_at_same_depth(self):
+        """Test that multiple hooks share the same prefix ID at the same depth."""
         prefix_ids = set()
         for _ in range(5):
             hook = _create_dynamo_request_hook(
@@ -321,12 +343,12 @@ class TestDynamoRequestHook:
             await hook(mock_request)
             prefix_ids.add(mock_request.headers["x-prefix-id"])
 
-        # Different hooks should have different prefix IDs
-        assert len(prefix_ids) == 5
+        # All hooks at the same depth share the same prefix ID within a context
+        assert len(prefix_ids) == 1
 
     @pytest.mark.asyncio
-    async def test_hook_default_prefix_template(self):
-        """Test that the hook uses default prefix format when template is None."""
+    async def test_hook_uses_depth_based_prefix(self):
+        """Test that the hook uses depth-based prefix format."""
         hook = _create_dynamo_request_hook(
             prefix_template=None,
             total_requests=10,
@@ -339,8 +361,9 @@ class TestDynamoRequestHook:
 
         await hook(mock_request)
 
-        # Should use default "nat-dynamo-{id}" format
-        assert mock_request.headers["x-prefix-id"].startswith("nat-dynamo-")
+        # Should use depth-based format "{workflow_id}-d{depth}"
+        prefix_id = mock_request.headers["x-prefix-id"]
+        assert "-d0" in prefix_id  # Depth 0 at root level
 
     @pytest.mark.asyncio
     async def test_hook_normalizes_case(self):
@@ -361,8 +384,8 @@ class TestDynamoRequestHook:
         assert mock_request.headers["x-prefix-iat"] == "HIGH"
 
     @pytest.mark.asyncio
-    async def test_hook_template_without_uuid_placeholder(self):
-        """Test that a template without {uuid} placeholder uses template as-is."""
+    async def test_hook_with_override_ignores_depth(self):
+        """Test that setting an override prefix uses it instead of depth-based ID."""
         hook = _create_dynamo_request_hook(
             prefix_template="static-prefix-no-uuid",
             total_requests=10,
@@ -370,12 +393,15 @@ class TestDynamoRequestHook:
             iat="MEDIUM",
         )
 
+        # Set override
+        DynamoPrefixContext.set("my-override-prefix")
+
         mock_request = MagicMock()
         mock_request.headers = {}
         await hook(mock_request)
 
-        # Template used as-is when no {uuid} placeholder
-        assert mock_request.headers["x-prefix-id"] == "static-prefix-no-uuid"
+        # Override prefix is used
+        assert mock_request.headers["x-prefix-id"] == "my-override-prefix"
 
 
 # ---------------------------------------------------------------------------

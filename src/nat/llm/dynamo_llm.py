@@ -125,85 +125,124 @@ class DynamoPrefixContext(metaclass=Singleton):
     """
     Singleton class for managing Dynamo prefix IDs across LLM calls.
 
-    This allows evaluation code to set a prefix ID that persists across all LLM
-    calls for a single evaluation question (multi-turn conversation).
+    Prefix IDs are unique per depth level in the function call stack, allowing
+    different caching behavior at different levels of nested function calls.
+    Each depth level gets its own prefix ID that remains constant within a
+    single workflow run but changes between runs.
+
+    The prefix ID format is: ``{workflow_run_id}-d{depth}``
 
     Usage::
 
         from nat.llm.dynamo_llm import DynamoPrefixContext
 
-        # Set prefix ID at the start of each evaluation question
-        DynamoPrefixContext.set("eval-q001-abc123")
+        # Automatically gets prefix ID based on current call stack depth
+        prefix_id = DynamoPrefixContext.get()
 
-        # ... perform LLM calls ...
-
-        # Clear when done
-        DynamoPrefixContext.clear()
-
-        # Or use as a context manager
+        # Or use as a context manager for explicit control
         with DynamoPrefixContext.scope("eval-q001-abc123"):
-            # ... perform LLM calls ...
+            # All LLM calls here will use "eval-q001-abc123" prefix
+            ...
     """
 
-    _current_prefix_id: ContextVar[str | None] = ContextVar('dynamo_prefix_id', default=None)
+    # Maps depth -> prefix_id for the current workflow run
+    _prefix_ids_by_depth: ContextVar[dict[int, str] | None] = ContextVar('dynamo_prefix_ids_by_depth', default=None)
+    # Optional override that takes precedence over depth-based IDs
+    _override_prefix_id: ContextVar[str | None] = ContextVar('dynamo_override_prefix_id', default=None)
+
+    @classmethod
+    def _get_current_depth(cls) -> int:
+        """Get the current function call stack depth from Context."""
+        try:
+            ctx = Context.get()
+            return len(ctx.function_path)
+        except Exception:
+            return 0
+
+    @classmethod
+    def _get_or_create_depth_map(cls) -> dict[int, str]:
+        """Get or create the depth -> prefix_id mapping for this context."""
+        depth_map = cls._prefix_ids_by_depth.get()
+        if depth_map is None:
+            depth_map = {}
+            cls._prefix_ids_by_depth.set(depth_map)
+        return depth_map
 
     @classmethod
     def set(cls, prefix_id: str) -> None:
         """
-        Set the Dynamo prefix ID for the current context.
+        Set an override prefix ID that takes precedence over depth-based IDs.
 
-        Call this at the start of each evaluation question to ensure all LLM calls
-        for that question share the same prefix ID (enabling KV cache reuse).
+        Use this when you need explicit control over the prefix ID, such as
+        during batch evaluation where each question should have a specific ID.
 
         Args:
-            prefix_id: The unique prefix ID (e.g., "eval-q001-abc123")
+            prefix_id: The prefix ID to use (overrides depth-based generation)
         """
-        cls._current_prefix_id.set(prefix_id)
-        logger.debug("Set Dynamo prefix ID: %s", prefix_id)
+        cls._override_prefix_id.set(prefix_id)
+        logger.debug("Set override Dynamo prefix ID: %s", prefix_id)
 
     @classmethod
     def clear(cls) -> None:
-        """Clear the current Dynamo prefix ID context."""
-        cls._current_prefix_id.set(None)
-        logger.debug("Cleared Dynamo prefix ID")
+        """Clear all prefix ID state (both override and depth-based)."""
+        cls._override_prefix_id.set(None)
+        cls._prefix_ids_by_depth.set(None)
+        logger.debug("Cleared Dynamo prefix ID context")
 
     @classmethod
-    def get(cls) -> str | None:
-        """Get the current Dynamo prefix ID from context, if any."""
-        cur_prefix = cls._current_prefix_id.get()
+    def get(cls) -> str:
+        """
+        Get the Dynamo prefix ID for the current context.
 
-        if not cur_prefix:
+        Returns the override prefix ID if set, otherwise returns a depth-based
+        prefix ID that is unique per workflow run and call stack depth.
 
-            import uuid
+        Returns:
+            The prefix ID string, never None.
+        """
+        # Check for override first
+        override = cls._override_prefix_id.get()
+        if override:
+            return override
 
-            from nat.builder.context import Context
-            logger.debug("No Dynamo prefix ID set in context")
-            if not Context.workflow_run_id:
+        # Get depth-based prefix ID
+        depth = cls._get_current_depth()
+        depth_map = cls._get_or_create_depth_map()
+
+        if depth not in depth_map:
+            # Generate new prefix ID for this depth
+            try:
+                ctx = Context.get()
+                workflow_id = ctx.workflow_run_id
+            except Exception:
+                workflow_id = None
+
+            if not workflow_id:
                 logger.warning("No workflow_run_id in context; using unique prefix ID.")
-                prefix = str(uuid.uuid4().hex[:16])
-            else:
-                prefix = Context.workflow_run_id
-            cls.set(prefix)
-            return prefix
+                workflow_id = uuid.uuid4().hex[:16]
 
-        return cur_prefix
+            prefix_id = f"{workflow_id}-d{depth}"
+            depth_map[depth] = prefix_id
+            logger.debug("Generated Dynamo prefix ID for depth %d: %s", depth, prefix_id)
+
+        return depth_map[depth]
 
     @classmethod
     def is_set(cls) -> bool:
-        """Check if a Dynamo prefix ID is currently set in context."""
-        return cls.get() is not None
+        """Check if a Dynamo prefix ID is available (always True, IDs are auto-generated)."""
+        return True
 
     @classmethod
     @contextmanager
     def scope(cls, prefix_id: str) -> Iterator[None]:
         """
-        Context manager for scoped prefix ID usage.
+        Context manager for scoped override prefix ID usage.
 
-        Automatically sets the prefix ID on entry and clears it on exit,
-        ensuring proper cleanup even if exceptions occur.
+        Sets an override prefix ID on entry and restores the previous state on exit,
+        ensuring proper cleanup even if exceptions occur. Supports nesting.
 
         Args:
-            prefix_id: The unique prefix ID for this scope
+            prefix_id: The override prefix ID for this scope
 
         Yields:
             None
@@ -213,11 +252,12 @@ class DynamoPrefixContext(metaclass=Singleton):
                 # All LLM calls here will use "eval-q001" prefix
                 await llm.ainvoke(...)
         """
+        previous_override = cls._override_prefix_id.get()
         cls.set(prefix_id)
         try:
             yield
         finally:
-            cls.clear()
+            cls._override_prefix_id.set(previous_override)
 
 
 # =============================================================================
@@ -330,15 +370,13 @@ def _create_dynamo_request_hook(
     Create an httpx event hook that injects Dynamo prefix headers into requests.
 
     This hook is called before each HTTP request is sent, allowing us to inject
-    headers dynamically. The prefix ID is generated ONCE when the hook is created,
-    ensuring all requests from the same client share the same prefix ID. This enables
-    Dynamo's KV cache optimization across multi-turn conversations.
-
-    The context variable can override this for scenarios where you need different
-    prefix IDs (e.g., per-question in batch evaluation).
+    headers dynamically. The prefix ID is obtained from DynamoPrefixContext which
+    provides depth-aware prefix IDs - each level in the function call stack gets
+    its own unique prefix ID that remains constant within a workflow run.
 
     Args:
-        prefix_template: Template string with {uuid} placeholder
+        prefix_template: Template string with {uuid} placeholder (currently unused,
+            kept for API compatibility)
         total_requests: Expected number of requests for this prefix
         osl: Output sequence length hint (LOW/MEDIUM/HIGH)
         iat: Inter-arrival time hint (LOW/MEDIUM/HIGH)
@@ -346,29 +384,15 @@ def _create_dynamo_request_hook(
     Returns:
         An async function suitable for use as an httpx event hook.
     """
-    # Generate the default prefix ID ONCE when the hook is created
-    # This ensures all requests from this client share the same prefix ID
-    unique_id = uuid.uuid4().hex[:16]
-    if prefix_template:
-        default_prefix_id = prefix_template.format(uuid=unique_id)
-    else:
-        default_prefix_id = f"nat-dynamo-{unique_id}"
-
-    logger.debug("Created Dynamo request hook with default prefix ID: %s", default_prefix_id)
+    # Note: prefix_template is kept for API compatibility but no longer used.
+    # Prefix IDs are now managed by DynamoPrefixContext with depth-awareness.
+    _ = prefix_template  # Suppress unused parameter warning
 
     async def on_request(request):
         """Inject Dynamo prefix headers before each request."""
-        # Check context variable first (allows per-question override in batch evaluation)
-
-        context_prefix_id = DynamoPrefixContext.get()
-
-        if context_prefix_id:
-            prefix_id = context_prefix_id
-            logger.debug("Using context prefix ID: %s", prefix_id)
-        else:
-            # Use the pre-generated prefix ID (same for all requests from this client)
-            prefix_id = default_prefix_id
-            logger.debug("Using default prefix ID: %s", prefix_id)
+        # Get depth-aware prefix ID from context
+        prefix_id = DynamoPrefixContext.get()
+        logger.debug("Using depth-aware prefix ID: %s", prefix_id)
 
         # Inject Dynamo headers
         request.headers["x-prefix-id"] = prefix_id
