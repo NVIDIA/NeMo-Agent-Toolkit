@@ -68,6 +68,7 @@ from nat.cli.register_workflow import register_llm_provider
 from nat.data_models.optimizable import OptimizableField
 from nat.data_models.optimizable import SearchSpace
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.profiler.prediction_trie.data_models import LLMCallPrediction
 
 logger = logging.getLogger(__name__)
 
@@ -343,6 +344,74 @@ def create_httpx_client_with_dynamo_hooks(
 
     return httpx.AsyncClient(
         event_hooks={"request": [request_hook]},
+        timeout=httpx.Timeout(timeout),
+    )
+
+
+def _create_prediction_request_hook(
+    prediction: LLMCallPrediction, ) -> Callable[["httpx.Request"], Coroutine[Any, Any, None]]:
+    """
+    Create an httpx event hook that injects prediction headers.
+
+    Args:
+        prediction: The prediction data to inject
+
+    Returns:
+        An async function suitable for use as an httpx event hook.
+    """
+
+    async def on_request(request):
+        """Inject prediction headers before each request."""
+        request.headers["x-nat-remaining-llm-calls"] = str(int(prediction.remaining_calls.mean))
+        request.headers["x-nat-interarrival-ms"] = str(int(prediction.interarrival_ms.mean))
+        request.headers["x-nat-expected-output-tokens"] = str(int(prediction.output_tokens.p90))
+
+        logger.debug(
+            "Injected prediction headers: remaining=%d, interarrival=%d, output_tokens=%d",
+            int(prediction.remaining_calls.mean),
+            int(prediction.interarrival_ms.mean),
+            int(prediction.output_tokens.p90),
+        )
+
+    return on_request
+
+
+def create_httpx_client_with_prediction_headers(
+    prediction: LLMCallPrediction,
+    prefix_template: str | None,
+    total_requests: int,
+    osl: str,
+    iat: str,
+    timeout: float = 600.0,
+) -> "httpx.AsyncClient":
+    """
+    Create an httpx.AsyncClient with both Dynamo prefix and prediction headers.
+
+    Args:
+        prediction: Prediction data for this LLM call
+        prefix_template: Template string with {uuid} placeholder
+        total_requests: Expected number of requests for this prefix
+        osl: Output sequence length hint (LOW/MEDIUM/HIGH)
+        iat: Inter-arrival time hint (LOW/MEDIUM/HIGH)
+        timeout: HTTP request timeout in seconds
+
+    Returns:
+        An httpx.AsyncClient configured with header injection.
+    """
+    import httpx
+
+    hooks: list[Callable] = []
+
+    # Add Dynamo prefix hook
+    prefix_hook = _create_dynamo_request_hook(prefix_template, total_requests, osl, iat)
+    hooks.append(prefix_hook)
+
+    # Add prediction hook
+    prediction_hook = _create_prediction_request_hook(prediction)
+    hooks.append(prediction_hook)
+
+    return httpx.AsyncClient(
+        event_hooks={"request": hooks},
         timeout=httpx.Timeout(timeout),
     )
 
