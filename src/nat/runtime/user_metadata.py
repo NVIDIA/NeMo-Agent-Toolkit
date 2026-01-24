@@ -139,7 +139,7 @@ class RequestAttributes:
         result = self._request.model_dump(exclude_none=True)
         # Convert Starlette Headers/QueryParams to plain dicts for JSON serialization
         if "headers" in result and isinstance(result["headers"], Headers):
-            result["headers"] = dict[str, str](result["headers"])
+            result["headers"] = dict(result["headers"])
         if "query_params" in result and isinstance(result["query_params"], QueryParams):
-            result["query_params"] = dict[str, str](result["query_params"])
+            result["query_params"] = dict(result["query_params"])
         return result
