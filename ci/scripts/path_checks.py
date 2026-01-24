@@ -186,7 +186,7 @@ ALLOWLISTED_WORDS: set[str] = {
     r"\d+/\d+(/\d+)*",  #
     # LLM model names
     "meta/[Ll]lama.*",
-    "nvidia/([Ll]lama|[Nn][Vv]-).*",
+    "nvidia/([Nn][Vv][Ii][Dd][Ii][Aa]-)?([Ll]lama|[Nn][Vv]-|[Nn]emotron).*",
     "mistralai/[Mm]ixtral.*",
     "microsoft/[Pp]hi.*",
     "ssmits/[Qq]wen.*",

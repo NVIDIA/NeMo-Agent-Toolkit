@@ -350,6 +350,13 @@ class NeMoCustomizerTrainerAdapterConfig(TrainerAdapterConfig, name="nemo_custom
         description="Maximum time in seconds to wait for deployment to be ready. "
         "Default is 30 minutes (1800 seconds).",
     )
+    max_consecutive_status_failures: int = Field(
+        default=3,
+        ge=1,
+        le=10,
+        description="Maximum consecutive status check failures before treating as job failure. "
+        "Helps handle transient HTTP errors without failing the training job.",
+    )
 
     @model_validator(mode="after")
     def validate_config(self) -> "NeMoCustomizerTrainerAdapterConfig":

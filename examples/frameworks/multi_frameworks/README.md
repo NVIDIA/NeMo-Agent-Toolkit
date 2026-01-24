@@ -17,6 +17,8 @@ limitations under the License.
 
 # Multi-Frameworks Example
 
+**Complexity:** 🟨 Intermediate
+
 This example demonstrates how to integrate multiple AI frameworks seamlessly using a set of LangChain / LangGraph agents, in NeMo Agent toolkit.
 NeMo Agent toolkit is framework-agnostic, allowing usage of custom and pre-built preferred AI tools without restriction due to AI framework.
 

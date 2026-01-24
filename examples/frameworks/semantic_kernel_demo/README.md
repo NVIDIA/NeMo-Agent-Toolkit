@@ -17,6 +17,8 @@ limitations under the License.
 
 # Semantic Kernel Example
 
+**Complexity:** 🟢 Beginner
+
 A minimal example using Semantic Kernel showcasing a multi-agent travel planning system where an Itinerary Agent creates a travel schedule, a Budget Agent ensures cost compliance, and a Summarizer Agent formats the final itinerary. **Please note that we only support OpenAI models currently**.
 
 ## Table of Contents

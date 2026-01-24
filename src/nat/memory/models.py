@@ -36,6 +36,10 @@ class MemoryItem(BaseModel):
         Metadata providing context and utility for management operations.
     memory : str or None
         Optional memory string. Helpful when returning a memory.
+    similarity_score : float or None
+        Optional similarity score from semantic search. The exact distance metric is implementation-dependent.
+        For example, with L2/Euclidean distance, lower scores indicate higher similarity (0.0 = identical),
+        whereas with cosine similarity, higher scores indicate higher similarity (1.0 = identical).
     """
     # yapf: disable
     model_config = ConfigDict(
@@ -82,6 +86,8 @@ class MemoryItem(BaseModel):
     metadata: dict[str, typing.Any] = Field(description="Metadata about the memory item.", default={})
     user_id: str = Field(description="The user's ID.")
     memory: str | None = Field(default=None)
+    similarity_score: float | None = Field(
+        description="Similarity to semantic search query. Distance metric is implementation-dependent.", default=None)
 
 
 class SearchMemoryInput(BaseModel):

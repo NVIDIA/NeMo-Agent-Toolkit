@@ -22,6 +22,7 @@ from unittest.mock import MagicMock
 import pytest
 from pydantic import BaseModel
 
+from nat.builder.function import FunctionGroup
 from nat.middleware.function_middleware import FunctionMiddlewareContext
 from nat.middleware.red_teaming.red_teaming_middleware import RedTeamingMiddleware
 
@@ -59,6 +60,20 @@ class NestedOutput(BaseModel):
 
 class MultiFieldModel(BaseModel):
     messages: list[str]
+
+
+def test_separator_constant_value():
+    """
+    Guardrail: Alerts when FunctionGroup.SEPARATOR changes.
+
+    Red teaming middleware uses this separator to match target_function_or_group
+    in YAML configs against runtime function names.
+    """
+    assert FunctionGroup.SEPARATOR == "__", (
+        f"FunctionGroup.SEPARATOR changed to '{FunctionGroup.SEPARATOR}'! "
+        "Update red-teaming YAML configs: change 'target_function_or_group' values "
+        "(e.g., 'group__func' must use the new separator)."
+    )
 
 
 async def test_simple_output_replace_strategy():
@@ -171,7 +186,7 @@ async def test_attack_input_with_output_passthrough():
     mock_call_next = AsyncMock(return_value=expected_output)
 
     context = FunctionMiddlewareContext(
-        name="llm.generate",
+        name=f"llm{FunctionGroup.SEPARATOR}generate",
         config=MagicMock(),
         description="Generate",
         input_schema=LLMInput,
@@ -203,7 +218,7 @@ async def test_attack_deeply_nested_jsonpath():
     mock_call_next = AsyncMock(return_value=NestedOutput(result="Done", metadata={"status": "ok"}))
 
     context = FunctionMiddlewareContext(
-        name="service.handle",
+        name=f"service{FunctionGroup.SEPARATOR}handle",
         config=MagicMock(),
         description="Handle request",
         input_schema=NestedInput,
@@ -232,7 +247,7 @@ async def test_attack_nested_output_field():
     mock_call_next = AsyncMock(return_value=LLMOutput(response="Original response", confidence=0.9))
 
     context = FunctionMiddlewareContext(
-        name="llm.chat",
+        name=f"llm{FunctionGroup.SEPARATOR}chat",
         config=MagicMock(),
         description="Chat",
         input_schema=LLMInput,
@@ -264,7 +279,7 @@ async def test_attack_output_preserves_input():
     mock_call_next = AsyncMock(return_value=NestedOutput(result="Success", metadata={"key": "value"}))
 
     context = FunctionMiddlewareContext(
-        name="processor.run",
+        name=f"processor{FunctionGroup.SEPARATOR}run",
         config=MagicMock(),
         description="Process",
         input_schema=NestedInput,
@@ -297,7 +312,7 @@ async def test_target_function_filtering():
     mock_call_next = AsyncMock(return_value=LLMOutput(response="Response", confidence=0.8))
 
     context = FunctionMiddlewareContext(
-        name="llm.generate",
+        name=f"llm{FunctionGroup.SEPARATOR}generate",
         config=MagicMock(),
         description="Generate",
         input_schema=LLMInput,
@@ -327,7 +342,7 @@ async def test_multiple_field_matches_with_all_strategy():
     mock_call_next = AsyncMock(return_value={"status": "ok"})
 
     context = FunctionMiddlewareContext(
-        name="processor.batch",
+        name=f"processor{FunctionGroup.SEPARATOR}batch",
         config=MagicMock(),
         description="Batch process",
         input_schema=MultiFieldModel,
@@ -356,7 +371,7 @@ async def test_multiple_field_matches_with_first_strategy():
     mock_call_next = AsyncMock(return_value={"status": "ok"})
 
     context = FunctionMiddlewareContext(
-        name="processor.batch",
+        name=f"processor{FunctionGroup.SEPARATOR}batch",
         config=MagicMock(),
         description="Batch process",
         input_schema=MultiFieldModel,
@@ -385,7 +400,7 @@ async def test_multiple_field_matches_with_error_strategy():
     mock_call_next = AsyncMock(return_value={"status": "ok"})
 
     context = FunctionMiddlewareContext(
-        name="processor.batch",
+        name=f"processor{FunctionGroup.SEPARATOR}batch",
         config=MagicMock(),
         description="Batch process",
         input_schema=MultiFieldModel,

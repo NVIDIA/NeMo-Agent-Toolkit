@@ -22,6 +22,8 @@ limitations under the License.
 
 # Plot Charts Agent
 
+**Complexity:** 🟢 Beginner
+
 A simple and reusable example that demonstrates creating charts from data using the NeMo Agent toolkit. This workflow can generate line charts, bar charts, and scatter plots from JSON data files based on user requests. The implementation follows NeMo Agent toolkit best practices for configuration-driven, reusable workflows.
 
 ## Table of Contents

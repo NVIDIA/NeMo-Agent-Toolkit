@@ -187,30 +187,35 @@ class EvaluationRun:
                         # raise an error if the workflow has multiple outputs
                         raise NotImplementedError("Multiple outputs are not supported")
 
-                    runner_result = None
-                    intermediate_future = None
+                    runner_task = None
+                    intermediate_task = None
+
+                    async def cancel_pending_tasks():
+                        pending = []
+                        for awaitable in (runner_task, intermediate_task):
+                            if awaitable is not None:
+                                if not awaitable.done():
+                                    awaitable.cancel()
+                                pending.append(awaitable)
+                        if pending:
+                            await asyncio.gather(*pending, return_exceptions=True)
 
                     try:
                         # Start usage stats and intermediate steps collection in parallel
-                        intermediate_future = pull_intermediate()
-                        runner_result = runner.result()
-                        base_output = await runner_result
-                        intermediate_steps = await intermediate_future
+                        intermediate_task = asyncio.ensure_future(pull_intermediate())
+                        runner_task = asyncio.create_task(runner.result())
+                        base_output = await runner_task
+                        intermediate_steps = await intermediate_task
                     except NotImplementedError as e:
                         logger.error("Failed to run the workflow: %s", e)
+                        await cancel_pending_tasks()
                         # raise original error
                         raise
                     except Exception as e:
                         logger.exception("Failed to run the workflow: %s", e)
                         # stop processing if a workflow error occurs
                         self.workflow_interrupted = True
-
-                        # Cancel any coroutines that are still running, avoiding a warning about unawaited coroutines
-                        # (typically one of these two is what raised the exception and the other is still running)
-                        for coro in (runner_result, intermediate_future):
-                            if coro is not None:
-                                asyncio.ensure_future(coro).cancel()
-
+                        await cancel_pending_tasks()
                         stop_event.set()
                         return
 

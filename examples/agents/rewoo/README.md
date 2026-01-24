@@ -17,6 +17,8 @@ limitations under the License.
 
 # ReWOO Agent Example
 
+**Complexity:** 🟢 Beginner
+
 This example demonstrates how to use a configurable [ReWOO](https://arxiv.org/abs/2305.18323) (Reasoning WithOut Observation) agent with the NeMo Agent toolkit. For this purpose NeMo Agent toolkit provides a [`rewoo_agent`](../../../docs/source/components/agents/rewoo-agent/index.md) workflow type.
 
 ## Table of Contents

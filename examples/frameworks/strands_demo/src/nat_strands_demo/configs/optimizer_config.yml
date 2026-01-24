@@ -29,34 +29,28 @@ llms:
   nim_llm:
     _type: nim
     model_name: meta/llama-3.3-70b-instruct
-    temperature: 0.5
-    top_p: 0.9
+    temperature: 0.0
     max_tokens: 4096
     # Enable optimization for these parameters
     optimizable_params:
       - temperature
-      - top_p
       - max_tokens
     # Define search spaces
     search_space:
       temperature:
-        low: 0.1
-        high: 0.7
-        step: 0.2  # Tests: 0.1, 0.3, 0.5, 0.7
-      top_p:
-        low: 0.7
-        high: 1.0
-        step: 0.1  # Tests: 0.7, 0.8, 0.9, 1.0
+        low: 0.0
+        high: 0.6
+        step: 0.2  # Tests: 0.0, 0.2, 0.4, 0.6
       max_tokens:
         low: 4096
         high: 8192
-        step: 512  # Tests: 4096, 4608, 5120, 5632, 6144, 6656, 7168, 7680, 8192
+        step: 2048  # Tests: 4096, 6144, 8192
   
   # Optimizer LLM (used for prompt optimization)
   optimizer_llm:
     _type: nim
     model_name: meta/llama-3.3-70b-instruct
-    temperature: 0.7
+    temperature: 0.0
     max_tokens: 4096
   
   # Evaluator LLM (used for evaluation metrics)
@@ -112,8 +106,7 @@ optimizer:
   # Numeric optimization (Optuna)
   numeric:
     enabled: true
-    n_trials: 20              # number of trials for numeric parameters
-    sampler: null             # Use TPE (Bayesian) sampling
+    sampler: grid
  
   # Evaluation settings
   reps_per_param_set: 3      # Run each config 3 times for stability
