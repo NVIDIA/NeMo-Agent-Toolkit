@@ -215,6 +215,12 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
         description="HTTP request timeout in seconds for LLM requests.",
     )
 
+    prediction_trie_path: str | None = Field(
+        default=None,
+        description="Path to prediction_trie.json file. When set, predictions are "
+        "looked up and injected as headers for each LLM call.",
+    )
+
     # =========================================================================
     # UTILITY METHODS
     # =========================================================================
@@ -243,6 +249,7 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
             "prefix_osl",
             "prefix_iat",
             "request_timeout",
+            "prediction_trie_path",
         })
 
 
