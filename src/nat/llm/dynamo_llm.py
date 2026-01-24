@@ -60,6 +60,8 @@ from typing import Literal
 if TYPE_CHECKING:
     import httpx
 
+    from nat.profiler.prediction_trie import PredictionTrieLookup
+
 from pydantic import Field
 
 from nat.builder.builder import Builder
@@ -379,6 +381,63 @@ def _create_prediction_request_hook(
             int(prediction.interarrival_ms.mean),
             int(prediction.output_tokens.p90),
         )
+
+    return on_request
+
+
+def _create_dynamic_prediction_hook(
+    trie_lookup: "PredictionTrieLookup", ) -> Callable[["httpx.Request"], Coroutine[Any, Any, None]]:
+    """
+    Create an httpx event hook that dynamically looks up predictions per request.
+
+    This hook reads the current function path and call index from context,
+    looks up the prediction in the trie, and injects headers.
+
+    Args:
+        trie_lookup: The PredictionTrieLookup instance to query
+
+    Returns:
+        An async function suitable for use as an httpx event hook.
+    """
+
+    async def on_request(request: "httpx.Request") -> None:
+        """Look up prediction from context and inject headers."""
+        from nat.builder.context import Context
+        from nat.llm.prediction_context import get_call_tracker
+
+        try:
+            ctx = Context.get()
+            path = ctx.function_path
+
+            # Get call index for current parent function
+            call_index = 1  # default
+            active_fn = ctx.active_function
+            if active_fn and active_fn.function_id != "root":
+                tracker = get_call_tracker()
+                call_index = tracker.counts.get(active_fn.function_id, 1)
+
+            # Look up prediction
+            prediction = trie_lookup.find(path, call_index)
+
+            if prediction:
+                request.headers["x-nat-remaining-llm-calls"] = str(int(prediction.remaining_calls.mean))
+                request.headers["x-nat-interarrival-ms"] = str(int(prediction.interarrival_ms.mean))
+                request.headers["x-nat-expected-output-tokens"] = str(int(prediction.output_tokens.p90))
+
+                logger.debug(
+                    "Injected prediction headers: path=%s, call_index=%d, remaining=%d, interarrival=%d, output=%d",
+                    path,
+                    call_index,
+                    int(prediction.remaining_calls.mean),
+                    int(prediction.interarrival_ms.mean),
+                    int(prediction.output_tokens.p90),
+                )
+            else:
+                logger.debug("No prediction found for path=%s, call_index=%d", path, call_index)
+
+        except Exception as e:
+            # Don't fail the request if prediction lookup fails
+            logger.warning("Failed to inject prediction headers: %s", e)
 
     return on_request
 
