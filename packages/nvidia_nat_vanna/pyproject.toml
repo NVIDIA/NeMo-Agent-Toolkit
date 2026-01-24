@@ -38,12 +38,12 @@ dependencies = [
   # Keep sorted!!!
   "nvidia-nat-core == {version}",
   "nvidia-nat-langchain == {version}",
-  "databricks-sql-connector~=4.1.4",
-  "databricks-sqlalchemy~=2.0.8",
+  "databricks-sql-connector>=4.1.4,<5.0.0",
+  "databricks-sqlalchemy>=2.0.8,<3.0.0",
   "pandas~=2.0",
-  "pymilvus[model]~=2.6.0",
-  "sqlglot~=26.33.0",
-  "vanna[chromadb]~=2.0.1",
+  "pymilvus[model]~=2.6",
+  "sqlglot~=26.33",
+  "vanna[chromadb]>=2.0.1,<3.0.0",
 ]
 
 [tool.uv]

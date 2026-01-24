@@ -41,7 +41,7 @@ dependencies = [
   # Keep sorted!!!
   "nvidia-nat-core == {version}",
   "matplotlib~=3.9",
-  "openpipe-art~=0.5.4"
+  "openpipe-art>=0.5.4,<1.0.0"
 ]
 
 [tool.uv]

@@ -17,6 +17,8 @@ limitations under the License.
 
 # Simple MCP Authentication Example
 
+**Complexity:** 🟨 Intermediate
+
 This example demonstrates how to use the NVIDIA NeMo Agent toolkit with MCP servers that require authentication. You'll authenticate with protected MCP services and access secured tools through OAuth2 flows.
 
 It is recommended to read the [MCP Authentication](../../../docs/source/components/auth/mcp-auth/index.md) documentation first.

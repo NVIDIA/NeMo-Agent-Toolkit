@@ -23,6 +23,7 @@ from unittest.mock import patch
 import pytest
 from pydantic import BaseModel
 
+from nat.builder.function import FunctionGroup
 from nat.middleware.defense.defense_middleware_output_verifier import OutputVerifierMiddleware
 from nat.middleware.defense.defense_middleware_output_verifier import OutputVerifierMiddlewareConfig
 from nat.middleware.middleware import FunctionMiddlewareContext
@@ -49,7 +50,7 @@ def fixture_mock_builder():
 @pytest.fixture(name="middleware_context")
 def fixture_middleware_context():
     """Create a test FunctionMiddlewareContext."""
-    return FunctionMiddlewareContext(name="my_calculator.multiply",
+    return FunctionMiddlewareContext(name=f"my_calculator{FunctionGroup.SEPARATOR}multiply",
                                      config=MagicMock(),
                                      description="Multiply function",
                                      input_schema=_TestInput,
@@ -345,9 +346,10 @@ class TestOutputVerifierInvoke:
         assert result == 42.0
 
         # Test specific function targeting
-        config = OutputVerifierMiddlewareConfig(llm_name="test_llm",
-                                                target_function_or_group="my_calculator.multiply",
-                                                action="partial_compliance")
+        config = OutputVerifierMiddlewareConfig(
+            llm_name="test_llm",
+            target_function_or_group=f"my_calculator{FunctionGroup.SEPARATOR}multiply",
+            action="partial_compliance")
         middleware = OutputVerifierMiddleware(config, mock_builder)
         middleware._llm = mock_llm
         mock_llm.ainvoke.reset_mock()
@@ -357,9 +359,10 @@ class TestOutputVerifierInvoke:
         assert result == 42.0
 
         # Test non-targeted function skips defense
-        config = OutputVerifierMiddlewareConfig(llm_name="test_llm",
-                                                target_function_or_group="calculator.invalid_func",
-                                                action="partial_compliance")
+        config = OutputVerifierMiddlewareConfig(
+            llm_name="test_llm",
+            target_function_or_group=f"calculator{FunctionGroup.SEPARATOR}invalid_func",
+            action="partial_compliance")
         middleware = OutputVerifierMiddleware(config, mock_builder)
         mock_llm.ainvoke.reset_mock()
 

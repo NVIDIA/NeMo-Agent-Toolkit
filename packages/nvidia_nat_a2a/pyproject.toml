@@ -36,7 +36,7 @@ dependencies = [
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
   # Keep sorted!!!
   "nvidia-nat-core == {version}",
-  "a2a-sdk~=0.3.20",
+  "a2a-sdk>=0.3.20,<1.0.0",
 ]
 
 [project.urls]

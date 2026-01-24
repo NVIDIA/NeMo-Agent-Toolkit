@@ -41,7 +41,7 @@ dependencies = [
   # Keep sorted!!!
   "nvidia-nat-core == {version}",
   "nvidia-nat-opentelemetry == {version}",
-  "arize-phoenix-otel~=0.13.1",
+  "arize-phoenix-otel>=0.13.1,<1.0.0",
   "openinference-instrumentation", # version determined by arize-phoenix-otel
 ]
 

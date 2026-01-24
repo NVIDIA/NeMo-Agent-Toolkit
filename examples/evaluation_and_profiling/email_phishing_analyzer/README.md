@@ -18,6 +18,8 @@ limitations under the License.
 
 # Email phishing analyzer
 
+**Complexity:** 🟨 Intermediate
+
 ## Table of Contents
 
 - [Key Features](#key-features)

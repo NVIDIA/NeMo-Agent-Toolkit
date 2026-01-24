@@ -41,7 +41,7 @@ dependencies = [
   # Keep sorted!!!
   "nvidia-nat-core == {version}",
   "nvidia-nat-opentelemetry == {version}",
-  "ragaai-catalyst>=2.2.0,<2.3",
+  "ragaai-catalyst~=2.2",
 ]
 
 [tool.uv]

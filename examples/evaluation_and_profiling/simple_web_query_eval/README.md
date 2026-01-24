@@ -17,6 +17,8 @@ limitations under the License.
 
 # Simple LangSmith-Documentation Agent - Evaluation and Profiling
 
+**Complexity:** 🟨 Intermediate
+
 This example demonstrates how to evaluate and profile AI agent performance using the NVIDIA NeMo Agent toolkit. You'll learn to systematically measure your agent's accuracy and analyze its behavior using the Simple LangSmith-Documentation Agent workflow.
 
 ## Table of Contents
@@ -35,7 +37,7 @@ This example demonstrates how to evaluate and profile AI agent performance using
 ## Key Features
 
 - **Web Query Agent Evaluation:** Demonstrates comprehensive evaluation of the `simple_web_query` agent that retrieves and processes LangSmith documentation using `webpage_query` tools and `react_agent` reasoning.
-- **Multi-Model Performance Testing:** Shows systematic comparison across different LLM providers including OpenAI models, Llama 3.1, and Llama 3.3 to identify optimal configurations for documentation retrieval tasks.
+- **Multi-Model Performance Testing:** Shows systematic comparison across different LLM providers including OpenAI models, NVIDIA Nemotron models, Llama 3.1, and Llama 3.3 to identify optimal configurations for documentation retrieval tasks.
 - **Evaluation Framework Integration:** Uses the NeMo Agent toolkit `nat eval` command with various evaluation configurations to measure response quality, accuracy scores, and documentation retrieval effectiveness.
 - **Question-by-Question Analysis:** Provides detailed breakdown of individual agent responses with comprehensive metrics for identifying failure patterns in LangSmith documentation queries.
 - **Dataset Management Workflow:** Demonstrates working with evaluation datasets for consistent testing and performance tracking over time, including evaluation-only modes and result upload capabilities.
@@ -44,7 +46,7 @@ This example demonstrates how to evaluate and profile AI agent performance using
 
 - **Accuracy Evaluation**: Measure and validate agent responses using various evaluation methods
 - **Performance Analysis**: Understand agent behavior through systematic evaluation
-- **Multi-Model Testing**: Compare performance across different LLM providers (OpenAI, Llama 3.1, Llama 3.3)
+- **Multi-Model Testing**: Compare performance across different LLM providers (OpenAI, NVIDIA Nemotron, Llama 3.1, Llama 3.3)
 - **Dataset Management**: Work with evaluation datasets for consistent testing
 - **Results Interpretation**: Analyze evaluation metrics to improve agent performance
 
@@ -204,7 +206,7 @@ For detailed descriptions of each output file, refer to the [Evaluation outputs 
 
 | Configuration | Description |
 |--------------|-------------|
-| `eval_config.yml` | Standard evaluation with default settings |
+| `eval_config.yml` | Standard evaluation with NVIDIA Nemotron models (default) |
 | `eval_config_openai.yml` | Evaluation using OpenAI models |
 | `eval_config_llama31.yml` | Evaluation using Llama 3.1 model |
 | `eval_config_llama33.yml` | Evaluation using Llama 3.3 model |

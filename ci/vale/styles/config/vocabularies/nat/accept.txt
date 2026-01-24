@@ -77,7 +77,7 @@ glog
 GPU(s?)
 Grafana
 [Gg]ranularities
-groundedness
+[Gg]roundedness
 [Gg]uardrail(s|ed|ing)?
 [Hh]ashable
 [Hh]ardcode(s|d)?

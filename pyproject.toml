@@ -109,7 +109,39 @@ profiling = [
 [dependency-groups]
 # Dependency groups are only for developers to aid in managing dependencies local to a dev machine.
 dev = [
-  "nvidia-nat-core[dev]"
+  "asgi-lifespan~=2.1",
+  "galileo~=1.27",
+  "beautifulsoup4~=4.13",
+  "httpx-sse~=0.4",
+  "ipython~=8.31",
+  "langsmith", # this is currently a transitive dependency of nat, not specifying a version to avoid conflicts
+  "myst-parser~=4.0",
+  "nbconvert", # Version determined by jupyter
+  "nbsphinx~=0.9",
+  "nvidia-nat_test",
+  "nvidia-sphinx-theme>=0.0.9",
+  "pre-commit>=4.0,<5.0",
+  "pytest~=8.3",
+  "pytest-asyncio==0.24.*",
+  "pytest-cov~=6.1",
+  "pytest_httpserver==1.1.*",
+  "pytest-timeout~=2.4",
+  "python-docx~=1.1",
+  "ruff~=0.12",
+  "setuptools >= 64",
+  "setuptools_scm>=8",
+  "sphinx~=8.2",
+  "sphinx-autoapi>=3.6",
+  "sphinx-copybutton>=0.5",
+  "sphinx_design~=0.6",
+  "sphinx-mermaid",
+  "sphinx-reredirects~=1.1",
+  "tomlkit>=0.13.2",
+  "twine~=6.0",
+  "vale~=3.12",
+  "yapf==0.43.*",
+  # transitive dependencies
+  "werkzeug>=3.1.5",
 ]
 
 [tool.setuptools]

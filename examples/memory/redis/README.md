@@ -17,6 +17,8 @@ limitations under the License.
 
 # Redis Examples
 
+**Complexity:** 🟨 Intermediate
+
 These examples use the redis memory backend.
 
 ## Table of Contents

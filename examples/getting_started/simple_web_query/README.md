@@ -17,6 +17,8 @@ limitations under the License.
 
 # A Simple LangSmith-Documentation Agent
 
+**Complexity:** 🟢 Beginner
+
 A minimal example demonstrating a simple LangSmith-Documentation agent. This agent leverages the NeMo Agent toolkit plugin system and `Builder` to integrate pre-built and custom tools into the workflow to answer questions about LangSmith. Key elements are summarized below:
 
 ## Table of Contents
