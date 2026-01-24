@@ -27,9 +27,9 @@ class FunctionBaseConfig(TypedBaseModel, BaseModelRegistryTag):
     """Base configuration for functions.
 
     Attributes:
-        name: Optional display name for this function. Used in tracing and observability.
+        `name`: Optional display name for this function. Used in tracing and observability.
             If not provided, the function type will be used.
-        middleware: List of function middleware names to apply to this function.
+        `middleware`: List of function middleware names to apply to this function.
             These must match names defined in the `middleware` section of the YAML configuration.
     """
     name: str | None = Field(
