@@ -40,6 +40,11 @@ class PrefixSpanConfig(BaseModel):
     chain_with_common_prefixes: bool = False
 
 
+class PredictionTrieConfig(BaseModel):
+    enable: bool = False
+    output_filename: str = "prediction_trie.json"
+
+
 class ProfilerConfig(BaseModel):
 
     base_metrics: bool = False
@@ -52,3 +57,4 @@ class ProfilerConfig(BaseModel):
     bottleneck_analysis: BottleneckConfig = BottleneckConfig()
     concurrency_spike_analysis: ConcurrencySpikeConfig = ConcurrencySpikeConfig()
     prefix_span_analysis: PrefixSpanConfig = PrefixSpanConfig()
+    prediction_trie: PredictionTrieConfig = PredictionTrieConfig()
