@@ -945,5 +945,5 @@ nat optimize --config_file examples/dynamo_integration/react_benchmark_agent/con
 # The Pareto analysis identifies configurations that are optimal trade-offs
 # between latency, throughput, and quality (TSQ). No single point dominates
 # all others across all objectives - these form the Pareto frontier.
-nat profile --config_file examples/dynamo_integration/react_benchmark_agent/configs/profile_rethinking_full_test.yml
+nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs/profile_rethinking_full_test.yml
 ```
