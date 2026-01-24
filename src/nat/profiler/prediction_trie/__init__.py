@@ -16,5 +16,6 @@
 from nat.profiler.prediction_trie.data_models import LLMCallPrediction
 from nat.profiler.prediction_trie.data_models import PredictionMetrics
 from nat.profiler.prediction_trie.data_models import PredictionTrieNode
+from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
 
-__all__ = ["PredictionMetrics", "LLMCallPrediction", "PredictionTrieNode"]
+__all__ = ["PredictionMetrics", "LLMCallPrediction", "PredictionTrieNode", "PredictionTrieLookup"]
