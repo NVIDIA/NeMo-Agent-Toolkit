@@ -16,6 +16,17 @@
 from nat.profiler.prediction_trie.data_models import LLMCallPrediction
 from nat.profiler.prediction_trie.data_models import PredictionMetrics
 from nat.profiler.prediction_trie.data_models import PredictionTrieNode
+from nat.profiler.prediction_trie.serialization import load_prediction_trie
+from nat.profiler.prediction_trie.serialization import save_prediction_trie
+from nat.profiler.prediction_trie.trie_builder import PredictionTrieBuilder
 from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
 
-__all__ = ["PredictionMetrics", "LLMCallPrediction", "PredictionTrieNode", "PredictionTrieLookup"]
+__all__ = [
+    "LLMCallPrediction",
+    "PredictionMetrics",
+    "PredictionTrieBuilder",
+    "PredictionTrieLookup",
+    "PredictionTrieNode",
+    "load_prediction_trie",
+    "save_prediction_trie",
+]
