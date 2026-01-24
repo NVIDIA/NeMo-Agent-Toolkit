@@ -134,6 +134,7 @@ class TestDynamoModelConfig:
             "prefix_osl",
             "prefix_iat",
             "request_timeout",
+            "prediction_trie_path",
         })
 
         assert field_names == expected
