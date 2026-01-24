@@ -161,12 +161,6 @@ class Runner:
             token_run_id = self._context_state.workflow_run_id.set(workflow_run_id)
             token_trace_id = self._context_state.workflow_trace_id.set(workflow_trace_id)
 
-            # Set Dynamo prefix context for KV cache optimization
-            # Each workflow invocation gets a unique prefix ID based on the run ID
-            # Lazy import to avoid circular dependency
-            from nat.llm.dynamo_llm import DynamoPrefixContext
-            DynamoPrefixContext.set(f"nat-workflow-{workflow_run_id}")
-
             # Prepare workflow-level intermediate step identifiers
             workflow_step_uuid = str(uuid.uuid4())
             workflow_name = getattr(self._entry_fn, 'instance_name', None) or "workflow"
@@ -217,9 +211,6 @@ class Runner:
             self._state = RunnerState.FAILED
             raise
         finally:
-            # Lazy import to avoid circular dependency
-            from nat.llm.dynamo_llm import DynamoPrefixContext
-            DynamoPrefixContext.clear()
             if token_run_id is not None:
                 self._context_state.workflow_run_id.reset(token_run_id)
             if token_trace_id is not None:
@@ -248,12 +239,6 @@ class Runner:
 
             token_run_id = self._context_state.workflow_run_id.set(workflow_run_id)
             token_trace_id = self._context_state.workflow_trace_id.set(workflow_trace_id)
-
-            # Set Dynamo prefix context for KV cache optimization
-            # Each workflow invocation gets a unique prefix ID based on the run ID
-            # Lazy import to avoid circular dependency
-            from nat.llm.dynamo_llm import DynamoPrefixContext
-            DynamoPrefixContext.set(f"nat-workflow-{workflow_run_id}")
 
             # Prepare workflow-level intermediate step identifiers
             workflow_step_uuid = str(uuid.uuid4())
@@ -311,9 +296,6 @@ class Runner:
             self._state = RunnerState.FAILED
             raise
         finally:
-            # Lazy import to avoid circular dependency
-            from nat.llm.dynamo_llm import DynamoPrefixContext
-            DynamoPrefixContext.clear()
             if token_run_id is not None:
                 self._context_state.workflow_run_id.reset(token_run_id)
             if token_trace_id is not None:
