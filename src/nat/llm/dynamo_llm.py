@@ -65,6 +65,8 @@ if TYPE_CHECKING:
 from pydantic import Field
 
 from nat.builder.builder import Builder
+from nat.builder.context import Context
+from nat.builder.context import Singleton
 from nat.builder.llm import LLMProviderInfo
 from nat.cli.register_workflow import register_llm_provider
 from nat.data_models.optimizable import OptimizableField
@@ -78,11 +80,48 @@ logger = logging.getLogger(__name__)
 PrefixLevel = Literal["LOW", "MEDIUM", "HIGH"]
 
 # =============================================================================
+# CATEGORY CONVERSION HELPERS
+# =============================================================================
+
+
+def _output_tokens_to_osl(output_tokens: float) -> PrefixLevel:
+    """
+    Convert predicted output tokens to OSL category.
+
+    Thresholds:
+        - < 256 tokens: LOW (short responses)
+        - < 1024 tokens: MEDIUM (typical responses)
+        - >= 1024 tokens: HIGH (long responses)
+    """
+    if output_tokens < 256:
+        return "LOW"
+    if output_tokens < 1024:
+        return "MEDIUM"
+    return "HIGH"
+
+
+def _interarrival_ms_to_iat(interarrival_ms: float) -> PrefixLevel:
+    """
+    Convert predicted interarrival time to IAT category.
+
+    Thresholds:
+        - < 100ms: LOW (rapid bursts, high worker stickiness)
+        - < 500ms: MEDIUM (normal pacing)
+        - >= 500ms: HIGH (slow requests, more exploration)
+    """
+    if interarrival_ms < 100:
+        return "LOW"
+    if interarrival_ms < 500:
+        return "MEDIUM"
+    return "HIGH"
+
+
+# =============================================================================
 # CONTEXT MANAGEMENT FOR DYNAMO PREFIX ID
 # =============================================================================
 
 
-class DynamoPrefixContext:
+class DynamoPrefixContext(metaclass=Singleton):
     """
     Singleton class for managing Dynamo prefix IDs across LLM calls.
 
@@ -132,6 +171,11 @@ class DynamoPrefixContext:
     def get(cls) -> str | None:
         """Get the current Dynamo prefix ID from context, if any."""
         return cls._current_prefix_id.get()
+
+    @classmethod
+    def is_set(cls) -> bool:
+        """Check if a Dynamo prefix ID is currently set in context."""
+        return cls.get() is not None
 
     @classmethod
     @contextmanager
@@ -299,6 +343,17 @@ def _create_dynamo_request_hook(
     async def on_request(request):
         """Inject Dynamo prefix headers before each request."""
         # Check context variable first (allows per-question override in batch evaluation)
+
+        if not DynamoPrefixContext.is_set():
+            if not Context.workflow_run_id:
+                logger.warning("No workflow_run_id in context; using unique prefix ID.")
+                import uuid
+                prefix = str(uuid.uuid4().hex[:16])
+            else:
+                prefix = Context.workflow_run_id
+
+            DynamoPrefixContext.set(prefix)
+
         context_prefix_id = DynamoPrefixContext.get()
 
         if context_prefix_id:
@@ -371,7 +426,10 @@ def create_httpx_client_with_dynamo_hooks(
 def _create_prediction_request_hook(
     prediction: LLMCallPrediction, ) -> Callable[["httpx.Request"], Coroutine[Any, Any, None]]:
     """
-    Create an httpx event hook that injects prediction headers.
+    Create an httpx event hook that overrides x-prefix-* headers from static prediction data.
+
+    This hook converts numeric prediction values to categorical values (LOW/MEDIUM/HIGH)
+    and overrides the x-prefix-* headers set by the Dynamo prefix hook.
 
     Args:
         prediction: The prediction data to inject
@@ -379,18 +437,22 @@ def _create_prediction_request_hook(
     Returns:
         An async function suitable for use as an httpx event hook.
     """
+    # Pre-compute categorical values from prediction
+    total_requests = int(prediction.remaining_calls.mean)
+    osl = _output_tokens_to_osl(prediction.output_tokens.p90)
+    iat = _interarrival_ms_to_iat(prediction.interarrival_ms.mean)
 
     async def on_request(request):
-        """Inject prediction headers before each request."""
-        request.headers["x-nat-remaining-llm-calls"] = str(int(prediction.remaining_calls.mean))
-        request.headers["x-nat-interarrival-ms"] = str(int(prediction.interarrival_ms.mean))
-        request.headers["x-nat-expected-output-tokens"] = str(int(prediction.output_tokens.p90))
+        """Override x-prefix-* headers with prediction-derived values."""
+        request.headers["x-prefix-total-requests"] = str(total_requests)
+        request.headers["x-prefix-osl"] = osl
+        request.headers["x-prefix-iat"] = iat
 
         logger.debug(
-            "Injected prediction headers: remaining=%d, interarrival=%d, output_tokens=%d",
-            int(prediction.remaining_calls.mean),
-            int(prediction.interarrival_ms.mean),
-            int(prediction.output_tokens.p90),
+            "Overrode prefix headers from static prediction: total_requests=%d, osl=%s, iat=%s",
+            total_requests,
+            osl,
+            iat,
         )
 
     return on_request
@@ -402,7 +464,15 @@ def _create_dynamic_prediction_hook(
     Create an httpx event hook that dynamically looks up predictions per request.
 
     This hook reads the current function path and call index from context,
-    looks up the prediction in the trie, and injects headers.
+    looks up the prediction in the trie, and overrides the x-prefix-* headers
+    with values derived from the prediction. The numeric prediction values
+    are converted to categorical values (LOW/MEDIUM/HIGH) for consistency
+    with static configuration.
+
+    When a prediction is found, this hook overrides:
+        - x-prefix-total-requests: from remaining_calls.mean
+        - x-prefix-osl: converted from output_tokens.p90
+        - x-prefix-iat: converted from interarrival_ms.mean
 
     Args:
         trie_lookup: The PredictionTrieLookup instance to query
@@ -412,7 +482,7 @@ def _create_dynamic_prediction_hook(
     """
 
     async def on_request(request: "httpx.Request") -> None:
-        """Look up prediction from context and inject headers."""
+        """Look up prediction from context and override x-prefix-* headers."""
         from nat.builder.context import Context
         from nat.llm.prediction_context import get_call_tracker
 
@@ -431,24 +501,32 @@ def _create_dynamic_prediction_hook(
             prediction = trie_lookup.find(path, call_index)
 
             if prediction:
-                request.headers["x-nat-remaining-llm-calls"] = str(int(prediction.remaining_calls.mean))
-                request.headers["x-nat-interarrival-ms"] = str(int(prediction.interarrival_ms.mean))
-                request.headers["x-nat-expected-output-tokens"] = str(int(prediction.output_tokens.p90))
+                # Convert numeric predictions to categorical values and override headers
+                total_requests = int(prediction.remaining_calls.mean)
+                osl = _output_tokens_to_osl(prediction.output_tokens.p90)
+                iat = _interarrival_ms_to_iat(prediction.interarrival_ms.mean)
+
+                request.headers["x-prefix-total-requests"] = str(total_requests)
+                request.headers["x-prefix-osl"] = osl
+                request.headers["x-prefix-iat"] = iat
 
                 logger.debug(
-                    "Injected prediction headers: path=%s, call_index=%d, remaining=%d, interarrival=%d, output=%d",
+                    "Overrode prefix headers from prediction: path=%s, call_index=%d, "
+                    "total_requests=%d, osl=%s (tokens=%d), iat=%s (ms=%d)",
                     path,
                     call_index,
-                    int(prediction.remaining_calls.mean),
-                    int(prediction.interarrival_ms.mean),
+                    total_requests,
+                    osl,
                     int(prediction.output_tokens.p90),
+                    iat,
+                    int(prediction.interarrival_ms.mean),
                 )
             else:
-                logger.debug("No prediction found for path=%s, call_index=%d", path, call_index)
+                logger.debug("No prediction found for path=%s, call_index=%d; using static values", path, call_index)
 
         except Exception as e:
             # Don't fail the request if prediction lookup fails
-            logger.warning("Failed to inject prediction headers: %s", e)
+            logger.warning("Failed to override prefix headers from prediction: %s", e)
 
     return on_request
 

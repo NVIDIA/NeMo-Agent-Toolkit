@@ -241,6 +241,7 @@ class TestDynamoLangChain:
                 osl="HIGH",
                 iat="LOW",
                 timeout=300.0,
+                prediction_lookup=None,
             )
 
             # Verify ChatOpenAI was called with the custom httpx client

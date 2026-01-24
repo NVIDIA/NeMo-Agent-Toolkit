@@ -53,7 +53,7 @@ class MockRequest:
 
 
 async def test_dynamic_hook_injects_headers(sample_trie_lookup):
-    """Test that dynamic hook injects prediction headers based on context."""
+    """Test that dynamic hook overrides x-prefix-* headers based on context predictions."""
     ctx = Context.get()
     state = ctx._context_state
 
@@ -71,10 +71,14 @@ async def test_dynamic_hook_injects_headers(sample_trie_lookup):
             request = MockRequest()
             await hook(request)
 
-            assert "x-nat-remaining-llm-calls" in request.headers
-            assert request.headers["x-nat-remaining-llm-calls"] == "3"
-            assert request.headers["x-nat-interarrival-ms"] == "500"
-            assert request.headers["x-nat-expected-output-tokens"] == "200"
+            # Prediction values are converted to x-prefix-* headers:
+            # - remaining_calls.mean=3.0 -> x-prefix-total-requests="3"
+            # - output_tokens.p90=200.0 -> x-prefix-osl="LOW" (< 256)
+            # - interarrival_ms.mean=500.0 -> x-prefix-iat="HIGH" (>= 500)
+            assert "x-prefix-total-requests" in request.headers
+            assert request.headers["x-prefix-total-requests"] == "3"
+            assert request.headers["x-prefix-osl"] == "LOW"
+            assert request.headers["x-prefix-iat"] == "HIGH"
 
 
 async def test_dynamic_hook_uses_root_fallback(sample_trie_lookup):
@@ -95,7 +99,7 @@ async def test_dynamic_hook_uses_root_fallback(sample_trie_lookup):
         await hook(request)
 
         # Should fall back to root aggregated predictions
-        assert "x-nat-remaining-llm-calls" in request.headers
+        assert "x-prefix-total-requests" in request.headers
 
 
 async def test_dynamic_hook_handles_empty_context(sample_trie_lookup):
@@ -114,7 +118,7 @@ async def test_dynamic_hook_handles_empty_context(sample_trie_lookup):
     await hook(request)
 
     # Should still inject headers from root fallback
-    assert "x-nat-remaining-llm-calls" in request.headers
+    assert "x-prefix-total-requests" in request.headers
 
 
 async def test_dynamic_hook_no_prediction_found():
@@ -135,8 +139,9 @@ async def test_dynamic_hook_no_prediction_found():
         request = MockRequest()
         await hook(request)
 
-        # Headers should not be injected when no prediction found
-        assert "x-nat-remaining-llm-calls" not in request.headers
+        # Headers should not be overridden when no prediction found
+        # (the static Dynamo hook would set them, but this hook runs after)
+        assert "x-prefix-total-requests" not in request.headers
 
 
 async def test_client_includes_prediction_hook_when_lookup_provided(sample_trie_lookup):
