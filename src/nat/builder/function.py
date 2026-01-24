@@ -70,7 +70,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
         if instance_name and instance_name != WORKFLOW_COMPONENT_NAME:
             self.instance_name = instance_name
         else:
-            self.instance_name = getattr(config, 'name', None) or config.type
+            self.instance_name = config.name or config.type
         self._context = Context.get()
         self._configured_middleware: tuple[Middleware, ...] = tuple()
         self._middlewared_single: _InvokeFnT | None = None
