@@ -258,6 +258,11 @@ class Context:
         # 1) Set the active function in the contextvar
         fn_token = self._context_state.active_function.set(current_function_node)
 
+        # 1b) Push function name onto path stack
+        current_path = self._context_state.function_path_stack.get()
+        new_path = current_path + [function_name]
+        path_token = self._context_state.function_path_stack.set(new_path)
+
         # 2) Optionally record function start as an intermediate step
         step_manager = self.intermediate_step_manager
         step_manager.push_intermediate_step(
@@ -282,7 +287,10 @@ class Context:
                                         name=function_name,
                                         data=data))
 
-            # 4) Unset the function contextvar
+            # 4a) Pop function name from path stack
+            self._context_state.function_path_stack.reset(path_token)
+
+            # 4b) Unset the function contextvar
             self._context_state.active_function.reset(fn_token)
 
     @property
@@ -294,6 +302,19 @@ class Context:
         state. The active function is the function that is currently being executed.
         """
         return self._context_state.active_function.get()
+
+    @property
+    def function_path(self) -> list[str]:
+        """
+        Returns a copy of the current function path stack.
+
+        The function path represents the ancestry of the currently executing
+        function, from root to the current function.
+
+        Returns:
+            list[str]: Copy of the function path stack.
+        """
+        return list(self._context_state.function_path_stack.get())
 
     @property
     def active_span_id(self) -> str:
