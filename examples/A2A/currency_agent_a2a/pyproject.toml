@@ -1,6 +1,6 @@
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools >= 64", "setuptools-scm>=8"]
+requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 
 [tool.setuptools]
 packages = []
@@ -11,16 +11,17 @@ root = "../../.."
 
 [project]
 name = "nat_currency_agent_a2a"
-dynamic = ["version"]
-dependencies = [
-    "nvidia-nat[a2a]~=1.5",
-    "nvidia-nat[mcp]~=1.5",
-    "mcp-server-time~=2025.8"
-]
+dynamic = ["version", "dependencies"]
 requires-python = ">=3.11,<3.14"
 description = "A2A client example demonstrating external/third-party A2A server integration"
 keywords = ["ai", "a2a", "protocol", "agents"]
 classifiers = ["Programming Language :: Python"]
+
+[tool.setuptools_dynamic_dependencies]
+dependencies = [
+    "nvidia-nat[a2a,mcp] == {version}",
+    "mcp-server-time~=2025.8",
+]
 
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }

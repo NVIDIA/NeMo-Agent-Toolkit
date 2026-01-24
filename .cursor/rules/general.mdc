@@ -56,8 +56,7 @@ These are the overarching standards that every **source, test, documentation and
 - Large / binary assets **must** be committed with Git-LFS and placed in a neighbouring `data/` folder.
 - Shell or utility scripts belong in `scripts/` or `ci/scripts/` – never mix them with library code.
 - **Source code organization**:
-  - `src/aiq/**/*`: Maintains backward compatibility with previous toolkit version. Should almost never be modified.
-  - `src/nat/**/*`: Contains core functionality. Changes should prioritize backward compatibility.
+  - `packages/nvidia_nat_core/src/nat/**/*`: Contains core functionality. Changes should prioritize backward compatibility.
 
 ## Code Formatting & Imports
 

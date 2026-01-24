@@ -1,6 +1,6 @@
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools >= 64", "setuptools-scm>=8"]
+requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -14,19 +14,21 @@ root = "../../.."
 
 [project]
 name = "nat_simple_calculator_observability"
-dynamic = ["version"]
-dependencies = [
-    "nvidia-nat[langchain,telemetry]~=1.5",
-    "nat_simple_calculator",
-]
+dynamic = ["version", "dependencies"]
 requires-python = ">=3.11,<3.14"
 description = "Simple Calculator Observability - demonstrates NeMo Agent toolkit observability and tracing capabilities"
 keywords = ["ai", "observability", "tracing", "agents"]
 classifiers = ["Programming Language :: Python"]
 
-[project.entry-points."nat.components"]
-nat_simple_calculator_observability = "nat_simple_calculator_observability.register"
+[tool.setuptools_dynamic_dependencies]
+dependencies = [
+  "nvidia-nat[langchain,telemetry] == {version}",
+  "nat_simple_calculator",
+]
 
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }
 nat_simple_calculator = { path = "../../getting_started/simple_calculator", editable = true }
+
+[project.entry-points."nat.components"]
+nat_simple_calculator_observability = "nat_simple_calculator_observability.register"

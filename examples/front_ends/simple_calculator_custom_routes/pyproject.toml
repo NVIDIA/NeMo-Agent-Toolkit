@@ -1,6 +1,6 @@
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools >= 64", "setuptools-scm>=8"]
+requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 
 [tool.setuptools]
 packages = []
@@ -11,15 +11,17 @@ root = "../../.."
 
 [project]
 name = "nat_simple_calculator_custom_routes"
-dynamic = ["version"]
-dependencies = [
-    "nvidia-nat[langchain]~=1.5",
-    "nat_simple_calculator",
-]
+dynamic = ["version", "dependencies"]
 requires-python = ">=3.11,<3.14"
 description = "Simple Calculator Custom Routes - demonstrates NeMo Agent toolkit custom API routes and metadata access"
 keywords = ["ai", "api", "routes", "metadata", "agents"]
 classifiers = ["Programming Language :: Python"]
+
+[tool.setuptools_dynamic_dependencies]
+dependencies = [
+  "nvidia-nat[langchain] == {version}",
+  "nat_simple_calculator",
+]
 
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }

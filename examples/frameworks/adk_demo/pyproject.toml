@@ -3,7 +3,7 @@
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools >= 64", "setuptools-scm>=8"]
+requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 
 [tool.setuptools_scm]
 root = "../../.."
@@ -11,16 +11,18 @@ git_describe_command = "git describe --long --first-parent"
 
 [project]
 name = "nat_adk_demo"
-dynamic = ["version"]
+dynamic = ["version", "dependencies"]
 requires-python = ">=3.11,<3.14"
-dependencies = [
-  "zstandard",
-  "matplotlib~=3.9",
-  "nvidia-nat[adk]~=1.5"
-]
 description = "Google ADK Example"
 keywords = ["ai", "agents", "tools", "adk"]
 classifiers = ["Programming Language :: Python"]
+
+[tool.setuptools_dynamic_dependencies]
+dependencies = [
+  "nvidia-nat[adk] == {version}",
+  "matplotlib~=3.9",
+  "zstandard",
+]
 
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }
