@@ -1,0 +1,77 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Sandbox Agent Configuration with Daytona Cloud
+# Configuration for running the sandbox agent with Daytona cloud sandboxes
+#
+# Usage:
+#   1. Set your Daytona API key:
+#      export DAYTONA_API_KEY=<your-api-key>
+#
+#   2. Start the API server:
+#      nat serve src/nat_sandbox_agent/configs/config_daytona.yaml
+#
+#   3. Start NAT's external UI (in a separate terminal):
+#      cd external/nat-ui && npm ci && npm run dev
+#
+#   4. Open http://localhost:3000 in your browser
+
+# LLM Configuration
+llms:
+  agent_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.0
+    max_tokens: 4096
+
+# Workflow Configuration
+workflow:
+  _type: sandbox_agent
+  llm_name: agent_llm
+  max_iterations: 30
+  max_observation_tokens: 15000
+
+  # Daytona sandbox configuration
+  sandbox_config:
+    type: daytona
+    api_key: ${DAYTONA_API_KEY}  # Set via environment variable
+    server_url: https://api.daytona.io
+    target: us
+    image: "daytonaio/workspace:latest"
+    cpu: 4
+    memory: 8  # GB
+    disk: 20   # GB
+    auto_stop_interval: 30  # minutes
+
+# Frontend Configuration - NAT's FastAPI Server
+general:
+  front_end:
+    _type: fastapi
+    host: 0.0.0.0
+    port: 8000
+
+    # Streaming configuration
+    streaming:
+      enabled: true
+
+    # CORS settings - allow NAT UI to connect
+    cors:
+      allow_origins:
+        - "http://localhost:3000"
+        - "http://127.0.0.1:3000"
+      allow_methods:
+        - "*"
+      allow_headers:
+        - "*"

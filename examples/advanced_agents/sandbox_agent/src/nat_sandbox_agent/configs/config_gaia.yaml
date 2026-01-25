@@ -1,0 +1,118 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# =============================================================================
+# Sandbox Agent - GAIA Benchmark Evaluation Configuration
+# =============================================================================
+#
+# Parameterized configuration for GAIA benchmark evaluation.
+#
+# Usage Examples:
+#
+#   1. Run with default settings (Level 2, NIM LLaMA):
+#      nat eval src/nat_sandbox_agent/configs/config_gaia.yaml
+#
+#   2. Run specific level with environment variables:
+#      GAIA_LEVEL=1 nat eval src/nat_sandbox_agent/configs/config_gaia.yaml
+#      GAIA_LEVEL=3 nat eval src/nat_sandbox_agent/configs/config_gaia.yaml
+#
+#   3. Run with OpenAI model:
+#      LLM_TYPE=openai LLM_MODEL=gpt-5.2 nat eval src/nat_sandbox_agent/configs/config_gaia.yaml
+#
+#   4. Run with custom output directory:
+#      EVAL_OUTPUT_DIR=.tmp/my_eval/ nat eval src/nat_sandbox_agent/configs/config_gaia.yaml
+#
+# Environment Variables:
+#   - GAIA_LEVEL: GAIA difficulty level (1, 2, or 3). Default: 2
+#   - LLM_TYPE: LLM provider type (nim or openai). Default: nim
+#   - LLM_MODEL: Model name. Default: meta/llama-3.3-70b-instruct
+#   - EVAL_OUTPUT_DIR: Output directory. Default: .tmp/nat/sandbox_agent/gaia_eval/
+#   - MAX_CONCURRENCY: Parallel evaluation tasks. Default: 4
+#   - MAX_ITERATIONS: Max agent iterations per task. Default: 50
+#
+# Required Environment Variables:
+#   - NVIDIA_API_KEY or NGC_API_KEY: For NIM LLM access
+#   - OPENAI_API_KEY: For OpenAI models
+#   - TAVILY_API_KEY: For web search tool
+#
+# =============================================================================
+
+# LLM Configuration
+llms:
+  agent_llm:
+    _type: ${LLM_TYPE:-nim}
+    model_name: ${LLM_MODEL:-meta/llama-3.3-70b-instruct}
+    temperature: 0.0
+    max_tokens: 8192
+
+  eval_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.0
+
+# Workflow Configuration
+workflow:
+  _type: sandbox_agent
+  llm_name: agent_llm
+  max_iterations: ${MAX_ITERATIONS:-50}
+  max_observation_tokens: 20000
+
+  # Sandbox configuration optimized for evaluation
+  sandbox_config:
+    type: docker
+    image: "nat-sandbox:latest"
+    memory_limit: "4g"
+    cpu_limit: 4.0
+    network_enabled: true
+    # Mount GAIA attachments directory to sandbox
+    # Note: Set GAIA_ATTACHMENTS_DIR to absolute path of your attachments directory
+    volumes:
+      "${GAIA_ATTACHMENTS_DIR}": "/workspace/input"
+
+# Evaluation Configuration
+eval:
+  general:
+    output_dir: ${EVAL_OUTPUT_DIR:-.tmp/nat/sandbox_agent/gaia_eval/}
+    max_concurrency: ${MAX_CONCURRENCY:-4}
+    dataset:
+      _type: parquet
+      # GAIA dataset from HuggingFace (requires accepting license at https://huggingface.co/datasets/gaia-benchmark/GAIA)
+      file_path: hf://datasets/gaia-benchmark/GAIA/2023/validation/metadata.parquet
+      id_key: task_id
+      structure:
+        question_key: Question
+        answer_key: "Final answer"
+      # Filter by GAIA level (1, 2, or 3)
+      filter:
+        allowlist:
+          field:
+            Level: ["${GAIA_LEVEL:-2}"]
+
+  evaluators:
+    # Answer accuracy evaluation using RAGAS
+    accuracy:
+      _type: ragas
+      metric: AnswerAccuracy
+      llm_name: eval_llm
+
+    # Runtime performance metrics
+    runtime:
+      _type: avg_workflow_runtime
+
+    llm_latency:
+      _type: avg_llm_latency
+
+    llm_calls:
+      _type: avg_num_llm_calls

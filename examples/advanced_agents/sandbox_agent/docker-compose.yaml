@@ -1,0 +1,75 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Docker Compose configuration for Sandbox Agent
+# Use this for local development and testing
+
+version: '3.8'
+
+services:
+  # Sandbox Agent API Server
+  sandbox-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nat-sandbox:latest
+    container_name: sandbox-agent
+    ports:
+      - "8000:8000"
+    environment:
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY}
+      - LOG_LEVEL=INFO
+    volumes:
+      # Mount config files
+      - ./src/nat_sandbox_agent/configs:/app/configs:ro
+      # Mount workspace for persistence (optional)
+      - sandbox-data:/workspace
+    networks:
+      - sandbox-network
+    restart: unless-stopped
+
+  # Phoenix Observability (optional)
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    container_name: phoenix
+    ports:
+      - "6006:6006"
+    environment:
+      - PHOENIX_ENABLE_AUTH=false
+    networks:
+      - sandbox-network
+    profiles:
+      - observability
+
+  # Redis for session storage (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - sandbox-network
+    profiles:
+      - production
+
+networks:
+  sandbox-network:
+    driver: bridge
+
+volumes:
+  sandbox-data:
+  redis-data:
