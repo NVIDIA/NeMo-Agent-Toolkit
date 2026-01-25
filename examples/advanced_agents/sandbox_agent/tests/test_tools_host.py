@@ -14,6 +14,7 @@
 # limitations under the License.
 """Tests for host-side tools (web_search, youtube_transcript)."""
 
+from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -56,7 +57,7 @@ class TestHostWebSearchTool:
         tool = HostWebSearchTool(api_key="test-key")
 
         mock_client = MagicMock()
-        mock_client.search.return_value = {
+        mock_client.search = AsyncMock(return_value={
             "results": [{
                 "title": "Test Result",
                 "url": "https://example.com",
@@ -64,7 +65,7 @@ class TestHostWebSearchTool:
                 "score": 0.95,
             }],
             "answer": "The answer is 42",
-        }
+        })
         tool._client = mock_client
 
         result = await tool.search("test query", num_results=5)
@@ -88,7 +89,7 @@ class TestHostWebSearchTool:
         tool = HostWebSearchTool(api_key="test-key")
 
         mock_client = MagicMock()
-        mock_client.search.return_value = {"results": [], "answer": None}
+        mock_client.search = AsyncMock(return_value={"results": [], "answer": None})
         tool._client = mock_client
 
         await tool.search("test", num_results=15)
@@ -105,7 +106,7 @@ class TestHostWebSearchTool:
         tool = HostWebSearchTool(api_key="test-key")
 
         mock_client = MagicMock()
-        mock_client.search.side_effect = Exception("API error")
+        mock_client.search = AsyncMock(side_effect=Exception("API error"))
         tool._client = mock_client
 
         result = await tool.search("test query")

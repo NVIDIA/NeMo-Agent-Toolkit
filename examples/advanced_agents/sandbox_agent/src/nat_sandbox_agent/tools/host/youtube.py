@@ -29,6 +29,7 @@ This tool runs on the host machine (not in the sandbox) for:
 - No sandbox dependencies required
 """
 
+import asyncio
 import logging
 import re
 from typing import Any
@@ -109,9 +110,12 @@ class HostYouTubeTool:
                 }
 
             # Try to get transcript in preferred language
+            # Use asyncio.to_thread to avoid blocking the event loop
             transcript = None
             try:
-                transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+                transcript_list = await asyncio.to_thread(
+                    YouTubeTranscriptApi.list_transcripts, video_id
+                )
 
                 try:
                     transcript = transcript_list.find_transcript([language])
@@ -134,7 +138,7 @@ class HostYouTubeTool:
                 }
 
             if transcript:
-                data = transcript.fetch()
+                data = await asyncio.to_thread(transcript.fetch)
                 full_text = " ".join([entry["text"] for entry in data])
 
                 # Create timestamped version
@@ -174,7 +178,7 @@ class HostYouTubeTool:
                 "error": "youtube-transcript-api not installed",
             }
         except Exception as e:
-            logger.error(f"YouTube transcript error: {e}")
+            logger.exception("YouTube transcript error")
             return {
                 "status": "error",
                 "error": str(e),

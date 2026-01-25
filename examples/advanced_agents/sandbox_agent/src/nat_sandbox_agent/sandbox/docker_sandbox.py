@@ -176,18 +176,24 @@ class DockerSandbox(BaseSandbox):
 
         logger.debug(f"Executing command: {command[:100]}...")
 
+        # Use Linux timeout command to ensure container-side process termination.
+        # Without this, asyncio.wait_for() only cancels the Python await,
+        # but the process inside the container continues running as orphan.
+        timeout_int = int(timeout)
+        wrapped_command = f"timeout {timeout_int} /bin/bash -c {shlex.quote(command)}"
+
         try:
             exec_result = await asyncio.wait_for(
                 asyncio.get_running_loop().run_in_executor(
                     None,
                     lambda: self._container.exec_run(
-                        cmd=f"/bin/bash -c {shlex.quote(command)}",
+                        cmd=wrapped_command,
                         workdir=working_dir,
                         environment=env,
                         demux=True,
                     ),
                 ),
-                timeout=timeout,
+                timeout=timeout + 5,  # Give container timeout a chance to fire first
             )
 
             exit_code = exec_result.exit_code
@@ -195,6 +201,15 @@ class DockerSandbox(BaseSandbox):
 
             stdout = stdout_bytes.decode("utf-8", errors="replace") if stdout_bytes else ""
             stderr = stderr_bytes.decode("utf-8", errors="replace") if stderr_bytes else ""
+
+            # Linux timeout command returns 124 when the command times out
+            if exit_code == 124:
+                logger.warning(f"Command timed out after {timeout_int}s: {command[:50]}...")
+                return CommandResult(
+                    exit_code=-1,
+                    stdout=stdout,
+                    stderr=f"Command timed out after {timeout_int} seconds\n{stderr}".strip(),
+                )
 
             return CommandResult(
                 exit_code=exit_code,
@@ -210,14 +225,14 @@ class DockerSandbox(BaseSandbox):
                 stderr=f"Command timed out after {timeout} seconds",
             )
         except ContainerError as e:
-            logger.error(f"Container error: {e}")
+            logger.exception(f"Container error: {e}")
             return CommandResult(
                 exit_code=e.exit_status,
                 stdout="",
                 stderr=str(e),
             )
         except Exception as e:
-            logger.error(f"Command execution failed: {e}")
+            logger.exception(f"Command execution failed: {e}")
             return CommandResult(
                 exit_code=-1,
                 stdout="",
