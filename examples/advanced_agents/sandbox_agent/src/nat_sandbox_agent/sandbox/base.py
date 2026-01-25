@@ -18,6 +18,7 @@
 from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
+from types import TracebackType
 
 # ============ Workspace Constants ============
 # These constants define the standard workspace directory structure.
@@ -140,6 +141,11 @@ class BaseSandbox(ABC):
         await self.start()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Async context manager exit - cleans up the sandbox."""
         await self.cleanup()

@@ -47,10 +47,13 @@ def create_sandbox_tools(
         sandbox: The sandbox instance to bind tools to.
         max_output_chars: Maximum characters for tool output truncation.
         include_tools: Optional list of tool names to include.
-            If None, all tools are included.
+            If None, all tools are included. If empty list, returns empty list.
 
     Returns:
         List of sandbox tools.
+
+    Raises:
+        ValueError: If include_tools contains unknown tool names.
     """
     executor = SandboxToolExecutor(
         sandbox=sandbox,
@@ -65,17 +68,24 @@ def create_sandbox_tools(
         "web_browse": create_web_browse_tool(executor),
     }
 
-    if include_tools:
-        return [all_tools[name] for name in include_tools if name in all_tools]
+    if include_tools is not None:
+        # Validate tool names
+        unknown_tools = set(include_tools) - set(all_tools.keys())
+        if unknown_tools:
+            raise ValueError(
+                f"Unknown tool names: {unknown_tools}. "
+                f"Available tools: {list(all_tools.keys())}"
+            )
+        return [all_tools[name] for name in include_tools]
 
     return list(all_tools.values())
 
 __all__ = [
-    "create_sandbox_tools",
     "SandboxToolExecutor",
-    "create_shell_tool",
-    "create_python_tool",
     "create_file_read_tool",
     "create_file_write_tool",
+    "create_python_tool",
+    "create_sandbox_tools",
+    "create_shell_tool",
     "create_web_browse_tool",
 ]

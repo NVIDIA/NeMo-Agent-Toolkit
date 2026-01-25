@@ -26,8 +26,8 @@ from nat_sandbox_agent.sandbox.factory import create_sandbox
 __all__ = [
     "BaseSandbox",
     "CommandResult",
-    "DockerSandbox",
     "DaytonaSandbox",
+    "DockerSandbox",
     "SandboxConfig",
     "SandboxType",
     "create_sandbox",

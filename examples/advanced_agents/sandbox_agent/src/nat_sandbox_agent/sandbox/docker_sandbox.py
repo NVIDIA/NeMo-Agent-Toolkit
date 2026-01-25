@@ -272,8 +272,8 @@ class DockerSandbox(BaseSandbox):
             # Get directory path
             dir_path = "/".join(path.split("/")[:-1]) or "/"
 
-            # Ensure directory exists
-            await self.run_command(f"mkdir -p {dir_path}")
+            # Ensure directory exists (shell-escape to prevent injection)
+            await self.run_command(f"mkdir -p {shlex.quote(dir_path)}")
 
             # Upload the tar archive
             await asyncio.get_running_loop().run_in_executor(

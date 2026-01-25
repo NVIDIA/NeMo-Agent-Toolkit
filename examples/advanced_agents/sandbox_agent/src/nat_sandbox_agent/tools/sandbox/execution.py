@@ -96,7 +96,16 @@ async def execute_python(
     logger.info(f"Executing Python code ({len(code)} chars)")
 
     # Write code to a temp file for better error messages
-    await executor.sandbox.write_file(DEFAULT_SCRIPT_PATH, code)
+    try:
+        await executor.sandbox.write_file(DEFAULT_SCRIPT_PATH, code)
+    except Exception as e:
+        logger.exception(f"Failed to write script file: {e}")
+        return {
+            "status": "error",
+            "stdout": "",
+            "stderr": executor.truncate(str(e)),
+            "generated_files": [],
+        }
 
     result = await executor.sandbox.run_command(
         command=f"cd {WORKSPACE_ROOT} && python3 {DEFAULT_SCRIPT_PATH}",

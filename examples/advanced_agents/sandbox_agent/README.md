@@ -35,7 +35,7 @@ The Sandbox Agent executes tasks within secure, isolated Docker containers or Da
 ### Prerequisites
 
 - Docker (running daemon)
-- Python 3.10+
+- Python 3.11+
 - API keys (see Environment Variables below)
 
 ### Installation

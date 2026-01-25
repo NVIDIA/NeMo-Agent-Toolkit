@@ -109,6 +109,12 @@ RUN mkdir -p ${PLAYWRIGHT_BROWSERS_PATH} && chmod 755 ${PLAYWRIGHT_BROWSERS_PATH
 # Install Playwright browser (Chromium only to reduce size)
 RUN playwright install chromium --with-deps
 
+# Create non-root user for security (created early so we can chown)
+RUN useradd -m -s /bin/bash sandbox
+
+# Change ownership of Playwright browsers to sandbox user
+RUN chown -R sandbox:sandbox ${PLAYWRIGHT_BROWSERS_PATH}
+
 # Create workspace directories
 RUN mkdir -p /workspace/input \
              /workspace/output \
@@ -118,9 +124,8 @@ RUN mkdir -p /workspace/input \
 # Set working directory
 WORKDIR /workspace
 
-# Create non-root user for security
-RUN useradd -m -s /bin/bash sandbox && \
-    chown -R sandbox:sandbox /workspace
+# Set workspace ownership to sandbox user
+RUN chown -R sandbox:sandbox /workspace
 
 # Switch to non-root user
 USER sandbox

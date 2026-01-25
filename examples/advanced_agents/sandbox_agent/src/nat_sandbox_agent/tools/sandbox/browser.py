@@ -75,6 +75,9 @@ async def web_browse(
     """
     logger.info(f"Web browse: {url}")
 
+    # Safely escape URL for embedding in generated code
+    safe_url = json.dumps(url)
+
     # Build the content extraction code
     if selector:
         # Escape the selector to prevent code injection
@@ -105,7 +108,7 @@ async def main():
             browser = await p.chromium.launch(headless=True)
             page = await browser.new_page()
 
-            await page.goto("{url}", wait_until="domcontentloaded")
+            await page.goto({safe_url}, wait_until="domcontentloaded")
 
             title = await page.title()
             {extract_code}
