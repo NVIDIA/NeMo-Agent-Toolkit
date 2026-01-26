@@ -22,7 +22,7 @@ dependencies = [
   # Keep sorted!!!
   "nvidia-nat[litellm]~=1.5",
   "matplotlib~=3.9",
-  "openpipe-art>=0.5.4,<1.0.0"
+  "openpipe-art==0.5.4"  # hard-coded version; upgrading requires extensive testing
 ]
 requires-python = ">=3.11,<3.14"
 description = "Subpackage for OpenPipe ART integration in NeMo Agent toolkit"

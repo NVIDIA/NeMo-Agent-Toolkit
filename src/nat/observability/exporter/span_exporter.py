@@ -220,6 +220,7 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
                 sub_span.set_attribute(SpanAttributes.INPUT_VALUE.value, serialized_input)
                 sub_span.set_attribute(SpanAttributes.INPUT_MIME_TYPE.value,
                                        MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value)
+                sub_span.set_attribute("input.value_obj", self._to_dict(event.payload.data.input))
 
         # Add metadata to the metadata stack
         start_metadata = event.payload.metadata or {}
@@ -231,6 +232,19 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
         else:
             logger.warning("Invalid metadata type for step %s", event.UUID)
             return
+
+        # Inject request attributes into provided_metadata
+        try:
+            request_metadata = self._context_state.metadata.get()
+            if request_metadata:
+                request_attrs = request_metadata.to_dict()
+                if request_attrs:
+                    stored = self._metadata_stack[event.UUID]
+                    if "provided_metadata" not in stored or stored["provided_metadata"] is None:
+                        stored["provided_metadata"] = {}
+                    stored["provided_metadata"]["request_attributes"] = request_attrs
+        except (AttributeError, LookupError):
+            pass
 
         self._span_stack[event.UUID] = sub_span  # type: ignore
         self._outstanding_spans[event.UUID] = sub_span  # type: ignore
@@ -276,6 +290,7 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
             sub_span.set_attribute(SpanAttributes.OUTPUT_VALUE.value, serialized_output)
             sub_span.set_attribute(SpanAttributes.OUTPUT_MIME_TYPE.value,
                                    MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value)
+            sub_span.set_attribute("output.value_obj", self._to_dict(event.payload.data.output))
 
         # Merge metadata from start event with end event metadata
         start_metadata = self._metadata_stack.pop(event.UUID)  # type: ignore
@@ -306,6 +321,21 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
 
         # Export the span with processing pipeline
         self._create_export_task(self._export_with_processing(sub_span))  # type: ignore
+
+    def _to_dict(self, data: typing.Any) -> dict[str, typing.Any] | typing.Any:
+        """Transform serialized payload into a structured dict for span attributes."""
+
+        if hasattr(data, 'model_dump'):
+            result = data.model_dump(exclude_none=True)
+        elif isinstance(data, dict):
+            result = {k: v for k, v in data.items() if v is not None}
+        else:
+            return data
+
+        if 'value' in result and result['value'] is not None:
+            return result['value']
+
+        return result
 
     @override
     async def _cleanup(self):

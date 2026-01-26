@@ -17,8 +17,12 @@
 import logging
 from collections.abc import Sequence
 from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import TypeVar
+
+if TYPE_CHECKING:
+    import httpx
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -35,6 +39,7 @@ from nat.llm.huggingface_llm import HuggingFaceConfig
 from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.hooks import create_metadata_injection_client
 from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
@@ -142,15 +147,23 @@ async def azure_openai_langchain(llm_config: AzureOpenAIModelConfig, _builder: B
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.LANGCHAIN)
 
-    client = AzureChatOpenAI(
-        **llm_config.model_dump(exclude={"type", "thinking", "api_type", "api_version"},
-                                by_alias=True,
-                                exclude_none=True,
-                                exclude_unset=True),
-        api_version=llm_config.api_version,  # type: ignore[call-arg]
-    )
+    http_async_client: httpx.AsyncClient = create_metadata_injection_client()
 
-    yield _patch_llm_based_on_config(client, llm_config)
+    try:
+        client = AzureChatOpenAI(
+            http_async_client=http_async_client,  # type: ignore[call-arg]
+            **llm_config.model_dump(exclude={"type", "thinking", "api_type", "api_version"},
+                                    by_alias=True,
+                                    exclude_none=True,
+                                    exclude_unset=True),
+            api_version=llm_config.api_version,  # type: ignore[call-arg]
+        )
+        if "http_async_client" in client.model_kwargs:
+            del client.model_kwargs["http_async_client"]
+
+        yield _patch_llm_based_on_config(client, llm_config)
+    finally:
+        await http_async_client.aclose()
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
@@ -179,27 +192,37 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
 
     from langchain_openai import ChatOpenAI
 
-    if llm_config.api_type == APITypeEnum.RESPONSES:
-        client = ChatOpenAI(stream_usage=True,
-                            use_responses_api=True,
-                            use_previous_response_id=True,
-                            **llm_config.model_dump(
-                                exclude={"type", "thinking", "api_type"},
-                                by_alias=True,
-                                exclude_none=True,
-                                exclude_unset=True,
-                            ))
-    else:
-        # If stream_usage is specified, it will override the default value of True.
-        client = ChatOpenAI(stream_usage=True,
-                            **llm_config.model_dump(
-                                exclude={"type", "thinking", "api_type"},
-                                by_alias=True,
-                                exclude_none=True,
-                                exclude_unset=True,
-                            ))
+    http_async_client: httpx.AsyncClient = create_metadata_injection_client()
 
-    yield _patch_llm_based_on_config(client, llm_config)
+    try:
+        if llm_config.api_type == APITypeEnum.RESPONSES:
+            client = ChatOpenAI(
+                http_async_client=http_async_client,  # type: ignore[call-arg]
+                stream_usage=True,
+                use_responses_api=True,  # type: ignore[call-arg]
+                use_previous_response_id=True,  # type: ignore[call-arg]
+                **llm_config.model_dump(
+                    exclude={"type", "thinking", "api_type"},
+                    by_alias=True,
+                    exclude_none=True,
+                    exclude_unset=True,
+                ))
+        else:
+            client = ChatOpenAI(
+                http_async_client=http_async_client,  # type: ignore[call-arg]
+                stream_usage=True,
+                **llm_config.model_dump(
+                    exclude={"type", "thinking", "api_type"},
+                    by_alias=True,
+                    exclude_none=True,
+                    exclude_unset=True,
+                ))
+        if "http_async_client" in client.model_kwargs:
+            del client.model_kwargs["http_async_client"]
+
+        yield _patch_llm_based_on_config(client, llm_config)
+    finally:
+        await http_async_client.aclose()
 
 
 @register_llm_client(config_type=DynamoModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)

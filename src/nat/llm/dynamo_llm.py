@@ -73,6 +73,7 @@ from nat.data_models.optimizable import OptimizableField
 from nat.data_models.optimizable import SearchSpace
 from nat.llm.openai_llm import OpenAIModelConfig
 from nat.profiler.prediction_trie.data_models import LLMCallPrediction
+from nat.llm.utils.constants import LLMHeaderPrefix
 
 logger = logging.getLogger(__name__)
 
@@ -395,10 +396,10 @@ def _create_dynamo_request_hook(
         logger.debug("Using depth-aware prefix ID: %s", prefix_id)
 
         # Inject Dynamo headers
-        request.headers["x-prefix-id"] = prefix_id
-        request.headers["x-prefix-total-requests"] = str(total_requests)
-        request.headers["x-prefix-osl"] = osl.upper()
-        request.headers["x-prefix-iat"] = iat.upper()
+        request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-id"] = prefix_id
+        request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-total-requests"] = str(total_requests)
+        request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-osl"] = osl.upper()
+        request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-iat"] = iat.upper()
 
         logger.debug("Injected Dynamo headers: prefix_id=%s, total_requests=%d, osl=%s, iat=%s",
                      prefix_id,
@@ -474,9 +475,9 @@ def _create_prediction_request_hook(
 
     async def on_request(request):
         """Override x-prefix-* headers with prediction-derived values."""
-        request.headers["x-prefix-total-requests"] = str(total_requests)
-        request.headers["x-prefix-osl"] = osl
-        request.headers["x-prefix-iat"] = iat
+        request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-total-requests"] = str(total_requests)
+        request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-osl"] = osl
+        request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-iat"] = iat
 
         logger.debug(
             "Overrode prefix headers from static prediction: total_requests=%d, osl=%s, iat=%s",
@@ -535,9 +536,9 @@ def _create_dynamic_prediction_hook(
                 osl = _output_tokens_to_osl(prediction.output_tokens.p90)
                 iat = _interarrival_ms_to_iat(prediction.interarrival_ms.mean)
 
-                request.headers["x-prefix-total-requests"] = str(total_requests)
-                request.headers["x-prefix-osl"] = osl
-                request.headers["x-prefix-iat"] = iat
+                request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-total-requests"] = str(total_requests)
+                request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-osl"] = osl
+                request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-iat"] = iat
 
                 logger.debug(
                     "Overrode prefix headers from prediction: path=%s, call_index=%d, "
