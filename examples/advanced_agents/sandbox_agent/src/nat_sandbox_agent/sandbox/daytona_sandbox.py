@@ -32,7 +32,7 @@ class DaytonaSandbox(BaseSandbox):
     This sandbox uses the Daytona cloud service to provide isolated
     execution environments.
 
-    Note: Requires daytona-sdk package to be installed.
+    Note: Requires `daytona-sdk` package to be installed.
     """
 
     DEFAULT_IMAGE = "daytonaio/workspace:latest"
@@ -200,7 +200,7 @@ class DaytonaSandbox(BaseSandbox):
             data = await asyncio.get_running_loop().run_in_executor(
                 None, lambda: self._sandbox.fs.download_file(path)
             )
-            return data.decode("utf-8")
+            return data.decode("utf-8", errors="replace")
         except Exception as e:
             if "not found" in str(e).lower():
                 raise FileNotFoundError(f"File not found: {path}") from None
