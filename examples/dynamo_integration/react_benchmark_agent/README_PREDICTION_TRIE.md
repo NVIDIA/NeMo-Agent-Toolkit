@@ -150,7 +150,7 @@ llms:
 
 The trie file doesn't exist at the configured path. Check:
 - Did Phase 1 profiling complete successfully?
-- Is the job_id in the path correct?
+- Is the `job_id` in the path correct?
 - Is the path relative to where you're running the command?
 
 ### "No prediction found for path"
