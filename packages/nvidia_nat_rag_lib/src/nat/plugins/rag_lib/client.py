@@ -158,6 +158,7 @@ async def nvidia_rag_lib(config: NvidiaRAGLibConfig, builder: Builder) -> AsyncG
             logger.exception("RAG search failed")
             raise
 
+    # Server-Sent Events (SSE) format prefix for parsing streaming response chunks
     DATA_PREFIX = "data: "
     DATA_PREFIX_WIDTH = len(DATA_PREFIX)
 
