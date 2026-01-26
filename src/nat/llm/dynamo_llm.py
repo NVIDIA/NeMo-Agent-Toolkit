@@ -60,7 +60,7 @@ from typing import Literal
 if TYPE_CHECKING:
     import httpx
 
-    from nat.profiler.prediction_trie import PredictionTrieLookup
+    from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
 
 from pydantic import Field
 
@@ -298,19 +298,23 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
                      "Lower values allow more load balancing across workers."),
         space=SearchSpace(low=1, high=20, step=5))
 
-    prefix_osl: PrefixLevel = OptimizableField(default="MEDIUM",
-                                               description=("Output Sequence Length hint for the Dynamo router. "
-                                                            "LOW=short responses (decode_cost=1.0), "
-                                                            "MEDIUM=typical (decode_cost=2.0), "
-                                                            "HIGH=long responses (decode_cost=3.0)."),
-                                               space=SearchSpace(values=["LOW", "MEDIUM", "HIGH"]))
+    prefix_osl: PrefixLevel = OptimizableField(
+        default="MEDIUM",
+        description="Output Sequence Length hint for the Dynamo router. "
+        "LOW means short responses (decode_cost=1.0), "
+        "MEDIUM means typical (decode_cost=2.0), "
+        "HIGH means long responses (decode_cost=3.0).",
+        space=SearchSpace(values=["LOW", "MEDIUM", "HIGH"]),
+    )
 
-    prefix_iat: PrefixLevel = OptimizableField(default="MEDIUM",
-                                               description=("Inter-Arrival Time hint for the Dynamo router. "
-                                                            "LOW=rapid bursts (iat_factor=1.5, high stickiness), "
-                                                            "MEDIUM=normal (iat_factor=1.0), "
-                                                            "HIGH=slow requests (iat_factor=0.6, more exploration)."),
-                                               space=SearchSpace(values=["LOW", "MEDIUM", "HIGH"]))
+    prefix_iat: PrefixLevel = OptimizableField(
+        default="MEDIUM",
+        description="Inter-Arrival Time hint for the Dynamo router. "
+        "LOW means rapid bursts (iat_factor=1.5, high stickiness), "
+        "MEDIUM means normal (iat_factor=1.0), "
+        "HIGH means slow requests (iat_factor=0.6, more exploration).",
+        space=SearchSpace(values=["LOW", "MEDIUM", "HIGH"]),
+    )
 
     request_timeout: float = Field(
         default=600.0,
@@ -376,11 +380,10 @@ def _create_dynamo_request_hook(
     its own unique prefix ID that remains constant within a workflow run.
 
     Args:
-        prefix_template: Template string with {uuid} placeholder (currently unused,
-            kept for API compatibility)
-        total_requests: Expected number of requests for this prefix
-        osl: Output sequence length hint (LOW/MEDIUM/HIGH)
-        iat: Inter-arrival time hint (LOW/MEDIUM/HIGH)
+        prefix_template: Template string with {uuid} placeholder (unused, for API compat).
+        total_requests: Expected number of requests for this prefix.
+        osl: Output sequence length hint (LOW/MEDIUM/HIGH).
+        iat: Inter-arrival time hint (LOW/MEDIUM/HIGH).
 
     Returns:
         An async function suitable for use as an httpx event hook.

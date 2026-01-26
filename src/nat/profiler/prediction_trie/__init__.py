@@ -19,13 +19,15 @@ from nat.profiler.prediction_trie.data_models import PredictionTrieNode
 from nat.profiler.prediction_trie.serialization import load_prediction_trie
 from nat.profiler.prediction_trie.serialization import save_prediction_trie
 from nat.profiler.prediction_trie.trie_builder import PredictionTrieBuilder
-from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
+
+# Note: PredictionTrieLookup is intentionally not re-exported here to avoid
+# Sphinx cross-reference warnings. Import from trie_lookup submodule directly:
+# from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
 
 __all__ = [
     "LLMCallPrediction",
     "PredictionMetrics",
     "PredictionTrieBuilder",
-    "PredictionTrieLookup",
     "PredictionTrieNode",
     "load_prediction_trie",
     "save_prediction_trie",

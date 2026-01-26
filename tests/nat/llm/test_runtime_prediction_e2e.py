@@ -28,12 +28,12 @@ from nat.builder.context import Context
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.llm.dynamo_llm import _create_dynamic_prediction_hook
-from nat.profiler.prediction_trie import PredictionTrieLookup
 from nat.profiler.prediction_trie import load_prediction_trie
 from nat.profiler.prediction_trie import save_prediction_trie
 from nat.profiler.prediction_trie.data_models import LLMCallPrediction
 from nat.profiler.prediction_trie.data_models import PredictionMetrics
 from nat.profiler.prediction_trie.data_models import PredictionTrieNode
+from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
 
 
 class MockRequest:

@@ -25,8 +25,8 @@ from nat.data_models.invocation_node import InvocationNode
 from nat.data_models.profiler import PredictionTrieConfig
 from nat.data_models.profiler import ProfilerConfig
 from nat.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
-from nat.profiler.prediction_trie import PredictionTrieLookup
 from nat.profiler.prediction_trie import load_prediction_trie
+from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
 from nat.profiler.profile_runner import ProfilerRunner
 
 

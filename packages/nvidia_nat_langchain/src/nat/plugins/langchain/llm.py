@@ -43,8 +43,8 @@ from nat.llm.utils.hooks import create_metadata_injection_client
 from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
-from nat.profiler.prediction_trie import PredictionTrieLookup
 from nat.profiler.prediction_trie import load_prediction_trie
+from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 from nat.utils.responses_api import validate_no_responses_api
 from nat.utils.type_utils import override

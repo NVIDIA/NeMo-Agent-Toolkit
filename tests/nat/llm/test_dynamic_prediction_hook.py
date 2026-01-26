@@ -19,10 +19,10 @@ from nat.builder.context import Context
 from nat.llm.dynamo_llm import _create_dynamic_prediction_hook
 from nat.llm.dynamo_llm import create_httpx_client_with_dynamo_hooks
 from nat.llm.prediction_context import get_call_tracker
-from nat.profiler.prediction_trie import PredictionTrieLookup
 from nat.profiler.prediction_trie.data_models import LLMCallPrediction
 from nat.profiler.prediction_trie.data_models import PredictionMetrics
 from nat.profiler.prediction_trie.data_models import PredictionTrieNode
+from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
 
 
 @pytest.fixture(name="sample_trie_lookup")

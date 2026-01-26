@@ -24,11 +24,11 @@ import pytest
 from nat.builder.builder import Builder
 from nat.llm.dynamo_llm import DynamoModelConfig
 from nat.plugins.langchain.llm import dynamo_langchain
-from nat.profiler.prediction_trie import PredictionTrieLookup
 from nat.profiler.prediction_trie import save_prediction_trie
 from nat.profiler.prediction_trie.data_models import LLMCallPrediction
 from nat.profiler.prediction_trie.data_models import PredictionMetrics
 from nat.profiler.prediction_trie.data_models import PredictionTrieNode
+from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
 
 
 @pytest.fixture(name="trie_file")
