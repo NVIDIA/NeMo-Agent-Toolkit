@@ -23,7 +23,8 @@ from typing import Any
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
 
-from mcp.server.fastmcp import FastMCP
+from nat.plugins.mcp.server.fastmcp_compat import FastMCPType
+from nat.plugins.mcp.server.fastmcp_compat import get_fastmcp_class
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
@@ -63,7 +64,7 @@ class MCPFrontEndPluginWorkerBase(ABC):
                                               top_n=self.front_end_config.memory_profile_top_n,
                                               log_level=self.front_end_config.memory_profile_log_level)
 
-    def _setup_health_endpoint(self, mcp: FastMCP):
+    def _setup_health_endpoint(self, mcp: FastMCPType):
         """Set up the HTTP health endpoint that exercises MCP ping handler."""
 
         @mcp.custom_route("/health", methods=["GET"])
@@ -95,7 +96,7 @@ class MCPFrontEndPluginWorkerBase(ABC):
                                     status_code=503)
 
     @abstractmethod
-    async def create_mcp_server(self) -> FastMCP:
+    async def create_mcp_server(self) -> FastMCPType:
         """Create and configure the MCP server instance.
 
         This is the main extension point. Plugins can return FastMCP or any subclass
@@ -107,7 +108,7 @@ class MCPFrontEndPluginWorkerBase(ABC):
         ...
 
     @abstractmethod
-    async def add_routes(self, mcp: FastMCP, builder: WorkflowBuilder):
+    async def add_routes(self, mcp: FastMCPType, builder: WorkflowBuilder):
         """Add routes to the MCP server.
 
         Plugins must implement this method. Most plugins can call
@@ -120,7 +121,7 @@ class MCPFrontEndPluginWorkerBase(ABC):
         """
         ...
 
-    async def _default_add_routes(self, mcp: FastMCP, builder: WorkflowBuilder):
+    async def _default_add_routes(self, mcp: FastMCPType, builder: WorkflowBuilder):
         """Default route registration logic - reusable by subclasses.
 
         This is a protected helper method that plugins can call to get
@@ -222,7 +223,7 @@ class MCPFrontEndPluginWorkerBase(ABC):
 
         return functions
 
-    async def add_root_level_routes(self, wrapper_app: "FastAPI", mcp: FastMCP) -> None:
+    async def add_root_level_routes(self, wrapper_app: "FastAPI", mcp: FastMCPType) -> None:
         """Add routes to the wrapper FastAPI app (optional extension point).
 
         This method is called when base_path is configured and a wrapper
@@ -244,7 +245,7 @@ class MCPFrontEndPluginWorkerBase(ABC):
         """
         pass  # Default: no additional root-level routes
 
-    def _setup_debug_endpoints(self, mcp: FastMCP, functions: Mapping[str, FunctionBase]) -> None:
+    def _setup_debug_endpoints(self, mcp: FastMCPType, functions: Mapping[str, FunctionBase]) -> None:
         """Set up HTTP debug endpoints for introspecting tools and schemas.
 
         Exposes:
@@ -372,7 +373,7 @@ class MCPFrontEndPluginWorker(MCPFrontEndPluginWorkerBase):
                 self._add_my_custom_features(mcp)
     """
 
-    async def create_mcp_server(self) -> FastMCP:
+    async def create_mcp_server(self) -> FastMCPType:
         """Create default MCP server with optional authentication.
 
         Returns:
@@ -397,14 +398,15 @@ class MCPFrontEndPluginWorker(MCPFrontEndPluginWorkerBase):
 
             token_verifier = IntrospectionTokenVerifier(self.front_end_config.server_auth)
 
-        return FastMCP(name=self.front_end_config.name,
-                       host=self.front_end_config.host,
-                       port=self.front_end_config.port,
-                       debug=self.front_end_config.debug,
-                       auth=auth_settings,
-                       token_verifier=token_verifier)
+        fastmcp_class = get_fastmcp_class()
+        return fastmcp_class(name=self.front_end_config.name,
+                             host=self.front_end_config.host,
+                             port=self.front_end_config.port,
+                             debug=self.front_end_config.debug,
+                             auth=auth_settings,
+                             token_verifier=token_verifier)
 
-    async def add_routes(self, mcp: FastMCP, builder: WorkflowBuilder):
+    async def add_routes(self, mcp: FastMCPType, builder: WorkflowBuilder):
         """Add default routes to the MCP server.
 
         Args:

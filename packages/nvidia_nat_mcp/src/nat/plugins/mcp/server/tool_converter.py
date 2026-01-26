@@ -24,7 +24,7 @@ from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
-from mcp.server.fastmcp import FastMCP
+from nat.plugins.mcp.server.fastmcp_compat import FastMCPType
 from nat.builder.function import Function
 from nat.builder.function_base import FunctionBase
 
@@ -254,7 +254,7 @@ def get_function_description(function: FunctionBase) -> str:
     return function_description
 
 
-def register_function_with_mcp(mcp: FastMCP,
+def register_function_with_mcp(mcp: FastMCPType,
                                function_name: str,
                                session_manager: 'SessionManager',
                                memory_profiler: 'MemoryProfiler | None' = None,
