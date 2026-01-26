@@ -167,3 +167,31 @@ async def test_search_success(redis_editor: RedisEditor, mock_redis_client: Asyn
     assert result[0].memory == "Sample memory"
     assert result[0].tags == ["tag1", "tag2"]
     assert result[0].metadata == {"key1": "value1"}
+    assert result[0].similarity_score == 0.95  # Verify similarity score is captured
+
+
+@pytest.mark.asyncio
+async def test_search_with_similarity_threshold_filters_results(redis_editor: RedisEditor,
+                                                                mock_redis_client: AsyncMock):
+    """Test that similarity_threshold parameter filters out results above the threshold."""
+    # Create mock documents with varying similarity scores (0.2, 0.6, 0.4)
+    mock_docs = [MagicMock(id=f"pytest:memory:doc{i}", score=score) for i, score in enumerate([0.2, 0.6, 0.4], 1)]
+
+    mock_results = MagicMock()
+    mock_results.docs = mock_docs
+
+    mock_ft_index = MagicMock()
+    mock_ft_index.search = AsyncMock(return_value=mock_results)
+    mock_redis_client.ft = MagicMock(return_value=mock_ft_index)
+
+    # Mock JSON get - called for doc1 and doc3 only (doc2 filtered before fetch)
+    mock_redis_client.json().get.side_effect = [{
+        "conversation": [], "user_id": "user123", "tags": [], "metadata": {}, "memory": f"Memory {i}"
+    } for i in [1, 2]]
+
+    # Search with threshold=0.5 filters out doc2 (score 0.6)
+    result = await redis_editor.search(query="test query", user_id="user123", top_k=3, similarity_threshold=0.5)
+
+    assert len(result) == 2
+    assert result[0].similarity_score == 0.2
+    assert result[1].similarity_score == 0.4
