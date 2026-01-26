@@ -46,6 +46,7 @@
 #   - NVIDIA_API_KEY or NGC_API_KEY: For NIM LLM access
 #   - OPENAI_API_KEY: For OpenAI models
 #   - TAVILY_API_KEY: For web search tool
+#   - GAIA_ATTACHMENTS_DIR: Absolute path to GAIA attachments directory (for volume mount)
 #
 # =============================================================================
 

@@ -109,8 +109,10 @@ class DaytonaSandbox(BaseSandbox):
                 auto_stop_interval=self._auto_stop_interval,
             )
 
-            # Create and start the sandbox
-            self._sandbox = client.create(params)
+            # Create and start the sandbox (wrap sync call to avoid blocking)
+            self._sandbox = await asyncio.get_running_loop().run_in_executor(
+                None, lambda: client.create(params)
+            )
 
             # Initialize workspace directories
             await self.run_command(WORKSPACE_INIT_COMMAND)
@@ -126,7 +128,10 @@ class DaytonaSandbox(BaseSandbox):
         if self._sandbox:
             logger.info(f"Cleaning up Daytona sandbox: {self._sandbox.id}")
             try:
-                self._sandbox.delete()
+                # Wrap sync call to avoid blocking
+                await asyncio.get_running_loop().run_in_executor(
+                    None, self._sandbox.delete
+                )
                 self._sandbox = None
             except Exception as e:
                 logger.error(f"Failed to cleanup Daytona sandbox: {e}")
@@ -189,7 +194,10 @@ class DaytonaSandbox(BaseSandbox):
             raise RuntimeError("Sandbox not started")
 
         try:
-            content = self._sandbox.fs.read_file(path)
+            # Wrap sync call to avoid blocking
+            content = await asyncio.get_running_loop().run_in_executor(
+                None, lambda: self._sandbox.fs.read_file(path)
+            )
             return content
         except Exception as e:
             if "not found" in str(e).lower():
@@ -208,7 +216,10 @@ class DaytonaSandbox(BaseSandbox):
             if dir_path:
                 await self.run_command(f"mkdir -p {dir_path}")
 
-            self._sandbox.fs.write_file(path, content)
+            # Wrap sync call to avoid blocking
+            await asyncio.get_running_loop().run_in_executor(
+                None, lambda: self._sandbox.fs.write_file(path, content)
+            )
         except Exception as e:
             logger.error(f"Failed to write file {path}: {e}")
             raise

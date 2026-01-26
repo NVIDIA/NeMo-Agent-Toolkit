@@ -44,4 +44,6 @@ except PackageNotFoundError:
     __version__ = "unknown"
 
 # Import registration to enable NAT component discovery
-from nat_sandbox_agent import register  # noqa: F401
+from . import register
+
+__all__ = ["register", "__version__"]

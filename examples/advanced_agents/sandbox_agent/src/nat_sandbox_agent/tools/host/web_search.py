@@ -63,10 +63,7 @@ class HostWebSearchTool:
         """Lazily initialize async Tavily client."""
         if self._client is None:
             if not self._api_key:
-                raise ValueError(
-                    "TAVILY_API_KEY not set. Please set the environment variable "
-                    "or pass api_key to the tool."
-                )
+                raise ValueError("TAVILY_API_KEY not set")
             from tavily import AsyncTavilyClient
 
             self._client = AsyncTavilyClient(api_key=self._api_key)

@@ -244,10 +244,9 @@ class DockerSandbox(BaseSandbox):
         if not self._container:
             raise RuntimeError("Sandbox not started")
 
-        try:
-            bits, _ = await asyncio.get_running_loop().run_in_executor(
-                None, lambda: self._container.get_archive(path)
-            )
+        def _extract_from_archive():
+            """Synchronous helper to fetch and extract file from container."""
+            bits, _ = self._container.get_archive(path)
 
             # Extract file content from tar archive
             tar_stream = io.BytesIO()
@@ -261,6 +260,12 @@ class DockerSandbox(BaseSandbox):
                 if file_obj:
                     return file_obj.read().decode("utf-8", errors="replace")
                 raise FileNotFoundError(f"File not found: {path}")
+
+        try:
+            # Wrap all blocking I/O in run_in_executor
+            return await asyncio.get_running_loop().run_in_executor(
+                None, _extract_from_archive
+            )
 
         except NotFound:
             raise FileNotFoundError(f"File not found: {path}")

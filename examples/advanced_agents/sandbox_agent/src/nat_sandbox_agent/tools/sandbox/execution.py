@@ -63,7 +63,7 @@ async def execute_shell(
     Returns:
         Dict with status, stdout, stderr, and exit_code.
     """
-    logger.info(f"Executing shell command: {command[:100]}...")
+    logger.info(f"Executing shell command: {command[:20]}... ({len(command)} chars)")
 
     result = await executor.sandbox.run_command(
         command=command,

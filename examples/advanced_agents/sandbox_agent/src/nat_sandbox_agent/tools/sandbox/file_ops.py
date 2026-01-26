@@ -16,6 +16,7 @@
 """File operation tools for sandbox."""
 
 import logging
+import posixpath
 from pathlib import PurePosixPath
 from typing import Any
 
@@ -27,8 +28,8 @@ from nat_sandbox_agent.tools.sandbox.executor import SandboxToolExecutor
 
 logger = logging.getLogger(__name__)
 
-# Allowed base directories for file operations
-ALLOWED_BASE_PATHS = ("/workspace",)
+# Allowed base directories for file operations (as PurePosixPath for component-aware checks)
+ALLOWED_BASE_PATHS = (PurePosixPath("/workspace"),)
 
 
 def _validate_path(path: str) -> str:
@@ -43,35 +44,25 @@ def _validate_path(path: str) -> str:
     Raises:
         ValueError: If the path is outside allowed directories.
     """
-    # Normalize the path (resolve .. and .)
-    normalized = str(PurePosixPath(path))
+    # Normalize the path (resolve .. and . components)
+    normalized = PurePosixPath(posixpath.normpath(path))
 
-    # Check if the path starts with an allowed base
-    if not any(normalized.startswith(base) for base in ALLOWED_BASE_PATHS):
+    # Must be an absolute path
+    if not normalized.is_absolute():
+        raise ValueError(f"Path must be absolute, got: '{path}'")
+
+    # Use component-aware check: the path must be equal to or a child of an allowed base.
+    # This prevents "/workspace2" from matching "/workspace" (unlike string startswith).
+    if not any(
+        normalized == base or base in normalized.parents
+        for base in ALLOWED_BASE_PATHS
+    ):
         raise ValueError(
             f"Path '{path}' is outside allowed directories. "
-            f"Allowed: {ALLOWED_BASE_PATHS}"
+            f"Allowed: {[str(p) for p in ALLOWED_BASE_PATHS]}"
         )
 
-    # Additional check: ensure no path traversal escapes after normalization
-    # by verifying the resolved path still starts with allowed base
-    parts = PurePosixPath(normalized).parts
-    resolved_parts = []
-    for part in parts:
-        if part == "..":
-            if resolved_parts:
-                resolved_parts.pop()
-        elif part != ".":
-            resolved_parts.append(part)
-
-    resolved = "/" + "/".join(resolved_parts[1:]) if resolved_parts else "/"
-
-    if not any(resolved.startswith(base) for base in ALLOWED_BASE_PATHS):
-        raise ValueError(
-            f"Path '{path}' resolves to '{resolved}' which is outside allowed directories."
-        )
-
-    return normalized
+    return normalized.as_posix()
 
 
 class FileReadInput(BaseModel):
