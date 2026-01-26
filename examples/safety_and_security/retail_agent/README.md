@@ -39,8 +39,7 @@ limitations under the License.
   - [Installation and Setup](#installation-and-setup)
 - [Red Teaming the Retail Agent](#red-teaming-the-retail-agent)
   - [Understanding the Results](#understanding-the-results)
-- [Adding Defenses](#adding-defenses)
-  - [Red Teaming the Retail Agent with Defenses](#red-teaming-the-retail-agent-with-defenses)
+- [Red Teaming the Retail Agent with Defenses](#red-teaming-the-retail-agent-with-defenses)
   - [Before vs After Comparison](#before-vs-after-comparison)
 
 ---
@@ -375,11 +374,7 @@ Results can vary across runs because LLM outputs are non-deterministic. Running 
 
 ---
 
-## Adding Defenses
-
-After identifying vulnerabilities through red teaming, add defense middleware to mitigate attacks.
-
-### Red Teaming the Retail Agent with Defenses
+## Red Teaming the Retail Agent with Defenses
 
 Install HuggingFace support for local guard models:
 
