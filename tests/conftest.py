@@ -31,6 +31,7 @@ import typing
 import uuid
 from collections.abc import AsyncGenerator
 from collections.abc import Callable
+from collections.abc import Generator
 from collections.abc import Sequence
 from pathlib import Path
 from unittest import mock
@@ -507,6 +508,34 @@ def dask_scheduler_address_fixture(dask_cluster: "LocalCluster") -> str:
     Fixture to provide the Dask scheduler address for tests.
     """
     return dask_cluster.scheduler.address
+
+
+@pytest.fixture(name="async_dask_client", scope="session")
+async def async_dask_client_fixture(dask_scheduler_address: str) -> AsyncGenerator["DaskClient"]:
+    """
+    Fixture to provide an asynchronous Dask client connected to the test Dask cluster.
+    """
+    from dask.distributed import Client as DaskClient
+
+    client = await DaskClient(address=dask_scheduler_address, asynchronous=True)
+    try:
+        yield client
+    finally:
+        await client.close()
+
+
+@pytest.fixture(name="dask_client", scope="session")
+def dask_client_fixture(dask_scheduler_address: str) -> Generator["DaskClient"]:
+    """
+    Fixture to provide an asynchronous Dask client connected to the test Dask cluster.
+    """
+    from dask.distributed import Client
+
+    client = Client(address=dask_scheduler_address, asynchronous=False)
+    try:
+        yield client
+    finally:
+        client.close()
 
 
 @pytest.fixture(name="db_engine")
