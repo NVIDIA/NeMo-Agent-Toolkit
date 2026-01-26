@@ -72,8 +72,8 @@ from nat.cli.register_workflow import register_llm_provider
 from nat.data_models.optimizable import OptimizableField
 from nat.data_models.optimizable import SearchSpace
 from nat.llm.openai_llm import OpenAIModelConfig
-from nat.profiler.prediction_trie.data_models import LLMCallPrediction
 from nat.llm.utils.constants import LLMHeaderPrefix
+from nat.profiler.prediction_trie.data_models import LLMCallPrediction
 
 logger = logging.getLogger(__name__)
 
