@@ -26,15 +26,15 @@ from nat.llm.utils.hooks import create_metadata_injection_client
 class TestMetadataInjectionHook:
     """Unit tests for the metadata injection hook function."""
 
-    @pytest.fixture
-    def mock_httpx_request(self):
+    @pytest.fixture(name="mock_httpx_request")
+    def fixture_mock_httpx_request(self):
         """Create a mock httpx.Request."""
         mock_request = MagicMock()
         mock_request.headers = {}
         return mock_request
 
-    @pytest.fixture
-    def mock_input_message(self):
+    @pytest.fixture(name="mock_input_message")
+    def fixture_mock_input_message(self):
         """Create a mock input message with model_extra fields."""
         mock_msg = MagicMock()
         mock_msg.model_extra = {
@@ -96,19 +96,21 @@ class TestMetadataInjectionHook:
 class TestCreateMetadataInjectionClient:
     """Unit tests for create_metadata_injection_client function."""
 
-    def test_creates_client_with_event_hooks(self):
+    async def test_creates_client_with_event_hooks(self):
         """Test that client is created with event hooks."""
         client = create_metadata_injection_client()
 
         assert "request" in client.event_hooks
         assert len(client.event_hooks["request"]) == 1
 
+        await client.aclose()
+
 
 class TestMetadataInjectionIntegration:
     """Integration tests with mock HTTP server."""
 
-    @pytest.fixture
-    def mock_input_message(self):
+    @pytest.fixture(name="mock_input_message")
+    def fixture_mock_input_message(self):
         """Create a mock input message with model_extra fields."""
         mock_msg = MagicMock()
         mock_msg.model_extra = {
@@ -196,5 +198,4 @@ class TestMetadataInjectionIntegration:
         payload_headers = [k for k in request_headers.keys() if k.startswith("X-Payload-")]
         assert len(payload_headers) == 0
 
-        await client.aclose()
         await client.aclose()
