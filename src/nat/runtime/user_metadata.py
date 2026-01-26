@@ -128,3 +128,18 @@ class RequestAttributes:
             dict[str, str] | None
         """
         return self._request.cookies
+
+    def to_dict(self) -> dict[str, object]:
+        """
+        Convert the request attributes to a dictionary, excluding None values.
+
+        Returns:
+            dict[str, object]: Dictionary representation of request attributes.
+        """
+        result = self._request.model_dump(exclude_none=True)
+        # Convert Starlette Headers/QueryParams to plain dicts for JSON serialization
+        if "headers" in result and isinstance(result["headers"], Headers):
+            result["headers"] = dict(result["headers"])
+        if "query_params" in result and isinstance(result["query_params"], QueryParams):
+            result["query_params"] = dict(result["query_params"])
+        return result

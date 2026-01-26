@@ -22,6 +22,7 @@ from nat.llm.dynamo_llm import DynamoModelConfig
 from nat.llm.dynamo_llm import DynamoPrefixContext
 from nat.llm.dynamo_llm import _create_dynamo_request_hook
 from nat.llm.dynamo_llm import create_httpx_client_with_dynamo_hooks
+from nat.llm.utils.constants import LLMHeaderPrefix
 
 # ---------------------------------------------------------------------------
 # DynamoModelConfig Tests
@@ -250,11 +251,11 @@ class TestDynamoRequestHook:
 
         await hook(mock_request)
 
-        assert "x-prefix-id" in mock_request.headers
-        assert mock_request.headers["x-prefix-id"].startswith("test-")
-        assert mock_request.headers["x-prefix-total-requests"] == "15"
-        assert mock_request.headers["x-prefix-osl"] == "HIGH"
-        assert mock_request.headers["x-prefix-iat"] == "LOW"
+        assert f"{LLMHeaderPrefix.DYNAMO.value}-id" in mock_request.headers
+        assert mock_request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-id"].startswith("test-")
+        assert mock_request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-total-requests"] == "15"
+        assert mock_request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-osl"] == "HIGH"
+        assert mock_request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-iat"] == "LOW"
 
     @pytest.mark.asyncio
     async def test_hook_uses_context_prefix_id(self):
@@ -275,7 +276,7 @@ class TestDynamoRequestHook:
         await hook(mock_request)
 
         # Should use context prefix ID, not generate from template
-        assert mock_request.headers["x-prefix-id"] == "context-prefix-abc"
+        assert mock_request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-id"] == "context-prefix-abc"
 
     @pytest.mark.asyncio
     async def test_hook_uses_same_id_for_all_requests(self):
@@ -297,7 +298,7 @@ class TestDynamoRequestHook:
             mock_request = MagicMock()
             mock_request.headers = {}
             await hook(mock_request)
-            prefix_ids.add(mock_request.headers["x-prefix-id"])
+            prefix_ids.add(mock_request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-id"])
 
         # All requests should share the SAME prefix ID (for KV cache optimization)
         assert len(prefix_ids) == 1
@@ -318,7 +319,7 @@ class TestDynamoRequestHook:
             mock_request = MagicMock()
             mock_request.headers = {}
             await hook(mock_request)
-            prefix_ids.add(mock_request.headers["x-prefix-id"])
+            prefix_ids.add(mock_request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-id"])
 
         # Different hooks should have different prefix IDs
         assert len(prefix_ids) == 5
@@ -339,7 +340,7 @@ class TestDynamoRequestHook:
         await hook(mock_request)
 
         # Should use default "nat-dynamo-{id}" format
-        assert mock_request.headers["x-prefix-id"].startswith("nat-dynamo-")
+        assert mock_request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-id"].startswith("nat-dynamo-")
 
     @pytest.mark.asyncio
     async def test_hook_normalizes_case(self):
@@ -356,8 +357,8 @@ class TestDynamoRequestHook:
 
         await hook(mock_request)
 
-        assert mock_request.headers["x-prefix-osl"] == "LOW"
-        assert mock_request.headers["x-prefix-iat"] == "HIGH"
+        assert mock_request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-osl"] == "LOW"
+        assert mock_request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-iat"] == "HIGH"
 
     @pytest.mark.asyncio
     async def test_hook_template_without_uuid_placeholder(self):
@@ -374,7 +375,7 @@ class TestDynamoRequestHook:
         await hook(mock_request)
 
         # Template used as-is when no {uuid} placeholder
-        assert mock_request.headers["x-prefix-id"] == "static-prefix-no-uuid"
+        assert mock_request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-id"] == "static-prefix-no-uuid"
 
 
 # ---------------------------------------------------------------------------

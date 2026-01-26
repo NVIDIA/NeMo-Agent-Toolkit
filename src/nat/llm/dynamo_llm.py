@@ -68,6 +68,7 @@ from nat.cli.register_workflow import register_llm_provider
 from nat.data_models.optimizable import OptimizableField
 from nat.data_models.optimizable import SearchSpace
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.constants import LLMHeaderPrefix
 
 logger = logging.getLogger(__name__)
 
@@ -300,10 +301,10 @@ def _create_dynamo_request_hook(
             logger.debug("Using default prefix ID: %s", prefix_id)
 
         # Inject Dynamo headers
-        request.headers["x-prefix-id"] = prefix_id
-        request.headers["x-prefix-total-requests"] = str(total_requests)
-        request.headers["x-prefix-osl"] = osl.upper()
-        request.headers["x-prefix-iat"] = iat.upper()
+        request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-id"] = prefix_id
+        request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-total-requests"] = str(total_requests)
+        request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-osl"] = osl.upper()
+        request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-iat"] = iat.upper()
 
         logger.debug("Injected Dynamo headers: prefix_id=%s, total_requests=%d, osl=%s, iat=%s",
                      prefix_id,
