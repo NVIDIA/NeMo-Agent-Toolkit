@@ -16,6 +16,7 @@
 
 import logging
 from collections.abc import Sequence
+from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import TypeVar
@@ -42,6 +43,8 @@ from nat.llm.utils.hooks import create_metadata_injection_client
 from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
+from nat.profiler.prediction_trie import load_prediction_trie
+from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 from nat.utils.responses_api import validate_no_responses_api
 from nat.utils.type_utils import override
@@ -243,6 +246,19 @@ async def dynamo_langchain(llm_config: DynamoModelConfig, _builder: Builder):
     # Initialize http_async_client to None for proper cleanup
     http_async_client = None
 
+    # Load prediction trie if configured
+    prediction_lookup: PredictionTrieLookup | None = None
+    if llm_config.prediction_trie_path:
+        try:
+            trie_path = Path(llm_config.prediction_trie_path)
+            trie = load_prediction_trie(trie_path)
+            prediction_lookup = PredictionTrieLookup(trie)
+            logger.info("Loaded prediction trie from %s", llm_config.prediction_trie_path)
+        except FileNotFoundError:
+            logger.warning("Prediction trie file not found: %s", llm_config.prediction_trie_path)
+        except Exception as e:
+            logger.warning("Failed to load prediction trie: %s", e)
+
     try:
         # If prefix_template is set, create a custom httpx client with Dynamo hooks
         if llm_config.prefix_template is not None:
@@ -252,14 +268,16 @@ async def dynamo_langchain(llm_config: DynamoModelConfig, _builder: Builder):
                 osl=llm_config.prefix_osl,
                 iat=llm_config.prefix_iat,
                 timeout=llm_config.request_timeout,
+                prediction_lookup=prediction_lookup,
             )
             config_dict["http_async_client"] = http_async_client
             logger.info(
-                "Dynamo prefix headers enabled: template=%s, total_requests=%d, osl=%s, iat=%s",
+                "Dynamo prefix headers enabled: template=%s, total_requests=%d, osl=%s, iat=%s, prediction_trie=%s",
                 llm_config.prefix_template,
                 llm_config.prefix_total_requests,
                 llm_config.prefix_osl,
                 llm_config.prefix_iat,
+                "loaded" if prediction_lookup else "disabled",
             )
 
         # Create the ChatOpenAI client

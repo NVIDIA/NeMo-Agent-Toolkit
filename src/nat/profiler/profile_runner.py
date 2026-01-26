@@ -270,6 +270,25 @@ class ProfilerRunner:
                 json.dump(workflow_profiling_metrics, f, indent=2)
             logger.info("Wrote workflow profiling metrics to: %s", profiling_metrics_path)
 
+        if self.profile_config.prediction_trie.enable:
+            # ------------------------------------------------------------
+            # Build and save prediction trie
+            # ------------------------------------------------------------
+            from nat.profiler.prediction_trie import PredictionTrieBuilder
+            from nat.profiler.prediction_trie import save_prediction_trie
+
+            logger.info("Building prediction trie from traces...")
+            trie_builder = PredictionTrieBuilder()
+            for trace in all_steps:
+                trie_builder.add_trace(trace)
+
+            prediction_trie = trie_builder.build()
+
+            if self.write_output:
+                trie_path = os.path.join(self.output_dir, self.profile_config.prediction_trie.output_filename)
+                save_prediction_trie(prediction_trie, Path(trie_path), workflow_name="profiled_workflow")
+                logger.info("Wrote prediction trie to: %s", trie_path)
+
         if self.profile_config.token_usage_forecast:
             # ------------------------------------------------------------
             # Fit forecasting model and save
