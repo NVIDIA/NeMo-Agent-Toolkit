@@ -62,7 +62,7 @@ The profiler collects data for each LLM call:
 - Function path at time of call
 - Call index within the parent function
 - Output tokens generated
-- Time until the next LLM call (interarrival)
+- Time until the next LLM call
 - Remaining LLM calls in the workflow
 
 This data is aggregated into a trie structure with statistical summaries (mean, p50, p90, etc.) at each node.
@@ -114,7 +114,7 @@ To measure the impact of prediction trie vs static headers:
 
 ## Configuration Reference
 
-### Profiler Config (Phase 1)
+### Profiler Configuration (Phase 1)
 
 Enable trie building in the profiler section:
 
@@ -125,7 +125,7 @@ profiler:
     output_filename: prediction_trie.json  # default
 ```
 
-### LLM Config (Phase 2)
+### LLM Configuration (Phase 2)
 
 Add the trie path to your Dynamo LLM config:
 
