@@ -23,7 +23,6 @@ import typing
 from nat.builder.front_end import FrontEndBase
 from nat.front_ends.fastapi.async_job import _setup_worker
 from nat.front_ends.fastapi.async_job import periodic_cleanup
-from nat.front_ends.fastapi.dask_client_mixin import DaskClientMixin
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorkerBase
 from nat.front_ends.fastapi.main import get_app
@@ -33,21 +32,35 @@ from nat.utils.log_levels import LOG_LEVELS
 from nat.utils.log_utils import LOG_DATE_FORMAT
 
 if (typing.TYPE_CHECKING):
+    from dask.distributed import Client as DaskClient
+
     from nat.data_models.config import Config
 
 logger = logging.getLogger(__name__)
 
 
-class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]):
+class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
 
     def __init__(self, full_config: "Config"):
         super().__init__(full_config)
 
+        self._dask_available = False
         # This attribute is set if dask is installed, and an external cluster is not used (scheduler_address is None)
         self._cluster = None
         self._periodic_cleanup_future = None
         self._scheduler_address = None
         self._use_dask_threads = False
+        self._dask_client: DaskClient | None = None
+
+    @property
+    def dask_client(self) -> "DaskClient":
+        assert self._dask_available, "Dask is not available"
+
+        if self._dask_client is None:
+            from dask.distributed import Client
+            self._dask_client = Client(self._scheduler_address)
+
+        return self._dask_client
 
     def get_worker_class(self) -> type[FastApiFrontEndPluginWorkerBase]:
         from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
@@ -67,12 +80,11 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
     async def _submit_cleanup_task(self, scheduler_address: str, db_url: str, log_level: int = logging.INFO):
         """Submit a cleanup task to the cluster to remove the job after expiry."""
         logger.info("Submitting periodic cleanup task to Dask cluster at %s", scheduler_address)
-        async with self.client(self._scheduler_address) as client:
-            self._periodic_cleanup_future = client.submit(periodic_cleanup,
-                                                          scheduler_address=self._scheduler_address,
-                                                          db_url=db_url,
-                                                          log_level=log_level,
-                                                          configure_logging=not self._use_dask_threads)
+        self._periodic_cleanup_future = self.dask_client.submit(periodic_cleanup,
+                                                                scheduler_address=self._scheduler_address,
+                                                                db_url=db_url,
+                                                                log_level=log_level,
+                                                                configure_logging=not self._use_dask_threads)
 
     async def run(self):
         log_level = logger.getEffectiveLevel()
@@ -97,6 +109,7 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
 
                     from dask.distributed import LocalCluster
 
+                    self._dask_available = True
                     self._use_dask_threads = self.front_end_config.dask_workers == 'threads'
 
                     # Convert memory limit string to the appropriate type for Dask
@@ -130,9 +143,7 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
                     self._scheduler_address = self._cluster.scheduler.address
 
                     if not self._use_dask_threads and sys.platform != "win32":
-                        with self.blocking_client(self._scheduler_address) as client:
-                            # Client.run submits a function to be run on each worker
-                            client.run(_setup_worker)
+                        self.dask_client.run(_setup_worker)
 
                     logger.info("Created local Dask cluster with scheduler at %s using %s workers",
                                 self._scheduler_address,
@@ -144,6 +155,7 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
             if self._scheduler_address is not None:
                 # If we are here then either the user provided a scheduler address, or we created a LocalCluster
 
+                self._dask_available = True
                 from nat.front_ends.fastapi.job_store import Base
                 from nat.front_ends.fastapi.job_store import get_db_engine
 
@@ -248,8 +260,11 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
             if self._periodic_cleanup_future is not None:
                 logger.info("Cancelling periodic cleanup task.")
                 # Use the scheduler address, because self._cluster is None if an external cluster is used
-                async with self.client(self._scheduler_address) as client:
-                    await client.cancel([self._periodic_cleanup_future], asynchronous=True, force=True)
+                self.dask_client.cancel([self._periodic_cleanup_future], asynchronous=False, force=True)
+
+            if self._dask_client is not None:
+                logger.debug("Closing Dask client.")
+                self._dask_client.close()
 
             if self._cluster is not None:
                 # Only shut down the cluster if we created it
