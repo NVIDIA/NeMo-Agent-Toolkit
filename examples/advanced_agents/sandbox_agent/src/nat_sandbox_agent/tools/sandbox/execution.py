@@ -98,8 +98,8 @@ async def execute_python(
     # Write code to a temp file for better error messages
     try:
         await executor.sandbox.write_file(DEFAULT_SCRIPT_PATH, code)
-    except Exception as e:
-        logger.exception(f"Failed to write script file: {e}")
+    except Exception:
+        logger.exception("Failed to write script file")
         return {
             "status": "error",
             "stdout": "",

@@ -17,6 +17,7 @@
 
 import asyncio
 import logging
+import shlex
 
 from nat_sandbox_agent.sandbox.base import WORKSPACE_INIT_COMMAND
 from nat_sandbox_agent.sandbox.base import BaseSandbox
@@ -181,7 +182,7 @@ class DaytonaSandbox(BaseSandbox):
                 stderr=f"Command timed out after {timeout} seconds",
             )
         except Exception as e:
-            logger.error(f"Command execution failed: {e}")
+            logger.exception("Command execution failed")
             return CommandResult(
                 exit_code=-1,
                 stdout="",
@@ -195,13 +196,14 @@ class DaytonaSandbox(BaseSandbox):
 
         try:
             # Wrap sync call to avoid blocking
-            content = await asyncio.get_running_loop().run_in_executor(
-                None, lambda: self._sandbox.fs.read_file(path)
+            # Daytona SDK uses download_file() which returns bytes
+            data = await asyncio.get_running_loop().run_in_executor(
+                None, lambda: self._sandbox.fs.download_file(path)
             )
-            return content
+            return data.decode("utf-8")
         except Exception as e:
             if "not found" in str(e).lower():
-                raise FileNotFoundError(f"File not found: {path}")
+                raise FileNotFoundError(f"File not found: {path}") from None
             logger.error(f"Failed to read file {path}: {e}")
             raise
 
@@ -211,14 +213,15 @@ class DaytonaSandbox(BaseSandbox):
             raise RuntimeError("Sandbox not started")
 
         try:
-            # Ensure parent directory exists
+            # Ensure parent directory exists (shell-escape to prevent injection)
             dir_path = "/".join(path.split("/")[:-1])
             if dir_path:
-                await self.run_command(f"mkdir -p {dir_path}")
+                await self.run_command(f"mkdir -p {shlex.quote(dir_path)}")
 
             # Wrap sync call to avoid blocking
+            # Daytona SDK uses upload_file(data, path) which takes bytes
             await asyncio.get_running_loop().run_in_executor(
-                None, lambda: self._sandbox.fs.write_file(path, content)
+                None, lambda: self._sandbox.fs.upload_file(content.encode("utf-8"), path)
             )
         except Exception as e:
             logger.error(f"Failed to write file {path}: {e}")

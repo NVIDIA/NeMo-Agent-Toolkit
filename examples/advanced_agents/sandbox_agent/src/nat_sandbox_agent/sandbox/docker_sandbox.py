@@ -225,14 +225,14 @@ class DockerSandbox(BaseSandbox):
                 stderr=f"Command timed out after {timeout} seconds",
             )
         except ContainerError as e:
-            logger.exception(f"Container error: {e}")
+            logger.exception("Container error")
             return CommandResult(
                 exit_code=e.exit_status,
                 stdout="",
                 stderr=str(e),
             )
         except Exception as e:
-            logger.exception(f"Command execution failed: {e}")
+            logger.exception("Command execution failed")
             return CommandResult(
                 exit_code=-1,
                 stdout="",
@@ -268,7 +268,7 @@ class DockerSandbox(BaseSandbox):
             )
 
         except NotFound:
-            raise FileNotFoundError(f"File not found: {path}")
+            raise FileNotFoundError(f"File not found: {path}") from None
         except Exception as e:
             logger.error(f"Failed to read file {path}: {e}")
             raise
