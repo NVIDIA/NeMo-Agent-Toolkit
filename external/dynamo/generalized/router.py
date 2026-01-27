@@ -1067,7 +1067,7 @@ async def worker(runtime: DistributedRuntime):
     args = parse_args()
 
     component = runtime.namespace("dynamo").component("router")
-    await component.create_service()
+    # NOTE: create_service() was removed in Dynamo 0.8.x - endpoint creation handles registration
     logger.info("Initializing WorkloadAwareRouter (LinTS + feedback + timeout + traces)")
 
     router = WorkloadAwareRouter(

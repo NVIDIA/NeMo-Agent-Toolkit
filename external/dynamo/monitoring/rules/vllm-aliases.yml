@@ -1,0 +1,70 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Prometheus Recording Rules for vLLM Metric Aliases
+# ===================================================
+#
+# vLLM metrics have different names than SGLang metrics.
+# These recording rules create vLLM metrics with names that match
+# what the Grafana dashboard expects, enabling a single parameterized
+# dashboard to work with both backends.
+#
+# Dashboard variable: ${backend} = "sglang" or "vllm"
+# Dashboard queries: ${backend}:metric_name
+#
+# Metric Mapping:
+#   Dashboard Query        | vLLM Source Metric(s)
+#   -----------------------|---------------------------------------
+#   vllm:cache_hit_rate    | prefix_cache_hits / prefix_cache_queries
+#   vllm:gen_throughput    | rate(generation_tokens_total)
+#   vllm:token_usage       | kv_cache_usage_perc
+#   vllm:num_running_reqs  | num_requests_running (same name!)
+#   vllm:num_queue_reqs    | num_requests_waiting
+#   vllm:num_used_tokens   | (computed from kv_cache_usage_perc * total_blocks)
+
+groups:
+  - name: vllm_metric_aliases
+    interval: 2s
+    rules:
+      # Cache hit rate: prefix_cache_hits / prefix_cache_queries
+      # This matches SGLang's cache_hit_rate metric
+      - record: "vllm:cache_hit_rate"
+        expr: |
+          (
+            sum by (instance, model_name) (vllm:prefix_cache_hits_total)
+            /
+            clamp_min(sum by (instance, model_name) (vllm:prefix_cache_queries_total), 1)
+          )
+
+      # Generation throughput: rate of generation tokens
+      # This matches SGLang's gen_throughput metric
+      - record: "vllm:gen_throughput"
+        expr: |
+          rate(vllm:generation_tokens_total[5s])
+
+      # Token usage percentage: direct alias for kv_cache_usage_perc
+      # This matches SGLang's token_usage metric
+      - record: "vllm:token_usage"
+        expr: |
+          vllm:kv_cache_usage_perc
+
+      # Number of requests in queue: alias for num_requests_waiting
+      # This matches SGLang's num_queue_reqs metric
+      - record: "vllm:num_queue_reqs"
+        expr: |
+          vllm:num_requests_waiting
+
+      # Note: vllm:num_requests_running is already the correct name,
+      # but SGLang uses num_running_reqs. Create an alias.
+      - record: "vllm:num_running_reqs"
+        expr: |
+          vllm:num_requests_running
+
+      # Number of used tokens: estimate from cache usage percentage
+      # Note: This is an approximation since vLLM doesn't expose exact token count
+      # The dashboard may need adjustment for accurate display
+      - record: "vllm:num_used_tokens"
+        expr: |
+          vllm:kv_cache_usage_perc * 100000
+
+

@@ -2,6 +2,17 @@
 
 This directory contains a Prometheus + Grafana monitoring setup for the Dynamo LLM inference stack with Thompson Sampling router.
 
+## Supported Backends
+
+The monitoring stack supports both **SGLang** and **vLLM** backends:
+
+| Backend | Metric Prefix | Startup Script | Features |
+|---------|---------------|----------------|----------|
+| SGLang | `sglang:` | `start_dynamo_optimized_thompson_hints_sglang.sh` | Fast inference |
+| vLLM | `vllm:` | `start_dynamo_optimized_thompson_hints_vllm.sh` | Native KVBM support |
+
+The Grafana dashboard includes a **Backend** dropdown selector to switch between SGLang and vLLM metrics dynamically.
+
 ## Quick Start
 
 ```bash
@@ -12,12 +23,14 @@ docker compose up -d
 # Access the dashboards
 # Prometheus: http://localhost:9090
 # Grafana: http://localhost:3000 (admin/admin)
+
+# In Grafana, use the "Backend" dropdown to select sglang or vllm
 ```
 
 ## Prerequisites
 
 - Docker and Docker Compose
-- Dynamo stack running (see `../start_dynamo_optimized_thompson_hints.sh`)
+- Dynamo stack running (see `../start_dynamo_optimized_thompson_hints_sglang.sh` or `../start_dynamo_optimized_thompson_hints_vllm.sh`)
 
 ## Architecture
 
@@ -87,7 +100,9 @@ User-facing HTTP API metrics for latency, throughput, and token statistics.
 
 ### Worker Metrics (`:8081/metrics`)
 
-SGLang backend worker metrics including KV cache, scheduling, and internal statistics.
+Backend worker metrics including KV cache, scheduling, and internal statistics. Both SGLang and vLLM expose similar metrics with different prefixes:
+- **SGLang**: Metrics prefixed with `sglang:` (e.g., `sglang:cache_hit_rate`)
+- **vLLM**: Metrics prefixed with `vllm:` (e.g., `vllm:cache_hit_rate`)
 
 #### Dynamo Component Metrics
 
@@ -102,16 +117,25 @@ SGLang backend worker metrics including KV cache, scheduling, and internal stati
 | `dynamo_component_` | `dynamo_component_inflight_requests` | Gauge | Requests currently in worker |
 | `dynamo_component_` | `dynamo_component_uptime_seconds` | Gauge | Worker uptime |
 
-#### SGLang Native Metrics
+#### Backend Native Metrics
+
+Both SGLang and vLLM expose similar native metrics with their respective prefixes. Use the `${backend}` variable in the Grafana dashboard to switch between them.
+
+**Common metrics across both backends:**
+
+| Metric (use `${backend}:` prefix) | Type | Description |
+|-----------------------------------|------|-------------|
+| `cache_hit_rate` | Gauge | Prefix cache hit rate |
+| `token_usage` | Gauge | Current token usage |
+| `num_running_reqs` | Gauge | Currently running requests |
+| `num_queue_reqs` | Gauge | Queued requests |
+| `num_used_tokens` | Gauge | Tokens currently in use |
+| `gen_throughput` | Gauge | Generation throughput |
+
+**SGLang-specific metrics:**
 
 | Prefix | Full Metric Name | Type | Description |
 |--------|------------------|------|-------------|
-| `sglang:` | `sglang:cache_hit_rate` | Gauge | Prefix cache hit rate |
-| `sglang:` | `sglang:token_usage` | Gauge | Current token usage |
-| `sglang:` | `sglang:num_running_reqs` | Gauge | Currently running requests |
-| `sglang:` | `sglang:num_queue_reqs` | Gauge | Queued requests |
-| `sglang:` | `sglang:num_used_tokens` | Gauge | Tokens currently in use |
-| `sglang:` | `sglang:gen_throughput` | Gauge | Generation throughput |
 | `sglang:` | `sglang:utilization` | Gauge | GPU utilization |
 | `sglang:` | `sglang:queue_time_seconds` | Histogram | Time spent in queue |
 | `sglang:` | `sglang:per_stage_req_latency_seconds` | Histogram | Per-stage request latency |
@@ -119,6 +143,17 @@ SGLang backend worker metrics including KV cache, scheduling, and internal stati
 | `sglang:` | `sglang:kv_transfer_speed_gb_s` | Gauge | KV transfer speed |
 | `sglang:` | `sglang:engine_startup_time` | Gauge | Engine startup duration |
 | `sglang:` | `sglang:engine_load_weights_time` | Gauge | Model weight loading time |
+
+**vLLM-specific metrics:**
+
+| Prefix | Full Metric Name | Type | Description |
+|--------|------------------|------|-------------|
+| `vllm:` | `vllm:gpu_cache_usage_perc` | Gauge | GPU KV cache usage percentage |
+| `vllm:` | `vllm:cpu_cache_usage_perc` | Gauge | CPU KV cache usage percentage |
+| `vllm:` | `vllm:num_requests_running` | Gauge | Currently running requests |
+| `vllm:` | `vllm:num_requests_waiting` | Gauge | Waiting requests in queue |
+| `vllm:` | `vllm:generation_tokens_total` | Counter | Total generation tokens |
+| `vllm:` | `vllm:prompt_tokens_total` | Counter | Total prompt tokens |
 
 ### Router Metrics (`:8082/metrics`)
 
@@ -172,7 +207,9 @@ TotalWork = cached_prompt_blocks * block_size
 w_hit = (w_gpu_hit, w_cpu_hit, w_disk_hit)  # weights per hit source
 ```
 
-Since CPU/disk hit metrics are not available in SGLang (KVBM not yet supported), we use a **simplified KVES proxy**:
+Since full KVES requires GPU/CPU/disk hit breakdowns, we use a **simplified KVES proxy** based on cache hit rate:
+
+**Note**: vLLM with KVBM enabled provides richer KV cache metrics than SGLang.
 
 ```promql
 # KVES Proxy (using SGLang native metric - RECOMMENDED)
@@ -186,12 +223,14 @@ sglang:cache_hit_rate * 100
 > `cached_tokens` in its API responses. The processor's `thompson_kve_*` counters will show 0
 > unless the underlying engine provides `usage.prompt_tokens_details.cached_tokens`.
 
-> **Note on Full KVES**: To implement the full KVES equation with CPU/disk hit weights, you would need
-> to switch to vLLM with KVBM enabled, which provides GPU→CPU→Disk tiered caching with proper metrics.
+> **Note on Full KVES**: To implement the full KVES equation with CPU/disk hit weights, use
+> vLLM with KVBM enabled, which provides GPU→CPU→Disk tiered caching with proper metrics.
 
 ## KV Cache Metrics Status
 
 This section documents the working status of all KV cache related metrics across the Dynamo stack.
+
+**Backend Selection**: The Grafana dashboard uses a `${backend}` template variable. Select `sglang` or `vllm` from the dropdown to switch all backend-specific queries.
 
 ### Working Metrics ✓
 
@@ -238,26 +277,49 @@ This section documents the working status of all KV cache related metrics across
 
 ### Recommended KV Cache Queries
 
+The following queries use `${backend}` variable (set to `sglang` or `vllm` in Grafana):
+
 ```promql
-# KV Cache Memory Usage % (RECOMMENDED - this actually works!)
-sglang:token_usage * 100
+# KV Cache Memory Usage % (RECOMMENDED - works with both backends!)
+${backend}:token_usage * 100
 
 # Absolute tokens in KV cache
-sglang:num_used_tokens
+${backend}:num_used_tokens
 
 # Total KV cache capacity (blocks)
 dynamo_component_kvstats_total_blocks
 
 # Prefix Cache Hit Rate % (may be 0 without repeated prefix queries)
-sglang:cache_hit_rate * 100
+${backend}:cache_hit_rate * 100
 
 # Token throughput
-sglang:gen_throughput
+${backend}:gen_throughput
+```
+
+**Direct queries** (without variable):
+```promql
+# SGLang specific
+sglang:token_usage * 100
+sglang:cache_hit_rate * 100
+
+# vLLM specific
+vllm:token_usage * 100
+vllm:cache_hit_rate * 100
 ```
 
 ## Grafana Dashboard
 
 The pre-configured dashboard "Dynamo LLM Overview" includes:
+
+### Backend Selector
+
+The dashboard includes a **Backend** dropdown variable at the top. Select:
+- **sglang** - For SGLang workers (metrics prefixed with `sglang:`)
+- **vllm** - For vLLM workers (metrics prefixed with `vllm:`)
+
+All backend-specific panels automatically update based on your selection.
+
+### Dashboard Panels
 
 1. **Inflight Requests** - Current load across all components
 2. **Requests/min** - Throughput
@@ -269,9 +331,9 @@ The pre-configured dashboard "Dynamo LLM Overview" includes:
 8. **KV Cache Usage** - Memory usage % and prefix cache hit rate % over time
 9. **KV Cache Tokens & Throughput** - Absolute token count and generation throughput
 10. **KV Cache Details (Per-Worker)** - Detailed per-worker metrics including:
-    - KVES: Prefix hit rate (%) - `avg_over_time(sglang:cache_hit_rate[1m]) * 100`
-    - KV Usage (%) - `avg_over_time(sglang:token_usage[1m]) * 100`
-    - KV Tokens Used - `last_over_time(sglang:num_used_tokens[1m])`
+    - KVES: Prefix hit rate (%) - `avg_over_time(${backend}:cache_hit_rate[1m]) * 100`
+    - KV Usage (%) - `avg_over_time(${backend}:token_usage[1m]) * 100`
+    - KV Tokens Used - `last_over_time(${backend}:num_used_tokens[1m])`
     - KV Capacity (blocks) - `last_over_time(dynamo_component_kvstats_total_blocks[1m])`
     - Frontend Block Size - `last_over_time(dynamo_frontend_model_kv_cache_block_size[5m])`
 11. **KVES Proxy by Worker** - Color-coded efficiency score per worker (0-1 scale)
@@ -279,16 +341,16 @@ The pre-configured dashboard "Dynamo LLM Overview" includes:
 
 ### Thompson Sampling Panels (Included)
 
-The dashboard includes these Thompson Sampling and SGLang monitoring panels:
+The dashboard includes these Thompson Sampling and worker monitoring panels:
 
 - **Routing Decisions/sec** - `rate(dynamo_component_thompson_routing_decisions_total[5m])`
-- **SGLang Queue Depth** - `sglang:num_queue_reqs` + `sglang:num_running_reqs`
-- **Worker Utilization** - `sglang:utilization` + `sglang:token_usage`
+- **Worker Queue Depth** - `${backend}:num_queue_reqs`
+- **Worker Activity** - `${backend}:num_running_reqs`
 
-> **Note on KV Cache Metrics**: The dashboard uses SGLang's native metrics (`sglang:token_usage`,
-> `sglang:cache_hit_rate`, `sglang:num_used_tokens`) which are reliably populated. The Dynamo-specific
-> `dynamo_component_kvstats_*` metrics are not populated by the SGLang backend. See the
-> "KV Cache Metrics Status" section above for detailed metric availability.
+> **Note on KV Cache Metrics**: The dashboard uses backend-native metrics (`${backend}:token_usage`,
+> `${backend}:cache_hit_rate`, `${backend}:num_used_tokens`) which are reliably populated by both
+> SGLang and vLLM. The Dynamo-specific `dynamo_component_kvstats_*` metrics may not be populated
+> depending on your backend configuration. See the "KV Cache Metrics Status" section above for details.
 
 ## Files
 

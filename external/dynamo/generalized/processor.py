@@ -426,7 +426,7 @@ def parse_args():
 async def worker(runtime: DistributedRuntime):
     args = parse_args()
     component = runtime.namespace("dynamo").component("processor")
-    await component.create_service()
+    # NOTE: create_service() was removed in Dynamo 0.8.x - endpoint creation handles registration
 
     handler = ProcessorRequestHandler(runtime, model_name=args.model, enable_router=args.enable_router)
     await handler.initialize()

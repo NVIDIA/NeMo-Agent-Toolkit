@@ -357,6 +357,15 @@ export DYNAMO_TP_SIZE=2
 | `DYN_SYSTEM_PORT` | `8081` | Dynamo system/metrics port |
 | `DYNAMO_ROUTER_WAIT_FOR_WORKERS_TIMEOUT_S` | `600` | Worker discovery timeout |
 
+### Backend-Specific Configuration (REQUIRED)
+
+| Variable | Values | Description |
+|----------|--------|-------------|
+| `DYNAMO_WORKER_COMPONENT` | `worker` or `backend` | **REQUIRED.** Component name where workers register. SGLang uses `worker` (via `--endpoint workers.worker.generate`). vLLM uses `backend` (hardcoded in `dynamo.vllm`). |
+
+> **Important**: `DYNAMO_WORKER_COMPONENT` must be set for the router and processor to find
+> the backend workers. Without this variable, startup will fail with an error.
+
 > **Note on `DYN_ROUTER_MODE`**: The startup script passes `--router-mode round-robin` to the
 > default frontend, but this is **irrelevant** in our architecture. The frontend's built-in
 > router routes to `dynamo.backend.generate`, which is our Processor (not a real backend).

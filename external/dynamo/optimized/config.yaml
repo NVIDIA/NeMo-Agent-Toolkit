@@ -7,6 +7,11 @@
 # This file contains all configurable parameters for the WorkloadAwareRouter.
 # Parameters can be overridden via CLI flags (see PARAMETERS.md for details).
 #
+# REQUIRED ENVIRONMENT VARIABLE:
+#   DYNAMO_WORKER_COMPONENT - Component name where backend workers register.
+#     - SGLang: "worker" (workers register at workers.worker.generate)
+#     - vLLM:   "backend" (workers register at workers.backend.generate)
+#
 # CLI Override Examples:
 #   python router.py --config config.yaml --affinity-base 0.5
 #   python router.py --config config.yaml --override affinity.reuse_weight=0.2

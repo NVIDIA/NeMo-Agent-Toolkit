@@ -3,6 +3,11 @@
 
 # Prometheus configuration for Dynamo metrics collection
 #
+# Supports both SGLang and vLLM backends:
+#   - SGLang metrics use 'sglang:' prefix (e.g., sglang:cache_hit_rate)
+#   - vLLM metrics use 'vllm:' prefix (e.g., vllm:cache_hit_rate)
+#   - Grafana dashboard uses ${backend} variable to switch between them
+#
 # Metrics Endpoints (using 18xxx range to avoid conflicts):
 #   - Frontend (8000): User-facing latency, throughput, tokens
 #   - Workers (18081-180xx): KV cache stats, NATS metrics, internal stats (one per worker)
@@ -17,6 +22,11 @@ global:
   scrape_interval: 2s
   evaluation_interval: 2s
 
+# Recording rules to create vLLM metric aliases that match the dashboard expectations
+# This allows the same dashboard queries to work for both SGLang and vLLM backends
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
 scrape_configs:
   # Dynamo Frontend metrics (user-facing latency, throughput)
   - job_name: 'dynamo-frontend'
@@ -26,6 +36,7 @@ scrape_configs:
     scrape_interval: 2s
 
   # Dynamo Worker metrics (KV cache, internal stats)
+  # Works for both SGLang and vLLM backends - same ports, different metric prefixes
   # Multiple workers use sequential ports starting at 18081
   # Add/remove targets based on your NUM_WORKERS setting
   - job_name: 'dynamo-worker'
