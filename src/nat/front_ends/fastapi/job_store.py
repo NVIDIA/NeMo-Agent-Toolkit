@@ -28,7 +28,6 @@ from datetime import timedelta
 from enum import Enum
 from uuid import uuid4
 
-from dask.distributed import Client as DaskClient
 from dask.distributed import Future
 from dask.distributed import Variable
 from dask.distributed import fire_and_forget
