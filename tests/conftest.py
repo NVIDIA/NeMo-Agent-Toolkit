@@ -514,7 +514,7 @@ def dask_scheduler_address_fixture(dask_cluster: "LocalCluster") -> str:
 @pytest.fixture(name="dask_client", scope="session")
 def dask_client_fixture(dask_scheduler_address: str) -> Generator["DaskClient"]:
     """
-    Fixture to provide an asynchronous Dask client connected to the test Dask cluster.
+    Fixture to provide an blocking Dask client connected to the test Dask cluster.
     """
     from dask.distributed import Client
 
