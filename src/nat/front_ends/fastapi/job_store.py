@@ -180,7 +180,8 @@ class JobStore:
 
         self._dask_client: DaskClient | None = None
 
-    def get_dask_client(self) -> DaskClient:
+    @property
+    def dask_client(self) -> DaskClient:
         """
         Async context manager for obtaining a Dask client connection.
 
@@ -306,11 +307,10 @@ class JobStore:
         # the job has completed, and we want the metadata to persist until the job expires.
 
         logger.debug("Submitting job with job_args: %s, job_kwargs: %s", job_args, job_kwargs)
-        dask_client = self.get_dask_client()
-        future = dask_client.submit(job_fn, *job_args, key=f"{job_id}-job", **job_kwargs)
+        future = self.dask_client.submit(job_fn, *job_args, key=f"{job_id}-job", **job_kwargs)
 
         # Store the future in a variable, this allows us to potentially cancel the future later if needed
-        future_var = Variable(name=job_id, client=dask_client)
+        future_var = Variable(name=job_id, client=self.dask_client)
         future_var.set(future, timeout="5 s")
         if sync_timeout > 0:
             try:
@@ -517,7 +517,6 @@ class JobStore:
             and_(JobInfo.is_expired == sa_expr.false(),
                  JobInfo.status.not_in(self.ACTIVE_STATUS))).order_by(JobInfo.updated_at.desc())
         # Filter out active jobs
-        dask_client = self.get_dask_client()
         async with self.session() as session:
             finished_jobs = (await session.execute(stmt)).scalars().all()
 
@@ -545,11 +544,11 @@ class JobStore:
                 for job_id in expired_ids:
                     var = None
                     try:
-                        var = Variable(name=job_id, client=dask_client)
+                        var = Variable(name=job_id, client=self.dask_client)
                         try:
                             future = var.get(timeout=5)
                             if isinstance(future, Future):
-                                dask_client.cancel([future], force=True)
+                                self.dask_client.cancel([future], force=True)
 
                         except TimeoutError:
                             pass

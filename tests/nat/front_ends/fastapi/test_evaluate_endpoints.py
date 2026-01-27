@@ -17,6 +17,7 @@ import shutil
 import typing
 from pathlib import Path
 from unittest.mock import MagicMock
+from unittest.mock import PropertyMock
 from unittest.mock import patch
 
 import pytest
@@ -98,7 +99,8 @@ async def test_client_fixture(test_config: Config) -> TestClient:
 
 @pytest.fixture(autouse=True)
 def patch_job_store_get_dask_client(dask_client: "DaskClient"):
-    with patch("nat.front_ends.fastapi.job_store.JobStore.get_dask_client", return_value=dask_client):
+    with patch("nat.front_ends.fastapi.job_store.JobStore.dask_client", new_callable=PropertyMock) as mock_dask_client:
+        mock_dask_client.return_value = dask_client
         yield
 
 
