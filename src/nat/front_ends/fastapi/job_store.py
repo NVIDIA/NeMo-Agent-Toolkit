@@ -307,14 +307,11 @@ class JobStore:
 
         logger.debug("Submitting job with job_args: %s, job_kwargs: %s", job_args, job_kwargs)
         dask_client = self.get_dask_client()
-        print("Submitting job to Dask scheduler...")
         future = dask_client.submit(job_fn, *job_args, key=f"{job_id}-job", **job_kwargs)
-        print("Job submitted, future:", future)
+
         # Store the future in a variable, this allows us to potentially cancel the future later if needed
         future_var = Variable(name=job_id, client=dask_client)
-        print("Storing future in Dask variable:", future_var)
         future_var.set(future, timeout="5 s")
-        print("Future stored in Dask variable.")
         if sync_timeout > 0:
             try:
                 _ = await future.result(timeout=sync_timeout)
@@ -324,9 +321,7 @@ class JobStore:
             except TimeoutError:
                 pass
 
-        print("Setting fire_and_forget for future")
         fire_and_forget(future)
-        print("Setting fire_and_forget for future - done")
 
         return (job_id, None)
 
