@@ -6361,7 +6361,7 @@ requires-dist = [
     { name = "datasets", specifier = "~=4.4" },
     { name = "distributed", marker = "extra == 'async-endpoints'", specifier = "~=2026.1" },
     { name = "expandvars", specifier = "~=1.0" },
-    { name = "fastapi", specifier = "~=0.119" },
+    { name = "fastapi", specifier = "~=0.123" },
     { name = "gunicorn", marker = "extra == 'gunicorn'", specifier = "~=23.0" },
     { name = "httpx", specifier = "~=0.27" },
     { name = "jinja2", specifier = "~=3.1" },
@@ -6530,7 +6530,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "google-adk", specifier = "~=1.18" },
+    { name = "google-adk", specifier = "~=1.23" },
     { name = "nvidia-nat", extras = ["litellm"], editable = "." },
 ]
 
