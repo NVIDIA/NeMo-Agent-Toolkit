@@ -24,23 +24,33 @@ limitations under the License.
 ---
 
 ## Table of Contents
-- [Introduction](#introduction)
-  - [The Problem](#the-problem)
-  - [The Solution](#the-solution)
-  - [How NASSE Works](#how-nasse-works)
-  - [Scenario Overview: Attack and Defense](#scenario-overview-attack-and-defense)
-- [Key Features Overview](#key-features-overview)
-  - [RedTeamingRunner](#redteamingrunner)
-  - [RedTeamingMiddleware](#redteamingmiddleware)
-  - [RedTeamingEvaluator](#redteamingevaluator)
-  - [Defense Middleware](#defense-middleware)
-- [Retail Agent Example](#retail-agent-example)
-  - [The Retail Agent](#the-retail-agent)
-  - [Installation and Setup](#installation-and-setup)
-- [Red Teaming the Retail Agent](#red-teaming-the-retail-agent)
-  - [Understanding the Results](#understanding-the-results)
-- [Red Teaming the Retail Agent with Defenses](#red-teaming-the-retail-agent-with-defenses)
-  - [Before vs After Comparison](#before-vs-after-comparison)
+- [NeMo Agent Safety and Security Engine (NASSE)](#nemo-agent-safety-and-security-engine-nasse)
+    - [Demonstrated Through Retail Agent Example](#demonstrated-through-retail-agent-example)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [Why We Need a Safety and Security Framework](#why-we-need-a-safety-and-security-framework)
+    - [The Problem](#the-problem)
+    - [The Solution](#the-solution)
+    - [How NASSE Works](#how-nasse-works)
+      - [Red Teaming Flow](#red-teaming-flow)
+      - [Defense Flow](#defense-flow)
+    - [Scenario Overview: Attack and Defense](#scenario-overview-attack-and-defense)
+  - [Key Features Overview](#key-features-overview)
+    - [How the Red Teaming Components Work Together](#how-the-red-teaming-components-work-together)
+    - [RedTeamingRunner](#redteamingrunner)
+    - [RedTeamingMiddleware](#redteamingmiddleware)
+    - [RedTeamingEvaluator](#redteamingevaluator)
+    - [Defense Middleware](#defense-middleware)
+  - [Retail Agent Example](#retail-agent-example)
+    - [The Retail Agent](#the-retail-agent)
+    - [Installation and Setup](#installation-and-setup)
+      - [Install This Workflow](#install-this-workflow)
+      - [Set Up API Keys](#set-up-api-keys)
+      - [Run the Workflow](#run-the-workflow)
+  - [Red Teaming the Retail Agent](#red-teaming-the-retail-agent)
+    - [Understanding the Results](#understanding-the-results)
+  - [Red Teaming the Retail Agent with Defenses](#red-teaming-the-retail-agent-with-defenses)
+    - [Before vs After Comparison](#before-vs-after-comparison)
 
 ---
 
@@ -76,13 +86,13 @@ NASSE addresses these vulnerabilities through a two-phase approach:
 
 The following diagrams illustrate how attacks are injected, evaluated, and mitigated:
 
-**Red Teaming Flow**
+#### Red Teaming Flow
 
 The red teaming middleware can inject attacks into workflow components. After each workflow run, the Red Teaming evaluator scores the agent's behavior to determine attack success.
 
 ![Red teaming flow](./assets/red-teaming-flow.svg)
 
-**Defense Flow**
+#### Defense Flow
 
 The defense middleware inspects tool outputs, sanitizes or blocks unsafe content, and returns safe data to the agent.
 
@@ -120,7 +130,7 @@ Each scenario below explains the normal workflow behavior, the attack vector, an
 
 NASSE provides four core components that work together to assess and improve agent security:
 
-**How the Red Teaming Components Work Together**
+### How the Red Teaming Components Work Together
 
 ![Red teaming system flow](./assets/red-teaming-system-flow.svg)
 
