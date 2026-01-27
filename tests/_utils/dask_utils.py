@@ -19,12 +19,12 @@ if typing.TYPE_CHECKING:
     from dask.distributed import Client as DaskClient
 
 
-async def await_job(dask_client: "DaskClient", job_id: str, timeout: int = 60) -> typing.Any:
+def wait_job(dask_client: "DaskClient", job_id: str, timeout: int = 60) -> typing.Any:
     """Helper to await a job completion."""
     from dask.distributed import Variable
 
     var = Variable(name=job_id, client=dask_client)
-    future = await var.get(timeout=5)
-    results = await future.result(timeout=timeout)
+    future = var.get(timeout=5)
+    results = future.result(timeout=timeout)
 
     return results
