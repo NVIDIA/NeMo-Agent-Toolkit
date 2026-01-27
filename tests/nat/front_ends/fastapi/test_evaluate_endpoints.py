@@ -98,12 +98,7 @@ async def test_client_fixture(test_config: Config) -> TestClient:
 
 @pytest.fixture(autouse=True)
 def patch_job_store_get_dask_client(dask_client: "DaskClient"):
-    with patch("nat.front_ends.fastapi.job_store.JobStore.get_dask_client") as mock_get_dask_client:
-
-        def get_client_side_effect():
-            return dask_client
-
-        mock_get_dask_client.side_effect = get_client_side_effect
+    with patch("nat.front_ends.fastapi.job_store.JobStore.get_dask_client", return_value=dask_client):
         yield
 
 
