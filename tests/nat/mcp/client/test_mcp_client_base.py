@@ -665,7 +665,7 @@ class TestMCPStreamableHTTPClientSessionIdAndHeaders:
 
         client = MCPStreamableHTTPClient(url="http://localhost:8080/mcp")
 
-        # Mock the streamablehttp_client
+        # Mock the streamable_http_client
         mock_session_id_callback = MagicMock(return_value="mock-session-id")
         mock_session = AsyncMock()
         mock_session.initialize = AsyncMock()
@@ -675,7 +675,7 @@ class TestMCPStreamableHTTPClientSessionIdAndHeaders:
         async def mock_streamable_client(*args, **kwargs):
             yield (AsyncMock(), AsyncMock(), mock_session_id_callback)
 
-        with patch('nat.plugins.mcp.client.client_base.streamablehttp_client', mock_streamable_client):
+        with patch('nat.plugins.mcp.client.client_base.streamable_http_client', mock_streamable_client):
             with patch('nat.plugins.mcp.client.client_base.ClientSession') as MockClientSession:
                 mock_session_cm = AsyncMock()
                 mock_session_cm.__aenter__ = AsyncMock(return_value=mock_session)
@@ -691,23 +691,24 @@ class TestMCPStreamableHTTPClientSessionIdAndHeaders:
         assert client._get_mcp_session_id is None
 
     async def test_connect_to_server_passes_custom_headers(self):
-        """Test that connect_to_server passes custom headers to streamablehttp_client."""
+        """Test that connect_to_server configures httpx client with custom headers."""
         from unittest.mock import AsyncMock
 
         custom_headers = {"X-Custom-Header": "custom-value"}
         client = MCPStreamableHTTPClient(url="http://localhost:8080/mcp", custom_headers=custom_headers)
 
-        captured_kwargs = {}
+        captured_http_client = None
 
         @asynccontextmanager
         async def mock_streamable_client(*args, **kwargs):
-            captured_kwargs.update(kwargs)
+            nonlocal captured_http_client
+            captured_http_client = kwargs.get('http_client')
             yield (AsyncMock(), AsyncMock(), MagicMock(return_value=None))
 
         mock_session = AsyncMock()
         mock_session.initialize = AsyncMock()
 
-        with patch('nat.plugins.mcp.client.client_base.streamablehttp_client', mock_streamable_client):
+        with patch('nat.plugins.mcp.client.client_base.streamable_http_client', mock_streamable_client):
             with patch('nat.plugins.mcp.client.client_base.ClientSession') as MockClientSession:
                 mock_session_cm = AsyncMock()
                 mock_session_cm.__aenter__ = AsyncMock(return_value=mock_session)
@@ -717,26 +718,28 @@ class TestMCPStreamableHTTPClientSessionIdAndHeaders:
                 async with client.connect_to_server():
                     pass
 
-        # Verify custom headers were passed
-        assert captured_kwargs.get('headers') == custom_headers
+        # Verify http_client was passed and has custom headers
+        assert captured_http_client is not None
+        assert captured_http_client.headers.get("X-Custom-Header") == "custom-value"
 
     async def test_connect_to_server_no_headers_when_empty(self):
-        """Test that connect_to_server passes None for headers when no custom headers configured."""
+        """Test that connect_to_server creates httpx client without headers when none configured."""
         from unittest.mock import AsyncMock
 
         client = MCPStreamableHTTPClient(url="http://localhost:8080/mcp")
 
-        captured_kwargs = {}
+        captured_http_client = None
 
         @asynccontextmanager
         async def mock_streamable_client(*args, **kwargs):
-            captured_kwargs.update(kwargs)
+            nonlocal captured_http_client
+            captured_http_client = kwargs.get('http_client')
             yield (AsyncMock(), AsyncMock(), MagicMock(return_value=None))
 
         mock_session = AsyncMock()
         mock_session.initialize = AsyncMock()
 
-        with patch('nat.plugins.mcp.client.client_base.streamablehttp_client', mock_streamable_client):
+        with patch('nat.plugins.mcp.client.client_base.streamable_http_client', mock_streamable_client):
             with patch('nat.plugins.mcp.client.client_base.ClientSession') as MockClientSession:
                 mock_session_cm = AsyncMock()
                 mock_session_cm.__aenter__ = AsyncMock(return_value=mock_session)
@@ -746,8 +749,8 @@ class TestMCPStreamableHTTPClientSessionIdAndHeaders:
                 async with client.connect_to_server():
                     pass
 
-        # Verify headers is None when no custom headers configured
-        assert captured_kwargs.get('headers') is None
+        # Verify http_client was passed (even without custom headers, we still create one for auth support)
+        assert captured_http_client is not None
 
 
 class TestMCPServerConfigCustomHeaders:
