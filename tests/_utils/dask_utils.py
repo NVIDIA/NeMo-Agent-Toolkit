@@ -20,7 +20,7 @@ if typing.TYPE_CHECKING:
 
 
 def wait_job(dask_client: "DaskClient", job_id: str, timeout: int = 60) -> typing.Any:
-    """Helper to await a job completion."""
+    """Helper to wait for a job to complete."""
     from dask.distributed import Variable
 
     var = Variable(name=job_id, client=dask_client)
