@@ -80,7 +80,8 @@ class ReActAgentGraph(DualNodeAgent):
                  parse_agent_response_max_retries: int = 1,
                  tool_call_max_retries: int = 1,
                  pass_tool_call_errors_to_agent: bool = True,
-                 normalize_tool_input_quotes: bool = True):
+                 normalize_tool_input_quotes: bool = True,
+                 use_native_tool_calling: bool = False):
         super().__init__(llm=llm,
                          tools=tools,
                          callbacks=callbacks,
@@ -91,6 +92,7 @@ class ReActAgentGraph(DualNodeAgent):
         self.tool_call_max_retries = tool_call_max_retries
         self.pass_tool_call_errors_to_agent = pass_tool_call_errors_to_agent
         self.normalize_tool_input_quotes = normalize_tool_input_quotes
+        self.use_native_tool_calling = use_native_tool_calling
         logger.debug(
             "%s Filling the prompt variables 'tools' and 'tool_names', using the tools provided in the config.",
             AGENT_LOG_PREFIX)
@@ -108,19 +110,33 @@ class ReActAgentGraph(DualNodeAgent):
                          f"{INPUT_SCHEMA_MESSAGE.format(schema=tools[-1].input_schema.model_fields)}")
         prompt = prompt.partial(tools=tool_names_and_descriptions, tool_names=tool_names)
         # construct the ReAct Agent
-        self.agent = prompt | self._maybe_bind_llm_and_yield()
+        self.agent = prompt | self._maybe_bind_llm_and_yield(tools if use_native_tool_calling else None)
         self.tools_dict = {tool.name: tool for tool in tools}
         logger.debug("%s Initialized ReAct Agent Graph", AGENT_LOG_PREFIX)
 
-    def _maybe_bind_llm_and_yield(self) -> Runnable[LanguageModelInput, BaseMessage]:
+    def _maybe_bind_llm_and_yield(self,
+                                  tools: list[BaseTool] | None = None) -> Runnable[LanguageModelInput, BaseMessage]:
         """
         Bind additional parameters to the LLM if needed
+        - if native tool calling is enabled, bind tools to the LLM for structured tool_calls
         - if the LLM is a smart model, no need to bind any additional parameters
         - if the LLM is a non-smart model, bind a stop sequence to the LLM
+
+        Args:
+            tools: List of tools to bind for native tool calling. If None, native tool calling is disabled.
 
         Returns:
             Runnable[LanguageModelInput, BaseMessage]: The LLM with any additional parameters bound.
         """
+        # If native tool calling is enabled, bind tools to the LLM
+        if tools is not None:
+            logger.debug("%s Binding tools to LLM for native tool calling", AGENT_LOG_PREFIX)
+            try:
+                return self.llm.bind_tools(tools)
+            except NotImplementedError:
+                logger.warning("%s LLM does not support bind_tools, falling back to text parsing", AGENT_LOG_PREFIX)
+                self.use_native_tool_calling = False
+
         # models that don't need (or don't support)a stop sequence
         smart_models = re.compile(r"gpt-?5", re.IGNORECASE)
         if smart_models.search(str(getattr(self.llm, "model", ""))):
@@ -202,6 +218,27 @@ class ReActAgentGraph(DualNodeAgent):
                 try:
                     # check if the agent has the final answer yet
                     logger.debug("%s Successfully obtained agent response. Parsing agent's response", AGENT_LOG_PREFIX)
+
+                    # Check for native tool calls first (when use_native_tool_calling is enabled)
+                    if self.use_native_tool_calling and hasattr(output_message,
+                                                                'tool_calls') and output_message.tool_calls:
+                        # Extract tool call from structured response
+                        tool_call = output_message.tool_calls[0]
+                        tool_name = tool_call.get('name', '').strip()
+                        tool_args = tool_call.get('args', {})
+
+                        # Convert tool args to JSON string for consistency with text parsing
+                        tool_input_str = json.dumps(tool_args) if isinstance(tool_args, dict) else str(tool_args)
+
+                        agent_output = AgentAction(
+                            tool=tool_name,
+                            tool_input=tool_input_str,
+                            log=str(output_message.content) if output_message.content else f"Calling {tool_name}")
+                        logger.debug("%s Native tool call detected: %s", AGENT_LOG_PREFIX, tool_name)
+                        state.agent_scratchpad += [agent_output]
+                        return state
+
+                    # Fall back to text parsing
                     agent_output = await ReActOutputParser().aparse(output_message.content)
                     logger.debug("%s Successfully parsed agent response after %s attempts", AGENT_LOG_PREFIX, attempt)
                     if isinstance(agent_output, AgentFinish):
