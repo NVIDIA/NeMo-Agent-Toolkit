@@ -25,32 +25,32 @@ limitations under the License.
 
 ## Table of Contents
 - [NeMo Agent Safety and Security Engine (NASSE)](#nemo-agent-safety-and-security-engine-nasse)
-    - [Demonstrated Through Retail Agent Example](#demonstrated-through-retail-agent-example)
-  - [Table of Contents](#table-of-contents)
-  - [Introduction](#introduction)
-  - [Why We Need a Safety and Security Framework](#why-we-need-a-safety-and-security-framework)
-    - [The Problem](#the-problem)
-    - [The Solution](#the-solution)
-    - [How NASSE Works](#how-nasse-works)
-      - [Red Teaming Flow](#red-teaming-flow)
-      - [Defense Flow](#defense-flow)
-    - [Scenario Overview: Attack and Defense](#scenario-overview-attack-and-defense)
-  - [Key Features Overview](#key-features-overview)
-    - [How the Red Teaming Components Work Together](#how-the-red-teaming-components-work-together)
-    - [RedTeamingRunner](#redteamingrunner)
-    - [RedTeamingMiddleware](#redteamingmiddleware)
-    - [RedTeamingEvaluator](#redteamingevaluator)
-    - [Defense Middleware](#defense-middleware)
-  - [Retail Agent Example](#retail-agent-example)
-    - [The Retail Agent](#the-retail-agent)
-    - [Installation and Setup](#installation-and-setup)
-      - [Install This Workflow](#install-this-workflow)
-      - [Set Up API Keys](#set-up-api-keys)
-      - [Run the Workflow](#run-the-workflow)
-  - [Red Teaming the Retail Agent](#red-teaming-the-retail-agent)
-    - [Understanding the Results](#understanding-the-results)
-  - [Red Teaming the Retail Agent with Defenses](#red-teaming-the-retail-agent-with-defenses)
-    - [Before vs After Comparison](#before-vs-after-comparison)
+  - [Demonstrated Through Retail Agent Example](#demonstrated-through-retail-agent-example)
+- [Table of Contents](#table-of-contents)
+- [Introduction](#introduction)
+- [Why We Need a Safety and Security Framework](#why-we-need-a-safety-and-security-framework)
+  - [The Problem](#the-problem)
+  - [The Solution](#the-solution)
+  - [How NASSE Works](#how-nasse-works)
+    - [Red Teaming Flow](#red-teaming-flow)
+    - [Defense Flow](#defense-flow)
+  - [Scenario Overview: Attack and Defense](#scenario-overview-attack-and-defense)
+- [Key Features Overview](#key-features-overview)
+  - [How the Red Teaming Components Work Together](#how-the-red-teaming-components-work-together)
+  - [RedTeamingRunner](#redteamingrunner)
+  - [RedTeamingMiddleware](#redteamingmiddleware)
+  - [RedTeamingEvaluator](#redteamingevaluator)
+  - [Defense Middleware](#defense-middleware)
+- [Retail Agent Example](#retail-agent-example)
+  - [The Retail Agent](#the-retail-agent)
+  - [Installation and Setup](#installation-and-setup)
+    - [Install This Workflow](#install-this-workflow)
+    - [Set Up API Keys](#set-up-api-keys)
+    - [Run the Workflow](#run-the-workflow)
+- [Red Teaming the Retail Agent](#red-teaming-the-retail-agent)
+  - [Understanding the Results](#understanding-the-results)
+- [Red Teaming the Retail Agent with Defenses](#red-teaming-the-retail-agent-with-defenses)
+  - [Before vs After Comparison](#before-vs-after-comparison)
 
 ---
 
@@ -365,7 +365,7 @@ nat red-team --red_team_config examples/safety_and_security/retail_agent/configs
 
 **Example Results (5 Repetitions):**
 
-![Red teaming results](./src/nat_retail_agent/data/attack-score.png)
+![Red teaming results](./assets/attack-score.png)
 
 ### Understanding the Results
 
@@ -410,7 +410,7 @@ The only difference in the config is the `base_workflow` path in `configs/red-te
 
 **Example Results (Defended Run):**
 
-![Defended red teaming results](./src/nat_retail_agent/data/defense-score.png)
+![Defended red teaming results](./assets/defense-score.png)
 
 **How Defenses Mitigated Attacks:**
 
@@ -433,11 +433,11 @@ PIIDefenseMiddleware: Verified output of <workflow>: No PII detected
   <tr>
     <td align="center">
       <b>Before Defenses</b><br/>
-      <img src="./src/nat_retail_agent/data/attack-score.png"/>
+      <img src="./assets/attack-score.png"/>
     </td>
     <td align="center">
       <b>After Defenses</b><br/>
-      <img src="./src/nat_retail_agent/data/defense-score.png"/>
+      <img src="./assets/defense-score.png"/>
     </td>
   </tr>
 </table>
