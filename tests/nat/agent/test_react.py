@@ -291,7 +291,8 @@ async def mock_graph_no_raise(mock_react_agent_no_raise):
 
 
 async def test_graph_parsing_error(mock_react_graph_no_raise):
-    response = await mock_react_graph_no_raise.ainvoke(ReActGraphState(messages=[HumanMessage('fix the input on retry')]))
+    response = await mock_react_graph_no_raise.ainvoke(
+        ReActGraphState(messages=[HumanMessage('fix the input on retry')]))
     response = ReActGraphState(**response)
 
     response = response.messages[-1]
