@@ -82,7 +82,7 @@ class ReActAgentGraph(DualNodeAgent):
                  tool_call_max_retries: int = 1,
                  pass_tool_call_errors_to_agent: bool = True,
                  normalize_tool_input_quotes: bool = True,
-                 raise_on_parsing_failure: bool = False):
+                 raise_on_parsing_failure: bool = True):
         super().__init__(llm=llm,
                          tools=tools,
                          callbacks=callbacks,

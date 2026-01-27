@@ -62,9 +62,9 @@ class ReActAgentWorkflowConfig(AgentBaseConfig, OptimizableMixin, name="react_ag
         default=True,
         description="Whether to pass tool call errors to agent. If False, failed tool calls will raise an exception.")
     raise_on_parsing_failure: bool = Field(
-        default=False,
+        default=True,
         description="Whether to raise ReActAgentParsingFailedError when parsing fails after max retries. "
-        "If False (default), error messages are returned as the answer for backward compatibility.")
+        "If False, error messages are returned as the answer.")
     include_tool_input_schema_in_tool_description: bool = Field(
         default=True, description="Specify inclusion of tool input schemas in the prompt.")
     normalize_tool_input_quotes: bool = Field(
