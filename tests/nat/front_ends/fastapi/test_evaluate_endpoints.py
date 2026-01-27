@@ -97,13 +97,6 @@ async def test_client_fixture(test_config: Config) -> TestClient:
         yield TestClient(app)
 
 
-@pytest.fixture(autouse=True)
-def patch_job_store_get_dask_client(dask_client: "DaskClient"):
-    with patch("nat.front_ends.fastapi.job_store.JobStore.dask_client", new_callable=PropertyMock) as mock_dask_client:
-        mock_dask_client.return_value = dask_client
-        yield
-
-
 def create_job(test_client: TestClient, config_file: str, job_id: str | None = None):
     """Helper to create an evaluation job."""
     payload = {"config_file": config_file}

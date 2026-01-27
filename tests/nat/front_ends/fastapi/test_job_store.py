@@ -24,6 +24,7 @@ import pytest
 from pydantic import BaseModel
 
 if typing.TYPE_CHECKING:
+    from dask.distributed import Client as DaskClient
     from sqlalchemy.ext.asyncio import AsyncEngine
 
 
@@ -721,17 +722,14 @@ def test_get_db_engine_creates_default_sqlite():
             os.environ["NAT_JOB_STORE_DB_URL"] = original_url
 
 
-@pytest.mark.asyncio
-async def test_client_context_manager(db_engine: "AsyncEngine", dask_scheduler_address: str):
+def test_job_store_client_property(dask_client: "DaskClient", db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test the client context manager works correctly."""
     from nat.front_ends.fastapi.job_store import JobStore
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
-    async with job_store.client() as client:
-        assert client is not None
-        # Should be connected to the correct scheduler
-        assert client.scheduler.address == dask_scheduler_address
+    assert job_store.dask_client is dask_client
+    assert job_store.dask_client.scheduler.address == dask_scheduler_address
 
 
 @pytest.mark.usefixtures("setup_db")
