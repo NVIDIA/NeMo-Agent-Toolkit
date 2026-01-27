@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import shutil
+import typing
 from pathlib import Path
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -23,17 +24,24 @@ import pytest_asyncio
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from _utils.dask_utils import await_job
+from _utils.dask_utils import wait_job
 from nat.data_models.config import Config
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
 
+if typing.TYPE_CHECKING:
+    from dask.distributed import Client as DaskClient
+
 
 @pytest.fixture(name="test_config")
-def test_config_fixture() -> Config:
+def test_config_fixture(dask_scheduler_address: str, set_nat_dask_scheduler_env_var: str) -> Config:
     config = Config()
-    config.general.front_end = FastApiFrontEndConfig(evaluate=FastApiFrontEndConfig.EndpointBase(
-        path="/evaluate", method="POST", description="Test evaluate endpoint"))
+    config.general.front_end = FastApiFrontEndConfig(
+        scheduler_address=dask_scheduler_address,
+        evaluate=FastApiFrontEndConfig.EndpointBase(path="/evaluate",
+                                                    method="POST",
+                                                    description="Test evaluate endpoint"),
+    )
 
     return config
 
@@ -85,7 +93,18 @@ async def test_client_fixture(test_config: Config) -> TestClient:
 
         await worker.add_evaluate_route(app, session_manager=mock_session)
 
-    return TestClient(app)
+        yield TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def patch_job_store_get_dask_client(dask_client: "DaskClient"):
+    with patch("nat.front_ends.fastapi.job_store.JobStore.get_dask_client") as mock_get_dask_client:
+
+        def get_client_side_effect():
+            return dask_client
+
+        mock_get_dask_client.side_effect = get_client_side_effect
+        yield
 
 
 def create_job(test_client: TestClient, config_file: str, job_id: str | None = None):
@@ -97,24 +116,21 @@ def create_job(test_client: TestClient, config_file: str, job_id: str | None = N
     return test_client.post("/evaluate", json=payload)
 
 
-@pytest.mark.asyncio
-async def test_create_job(test_client: TestClient, eval_config_file: str):
+def test_create_job(dask_client: "DaskClient", test_client: TestClient, eval_config_file: str):
     """Test creating a new evaluation job."""
     response = create_job(test_client, eval_config_file)
     assert response.status_code == 200
     data = response.json()
     assert "job_id" in data
     assert data["status"] == "submitted"
-    await await_job(data["job_id"])
+    wait_job(dask_client, data["job_id"])
 
 
-@pytest.mark.asyncio
-async def test_get_job_status(test_client: TestClient, eval_config_file: str):
+def test_get_job_status(dask_client: "DaskClient", test_client: TestClient, eval_config_file: str):
     """Test getting the status of a specific job."""
     create_response = create_job(test_client, eval_config_file)
     job_id = create_response.json()["job_id"]
-    await await_job(job_id)
-
+    wait_job(dask_client, job_id)
     status_response = test_client.get(f"/evaluate/job/{job_id}")
     assert status_response.status_code == 200
     data = status_response.json()
@@ -130,13 +146,12 @@ def test_get_job_status_not_found(test_client: TestClient):
     assert response.json()["detail"] == "Job non-existent-id not found"
 
 
-@pytest.mark.asyncio
-async def test_get_last_job(test_client: TestClient, eval_config_file: str):
+def test_get_last_job(dask_client: "DaskClient", test_client: TestClient, eval_config_file: str):
     """Test getting the last created job."""
     for i in range(3):
         job_id = f"job-{i}"
         create_job(test_client, eval_config_file, job_id=job_id)
-        await await_job(job_id)
+        wait_job(dask_client, job_id)
 
     response = test_client.get("/evaluate/job/last")
     assert response.status_code == 200
@@ -152,14 +167,13 @@ def test_get_last_job_not_found(test_client: TestClient):
 
 
 @pytest.mark.parametrize("set_job_id", [False, True])
-@pytest.mark.asyncio
-async def test_get_all_jobs(test_client: TestClient, eval_config_file: str, set_job_id: bool):
+def test_get_all_jobs(dask_client: "DaskClient", test_client: TestClient, eval_config_file: str, set_job_id: bool):
     """Test retrieving all jobs."""
     for i in range(3):
         job_id = f"job-{i}" if set_job_id else None
         create_response = create_job(test_client, eval_config_file, job_id=job_id)
         job_id = create_response.json()["job_id"]
-        await await_job(job_id)
+        wait_job(dask_client, job_id)
 
     response = test_client.get("/evaluate/jobs")
     assert response.status_code == 200
@@ -171,12 +185,15 @@ async def test_get_all_jobs(test_client: TestClient, eval_config_file: str, set_
     ("success", 3),
     ("interrupted", 0),
 ])
-@pytest.mark.asyncio
-async def test_get_jobs_by_status(test_client: TestClient, eval_config_file: str, status: str, expected_count: int):
+def test_get_jobs_by_status(dask_client: "DaskClient",
+                            test_client: TestClient,
+                            eval_config_file: str,
+                            status: str,
+                            expected_count: int):
     """Test getting jobs filtered by status."""
     for _ in range(3):
         response = create_job(test_client, eval_config_file)
-        await await_job(response.json()["job_id"])
+        wait_job(dask_client, response.json()["job_id"])
 
     response = test_client.get(f"/evaluate/jobs?status={status}")
     assert response.status_code == 200
@@ -187,19 +204,17 @@ async def test_get_jobs_by_status(test_client: TestClient, eval_config_file: str
         assert all(job["status"] == "submitted" for job in data)
 
 
-@pytest.mark.asyncio
-async def test_create_job_with_reps(test_client: TestClient, eval_config_file: str):
+def test_create_job_with_reps(dask_client: "DaskClient", test_client: TestClient, eval_config_file: str):
     """Test creating a new evaluation job with custom repetitions."""
     response = test_client.post("/evaluate", json={"config_file": eval_config_file, "reps": 3})
     assert response.status_code == 200
     data = response.json()
     assert "job_id" in data
     assert data["status"] == "submitted"
-    await await_job(data["job_id"])
+    wait_job(dask_client, data["job_id"])
 
 
-@pytest.mark.asyncio
-async def test_create_job_with_expiry(test_client: TestClient, eval_config_file: str):
+def test_create_job_with_expiry(dask_client: "DaskClient", test_client: TestClient, eval_config_file: str):
     """Test creating a new evaluation job with custom expiry time."""
     response = test_client.post(
         "/evaluate",
@@ -211,11 +226,10 @@ async def test_create_job_with_expiry(test_client: TestClient, eval_config_file:
     data = response.json()
     assert "job_id" in data
     assert data["status"] == "submitted"
-    await await_job(data["job_id"])
+    wait_job(dask_client, data["job_id"])
 
 
-@pytest.mark.asyncio
-async def test_create_job_with_job_id(test_client: TestClient, eval_config_file: str):
+def test_create_job_with_job_id(dask_client: "DaskClient", test_client: TestClient, eval_config_file: str):
     """Test creating a new evaluation job with a specific job ID."""
     job_id = "test-job-123"
     response = test_client.post("/evaluate", json={"config_file": eval_config_file, "job_id": job_id})
@@ -223,7 +237,7 @@ async def test_create_job_with_job_id(test_client: TestClient, eval_config_file:
     data = response.json()
     assert data["job_id"] == job_id
     assert data["status"] == "submitted"
-    await await_job(job_id)
+    wait_job(dask_client, job_id)
 
 
 @pytest.mark.parametrize("job_id", ["test/job/123", "..", ".", "/abolute/path"
@@ -243,8 +257,10 @@ def test_invalid_config_file_doesnt_exist(test_client: TestClient):
     assert response.status_code >= 400 and response.status_code < 500
 
 
-@pytest.mark.asyncio
-async def test_config_file_outside_curdir(test_client: TestClient, eval_config_file: str, tmp_path: Path):
+def test_config_file_outside_curdir(dask_client: "DaskClient",
+                                    test_client: TestClient,
+                                    eval_config_file: str,
+                                    tmp_path: Path):
     """Test creating a job with a config file outside the current directory."""
     dest_config_file = tmp_path / "config.yml"
     shutil.copy(eval_config_file, dest_config_file)
@@ -255,7 +271,7 @@ async def test_config_file_outside_curdir(test_client: TestClient, eval_config_f
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "submitted"
-    await await_job(data["job_id"])
+    wait_job(dask_client, data["job_id"])
 
 
 # ============================================================================
