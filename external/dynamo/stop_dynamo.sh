@@ -14,9 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Dynamo SGLang Shutdown Script
-# Stops all components: Dynamo worker container, ETCD, and NATS
+# Dynamo Shutdown Script
+# Stops all components: Dynamo worker container (SGLang or vLLM), ETCD, and NATS
 # Works for: UNIFIED, THOMPSON SAMPLING, and DISAGGREGATED modes
+# Supports both SGLang and vLLM backends
 #
 # Usage:
 #   bash stop_dynamo.sh                  # Stop Dynamo, ETCD, NATS only
@@ -50,26 +51,36 @@ for arg in "$@"; do
 done
 
 echo "========================================================="
-echo "Stopping Dynamo SGLang FULL STACK"
+echo "Stopping Dynamo FULL STACK (SGLang/vLLM)"
 echo "========================================================="
 echo ""
 
-# Stop Dynamo containers (check for both standard and thompson variants)
+# Stop Dynamo containers (check for SGLang and vLLM variants)
 STOPPED_CONTAINER=false
 
+# SGLang containers
 if docker ps --format '{{.Names}}' | grep -q "^dynamo-sglang$"; then
-    echo "Stopping Dynamo container (standard)..."
+    echo "Stopping Dynamo container (SGLang)..."
     docker stop dynamo-sglang
     docker rm dynamo-sglang
-    echo "✓ Dynamo container stopped and removed"
+    echo "✓ Dynamo SGLang container stopped and removed"
     STOPPED_CONTAINER=true
 fi
 
 if docker ps --format '{{.Names}}' | grep -q "^dynamo-sglang-thompson$"; then
-    echo "Stopping Dynamo container (Thompson Sampling)..."
+    echo "Stopping Dynamo container (SGLang Thompson Sampling)..."
     docker stop dynamo-sglang-thompson
     docker rm dynamo-sglang-thompson
-    echo "✓ Dynamo Thompson container stopped and removed"
+    echo "✓ Dynamo SGLang Thompson container stopped and removed"
+    STOPPED_CONTAINER=true
+fi
+
+# vLLM containers
+if docker ps --format '{{.Names}}' | grep -q "^dynamo-vllm$"; then
+    echo "Stopping Dynamo container (vLLM)..."
+    docker stop dynamo-vllm
+    docker rm dynamo-vllm
+    echo "✓ Dynamo vLLM container stopped and removed"
     STOPPED_CONTAINER=true
 fi
 
@@ -149,6 +160,7 @@ echo "========================================================="
 echo ""
 echo "To restart:"
 echo "  Standard Unified:     bash start_dynamo_unified.sh"
-echo "  Thompson Sampling:    bash start_dynamo_optimized_thompson_hints.sh"
+echo "  SGLang Thompson:      bash start_dynamo_optimized_thompson_hints_sglang.sh"
+echo "  vLLM Thompson:        bash start_dynamo_optimized_thompson_hints_vllm.sh"
 echo ""
 

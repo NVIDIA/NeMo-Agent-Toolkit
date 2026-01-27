@@ -39,21 +39,14 @@
 
 # Configuration Variables (can be overridden via environment variables)
 CONTAINER_NAME="dynamo-sglang"
-WORKER_GPUS="${DYNAMO_GPU_DEVICES:-0,1,2,3,4,5,6,7}"
-TP_SIZE="${DYNAMO_TP_SIZE:-2}"
-HTTP_PORT="${DYNAMO_HTTP_PORT:-8099}"
+WORKER_GPUS="${DYNAMO_GPU_DEVICES:-0,1,2,3}"
+TP_SIZE="${DYNAMO_TP_SIZE:-4}"
+HTTP_PORT="${DYNAMO_HTTP_PORT:-8000}"
 MODEL="/workspace/models/Llama-3.3-70B-Instruct"
 SERVED_MODEL_NAME="${DYNAMO_MODEL_NAME:-llama-3.3-70b}"
 IMAGE="nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.7.1"
 SHM_SIZE="${DYNAMO_SHM_SIZE:-16g}"
-WORKER_INIT_TIMEOUT_S="${DYNAMO_WORKER_INIT_TIMEOUT_S:-1800}"
-
-# Compute container-internal GPU indices (GPUs are renumbered 0,1,2,... inside the container)
-NUM_GPUS=$(echo "$WORKER_GPUS" | tr ',' '\n' | wc -l)
-CONTAINER_GPU_INDICES=$(seq -s, 0 $((NUM_GPUS - 1)))
-
-# Calculate number of workers based on available GPUs and TP size
-NUM_WORKERS=$((NUM_GPUS / TP_SIZE))
+WORKER_INIT_TIMEOUT_S="${DYNAMO_WORKER_INIT_TIMEOUT_S:-600}"
 
 # Local paths - DYNAMO_MODEL_DIR must be set or script will error
 if [ -z "${DYNAMO_MODEL_DIR}" ]; then
@@ -87,7 +80,7 @@ if [ -d "${DYNAMO_MODEL_DIR}" ]; then
         echo ""
         echo "This usually means incomplete/corrupted download. Try:"
         echo "  rm -rf ${DYNAMO_MODEL_DIR}"
-        echo "  hf download meta-llama/Llama-3.3-70B-Instruct --local-dir ${DYNAMO_MODEL_DIR}"
+        echo "  huggingface-cli download meta-llama/Llama-3.3-70B-Instruct --local-dir ${DYNAMO_MODEL_DIR}"
         exit 1
     fi
 fi
@@ -119,9 +112,8 @@ echo "  - Custom Router (KV overlap + Thompson Sampling)"
 echo "  - Custom Processor (hint forwarding + metrics)"
 echo "  - SGLang Worker (unified mode)"
 echo ""
-echo "Backend Workers:"
-echo "  Workers: $NUM_WORKERS (GPUs: $NUM_GPUS, TP=$TP_SIZE per worker)"
-echo "  GPUs: $WORKER_GPUS"
+echo "Backend Worker:"
+echo "  Unified: GPUs $WORKER_GPUS (TP=$TP_SIZE)"
 echo "  Mode: UNIFIED (no prefill/decode disaggregation)"
 echo ""
 echo "========================================================="
@@ -248,7 +240,7 @@ if [ ! -d "$LOCAL_MODEL_DIR" ]; then
     echo "WARNING: Model directory not found at: $LOCAL_MODEL_DIR"
     echo ""
     echo "To download the model, run:"
-    echo "  hf download meta-llama/Llama-3.3-70B-Instruct --local-dir $LOCAL_MODEL_DIR"
+    echo "  huggingface-cli download meta-llama/Llama-3.3-70B-Instruct --local-dir $LOCAL_MODEL_DIR"
     echo ""
     read -p "Continue anyway (model will be downloaded from HuggingFace)? [y/N] " -n 1 -r
     echo
@@ -316,8 +308,8 @@ docker run -d \
     wait_for_worker() {
         local worker_type=\$1
         local pid=\$2
-        # Use WORKER_INIT_TIMEOUT_S (defaults to 1800s / 30 min)
-        local max_wait=$WORKER_INIT_TIMEOUT_S
+        # local max_wait=300
+        local max_wait=${WORKER_INIT_TIMEOUT_S:-600}
         local elapsed=0
         local poll_interval=5
 
@@ -368,46 +360,24 @@ docker run -d \
     }
 
     echo '========================================================='
-    echo 'Step 1: Starting $NUM_WORKERS Unified Worker(s) (Host GPUs $WORKER_GPUS -> Container GPUs $CONTAINER_GPU_INDICES)...'
+    echo 'Step 1: Starting Unified Worker (GPUs 0,1,2,3 = Host GPUs $WORKER_GPUS)...'
     echo '========================================================='
-
-    # Start multiple workers, each using TP_SIZE GPUs
-    WORKER_PIDS=()
-    for i in \$(seq 0 \$(($NUM_WORKERS - 1))); do
-        # Calculate GPU range for this worker (e.g., worker 0: 0,1; worker 1: 2,3; etc.)
-        START_GPU=\$((i * $TP_SIZE))
-        END_GPU=\$(((i + 1) * $TP_SIZE - 1))
-        WORKER_GPU_LIST=\$(seq -s, \$START_GPU \$END_GPU)
-        WORKER_PORT=\$((30000 + i))
-
-        echo \"Starting Worker \$i: GPUs \$WORKER_GPU_LIST, Port \$WORKER_PORT\"
-        CUDA_VISIBLE_DEVICES=\$WORKER_GPU_LIST \
-        python3 -m dynamo.sglang \
-          --model-path $MODEL \
-          --served-model-name $SERVED_MODEL_NAME \
-          --host 0.0.0.0 \
-          --port \$WORKER_PORT \
-          --tp $TP_SIZE \
-          --trust-remote-code \
-          --enable-metrics \
-          --mem-fraction-static 0.9 &
-        WORKER_PIDS+=(\$!)
-        echo \"  Worker \$i PID: \${WORKER_PIDS[\$i]}\"
-    done
-    echo \"\"
-    echo \"Total workers started: \${#WORKER_PIDS[@]}\"
-    echo \"Worker PIDs: \${WORKER_PIDS[*]}\"
+    CUDA_VISIBLE_DEVICES=0,1,2,3 \
+    python3 -m dynamo.sglang \
+      --model-path $MODEL \
+      --served-model-name $SERVED_MODEL_NAME \
+      --host 0.0.0.0 \
+      --port 30000 \
+      --tp $TP_SIZE \
+      --trust-remote-code \
+      --enable-metrics \
+      --mem-fraction-static 0.8 &
+    WORKER_PID=\$!
+    echo \"Unified Worker PID: \$WORKER_PID\"
     echo \"\"
 
-    # Wait for first worker to initialize (checks ETCD registration)
-    # Once one worker is registered, the frontend can start discovering workers
-    wait_for_worker \"Unified\" \${WORKER_PIDS[0]} || exit 1
-
-    # Give additional workers time to initialize
-    if [ \${#WORKER_PIDS[@]} -gt 1 ]; then
-        echo \"Waiting additional 30s for remaining workers to initialize...\"
-        sleep 30
-    fi
+    # Wait for unified worker to initialize (checks ETCD registration)
+    wait_for_worker \"Unified\" \$WORKER_PID || exit 1
 
     echo ''
     echo '========================================================='
@@ -480,12 +450,7 @@ docker run -d \
     echo \"  NATS: localhost:4222\"
     echo \"\"
     echo \"Dynamo Components (This Container):\"
-    echo \"  Unified Workers: \${#WORKER_PIDS[@]} workers (GPUs $WORKER_GPUS, TP=$TP_SIZE each)\"
-    for i in \$(seq 0 \$((\${#WORKER_PIDS[@]} - 1))); do
-        START_GPU=\$((i * $TP_SIZE))
-        END_GPU=\$(((i + 1) * $TP_SIZE - 1))
-        echo \"    Worker \$i: PID \${WORKER_PIDS[\$i]}, GPUs \$START_GPU-\$END_GPU, port \$((30000 + i))\"
-    done
+    echo \"  Unified Worker: PID \$WORKER_PID  (GPUs $WORKER_GPUS, TP=$TP_SIZE, internal port 30000)\"
     echo \"  Router: PID \$ROUTER_PID  (Thompson Sampling + KV overlap)\"
     echo \"  Processor: PID \$PROCESSOR_PID  (Workload-aware routing)\"
     echo \"  Frontend: PID \$FRONTEND_PID  (HTTP API on port $HTTP_PORT)\"
@@ -533,12 +498,10 @@ docker run -d \
             echo \"ERROR: Router died!\"
             exit 1
         fi
-        for i in \$(seq 0 \$((\${#WORKER_PIDS[@]} - 1))); do
-            if ! kill -0 \${WORKER_PIDS[\$i]} 2>/dev/null; then
-                echo \"ERROR: Worker \$i (PID \${WORKER_PIDS[\$i]}) died!\"
-                exit 1
-            fi
-        done
+        if ! kill -0 \$WORKER_PID 2>/dev/null; then
+            echo \"ERROR: Unified worker died!\"
+            exit 1
+        fi
         sleep 10
     done
   "
@@ -564,7 +527,7 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo "    ↓"
     echo "  Custom Router (Thompson Sampling)"
     echo "    ↓ (KV overlap + workload-aware selection)"
-    echo "  $NUM_WORKERS Unified Workers ($NUM_WORKERS x TP=$TP_SIZE = $NUM_GPUS GPUs total)"
+    echo "  Unified Worker (GPUs $WORKER_GPUS, TP=$TP_SIZE)"
     echo "    ↓"
     echo "  Response + Feedback Loop"
     echo ""
@@ -576,7 +539,7 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo "  Frontend: HTTP API on port $HTTP_PORT"
     echo "  Router: Thompson Sampling (LinTS + Beta bandits)"
     echo "  Processor: Workload-aware routing"
-    echo "  Unified Workers: $NUM_WORKERS workers (TP=$TP_SIZE each, ports 30000-$((30000 + NUM_WORKERS - 1)))"
+    echo "  Unified Worker: GPUs $WORKER_GPUS (TP=$TP_SIZE, internal port 30000)"
     echo ""
     echo "API Endpoint: http://localhost:$HTTP_PORT/v1/chat/completions"
     echo "Health Check: http://localhost:$HTTP_PORT/health"
@@ -645,8 +608,8 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     # Wait for server to be ready (check /health for custom frontend)
     # Note: Custom frontend doesn't implement /v1/models, so we use /health
     # Worker registration is already confirmed via ETCD check above
-    echo "Checking for API availability (timeout=${WORKER_INIT_TIMEOUT_S}s)..."
-    max_attempts=$WORKER_INIT_TIMEOUT_S
+    echo "Checking for API availability (timeout=15 minutes)..."
+    max_attempts=900
     attempt=0
 
     while [ $attempt -lt $max_attempts ]; do

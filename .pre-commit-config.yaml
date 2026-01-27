@@ -64,7 +64,8 @@ repos:
         name: Clear Jupyter Notebook Output Cells
         entry: ci/scripts/clear_notebook_output_cells.sh
         files: "\\.ipynb$"
-        language: unsupported_script
+        language: python
+        additional_dependencies: ["nbconvert"]
 
   - repo: https://github.com/tcort/markdown-link-check
     rev: v3.14.2

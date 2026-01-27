@@ -34,7 +34,7 @@
 CONTAINER_NAME="dynamo-sglang"
 WORKER_GPUS="${DYNAMO_GPU_DEVICES:-0,1,2,3,4,5,6,7}"
 TP_SIZE="${DYNAMO_TP_SIZE:-2}"
-HTTP_PORT="${DYNAMO_HTTP_PORT:-8099}"
+HTTP_PORT="${DYNAMO_HTTP_PORT:-8000}"
 MODEL="/workspace/models/Llama-3.3-70B-Instruct"
 SERVED_MODEL_NAME="${DYNAMO_MODEL_NAME:-llama-3.3-70b}"
 IMAGE="nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.7.1"

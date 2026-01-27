@@ -14,13 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Dynamo SGLang with OPTIMIZED Thompson Sampling Router Architecture
+# Dynamo vLLM with OPTIMIZED Thompson Sampling Router Architecture
 # 
-# Key difference from generalized architecture:
-#   - Uses DEFAULT Dynamo frontend (python -m dynamo.frontend)
-#   - Custom Processor + Router components
-#   - Routing hints passed via nvext.annotations instead of HTTP headers
-#   - Prometheus metrics instead of CSV files
+# Key difference from SGLang version:
+#   - Uses vLLM backend instead of SGLang
+#   - vLLM has native KVBM support for KV event publishing
+#   - Different CLI flags (--block-size vs --page-size, etc.)
+#   - Enables radix/prefix caching by default (no --disable-radix-cache)
 #
 # Architecture:
 #   Client → Default Dynamo Frontend (tokenization + nvext parsing)
@@ -29,7 +29,7 @@
 #         ↓ RouterRequest
 #   Custom Router (Thompson Sampling + KV overlap)
 #         ↓ worker_id
-#   SGLang Backend Worker
+#   vLLM Backend Worker
 #         ↓ response tokens
 #   Processor sends feedback to Router
 #
@@ -39,7 +39,7 @@
 #   - Default Dynamo Frontend (HTTP API on port 8000)
 #   - Custom Router (Thompson Sampling + KV overlap)
 #   - Custom Processor (hint extraction + routing)
-#   - SGLang Workers (unified mode, multiple workers with TP=2 each)
+#   - vLLM Workers (unified mode, multiple workers with TP=2 each)
 #
 # Prometheus Metrics:
 #   - Frontend: http://localhost:8000/metrics
@@ -51,9 +51,9 @@ set -euo pipefail
 
 # Configuration Variables (can be overridden via environment variables)
 # See env.example for documentation on each variable
-CONTAINER_NAME="dynamo-sglang"
+CONTAINER_NAME="dynamo-vllm"
 WORKER_GPUS="${DYNAMO_GPU_DEVICES:-0,1,2,3,4,5,6,7}"
-TP_SIZE="${DYNAMO_TP_SIZE:-2}"
+TP_SIZE="${DYNAMO_TP_SIZE:-4}"
 HTTP_PORT="${DYNAMO_HTTP_PORT:-8000}"
 # Metrics ports - each component gets its own port to avoid conflicts
 # Using 18xxx range to avoid conflicts with common services
@@ -64,15 +64,54 @@ ROUTER_METRICS_PORT="${DYNAMO_ROUTER_METRICS_PORT:-18090}"
 PROCESSOR_METRICS_PORT="${DYNAMO_PROCESSOR_METRICS_PORT:-18091}"
 MODEL="/workspace/models/Llama-3.3-70B-Instruct"
 SERVED_MODEL_NAME="${DYNAMO_MODEL_NAME:-llama-3.3-70b}"
-IMAGE="nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.7.1"
+
+# ============================================================================
+# MultiLRU Configuration Logic
+# ============================================================================
+# Default behavior (standard vLLM 0.7.1 image):
+#   - Uses router.py and processor.py (with @dynamo_worker(static=False))
+#   - Uses standard vLLM scheduler (no MultiLRU)
+#   - Works with nvcr.io/nvidia/ai-dynamo/vllm-runtime:0.7.1
+#
+# To enable MultiLRU (requires custom-built image):
+#   export DYNAMO_USE_MULTILRU=true
+#   export DYNAMO_VLLM_IMAGE=dynamo-multi-lru:latest
+#   bash start_dynamo_optimized_thompson_hints_vllm.sh
+# ============================================================================
+
+# Enforce safe defaults: only use multilru if EXPLICITLY enabled
+if [ "${DYNAMO_USE_MULTILRU:-}" != "true" ]; then
+    # Not explicitly set to true - use standard configuration
+    DYNAMO_USE_MULTILRU="false"
+    # If image wasn't explicitly set to custom multilru image, use standard
+    if [ "${DYNAMO_VLLM_IMAGE:-}" != "dynamo-multi-lru:latest" ]; then
+        IMAGE="nvcr.io/nvidia/ai-dynamo/vllm-runtime:0.7.1"
+    else
+        IMAGE="${DYNAMO_VLLM_IMAGE}"
+    fi
+else
+    # Explicitly enabled - use multilru configuration
+    DYNAMO_USE_MULTILRU="true"
+    # Default to custom image if not specified
+    IMAGE="${DYNAMO_VLLM_IMAGE:-dynamo-multi-lru:latest}"
+fi
+
 SHM_SIZE="${DYNAMO_SHM_SIZE:-16g}"
 WORKER_INIT_TIMEOUT_S="${DYNAMO_WORKER_INIT_TIMEOUT_S:-1800}"
 
 # KV Cache Configuration
-# Block size in tokens - must match between SGLang (--page-size) and Frontend (--kv-cache-block-size)
-KV_BLOCK_SIZE="${DYNAMO_KV_BLOCK_SIZE:-64}"
+# Block size in tokens - must match between vLLM (--block-size) and Frontend (--kv-cache-block-size)
+KV_BLOCK_SIZE="${DYNAMO_KV_BLOCK_SIZE:-16}"
 # Fraction of GPU memory for KV cache (0.0-1.0). Reduce to test cache pressure/degradation.
-MEM_FRACTION_STATIC="${DYNAMO_MEM_FRACTION_STATIC:-0.9}"
+# NOTE: 0.85 is safer than 0.9+ to avoid OOM during vLLM warmup with large max_num_seqs
+GPU_MEMORY_UTILIZATION="${DYNAMO_GPU_MEMORY_UTILIZATION:-0.85}"
+# Maximum concurrent sequences per worker. Lower values use less memory during warmup.
+# vLLM default is 1024, but this can cause OOM on memory-constrained setups.
+MAX_NUM_SEQS="${DYNAMO_MAX_NUM_SEQS:-256}"
+# Override the number of GPU KV cache blocks (for experiments with limited cache).
+# Set to a small number (e.g., 8-16) to force cache eviction behavior.
+# Leave empty/unset to use automatic calculation based on GPU memory.
+NUM_GPU_BLOCKS_OVERRIDE="${DYNAMO_NUM_GPU_BLOCKS_OVERRIDE:-}"
 
 # Compute container-internal GPU indices (GPUs are renumbered 0,1,2,... inside the container)
 NUM_GPUS=$(echo "$WORKER_GPUS" | tr ',' '\n' | wc -l)
@@ -80,6 +119,13 @@ CONTAINER_GPU_INDICES=$(seq -s, 0 $((NUM_GPUS - 1)))
 
 # Calculate number of workers based on available GPUs and TP size
 NUM_WORKERS=$((NUM_GPUS / TP_SIZE))
+
+# vLLM-specific: Enable KVBM event publishing for radix tree observability
+# Each worker needs a unique KV event port - configured via DYN_VLLM_KV_EVENT_PORT
+# Port allocation: Worker 0 = 20080, Worker 1 = 20081, etc.
+# This is set per-worker at startup time below
+ENABLE_KV_EVENTS="${DYNAMO_ENABLE_KV_EVENTS:-true}"
+KV_EVENT_BASE_PORT="${DYNAMO_KV_EVENT_BASE_PORT:-20080}"
 
 # Local paths - DYNAMO_MODEL_DIR must be set or script will error
 if [ -z "${DYNAMO_MODEL_DIR:-}" ]; then
@@ -119,8 +165,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CUSTOM_DYNAMO_DIR="${SCRIPT_DIR}/optimized"
 
 echo "========================================================="
-echo "Dynamo SGLang with OPTIMIZED Thompson Sampling Router"
+echo "Dynamo vLLM with OPTIMIZED Thompson Sampling Router"
 echo "========================================================="
+if [ "$DYNAMO_USE_MULTILRU" = "true" ]; then
+    echo "Configuration: MultiLRU Mode (custom image: $IMAGE)"
+else
+    echo "Configuration: Standard Mode (image: $IMAGE)"
+fi
 echo "Model: Llama-3.3-70B-Instruct"
 echo "Container: $CONTAINER_NAME"
 echo "HTTP Port: $HTTP_PORT (default Dynamo frontend)"
@@ -129,10 +180,11 @@ echo "  - Worker:    $WORKER_METRICS_PORT (KV cache, internal)"
 echo "  - Router:    $ROUTER_METRICS_PORT (Thompson routing)"
 echo "  - Processor: $PROCESSOR_METRICS_PORT (KVE metrics)"
 echo ""
-echo "Architecture Differences (vs generalized):"
-echo "  - Default Dynamo frontend (not custom frontend.py)"
-echo "  - Hints via nvext.annotations (not HTTP headers)"
-echo "  - Prometheus metrics on separate ports per component"
+echo "Architecture Differences (vs SGLang version):"
+echo "  - vLLM backend (native KVBM support)"
+echo "  - KV events enabled: $ENABLE_KV_EVENTS"
+echo "  - Different CLI flags (--block-size, --gpu-memory-utilization)"
+echo "  - Prefix caching enabled by default"
 echo ""
 echo "Components:"
 echo "  - ETCD (metadata and discovery)"
@@ -140,7 +192,7 @@ echo "  - NATS (message queue for KV events)"
 echo "  - Default Frontend (HTTP API on port $HTTP_PORT)"
 echo "  - Custom Router (Thompson Sampling + KV overlap)"
 echo "  - Custom Processor (hint extraction + routing)"
-echo "  - SGLang Worker (unified mode)"
+echo "  - vLLM Worker (unified mode)"
 echo ""
 echo "Backend Workers:"
 echo "  Workers: $NUM_WORKERS (GPUs: $NUM_GPUS, TP=$TP_SIZE per worker)"
@@ -148,21 +200,40 @@ echo "  GPUs: $WORKER_GPUS"
 echo "  Mode: UNIFIED (no prefill/decode disaggregation)"
 echo ""
 echo "KV Cache Configuration:"
-echo "  Block Size: $KV_BLOCK_SIZE tokens (--page-size / --kv-cache-block-size)"
-echo "  GPU Mem Fraction: $MEM_FRACTION_STATIC (--mem-fraction-static)"
+echo "  Block Size: $KV_BLOCK_SIZE tokens (--block-size / --kv-cache-block-size)"
+echo "  GPU Mem Utilization: $GPU_MEMORY_UTILIZATION (--gpu-memory-utilization)"
+echo "  Max Concurrent Seqs: $MAX_NUM_SEQS (--max-num-seqs, prevents OOM during warmup)"
+echo "  KV Events: $ENABLE_KV_EVENTS (KVBM event publishing)"
+if [ "$ENABLE_KV_EVENTS" = "true" ] && [ "$NUM_WORKERS" -gt 1 ]; then
+    echo "    Per-worker ports: $KV_EVENT_BASE_PORT - $((KV_EVENT_BASE_PORT + NUM_WORKERS - 1))"
+fi
+if [ -n "$NUM_GPU_BLOCKS_OVERRIDE" ]; then
+    echo "  ⚠️  GPU Blocks Override: $NUM_GPU_BLOCKS_OVERRIDE (EXPERIMENT MODE - limited cache!)"
+fi
 echo ""
 echo "========================================================="
 
-# Verify custom components exist
-if [ ! -f "$CUSTOM_DYNAMO_DIR/router.py" ]; then
-    echo "✗ ERROR: Custom router.py not found at: $CUSTOM_DYNAMO_DIR/router.py"
+# Select router/processor scripts based on DYNAMO_USE_MULTILRU
+if [ "$DYNAMO_USE_MULTILRU" = "true" ]; then
+    ROUTER_SCRIPT="router_multilru.py"
+    PROCESSOR_SCRIPT="processor_multilru.py"
+else
+    ROUTER_SCRIPT="router.py"
+    PROCESSOR_SCRIPT="processor.py"
+fi
+
+# Verify selected components exist
+if [ ! -f "$CUSTOM_DYNAMO_DIR/$ROUTER_SCRIPT" ]; then
+    echo "✗ ERROR: Custom $ROUTER_SCRIPT not found at: $CUSTOM_DYNAMO_DIR/$ROUTER_SCRIPT"
     exit 1
 fi
-if [ ! -f "$CUSTOM_DYNAMO_DIR/processor.py" ]; then
-    echo "✗ ERROR: Custom processor.py not found at: $CUSTOM_DYNAMO_DIR/processor.py"
+if [ ! -f "$CUSTOM_DYNAMO_DIR/$PROCESSOR_SCRIPT" ]; then
+    echo "✗ ERROR: Custom $PROCESSOR_SCRIPT not found at: $CUSTOM_DYNAMO_DIR/$PROCESSOR_SCRIPT"
     exit 1
 fi
 echo "✓ Custom components found in: $CUSTOM_DYNAMO_DIR"
+echo "  Router:    $ROUTER_SCRIPT"
+echo "  Processor: $PROCESSOR_SCRIPT"
 echo ""
 
 # Start ETCD if not running
@@ -319,9 +390,12 @@ if [ ! -d "$LOCAL_MODEL_DIR" ]; then
     fi
 fi
 
+# KV events are configured per-worker via --kv-events-config JSON inside the container
+# Each worker gets a unique endpoint port: tcp://*:$KV_EVENT_PORT
+
 # Start container with optimized Thompson Sampling components
 echo ""
-echo "Starting Dynamo container with OPTIMIZED Thompson Sampling components..."
+echo "Starting Dynamo container with OPTIMIZED Thompson Sampling components (vLLM)..."
 docker run -d \
   --name $CONTAINER_NAME \
   --gpus "\"device=${WORKER_GPUS}\"" \
@@ -332,6 +406,7 @@ docker run -d \
   --ulimit stack=67108864 \
   -v $LOCAL_MODEL_DIR:$MODEL:ro \
   -v $CUSTOM_DYNAMO_DIR:/workspace/custom_dynamo:ro \
+  -v ${SCRIPT_DIR}/monitoring/scripts:/workspace/monitoring/scripts:ro \
   -e HF_TOKEN="$HF_TOKEN" \
   -e HUGGING_FACE_HUB_TOKEN="$HF_TOKEN" \
   -e RUST_BACKTRACE=1 \
@@ -342,7 +417,12 @@ docker run -d \
   -e ROUTER_METRICS_PORT=$ROUTER_METRICS_PORT \
   -e PROCESSOR_METRICS_PORT=$PROCESSOR_METRICS_PORT \
   -e KV_BLOCK_SIZE=$KV_BLOCK_SIZE \
-  -e MEM_FRACTION_STATIC=$MEM_FRACTION_STATIC \
+  -e GPU_MEMORY_UTILIZATION=$GPU_MEMORY_UTILIZATION \
+  -e MAX_NUM_SEQS=$MAX_NUM_SEQS \
+  -e ENABLE_KV_EVENTS=$ENABLE_KV_EVENTS \
+  -e KV_EVENT_BASE_PORT=$KV_EVENT_BASE_PORT \
+  -e DYNAMO_USE_MULTILRU=$DYNAMO_USE_MULTILRU \
+  -e DYNAMO_WORKER_COMPONENT=backend \
   $IMAGE \
   bash -c "
     set -e
@@ -414,6 +494,58 @@ docker run -d \
         return 1
     }
 
+    # Function to wait for ALL workers to register with ETCD
+    # Counts workers registered at workers.backend.generate endpoint
+    wait_for_all_workers() {
+        local expected_count=\$1
+        local max_wait=$WORKER_INIT_TIMEOUT_S
+        local elapsed=0
+        local poll_interval=10
+
+        echo \"\"
+        echo \"Waiting for ALL \$expected_count vLLM workers to register with ETCD...\"
+        echo \"  Detection: Count workers at workers.backend.generate endpoint\"
+        echo \"  Timeout: \${max_wait}s\"
+        echo \"\"
+
+        while [ \$elapsed -lt \$max_wait ]; do
+            # Check all worker PIDs are still alive
+            for wpid in \"\${WORKER_PIDS[@]}\"; do
+                if ! kill -0 \$wpid 2>/dev/null; then
+                    echo \"ERROR: Worker process \$wpid died during initialization!\"
+                    return 1
+                fi
+            done
+
+            # Count worker registrations in ETCD
+            # Workers register with keys like: v1/instances/workers/backend/generate/<instance_id>
+            local worker_count=\$(curl -s --max-time 2 http://localhost:2379/v3/kv/range \
+                -X POST \
+                -H \"Content-Type: application/json\" \
+                -d '{
+                    \"key\": \"'\"djEvaW5zdGFuY2VzL3dvcmtlcnMvYmFja2VuZC9nZW5lcmF0ZS8=\"'\",
+                    \"range_end\": \"'\"djEvaW5zdGFuY2VzL3dvcmtlcnMvYmFja2VuZC9nZW5lcmF0ZTA=\"'\",
+                    \"count_only\": true
+                }' 2>/dev/null | grep -o '\"count\":\"[^\"]*\"' | grep -o '[0-9]*' || echo \"0\")
+
+            if [ \"\$worker_count\" -ge \"\$expected_count\" ]; then
+                echo \"✓ All \$expected_count vLLM workers registered with ETCD (took \${elapsed}s)\"
+                return 0
+            fi
+
+            if [ \$((elapsed % 30)) -eq 0 ]; then
+                echo \"  [\${elapsed}s] Workers registered: \$worker_count / \$expected_count\"
+            fi
+
+            sleep \$poll_interval
+            elapsed=\$((elapsed + poll_interval))
+        done
+
+        echo \"ERROR: Only \$worker_count / \$expected_count workers registered within \${max_wait}s\"
+        echo \"  Some workers may still be initializing torch.compile (can take 10+ min first time)\"
+        return 1
+    }
+
     # =========================================================================
     # STARTUP ORDER WITH MODEL NAME ISOLATION
     # =========================================================================
@@ -430,11 +562,28 @@ docker run -d \
     # =========================================================================
 
     echo '========================================================='
-    echo 'Step 1: Starting $NUM_WORKERS Unified Worker(s) (Host GPUs $WORKER_GPUS -> Container GPUs $CONTAINER_GPU_INDICES)...'
+    echo 'Step 1: Starting $NUM_WORKERS vLLM Unified Worker(s) (Host GPUs $WORKER_GPUS -> Container GPUs $CONTAINER_GPU_INDICES)...'
     echo '========================================================='
     # Workers register at workers.worker.generate (in 'workers' namespace)
     # They start first so the router can discover them during initialization
     # DYN_SYSTEM_PORT sets the Prometheus metrics port for this component
+
+    # KV events configuration
+    # NOTE: KV events are configured via --kv-events-config JSON, not --enable-kv-events flag
+    # Each worker gets a unique endpoint port via the config
+    # --enable-prefix-caching is a separate vLLM feature (always enabled by default in unified mode)
+    if [ \"\$ENABLE_KV_EVENTS\" = \"true\" ]; then
+        echo \"KV Events: ENABLED (per-worker ports starting at \$KV_EVENT_BASE_PORT)\"
+    else
+        echo \"KV Events: DISABLED (set DYNAMO_ENABLE_KV_EVENTS=true to enable)\"
+    fi
+    
+    # Build optional --num-gpu-blocks-override flag (for cache size experiments)
+    GPU_BLOCKS_OVERRIDE_OPT=\"\"
+    if [ -n \"$NUM_GPU_BLOCKS_OVERRIDE\" ]; then
+        GPU_BLOCKS_OVERRIDE_OPT=\"--num-gpu-blocks-override $NUM_GPU_BLOCKS_OVERRIDE\"
+        echo \"GPU Blocks Override: $NUM_GPU_BLOCKS_OVERRIDE (experiment mode - limited cache!)\"
+    fi
 
     # Start multiple workers, each using TP_SIZE GPUs
     WORKER_PIDS=()
@@ -443,24 +592,84 @@ docker run -d \
         START_GPU=\$((i * $TP_SIZE))
         END_GPU=\$(((i + 1) * $TP_SIZE - 1))
         WORKER_GPU_LIST=\$(seq -s, \$START_GPU \$END_GPU)
-        WORKER_PORT=\$((30000 + i))
 
-        echo \"Starting Worker \$i: GPUs \$WORKER_GPU_LIST, Port \$WORKER_PORT (internal model name)\"
-        echo \"  KV Block Size: $KV_BLOCK_SIZE tokens, Mem Fraction: $MEM_FRACTION_STATIC\"
-        CUDA_VISIBLE_DEVICES=\$WORKER_GPU_LIST \
-        DYN_SYSTEM_PORT=\$((WORKER_METRICS_PORT + i)) \
-        DYN_NAMESPACE=workers \
-        python3 -m dynamo.sglang \
-          --model-path $MODEL \
-          --served-model-name ${SERVED_MODEL_NAME}-internal \
-          --host 0.0.0.0 \
-          --port \$WORKER_PORT \
-          --tp $TP_SIZE \
-          --trust-remote-code \
-          --enable-metrics \
-          --page-size $KV_BLOCK_SIZE \
-          --mem-fraction-static $MEM_FRACTION_STATIC \
-          --endpoint workers.worker.generate &
+        # Calculate port offsets for this worker to avoid ZMQ port conflicts
+        # 
+        # 1. NIXL Side Channel Ports (for KV transfer handshake)
+        #    Each worker's NIXL connector uses TP_SIZE consecutive ports
+        #    Port spacing = TP_SIZE (minimum needed to avoid overlap)
+        #    Examples:
+        #      TP=1, 8 GPUs → 8 workers: 5557, 5558, 5559, 5560, 5561, 5562, 5563, 5564
+        #      TP=2, 8 GPUs → 4 workers: 5557-5558, 5559-5560, 5561-5562, 5563-5564
+        #      TP=4, 8 GPUs → 2 workers: 5557-5560, 5561-5564
+        #      TP=8, 8 GPUs → 1 worker:  5557-5564
+        NIXL_BASE_PORT=\$((5557 + i * $TP_SIZE))
+        
+        # 2. KV Event Publisher Port (for publishing KV cache events to subscriber)
+        #    Each worker needs a unique port for its ZMQ publisher
+        #    Set via DYN_VLLM_KV_EVENT_PORT environment variable
+        #    Default base: 20080, Worker 0: 20080, Worker 1: 20081, etc.
+        KV_EVENT_PORT=\$(($KV_EVENT_BASE_PORT + i))
+        
+        echo \"Starting vLLM Worker \$i: GPUs \$WORKER_GPU_LIST (internal model name)\"
+        echo \"  KV Block Size: $KV_BLOCK_SIZE tokens, GPU Mem Util: $GPU_MEMORY_UTILIZATION, Max Seqs: $MAX_NUM_SEQS\"
+        echo \"  NIXL Port Range: \$NIXL_BASE_PORT - \$((NIXL_BASE_PORT + $TP_SIZE - 1)) (TP=$TP_SIZE)\"
+        echo \"  KV Event Port: \$KV_EVENT_PORT (KV Events: $ENABLE_KV_EVENTS)\"
+        # NOTE: dynamo.vllm does NOT accept --host/--port/--endpoint like dynamo.sglang
+        # Endpoint is set via DYN_ENDPOINT env var, namespace via DYN_NAMESPACE
+        # VLLM_NIXL_SIDE_CHANNEL_PORT sets the base port for NIXL handshake listener
+        # DYN_VLLM_KV_EVENT_PORT sets the port for KV event publishing (unique per worker)
+        # KV events are configured via --kv-events-config JSON with unique endpoint per worker
+        
+        # Build KV events config JSON for this worker (unique endpoint per worker)
+        KV_EVENTS_JSON=\"{\\\"enable_kv_cache_events\\\":true,\\\"publisher\\\":\\\"zmq\\\",\\\"endpoint\\\":\\\"tcp://*:\$KV_EVENT_PORT\\\"}\"
+        
+        # Build scheduler class option - use DynamoScheduler for MultiLruBackend if available
+        # Set DYNAMO_USE_MULTILRU=false to disable
+        SCHEDULER_OPT=\"\"
+        if [ \"\${DYNAMO_USE_MULTILRU:-false}\" = \"true\" ]; then
+            SCHEDULER_OPT=\"--scheduler-cls kvbm.v2.vllm.schedulers.dynamo.DynamoScheduler\"
+            echo \"  Scheduler: DynamoScheduler with MultiLruBackend (frequency-based eviction)\"
+        else
+            echo \"  Scheduler: Default vLLM scheduler\"
+        fi
+        
+        if [ \"\$ENABLE_KV_EVENTS\" = \"true\" ]; then
+            CUDA_VISIBLE_DEVICES=\$WORKER_GPU_LIST \
+            DYN_SYSTEM_PORT=\$((WORKER_METRICS_PORT + i)) \
+            DYN_NAMESPACE=workers \
+            DYN_ENDPOINT=workers.worker.generate \
+            VLLM_NIXL_SIDE_CHANNEL_PORT=\$NIXL_BASE_PORT \
+            DYN_VLLM_KV_EVENT_PORT=\$KV_EVENT_PORT \
+            python3 -m dynamo.vllm \
+              --model $MODEL \
+              --served-model-name ${SERVED_MODEL_NAME}-internal \
+              --tensor-parallel-size $TP_SIZE \
+              --trust-remote-code \
+              --block-size $KV_BLOCK_SIZE \
+              --gpu-memory-utilization $GPU_MEMORY_UTILIZATION \
+              --max-num-seqs $MAX_NUM_SEQS \
+              \$SCHEDULER_OPT \
+              \$GPU_BLOCKS_OVERRIDE_OPT \
+              --kv-events-config \"\$KV_EVENTS_JSON\" &
+        else
+            CUDA_VISIBLE_DEVICES=\$WORKER_GPU_LIST \
+            DYN_SYSTEM_PORT=\$((WORKER_METRICS_PORT + i)) \
+            DYN_NAMESPACE=workers \
+            DYN_ENDPOINT=workers.worker.generate \
+            VLLM_NIXL_SIDE_CHANNEL_PORT=\$NIXL_BASE_PORT \
+            DYN_VLLM_KV_EVENT_PORT=\$KV_EVENT_PORT \
+            python3 -m dynamo.vllm \
+              --model $MODEL \
+              --served-model-name ${SERVED_MODEL_NAME}-internal \
+              --tensor-parallel-size $TP_SIZE \
+              --trust-remote-code \
+              --block-size $KV_BLOCK_SIZE \
+              --gpu-memory-utilization $GPU_MEMORY_UTILIZATION \
+              --max-num-seqs $MAX_NUM_SEQS \
+              \$SCHEDULER_OPT \
+              \$GPU_BLOCKS_OVERRIDE_OPT &
+        fi
         WORKER_PIDS+=(\$!)
         echo \"  Worker \$i PID: \${WORKER_PIDS[\$i]}\"
     done
@@ -472,12 +681,15 @@ docker run -d \
     echo \"\"
 
     # Wait for first worker to initialize (checks ETCD registration)
-    wait_for_worker \"Unified\" \${WORKER_PIDS[0]} || exit 1
+    wait_for_worker \"vLLM Unified\" \${WORKER_PIDS[0]} || exit 1
 
-    # Give additional workers time to initialize
+    # Wait for ALL workers to register with ETCD
+    # vLLM workers can take a long time to initialize due to torch.compile
     if [ \${#WORKER_PIDS[@]} -gt 1 ]; then
-        echo \"Waiting additional 30s for remaining workers to initialize...\"
-        sleep 30
+        wait_for_all_workers \${#WORKER_PIDS[@]} || {
+            echo \"WARNING: Not all workers initialized. Continuing with available workers.\"
+            echo \"         Dashboard metrics may be incomplete.\"
+        }
     fi
 
     echo ''
@@ -488,7 +700,7 @@ docker run -d \
     # It needs workers to be present (started in Step 1)
     # DYN_SYSTEM_PORT sets the Prometheus metrics port for this component
     DYN_SYSTEM_PORT=\$ROUTER_METRICS_PORT \
-    python3 /workspace/custom_dynamo/router.py \
+    python3 /workspace/custom_dynamo/$ROUTER_SCRIPT \
       --config /workspace/custom_dynamo/config.yaml &
     ROUTER_PID=\$!
     echo \"Router PID: \$ROUTER_PID\"
@@ -505,7 +717,7 @@ docker run -d \
     # --static-endpoint on the frontend to find it.
     # DYN_SYSTEM_PORT sets the Prometheus metrics port for this component
     DYN_SYSTEM_PORT=\$PROCESSOR_METRICS_PORT \
-    python3 /workspace/custom_dynamo/processor.py \
+    python3 /workspace/custom_dynamo/$PROCESSOR_SCRIPT \
       --enable-router \
       --model-path $MODEL \
       --model-name $SERVED_MODEL_NAME &
@@ -513,7 +725,7 @@ docker run -d \
     echo \"Processor PID: \$PROCESSOR_PID\"
     echo \"Model: $SERVED_MODEL_NAME (from $MODEL)\"
     echo \"Registered at: dynamo.backend.generate (namespace=dynamo)\"
-    echo \"Forwards to: workers.worker.generate (actual SGLang workers)\"
+    echo \"Forwards to: workers.worker.generate (actual vLLM workers)\"
     echo \"Metrics at: http://localhost:\$PROCESSOR_METRICS_PORT/metrics\"
     sleep 15
     echo \"\"
@@ -526,7 +738,7 @@ docker run -d \
     # but only from the 'dynamo' namespace. Workers are in the 'workers' namespace,
     # so the frontend will ONLY discover the processor (in 'dynamo' namespace).
     # This ensures ALL requests go through the Thompson Sampling router.
-    echo \"Frontend KV Block Size: $KV_BLOCK_SIZE tokens (must match worker --page-size)\"
+    echo \"Frontend KV Block Size: $KV_BLOCK_SIZE tokens (must match worker --block-size)\"
     python3 -m dynamo.frontend \
       --http-port $HTTP_PORT \
       --model-name $SERVED_MODEL_NAME \
@@ -548,11 +760,11 @@ docker run -d \
     echo \"  NATS: localhost:4222\"
     echo \"\"
     echo \"Dynamo Components (This Container):\"
-    echo \"  Unified Workers: \${#WORKER_PIDS[@]} workers (GPUs $WORKER_GPUS, TP=$TP_SIZE each)\"
+    echo \"  vLLM Unified Workers: \${#WORKER_PIDS[@]} workers (GPUs $WORKER_GPUS, TP=$TP_SIZE each)\"
     for i in \$(seq 0 \$((\${#WORKER_PIDS[@]} - 1))); do
         START_GPU=\$((i * $TP_SIZE))
         END_GPU=\$(((i + 1) * $TP_SIZE - 1))
-        echo \"    Worker \$i: PID \${WORKER_PIDS[\$i]}, GPUs \$START_GPU-\$END_GPU, port \$((30000 + i))\"
+        echo \"    Worker \$i: PID \${WORKER_PIDS[\$i]}, GPUs \$START_GPU-\$END_GPU\"
     done
     echo \"    → Registered at: workers.worker.generate (hidden from frontend)\"
     echo \"  Router: PID \$ROUTER_PID  (Thompson Sampling + Prometheus)\"
@@ -577,7 +789,7 @@ docker run -d \
     echo '         ↓ (KV overlap + workload-aware selection)'
     echo '  Processor routes to → workers.worker.generate (with worker_id)'
     echo '         ↓'
-    echo '  Unified Worker (workers.worker.generate)'
+    echo '  vLLM Unified Worker (workers.worker.generate)'
     echo '         ↓'
     echo '  Response + Feedback to Router'
     echo ''
@@ -621,7 +833,7 @@ sleep 15
 if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo ""
     echo "========================================================="
-    echo "✓ Dynamo with OPTIMIZED Thompson Sampling Router Started!"
+    echo "✓ Dynamo with OPTIMIZED Thompson Sampling Router Started! (vLLM)"
     echo "========================================================="
     echo ""
     echo "Architecture (Model Name Isolation - Thompson Sampling):"
@@ -650,7 +862,7 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo "      ↓ KV overlap + workload-aware selection"
     echo "    Processor forwards to workers.worker.generate"
     echo "      ↓"
-    echo "    Unified Workers ($NUM_WORKERS x TP=$TP_SIZE = $NUM_GPUS GPUs total)"
+    echo "    vLLM Unified Workers ($NUM_WORKERS x TP=$TP_SIZE = $NUM_GPUS GPUs total)"
     echo "      ↓"
     echo "    Response + Feedback Loop"
     echo ""
@@ -666,11 +878,20 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo ""
     echo "Dynamo Components:"
     echo "  Frontend: HTTP API on port $HTTP_PORT"
-    echo "  Unified Workers: $NUM_WORKERS workers (TP=$TP_SIZE each, ports 30000-$((30000 + NUM_WORKERS - 1)))"
+    echo "  vLLM Unified Workers: $NUM_WORKERS workers (TP=$TP_SIZE each)"
     echo ""
     echo "KV Cache Settings:"
     echo "  Block Size: $KV_BLOCK_SIZE tokens (DYNAMO_KV_BLOCK_SIZE)"
-    echo "  GPU Mem Fraction: $MEM_FRACTION_STATIC (DYNAMO_MEM_FRACTION_STATIC)"
+    echo "  GPU Mem Utilization: $GPU_MEMORY_UTILIZATION (DYNAMO_GPU_MEMORY_UTILIZATION)"
+    echo "  Max Concurrent Seqs: $MAX_NUM_SEQS (DYNAMO_MAX_NUM_SEQS)"
+    echo "  KV Events: $ENABLE_KV_EVENTS (DYNAMO_ENABLE_KV_EVENTS)"
+    if [ "${DYNAMO_USE_MULTILRU:-false}" = "true" ]; then
+        echo "  Scheduler: DynamoScheduler with MultiLruBackend (DYNAMO_USE_MULTILRU=true)"
+        echo "    → 4-pool system: Cold→Warm→Hot→VeryHot"
+        echo "    → Promotion thresholds: [2, 6, 15] accesses"
+    else
+        echo "  Scheduler: Default vLLM scheduler (DYNAMO_USE_MULTILRU=false)"
+    fi
     echo ""
     echo "API Endpoint: http://localhost:$HTTP_PORT/v1/chat/completions"
     echo "Health Check: http://localhost:$HTTP_PORT/health"
@@ -698,9 +919,9 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo "  Stop all:             bash stop_dynamo.sh"
     echo "  Stop all + metrics:   bash stop_dynamo.sh --kill-metrics"
     echo ""
-    echo "Query Metrics:"
+    echo "Query Metrics (vLLM uses 'vllm:' prefix):"
     echo "  curl http://localhost:$HTTP_PORT/metrics | grep dynamo_frontend"
-    echo "  curl http://localhost:$WORKER_METRICS_PORT/metrics | grep kvstats"
+    echo "  curl http://localhost:$WORKER_METRICS_PORT/metrics | grep vllm:"
     echo "  curl http://localhost:$ROUTER_METRICS_PORT/metrics | grep thompson_router"
     echo "  curl http://localhost:$PROCESSOR_METRICS_PORT/metrics | grep thompson_kve"
     echo ""
@@ -749,7 +970,7 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo ""
     echo "========================================================="
     echo ""
-    echo "Waiting for SGLang to initialize (this may take 5-10 minutes for a 70B model)..."
+    echo "Waiting for vLLM to initialize (this may take 5-10 minutes for a 70B model)..."
     echo "Monitoring logs (Ctrl+C to exit, container continues)..."
     echo ""
 
@@ -865,3 +1086,4 @@ else
     echo "Check logs with: docker logs $CONTAINER_NAME"
     exit 1
 fi
+

@@ -210,62 +210,64 @@ class ProcessorMetrics:
     """
     Container for Thompson Sampling processor metrics.
 
-    All metrics are created via Dynamo's metrics API, which:
-    - Automatically exposes them at /metrics in Prometheus format
-    - Adds standard labels (dynamo_namespace, dynamo_component, dynamo_endpoint)
-    - Integrates with Dynamo's Grafana dashboards
+    Uses prometheus_client directly (compatible with ryan/kvbm-next branch).
+    Metrics are registered with Dynamo's endpoint via register_prometheus_expfmt_callback.
     """
 
     def __init__(self, endpoint):
         """
-        Initialize metrics using Dynamo's metrics API.
+        Initialize metrics using prometheus_client directly.
 
         Args:
-            endpoint: Dynamo endpoint object providing the metrics interface.
+            endpoint: Dynamo endpoint object for registering metrics callback.
         """
+        from prometheus_client import REGISTRY
+        from prometheus_client import Counter
+        from prometheus_client import Gauge
+        from prometheus_client import Histogram
+
         # Request throughput (prefixed with thompson_ to avoid conflicts with
         # serve_endpoint's built-in work handler metrics)
-        self.requests_total = endpoint.metrics.create_intcounter(
+        self.requests_total = Counter(
             "thompson_requests_total",
             "Total requests processed by the Thompson Sampling processor",
         )
 
-        # Latency histogram (uses default Prometheus buckets since Python binding
-        # doesn't expose custom bucket configuration in Dynamo 0.7.1)
-        self.request_latency_seconds = endpoint.metrics.create_histogram(
+        # Latency histogram
+        self.request_latency_seconds = Histogram(
             "thompson_request_latency_seconds",
             "End-to-end request latency in seconds",
         )
 
         # Token throughput
-        self.tokens_in_total = endpoint.metrics.create_intcounter(
+        self.tokens_in_total = Counter(
             "thompson_tokens_in_total",
             "Total input tokens processed",
         )
-        self.tokens_out_total = endpoint.metrics.create_intcounter(
+        self.tokens_out_total = Counter(
             "thompson_tokens_out_total",
             "Total output tokens generated",
         )
 
         # Routing decisions by worker (for analyzing load distribution)
-        self.routing_decisions_total = endpoint.metrics.create_intcountervec(
+        self.routing_decisions_total = Counter(
             "thompson_routing_decisions_total",
             "Routing decisions by worker",
             ["worker_id"],
         )
 
         # Error tracking
-        self.router_errors_total = endpoint.metrics.create_intcounter(
+        self.router_errors_total = Counter(
             "thompson_router_errors_total",
             "Router communication errors (failed to pick worker)",
         )
-        self.engine_errors_total = endpoint.metrics.create_intcounter(
+        self.engine_errors_total = Counter(
             "thompson_engine_errors_total",
             "Backend engine errors (failed during streaming)",
         )
 
         # Active request gauge
-        self.active_requests = endpoint.metrics.create_intgauge(
+        self.active_requests = Gauge(
             "thompson_active_requests",
             "Currently active requests being processed",
         )
@@ -275,30 +277,34 @@ class ProcessorMetrics:
         # These track cache hit rates for analyzing routing effectiveness.
         # Efficiency = kve_cached_tokens_total / kve_prompt_tokens_total
         # -----------------------------------------------------------------
-        self.kve_prompt_tokens_total = endpoint.metrics.create_intcounter(
+        self.kve_prompt_tokens_total = Counter(
             "thompson_kve_prompt_tokens_total",
             "Total prompt tokens processed (KV efficiency denominator)",
         )
-        self.kve_cached_tokens_total = endpoint.metrics.create_intcounter(
+        self.kve_cached_tokens_total = Counter(
             "thompson_kve_cached_tokens_total",
             "Total cached tokens hit (KV efficiency numerator)",
         )
 
         # Cache hit breakdown by memory tier (for analyzing cache hierarchy)
-        self.kve_device_blocks_total = endpoint.metrics.create_intcounter(
+        self.kve_device_blocks_total = Counter(
             "thompson_kve_device_blocks_total",
             "KV cache blocks hit from device (GPU) memory",
         )
-        self.kve_host_blocks_total = endpoint.metrics.create_intcounter(
+        self.kve_host_blocks_total = Counter(
             "thompson_kve_host_blocks_total",
             "KV cache blocks hit from host (CPU) memory",
         )
-        self.kve_disk_blocks_total = endpoint.metrics.create_intcounter(
+        self.kve_disk_blocks_total = Counter(
             "thompson_kve_disk_blocks_total",
             "KV cache blocks hit from disk storage",
         )
 
-        logger.info("Processor metrics initialized via Dynamo metrics API")
+        # Register metrics with Dynamo's endpoint for /metrics exposure
+        from dynamo.common.utils.prometheus import register_engine_metrics_callback
+        register_engine_metrics_callback(endpoint, REGISTRY, metric_prefix_filters=["thompson_"])
+
+        logger.info("Processor metrics initialized via prometheus_client")
 
 
 # -------------------------- processor handler -------------------------- #
@@ -384,7 +390,7 @@ class ProcessorRequestHandler:
         """
         Extract routing hints from PreprocessedRequest annotations.
 
-        Returns: (prefix_id, total_requests, osl, iat)
+        Returns: (prefix_id, total_requests, osl, iat, use_frequency_backend)
         """
         annotations = request.get("annotations", [])
         if not isinstance(annotations, list):
@@ -414,7 +420,11 @@ class ProcessorRequestHandler:
         if iat not in ("LOW", "MEDIUM", "HIGH"):
             iat = "MEDIUM"
 
-        return prefix_id, total_requests, osl, iat
+        # Extract backend selection (determines v1 vs v2 routing)
+        backend_selector = self._extract_annotation(annotations, "backend")
+        use_frequency_backend = backend_selector == "frequency_multi_lru" if backend_selector else False
+
+        return prefix_id, total_requests, osl, iat, use_frequency_backend
 
     async def _update_prefix_state(self, prefix_id: str, total_requests: int) -> int:
         """
@@ -488,7 +498,7 @@ class ProcessorRequestHandler:
 
             # Record routing decision
             if worker_id is not None:
-                self._metrics.routing_decisions_total.inc({"worker_id": str(worker_id)})
+                self._metrics.routing_decisions_total.labels(worker_id=str(worker_id)).inc()
             else:
                 logger.warning("Router stream ended without worker_id; falling back to engine load balancing.")
 
@@ -544,11 +554,11 @@ class ProcessorRequestHandler:
             return
 
         # Update counters - these are atomic operations
-        self._metrics.kve_prompt_tokens_total.inc_by(kve.prompt_tokens)
-        self._metrics.kve_cached_tokens_total.inc_by(kve.cached_tokens)
-        self._metrics.kve_device_blocks_total.inc_by(kve.device_blocks)
-        self._metrics.kve_host_blocks_total.inc_by(kve.host_blocks)
-        self._metrics.kve_disk_blocks_total.inc_by(kve.disk_blocks)
+        self._metrics.kve_prompt_tokens_total.inc(kve.prompt_tokens)
+        self._metrics.kve_cached_tokens_total.inc(kve.cached_tokens)
+        self._metrics.kve_device_blocks_total.inc(kve.device_blocks)
+        self._metrics.kve_host_blocks_total.inc(kve.host_blocks)
+        self._metrics.kve_disk_blocks_total.inc(kve.disk_blocks)
 
         # Log efficiency for debugging (only if we have meaningful data)
         if kve.prompt_tokens > 0:
@@ -645,8 +655,8 @@ class ProcessorRequestHandler:
 
                     # Update core Prometheus metrics (fast atomic operations)
                     self._metrics.request_latency_seconds.observe(latency_seconds)
-                    self._metrics.tokens_in_total.inc_by(tokens_in)
-                    self._metrics.tokens_out_total.inc_by(tokens_out)
+                    self._metrics.tokens_in_total.inc(tokens_in)
+                    self._metrics.tokens_out_total.inc(tokens_out)
 
                     # Fire-and-forget KVE metric update (async, non-blocking)
                     # This ensures KVE computation has ZERO impact on routing throughput
@@ -685,7 +695,10 @@ class ProcessorRequestHandler:
             self._metrics.requests_total.inc()
 
             # Extract routing hints from annotations
-            prefix_id, total_requests, osl, iat = self._extract_hints(raw)
+            prefix_id, total_requests, osl, iat, use_frequency_backend = self._extract_hints(raw)
+
+            # Determine KVBM routing path based on backend selection
+            kvbm_version = "v2" if use_frequency_backend else "v1"
 
             # Get token IDs from preprocessed request
             token_ids = raw.get("token_ids", [])
@@ -694,12 +707,14 @@ class ProcessorRequestHandler:
 
             tokens_in = len(token_ids)
             logger.info(
-                "Processing request: prefix=%s total=%d osl=%s iat=%s tokens=%d",
+                "Processing request: prefix=%s total=%d osl=%s iat=%s tokens=%d kvbm=%s backend=%s",
                 prefix_id,
                 total_requests,
                 osl,
                 iat,
                 tokens_in,
+                kvbm_version,
+                "frequency_multi_lru" if use_frequency_backend else "default_3pool",
             )
 
             # Compute reuse_budget := remaining AFTER this request
@@ -754,7 +769,7 @@ def parse_args():
     return parser.parse_args()
 
 
-@dynamo_worker(static=False)  # Dynamic mode - required to call router/workers which are also dynamic
+@dynamo_worker()  # Dynamic mode - required to call router/workers which are also dynamic
 async def worker(runtime: DistributedRuntime):
     """
     Main worker entry point for the Thompson Sampling processor.
@@ -777,7 +792,7 @@ async def worker(runtime: DistributedRuntime):
     #   4. We forward to actual workers at workers.worker.generate
 
     component = runtime.namespace("dynamo").component("backend")
-    await component.create_service()
+    # NOTE: create_service() was removed in Dynamo 0.8.x - endpoint creation handles registration
 
     # Create the endpoint FIRST (needed for register_llm and metrics)
     endpoint = component.endpoint("generate")
