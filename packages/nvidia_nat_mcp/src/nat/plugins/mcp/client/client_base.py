@@ -601,17 +601,13 @@ class MCPStreamableHTTPClient(MCPBaseClient):
         """
         # Create httpx client with custom headers and auth
         # streamable_http_client expects a pre-configured httpx.AsyncClient for headers/auth
-        http_client = httpx.AsyncClient(
-            headers=self._custom_headers if self._custom_headers else None,
-            auth=self._httpx_auth
-        )
+        http_client = httpx.AsyncClient(headers=self._custom_headers if self._custom_headers else None,
+                                        auth=self._httpx_auth)
 
         try:
             async with http_client:
-                async with streamable_http_client(
-                    url=self._url,
-                    http_client=http_client
-                ) as (read, write, get_session_id):
+                async with streamable_http_client(url=self._url,
+                                                  http_client=http_client) as (read, write, get_session_id):
                     # Store the session ID callback for later retrieval
                     self._get_mcp_session_id = get_session_id
                     async with ClientSession(read, write) as session:

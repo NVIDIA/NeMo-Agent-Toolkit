@@ -760,8 +760,9 @@ class TestMCPServerConfigCustomHeaders:
         """Test that custom headers are allowed for streamable-http transport."""
         from nat.plugins.mcp.client.client_config import MCPServerConfig
 
-        config = MCPServerConfig(
-            transport="streamable-http", url="http://localhost:8080/mcp", custom_headers={"X-Header": "value"})
+        config = MCPServerConfig(transport="streamable-http",
+                                 url="http://localhost:8080/mcp",
+                                 custom_headers={"X-Header": "value"})
 
         assert config.custom_headers == {"X-Header": "value"}
 

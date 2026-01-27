@@ -56,8 +56,8 @@ class MCPServerConfig(BaseModel):
     custom_headers: dict[str, str] | None = Field(
         default=None,
         description="Custom HTTP headers to include in requests to the MCP server. "
-                    "Only supported for streamable-http transport. "
-                    "Useful for passing business context or correlation IDs to the MCP server.")
+        "Only supported for streamable-http transport. "
+        "Useful for passing business context or correlation IDs to the MCP server.")
 
     @model_validator(mode="after")
     def validate_model(self):
