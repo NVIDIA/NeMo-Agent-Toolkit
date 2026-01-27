@@ -180,7 +180,7 @@ class JobStore:
 
         self._dask_client: DaskClient | None = None
 
-    async def get_dask_client(self) -> DaskClient:
+    def get_dask_client(self) -> DaskClient:
         """
         Async context manager for obtaining a Dask client connection.
 
@@ -190,7 +190,7 @@ class JobStore:
             An active Dask client connected to the scheduler.
         """
         if self._dask_client is None:
-            self._dask_client = await DaskClient(address=self._scheduler_address, asynchronous=True)
+            self._dask_client = DaskClient(address=self._scheduler_address)
 
         return self._dask_client
 
@@ -306,13 +306,15 @@ class JobStore:
         # the job has completed, and we want the metadata to persist until the job expires.
 
         logger.debug("Submitting job with job_args: %s, job_kwargs: %s", job_args, job_kwargs)
-        dask_client = await self.get_dask_client()
+        dask_client = self.get_dask_client()
+        print("Submitting job to Dask scheduler...")
         future = dask_client.submit(job_fn, *job_args, key=f"{job_id}-job", **job_kwargs)
-
+        print("Job submitted, future:", future)
         # Store the future in a variable, this allows us to potentially cancel the future later if needed
         future_var = Variable(name=job_id, client=dask_client)
-        await future_var.set(future)
-
+        print("Storing future in Dask variable:", future_var)
+        future_var.set(future, timeout="5 s")
+        print("Future stored in Dask variable.")
         if sync_timeout > 0:
             try:
                 _ = await future.result(timeout=sync_timeout)
@@ -322,7 +324,9 @@ class JobStore:
             except TimeoutError:
                 pass
 
+        print("Setting fire_and_forget for future")
         fire_and_forget(future)
+        print("Setting fire_and_forget for future - done")
 
         return (job_id, None)
 
@@ -518,7 +522,7 @@ class JobStore:
             and_(JobInfo.is_expired == sa_expr.false(),
                  JobInfo.status.not_in(self.ACTIVE_STATUS))).order_by(JobInfo.updated_at.desc())
         # Filter out active jobs
-        dask_client = await self.get_dask_client()
+        dask_client = self.get_dask_client()
         async with self.session() as session:
             finished_jobs = (await session.execute(stmt)).scalars().all()
 
@@ -548,9 +552,9 @@ class JobStore:
                     try:
                         var = Variable(name=job_id, client=dask_client)
                         try:
-                            future = await var.get(timeout=5)
+                            future = var.get(timeout=5)
                             if isinstance(future, Future):
-                                await dask_client.cancel([future], asynchronous=True, force=True)
+                                dask_client.cancel([future], force=True)
 
                         except TimeoutError:
                             pass
