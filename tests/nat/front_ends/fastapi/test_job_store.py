@@ -722,8 +722,10 @@ def test_get_db_engine_creates_default_sqlite():
             os.environ["NAT_JOB_STORE_DB_URL"] = original_url
 
 
-def test_job_store_client_property(dask_client: "DaskClient", db_engine: "AsyncEngine", dask_scheduler_address: str):
-    """Test the client context manager works correctly."""
+def test_job_store_dask_client_property(dask_client: "DaskClient",
+                                        db_engine: "AsyncEngine",
+                                        dask_scheduler_address: str):
+    """Test the dask_client property works correctly."""
     from nat.front_ends.fastapi.job_store import JobStore
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
