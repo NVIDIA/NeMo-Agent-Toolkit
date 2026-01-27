@@ -131,8 +131,8 @@ async def periodic_cleanup(*,
 
 def _setup_worker():
     """
-    Setup function to be run in each worker process. This moves each worker into it's own process group.
-    This fixes an issue where a Ctrl-C in the terminal sends a SIGINT to all workers, which then causes the
-    workers to exit before the main process can shutdown the cluster gracefully.
+    Setup function to be run in each worker process. This moves each worker into its own process group.
+    This fixes an issue where a `Ctrl-C` in the terminal sends a `SIGINT` to all workers, which then causes the
+    workers to exit before the main process can shut down the cluster gracefully.
     """
     os.setsid()
