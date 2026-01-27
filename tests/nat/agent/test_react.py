@@ -76,6 +76,19 @@ def fixture_mock_agent(mock_config_react_agent, mock_llm, mock_tool):
     return agent
 
 
+@pytest.fixture(name='mock_react_agent_no_raise', scope="module")
+def fixture_mock_agent_no_raise(mock_config_react_agent, mock_llm, mock_tool):
+    """Create a mock ReAct agent with raise_on_parsing_failure=False for testing error message returns."""
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+    agent = ReActAgentGraph(llm=mock_llm,
+                            prompt=prompt,
+                            tools=tools,
+                            detailed_logs=mock_config_react_agent.verbose,
+                            raise_on_parsing_failure=False)
+    return agent
+
+
 async def test_build_graph(mock_react_agent):
     graph = await mock_react_agent.build_graph()
     assert isinstance(graph, CompiledStateGraph)
@@ -92,8 +105,8 @@ async def test_agent_node_no_input(mock_react_agent):
     assert isinstance(ex.value, RuntimeError)
 
 
-async def test_malformed_agent_output_after_max_retries(mock_react_agent):
-    response = await mock_react_agent.agent_node(ReActGraphState(messages=[HumanMessage('hi')]))
+async def test_malformed_agent_output_after_max_retries(mock_react_agent_no_raise):
+    response = await mock_react_agent_no_raise.agent_node(ReActGraphState(messages=[HumanMessage('hi')]))
     response = response.messages[-1]
     assert isinstance(response, AIMessage)
     # The actual format combines error observation with original output
@@ -202,20 +215,20 @@ async def test_agent_node_parse_agent_finish_with_action(mock_react_agent):
     assert final_answer.content == answer
 
 
-async def test_agent_node_parse_agent_finish_with_action_and_input_after_max_retries(mock_react_agent):
+async def test_agent_node_parse_agent_finish_with_action_and_input_after_max_retries(mock_react_agent_no_raise):
     answer = 'after careful deliberation...'
     mock_react_agent_output = f'Action: i have the final answer\nAction Input: None\nFinal Answer: {answer}'
     mock_state = ReActGraphState(messages=[HumanMessage(content=mock_react_agent_output)])
-    final_answer = await mock_react_agent.agent_node(mock_state)
+    final_answer = await mock_react_agent_no_raise.agent_node(mock_state)
     final_answer = final_answer.messages[-1]
     assert isinstance(final_answer, AIMessage)
     assert FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE in final_answer.content
 
 
-async def test_agent_node_parse_agent_finish_with_action_and_input_after_retry(mock_react_agent):
+async def test_agent_node_parse_agent_finish_with_action_and_input_after_retry(mock_react_agent_no_raise):
     mock_react_agent_output = 'Action: give me final answer\nAction Input: None\nFinal Answer: hello, world!'
     mock_state = ReActGraphState(messages=[HumanMessage(content=mock_react_agent_output)])
-    final_answer = await mock_react_agent.agent_node(mock_state)
+    final_answer = await mock_react_agent_no_raise.agent_node(mock_state)
     final_answer = final_answer.messages[-1]
     assert isinstance(final_answer, AIMessage)
     # When agent output has both Action and Final Answer, it should return an error message
@@ -272,8 +285,13 @@ async def mock_graph(mock_react_agent):
     return await mock_react_agent.build_graph()
 
 
-async def test_graph_parsing_error(mock_react_graph):
-    response = await mock_react_graph.ainvoke(ReActGraphState(messages=[HumanMessage('fix the input on retry')]))
+@pytest.fixture(name='mock_react_graph_no_raise', scope='module')
+async def mock_graph_no_raise(mock_react_agent_no_raise):
+    return await mock_react_agent_no_raise.build_graph()
+
+
+async def test_graph_parsing_error(mock_react_graph_no_raise):
+    response = await mock_react_graph_no_raise.ainvoke(ReActGraphState(messages=[HumanMessage('fix the input on retry')]))
     response = ReActGraphState(**response)
 
     response = response.messages[-1]
@@ -1008,9 +1026,9 @@ class TestRaiseOnParsingFailure:
     """Tests for the raise_on_parsing_failure configuration option."""
 
     def test_config_default_value(self):
-        """Test that raise_on_parsing_failure defaults to False."""
+        """Test that raise_on_parsing_failure defaults to True."""
         config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test')
-        assert config.raise_on_parsing_failure is False
+        assert config.raise_on_parsing_failure is True
 
     def test_config_explicit_true(self):
         """Test that raise_on_parsing_failure can be set to True."""
@@ -1047,13 +1065,21 @@ async def test_agent_raises_exception_on_parsing_failure(mock_react_agent_raise_
     assert error.attempts == 1
 
 
-async def test_agent_returns_error_message_when_not_raising(mock_react_agent):
-    """Test that agent returns error message when raise_on_parsing_failure=False (default)."""
-    # Verify the default agent does NOT raise on parsing failure
-    assert mock_react_agent.raise_on_parsing_failure is False
+async def test_agent_returns_error_message_when_not_raising(mock_config_react_agent, mock_llm, mock_tool):
+    """Test that agent returns error message when raise_on_parsing_failure=False."""
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+    agent = ReActAgentGraph(llm=mock_llm,
+                            prompt=prompt,
+                            tools=tools,
+                            detailed_logs=mock_config_react_agent.verbose,
+                            raise_on_parsing_failure=False)
+
+    # Verify the agent does NOT raise on parsing failure
+    assert agent.raise_on_parsing_failure is False
 
     # Should NOT raise, but return error message in the response
-    response = await mock_react_agent.agent_node(ReActGraphState(messages=[HumanMessage('hi')]))
+    response = await agent.agent_node(ReActGraphState(messages=[HumanMessage('hi')]))
     response = response.messages[-1]
 
     assert isinstance(response, AIMessage)
@@ -1090,7 +1116,7 @@ def test_agent_init_with_raise_on_parsing_failure_param(mock_config_react_agent,
     tools = [mock_tool('Tool A'), mock_tool('Tool B')]
     prompt = create_react_agent_prompt(mock_config_react_agent)
 
-    # Test with raise_on_parsing_failure enabled
+    # Test with raise_on_parsing_failure enabled (default)
     agent_enabled = ReActAgentGraph(llm=mock_llm,
                                     prompt=prompt,
                                     tools=tools,
@@ -1098,7 +1124,7 @@ def test_agent_init_with_raise_on_parsing_failure_param(mock_config_react_agent,
                                     raise_on_parsing_failure=True)
     assert agent_enabled.raise_on_parsing_failure is True
 
-    # Test with raise_on_parsing_failure disabled (default)
+    # Test with raise_on_parsing_failure disabled
     agent_disabled = ReActAgentGraph(llm=mock_llm,
                                      prompt=prompt,
                                      tools=tools,
@@ -1106,9 +1132,9 @@ def test_agent_init_with_raise_on_parsing_failure_param(mock_config_react_agent,
                                      raise_on_parsing_failure=False)
     assert agent_disabled.raise_on_parsing_failure is False
 
-    # Test default value
+    # Test default value (should be True)
     agent_default = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=False)
-    assert agent_default.raise_on_parsing_failure is False
+    assert agent_default.raise_on_parsing_failure is True
 
 
 async def test_exception_chaining_preserves_original_error(mock_react_agent_raise_on_failure):
