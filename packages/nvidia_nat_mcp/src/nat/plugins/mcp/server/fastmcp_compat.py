@@ -19,6 +19,7 @@
 from __future__ import annotations
 
 import importlib.metadata
+import inspect
 from typing import TYPE_CHECKING, Any, TypeAlias
 
 if TYPE_CHECKING:
@@ -34,6 +35,16 @@ def get_fastmcp_class() -> type[FastMCPType]:
     except ImportError:
         from mcp.server.fastmcp import FastMCP as FastMCPClass
     return FastMCPClass
+
+
+def build_fastmcp_server(**kwargs: Any) -> FastMCPType:
+    """Build a FastMCP server with supported keyword arguments."""
+    fastmcp_class = get_fastmcp_class()
+    signature = inspect.signature(fastmcp_class.__init__)
+    allowed = set(signature.parameters.keys())
+    allowed.discard("self")
+    filtered_kwargs = {key: value for key, value in kwargs.items() if key in allowed and value is not None}
+    return fastmcp_class(**filtered_kwargs)
 
 
 def get_fastmcp_version() -> str | None:

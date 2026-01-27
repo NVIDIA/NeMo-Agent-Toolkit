@@ -105,12 +105,14 @@ def create_function_wrapper(
             default=Parameter.empty,
             annotation=str,
         )]
+        annotations: dict[str, Any] = {"query": str}
     else:
         # Regular case - extract parameter information from the input schema
         # Extract parameter information from the input schema
         param_fields = schema.model_fields
 
         parameters = []
+        annotations = {}
         for name, field in param_fields.items():
             # Get the field type and convert to appropriate Python type
             field_type = field.annotation
@@ -126,6 +128,7 @@ def create_function_wrapper(
                     default=param_default,
                     annotation=field_type,
                 ))
+            annotations[name] = field_type
 
     # Create the function signature WITHOUT the ctx parameter
     # We'll handle this in the wrapper function internally
@@ -206,6 +209,7 @@ def create_function_wrapper(
     # Set the signature on the wrapper function (WITHOUT ctx)
     wrapper.__signature__ = sig  # type: ignore
     wrapper.__name__ = function_name
+    wrapper.__annotations__ = {**annotations, "return": str}
 
     # Return the wrapper with proper signature
     return wrapper
