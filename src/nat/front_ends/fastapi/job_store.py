@@ -314,7 +314,7 @@ class JobStore:
         future_var.set(future, timeout="5 s")
         if sync_timeout > 0:
             try:
-                _ = await future.result(timeout=sync_timeout)
+                future.result(timeout=sync_timeout)
                 job = await self.get_job(job_id)
                 assert job is not None, "Job should exist after future result"
                 return (job_id, job)
