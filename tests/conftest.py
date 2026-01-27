@@ -497,7 +497,7 @@ def dask_cluster_fixture(fail_missing: bool) -> "LocalCluster":
 
     # Use threaded workers for tests - this is the standard practice for test suites
     # as it avoids complexity with module imports and provides faster execution
-    cluster = LocalCluster(asynchronous=False, n_workers=1, threads_per_worker=1, processes=False)
+    cluster = LocalCluster(n_workers=1, threads_per_worker=1, protocol="tcp", processes=False)
     yield cluster
     cluster.close()
 
@@ -508,20 +508,6 @@ def dask_scheduler_address_fixture(dask_cluster: "LocalCluster") -> str:
     Fixture to provide the Dask scheduler address for tests.
     """
     return dask_cluster.scheduler.address
-
-
-@pytest.fixture(name="async_dask_client", scope="session")
-async def async_dask_client_fixture(dask_scheduler_address: str) -> AsyncGenerator["DaskClient"]:
-    """
-    Fixture to provide an asynchronous Dask client connected to the test Dask cluster.
-    """
-    from dask.distributed import Client as DaskClient
-
-    client = await DaskClient(address=dask_scheduler_address, asynchronous=True)
-    try:
-        yield client
-    finally:
-        await client.close()
 
 
 @pytest.fixture(name="dask_client", scope="session")
