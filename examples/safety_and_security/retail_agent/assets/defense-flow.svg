@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="160" viewBox="0 0 820 160">
+  <style>
+    .box { fill: #ffffff; stroke: #333333; stroke-width: 1.5; }
+    .text { font-family: Arial, sans-serif; font-size: 12px; fill: #111111; }
+    .arrow { stroke: #1f77b4; stroke-width: 1.5; fill: none; marker-end: url(#arrowhead); }
+  </style>
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#1f77b4"/>
+    </marker>
+  </defs>
+
+  <rect class="box" x="20" y="60" width="110" height="40" rx="4"/>
+  <text class="text" x="75" y="85" text-anchor="middle">User Input</text>
+
+  <rect class="box" x="155" y="60" width="90" height="40" rx="4"/>
+  <text class="text" x="200" y="85" text-anchor="middle">Agent</text>
+
+  <rect class="box" x="270" y="60" width="100" height="40" rx="4"/>
+  <text class="text" x="320" y="85" text-anchor="middle">Tool Call</text>
+
+  <rect class="box" x="395" y="60" width="100" height="40" rx="4"/>
+  <text class="text" x="445" y="85" text-anchor="middle">Tool Output</text>
+
+  <rect class="box" x="530" y="55" width="120" height="50" rx="4"/>
+  <text class="text" x="590" y="80" text-anchor="middle" dominant-baseline="middle">Defense Middleware</text>
+
+  <rect class="box" x="685" y="60" width="110" height="40" rx="4"/>
+  <text class="text" x="740" y="85" text-anchor="middle">Sanitized Output</text>
+
+  <line class="arrow" x1="130" y1="80" x2="155" y2="80"/>
+  <line class="arrow" x1="245" y1="80" x2="270" y2="80"/>
+  <line class="arrow" x1="370" y1="80" x2="395" y2="80"/>
+  <line class="arrow" x1="495" y1="80" x2="520" y2="80"/>
+  <line class="arrow" x1="660" y1="80" x2="685" y2="80"/>
+  <line class="arrow" x1="740" y1="60" x2="740" y2="40"/>
+  <line class="arrow" x1="740" y1="40" x2="200" y2="40"/>
+  <line class="arrow" x1="200" y1="40" x2="200" y2="60"/>
+</svg>
