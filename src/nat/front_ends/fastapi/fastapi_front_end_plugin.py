@@ -23,6 +23,7 @@ import typing
 from nat.builder.front_end import FrontEndBase
 from nat.front_ends.fastapi.async_job import _setup_worker
 from nat.front_ends.fastapi.async_job import periodic_cleanup
+from nat.front_ends.fastapi.dask_client_mixin import DaskClientMixin
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorkerBase
 from nat.front_ends.fastapi.main import get_app
@@ -32,14 +33,12 @@ from nat.utils.log_levels import LOG_LEVELS
 from nat.utils.log_utils import LOG_DATE_FORMAT
 
 if (typing.TYPE_CHECKING):
-    from dask.distributed import Client as DaskClient
-
     from nat.data_models.config import Config
 
 logger = logging.getLogger(__name__)
 
 
-class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
+class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]):
 
     def __init__(self, full_config: "Config"):
         super().__init__(full_config)
@@ -50,17 +49,6 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
         self._periodic_cleanup_future = None
         self._scheduler_address = None
         self._use_dask_threads = False
-        self._dask_client: DaskClient | None = None
-
-    @property
-    def dask_client(self) -> "DaskClient":
-        assert self._dask_available, "Dask is not available"
-
-        if self._dask_client is None:
-            from dask.distributed import Client
-            self._dask_client = Client(self._scheduler_address)
-
-        return self._dask_client
 
     def get_worker_class(self) -> type[FastApiFrontEndPluginWorkerBase]:
         from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker

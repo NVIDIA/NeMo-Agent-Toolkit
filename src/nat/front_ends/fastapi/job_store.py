@@ -45,6 +45,8 @@ from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.sql import expression as sa_expr
 
+from nat.front_ends.fastapi.dask_client_mixin import DaskClientMixin
+
 if typing.TYPE_CHECKING:
     from sqlalchemy.engine import Engine
     from sqlalchemy.ext.asyncio import AsyncEngine
@@ -133,7 +135,7 @@ class JobInfo(Base):
         return f"JobInfo(job_id={self.job_id}, status={self.status})"
 
 
-class JobStore:
+class JobStore(DaskClientMixin):
     """
     Tracks and manages jobs submitted to the Dask scheduler, along with persisting job metadata (JobInfo objects) in a
     database.
@@ -177,23 +179,6 @@ class JobStore:
         # The async_scoped_session ensures that the same session is used
         # within the same task, and that no two tasks share the same session.
         self._session = async_scoped_session(session_maker, scopefunc=current_task)
-
-        self._dask_client: DaskClient | None = None
-
-    @property
-    def dask_client(self) -> DaskClient:
-        """
-        Async context manager for obtaining a Dask client connection.
-
-        Yields
-        ------
-        DaskClient
-            An active Dask client connected to the scheduler.
-        """
-        if self._dask_client is None:
-            self._dask_client = DaskClient(address=self._scheduler_address)
-
-        return self._dask_client
 
     @asynccontextmanager
     async def session(self) -> AsyncGenerator["AsyncSession"]:
