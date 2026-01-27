@@ -59,6 +59,7 @@ sys.path.append(SRC_DIR)
 os.environ.setdefault("DASK_DISTRIBUTED__WORKER__PYTHON", sys.executable)
 
 if typing.TYPE_CHECKING:
+    from dask.distributed import Client as DaskClient
     from dask.distributed import LocalCluster
     from sqlalchemy.ext.asyncio import AsyncEngine
 
