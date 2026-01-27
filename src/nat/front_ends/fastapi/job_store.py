@@ -289,8 +289,6 @@ class JobStore(DaskClientMixin):
 
         # We are intentionally not using job_id as the key, since Dask will clear the associated metadata once
         # the job has completed, and we want the metadata to persist until the job expires.
-
-        logger.debug("Submitting job with job_args: %s, job_kwargs: %s", job_args, job_kwargs)
         future = self.dask_client.submit(job_fn, *job_args, key=f"{job_id}-job", **job_kwargs)
 
         # Store the future in a variable, this allows us to potentially cancel the future later if needed
