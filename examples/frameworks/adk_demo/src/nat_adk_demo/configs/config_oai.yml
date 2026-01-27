@@ -45,7 +45,7 @@ llms:
 workflow:
   _type: adk
   name: adk_demo
-  llm: nim_llm
+  llm: openai_llm
   tool_names: [weather_update_tool, get_city_time_tool]
   description: "To get the current weather and time in a specific city"
   prompt: >
