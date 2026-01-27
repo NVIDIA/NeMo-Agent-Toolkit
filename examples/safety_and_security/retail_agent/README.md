@@ -324,7 +324,7 @@ nat run --config_file examples/safety_and_security/retail_agent/configs/config.y
   --input "Email From: john@email.com\nContent: What garden trowels do you have?"
 ```
 
-> **Note**: This workflow is most reliable with 70B-class LLM models. Smaller models (for example, `meta/llama-3.1-8b-instruct`) can fail tool-call validation or misformat tool inputs, which causes workflow errors. Use the configured 70B model for stable runs.
+> **Note**: This workflow is most reliable with 70B-class LLM models. Smaller models (for example, `meta/llama-3.1-8b-instruct`) can fail tool-call validation or format tool inputs incorrectly, which causes workflow errors. Use the configured 70B model for stable runs.
 
 **Key Output:**
 
