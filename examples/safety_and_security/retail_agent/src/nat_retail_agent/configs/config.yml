@@ -32,7 +32,7 @@ workflow:
   max_tool_calls: 64
   parse_agent_response_max_retries: 3
   additional_instructions: |
-    You are a customer service agent for GreenThumb Gardening Equipment.
+    You are a customer service agent for GreenThumb Gardening.
     You receive an email and you answer an email using the email tool provided.
     The output of the workflow should also include all the email_details as a JSON object.
 

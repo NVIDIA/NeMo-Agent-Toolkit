@@ -15,6 +15,7 @@
 
 import pytest
 from langchain_core.agents import AgentAction
+from langchain_core.agents import AgentFinish
 from langchain_core.messages import AIMessage
 from langchain_core.messages import HumanMessage
 from langchain_core.messages.tool import ToolMessage
@@ -1146,3 +1147,235 @@ async def test_exception_chaining_preserves_original_error(mock_react_agent_rais
     # Check that the exception was chained with 'from'
     assert exc_info.value.__cause__ is not None
     assert isinstance(exc_info.value.__cause__, ReActOutputParserException)
+
+
+# =============================================================================
+# Tests for lenient regex parsing (Issue #1308)
+# =============================================================================
+
+
+async def test_output_parser_case_insensitive_action(mock_react_output_parser):
+    """Test that lowercase 'action' is parsed correctly."""
+    mock_input = 'Thought: I need to search\naction: Tool A\nAction Input: search query\nObservation:'
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool == "Tool A"
+    assert test_output.tool_input == "search query"
+
+
+async def test_output_parser_case_insensitive_action_input(mock_react_output_parser):
+    """Test that lowercase 'action input' is parsed correctly."""
+    mock_input = 'Thought: I need to search\nAction: Tool A\naction input: search query\nObservation:'
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool == "Tool A"
+    assert test_output.tool_input == "search query"
+
+
+async def test_output_parser_all_lowercase(mock_react_output_parser):
+    """Test that all lowercase 'action' and 'action input' are parsed correctly."""
+    mock_input = 'thought: I need to search\naction: Tool A\naction input: search query\nobservation:'
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool == "Tool A"
+    assert test_output.tool_input == "search query"
+
+
+async def test_output_parser_input_only_instead_of_action_input(mock_react_output_parser):
+    """Test that 'Input:' without 'Action' prefix is parsed correctly."""
+    mock_input = 'Thought: I need to search\nAction: Tool A\nInput: search query\nObservation:'
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool == "Tool A"
+    assert test_output.tool_input == "search query"
+
+
+async def test_output_parser_input_lowercase(mock_react_output_parser):
+    """Test that lowercase 'input:' is parsed correctly."""
+    mock_input = 'Thought: I need to search\nAction: Tool A\ninput: search query\nObservation:'
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool == "Tool A"
+    assert test_output.tool_input == "search query"
+
+
+async def test_output_parser_case_insensitive_final_answer(mock_react_output_parser):
+    """Test that case-insensitive 'Final Answer' is parsed correctly."""
+    mock_input = 'Thought: I now know the answer\nfinal answer: The result is 42'
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentFinish)
+    assert test_output.return_values['output'] == 'The result is 42'
+
+
+async def test_output_parser_mixed_case_final_answer(mock_react_output_parser):
+    """Test that mixed case 'FINAL ANSWER' is parsed correctly."""
+    mock_input = 'Thought: I now know the answer\nFINAL ANSWER: The result is 42'
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentFinish)
+    assert test_output.return_values['output'] == 'The result is 42'
+
+
+async def test_output_parser_extra_whitespace(mock_react_output_parser):
+    """Test that extra whitespace in action/input labels is handled correctly."""
+    mock_input = 'Thought: I need to search\nAction  :  Tool A\nAction   Input  :  search query\nObservation:'
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool == "Tool A"
+    assert test_output.tool_input == "search query"
+
+
+async def test_output_parser_json_input_with_lowercase(mock_react_output_parser):
+    """Test that JSON input with lowercase action/input is parsed correctly."""
+    mock_action = 'SearchTool'
+    mock_json_input = '{"query": "what is NIM"}'
+    mock_input = \
+    f'thought: I need to call the search tool\naction: {mock_action}\ninput: {mock_json_input}\nobservation'
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool == mock_action
+    assert test_output.tool_input == mock_json_input
+
+
+# =============================================================================
+# Tests for native tool calling support (Issue #1308)
+# =============================================================================
+
+
+def test_config_use_native_tool_calling_default():
+    """Test that use_native_tool_calling defaults to False."""
+    config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test')
+    assert config.use_native_tool_calling is False
+
+
+def test_config_use_native_tool_calling_explicit_true():
+    """Test that use_native_tool_calling can be set to True."""
+    config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test', use_native_tool_calling=True)
+    assert config.use_native_tool_calling is True
+
+
+def test_react_agent_init_with_native_tool_calling_disabled(mock_config_react_agent, mock_llm, mock_tool):
+    """Test ReActAgentGraph initialization with native tool calling disabled."""
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+
+    agent = ReActAgentGraph(llm=mock_llm,
+                            prompt=prompt,
+                            tools=tools,
+                            detailed_logs=False,
+                            use_native_tool_calling=False)
+    assert agent.use_native_tool_calling is False
+
+
+def test_react_agent_init_with_native_tool_calling_enabled(mock_config_react_agent, mock_llm, mock_tool):
+    """Test ReActAgentGraph initialization with native tool calling enabled."""
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+
+    agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=False, use_native_tool_calling=True)
+    assert agent.use_native_tool_calling is True
+
+
+async def test_agent_node_native_tool_calling(mock_config_react_agent, mock_llm, mock_tool):
+    """Test that native tool calls are properly extracted from LLM response."""
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch
+
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+
+    agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=False, use_native_tool_calling=True)
+
+    # Create a mock message with tool_calls
+    mock_response = AIMessage(content="I need to call Tool A to get the answer",
+                              tool_calls=[{
+                                  "name": "Tool A",
+                                  "args": {
+                                      "query": "test query"
+                                  },
+                                  "id": "call_123",
+                                  "type": "tool_call"
+                              }])
+
+    state = ReActGraphState(messages=[HumanMessage(content="mock tool call")])
+
+    with patch.object(agent, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
+        mock_stream_llm.return_value = mock_response
+
+        result_state = await agent.agent_node(state)
+
+        # Verify that the tool call was extracted
+        assert len(result_state.agent_scratchpad) == 1
+        agent_action = result_state.agent_scratchpad[0]
+        assert isinstance(agent_action, AgentAction)
+        assert agent_action.tool == "Tool A"
+        assert '"query": "test query"' in agent_action.tool_input
+
+
+async def test_agent_node_native_tool_calling_fallback_to_text_parsing(mock_config_react_agent, mock_llm, mock_tool):
+    """Test that agent falls back to text parsing when no tool_calls in response."""
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch
+
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+
+    agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=False, use_native_tool_calling=True)
+
+    # Create a mock message without tool_calls (text-based response)
+    mock_response = AIMessage(
+        content="Thought: I need to search\nAction: Tool A\nAction Input: test query\nObservation:",
+        tool_calls=[]  # No tool calls
+    )
+
+    state = ReActGraphState(messages=[HumanMessage(content="test question")])
+
+    with patch.object(agent, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
+        mock_stream_llm.return_value = mock_response
+
+        result_state = await agent.agent_node(state)
+
+        # Verify that text parsing was used as fallback
+        assert len(result_state.agent_scratchpad) == 1
+        agent_action = result_state.agent_scratchpad[0]
+        assert isinstance(agent_action, AgentAction)
+        assert agent_action.tool == "Tool A"
+        assert agent_action.tool_input == "test query"
+
+
+async def test_agent_node_native_tool_calling_with_dict_args(mock_config_react_agent, mock_llm, mock_tool):
+    """Test that tool call with dict args is properly converted to JSON string."""
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch
+
+    tools = [mock_tool('Tool A')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+
+    agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=False, use_native_tool_calling=True)
+
+    # Create a mock message with complex dict args
+    mock_response = AIMessage(content="Calling the tool",
+                              tool_calls=[{
+                                  "name": "Tool A",
+                                  "args": {
+                                      "query": "search term", "limit": 10, "nested": {
+                                          "key": "value"
+                                      }
+                                  },
+                                  "id": "call_456",
+                                  "type": "tool_call"
+                              }])
+
+    state = ReActGraphState(messages=[HumanMessage(content="test")])
+
+    with patch.object(agent, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
+        mock_stream_llm.return_value = mock_response
+
+        result_state = await agent.agent_node(state)
+
+        agent_action = result_state.agent_scratchpad[0]
+        # Verify the tool input is a JSON string
+        import json
+        parsed = json.loads(agent_action.tool_input)
+        assert parsed["query"] == "search term"
+        assert parsed["limit"] == 10
+        assert parsed["nested"]["key"] == "value"

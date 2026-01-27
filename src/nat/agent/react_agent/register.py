@@ -71,6 +71,11 @@ class ReActAgentWorkflowConfig(AgentBaseConfig, OptimizableMixin, name="react_ag
         default=True,
         description="Whether to replace single quotes with double quotes in the tool input. "
         "This is useful for tools that expect structured json input.")
+    use_native_tool_calling: bool = Field(
+        default=False,
+        description="Whether to use native tool calling via the LLM's tool API (bind_tools). "
+        "When enabled, tool schemas are sent to the LLM, which returns structured tool_calls "
+        "instead of requiring text parsing. This is more reliable for LLMs that support tool calling.")
     system_prompt: str | None = Field(
         default=None,
         description="Provides the SYSTEM_PROMPT to use with the agent")  # defaults to SYSTEM_PROMPT in prompt.py
@@ -119,7 +124,8 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
         tool_call_max_retries=config.tool_call_max_retries,
         pass_tool_call_errors_to_agent=config.pass_tool_call_errors_to_agent,
         normalize_tool_input_quotes=config.normalize_tool_input_quotes,
-        raise_on_parsing_failure=config.raise_on_parsing_failure).build_graph()
+        raise_on_parsing_failure=config.raise_on_parsing_failure,
+        use_native_tool_calling=config.use_native_tool_calling).build_graph()
 
     async def _response_fn(chat_request_or_message: ChatRequestOrMessage) -> ChatResponse | str:
         """

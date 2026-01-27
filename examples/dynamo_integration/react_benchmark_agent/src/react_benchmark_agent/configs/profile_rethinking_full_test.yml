@@ -223,6 +223,11 @@ eval:
       concurrency_spike_analysis:
         enable: true
         spike_threshold: 24  # Alert when concurrent functions >= 24
+      # Build prediction trie for dynamic Dynamo header injection
+      # Output: prediction_trie.json in the output directory
+      # Use with run_with_prediction_trie.yml for optimized routing
+      prediction_trie:
+        enable: true
 
   evaluators:
     tool_selection_quality:
