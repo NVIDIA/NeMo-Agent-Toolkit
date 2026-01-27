@@ -43,7 +43,6 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
     def __init__(self, full_config: "Config"):
         super().__init__(full_config)
 
-        self._dask_available = False
         # This attribute is set if dask is installed, and an external cluster is not used (scheduler_address is None)
         self._cluster = None
         self._periodic_cleanup_future = None
@@ -97,7 +96,6 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
 
                     from dask.distributed import LocalCluster
 
-                    self._dask_available = True
                     self._use_dask_threads = self.front_end_config.dask_workers == 'threads'
 
                     # Convert memory limit string to the appropriate type for Dask
@@ -143,7 +141,6 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
             if self._scheduler_address is not None:
                 # If we are here then either the user provided a scheduler address, or we created a LocalCluster
 
-                self._dask_available = True
                 from nat.front_ends.fastapi.job_store import Base
                 from nat.front_ends.fastapi.job_store import get_db_engine
 
