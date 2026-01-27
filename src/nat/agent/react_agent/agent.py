@@ -224,7 +224,7 @@ class ReActAgentGraph(DualNodeAgent):
                                                                 'tool_calls') and output_message.tool_calls:
                         # Extract tool call from structured response
                         tool_call = output_message.tool_calls[0]
-                        tool_name = tool_call.get('name', '')
+                        tool_name = tool_call.get('name', '').strip()
                         tool_args = tool_call.get('args', {})
 
                         # Convert tool args to JSON string for consistency with text parsing
