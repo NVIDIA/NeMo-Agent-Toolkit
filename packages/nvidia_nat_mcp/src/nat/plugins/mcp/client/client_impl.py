@@ -390,6 +390,7 @@ class MCPFunctionGroup(FunctionGroup):
                 str(config.server.url),
                 auth_provider=self._shared_auth_provider,
                 user_id=session_id,  # Pass session_id as user_id for cache isolation
+                custom_headers=config.server.custom_headers,
                 tool_call_timeout=config.tool_call_timeout,
                 auth_flow_timeout=config.auth_flow_timeout,
                 reconnect_enabled=config.reconnect_enabled,
@@ -557,6 +558,7 @@ async def mcp_client_function_group(config: MCPClientConfig, _builder: Builder):
         client = MCPStreamableHTTPClient(str(config.server.url),
                                          auth_provider=auth_provider,
                                          user_id=base_user_id,
+                                         custom_headers=config.server.custom_headers,
                                          tool_call_timeout=config.tool_call_timeout,
                                          auth_flow_timeout=config.auth_flow_timeout,
                                          reconnect_enabled=config.reconnect_enabled,
@@ -689,6 +691,7 @@ async def per_user_mcp_client_function_group(config: PerUserMCPClientConfig, _bu
         client = MCPStreamableHTTPClient(str(config.server.url),
                                          auth_provider=auth_provider,
                                          user_id=user_id,
+                                         custom_headers=config.server.custom_headers,
                                          tool_call_timeout=config.tool_call_timeout,
                                          auth_flow_timeout=config.auth_flow_timeout,
                                          reconnect_enabled=config.reconnect_enabled,
