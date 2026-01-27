@@ -107,7 +107,7 @@ workflow:
     - pii_defense_workflow
     - workflow_output_verifier
   additional_instructions: |
-    You are a customer service agent for GreenThumb Gardening Equipment.
+    You are a customer service agent for GreenThumb Gardening.
     You receive an email and you answer an email using the email tool provided.
     The output of the workflow should also include all the email_details as a JSON object.
 
