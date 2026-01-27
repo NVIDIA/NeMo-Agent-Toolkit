@@ -60,6 +60,7 @@ class TestMCPSessionManagement:
         config.server = MagicMock(spec=MCPServerConfig)
         config.server.transport = "streamable-http"
         config.server.url = "http://localhost:8080/mcp"
+        config.server.custom_headers = {}  # Pydantic fields need explicit setting with spec=
 
         # Mock timeouts
         config.tool_call_timeout = timedelta(seconds=60)
