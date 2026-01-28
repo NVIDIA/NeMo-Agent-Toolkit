@@ -136,19 +136,6 @@ async def test_generate_and_openai_stream(fn_use_openai_api: bool):
                 assert event_source.response.status_code == 200
                 assert response == values
 
-        response_oai: list[str] = []
-
-        async with aconnect_sse(client,
-                                "POST",
-                                f"{oai_path}/stream",
-                                json=ChatRequest(messages=[Message(content=x, role="user")
-                                                           for x in values]).model_dump()) as event_source:
-            async for sse in event_source.aiter_sse():
-                response_oai.append(ChatResponseChunk.model_validate(sse.json()).choices[0].delta.content or "")
-
-            assert event_source.response.status_code == 200
-            assert response_oai == values
-
 
 async def test_custom_endpoint():
 

@@ -189,7 +189,6 @@ Expected output:
 2025-07-31 19:39:37,616 - nat.eval.evaluate - INFO - Starting evaluation run with config file: examples/evaluation_and_profiling/swe_bench/configs/config_gold.yml
 2025-07-31 19:39:38,764 - nat.runtime.loader - WARNING - Loading module 'nat_profiler_agent.register' from entry point 'nat_profiler_agent' took a long time (1084.733009 ms). Ensure all imports are inside your registered functions.
 2025-07-31 19:39:39,160 - nat.runtime.loader - WARNING - Loading module 'nat_multi_frameworks.register' from entry point 'nat_multi_frameworks' took a long time (226.987600 ms). Ensure all imports are inside your registered functions.
-2025-07-31 19:39:40,652 - nat.runtime.loader - WARNING - Loading module 'nat.agent.register' from entry point 'nat_agents' took a long time (1482.537985 ms). Ensure all imports are inside your registered functions.
 2025-07-31 19:39:41,135 - nat.runtime.loader - WARNING - Loading module 'nat.experimental.inference_time_scaling.register' from entry point 'nat_inference_time_scaling' took a long time (266.962051 ms). Ensure all imports are inside your registered functions.
 2025-07-31 19:39:41,430 - nat.runtime.loader - WARNING - Loading module 'nat.tool.register' from entry point 'nat_tools' took a long time (192.843914 ms). Ensure all imports are inside your registered functions.
 2025-07-31 19:39:41,515 - nat.data_models.discovery_metadata - WARNING - Package metadata not found for simple_auth

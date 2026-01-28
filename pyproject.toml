@@ -69,13 +69,6 @@ redis = ["nvidia-nat-redis == {version}"]
 s3 = ["nvidia-nat-s3 == {version}"]
 semantic-kernel = ["nvidia-nat-semantic-kernel == {version}"]
 strands = ["nvidia-nat-strands == {version}"]
-telemetry = [
-  "nvidia-nat-data-flywheel == {version}",
-  "nvidia-nat-opentelemetry == {version}",
-  "nvidia-nat-phoenix == {version}",
-  "nvidia-nat-ragaai == {version}",
-  "nvidia-nat-weave == {version}",
-]
 test = ["nvidia-nat-test == {version}"]
 vanna = ["nvidia-nat-vanna == {version}"]
 weave = ["nvidia-nat-weave == {version}"]
@@ -89,9 +82,6 @@ gunicorn = [
 ]
 ingestion = [
   "nvidia-nat-core[ingestion] == {version}"
-]
-litellm = [
-  "nvidia-nat-core[litellm] == {version}"
 ]
 nvidia_haystack = [
   "nvidia-nat-core[nvidia_haystack] == {version}"
@@ -109,37 +99,30 @@ profiling = [
 [dependency-groups]
 # Dependency groups are only for developers to aid in managing dependencies local to a dev machine.
 dev = [
-  "asgi-lifespan~=2.1",
-  "galileo~=1.27",
   "beautifulsoup4~=4.13",
   "httpx-sse~=0.4",
   "ipython~=8.31",
-  "langsmith", # this is currently a transitive dependency of nat, not specifying a version to avoid conflicts
-  "myst-parser~=4.0",
+  "langchain-community~=0.3", # web ingest script
   "nbconvert", # Version determined by jupyter
-  "nbsphinx~=0.9",
-  "nvidia-nat_test",
-  "nvidia-sphinx-theme>=0.0.9",
   "pre-commit>=4.0,<5.0",
-  "pytest~=8.3",
-  "pytest-asyncio==0.24.*",
-  "pytest-cov~=6.1",
-  "pytest_httpserver==1.1.*",
-  "pytest-timeout~=2.4",
   "python-docx~=1.1",
   "ruff~=0.12",
   "setuptools >= 64",
   "setuptools_scm>=8",
+  "tomlkit>=0.13.2",
+  "twine~=6.0",
+  "vale~=3.12",
+  "yapf==0.43.*",
+  # documentation related dependencies
+  "myst-parser~=4.0",
+  "nbsphinx~=0.9",
+  "nvidia-sphinx-theme>=0.0.9",
   "sphinx~=8.2",
   "sphinx-autoapi>=3.6",
   "sphinx-copybutton>=0.5",
   "sphinx_design~=0.6",
   "sphinx-mermaid",
   "sphinx-reredirects~=1.1",
-  "tomlkit>=0.13.2",
-  "twine~=6.0",
-  "vale~=3.12",
-  "yapf==0.43.*",
   # transitive dependencies
   "werkzeug>=3.1.5",
 ]
@@ -147,6 +130,16 @@ dev = [
 [tool.setuptools]
 include-package-data = true
 packages = []
+
+[tool.uv]
+conflicts = [
+    # (adk|crewai)<>openpipe-art have incompatible litellm versions
+    [{ extra = "adk" }, { extra = "openpipe-art" }],
+    [{ extra = "crewai" }, { extra = "openpipe-art" }],
+    # (strands|adk)<>ragaai have incompatible tenacity versions
+    [{ extra = "adk" }, { extra = "ragaai" }],
+    [{ extra = "strands" }, { extra = "ragaai" }],
+]
 
 [tool.uv.sources]
 nvidia-nat-a2a = { path = "packages/nvidia_nat_a2a", editable = true }
@@ -174,27 +167,6 @@ nvidia-nat-test = { path = "packages/nvidia_nat_test", editable = true }
 nvidia-nat-vanna = { path = "packages/nvidia_nat_vanna", editable = true }
 nvidia-nat-weave = { path = "packages/nvidia_nat_weave", editable = true }
 nvidia-nat-zep-cloud = { path = "packages/nvidia_nat_zep_cloud", editable = true }
-
-# List any markers that users would reasonably want to filter by.
-# These show up when querying `pytest --markers`
-[tool.pytest.ini_options]
-markers = [
-  "benchmark: Benchmarks",
-  "integration: Integration tests which do not use mocks and may require external services",
-  "requires_cache: Tests that require a reverse-proxy cache to be running",
-  "slow: Slow tests",
-]
-filterwarnings = [
-  # Work-around for a warning emitted by strands https://github.com/strands-agents/sdk-python/issues/1236
-  "ignore:^These events have been moved to production.*strands:DeprecationWarning",
-]
-testpaths = ["tests", "examples/**/tests", "packages/**/tests"]
-asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "session"
-
-# Global timeout of 5 minutes per test to catch hanging tests.
-# Individual tests can override with @pytest.mark.timeout(seconds) or disable with @pytest.mark.timeout(0)
-timeout = 300
 
 [tool.ruff]
 # Set the maximum line length to 120.

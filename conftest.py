@@ -37,23 +37,11 @@ from unittest import mock
 
 import pytest
 import pytest_asyncio
-from langchain_core.callbacks import AsyncCallbackManagerForLLMRun
-from langchain_core.callbacks import AsyncCallbackManagerForToolRun
-from langchain_core.callbacks import CallbackManagerForLLMRun
-from langchain_core.callbacks import CallbackManagerForToolRun
-from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage
-from langchain_core.messages import BaseMessage
-from langchain_core.outputs import ChatGeneration
-from langchain_core.outputs import ChatResult
-from langchain_core.tools import BaseTool
 from pydantic import BaseModel
 
-TESTS_DIR = os.path.dirname(__file__)
-PROJECT_DIR = os.path.dirname(TESTS_DIR)
-SRC_DIR = os.path.join(PROJECT_DIR, "src")
-EXAMPLES_DIR = os.path.join(PROJECT_DIR, "examples")
-sys.path.append(SRC_DIR)
+ROOT_DIR = str(Path(os.path.dirname(__file__)).resolve())
+EXAMPLES_DIR = str(Path(os.path.join(ROOT_DIR, "examples")).resolve())
+TEST_DATA_DIR = str(Path(os.path.join(ROOT_DIR, "test_data")).resolve())
 
 os.environ.setdefault("DASK_DISTRIBUTED__WORKER__PYTHON", sys.executable)
 
@@ -72,7 +60,7 @@ def project_dir_fixture(root_repo_dir: Path) -> str:
 
 @pytest.fixture(name="test_data_dir")
 def test_data_dir_fixture():
-    return os.path.join(TESTS_DIR, "test_data")
+    return TEST_DATA_DIR
 
 
 @pytest.fixture(name="config_file")
@@ -286,8 +274,16 @@ def httpserver_listen_address():
     return "127.0.0.1", 0
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 async def mock_llm():
+    from langchain_core.callbacks import AsyncCallbackManagerForLLMRun
+    from langchain_core.callbacks import CallbackManagerForLLMRun
+    from langchain_core.language_models import BaseChatModel
+    from langchain_core.messages import AIMessage
+    from langchain_core.messages import BaseMessage
+    from langchain_core.outputs import ChatGeneration
+    from langchain_core.outputs import ChatResult
+    from langchain_core.tools import BaseTool
 
     class MockLLM(BaseChatModel):
 
@@ -348,8 +344,12 @@ async def mock_llm():
     return MockLLM()
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def mock_tool():
+
+    from langchain_core.callbacks import AsyncCallbackManagerForToolRun
+    from langchain_core.callbacks import CallbackManagerForToolRun
+    from langchain_core.tools import BaseTool
 
     def _create_mock_tool(tool_name: str):
 

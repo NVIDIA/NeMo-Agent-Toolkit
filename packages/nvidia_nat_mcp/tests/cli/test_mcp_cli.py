@@ -19,6 +19,7 @@ from types import ModuleType
 from unittest.mock import AsyncMock
 from unittest.mock import patch
 
+import click
 import pytest
 
 # pyright: reportMissingImports=false, reportAttributeAccessIssue=false
@@ -36,6 +37,18 @@ from nat.plugins.mcp.cli.commands import mcp_client_tool_list
 from nat.plugins.mcp.cli.commands import ping_mcp_server
 from nat.plugins.mcp.cli.commands import print_tool
 from nat.plugins.mcp.cli.commands import validate_transport_cli_args
+
+
+def test_mcp_plugin_discovered():
+    """Test that MCP plugin is discovered when nvidia-nat-mcp is installed."""
+    import nat.plugins.mcp.cli.commands  # noqa: F401
+    from nat.cli.plugin_loader import discover_and_load_cli_plugins
+
+    cli_group = click.Group()
+    discover_and_load_cli_plugins(cli_group)
+
+    # MCP should be discovered and loaded
+    assert "mcp" in cli_group.commands
 
 
 @pytest.fixture(name="mock_tools")

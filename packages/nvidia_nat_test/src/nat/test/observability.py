@@ -13,16 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# flake8: noqa
-# isort:skip_file
+from unittest.mock import MagicMock
 
-# Import any providers which need to be automatically registered here
 
-from . import embedder
-from . import langgraph_workflow
-from . import llm
-from . import tool_wrapper
-from . import retriever
-from .tools import register
-from .agent import register
-from .control_flow import register
+def create_mock_step(event_type, event_state, framework=None, data=None, name=None):
+    """Helper function to create mock IntermediateStep objects."""
+    step = MagicMock()
+    step.event_type = event_type
+    step.event_state = event_state
+    step.framework = framework
+    step.name = name
+    step.data = data
+    return step

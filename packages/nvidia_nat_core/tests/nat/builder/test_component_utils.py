@@ -35,7 +35,6 @@ from nat.builder.component_utils import group_from_component
 from nat.builder.component_utils import iterate_leaf_to_root
 from nat.builder.component_utils import recursive_componentref_discovery
 from nat.builder.component_utils import update_dependency_graph
-from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.cli.register_workflow import register_function
 from nat.data_models.authentication import AuthProviderBaseConfig
@@ -88,16 +87,16 @@ def nested_nat_config_fixture():
     async def outer_fn(config: FnConfig, builder: Builder):
 
         if config.llm_name is not None:
-            await builder.get_llm(llm_name=config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+            builder.get_llm_config(config.llm_name)
         if config.embedder_name is not None:
-            await builder.get_embedder(embedder_name=config.embedder_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+            builder.get_embedder_config(config.embedder_name)
         if config.object_store_name is not None:
-            await builder.get_object_store_client(object_store_name=config.object_store_name)
+            builder.get_object_store_config(config.object_store_name)
         if config.retriever_name is not None:
-            await builder.get_retriever(retriever_name=config.retriever_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+            await builder.get_retriever_config(config.retriever_name)
 
         for fn_name in config.fn_names:
-            await builder.get_function(name=fn_name)
+            builder.get_function_config(fn_name)
 
         async def _inner_func(fn_input: str) -> str:
             return ""

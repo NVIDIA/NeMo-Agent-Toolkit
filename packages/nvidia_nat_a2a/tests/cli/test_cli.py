@@ -13,16 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# flake8: noqa
-# isort:skip_file
+import click
 
-# Import any providers which need to be automatically registered here
 
-from . import embedder
-from . import langgraph_workflow
-from . import llm
-from . import tool_wrapper
-from . import retriever
-from .tools import register
-from .agent import register
-from .control_flow import register
+def test_a2a_plugin_discovered():
+    """Test that A2A plugin is discovered when nvidia-nat-a2a is installed."""
+    import nat.plugins.a2a.cli.commands  # noqa: F401
+    from nat.cli.plugin_loader import discover_and_load_cli_plugins
+
+    cli_group = click.Group()
+    discover_and_load_cli_plugins(cli_group)
+
+    # A2A should be discovered and loaded
+    assert "a2a" in cli_group.commands

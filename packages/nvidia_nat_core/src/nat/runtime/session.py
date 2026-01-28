@@ -306,8 +306,11 @@ class SessionManager:
 
         # Start cleanup task for per-user workflows
         if session_manager._is_workflow_per_user:
-            session_manager._per_user_builders_cleanup_task = asyncio.create_task(
-                session_manager._run_periodic_cleanup())
+            cleanup_coro = session_manager._run_periodic_cleanup()
+            cleanup_task = asyncio.create_task(cleanup_coro)
+            session_manager._per_user_builders_cleanup_task = cleanup_task
+            if not isinstance(cleanup_task, asyncio.Task):
+                cleanup_coro.close()
 
         return session_manager
 

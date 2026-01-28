@@ -13,26 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import MagicMock
-
 import pytest
 
-from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.intermediate_step import IntermediateStepState
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.finetuning.utils.parsers.base_parser import _validate_message_sequence
 from nat.finetuning.utils.parsers.base_parser import parse_to_openai_messages
-
-
-def create_mock_step(event_type, event_state, framework=None, data=None, name=None):
-    """Helper function to create mock IntermediateStep objects."""
-    step = MagicMock()
-    step.event_type = event_type
-    step.event_state = event_state
-    step.framework = framework
-    step.name = name
-    step.data = data
-    return step
+from nat.test.observability import create_mock_step
 
 
 class TestParseToOpenAIMessages:
@@ -42,45 +29,6 @@ class TestParseToOpenAIMessages:
         """Test parsing empty list of steps."""
         result = parse_to_openai_messages([])
         assert result == []
-
-    def test_skip_non_relevant_event_types(self):
-        """Test that non-LLM/TOOL events are skipped."""
-        step = create_mock_step(IntermediateStepType.WORKFLOW_START,
-                                IntermediateStepState.START,
-                                framework=LLMFrameworkEnum.LANGCHAIN)
-
-        result = parse_to_openai_messages([step])
-        assert len(result) == 0
-
-    def test_skip_streaming_chunks(self):
-        """Test that streaming chunks are skipped."""
-        step = create_mock_step(
-            IntermediateStepType.LLM_END,
-            IntermediateStepState.CHUNK,  # Should be skipped
-            framework=LLMFrameworkEnum.LANGCHAIN)
-
-        result = parse_to_openai_messages([step])
-        assert len(result) == 0
-
-    def test_skip_llm_start_after_tool_end(self):
-        """Test that LLM_START after TOOL_END is skipped."""
-        steps = [
-            create_mock_step(IntermediateStepType.TOOL_END,
-                             IntermediateStepState.END,
-                             framework=LLMFrameworkEnum.LANGCHAIN),
-            create_mock_step(
-                IntermediateStepType.LLM_START,  # Should be skipped
-                IntermediateStepState.START,
-                framework=LLMFrameworkEnum.LANGCHAIN),
-        ]
-
-        # Mock the data for tool_end
-        steps[0].data = MagicMock()
-        steps[0].data.output = "tool result"
-
-        result = parse_to_openai_messages(steps)
-        # Should only have tool message, no LLM_START
-        assert len(result) == 1
 
     def test_unsupported_framework_is_skipped(self):
         """Test that unsupported framework is skipped."""

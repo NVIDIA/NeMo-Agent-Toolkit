@@ -204,7 +204,7 @@ Sample output:
 }
 ```
 
-The output is truncated for brevity. For more information, refer to the [CalcRunnerOutput](../../../src/nat/profiler/calc/data_models.py) Pydantic model.
+The output is truncated for brevity. For more information, refer to the {py:class}`~nat.profiler.calc.data_models.CalcRunnerOutput` Pydantic model.
 
 ### Using a Remote Workflow
 By default, the calculator runs the workflow locally to gather metrics. You can use the `--endpoint` and `--endpoint_timeout` command line parameters to use a remote workflow for gathering metrics.
@@ -376,4 +376,4 @@ asyncio.run(run_calc())
 
 {py:class}`~nat.profiler.calc.data_models.CalcRunnerConfig` is a Pydantic model that contains the configuration for the calculator. It provides fine-grained control over the calculator's behavior.
 {py:class}`~nat.profiler.calc.data_models.CalcRunnerOutput` is a Pydantic model that contains the per-concurrency metrics and the GPU count estimates.
-For more information, refer to the [calculator data models](../../../src/nat/profiler/calc/data_models.py).
+For more information, refer to the [calculator data models](../../../packages/nvidia_nat_core/src/nat/profiler/calc/data_models.py).

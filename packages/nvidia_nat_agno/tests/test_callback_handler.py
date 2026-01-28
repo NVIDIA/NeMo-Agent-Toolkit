@@ -13,11 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import time
 from uuid import uuid4
-
-import pytest
 
 from nat.builder.context import Context
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -26,216 +23,8 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import TraceMetadata
 from nat.data_models.intermediate_step import UsageInfo
-from nat.profiler.callbacks.langchain_callback_handler import LangchainProfilerHandler
-from nat.profiler.callbacks.llama_index_callback_handler import LlamaIndexProfilerHandler
 from nat.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
 from nat.utils.reactive.subject import Subject
-
-
-async def test_langchain_handler(reactive_stream: Subject):
-    """
-    Test that the LangchainProfilerHandler produces usage stats in the correct order:
-      - on_llm_start -> usage stat with event_type=LLM_START
-      - on_llm_new_token -> usage stat with event_type=LLM_NEW_TOKEN
-      - on_llm_end -> usage stat with event_type=LLM_END
-    And that the queue sees them in the correct order.
-    """
-
-    all_stats = []
-    handler = LangchainProfilerHandler()
-    _ = reactive_stream.subscribe(all_stats.append)
-
-    # Simulate an LLM start event
-    prompts = ["Hello world"]
-    run_id = str(uuid4())
-
-    await handler.on_llm_start(serialized={}, prompts=prompts, run_id=run_id)
-
-    # Simulate a fake sleep for 0.05 second
-    await asyncio.sleep(0.05)
-
-    # Simulate receiving new tokens with delay between them
-    await handler.on_llm_new_token("hello", run_id=run_id)
-    await asyncio.sleep(0.05)  # Ensure a small delay between token events
-    await handler.on_llm_new_token(" world", run_id=run_id)
-
-    # Simulate a delay before ending
-    await asyncio.sleep(0.05)
-
-    # Build a fake LLMResult
-    from langchain_core.messages import AIMessage
-    from langchain_core.messages.ai import UsageMetadata
-    from langchain_core.outputs import ChatGeneration
-    from langchain_core.outputs import LLMResult
-
-    generation = ChatGeneration(message=AIMessage(
-        content="Hello back!",
-        # Instantiate usage metadata typed dict with input tokens and output tokens
-        usage_metadata=UsageMetadata(input_tokens=15, output_tokens=15, total_tokens=0)))
-    llm_result = LLMResult(generations=[[generation]])
-    await handler.on_llm_end(response=llm_result, run_id=run_id)
-
-    assert len(all_stats) == 4, "Expected 4 usage stats events total"
-    assert all_stats[0].event_type == IntermediateStepType.LLM_START
-    assert all_stats[1].event_type == IntermediateStepType.LLM_NEW_TOKEN
-    assert all_stats[2].event_type == IntermediateStepType.LLM_NEW_TOKEN
-    assert all_stats[3].event_type == IntermediateStepType.LLM_END
-
-    # Test event timestamp to ensure we don't have any race conditions
-    # Use >= instead of < to handle cases where timestamps might be identical or very close
-    assert all_stats[0].event_timestamp <= all_stats[1].event_timestamp
-    assert all_stats[1].event_timestamp <= all_stats[2].event_timestamp
-    assert all_stats[2].event_timestamp <= all_stats[3].event_timestamp
-
-    # Check that there's a delay between start and first token
-    assert all_stats[1].event_timestamp - all_stats[0].event_timestamp > 0.05
-
-    # Check that the first usage stat has the correct chat_inputs
-    assert all_stats[0].payload.metadata.chat_inputs == prompts
-    # Check new token event usage
-    assert all_stats[1].payload.data.chunk == "hello"  # we captured "hello"
-    # Check final token usage
-    assert all_stats[3].payload.usage_info.token_usage.prompt_tokens == 15  # Will not populate usage
-    assert all_stats[3].payload.usage_info.token_usage.completion_tokens == 15
-    assert all_stats[3].payload.data.output == "Hello back!"
-
-
-async def test_llama_index_handler_order(reactive_stream: Subject):
-    """
-    Test that the LlamaIndexProfilerHandler usage stats occur in correct order for LLM events.
-    """
-
-    handler = LlamaIndexProfilerHandler()
-    stats_list = []
-    _ = reactive_stream.subscribe(stats_list.append)
-
-    # Simulate an LLM start event
-    from llama_index.core.callbacks import CBEventType
-    from llama_index.core.callbacks import EventPayload
-    from llama_index.core.llms import ChatMessage
-    from llama_index.core.llms import ChatResponse
-
-    payload_start = {EventPayload.PROMPT: "Say something wise."}
-    handler.on_event_start(event_type=CBEventType.LLM, payload=payload_start, event_id="evt-1")
-
-    # Simulate an LLM end event
-    payload_end = {
-        EventPayload.RESPONSE:
-            ChatResponse(message=ChatMessage.from_str("42 is the meaning of life."), raw="42 is the meaning of life.")
-    }
-    handler.on_event_end(event_type=CBEventType.LLM, payload=payload_end, event_id="evt-1")
-
-    assert len(stats_list) == 2
-    assert stats_list[0].event_type == IntermediateStepType.LLM_START
-    assert stats_list[0].payload.data.input == "Say something wise."
-    assert stats_list[1].payload.event_type == IntermediateStepType.LLM_END
-    assert stats_list[0].payload.usage_info.num_llm_calls == 1
-    # chat_responses is a bit short in this test, but we confirm at least we get something
-
-
-@pytest.mark.slow
-async def test_crewai_handler_time_between_calls(reactive_stream: Subject):
-    """
-    Test CrewAIProfilerHandler ensures seconds_between_calls is properly set for consecutive calls.
-    We'll mock time.time() to produce stable intervals.
-    """
-    pytest.importorskip("crewai")
-
-    import math
-
-    from packages.nvidia_nat_crewai.src.nat.plugins.crewai.crewai_callback_handler import CrewAIProfilerHandler
-
-    # The crewAI handler monkey-patch logic is for real code instrumentation,
-    # but let's just call the wrapped calls directly:
-    results = []
-    handler = CrewAIProfilerHandler()
-    _ = reactive_stream.subscribe(results.append)
-    step_manager = Context.get().intermediate_step_manager
-
-    # We'll patch time.time so it returns predictable values:
-    # e.g. 100.0 for the first call, 103.2 for the second, etc.
-    # Simulate a first LLM call
-    # crewAI calls _llm_call_monkey_patch => we can't call that directly, let's just do an inline approach
-    # We'll do a short local function "simulate_llm_call" that replicates the logic:
-    times = [100.0, 103.2, 107.5, 112.0]
-    # seconds_between_calls = int(now - self.last_call_ts) => at the first call, last_call_ts=some default
-    # but let's just forcibly create a usage stat
-
-    run_id1 = str(uuid4())
-    start_stat = IntermediateStepPayload(UUID=run_id1,
-                                         event_type=IntermediateStepType.LLM_START,
-                                         data=StreamEventData(input="Hello user!"),
-                                         framework=LLMFrameworkEnum.CREWAI,
-                                         event_timestamp=times[0])
-    step_manager.push_intermediate_step(start_stat)
-    handler.last_call_ts = times[0]
-
-    # Simulate end
-    end_stat = IntermediateStepPayload(UUID=run_id1,
-                                       event_type=IntermediateStepType.LLM_END,
-                                       data=StreamEventData(output="World response"),
-                                       framework=LLMFrameworkEnum.CREWAI,
-                                       event_timestamp=times[1])
-    step_manager.push_intermediate_step(end_stat)
-
-    now2 = times[2]
-    run_id2 = str(uuid4())
-    start_stat2 = IntermediateStepPayload(UUID=run_id2,
-                                          event_type=IntermediateStepType.LLM_START,
-                                          data=StreamEventData(input="Hello again!"),
-                                          framework=LLMFrameworkEnum.CREWAI,
-                                          event_timestamp=now2,
-                                          usage_info=UsageInfo(seconds_between_calls=math.floor(now2 -
-                                                                                                handler.last_call_ts)))
-    step_manager.push_intermediate_step(start_stat2)
-    handler.last_call_ts = now2
-    second_end = IntermediateStepPayload(UUID=run_id2,
-                                         event_type=IntermediateStepType.LLM_END,
-                                         data=StreamEventData(output="Another response"),
-                                         framework=LLMFrameworkEnum.CREWAI,
-                                         event_timestamp=times[3])
-    step_manager.push_intermediate_step(second_end)
-
-    assert len(results) == 4
-    # Check the intervals
-    assert results[2].usage_info.seconds_between_calls == 7
-
-
-@pytest.mark.slow
-async def test_semantic_kernel_handler_tool_call(reactive_stream: Subject):
-    """
-    Test that the SK callback logs tool usage events.
-    """
-
-    pytest.importorskip("semantic_kernel")
-
-    from nat.profiler.callbacks.semantic_kernel_callback_handler import SemanticKernelProfilerHandler
-
-    all_ = []
-    _ = SemanticKernelProfilerHandler(workflow_llms={})
-    _ = reactive_stream.subscribe(all_.append)
-    step_manager = Context.get().intermediate_step_manager
-    # We'll manually simulate the relevant methods.
-
-    # Suppose we do a tool "invoke_function_call"
-    # We'll simulate a call to handler's patched function
-    run_id1 = str(uuid4())
-    start_event = IntermediateStepPayload(UUID=run_id1,
-                                          event_type=IntermediateStepType.TOOL_START,
-                                          framework=LLMFrameworkEnum.SEMANTIC_KERNEL,
-                                          metadata=TraceMetadata(tool_inputs={"args": ["some input"]}))
-    step_manager.push_intermediate_step(start_event)
-
-    end_event = IntermediateStepPayload(UUID=run_id1,
-                                        event_type=IntermediateStepType.TOOL_END,
-                                        framework=LLMFrameworkEnum.SEMANTIC_KERNEL,
-                                        metadata=TraceMetadata(tool_outputs={"result": "some result"}))
-    step_manager.push_intermediate_step(end_event)
-
-    assert len(all_) == 2
-    assert all_[0].event_type == IntermediateStepType.TOOL_START
-    assert all_[1].event_type == IntermediateStepType.TOOL_END
-    assert all_[1].payload.metadata.tool_outputs == {"result": "some result"}
 
 
 async def test_agno_handler_llm_call(reactive_stream: Subject):
@@ -245,10 +34,8 @@ async def test_agno_handler_llm_call(reactive_stream: Subject):
     - It should generate LLM_END event after completion finishes
     - Events should have correct model input/output and token usage
     """
-    pytest.importorskip("litellm")
 
-    from nat.builder.context import Context
-    from nat.profiler.callbacks.agno_callback_handler import AgnoProfilerHandler
+    from nat.plugins.agno.callback_handler import AgnoProfilerHandler
     from nat.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
 
     # Create handler and set up collection of results
@@ -442,7 +229,6 @@ async def test_agno_handler_tool_execution(reactive_stream: Subject):
     Note: This test simulates how tool execution is tracked in the tool_wrapper.py
     since AgnoProfilerHandler doesn't directly patch tool execution.
     """
-    from nat.builder.context import Context
     from nat.data_models.intermediate_step import IntermediateStep
     from nat.data_models.invocation_node import InvocationNode
     from nat.profiler.callbacks.agno_callback_handler import AgnoProfilerHandler
@@ -587,90 +373,3 @@ async def test_agno_handler_tool_execution(reactive_stream: Subject):
     assert end_event.payload.name == "TestTool"
     assert "result" in end_event.payload.metadata.tool_outputs
     assert end_event.payload.metadata.tool_outputs["result"] == "Tool execution result"
-
-
-async def test_strands_handler_tool_execution(reactive_stream: Subject):
-    """
-    Test that Strands handler correctly tracks tool execution:
-    - It should generate TOOL_START event when a tool is executed
-    - It should generate TOOL_END event after tool execution completes
-    - The events should contain correct input args and output results
-    """
-    pytest.importorskip("strands", reason="Strands not available")
-
-    from nat.plugins.strands.strands_callback_handler import StrandsProfilerHandler
-    from nat.plugins.strands.strands_callback_handler import StrandsToolInstrumentationHook
-
-    # Set up handler and collect results
-    all_stats = []
-    handler = StrandsProfilerHandler()
-    reactive_stream.subscribe(all_stats.append)
-
-    # Create a tool hook instance (this is normally done per-agent-instance)
-    tool_hook = StrandsToolInstrumentationHook(handler)
-
-    # Simulate tool execution events that would come from Strands hooks
-    tool_use_id = "strands-tool-123"
-    tool_name = "test_strands_tool"
-    tool_input = {"param1": "value1", "param2": "value2"}
-    tool_output = "Strands tool execution result"
-
-    # Create mock events similar to what Strands would generate
-    class MockBeforeEvent:
-
-        def __init__(self):
-            self.tool_use = {"toolUseId": tool_use_id, "name": tool_name, "input": tool_input}
-            self.selected_tool = type(
-                'MockTool', (), {
-                    'tool_name': tool_name, 'tool_spec': {
-                        "name": tool_name, "description": "Test tool"
-                    }
-                })()
-
-    class MockAfterEvent:
-
-        def __init__(self):
-            self.tool_use = {"toolUseId": tool_use_id, "name": tool_name, "input": tool_input}
-            self.selected_tool = type('MockTool', (), {'tool_name': tool_name, 'tool_spec': {"name": tool_name}})()
-            self.result = {"content": [{"text": tool_output}]}
-            self.exception = None
-
-    # Simulate the tool execution flow
-    before_event = MockBeforeEvent()
-    after_event = MockAfterEvent()
-
-    # Call the hook methods directly
-    tool_hook.on_before_tool_invocation(before_event)
-    tool_hook.on_after_tool_invocation(after_event)
-
-    # Verify events were generated
-    assert len(all_stats) >= 2, f"Expected at least 2 events, got {len(all_stats)}"
-
-    # Find TOOL_START and TOOL_END events
-    tool_start_events = [
-        event for event in all_stats if event.payload.event_type == IntermediateStepType.TOOL_START
-        and event.payload.framework == LLMFrameworkEnum.STRANDS
-    ]
-    tool_end_events = [
-        event for event in all_stats if event.payload.event_type == IntermediateStepType.TOOL_END
-        and event.payload.framework == LLMFrameworkEnum.STRANDS
-    ]
-
-    assert len(tool_start_events) > 0, "No TOOL_START events found for Strands"
-    assert len(tool_end_events) > 0, "No TOOL_END events found for Strands"
-
-    # Verify event details
-    start_event = tool_start_events[-1]
-    end_event = tool_end_events[-1]
-
-    # Check TOOL_START event
-    assert start_event.payload.name == tool_name
-    assert start_event.payload.UUID == tool_use_id
-    assert start_event.payload.framework == LLMFrameworkEnum.STRANDS
-    assert start_event.payload.metadata.tool_inputs == tool_input
-
-    # Check TOOL_END event
-    assert end_event.payload.name == tool_name
-    assert end_event.payload.UUID == tool_use_id
-    assert end_event.payload.framework == LLMFrameworkEnum.STRANDS
-    assert tool_output in end_event.payload.metadata.tool_outputs

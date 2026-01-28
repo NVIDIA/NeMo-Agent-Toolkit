@@ -16,7 +16,7 @@ classifiers = ["Programming Language :: Python"]
 
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
-  "nvidia-nat[langchain,telemetry] == {version}",
+  "nvidia-nat[langchain,opentelemetry,phoenix,ragaai,weave] == {version}",
   "usearch~=2.21",
 ]
 

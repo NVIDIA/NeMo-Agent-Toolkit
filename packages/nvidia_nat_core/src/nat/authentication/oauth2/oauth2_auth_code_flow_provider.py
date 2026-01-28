@@ -25,6 +25,7 @@ from pydantic import SecretStr
 
 from nat.authentication.interfaces import AuthProviderBase
 from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
+from nat.authentication.token_storage import TokenStorageBase
 from nat.builder.context import Context
 from nat.data_models.authentication import AuthenticatedContext
 from nat.data_models.authentication import AuthFlowType
@@ -36,12 +37,12 @@ logger = logging.getLogger(__name__)
 
 class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConfig]):
 
-    def __init__(self, config: OAuth2AuthCodeFlowProviderConfig, token_storage=None):
+    def __init__(self, config: OAuth2AuthCodeFlowProviderConfig, token_storage: TokenStorageBase | None = None):
         super().__init__(config)
         self._auth_callback = None
         # Always use token storage - defaults to in-memory if not provided
         if token_storage is None:
-            from nat.plugins.mcp.auth.token_storage import InMemoryTokenStorage
+            from nat.authentication.token_storage import InMemoryTokenStorage
             self._token_storage = InMemoryTokenStorage()
         else:
             self._token_storage = token_storage

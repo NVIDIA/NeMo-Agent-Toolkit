@@ -41,7 +41,8 @@ def walk_optimizables(obj: BaseModel, path: str = "") -> dict[str, SearchSpace]:
     overrides = getattr(obj, "search_space", {}) or {}
     has_optimizable_flag = False
 
-    for name, fld in obj.model_fields.items():
+    model_fields = obj.model_fields if isinstance(obj, type) else type(obj).model_fields
+    for name, fld in model_fields.items():
         full = f"{path}.{name}" if path else name
         extra = fld.json_schema_extra or {}
 
@@ -88,6 +89,6 @@ def walk_optimizables(obj: BaseModel, path: str = "") -> dict[str, SearchSpace]:
         logger.warning(
             "Model %s contains optimizable fields but no `optimizable_params` "
             "were defined; these fields will be ignored.",
-            obj.__class__.__name__,
+            type(obj).__name__,
         )
     return spaces

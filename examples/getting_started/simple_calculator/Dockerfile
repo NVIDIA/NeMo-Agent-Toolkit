@@ -53,7 +53,7 @@ RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
     export SETUPTOOLS_SCM_PRETEND_VERSION_FOR_NAT_SIMPLE_CALCULATOR=${NAT_VERSION} && \
     uv venv --python ${PYTHON_VERSION} /workspace/.venv && \
     uv sync --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
-    uv pip install -e '.[telemetry]' --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
+    uv pip install -e '.[opentelemetry,phoenix,weave]' --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
     uv pip install --link-mode=copy ./examples/getting_started/simple_calculator
 
 # Environment variables for the venv

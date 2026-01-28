@@ -571,12 +571,17 @@ def test_write_output_handles_none_output(evaluation_run, eval_input):
             pytest.fail("write_output should not access .output without a None check")
 
 
+@pytest.mark.filterwarnings("ignore:.*Pydantic serializer warnings.*:UserWarning")
 def test_write_configuration_with_path_config(evaluation_run, default_eval_config, tmp_path):
     """Test that write_configuration correctly saves config files when config_file is a Path."""
     # Create a temporary config file
     config_file = tmp_path / "test_config.yml"
-    config_file.write_text("workflow:\n  type: test\neval:\n  general:\n    max_concurrency: 1\n")
-
+    config_file.write_text("""workflow:
+  type: test
+eval:
+  general:
+    max_concurrency: 1
+""")
     # Setup evaluation run
     evaluation_run.config.config_file = config_file
     evaluation_run.config.override = (("eval.general.max_concurrency", "5"), )
@@ -614,6 +619,7 @@ def test_write_configuration_with_path_config(evaluation_run, default_eval_confi
     assert mock_logger.call_count >= 3, "Should log for all three config files"
 
 
+@pytest.mark.filterwarnings("ignore:.*Pydantic serializer warnings.*:UserWarning")
 def test_write_configuration_with_basemodel_config(evaluation_run, default_eval_config, tmp_path):
     """Test that write_configuration correctly saves config files when config_file is a BaseModel."""
     # Setup evaluation run with BaseModel config

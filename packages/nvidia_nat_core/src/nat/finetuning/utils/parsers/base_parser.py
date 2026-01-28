@@ -20,9 +20,6 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepState
 from nat.data_models.intermediate_step import IntermediateStepType
-from nat.finetuning.utils.parsers import adk_parser
-from nat.finetuning.utils.parsers import langchain_parser
-from nat.finetuning.utils.parsers import llama_index_parser
 
 logger = logging.getLogger(__name__)
 
@@ -62,16 +59,27 @@ def parse_to_openai_messages(steps: list[IntermediateStep]) -> list[dict]:
             continue
 
         # Parse the message based on framework
-        if message.framework == LLMFrameworkEnum.LANGCHAIN:
-            parsed_msg = langchain_parser.parse_to_openai_message(message=message)
-        elif message.framework == LLMFrameworkEnum.LLAMA_INDEX:
-            parsed_msg = llama_index_parser.parse_to_openai_message(message=message)
-        elif message.framework == LLMFrameworkEnum.ADK:
-            parsed_msg = adk_parser.parse_to_openai_message(message=message)
-        else:
-            if message.framework is not None:
-                logger.warning(f"Unsupported framework: {message.framework} for message {message}")
-            continue
+        try:
+            match message.framework:
+                case LLMFrameworkEnum.LANGCHAIN:
+                    from nat.plugins.langchain.langchain_parser import parse_to_openai_message
+                    parsed_msg = parse_to_openai_message(message=message)
+                case LLMFrameworkEnum.LLAMA_INDEX:
+                    from nat.plugins.llama_index.llama_index_parser import parse_to_openai_message
+                    parsed_msg = parse_to_openai_message(message=message)
+                case LLMFrameworkEnum.ADK:
+                    from nat.plugins.adk.adk_parser import parse_to_openai_message
+                    parsed_msg = parse_to_openai_message(message=message)
+                case _:
+                    if message.framework is not None:
+                        logger.warning(f"Unsupported framework: {message.framework} for message {message}")
+                    continue
+        except ImportError as e:
+            logger.exception(f"Error importing parser: {e}. Please install the required dependencies.")
+            raise
+        except Exception as e:
+            logger.exception(f"Error parsing message: {e}")
+            raise
 
         # Add the parsed message
         if message.event_type == IntermediateStepType.LLM_START:

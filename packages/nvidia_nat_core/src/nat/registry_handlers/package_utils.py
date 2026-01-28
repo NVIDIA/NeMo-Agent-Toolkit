@@ -148,7 +148,7 @@ def extract_dependencies_with_extras_resolved(pyproject_path: str) -> set[str]:
         set[str]: Set of all dependency names including those resolved from extras
 
     Example:
-        For a dependency like "nat[langchain,telemetry]~=1.2", this will return:
+        For a dependency like "nat[langchain,opentelemetry,phoenix,ragaai,weave]~=1.2", this will return:
         {'nvidia-nat', 'nvidia-nat-langchain', 'nvidia-nat-opentelemetry', 'nvidia-nat-phoenix', ...}
 
     Raises:

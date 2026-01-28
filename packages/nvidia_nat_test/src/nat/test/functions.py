@@ -61,8 +61,8 @@ async def streaming_function(config: StreamingEchoFunctionConfig, builder: Build
     def oai_to_list(message: ChatRequest) -> list[str]:
         return [m.content for m in message.messages]
 
-    async def inner(message: list[str]) -> AsyncGenerator[str]:
-        for value in message:
+    async def inner(input_message: list[str]) -> AsyncGenerator[str]:
+        for value in input_message:
             yield value
 
     async def inner_oai(message: ChatRequest) -> AsyncGenerator[ChatResponseChunk]:

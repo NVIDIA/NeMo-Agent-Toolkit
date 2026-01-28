@@ -101,7 +101,6 @@ nat run --config_file examples/frameworks/agno_personal_finance/configs/config.y
 
 **Expected Workflow Output**
 ```console
-2025-07-23 03:43:31,701 - nat.runtime.loader - WARNING - Loading module 'nat.agent.register' from entry point 'nat_agents' took a long time (507.685900 ms). Ensure all imports are inside your registered functions.
 2025-07-23 03:43:32,279 - nat.runtime.loader - WARNING - Loading module 'nat_plot_charts.register' from entry point 'nat_plot_charts' took a long time (473.043442 ms). Ensure all imports are inside your registered functions.
 2025-07-23 03:43:32,455 - nat.runtime.loader - WARNING - Loading module 'nat_semantic_kernel_demo.register' from entry point 'nat_semantic_kernel_demo' took a long time (175.730944 ms). Ensure all imports are inside your registered functions.
 2025-07-23 03:43:32,572 - nat.runtime.loader - WARNING - Loading module 'nat_alert_triage_agent.register' from entry point 'nat_alert_triage_agent' took a long time (117.298603 ms). Ensure all imports are inside your registered functions.

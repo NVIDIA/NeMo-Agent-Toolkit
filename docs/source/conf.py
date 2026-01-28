@@ -49,7 +49,6 @@ def _build_api_tree() -> Path:
 
     docs_dir = cur_dir.parent
     root_dir = docs_dir.parent
-    nat_dir = root_dir / "src" / "nat"
     plugins_dir = root_dir / "packages"
 
     build_dir = docs_dir / "build"
@@ -59,23 +58,20 @@ def _build_api_tree() -> Path:
     if api_tree.exists():
         shutil.rmtree(api_tree.absolute())
 
-    os.makedirs(api_tree.absolute())
+    os.makedirs(dest_dir.absolute())
 
-    shutil.copytree(nat_dir, dest_dir)
-    dest_plugins_dir = dest_dir / "plugins"
-
-    for sub_dir in (dest_dir, dest_plugins_dir):
-        with open(sub_dir / "__init__.py", "w", encoding="utf-8") as f:
-            f.write("")
+    with open(dest_dir / "__init__.py", "w", encoding="utf-8") as f:
+        f.write("")
 
     plugin_dirs = [Path(p) for p in glob.glob(f'{plugins_dir}/nvidia_nat_*')]
     for plugin_dir in plugin_dirs:
-        src_dir = plugin_dir / 'src/nat/plugins'
+        src_dir = plugin_dir / 'src/nat'
+        print(f"Copying {src_dir} to {dest_dir}")
         if src_dir.exists():
             for plugin_subdir in src_dir.iterdir():
                 if plugin_subdir.is_dir():
-                    dest_subdir = dest_plugins_dir / plugin_subdir.name
-                    shutil.copytree(plugin_subdir, dest_subdir)
+                    dest_subdir = dest_dir / plugin_subdir.name
+                    shutil.copytree(plugin_subdir, dest_subdir, dirs_exist_ok=True)
                     package_file = dest_subdir / "__init__.py"
                     if not package_file.exists():
                         with open(package_file, "w", encoding="utf-8") as f:

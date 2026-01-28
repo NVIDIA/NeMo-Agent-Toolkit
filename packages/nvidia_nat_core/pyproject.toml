@@ -28,7 +28,7 @@ root = "../.."
 
 [project]
 name = "nvidia-nat-core"
-dynamic = ["version"]
+dynamic = ["version", "optional-dependencies"]
 dependencies = [
   # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. When using `~=`, use 2 digits
@@ -42,6 +42,7 @@ dependencies = [
   "datasets~=4.4", # workaround for uv's solver choosing different versions of datasets based on sys_platform
   "expandvars~=1.0",
   "fastapi~=0.119.0",
+  "flask>=3.0.0",
   "httpx~=0.27",
   "jinja2~=3.1",
   "jsonpath-ng~=1.7",
@@ -60,6 +61,7 @@ dependencies = [
   "pydantic~=2.11",
   "pymilvus~=2.6",
   "python-dotenv~=1.1.1",
+  "python-multipart>=0.0.21",
   "PyYAML~=6.0",
   "ragas~=0.2.14", # If you update ragas be sure to update github links in docs/source/workflows/evaluate.md as well
   "rich~=14.0",
@@ -87,7 +89,7 @@ maintainers = [{ name = "NVIDIA Corporation" }]
 documentation = "https://docs.nvidia.com/nemo/agent-toolkit/latest/"
 source = "https://github.com/NVIDIA/NeMo-Agent-Toolkit"
 
-[project.optional-dependencies]
+[tool.setuptools_dynamic_dependencies.optional-dependencies]
 # Optional dependencies are things that users would want to install with NAT core.
 # Keep sorted!!!
 async_endpoints = [
@@ -105,9 +107,6 @@ huggingface = [
 ingestion = [
   "lxml~=5.4",
 ]
-litellm = [
-  "litellm==1.74.9"
-]
 nvidia_haystack = [
   "nvidia-haystack~=0.3.0",
 ]
@@ -123,11 +122,15 @@ profiling = [
   "prefixspan~=0.5.2",
   "scikit-learn~=1.6",
 ]
+test = [
+  "nvidia-nat-test == {version}",
+]
+
+[tool.uv.sources]
+nvidia-nat-test = { path = "../nvidia_nat_test", editable = true }
 
 [project.entry-points.'nat.components']
-nat_agents = "nat.agent.register"
 nat_authentication = "nat.authentication.register"
-nat_control_flow = "nat.control_flow.register"
 nat_embedders = "nat.embedder.register"
 nat_evaluators = "nat.eval.register"
 nat_middleware = "nat.middleware.register"

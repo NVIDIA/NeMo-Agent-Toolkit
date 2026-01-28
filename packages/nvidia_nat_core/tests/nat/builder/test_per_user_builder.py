@@ -1342,10 +1342,10 @@ async def test_per_user_builder_get_tools_with_function_groups():
                 tools = await per_user_builder.get_tools(["shared_fg", "per_user_fg"],
                                                          wrapper_type=LLMFrameworkEnum.LANGCHAIN)
                 # Should get tools from both groups (if wrapper is registered)
-                assert len(tools) >= 0  # May be 0 if no wrapper registered in test environment
-            except ValueError as e:
+                assert len(tools) == 2
+            except KeyError as e:
                 # Expected if no tool wrapper is registered for LANGCHAIN
-                assert "not registered" in str(e) or "Tool wrapper" in str(e)
+                assert "Could not find a registered tool wrapper" in str(e)
 
 
 async def test_per_user_builder_populate_builds_function_groups_before_functions():

@@ -13,15 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-app:
-  host: "localhost"
-  ws: "websocket"
-  port: 8000
-  config_filepath: 'examples/getting_started/simple_web_query/configs/config.yml'
-  input: "Can you provide me with the most read content about LangSmith?"
-
-endpoint:
-  generate: "/generate"
-  chat: "/chat"
-  generate_stream: "/generate/stream"
-  chat_stream: "/chat/stream"
+workflow:
+  _type: test_echo
+  use_openai_api: true

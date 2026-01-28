@@ -37,13 +37,14 @@ class ComponentDiscoveryMetadata:
         registry = GlobalTypeRegistry.get()
 
         for _, registered_component_info in registry.get_infos_by_type(component_type=self._component_type).items():
+            package_name = registered_component_info.discovery_metadata.package
+            is_current_package = self._wheel_data is not None and package_name == self._wheel_data.package_name
+            in_dependency_set = self._wheel_data is not None and package_name in self._wheel_data.union_dependencies
 
-            if ((registered_component_info.discovery_metadata.status == DiscoveryStatusEnum.SUCCESS) and
-                ((self._wheel_data is None) or
-                 (registered_component_info.discovery_metadata.package in self._wheel_data.union_dependencies))):
+            if ((registered_component_info.discovery_metadata.status == DiscoveryStatusEnum.SUCCESS)
+                    and (self._wheel_data is None or is_current_package or in_dependency_set)):
 
-                if ((self._wheel_data is not None)
-                        and (registered_component_info.discovery_metadata.package == self._wheel_data.package_name)):
+                if is_current_package:
                     discovery_metadata_copy = registered_component_info.discovery_metadata.model_copy(deep=True)
                     discovery_metadata_copy.version = self._wheel_data.whl_version
                     self._metadata_items.append(discovery_metadata_copy.model_dump())

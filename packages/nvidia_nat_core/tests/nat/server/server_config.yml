@@ -13,16 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# flake8: noqa
-# isort:skip_file
+app:
+  host: "localhost"
+  ws: "websocket"
+  port: 8000
+  config_filepath: 'config.yml'
+  input: "Can you provide me with the most read content about LangSmith?"
 
-# Import any providers which need to be automatically registered here
-
-from . import embedder
-from . import langgraph_workflow
-from . import llm
-from . import tool_wrapper
-from . import retriever
-from .tools import register
-from .agent import register
-from .control_flow import register
+endpoint:
+  generate: "/generate"
+  chat: "/chat"
+  generate_stream: "/generate/stream"
+  chat_stream: "/chat/stream"

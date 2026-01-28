@@ -68,8 +68,8 @@ from nat.data_models.interactive import HumanResponseText
 from nat.data_models.interactive import MultipleChoiceOption
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
 from nat.front_ends.fastapi.message_validator import MessageValidator
-from nat.runtime.loader import load_config
 from nat.runtime.session import SessionManager
+from nat.test.functions import EchoFunctionConfig
 
 
 class AppConfig(BaseModel):
@@ -307,18 +307,19 @@ observability_trace_message = {
 
 
 @pytest.fixture(name="config")
-def server_config(restore_environ, file_path: str = "tests/nat/server/config.yml") -> BaseModel:
+def server_config(
+    restore_environ, file_path: str = __file__.replace("test_unified_api_server.py", "server_config.yml")) -> BaseModel:
     data = None
-    with open(file_path, encoding="utf-8") as file:
-        data = yaml.safe_load(file)
-
+    with open(file_path, encoding="utf-8") as f:
+        data = yaml.safe_load(f)
     os.environ["NAT_CONFIG_FILE"] = file_path
     return Config(**data)
 
 
 @pytest_asyncio.fixture(name="client")
 async def client_fixture(config):
-    app_config = load_config(config.app.config_filepath)
+    from nat.data_models.config import Config as AppConfig
+    app_config = AppConfig(workflow=EchoFunctionConfig())
     front_end_worker = FastApiFrontEndPluginWorker(app_config)
     fastapi_app = front_end_worker.build_app()
 
@@ -330,25 +331,22 @@ async def client_fixture(config):
 
 
 @pytest.mark.integration
-@pytest.mark.usefixtures("nvidia_api_key")
 async def test_generate_endpoint(client: httpx.AsyncClient, config: Config):
     """Tests generate endpoint to verify it responds successfully."""
-    input_message = {"input_message": f"{config.app.input}"}
+    input_message = {"message": f"{config.app.input}"}
     response = await client.post(f"{config.endpoint.generate}", json=input_message)
     assert response.status_code == 200
 
 
 @pytest.mark.integration
-@pytest.mark.usefixtures("nvidia_api_key")
 async def test_generate_stream_endpoint(client: httpx.AsyncClient, config: Config):
     """Tests generate stream endpoint to verify it responds successfully."""
-    input_message = {"input_message": f"{config.app.input}"}
+    input_message = {"message": f"{config.app.input}"}
     response = await client.post(f"{config.endpoint.generate_stream}", json=input_message)
     assert response.status_code == 200
 
 
 @pytest.mark.integration
-@pytest.mark.usefixtures("nvidia_api_key")
 async def test_chat_endpoint(client: httpx.AsyncClient, config: Config):
     """Tests chat endpoint to verify it responds successfully."""
     input_message = {"messages": [{"role": "user", "content": f"{config.app.input}"}], "use_knowledge_base": True}
@@ -359,7 +357,6 @@ async def test_chat_endpoint(client: httpx.AsyncClient, config: Config):
 
 
 @pytest.mark.integration
-@pytest.mark.usefixtures("nvidia_api_key")
 async def test_chat_stream_endpoint(client: httpx.AsyncClient, config: Config):
     """Tests chat stream endpoint to verify it responds successfully."""
     input_message = {"messages": [{"role": "user", "content": f"{config.app.input}"}], "use_knowledge_base": True}
@@ -374,7 +371,6 @@ async def test_chat_stream_endpoint(client: httpx.AsyncClient, config: Config):
 
 
 @pytest.mark.integration
-@pytest.mark.usefixtures("nvidia_api_key")
 async def test_chat_stream_endpoint_observability_trace_id_integration(client: httpx.AsyncClient, config: Config):
     """Tests that chat stream endpoint sends observability_trace_id as a separate SSE event."""
     input_message = {"messages": [{"role": "user", "content": f"{config.app.input}"}], "use_knowledge_base": True}
@@ -408,10 +404,9 @@ async def test_chat_stream_endpoint_observability_trace_id_integration(client: h
 
 
 @pytest.mark.integration
-@pytest.mark.usefixtures("nvidia_api_key")
 async def test_user_attributes_from_http_request(client: httpx.AsyncClient, config: Config):
     """Tests setting user attributes from HTTP request."""
-    input_message = {"input_message": f"{config.app.input}"}
+    input_message = {"message": f"{config.app.input}"}
     headers = {"Header-Test": "application/json"}
     query_params = {"param1": "value1"}
 

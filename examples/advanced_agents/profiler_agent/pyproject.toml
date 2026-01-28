@@ -19,7 +19,7 @@ maintainers = [{ name = "NVIDIA Corporation" }]
 
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
-  "nvidia-nat[langchain,profiling,telemetry] == {version}",
+  "nvidia-nat[langchain,profiling,opentelemetry,phoenix,ragaai,weave] == {version}",
   "arize-phoenix-client~=1.21",
   "pydantic",
 ]

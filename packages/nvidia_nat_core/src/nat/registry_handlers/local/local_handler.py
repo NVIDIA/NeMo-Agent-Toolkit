@@ -96,7 +96,7 @@ class LocalRegistryHandler(AbstractRegistryHandler):
         try:
             results_dict = build_package_metadata(wheel_data=None)
             component_results = []
-            query_component_types = [component_type.value for component_type in query.component_types]
+            query_component_types = set(query.component_types)
             for component_type, components in results_dict.items():
                 if component_type in query_component_types:
                     component_results.extend(components)

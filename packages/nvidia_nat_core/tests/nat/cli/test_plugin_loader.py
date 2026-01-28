@@ -193,34 +193,6 @@ class TestPluginLoaderIntegration:
 
         assert not missing_commands, f"Missing core commands: {missing_commands}"
 
-    def test_mcp_plugin_discovered(self):
-        """Test that MCP plugin is discovered when nvidia-nat-mcp is installed."""
-        try:
-            # Try importing to check if plugin is available
-            import nat.plugins.mcp.cli.commands  # noqa: F401
-
-            cli_group = click.Group()
-            discover_and_load_cli_plugins(cli_group)
-
-            # MCP should be discovered and loaded
-            assert "mcp" in cli_group.commands
-        except ImportError:
-            pytest.skip("nvidia-nat-mcp not installed")
-
-    def test_a2a_plugin_discovered(self):
-        """Test that A2A plugin is discovered when nvidia-nat-a2a is installed."""
-        try:
-            # Try importing to check if plugin is available
-            import nat.plugins.a2a.cli.commands  # noqa: F401
-
-            cli_group = click.Group()
-            discover_and_load_cli_plugins(cli_group)
-
-            # A2A should be discovered and loaded
-            assert "a2a" in cli_group.commands
-        except ImportError:
-            pytest.skip("nvidia-nat-a2a not installed")
-
     def test_all_commands_together(self):
         """Test that core and plugin commands can coexist."""
         cli_group = click.Group()

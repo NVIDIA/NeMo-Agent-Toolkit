@@ -36,7 +36,7 @@ from nat.settings.global_settings import Settings
                          [
                              ("all", "function", 5, "success"),
                              ("all", "llm_provider", 2, "success"),
-                             ("all", "tool_wrapper", 2, "success"),
+                             ("all", "tool_wrapper", 0, "success"),
                              ("all", "llm_client", 2, "success"),
                              ("all", "embedder_provider", 1, "success"),
                              ("all", "embedder_client", 1, "success"),

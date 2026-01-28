@@ -40,28 +40,24 @@ The core observability features (console and file logging) are included by defau
 If you have already installed the NeMo Agent toolkit from source, you can install package extras with the following commands:
 
 ```bash
-# Install all optional telemetry extras
-uv pip install -e '.[telemetry]'
-
 # Install specific telemetry extras
 uv pip install -e '.[data-flywheel]'
 uv pip install -e '.[opentelemetry]'
 uv pip install -e '.[phoenix]'
 uv pip install -e '.[weave]'
+# Note: conflicts with .[strands] and .[adk]
 uv pip install -e '.[ragaai]'
 ```
 
 If you have not installed the NeMo Agent toolkit from source, you can install package extras with the following commands:
 
 ```bash
-# Install all optional telemetry extras
-uv pip install "nvidia-nat[telemetry]"
-
 # Install specific telemetry extras
 uv pip install "nvidia-nat[data-flywheel]"
 uv pip install "nvidia-nat[opentelemetry]"
 uv pip install "nvidia-nat[phoenix]"
 uv pip install "nvidia-nat[weave]"
+# Note: conflicts with nvidia-nat[strands] and nvidia-nat[adk]
 uv pip install "nvidia-nat[ragaai]"
 ```
 

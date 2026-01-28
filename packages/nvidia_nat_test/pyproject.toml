@@ -42,6 +42,11 @@ dependencies = [
   "nvidia-nat-core == {version}",
   "langchain-community~=0.3",
   "pytest~=8.3",
+  "pytest-asyncio==0.24.*",
+  "pytest-cov~=6.1",
+  "pytest_httpserver==1.1.*",
+  "pytest-timeout~=2.4",
+  "asgi-lifespan~=2.1",
 ]
 
 [tool.uv]

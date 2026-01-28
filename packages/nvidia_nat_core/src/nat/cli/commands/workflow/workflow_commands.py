@@ -104,7 +104,11 @@ class PackageError(Exception):
 
 
 def get_repo_root():
-    return find_package_root("nvidia-nat")
+    loc = find_package_root("nvidia-nat-core")
+    if loc:
+        # structure is <repo_root>/packages/nvidia_nat_core
+        return (loc / ".." / "..").resolve()
+    return None
 
 
 def _get_module_name(workflow_name: str):

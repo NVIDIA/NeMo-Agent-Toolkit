@@ -34,8 +34,8 @@ class TelemetryOptionalImportError(OptionalImportError):
         super().__init__(
             module_name,
             "But the configuration file contains tracing exporters. "
-            "If you want to use this feature, please install it with: uv pip install -e '.[telemetry]'",
-        )
+            "If you want to use this feature, please install it:\n"
+            "  uv pip install -e '.[opentelemetry]'\n")
 
 
 def optional_import(module_name: str) -> ModuleType:
