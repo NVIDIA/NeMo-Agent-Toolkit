@@ -71,7 +71,6 @@ class _DummyExporterManager:
 @pytest.mark.parametrize("method", ["result", "result_stream"])  # result vs stream
 @pytest.mark.parametrize("existing_run", [True, False])
 @pytest.mark.parametrize("existing_trace", [True, False])
-@pytest.mark.asyncio
 async def test_runner_trace_and_run_ids(existing_trace: bool, existing_run: bool, method: str):
     ctx_state = ContextState.get()
 
@@ -119,7 +118,7 @@ async def test_runner_trace_and_run_ids(existing_trace: bool, existing_run: bool
     ],
     ids=["config_name_set", "instance_name_fallback", "config_type_fallback"],
 )
-@pytest.mark.asyncio
+
 async def test_runner_workflow_name_resolution(
     config_name: str | None,
     instance_name: str,
