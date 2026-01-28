@@ -33,6 +33,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from git.exc import GitCommandError
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from rich.console import Console
 
@@ -571,9 +572,15 @@ class SweBenchPredictor(SweBenchPredictorBase):
             }))
             repo_path = Path(repo_path_str)
             logger.info("Repository setup at %s", repo_path)
+        except GitCommandError as e:
+            logger.error("Git operation failed: %s", e, exc_info=True)
+            return f"Error: Git operation failed - {e.stderr}"
+        except OSError as e:
+            logger.error("Filesystem error: %s", e, exc_info=True)
+            return f"Error: Workspace setup failed - {str(e)}"
         except Exception as e:
-            logger.exception("Failed to setup repository: %s", e)
-            return f"Error: Failed to setup repository - {str(e)}"
+            logger.exception("Unexpected error during repo setup: %s", e)
+            return f"Error: Setup failed - {str(e)}"
 
         try:
             # Get LLM
