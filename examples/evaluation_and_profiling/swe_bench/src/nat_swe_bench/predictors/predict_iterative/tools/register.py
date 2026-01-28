@@ -14,12 +14,15 @@
 # limitations under the License.
 
 # Register all the tools needed by the full predictor without loading the dependencies.
+import logging
 import typing
 
 from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.function import FunctionBaseConfig
+
+logger = logging.getLogger(__name__)
 
 
 class GitRepoToolConfig(FunctionBaseConfig, name="git_repo_tool"):
@@ -67,4 +70,9 @@ async def git_repo_tool(tool_config: GitRepoToolConfig, builder: Builder):
                                    description="Git repository management tool that accepts JSON string arguments")
     finally:
         if tool_config.cleanup_on_exit:
-            await repo_manager.cleanup()
+            try:
+                await repo_manager.cleanup()
+                logger.info("Workspace cleanup completed successfully")
+            except Exception as e:
+                logger.error("Workspace cleanup failed: %s", e, exc_info=True)
+                # Don't raise - allow graceful degradation
