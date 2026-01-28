@@ -161,6 +161,17 @@ These predictors are provided in this NeMo Agent Toolkit example:
 - `skeleton` - Skeleton code for creating a problem-solving workflow. This code can be copied to create a net-new predictor. See [predict_skeleton.py](src/nat_swe_bench/predictors/predict_skeleton/predict_skeleton.py) and configuration file `examples/evaluation_and_profiling/swe_bench/configs/config_skeleton.yml`.
 - `iterative` - Iterative agent that solves problems by executing bash commands step-by-step, observing results, and generating patches. See [predict_iterative.py](src/nat_swe_bench/predictors/predict_iterative/predict_iterative.py) and configuration file `examples/evaluation_and_profiling/swe_bench/configs/config_iterative.yml`.
 
+### Benchmark Context (January 2026)
+
+The iterative predictor achieves 70% success rate on SWE-bench Lite, which primarily reflects the capabilities of modern foundation models (Claude Sonnet 4.5, GPT-5.2) rather than framework-specific innovations. SWE-bench Lite is approaching saturation at 70-80% with simple agent architectures.
+
+**For evaluating framework improvements beyond task correctness, consider tracking:**
+- **Efficiency metrics:** Tokens consumed, steps taken, cost per solution
+- **Reliability metrics:** Success rate variance over multiple runs
+- **Harder benchmarks:** SWE-bench Verified (currently ~35% SOTA, not saturated) or full SWE-bench dataset (2,294 problems)
+
+This positions the iterative predictor as a reference implementation demonstrating NeMo Agent toolkit's builder pattern and tool integration capabilities.
+
 ### Adding a net new predictor
 To add a new predictor:
 - Create a new directory in the predictors directory, copy over the contents of [predictors/predict_skeleton](src/nat_swe_bench/predictors/predict_skeleton/). Rename the files and fill in the logic to solve the problem.
