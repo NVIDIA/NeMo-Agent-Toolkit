@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import logging
 import os
 import re
@@ -322,20 +323,31 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
         # Export the span with processing pipeline
         self._create_export_task(self._export_with_processing(sub_span))  # type: ignore
 
-    def _to_dict(self, data: typing.Any) -> dict[str, typing.Any] | typing.Any:
-        """Transform serialized payload into a structured dict for span attributes."""
+    def _to_dict(self, data: typing.Any) -> str:
+        """Transform payload into a JSON string for span attributes.
 
-        if hasattr(data, 'model_dump'):
-            result = data.model_dump(exclude_none=True)
-        elif isinstance(data, dict):
-            result = {k: v for k, v in data.items() if v is not None}
-        else:
-            return data
+        Converts the input data to a JSON string representation that is always
+        compatible with OTLP span attribute encoding. Raw dicts and nested structures
+        can contain types (None, custom objects) that OTLP cannot encode, so the
+        result is serialized to a JSON string for safety.
+        """
 
-        if 'value' in result and result['value'] is not None:
-            return result['value']
+        try:
+            if hasattr(data, 'model_dump'):
+                result = data.model_dump(exclude_none=True)
+            elif isinstance(data, dict):
+                result = {k: v for k, v in data.items() if v is not None}
+            elif isinstance(data, list):
+                result = [item.model_dump(exclude_none=True) if hasattr(item, 'model_dump') else item for item in data]
+            else:
+                return str(data)
 
-        return result
+            if isinstance(result, dict) and 'value' in result and result['value'] is not None:
+                result = result['value']
+
+            return json.dumps(result, default=str)
+        except Exception:
+            return str(data)
 
     @override
     async def _cleanup(self):
