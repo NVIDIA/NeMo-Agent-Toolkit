@@ -88,12 +88,6 @@ NeMo Agent Toolkit has many optional dependencies which can be installed with th
 pip install "nvidia-nat[langchain]"
 ```
 
-Or for **almost all** optional dependencies:
-
-```bash
-pip install "nvidia-nat[all]"
-```
-
 Detailed installation instructions, including the full list of optional dependencies and their conflicts, can be found in the [Installation Guide](./docs/source/get-started/installation.md).
 
 ## 🌟 Hello World Example
@@ -119,8 +113,9 @@ Before getting started, it's possible to run this simple workflow and many other
       # Tell NeMo Agent Toolkit which LLM to use for the agent
       nim_llm:
          _type: nim
-         model_name: meta/llama-3.1-70b-instruct
-         temperature: 0.0
+         model_name: nvidia/nemotron-3-nano-30b-a3b
+         chat_template_kwargs:
+            enable_thinking: false
 
    workflow:
       # Use an agent that 'reasons' and 'acts'

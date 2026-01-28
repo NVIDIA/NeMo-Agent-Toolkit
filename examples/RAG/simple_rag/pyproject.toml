@@ -19,7 +19,8 @@ classifiers = ["Programming Language :: Python"]
 
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
-  "nvidia-nat[ingestion,langchain,mem0ai] == {version}",
+  "nvidia-nat[langchain,mem0ai] == {version}",
+  "lxml~=5.4",
 ]
 
 [tool.uv.sources]

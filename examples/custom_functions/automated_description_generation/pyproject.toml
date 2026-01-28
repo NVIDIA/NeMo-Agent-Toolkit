@@ -16,7 +16,8 @@ classifiers = ["Programming Language :: Python"]
 
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
-  "nvidia-nat[ingestion,langchain] == {version}",
+  "nvidia-nat[langchain] == {version}",
+  "lxml~=5.4",
   "usearch~=2.21",
 ]
 

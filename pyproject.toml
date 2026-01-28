@@ -74,26 +74,39 @@ vanna = ["nvidia-nat-vanna == {version}"]
 weave = ["nvidia-nat-weave == {version}"]
 zep-cloud = ["nvidia-nat-zep-cloud == {version}"]
 
-async_endpoints = [
-  "nvidia-nat-core[async_endpoints] == {version}"
-]
-gunicorn = [
-  "nvidia-nat-core[gunicorn] == {version}"
-]
-ingestion = [
-  "nvidia-nat-core[ingestion] == {version}"
-]
-nvidia_haystack = [
-  "nvidia-nat-core[nvidia_haystack] == {version}"
-]
-openai = [
-  "nvidia-nat-core[openai] == {version}"
-]
+async_endpoints = [ "nvidia-nat-core[async_endpoints] == {version}" ]
+gunicorn = [ "nvidia-nat-core[gunicorn] == {version}" ]
+huggingface = [ "nvidia-nat-core[huggingface] == {version}" ]
 pii-defense = [
-  "nvidia-nat-core[pii-defense] == {version}"
+  "presidio-analyzer",
+  "presidio-anonymizer"
 ]
-profiling = [
-  "nvidia-nat-core[profiling] == {version}"
+profiling = [ "nvidia-nat-core[profiling] == {version}" ]
+
+most = [
+  "nvidia-nat-a2a == {version}",
+  "nvidia-nat-adk == {version}",
+  "nvidia-nat-agno == {version}",
+  "nvidia-nat-autogen == {version}",
+  "nvidia-nat-core == {version}",
+  "nvidia-nat-crewai == {version}",
+  "nvidia-nat-data-flywheel == {version}",
+  "nvidia-nat-langchain == {version}",
+  "nvidia-nat-llama-index == {version}",
+  "nvidia-nat-mcp == {version}",
+  "nvidia-nat-mem0ai == {version}",
+  "nvidia-nat-nemo-customizer == {version}",
+  "nvidia-nat-opentelemetry == {version}",
+  "nvidia-nat-phoenix == {version}",
+  "nvidia-nat-mysql == {version}",
+  "nvidia-nat-redis == {version}",
+  "nvidia-nat-s3 == {version}",
+  "nvidia-nat-semantic-kernel == {version}",
+  "nvidia-nat-strands == {version}",
+  "nvidia-nat-test == {version}",
+  "nvidia-nat-vanna == {version}",
+  "nvidia-nat-weave == {version}",
+  "nvidia-nat-zep-cloud == {version}",
 ]
 
 [dependency-groups]

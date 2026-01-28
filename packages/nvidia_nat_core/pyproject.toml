@@ -104,19 +104,6 @@ gunicorn = [
 huggingface = [
   "transformers[torch,accelerate]~=4.57",
 ]
-ingestion = [
-  "lxml~=5.4",
-]
-nvidia_haystack = [
-  "nvidia-haystack~=0.3.0",
-]
-openai = [
-  "openai~=1.106"
-]
-pii-defense = [
-  "presidio-analyzer",
-  "presidio-anonymizer"
-]
 profiling = [
   "matplotlib~=3.9",
   "prefixspan~=0.5.2",

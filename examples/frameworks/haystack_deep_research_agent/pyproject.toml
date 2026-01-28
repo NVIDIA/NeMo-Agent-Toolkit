@@ -15,9 +15,9 @@ classifiers = ["Programming Language :: Python"]
 
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
-  "nvidia-nat[nvidia_haystack] == {version}",
   "docstring-parser~=0.16",
   "haystack-ai>=2.18.1,<3.0.0",
+  "nvidia-haystack~=0.3.0",
   "opensearch-haystack~=4.2",
   "pypdf~=6.5",
   "trafilatura~=2.0",
