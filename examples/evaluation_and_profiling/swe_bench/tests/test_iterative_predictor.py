@@ -38,15 +38,15 @@ from nat_swe_bench.predictors.predict_iterative.predict_iterative import (
 # Fixtures
 # =============================================================================
 
-@pytest.fixture
-def mock_llm():
+@pytest.fixture(name="mock_llm")
+def fixture_mock_llm():
     """Create a mock LLM that returns configurable responses."""
     llm = AsyncMock()
     return llm
 
 
-@pytest.fixture
-def agent_config():
+@pytest.fixture(name="agent_config")
+def fixture_agent_config():
     """Create a default agent configuration for testing."""
     return IterativeAgentConfig(
         step_limit=10,
@@ -55,16 +55,16 @@ def agent_config():
     )
 
 
-@pytest.fixture
-def temp_repo_path(tmp_path):
+@pytest.fixture(name="temp_repo_path")
+def fixture_temp_repo_path(tmp_path):
     """Create a temporary directory to simulate a repository."""
     repo_path = tmp_path / "test_repo"
     repo_path.mkdir()
     return repo_path
 
 
-@pytest.fixture
-def agent(mock_llm, temp_repo_path, agent_config):
+@pytest.fixture(name="agent")
+def fixture_agent(mock_llm, temp_repo_path, agent_config):
     """Create an IterativeAgent instance with mocked dependencies."""
     return IterativeAgent(mock_llm, temp_repo_path, agent_config)
 
