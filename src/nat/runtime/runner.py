@@ -18,6 +18,7 @@ import typing
 import uuid
 from enum import Enum
 
+from nat.builder.component_utils import WORKFLOW_COMPONENT_NAME
 from nat.builder.context import Context
 from nat.builder.context import ContextState
 from nat.builder.function import Function
@@ -163,7 +164,17 @@ class Runner:
 
             # Prepare workflow-level intermediate step identifiers
             workflow_step_uuid = str(uuid.uuid4())
-            workflow_name = getattr(self._entry_fn, 'instance_name', None) or "workflow"
+
+            # Get workflow name with backwards-compatible fallback chain:
+            # 1. Check for explicit 'name' in config (allows user customization in config yaml)
+            # 2. Fall back to instance_name (original behavior)
+            # 3. If instance_name is the placeholder, use config.type (e.g., "react_agent")
+            config = self._entry_fn.config
+            workflow_name = config.name
+            if not workflow_name:
+                workflow_name = self._entry_fn.instance_name
+                if workflow_name == WORKFLOW_COMPONENT_NAME:
+                    workflow_name = config.type
 
             async with self._exporter_manager.start(context_state=self._context_state):
                 # Emit WORKFLOW_START
@@ -242,7 +253,17 @@ class Runner:
 
             # Prepare workflow-level intermediate step identifiers
             workflow_step_uuid = str(uuid.uuid4())
-            workflow_name = getattr(self._entry_fn, 'instance_name', None) or "workflow"
+
+            # Get workflow name with backwards-compatible fallback chain:
+            # 1. Check for explicit 'name' in config (allows user customization in config yaml)
+            # 2. Fall back to instance_name (original behavior)
+            # 3. If instance_name is the placeholder, use config.type (e.g., "react_agent")
+            config = self._entry_fn.config
+            workflow_name = config.name
+            if not workflow_name:
+                workflow_name = self._entry_fn.instance_name
+                if workflow_name == WORKFLOW_COMPONENT_NAME:
+                    workflow_name = config.type
 
             # Run the workflow
             async with self._exporter_manager.start(context_state=self._context_state):

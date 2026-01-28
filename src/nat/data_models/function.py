@@ -27,9 +27,15 @@ class FunctionBaseConfig(TypedBaseModel, BaseModelRegistryTag):
     """Base configuration for functions.
 
     Attributes:
-        middleware: List of function middleware names to apply to this function.
+        `name`: Optional display name for this function. Used in tracing and observability.
+            If not provided, the function type will be used.
+        `middleware`: List of function middleware names to apply to this function.
             These must match names defined in the `middleware` section of the YAML configuration.
     """
+    name: str | None = Field(
+        default=None,
+        description="Optional display name for this function. Used in tracing and observability.",
+    )
     middleware: list[str] = Field(
         default_factory=list,
         description="List of function middleware names to apply to this function in order",
