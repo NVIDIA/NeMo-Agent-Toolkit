@@ -504,12 +504,9 @@ class TestCleanup:
         manager = RepoManager("/tmp/test")
         manager.cleanup = AsyncMock(side_effect=Exception("Cleanup failed"))
 
-        # The cleanup should not propagate the exception in the finally block
-        # This tests the error handling in register.py
-        try:
+        # Verify that cleanup raises an exception (simulating failure)
+        with pytest.raises(Exception, match="Cleanup failed"):
             await manager.cleanup()
-        except Exception:
-            pass  # Expected - the test is that this doesn't crash the system
 
 
 # =============================================================================
