@@ -68,7 +68,6 @@ class RepoManager:
 
     async def cleanup(self):
         """Clean up all managed repositories."""
-        import shutil
         for repo_path_str in list(self.active_repos.keys()):
             repo_path = Path(repo_path_str)
             if repo_path.exists():
