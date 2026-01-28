@@ -35,7 +35,7 @@ workflow:
   predictor:
     _type: iterative
     llm_name: "openai_llm"   # "nim_llm" or "claude_sonnet_llm" or "openai_llm"
-    step_limit: 100
+    step_limit: 100  # Overrides default (250)
     timeout: 60
 
 functions:
