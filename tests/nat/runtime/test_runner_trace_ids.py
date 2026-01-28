@@ -160,9 +160,9 @@ async def test_runner_workflow_name_resolution(
         return original_push(self, payload)
 
     with patch.object(
-        IntermediateStepManager,
-        "push_intermediate_step",
-        capture_push,
+            IntermediateStepManager,
+            "push_intermediate_step",
+            capture_push,
     ):
         runner = Runner(
             "msg",
