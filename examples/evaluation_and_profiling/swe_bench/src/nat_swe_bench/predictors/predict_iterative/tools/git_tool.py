@@ -106,17 +106,71 @@ def get_repo_path(workspace_dir: str, repo_url: str, instance_id: str | None = N
     return Path(workspace_dir) / org_name / repo_name
 
 
-async def clone_repository(repo_url: str, target_path: Path) -> Repo:
-    """Clone a repository to the specified path."""
+async def clone_repository(repo_url: str, target_path: Path, timeout: int = 600) -> Repo:
+    """Clone a repository with timeout and error handling.
+
+    Args:
+        repo_url: URL of the repository to clone.
+        target_path: Local path to clone into.
+        timeout: Maximum time in seconds for clone operation.
+
+    Returns:
+        The cloned Repo object.
+
+    Raises:
+        ValueError: If repo_url format is invalid.
+        asyncio.TimeoutError: If clone exceeds timeout.
+    """
     logger.info("Cloning repository %s to %s", repo_url, target_path)
-    if os.path.exists(target_path):
+
+    # Validate URL format
+    if not (repo_url.startswith('https://') or repo_url.startswith('git@')):
+        raise ValueError(f"Invalid repository URL: {repo_url}")
+
+    # Clean existing path
+    if target_path.exists():
         await asyncio.to_thread(shutil.rmtree, target_path)
-    # Use asyncio.to_thread to avoid blocking the event loop during clone operation
-    return await asyncio.to_thread(Repo.clone_from, repo_url, target_path)
+
+    try:
+        repo = await asyncio.wait_for(
+            asyncio.to_thread(Repo.clone_from, repo_url, target_path),
+            timeout=timeout
+        )
+        logger.info("Successfully cloned %s", repo_url)
+        return repo
+    except asyncio.TimeoutError:
+        logger.error("Clone timed out for %s after %ds", repo_url, timeout)
+        if target_path.exists():
+            await asyncio.to_thread(shutil.rmtree, target_path)
+        raise
+    except Exception as e:
+        logger.error("Clone failed for %s: %s", repo_url, e)
+        if target_path.exists():
+            await asyncio.to_thread(shutil.rmtree, target_path)
+        raise
 
 
-async def checkout_commit(repo: Repo, commit_hash: str):
-    """Checkout a specific commit in the repository."""
+async def checkout_commit(repo: Repo, commit_hash: str, timeout: int = 120):
+    """Checkout a specific commit with timeout and error handling.
+
+    Args:
+        repo: The repository object.
+        commit_hash: The commit hash to checkout.
+        timeout: Maximum time in seconds for checkout operation.
+
+    Raises:
+        asyncio.TimeoutError: If checkout exceeds timeout.
+    """
     logger.info("Checking out commit %s", commit_hash)
-    # Use asyncio.to_thread to avoid blocking the event loop during checkout
-    await asyncio.to_thread(repo.git.checkout, commit_hash)
+    try:
+        await asyncio.wait_for(
+            asyncio.to_thread(repo.git.checkout, commit_hash),
+            timeout=timeout
+        )
+        logger.info("Successfully checked out %s", commit_hash)
+    except asyncio.TimeoutError:
+        logger.error("Checkout timed out for %s after %ds", commit_hash, timeout)
+        raise
+    except Exception as e:
+        logger.error("Checkout failed for %s: %s", commit_hash, e)
+        raise
