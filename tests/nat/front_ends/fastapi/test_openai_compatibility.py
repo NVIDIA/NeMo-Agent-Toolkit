@@ -568,3 +568,577 @@ async def test_openai_compatible_streaming_response_format():
 
     # At least one non-null finish_reason should appear across the stream (finalization)
     assert valid_final_reason_seen, "Expected a final chunk with non-null finish_reason"
+
+
+# ==================== OpenAI Responses API Tests ====================
+#
+# NOTE: The Responses API format is provided for pass-through compatibility with managed
+# services that support stateful backends (e.g., OpenAI, Azure OpenAI). NAT agents do not
+# inherently support stateful backends. Features like 'previous_response_id' are accepted
+# but ignored. Requests are converted to the internal ChatRequest format for execution.
+#
+
+
+def test_responses_request_model():
+    """Test that ResponsesRequest model correctly parses Responses API format."""
+    from nat.data_models.api_server import ResponsesRequest
+
+    # Test with simple string input
+    request = ResponsesRequest(model="gpt-4o-mini", input="What is the weather?")
+    assert request.model == "gpt-4o-mini"
+    assert request.input == "What is the weather?"
+    assert request.stream is False
+
+    # Test with message-style input
+    request = ResponsesRequest(
+        model="gpt-4o-mini",
+        input=[{
+            "role": "user", "content": "Hello"
+        }],
+        instructions="You are a helpful assistant.",
+        tools=[{
+            "type": "function", "name": "get_weather", "description": "Get weather"
+        }],
+    )
+    assert isinstance(request.input, list)
+    assert request.instructions == "You are a helpful assistant."
+    assert request.tools is not None
+
+
+def test_responses_request_to_chat_request_conversion():
+    """Test that ResponsesRequest correctly converts to ChatRequest."""
+    from nat.data_models.api_server import ResponsesRequest
+
+    # Test simple string input conversion
+    request = ResponsesRequest(model="gpt-4o-mini", input="What is the weather?")
+    chat_request = request.to_chat_request()
+
+    assert len(chat_request.messages) == 1
+    assert chat_request.messages[0].role.value == "user"
+    assert chat_request.messages[0].content == "What is the weather?"
+    assert chat_request.model == "gpt-4o-mini"
+
+    # Test with instructions (should be added as system message)
+    request = ResponsesRequest(model="gpt-4o-mini", input="Hello", instructions="Be helpful")
+    chat_request = request.to_chat_request()
+
+    assert len(chat_request.messages) == 2
+    assert chat_request.messages[0].role.value == "system"
+    assert chat_request.messages[0].content == "Be helpful"
+    assert chat_request.messages[1].role.value == "user"
+    assert chat_request.messages[1].content == "Hello"
+
+    # Test tool conversion (flat to nested format)
+    request = ResponsesRequest(
+        model="gpt-4o-mini",
+        input="What time is it?",
+        tools=[{
+            "type": "function", "name": "get_time", "description": "Get current time", "parameters": {}
+        }],
+    )
+    chat_request = request.to_chat_request()
+
+    assert chat_request.tools is not None
+    assert len(chat_request.tools) == 1
+    assert chat_request.tools[0]["type"] == "function"
+    assert "function" in chat_request.tools[0]
+    assert chat_request.tools[0]["function"]["name"] == "get_time"
+
+
+def test_responses_api_response_model():
+    """Test that ResponsesAPIResponse model has correct structure."""
+    from nat.data_models.api_server import ResponsesAPIResponse
+    from nat.data_models.api_server import ResponsesOutputContent
+    from nat.data_models.api_server import ResponsesOutputItem
+
+    response = ResponsesAPIResponse(
+        model="gpt-4o-mini",
+        output=[ResponsesOutputItem(content=[ResponsesOutputContent(text="Hello, world!")])],
+    )
+
+    assert response.object == "response"
+    assert response.status == "completed"
+    assert response.model == "gpt-4o-mini"
+    assert len(response.output) == 1
+    assert response.output[0].type == "message"
+    assert response.output[0].role == "assistant"
+    assert len(response.output[0].content) == 1
+    assert response.output[0].content[0].text == "Hello, world!"
+
+
+def test_responses_api_response_from_chat_response():
+    """Test conversion from ChatResponse to ResponsesAPIResponse."""
+    from nat.data_models.api_server import ResponsesAPIResponse
+
+    chat_response = ChatResponse.from_string("Test response", usage=Usage(prompt_tokens=10, completion_tokens=5))
+    responses_api_response = ResponsesAPIResponse.from_chat_response(chat_response, model="test-model")
+
+    assert responses_api_response.object == "response"
+    assert responses_api_response.model == "test-model"
+    assert len(responses_api_response.output) == 1
+    assert responses_api_response.output[0].content[0].text == "Test response"
+
+
+async def test_responses_api_endpoint_non_streaming():
+    """Test that /v1/responses endpoint accepts Responses API format and returns correct format."""
+    from nat.data_models.api_server import ResponsesAPIResponse
+
+    front_end_config = FastApiFrontEndConfig()
+    front_end_config.workflow.openai_api_v1_path = "/v1/responses"
+    front_end_config.workflow.openai_api_path = "/chat"
+
+    config = Config(
+        general=GeneralConfig(front_end=front_end_config),
+        workflow=EchoFunctionConfig(use_openai_api=True),
+    )
+
+    async with build_nat_client(config) as client:
+        # Test with Responses API format (using 'input' not 'messages')
+        response = await client.post(
+            "/v1/responses",
+            json={
+                "model": "gpt-4o-mini",
+                "input": "Hello, world!",
+                "stream": False,
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Validate Responses API response structure
+        assert data["object"] == "response"
+        assert data["status"] == "completed"
+        assert "output" in data
+        assert len(data["output"]) > 0
+        assert data["output"][0]["type"] == "message"
+        assert data["output"][0]["role"] == "assistant"
+        assert len(data["output"][0]["content"]) > 0
+        assert data["output"][0]["content"][0]["type"] == "output_text"
+        # Echo function should return the input
+        assert "Hello, world!" in data["output"][0]["content"][0]["text"]
+
+
+async def test_responses_api_endpoint_with_instructions():
+    """Test Responses API endpoint with system instructions."""
+    front_end_config = FastApiFrontEndConfig()
+    front_end_config.workflow.openai_api_v1_path = "/v1/responses"
+
+    config = Config(
+        general=GeneralConfig(front_end=front_end_config),
+        workflow=EchoFunctionConfig(use_openai_api=True),
+    )
+
+    async with build_nat_client(config) as client:
+        response = await client.post(
+            "/v1/responses",
+            json={
+                "model": "gpt-4o-mini",
+                "input": "Test message",
+                "instructions": "You are a helpful assistant.",
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["object"] == "response"
+
+
+async def test_responses_api_endpoint_streaming():
+    """Test that /v1/responses endpoint supports streaming in Responses API SSE format."""
+    import json
+
+    front_end_config = FastApiFrontEndConfig()
+    front_end_config.workflow.openai_api_v1_path = "/v1/responses"
+
+    config = Config(
+        general=GeneralConfig(front_end=front_end_config),
+        workflow=StreamingEchoFunctionConfig(use_openai_api=True),
+    )
+
+    async with build_nat_client(config) as client:
+        events = []
+        async with aconnect_sse(
+                client,
+                "POST",
+                "/v1/responses",
+                json={
+                    "model": "gpt-4o-mini",
+                    "input": "Hello streaming!",
+                    "stream": True,
+                },
+        ) as event_source:
+            async for sse in event_source.aiter_sse():
+                events.append({"event": sse.event, "data": json.loads(sse.data)})
+
+        assert event_source.response.status_code == 200
+        assert len(events) > 0
+
+        # Verify Responses API SSE event types
+        event_types = [e["event"] for e in events]
+
+        # Should have response lifecycle events
+        assert "response.created" in event_types
+        assert "response.output_item.added" in event_types
+        assert "response.content_part.added" in event_types
+        assert "response.output_text.done" in event_types
+        assert "response.done" in event_types
+
+        # Check response.created event
+        created_event = next(e for e in events if e["event"] == "response.created")
+        assert created_event["data"]["type"] == "response.created"
+        assert created_event["data"]["response"]["status"] == "in_progress"
+
+        # Check response.done event has completed response
+        done_event = next(e for e in events if e["event"] == "response.done")
+        assert done_event["data"]["type"] == "response.done"
+        assert done_event["data"]["response"]["status"] == "completed"
+        assert len(done_event["data"]["response"]["output"]) > 0
+
+
+async def test_responses_api_vs_chat_completions_path_detection():
+    """Test that path detection correctly routes to appropriate API handler."""
+    front_end_config = FastApiFrontEndConfig()
+
+    # Test Chat Completions path
+    front_end_config.workflow.openai_api_v1_path = "/v1/chat/completions"
+
+    config = Config(
+        general=GeneralConfig(front_end=front_end_config),
+        workflow=EchoFunctionConfig(use_openai_api=True),
+    )
+
+    async with build_nat_client(config) as client:
+        # Should accept Chat Completions format (with 'messages')
+        response = await client.post(
+            "/v1/chat/completions",
+            json={
+                "messages": [{
+                    "role": "user", "content": "Hello"
+                }],
+                "stream": False,
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["object"] == "chat.completion"  # Chat Completions response format
+
+        # Should reject Responses API format (with 'input' instead of 'messages')
+        response = await client.post(
+            "/v1/chat/completions",
+            json={
+                "model": "gpt-4o-mini",
+                "input": "Hello",
+            },
+        )
+        assert response.status_code == 422  # Validation error - missing 'messages'
+
+
+async def test_responses_api_endpoint_rejects_chat_completions_format():
+    """Test that /v1/responses endpoint rejects Chat Completions format."""
+    front_end_config = FastApiFrontEndConfig()
+    front_end_config.workflow.openai_api_v1_path = "/v1/responses"
+
+    config = Config(
+        general=GeneralConfig(front_end=front_end_config),
+        workflow=EchoFunctionConfig(use_openai_api=True),
+    )
+
+    async with build_nat_client(config) as client:
+        # Should reject Chat Completions format (with 'messages' instead of 'input')
+        response = await client.post(
+            "/v1/responses",
+            json={
+                "messages": [{
+                    "role": "user", "content": "Hello"
+                }],
+            },
+        )
+        assert response.status_code == 422  # Validation error - missing 'input' and 'model'
+
+
+# =============================================================================
+# Enhanced Tool Handling Tests
+# =============================================================================
+
+
+def test_responses_request_tool_conversion_flat_to_nested():
+    """Test that flat Responses API tool format converts to Chat Completions nested format."""
+    from nat.data_models.api_server import ResponsesRequest
+
+    request = ResponsesRequest(
+        model="gpt-4",
+        input="Hello",
+        tools=[{
+            "type": "function",
+            "name": "get_weather",
+            "description": "Get weather for a city",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "city": {"type": "string"}
+                }
+            }
+        }])
+
+    chat_request = request.to_chat_request()
+
+    assert chat_request.tools is not None
+    assert len(chat_request.tools) == 1
+    assert chat_request.tools[0]["type"] == "function"
+    assert "function" in chat_request.tools[0]
+    assert chat_request.tools[0]["function"]["name"] == "get_weather"
+    assert chat_request.tools[0]["function"]["description"] == "Get weather for a city"
+    assert chat_request.tools[0]["function"]["parameters"]["properties"]["city"]["type"] == "string"
+
+
+def test_responses_request_tool_conversion_preserves_strict_mode():
+    """Test that 'strict' mode is preserved during tool conversion."""
+    from nat.data_models.api_server import ResponsesRequest
+
+    request = ResponsesRequest(
+        model="gpt-4",
+        input="Hello",
+        tools=[{
+            "type": "function",
+            "name": "strict_func",
+            "description": "A strict function",
+            "parameters": {},
+            "strict": True,
+        }])
+
+    chat_request = request.to_chat_request()
+
+    assert chat_request.tools is not None
+    assert chat_request.tools[0]["function"]["strict"] is True
+
+
+def test_responses_request_tool_conversion_already_nested():
+    """Test that already-nested tools (Chat Completions format) pass through unchanged."""
+    from nat.data_models.api_server import ResponsesRequest
+
+    # Tool already in Chat Completions format (nested)
+    request = ResponsesRequest(
+        model="gpt-4",
+        input="Hello",
+        tools=[{
+            "type": "function",
+            "function": {
+                "name": "nested_func",
+                "description": "Already nested",
+                "parameters": {}
+            }
+        }])
+
+    chat_request = request.to_chat_request()
+
+    assert chat_request.tools is not None
+    assert len(chat_request.tools) == 1
+    # Should pass through unchanged
+    assert chat_request.tools[0]["function"]["name"] == "nested_func"
+
+
+def test_responses_request_filters_unsupported_tool_types(caplog):
+    """Test that unsupported tool types are filtered out with warnings."""
+    import logging
+    from nat.data_models.api_server import ResponsesRequest
+
+    request = ResponsesRequest(
+        model="gpt-4",
+        input="Hello",
+        tools=[
+            {"type": "code_interpreter"},
+            {"type": "file_search"},
+            {"type": "web_search_preview"},
+            {
+                "type": "function",
+                "name": "my_func",
+                "description": "test"
+            },
+        ])
+
+    # Capture log warnings
+    with caplog.at_level(logging.WARNING):
+        chat_request = request.to_chat_request()
+
+    # Verify warnings were logged for unsupported tool types
+    assert "code_interpreter" in caplog.text
+    assert "file_search" in caplog.text
+    assert "web_search_preview" in caplog.text
+    assert "not supported by NAT workflows" in caplog.text
+
+    # Only the function tool should remain
+    assert chat_request.tools is not None
+    assert len(chat_request.tools) == 1
+    assert chat_request.tools[0]["function"]["name"] == "my_func"
+
+
+def test_responses_request_no_tools_returns_none():
+    """Test that None tools returns None."""
+    from nat.data_models.api_server import ResponsesRequest
+
+    request = ResponsesRequest(model="gpt-4", input="Hello", tools=None)
+
+    chat_request = request.to_chat_request()
+
+    assert chat_request.tools is None
+
+
+def test_responses_request_empty_tools_returns_none():
+    """Test that empty tools list returns None after filtering."""
+    from nat.data_models.api_server import ResponsesRequest
+
+    # Only unsupported tools - should result in None after filtering
+    request = ResponsesRequest(model="gpt-4", input="Hello", tools=[{"type": "code_interpreter"}])
+
+    chat_request = request.to_chat_request()
+
+    assert chat_request.tools is None
+
+
+# =============================================================================
+# Path Detection Tests with Explicit Format Config
+# =============================================================================
+
+
+def test_openai_api_v1_format_config_field():
+    """Test that openai_api_v1_format field is properly added to config."""
+    from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
+
+    # Test default value (auto)
+    config = FastApiFrontEndConfig.EndpointBase(method="POST", description="test")
+    assert hasattr(config, 'openai_api_v1_format')
+    assert config.openai_api_v1_format == "auto"
+
+    # Test explicit chat_completions
+    config = FastApiFrontEndConfig.EndpointBase(method="POST",
+                                                description="test",
+                                                openai_api_v1_format="chat_completions")
+    assert config.openai_api_v1_format == "chat_completions"
+
+    # Test explicit responses
+    config = FastApiFrontEndConfig.EndpointBase(method="POST", description="test", openai_api_v1_format="responses")
+    assert config.openai_api_v1_format == "responses"
+
+
+@pytest.mark.parametrize(
+    "path,expected_format",
+    [
+        # Strict matches for Responses API
+        ("/v1/responses", "responses"),
+        ("/responses", "responses"),
+        ("/api/v1/responses", "responses"),
+        ("/api/v2/responses", "responses"),
+        # Trailing slash should also work
+        ("/v1/responses/", "responses"),
+        # Chat Completions paths
+        ("/v1/chat/completions", "chat_completions"),
+        ("/chat/completions", "chat_completions"),
+        ("/v1/completions", "chat_completions"),
+        # Paths that should NOT match Responses API (even if they contain "responses")
+        ("/v1/user_responses", "chat_completions"),
+        ("/v1/responses/history", "chat_completions"),
+        ("/v1/chat/responses", "chat_completions"),
+        ("/api/responses/list", "chat_completions"),
+    ],
+)
+def test_path_detection_strict_matching(path: str, expected_format: str):
+    """Test that path detection uses strict pattern matching."""
+    from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
+    from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
+    from nat.data_models.config import Config, GeneralConfig
+
+    # Create a minimal config
+    front_end_config = FastApiFrontEndConfig()
+    config = Config(
+        general=GeneralConfig(front_end=front_end_config),
+        workflow=EchoFunctionConfig(use_openai_api=True),
+    )
+
+    worker = FastApiFrontEndPluginWorker(config)
+
+    # Create endpoint with auto format
+    endpoint = FastApiFrontEndConfig.EndpointBase(method="POST", description="test", openai_api_v1_format="auto")
+
+    result = worker._determine_api_format(endpoint, path)
+    assert result == expected_format, f"Path '{path}' should detect as '{expected_format}', got '{result}'"
+
+
+def test_explicit_format_overrides_auto_detection():
+    """Test that explicit format config overrides auto-detection."""
+    from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
+    from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
+    from nat.data_models.config import Config, GeneralConfig
+
+    front_end_config = FastApiFrontEndConfig()
+    config = Config(
+        general=GeneralConfig(front_end=front_end_config),
+        workflow=EchoFunctionConfig(use_openai_api=True),
+    )
+
+    worker = FastApiFrontEndPluginWorker(config)
+
+    # Path looks like responses, but explicit config says chat_completions
+    endpoint = FastApiFrontEndConfig.EndpointBase(method="POST",
+                                                  description="test",
+                                                  openai_api_v1_format="chat_completions")
+
+    result = worker._determine_api_format(endpoint, "/v1/responses")
+    assert result == "chat_completions"
+
+    # Path looks like chat completions, but explicit config says responses
+    endpoint = FastApiFrontEndConfig.EndpointBase(method="POST",
+                                                  description="test",
+                                                  openai_api_v1_format="responses")
+
+    result = worker._determine_api_format(endpoint, "/v1/chat/completions")
+    assert result == "responses"
+
+
+async def test_explicit_responses_format_on_custom_path():
+    """Test that explicit 'responses' format works on a non-standard path."""
+    front_end_config = FastApiFrontEndConfig()
+    front_end_config.workflow.openai_api_v1_path = "/custom/agent/endpoint"
+    front_end_config.workflow.openai_api_v1_format = "responses"
+
+    config = Config(
+        general=GeneralConfig(front_end=front_end_config),
+        workflow=EchoFunctionConfig(use_openai_api=True),
+    )
+
+    async with build_nat_client(config) as client:
+        # Should accept Responses API format
+        response = await client.post(
+            "/custom/agent/endpoint",
+            json={
+                "model": "gpt-4",
+                "input": "Hello from custom path",
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["object"] == "response"
+
+
+async def test_explicit_chat_completions_format_on_responses_like_path():
+    """Test that explicit 'chat_completions' format works even on a path containing 'responses'."""
+    front_end_config = FastApiFrontEndConfig()
+    front_end_config.workflow.openai_api_v1_path = "/v1/my_responses_endpoint"
+    front_end_config.workflow.openai_api_v1_format = "chat_completions"
+
+    config = Config(
+        general=GeneralConfig(front_end=front_end_config),
+        workflow=EchoFunctionConfig(use_openai_api=True),
+    )
+
+    async with build_nat_client(config) as client:
+        # Should accept Chat Completions format
+        response = await client.post(
+            "/v1/my_responses_endpoint",
+            json={
+                "messages": [{"role": "user", "content": "Hello"}],
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["object"] == "chat.completion"

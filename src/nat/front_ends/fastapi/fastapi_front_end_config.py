@@ -172,10 +172,24 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
         )
         openai_api_v1_path: str | None = Field(
             default=None,
-            description=("Path for the OpenAI v1 Chat Completions API compatible endpoint. "
-                         "If provided, creates a single endpoint that handles both streaming and "
-                         "non-streaming requests based on the 'stream' parameter, following the "
-                         "OpenAI Chat Completions API specification exactly."),
+            description=("Path for the OpenAI v1 API compatible endpoint. "
+                         "Creates a single endpoint that handles both streaming and non-streaming "
+                         "requests based on the 'stream' parameter. "
+                         "Use 'openai_api_v1_format' to specify the API format, or leave it as 'auto' "
+                         "for automatic detection based on path patterns."),
+        )
+        openai_api_v1_format: typing.Literal["auto", "chat_completions", "responses"] = Field(
+            default="auto",
+            description=(
+                "API format for the openai_api_v1_path endpoint. "
+                "'auto': Detects based on path pattern - paths ending with '/responses' use Responses API, "
+                "otherwise Chat Completions API is used. "
+                "'chat_completions': Uses the Chat Completions API format (with 'messages' field). "
+                "'responses': Uses the Responses API format (with 'input' field). "
+                "WARNING: The Responses API format is provided for pass-through compatibility "
+                "with managed services that support stateful backends. NAT agents do not "
+                "inherently support stateful backends; features like 'previous_response_id' "
+                "will be ignored."),
         )
 
     class Endpoint(EndpointBase):
@@ -259,6 +273,7 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
         websocket_path="/websocket",
         openai_api_path="/chat",
         openai_api_v1_path="/v1/chat/completions",
+        openai_api_v1_format="auto",
         description="Executes the default NAT workflow from the loaded configuration ",
     )
 

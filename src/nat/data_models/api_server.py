@@ -865,6 +865,240 @@ def _string_to_nat_chat_response_chunk(data: str) -> ChatResponseChunk:
 
 GlobalTypeConverter.register_converter(_string_to_nat_chat_response_chunk)
 
+
+# ======== OpenAI Responses API Models ========
+
+class ResponsesInputItem(BaseModel):
+    """Input item for Responses API (message format)."""
+
+    type: typing.Literal["message"] = "message"
+    role: UserMessageContentRoleType = UserMessageContentRoleType.USER
+    content: str | list[dict[str, typing.Any]] = Field(description="Content of the message")
+
+
+class ResponsesRequest(BaseModel):
+    """
+    ResponsesRequest represents a request to the OpenAI Responses API.
+    https://platform.openai.com/docs/api-reference/responses
+
+    WARNING: This model is provided for pass-through compatibility with managed services
+    that support stateful backends (e.g., OpenAI, Azure OpenAI). NAT agents do not
+    inherently support stateful backends. Stateful features such as 'previous_response_id'
+    will be ignored when processed by NAT workflows. The request will be converted to
+    the internal ChatRequest format for execution.
+    """
+
+    model_config = ConfigDict(extra="allow",
+                              json_schema_extra={
+                                  "example": {
+                                      "model": "gpt-4o-mini",
+                                      "input": "What is the weather today?",
+                                      "tools": [{
+                                          "type": "function",
+                                          "name": "get_weather",
+                                          "description": "Get current weather"
+                                      }]
+                                  }
+                              })
+
+    # Required field
+    model: str = Field(description="ID of the model to use")
+
+    # Input can be a string or list of input items
+    input: str | list[dict[str, typing.Any]] = Field(
+        description="Text input to the model, or a list of input items (messages)")
+
+    # Optional fields
+    instructions: str | None = Field(default=None, description="System instructions for the model")
+    tools: list[dict[str, typing.Any]] | None = Field(default=None, description="Tools available to the model")
+    tool_choice: str | dict[str, typing.Any] | None = Field(default=None, description="Tool choice control")
+    stream: bool | None = Field(default=False, description="Whether to stream the response")
+    temperature: float | None = Field(default=None, description="Sampling temperature between 0 and 2")
+    max_output_tokens: int | None = Field(default=None, description="Maximum tokens in the response")
+    top_p: float | None = Field(default=None, description="Nucleus sampling parameter")
+    previous_response_id: str | None = Field(default=None,
+                                             description="ID of previous response for multi-turn conversations")
+    store: bool | None = Field(default=None, description="Whether to store the response")
+    metadata: dict[str, str] | None = Field(default=None, description="Metadata for the request")
+
+    def to_chat_request(self) -> "ChatRequest":
+        """Convert Responses API request to internal ChatRequest format for processing."""
+        messages: list[Message] = []
+
+        # Add system instruction if provided
+        if self.instructions:
+            messages.append(Message(role=UserMessageContentRoleType.SYSTEM, content=self.instructions))
+
+        # Convert input to messages format
+        if isinstance(self.input, str):
+            messages.append(Message(role=UserMessageContentRoleType.USER, content=self.input))
+        else:
+            # input is a list of input items (message-like dicts)
+            for item in self.input:
+                if isinstance(item, dict):
+                    role_str = item.get("role", "user")
+                    try:
+                        role = UserMessageContentRoleType(role_str)
+                    except ValueError:
+                        role = UserMessageContentRoleType.USER
+                    content = item.get("content", "")
+                    messages.append(Message(role=role, content=content))
+
+        # Convert tools if needed (Responses API tools have slightly different structure)
+        converted_tools = self._convert_tools() if self.tools else None
+
+        return ChatRequest(
+            messages=messages,
+            model=self.model,
+            tools=converted_tools,
+            tool_choice=self.tool_choice,
+            stream=self.stream,
+            temperature=self.temperature,
+            max_tokens=self.max_output_tokens,
+            top_p=self.top_p,
+        )
+
+    def _convert_tools(self) -> list[dict[str, typing.Any]] | None:
+        """
+        Convert Responses API tools format to Chat Completions format.
+
+        Responses API format (flat):
+            {"type": "function", "name": "get_weather", "description": "...", "parameters": {...}}
+
+        Chat Completions format (nested):
+            {"type": "function", "function": {"name": "get_weather", "description": "...", "parameters": {...}}}
+
+        Unsupported tool types (code_interpreter, file_search, web_search_preview) are logged
+        with warnings and excluded from conversion since NAT workflows do not support them.
+        """
+        import logging as _logging
+
+        _logger = _logging.getLogger(__name__)
+
+        if not self.tools:
+            return None
+
+        # Tool types that are built-in to OpenAI Responses API but not supported by NAT
+        unsupported_tool_types = {"code_interpreter", "file_search", "web_search_preview", "computer_use_preview"}
+
+        converted = []
+        for tool in self.tools:
+            if not isinstance(tool, dict):
+                converted.append(tool)
+                continue
+
+            tool_type = tool.get("type", "function")
+
+            if tool_type in unsupported_tool_types:
+                _logger.warning(
+                    "Tool type '%s' is not supported by NAT workflows and will be ignored. "
+                    "Only 'function' type tools are supported.", tool_type)
+                continue
+
+            if tool_type == "function":
+                # Check if already in Chat Completions nested format
+                if "function" in tool and isinstance(tool["function"], dict):
+                    # Already in Chat Completions format - pass through
+                    converted.append(tool)
+                else:
+                    # Responses API flat format -> Chat Completions nested format
+                    function_def = {
+                        "name": tool.get("name", ""),
+                        "description": tool.get("description", ""),
+                        "parameters": tool.get("parameters", {}),
+                    }
+                    # Preserve 'strict' mode if present
+                    if "strict" in tool:
+                        function_def["strict"] = tool["strict"]
+
+                    converted.append({
+                        "type": "function",
+                        "function": function_def,
+                    })
+            else:
+                # Unknown type - pass through with warning
+                _logger.warning("Unknown tool type '%s' encountered, passing through as-is.", tool_type)
+                converted.append(tool)
+
+        return converted if converted else None
+
+
+class ResponsesOutputContent(BaseModel):
+    """Content item in Responses API output."""
+
+    type: typing.Literal["output_text"] = "output_text"
+    text: str = ""
+    annotations: list[dict[str, typing.Any]] = Field(default_factory=list)
+
+
+class ResponsesOutputItem(BaseModel):
+    """Output item in Responses API format."""
+
+    type: typing.Literal["message"] = "message"
+    id: str = Field(default_factory=lambda: f"msg_{uuid.uuid4().hex[:24]}")
+    status: typing.Literal["in_progress", "completed", "incomplete"] = "completed"
+    role: typing.Literal["assistant"] = "assistant"
+    content: list[ResponsesOutputContent] = Field(default_factory=list)
+
+
+class ResponsesUsage(BaseModel):
+    """Usage information for Responses API."""
+
+    input_tokens: int = 0
+    output_tokens: int = 0
+    total_tokens: int = 0
+
+
+class ResponsesAPIResponse(ResponseBaseModelOutput):
+    """
+    Response format for OpenAI Responses API.
+    https://platform.openai.com/docs/api-reference/responses
+    """
+
+    id: str = Field(default_factory=lambda: f"resp_{uuid.uuid4().hex[:24]}")
+    object: typing.Literal["response"] = "response"
+    created_at: int = Field(
+        default_factory=lambda: int(datetime.datetime.now(tz=datetime.timezone.utc).timestamp()))
+    status: typing.Literal["in_progress", "completed", "incomplete", "failed"] = "completed"
+    model: str = "unknown-model"
+    output: list[ResponsesOutputItem] = Field(default_factory=list)
+    usage: ResponsesUsage = Field(default_factory=ResponsesUsage)
+    metadata: dict[str, str] = Field(default_factory=dict)
+
+    @staticmethod
+    def from_chat_response(chat_response: "ChatResponse", model: str | None = None) -> "ResponsesAPIResponse":
+        """Convert ChatResponse to Responses API format."""
+        content_items: list[ResponsesOutputContent] = []
+
+        if chat_response.choices:
+            for choice in chat_response.choices:
+                if choice.message and choice.message.content:
+                    content_items.append(ResponsesOutputContent(type="output_text", text=choice.message.content))
+
+        output_items = [ResponsesOutputItem(content=content_items)] if content_items else []
+
+        # Convert usage if available
+        usage = ResponsesUsage(
+            input_tokens=chat_response.usage.prompt_tokens or 0 if chat_response.usage else 0,
+            output_tokens=chat_response.usage.completion_tokens or 0 if chat_response.usage else 0,
+            total_tokens=chat_response.usage.total_tokens or 0 if chat_response.usage else 0,
+        )
+
+        return ResponsesAPIResponse(
+            model=model or chat_response.model,
+            output=output_items,
+            usage=usage,
+        )
+
+    @staticmethod
+    def from_string(data: str, *, model: str = "unknown-model") -> "ResponsesAPIResponse":
+        """Create a ResponsesAPIResponse from a simple string output."""
+        return ResponsesAPIResponse(
+            model=model,
+            output=[ResponsesOutputItem(content=[ResponsesOutputContent(type="output_text", text=data)])],
+        )
+
+
 # Compatibility aliases with previous releases
 AIQChatRequest = ChatRequest
 AIQChoiceMessage = ChoiceMessage

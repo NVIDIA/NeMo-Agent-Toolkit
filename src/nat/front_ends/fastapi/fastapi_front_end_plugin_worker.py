@@ -49,6 +49,8 @@ from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
 from nat.data_models.api_server import ChatResponseChunk
 from nat.data_models.api_server import ResponseIntermediateStep
+from nat.data_models.api_server import ResponsesAPIResponse
+from nat.data_models.api_server import ResponsesRequest
 from nat.data_models.config import Config
 from nat.data_models.object_store import KeyAlreadyExistsError
 from nat.data_models.object_store import NoSuchKeyError
@@ -69,6 +71,7 @@ from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateResponse
 from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateStatusResponse
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from nat.front_ends.fastapi.message_handler import WebSocketMessageHandler
+from nat.front_ends.fastapi.response_helpers import generate_responses_api_streaming
 from nat.front_ends.fastapi.response_helpers import generate_single_response
 from nat.front_ends.fastapi.response_helpers import generate_streaming_response_as_str
 from nat.front_ends.fastapi.response_helpers import generate_streaming_response_full_as_str
@@ -314,6 +317,45 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
     def get_step_adaptor(self) -> StepAdaptor:
 
         return StepAdaptor(self.front_end_config.step_adaptor)
+
+    def _determine_api_format(
+        self,
+        endpoint: FastApiFrontEndConfig.EndpointBase,
+        openai_v1_path: str,
+    ) -> str:
+        """
+        Determine the API format to use based on configuration and path pattern.
+
+        Args:
+            endpoint: The endpoint configuration
+            openai_v1_path: The path for the OpenAI v1 API endpoint
+
+        Returns:
+            "chat_completions" or "responses"
+        """
+        import re
+
+        # Check for explicit format configuration
+        explicit_format = getattr(endpoint, 'openai_api_v1_format', 'auto')
+
+        if explicit_format != "auto":
+            logger.debug("Using explicit API format '%s' for path '%s'", explicit_format, openai_v1_path)
+            return explicit_format
+
+        # Auto-detect based on path patterns using strict matching
+        path_lower = openai_v1_path.lower().rstrip('/')
+
+        # Strict patterns that indicate Responses API:
+        # - Exact match: /responses, /v1/responses, /api/v1/responses
+        # - Does NOT match: /v1/user_responses, /v1/responses/history
+        responses_pattern = re.compile(r'^(/api)?(/v\d+)?/responses$')
+
+        if responses_pattern.match(path_lower):
+            logger.debug("Auto-detected Responses API format for path '%s'", openai_v1_path)
+            return "responses"
+
+        logger.debug("Auto-detected Chat Completions API format for path '%s'", openai_v1_path)
+        return "chat_completions"
 
     async def configure(self, app: FastAPI, builder: WorkflowBuilder):
 
@@ -861,7 +903,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         def post_openai_api_compatible_endpoint(request_type: type):
             """
-            OpenAI-compatible endpoint that handles both streaming and non-streaming
+            OpenAI Chat Completions API compatible endpoint that handles both streaming and non-streaming
             based on the 'stream' parameter in the request.
             """
 
@@ -889,6 +931,55 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     return result
 
             return post_openai_api_compatible
+
+        def post_responses_api_compatible_endpoint(request_type: type):
+            """
+            OpenAI Responses API compatible endpoint that handles both streaming and non-streaming
+            based on the 'stream' parameter in the request.
+
+            This endpoint accepts the Responses API format (with 'input' field) and converts it
+            to the internal ChatRequest format for processing, then returns the response in
+            Responses API format.
+
+            WARNING: This endpoint is provided for pass-through compatibility with managed services
+            that support stateful backends (e.g., OpenAI, Azure OpenAI). NAT agents do not
+            inherently support stateful backends. Stateful features such as 'previous_response_id'
+            will be ignored. The request is converted to the internal ChatRequest format, executed
+            by the workflow, and then the response is converted back to Responses API format.
+            """
+            from nat.data_models.api_server import ResponsesAPIResponse
+
+            async def post_responses_api_compatible(response: Response, request: Request, payload: request_type):
+                stream_requested = getattr(payload, 'stream', False)
+
+                # Convert Responses API request to internal ChatRequest format
+                chat_request = payload.to_chat_request()
+                model_name = getattr(payload, 'model', 'unknown-model')
+
+                async with session_manager.session(http_connection=request) as session:
+                    if stream_requested:
+                        # Return streaming response in Responses API SSE format
+                        return StreamingResponse(
+                            headers={
+                                "Content-Type": "text/event-stream; charset=utf-8",
+                                "Cache-Control": "no-cache",
+                                "Connection": "keep-alive",
+                            },
+                            content=generate_responses_api_streaming(
+                                chat_request,
+                                session=session,
+                                model=model_name,
+                                step_adaptor=self.get_step_adaptor(),
+                            ))
+
+                    # Non-streaming: get result and convert to Responses API format
+                    response.headers["Content-Type"] = "application/json"
+                    chat_result = await generate_single_response(chat_request, session, result_type=ChatResponse)
+                    responses_result = ResponsesAPIResponse.from_chat_response(chat_result, model=model_name)
+                    add_context_headers_to_response(response)
+                    return responses_result
+
+            return post_responses_api_compatible
 
         def _job_status_to_response(job: "JobInfo") -> AsyncGenerationStatusResponse:
             job_output = job.output
@@ -1165,15 +1256,34 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 # Create OpenAI v1 compatible endpoint if configured
                 if openai_v1_path:
-                    # OpenAI v1 Compatible Mode: Create single endpoint that handles both streaming and non-streaming
-                    app.add_api_route(
-                        path=openai_v1_path,
-                        endpoint=post_openai_api_compatible_endpoint(request_type=ChatRequest),
-                        methods=[endpoint.method],
-                        response_model=ChatResponse | ChatResponseChunk,
-                        description=f"{endpoint.description} (OpenAI Chat Completions API compatible)",
-                        responses={500: response_500},
-                    )
+                    # Determine API format based on explicit config or path pattern detection
+                    api_format = self._determine_api_format(endpoint, openai_v1_path)
+
+                    if api_format == "responses":
+                        # OpenAI Responses API Mode: Uses 'input' field instead of 'messages'
+                        logger.warning(
+                            "Creating Responses API endpoint at '%s'. NOTE: The Responses API format "
+                            "is provided for pass-through compatibility with managed services. NAT agents "
+                            "do not support stateful backends; features like 'previous_response_id' will "
+                            "be ignored.", openai_v1_path)
+                        app.add_api_route(
+                            path=openai_v1_path,
+                            endpoint=post_responses_api_compatible_endpoint(request_type=ResponsesRequest),
+                            methods=[endpoint.method],
+                            response_model=ResponsesAPIResponse,
+                            description=f"{endpoint.description} (OpenAI Responses API compatible)",
+                            responses={500: response_500},
+                        )
+                    else:
+                        # OpenAI Chat Completions API Mode (default): Uses 'messages' field
+                        app.add_api_route(
+                            path=openai_v1_path,
+                            endpoint=post_openai_api_compatible_endpoint(request_type=ChatRequest),
+                            methods=[endpoint.method],
+                            response_model=ChatResponse | ChatResponseChunk,
+                            description=f"{endpoint.description} (OpenAI Chat Completions API compatible)",
+                            responses={500: response_500},
+                        )
 
             else:
                 raise ValueError(f"Unsupported method {endpoint.method}")

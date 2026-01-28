@@ -194,3 +194,203 @@ async def generate_streaming_response_full_as_str(payload: typing.Any,
         else:
             raise ValueError("Unexpected item type in stream. Expected ChatResponseSerializable, got: " +
                              str(type(item)))
+
+
+async def generate_responses_api_streaming(
+    payload: typing.Any,
+    *,
+    session: Session,
+    model: str,
+    step_adaptor: StepAdaptor = StepAdaptor(StepAdaptorConfig()),
+) -> AsyncGenerator[str, None]:
+    """
+    Generate streaming response in OpenAI Responses API format.
+    Converts internal streaming chunks to Responses API event stream format.
+
+    The Responses API uses Server-Sent Events with specific event types:
+    - response.created: Initial response creation
+    - response.output_item.added: New output item started
+    - response.content_part.added: New content part started
+    - response.output_text.delta: Text content delta
+    - response.output_text.done: Text content completed
+    - response.content_part.done: Content part completed
+    - response.output_item.done: Output item completed
+    - response.done: Full response completed
+    - response.failed: Emitted when an error occurs during processing
+
+    WARNING: This streaming format is provided for pass-through compatibility with managed
+    services that support stateful backends. NAT agents do not inherently support stateful
+    backends. The payload is processed through the NAT workflow and output is formatted
+    to match the Responses API streaming specification.
+    """
+    import json
+    import logging
+    import uuid as uuid_module
+
+    from nat.data_models.api_server import ChatResponse
+    from nat.data_models.api_server import ChatResponseChunk
+
+    _logger = logging.getLogger(__name__)
+
+    response_id = f"resp_{uuid_module.uuid4().hex[:24]}"
+    message_id = f"msg_{uuid_module.uuid4().hex[:24]}"
+    output_index = 0
+    content_index = 0
+    accumulated_text = ""
+    error_occurred = False
+
+    def _sse_event(event_type: str, data: dict) -> str:
+        """Format a Server-Sent Event."""
+        return f"event: {event_type}\ndata: {json.dumps(data)}\n\n"
+
+    def _error_event(error_message: str, error_code: str = "server_error") -> str:
+        """Generate a response.failed SSE event."""
+        return _sse_event("response.failed", {
+            "type": "response.failed",
+            "response": {
+                "id": response_id,
+                "object": "response",
+                "status": "failed",
+                "model": model,
+                "error": {
+                    "type": error_code,
+                    "message": error_message,
+                },
+                "output": [],
+            }
+        })
+
+    try:
+        # Event: response.created
+        yield _sse_event("response.created", {
+            "type": "response.created",
+            "response": {
+                "id": response_id,
+                "object": "response",
+                "status": "in_progress",
+                "model": model,
+                "output": [],
+            }
+        })
+
+        # Event: response.output_item.added
+        yield _sse_event("response.output_item.added", {
+            "type": "response.output_item.added",
+            "output_index": output_index,
+            "item": {
+                "type": "message",
+                "id": message_id,
+                "status": "in_progress",
+                "role": "assistant",
+                "content": [],
+            }
+        })
+
+        # Event: response.content_part.added
+        yield _sse_event("response.content_part.added", {
+            "type": "response.content_part.added",
+            "output_index": output_index,
+            "content_index": content_index,
+            "part": {
+                "type": "output_text",
+                "text": "",
+            }
+        })
+
+        # Process the workflow and stream text deltas
+        try:
+            async with session.run(payload) as runner:
+                if session.workflow.has_streaming_output:
+                    async for chunk in runner.result_stream(to_type=ChatResponseChunk):
+                        # Extract text from ChatResponseChunk
+                        if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
+                            delta_text = chunk.choices[0].delta.content
+                            accumulated_text += delta_text
+
+                            # Event: response.output_text.delta
+                            yield _sse_event("response.output_text.delta", {
+                                "type": "response.output_text.delta",
+                                "output_index": output_index,
+                                "content_index": content_index,
+                                "delta": delta_text,
+                            })
+                else:
+                    # Non-streaming workflow - get full result and emit as single delta
+                    result = await runner.result(to_type=ChatResponse)
+                    if result.choices and result.choices[0].message:
+                        accumulated_text = result.choices[0].message.content or ""
+                        if accumulated_text:
+                            yield _sse_event("response.output_text.delta", {
+                                "type": "response.output_text.delta",
+                                "output_index": output_index,
+                                "content_index": content_index,
+                                "delta": accumulated_text,
+                            })
+        except Exception as workflow_error:
+            error_occurred = True
+            _logger.exception("Error during Responses API streaming workflow execution")
+            yield _error_event(str(workflow_error), "workflow_error")
+            return  # Stop streaming after error
+
+        # Only emit completion events if no error occurred
+        if not error_occurred:
+            # Event: response.output_text.done
+            yield _sse_event("response.output_text.done", {
+                "type": "response.output_text.done",
+                "output_index": output_index,
+                "content_index": content_index,
+                "text": accumulated_text,
+            })
+
+            # Event: response.content_part.done
+            yield _sse_event("response.content_part.done", {
+                "type": "response.content_part.done",
+                "output_index": output_index,
+                "content_index": content_index,
+                "part": {
+                    "type": "output_text",
+                    "text": accumulated_text,
+                }
+            })
+
+            # Event: response.output_item.done
+            yield _sse_event("response.output_item.done", {
+                "type": "response.output_item.done",
+                "output_index": output_index,
+                "item": {
+                    "type": "message",
+                    "id": message_id,
+                    "status": "completed",
+                    "role": "assistant",
+                    "content": [{
+                        "type": "output_text",
+                        "text": accumulated_text,
+                    }],
+                }
+            })
+
+            # Event: response.done
+            yield _sse_event("response.done", {
+                "type": "response.done",
+                "response": {
+                    "id": response_id,
+                    "object": "response",
+                    "status": "completed",
+                    "model": model,
+                    "output": [{
+                        "type": "message",
+                        "id": message_id,
+                        "status": "completed",
+                        "role": "assistant",
+                        "content": [{
+                            "type": "output_text",
+                            "text": accumulated_text,
+                        }],
+                    }],
+                }
+            })
+
+    except Exception as setup_error:
+        # Catch any errors during initial event emission (before workflow starts)
+        _logger.exception("Error during Responses API streaming setup")
+        yield _error_event(str(setup_error), "server_error")
