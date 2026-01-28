@@ -26,6 +26,9 @@ This guide walks through the complete process of running decision-only evaluatio
 
 Currently this agent supports evaluation exclusively for the [Galileo Agent Leaderboard v2](https://huggingface.co/datasets/galileo-ai/agent-leaderboard-v2). However, we plan to extend the set of evaluation tool sets and benchmarks and will update this document accordingly.
 
+> [!IMPORTANT]
+> **Prerequisite**: Before running these examples, complete the [Dynamo Backend Setup Guide](../../../external/dynamo/README.md) to set up and verify your Dynamo inference server is running and responding to `curl` requests.
+
 ## Table of Contents
 
 1. [Prerequisites](#prerequisites)
@@ -46,12 +49,23 @@ Currently this agent supports evaluation exclusively for the [Galileo Agent Lead
 ### Software Requirements
 
 > [!WARNING]
-> This example requires a CUDA-compatible device with NVIDIA drivers installed. It cannot be run on systems without NVIDIA GPU hardware. You do not need to install ai-dynamo packages separately; the provided Docker images include them.
+> **This example requires a Linux system with NVIDIA GPUs.** See the [Dynamo Support Matrix](https://docs.nvidia.com/dynamo/archive/0.7.0/reference/support-matrix.html) for full details.
+>
+> **Supported Platforms:**
+> - Ubuntu 22.04 / 24.04 (x86_64)
+> - Ubuntu 24.04 (ARM64)
+> - CentOS Stream 9 (x86_64, experimental)
+>
+> **Not Supported:**
+> - ❌ macOS (Intel or Apple Silicon)
+> - ❌ Windows
+>
+> You do **not** need to install `ai-dynamo` or `ai-dynamo-runtime` packages locally. The Dynamo server runs inside pre-built Docker images from NGC (`nvcr.io/nvidia/ai-dynamo/sglang-runtime`), which include all necessary components. The NeMo Agent toolkit Dynamo LLM client (`_type: dynamo`) is a pure HTTP client that works on any platform.
 
 1. **Python 3.11, 3.12, or 3.13** installed
 2. **NeMo Agent toolkit** repository cloned
 3. **Docker** with NVIDIA Container Toolkit
-4. **NVIDIA Driver** with CUDA 12.0+ support, `nvidia-fabricmanager` enabled matching your driver version. Verify with:
+4. **NVIDIA Driver** with CUDA 12.0+ support, `nvidia-fabricmanager` enabled, and matching your driver version. Verify with:
 
     ```bash
     docker run --rm --gpus all nvidia/cuda:12.4.0-runtime-ubuntu22.04 \

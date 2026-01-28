@@ -20,6 +20,13 @@ limitations under the License.
 > [!NOTE]
 > ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice. We kindly ask that GitHub Issues are opened as bugs are issued quickly as features are subject to change.
 
+> [!TIP]
+> **Scope of This Guide**
+>
+> This document guides you through setting up and testing a NeMo Agent toolkit-compatible Dynamo inference server on a Linux/CUDA machine. By the end of this guide, you will be able to make `curl` requests to the endpoint and receive inference outputs from the Dynamo server.
+>
+> For **end-to-end integration with NeMo Agent toolkit workflows**, including detailed instructions and architectural considerations, see the [Dynamo Integration Examples](../../examples/dynamo_integration/README.md).
+
 This guide covers setting up, running, and configuring the NVIDIA Dynamo backend for the React Benchmark Agent evaluations.
 
 ## Table of Contents
@@ -170,6 +177,22 @@ Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimizat
 ---
 
 ## Prerequisites
+
+### Platform Requirements
+
+> [!WARNING]
+> **This example requires a Linux system with NVIDIA GPUs.** See the [Dynamo Support Matrix](https://docs.nvidia.com/dynamo/archive/0.7.0/reference/support-matrix.html) for full details.
+>
+> **Supported Platforms:**
+> - Ubuntu 22.04 / 24.04 (x86_64)
+> - Ubuntu 24.04 (ARM64)
+> - CentOS Stream 9 (x86_64, experimental)
+>
+> **Not Supported:**
+> - ❌ macOS (Intel or Apple Silicon)
+> - ❌ Windows
+>
+> You do **not** need to install `ai-dynamo` or `ai-dynamo-runtime` packages locally. The Dynamo server runs inside pre-built Docker images from NGC (`nvcr.io/nvidia/ai-dynamo/sglang-runtime`), which include all necessary components. The NeMo Agent toolkit Dynamo LLM client (`_type: dynamo`) is a pure HTTP client that works on any platform.
 
 ### Hardware Requirements
 
@@ -1101,3 +1124,18 @@ external/dynamo/                                # Dynamo backend
 
 - **[React Benchmark Agent](../../examples/dynamo_integration/react_benchmark_agent/README.md)** - Complete evaluation guide
 - **[Architecture](../../examples/dynamo_integration/ARCHITECTURE.md)** - System diagrams
+
+---
+
+## Next Steps
+
+Now that you have a running Dynamo server and can make `curl` requests to the endpoint, you're ready to integrate with NeMo Agent toolkit workflows.
+
+> [!TIP]
+> **Ready for Full Integration?**
+>
+> Visit the [Dynamo Integration Examples](../../examples/dynamo_integration/README.md) for:
+> - End-to-end workflow integration with NeMo Agent toolkit
+> - Benchmark agent configurations and evaluation harnesses
+> - Performance analysis scripts and visualization tools
+> - Architectural deep-dives on toolkit-Dynamo integration patterns
