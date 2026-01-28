@@ -15,12 +15,13 @@
 
 import io
 import time
+import typing
 
 import pytest
 from fastapi import FastAPI
 from httpx_sse import aconnect_sse
 
-from _utils.dask_utils import await_job
+from _utils.dask_utils import wait_job
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
@@ -35,6 +36,9 @@ from nat.test.functions import EchoFunctionConfig
 from nat.test.functions import StreamingEchoFunctionConfig
 from nat.test.utils import build_nat_client
 from nat.utils.type_utils import override
+
+if typing.TYPE_CHECKING:
+    from dask.distributed import Client as DaskClient
 
 
 class CustomWorker(FastApiFrontEndPluginWorker):
@@ -194,7 +198,7 @@ async def test_specified_endpoints():
 
 @pytest.mark.parametrize("use_sync_timeout", [True, False])
 @pytest.mark.parametrize("fn_use_openai_api", [True, False])
-async def test_generate_async(fn_use_openai_api: bool, use_sync_timeout: bool):
+async def test_generate_async(dask_client: "DaskClient", fn_use_openai_api: bool, use_sync_timeout: bool):
     if (fn_use_openai_api):
         pytest.skip("Async support for OpenAI API is not implemented yet")
 
@@ -253,7 +257,7 @@ async def test_generate_async(fn_use_openai_api: bool, use_sync_timeout: bool):
             assert status in expected_status_values
             if status != "success":
                 assert time.time() < deadline, "Job did not complete in time"
-                await await_job(job_id, timeout=timeout)
+                wait_job(dask_client, job_id, timeout=timeout)
 
 
 async def test_async_job_status_not_found():
