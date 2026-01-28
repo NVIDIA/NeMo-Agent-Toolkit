@@ -35,8 +35,14 @@ class RepoContext:
 
 
 class RepoManager:
+    """Manages git repository cloning and cleanup for SWE-bench instances."""
 
     def __init__(self, workspace_dir: str):
+        """Initialize the repository manager.
+
+        Args:
+            workspace_dir: Base directory for cloning repositories.
+        """
         self.workspace = Path(workspace_dir)
         self.workspace.mkdir(parents=True, exist_ok=True)
         self.active_repos = {}
@@ -47,10 +53,17 @@ class RepoManager:
         """Setup a repository at a specific commit.
 
         Args:
-            repo_url: URL of the repository to clone
-            base_commit: Commit hash to checkout
+            repo_url: URL of the repository to clone.
+            base_commit: Commit hash to checkout.
             instance_id: Optional instance ID for workspace isolation. When provided,
                          each instance gets its own clean workspace directory.
+
+        Returns:
+            RepoContext containing the repository path and Repo object.
+
+        Raises:
+            ValueError: If the repository URL is invalid.
+            asyncio.TimeoutError: If clone or checkout times out.
         """
         repo_path = get_repo_path(str(self.workspace), repo_url, instance_id)
 
@@ -67,7 +80,10 @@ class RepoManager:
         return context
 
     async def cleanup(self):
-        """Clean up all managed repositories."""
+        """Clean up all managed repositories.
+
+        Removes all cloned repository directories and clears the active repos cache.
+        """
         for repo_path_str in list(self.active_repos.keys()):
             repo_path = Path(repo_path_str)
             if repo_path.exists():

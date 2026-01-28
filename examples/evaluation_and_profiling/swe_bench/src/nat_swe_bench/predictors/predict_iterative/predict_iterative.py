@@ -217,7 +217,16 @@ class IterativeAgent:
         self.n_steps = 0
 
     def add_message(self, role: str, content: str):
-        """Add a message to the conversation and print it for debugging."""
+        """Add a message to the conversation and print it for debugging.
+
+        Args:
+            role: The role of the message sender. Must be one of:
+                  "system", "user", "human", "assistant", or "ai".
+            content: The message content to add.
+
+        Raises:
+            ValueError: If role is not a recognized value.
+        """
         if role == "system":
             msg = SystemMessage(content=content)
             self.messages.append(msg)
@@ -238,10 +247,13 @@ class IterativeAgent:
 
     def _build_prompts(self, task: str, repo_path: Path) -> tuple[str, str]:
         """Build system and instance prompts customized for SWE-bench.
-        
+
         Args:
-            task: The task description/PR description
-            repo_path: Path to the repository being worked on
+            task: The task description/PR description.
+            repo_path: Path to the repository being worked on.
+
+        Returns:
+            A tuple of (system_prompt, instance_prompt) strings.
         """
         # Convert Path to string for template usage
         repo_path_str = str(repo_path)
@@ -420,7 +432,18 @@ You cannot continue working (reading, editing, testing) in any way on this task 
         return system_template, instance_template
 
     async def run(self, task: str) -> tuple[str, str]:
-        """Run the iterative agent loop until completion."""
+        """Run the iterative agent loop until completion.
+
+        Executes commands step-by-step, observing results and adjusting strategy
+        until the task is completed or limits are exceeded.
+
+        Args:
+            task: The task description to solve.
+
+        Returns:
+            A tuple of (exit_status, result) where exit_status is either
+            "Submitted" or "LimitsExceeded", and result is the patch or error message.
+        """
         system_template, instance_template = self._build_prompts(task, self.repo_path)
 
         self.messages = []
@@ -458,7 +481,14 @@ You cannot continue working (reading, editing, testing) in any way on this task 
                 return type(e).__name__, str(e)
 
     async def _query_llm(self) -> str:
-        """Query LLM and return response content."""
+        """Query LLM and return response content.
+
+        Returns:
+            The LLM response content as a string.
+
+        Raises:
+            NonTerminatingException: If the LLM invocation fails.
+        """
         try:
             response = await self.llm.ainvoke(self.messages)                    
             content = response.content if hasattr(response, 'content') else str(response)
@@ -470,7 +500,20 @@ You cannot continue working (reading, editing, testing) in any way on this task 
             raise NonTerminatingException(f"LLM call failed: {str(e)}")
 
     async def _execute_action(self, response: str) -> str:
-        """Parse action from response and execute it asynchronously."""
+        """Parse action from response and execute it asynchronously.
+
+        Args:
+            response: The LLM response containing a bash code block.
+
+        Returns:
+            The command output including returncode.
+
+        Raises:
+            FormatError: If the response doesn't contain exactly one bash block,
+                        or if the command fails security validation.
+            ExecutionTimeoutError: If the command execution times out.
+            NonTerminatingException: If command execution fails unexpectedly.
+        """
         # Extract bash command from response
         action_regex = r"```bash\s*\n(.*?)\n```"
         matches = re.findall(action_regex, response, re.DOTALL)
@@ -548,7 +591,14 @@ class SweBenchPredictor(SweBenchPredictorBase):
         self.git_tool = None
 
     async def predict_fn(self, swebench_input: SWEBenchInput) -> str:
-        """Generate patch using iterative agent approach."""
+        """Generate patch using iterative agent approach.
+
+        Args:
+            swebench_input: The SWE-bench problem instance to solve.
+
+        Returns:
+            The generated patch as a string, or an error message if failed.
+        """
         logger.info("Processing instance %s with iterative agent", swebench_input.instance_id)
 
         # Setup repository
@@ -614,7 +664,14 @@ class SweBenchPredictor(SweBenchPredictorBase):
             return f"Error: {str(e)}"
 
     def _build_task_description(self, swebench_input: SWEBenchInput) -> str:
-        """Build task description from SWE-bench input."""
+        """Build task description from SWE-bench input.
+
+        Args:
+            swebench_input: The SWE-bench problem instance.
+
+        Returns:
+            Combined task description with problem statement and hints.
+        """
         parts = [swebench_input.problem_statement]
         if swebench_input.hints_text:
             parts.append(f"\nAdditional Context:\n{swebench_input.hints_text}")

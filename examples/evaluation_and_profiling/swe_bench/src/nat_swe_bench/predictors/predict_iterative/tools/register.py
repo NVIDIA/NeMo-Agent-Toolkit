@@ -34,14 +34,36 @@ class GitRepoToolConfig(FunctionBaseConfig, name="git_repo_tool"):
 
 @register_function(config_type=GitRepoToolConfig)
 async def git_repo_tool(tool_config: GitRepoToolConfig, builder: Builder):
-    """Git repository management tool for SWE Bench."""
+    """Git repository management tool for SWE Bench.
+
+    Args:
+        tool_config: Configuration for the git tool.
+        builder: NAT builder instance.
+
+    Yields:
+        FunctionInfo for the git_operations function.
+    """
     import json
 
     from .git_tool import RepoManager
     repo_manager = RepoManager(tool_config.workspace_dir)
 
-    # Simple async function that accepts a JSON string
     async def git_operations(args_str: str) -> str:
+        """Perform git operations based on JSON input.
+
+        Args:
+            args_str: JSON string with 'operation' and operation-specific parameters.
+                      Supported operations:
+                      - setup: requires 'repo_url', 'base_commit', optional 'instance_id'
+                      - cleanup: no additional parameters
+
+        Returns:
+            For 'setup': the repository path as a string.
+            For 'cleanup': "Cleanup complete".
+
+        Raises:
+            ValueError: If JSON is invalid or operation is unknown.
+        """
         try:
             args = json.loads(args_str)
         except json.JSONDecodeError as e:
