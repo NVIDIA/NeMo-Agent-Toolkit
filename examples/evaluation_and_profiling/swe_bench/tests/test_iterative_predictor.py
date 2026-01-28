@@ -326,11 +326,11 @@ class TestTimeoutHandling:
 class TestWorkspaceIsolation:
     """Tests for workspace isolation between instances."""
 
-    def test_different_instance_ids_get_different_paths(self):
+    def test_different_instance_ids_get_different_paths(self, tmp_path):
         """Test that different instance_ids produce different workspace paths."""
         from nat_swe_bench.predictors.predict_iterative.tools.git_tool import get_repo_path
 
-        workspace = "/tmp/workspace"
+        workspace = str(tmp_path / "workspace")
         repo_url = "https://github.com/org/repo"
 
         path1 = get_repo_path(workspace, repo_url, instance_id="instance-001")
@@ -340,11 +340,11 @@ class TestWorkspaceIsolation:
         assert "instance-001" in str(path1)
         assert "instance-002" in str(path2)
 
-    def test_same_instance_id_gets_same_path(self):
+    def test_same_instance_id_gets_same_path(self, tmp_path):
         """Test that the same instance_id always produces the same path."""
         from nat_swe_bench.predictors.predict_iterative.tools.git_tool import get_repo_path
 
-        workspace = "/tmp/workspace"
+        workspace = str(tmp_path / "workspace")
         repo_url = "https://github.com/org/repo"
         instance_id = "instance-001"
 
@@ -353,22 +353,22 @@ class TestWorkspaceIsolation:
 
         assert path1 == path2
 
-    def test_no_instance_id_uses_default_path(self):
+    def test_no_instance_id_uses_default_path(self, tmp_path):
         """Test that no instance_id uses the default org/repo path."""
         from nat_swe_bench.predictors.predict_iterative.tools.git_tool import get_repo_path
 
-        workspace = "/tmp/workspace"
+        workspace = str(tmp_path / "workspace")
         repo_url = "https://github.com/myorg/myrepo"
 
         path = get_repo_path(workspace, repo_url, instance_id=None)
 
-        assert str(path) == "/tmp/workspace/myorg/myrepo"
+        assert str(path) == f"{workspace}/myorg/myrepo"
 
-    def test_ssh_url_parsing(self):
+    def test_ssh_url_parsing(self, tmp_path):
         """Test that SSH URLs are correctly parsed."""
         from nat_swe_bench.predictors.predict_iterative.tools.git_tool import get_repo_path
 
-        workspace = "/tmp/workspace"
+        workspace = str(tmp_path / "workspace")
         repo_url = "git@github.com:org/repo.git"
 
         path = get_repo_path(workspace, repo_url, instance_id="test-123")
@@ -495,13 +495,13 @@ class TestCleanup:
         assert len(manager.active_repos) == 0
 
     @pytest.mark.asyncio
-    async def test_register_cleanup_error_handling(self):
+    async def test_register_cleanup_error_handling(self, tmp_path):
         """Test that register.py cleanup handles errors gracefully."""
         from unittest.mock import AsyncMock
         from nat_swe_bench.predictors.predict_iterative.tools.git_tool import RepoManager
 
         # Create a mock that raises an exception
-        manager = RepoManager("/tmp/test")
+        manager = RepoManager(str(tmp_path))
         manager.cleanup = AsyncMock(side_effect=Exception("Cleanup failed"))
 
         # Verify that cleanup raises an exception (simulating failure)
@@ -590,7 +590,7 @@ class TestAdditionalCoverage:
         target_path.mkdir()
         (target_path / "existing_file.txt").write_text("old content")
 
-        with patch('nat_swe_bench.predictors.predict_iterative.tools.git_tool.Repo') as MockRepo:
+        with patch('nat_swe_bench.predictors.predict_iterative.tools.git_tool.Repo'):
             mock_repo = MagicMock()
 
             with patch('nat_swe_bench.predictors.predict_iterative.tools.git_tool.asyncio.wait_for') as mock_wait:
@@ -689,7 +689,7 @@ class TestIntegrationMockedLLM:
                 MagicMock(returncode=0, stdout="COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT\ndiff --git a/main.py\n-old\n+new"),
             ]
 
-            exit_status, patch_result = await agent.run("Fix the bug in main.py")
+            exit_status, _patch_result = await agent.run("Fix the bug in main.py")
 
         assert exit_status == "Submitted"
         assert agent.n_steps == 4
