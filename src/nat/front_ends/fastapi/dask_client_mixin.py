@@ -31,6 +31,6 @@ class DaskClientMixin(ABC):
 
         if getattr(self, "_dask_client", None) is None:
             from dask.distributed import Client
-            self._dask_client = Client(self._scheduler_address)
+            self._dask_client = Client(self._scheduler_address, asynchronous=False)
 
         return self._dask_client
