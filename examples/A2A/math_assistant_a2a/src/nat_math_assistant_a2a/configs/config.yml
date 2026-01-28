@@ -18,7 +18,6 @@ function_groups:
   calculator_a2a:
     _type: a2a_client
     url: http://localhost:10000
-    task_timeout: 60
     include_skills_in_description: true
 
   # Local MCP server for time and date operations

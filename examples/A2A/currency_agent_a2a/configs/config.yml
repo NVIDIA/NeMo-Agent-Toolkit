@@ -30,7 +30,6 @@ function_groups:
   currency_agent:
     _type: a2a_client
     url: http://localhost:11000
-    task_timeout: 60
 
 llms:
   nim_llm:
