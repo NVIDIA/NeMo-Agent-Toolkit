@@ -15,6 +15,7 @@
 import argparse
 import asyncio
 import os
+from contextlib import asynccontextmanager
 from datetime import timedelta
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
@@ -597,6 +598,195 @@ class TestMCPToolClient:
         # Should raise RuntimeError when parent_client is None
         with pytest.raises(RuntimeError, match="MCPToolClient initialized without a parent client"):
             MCPToolClient(session=mock_session, parent_client=None, tool_name="test_tool", tool_description="Test tool")
+
+
+class TestMCPStreamableHTTPClientSessionIdAndHeaders:
+    """Test MCP session ID exposure and custom headers functionality."""
+
+    def test_custom_headers_initialization(self):
+        """Test that custom headers are properly stored during initialization."""
+        custom_headers = {"X-Business-Context": "test-value", "X-Correlation-ID": "12345"}
+        client = MCPStreamableHTTPClient(url="http://localhost:8080/mcp", custom_headers=custom_headers)
+
+        assert client.custom_headers == custom_headers
+
+    def test_custom_headers_default_empty(self):
+        """Test that custom headers default to empty dict when not provided."""
+        client = MCPStreamableHTTPClient(url="http://localhost:8080/mcp")
+
+        assert client.custom_headers == {}
+
+    def test_custom_headers_none_becomes_empty_dict(self):
+        """Test that None custom headers become empty dict."""
+        client = MCPStreamableHTTPClient(url="http://localhost:8080/mcp", custom_headers=None)
+
+        assert client.custom_headers == {}
+
+    def test_mcp_session_id_before_connection(self):
+        """Test that mcp_session_id returns None before connection is established."""
+        client = MCPStreamableHTTPClient(url="http://localhost:8080/mcp")
+
+        assert client.mcp_session_id is None
+
+    def test_mcp_session_id_with_callback(self):
+        """Test that mcp_session_id returns value from callback when set."""
+        client = MCPStreamableHTTPClient(url="http://localhost:8080/mcp")
+
+        # Simulate what happens during connection - the callback gets set
+        expected_session_id = "test-session-id-12345"
+        client._get_mcp_session_id = lambda: expected_session_id
+
+        assert client.mcp_session_id == expected_session_id
+
+    def test_mcp_session_id_callback_returns_none(self):
+        """Test that mcp_session_id handles callback returning None."""
+        client = MCPStreamableHTTPClient(url="http://localhost:8080/mcp")
+
+        # Callback can return None if session ID hasn't been assigned yet
+        client._get_mcp_session_id = lambda: None
+
+        assert client.mcp_session_id is None
+
+    async def test_mcp_session_id_cleared_after_disconnect(self):
+        """Test that mcp_session_id callback is cleared after disconnection."""
+        client = MCPStreamableHTTPClient(url="http://localhost:8080/mcp")
+
+        # Simulate connection
+        client._get_mcp_session_id = lambda: "session-123"
+        assert client.mcp_session_id == "session-123"
+
+        # Simulate disconnection by clearing the callback (as done in connect_to_server finally block)
+        client._get_mcp_session_id = None
+        assert client.mcp_session_id is None
+
+    async def test_connect_to_server_sets_session_id_callback(self):
+        """Test that connect_to_server properly captures the session ID callback."""
+        from unittest.mock import AsyncMock
+
+        client = MCPStreamableHTTPClient(url="http://localhost:8080/mcp")
+
+        # Mock the streamable_http_client
+        mock_session_id_callback = MagicMock(return_value="mock-session-id")
+        mock_session = AsyncMock()
+        mock_session.initialize = AsyncMock()
+
+        # Create a mock context manager
+        @asynccontextmanager
+        async def mock_streamable_client(*args, **kwargs):
+            yield (AsyncMock(), AsyncMock(), mock_session_id_callback)
+
+        with patch('nat.plugins.mcp.client.client_base.streamable_http_client', mock_streamable_client):
+            with patch('nat.plugins.mcp.client.client_base.ClientSession') as MockClientSession:
+                mock_session_cm = AsyncMock()
+                mock_session_cm.__aenter__ = AsyncMock(return_value=mock_session)
+                mock_session_cm.__aexit__ = AsyncMock(return_value=None)
+                MockClientSession.return_value = mock_session_cm
+
+                async with client.connect_to_server():
+                    # During connection, the callback should be set
+                    assert client._get_mcp_session_id is mock_session_id_callback
+                    assert client.mcp_session_id == "mock-session-id"
+
+        # After exiting, callback should be cleared
+        assert client._get_mcp_session_id is None
+
+    async def test_connect_to_server_passes_custom_headers(self):
+        """Test that connect_to_server configures httpx client with custom headers."""
+        from unittest.mock import AsyncMock
+
+        custom_headers = {"X-Custom-Header": "custom-value"}
+        client = MCPStreamableHTTPClient(url="http://localhost:8080/mcp", custom_headers=custom_headers)
+
+        captured_http_client = None
+
+        @asynccontextmanager
+        async def mock_streamable_client(*args, **kwargs):
+            nonlocal captured_http_client
+            captured_http_client = kwargs.get('http_client')
+            yield (AsyncMock(), AsyncMock(), MagicMock(return_value=None))
+
+        mock_session = AsyncMock()
+        mock_session.initialize = AsyncMock()
+
+        with patch('nat.plugins.mcp.client.client_base.streamable_http_client', mock_streamable_client):
+            with patch('nat.plugins.mcp.client.client_base.ClientSession') as MockClientSession:
+                mock_session_cm = AsyncMock()
+                mock_session_cm.__aenter__ = AsyncMock(return_value=mock_session)
+                mock_session_cm.__aexit__ = AsyncMock(return_value=None)
+                MockClientSession.return_value = mock_session_cm
+
+                async with client.connect_to_server():
+                    pass
+
+        # Verify http_client was passed and has custom headers
+        assert captured_http_client is not None
+        assert captured_http_client.headers.get("X-Custom-Header") == "custom-value"
+
+    async def test_connect_to_server_no_headers_when_empty(self):
+        """Test that connect_to_server creates httpx client without headers when none configured."""
+        from unittest.mock import AsyncMock
+
+        client = MCPStreamableHTTPClient(url="http://localhost:8080/mcp")
+
+        captured_http_client = None
+
+        @asynccontextmanager
+        async def mock_streamable_client(*args, **kwargs):
+            nonlocal captured_http_client
+            captured_http_client = kwargs.get('http_client')
+            yield (AsyncMock(), AsyncMock(), MagicMock(return_value=None))
+
+        mock_session = AsyncMock()
+        mock_session.initialize = AsyncMock()
+
+        with patch('nat.plugins.mcp.client.client_base.streamable_http_client', mock_streamable_client):
+            with patch('nat.plugins.mcp.client.client_base.ClientSession') as MockClientSession:
+                mock_session_cm = AsyncMock()
+                mock_session_cm.__aenter__ = AsyncMock(return_value=mock_session)
+                mock_session_cm.__aexit__ = AsyncMock(return_value=None)
+                MockClientSession.return_value = mock_session_cm
+
+                async with client.connect_to_server():
+                    pass
+
+        # Verify http_client was passed (even without custom headers, we still create one for auth support)
+        assert captured_http_client is not None
+
+
+class TestMCPServerConfigCustomHeaders:
+    """Test MCPServerConfig custom headers validation."""
+
+    def test_custom_headers_valid_for_streamable_http(self):
+        """Test that custom headers are allowed for streamable-http transport."""
+        from nat.plugins.mcp.client.client_config import MCPServerConfig
+
+        config = MCPServerConfig(transport="streamable-http",
+                                 url="http://localhost:8080/mcp",
+                                 custom_headers={"X-Header": "value"})
+
+        assert config.custom_headers == {"X-Header": "value"}
+
+    def test_custom_headers_rejected_for_stdio(self):
+        """Test that custom headers raise error for stdio transport."""
+        from nat.plugins.mcp.client.client_config import MCPServerConfig
+
+        with pytest.raises(ValueError, match="custom_headers is not supported for stdio transport"):
+            MCPServerConfig(transport="stdio", command="python", custom_headers={"X-Header": "value"})
+
+    def test_custom_headers_rejected_for_sse(self):
+        """Test that custom headers raise error for SSE transport."""
+        from nat.plugins.mcp.client.client_config import MCPServerConfig
+
+        with pytest.raises(ValueError, match="custom_headers is not supported for SSE transport"):
+            MCPServerConfig(transport="sse", url="http://localhost:8080/sse", custom_headers={"X-Header": "value"})
+
+    def test_custom_headers_default_none(self):
+        """Test that custom headers default to None."""
+        from nat.plugins.mcp.client.client_config import MCPServerConfig
+
+        config = MCPServerConfig(transport="streamable-http", url="http://localhost:8080/mcp")
+
+        assert config.custom_headers is None
 
 
 if __name__ == "__main__":

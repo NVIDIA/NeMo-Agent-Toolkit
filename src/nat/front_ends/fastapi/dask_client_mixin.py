@@ -15,51 +15,22 @@
 
 import typing
 from abc import ABC
-from collections.abc import AsyncGenerator
-from collections.abc import Generator
-from contextlib import asynccontextmanager
-from contextlib import contextmanager
 
 if typing.TYPE_CHECKING:
-    from dask.distributed import Client
+    from dask.distributed import Client as DaskClient
 
 
 class DaskClientMixin(ABC):
 
-    @asynccontextmanager
-    async def client(self, address: str) -> AsyncGenerator["Client"]:
+    @property
+    def dask_client(self) -> "DaskClient":
         """
-        Async context manager for obtaining a Dask client.
-
-        Yields
-        ------
-        Client
-            An async Dask client connected to the scheduler. The client is automatically closed when exiting the
-            context manager.
+        Lazily initializes and returns a Dask Client connected to the specified scheduler address.
+        Requires that the inheriting class has a `_scheduler_address` attribute.
         """
-        from dask.distributed import Client
-        client = await Client(address=address, asynchronous=True)
 
-        try:
-            yield client
-        finally:
-            await client.close()
+        if getattr(self, "_dask_client", None) is None:
+            from dask.distributed import Client
+            self._dask_client = Client(self._scheduler_address, asynchronous=False)
 
-    @contextmanager
-    def blocking_client(self, address: str) -> Generator["Client"]:
-        """
-        context manager for obtaining a blocking Dask client.
-
-        Yields
-        ------
-        Client
-            A blocking Dask client connected to the scheduler. The client is automatically closed when exiting the
-            context manager.
-        """
-        from dask.distributed import Client
-        client = Client(address=address)
-
-        try:
-            yield client
-        finally:
-            client.close()
+        return self._dask_client

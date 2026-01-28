@@ -80,6 +80,8 @@ The following are more ways you can configure your config file when using the Re
 
 * `pass_tool_call_errors_to_agent`: Defaults to `True`.  If set to `True`, the agent will pass tool call errors to the agent.  If set to `False`, the agent will raise an exception.
 
+* `raise_on_parsing_failure`: Defaults to `True`. If set to `True`, the agent raises a `ReActAgentParsingFailedError` when parsing fails after max retries. If set to `False`, error messages are returned as the answer.
+
 * `normalize_tool_input_quotes`: Defaults to `True`. When JSON parsing of the tool input fails and this is `True`, the agent attempts a fallback that replaces single quotes with double quotes and retries parsing. Set to `False` to bypass normalization and pass the raw string to the tool (useful when inputs contain SQL or other quote‑sensitive content).
 
 * `description`:  Defaults to `"ReAct Agent Workflow"`.  When the ReAct agent is configured as a function, this config option allows us to control the tool description (for example, when used as a tool within another agent).
