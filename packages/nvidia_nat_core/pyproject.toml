@@ -94,8 +94,8 @@ source = "https://github.com/NVIDIA/NeMo-Agent-Toolkit"
 # Keep sorted!!!
 async_endpoints = [
   "aiosqlite~=0.21",
-  "dask~=2025.11",
-  "distributed~=2025.11",
+  "dask~=2026.1",
+  "distributed~=2026.1",
   "sqlalchemy[asyncio]~=2.0",
 ]
 gunicorn = [

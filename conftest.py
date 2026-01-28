@@ -31,6 +31,7 @@ import typing
 import uuid
 from collections.abc import AsyncGenerator
 from collections.abc import Callable
+from collections.abc import Generator
 from collections.abc import Sequence
 from pathlib import Path
 from unittest import mock
@@ -46,6 +47,7 @@ TEST_DATA_DIR = str(Path(os.path.join(ROOT_DIR, "test_data")).resolve())
 os.environ.setdefault("DASK_DISTRIBUTED__WORKER__PYTHON", sys.executable)
 
 if typing.TYPE_CHECKING:
+    from dask.distributed import Client as DaskClient
     from dask.distributed import LocalCluster
     from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -496,7 +498,7 @@ def dask_cluster_fixture(fail_missing: bool) -> "LocalCluster":
 
     # Use threaded workers for tests - this is the standard practice for test suites
     # as it avoids complexity with module imports and provides faster execution
-    cluster = LocalCluster(asynchronous=False, n_workers=1, threads_per_worker=1, processes=False)
+    cluster = LocalCluster(n_workers=1, threads_per_worker=1, protocol="tcp", processes=False)
     yield cluster
     cluster.close()
 
@@ -507,6 +509,20 @@ def dask_scheduler_address_fixture(dask_cluster: "LocalCluster") -> str:
     Fixture to provide the Dask scheduler address for tests.
     """
     return dask_cluster.scheduler.address
+
+
+@pytest.fixture(name="dask_client", scope="session")
+def dask_client_fixture(dask_scheduler_address: str) -> Generator["DaskClient"]:
+    """
+    Fixture to provide an blocking Dask client connected to the test Dask cluster.
+    """
+    from dask.distributed import Client
+
+    client = Client(address=dask_scheduler_address, asynchronous=False)
+    try:
+        yield client
+    finally:
+        client.close()
 
 
 @pytest.fixture(name="db_engine")

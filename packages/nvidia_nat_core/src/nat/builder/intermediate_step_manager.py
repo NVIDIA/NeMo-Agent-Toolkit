@@ -22,6 +22,8 @@ from typing import ClassVar
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepState
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.llm.prediction_context import get_call_tracker
 from nat.utils.reactive.observable import OnComplete
 from nat.utils.reactive.observable import OnError
 from nat.utils.reactive.observable import OnNext
@@ -94,6 +96,16 @@ class IntermediateStepManager:
                          payload.event_type,
                          parent_step_id,
                          id(active_span_id_stack))
+
+            # Track LLM call index for prediction trie lookups
+            if payload.event_type == IntermediateStepType.LLM_START:
+                active_function = self._context_state.active_function.get()
+                if active_function and active_function.function_id != "root":
+                    tracker = get_call_tracker()
+                    tracker.increment(active_function.function_id)
+                    logger.debug("Incremented LLM call tracker for %s to %d",
+                                 active_function.function_id,
+                                 tracker.counts.get(active_function.function_id, 0))
 
         elif (payload.event_state == IntermediateStepState.END):
 

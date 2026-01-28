@@ -179,6 +179,7 @@ Tavily
 [Tt]imestamp(s?)
 [Tt]okenization
 [Tt]okenizer(s?)
+[Tt]rie(s?)
 triages
 [Uu]ncomment(ed)?
 [Uu]nencrypted

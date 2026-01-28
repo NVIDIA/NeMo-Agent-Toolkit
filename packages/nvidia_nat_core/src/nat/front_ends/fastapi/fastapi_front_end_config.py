@@ -240,9 +240,9 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
         description="Logging level for Dask.",
     )
     dask_worker_memory_limit: str = Field(
-        default="auto",
+        default="0",
         description=("Memory limit for each Dask worker. Can be 'auto', a memory string like '4GB' or a float "
-                     "representing a fraction of the system memory. "
+                     "representing a fraction of the system memory. Default is '0' which means no limit. "
                      "Refer to https://docs.dask.org/en/stable/deploying-python.html#reference for details."))
 
     dask_threads_per_worker: int = Field(
