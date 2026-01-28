@@ -61,6 +61,10 @@ class ReActAgentWorkflowConfig(AgentBaseConfig, OptimizableMixin, name="react_ag
     pass_tool_call_errors_to_agent: bool = Field(
         default=True,
         description="Whether to pass tool call errors to agent. If False, failed tool calls will raise an exception.")
+    raise_on_parsing_failure: bool = Field(
+        default=True,
+        description="Whether to raise ReActAgentParsingFailedError when parsing fails after max retries. "
+        "If False, error messages are returned as the answer.")
     include_tool_input_schema_in_tool_description: bool = Field(
         default=True, description="Specify inclusion of tool input schemas in the prompt.")
     normalize_tool_input_quotes: bool = Field(
@@ -120,6 +124,7 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
         tool_call_max_retries=config.tool_call_max_retries,
         pass_tool_call_errors_to_agent=config.pass_tool_call_errors_to_agent,
         normalize_tool_input_quotes=config.normalize_tool_input_quotes,
+        raise_on_parsing_failure=config.raise_on_parsing_failure,
         use_native_tool_calling=config.use_native_tool_calling).build_graph()
 
     async def _response_fn(chat_request_or_message: ChatRequestOrMessage) -> ChatResponse | str:
