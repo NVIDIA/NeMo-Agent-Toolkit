@@ -30,6 +30,7 @@ import json
 import logging
 import re
 import subprocess
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -215,6 +216,8 @@ class IterativeAgent:
         self.config = config
         self.messages: list = []
         self.n_steps = 0
+        self.total_input_tokens = 0
+        self.total_output_tokens = 0
 
     def add_message(self, role: str, content: str):
         """Add a message to the conversation and print it for debugging.
@@ -450,6 +453,8 @@ You cannot continue working (reading, editing, testing) in any way on this task 
         self.add_message("system", system_template)
         self.add_message("user", instance_template)
 
+        start_time = time.perf_counter()
+
         while True:
             try:
                 # Check limits
@@ -457,7 +462,7 @@ You cannot continue working (reading, editing, testing) in any way on this task 
                     raise LimitsExceeded(f"Reached step limit: {self.config.step_limit}")
 
                 self.n_steps += 1
-                
+
                 response = await self._query_llm()
                 observation = await self._execute_action(response)
 
@@ -476,9 +481,16 @@ You cannot continue working (reading, editing, testing) in any way on this task 
                 # Recoverable errors: add error message and continue
                 self.add_message("user", str(e))
             except TerminatingException as e:
-                # Terminal errors: add error message and return
+                # Log summary and return
+                elapsed = time.perf_counter() - start_time
+                exit_status = type(e).__name__
+                logger.info(
+                    "\nAgent finished: steps=%d, tokens=%d/%d, time=%.1fs, status=%s",
+                    self.n_steps, self.total_input_tokens, self.total_output_tokens,
+                    elapsed, exit_status
+                )
                 self.add_message("user", str(e))
-                return type(e).__name__, str(e)
+                return exit_status, str(e)
 
     async def _query_llm(self) -> str:
         """Query LLM and return response content.
@@ -490,13 +502,25 @@ You cannot continue working (reading, editing, testing) in any way on this task 
             NonTerminatingException: If the LLM invocation fails.
         """
         try:
-            response = await self.llm.ainvoke(self.messages)                    
+            response = await self.llm.ainvoke(self.messages)
             content = response.content if hasattr(response, 'content') else str(response)
             self.add_message("assistant", content)
+
+            # Extract and accumulate token usage from response metadata
+            if hasattr(response, 'response_metadata'):
+                metadata = response.response_metadata
+                # OpenAI format
+                if 'token_usage' in metadata:
+                    self.total_input_tokens += metadata['token_usage'].get('prompt_tokens', 0)
+                    self.total_output_tokens += metadata['token_usage'].get('completion_tokens', 0)
+                # Anthropic format
+                elif 'usage' in metadata:
+                    self.total_input_tokens += metadata['usage'].get('input_tokens', 0)
+                    self.total_output_tokens += metadata['usage'].get('output_tokens', 0)
+
             return content
         except Exception as e:
             logger.error("LLM invocation failed: %s", e, exc_info=True)
-            # recoverable error, let the agent continue
             raise NonTerminatingException(f"LLM call failed: {str(e)}")
 
     async def _execute_action(self, response: str) -> str:
@@ -545,10 +569,10 @@ You cannot continue working (reading, editing, testing) in any way on this task 
 
         try:
             result = await asyncio.to_thread(run_cmd)
-            
+
             # stderr is automatically redirected to stdout via stderr=subprocess.STDOUT
             output = result.stdout if result.stdout else ""
-            
+
             # Include returncode in the output so agent know action success or fail
             output = f"<returncode>{result.returncode}</returncode>\n{output}"
 
