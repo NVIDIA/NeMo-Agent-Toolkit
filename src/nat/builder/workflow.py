@@ -14,8 +14,6 @@
 # limitations under the License.
 
 from contextlib import asynccontextmanager
-from contextvars import ContextVar
-from typing import Any
 
 from nat.builder.context import ContextState
 from nat.builder.embedder import EmbedderProviderInfo
@@ -35,8 +33,6 @@ from nat.object_store.interfaces import ObjectStore
 from nat.observability.exporter.base_exporter import BaseExporter
 from nat.observability.exporter_manager import ExporterManager
 from nat.runtime.runner import Runner
-
-callback_handler_var: ContextVar[Any | None] = ContextVar("callback_handler_var", default=None)
 
 
 class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):

@@ -28,6 +28,8 @@ from nat.data_models.intermediate_step import TraceMetadata
 from nat.data_models.invocation_node import InvocationNode
 from nat.data_models.runtime_enum import RuntimeTypeEnum
 from nat.observability.exporter_manager import ExporterManager
+from nat.profiler.decorators.framework_wrapper import _library_instrumented
+from nat.profiler.decorators.framework_wrapper import callback_handler_var
 from nat.utils.reactive.subject import Subject
 
 logger = logging.getLogger(__name__)
@@ -109,6 +111,15 @@ class Runner:
         ))
 
         self._runtime_type_token = self._context_state.runtime_type.set(self._runtime_type)
+
+        # Set up LangChain callback handler in this request's async context.
+        # The global hook is registered once during workflow build, but the ContextVar
+        # must be set in each request context for the callback to be invoked.
+        # See: https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues/1505
+        if _library_instrumented.get("langchain", False):
+            from nat.profiler.callbacks.langchain_callback_handler import LangchainProfilerHandler
+            handler = LangchainProfilerHandler()
+            callback_handler_var.set(handler)
 
         if (self._state == RunnerState.UNINITIALIZED):
             self._state = RunnerState.INITIALIZED
