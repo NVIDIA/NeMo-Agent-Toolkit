@@ -15,11 +15,16 @@
 
 import asyncio
 import logging
+import types
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from dataclasses import field
 from datetime import datetime
 from datetime import timedelta
+from typing import Annotated
+from typing import Union
+from typing import get_args
+from typing import get_origin
 
 import aiorwlock
 from pydantic import BaseModel
@@ -37,6 +42,36 @@ from nat.plugins.mcp.client.client_config import PerUserMCPClientConfig
 from nat.plugins.mcp.utils import truncate_session_id
 
 logger = logging.getLogger(__name__)
+
+
+def _annotation_allows_none(annotation: object) -> bool:
+    """Return True if a type annotation explicitly allows None."""
+    if annotation is None or annotation is type(None):
+        return True
+
+    origin = get_origin(annotation)
+    if origin is Annotated:
+        annotation = get_args(annotation)[0]
+        origin = get_origin(annotation)
+
+    if origin in (Union, getattr(types, "UnionType", None)):
+        return type(None) in get_args(annotation)
+
+    return False
+
+
+def _drop_invalid_none_values(args: dict, schema: type[BaseModel]) -> dict:
+    """Drop None values only when schema does not allow them."""
+    fields = getattr(schema, "model_fields", {})
+    if not fields:
+        return args
+
+    filtered = {}
+    for key, value in args.items():
+        if value is None and key in fields and not _annotation_allows_none(fields[key].annotation):
+            continue
+        filtered[key] = value
+    return filtered
 
 
 class PerUserMCPFunctionGroup(FunctionGroup):
@@ -84,7 +119,8 @@ def mcp_per_user_tool_function(tool, client: MCPBaseClient):
             # We re-validate here (yes, redundant) to leverage Pydantic's exclude_none with
             # mode='json' for recursive None removal in nested models.
             # Reference: function_info.py:_convert_input_pydantic
-            validated_input = mcp_tool.input_schema.model_validate(kwargs)
+            validated_input = mcp_tool.input_schema.model_validate(
+                _drop_invalid_none_values(kwargs, mcp_tool.input_schema))
             args = validated_input.model_dump(exclude_none=True, mode='json')
             return await mcp_tool.acall(args)
         except Exception as e:
@@ -496,7 +532,8 @@ def mcp_session_tool_function(tool, function_group: MCPFunctionGroup):
             # We re-validate here (yes, redundant) to leverage Pydantic's exclude_none with
             # mode='json' for recursive None removal in nested models.
             # Reference: function_info.py:_convert_input_pydantic
-            validated_input = session_tool.input_schema.model_validate(kwargs)
+            validated_input = session_tool.input_schema.model_validate(
+                _drop_invalid_none_values(kwargs, session_tool.input_schema))
             args = validated_input.model_dump(exclude_none=True, mode='json')
             return await session_tool.acall(args)
         except Exception as e:
