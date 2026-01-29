@@ -53,11 +53,14 @@ def setup_logging(log_level: str):
 def get_version():
     from importlib.metadata import PackageNotFoundError
     from importlib.metadata import version
-    try:
-        # Use the distro name to get the version
-        return version("nvidia-nat")
-    except PackageNotFoundError:
-        return "unknown"
+    # prefer to inspect the core package first, then the meta package
+    for package in ["nvidia-nat-core", "nvidia-nat"]:
+        try:
+            return version(package)
+        except PackageNotFoundError:
+            pass
+
+    return "unknown"
 
 
 @click.group(name="nat", chain=False, invoke_without_command=True, no_args_is_help=True)
