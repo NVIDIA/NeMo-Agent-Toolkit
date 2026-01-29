@@ -35,7 +35,7 @@ functions:
     verbose: true
 
 workflow:
-  _type: react_agent
+  _type: per_user_react_agent
   tool_names: [wikipedia_search, current_datetime, code_generation]
   llm_name: nim_llm
   verbose: true

@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import contextvars
 import logging
 import typing
 import uuid
@@ -28,8 +29,6 @@ from nat.data_models.intermediate_step import TraceMetadata
 from nat.data_models.invocation_node import InvocationNode
 from nat.data_models.runtime_enum import RuntimeTypeEnum
 from nat.observability.exporter_manager import ExporterManager
-from nat.profiler.decorators.framework_wrapper import _library_instrumented
-from nat.profiler.decorators.framework_wrapper import callback_handler_var
 from nat.utils.reactive.subject import Subject
 
 logger = logging.getLogger(__name__)
@@ -53,7 +52,8 @@ class Runner:
                  entry_fn: Function,
                  context_state: ContextState,
                  exporter_manager: ExporterManager,
-                 runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE):
+                 runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE,
+                 saved_context: contextvars.Context | None = None):
         """
         The Runner class is used to run a workflow. It handles converting input and output data types and running the
         workflow with the specified concurrency.
@@ -70,6 +70,8 @@ class Runner:
             The exporter manager to use
         runtime_type : RuntimeTypeEnum
             The runtime type (RUN_OR_SERVE, EVALUATE, OTHER)
+        saved_context : contextvars.Context | None
+            The saved context from the workflow build phase to restore for each request
         """
 
         if (entry_fn is None):
@@ -91,6 +93,9 @@ class Runner:
         self._runtime_type = runtime_type
         self._runtime_type_token = None
 
+        # Saved context from workflow build phase for restoring framework profiler handlers
+        self._saved_context = saved_context
+
     @property
     def context(self) -> Context:
         return self._context
@@ -99,6 +104,14 @@ class Runner:
         return self._entry_fn.convert(value, to_type)
 
     async def __aenter__(self):
+
+        # Restore the saved context from the workflow build phase.
+        # This is needed because framework profiler handlers (e.g., LangChain's callback_handler_var)
+        # are set during workflow build, but HTTP requests in nat serve run in different async contexts.
+        # See: https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues/1505
+        if self._saved_context is not None:
+            for context_var, value in self._saved_context.items():
+                context_var.set(value)
 
         # Set the input message on the context
         self._input_message_token = self._context_state.input_message.set(self._input_message)
@@ -111,15 +124,6 @@ class Runner:
         ))
 
         self._runtime_type_token = self._context_state.runtime_type.set(self._runtime_type)
-
-        # Set up LangChain callback handler in this request's async context.
-        # The global hook is registered once during workflow build, but the ContextVar
-        # must be set in each request context for the callback to be invoked.
-        # See: https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues/1505
-        if _library_instrumented.get("langchain", False):
-            from nat.profiler.callbacks.langchain_callback_handler import LangchainProfilerHandler
-            handler = LangchainProfilerHandler()
-            callback_handler_var.set(handler)
 
         if (self._state == RunnerState.UNINITIALIZED):
             self._state = RunnerState.INITIALIZED
