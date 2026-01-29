@@ -1,0 +1,26 @@
+# Agent-Spec YAML configured for NVIDIA NIM with a ClientTool
+# Based on agent-spec examples, adapted for NIM
+
+component_type: Agent
+description: 'Weather agent with a client tool'
+name: weather_agent
+inputs: []
+llm_config:
+  component_type: OpenAiCompatibleConfig
+  name: "NIM LLM"
+  model_id: "meta/llama-3.1-8b-instruct"
+  # NIM endpoint - will use NVIDIA_API_KEY from environment
+  url: "https://integrate.api.nvidia.com/v1"
+outputs: []
+system_prompt: You are a weather agent. Use tools to answer user questions.
+tools:
+- component_type: ClientTool
+  description: Returns the weather in a certain city
+  name: get_weather
+  inputs:
+  - title: city
+    type: string
+  outputs:
+  - title: tool_output
+    type: string
+agentspec_version: 25.4.1

@@ -1,0 +1,14 @@
+# Minimal Agent-Spec YAML for testing
+# Based on Agent-Spec examples, simplified for testing
+
+component_type: Agent
+name: "Test Agent"
+description: "A simple test agent"
+system_prompt: "You are a helpful assistant."
+llm_config:
+  component_type: OpenAiConfig
+  name: "Test LLM"
+  model_id: "gpt-4"
+inputs: []
+outputs: []
+agentspec_version: 25.4.1

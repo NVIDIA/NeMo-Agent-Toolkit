@@ -1,0 +1,16 @@
+# Agent-Spec YAML configured for NVIDIA NIM (OpenAI-compatible)
+# Uses OpenAiCompatibleConfig which works with NIM endpoints
+
+component_type: Agent
+name: "NIM Test Agent"
+description: "A simple agent using NVIDIA NIM"
+system_prompt: "You are a helpful assistant. Keep responses brief."
+llm_config:
+  component_type: OpenAiCompatibleConfig
+  name: "NIM LLM"
+  model_id: "meta/llama-3.1-8b-instruct"
+  # NIM endpoint - will use NVIDIA_API_KEY from environment
+  url: "https://integrate.api.nvidia.com/v1"
+inputs: []
+outputs: []
+agentspec_version: 25.4.1
