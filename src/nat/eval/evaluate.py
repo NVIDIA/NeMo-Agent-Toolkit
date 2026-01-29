@@ -182,7 +182,7 @@ class EvaluationRun:
 
             user_id = self.config.user_id
             if self.eval_config.general.per_input_user_id:
-                user_id = f"{self.config.user_id}_{item.id}_{uuid4()}"
+                user_id += f"-{uuid4()}"
 
             async with session_manager.session(user_id=user_id) as session:
                 async with session.run(item.input_obj) as runner:
