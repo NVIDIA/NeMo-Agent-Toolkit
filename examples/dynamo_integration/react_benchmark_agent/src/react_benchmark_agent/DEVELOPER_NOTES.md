@@ -15,87 +15,24 @@ limitations under the License.
 -->
 <!-- path-check-skip-file -->
 
+# React Benchmark Agent - Developer Notes
+
 > [!NOTE]
-> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent Toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
-
-# React Benchmark Agent - Implementation Guide
-
-**Complexity:** 🛑 Advanced
-
-This document details the source code implementation of the React Benchmark Agent, explaining how the different configuration files map to the underlying components, evaluators, and workflows.
+> This document details the source code implementation of the React Benchmark Agent, explaining how configuration files map to underlying components, evaluators, and workflows.
+>
+> For **setup instructions, running evaluations, and troubleshooting**, see the [Evaluation Guide](../../README.md).
 
 ## Table of Contents
 
-1. [Prerequisites](#prerequisites)
-2. [Architecture Overview](#architecture-overview)
-3. [Component Registry](#component-registry)
-4. [Deployment Patterns](#deployment-patterns)
+1. [Architecture Overview](#architecture-overview)
+2. [Component Registry](#component-registry)
+3. [Deployment Patterns](#deployment-patterns)
    - [Standard Deployment](#1-standard-deployment-no-rethinking)
    - [Self-Evaluation with Feedback](#2-self-evaluation-with-feedback-rethinking)
    - [Optimization Configuration](#3-optimization-configuration)
    - [Profiling Configuration](#4-profiling-configuration)
-5. [Source Code Reference](#source-code-reference)
-6. [Evaluators](#evaluators)
-
----
-
-## Prerequisites
-
-### Minimum Hardware Requirements
-
-|| Component | Minimum | Recommended |
-||-----------|---------|-------------|
-|| **GPU Architecture** | NVIDIA Hopper (H100) or Blackwell (B200) | B200 for optimal performance |
-|| **GPU Count** | 4 GPUs (TP=4 for 70B model) | 8 GPUs for optimal performance |
-|| **GPU Memory** | 80GB per GPU (H100) | 192GB per GPU (B200) |
-|| **System RAM** | 256GB | 512GB+ |
-
-> **Note**: The Llama-3.3-70B-Instruct model requires approximately 140GB of GPU memory when loaded with TP=4 (tensor parallelism across 4 GPUs).
-
-### System Dependencies
-
-1. **Python 3.11, 3.12, or 3.13** installed
-2. **Docker**
-3. **NeMo Agent Toolkit** repository cloned and installed
-4. **Dynamo Backend** running on `localhost:8099`
-   - See [Dynamo Setup Guide](../../../../../external/dynamo/README.md) for installation
-5. **Hugging Face account** with access to Llama-3.3-70B-Instruct model
-
-### Example-Specific Installation Steps
-
-```bash
-# Navigate to the repository root
-cd /path/to/NeMo-Agent-Toolkit
-
-# Create virtual environment
-uv venv "${HOME}/.venvs/nat_dynamo_eval" --python 3.13
-source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
-
-# Install nvidia-nat with LangChain support
-uv pip install -e ".[langchain]"
-
-# Install visualization dependencies
-uv pip install matplotlib scipy
-
-# Install the nat_react_benchmark_agent workflow package
-cd examples/dynamo_integration/react_benchmark_agent
-uv pip install -e .
-
-# Set up Hugging Face for dataset access
-export HF_HOME=/path/to/local/storage/.cache/huggingface
-export HF_TOKEN=<your_huggingface_token>
-
-# Download the Agent Leaderboard v2 dataset
-cd ../  # Navigate to examples/dynamo_integration
-python scripts/download_agent_leaderboard_v2.py --domains banking
-
-# Start Dynamo backend (in separate terminal)
-cd ../../external/dynamo
-bash start_dynamo_unified.sh
-
-# Verify Dynamo is running
-curl http://localhost:8099/health
-```
+4. [Source Code Reference](#source-code-reference)
+5. [Evaluators](#evaluators)
 
 ---
 
@@ -124,7 +61,7 @@ curl http://localhost:8099/health
                     ┌───────────────────┼───────────────────┐
                     ▼                   ▼                   ▼
            ┌───────────────┐   ┌───────────────┐   ┌───────────────┐
-           │  LLM `Configs`│   │   Functions   │   │  Evaluators   │
+           │  LLM Configs  │   │   Functions   │   │  Evaluators   │
            │───────────────│   │───────────────│   │───────────────│
            │ dynamo_llm    │   │ react_agent   │   │ tsq_evaluator │
            │ eval_llm      │   │ banking_tools │   │ ac_evaluator  │
@@ -185,8 +122,6 @@ from .evaluators import tsq_evaluator_function
 
 **Configuration:** `eval_config_no_rethinking_full_test.yml`
 
-This is the baseline deployment that runs a ReAct agent directly without self-evaluation.
-
 #### Configuration → Code Mapping
 
 | `config` Section | Source File | Component |
@@ -218,10 +153,10 @@ User Question
 │         │                   │                                      │
 │         │                   ▼                                      │
 │         │           ┌──────────────┐                               │
-│         │           │ToolIntent    │                                │
-│         │           │Buffer.record │                                │
-│         │           │(tool_intent_ │                                │
-│         │           │ stubs.py)    │                                │
+│         │           │ToolIntent    │                               │
+│         │           │Buffer.record │                               │
+│         │           │(tool_intent_ │                               │
+│         │           │ stubs.py)    │                               │
 │         │           └──────────────┘                               │
 │         │                   │                                      │
 │         ▼                   ▼                                      │
@@ -249,6 +184,7 @@ User Question
 #### Key Source Files
 
 **`react_benchmark_agent.py`** (lines 15-94)
+
 ```python
 class ReactBenchmarkAgentFunctionConfig(FunctionBaseConfig, name="react_benchmark_agent"):
     """
@@ -264,11 +200,13 @@ class ReactBenchmarkAgentFunctionConfig(FunctionBaseConfig, name="react_benchmar
 ```
 
 **`banking_tools.py`** (lines 30-138)
+
 - Loads tool schemas from `data/raw/banking/tools.json`
 - Creates stub functions for each tool via `create_tool_stub_function()`
 - Registers them as a function group accessible by `banking_tools.<tool_name>`
 
 **`tool_intent_stubs.py`** (lines 79-136)
+
 - `ToolIntentBuffer` class stores captured tool intents
 - `create_tool_stub_function()` creates async stubs that record to the buffer
 - Global registry `_GLOBAL_INTENT_REGISTRY` enables cross-module intent access
@@ -279,19 +217,14 @@ class ReactBenchmarkAgentFunctionConfig(FunctionBaseConfig, name="react_benchmar
 
 **Configuration:** `eval_config_rethinking_full_test.yml`
 
-This advanced deployment wraps the ReAct agent with a self-evaluation loop that:
-- Evaluates tool selection after each attempt
-- Provides structured feedback on retry
-- Continues until confidence threshold is met
-
 #### Configuration → Code Mapping
 
 | `config` Section | Source File | Component |
 |----------------|-------------|-----------|
 | `functions.react_workflow._type: react_agent` | `nvidia-nat` | Inner ReAct agent |
 | `workflow._type: self_evaluating_agent_with_feedback` | `self_evaluating_agent_with_feedback.py` | Self-eval wrapper |
-| `workflow.wrapped_agent: react_workflow` | (reference) | Reference to inner agent |
-| `workflow.evaluator_llm: eval_llm` | (reference) | LLM for self-evaluation |
+| `workflow.wrapped_agent: react_workflow` | (YAML ref to `functions.react_workflow`) | Reference to inner agent |
+| `workflow.evaluator_llm: eval_llm` | (YAML ref to `llms.eval_llm`) | LLM for self-evaluation |
 | `workflow.pass_feedback_to_agent: true` | `self_evaluating_agent_with_feedback.py` | Feedback loop enabled |
 
 #### Data Flow
@@ -371,6 +304,7 @@ User Question
 #### Key Source Files
 
 **`self_evaluating_agent_with_feedback.py`** (lines 41-109)
+
 ```python
 class SelfEvaluatingAgentWithFeedbackConfig(FunctionBaseConfig, name="self_evaluating_agent_with_feedback"):
     """Configuration for Self-Evaluating Agent with Feedback Loop."""
@@ -385,6 +319,7 @@ class SelfEvaluatingAgentWithFeedbackConfig(FunctionBaseConfig, name="self_evalu
 ```
 
 **Intent Isolation for Concurrent Execution** (`tool_intent_stubs.py`, lines 33-76)
+
 ```python
 # Context variable for async-safe scenario isolation
 _current_scenario_id: contextvars.ContextVar[str] = contextvars.ContextVar("scenario_id", default="current")
@@ -408,14 +343,16 @@ This configuration enables the optimizer to tune Dynamo router parameters for la
 
 | `config` Section | Source File | Component |
 |----------------|-------------|-----------|
-| `llms.dynamo_llm._type: dynamo` | `nvidia-nat` (`nat.llm.dynamo_llm`) | Dynamo LLM with optimizable prefix fields |
-| `llms.dynamo_llm.optimizable_params` | `nvidia-nat` | Fields to optimize |
-| `llms.dynamo_llm.search_space` | `nvidia-nat` | Parameter search ranges |
-| `evaluators.avg_llm_latency._type: avg_llm_latency` | `nvidia-nat` | Runtime performance metric |
-| `optimizer.eval_metrics` | `nvidia-nat` | Metrics to minimize |
+| `llms.dynamo_llm._type: dynamo` | `nat/llm/dynamo_llm.py` | `DynamoModelConfig` with optimizable prefix fields |
+| `OptimizableField`, `SearchSpace` | `nat/data_models/optimizable.py` | Hyper-parameter metadata and Optuna integration |
+| `evaluators.avg_llm_latency._type: avg_llm_latency` | `nat/eval/runtime_evaluator/register.py` | `AverageLLMLatencyConfig` evaluator |
+| `optimizer.eval_metrics` | `nat/data_models/optimizer.py` | `OptimizerConfig.eval_metrics` field |
+| Optimizer runtime | `nat/profiler/parameter_optimization/parameter_optimizer.py` | `optimize_parameters()` function |
+
 #### Optimizable Parameters
 
 **`DynamoModelConfig`** (`src/nat/llm/dynamo_llm.py`)
+
 ```python
 class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
     """Dynamo LLM with automatic prefix header injection for KV cache optimization."""
@@ -496,16 +433,16 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
 
 **Configuration:** `profile_rethinking_full_test.yml`
 
-This configuration enables comprehensive profiling for performance analysis.
-
 #### Configuration → Code Mapping
 
 | `config` Section | Source File | Component |
 |----------------|-------------|-----------|
-| `eval.general.profiler.compute_llm_metrics: true` | `nvidia-nat` | TTFT, ITL, throughput metrics |
-| `eval.general.profiler.token_uniqueness_forecast: true` | `nvidia-nat` | Token pattern analysis |
-| `eval.general.profiler.bottleneck_analysis.enable_nested_stack: true` | `nvidia-nat` | Call stack analysis |
-| `eval.general.profiler.prompt_caching_prefixes.enable: true` | `nvidia-nat` | KV cache prefix detection |
+| `eval.general.profiler` | `nat/data_models/profiler.py` | `ProfilerConfig` data model |
+| `profiler.compute_llm_metrics: true` | `nat/profiler/inference_optimization/llm_metrics.py` | `LLMMetrics.compute_profiling_metrics()` - TTFT, ITL, throughput |
+| `profiler.token_uniqueness_forecast: true` | `nat/profiler/inference_optimization/token_uniqueness.py` | `compute_inter_query_token_uniqueness_by_llm()` |
+| `profiler.bottleneck_analysis.enable_nested_stack: true` | `nat/profiler/inference_optimization/bottleneck_analysis/nested_stack_analysis.py` | `multi_example_call_profiling()` |
+| `profiler.prompt_caching_prefixes.enable: true` | `nat/profiler/inference_optimization/prompt_caching.py` | `get_common_prefixes()` |
+| Profiler runtime | `nat/profiler/profile_runner.py` | `ProfileRunner.run_inference_optimization()` |
 
 #### Profiler Output Files
 
@@ -548,10 +485,6 @@ outputs/dynamo_evals/<job_id>/
 
 **File:** `evaluators/tsq_evaluator.py`
 
-The TSQ evaluator measures how accurately the agent selects tools compared to expected tool calls.
-
-#### Key Functions
-
 ```python
 def extract_tool_calls_from_trajectory(trajectory):
     """
@@ -572,28 +505,9 @@ def calculate_tool_accuracy(actual, expected):
     """
 ```
 
-#### Configuration Options
-
-```yaml
-evaluators:
-  tool_selection_quality:
-    _type: tsq_evaluator
-    llm_name: eval_llm      # Optional: for semantic comparison
-    strict_mode: false      # Allow fuzzy matching
-    tool_weight: 1.0        # Weight for tool selection (0-1)
-    parameter_weight: 0.0   # Weight for parameter accuracy (0-1)
-```
-
 ### Action Completion (AC) Evaluator
 
 **File:** `evaluators/action_completion_evaluator.py`
 
 The AC evaluator measures whether the agent addressed all user goals.
 
-```yaml
-evaluators:
-  action_completion:
-    _type: action_completion_evaluator
-    llm_name: eval_llm      # Optional: for semantic goal matching
-    strict_mode: false      # Allow semantic matching
-```

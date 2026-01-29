@@ -19,6 +19,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 from pydantic import Discriminator
+from pydantic import Field
 from pydantic import model_validator
 
 from nat.data_models.common import TypedBaseModel
@@ -36,65 +37,78 @@ class JobEvictionPolicy(str, Enum):
 
 
 class EvalCustomScriptConfig(BaseModel):
-    # Path to the script to run
-    script: Path
-    # Keyword arguments to pass to the script
-    kwargs: dict[str, str] = {}
+    script: Path = Field(description="Path to the script to run.")
+
+    kwargs: dict[str, str] = Field(default_factory=dict, description="Keyword arguments to pass to the script.")
 
 
 class JobManagementConfig(BaseModel):
-    # Whether to append a unique job ID to the output directory for each run
-    append_job_id_to_output_dir: bool = False
-    # Maximum number of jobs to keep in the output directory. Oldest jobs will be evicted.
-    # A value of 0 means no limit.
-    max_jobs: int = 0
-    # Policy for evicting old jobs. Defaults to using time_created.
-    eviction_policy: JobEvictionPolicy = JobEvictionPolicy.TIME_CREATED
+    append_job_id_to_output_dir: bool = Field(
+        default=False, description="Whether to append a unique job ID to the output directory for each run.")
+
+    max_jobs: int = Field(default=0,
+                          description="Maximum number of jobs to keep in the output directory. "
+                          "Oldest jobs will be evicted. A value of 0 means no limit.")
+
+    eviction_policy: JobEvictionPolicy = Field(default=JobEvictionPolicy.TIME_CREATED,
+                                               description="Policy for evicting old jobs.")
 
 
 class EvalOutputConfig(BaseModel):
-    # Output directory for the workflow and evaluation results
-    dir: Path = Path("./.tmp/nat/examples/default/")
-    # S3 prefix for the workflow and evaluation results
-    remote_dir: str | None = None
-    # Custom function to pre-evaluation process the eval input
-    # Format: "module.path.function_name"
-    custom_pre_eval_process_function: str | None = None
-    # Custom scripts to run after the workflow and evaluation results are saved
-    custom_scripts: dict[str, EvalCustomScriptConfig] = {}
-    # S3 config for uploading the contents of the output directory
-    s3: EvalS3Config | None = None
-    # Whether to cleanup the output directory before running the workflow
-    cleanup: bool = True
-    # Job management configuration (job id, eviction, etc.)
-    job_management: JobManagementConfig = JobManagementConfig()
-    # Filter for the workflow output steps
-    workflow_output_step_filter: list[IntermediateStepType] | None = None
+    dir: Path = Field(default=Path("./.tmp/nat/examples/default/"),
+                      description="Output directory for the workflow and evaluation results.")
+
+    remote_dir: str | None = Field(default=None, description="S3 prefix for the workflow and evaluation results.")
+
+    custom_pre_eval_process_function: str | None = Field(
+        default=None,
+        description="Custom function to pre-evaluation process the eval input. Format: 'module.path.function_name'.")
+
+    custom_scripts: dict[str, EvalCustomScriptConfig] = Field(
+        default_factory=dict, description="Custom scripts to run after the workflow and evaluation results are saved.")
+
+    s3: EvalS3Config | None = Field(default=None,
+                                    description="S3 config for uploading the contents of the output directory.")
+
+    cleanup: bool = Field(default=True,
+                          description="Whether to cleanup the output directory before running the workflow.")
+
+    job_management: JobManagementConfig = Field(default_factory=JobManagementConfig,
+                                                description="Job management configuration (job id, eviction, etc.).")
+
+    workflow_output_step_filter: list[IntermediateStepType] | None = Field(
+        default=None, description="Filter for the workflow output steps.")
 
 
 class EvalGeneralConfig(BaseModel):
-    max_concurrency: int = 8
+    max_concurrency: int = Field(default=8, description="Maximum number of concurrent workflow executions.")
 
-    # Workflow alias for displaying in evaluation UI, if not provided,
-    # the workflow type will be used
-    workflow_alias: str | None = None
+    workflow_alias: str | None = Field(
+        default=None,
+        description="Workflow alias for displaying in evaluation UI. If not provided, the workflow type will be used.")
 
-    # Output directory for the workflow and evaluation results
-    output_dir: Path = Path("./.tmp/nat/examples/default/")
+    output_dir: Path = Field(default=Path("./.tmp/nat/examples/default/"),
+                             description="Output directory for the workflow and evaluation results.")
 
-    # If present overrides output_dir
-    output: EvalOutputConfig | None = None
+    output: EvalOutputConfig | None = Field(default=None,
+                                            description="Output configuration. If present, overrides output_dir.")
 
-    # Dataset for running the workflow and evaluating
-    dataset: EvalDatasetConfig | None = None
+    dataset: EvalDatasetConfig | None = Field(
+        default=None, description="Dataset configuration for running the workflow and evaluating.")
 
-    # Inference profiler
-    profiler: ProfilerConfig | None = None
+    profiler: ProfilerConfig | None = Field(default=None, description="Inference profiler configuration.")
 
-    # When enabled, validates that all LLM endpoints are accessible before starting evaluation.
-    # This catches deployment issues early (e.g., 404 errors from canceled training jobs).
-    # Recommended for production workflows. Opt-in for now, may become default in future.
-    validate_llm_endpoints: bool = False
+    validate_llm_endpoints: bool = Field(
+        default=False,
+        description="When enabled, validates that all LLM endpoints are accessible before starting evaluation. "
+        "This catches deployment issues early (e.g., 404 errors from canceled training jobs). "
+        "Recommended for production workflows.")
+
+    per_input_user_id: bool = Field(
+        default=True,
+        description="When enabled, generates a unique user_id for each eval item. For per-user workflows, "
+        "this creates a fresh workflow instance per eval item, resetting all stateful tools to their "
+        "initial state. Set to False to disable this behavior.")
 
     # overwrite the output_dir with the output config if present
     @model_validator(mode="before")
@@ -106,12 +120,9 @@ class EvalGeneralConfig(BaseModel):
 
 
 class EvalConfig(BaseModel):
+    general: EvalGeneralConfig = Field(default_factory=EvalGeneralConfig, description="General evaluation options.")
 
-    # General Evaluation Options
-    general: EvalGeneralConfig = EvalGeneralConfig()
-
-    # Evaluators
-    evaluators: dict[str, EvaluatorBaseConfig] = {}
+    evaluators: dict[str, EvaluatorBaseConfig] = Field(default_factory=dict, description="Evaluators configuration.")
 
     @classmethod
     def rebuild_annotations(cls):

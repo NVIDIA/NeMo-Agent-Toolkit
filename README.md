@@ -114,6 +114,7 @@ Before getting started, it's possible to run this simple workflow and many other
       nim_llm:
          _type: nim
          model_name: nvidia/nemotron-3-nano-30b-a3b
+         temperature: 0.0
          chat_template_kwargs:
             enable_thinking: false
 
