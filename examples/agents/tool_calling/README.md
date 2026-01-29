@@ -250,7 +250,7 @@ Notes:
 - When `builtin_tools` or `mcp_tools` are provided, they are bound on the LLM with `strict=True` and optional `parallel_tool_calls` support.
 
 #### Configure MCP tools
-You can allow the model to call tools from a remote MCP server by adding entries under `mcp_tools`. The schema is defined in `src/nat/data_models/openai_mcp.py`.
+You can allow the model to call tools from a remote MCP server by adding entries under `mcp_tools`. The schema is defined in `packages/nvidia_nat_core/src/nat/data_models/openai_mcp.py`.
 
 Example:
 

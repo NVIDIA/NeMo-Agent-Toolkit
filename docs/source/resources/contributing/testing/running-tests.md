@@ -69,7 +69,7 @@ export AZURE_OPENAI_ENDPOINT="<your-custom-endpoint>"
 
 ### Start the Required Services
 
-A Docker Compose YAML file is provided to start the required services located at `tests/test_data/docker-compose.services.yml`. The services at time of writing include Arize Phoenix, etcd, Milvus, MinIO, MySQL, OpenSearch, and Redis.
+A Docker Compose YAML file is provided to start the required services located at `test_data/docker-compose.services.yml`. The services at time of writing include Arize Phoenix, etcd, Milvus, MinIO, MySQL, OpenSearch, and Redis.
 
 ```bash
 # Create temporary passwords for the services
@@ -87,13 +87,13 @@ export MYSQL_ROOT_PASSWORD="$(mk_pw)"
 export POSTGRES_PASSWORD="$(mk_pw)"
 
 # Start the services in detached mode
-docker compose -f tests/test_data/docker-compose.services.yml up -d
+docker compose -f test_data/docker-compose.services.yml up -d
 ```
 
 :::{note}
 It can take some time for the services to start up. You can check the logs with:
 ```bash
-docker compose -f tests/test_data/docker-compose.services.yml logs --follow
+docker compose -f test_data/docker-compose.services.yml logs --follow
 ```
 :::
 
@@ -105,7 +105,7 @@ pytest --run_slow --run_integration
 ### Cleaning Up
 To stop the services, run:
 ```bash
-docker compose -f tests/test_data/docker-compose.services.yml down
+docker compose -f test_data/docker-compose.services.yml down
 ```
 
 ## Writing Integration Tests
@@ -219,4 +219,4 @@ async def test_full_workflow(milvus_uri: str) -> None:
 
 Of note here is that an additional fixture `populate_milvus` is used to ensure that the Milvus instance is populated with test data before this test is run. Additionally the `examples/custom_functions/automated_description_generation/configs/config.yml` configuration file specifies a Milvus URL of `http://localhost:19530`, which is replaced at runtime with the actual URL provided by the `milvus_uri` fixture. This allows the test to run against a Milvus instance running in a different environment if needed.
 
-Finally the new service should be added to the Docker Compose YAML file located at `tests/test_data/docker-compose.services.yml` to allow easy startup of the service when running integration tests locally.
+Finally the new service should be added to the Docker Compose YAML file located at `test_data/docker-compose.services.yml` to allow easy startup of the service when running integration tests locally.

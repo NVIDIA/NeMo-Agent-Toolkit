@@ -104,9 +104,6 @@ async_endpoints = [
 gunicorn = [
   "gunicorn~=23.0",
 ]
-huggingface = [
-  "transformers[torch,accelerate]~=4.57",
-]
 pii-defense = [
   "presidio-analyzer",
   "presidio-anonymizer"

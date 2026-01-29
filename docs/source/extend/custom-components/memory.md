@@ -251,4 +251,4 @@ This modular design allows any developer to **plug in** a new memory backend—l
 
 ---
 
-**That's it!** You now know how to create, register, and use a **custom memory client** in NeMo Agent Toolkit. Feel free to explore the existing memory clients in the `src/nat/memory` directory for reference and see how they are integrated into the overall framework.
+**That's it!** You now know how to create, register, and use a **custom memory client** in NeMo Agent Toolkit. Feel free to explore the existing memory clients in the `packages/nvidia_nat_core/src/nat/memory` directory for reference and see how they are integrated into the overall framework.

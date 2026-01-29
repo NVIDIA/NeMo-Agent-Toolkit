@@ -86,7 +86,7 @@ async def oauth2_client(authentication_provider: OAuth2AuthCodeFlowProviderConfi
 Each authentication provider should inherit from the {py:class}`~nat.authentication.interfaces.AuthProviderBase` class, and implement the required methods.
 
 ## Testing the new Provider
-After implementing a new authentication provider, it’s important to verify that the required functionality works as expected. This can be done by writing integration tests. It is important to minimize the amount of mocking in the tests to ensure that the provider behaves as expected in a real-world scenario. You can find examples of existing tests in the repository at `tests/nat/authentication`.
+After implementing a new authentication provider, it’s important to verify that the required functionality works as expected. This can be done by writing integration tests. It is important to minimize the amount of mocking in the tests to ensure that the provider behaves as expected in a real-world scenario. You can find examples of existing tests in the repository at `packages/nvidia_nat_core/tests/nat/authentication`.
 
 ## Packaging the Provider
 

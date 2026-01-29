@@ -126,7 +126,7 @@ Registering an embedder or retriever provider is similar; however, the function 
 
 
 The `OpenAIModelConfig` from the previous section is registered as follows:
-`src/nat/llm/openai_llm.py`:
+`packages/nvidia_nat_core/src/nat/llm/openai_llm.py`:
 ```python
 @register_llm_provider(config_type=OpenAIModelConfig)
 async def openai_llm(config: OpenAIModelConfig, builder: Builder):

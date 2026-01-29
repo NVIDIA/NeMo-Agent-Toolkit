@@ -76,7 +76,7 @@ general:
 ```
 
 ### Complete Metadata Access Example
-Get the instance of the `nat.builder.context.Context` object using the `nat.builder.context.Context.get()` method. This will give you access to the metadata method which holds the request attributes defined by the user on request. A complete example of the function can be found in `src/nat/tool/server_tools.py`.
+Get the instance of the `nat.builder.context.Context` object using the `nat.builder.context.Context.get()` method. This will give you access to the metadata method which holds the request attributes defined by the user on request. A complete example of the function can be found in `packages/nvidia_nat_core/src/nat/tool/server_tools.py`.
 
 > [!NOTE]
 >

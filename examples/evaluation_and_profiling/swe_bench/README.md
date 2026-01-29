@@ -100,7 +100,7 @@ eval:
       file_path: hf://datasets/princeton-nlp/SWE-bench_Lite/data/dev-00000-of-00001.parquet
 ```
 
-The input to the workflow is a [Pydantic](https://docs.pydantic.dev) model, `SWEBenchInput`. Refer to `src/nat/data_models/swe_bench_model.py` for the model definition.
+The input to the workflow is a [Pydantic](https://docs.pydantic.dev) model, `SWEBenchInput`. Refer to `packages/nvidia_nat_core/src/nat/data_models/swe_bench_model.py` for the model definition.
 
 ### Filtering dataset entries
 You can limit the number of `swe_bench` instances in the dataset that are solved and evaluated through a filter in the configuration file. For example:
