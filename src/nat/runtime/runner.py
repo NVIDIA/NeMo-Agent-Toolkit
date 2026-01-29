@@ -19,13 +19,12 @@ import typing
 import uuid
 from enum import Enum
 
-from nat.builder.context import Context
-from nat.builder.context import ContextState
+from nat.builder.context import Context, ContextState
 from nat.builder.function import Function
-from nat.data_models.intermediate_step import IntermediateStepPayload
-from nat.data_models.intermediate_step import IntermediateStepType
-from nat.data_models.intermediate_step import StreamEventData
-from nat.data_models.intermediate_step import TraceMetadata
+from nat.data_models.intermediate_step import (IntermediateStepPayload,
+                                               IntermediateStepType,
+                                               StreamEventData,
+                                               TraceMetadata)
 from nat.data_models.invocation_node import InvocationNode
 from nat.data_models.runtime_enum import RuntimeTypeEnum
 from nat.observability.exporter_manager import ExporterManager
