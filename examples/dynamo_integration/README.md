@@ -42,7 +42,7 @@ limitations under the License.
 
 **This set of example agents and evaluations demonstrate the capability to integrate NeMo Agent toolkit agents with LLM inference accelerated by NVIDIA Dynamo-hosted LLM endpoints.**
 
-This set of examples is intended to grow over time as the synergies between NeMo Agent toolkit and [Dynamo](https://github.com/ai-dynamo/dynamo) evolve. In the first set of examples, we will analyze the performance (throughput and latency) of NeMo Agent toolkit agents requests to Dynamo and seek out key optimizations. Agentic LLM requests have predictable patterns with respect to conversation length, system prompts, and tool-calling. We aim to co-design our inference servers to provide better performance in a repeatable, mock, decision-only evaluation harness. The harness uses the Banking data subset and mock tools from the [Galileo Agent Leaderboard v2](https://huggingface.co/datasets/galileo-ai/agent-leaderboard-v2) benchmark to simulate agentic tool selection quality (TSQ).
+This set of examples is intended to grow over time as the synergies between NVIDIA NeMo Agent toolkit and [Dynamo](https://github.com/ai-dynamo/dynamo) evolve. In the first set of examples, we will analyze the performance (throughput and latency) of NeMo Agent toolkit agents requests to Dynamo and seek out key optimizations. Agentic LLM requests have predictable patterns with respect to conversation length, system prompts, and tool-calling. We aim to co-design our inference servers to provide better performance in a repeatable, mock, decision-only evaluation harness. The harness uses the Banking data subset and mock tools from the [Galileo Agent Leaderboard v2](https://huggingface.co/datasets/galileo-ai/agent-leaderboard-v2) benchmark to simulate agentic tool selection quality (TSQ).
 
 Most of these examples could be tested using a managed LLM service, like an NVIDIA NIM model endpoint, for inference. However, the intended analysis would require hosting the LLM endpoints on your own GPU cluster using Dynamo.
 
@@ -53,7 +53,7 @@ Most of these examples could be tested using a managed LLM service, like an NVID
 - **Dynamo Backend**: Fast LLM inference with KV cache optimization (default Dynamo method) and a predictive Thompson sampling router (new implementation)
 - **Self-Evaluation Loop**: Agent can re-evaluate and retry tool selection for improved quality.
 - **Comprehensive Metrics and Visualizations**: TSQ scores (accuracy of parameters has been excluded), token throughput, latency analysis. Visualized in A/B scatter plots and histograms for analysis.
-- **NeMo Agent toolkit Framework**: Full integration with NeMo Agent toolkit evaluators, optimizer, and profiler
+- **NeMo Agent toolkit Framework**: Full integration with toolkit evaluators, optimizer, and profiler
 
 ## Prerequisites
 
@@ -78,7 +78,7 @@ Most of these examples could be tested using a managed LLM service, like an NVID
 These experiments are designed to run against a Dynamo backend for LLM inference. The following GPU resources are required:
 
 | Component | Minimum | Recommended |
-|-----------|---------|-------------|
+| --------- | ------- | ----------- |
 | **GPU Architecture** | NVIDIA Hopper (H100) | B200 for optimal performance |
 | **GPU Count** | 4 GPUs (TP=4 for 70B model) | 8 GPUs for optimal performance |
 | **GPU Memory** | 96GB per GPU (H100) | 192GB per GPU (B200) |
@@ -90,8 +90,9 @@ See the [Dynamo Setup Guide](../../external/dynamo/README.md) for detailed hardw
 ## Quick Start
 
 > [!NOTE]
-> The instructions below are an **abbreviated quick start**. For detailed environment setup, thorough explanations of each step, configuration options, and troubleshooting guidance, see the [Complete Evaluation Guide](react_benchmark_agent/README.md#environment-setup).
+> The instructions below are an **abbreviated quick start**. For detailed environment setup, thorough explanations of each step, configuration options, and troubleshooting guidance, refer to the [Complete Evaluation Guide](react_benchmark_agent/README.md#environment-setup).
 
+<!-- path-check-skip-begin -->
 ```bash
 # 1. Setup environment
 cd /path/to/NeMo-Agent-Toolkit
@@ -101,28 +102,23 @@ uv pip install -e ".[langchain]"
 uv pip install matplotlib scipy
 
 # 2. Install the workflow package
-# <!-- path-check-skip-next-line -->
 cd examples/dynamo_integration/react_benchmark_agent
 uv pip install -e .
 
 # 3. Source environment variables
-# <!-- path-check-skip-next-line -->
 cd ../ # NeMo-Agent-Toolkit/examples/dynamo_integration
 cp .env.example .env
 vi .env # update the environment variables then source
 [ -f .env ] && source .env || { echo "Warning: .env not found" >&2; false; }
 
 # 4. Download the dataset (requires HuggingFace account)
-# <!-- path-check-skip-next-line -->
 python scripts/download_agent_leaderboard_v2.py --domains banking
 
 # 5. Download the model weights (requires HuggingFace account)
 mkdir -p "$(dirname "$DYNAMO_MODEL_DIR")"
-# <!-- path-check-skip-next-line -->
 hf download meta-llama/Llama-3.3-70B-Instruct --local-dir "$DYNAMO_MODEL_DIR"
 
 # 6. Start Dynamo backend (see Dynamo README for details)
-# <!-- path-check-skip-next-line -->
 cd "$DYNAMO_REPO_DIR" # cd /path/to/NeMo-Agent-Toolkit/external/dynamo
 bash start_dynamo_unified.sh > startup_output.txt 2>&1 # wait ~5 minutes for the server to start
 
@@ -137,12 +133,12 @@ cd ../../ # NeMo-Agent-Toolkit/
 nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs/eval_config_no_rethinking_full_test.yml
 
 # 8. Visualize results (after evaluation completes)
-# <!-- path-check-skip-next-line -->
 cd examples/dynamo_integration
 python scripts/plot_throughput_vs_tsq_per_request.py \
   ./react_benchmark_agent/outputs/dynamo_evals/banking_data_eval_full_test/jobs/
 # Generates: ttft_vs_tsq.png, itl_vs_tsq.png, throughput_vs_tsq.png in the jobs/ directory
 ```
+<!-- path-check-skip-end -->
 
 > [!WARNING]
 > The first load of model weights to `SGLang` workers can take significant time.
@@ -152,12 +148,14 @@ python scripts/plot_throughput_vs_tsq_per_request.py \
 After running this end-to-end evaluation, you will have confirmed functional model services on Dynamo, dataset access, and agent execution.
 
 ## Quick Stop
+<!-- path-check-skip-begin -->
 ```bash
 # 1. When testing is complete don't forget to stop workers and free GPU memory
-# <!-- path-check-skip-next-line -->
 cd /path/to/NeMo-Agent-Toolkit/external/dynamo # NeMo-Agent-Toolkit/external/dynamo
 bash stop_dynamo.sh
 ```
+<!-- path-check-skip-end -->
+
 
 ### Understanding Evaluation Artifacts
 
@@ -311,7 +309,7 @@ See [Evaluation Guide](react_benchmark_agent/README.md) for complete configurati
 
 ## Troubleshooting and Support
 
-For troubleshooting common issues, see the [Complete Evaluation Guide - Troubleshooting](react_benchmark_agent/README.md#troubleshooting) section, which covers:
+For troubleshooting common issues, refer to the [Complete Evaluation Guide - Troubleshooting](react_benchmark_agent/README.md#troubleshooting) section, which covers:
 
 - Permission denied errors when downloading datasets
 - Tools not executing (hallucinated observations)

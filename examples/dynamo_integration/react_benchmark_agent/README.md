@@ -74,7 +74,7 @@ Currently this agent supports evaluation exclusively for the [Galileo Agent Lead
 
     The output should show `True`. If it shows `False` with error 802, ensure `nvidia-fabricmanager` is installed, running, and matches your driver version.
 
-5. **Hugging Face account** with access to Llama-3.3-70B-Instruct model
+5. **Hugging Face account** with access to Llama-3.3-70B-Instruct model (requires approval from Meta)
 
 ### Hardware Requirements (Dynamo Backend)
 
@@ -134,13 +134,14 @@ source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 
 If not already configured from running [../README.md](../README.md), copy `.env.example` to a new `.env`, update the environment variable values, and source it in the current terminal
 
+<!-- path-check-skip-begin -->
 ```bash
-# <!-- path-check-skip-next-line -->
 cd ../ # NeMo-Agent-Toolkit/examples/dynamo_integration
 cp .env.example .env
 vi .env # update the environment variables then source
 [ -f .env ] && source .env || { echo "Warning: .env not found" >&2; false; }
 ```
+<!-- path-check-skip-end -->
 
 > **Note:** Dynamo-specific environment variables (`DYNAMO_BACKEND`, `DYNAMO_MODEL`, `DYNAMO_PORT`) are used by the test scripts in `external/dynamo/` and are not required for running evaluations. See [Dynamo Setup Guide](../../../external/dynamo/README.md) for those options.
 

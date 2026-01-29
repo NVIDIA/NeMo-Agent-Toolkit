@@ -18,12 +18,12 @@ limitations under the License.
 # Dynamo Backend Setup Guide
 
 > [!NOTE]
-> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice. We kindly ask that GitHub Issues are opened as bugs are issued quickly as features are subject to change.
+> ⚠️ **EXPERIMENTAL**: This integration between NVIDIA NeMo Agent toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice. We kindly ask that GitHub Issues are opened as bugs are issued quickly as features are subject to change.
 
 > [!TIP]
 > **Scope of This Guide**
 >
-> This document guides you through setting up and testing a NeMo Agent toolkit-compatible Dynamo inference server on a Linux/CUDA machine. By the end of this guide, you will be able to make `curl` requests to the endpoint and receive inference outputs from the Dynamo server.
+> This document guides you through setting up and testing a NVIDIA NeMo Agent toolkit-compatible Dynamo inference server on a Linux/CUDA machine. By the end of this guide, you will be able to make `curl` requests to the endpoint and receive inference outputs from the Dynamo server.
 >
 > For **end-to-end integration with NeMo Agent toolkit workflows**, including detailed instructions and architectural considerations, see the [Dynamo Integration Examples](../../examples/dynamo_integration/README.md).
 
