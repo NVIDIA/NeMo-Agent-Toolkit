@@ -201,6 +201,8 @@ curl http://localhost:8000/v1/models
 In a **separate terminal** with your NeMo Agent toolkit environment activated:
 
 ```bash
+# This is a dummy key for local vLLM usage
+export OPENAI_API_KEY=default
 # Run the pre-training evaluation
 nat eval --config_file examples/finetuning/rl_with_openpipe_art/configs/config_pre_train.yml --reps 3
 ```
@@ -227,7 +229,7 @@ source art-env/bin/activate
 export HF_TOKEN=<your_huggingface_token>
 
 # Start the ART server
-uv run art --host 0.0.0.0 --port 7623
+art --host 0.0.0.0 --port 7623
 ```
 
 > **Note**: The ART server listens on port `7623` for training commands and starts vLLM internally on port `8000` for inference.
@@ -318,6 +320,8 @@ finetuning:
 In your **NeMo Agent toolkit environment**:
 
 ```bash
+# This is a dummy key for local vLLM usage
+export OPENAI_API_KEY=default
 nat finetune --config_file examples/finetuning/rl_with_openpipe_art/configs/config.yml
 ```
 
@@ -571,6 +575,8 @@ The ART server continues serving the finetuned model weights. Do not restart it,
 ### 6.2 Run Post-Training Evaluation
 
 ```bash
+# This is a dummy key for local vLLM usage
+export OPENAI_API_KEY=default
 nat eval --config_file examples/finetuning/rl_with_openpipe_art/configs/config_post_train.yml --reps 3
 ```
 
