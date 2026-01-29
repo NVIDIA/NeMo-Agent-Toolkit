@@ -22,7 +22,7 @@ from nat.plugins.mcp.server.front_end_config import MCPFrontEndConfig
 from nat.plugins.mcp.server.front_end_plugin_worker import MCPFrontEndPluginWorkerBase
 
 if typing.TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
+    from fastmcp import FastMCP
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,13 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
                                    self.front_end_config.transport)
                 full_url = f"http://{self.front_end_config.host}:{self.front_end_config.port}/mcp"
                 logger.info("MCP server URL: %s", full_url)
-                await mcp.run_streamable_http_async()
+                await mcp.run_async(
+                    transport="streamable-http",
+                    host=self.front_end_config.host,
+                    port=self.front_end_config.port,
+                    path="/mcp",
+                    log_level=self.front_end_config.log_level.lower(),
+                )
             except KeyboardInterrupt:
                 logger.info("MCP server shutdown requested (Ctrl+C). Shutting down gracefully.")
 
@@ -92,35 +98,20 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
         Args:
             mcp: The FastMCP server instance to mount
         """
-        import contextlib
-
         import uvicorn
         from fastapi import FastAPI
 
-        @contextlib.asynccontextmanager
-        async def lifespan(_app: FastAPI):
-            """Manage MCP server session lifecycle."""
-            logger.info("Starting MCP server session manager...")
-            async with contextlib.AsyncExitStack() as stack:
-                try:
-                    # Initialize the MCP server's session manager
-                    await stack.enter_async_context(mcp.session_manager.run())
-                    logger.info("MCP server session manager started successfully")
-                    yield
-                except Exception as e:
-                    logger.error("Failed to start MCP server session manager: %s", e)
-                    raise
-            logger.info("MCP server session manager stopped")
+        mcp_app = mcp.http_app(transport="streamable-http", path="/mcp")
 
-        # Create a FastAPI wrapper app with lifespan management
+        # Create a FastAPI wrapper app with MCP app lifespan management
         app = FastAPI(
             title=self.front_end_config.name,
             description="MCP server mounted at custom base path",
-            lifespan=lifespan,
+            lifespan=mcp_app.lifespan,
         )
 
         # Mount the MCP server's ASGI app at the configured base_path
-        app.mount(self.front_end_config.base_path, mcp.streamable_http_app())
+        app.mount(self.front_end_config.base_path, mcp_app)
 
         # Allow plugins to add routes to the wrapper app (e.g., OAuth discovery endpoints)
         worker = self._get_worker_instance()

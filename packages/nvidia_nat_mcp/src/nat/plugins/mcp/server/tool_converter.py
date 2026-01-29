@@ -20,11 +20,11 @@ from inspect import Signature
 from typing import TYPE_CHECKING
 from typing import Any
 
+from fastmcp import FastMCP
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
-from nat.plugins.mcp.server.fastmcp_compat import FastMCPType
 from nat.builder.function import Function
 from nat.builder.function_base import FunctionBase
 
@@ -258,7 +258,7 @@ def get_function_description(function: FunctionBase) -> str:
     return function_description
 
 
-def register_function_with_mcp(mcp: FastMCPType,
+def register_function_with_mcp(mcp: FastMCP,
                                function_name: str,
                                session_manager: 'SessionManager',
                                memory_profiler: 'MemoryProfiler | None' = None,
