@@ -59,10 +59,10 @@ To install these first-party plugin libraries, you can use the full distribution
 ## Other Extras
 
 - `nvidia-nat[async_endpoints]` - Support for asynchronous endpoints when launching `nat serve`
-- `nvidia-nat[gunicorn]` - Support for launching `nat serve` with gunicorn; requires additional configuration file changes
+- `nvidia-nat[gunicorn]` - Support for launching `nat serve` with an alternative server; requires additional configuration file changes
 - `nvidia-nat[huggingface]` - [HuggingFace](https://huggingface.co/) local model integration
 - `nvidia-nat[ingestion]` - Additional dependencies needed for data ingestion
-- `nvidia-nat[most]` - Metapackage containing all Framework integrations except for: `nvidia-nat-ragaai`, `nvidia-nat-openpipe-art`
+- `nvidia-nat[most]` - Meta package containing all Framework integrations except for: `nvidia-nat-ragaai`, `nvidia-nat-openpipe-art`
 - `nvidia-nat[pii-defense]` - Additional dependencies for `nat red-team` evaluation
 - `nvidia-nat[profiling]` - Additional dependencies needed for [profiling](../improve-workflows/profiler.md)
 
