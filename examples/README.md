@@ -178,7 +178,7 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 
 ### Dynamo Integration
 - **[`react_benchmark_agent`](dynamo_integration/react_benchmark_agent/README.md)**: Walks through the complete process of running decision-only evaluations using the `react_benchmark_agent`: downloading data, configuring evaluations, running experiments, and analyzing results. **[🛑 Advanced]**
-- **[`react_benchmark_agent - src - react_benchmark_agent`](dynamo_integration/react_benchmark_agent/src/react_benchmark_agent/README.md)**: Implementation guide that maps React Benchmark Agent configuration files to the underlying components, evaluators, and workflows. **[🛑 Advanced]**
+- **[`react_benchmark_agent - src - react_benchmark_agent`](dynamo_integration/react_benchmark_agent/src/react_benchmark_agent/DEVELOPER_NOTES.md)**: Developer notes that map React Benchmark Agent configuration files to the underlying components, evaluators, and workflows. **[🛑 Advanced]**
 
 _See the [Dynamo Integration README](dynamo_integration/README.md) for additional information_
 
