@@ -53,7 +53,7 @@ Most of these examples could be tested using a managed LLM service, like an NVID
 - **Dynamo Backend**: Fast LLM inference with KV cache optimization (default Dynamo method) and a predictive Thompson sampling router (new implementation)
 - **Self-Evaluation Loop**: Agent can re-evaluate and retry tool selection for improved quality.
 - **Comprehensive Metrics and Visualizations**: TSQ scores (accuracy of parameters has been excluded), token throughput, latency analysis. Visualized in A/B scatter plots and histograms for analysis.
-- **NeMo Agent toolkit Framework**: Full integration with toolkit evaluators, optimizer, and profiler
+- **NeMo Agent toolkit**: Full integration with toolkit evaluators, optimizer, and profiler
 
 ## Prerequisites
 
