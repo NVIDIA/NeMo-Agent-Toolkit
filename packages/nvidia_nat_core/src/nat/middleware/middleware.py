@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Base middleware class for the NeMo Agent toolkit.
+"""Base middleware class for the NeMo Agent Toolkit.
 
 This module provides the base Middleware class that defines the middleware pattern
 for wrapping and modifying function calls. Middleware works like middleware in

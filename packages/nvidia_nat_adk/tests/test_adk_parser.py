@@ -21,12 +21,12 @@ from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import InvocationNode
 from nat.data_models.intermediate_step import StreamEventData
-from nat.finetuning.utils.parsers.adk_parser import _extract_content
-from nat.finetuning.utils.parsers.adk_parser import _parse_assistant_message
-from nat.finetuning.utils.parsers.adk_parser import _parse_generic_message
-from nat.finetuning.utils.parsers.adk_parser import _parse_input_message
-from nat.finetuning.utils.parsers.adk_parser import _parse_tool_message
-from nat.finetuning.utils.parsers.adk_parser import parse_to_openai_message
+from nat.plugins.adk.adk_parser import _extract_content
+from nat.plugins.adk.adk_parser import _parse_assistant_message
+from nat.plugins.adk.adk_parser import _parse_generic_message
+from nat.plugins.adk.adk_parser import _parse_input_message
+from nat.plugins.adk.adk_parser import _parse_tool_message
+from nat.plugins.adk.adk_parser import parse_to_openai_message
 
 
 def create_intermediate_step(

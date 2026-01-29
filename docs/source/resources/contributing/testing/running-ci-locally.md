@@ -27,7 +27,7 @@ We do not set all of the same environment variables that GitHub Actions would se
 
 ## Prerequisites
 - [Docker](https://docs.docker.com/get-docker/)
-- NeMo Agent toolkit source repository cloned locally with both the `origin` and `upstream` remotes set up. Refer to [Creating the Environment](../index.md#creating-the-environment) for more details.
+- NeMo Agent Toolkit source repository cloned locally with both the `origin` and `upstream` remotes set up. Refer to [Creating the Environment](../index.md#creating-the-environment) for more details.
 
 ## Usage
 Typical usage is as follows:
@@ -52,7 +52,7 @@ To debug a CI issue, you can use the `bash` pseudo-stage. This will perform a gi
 ./ci/scripts/run_ci_local.sh bash
 ```
 
-From this point you can manually copy/paste the commands which would normally be run by the CI scripts one command at a time. The GitHub Actions CI scripts for NeMo Agent toolkit are located in the `ci/scripts/github` directory, these scripts are GitHub Actions specific wrappers for scripts located in the `ci/scripts` directory.
+From this point you can manually copy/paste the commands which would normally be run by the CI scripts one command at a time. The GitHub Actions CI scripts for NeMo Agent Toolkit are located in the `ci/scripts/github` directory, these scripts are GitHub Actions specific wrappers for scripts located in the `ci/scripts` directory.
 
 ## CI Artifacts and Cache
 

@@ -18,7 +18,7 @@ limitations under the License.
 # Dynamo Backend Setup Guide
 
 > [!NOTE]
-> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice. We kindly ask that GitHub Issues are opened as bugs are issued quickly as features are subject to change.
+> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent Toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice. We kindly ask that GitHub Issues are opened as bugs are issued quickly as features are subject to change.
 
 This guide covers setting up, running, and configuring the NVIDIA Dynamo backend for the React Benchmark Agent evaluations.
 
@@ -38,7 +38,7 @@ This guide covers setting up, running, and configuring the NVIDIA Dynamo backend
 
 ## Overview
 
-Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimization. The scope of the current integration is based around two core aspects. First, we have implemented a [Dynamo LLM](../../src/nat/llm/dynamo_llm.py) support for NeMo Agent toolkit inference on Dynamo runtimes. Second, we provide a set of startup scripts for NVIDIA Hopper and Blackwell GPU servers supporting NeMo Agent toolkit runtimes at scale. The following **Table** defines each script: 
+Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimization. The scope of the current integration is based around two core aspects. First, we have implemented a [Dynamo LLM](../../packages/nvidia_nat_core/src/nat/llm/dynamo_llm.py) support for NeMo Agent Toolkit inference on Dynamo runtimes. Second, we provide a set of startup scripts for NVIDIA Hopper and Blackwell GPU servers supporting NeMo Agent Toolkit runtimes at scale. The following **Table** defines each script: 
 
 | Mode | Script | Description | Best For |
 |------|--------|-------------|----------|
@@ -209,7 +209,7 @@ cd /path/to/NeMo-Agent-Toolkit
 uv venv "${HOME}/.venvs/nat_dynamo_eval" --python 3.13
 source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 
-# install the NeMo Agent toolkit
+# install the NeMo Agent Toolkit
 uv pip install -e ".[langchain]"
 uv pip install -e examples/dynamo_integration/react_benchmark_agent
 ```
@@ -477,7 +477,7 @@ bash test_dynamo_integration.sh
 - `DYNAMO_PORT` - Frontend port (default: `8099`)
 
 **Tests performed:**
-1. NeMo Agent toolkit environment is active
+1. NeMo Agent Toolkit environment is active
 2. Configuration files exist
 3. Dynamo frontend is responding on the configured port
 4. Basic chat completion request works
@@ -1086,7 +1086,7 @@ external/dynamo/                                # Dynamo backend
 | `./monitor_dynamo.sh` | Interactive monitoring |
 | `curl localhost:8099/health` | Health check |
 | `docker logs -f dynamo-sglang` | View logs |
-| `nat run --config_file examples/dynamo_integration/react_benchmark_agent/configs/config_dynamo_e2e_test.yml --input "..."` | Quick NeMo Agent toolkit validation |
+| `nat run --config_file examples/dynamo_integration/react_benchmark_agent/configs/config_dynamo_e2e_test.yml --input "..."` | Quick NeMo Agent Toolkit validation |
 | `nat run --config_file examples/dynamo_integration/react_benchmark_agent/configs/config_dynamo_prefix_e2e_test.yml --input "..."` | Test with prefix headers |
 
 ### Containers

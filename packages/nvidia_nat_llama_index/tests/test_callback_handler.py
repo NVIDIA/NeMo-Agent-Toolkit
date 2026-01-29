@@ -21,7 +21,7 @@ async def test_llama_index_handler_order(reactive_stream: Subject):
     Test that the LlamaIndexProfilerHandler usage stats occur in correct order for LLM events.
     """
     from nat.data_models.intermediate_step import IntermediateStepType
-    from nat.profiler.callbacks.llama_index_callback_handler import LlamaIndexProfilerHandler
+    from nat.plugins.llama_index.callback_handler import LlamaIndexProfilerHandler
     handler = LlamaIndexProfilerHandler()
     stats_list = []
     _ = reactive_stream.subscribe(stats_list.append)

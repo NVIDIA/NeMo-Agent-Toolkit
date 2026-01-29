@@ -16,9 +16,9 @@
 
 import pytest
 
-from nat.agent.responses_api_agent.register import ResponsesAPIAgentWorkflowConfig
-from nat.agent.responses_api_agent.register import responses_api_agent_workflow
 from nat.data_models.openai_mcp import OpenAIMCPSchemaTool
+from nat.plugins.langchain.agent.responses_api_agent.register import ResponsesAPIAgentWorkflowConfig
+from nat.plugins.langchain.agent.responses_api_agent.register import responses_api_agent_workflow
 
 
 class _MockBuilder:

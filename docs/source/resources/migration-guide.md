@@ -17,11 +17,11 @@
 
 # Migration Guide
 
-NeMo Agent toolkit is designed to be backwards compatible with the previous version of the toolkit except for changes documented on this page.
+NeMo Agent Toolkit is designed to be backwards compatible with the previous version of the toolkit except for changes documented on this page.
 
 Additionally, all new contributions should rely on the most recent version of the toolkit and not rely on any deprecated functionality.
 
-## Migrating to a new version of NeMo Agent toolkit
+## Migrating to a new version of NeMo Agent Toolkit
 
 It is strongly encouraged to migrate any existing code to the latest conventions and remove any deprecated functionality.
 

@@ -19,16 +19,16 @@ limitations under the License.
 **Complexity:** 🛑 Advanced
 
 > [!NOTE]
-> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
+> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent Toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
 
 > [!WARNING]
 > This example requires a CUDA-compatible device with NVIDIA drivers installed. It cannot be run on systems without NVIDIA GPU hardware. You do not need to install ai-dynamo packages separately; the provided Docker images include them.
 
 ## Overview
 
-**This set of example agents and evaluations demonstrate the capability to integrate NeMo Agent toolkit agents with LLM inference accelerated by NVIDIA Dynamo-hosted LLM endpoints.**
+**This set of example agents and evaluations demonstrate the capability to integrate NeMo Agent Toolkit agents with LLM inference accelerated by NVIDIA Dynamo-hosted LLM endpoints.**
 
-This set of examples is intended to grow over time as the synergies between NeMo Agent toolkit and [Dynamo](https://github.com/ai-dynamo/dynamo) evolve. In the first set of examples, we will analyze the performance (throughput and latency) of NeMo Agent toolkit agents requests to Dynamo and seek out key optimizations. Agentic LLM requests have predictable patterns with respect to conversation length, system prompts, and tool-calling. We aim to co-design our inference servers to provide better performance in a repeatable, mock, decision-only evaluation harness. The harness uses the Banking data subset and mock tools from the [Galileo Agent Leaderboard v2](https://huggingface.co/datasets/galileo-ai/agent-leaderboard-v2) benchmark to simulate agentic tool selection quality (TSQ).
+This set of examples is intended to grow over time as the synergies between NeMo Agent Toolkit and [Dynamo](https://github.com/ai-dynamo/dynamo) evolve. In the first set of examples, we will analyze the performance (throughput and latency) of NeMo Agent Toolkit agents requests to Dynamo and seek out key optimizations. Agentic LLM requests have predictable patterns with respect to conversation length, system prompts, and tool-calling. We aim to co-design our inference servers to provide better performance in a repeatable, mock, decision-only evaluation harness. The harness uses the Banking data subset and mock tools from the [Galileo Agent Leaderboard v2](https://huggingface.co/datasets/galileo-ai/agent-leaderboard-v2) benchmark to simulate agentic tool selection quality (TSQ).
 
 Most of these examples could be tested using a managed LLM service, like an NVIDIA NIM model endpoint, for inference. However, the intended analysis would require hosting the LLM endpoints on your own GPU cluster using Dynamo.
 
@@ -39,7 +39,7 @@ Most of these examples could be tested using a managed LLM service, like an NVID
 - **Dynamo Backend**: Fast LLM inference with KV cache optimization (default Dynamo method) and a predictive Thompson sampling router (new implementation)
 - **Self-Evaluation Loop**: Agent can re-evaluate and retry tool selection for improved quality.
 - **Comprehensive Metrics and Visualizations**: TSQ scores (accuracy of parameters has been excluded), token throughput, latency analysis. Visualized in A/B scatter plots and histograms for analysis.
-- **NeMo Agent toolkit Framework**: Full integration with NeMo Agent toolkit evaluators, optimizer, and profiler
+- **NeMo Agent Toolkit Framework**: Full integration with NeMo Agent Toolkit evaluators, optimizer, and profiler
 
 ## Quick Start
 
@@ -271,7 +271,7 @@ See [Evaluation Guide](react_benchmark_agent/README.md) for complete configurati
 
     The output should show `True`. If it shows `False` with error 802, ensure `nvidia-fabricmanager` is installed, running, and matches your driver version.
 
-- **NeMo Agent toolkit** with LangChain integration (`uv pip install -e ".[langchain]"`)
+- **NeMo Agent Toolkit** with LangChain integration (`uv pip install -e ".[langchain]"`)
 - **Hugging Face account** with access to Llama-3.3-70B-Instruct model (for dataset download and model weights)
 
 ### Hardware Requirements (Dynamo Backend)

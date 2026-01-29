@@ -17,9 +17,9 @@ limitations under the License.
 
 # Size a GPU Cluster With NVIDIA NeMo Agent Toolkit
 
-The NVIDIA NeMo Agent toolkit provides a sizing calculator to estimate the GPU cluster size required to accommodate a target number of users with a target response time. The estimation is based on the performance of the workflow at different concurrency levels.
+The NVIDIA NeMo Agent Toolkit provides a sizing calculator to estimate the GPU cluster size required to accommodate a target number of users with a target response time. The estimation is based on the performance of the workflow at different concurrency levels.
 
-The sizing calculator uses the [evaluation](evaluate.md) and [profiling](./profiler.md) systems in the NeMo Agent toolkit.
+The sizing calculator uses the [evaluation](evaluate.md) and [profiling](./profiler.md) systems in the NeMo Agent Toolkit.
 
 ## Prerequisites
 Sizing calculator uses the profiler subsystem. Ensure that it is installed by running the following command:

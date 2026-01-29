@@ -21,10 +21,8 @@ from collections.abc import Callable
 from typing import Any
 from uuid import uuid4
 
-import semantic_kernel
 from pydantic import BaseModel
 from pydantic import Field
-from semantic_kernel.connectors.ai.open_ai.services.open_ai_chat_completion_base import OpenAIChatCompletionBase
 
 from nat.builder.context import Context
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -59,6 +57,8 @@ class SemanticKernelProfilerHandler(BaseProfilerCallback):
     """
 
     def __init__(self, workflow_llms: dict) -> None:
+        from semantic_kernel.connectors.ai.open_ai.services.open_ai_chat_completion_base import OpenAIChatCompletionBase
+
         super().__init__()
         self._lock = threading.Lock()
         self.last_call_ts = time.time()
@@ -81,6 +81,7 @@ class SemanticKernelProfilerHandler(BaseProfilerCallback):
         """
         Monkey-patch the relevant Semantic Kernel methods with usage-stat collection logic.
         """
+        import semantic_kernel
 
         functions_to_patch = []
 

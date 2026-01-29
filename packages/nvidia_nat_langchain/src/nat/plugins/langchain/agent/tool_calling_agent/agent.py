@@ -31,13 +31,13 @@ from langgraph.runtime import DEFAULT_RUNTIME
 from pydantic import BaseModel
 from pydantic import Field
 
-from nat.agent.base import AGENT_CALL_LOG_MESSAGE
-from nat.agent.base import AGENT_LOG_PREFIX
-from nat.agent.base import AgentDecision
-from nat.agent.dual_node import DualNodeAgent
+from nat.plugins.langchain.agent.base import AGENT_CALL_LOG_MESSAGE
+from nat.plugins.langchain.agent.base import AGENT_LOG_PREFIX
+from nat.plugins.langchain.agent.base import AgentDecision
+from nat.plugins.langchain.agent.dual_node import DualNodeAgent
 
 if typing.TYPE_CHECKING:
-    from nat.agent.tool_calling_agent.register import ToolCallAgentWorkflowConfig
+    from nat.plugins.langchain.agent.tool_calling_agent.register import ToolCallAgentWorkflowConfig
 
 logger = logging.getLogger(__name__)
 

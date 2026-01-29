@@ -19,7 +19,7 @@ limitations under the License.
 
 **Complexity:** 🟨 Intermediate
 
-This example demonstrates how to use the NVIDIA NeMo Agent toolkit with MCP servers that support service account authentication. Service account authentication enables headless, automated workflows without requiring browser-based user interaction.
+This example demonstrates how to use the NVIDIA NeMo Agent Toolkit with MCP servers that support service account authentication. Service account authentication enables headless, automated workflows without requiring browser-based user interaction.
 
 It is recommended to read the [MCP Service Account Authentication](../../../docs/source/components/auth/mcp-auth/mcp-service-account-auth.md) documentation first.
 

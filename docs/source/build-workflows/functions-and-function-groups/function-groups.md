@@ -17,7 +17,7 @@ limitations under the License.
 
 # Function Groups
 
-Function groups let you package multiple related functions together so they can share configuration, context, and resources within the NVIDIA NeMo Agent toolkit.
+Function groups let you package multiple related functions together so they can share configuration, context, and resources within the NVIDIA NeMo Agent Toolkit.
 
 ## Overview of Function Groups
 

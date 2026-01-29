@@ -73,8 +73,8 @@ class _BuilderStub:
         self._function_groups = groups
 
 
-@pytest_asyncio.fixture
-async def app_worker():
+@pytest_asyncio.fixture(name="app_worker")
+async def fixture_app_worker(set_nat_config_file_env_var):
     cfg = Config()
     worker = FastApiFrontEndPluginWorker(cfg)
     app = FastAPI()

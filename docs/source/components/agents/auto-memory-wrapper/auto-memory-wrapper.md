@@ -17,7 +17,7 @@ limitations under the License.
 
 # Configure the Automatic Memory Wrapper Agent
 
-Configure the NVIDIA NeMo Agent toolkit automatic memory wrapper agent as a workflow or a function.
+Configure the NVIDIA NeMo Agent Toolkit automatic memory wrapper agent as a workflow or a function.
 
 ## Requirements
 

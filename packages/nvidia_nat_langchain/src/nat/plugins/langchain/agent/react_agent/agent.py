@@ -37,21 +37,21 @@ from langgraph.runtime import DEFAULT_RUNTIME
 from pydantic import BaseModel
 from pydantic import Field
 
-from nat.agent.base import AGENT_CALL_LOG_MESSAGE
-from nat.agent.base import AGENT_LOG_PREFIX
-from nat.agent.base import INPUT_SCHEMA_MESSAGE
-from nat.agent.base import NO_INPUT_ERROR_MESSAGE
-from nat.agent.base import TOOL_NOT_FOUND_ERROR_MESSAGE
-from nat.agent.base import AgentDecision
-from nat.agent.dual_node import DualNodeAgent
-from nat.agent.react_agent.output_parser import ReActAgentParsingFailedError
-from nat.agent.react_agent.output_parser import ReActOutputParser
-from nat.agent.react_agent.output_parser import ReActOutputParserException
-from nat.agent.react_agent.prompt import SYSTEM_PROMPT
-from nat.agent.react_agent.prompt import USER_PROMPT
+from nat.plugins.langchain.agent.base import AGENT_CALL_LOG_MESSAGE
+from nat.plugins.langchain.agent.base import AGENT_LOG_PREFIX
+from nat.plugins.langchain.agent.base import INPUT_SCHEMA_MESSAGE
+from nat.plugins.langchain.agent.base import NO_INPUT_ERROR_MESSAGE
+from nat.plugins.langchain.agent.base import TOOL_NOT_FOUND_ERROR_MESSAGE
+from nat.plugins.langchain.agent.base import AgentDecision
+from nat.plugins.langchain.agent.dual_node import DualNodeAgent
+from nat.plugins.langchain.agent.react_agent.output_parser import ReActAgentParsingFailedError
+from nat.plugins.langchain.agent.react_agent.output_parser import ReActOutputParser
+from nat.plugins.langchain.agent.react_agent.output_parser import ReActOutputParserException
+from nat.plugins.langchain.agent.react_agent.prompt import SYSTEM_PROMPT
+from nat.plugins.langchain.agent.react_agent.prompt import USER_PROMPT
 
 if typing.TYPE_CHECKING:
-    from nat.agent.react_agent.register import ReActAgentWorkflowConfig
+    from nat.plugins.langchain.agent.react_agent.register import ReActAgentWorkflowConfig
 
 logger = logging.getLogger(__name__)
 

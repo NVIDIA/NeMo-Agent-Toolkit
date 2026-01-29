@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Function-specific middleware for the NeMo Agent toolkit.
+"""Function-specific middleware for the NeMo Agent Toolkit.
 
 This module provides function-specific middleware implementations that extend
 the base Middleware class. FunctionMiddleware is a specialized middleware type

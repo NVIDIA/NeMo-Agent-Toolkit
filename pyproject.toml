@@ -25,7 +25,7 @@ git_describe_command = "git describe --long --first-parent"
 name = "nvidia-nat"
 dynamic = ["version", "dependencies", "optional-dependencies"]
 requires-python = ">=3.11,<3.14"
-description = "NVIDIA NeMo Agent toolkit"
+description = "NVIDIA NeMo Agent Toolkit"
 readme = "README.md"
 license = { text = "Apache-2.0" }
 keywords = ["ai", "rag", "agents"]
@@ -77,10 +77,7 @@ zep-cloud = ["nvidia-nat-zep-cloud == {version}"]
 async_endpoints = [ "nvidia-nat-core[async_endpoints] == {version}" ]
 gunicorn = [ "nvidia-nat-core[gunicorn] == {version}" ]
 huggingface = [ "nvidia-nat-core[huggingface] == {version}" ]
-pii-defense = [
-  "presidio-analyzer",
-  "presidio-anonymizer"
-]
+pii-defense = [ "nvidia-nat-core[pii-defense] == {version}" ]
 profiling = [ "nvidia-nat-core[profiling] == {version}" ]
 
 most = [
@@ -149,9 +146,11 @@ conflicts = [
     # (adk|crewai)<>openpipe-art have incompatible litellm versions
     [{ extra = "adk" }, { extra = "openpipe-art" }],
     [{ extra = "crewai" }, { extra = "openpipe-art" }],
+    [{ extra = "most" }, { extra = "openpipe-art" }],
     # (strands|adk)<>ragaai have incompatible tenacity versions
     [{ extra = "adk" }, { extra = "ragaai" }],
     [{ extra = "strands" }, { extra = "ragaai" }],
+    [{ extra = "most" }, { extra = "ragaai" }],
 ]
 
 [tool.uv.sources]

@@ -96,10 +96,10 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
     from langchain_core.messages import trim_messages
     from langgraph.graph.state import CompiledStateGraph
 
-    from nat.agent.base import AGENT_LOG_PREFIX
-    from nat.agent.react_agent.agent import ReActAgentGraph
-    from nat.agent.react_agent.agent import ReActGraphState
-    from nat.agent.react_agent.agent import create_react_agent_prompt
+    from nat.plugins.langchain.agent.base import AGENT_LOG_PREFIX
+    from nat.plugins.langchain.agent.react_agent.agent import ReActAgentGraph
+    from nat.plugins.langchain.agent.react_agent.agent import ReActGraphState
+    from nat.plugins.langchain.agent.react_agent.agent import create_react_agent_prompt
 
     prompt = create_react_agent_prompt(config)
 

@@ -30,7 +30,7 @@ async def test_semantic_kernel_handler_tool_call(reactive_stream: Subject):
     from nat.data_models.intermediate_step import IntermediateStepPayload
     from nat.data_models.intermediate_step import IntermediateStepType
     from nat.data_models.intermediate_step import TraceMetadata
-    from nat.profiler.callbacks.semantic_kernel_callback_handler import SemanticKernelProfilerHandler
+    from nat.plugins.semantic_kernel.callback_handler import SemanticKernelProfilerHandler
 
     all_ = []
     _ = SemanticKernelProfilerHandler(workflow_llms={})

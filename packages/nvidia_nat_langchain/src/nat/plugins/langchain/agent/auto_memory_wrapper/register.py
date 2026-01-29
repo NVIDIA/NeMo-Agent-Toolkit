@@ -126,9 +126,9 @@ async def auto_memory_agent(config: AutoMemoryAgentConfig, builder: Builder) -> 
     from langchain_core.messages.human import HumanMessage
     from langgraph.graph.state import CompiledStateGraph
 
-    from nat.agent.auto_memory_wrapper.agent import AutoMemoryWrapperGraph
-    from nat.agent.auto_memory_wrapper.state import AutoMemoryWrapperState
-    from nat.agent.base import AGENT_LOG_PREFIX
+    from nat.plugins.langchain.agent.auto_memory_wrapper.agent import AutoMemoryWrapperGraph
+    from nat.plugins.langchain.agent.auto_memory_wrapper.state import AutoMemoryWrapperState
+    from nat.plugins.langchain.agent.base import AGENT_LOG_PREFIX
 
     # Get memory editor from builder
     memory_editor = await builder.get_memory_client(config.memory_name)

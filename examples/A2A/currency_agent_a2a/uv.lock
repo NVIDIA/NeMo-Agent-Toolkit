@@ -23,6 +23,13 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/64/e8/f4e39fd1cf0b3c4537b974637143f3ebfe1158dad7232d9eef15666a81ba/a2a_sdk-0.3.22-py3-none-any.whl", hash = "sha256:b98701135bb90b0ff85d35f31533b6b7a299bf810658c1c65f3814a6c15ea385", size = 144347, upload-time = "2025-12-16T18:39:19.218Z" },
 ]
 
+[package.optional-dependencies]
+http-server = [
+    { name = "fastapi" },
+    { name = "sse-starlette" },
+    { name = "starlette" },
+]
+
 [[package]]
 name = "aioboto3"
 version = "15.5.0"
@@ -1731,13 +1738,13 @@ dev = [
 name = "nvidia-nat-a2a"
 source = { editable = "../../../packages/nvidia_nat_a2a" }
 dependencies = [
-    { name = "a2a-sdk" },
+    { name = "a2a-sdk", extra = ["http-server"] },
     { name = "nvidia-nat-core" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "a2a-sdk", specifier = ">=0.3.20,<1.0.0" },
+    { name = "a2a-sdk", extras = ["http-server"], specifier = ">=0.3.20,<1.0.0" },
     { name = "nvidia-nat-core", editable = "../../../packages/nvidia_nat_core" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../../../packages/nvidia_nat_test" },
 ]
@@ -1848,7 +1855,9 @@ requires-dist = [
     { name = "aiorwlock", specifier = "~=1.5" },
     { name = "mcp", specifier = "~=1.25" },
     { name = "nvidia-nat-core", editable = "../../../packages/nvidia_nat_core" },
+    { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../../../packages/nvidia_nat_test" },
 ]
+provides-extras = ["test"]
 
 [[package]]
 name = "openai"

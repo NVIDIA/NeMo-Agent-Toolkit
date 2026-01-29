@@ -15,8 +15,8 @@
 
 from unittest.mock import MagicMock
 
-from nat.finetuning.utils.parsers.llama_index_parser import _extract_content
-from nat.finetuning.utils.parsers.llama_index_parser import _parse_dict_message
+from nat.plugins.llama_index.llama_index_parser import _extract_content
+from nat.plugins.llama_index.llama_index_parser import _parse_dict_message
 
 
 class TestParseDictMessage:

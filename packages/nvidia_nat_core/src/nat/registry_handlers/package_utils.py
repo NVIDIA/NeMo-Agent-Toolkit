@@ -548,7 +548,7 @@ def build_package_metadata(wheel_data: WheelData | None) -> dict[ComponentEnum, 
 
 
 def build_artifact(package_root: str) -> Artifact:
-    """Builds a complete NeMo Agent toolkit Artifact that can be published for discovery and reuse.
+    """Builds a complete NeMo Agent Toolkit Artifact that can be published for discovery and reuse.
 
     Args:
         package_root (str): Path to root of python package

@@ -22,15 +22,15 @@ from langchain_core.messages.tool import ToolMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langgraph.graph.state import CompiledStateGraph
 
-from nat.agent.base import AgentDecision
-from nat.agent.rewoo_agent.agent import NO_INPUT_ERROR_MESSAGE
-from nat.agent.rewoo_agent.agent import TOOL_NOT_FOUND_ERROR_MESSAGE
-from nat.agent.rewoo_agent.agent import ReWOOAgentGraph
-from nat.agent.rewoo_agent.agent import ReWOOEvidence
-from nat.agent.rewoo_agent.agent import ReWOOGraphState
-from nat.agent.rewoo_agent.agent import ReWOOPlanStep
-from nat.agent.rewoo_agent.register import ReWOOAgentWorkflowConfig
 from nat.builder.function import FunctionGroup
+from nat.plugins.langchain.agent.base import AgentDecision
+from nat.plugins.langchain.agent.rewoo_agent.agent import NO_INPUT_ERROR_MESSAGE
+from nat.plugins.langchain.agent.rewoo_agent.agent import TOOL_NOT_FOUND_ERROR_MESSAGE
+from nat.plugins.langchain.agent.rewoo_agent.agent import ReWOOAgentGraph
+from nat.plugins.langchain.agent.rewoo_agent.agent import ReWOOEvidence
+from nat.plugins.langchain.agent.rewoo_agent.agent import ReWOOGraphState
+from nat.plugins.langchain.agent.rewoo_agent.agent import ReWOOPlanStep
+from nat.plugins.langchain.agent.rewoo_agent.register import ReWOOAgentWorkflowConfig
 
 
 async def test_state_schema():
@@ -56,10 +56,10 @@ def mock_config():
 
 
 def test_rewoo_init(mock_config_rewoo_agent, mock_llm, mock_tool):
-    from nat.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
-    from nat.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
-    from nat.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
-    from nat.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
 
     tools = [mock_tool('mock_tool_A'), mock_tool('mock_tool_B')]
     planner_prompt = ChatPromptTemplate([("system", PLANNER_SYSTEM_PROMPT), ("user", PLANNER_USER_PROMPT)])
@@ -78,10 +78,10 @@ def test_rewoo_init(mock_config_rewoo_agent, mock_llm, mock_tool):
 
 @pytest.fixture(name='mock_rewoo_agent', scope="module")
 def mock_agent(mock_config_rewoo_agent, mock_llm, mock_tool):
-    from nat.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
-    from nat.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
-    from nat.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
-    from nat.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
 
     tools = [mock_tool('mock_tool_A'), mock_tool('mock_tool_B')]
     planner_prompt = ChatPromptTemplate([("system", PLANNER_SYSTEM_PROMPT), ("user", PLANNER_USER_PROMPT)])
@@ -190,8 +190,8 @@ async def test_executor_node_with_not_configured_tool(mock_rewoo_agent):
 
 
 async def test_executor_node_parse_input(mock_rewoo_agent):
-    from nat.agent.base import AGENT_LOG_PREFIX
-    with patch('nat.agent.rewoo_agent.agent.logger.debug') as mock_logger_debug:
+    from nat.plugins.langchain.agent.base import AGENT_LOG_PREFIX
+    with patch('nat.plugins.langchain.agent.rewoo_agent.agent.logger.debug') as mock_logger_debug:
         # Test with dict as tool input
         steps = [
             _create_step_info(
@@ -346,7 +346,7 @@ def test_validate_solver_prompt():
 
 def test_additional_planner_instructions_are_appended():
     """Test that additional planner instructions are properly appended to the base planner prompt."""
-    from nat.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
 
     base_prompt = PLANNER_SYSTEM_PROMPT
     additional_instructions = "\n\nAdditional instruction: Always consider performance implications."
@@ -360,7 +360,7 @@ def test_additional_planner_instructions_are_appended():
     assert ReWOOAgentGraph.validate_planner_prompt(planner_system_prompt_with_additional)
 
     # Test that we can create a valid ChatPromptTemplate with additional instructions
-    from nat.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
     planner_prompt = ChatPromptTemplate([("system", planner_system_prompt_with_additional),
                                          ("user", PLANNER_USER_PROMPT)])
     assert isinstance(planner_prompt, ChatPromptTemplate)
@@ -368,7 +368,7 @@ def test_additional_planner_instructions_are_appended():
 
 def test_additional_solver_instructions_are_appended():
     """Test that additional solver instructions are properly appended to the base solver prompt."""
-    from nat.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
 
     base_prompt = SOLVER_SYSTEM_PROMPT
     additional_instructions = "\n\nAdditional instruction: Provide concise answers."
@@ -382,15 +382,15 @@ def test_additional_solver_instructions_are_appended():
     assert ReWOOAgentGraph.validate_solver_prompt(solver_system_prompt_with_additional)
 
     # Test that we can create a valid ChatPromptTemplate with additional instructions
-    from nat.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
     solver_prompt = ChatPromptTemplate([("system", solver_system_prompt_with_additional), ("user", SOLVER_USER_PROMPT)])
     assert isinstance(solver_prompt, ChatPromptTemplate)
 
 
 def test_prompt_validation_with_additional_instructions():
     """Test that prompt validation still works correctly when additional instructions are provided."""
-    from nat.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
-    from nat.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
 
     # Test planner prompt validation with additional instructions
     base_planner_prompt = PLANNER_SYSTEM_PROMPT
@@ -421,10 +421,10 @@ def test_prompt_validation_with_additional_instructions():
 
 def test_rewoo_agent_tool_call_max_retries_initialization(mock_llm, mock_tool):
     """Test that ReWOO agent initializes with tool_call_max_retries parameter."""
-    from nat.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
-    from nat.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
-    from nat.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
-    from nat.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
 
     tools = [mock_tool('test_tool')]
     planner_prompt = ChatPromptTemplate([("system", PLANNER_SYSTEM_PROMPT), ("user", PLANNER_USER_PROMPT)])
@@ -575,8 +575,8 @@ def test_json_output_parsing_with_dict_tool_input():
 
 def test_edge_cases_empty_additional_instructions():
     """Test edge cases with empty additional instructions."""
-    from nat.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
-    from nat.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
 
     # Test empty string additional instructions
     base_planner_prompt = PLANNER_SYSTEM_PROMPT
@@ -600,8 +600,8 @@ def test_edge_cases_empty_additional_instructions():
 
 def test_edge_cases_whitespace_additional_instructions():
     """Test edge cases with whitespace-only additional instructions."""
-    from nat.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
-    from nat.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
 
     # Test whitespace-only additional instructions
     whitespace_instructions = "   \n\t  "
@@ -737,10 +737,10 @@ def test_rewoo_config_raise_tool_call_error():
 
 def test_rewoo_agent_raise_tool_call_error_initialization(mock_llm, mock_tool):
     """Test that ReWOO agent initializes with raise_tool_call_error parameter."""
-    from nat.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
-    from nat.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
-    from nat.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
-    from nat.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
 
     tools = [mock_tool('test_tool')]
     planner_prompt = ChatPromptTemplate([("system", PLANNER_SYSTEM_PROMPT), ("user", PLANNER_USER_PROMPT)])
@@ -771,10 +771,10 @@ async def test_executor_node_raise_tool_call_error_true_behavior(mock_llm, mock_
     """Test that executor_node raises RuntimeError when raise_tool_call_error=True and tool fails."""
     from unittest.mock import AsyncMock
 
-    from nat.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
-    from nat.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
-    from nat.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
-    from nat.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
 
     # Create a mock tool that will fail
     failing_tool = mock_tool('failing_tool')
@@ -808,10 +808,10 @@ async def test_executor_node_raise_tool_call_error_false_behavior(mock_llm, mock
     """Test that executor_node continues with error message when raise_tool_call_error=False and tool fails."""
     from unittest.mock import AsyncMock
 
-    from nat.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
-    from nat.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
-    from nat.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
-    from nat.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
 
     # Create a mock tool that will fail
     failing_tool = mock_tool('failing_tool')
@@ -852,10 +852,10 @@ async def test_executor_node_raise_tool_call_error_success_case(mock_llm, mock_t
     """Test that executor_node behaves normally when tool succeeds, regardless of raise_tool_call_error setting."""
     from unittest.mock import AsyncMock
 
-    from nat.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
-    from nat.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
-    from nat.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
-    from nat.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
 
     # Create a mock tool that will succeed
     success_tool = mock_tool('success_tool')

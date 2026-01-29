@@ -29,10 +29,10 @@ A minimal example showcasing a Strands agent that answers questions about Strand
 - [Key Features](#key-features)
 - [Prerequisites](#prerequisites)
   - [Local Development Tools](#local-development-tools)
-  - [NeMo Agent toolkit](#nemo-agent-toolkit)
+  - [NeMo Agent Toolkit](#nemo-agent-toolkit)
   - [API Keys](#api-keys)
 - [Installation and Setup](#installation-and-setup)
-  - [Install NeMo Agent toolkit and Workflow](#install-nemo-agent-toolkit-and-workflow)
+  - [Install NeMo Agent Toolkit and Workflow](#install-nemo-agent-toolkit-and-workflow)
   - [Set Up API Keys](#set-up-api-keys)
 - [Run the Workflow locally](#run-the-workflow-locally)
   - [1) Run the workflow (config.yml)](#1-run-the-workflow-configyml)
@@ -43,7 +43,7 @@ A minimal example showcasing a Strands agent that answers questions about Strand
 
 ## Key Features
 
-- **Strands framework integration**: Demonstrates support for Strands Agents in the NeMo Agent toolkit.
+- **Strands framework integration**: Demonstrates support for Strands Agents in the NeMo Agent Toolkit.
 - **AgentCore Integration**: Demonstrates an agent that can be run on Amazon Bedrock AgentCore runtime.
 - **Evaluation and Performance Metrics**: Runs dataset-driven evaluation and performance analysis via `nat eval`.
 - **Support for Model Providers**: Configuration includes NIM, OpenAI, and AWS Bedrock options.
@@ -58,7 +58,7 @@ A minimal example showcasing a Strands agent that answers questions about Strand
 
 ### NeMo Agent Toolkit
 
-Follow the official NeMo Agent toolkit [installation guide](https://docs.nvidia.com/nemo/agent-toolkit/latest/quick-start/installing.html)
+Follow the official NeMo Agent Toolkit [installation guide](https://docs.nvidia.com/nemo/agent-toolkit/latest/quick-start/installing.html)
 
 Or see the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) for installing from source.
 
@@ -221,4 +221,4 @@ curl -X POST http://localhost:8080/invocations \
   -d '{"inputs": "What is the Strands agent loop?"}'
 ```
 
-Next, to deploy the AgentCore-compatible NeMo Agent toolkit workflow on Amazon Bedrock AgentCore, follow [Running Strands with NeMo Agent toolkit on AWS AgentCore](./bedrock_agentcore/README.md).
+Next, to deploy the AgentCore-compatible NeMo Agent Toolkit workflow on Amazon Bedrock AgentCore, follow [Running Strands with NeMo Agent Toolkit on AWS AgentCore](./bedrock_agentcore/README.md).

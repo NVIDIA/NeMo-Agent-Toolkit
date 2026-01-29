@@ -26,7 +26,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.runtime import DEFAULT_RUNTIME
 
-from nat.agent.base import BaseAgent
+from nat.plugins.langchain.agent.base import BaseAgent
 
 
 class MockBaseAgent(BaseAgent):

@@ -1643,6 +1643,8 @@ requires-dist = [
     { name = "platformdirs", specifier = "~=4.3" },
     { name = "plotly", specifier = "~=6.0" },
     { name = "prefixspan", marker = "extra == 'profiling'", specifier = "~=0.5.2" },
+    { name = "presidio-analyzer", marker = "extra == 'pii-defense'" },
+    { name = "presidio-anonymizer", marker = "extra == 'pii-defense'" },
     { name = "pydantic", specifier = "~=2.11" },
     { name = "pymilvus", specifier = "~=2.6" },
     { name = "python-dotenv", specifier = "~=1.1.1" },
@@ -1658,7 +1660,7 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.38" },
     { name = "wikipedia", specifier = "~=1.4" },
 ]
-provides-extras = ["async-endpoints", "gunicorn", "huggingface", "profiling", "test"]
+provides-extras = ["async-endpoints", "gunicorn", "huggingface", "pii-defense", "profiling", "test"]
 
 [[package]]
 name = "nvidia-nat-test"

@@ -22,6 +22,9 @@ requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependenc
 git_describe_command = "git describe --long --first-parent"
 root = "../../.."
 
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [project]
 name = "nat_autogen_demo"
 dynamic = ["version", "dependencies"]
@@ -32,7 +35,7 @@ classifiers = ["Programming Language :: Python"]
 
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
-  "nvidia-nat[autogen,mcp] == {version}",
+  "nvidia-nat[autogen,mcp,test] == {version}",
 ]
 
 [tool.uv.sources]

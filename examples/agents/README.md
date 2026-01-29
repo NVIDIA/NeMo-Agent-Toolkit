@@ -17,9 +17,9 @@ limitations under the License.
 
 # Agent Examples
 
-The agent examples demonstrate how NeMo Agent toolkit accelerates and enables AI Agent development.
+The agent examples demonstrate how NeMo Agent Toolkit accelerates and enables AI Agent development.
 The examples showcase 5 distinct AI Agent architectures solving a similar problem in different ways.
-By leveraging the NeMo Agent toolkit plugin system and the `Builder` object, you can use both pre-built and
+By leveraging the NeMo Agent Toolkit plugin system and the `Builder` object, you can use both pre-built and
 custom agentic workflows and tools in a flexible manner.
 
 ## Table of Contents
@@ -31,7 +31,7 @@ custom agentic workflows and tools in a flexible manner.
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 
 ### Set Up API Keys
 

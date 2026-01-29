@@ -17,7 +17,7 @@ limitations under the License.
 
 # Install NVIDIA NeMo Agent Toolkit
 
-This guide will help you set up your NVIDIA NeMo Agent toolkit development environment.
+This guide will help you set up your NVIDIA NeMo Agent Toolkit development environment.
 
 ## Supported LLM APIs
 
@@ -30,7 +30,7 @@ The following [LLM](../build-workflows/llms/index.md) API providers are supporte
 
 ## Packages
 
-To keep the library lightweight, many of the first-party plugins supported by NeMo Agent toolkit are located in separate distribution packages. For example, the `nvidia-nat-langchain` distribution contains all the LangChain-specific and LangGraph-specific plugins, and the `nvidia-nat-mem0ai` distribution contains the Mem0-specific plugins.
+To keep the library lightweight, many of the first-party plugins supported by NeMo Agent Toolkit are located in separate distribution packages. For example, the `nvidia-nat-langchain` distribution contains all the LangChain-specific and LangGraph-specific plugins, and the `nvidia-nat-mem0ai` distribution contains the Mem0-specific plugins.
 
 To install these first-party plugin libraries, you can use the full distribution name (for example, `nvidia-nat-langchain`) or use the `nvidia-nat[langchain]` extra distribution. The following extras are supported:
 
@@ -51,7 +51,7 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[s3]` or `nvidia-nat-s3` - [Amazon S3](https://aws.amazon.com/s3/)
 - `nvidia-nat[semantic-kernel]` or `nvidia-nat-semantic-kernel` - [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/)
 - `nvidia-nat[strands]` or `nvidia-nat-strands` - [Strands Agents](https://github.com/strands-agents/sdk-python). Conflicts with `nvidia-nat[ragaai]`.
-- `nvidia-nat[test]` or `nvidia-nat-test` - NeMo Agent toolkit testing package
+- `nvidia-nat[test]` or `nvidia-nat-test` - NeMo Agent Toolkit testing package
 - `nvidia-nat[vanna]` or `nvidia-nat-vanna` - [Vanna](https://vanna.ai/) text-to-SQL with Databricks support
 - `nvidia-nat[weave]` or `nvidia-nat-weave` - [Weights & Biases Weave](https://weave-docs.wandb.ai)
 - `nvidia-nat[zep-cloud]` or `nvidia-nat-zep-cloud` - [Zep](https://www.getzep.com/)
@@ -79,7 +79,7 @@ To install these first-party plugin libraries, you can use the full distribution
 
 ## Software Prerequisites
 
-NVIDIA NeMo Agent toolkit is a Python library that doesn't require a GPU to run by default. Before you begin using NeMo Agent toolkit, ensure that you meet the following software prerequisites:
+NVIDIA NeMo Agent Toolkit is a Python library that doesn't require a GPU to run by default. Before you begin using NeMo Agent Toolkit, ensure that you meet the following software prerequisites:
 
 - [Python](https://www.python.org/) 3.11, 3.12, or 3.13
 
@@ -93,16 +93,16 @@ NVIDIA NeMo Agent toolkit is a Python library that doesn't require a GPU to run 
 The package installation is recommended for production use.
 
 :::{note}
-To run any examples, you need to install the NeMo Agent toolkit from source.
+To run any examples, you need to install the NeMo Agent Toolkit from source.
 :::
 
-To install the latest stable version of NeMo Agent toolkit, run the following command:
+To install the latest stable version of NeMo Agent Toolkit, run the following command:
 
 ```bash
 pip install nvidia-nat
 ```
 
-NeMo Agent toolkit has many optional dependencies which can be installed with the core package. Optional dependencies are grouped by framework and can be installed with the core package. For example, to install the LangChain/LangGraph plugin, run the following:
+NeMo Agent Toolkit has many optional dependencies which can be installed with the core package. Optional dependencies are grouped by framework and can be installed with the core package. For example, to install the LangChain/LangGraph plugin, run the following:
 
 ```bash
 pip install "nvidia-nat[langchain]"
@@ -118,7 +118,7 @@ Using Conda environments is not recommended and may cause component resolution i
 
 Installing from source is required to run any examples provided in the repository or to contribute to the project.
 
-1. Clone the NeMo Agent toolkit repository to your local machine.
+1. Clone the NeMo Agent Toolkit repository to your local machine.
     ```bash
     git clone -b main https://github.com/NVIDIA/NeMo-Agent-Toolkit.git nemo-agent-toolkit
     cd nemo-agent-toolkit
@@ -145,13 +145,13 @@ Installing from source is required to run any examples provided in the repositor
     Python 3.11 and 3.12 are also supported simply replace `3.13` with `3.11` or `3.12` in the `uv` command above.
     :::
 
-5. Install the NeMo Agent toolkit library.
-    To install the NeMo Agent toolkit library along with all of the optional dependencies. Including developer tools (`--all-groups`) and all of the dependencies needed for profiling and plugins (`--all-extras`) in the source repository, run the following:
+5. Install the NeMo Agent Toolkit library.
+    To install the NeMo Agent Toolkit library along with all of the optional dependencies. Including developer tools (`--all-groups`) and all of the dependencies needed for profiling and plugins (`--all-extras`) in the source repository, run the following:
     ```bash
     uv sync --all-groups --all-extras
     ```
 
-    Alternatively to install just the core NeMo Agent toolkit without any optional plugins, run the following:
+    Alternatively to install just the core NeMo Agent Toolkit without any optional plugins, run the following:
     ```bash
     uv sync
     ```
@@ -170,7 +170,7 @@ Installing from source is required to run any examples provided in the repositor
     ```bash
     uv pip install -e '.[profiling]'
     ```
-6. Verify that you've installed the NeMo Agent toolkit library.
+6. Verify that you've installed the NeMo Agent Toolkit library.
 
      ```bash
      nat --help
@@ -181,4 +181,4 @@ Installing from source is required to run any examples provided in the repositor
 
 ## Next Steps
 
-* Follow the [Quick Start Guide](./quick-start.md) to get started running workflows with NeMo Agent toolkit.
+* Follow the [Quick Start Guide](./quick-start.md) to get started running workflows with NeMo Agent Toolkit.

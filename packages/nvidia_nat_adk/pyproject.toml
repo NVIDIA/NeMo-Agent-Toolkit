@@ -29,7 +29,7 @@ root = "../.."
 
 [project]
 name = "nvidia-nat-adk"
-dynamic = ["version", "dependencies"]
+dynamic = ["version", "dependencies", "optional-dependencies"]
 requires-python = ">=3.11,<3.14"
 description = "Subpackage for Google ADK integration in NeMo Agent Toolkit"
 readme = "src/nat/meta/pypi.md"
@@ -58,6 +58,11 @@ dependencies = [
   "litellm~=1.74",
 ]
 
+[tool.setuptools_dynamic_dependencies.optional-dependencies]
+test = [
+  "nvidia-nat-test == {version}",
+]
+
 [tool.uv]
 build-constraint-dependencies = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 managed = true
@@ -65,6 +70,7 @@ config-settings = { editable_mode = "compat" }
 
 [tool.uv.sources]
 nvidia-nat-core = { path = "../nvidia_nat_core", editable = true }
+nvidia-nat-test = { path = "../nvidia_nat_test", editable = true }
 
 [project.entry-points.'nat.components']
 nat_adk = "nat.plugins.adk.register"

@@ -27,13 +27,13 @@ from pydantic import PrivateAttr
 from nat.builder.builder import Builder
 from nat.builder.function import Function
 from nat.builder.function_info import FunctionInfo
-from nat.control_flow.sequential_executor import SequentialExecutorConfig
-from nat.control_flow.sequential_executor import SequentialExecutorExit
-from nat.control_flow.sequential_executor import ToolExecutionConfig
-from nat.control_flow.sequential_executor import _validate_function_type_compatibility
-from nat.control_flow.sequential_executor import _validate_tool_list_type_compatibility
-from nat.control_flow.sequential_executor import sequential_execution
 from nat.data_models.component_ref import FunctionRef
+from nat.plugins.langchain.control_flow.sequential_executor import SequentialExecutorConfig
+from nat.plugins.langchain.control_flow.sequential_executor import SequentialExecutorExit
+from nat.plugins.langchain.control_flow.sequential_executor import ToolExecutionConfig
+from nat.plugins.langchain.control_flow.sequential_executor import _validate_function_type_compatibility
+from nat.plugins.langchain.control_flow.sequential_executor import _validate_tool_list_type_compatibility
+from nat.plugins.langchain.control_flow.sequential_executor import sequential_execution
 from nat.utils.type_utils import DecomposedType
 
 
@@ -306,7 +306,8 @@ class TestValidateSequentialToolList:
 
         mock_builder.get_functions.return_value = compatible_functions
 
-        with patch('nat.control_flow.sequential_executor._validate_function_type_compatibility', return_value=True):
+        with patch('nat.plugins.langchain.control_flow.sequential_executor._validate_function_type_compatibility',
+                   return_value=True):
             input_type, output_type = await _validate_tool_list_type_compatibility(config, mock_builder)
 
             assert input_type is str  # First function's input type
@@ -320,7 +321,7 @@ class TestValidateSequentialToolList:
 
         mock_builder.get_functions.return_value = compatible_functions
 
-        with patch('nat.control_flow.sequential_executor._validate_function_type_compatibility',
+        with patch('nat.plugins.langchain.control_flow.sequential_executor._validate_function_type_compatibility',
                    side_effect=ValueError("The output type of the func1 function is not compatible")):
             with pytest.raises(ValueError, match="The sequential tool list has incompatible types"):
                 await _validate_tool_list_type_compatibility(config, mock_builder)
@@ -333,7 +334,8 @@ class TestValidateSequentialToolList:
 
         mock_builder.get_functions.return_value = compatible_functions
 
-        with patch('nat.control_flow.sequential_executor._validate_function_type_compatibility', return_value=True):
+        with patch('nat.plugins.langchain.control_flow.sequential_executor._validate_function_type_compatibility',
+                   return_value=True):
             input_type, output_type = await _validate_tool_list_type_compatibility(config, mock_builder)
 
             assert input_type is str  # First function's input type
@@ -383,7 +385,7 @@ class TestSequentialExecution:
         """Test basic sequential execution of tools."""
         config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1"), FunctionRef("tool2"), FunctionRef("tool3")])
 
-        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
+        with patch('nat.plugins.langchain.control_flow.sequential_executor._validate_tool_list_type_compatibility',
                    return_value=(str, str)):
             async with sequential_execution(config, mock_builder) as function_info:
                 assert isinstance(function_info, FunctionInfo)
@@ -403,7 +405,7 @@ class TestSequentialExecution:
         config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1"), FunctionRef("tool2"), FunctionRef("tool3")],
                                           tool_execution_config={"tool2": ToolExecutionConfig(use_streaming=True)})
 
-        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
+        with patch('nat.plugins.langchain.control_flow.sequential_executor._validate_tool_list_type_compatibility',
                    return_value=(str, str)):
             async with sequential_execution(config, mock_builder) as function_info:
                 # Test that we get a function info object
@@ -422,7 +424,7 @@ class TestSequentialExecution:
 
         config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1"), FunctionRef("tool2"), FunctionRef("tool3")])
 
-        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
+        with patch('nat.plugins.langchain.control_flow.sequential_executor._validate_tool_list_type_compatibility',
                    return_value=(str, str)):
             async with sequential_execution(config, mock_builder) as function_info:
                 # Get the actual function from the generator
@@ -438,7 +440,7 @@ class TestSequentialExecution:
         config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1"), FunctionRef("tool2")],
                                           raise_type_incompatibility=True)
 
-        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
+        with patch('nat.plugins.langchain.control_flow.sequential_executor._validate_tool_list_type_compatibility',
                    side_effect=ValueError("Type incompatibility")):
             with pytest.raises(ValueError, match="Type incompatibility"):
                 async with sequential_execution(config, mock_builder) as _:
@@ -450,7 +452,7 @@ class TestSequentialExecution:
         config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1"), FunctionRef("tool2")],
                                           raise_type_incompatibility=False)
 
-        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
+        with patch('nat.plugins.langchain.control_flow.sequential_executor._validate_tool_list_type_compatibility',
                    side_effect=ValueError("Type incompatibility")):
             with caplog.at_level(logging.WARNING):
                 async with sequential_execution(config, mock_builder) as function_info:
@@ -473,7 +475,7 @@ class TestSequentialExecution:
         config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1"), FunctionRef("tool2"), FunctionRef("tool3")],
                                           return_error_on_exception=True)
 
-        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
+        with patch('nat.plugins.langchain.control_flow.sequential_executor._validate_tool_list_type_compatibility',
                    return_value=(str, str)):
             async with sequential_execution(config, mock_builder) as function_info:
                 actual_function = function_info.single_fn  # type: ignore
@@ -498,7 +500,7 @@ class TestSequentialExecution:
         config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1"), FunctionRef("tool2"), FunctionRef("tool3")],
                                           return_error_on_exception=False)
 
-        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
+        with patch('nat.plugins.langchain.control_flow.sequential_executor._validate_tool_list_type_compatibility',
                    return_value=(str, str)):
             async with sequential_execution(config, mock_builder) as function_info:
                 actual_function = function_info.single_fn  # type: ignore
@@ -520,7 +522,7 @@ class TestSequentialExecution:
 
         config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1"), FunctionRef("tool2"), FunctionRef("tool3")])
 
-        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
+        with patch('nat.plugins.langchain.control_flow.sequential_executor._validate_tool_list_type_compatibility',
                    return_value=(str, str)):
             async with sequential_execution(config, mock_builder) as function_info:
                 actual_function = function_info.single_fn  # type: ignore
@@ -540,7 +542,7 @@ class TestSequentialExecution:
 
         mock_builder.get_tools.return_value = []
 
-        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
+        with patch('nat.plugins.langchain.control_flow.sequential_executor._validate_tool_list_type_compatibility',
                    side_effect=IndexError("list index out of range")):
             with pytest.raises(ValueError, match="Error with the sequential executor tool list"):
                 async with sequential_execution(config, mock_builder) as _:
@@ -563,7 +565,7 @@ class TestSequentialExecution:
         func1.streaming_output_type = str
         mock_builder.get_function.return_value = func1
 
-        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
+        with patch('nat.plugins.langchain.control_flow.sequential_executor._validate_tool_list_type_compatibility',
                    return_value=(str, str)):
             async with sequential_execution(config, mock_builder) as function_info:
                 actual_function = function_info.single_fn  # type: ignore
@@ -596,7 +598,7 @@ class TestSequentialExecution:
         tools = [OrderTestTool(tool_name="tool1"), OrderTestTool(tool_name="tool2"), OrderTestTool(tool_name="tool3")]
         mock_builder.get_tools.return_value = tools
 
-        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
+        with patch('nat.plugins.langchain.control_flow.sequential_executor._validate_tool_list_type_compatibility',
                    return_value=(str, str)):
             async with sequential_execution(config, mock_builder) as function_info:
                 actual_function = function_info.single_fn  # type: ignore
@@ -614,7 +616,7 @@ class TestSequentialExecution:
         config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1"), FunctionRef("tool2")],
                                           tool_execution_config={"tool1": ToolExecutionConfig(use_streaming=True)})
 
-        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
+        with patch('nat.plugins.langchain.control_flow.sequential_executor._validate_tool_list_type_compatibility',
                    return_value=(str, str)):
             async with sequential_execution(config, mock_builder) as function_info:
                 actual_function = function_info.single_fn  # type: ignore
@@ -625,7 +627,7 @@ class TestSequentialExecution:
         """Test that function annotations are set correctly based on type validation."""
         config = SequentialExecutorConfig(tool_list=[FunctionRef("tool1")])
 
-        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
+        with patch('nat.plugins.langchain.control_flow.sequential_executor._validate_tool_list_type_compatibility',
                    return_value=(str, int)):
             # Get the generator
             gen = sequential_execution(config, mock_builder)
@@ -693,7 +695,7 @@ class TestErrorScenarios:
         builder.get_function.return_value = func
 
         # This should not raise an error - extra config should be ignored
-        with patch('nat.control_flow.sequential_executor._validate_tool_list_type_compatibility',
+        with patch('nat.plugins.langchain.control_flow.sequential_executor._validate_tool_list_type_compatibility',
                    return_value=(str, str)):
             async with sequential_execution(config, builder) as function_info:
                 actual_function = function_info.single_fn  # type: ignore

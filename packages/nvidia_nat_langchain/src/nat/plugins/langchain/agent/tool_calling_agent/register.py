@@ -56,10 +56,10 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
     from langchain_core.messages.base import BaseMessage
     from langgraph.graph.state import CompiledStateGraph
 
-    from nat.agent.base import AGENT_LOG_PREFIX
-    from nat.agent.tool_calling_agent.agent import ToolCallAgentGraph
-    from nat.agent.tool_calling_agent.agent import ToolCallAgentGraphState
-    from nat.agent.tool_calling_agent.agent import create_tool_calling_agent_prompt
+    from nat.plugins.langchain.agent.base import AGENT_LOG_PREFIX
+    from nat.plugins.langchain.agent.tool_calling_agent.agent import ToolCallAgentGraph
+    from nat.plugins.langchain.agent.tool_calling_agent.agent import ToolCallAgentGraphState
+    from nat.plugins.langchain.agent.tool_calling_agent.agent import create_tool_calling_agent_prompt
 
     prompt = create_tool_calling_agent_prompt(config)
     # we can choose an LLM for the ReAct agent in the config file

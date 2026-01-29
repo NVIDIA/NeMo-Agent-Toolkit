@@ -26,8 +26,8 @@ async def test_strands_handler_tool_execution(reactive_stream: Subject):
 
     from nat.builder.framework_enum import LLMFrameworkEnum
     from nat.data_models.intermediate_step import IntermediateStepType
-    from nat.plugins.strands.strands_callback_handler import StrandsProfilerHandler
-    from nat.plugins.strands.strands_callback_handler import StrandsToolInstrumentationHook
+    from nat.plugins.strands.callback_handler import StrandsProfilerHandler
+    from nat.plugins.strands.callback_handler import StrandsToolInstrumentationHook
 
     # Set up handler and collect results
     all_stats = []

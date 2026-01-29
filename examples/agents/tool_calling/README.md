@@ -24,7 +24,7 @@ limitations under the License.
 
 **Complexity:** 🟢 Beginner
 
-A configurable Tool Calling agent. This agent leverages the NeMo Agent toolkit plugin system and `WorkflowBuilder` to integrate pre-built and custom tools into the workflow. Key elements are summarized below:
+A configurable Tool Calling agent. This agent leverages the NeMo Agent Toolkit plugin system and `WorkflowBuilder` to integrate pre-built and custom tools into the workflow. Key elements are summarized below:
 
 ## Table of Contents
 
@@ -45,11 +45,11 @@ A configurable Tool Calling agent. This agent leverages the NeMo Agent toolkit p
 - **Wikipedia Search Integration:** Shows integration with the `wikipedia_search` tool for retrieving factual information from Wikipedia sources.
 - **Code Generation Capabilities:** Includes the `code_generation_tool` for generating code examples and technical content.
 - **Schema-Driven Tool Selection:** Uses structured input schemas to appropriately route to the correct tool, providing more deterministic tool calling compared to name or description-based routing.
-- **Dual-Node Graph Architecture:** Implements the same operational pattern as other NeMo Agent toolkit agents, alternating between reasoning and tool execution while using schema-based tool selection.
+- **Dual-Node Graph Architecture:** Implements the same operational pattern as other NeMo Agent Toolkit agents, alternating between reasoning and tool execution while using schema-based tool selection.
 
 ## Graph Structure
 
-The Tool Calling agent uses the same dual-node graph architecture as other agents in the NeMo Agent toolkit, alternating between reasoning and tool execution. The following diagram illustrates the agent's workflow:
+The Tool Calling agent uses the same dual-node graph architecture as other agents in the NeMo Agent Toolkit, alternating between reasoning and tool execution. The following diagram illustrates the agent's workflow:
 
 <div align="center">
 <img src="../../../docs/source/_static/dual_node_agent.png" alt="Tool Calling Agent Graph Structure" width="400" style="max-width: 100%; height: auto;">
@@ -66,7 +66,7 @@ This architecture enables the Tool Calling agent to make precise tool selections
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 
 ### Install this Workflow
 
@@ -128,7 +128,7 @@ Tool's response:
 Edsger Wybe Dijkstra ( DYKE-strə; Dutch: [ˈɛtsxər ˈʋibə ˈdɛikstraː] ; 11 May 1930 – 6 August 2002) was a Dutch computer scientist, programmer, software engineer, mathematician, and science essayist.
 Born in Rotterdam in the Netherlands, Dijkstra studied mathematics and physics and then theoretical physics at the University of Leiden. Adriaan van Wijngaarden offered him a job as the first computer programmer in the Netherlands at the Mathematical Centre in Amsterdam, where he worked from 1952 until 1962. He formulated and solved the shortest path problem in 1956, and in 1960 developed the first compiler for the programming language ALGOL 60 in conjunction with colleague Jaap A. Zonneveld. In 1962 he moved to Eindhoven, and later to Nuenen, where he became a professor in the Mathematics Department at the Technische Hogeschool Eindhoven. In the late 1960s he built the THE multiprogramming system, which influence...
 ------------------------------
-2025-04-23 15:03:59,211 - nat.agent.tool_calling_agent.agent - INFO -
+2025-04-23 15:03:59,211 - nat.plugins.langchain.agent.tool_calling_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Agent input: who was Djikstra?
@@ -147,7 +147,7 @@ Workflow Result:
 
 ### Starting the NeMo Agent Toolkit Server
 
-You can start the NeMo Agent toolkit server using the `nat serve` command with the appropriate configuration file.
+You can start the NeMo Agent Toolkit server using the `nat serve` command with the appropriate configuration file.
 
 **Starting the Tool Calling Agent Example Workflow**
 
@@ -189,7 +189,7 @@ nat eval --config_file=examples/agents/tool_calling/configs/config.yml
 ```
 
 ### Using Tool Calling with the OpenAI Responses API
-The NeMo Agent toolkit also provides an agent implementation that uses OpenAI's Responses API to enable built-in tools (such as Code Interpreter) and remote tools via Model Context Protocol (MCP).
+The NeMo Agent Toolkit also provides an agent implementation that uses OpenAI's Responses API to enable built-in tools (such as Code Interpreter) and remote tools via Model Context Protocol (MCP).
 
 #### What is the Responses API?
 OpenAI's Responses API is a unified endpoint for reasoning models that supports built-in tools and external tool integrations. Compared to Chat Completions, Responses focuses on agentic behaviors like multi-step tool use, background tasks, and streaming of intermediate items. With Responses, models can:
@@ -199,7 +199,7 @@ OpenAI's Responses API is a unified endpoint for reasoning models that supports 
 For current capabilities and model support, see OpenAI's documentation for the Responses API.
 
 #### Run the Responses API agent
-An example configuration is provided at `examples/agents/tool_calling/configs/config-responses-api.yml`. Run it from the NeMo Agent toolkit repo root:
+An example configuration is provided at `examples/agents/tool_calling/configs/config-responses-api.yml`. Run it from the NeMo Agent Toolkit repo root:
 
 ```bash
 nat run --config_file=examples/agents/tool_calling/configs/config-responses-api.yml --input "How many 0s are in the current time?"
@@ -230,7 +230,7 @@ workflow:
   mcp_tools: []                     # Optional: remote tools over MCP (see below)
 ```
 
-- **`nat_tools`**: Tools implemented in NeMo Agent toolkit (for example, `current_datetime`). These run via the tool node in the agent graph.
+- **`nat_tools`**: Tools implemented in NeMo Agent Toolkit (for example, `current_datetime`). These run via the tool node in the agent graph.
 - **`builtin_tools`**: Tools provided by OpenAI's Responses API and executed by the model runtime. The agent binds them to the LLM; the graph does not run them directly.
 - **`mcp_tools`**: Remote tools exposed via MCP. The agent passes the schema to the LLM; the model orchestrates calls to the remote server.
 

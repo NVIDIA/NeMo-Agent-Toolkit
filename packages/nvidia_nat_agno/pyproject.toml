@@ -1,3 +1,17 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 [build-system]
 build-backend = "setuptools.build_meta"
 requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
@@ -15,10 +29,10 @@ root = "../.."
 
 [project]
 name = "nvidia-nat-agno"
-dynamic = ["version", "dependencies"]
+dynamic = ["version", "dependencies", "optional-dependencies"]
 requires-python = ">=3.11,<3.14"
 readme = "src/nat/meta/pypi.md"
-description = "Subpackage for Agno integration in NeMo Agent toolkit"
+description = "Subpackage for Agno integration in NeMo Agent Toolkit"
 keywords = ["ai", "rag", "agents"]
 license = { text = "Apache-2.0" }
 authors = [{ name = "NVIDIA Corporation" }]
@@ -42,7 +56,13 @@ dependencies = [
   "nvidia-nat-core == {version}",
   "agno>=1.2.3,<2.0.0",
   "google-search-results>=2.4.2,<3.0.0",
+  "litellm~=1.74",
   "openai~=1.106",
+]
+
+[tool.setuptools_dynamic_dependencies.optional-dependencies]
+test = [
+  "nvidia-nat-test == {version}",
 ]
 
 [tool.uv]
@@ -52,6 +72,7 @@ config-settings = { editable_mode = "compat" }
 
 [tool.uv.sources]
 nvidia-nat-core = { path = "../nvidia_nat_core", editable = true }
+nvidia-nat-test = { path = "../nvidia_nat_test", editable = true }
 
 [project.entry-points.'nat.components']
 nat_agno = "nat.plugins.agno.register"

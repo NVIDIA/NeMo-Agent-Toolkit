@@ -17,13 +17,13 @@
 
 # Running NVIDIA NeMo Agent Toolkit Tests
 
-NeMo Agent toolkit uses [pytest](https://docs.pytest.org/en/stable) for running tests. To run the basic set of tests, from the root of the repository, run:
+NeMo Agent Toolkit uses [pytest](https://docs.pytest.org/en/stable) for running tests. To run the basic set of tests, from the root of the repository, run:
 ```bash
 pytest
 ```
 
 ## Optional pytest Flags
-NeMo Agent toolkit adds the following optional pytest flags to control which tests are run:
+NeMo Agent Toolkit adds the following optional pytest flags to control which tests are run:
 
 | Flag | Description |
 |------|-------------|
@@ -133,9 +133,9 @@ async def test_full_workflow():
 
 In the above example, the `@pytest.mark.integration` decorator marks the test as an integration test, this will cause the test to be skipped unless the `--run_integration` flag is provided when running pytest. Similarly the `@pytest.mark.slow` decorator marks the test as a slow test, which will be skipped unless the `--run_slow` flag is provided.
 
-The workflow being run requires a valid NVIDIA API key to be set in the `NVIDIA_API_KEY` environment variable, the `@pytest.mark.usefixtures("nvidia_api_key")` decorator ensures that the test is skipped if the API key is not set. This fixture along with many others are defined in `packages/nvidia_nat_test/src/nat/test/plugin.py`, and are available for use in tests if the `nvidia-nat-test` package is installed. Most of the API keys used in NeMo Agent toolkit workflows have corresponding fixtures defined there (for example: `openai_api_key`, `tavily_api_key`, `mem0_api_key`, and others).
+The workflow being run requires a valid NVIDIA API key to be set in the `NVIDIA_API_KEY` environment variable, the `@pytest.mark.usefixtures("nvidia_api_key")` decorator ensures that the test is skipped if the API key is not set. This fixture along with many others are defined in `packages/nvidia_nat_test/src/nat/test/plugin.py`, and are available for use in tests if the `nvidia-nat-test` package is installed. Most of the API keys used in NeMo Agent Toolkit workflows have corresponding fixtures defined there (for example: `openai_api_key`, `tavily_api_key`, `mem0_api_key`, and others).
 
-The `locate_example_config` utility function is used to locate the configuration file relative to the configuration class. By default this function searches for a file named `config.yml`, alternately the `config_file` argument can be specified (ex: `locate_example_config(RetryReactAgentConfig, "config-hitl.yml")`). This function will work with any workflow that has the same layout structure as a workflow created using the `nat workflow create` command. This function works for both example workflows in the NeMo Agent toolkit repository itself, and workflows in another repository that has the `nvidia-nat-test` installed.
+The `locate_example_config` utility function is used to locate the configuration file relative to the configuration class. By default this function searches for a file named `config.yml`, alternately the `config_file` argument can be specified (ex: `locate_example_config(RetryReactAgentConfig, "config-hitl.yml")`). This function will work with any workflow that has the same layout structure as a workflow created using the `nat workflow create` command. This function works for both example workflows in the NeMo Agent Toolkit repository itself, and workflows in another repository that has the `nvidia-nat-test` installed.
 
 The `run_workflow` utility function is used to run the workflow with the specified configuration file, question, and expected answer. Since the results of LLM calls can vary it is best to use simple questions and expected answers that are likely to be returned consistently. By default a case-insensitive match is used for the `expected_answer`. Alternately the `assert_expected_answer` parameter can be set to `False` allowing the test to perform custom validation of the result returned by the workflow:
 ```python
@@ -160,12 +160,12 @@ async def test_react_agent_full_workflow(examples_dir: Path):
 ```
 
 :::{note}
-While most of the fixtures defined in the `nvidia-nat-test` package are available for use in tests in third-party packages, a few such as `root_repo_dir` and `examples_dir` only function correctly when used within the NeMo Agent toolkit repository itself. As an alternative, a configuration file can be located relative to the test file using: `config_file = Path(__file__).parent / "configs/config.yml"`.
+While most of the fixtures defined in the `nvidia-nat-test` package are available for use in tests in third-party packages, a few such as `root_repo_dir` and `examples_dir` only function correctly when used within the NeMo Agent Toolkit repository itself. As an alternative, a configuration file can be located relative to the test file using: `config_file = Path(__file__).parent / "configs/config.yml"`.
 :::
 <!-- path-check-skip-end -->
 
 #### Workflows Requiring a Service
-Many of the existing services that NeMo Agent toolkit workflows can interact with have corresponding fixtures defined in the `nvidia-nat-test` package to ensure that the service is running before the test is run, these are defined in `packages/nvidia_nat_test/src/nat/test/plugin.py`.
+Many of the existing services that NeMo Agent Toolkit workflows can interact with have corresponding fixtures defined in the `nvidia-nat-test` package to ensure that the service is running before the test is run, these are defined in `packages/nvidia_nat_test/src/nat/test/plugin.py`.
 
 A typical example of such a fixture is the `milvus_uri` fixture, which ensures that the Milvus service is running and provides the URL to connect to it:
 ```python
@@ -189,7 +189,7 @@ def milvus_uri_fixture(etcd_url: str, fail_missing: bool = False) -> str:
         pytest.skip(reason=reason)
 ```
 
-The above fixture is scoped to the session, ensuring it will only be run once per test session. The `pymilvus` library is imported lazily within the body of the fixture, this avoids unnecessary imports to be performed during test collection. This is especially important in this case as the `pymilvus` library is an optional dependency of NeMo Agent toolkit, and may not be installed in all environments. Since the import is performed within a try/except block, if the library is not installed the test will be skipped (unless the user also ran pytest with the `--fail_missing` flag).
+The above fixture is scoped to the session, ensuring it will only be run once per test session. The `pymilvus` library is imported lazily within the body of the fixture, this avoids unnecessary imports to be performed during test collection. This is especially important in this case as the `pymilvus` library is an optional dependency of NeMo Agent Toolkit, and may not be installed in all environments. Since the import is performed within a try/except block, if the library is not installed the test will be skipped (unless the user also ran pytest with the `--fail_missing` flag).
 
 Of note is that the host and port of the service can be configured via environment variables, this allows the test to connect to services running in different environments.
 

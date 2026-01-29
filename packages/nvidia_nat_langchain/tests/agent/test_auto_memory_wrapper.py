@@ -23,8 +23,6 @@ from langchain_core.messages import AIMessage
 from langchain_core.messages import HumanMessage
 from langchain_core.messages import SystemMessage
 
-from nat.agent.auto_memory_wrapper.agent import AutoMemoryWrapperGraph
-from nat.agent.auto_memory_wrapper.state import AutoMemoryWrapperState
 from nat.builder.context import Context
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
@@ -33,6 +31,8 @@ from nat.data_models.api_server import ChoiceMessage
 from nat.data_models.api_server import Usage
 from nat.data_models.api_server import UserMessageContentRoleType
 from nat.memory.models import MemoryItem
+from nat.plugins.langchain.agent.auto_memory_wrapper.agent import AutoMemoryWrapperGraph
+from nat.plugins.langchain.agent.auto_memory_wrapper.state import AutoMemoryWrapperState
 
 
 @pytest.fixture(name="mock_memory_editor")
@@ -77,7 +77,7 @@ def fixture_mock_context() -> Mock:
 @pytest.fixture(name="wrapper_graph")
 def fixture_wrapper_graph(mock_inner_agent, mock_memory_editor, mock_context) -> AutoMemoryWrapperGraph:
     """Create an AutoMemoryWrapperGraph instance for testing."""
-    with patch('nat.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
+    with patch('nat.plugins.langchain.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
         return AutoMemoryWrapperGraph(inner_agent_fn=mock_inner_agent,
                                       memory_editor=mock_memory_editor,
                                       save_user_messages=True,
@@ -107,7 +107,7 @@ class TestAutoMemoryWrapperGraph:
 
     def test_initialization(self, mock_inner_agent, mock_memory_editor, mock_context):
         """Test AutoMemoryWrapperGraph initialization with all features enabled."""
-        with patch('nat.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
+        with patch('nat.plugins.langchain.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
             wrapper = AutoMemoryWrapperGraph(inner_agent_fn=mock_inner_agent,
                                              memory_editor=mock_memory_editor,
                                              save_user_messages=True,
@@ -131,7 +131,7 @@ class TestAutoMemoryWrapperGraph:
 
     def test_get_wrapper_node_count_minimal(self, mock_inner_agent, mock_memory_editor, mock_context):
         """Test wrapper node count with minimal features."""
-        with patch('nat.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
+        with patch('nat.plugins.langchain.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
             wrapper = AutoMemoryWrapperGraph(inner_agent_fn=mock_inner_agent,
                                              memory_editor=mock_memory_editor,
                                              save_user_messages=False,
@@ -149,7 +149,7 @@ class TestAutoMemoryWrapperGraph:
         """Test user ID extraction from X-User-ID header."""
         mock_context.metadata = Mock()
         mock_context.metadata.headers = {"x-user-id": "test-user-123"}
-        with patch('nat.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
+        with patch('nat.plugins.langchain.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
             wrapper_graph._context = mock_context
             user_id = wrapper_graph._get_user_id_from_context()
         assert user_id == "test-user-123"
@@ -159,7 +159,7 @@ class TestAutoMemoryWrapperGraph:
         mock_user_manager = Mock()
         mock_user_manager.get_id.return_value = "user-from-manager"
         mock_context.user_manager = mock_user_manager
-        with patch('nat.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
+        with patch('nat.plugins.langchain.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
             wrapper_graph._context = mock_context
             user_id = wrapper_graph._get_user_id_from_context()
         assert user_id == "user-from-manager"
@@ -200,7 +200,7 @@ class TestAutoMemoryWrapperGraph:
 
     async def test_capture_user_message_node_disabled(self, mock_inner_agent, mock_memory_editor, mock_context):
         """Test capture_user_message_node when disabled."""
-        with patch('nat.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
+        with patch('nat.plugins.langchain.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
             wrapper = AutoMemoryWrapperGraph(inner_agent_fn=mock_inner_agent,
                                              memory_editor=mock_memory_editor,
                                              save_user_messages=False,
@@ -253,7 +253,7 @@ class TestAutoMemoryWrapperGraph:
 
     async def test_memory_retrieve_node_disabled(self, mock_inner_agent, mock_memory_editor, mock_context):
         """Test memory_retrieve_node when disabled."""
-        with patch('nat.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
+        with patch('nat.plugins.langchain.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
             wrapper = AutoMemoryWrapperGraph(inner_agent_fn=mock_inner_agent,
                                              memory_editor=mock_memory_editor,
                                              save_user_messages=False,
@@ -310,7 +310,7 @@ class TestAutoMemoryWrapperGraph:
 
     async def test_capture_ai_response_node_disabled(self, mock_inner_agent, mock_memory_editor, mock_context):
         """Test capture_ai_response_node when disabled."""
-        with patch('nat.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
+        with patch('nat.plugins.langchain.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
             wrapper = AutoMemoryWrapperGraph(inner_agent_fn=mock_inner_agent,
                                              memory_editor=mock_memory_editor,
                                              save_user_messages=False,
@@ -330,7 +330,7 @@ class TestAutoMemoryWrapperGraph:
 
     def test_build_graph_minimal_features(self, mock_inner_agent, mock_memory_editor, mock_context):
         """Test build_graph with minimal features."""
-        with patch('nat.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
+        with patch('nat.plugins.langchain.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
             wrapper = AutoMemoryWrapperGraph(inner_agent_fn=mock_inner_agent,
                                              memory_editor=mock_memory_editor,
                                              save_user_messages=False,
@@ -342,7 +342,7 @@ class TestAutoMemoryWrapperGraph:
     async def test_search_params_passed_to_memory(self, mock_inner_agent, mock_memory_editor, mock_context):
         """Test that search_params are properly passed to memory editor."""
         search_params = {"top_k": 10, "mode": "summary"}
-        with patch('nat.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
+        with patch('nat.plugins.langchain.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
             wrapper = AutoMemoryWrapperGraph(inner_agent_fn=mock_inner_agent,
                                              memory_editor=mock_memory_editor,
                                              save_user_messages=False,
@@ -361,7 +361,7 @@ class TestAutoMemoryWrapperGraph:
     async def test_add_params_passed_to_memory(self, mock_inner_agent, mock_memory_editor, mock_context):
         """Test that add_params are properly passed to memory editor."""
         add_params = {"ignore_roles": ["assistant"]}
-        with patch('nat.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
+        with patch('nat.plugins.langchain.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
             wrapper = AutoMemoryWrapperGraph(inner_agent_fn=mock_inner_agent,
                                              memory_editor=mock_memory_editor,
                                              save_user_messages=True,

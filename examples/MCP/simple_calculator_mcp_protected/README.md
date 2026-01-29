@@ -17,7 +17,7 @@ limitations under the License.
 
 # Simple Calculator MCP - Protected
 
-This example demonstrates how to set up an OAuth2-protected NVIDIA NeMo Agent toolkit MCP server. This complements the unprotected [Simple Calculator MCP](../simple_calculator_mcp/) example to demonstrate both authenticated and unauthenticated MCP server setups.
+This example demonstrates how to set up an OAuth2-protected NVIDIA NeMo Agent Toolkit MCP server. This complements the unprotected [Simple Calculator MCP](../simple_calculator_mcp/) example to demonstrate both authenticated and unauthenticated MCP server setups.
 
 This example uses **per-user mode**, enabling complete per-user isolation while accessing the same protected MCP calculator tools.
 
@@ -58,7 +58,7 @@ graph TB
 
 ## Prerequisites
 
-- NeMo Agent toolkit installed (see [Installation Guide](../../../docs/source/get-started/installation.md))
+- NeMo Agent Toolkit installed (see [Installation Guide](../../../docs/source/get-started/installation.md))
 - Keycloak server running locally (see setup instructions below)
 - Basic understanding of OAuth2 and JWT tokens
 
@@ -134,7 +134,7 @@ Look for: `Listening on: http://0.0.0.0:8080`
    - `jwks_uri`: `http://localhost:8080/realms/master/protocol/openid-connect/certs`
    - `introspection_endpoint`: `http://localhost:8080/realms/master/protocol/openid-connect/token/introspect`
 
-   **Note:** These endpoints use Keycloak's standard paths (`/protocol/openid-connect/*`), not generic `/oauth/*` paths. The NeMo Agent toolkit MCP client discovers these URLs automatically from the discovery endpoint.
+   **Note:** These endpoints use Keycloak's standard paths (`/protocol/openid-connect/*`), not generic `/oauth/*` paths. The NeMo Agent Toolkit MCP client discovers these URLs automatically from the discovery endpoint.
 
 ### Step 3: Register MCP Client
 

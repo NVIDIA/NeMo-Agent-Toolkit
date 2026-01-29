@@ -21,9 +21,9 @@ from langchain_core.messages import HumanMessage
 from langchain_core.messages import SystemMessage
 from langchain_core.messages import ToolMessage
 
-from nat.finetuning.utils.parsers.langchain_parser import _extract_content
-from nat.finetuning.utils.parsers.langchain_parser import _parse_dict_message
-from nat.finetuning.utils.parsers.langchain_parser import _parse_langchain_message
+from nat.plugins.langchain.langchain_parser import _extract_content
+from nat.plugins.langchain.langchain_parser import _parse_dict_message
+from nat.plugins.langchain.langchain_parser import _parse_langchain_message
 
 
 class TestParseLangChainMessage:

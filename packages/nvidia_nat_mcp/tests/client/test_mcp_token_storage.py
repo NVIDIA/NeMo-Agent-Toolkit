@@ -23,6 +23,8 @@ from unittest.mock import patch
 import pytest
 from pydantic import SecretStr
 
+from nat.authentication.token_storage import InMemoryTokenStorage
+from nat.authentication.token_storage import ObjectStoreTokenStorage
 from nat.data_models.authentication import AuthResult
 from nat.data_models.authentication import BearerTokenCred
 from nat.data_models.object_store import NoSuchKeyError
@@ -31,8 +33,6 @@ from nat.object_store.models import ObjectStoreItem
 from nat.plugins.mcp.auth.auth_provider import MCPOAuth2Provider
 from nat.plugins.mcp.auth.auth_provider import OAuth2Credentials
 from nat.plugins.mcp.auth.auth_provider import OAuth2Endpoints
-from nat.plugins.mcp.auth.token_storage import InMemoryTokenStorage
-from nat.plugins.mcp.auth.token_storage import ObjectStoreTokenStorage
 
 # --------------------------------------------------------------------------- #
 # Test Fixtures

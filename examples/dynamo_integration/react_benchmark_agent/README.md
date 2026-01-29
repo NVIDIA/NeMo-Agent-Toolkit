@@ -16,7 +16,7 @@ limitations under the License.
 <!-- path-check-skip-file -->
 
 > [!NOTE]
-> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
+> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent Toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
 
 # Agent Leaderboard v2 - Evaluation Guide
 
@@ -49,7 +49,7 @@ Currently this agent supports evaluation exclusively for the [Galileo Agent Lead
 > This example requires a CUDA-compatible device with NVIDIA drivers installed. It cannot be run on systems without NVIDIA GPU hardware. You do not need to install ai-dynamo packages separately; the provided Docker images include them.
 
 1. **Python 3.11, 3.12, or 3.13** installed
-2. **NeMo Agent toolkit** repository cloned
+2. **NeMo Agent Toolkit** repository cloned
 3. **Docker** with NVIDIA Container Toolkit
 4. **NVIDIA Driver** with CUDA 12.0+ support, `nvidia-fabricmanager` enabled matching your driver version. Verify with:
 

@@ -61,7 +61,7 @@ The model learns to play against a **random opponent**, receiving rewards based 
 
 3. **OpenPipe ART** installed in a **separate virtual environment**:
 
-   OpenPipe ART has specific dependency requirements that may conflict with NeMo Agent toolkit. We recommend installing it in an isolated environment:
+   OpenPipe ART has specific dependency requirements that may conflict with NeMo Agent Toolkit. We recommend installing it in an isolated environment:
 
    ```bash
    # Create a separate virtual environment for ART
@@ -198,7 +198,7 @@ curl http://localhost:8000/v1/models
 
 ### 1.2 Run Pre-Training Evaluation
 
-In a **separate terminal** with your NeMo Agent toolkit environment activated:
+In a **separate terminal** with your NeMo Agent Toolkit environment activated:
 
 ```bash
 # Run the pre-training evaluation
@@ -315,7 +315,7 @@ finetuning:
 
 ### 3.2 Start Training
 
-In your **NeMo Agent toolkit environment**:
+In your **NeMo Agent Toolkit environment**:
 
 ```bash
 nat finetune --config_file examples/finetuning/rl_with_openpipe_art/configs/config.yml
@@ -759,7 +759,7 @@ curl http://localhost:7623/health
 
 ## Further Reading
 
-- [NeMo Agent toolkit Finetuning Concepts](../../../docs/source/improve-workflows/finetuning/concepts.md)
-- [NeMo Agent toolkit Finetuning Extension Guide](../../../docs/source/extend/custom-components/finetuning.md)
+- [NeMo Agent Toolkit Finetuning Concepts](../../../docs/source/improve-workflows/finetuning/concepts.md)
+- [NeMo Agent Toolkit Finetuning Extension Guide](../../../docs/source/extend/custom-components/finetuning.md)
 - [OpenPipe ART Integration](../../../docs/source/improve-workflows/finetuning/rl_with_openpipe.md)
 - [OpenPipe ART Documentation](https://art.openpipe.ai/)

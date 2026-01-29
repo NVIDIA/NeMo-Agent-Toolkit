@@ -15,7 +15,6 @@
 
 import logging
 
-from nat.agent.react_agent.register import ReActAgentWorkflowConfig
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
@@ -23,6 +22,7 @@ from nat.cli.register_workflow import register_per_user_function
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatRequestOrMessage
 from nat.data_models.api_server import ChatResponse
+from nat.plugins.langchain.agent.react_agent.register import ReActAgentWorkflowConfig
 
 logger = logging.getLogger(__name__)
 
@@ -45,11 +45,11 @@ async def per_user_react_agent_workflow(config: PerUserReActAgentWorkflowConfig,
     from langchain_core.messages import trim_messages
     from langgraph.graph.state import CompiledStateGraph
 
-    from nat.agent.base import AGENT_LOG_PREFIX
-    from nat.agent.react_agent.agent import ReActAgentGraph
-    from nat.agent.react_agent.agent import ReActGraphState
-    from nat.agent.react_agent.agent import create_react_agent_prompt
     from nat.data_models.api_server import Usage
+    from nat.plugins.langchain.agent.base import AGENT_LOG_PREFIX
+    from nat.plugins.langchain.agent.react_agent.agent import ReActAgentGraph
+    from nat.plugins.langchain.agent.react_agent.agent import ReActGraphState
+    from nat.plugins.langchain.agent.react_agent.agent import create_react_agent_prompt
     from nat.utils.type_converter import GlobalTypeConverter
 
     prompt = create_react_agent_prompt(config)

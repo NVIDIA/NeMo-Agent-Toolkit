@@ -23,14 +23,9 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
+from nat.llm.huggingface_llm import HuggingFaceConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
-
-try:
-    from nat.llm.huggingface_llm import HuggingFaceConfig  # noqa: F401
-    HAS_HUGGINGFACE = True
-except ImportError:
-    HAS_HUGGINGFACE = False
 
 
 @pytest.mark.integration
@@ -148,13 +143,16 @@ async def test_azure_openai_react_e2e(test_data_dir: str):
 
 
 @pytest.mark.integration
-@pytest.mark.skipif(not HAS_HUGGINGFACE, reason="HuggingFace dependencies (transformers, torch) not installed")
 async def test_huggingface_langchain_agent():
     """
     Test HuggingFace LLM with LangChain/LangGraph agent.
     Requires transformers and torch to be installed (optional dependencies).
     """
-    from nat.llm.huggingface_llm import HuggingFaceConfig
+    try:
+        import torch  # noqa: F401
+        import transformers  # noqa: F401
+    except ImportError:
+        pytest.skip("HuggingFace dependencies (transformers, torch) not installed")
 
     prompt = ChatPromptTemplate.from_messages([("system", "You are a helpful AI assistant."), ("human", "{input}")])
 

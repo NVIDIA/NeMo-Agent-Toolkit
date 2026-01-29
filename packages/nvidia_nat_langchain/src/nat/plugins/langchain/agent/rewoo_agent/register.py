@@ -76,10 +76,10 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
     from langchain_core.prompts import ChatPromptTemplate
     from langgraph.graph.state import CompiledStateGraph
 
-    from nat.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
-    from nat.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
-    from nat.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
-    from nat.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import PLANNER_SYSTEM_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
+    from nat.plugins.langchain.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
 
     from .agent import ReWOOAgentGraph
     from .agent import ReWOOGraphState

@@ -231,7 +231,7 @@ async def test_agno_handler_tool_execution(reactive_stream: Subject):
     """
     from nat.data_models.intermediate_step import IntermediateStep
     from nat.data_models.invocation_node import InvocationNode
-    from nat.profiler.callbacks.agno_callback_handler import AgnoProfilerHandler
+    from nat.plugins.agno.callback_handler import AgnoProfilerHandler
 
     # Set up handler and collect results
     all_stats = []

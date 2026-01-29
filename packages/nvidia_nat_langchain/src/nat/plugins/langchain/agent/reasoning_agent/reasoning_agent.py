@@ -82,7 +82,7 @@ async def build_reasoning_function(config: ReasoningFunctionConfig, builder: Bui
     from langchain_core.language_models import BaseChatModel
     from langchain_core.prompts import PromptTemplate
 
-    from nat.agent.base import AGENT_LOG_PREFIX
+    from nat.plugins.langchain.agent.base import AGENT_LOG_PREFIX
 
     def remove_r1_think_tags(text: str):
         pattern = r'(<think>)?.*?</think>\s*(.*)'

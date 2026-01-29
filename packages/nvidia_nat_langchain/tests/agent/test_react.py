@@ -21,19 +21,19 @@ from langchain_core.messages import HumanMessage
 from langchain_core.messages.tool import ToolMessage
 from langgraph.graph.state import CompiledStateGraph
 
-from nat.agent.base import AgentDecision
-from nat.agent.react_agent.agent import NO_INPUT_ERROR_MESSAGE
-from nat.agent.react_agent.agent import TOOL_NOT_FOUND_ERROR_MESSAGE
-from nat.agent.react_agent.agent import ReActAgentGraph
-from nat.agent.react_agent.agent import ReActGraphState
-from nat.agent.react_agent.agent import create_react_agent_prompt
-from nat.agent.react_agent.output_parser import FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE
-from nat.agent.react_agent.output_parser import MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE
-from nat.agent.react_agent.output_parser import MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE
-from nat.agent.react_agent.output_parser import ReActAgentParsingFailedError
-from nat.agent.react_agent.output_parser import ReActOutputParser
-from nat.agent.react_agent.output_parser import ReActOutputParserException
-from nat.agent.react_agent.register import ReActAgentWorkflowConfig
+from nat.plugins.langchain.agent.base import AgentDecision
+from nat.plugins.langchain.agent.react_agent.agent import NO_INPUT_ERROR_MESSAGE
+from nat.plugins.langchain.agent.react_agent.agent import TOOL_NOT_FOUND_ERROR_MESSAGE
+from nat.plugins.langchain.agent.react_agent.agent import ReActAgentGraph
+from nat.plugins.langchain.agent.react_agent.agent import ReActGraphState
+from nat.plugins.langchain.agent.react_agent.agent import create_react_agent_prompt
+from nat.plugins.langchain.agent.react_agent.output_parser import FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE
+from nat.plugins.langchain.agent.react_agent.output_parser import MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE
+from nat.plugins.langchain.agent.react_agent.output_parser import MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE
+from nat.plugins.langchain.agent.react_agent.output_parser import ReActAgentParsingFailedError
+from nat.plugins.langchain.agent.react_agent.output_parser import ReActOutputParser
+from nat.plugins.langchain.agent.react_agent.output_parser import ReActOutputParserException
+from nat.plugins.langchain.agent.react_agent.register import ReActAgentWorkflowConfig
 
 
 async def test_state_schema():
@@ -492,7 +492,8 @@ async def test_final_answer_field_set_on_agent_finish(mock_react_agent):
     with patch.object(mock_react_agent, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
         mock_stream_llm.return_value = AIMessage(content="Final Answer: The answer is 4")
 
-        with patch('nat.agent.react_agent.agent.ReActOutputParser.aparse', new_callable=AsyncMock) as mock_parse:
+        with patch('nat.plugins.langchain.agent.react_agent.agent.ReActOutputParser.aparse',
+                   new_callable=AsyncMock) as mock_parse:
             mock_parse.return_value = mock_agent_finish
 
             # Call the agent node
@@ -545,7 +546,8 @@ async def test_multi_turn_chat_scenario(mock_react_agent):
     with patch.object(mock_react_agent, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
         mock_stream_llm.return_value = AIMessage(content="Final Answer: The answer is 4")
 
-        with patch('nat.agent.react_agent.agent.ReActOutputParser.aparse', new_callable=AsyncMock) as mock_parse:
+        with patch('nat.plugins.langchain.agent.react_agent.agent.ReActOutputParser.aparse',
+                   new_callable=AsyncMock) as mock_parse:
             mock_parse.return_value = mock_agent_finish
 
             # Process first turn
@@ -571,7 +573,8 @@ async def test_multi_turn_chat_scenario(mock_react_agent):
     with patch.object(mock_react_agent, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm_2:
         mock_stream_llm_2.return_value = AIMessage(content="Final Answer: The answer is 6")
 
-        with patch('nat.agent.react_agent.agent.ReActOutputParser.aparse', new_callable=AsyncMock) as mock_parse_2:
+        with patch('nat.plugins.langchain.agent.react_agent.agent.ReActOutputParser.aparse',
+                   new_callable=AsyncMock) as mock_parse_2:
             mock_parse_2.return_value = mock_agent_finish_2
 
             # Process second turn

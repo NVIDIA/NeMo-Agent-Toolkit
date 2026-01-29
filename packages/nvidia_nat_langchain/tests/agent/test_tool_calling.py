@@ -20,11 +20,11 @@ from langchain_core.messages import ToolMessage
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode
 
-from nat.agent.base import AgentDecision
-from nat.agent.tool_calling_agent.agent import ToolCallAgentGraph
-from nat.agent.tool_calling_agent.agent import ToolCallAgentGraphState
-from nat.agent.tool_calling_agent.agent import create_tool_calling_agent_prompt
-from nat.agent.tool_calling_agent.register import ToolCallAgentWorkflowConfig
+from nat.plugins.langchain.agent.base import AgentDecision
+from nat.plugins.langchain.agent.tool_calling_agent.agent import ToolCallAgentGraph
+from nat.plugins.langchain.agent.tool_calling_agent.agent import ToolCallAgentGraphState
+from nat.plugins.langchain.agent.tool_calling_agent.agent import create_tool_calling_agent_prompt
+from nat.plugins.langchain.agent.tool_calling_agent.register import ToolCallAgentWorkflowConfig
 
 
 async def test_state_schema():

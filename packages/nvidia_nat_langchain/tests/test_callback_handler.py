@@ -17,7 +17,7 @@ import asyncio
 from uuid import uuid4
 
 from nat.data_models.intermediate_step import IntermediateStepType
-from nat.profiler.callbacks.langchain_callback_handler import LangchainProfilerHandler
+from nat.plugins.langchain.callback_handler import LangchainProfilerHandler
 from nat.utils.reactive.subject import Subject
 
 

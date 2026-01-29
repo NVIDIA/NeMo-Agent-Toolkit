@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nat.agent.prompt_optimizer.prompt import oracle_feedback_template
-from nat.agent.prompt_optimizer.register import PromptOptimizerInputSchema
+from nat.plugins.langchain.agent.prompt_optimizer.prompt import oracle_feedback_template
+from nat.plugins.langchain.agent.prompt_optimizer.register import PromptOptimizerInputSchema
 
 
 class TestPromptOptimizerInputSchema:

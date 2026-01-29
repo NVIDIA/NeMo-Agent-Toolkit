@@ -85,7 +85,7 @@ class TokenStorageBase(ABC):
 
 class ObjectStoreTokenStorage(TokenStorageBase):
     """
-    Token storage implementation backed by a NeMo Agent toolkit object store.
+    Token storage implementation backed by a NeMo Agent Toolkit object store.
 
     This implementation uses the object store infrastructure to persist tokens,
     which provides encryption at rest, access controls, and persistence across
@@ -206,7 +206,7 @@ class ObjectStoreTokenStorage(TokenStorageBase):
 
 class InMemoryTokenStorage(TokenStorageBase):
     """
-    In-memory token storage using the built-in object store provided by the NeMo Agent toolkit.
+    In-memory token storage using the built-in object store provided by the NeMo Agent Toolkit.
 
     This implementation uses the in-memory object store for token persistence,
     which provides a secure default option that doesn't require external storage

@@ -26,7 +26,7 @@ limitations under the License.
 
 The automated description generation workflow, is a workflow that can be used to build on top of the RAG service and enhances the accuracy of the  multi-query collection workflow. The goal of the workflow is to automatically generate descriptions of collections within VectorDB's, which can be leveraged by the multi-query collection tool to empower retrieval of context, typically documents, across multiple collections within a given vector database. This document will cover the tooling and the process leveraged to execute the description generation workflow.
 
-The documentation will also cover configuration considerations and how to set up a NeMo Agent toolkit pipeline that leverages the workflow. The current implementation is Milvus focused, with a plans to extend functionality to other vector databases.
+The documentation will also cover configuration considerations and how to set up a NeMo Agent Toolkit pipeline that leverages the workflow. The current implementation is Milvus focused, with a plans to extend functionality to other vector databases.
 
 ## Table of Contents
 
@@ -46,16 +46,16 @@ The documentation will also cover configuration considerations and how to set up
 - **VectorDB Collection Analysis:** Demonstrates automated generation of intelligent descriptions for VectorDB collections using document retrieval and LLM-based summarization to capture the essence of stored documents.
 - **Multi-Query Collection Enhancement:** Shows how to enhance multi-query collection workflows by automatically generating feature-rich descriptions that improve retrieval accuracy across multiple collections.
 - **Map-Reduce Summarization:** Implements a sophisticated approach using dummy embeddings for document retrieval, LLM-generated local summaries, and map-reduce techniques for final description generation.
-- **Milvus Integration with Extensible Design:** Currently focused on Milvus vector database with plans for extension to other VectorDBs, demonstrating how to work with the NeMo Agent toolkit retriever interface.
+- **Milvus Integration with Extensible Design:** Currently focused on Milvus vector database with plans for extension to other VectorDBs, demonstrating how to work with the NeMo Agent Toolkit retriever interface.
 - **RAG Service Enhancement:** Provides a foundation for improving RAG (Retrieval-Augmented Generation) services by automatically generating more accurate collection metadata for better document retrieval.
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the NeMo Agent toolkit library, run the following commands:
+From the root directory of the NeMo Agent Toolkit library, run the following commands:
 
 ```bash
 uv pip install -e ./examples/custom_functions/automated_description_generation
@@ -70,7 +70,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 
 ### Set Up Milvus
 
-This example uses a Milvus vector database to demonstrate how descriptions can be generated for collections. However, because this workflow uses the built-in NeMo Agent toolkit abstractions for retrievers, this example will work for any database that implements the required methods of the NeMo Agent toolkit `retriever` interface.
+This example uses a Milvus vector database to demonstrate how descriptions can be generated for collections. However, because this workflow uses the built-in NeMo Agent Toolkit abstractions for retrievers, this example will work for any database that implements the required methods of the NeMo Agent Toolkit `retriever` interface.
 
 Start the docker compose
 ```bash
@@ -165,7 +165,7 @@ Number of Retrievers: 1
 Number of TTC Strategies: 0
 Number of Authentication Providers: 0
 
-2025-10-17 11:35:33 - INFO     - nat.agent.react_agent.agent:169 - 
+2025-10-17 11:35:33 - INFO     - nat.plugins.langchain.agent.react_agent.agent:169 - 
 ------------------------------
 [AGENT]
 Agent input: List all known subspecies of Aardvark
@@ -177,8 +177,8 @@ Action: None
 Action Input: None
 
 ------------------------------
-2025-10-17 11:35:33 - WARNING  - nat.agent.react_agent.agent:273 - [AGENT] ReAct Agent wants to call tool None. In the ReAct Agent's configuration within the config file,there is no tool with that name: ['cuda_tool']
-2025-10-17 11:35:34 - INFO     - nat.agent.react_agent.agent:193 - 
+2025-10-17 11:35:33 - WARNING  - nat.plugins.langchain.agent.react_agent.agent:273 - [AGENT] ReAct Agent wants to call tool None. In the ReAct Agent's configuration within the config file,there is no tool with that name: ['cuda_tool']
+2025-10-17 11:35:34 - INFO     - nat.plugins.langchain.agent.react_agent.agent:193 - 
 ------------------------------
 [AGENT]
 Agent input: List all known subspecies of Aardvark
@@ -275,7 +275,7 @@ Number of Retrievers: 1
 Number of TTC Strategies: 0
 Number of Authentication Providers: 0
 
-2025-10-17 11:36:45 - INFO     - nat.agent.react_agent.agent:169 - 
+2025-10-17 11:36:45 - INFO     - nat.plugins.langchain.agent.react_agent.agent:169 - 
 ------------------------------
 [AGENT]
 Agent input: List all known subspecies of Aardvark
@@ -288,7 +288,7 @@ Action Input: {'query': 'What are the known subspecies of Aardvark?'}
 
 ------------------------------
 2025-10-17 11:36:46 - INFO     - nat.tool.retriever:76 - Retrieved 10 records for query What are the known subspecies of Aardvark?.
-2025-10-17 11:36:46 - INFO     - nat.agent.base:221 - 
+2025-10-17 11:36:46 - INFO     - nat.plugins.langchain.agent.base:221 - 
 ------------------------------
 [AGENT]
 Calling tools: retrieve_tool
@@ -296,7 +296,7 @@ Tool's input: {'query': 'What are the known subspecies of Aardvark?'}
 Tool's response: 
 {"results": [{"page_content": "Subspecies[edit]\nThe aardvark has seventeen poorly defined subspecies listed:[4]\n\nOrycteropus afer afer (Southern aardvark)\nO. a. adametzi  Grote, 1921 (Western aardvark)\nO. a. aethiopicus  Sundevall, 1843\nO. a. angolensis  Zukowsky & Haltenorth, 1957\nO. a. erikssoni  L\u00f6nnberg, 1906\nO. a. faradjius  Hatt, 1932\nO. a. haussanus  Matschie, 1900\nO. a. kordofanicus  Rothschild, 1927\nO. a. lademanni  Grote, 1911\nO. a. leptodon  Hirst, 1906\nO. a. matschiei  Grote, 1921\nO. a. observandus Grote, 1921\nO. a. ruvanensis Grote, 1921\nO. a. senegalensis Lesson, 1840\nO. a. somalicus Lydekker, 1908\nO. a. wardi Lydekker, 1908\nO. a. wertheri  Matschie, 1898 (Eastern aardvark)\nThe 1911 Encyclop\u00e6dia Britannica also mentions O.\u00a0a. capensis or Cape ant-bear from South Africa.[21]\n\nDescription[edit]\nSouthern aardvark (O.\u00a0a. afer) front and rear foot print\nStrong forelimb of aardvark\nThe aardvark is vaguely pig-like in appearance. Its ...(rest of response truncated)
 ------------------------------
-2025-10-17 11:36:51 - INFO     - nat.agent.react_agent.agent:193 - 
+2025-10-17 11:36:51 - INFO     - nat.plugins.langchain.agent.react_agent.agent:193 - 
 ------------------------------
 [AGENT]
 Agent input: List all known subspecies of Aardvark

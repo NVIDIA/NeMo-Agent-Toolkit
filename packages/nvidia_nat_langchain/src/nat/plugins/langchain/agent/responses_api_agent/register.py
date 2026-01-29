@@ -18,7 +18,6 @@ import typing
 
 from pydantic import Field
 
-from nat.agent.base import AGENT_LOG_PREFIX
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
@@ -27,6 +26,7 @@ from nat.data_models.component_ref import FunctionRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.openai_mcp import OpenAIMCPSchemaTool
+from nat.plugins.langchain.agent.base import AGENT_LOG_PREFIX
 
 logger = logging.getLogger(__name__)
 
@@ -63,8 +63,8 @@ async def responses_api_agent_workflow(config: ResponsesAPIAgentWorkflowConfig, 
     from langchain_core.runnables import Runnable
     from langchain_openai import ChatOpenAI
 
-    from nat.agent.tool_calling_agent.agent import ToolCallAgentGraph
-    from nat.agent.tool_calling_agent.agent import ToolCallAgentGraphState
+    from nat.plugins.langchain.agent.tool_calling_agent.agent import ToolCallAgentGraph
+    from nat.plugins.langchain.agent.tool_calling_agent.agent import ToolCallAgentGraphState
 
     llm: ChatOpenAI = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     assert llm.use_responses_api, "Responses API Agent requires an LLM that supports the Responses API."

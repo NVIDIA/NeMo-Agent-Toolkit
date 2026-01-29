@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Testing Guidelines for NeMo Agent Toolkit
 
-Follow these rules when writing, creating, or modifying tests for NeMo Agent toolkit.
+Follow these rules when writing, creating, or modifying tests for NeMo Agent Toolkit.
 
 ## Referenced Documentation
 
@@ -17,7 +17,7 @@ Follow these rules when writing, creating, or modifying tests for NeMo Agent too
 
 ## General Testing Rules
 
-All tests in NeMo Agent toolkit use pytest. See the general coding guidelines for basic testing requirements.
+All tests in NeMo Agent Toolkit use pytest. See the general coding guidelines for basic testing requirements.
 
 ### Unit Tests
 

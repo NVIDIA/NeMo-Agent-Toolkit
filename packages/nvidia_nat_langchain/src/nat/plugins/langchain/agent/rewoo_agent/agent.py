@@ -35,13 +35,13 @@ from langgraph.runtime import DEFAULT_RUNTIME
 from pydantic import BaseModel
 from pydantic import Field
 
-from nat.agent.base import AGENT_CALL_LOG_MESSAGE
-from nat.agent.base import AGENT_LOG_PREFIX
-from nat.agent.base import INPUT_SCHEMA_MESSAGE
-from nat.agent.base import NO_INPUT_ERROR_MESSAGE
-from nat.agent.base import TOOL_NOT_FOUND_ERROR_MESSAGE
-from nat.agent.base import AgentDecision
-from nat.agent.base import BaseAgent
+from nat.plugins.langchain.agent.base import AGENT_CALL_LOG_MESSAGE
+from nat.plugins.langchain.agent.base import AGENT_LOG_PREFIX
+from nat.plugins.langchain.agent.base import INPUT_SCHEMA_MESSAGE
+from nat.plugins.langchain.agent.base import NO_INPUT_ERROR_MESSAGE
+from nat.plugins.langchain.agent.base import TOOL_NOT_FOUND_ERROR_MESSAGE
+from nat.plugins.langchain.agent.base import AgentDecision
+from nat.plugins.langchain.agent.base import BaseAgent
 
 logger = logging.getLogger(__name__)
 

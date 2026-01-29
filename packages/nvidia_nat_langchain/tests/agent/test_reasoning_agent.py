@@ -20,17 +20,18 @@ from unittest.mock import MagicMock
 import pytest
 import pytest_asyncio
 
-#
-# The "build_reasoning_function" to be tested:
-#
-from nat.agent.reasoning_agent.reasoning_agent import ReasoningFunctionConfig
-from nat.agent.reasoning_agent.reasoning_agent import build_reasoning_function
 from nat.builder.builder import Builder
 from nat.builder.function import Function
 from nat.builder.function import LambdaFunction
 from nat.builder.function_info import FunctionInfo
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.function import FunctionBaseConfig
+
+#
+# The "build_reasoning_function" to be tested:
+#
+from nat.plugins.langchain.agent.reasoning_agent.reasoning_agent import ReasoningFunctionConfig
+from nat.plugins.langchain.agent.reasoning_agent.reasoning_agent import build_reasoning_function
 
 #############################
 # EXAMPLE MOCK CLASSES

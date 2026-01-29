@@ -16,7 +16,7 @@ limitations under the License.
 <!-- path-check-skip-file -->
 
 > [!NOTE]
-> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
+> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent Toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
 
 # React Benchmark Agent - Implementation Guide
 
@@ -56,7 +56,7 @@ This document details the source code implementation of the React Benchmark Agen
 
 1. **Python 3.11, 3.12, or 3.13** installed
 2. **Docker**
-3. **NeMo Agent toolkit** repository cloned and installed
+3. **NeMo Agent Toolkit** repository cloned and installed
 4. **Dynamo Backend** running on `localhost:8099`
    - See [Dynamo Setup Guide](../../../../../external/dynamo/README.md) for installation
 5. **Hugging Face account** with access to Llama-3.3-70B-Instruct model

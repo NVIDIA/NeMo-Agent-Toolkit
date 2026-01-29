@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES.
 # All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -18,13 +18,16 @@
 build-backend = "setuptools.build_meta"
 requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 
+
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["nat.*"]
 
+
 [tool.setuptools_scm]
 git_describe_command = "git describe --long --first-parent"
 root = "../.."
+
 
 [project]
 name = "nvidia-nat-core"
@@ -72,7 +75,7 @@ dependencies = [
   "urllib3~=2.6.3",
 ]
 requires-python = ">=3.11,<3.14"
-description = "Core library for NVIDIA NeMo Agent toolkit"
+description = "Core library for NVIDIA NeMo Agent Toolkit"
 readme = "src/nat/meta/pypi.md"
 license = { text = "Apache-2.0" }
 keywords = ["ai", "rag", "agents"]
@@ -103,6 +106,10 @@ gunicorn = [
 ]
 huggingface = [
   "transformers[torch,accelerate]~=4.57",
+]
+pii-defense = [
+  "presidio-analyzer",
+  "presidio-anonymizer"
 ]
 profiling = [
   "matplotlib~=3.9",

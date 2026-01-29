@@ -17,11 +17,11 @@ limitations under the License.
 
 # Quick Start with NVIDIA NeMo Agent Toolkit
 
-This guide will walk you through [running](../run-workflows/about-running-workflows.md) and [evaluating](../improve-workflows/evaluate.md) existing [workflows](../build-workflows/about-building-workflows.md). If you have not yet installed the NeMo Agent toolkit, follow the instructions in the [Install Guide](./installation.md) first.
+This guide will walk you through [running](../run-workflows/about-running-workflows.md) and [evaluating](../improve-workflows/evaluate.md) existing [workflows](../build-workflows/about-building-workflows.md). If you have not yet installed the NeMo Agent Toolkit, follow the instructions in the [Install Guide](./installation.md) first.
 
 ## Obtaining API Keys
 
-Depending on which workflows you are running, you may need to obtain API keys from the respective services. Most NeMo Agent toolkit workflows require an NVIDIA API key defined with the `NVIDIA_API_KEY` environment variable. An API key can be obtained by creating an account on [`build.nvidia.com`](https://build.nvidia.com/).
+Depending on which workflows you are running, you may need to obtain API keys from the respective services. Most NeMo Agent Toolkit workflows require an NVIDIA API key defined with the `NVIDIA_API_KEY` environment variable. An API key can be obtained by creating an account on [`build.nvidia.com`](https://build.nvidia.com/).
 
 ### Optional OpenAI API Key
 
@@ -33,7 +33,7 @@ export OPENAI_API_KEY="<YOUR_OPENAI_API_KEY>"
 
 ## Running Example Workflows
 
-Before running any of the NeMo Agent toolkit examples, set your NVIDIA API key as an
+Before running any of the NeMo Agent Toolkit examples, set your NVIDIA API key as an
 environment variable to access NVIDIA AI services.
 
 ```bash
@@ -68,11 +68,11 @@ Replace `<YOUR_API_KEY>` with your actual NVIDIA API key.
 
 ## NeMo Agent Toolkit Packages
 
-Once a NeMo Agent toolkit workflow is ready for deployment to production, the deployed workflow will need to declare a dependency on the `nvidia-nat` package, along with the needed plugins. When declaring a dependency on NeMo Agent toolkit, we recommend using the first two digits of the version number. For example if the version is `1.0.0`, then the dependency would be `1.0`.
+Once a NeMo Agent Toolkit workflow is ready for deployment to production, the deployed workflow will need to declare a dependency on the `nvidia-nat` package, along with the needed plugins. When declaring a dependency on NeMo Agent Toolkit, we recommend using the first two digits of the version number. For example if the version is `1.0.0`, then the dependency would be `1.0`.
 
 For more information on the available plugins, refer to [Framework Integrations](./installation.md#framework-integrations).
 
-Example of a dependency for NeMo Agent toolkit using the LangChain/LangGraph plugin for projects using a `pyproject.toml` file:
+Example of a dependency for NeMo Agent Toolkit using the LangChain/LangGraph plugin for projects using a `pyproject.toml` file:
 
 ```toml
 dependencies = [
@@ -89,5 +89,5 @@ nvidia-nat[langchain]==1.0.*
 
 ## Next Steps
 
-- Review the NeMo Agent toolkit [tutorials](./tutorials/index.md) for detailed guidance on using the toolkit.
-- Explore the examples in the `examples` directory to learn how to build custom workflows and [tools](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) with NeMo Agent toolkit.
+- Review the NeMo Agent Toolkit [tutorials](./tutorials/index.md) for detailed guidance on using the toolkit.
+- Explore the examples in the `examples` directory to learn how to build custom workflows and [tools](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) with NeMo Agent Toolkit.

@@ -16,12 +16,12 @@ limitations under the License.
 -->
 
 # Customize a Workflow
-This tutorial demonstrates how to customize a workflow with NeMo Agent toolkit.
+This tutorial demonstrates how to customize a workflow with NeMo Agent Toolkit.
 
 ## Prerequisites
 
 1. Set up your environment by following the instructions in the [Install From Source](../installation.md#install-from-source) section of the install guide.
-1. Install NVIDIA NeMo Agent toolkit and the Simple example workflow.
+1. Install NVIDIA NeMo Agent Toolkit and the Simple example workflow.
     ```bash
     uv pip install -e .
     uv pip install -e examples/getting_started/simple_web_query

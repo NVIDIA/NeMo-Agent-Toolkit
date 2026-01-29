@@ -75,7 +75,7 @@ def set_framework_profiler_handler(
                 try:
                     # Always set a fresh handler in the current context so callbacks
                     # route to the active run. Only register the hook once globally.
-                    from nat.plugins.langchain.langchain_callback_handler import LangchainProfilerHandler
+                    from nat.plugins.langchain.callback_handler import LangchainProfilerHandler
 
                     handler = LangchainProfilerHandler()
                     callback_handler_var.set(handler)
@@ -96,7 +96,7 @@ def set_framework_profiler_handler(
                     from llama_index.core import Settings
                     from llama_index.core.callbacks import CallbackManager
 
-                    from nat.plugins.llama_index.llama_index_callback_handler import LlamaIndexProfilerHandler
+                    from nat.plugins.llama_index.callback_handler import LlamaIndexProfilerHandler
 
                     handler = LlamaIndexProfilerHandler()
                     Settings.callback_manager = CallbackManager([handler])
@@ -109,7 +109,7 @@ def set_framework_profiler_handler(
 
             if LLMFrameworkEnum.CREWAI in frameworks and not _library_instrumented["crewai"]:
                 try:
-                    from nat.plugins.crewai.crewai_callback_handler import CrewAIProfilerHandler
+                    from nat.plugins.crewai.callback_handler import CrewAIProfilerHandler
                     handler = CrewAIProfilerHandler()
                     handler.instrument()
                     _library_instrumented["crewai"] = True
@@ -122,9 +122,7 @@ def set_framework_profiler_handler(
 
             if LLMFrameworkEnum.SEMANTIC_KERNEL in frameworks and not _library_instrumented["semantic_kernel"]:
                 try:
-                    # This formatting is different than other plugins because ruff import sort conflicts with yapf
-                    from nat.plugins.semantic_kernel import semantic_kernel_callback_handler
-                    SemanticKernelProfilerHandler = semantic_kernel_callback_handler.SemanticKernelProfilerHandler
+                    from nat.plugins.semantic_kernel.callback_handler import SemanticKernelProfilerHandler
                     handler = SemanticKernelProfilerHandler(workflow_llms=workflow_llms)
                     handler.instrument()
                     _library_instrumented["semantic_kernel"] = True
@@ -137,7 +135,7 @@ def set_framework_profiler_handler(
 
             if LLMFrameworkEnum.AGNO in frameworks and not _library_instrumented["agno"]:
                 try:
-                    from nat.plugins.agno.agno_callback_handler import AgnoProfilerHandler
+                    from nat.plugins.agno.callback_handler import AgnoProfilerHandler
                     handler = AgnoProfilerHandler()
                     handler.instrument()
                     _library_instrumented["agno"] = True
@@ -150,7 +148,7 @@ def set_framework_profiler_handler(
 
             if LLMFrameworkEnum.ADK in frameworks and not _library_instrumented["adk"]:
                 try:
-                    from nat.plugins.adk.adk_callback_handler import ADKProfilerHandler
+                    from nat.plugins.adk.callback_handler import ADKProfilerHandler
                     handler = ADKProfilerHandler()
                     handler.instrument()
                     _library_instrumented["adk"] = True
@@ -163,7 +161,7 @@ def set_framework_profiler_handler(
 
             if LLMFrameworkEnum.STRANDS in frameworks and not _library_instrumented["strands"]:
                 try:
-                    from nat.plugins.strands.strands_callback_handler import StrandsProfilerHandler
+                    from nat.plugins.strands.callback_handler import StrandsProfilerHandler
                     handler = StrandsProfilerHandler()
                     handler.instrument()
                     _library_instrumented["strands"] = True
