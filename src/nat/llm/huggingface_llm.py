@@ -145,8 +145,7 @@ async def huggingface_provider(
     except ImportError:
         raise ValueError("HuggingFace dependencies not installed. \n"
                          "Install with:\n"
-                         "  `pip install nvidia-nat[huggingface]` (package) or\n"
-                         "  `uv pip install -e '.[huggingface]'` (source)\n")
+                         "  `pip install \"transformers[torch,accelerate]~=4.57\"")
 
     cache = ModelCache()
 
