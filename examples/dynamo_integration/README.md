@@ -160,7 +160,7 @@ nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs
 
 # Compare performance across all jobs
 python scripts/plot_throughput_vs_tsq_per_request.py \
-  ./react_benchmark_agent/outputs/dynamo_evals/banking_data_eval_full_test/jobs/
+  <path_to_eval_output_jobs_directory>
 ```
 
 This script will generate comparative visualizations showing throughput vs. Tool Selection Quality (TSQ) metrics across all jobs in the specified directory, allowing you to analyze the performance differences between different agent configurations.
