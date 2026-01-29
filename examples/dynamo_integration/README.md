@@ -87,6 +87,15 @@ These experiments are designed to run against a Dynamo backend for LLM inference
 
 See the [Dynamo Setup Guide](../../external/dynamo/README.md) for detailed hardware requirements and configuration options.
 
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| **[Complete Evaluation Guide](react_benchmark_agent/README.md)** | Complete walkthrough: downloading data, running evaluations, analyzing results, self-evaluation loop |
+| **[Performance Comparison](#performance-comparison)** | Guide for comparing performance across multiple evaluation runs and Dynamo backend configurations |
+| **[Dynamo Setup](../../external/dynamo/README.md)** | Setting up Dynamo backend, startup scripts, Thompson Sampling router, dynamic prefix headers |
+| **[ARCHITECTURE.md](ARCHITECTURE.md)** | System architecture diagrams, component interactions, data flow |
+
 ## Quick Start
 
 > [!NOTE]
@@ -140,6 +149,27 @@ python scripts/plot_throughput_vs_tsq_per_request.py \
 ```
 <!-- path-check-skip-end -->
 
+## Performance Comparison
+
+To compare the performance of different configurations or runs, execute multiple evaluation jobs with different settings and then use the comparison script to analyze the results:
+
+```bash
+# Run multiple jobs with different configurations for comparison
+nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs/eval_config_no_rethinking_full_test.yml
+nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs/eval_config_rethinking_full_test.yml
+
+# Compare performance across all jobs
+python scripts/plot_throughput_vs_tsq_per_request.py \
+  ./react_benchmark_agent/outputs/dynamo_evals/banking_data_eval_full_test/jobs/
+```
+
+This script will generate comparative visualizations showing throughput vs. Tool Selection Quality (TSQ) metrics across all jobs in the specified directory, allowing you to analyze the performance differences between different agent configurations.
+
+> [!NOTE]
+> **Multi-Backend Comparisons**: Evaluation runs can be performed across multiple Dynamo backend configurations (e.g., different routing strategies, tensor parallelism settings, or hardware configurations) and compared using the same script. Simply run evaluations against different Dynamo deployments and place the results in the same jobs directory for side-by-side analysis.
+
+
+
 > [!WARNING]
 > The first load of model weights to `SGLang` workers can take significant time.
 > [!NOTE]
@@ -182,14 +212,6 @@ Use these scripts to analyze and visualize your evaluation results:
 | `run_concurrency_benchmark.sh` | `bash scripts/run_concurrency_benchmark.sh` | Interactive prompts | Runs evaluations at multiple concurrency levels. Outputs `benchmark_results.csv`, `benchmark_report.md`, and `analysis_*.txt` |
 | `create_test_subset.py` | `python scripts/create_test_subset.py --num-scenarios 3` | `--input-file PATH`, `--output-file PATH` | Creates smaller dataset subset for quick end-to-end validation testing |
 <!-- path-check-skip-end -->
-
-## Documentation
-
-| Document | Description |
-|----------|-------------|
-| **[Complete Evaluation Guide](react_benchmark_agent/README.md)** | Complete walkthrough: downloading data, running evaluations, analyzing results, self-evaluation loop |
-| **[Dynamo Setup](../../external/dynamo/README.md)** | Setting up Dynamo backend, startup scripts, Thompson Sampling router, dynamic prefix headers |
-| **[ARCHITECTURE.md](ARCHITECTURE.md)** | System architecture diagrams, component interactions, data flow |
 
 ## Project Structure
 
