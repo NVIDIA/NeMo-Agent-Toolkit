@@ -75,6 +75,7 @@ Currently this agent supports evaluation exclusively for the [Galileo Agent Lead
     The output should show `True`. If it shows `False` with error 802, ensure `nvidia-fabricmanager` is installed, running, and matches your driver version.
 
 5. **Hugging Face account** with access to Llama-3.3-70B-Instruct model (requires approval from Meta)
+6. **Model weights downloaded** - Follow the model download instructions in the [Dynamo Setup Guide](../../../external/dynamo/README.md#download-model-weights-can-skip-if-already-done)
 
 ### Hardware Requirements (Dynamo Backend)
 

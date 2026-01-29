@@ -168,8 +168,10 @@ The HuggingFace LLM provider is defined by the {py:class}`~nat.llm.huggingface_l
 * `trust_remote_code` - Whether to trust remote code when loading the model (default: `false`)
 
 :::{note}
-HuggingFace is a built-in NeMo Agent Toolkit LLM provider, but requires `nvidia-nat[huggingface]` for it to be used.
-In a source installation, `uv pip install -e '.[huggingface]'` can be specified to install the required dependencies.
+HuggingFace is a built-in NeMo Agent Toolkit LLM provider, but requires extra dependencies to run. They can be installed with:
+```
+pip install "transformers[torch,accelerate]~=4.57"
+```
 :::
 
 ### NVIDIA Dynamo (experimental)
