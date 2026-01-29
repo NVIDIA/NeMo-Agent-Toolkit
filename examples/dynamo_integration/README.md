@@ -92,7 +92,6 @@ See the [Dynamo Setup Guide](../../external/dynamo/README.md) for detailed hardw
 | Document | Description |
 |----------|-------------|
 | **[Complete Evaluation Guide](react_benchmark_agent/README.md)** | Complete walkthrough: downloading data, running evaluations, analyzing results, self-evaluation loop |
-| **[Performance Comparison](#performance-comparison)** | Guide for comparing performance across multiple evaluation runs and Dynamo backend configurations |
 | **[Dynamo Setup](../../external/dynamo/README.md)** | Setting up Dynamo backend, startup scripts, Thompson Sampling router, dynamic prefix headers |
 | **[ARCHITECTURE.md](ARCHITECTURE.md)** | System architecture diagrams, component interactions, data flow |
 
