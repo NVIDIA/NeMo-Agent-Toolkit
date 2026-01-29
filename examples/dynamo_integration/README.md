@@ -72,6 +72,7 @@ Most of these examples could be tested using a managed LLM service, like an NVID
     The output should show `True`. If it shows `False` with error 802, ensure `nvidia-fabricmanager` is installed, running, and matches your driver version.
 
 5. **Hugging Face account** with access to Llama-3.3-70B-Instruct model (requires approval from Meta)
+6. **Model weights downloaded** - Follow the model download instructions in the [Dynamo Setup Guide](../../external/dynamo/README.md#download-model-weights-can-skip-if-already-done)
 
 ### Hardware Requirements (Dynamo Backend)
 
@@ -166,11 +167,10 @@ This script will generate comparative visualizations showing throughput vs. Tool
 
 > [!NOTE]
 > **Multi-Backend Comparisons**: Evaluation runs can be performed across multiple Dynamo backend configurations (e.g., different routing strategies, tensor parallelism settings, or hardware configurations) and compared using the same script. Simply run evaluations against different Dynamo deployments and place the results in the same jobs directory for side-by-side analysis.
-
-> [!WARNING]
-> The first load of model weights to `SGLang` workers can take significant time.
 > [!NOTE]
 > To customize GPU workers and tensor parallelism, edit the configuration variables at the top of [start_dynamo_unified.sh](../../external/dynamo/start_dynamo_unified.sh).
+> [!WARNING]
+> The first load of model weights to `SGLang` workers can take significant time.
 
 After running this end-to-end evaluation, you will have confirmed functional model services on Dynamo, dataset access, and agent execution.
 
