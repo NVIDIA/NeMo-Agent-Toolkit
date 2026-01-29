@@ -389,7 +389,7 @@ Results can vary across runs because LLM outputs are non-deterministic. Running 
 Install HuggingFace support for local guard models:
 
 ```bash
-uv pip install -e '.[huggingface]'
+uv pip install 'transformers[torch,accelerate]~=4.57'
 ```
 
 For PII Defense, install additional dependencies:
