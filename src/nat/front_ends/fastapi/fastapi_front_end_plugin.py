@@ -198,16 +198,23 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
                     formatter["fmt"] = f"%(asctime)s - {formatter['fmt']}"
                     formatter["datefmt"] = LOG_DATE_FORMAT
 
-                uvicorn.run("nat.front_ends.fastapi.main:get_app",
-                            host=self.front_end_config.host,
-                            port=self.front_end_config.port,
-                            workers=self.front_end_config.workers,
-                            reload=self.front_end_config.reload,
-                            factory=True,
-                            reload_excludes=reload_excludes,
-                            loop=event_loop_policy,
-                            log_level=log_level,
-                            log_config=log_config)
+                config = uvicorn.Config(
+                    "nat.front_ends.fastapi.main:get_app",
+                    host=self.front_end_config.host,
+                    port=self.front_end_config.port,
+                    workers=self.front_end_config.workers,
+                    reload=self.front_end_config.reload,
+                    factory=True,
+                    reload_excludes=reload_excludes,
+                    loop=event_loop_policy,
+                    log_level=log_level,
+                    log_config=log_config,
+                )
+                server = uvicorn.Server(config)
+                try:
+                    await server.serve()
+                except KeyboardInterrupt:
+                    logger.info("Received interrupt, shutting down FastAPI server.")
 
             else:
                 app = get_app()
