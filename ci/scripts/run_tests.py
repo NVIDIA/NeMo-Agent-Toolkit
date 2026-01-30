@@ -176,8 +176,8 @@ def main(junit_xml: str | None, cov_xml: str | None, run_slow: bool, run_integra
         futs = [
             ex.submit(run_one,
                       p,
-                      enable_coverage=junit_xml is not None,
-                      enable_junit=cov_xml is not None,
+                      enable_coverage=cov_xml is not None,
+                      enable_junit=junit_xml is not None,
                       run_slow=run_slow,
                       run_integration=run_integration) for p in projects
         ]
@@ -188,15 +188,15 @@ def main(junit_xml: str | None, cov_xml: str | None, run_slow: bool, run_integra
         finally:
             ex = None
 
-    if junit_xml is not None:
+    if cov_xml is not None:
         sh(["uv", "tool", "install", "coverage[toml]"])
         sh(["coverage", "combine", "--keep", str(COV_DIR)])
-        sh(["coverage", "xml", "-o", str(junit_xml)])
+        sh(["coverage", "xml", "-o", str(cov_xml)])
         sh(["coverage", "report"])
 
-    if cov_xml is not None:
+    if junit_xml is not None:
         sh(["uv", "tool", "install", "junitparser"])
-        sh(["junitparser", "merge", "--glob", str(JUNIT_DIR / "*.xml"), str(cov_xml)])
+        sh(["junitparser", "merge", "--glob", str(JUNIT_DIR / "*.xml"), str(junit_xml)])
 
     return 1 if failures else 0
 

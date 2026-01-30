@@ -28,7 +28,7 @@ rapids-logger "Git Version: $(get_git_tag)"
 
 rapids-logger "Running tests with Python version $(python --version) and pytest version $(pytest --version) on $(arch)"
 set +e
-``
+
 REPORT_IDENT_SLUG="$(arch)-py${PYTHON_VERSION}"
 python ${GITHUB_SCRIPT_DIR}/../run_tests.py \
   --run_slow \
