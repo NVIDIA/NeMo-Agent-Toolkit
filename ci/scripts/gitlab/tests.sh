@@ -42,7 +42,7 @@ if [ "${CI_CRON_NIGHTLY}" == "1" ]; then
        COV_REPORT_NAME="${CI_PROJECT_DIR}/pytest_coverage_report_${DATE_TAG}.xml"
 fi
 
-${CI_PROJECT_DIR}/ci/scripts/run_tests.py ${PYTEST_ARGS} --junit_xml=${REPORT_NAME} --cov_xml=${COV_REPORT_NAME}
+python ${GITLAB_SCRIPT_DIR}/../run_tests.py ${PYTEST_ARGS} --junit_xml=${REPORT_NAME} --cov_xml=${COV_REPORT_NAME}
 
 PYTEST_RESULTS=$?
 

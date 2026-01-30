@@ -28,9 +28,9 @@ rapids-logger "Git Version: $(get_git_tag)"
 
 rapids-logger "Running tests with Python version $(python --version) and pytest version $(pytest --version) on $(arch)"
 set +e
-
+``
 REPORT_IDENT_SLUG="$(arch)-py${PYTHON_VERSION}"
-python ${CI_PROJECT_DIR}/ci/scripts/run_tests.py \
+python ${GITHUB_SCRIPT_DIR}/../run_tests.py \
   --run_slow \
   --junit_xml=${REPORTS_DIR}/report-${REPORT_IDENT_SLUG}_pytest.xml \
   --cov_xml=${REPORTS_DIR}/report-${REPORT_IDENT_SLUG}_pytest_coverage.xml

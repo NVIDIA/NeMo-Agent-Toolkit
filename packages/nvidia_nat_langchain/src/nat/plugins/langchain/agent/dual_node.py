@@ -23,8 +23,8 @@ from langgraph.graph import StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel
 
-from .base import AgentDecision
-from .base import BaseAgent
+from nat.plugins.langchain.agent.base import AgentDecision
+from nat.plugins.langchain.agent.base import BaseAgent
 
 log = logging.getLogger(__name__)
 

@@ -21,8 +21,8 @@ requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependenc
 git_describe_command = "git describe --long --first-parent"
 root = "../.."
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.setuptools]
+packages = []
 
 [project]
 name = "nat_documentation_guides"
