@@ -261,10 +261,12 @@ Policy gradient methods update the model by:
 2. Checking the probability it assigned to that generation
 3. Increasing/decreasing that probability based on reward
 
+:::{note}
 Without logprobs, we can't compute this gradient. This is why:
 - The harness requires logprobs for assistant messages
 - Your LLM inference endpoint must return logprobs
-- Trajectories without logprobs are filtered out
+- **Trajectories without logprobs are filtered out during training**
+:::
 
 ### Enabling Log Probabilities
 
