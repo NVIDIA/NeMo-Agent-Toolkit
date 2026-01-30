@@ -98,8 +98,6 @@ async def test_generate_and_openai_single(fn_use_openai_api: bool):
 @pytest.mark.parametrize("fn_use_openai_api", [True, False])
 async def test_generate_and_openai_stream(fn_use_openai_api: bool):
 
-    if (fn_use_openai_api):
-        values = ChatRequest(messages=[Message(content="Hello", role="user")]).model_dump()
     values = ["a", "b", "c", "d"]
 
     front_end_config = FastApiFrontEndConfig()
@@ -132,8 +130,7 @@ async def test_generate_and_openai_stream(fn_use_openai_api: bool):
                 assert response == values
 
         else:
-            async with aconnect_sse(client, "POST", f"{workflow_path}/stream",
-                                    json={"message": values}) as event_source:
+            async with aconnect_sse(client, "POST", f"{workflow_path}/stream", json=values) as event_source:
                 async for sse in event_source.aiter_sse():
                     response.append(sse.json()["value"])
 
