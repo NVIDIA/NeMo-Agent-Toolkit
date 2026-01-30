@@ -3,7 +3,6 @@
 
 # Dependency changes
 uv.lock @nvidia/nat-dep-approvers
-/pyproject.toml @nvidia/nat-dep-approvers
 
 # Dataset changes
 examples/**/data/**/* @nvidia/nat-dep-approvers

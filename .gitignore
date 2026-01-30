@@ -1,8 +1,5 @@
 ###### Place new entries directly below this line! ######
 
-# intentionally add root-level uv.lock so changes are not tracked by default.
-/uv.lock
-
 # auto-generated chainlit stuff
 chainlit.md
 .chainlit
