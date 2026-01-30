@@ -33,7 +33,7 @@ classifiers = ["Programming Language :: Python"]
 
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
-  "nvidia-nat[agno,litellm,test] == {version}",
+  "nvidia-nat[agno,test] == {version}",
   "openai~=1.106",
 ]
 
