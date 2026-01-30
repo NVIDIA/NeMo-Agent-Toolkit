@@ -84,7 +84,7 @@ most = [
   "nvidia-nat-adk == {version}",
   "nvidia-nat-agno == {version}",
   "nvidia-nat-autogen == {version}",
-  "nvidia-nat-core == {version}",
+  "nvidia-nat-core[async_endpoints,gunicorn,pii-defense,profiling] == {version}",
   "nvidia-nat-crewai == {version}",
   "nvidia-nat-data-flywheel == {version}",
   "nvidia-nat-langchain == {version}",
