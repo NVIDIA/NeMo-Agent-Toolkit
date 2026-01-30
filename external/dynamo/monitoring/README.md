@@ -1,6 +1,6 @@
 # Dynamo Monitoring Stack
 
-This directory contains a Prometheus + Grafana monitoring setup for the Dynamo LLM inference stack with Thompson Sampling router.
+This directory contains a Prometheus + Grafana monitoring setup for the Dynamo LLM inference stack with Thompson Sampling router. Metrics are collected at **2-second resolution** directly from ai-dynamo's Prometheus API for per-request granularity.
 
 ## Supported Backends
 
@@ -15,31 +15,137 @@ The Grafana dashboard includes a **Backend** dropdown selector to switch between
 
 ## Quick Start
 
+The monitoring stack starts **automatically** when you run the Dynamo startup script:
+
 ```bash
-# Start the monitoring stack
+# Start Dynamo (monitoring starts automatically)
+bash start_dynamo_optimized_thompson_hints_vllm.sh
+
+# Or start monitoring manually if needed
 cd monitoring
 docker compose up -d
-
-# Access the dashboards
-# Prometheus: http://localhost:9090
-# Grafana: http://localhost:3000 (admin/admin)
-
-# In Grafana, use the "Backend" dropdown to select sglang or vllm
 ```
+
+**Access the dashboards:**
+- **Grafana**: http://localhost:3000 (no login required)
+- **Prometheus**: http://localhost:9090
+
+**Direct dashboard link:**
+```
+http://localhost:3000/d/dynamo-overview/dynamo-llm-overview
+```
+
+In Grafana, use the **Backend** dropdown to select `sglang` or `vllm` based on your deployment.
 
 ## Prerequisites
 
 - Docker and Docker Compose
 - Dynamo stack running (see `../start_dynamo_optimized_thompson_hints_sglang.sh` or `../start_dynamo_optimized_thompson_hints_vllm.sh`)
 
+## Accessing Grafana Dashboard
+
+### Local Access
+
+If running on your local machine:
+
+1. Open your browser
+2. Navigate to: **http://localhost:3000/d/dynamo-overview/dynamo-llm-overview**
+3. No login required (anonymous access enabled)
+4. Use the **Backend** dropdown (top left) to select `sglang` or `vllm`
+5. Use the **time filter** (top right) to adjust the time range
+
+### Remote Access via SSH Tunnel
+
+If Dynamo and monitoring are running on a remote server (for example, a GPU cluster), use SSH port forwarding:
+
+**Step 1: Create SSH tunnel**
+```bash
+# Replace <USERNAME> and <REMOTE_HOST> with your credentials
+ssh -L 3000:localhost:3000 <USERNAME>@<REMOTE_HOST>
+
+# Example with VPN-accessible server:
+ssh -L 3000:localhost:3000 myuser@10.57.201.5
+```
+
+**Step 2: Open browser**
+Navigate to: **http://localhost:3000/d/dynamo-overview/dynamo-llm-overview**
+
+**Step 3: Set time filter**
+- Click the time picker in the top-right corner of Grafana
+- Select a preset range (Last 1 hour, Last 6 hours, Last 24 hours)
+- Or set a custom range to view historical data from previous benchmark runs
+
+> **Tip**: Data persists across restarts. Zoom out to the last 12-24 hours to see multiple benchmark intervals.
+
+### Viewing Historical Data
+
+Prometheus stores metrics data persistently. To view data from previous runs:
+
+1. Open the Grafana dashboard
+2. Use the time picker (top right) to expand the time range
+3. Look for intervals of activity separated by gaps
+4. Compare KV Efficiency scores across different runs
+
+**Example observation**: With a tool-calling agent (20 tools) on 4xH100 with 2 workers, you might see:
+- Worker 18081: 25.4% average KV Efficiency
+- Worker 18082: 16.4% average KV Efficiency
+
+### Sharing Dashboard Access
+
+Anyone with SSH access to the remote server can view the same data:
+
+1. Share the SSH tunnel command with team members
+2. They can connect and view real-time or historical metrics
+3. Useful for collaborative debugging and performance analysis
+
 ## Architecture
+
+The monitoring stack collects metrics from all Dynamo components. The architecture uses **model name isolation** to ensure all requests flow through the Thompson Sampling router.
+
+### Request Flow (Model Name Isolation)
+
+```
+Client Request (with nvext.annotations)
+      ↓
+┌─────────────────────────────────────────────────────────────────────────┐
+│  Default Dynamo Frontend (:8000)                                        │
+│    - Tokenization + nvext parsing                                       │
+│    - ETCD ModelWatcher (namespace=dynamo)                               │
+│    - Routes to processor ONLY (workers use internal model name)        │
+└─────────────────────────────────────────────────────────────────────────┘
+      ↓ discovers processor (model: llama-3.3-70b)
+┌─────────────────────────────────────────────────────────────────────────┐
+│  Custom Processor (:18091/metrics)                                      │
+│    - Extracts hints: prefix_id, total_requests, osl, iat               │
+│    - Queries Thompson Sampling router                                   │
+│    - Registered at: dynamo.backend.generate (namespace=dynamo)         │
+└─────────────────────────────────────────────────────────────────────────┘
+      ↓ queries router
+┌─────────────────────────────────────────────────────────────────────────┐
+│  Custom Router (:18090/metrics)                                         │
+│    - Thompson Sampling + KV overlap scoring                            │
+│    - Returns optimal worker_id                                          │
+│    - Registered at: dynamo.router.{find_worker,feedback}               │
+└─────────────────────────────────────────────────────────────────────────┘
+      ↓ returns worker_id
+┌─────────────────────────────────────────────────────────────────────────┐
+│  vLLM/SGLang Workers (:18081, :18082, ... /metrics)                    │
+│    - Registered at: workers.worker.generate (namespace=workers)        │
+│    - Model: llama-3.3-70b-internal (hidden from frontend)              │
+│    - Each worker uses TP_SIZE GPUs                                      │
+└─────────────────────────────────────────────────────────────────────────┘
+      ↓
+Response + Feedback to Router
+```
+
+### Metrics Collection
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                              Dynamo Stack                                    │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │  Frontend   │  │   Worker    │  │   Router    │  │  Processor  │         │
-│  │  :8000      │  │   :8081     │  │   :8082     │  │   :8083     │         │
+│  │  Frontend   │  │  Workers    │  │   Router    │  │  Processor  │         │
+│  │  :8000      │  │ :18081-180xx│  │   :18090    │  │   :18091    │         │
 │  │  /metrics   │  │  /metrics   │  │  /metrics   │  │  /metrics   │         │
 │  │  (latency)  │  │  (KV cache) │  │  (routing)  │  │  (KVE)      │         │
 │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘         │
@@ -50,32 +156,56 @@ docker compose up -d
 │                           Monitoring Stack                                   │
 │  ┌────────────────────────────────────────────────────────────────────────┐ │
 │  │                          Prometheus :9090                              │ │
-│  │    Scrapes all 4 endpoints every 5 seconds:                           │ │
-│  │    - Frontend (:8000) - latency, throughput, tokens                   │ │
-│  │    - Worker (:8081)   - KV cache, NATS, internal stats                │ │
-│  │    - Router (:8082)   - Thompson Sampling routing metrics             │ │
-│  │    - Processor (:8083) - Thompson Sampling KVE metrics                │ │
+│  │    Scrapes all endpoints every 2 seconds for per-request granularity: │ │
+│  │    - Frontend (:8000)        - latency, throughput, tokens            │ │
+│  │    - Workers (:18081-180xx)  - KV cache, backend stats (per-worker)   │ │
+│  │    - Router (:18090)         - Thompson Sampling routing metrics      │ │
+│  │    - Processor (:18091)      - Thompson Sampling KVE metrics          │ │
 │  └────────────────────────────────┬───────────────────────────────────────┘ │
 │                                   │                                         │
 │                                   ▼                                         │
 │  ┌────────────────────────────────────────────────────────────────────────┐ │
 │  │                          Grafana :3000                                 │ │
-│  │    Pre-configured dashboard: "Dynamo LLM Overview"                    │ │
-│  │    Login: admin / admin                                                │ │
+│  │    Dashboard: "Dynamo LLM Overview"                                   │ │
+│  │    URL: /d/dynamo-overview/dynamo-llm-overview                        │ │
+│  │    Access: Anonymous (no login required)                              │ │
 │  └────────────────────────────────────────────────────────────────────────┘ │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
+### Model Name Isolation Explained
+
+| Component | Model Name | Namespace | Purpose |
+|-----------|------------|-----------|---------|
+| Workers | `llama-3.3-70b-internal` | `workers` | Hidden from frontend discovery |
+| Processor | `llama-3.3-70b` | `dynamo` | Discovered by frontend |
+| Router | N/A | `dynamo` | Internal routing service |
+
+This isolation ensures **ALL requests** go through the Thompson Sampling router, enabling:
+- KV overlap-aware worker selection
+- Workload hint extraction (prefix_id, osl, iat)
+- Per-request feedback for router learning
+
 ## Metrics Endpoints
 
-| Component | Port | URL | Description |
-|-----------|------|-----|-------------|
-| Frontend | 8000 | `http://localhost:8000/metrics` | User-facing metrics (latency, throughput) |
-| Workers | 18081-180xx | `http://localhost:18081/metrics` | Internal metrics (KV cache, NATS stats) - one port per worker |
-| Router | 18090 | `http://localhost:18090/metrics` | Thompson Sampling routing metrics |
-| Processor | 18091 | `http://localhost:18091/metrics` | Thompson Sampling KVE metrics |
+| Component | Port(s) | URL | Description |
+|-----------|---------|-----|-------------|
+| Frontend | 8000 | `http://localhost:8000/metrics` | User-facing metrics (latency, throughput, tokens) |
+| Workers | 18081+ | `http://localhost:18081/metrics` | KV cache, backend stats - one port per worker |
+| Router | 18090 | `http://localhost:18090/metrics` | Thompson Sampling routing decisions |
+| Processor | 18091 | `http://localhost:18091/metrics` | Thompson Sampling KVE (KV Efficiency) metrics |
 
-**Note**: Worker metrics ports are sequential starting at 18081. With 2 workers: 18081, 18082. With 4 workers: 18081-18084.
+### Worker Port Allocation
+
+Worker metrics ports are sequential starting at `DYNAMO_WORKER_METRICS_PORT` (default: 18081):
+
+| Configuration | Workers | GPU Allocation | Metrics Ports |
+|---------------|---------|----------------|---------------|
+| 8 GPUs, TP=4 | 2 | GPUs 0-3, 4-7 | 18081, 18082 |
+| 8 GPUs, TP=2 | 4 | GPUs 0-1, 2-3, 4-5, 6-7 | 18081-18084 |
+| 4 GPUs, TP=2 | 2 | GPUs 0-1, 2-3 | 18081, 18082 |
+
+Each worker is identified in Grafana by its metrics port (for example, `instance="localhost:18081"`).
 
 ## Key Metrics
 
@@ -98,7 +228,7 @@ User-facing HTTP API metrics for latency, throughput, and token statistics.
 | `dynamo_frontend_` | `dynamo_frontend_model_context_length` | Gauge | Model context window size |
 | `dynamo_frontend_` | `dynamo_frontend_model_kv_cache_block_size` | Gauge | KV cache block size |
 
-### Worker Metrics (`:8081/metrics`)
+### Worker Metrics (`:18081+/metrics`)
 
 Backend worker metrics including KV cache, scheduling, and internal statistics. Both SGLang and vLLM expose similar metrics with different prefixes:
 - **SGLang**: Metrics prefixed with `sglang:` (e.g., `sglang:cache_hit_rate`)
@@ -155,7 +285,7 @@ Both SGLang and vLLM expose similar native metrics with their respective prefixe
 | `vllm:` | `vllm:generation_tokens_total` | Counter | Total generation tokens |
 | `vllm:` | `vllm:prompt_tokens_total` | Counter | Total prompt tokens |
 
-### Router Metrics (`:8082/metrics`)
+### Router Metrics (`:18090/metrics`)
 
 Dynamo component metrics for the Thompson Sampling router (uses standard `dynamo_component_*` prefix).
 
@@ -175,7 +305,7 @@ Dynamo component metrics for the Thompson Sampling router (uses standard `dynamo
 - `find_worker` - Worker selection requests
 - `feedback` - Feedback from completed requests
 
-### Thompson Sampling Processor Metrics (`:8083/metrics`)
+### Thompson Sampling Processor Metrics (`:18091/metrics`)
 
 Custom Thompson Sampling KV Efficiency (KVE) metrics from the processor component.
 
@@ -309,7 +439,15 @@ vllm:cache_hit_rate * 100
 
 ## Grafana Dashboard
 
-The pre-configured dashboard "Dynamo LLM Overview" includes:
+### Dashboard Access
+
+| Property | Value |
+|----------|-------|
+| Dashboard Name | Dynamo LLM Overview |
+| Direct URL | `http://localhost:3000/d/dynamo-overview/dynamo-llm-overview` |
+| Authentication | None required (anonymous access enabled) |
+| Data Refresh | Every 2 seconds (configurable) |
+| Data Retention | Persistent (survives restarts) |
 
 ### Backend Selector
 
@@ -318,6 +456,13 @@ The dashboard includes a **Backend** dropdown variable at the top. Select:
 - **vllm** - For vLLM workers (metrics prefixed with `vllm:`)
 
 All backend-specific panels automatically update based on your selection.
+
+### Time Controls
+
+Use the time picker (top right) to:
+- Select preset ranges: Last 5 minutes, Last 1 hour, Last 6 hours, Last 24 hours
+- Set custom absolute time ranges for specific benchmark intervals
+- Use the refresh dropdown to control auto-refresh frequency
 
 ### Dashboard Panels
 
@@ -371,9 +516,30 @@ monitoring/
 
 ## Usage
 
-### Start Monitoring
+### Automatic Startup (Recommended)
+
+The monitoring stack starts **automatically** when you run the Dynamo startup script:
 
 ```bash
+# Start Dynamo with monitoring (vLLM backend)
+bash start_dynamo_optimized_thompson_hints_vllm.sh
+
+# Or SGLang backend
+bash start_dynamo_optimized_thompson_hints_sglang.sh
+```
+
+The script will:
+1. Start ETCD and NATS infrastructure
+2. Start Prometheus and Grafana containers
+3. Wait for monitoring services to be ready
+4. Start Dynamo components (workers, router, processor, frontend)
+
+### Manual Startup
+
+If you need to start monitoring separately:
+
+```bash
+cd monitoring
 docker compose up -d
 ```
 
@@ -423,53 +589,99 @@ bash stop_dynamo.sh --kill-metrics
 docker volume rm monitoring_prometheus_data
 
 # Restart everything (monitoring will start automatically)
-bash start_dynamo_optimized_thompson_hints.sh
+bash start_dynamo_optimized_thompson_hints_vllm.sh
 ```
 
 ## Remote Access via SSH Port Forwarding
 
-If the monitoring stack is running on a remote server, use SSH port forwarding to access Grafana and Prometheus locally.
+If the monitoring stack is running on a remote GPU server (for example, a leased cluster node), use SSH port forwarding to access Grafana and Prometheus from your local machine.
 
-### General Syntax
+### Step-by-Step Remote Access
 
-```bash
-ssh -L <local_port>:localhost:<remote_port> <username>@<remote_host>
-```
-
-### Access Grafana (Port 3000)
+**1. Create SSH tunnel to the remote server:**
 
 ```bash
-ssh -L 3000:localhost:3000 <username>@<remote_host>
+# General syntax
+ssh -L 3000:localhost:3000 <USERNAME>@<REMOTE_HOST>
+
+# Example with VPN-accessible server
+ssh -L 3000:localhost:3000 myuser@10.57.201.5
 ```
 
-Then open http://localhost:3000 in your browser.
+**2. Open the Grafana dashboard in your browser:**
 
-### Access Prometheus (Port 9090)
+```
+http://localhost:3000/d/dynamo-overview/dynamo-llm-overview
+```
+
+**3. Configure the time range:**
+- Click the time picker (top right corner of Grafana UI)
+- Select a preset: Last 1 hour, Last 6 hours, Last 12 hours, Last 24 hours
+- Or set a custom absolute time range to view specific benchmark intervals
+
+**4. Select your backend:**
+- Use the **Backend** dropdown (top left) to choose `sglang` or `vllm`
+- All panels will automatically update to show backend-specific metrics
+
+### Sharing Data with Team Members
+
+Anyone with SSH access to the same server can view the monitoring data:
 
 ```bash
-ssh -L 9090:localhost:9090 <username>@<remote_host>
+# Team member creates their own tunnel
+ssh -L 3000:localhost:3000 <THEIR_USERNAME>@<REMOTE_HOST>
+
+# Then opens the same dashboard URL
+# http://localhost:3000/d/dynamo-overview/dynamo-llm-overview
 ```
 
-Then open http://localhost:9090 in your browser.
+This enables collaborative analysis - multiple people can view the same data simultaneously to focus on specific signals.
 
 ### Forward Multiple Ports
 
 To access both Grafana and Prometheus simultaneously:
 
 ```bash
-ssh -L 3000:localhost:3000 -L 9090:localhost:9090 <username>@<remote_host>
+ssh -L 3000:localhost:3000 -L 9090:localhost:9090 <USERNAME>@<REMOTE_HOST>
 ```
+
+Access:
+- Grafana: http://localhost:3000/d/dynamo-overview/dynamo-llm-overview
+- Prometheus: http://localhost:9090
 
 ### Background SSH Tunnel
 
-To run the tunnel in the background:
+To run the tunnel in the background (stays open after terminal closes):
 
 ```bash
-ssh -f -N -L 3000:localhost:3000 -L 9090:localhost:9090 <username>@<remote_host>
+ssh -f -N -L 3000:localhost:3000 -L 9090:localhost:9090 <USERNAME>@<REMOTE_HOST>
 ```
 
 - `-f`: Run in background after authentication
 - `-N`: Don't execute remote commands (tunnel only)
+
+To kill a background tunnel:
+```bash
+# Find the SSH process
+ps aux | grep "ssh -f -N -L 3000"
+
+# Kill it
+kill <PID>
+```
+
+### Viewing Historical Benchmark Data
+
+Prometheus persists all metrics data. To view historical benchmarks:
+
+1. Open the Grafana dashboard
+2. Expand the time range using the time picker (top right)
+3. Zoom out to 12-24 hours to see multiple benchmark intervals
+4. Gaps between data intervals indicate periods when Dynamo was stopped
+
+**Example**: After running multiple benchmark sessions, you might see:
+- Interval 1: Baseline configuration
+- Interval 2: Optimized parameters (small gap)
+- Interval 3: Best KV Efficiency (for example, Worker 18081: 25.4%, Worker 18082: 16.4%)
 
 ## Manual Metrics Queries
 
@@ -518,20 +730,24 @@ sglang:num_queue_reqs
 # All frontend metrics
 curl -s http://localhost:8000/metrics
 
-# All worker metrics (Dynamo + SGLang)
-curl -s http://localhost:8081/metrics
+# All worker metrics (Worker 0)
+curl -s http://localhost:18081/metrics
+
+# All worker metrics (Worker 1, if running multiple workers)
+curl -s http://localhost:18082/metrics
 
 # All router metrics
-curl -s http://localhost:8082/metrics
+curl -s http://localhost:18090/metrics
 
 # All processor metrics (Thompson Sampling)
-curl -s http://localhost:8083/metrics
+curl -s http://localhost:18091/metrics
 
 # Filter specific metrics
 curl -s http://localhost:8000/metrics | grep time_to_first_token
-curl -s http://localhost:8081/metrics | grep kvstats
-curl -s http://localhost:8081/metrics | grep "sglang:"
-curl -s http://localhost:8083/metrics | grep thompson
+curl -s http://localhost:18081/metrics | grep kvstats
+curl -s http://localhost:18081/metrics | grep "sglang:"   # SGLang backend
+curl -s http://localhost:18081/metrics | grep "vllm:"     # vLLM backend
+curl -s http://localhost:18091/metrics | grep thompson
 ```
 
 ## Troubleshooting
@@ -540,15 +756,52 @@ curl -s http://localhost:8083/metrics | grep thompson
 
 Check if Dynamo is running:
 ```bash
+# Check frontend health
 curl http://localhost:8000/health
-curl http://localhost:8081/metrics
+
+# Check worker metrics (Worker 0)
+curl http://localhost:18081/metrics
+
+# Check router metrics
+curl http://localhost:18090/metrics
+
+# Check processor metrics
+curl http://localhost:18091/metrics
 ```
 
 ### Grafana shows "No data"
 
-1. Verify Prometheus is scraping: http://localhost:9090/targets
-2. Check if metrics exist: http://localhost:9090/graph (query a metric name)
-3. Ensure time range is correct in Grafana
+1. **Verify Prometheus is scraping**: http://localhost:9090/targets
+   - All targets should show "UP" state
+   - Check for scrape errors in the "Error" column
+
+2. **Check if metrics exist**: http://localhost:9090/graph
+   - Query a metric name (for example, `dynamo_frontend_requests_total`)
+   - If no data, Dynamo may not be running or generating traffic
+
+3. **Ensure time range is correct in Grafana**:
+   - Click the time picker (top right)
+   - Select "Last 1 hour" or expand to see historical data
+   - If you just started, wait 30-60 seconds for initial data
+
+4. **Check backend selector**:
+   - Make sure the Backend dropdown matches your deployment (sglang vs vllm)
+   - Backend mismatch will result in empty panels
+
+### SSH tunnel issues
+
+If you can't access Grafana via SSH tunnel:
+
+```bash
+# Verify the tunnel is active
+ps aux | grep "ssh -L 3000"
+
+# Test if port 3000 is accessible locally
+curl -s http://localhost:3000/api/health
+
+# If "connection refused", recreate the tunnel
+ssh -L 3000:localhost:3000 <USERNAME>@<REMOTE_HOST>
+```
 
 ### Port conflicts
 
@@ -563,12 +816,24 @@ environment:
   - GF_SERVER_HTTP_PORT=3001  # Different port
 ```
 
+### Stale metrics after restart
+
+If you see old worker instances in Grafana after restarting Dynamo:
+
+```bash
+# Clear Prometheus data and restart
+docker stop dynamo-prometheus
+docker rm dynamo-prometheus
+docker volume rm monitoring_prometheus_data
+cd monitoring && docker compose up -d
+```
+
 ## Alternative: File-Based Collection
 
 If you don't want to run Prometheus/Grafana, use the collection script:
 
 ```bash
-cd /localhome/local-bbednarski/NeMo-Agent-Toolkit/external/dynamo
+cd external/dynamo
 ./collect_metrics.sh ./metrics_output 30  # Collect every 30s
 ```
 
@@ -578,12 +843,12 @@ This creates timestamped `.prom` files that can be analyzed later or imported in
 
 ### Summary by Component
 
-| Component | Port | Metric Count | Key Prefixes |
-|-----------|------|--------------|--------------|
+| Component | Port(s) | Metric Count | Key Prefixes |
+|-----------|---------|--------------|--------------|
 | Frontend | 8000 | ~22 | `dynamo_frontend_*` |
-| Worker | 8081 | ~50 | `dynamo_component_kvstats_*`, `sglang:*` |
-| Router | 8082 | ~20 | `dynamo_component_*` (labeled `router`) |
-| Processor | 8083 | ~35 | `dynamo_component_thompson_*` |
+| Workers | 18081+ | ~50 | `dynamo_component_kvstats_*`, `sglang:*` or `vllm:*` |
+| Router | 18090 | ~20 | `dynamo_component_*` (labeled `router`) |
+| Processor | 18091 | ~35 | `dynamo_component_thompson_*` |
 
 ### All Metric Names by Component
 
@@ -608,7 +873,7 @@ dynamo_frontend_time_to_first_token_seconds_{bucket,count,sum}
 </details>
 
 <details>
-<summary><b>Worker (port 8081) - 50 metrics</b></summary>
+<summary><b>Worker (ports 18081+) - 50 metrics per worker</b></summary>
 
 **Dynamo Component Metrics:**
 ```
@@ -658,7 +923,7 @@ sglang:utilization
 </details>
 
 <details>
-<summary><b>Router (port 8082) - 20 metrics</b></summary>
+<summary><b>Router (port 18090) - 20 metrics</b></summary>
 
 ```
 dynamo_component_inflight_requests{dynamo_component="router"}
@@ -683,7 +948,7 @@ dynamo_component_uptime_seconds
 </details>
 
 <details>
-<summary><b>Processor (port 8083) - 35 metrics</b></summary>
+<summary><b>Processor (port 18091) - 35 metrics</b></summary>
 
 **Standard Dynamo Component Metrics:**
 ```
