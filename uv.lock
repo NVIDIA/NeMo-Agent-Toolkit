@@ -1586,14 +1586,13 @@ name = "dask"
 version = "2026.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "click" },
-    { name = "cloudpickle" },
-    { name = "fsspec" },
-    { name = "importlib-metadata", marker = "python_full_version < '3.12'" },
-    { name = "packaging" },
-    { name = "partd" },
-    { name = "pyyaml" },
-    { name = "toolz" },
+    { name = "click", marker = "python_full_version >= '3.12'" },
+    { name = "cloudpickle", marker = "python_full_version >= '3.12'" },
+    { name = "fsspec", marker = "python_full_version >= '3.12'" },
+    { name = "packaging", marker = "python_full_version >= '3.12'" },
+    { name = "partd", marker = "python_full_version >= '3.12'" },
+    { name = "pyyaml", marker = "python_full_version >= '3.12'" },
+    { name = "toolz", marker = "python_full_version >= '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1e/46/61ecde57bac647ca7eb6ffef8dcd90af6c1c649020874cd7fd8738003d62/dask-2026.1.1.tar.gz", hash = "sha256:12b1dbb0d6e92f287feb4076871600b2fba3a843d35ff214776ada5e9e7a1529", size = 10994732, upload-time = "2026-01-16T12:35:30.258Z" }
 wheels = [
@@ -1793,21 +1792,21 @@ name = "distributed"
 version = "2026.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "click" },
-    { name = "cloudpickle" },
-    { name = "dask" },
-    { name = "jinja2" },
-    { name = "locket" },
-    { name = "msgpack" },
-    { name = "packaging" },
-    { name = "psutil" },
-    { name = "pyyaml" },
-    { name = "sortedcontainers" },
-    { name = "tblib" },
-    { name = "toolz" },
-    { name = "tornado" },
-    { name = "urllib3" },
-    { name = "zict" },
+    { name = "click", marker = "python_full_version >= '3.12'" },
+    { name = "cloudpickle", marker = "python_full_version >= '3.12'" },
+    { name = "dask", marker = "python_full_version >= '3.12'" },
+    { name = "jinja2", marker = "python_full_version >= '3.12'" },
+    { name = "locket", marker = "python_full_version >= '3.12'" },
+    { name = "msgpack", marker = "python_full_version >= '3.12'" },
+    { name = "packaging", marker = "python_full_version >= '3.12'" },
+    { name = "psutil", marker = "python_full_version >= '3.12'" },
+    { name = "pyyaml", marker = "python_full_version >= '3.12'" },
+    { name = "sortedcontainers", marker = "python_full_version >= '3.12'" },
+    { name = "tblib", marker = "python_full_version >= '3.12'" },
+    { name = "toolz", marker = "python_full_version >= '3.12'" },
+    { name = "tornado", marker = "python_full_version >= '3.12'" },
+    { name = "urllib3", marker = "python_full_version >= '3.12'" },
+    { name = "zict", marker = "python_full_version >= '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/45/19/0c13efdffc55cb311594f66c1c8d36a3c4711e427c820155fb9c59138b5e/distributed-2026.1.1.tar.gz", hash = "sha256:3d2709a43912797df3c345af3bb333bbf1a386ec1e9e6a134e5f050521373dbd", size = 2102870, upload-time = "2026-01-16T12:34:58.258Z" }
 wheels = [
@@ -6158,8 +6157,8 @@ all = [
 ]
 async-endpoints = [
     { name = "aiosqlite" },
-    { name = "dask" },
-    { name = "distributed" },
+    { name = "dask", marker = "python_full_version >= '3.12'" },
+    { name = "distributed", marker = "python_full_version >= '3.12'" },
     { name = "sqlalchemy", extra = ["asyncio"] },
 ]
 autogen = [
@@ -6341,9 +6340,9 @@ requires-dist = [
     { name = "authlib", specifier = ">=1.6.5,<2.0.0" },
     { name = "click", specifier = "~=8.1" },
     { name = "colorama", specifier = ">=0.4.6,<1.0.0" },
-    { name = "dask", marker = "extra == 'async-endpoints'", specifier = "~=2026.1" },
+    { name = "dask", marker = "python_full_version >= '3.12' and extra == 'async-endpoints'", specifier = "~=2026.1" },
     { name = "datasets", specifier = "~=4.4" },
-    { name = "distributed", marker = "extra == 'async-endpoints'", specifier = "~=2026.1" },
+    { name = "distributed", marker = "python_full_version >= '3.12' and extra == 'async-endpoints'", specifier = "~=2026.1" },
     { name = "expandvars", specifier = "~=1.0" },
     { name = "fastapi", specifier = "~=0.119" },
     { name = "gunicorn", marker = "extra == 'gunicorn'", specifier = "~=23.0" },
@@ -7882,8 +7881,8 @@ name = "partd"
 version = "1.4.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "locket" },
-    { name = "toolz" },
+    { name = "locket", marker = "python_full_version >= '3.12'" },
+    { name = "toolz", marker = "python_full_version >= '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b2/3a/3f06f34820a31257ddcabdfafc2672c5816be79c7e353b02c1f318daa7d4/partd-1.4.2.tar.gz", hash = "sha256:d022c33afbdc8405c226621b015e8067888173d85f7f5ecebb3cafed9a20f02c", size = 21029, upload-time = "2024-05-06T19:51:41.945Z" }
 wheels = [
