@@ -582,7 +582,7 @@ nat eval --config_file examples/finetuning/rl_with_openpipe_art/configs/config_p
 
 Compare the post-training win percentage against the pre-training baseline. You should see a notable improvement.
 
-**Note:** Due to the stochastic nature of reinforcement learning, you may notice a decrease in performance in some training attempts. Please try running the training again or follow the troublshooting guide below.
+**Note:** Due to the stochastic nature of reinforcement learning, you may notice a decrease in performance in some training attempts. Please try running the training again or follow the troubleshooting guide below.
 
 ---
 
