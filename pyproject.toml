@@ -74,6 +74,7 @@ vanna = ["nvidia-nat-vanna == {version}"]
 weave = ["nvidia-nat-weave == {version}"]
 zep-cloud = ["nvidia-nat-zep-cloud == {version}"]
 
+# define any dependency extras in core so we can easily propagate to most
 async_endpoints = [ "nvidia-nat-core[async_endpoints] == {version}" ]
 gunicorn = [ "nvidia-nat-core[gunicorn] == {version}" ]
 pii-defense = [ "nvidia-nat-core[pii-defense] == {version}" ]
