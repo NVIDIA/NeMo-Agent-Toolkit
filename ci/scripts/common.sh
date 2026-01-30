@@ -126,8 +126,6 @@ function create_env() {
     uv venv --python=${PYTHON_VERSION} --seed ${VENV_DIR}
     source ${VENV_DIR}/bin/activate
 
-    rapids-logger "Creating Environment with extras: ${@}"
-
     set +e
     UV_SYNC_STDERROUT=$(uv sync --active --only-dev 2>&1)
     UV_RESULT=$?

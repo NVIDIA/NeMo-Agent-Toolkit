@@ -22,7 +22,7 @@ If you don't already have a uv environment setup, refer to the [Get Started](./s
 
 ## Install Documentation Dependencies
 ```bash
-uv sync --all-groups --all-extras
+uv sync --only-dev
 ```
 
 ## Build Documentation

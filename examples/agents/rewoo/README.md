@@ -67,8 +67,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
 From the root directory of the NeMo Agent Toolkit library, run the following commands:
 
 ```bash
-uv sync --all-groups --all-extras
-uv pip install -e .
+uv pip install -e examples/agents
 ```
 
 ### Set Up API Keys

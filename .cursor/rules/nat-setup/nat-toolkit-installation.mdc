@@ -70,9 +70,9 @@ source .venv/bin/activate
 Choose the appropriate installation option based on requirements:
 
 #### Option A: Full Installation (Recommended for Development)
-Install with all plugins and developer tools:
+Install with most plugins and developer tools:
 ```bash
-uv sync --all-groups --all-extras
+uv sync --all-groups --extra most
 ```
 
 #### Option B: Core Only Installation
@@ -221,7 +221,7 @@ git clone git@github.com:NVIDIA/NeMo-Agent-Toolkit.git nemo-agent-toolkit && cd 
 git submodule update --init --recursive
 git lfs install && git lfs fetch && git lfs pull
 uv venv --seed .venv && source .venv/bin/activate
-uv sync --all-groups --all-extras
+uv sync --all-groups --extra most
 export NVIDIA_API_KEY=<your_key>
 nat --version
 ```

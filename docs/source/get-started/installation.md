@@ -145,9 +145,9 @@ Installing from source is required to run any examples provided in the repositor
     :::
 
 5. Install the NeMo Agent Toolkit library.
-    To install the NeMo Agent Toolkit library along with all of the optional dependencies. Including developer tools (`--all-groups`) and all of the dependencies needed for profiling and plugins (`--all-extras`) in the source repository, run the following:
+    To install the NeMo Agent Toolkit library along with most of the optional dependencies. Including developer tools (`--all-groups`) and most of the dependencies needed for profiling and plugins (`--extra most`) in the source repository, run the following:
     ```bash
-    uv sync --all-groups --all-extras
+    uv sync --all-groups --extra most
     ```
 
     Alternatively to install just the core NeMo Agent Toolkit without any optional plugins, run the following:
