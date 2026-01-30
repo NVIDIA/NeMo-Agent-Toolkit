@@ -27,6 +27,8 @@ rapids-logger "Git Version: ${GIT_TAG}"
 
 create_env
 
+build_wheel . "nvidia-nat"
+
 # Build all packages with a pyproject.toml in the first directory below packages
 for NAT_PACKAGE in "${NAT_PACKAGES[@]}"; do
     build_package_wheel ${NAT_PACKAGE}

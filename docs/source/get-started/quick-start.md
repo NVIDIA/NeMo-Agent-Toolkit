@@ -70,7 +70,7 @@ Replace `<YOUR_API_KEY>` with your actual NVIDIA API key.
 
 Once a NeMo Agent Toolkit workflow is ready for deployment to production, the deployed workflow will need to declare a dependency on the `nvidia-nat` package, along with the needed plugins. When declaring a dependency on NeMo Agent Toolkit, we recommend using the first two digits of the version number. For example if the version is `1.0.0`, then the dependency would be `1.0`.
 
-For more information on the available plugins, refer to [Framework Integrations](./installation.md#framework-integrations).
+For more information on the available plugins, refer to [Packages](./installation.md#packages).
 
 Example of a dependency for NeMo Agent Toolkit using the LangChain/LangGraph plugin for projects using a `pyproject.toml` file:
 

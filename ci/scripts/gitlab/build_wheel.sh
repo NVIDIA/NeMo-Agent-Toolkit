@@ -28,6 +28,9 @@ create_env
 
 WHEELS_BASE_DIR="${CI_PROJECT_DIR}/.tmp/wheels"
 WHEELS_DIR="${WHEELS_BASE_DIR}/nvidia-nat"
+
+build_wheel . "nvidia-nat"
+
 # Build all packages with a pyproject.toml in the first directory below packages
 for NAT_PACKAGE in "${NAT_PACKAGES[@]}"; do
     build_package_wheel ${NAT_PACKAGE}

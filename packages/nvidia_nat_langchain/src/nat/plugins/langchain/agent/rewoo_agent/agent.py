@@ -391,9 +391,9 @@ class ReWOOAgentGraph(BaseAgent):
         Execute a single tool with proper placeholder replacement.
 
         Args:
-            placeholder: The evidence placeholder (e.g., "#E1").
-            step_info: Step information containing tool and tool_input.
-            intermediate_results: Current intermediate results for placeholder replacement.
+            placeholder (str): The evidence placeholder (e.g., "#E1").
+            step_info (ReWOOPlanStep): Step information containing tool and tool_input.
+            intermediate_results (dict[str, ToolMessage]): Current intermediate results for placeholder replacement.
 
         Returns:
             ToolMessage with the tool execution result.

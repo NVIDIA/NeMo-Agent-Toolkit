@@ -222,7 +222,7 @@ The `pyproject.toml` file defines your package metadata and dependencies. In thi
   ]
   ```
 
-  In this example, you have been using NeMo Agent Toolkit with LangChain/LangGraph. This is why the dependency is declared on `nvidia-nat[langchain]`, that is to say NeMo Agent Toolkit with the LangChain/LangGraph integration plugin. If you want to use LlamaIndex, declare the dependency on `nvidia-nat[llama-index]`. This is described in more detail in [Framework Integrations](../installation.md#framework-integrations).
+  In this example, you have been using NeMo Agent Toolkit with LangChain/LangGraph. This is why the dependency is declared on `nvidia-nat[langchain]`, that is to say NeMo Agent Toolkit with the LangChain/LangGraph integration plugin. If you want to use LlamaIndex, declare the dependency on `nvidia-nat[llama-index]`. This is described in more detail in [Packages](../installation.md#packages).
 
 - **Version**: In this example, and in NeMo Agent Toolkit in general, we use [setuptools-scm](https://setuptools-scm.readthedocs.io/en/latest/) to automatically determine the version of the package based on the Git tags. We did this by setting `dynamic = ["version"]` and declaring a build dependency on both `setuptools` and `setuptools_scm` in the `build-system` section of `pyproject.toml`:
   ```toml
