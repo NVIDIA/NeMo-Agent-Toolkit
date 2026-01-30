@@ -55,20 +55,20 @@ limitations under the License.
 
 - **Building Agents**: Accelerate your agent development with tools that make it easier to get your agent into production.
   - 🧩 [**Framework Agnostic:**](./docs/source/components/integrations/frameworks.md) NeMo Agent Toolkit works side-by-side with agentic frameworks to add the instrumentation necessary for observing, profiling, and optimizing your agents. The toolkit supports a large number of popular frameworks such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), and [Google ADK](https://google.github.io/adk-docs/), as well as custom enterprise agentic frameworks and simple Python agents.
-  - 🔁 [**Reusability:**](./docs/source/components/sharing-components.md) Every agent, tool, and agentic workflow is designed to be reused in a variety of agentic workflows. Build components once and use them multiple times to maximize the value from development effort.
-  - ⚡ [**Customization:**](docs/source/get-started/tutorials/customize-a-workflow.md) Start with a pre-built agent, tool, or workflow, and customize it to your needs. With a flexible plugin system, you can jumpstart agent development without getting blocked by a missing tool, feature, or capability.
+  - 🔁 [**Reusability:**](./docs/source/components/sharing-components.md) Build components once and use them multiple times to maximize the value from development effort.
+  - ⚡ [**Customization:**](docs/source/get-started/tutorials/customize-a-workflow.md) Start with a pre-built agent, tool, or workflow, and customize it to your needs.
   - 💬 [**Built-In User Interface:**](./docs/source/run-workflows/launching-ui.md) Use the NeMo Agent Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
 - 📈 **Agent Insights:** Utilize NeMo Agent Toolkit's instrumentation to better understand how your agents function at runtime.
-  - 📈 [**Profiling:**](./docs/source/improve-workflows/profiler.md) Profile entire workflows from the agent level all the way down to individual tokens. The NeMo Agent Toolkit's profiler uses your agent's telemetry stream to identify bottlenecks, analyze token efficiency, and guide developer in optimizing their agents.
-  - 🔎 [**Observability:**](./docs/source/run-workflows/observe/observe.md) Monitor and debug your workflows with dedicated integrations for popular observability platforms such as Phoenix, Weave, and Langfuse, plus compatibility with OpenTelemetry-based observability platforms. Track performance, trace execution flows, and gain insights into your agent behaviors in production.
+  - 📈 [**Profiling:**](./docs/source/improve-workflows/profiler.md) Profile entire workflows from the agent level all the way down to individual tokens to identify bottlenecks, analyze token efficiency, and guide developer in optimizing their agents.
+  - 🔎 [**Observability:**](./docs/source/run-workflows/observe/observe.md) Track performance, trace execution flows, and gain insights into your agent behaviors in production.
 - **Agent Optimization:** Improve your agent's quality, accuracy, and performance with a suite of tools for all phases of the agent lifecycle.
-  - 🧪 [**Evaluation System:**](./docs/source/improve-workflows/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools. Utilize built in evaluation metrics such as LLM-as-a-judge, groundedness and relevancy scores with the ability to easily create your own custom metrics.
+  - 🧪 [**Evaluation System:**](./docs/source/improve-workflows/evaluate.md) Validate and maintain accuracy of agentic workflows with a suite of tools for offline evaluation.
   - [**Hyper-Parameter and Prompt Optimizer**](./docs/source/improve-workflows/optimizer.md) Automatically identify the best configuration and prompts to ensure you are getting the most out of your agent.
-  - [**Fine-tuning with Reinforcement Learning:**](./docs/source/improve-workflows/finetuning/index.md) Fine-tune LLMs specifically for your agent to train intrinsic information about your workflow directly into the model.
+  - [**Fine-tuning with Reinforcement Learning:**](./docs/source/improve-workflows/finetuning/index.md) Fine-tune LLMs specifically for your agent and train intrinsic information about your workflow directly into the model.
   - [**NVIDIA Dynamo Integration:**](./examples/dynamo_integration/README.md) Dynamo and NeMo Agent Toolkit work together to improve agent performance at scale.
 - **Protocol Support:** NeMo Agent Toolkit is compatible with common protocols used to build agents.
-   - 🔗 [**Full MCP Support:**](./docs/source/build-workflows/mcp-client.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use NeMo Agent Toolkit as an [MCP client](./docs/source/build-workflows/mcp-client.md) to connect to and use tools served by remote MCP servers. You can also use NeMo Agent Toolkit as an [MCP server](./docs/source/run-workflows/mcp-server.md) to publish tools via MCP.
-  - [**A2A:**](./docs/source/components/integrations/a2a.md) Build teams of distrinbuted agents utilizing the [Agent-to-Agent](https://a2aproject.org/) protocol.
+   - 🔗 [**Model Context Protocol (MCP):**](./docs/source/build-workflows/mcp-client.md) Integrate [MCP tools](./docs/source/build-workflows/mcp-client.md) into your agents or serve your tools/agents as an [MCP server](./docs/source/run-workflows/mcp-server.md) for others to consume.
+  - [**Agent-to-Agent (A2A) Protocol:**](./docs/source/components/integrations/a2a.md) Build teams of distrinbuted agents with full support for authentication.
 
 With NeMo Agent Toolkit, you can move quickly, experiment freely, and ensure reliability across all your agent-driven projects.
 
@@ -167,8 +167,10 @@ Before getting started, it's possible to run this simple workflow and many other
 ## 🛣️ Roadmap
 
 - [x] Automatic Reinforcement Learning (RL) to fine-tune LLMs for a specific agent.
-- [ ] Integration with [NeMo Guardrails](https://github.com/NVIDIA/NeMo-Guardrails) to secure any function in an agent workflow.
-- [x] End-to-end acceleration using intelligent integrations with [NVIDIA Dynamo](https://github.com/ai-dynamo/dynamo).
+- [x] Integration withe with [NVIDIA Dynamo](https://github.com/ai-dynamo/dynamo) to reduce LLM latency at scale.
+- [ ] Improve agent throughput with KV-Cache optimization.
+- [ ] Integration with [NeMo Guardrails](https://github.com/NVIDIA/NeMo-Guardrails) to improve agent safety and security.
+- [ ] Improved memory interface to support self-improving agents.
 
 ## 💬 Feedback
 
