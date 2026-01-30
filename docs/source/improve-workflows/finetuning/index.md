@@ -18,7 +18,7 @@ limitations under the License.
 
 <!-- path-check-skip-begin -->
 
-# Finetuning Harness
+# NVIDIA NeMo Agent Toolkit Finetuning Harness for Reinforncement Learning
 
 :::{warning}
 **Experimental Feature**: The Finetuning Harness is experimental and may change in future releases. Future versions may introduce breaking changes without notice.
