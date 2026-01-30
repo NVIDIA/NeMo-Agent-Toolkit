@@ -18,9 +18,11 @@ import csv
 import json
 import logging
 import os
+import re
 import time
 import uuid
 from collections.abc import AsyncGenerator
+from dataclasses import dataclass
 from typing import Any
 
 import uvicorn
@@ -36,10 +38,172 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from pydantic import field_validator
+from text_utils import strip_think_tags
 from transformers import AutoTokenizer
 
 configure_dynamo_logging()
 logger = logging.getLogger(__name__)
+
+
+# ----------------- Tool Call Parsing -----------------
+@dataclass
+class ParsedToolCall:
+    """Represents a parsed tool call from model output."""
+    id: str
+    name: str
+    arguments: dict[str, Any]
+
+    def to_openai_format(self) -> dict[str, Any]:
+        """Convert to OpenAI tool_calls format."""
+        return {
+            "id": self.id,
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "arguments": json.dumps(self.arguments),
+            }
+        }
+
+
+class ToolCallParser:
+    """
+    Parses tool calls from model output in the format:
+    <tool_call>
+      <function=function_name>
+        <parameter=param_name>
+          value
+        </parameter>
+      </function>
+    </tool_call>
+    """
+
+    # Pattern to match complete tool_call blocks
+    TOOL_CALL_PATTERN = re.compile(
+        r'<tool_call>\s*(.*?)\s*</tool_call>',
+        re.DOTALL
+    )
+
+    # Pattern to match function within a tool_call
+    FUNCTION_PATTERN = re.compile(
+        r'<function=([^>]+)>\s*(.*?)\s*</function>',
+        re.DOTALL
+    )
+
+    # Pattern to match parameters within a function
+    PARAMETER_PATTERN = re.compile(
+        r'<parameter=([^>]+)>\s*(.*?)\s*</parameter>',
+        re.DOTALL
+    )
+
+    @classmethod
+    def parse(cls, text: str) -> tuple[str, list[ParsedToolCall]]:
+        """
+        Parse tool calls from text.
+
+        Returns:
+            tuple of (text_without_tool_calls, list_of_parsed_tool_calls)
+        """
+        tool_calls: list[ParsedToolCall] = []
+
+        # Find all tool_call blocks
+        for match in cls.TOOL_CALL_PATTERN.finditer(text):
+            tool_call_content = match.group(1)
+
+            # Find function within this tool_call
+            func_match = cls.FUNCTION_PATTERN.search(tool_call_content)
+            if func_match:
+                func_name = func_match.group(1).strip()
+                func_content = func_match.group(2)
+
+                # Parse parameters
+                arguments: dict[str, Any] = {}
+                for param_match in cls.PARAMETER_PATTERN.finditer(func_content):
+                    param_name = param_match.group(1).strip()
+                    param_value = param_match.group(2).strip()
+
+                    # Try to parse as JSON for complex types, otherwise keep as string
+                    try:
+                        arguments[param_name] = json.loads(param_value)
+                    except (json.JSONDecodeError, ValueError):
+                        arguments[param_name] = param_value
+
+                tool_calls.append(ParsedToolCall(
+                    id=f"call_{uuid.uuid4().hex[:24]}",
+                    name=func_name,
+                    arguments=arguments,
+                ))
+
+        # Remove tool_call blocks from text
+        text_without_tools = cls.TOOL_CALL_PATTERN.sub('', text).strip()
+
+        return text_without_tools, tool_calls
+
+    @classmethod
+    def has_complete_tool_call(cls, text: str) -> bool:
+        """Check if text contains at least one complete tool_call block."""
+        return bool(cls.TOOL_CALL_PATTERN.search(text))
+
+    @classmethod
+    def has_partial_tool_call(cls, text: str) -> bool:
+        """Check if text contains a potentially incomplete tool_call (started but not closed)."""
+        # Count opening and closing tags
+        open_count = text.count('<tool_call>')
+        close_count = text.count('</tool_call>')
+        return open_count > close_count
+
+    @classmethod
+    def extract_partial_tool_call_info(cls, text: str) -> dict[str, Any] | None:
+        """
+        Extract partial tool call information for streaming.
+        Returns partial info if we can determine function name, even if not complete.
+        """
+        # Look for the last incomplete tool_call
+        last_open = text.rfind('<tool_call>')
+        if last_open == -1:
+            return None
+
+        partial_content = text[last_open:]
+
+        # Check if this tool_call is already complete
+        if '</tool_call>' in partial_content:
+            return None
+
+        # Try to extract function name
+        func_match = re.search(r'<function=([^>]+)>', partial_content)
+        if not func_match:
+            return None
+
+        func_name = func_match.group(1).strip()
+
+        # Try to extract any complete parameters so far
+        arguments: dict[str, Any] = {}
+        for param_match in cls.PARAMETER_PATTERN.finditer(partial_content):
+            param_name = param_match.group(1).strip()
+            param_value = param_match.group(2).strip()
+            try:
+                arguments[param_name] = json.loads(param_value)
+            except (json.JSONDecodeError, ValueError):
+                arguments[param_name] = param_value
+
+        # Also check for partial parameter (opened but not closed)
+        partial_param_match = re.search(
+            r'<parameter=([^>]+)>\s*([^<]*?)$',
+            partial_content,
+            re.DOTALL
+        )
+        partial_param_name = None
+        partial_param_value = None
+        if partial_param_match:
+            partial_param_name = partial_param_match.group(1).strip()
+            partial_param_value = partial_param_match.group(2)
+
+        return {
+            "function_name": func_name,
+            "complete_arguments": arguments,
+            "partial_param_name": partial_param_name,
+            "partial_param_value": partial_param_value,
+        }
 
 
 # ----------------- Pydantic request models -----------------
@@ -58,10 +222,19 @@ class StreamOptions(BaseModel):
 
 
 class PrefixHints(BaseModel):
-    prefix_id: str
-    total_requests: int
-    osl: str  # LOW | MEDIUM | HIGH
-    iat: str  # LOW | MEDIUM | HIGH  (estimated time between requests)
+    session_id: str
+    latency_priority: str  # LOW | MEDIUM | HIGH
+
+    @field_validator('latency_priority')
+    @classmethod
+    def validate_priority(cls, v: str) -> str:
+        """Validate and normalize priority to LOW/MEDIUM/HIGH."""
+        if not v:
+            return "MEDIUM"
+        normalized = v.strip().upper()
+        if normalized not in ("LOW", "MEDIUM", "HIGH"):
+            raise ValueError(f"latency_priority must be LOW/MEDIUM/HIGH, got: {v}")
+        return normalized
 
 
 class ChatCompletionRequest(BaseModel):
@@ -186,21 +359,16 @@ class FrontendRequestHandler:
         async def chat_completions(
                 request: ChatCompletionRequest,
                 # ---- New generalized prefix headers ----
-                hdr_prefix_id: str | None = Header(None, alias="x-prefix-id"),
-                hdr_prefix_total: str | None = Header(None, alias="x-prefix-total-requests"),
-                hdr_prefix_osl: str | None = Header(None, alias="x-prefix-osl"),
-                hdr_prefix_iat: str | None = Header(None, alias="x-prefix-iat"),
+                hdr_session_id: str | None = Header(None, alias="x-nat-session-id"),
+                hdr_latency_priority: str | None = Header(None, alias="x-nat-prefix-latency-priority"),
         ):
             """
             OpenAI-compatible /v1/chat/completions:
             - Non-streaming: returns a single JSON completion.
             - Streaming: returns SSE 'chat.completion.chunk' events, then [DONE].
             - Passes per-prefix hints (ID/Total/OSL/IAT) to the processor.
+            - Supports function/tool calling with XML-format tool calls from model.
             """
-
-            # No support for tool calling. Raise error if request.tools
-            if request.tools:
-                raise HTTPException(status_code=400, detail="Tool calling is not supported by this frontend.")
 
             try:
                 # Convert to dict once; we may augment it with prefix hints
@@ -208,26 +376,13 @@ class FrontendRequestHandler:
                 logger.info("Got full request: %s", req_dict)
 
                 # ---- Build prefix_hints from headers (with robust defaults) ----
-                prefix_id = hdr_prefix_id or f"auto-{uuid.uuid4().hex}"
-                try:
-                    total_requests = int(hdr_prefix_total) if hdr_prefix_total is not None else 1
-                except Exception:
-                    total_requests = 1
+                session_id = hdr_session_id or f"auto-{uuid.uuid4().hex}"
+                latency_priority = hdr_latency_priority or "MEDIUM"
 
-                def norm_level(v: str | None, default: str = "MEDIUM") -> str:
-                    if not v:
-                        return default
-                    v = str(v).strip().upper()
-                    return v if v in ("LOW", "MEDIUM", "HIGH") else default
-
-                osl = norm_level(hdr_prefix_osl, "MEDIUM")
-                iat = norm_level(hdr_prefix_iat, "MEDIUM")
-
+                # PrefixHints will validate and normalize priority via Pydantic validator
                 req_dict["prefix_hints"] = {
-                    "prefix_id": prefix_id,
-                    "total_requests": total_requests,
-                    "osl": osl,
-                    "iat": iat,
+                    "session_id": session_id,
+                    "latency_priority": latency_priority,
                 }
 
                 # Build the processor payload (includes stream fields)
@@ -253,13 +408,32 @@ class FrontendRequestHandler:
                         elif isinstance(data.get("content"), str):
                             full_text = data["content"]
 
-                    tok = self._get_tokenizer(request.model)
+                    # Parse tool calls from the response
+                    text_content, tool_calls = ToolCallParser.parse(full_text)
+
+                    # Filter out <think> tags from text content
+                    text_content = strip_think_tags(text_content)
+
+                    tok = self._get_tokenizer(request.model or "nvidia/Llama-3.1-Nemotron-Nano-8B-v1")
                     prompt_text = self._messages_to_text(processor_req["messages"], tok)
                     prompt_tokens = len(tok.encode(prompt_text, add_special_tokens=True))
+                    # Count tokens from full response (including tool call markup)
                     completion_tokens = len(tok.encode(full_text, add_special_tokens=False))
 
-                    message_payload: dict[str, Any]
-                    message_payload = {"role": "assistant", "content": full_text}
+                    message_payload: dict[str, Any] = {"role": "assistant"}
+
+                    if tool_calls:
+                        # Response contains tool calls
+                        finish_reason = "tool_calls"
+                        message_payload["tool_calls"] = [tc.to_openai_format() for tc in tool_calls]
+                        # Include content only if there's meaningful text outside tool calls
+                        if text_content:
+                            message_payload["content"] = text_content
+                        else:
+                            message_payload["content"] = None
+                    else:
+                        # Regular text response
+                        message_payload["content"] = text_content
 
                     # Count completed request
                     await self._inc_tps()
@@ -287,7 +461,7 @@ class FrontendRequestHandler:
                 async def sse_stream() -> AsyncGenerator[str, None]:
                     created = int(time.time())
                     resp_id = f"chatcmpl-{uuid.uuid4().hex}"
-                    model_name = request.model
+                    model_name = request.model or "nvidia/Llama-3.1-Nemotron-Nano-8B-v1"
 
                     # Prepare tokenizer & prompt token count (for usage if requested)
                     prompt_tokens = 0
@@ -300,7 +474,14 @@ class FrontendRequestHandler:
                     def sse_packet(payload: dict[str, Any]) -> str:
                         return "data: " + json.dumps(payload, separators=(",", ":")) + "\n\n"
 
-                    def make_chunk(delta: dict[str, Any], finish_reason: str | None) -> dict[str, Any]:
+                    def make_chunk(
+                        delta: dict[str, Any],
+                        finish_reason: str | None,
+                        tool_calls_delta: list[dict[str, Any]] | None = None
+                    ) -> dict[str, Any]:
+                        chunk_delta = dict(delta)
+                        if tool_calls_delta:
+                            chunk_delta["tool_calls"] = tool_calls_delta
                         return {
                             "id": resp_id,
                             "object": "chat.completion.chunk",
@@ -308,7 +489,7 @@ class FrontendRequestHandler:
                             "model": model_name,
                             "choices": [{
                                 "index": 0,
-                                "delta": delta,
+                                "delta": chunk_delta,
                                 "finish_reason": finish_reason,
                             }],
                         }
@@ -319,7 +500,14 @@ class FrontendRequestHandler:
                     # 2) Stream content chunks from processor
                     processor_stream = await self.processor_client.generate(processor_req)
                     full_text = ""
+                    filtered_sent = ""  # Track how much filtered content we've sent
                     finish_reason: str | None = None
+
+                    # Tool call streaming state
+                    tool_call_mode = False
+                    current_tool_call_index = 0
+                    sent_tool_calls: set[int] = set()  # Track which tool calls we've started streaming
+                    last_streamed_args: dict[int, str] = {}  # Track streamed args per tool call index
 
                     try:
                         async for chunk in processor_stream:
@@ -343,7 +531,99 @@ class FrontendRequestHandler:
 
                             if piece:
                                 full_text += piece
-                                yield sse_packet(make_chunk(delta={"content": piece}, finish_reason=None))
+
+                                # Check for tool call patterns
+                                if ToolCallParser.has_partial_tool_call(full_text) or ToolCallParser.has_complete_tool_call(full_text):
+                                    # We're in tool call territory
+                                    if not tool_call_mode:
+                                        tool_call_mode = True
+                                        # Send any remaining text content before tool calls
+                                        text_before_tool = full_text.split('<tool_call>')[0]
+                                        filtered_before = strip_think_tags(text_before_tool)
+                                        if len(filtered_before) > len(filtered_sent):
+                                            new_piece = filtered_before[len(filtered_sent):]
+                                            filtered_sent = filtered_before
+                                            if new_piece.strip():
+                                                yield sse_packet(make_chunk(delta={"content": new_piece}, finish_reason=None))
+
+                                    # Parse complete tool calls and stream them
+                                    _, complete_tool_calls = ToolCallParser.parse(full_text)
+
+                                    for idx, tc in enumerate(complete_tool_calls):
+                                        if idx not in sent_tool_calls:
+                                            # Send tool call start (name)
+                                            tool_call_delta = [{
+                                                "index": idx,
+                                                "id": tc.id,
+                                                "type": "function",
+                                                "function": {
+                                                    "name": tc.name,
+                                                    "arguments": "",
+                                                }
+                                            }]
+                                            yield sse_packet(make_chunk(delta={}, finish_reason=None, tool_calls_delta=tool_call_delta))
+                                            sent_tool_calls.add(idx)
+                                            last_streamed_args[idx] = ""
+
+                                        # Stream arguments incrementally
+                                        full_args = json.dumps(tc.arguments)
+                                        already_sent = last_streamed_args.get(idx, "")
+                                        if len(full_args) > len(already_sent):
+                                            args_delta = full_args[len(already_sent):]
+                                            tool_call_delta = [{
+                                                "index": idx,
+                                                "function": {
+                                                    "arguments": args_delta,
+                                                }
+                                            }]
+                                            yield sse_packet(make_chunk(delta={}, finish_reason=None, tool_calls_delta=tool_call_delta))
+                                            last_streamed_args[idx] = full_args
+
+                                    # Also handle partial tool calls (streaming args as they come)
+                                    partial_info = ToolCallParser.extract_partial_tool_call_info(full_text)
+                                    if partial_info:
+                                        idx = len(complete_tool_calls)  # Next index
+                                        if idx not in sent_tool_calls:
+                                            # Send tool call start
+                                            tool_call_delta = [{
+                                                "index": idx,
+                                                "id": f"call_{uuid.uuid4().hex[:24]}",
+                                                "type": "function",
+                                                "function": {
+                                                    "name": partial_info["function_name"],
+                                                    "arguments": "",
+                                                }
+                                            }]
+                                            yield sse_packet(make_chunk(delta={}, finish_reason=None, tool_calls_delta=tool_call_delta))
+                                            sent_tool_calls.add(idx)
+                                            last_streamed_args[idx] = ""
+
+                                        # Stream partial arguments
+                                        partial_args = partial_info["complete_arguments"]
+                                        if partial_args:
+                                            full_args = json.dumps(partial_args)
+                                            already_sent = last_streamed_args.get(idx, "")
+                                            if len(full_args) > len(already_sent):
+                                                # For partial, we stream what we have so far
+                                                # This is tricky because JSON isn't complete yet
+                                                # Just stream the partial JSON representation
+                                                args_delta = full_args[len(already_sent):]
+                                                tool_call_delta = [{
+                                                    "index": idx,
+                                                    "function": {
+                                                        "arguments": args_delta,
+                                                    }
+                                                }]
+                                                yield sse_packet(make_chunk(delta={}, finish_reason=None, tool_calls_delta=tool_call_delta))
+                                                last_streamed_args[idx] = full_args
+
+                                else:
+                                    # Regular text content (no tool calls detected yet)
+                                    filtered_full = strip_think_tags(full_text)
+                                    if len(filtered_full) > len(filtered_sent):
+                                        new_piece = filtered_full[len(filtered_sent):]
+                                        filtered_sent = filtered_full
+                                        yield sse_packet(make_chunk(delta={"content": new_piece}, finish_reason=None))
 
                             if "finish_reason" in data and data["finish_reason"] is not None:
                                 finish_reason = data["finish_reason"]
@@ -357,7 +637,11 @@ class FrontendRequestHandler:
                         return
 
                     # 3) Final finish chunk
-                    final_reason = finish_reason if finish_reason else "stop"
+                    _, final_tool_calls = ToolCallParser.parse(full_text)
+                    if final_tool_calls:
+                        final_reason = "tool_calls"
+                    else:
+                        final_reason = finish_reason if finish_reason else "stop"
                     yield sse_packet(make_chunk(delta={}, finish_reason=final_reason))
 
                     # 4) Optional usage chunk
