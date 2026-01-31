@@ -139,7 +139,12 @@ def run_one(
     if enable_junit:
         cmd.append(f"--junitxml={junit}")
     if enable_coverage:
-        cmd.append("--cov=.")
+        # always include nat module in the coverage report
+        cmd.append("--cov=nat")
+        # if the project has a src directory, include it in the coverage report
+        source_dir = project_dir / "src"
+        if source_dir.exists():
+            cmd.append(f"--cov={str(source_dir)}")
         cmd.append("--cov-report=")
 
     if rc := sh(cmd, env=env):
