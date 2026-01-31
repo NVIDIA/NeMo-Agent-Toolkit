@@ -75,8 +75,8 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
         self._context_state = context_state
 
         # Save the context vars from the build phase so we can restore them for each request.
-        # This is needed because framework profiler handlers (e.g., LangChain's callback_handler_var)
-        # are set during workflow build, but HTTP requests in nat serve run in different async contexts.
+        # This is needed because some context variables are set during workflow
+        # build, but HTTP requests in nat serve run in different async contexts.
         self._saved_context = contextvars.copy_context()
 
     @property

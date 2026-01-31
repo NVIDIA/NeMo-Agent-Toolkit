@@ -19,13 +19,12 @@ import typing
 import uuid
 from enum import Enum
 
-from nat.builder.context import Context
-from nat.builder.context import ContextState
+from nat.builder.context import Context, ContextState
 from nat.builder.function import Function
-from nat.data_models.intermediate_step import IntermediateStepPayload
-from nat.data_models.intermediate_step import IntermediateStepType
-from nat.data_models.intermediate_step import StreamEventData
-from nat.data_models.intermediate_step import TraceMetadata
+from nat.data_models.intermediate_step import (IntermediateStepPayload,
+                                               IntermediateStepType,
+                                               StreamEventData,
+                                               TraceMetadata)
 from nat.data_models.invocation_node import InvocationNode
 from nat.data_models.runtime_enum import RuntimeTypeEnum
 from nat.observability.exporter_manager import ExporterManager
@@ -93,7 +92,6 @@ class Runner:
         self._runtime_type = runtime_type
         self._runtime_type_token = None
 
-        # Saved context from workflow build phase for restoring framework profiler handlers
         self._saved_context = saved_context
 
     @property
@@ -106,8 +104,8 @@ class Runner:
     async def __aenter__(self):
 
         # Restore the saved context from the workflow build phase.
-        # This is needed because framework profiler handlers (e.g., LangChain's callback_handler_var)
-        # are set during workflow build, but HTTP requests in nat serve run in different async contexts.
+        # This is needed because some context variables are set during workflow
+        # build, but HTTP requests in nat serve run in different async contexts.
         if self._saved_context is not None:
             for context_var, value in self._saved_context.items():
                 context_var.set(value)
