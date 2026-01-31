@@ -26,6 +26,7 @@ from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 
+
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_nim_langchain_agent():
