@@ -106,6 +106,10 @@ def add_text(text: str, blocks: list[dict], plain_text: list[str]) -> None:
     plain_text.append(text)
 
 
+def chunk_items(items: list[typing.Any], chunk_size: int) -> list[list[typing.Any]]:
+    return [items[index:index + chunk_size] for index in range(0, len(items), chunk_size)]
+
+
 def build_messages(junit_data: dict[str, typing.Any], coverage_data: str) -> ReportMessages:
     branch_name = os.environ.get("CI_COMMIT_BRANCH", "unknown")
     num_errors = junit_data['num_errors']
@@ -199,14 +203,25 @@ def main():
                                        text="\n".join(report_messages.plain_text),
                                        blocks=report_messages.blocks,
                                        link_names=report_messages.failure_text is not None)
+    SLACK_BLOCK_LIMIT = 40
 
     if report_messages.failure_text is not None:
         # Since potentially a large number of failures could occur, we will post them in a thread to the original
         # message to avoid spamming the channel.
-        client.chat_postMessage(channel=slack_channel,
-                                text="\n".join(report_messages.failure_text),
-                                blocks=report_messages.failure_blocks,
-                                thread_ts=response["ts"])
+        failure_blocks = report_messages.failure_blocks or []
+        failure_text = report_messages.failure_text or []
+        if len(failure_blocks) > SLACK_BLOCK_LIMIT:
+            blocks_chunks = chunk_items(failure_blocks, SLACK_BLOCK_LIMIT)
+            text_chunks = chunk_items(failure_text, SLACK_BLOCK_LIMIT)
+        else:
+            blocks_chunks = [failure_blocks]
+            text_chunks = [failure_text]
+
+        for blocks_chunk, text_chunk in zip(blocks_chunks, text_chunks):
+            client.chat_postMessage(channel=slack_channel,
+                                    text="\n".join(text_chunk),
+                                    blocks=blocks_chunk,
+                                    thread_ts=response["ts"])
 
     return return_code
 
