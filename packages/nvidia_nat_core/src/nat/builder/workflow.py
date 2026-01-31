@@ -13,9 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import contextvars
 from contextlib import asynccontextmanager
-from contextvars import ContextVar
-from typing import Any
 
 from nat.builder.context import ContextState
 from nat.builder.embedder import EmbedderProviderInfo
@@ -35,8 +34,6 @@ from nat.object_store.interfaces import ObjectStore
 from nat.observability.exporter.base_exporter import BaseExporter
 from nat.observability.exporter_manager import ExporterManager
 from nat.runtime.runner import Runner
-
-callback_handler_var: ContextVar[Any | None] = ContextVar("callback_handler_var", default=None)
 
 
 class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
@@ -77,6 +74,11 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
 
         self._context_state = context_state
 
+        # Save the context vars from the build phase so we can restore them for each request.
+        # This is needed because some context variables are set during workflow
+        # build, but HTTP requests in nat serve run in different async contexts.
+        self._saved_context = contextvars.copy_context()
+
     @property
     def has_streaming_output(self) -> bool:
 
@@ -105,7 +107,8 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
                           entry_fn=self._entry_fn,
                           context_state=self._context_state,
                           exporter_manager=self.exporter_manager,
-                          runtime_type=runtime_type) as runner:
+                          runtime_type=runtime_type,
+                          saved_context=self._saved_context) as runner:
 
             # The caller can `yield runner` so they can do `runner.result()` or `runner.result_stream()`
             yield runner

@@ -639,9 +639,12 @@ class TestBatchingProcessorIntegration:
         processor = BatchingProcessor[str](batch_size=3, flush_interval=0.1)
 
         callback_batches = []
+        flush_event = asyncio.Event()
 
         async def capture_callback(batch):
             callback_batches.append(batch)
+            if len(callback_batches) == 1:
+                flush_event.set()
 
         processor.set_done_callback(capture_callback)
 
@@ -653,7 +656,7 @@ class TestBatchingProcessorIntegration:
         # Time-based batch
         await processor.process("4")
         await processor.process("5")
-        await asyncio.sleep(0.2)  # Wait for time-based flush
+        await asyncio.wait_for(flush_event.wait(), timeout=1.0)
 
         # Add more items before shutdown to ensure shutdown batch is created
         await processor.process("6")

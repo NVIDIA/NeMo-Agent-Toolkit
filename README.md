@@ -49,6 +49,8 @@ limitations under the License.
 
 - [**Initial NVIDIA Dynamo Integration:**](https://docs.nvidia.com/dynamo/latest/) NeMo Agent Toolkit now has initial Dynamo support for end-to-end deployment acceleration of agentic workflows.
 
+- [**Per-User Functions**](./docs/source/extend/custom-components/custom-functions/per-user-functions.md) NeMo Agent Toolkit now supports per-user functions for deferred instantiation, enabling per-user stateful functions, per-user resources, and other features.
+
 ## ✨ Key Features
 
 - 🧩 [**Framework Agnostic:**](./docs/source/components/integrations/frameworks.md) NeMo Agent Toolkit works side-by-side and around existing agentic frameworks, such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), and [Google ADK](https://google.github.io/adk-docs/), as well as custom enterprise agentic frameworks and simple Python agents. This allows you to use your current technology stack without replatforming. NeMo Agent Toolkit complements any existing agentic framework or memory tool you're using and isn't tied to any specific agentic framework, LLM provider, or data source.

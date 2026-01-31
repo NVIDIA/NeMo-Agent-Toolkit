@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import contextvars
 import logging
 import typing
 import uuid
@@ -52,7 +53,8 @@ class Runner:
                  entry_fn: Function,
                  context_state: ContextState,
                  exporter_manager: ExporterManager,
-                 runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE):
+                 runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE,
+                 saved_context: contextvars.Context | None = None):
         """
         The Runner class is used to run a workflow. It handles converting input and output data types and running the
         workflow with the specified concurrency.
@@ -69,6 +71,8 @@ class Runner:
             The exporter manager to use
         runtime_type : RuntimeTypeEnum
             The runtime type (RUN_OR_SERVE, EVALUATE, OTHER)
+        saved_context : contextvars.Context | None
+            The saved context from the workflow build phase to restore for each request
         """
 
         if (entry_fn is None):
@@ -90,6 +94,8 @@ class Runner:
         self._runtime_type = runtime_type
         self._runtime_type_token = None
 
+        self._saved_context = saved_context
+
     @property
     def context(self) -> Context:
         return self._context
@@ -98,6 +104,13 @@ class Runner:
         return self._entry_fn.convert(value, to_type)
 
     async def __aenter__(self):
+
+        # Restore the saved context from the workflow build phase.
+        # This is needed because some context variables are set during workflow
+        # build, but HTTP requests in nat serve run in different async contexts.
+        if self._saved_context is not None:
+            for context_var, value in self._saved_context.items():
+                context_var.set(value)
 
         # Set the input message on the context
         self._input_message_token = self._context_state.input_message.set(self._input_message)
