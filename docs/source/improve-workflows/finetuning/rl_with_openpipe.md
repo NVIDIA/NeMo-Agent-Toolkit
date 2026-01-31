@@ -19,7 +19,7 @@ limitations under the License.
 
 # OpenPipe ART Integration
 
-This guide covers the integration between the NVIDIA NeMo Agent toolkit finetuning harness and [OpenPipe ART](https://art.openpipe.ai/) (Agent Reinforcement Trainer), an open-source framework for teaching [LLMs](../../build-workflows/llms/index.md) through reinforcement learning.
+This guide covers the integration between the NVIDIA NeMo Agent Toolkit finetuning harness and [OpenPipe ART](https://art.openpipe.ai/) (Agent Reinforcement Trainer), an open-source framework for teaching [LLMs](../../build-workflows/llms/index.md) through reinforcement learning.
 
 ## About OpenPipe ART
 
@@ -70,11 +70,11 @@ The ART backend runs on GPU infrastructure and provides:
 - **vLLM Inference Engine**: Serves the model for inference with log probability support
 - **GRPO Trainer**: Performs weight updates based on submitted trajectories
 
-NeMo Agent toolkit connects to this backend through the `ARTTrainerAdapter`, which handles the protocol for submitting trajectories and monitoring training.
+NeMo Agent Toolkit connects to this backend through the `ARTTrainerAdapter`, which handles the protocol for submitting trajectories and monitoring training.
 
 ### Supported Agent Frameworks
 
-The following table highlights the current support matrix for using ART with different agent frameworks in the NeMo Agent toolkit:
+The following table highlights the current support matrix for using ART with different agent frameworks in the NeMo Agent Toolkit:
 
 | Agent Framework        | Support | 
 |------------------------|--------------------------------------------------|
@@ -246,7 +246,7 @@ The trainer has no additional configuration options; it uses the shared `finetun
 
 ### ARTTrajectoryBuilder
 
-The `ARTTrajectoryBuilder` collects training trajectories through the NeMo Agent toolkit evaluation system:
+The `ARTTrajectoryBuilder` collects training trajectories through the NeMo Agent Toolkit evaluation system:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -298,7 +298,7 @@ The `ARTTrajectoryBuilder` collects training trajectories through the NeMo Agent
 
 ### The `ARTTrainerAdapter` Class
 
-The `ARTTrainerAdapter` converts NeMo Agent toolkit trajectories to ART's format and manages training:
+The `ARTTrainerAdapter` converts NeMo Agent Toolkit trajectories to ART's format and manages training:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -347,9 +347,9 @@ The `ARTTrainerAdapter` converts NeMo Agent toolkit trajectories to ART's format
 
 1. **ART Client Management**: The adapter maintains an `art.Backend` client and `art.TrainableModel` instance that persist across epochs.
 
-2. **Trajectory Conversion**: NeMo Agent toolkit `Trajectory` objects are converted to ART's `art.Trajectory` format:
+2. **Trajectory Conversion**: NeMo Agent Toolkit `Trajectory` objects are converted to ART's `art.Trajectory` format:
    ```python
-   # NeMo Agent toolkit format
+   # NeMo Agent Toolkit format
    EpisodeItem(role=EpisodeItemRole.ASSISTANT, content="...", logprobs=...)
 
    # Converted to ART format

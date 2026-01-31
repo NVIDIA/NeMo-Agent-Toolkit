@@ -107,7 +107,7 @@ Below is a non‑exhaustive catalog you can use immediately; refer to the inline
 
 ## Pre‑Built TTC Functions
 
-NeMo Agent toolkit ships higher‑level wrappers that hide all orchestration.
+NeMo Agent Toolkit ships higher‑level wrappers that hide all orchestration.
 
 | Function                              | Use‑case                                                                                                            |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |

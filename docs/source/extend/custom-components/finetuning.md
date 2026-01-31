@@ -19,7 +19,7 @@ limitations under the License.
 
 # Extending the Finetuning Harness
 
-This guide covers how to create custom components for the NeMo Agent toolkit finetuning harness. You'll learn about the three core interfaces, how to implement them, and best practices for creating robust, reusable components.
+This guide covers how to create custom components for the NeMo Agent Toolkit finetuning harness. You'll learn about the three core interfaces, how to implement them, and best practices for creating robust, reusable components.
 
 ## Architecture Overview
 
@@ -56,7 +56,7 @@ Each component has a specific responsibility:
 | Component | Responsibility | Key Methods |
 |-----------|---------------|-------------|
 | **TrajectoryBuilder** | Generate training data from workflow executions | `start_run()`, `finalize()`, `compute_reward()` |
-| **TrainerAdapter** | Bridge between NeMo Agent toolkit and external training backends | `submit()`, `status()`, `wait_until_complete()` |
+| **TrainerAdapter** | Bridge between NeMo Agent Toolkit and external training backends | `submit()`, `status()`, `wait_until_complete()` |
 | **Trainer** | Orchestrate the complete finetuning workflow | `run_epoch()`, `run()`, `get_metrics()` |
 
 ## The TrajectoryBuilder Interface
@@ -87,7 +87,7 @@ class TrajectoryBuilder(ABC):
         self.trajectory_builder_config.reward = self.run_config.reward_function
 
     async def run_eval(self) -> EvaluationRunOutput:
-        """Run NeMo Agent toolkit Evaluation to generate episode items."""
+        """Run NeMo Agent Toolkit Evaluation to generate episode items."""
         # Default implementation uses the evaluation system
         from nat.eval.evaluate import EvaluationRun, EvaluationRunConfig
         # ... runs evaluation and returns output
@@ -193,7 +193,7 @@ async def my_trajectory_builder(config: MyTrajectoryBuilderConfig, builder: Buil
 
 ## The TrainerAdapter Interface
 
-The `TrainerAdapter` bridges the gap between NeMo Agent toolkit and external training backends. It handles data format conversion, job submission, and status monitoring.
+The `TrainerAdapter` bridges the gap between NeMo Agent Toolkit and external training backends. It handles data format conversion, job submission, and status monitoring.
 
 ### Interface Definition
 

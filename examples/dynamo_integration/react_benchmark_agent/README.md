@@ -16,7 +16,7 @@ limitations under the License.
 <!-- path-check-skip-file -->
 
 > [!NOTE]
-> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
+> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent Toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
 
 # Agent Leaderboard v2 - Evaluation Guide
 
@@ -60,10 +60,10 @@ Currently this agent supports evaluation exclusively for the [Galileo Agent Lead
 > - ❌ macOS (Intel or Apple Silicon)
 > - ❌ Windows
 >
-> You do **not** need to install `ai-dynamo` or `ai-dynamo-runtime` packages locally. The Dynamo server runs inside pre-built Docker images from NGC (`nvcr.io/nvidia/ai-dynamo/sglang-runtime`), which include all necessary components. The NeMo Agent toolkit Dynamo LLM client (`_type: dynamo`) is a pure HTTP client that works on any platform.
+> You do **not** need to install `ai-dynamo` or `ai-dynamo-runtime` packages locally. The Dynamo server runs inside pre-built Docker images from NGC (`nvcr.io/nvidia/ai-dynamo/sglang-runtime`), which include all necessary components. The NeMo Agent Toolkit Dynamo LLM client (`_type: dynamo`) is a pure HTTP client that works on any platform.
 
 1. **Python 3.11, 3.12, or 3.13** installed
-2. **NeMo Agent toolkit** repository cloned
+2. **NeMo Agent Toolkit** repository cloned
 3. **Docker** with NVIDIA Container Toolkit
 4. **NVIDIA Driver** with CUDA 12.0+ support, `nvidia-fabricmanager` enabled, and matching your driver version. Verify with:
 

@@ -25,7 +25,7 @@ For a complete, hands-on guide to setting up OAuth2 authentication with Keycloak
 
 ## Supported Capabilities
 
-NeMo Agent toolkit A2A authentication provides the capabilities required for secure agent-to-agent communication:
+NeMo Agent Toolkit A2A authentication provides the capabilities required for secure agent-to-agent communication:
 
 - **Agent Card Discovery**: Public endpoint for discovering security requirements without authentication
 - **OAuth 2.1 Authorization Code Flow**: Standard authorization flow conforming to [OAuth 2.1 draft specification](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13)

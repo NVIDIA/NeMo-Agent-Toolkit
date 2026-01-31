@@ -30,7 +30,7 @@ This directory contains configurations for running services used by the examples
 
 ## Key Features
 
-- **Docker Compose Services:** Provides pre-configured Docker Compose files for essential services used across NeMo Agent toolkit examples.
+- **Docker Compose Services:** Provides pre-configured Docker Compose files for essential services used across NeMo Agent Toolkit examples.
 - **Example Support Infrastructure:** Simplifies setup of supporting services required by various examples in the repository.
 - **Milvus:** Includes `docker-compose.milvus.yml` for running a Milvus server for RAG examples.
 - **MinIO:** Includes `docker-compose.minio.yml` for running a MinIO server for object store examples.

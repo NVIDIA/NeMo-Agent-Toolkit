@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 # Configure a Reasoning Agent
-Configure the NVIDIA NeMo Agent toolkit reasoning [agent](../index.md) as a [workflow](../../../build-workflows/about-building-workflows.md) or a [function](../../../build-workflows/functions-and-function-groups/functions.md). We recommend using the reasoning wrapper with any NVIDIA NeMo Agent toolkit function that could improve performance from task-specific plan generation.
+Configure the NVIDIA NeMo Agent Toolkit reasoning [agent](../index.md) as a [workflow](../../../build-workflows/about-building-workflows.md) or a [function](../../../build-workflows/functions-and-function-groups/functions.md). We recommend using the reasoning wrapper with any NVIDIA NeMo Agent Toolkit function that could improve performance from task-specific plan generation.
 
 ## Requirements
 The reasoning agent requires the `nvidia-nat[langchain]` plugin, which can be installed with one of the following commands.
@@ -27,7 +27,7 @@ The reasoning agent requires the `nvidia-nat[langchain]` plugin, which can be in
 uv pip install -e '.[langchain]'
 ```
 
-- If you have installed the NeMo Agent toolkit from a package:
+- If you have installed the NeMo Agent Toolkit from a package:
 
 ```bash
 uv pip install "nvidia-nat[langchain]"
@@ -109,7 +109,7 @@ When you enter a prompt with the reasoning agent, it runs through the following 
 2. **Reasoning on top of Function** – The agent reasons the best plan of action to take, based on the input and the augmented underlying function.
 3. **Instruction / Plan Execution** – The agent invokes the underlying function, passing its plan of action along to it.
 
-For an example of using reasoning agent with the ReAct agent, refer to the ReAct agent example `examples/agents/react/README.md` in the [NeMo Agent toolkit repository](https://github.com/NVIDIA/NeMo-Agent-Toolkit).
+For an example of using reasoning agent with the ReAct agent, refer to the ReAct agent example `examples/agents/react/README.md` in the [NeMo Agent Toolkit repository](https://github.com/NVIDIA/NeMo-Agent-Toolkit).
 
 ### Comparing ReAct Agent With and Without the Reasoning Agent
 

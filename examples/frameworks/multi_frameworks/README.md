@@ -19,8 +19,8 @@ limitations under the License.
 
 **Complexity:** 🟨 Intermediate
 
-This example demonstrates how to integrate multiple AI frameworks seamlessly using a set of LangChain / LangGraph agents, in NeMo Agent toolkit.
-NeMo Agent toolkit is framework-agnostic, allowing usage of custom and pre-built preferred AI tools without restriction due to AI framework.
+This example demonstrates how to integrate multiple AI frameworks seamlessly using a set of LangChain / LangGraph agents, in NeMo Agent Toolkit.
+NeMo Agent Toolkit is framework-agnostic, allowing usage of custom and pre-built preferred AI tools without restriction due to AI framework.
 
 ## Table of Contents
 
@@ -37,14 +37,14 @@ NeMo Agent toolkit is framework-agnostic, allowing usage of custom and pre-built
 
 LangChain/LangGraph is incredibly flexible, LlamaIndex is incredibly powerful for building RAG pipelines;
 different AI frameworks excel at different tasks.
-Instead of committing to just one, this example shows how they can work together via NeMo Agent toolkit.
+Instead of committing to just one, this example shows how they can work together via NeMo Agent Toolkit.
 
 In this example, we combine:
 - **Haystack Agent** – with a configurable LLM.
 - **LangChain/LangGraph Research Tool** – web search.
 - **LlamaIndex RAG Tool** – document Q&A (pre-configured to use this README)
 
-This example workflow leverages the NeMo Agent toolkit plugin system and `Builder` object to demonstrate how the `Builder` object can dynamically wrap any Python function—regardless of its underlying AI framework or implementation—and convert it into another AI framework of our choice.
+This example workflow leverages the NeMo Agent Toolkit plugin system and `Builder` object to demonstrate how the `Builder` object can dynamically wrap any Python function—regardless of its underlying AI framework or implementation—and convert it into another AI framework of our choice.
 
 In this example, we wrap all three of the above tools as LangChain/LangGraph Tools.
 Then, using LangChain and LangGraph, we unify these frameworks into a single workflow, demonstrating interoperability and flexibility. The goal is not to favor one tool over another but to showcase how different AI stacks can complement each other.
@@ -58,9 +58,9 @@ Then, using LangChain and LangGraph, we unify these frameworks into a single wor
 
 ## Key Features
 
-- **Multi-Framework Integration:** Demonstrates seamless integration of LangChain/LangGraph, LlamaIndex, and Haystack frameworks within a single NeMo Agent toolkit workflow.
+- **Multi-Framework Integration:** Demonstrates seamless integration of LangChain/LangGraph, LlamaIndex, and Haystack frameworks within a single NeMo Agent Toolkit workflow.
 - **Framework-Agnostic Agent Architecture:** Shows a supervisor agent that routes queries to specialized worker agents built with different underlying frameworks (LlamaIndex RAG, LangChain research, Haystack chitchat).
-- **Cross-Framework Tool Wrapping:** Demonstrates how the NeMo Agent toolkit Builder can dynamically wrap any Python function from any framework and convert it into LangChain/LangGraph tools for unified orchestration.
+- **Cross-Framework Tool Wrapping:** Demonstrates how the NeMo Agent Toolkit Builder can dynamically wrap any Python function from any framework and convert it into LangChain/LangGraph tools for unified orchestration.
 - **Specialized Agent Workers:** Includes three distinct agents - a `rag_agent` using LlamaIndex for document Q&A, a `research_agent` using LangChain/LangGraph for arXiv research, and a chitchat agent using Haystack pipelines.
 - **Dynamic Framework Selection:** Shows how different AI frameworks can be selected automatically based on query type, leveraging each framework's specific strengths without vendor lock-in.
 
@@ -77,7 +77,7 @@ the multi-agents architecture looks like the below
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 
 ### Install this Workflow
 

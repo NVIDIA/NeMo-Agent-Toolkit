@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 # Configure the ReWOO Agent
-Configure the NVIDIA NeMo Agent toolkit ReWOO agent as a [workflow](../../../build-workflows/about-building-workflows.md) or a [function](../../../build-workflows/functions-and-function-groups/functions.md). The ReWOO agent workflow is broken down into three phases, planning, execution, and solution.
+Configure the NVIDIA NeMo Agent Toolkit ReWOO agent as a [workflow](../../../build-workflows/about-building-workflows.md) or a [function](../../../build-workflows/functions-and-function-groups/functions.md). The ReWOO agent workflow is broken down into three phases, planning, execution, and solution.
 
 ## Requirements
 The ReWOO agent requires the `nvidia-nat[langchain]` plugin to be installed, which can be installed with one of the following commands.
@@ -27,7 +27,7 @@ The ReWOO agent requires the `nvidia-nat[langchain]` plugin to be installed, whi
 uv pip install -e '.[langchain]'
 ```
 
-- If you have installed the NeMo Agent toolkit from a package, you can install this with the following command:
+- If you have installed the NeMo Agent Toolkit from a package, you can install this with the following command:
 
 ```bash
 uv pip install "nvidia-nat[langchain]"

@@ -18,7 +18,7 @@ An embedder, or [embedding model](https://www.nvidia.com/en-us/glossary/vector-d
 
 ## Supported Embedder Providers
 
-NeMo Agent toolkit supports the following embedder providers:
+NeMo Agent Toolkit supports the following embedder providers:
 | Provider | Type | Description |
 |----------|------|-------------|
 | [NVIDIA NIM](https://build.nvidia.com) | `nim` | NVIDIA Inference Microservice (NIM) |

@@ -16,20 +16,20 @@ limitations under the License.
 -->
 
 # Model Context Protocol (MCP) Authentication for the NVIDIA NeMo Agent Toolkit
-MCP provides authorization capabilities at the transport level, enabling MCP clients to make requests to restricted MCP servers on behalf of resource owners. The NVIDIA NeMo Agent toolkit provides a set of built-in [authentication providers](../api-authentication.md) for accessing servers that require authentication.
+MCP provides authorization capabilities at the transport level, enabling MCP clients to make requests to restricted MCP servers on behalf of resource owners. The NVIDIA NeMo Agent Toolkit provides a set of built-in [authentication providers](../api-authentication.md) for accessing servers that require authentication.
 
 This document covers **interactive OAuth2 authentication** (`mcp_oauth2`) for user-facing workflows. For automated, headless scenarios such as CI/CD pipelines or backend services, see [Service Account Authentication](./mcp-service-account-auth.md).
 
-The `mcp_oauth2` provider is the default authentication provider in the NeMo Agent toolkit for MCP servers that require user authorization. It conforms to the [MCP OAuth2](https://modelcontextprotocol.io/specification/draft/basic/authorization) specification.
+The `mcp_oauth2` provider is the default authentication provider in the NeMo Agent Toolkit for MCP servers that require user authorization. It conforms to the [MCP OAuth2](https://modelcontextprotocol.io/specification/draft/basic/authorization) specification.
 
 ## Supported Capabilities
-NeMo Agent toolkit MCP authentication provides the capabilities required to access protected MCP servers:
+NeMo Agent Toolkit MCP authentication provides the capabilities required to access protected MCP servers:
 - Dynamic endpoint discovery using the procedures defined in [RFC 9728](https://www.rfc-editor.org/rfc/rfc9728), [RFC 8414](https://www.rfc-editor.org/rfc/rfc8414), and [OpenID Connect](https://openid.net/specs/openid-connect-core-1_0.html)
 - Client registration using the procedures defined in [RFC 7591](https://www.rfc-editor.org/rfc/rfc7591)
 - Authentication using the procedures defined in the [OAuth2 specification](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13)
 
 ## Configuring an Auth Provider
-`mcp_oauth2` is a built-in authentication provider in the NeMo Agent toolkit that implements the MCP OAuth2 specification. It is used to authenticate with MCP servers that require authentication.
+`mcp_oauth2` is a built-in authentication provider in the NeMo Agent Toolkit that implements the MCP OAuth2 specification. It is used to authenticate with MCP servers that require authentication.
 Sample configuration:
 ```yaml
 authentication:
@@ -182,7 +182,7 @@ At this point, a consent window is displayed again. The `UI` user must authorize
 
 ### Running the Workflow on a Remote Server
 
-When running the NeMo Agent toolkit on a remote server accessible from your local browser, you must configure the `redirect_uri` to use the remote server's network address instead of `localhost`.
+When running the NeMo Agent Toolkit on a remote server accessible from your local browser, you must configure the `redirect_uri` to use the remote server's network address instead of `localhost`.
 
 #### Why This Is Required
 

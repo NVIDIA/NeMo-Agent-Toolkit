@@ -19,9 +19,9 @@ limitations under the License.
 
 **Complexity:** 🟢 Beginner
 
-This example demonstrates how to use the sequential executor functionality with the NVIDIA NeMo Agent toolkit. The sequential executor is a control flow component that chains multiple functions together, where each function's output becomes the input for the next function. This creates a linear tool execution pipeline that executes functions in a predetermined sequence.
+This example demonstrates how to use the sequential executor functionality with the NVIDIA NeMo Agent Toolkit. The sequential executor is a control flow component that chains multiple functions together, where each function's output becomes the input for the next function. This creates a linear tool execution pipeline that executes functions in a predetermined sequence.
 
-The NeMo Agent toolkit provides a [`sequential_executor`](../../../src/nat/control_flow/sequential_executor.py) tool to implement this functionality.
+The NeMo Agent Toolkit provides a [`sequential_executor`](../../../packages/nvidia_nat_langchain/src/nat/plugins/langchain/control_flow/sequential_executor.py) tool to implement this functionality.
 
 ## Table of Contents
 
@@ -78,7 +78,7 @@ The following options are required for the sequential executor:
 
 ### Exceptions
 
-- **`SequentialExecutorExit`**: Raised by a tool to exit the chain early and return a custom message as the workflow output. Unlike `return_error_on_exception` which handles unexpected errors, this exception is for intentional early termination. Import from `nat.control_flow.sequential_executor`.
+- **`SequentialExecutorExit`**: Raised by a tool to exit the chain early and return a custom message as the workflow output. Unlike `return_error_on_exception` which handles unexpected errors, this exception is for intentional early termination. Import from `nat.plugins.langchain.control_flow.sequential_executor`.
 
 ### Example Configuration
 
@@ -127,11 +127,11 @@ workflow:
 
 ## Installation and Setup
 
-Before running this example, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install the NeMo Agent toolkit.
+Before running this example, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install the NeMo Agent Toolkit.
 
 ### Install this Workflow
 
-From the root directory of the NeMo Agent toolkit repository, run the following command:
+From the root directory of the NeMo Agent Toolkit repository, run the following command:
 
 ```bash
 uv pip install -e examples/control_flow/sequential_executor
@@ -140,7 +140,7 @@ uv pip install -e examples/control_flow/sequential_executor
 
 This workflow demonstrates sequential executor functionality by processing raw text through a three-stage pipeline. Each function's output becomes the input for the next function in the chain.
 
-Run the following command from the root of the NeMo Agent toolkit repository to execute this workflow:
+Run the following command from the root of the NeMo Agent Toolkit repository to execute this workflow:
 
 ```bash
 nat run --config_file=examples/control_flow/sequential_executor/configs/config.yml --input "The quick brown fox jumps over the lazy dog. This is a simple test sentence to demonstrate text processing capabilities."

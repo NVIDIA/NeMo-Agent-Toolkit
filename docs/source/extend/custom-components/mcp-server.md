@@ -18,10 +18,10 @@ limitations under the License.
 # Adding a Custom MCP Server Worker
 
 :::{note}
-We recommend reading the [MCP Server Guide](../../run-workflows/mcp-server.md) before proceeding with this documentation, to understand how MCP servers work in NVIDIA NeMo Agent toolkit.
+We recommend reading the [MCP Server Guide](../../run-workflows/mcp-server.md) before proceeding with this documentation, to understand how MCP servers work in NVIDIA NeMo Agent Toolkit.
 :::
 
-The NVIDIA NeMo Agent toolkit provides a default MCP server worker that publishes your [workflow](../../build-workflows/about-building-workflows.md) [functions](../../build-workflows/functions-and-function-groups/functions.md) as MCP [tools](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools). However, you may need to customize the server behavior for enterprise requirements such as authentication, custom endpoints, or telemetry. This guide shows you how to create custom MCP server workers that extend the default implementation.
+The NVIDIA NeMo Agent Toolkit provides a default MCP server worker that publishes your [workflow](../../build-workflows/about-building-workflows.md) [functions](../../build-workflows/functions-and-function-groups/functions.md) as MCP [tools](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools). However, you may need to customize the server behavior for enterprise requirements such as authentication, custom endpoints, or telemetry. This guide shows you how to create custom MCP server workers that extend the default implementation.
 
 ## When to Create a Custom Worker
 
@@ -34,9 +34,9 @@ Create a custom MCP worker when you need to:
 
 ## Creating and Registering a Custom MCP Worker
 
-To extend the NeMo Agent toolkit with custom MCP workers, you need to create a worker class that inherits from {py:class}`~nat.plugins.mcp.server.front_end_plugin_worker.MCPFrontEndPluginWorker` and override the methods you want to customize.
+To extend the NeMo Agent Toolkit with custom MCP workers, you need to create a worker class that inherits from {py:class}`~nat.plugins.mcp.server.front_end_plugin_worker.MCPFrontEndPluginWorker` and override the methods you want to customize.
 
-This section provides a step-by-step guide to create and register a custom MCP worker with the NeMo Agent toolkit. A custom status endpoint worker is used as an example to demonstrate the process.
+This section provides a step-by-step guide to create and register a custom MCP worker with the NeMo Agent Toolkit. A custom status endpoint worker is used as an example to demonstrate the process.
 
 ## Step 1: Implement the Worker Class
 
@@ -126,7 +126,7 @@ workflow:
 
 ## Step 3: Run and Test Your Server
 
-Start your server using the NeMo Agent toolkit CLI:
+Start your server using the NeMo Agent Toolkit CLI:
 
 ```bash
 nat mcp serve --config_file custom_mcp_server_workflow.yml
@@ -172,10 +172,10 @@ When extending {py:class}`~nat.plugins.mcp.server.front_end_plugin_worker.MCPFro
 
 - **Health endpoint**: `/health` for server status checks
 - **Workflow building**: Processes your workflow configuration
-- **Function-to-tool conversion**: Registers NeMo Agent toolkit functions as MCP tools
+- **Function-to-tool conversion**: Registers NeMo Agent Toolkit functions as MCP tools
 - **Debug endpoints**: Additional routes for development
 
-Most workers call `super().add_routes()` first to ensure all standard NeMo Agent toolkit tools are registered, then add custom features:
+Most workers call `super().add_routes()` first to ensure all standard NeMo Agent Toolkit tools are registered, then add custom features:
 
 ```python
 async def add_routes(self, mcp: FastMCP, builder: WorkflowBuilder):
@@ -262,7 +262,7 @@ Your worker has access to configuration through instance variables:
   - `port`: Server port number
   - `debug`: Debug mode flag
 
-- **`self.full_config`**: Complete NeMo Agent toolkit configuration
+- **`self.full_config`**: Complete NeMo Agent Toolkit configuration
   - `general`: General settings including front end config
   - `llms`: [LLM](../../build-workflows/llms/index.md) configurations
   - `functions`: Function configurations
@@ -289,11 +289,11 @@ async def create_mcp_server(self) -> FastMCP:
 
 ## Summary
 
-This guide provides a step-by-step process to create custom MCP server workers in the NeMo Agent toolkit. The custom status worker demonstrates how to:
+This guide provides a step-by-step process to create custom MCP server workers in the NeMo Agent Toolkit. The custom status worker demonstrates how to:
 
 1. Extend {py:class}`~nat.plugins.mcp.server.front_end_plugin_worker.MCPFrontEndPluginWorker`
 2. Override `add_routes()` and use `super()` to get default behavior
 3. Override `create_mcp_server()` to use a different server implementation. When doing so, implement your own authentication and authorization logic within that server.
 4. Override `add_root_level_routes()` to add routes to the wrapper FastAPI app when `base_path` is configured (such as OAuth discovery endpoints)
 
-Custom workers enable enterprise features like authentication, telemetry, and integration with existing infrastructure without modifying NeMo Agent toolkit core code.
+Custom workers enable enterprise features like authentication, telemetry, and integration with existing infrastructure without modifying NeMo Agent Toolkit core code.

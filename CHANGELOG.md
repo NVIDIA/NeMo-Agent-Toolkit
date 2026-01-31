@@ -390,7 +390,7 @@ This is a documentation only release, there are no code changes in this release.
 
 ## [1.2.0] - 2025-08-20
 ### 📦 Overview
-The NeMo Agent toolkit, formerly known as Agent Intelligence (AIQ) toolkit, has been renamed to align with the NVIDIA NeMo family of products. This release brings significant new capabilities and improvements across authentication, resource management, observability, and developer experience. The toolkit continues to offer backwards compatibility, making the transition seamless for existing users.
+The NeMo Agent Toolkit, formerly known as Agent Intelligence (AIQ) toolkit, has been renamed to align with the NVIDIA NeMo family of products. This release brings significant new capabilities and improvements across authentication, resource management, observability, and developer experience. The toolkit continues to offer backwards compatibility, making the transition seamless for existing users.
 
 While NeMo Agent Toolkit is designed to be compatible with the previous version, users are encouraged to update their code to follow the latest conventions and best practices. Migration instructions are provided in the [migration guide](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.2/docs/source/resources/migration-guide.md).
 
@@ -442,7 +442,7 @@ While NeMo Agent Toolkit is designed to be compatible with the previous version,
 * Extend `IntermediateStep` to support tool schemas in tool calling LLM requests by @mpenn in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/357
 * Fix AttributeError bug for otel_telemetry_exporter by @ZhongxuanWang in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/335
 * Update `OpenAIModelConfig` to support `stream_usage` option by @mdemoret-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/328
-* Rename to NeMo Agent toolkit by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/359
+* Rename to NeMo Agent Toolkit by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/359
 * fix(phoenix): set project name when using phoenix telemetry exporter (#337) by @briancaffey in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/347
 * Account for the "required fields" list in the mcp_input_schema by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/360
 * Provide a config to pass the complete dataset entry as an EvalInputItem field to evaluators by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/355

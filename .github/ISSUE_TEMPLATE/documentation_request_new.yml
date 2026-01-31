@@ -14,7 +14,7 @@
 # limitations under the License.
 
 name: Documentation - New Documentation Request
-description: Request additions to NeMo Agent toolkit documentation
+description: Request additions to NeMo Agent Toolkit documentation
 type: "Documentation"
 labels: ["doc", "Needs Triage"]
 

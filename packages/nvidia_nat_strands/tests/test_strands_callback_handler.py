@@ -21,8 +21,8 @@ import pytest
 from nat.builder.context import Context
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.intermediate_step import IntermediateStepType
-from nat.plugins.strands.strands_callback_handler import StrandsProfilerHandler
-from nat.plugins.strands.strands_callback_handler import StrandsToolInstrumentationHook
+from nat.plugins.strands.callback_handler import StrandsProfilerHandler
+from nat.plugins.strands.callback_handler import StrandsToolInstrumentationHook
 
 
 class TestStrandsToolInstrumentationHook:
@@ -148,7 +148,7 @@ class TestStrandsProfilerHandler:
         assert handler._patched is False
         assert hasattr(handler, 'last_call_ts')
 
-    @patch("nat.plugins.strands.strands_callback_handler.importlib")
+    @patch("nat.plugins.strands.callback_handler.importlib")
     def test_instrument_patches_llm_methods(self, mock_importlib):
         """Test that instrument patches LLM streaming methods."""
         # Create mock OpenAI model with __name__ attribute
@@ -188,7 +188,7 @@ class TestStrandsProfilerHandler:
         handler._patched = True  # pylint: disable=protected-access
 
         # Should return early without patching
-        with patch("nat.plugins.strands.strands_callback_handler.importlib"):
+        with patch("nat.plugins.strands.callback_handler.importlib"):
             handler.instrument()
 
         # Still patched
@@ -223,7 +223,7 @@ class TestStrandsProfilerHandler:
 class TestStrandsProfilerHandlerIntegration:
     """Integration tests for profiler handler."""
 
-    @patch("nat.plugins.strands.strands_callback_handler.importlib")
+    @patch("nat.plugins.strands.callback_handler.importlib")
     def test_full_instrumentation_flow(self, mock_importlib):  # pylint: disable=too-many-locals
         """Test complete instrumentation flow."""
         # Mock the models
@@ -401,7 +401,7 @@ class TestStrandsProfilerHandlerStreamWrapper:
     @pytest.fixture
     def mock_context(self):
         """Create a mock context with step manager."""
-        with patch('nat.plugins.strands.strands_callback_handler.Context') as mock_context_class:
+        with patch('nat.plugins.strands.callback_handler.Context') as mock_context_class:
             mock_context_instance = MagicMock()
             mock_step_manager = MagicMock()
             mock_context_instance.intermediate_step_manager = mock_step_manager
@@ -569,7 +569,7 @@ class TestStrandsProfilerHandlerAgentInstrumentation:
         """Create a StrandsProfilerHandler instance."""
         return StrandsProfilerHandler()
 
-    @patch("nat.plugins.strands.strands_callback_handler.importlib")
+    @patch("nat.plugins.strands.callback_handler.importlib")
     def test_instrument_agent_init_success(self, mock_importlib, handler):
         """Test successful agent instrumentation."""
 
@@ -629,7 +629,7 @@ class TestStrandsProfilerHandlerAgentInstrumentation:
         assert 'before_tool_invocation' in callback1_name or 'on_before_tool_invocation' in callback1_name
         assert 'after_tool_invocation' in callback2_name or 'on_after_tool_invocation' in callback2_name
 
-    @patch("nat.plugins.strands.strands_callback_handler.importlib")
+    @patch("nat.plugins.strands.callback_handler.importlib")
     def test_instrument_agent_init_agent_not_found(self, mock_importlib, handler):
         """Test agent instrumentation when Agent class not found."""
         mock_agent_mod = MagicMock()
@@ -644,7 +644,7 @@ class TestStrandsProfilerHandlerAgentInstrumentation:
         # Should not raise an exception
         assert True
 
-    @patch("nat.plugins.strands.strands_callback_handler.importlib")
+    @patch("nat.plugins.strands.callback_handler.importlib")
     def test_instrument_agent_init_import_error(self, mock_importlib, handler):
         """Test agent instrumentation with import error."""
         mock_importlib.import_module.side_effect = ImportError("Module not found")
@@ -656,7 +656,7 @@ class TestStrandsProfilerHandlerAgentInstrumentation:
         # Should not raise an exception
         assert True
 
-    @patch("nat.plugins.strands.strands_callback_handler.importlib")
+    @patch("nat.plugins.strands.callback_handler.importlib")
     def test_instrument_agent_init_hook_registration_error(self, mock_importlib, handler):
         """Test agent instrumentation with hook registration error."""
 

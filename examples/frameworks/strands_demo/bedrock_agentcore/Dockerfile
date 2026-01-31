@@ -65,7 +65,7 @@ RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
     export SETUPTOOLS_SCM_PRETEND_VERSION_FOR_NAT_STRANDS_DEMO=${NAT_VERSION} && \
     uv venv --python ${PYTHON_VERSION} /workspace/.venv && \
     uv sync --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
-    uv pip install -e '.[telemetry]' --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
+    uv pip install -e '.[opentelemetry,phoenix,weave]' --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
     uv pip install -e ./examples/frameworks/strands_demo --link-mode=copy && \
     uv pip install boto3 aws-opentelemetry-distro && \
     find /workspace/.venv -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true && \
