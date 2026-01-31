@@ -67,7 +67,7 @@ All LLM and embedder providers now use `exclude_unset=True` for `model_dump`.
 
 If you rely on implicit defaults being forwarded:
 - Set explicit values in your configuration for fields you need to send.
-- Update any custom providers that serialize configs to use the same behavior.
+- Update any custom providers that serialize configuration files to use the same behavior.
 
 #### Per-User Function Instantiation
 
@@ -77,7 +77,7 @@ If you enabled per-user workflows:
 - Register per-user functions with `@register_per_user_function()` and ensure schemas are explicit.
 - Verify your `nat serve` usage sets a `nat-session` cookie so per-user workflows can resolve a user ID.
 
-#### Removal of `default_user_id` in General Config
+#### Removal of `default_user_id` in General config
 
 The `default_user_id` field was removed to prevent unsafe per-user workflow sharing.
 
@@ -90,7 +90,7 @@ To migrate existing configurations:
 Function group names now use `__` instead of `.`.
 
 To migrate:
-- Update function names from `group.function` to `group__function` in configs and tool calls.
+- Update function names from `group.function` to `group__function` in configuration files and tool calls.
 - Watch for deprecation warnings if you still use the legacy separator.
 
 #### MCP Frontend Refactor
