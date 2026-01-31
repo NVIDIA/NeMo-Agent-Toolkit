@@ -26,16 +26,18 @@ packages = []
 
 [project]
 name = "nat_math_assistant_a2a_protected"
-dynamic = ["version"]
-dependencies = [
-    "nat_simple_calculator",
-    "nat_math_assistant_a2a",
-]
+dynamic = ["version", "dependencies"]
 requires-python = ">=3.11,<3.14"
 description = "OAuth2-protected A2A example with calculator server and math assistant client"
 readme = "README.md"
 keywords = ["ai", "a2a", "protocol", "agents", "calculator", "oauth2", "mcp"]
 classifiers = ["Programming Language :: Python"]
+
+[tool.setuptools_dynamic_dependencies]
+dependencies = [
+    "nat_simple_calculator",
+    "nat_math_assistant_a2a",
+]
 
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }
