@@ -55,6 +55,7 @@ autogen = ["nvidia-nat-autogen == {version}"]
 core = ["nvidia-nat-core == {version}"]
 crewai = ["nvidia-nat-crewai == {version}"]
 data-flywheel = ["nvidia-nat-data-flywheel == {version}"]
+fastmcp = ["nvidia-nat-fastmcp == {version}"]
 langchain = ["nvidia-nat-langchain == {version}"]
 llama-index = ["nvidia-nat-llama-index == {version}"]
 mcp = ["nvidia-nat-mcp == {version}"]
@@ -88,6 +89,7 @@ most = [
   "nvidia-nat-core[async_endpoints,gunicorn,pii-defense,profiling] == {version}",
   "nvidia-nat-crewai == {version}",
   "nvidia-nat-data-flywheel == {version}",
+  "nvidia-nat-fastmcp == {version}",
   "nvidia-nat-langchain == {version}",
   "nvidia-nat-llama-index == {version}",
   "nvidia-nat-mcp == {version}",
@@ -161,6 +163,7 @@ nvidia-nat-autogen = { path = "packages/nvidia_nat_autogen", editable = true }
 nvidia-nat-core = { path = "packages/nvidia_nat_core", editable = true }
 nvidia-nat-crewai = { path = "packages/nvidia_nat_crewai", editable = true }
 nvidia-nat-data-flywheel = { path = "packages/nvidia_nat_data_flywheel", editable = true }
+nvidia-nat-fastmcp = { path = "packages/nvidia_nat_fastmcp", editable = true }
 nvidia-nat-langchain = { path = "packages/nvidia_nat_langchain", editable = true }
 nvidia-nat-llama-index = { path = "packages/nvidia_nat_llama_index", editable = true }
 nvidia-nat-mcp = { path = "packages/nvidia_nat_mcp", editable = true }
