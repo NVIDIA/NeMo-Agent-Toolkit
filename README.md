@@ -51,6 +51,8 @@ limitations under the License.
 
 - [**Microsoft AutoGen Support:**](./docs/source/components/integrations/frameworks.md#autogen) NeMo Agent Toolkit now supports building agents using the Microsoft AutoGen framework.
 
+- [**Per-User Functions**](./docs/source/extend/custom-components/custom-functions/per-user-functions.md) NeMo Agent Toolkit now supports per-user functions for deferred instantiation, enabling per-user stateful functions, per-user resources, and other features.
+
 ## ✨ Key Features
 
 - **Building Agents**: Accelerate your agent development with tools that make it easier to get your agent into production.
