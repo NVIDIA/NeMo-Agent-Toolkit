@@ -5716,6 +5716,7 @@ source = { editable = "packages/nvidia_nat_fastmcp" }
 dependencies = [
     { name = "fastmcp" },
     { name = "nvidia-nat-core" },
+    { name = "watchfiles" },
 ]
 
 [package.metadata]
@@ -5723,6 +5724,7 @@ requires-dist = [
     { name = "fastmcp", specifier = ">=3.0.0b1" },
     { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
+    { name = "watchfiles", specifier = "~=1.1" },
 ]
 provides-extras = ["test"]
 

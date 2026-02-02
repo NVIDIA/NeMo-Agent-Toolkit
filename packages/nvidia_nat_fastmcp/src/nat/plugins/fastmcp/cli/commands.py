@@ -16,18 +16,16 @@
 
 from __future__ import annotations
 
-import os
 import shutil
 import signal
 import subprocess
 import sys
-import time
 from pathlib import Path
-from typing import Iterable
 
 import click
 
-from nat.cli.commands.start import start_command  # pylint: disable=import-error,no-name-in-module
+from nat.cli.commands.start import start_command  # type: ignore[reportMissingImports]
+from nat.plugins.fastmcp.cli.utils import iter_file_changes
 
 
 @click.group(name=__name__, invoke_without_command=False, help="FastMCP-related commands.")
@@ -65,33 +63,6 @@ def _resolve_nat_cli_command() -> list[str]:
     if nat_exe:
         return [nat_exe]
     return [sys.executable, "-m", "nat"]
-
-
-def _snapshot_paths(paths: Iterable[Path]) -> dict[Path, float]:
-    snapshot: dict[Path, float] = {}
-    for path in paths:
-        if path.is_file():
-            snapshot[path] = path.stat().st_mtime
-            continue
-        if path.is_dir():
-            for root, _, files in os.walk(path):
-                for filename in files:
-                    file_path = Path(root) / filename
-                    try:
-                        snapshot[file_path] = file_path.stat().st_mtime
-                    except FileNotFoundError:
-                        # File may have been removed between walk and stat
-                        continue
-    return snapshot
-
-
-def _has_changes(before: dict[Path, float], after: dict[Path, float]) -> bool:
-    if before.keys() != after.keys():
-        return True
-    for path, mtime in after.items():
-        if before.get(path) != mtime:
-            return True
-    return False
 
 
 def _stop_process(proc: subprocess.Popen) -> None:
@@ -164,17 +135,12 @@ def fastmcp_server_dev(
     watch_paths = {config_file}
     watch_paths.update(watch_path)
 
-    snapshot = _snapshot_paths(watch_paths)
     proc = start_server()
     try:
-        while True:
-            time.sleep(1)
-            updated = _snapshot_paths(watch_paths)
-            if _has_changes(snapshot, updated):
-                click.echo("Change detected. Restarting FastMCP server...")
-                snapshot = updated
-                _stop_process(proc)
-                proc = start_server()
+        for _changes in iter_file_changes(watch_paths, debounce_ms=750):
+            click.echo("Change detected. Restarting FastMCP server...")
+            _stop_process(proc)
+            proc = start_server()
     except KeyboardInterrupt:
         _stop_process(proc)
 
