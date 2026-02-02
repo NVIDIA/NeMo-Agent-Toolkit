@@ -26,12 +26,12 @@ from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
 from fastmcp import FastMCP
-from nat.builder.function import Function
-from nat.builder.function_base import FunctionBase
+from nat.builder.function import Function  # type: ignore[reportMissingImports]
+from nat.builder.function_base import FunctionBase  # type: ignore[reportMissingImports]
 
 if TYPE_CHECKING:
     from nat.plugins.fastmcp.server.memory_profiler import MemoryProfiler
-    from nat.runtime.session import SessionManager
+    from nat.runtime.session import SessionManager  # type: ignore[reportMissingImports]
 
 logger = logging.getLogger(__name__)
 
@@ -59,16 +59,21 @@ def _get_field_default(field_info: FieldInfo) -> Any:
 
 def _build_signature_from_schema(schema: Any) -> Signature:
     """Build a function signature from a Pydantic schema if possible."""
+    if _is_chat_request_schema(schema):
+        return Signature(parameters=[
+            Parameter(name="query", kind=Parameter.KEYWORD_ONLY, annotation=str),
+        ])
     if not hasattr(schema, "model_fields"):
         return Signature()
 
     params: list[Parameter] = []
     for name, field_info in schema.model_fields.items():  # type: ignore[attr-defined]
+        annotation = field_info.annotation or Any
         default = _get_field_default(field_info)
         if default is _USE_PYDANTIC_DEFAULT:
-            params.append(Parameter(name, Parameter.KEYWORD_ONLY))
+            params.append(Parameter(name, Parameter.KEYWORD_ONLY, annotation=annotation))
         else:
-            params.append(Parameter(name, Parameter.KEYWORD_ONLY, default=default))
+            params.append(Parameter(name, Parameter.KEYWORD_ONLY, default=default, annotation=annotation))
 
     return Signature(parameters=params)
 
@@ -85,6 +90,26 @@ def _build_input_schema(schema: Any) -> Any:
         return schema
 
     return None
+
+
+def _build_annotations_from_schema(schema: Any) -> dict[str, Any]:
+    """Build function annotations from a Pydantic schema if possible."""
+    if _is_chat_request_schema(schema):
+        return {"query": str}
+    if not hasattr(schema, "model_fields"):
+        return {}
+
+    annotations: dict[str, Any] = {}
+    for name, field_info in schema.model_fields.items():  # type: ignore[attr-defined]
+        annotations[name] = field_info.annotation or Any
+    return annotations
+
+
+def _is_chat_request_schema(schema: Any) -> bool:
+    """Return True when the schema represents a ChatRequest."""
+    schema_name = getattr(schema, "__name__", "")
+    schema_qualname = getattr(schema, "__qualname__", "")
+    return schema_name == "ChatRequest" or "ChatRequest" in schema_qualname
 
 
 def create_function_wrapper(
@@ -104,47 +129,61 @@ def create_function_wrapper(
     signature = _build_signature_from_schema(input_schema)
 
     async def wrapper_func(**kwargs: Any) -> Any:
-        if memory_profiler:
-            try:
-                memory_profiler.on_request_complete()
-            except Exception:
-                logger.exception("Failed to update memory profiler for %s", function_name)
+        try:
+            if _is_chat_request_schema(input_schema):
+                from nat.data_models.api_server import ChatRequest  # type: ignore[reportMissingImports]
 
-        result = await session_manager.run(kwargs)
-        return result
+                query = kwargs.get("query", "")
+                payload = ChatRequest.from_string(query)
+            else:
+                cleaned_kwargs = {k: v for k, v in kwargs.items() if v is not _USE_PYDANTIC_DEFAULT}
+                payload = input_schema.model_validate(cleaned_kwargs) if hasattr(input_schema,
+                                                                                 "model_validate") else cleaned_kwargs
+
+            async with session_manager.run(payload) as runner:
+                result = await runner.result()
+
+            if isinstance(result, str):
+                return result
+            if isinstance(result, dict | list):
+                return json.dumps(result, default=str)
+            return str(result)
+        finally:
+            if memory_profiler:
+                try:
+                    memory_profiler.on_request_complete()
+                except Exception:
+                    logger.exception("Failed to update memory profiler for %s", function_name)
 
     wrapper_func.__signature__ = signature  # type: ignore[attr-defined]
+    wrapper_func.__annotations__ = _build_annotations_from_schema(input_schema)
     wrapper_func.__name__ = function_name
     wrapper_func.__doc__ = "Auto-generated wrapper for a NeMo Agent Toolkit workflow."
     return wrapper_func
 
 
 def get_function_description(function: FunctionBase | None) -> str | None:
-    """Get a function description for tool registration."""
+    """Retrieve a human-readable description for a NAT function or workflow."""
     if function is None:
         return None
 
-    if isinstance(function, BaseModel):
-        config = function
-        # Try to get description from function's schema
-        if hasattr(config, "input_schema") and config.input_schema:
-            function_description = config.input_schema.__doc__
-        # Try to get description from config
+    from nat.builder.workflow import Workflow  # type: ignore[reportMissingImports]
+
+    function_description: str | None = None
+
+    if isinstance(function, Workflow):
+        config = function.config
+
+        if hasattr(function, "description") and function.description:
+            function_description = function.description
         elif hasattr(config, "description") and config.description:
             function_description = config.description
-        # Try to get anything that might be a description
         elif hasattr(config, "topic") and config.topic:
             function_description = config.topic
-        # Try to get description from the workflow config
         elif hasattr(config, "workflow") and hasattr(config.workflow, "description") and config.workflow.description:
             function_description = config.workflow.description
-        else:
-            function_description = None
-
     elif isinstance(function, Function):
         function_description = function.description
-    else:
-        function_description = None
 
     return function_description
 
