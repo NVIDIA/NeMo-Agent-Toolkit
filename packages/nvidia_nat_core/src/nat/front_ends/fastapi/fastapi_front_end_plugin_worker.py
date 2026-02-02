@@ -239,12 +239,27 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         self._outstanding_flows: dict[str, FlowState] = {}
         self._outstanding_flows_lock = asyncio.Lock()
 
+        # Conversation handlers for WebSocket reconnection support
+        self._conversation_handlers: dict[str, WebSocketMessageHandler] = {}
+
         # Track session managers for each route
         self._session_managers: list[SessionManager] = []
 
         # Evaluator storage for single-item evaluation
         self._evaluators: dict[str, EvaluatorInfo] = {}
         self._eval_builder: WorkflowEvalBuilder | None = None
+
+    def get_conversation_handler(self, conversation_id: str) -> "WebSocketMessageHandler | None":
+        """Get a conversation handler for reconnection support."""
+        return self._conversation_handlers.get(conversation_id)
+
+    def set_conversation_handler(self, conversation_id: str, handler: "WebSocketMessageHandler") -> None:
+        """Register a conversation handler for reconnection support."""
+        self._conversation_handlers[conversation_id] = handler
+
+    def remove_conversation_handler(self, conversation_id: str) -> None:
+        """Remove a conversation handler when workflow completes."""
+        self._conversation_handlers.pop(conversation_id, None)
 
     async def initialize_evaluators(self, config: Config):
         """Initialize and store evaluators from config for single-item evaluation."""
@@ -997,7 +1012,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 # Update the websocket scope with the modified headers
                 websocket.scope["headers"] = headers
 
-            async with WebSocketMessageHandler(websocket, session_manager, self.get_step_adaptor()) as handler:
+            async with WebSocketMessageHandler(websocket, session_manager, self.get_step_adaptor(), self) as handler:
 
                 flow_handler = WebSocketAuthenticationFlowHandler(self._add_flow, self._remove_flow, handler)
 

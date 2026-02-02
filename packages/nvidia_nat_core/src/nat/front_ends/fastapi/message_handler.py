@@ -57,10 +57,10 @@ from nat.front_ends.fastapi.response_helpers import generate_streaming_response
 from nat.front_ends.fastapi.step_adaptor import StepAdaptor
 from nat.runtime.session import SessionManager
 
-logger = logging.getLogger(__name__)
+if typing.TYPE_CHECKING:
+    from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
 
-# Module-level handler store keyed by conversation_id for reconnection support
-_conversation_handlers: dict[str, "WebSocketMessageHandler"] = {}
+logger = logging.getLogger(__name__)
 
 
 class UserInteraction(BaseModel):
@@ -74,10 +74,15 @@ class UserInteraction(BaseModel):
 
 class WebSocketMessageHandler:
 
-    def __init__(self, socket: WebSocket, session_manager: SessionManager, step_adaptor: StepAdaptor):
+    def __init__(self,
+                 socket: WebSocket,
+                 session_manager: SessionManager,
+                 step_adaptor: StepAdaptor,
+                 worker: "FastApiFrontEndPluginWorker"):
         self._socket: WebSocket = socket
         self._session_manager: SessionManager = session_manager
         self._step_adaptor: StepAdaptor = step_adaptor
+        self._worker: FastApiFrontEndPluginWorker = worker
 
         self._message_validator: MessageValidator = MessageValidator()
         self._running_workflow_task: asyncio.Task | None = None
@@ -109,23 +114,28 @@ class WebSocketMessageHandler:
         self._message_parent_id = message.id
         self._workflow_schema_type = message.schema_type
         self._conversation_id = message.conversation_id
-        _conversation_handlers[self._conversation_id] = self
+        if self._conversation_id:
+            self._worker.set_conversation_handler(self._conversation_id, self)
 
     async def _restore_execution_state(self) -> None:
         """Restore execution state on reconnection by swapping handler state."""
         conversation_id = self._socket.query_params.get("conversation_id")
-        if not conversation_id or conversation_id not in _conversation_handlers:
+        if not conversation_id:
+            return
+
+        disconnected_handler = self._worker.get_conversation_handler(conversation_id)
+        if not disconnected_handler:
             return
 
         # Swap socket on disconnected handler so its running workflow can send through new connection
-        _conversation_handlers[conversation_id]._socket = self._socket
+        disconnected_handler._socket = self._socket
 
         # Copy disconnected handler's state so this handler can receive and process messages
-        self._conversation_id = _conversation_handlers[conversation_id]._conversation_id
-        self._user_interaction = _conversation_handlers[conversation_id]._user_interaction
-        self._message_parent_id = _conversation_handlers[conversation_id]._message_parent_id
-        self._workflow_schema_type = _conversation_handlers[conversation_id]._workflow_schema_type
-        self._running_workflow_task = _conversation_handlers[conversation_id]._running_workflow_task
+        self._conversation_id = disconnected_handler._conversation_id
+        self._user_interaction = disconnected_handler._user_interaction
+        self._message_parent_id = disconnected_handler._message_parent_id
+        self._workflow_schema_type = disconnected_handler._workflow_schema_type
+        self._running_workflow_task = disconnected_handler._running_workflow_task
 
         # Re-send pending HITL prompt so UI displays it again after reconnect
         if self._user_interaction and not self._user_interaction.future.done():
@@ -227,8 +237,8 @@ class WebSocketMessageHandler:
 
                 def _done_callback(_task: asyncio.Task):
                     self._running_workflow_task = None
-                    if self._conversation_id in _conversation_handlers:
-                        del _conversation_handlers[self._conversation_id]
+                    if self._conversation_id:
+                        self._worker.remove_conversation_handler(self._conversation_id)
 
                 self._running_workflow_task = asyncio.create_task(
                     self._run_workflow(payload=message_content,
