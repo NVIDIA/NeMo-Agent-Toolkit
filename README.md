@@ -33,7 +33,7 @@ limitations under the License.
 
 <div align="center">
 
-*NVIDIA NeMo Agent Toolkit is a flexible, lightweight, and unifying library that allows you to easily connect existing enterprise agents to data sources and tools across any framework.*
+*NVIDIA NeMo Agent Toolkit adds intelligence to AI agents across any framework—enhancing speed, accuracy, and decision-making through enterprise-grade instrumentation, observability, and continuous learning.*
 
 </div>
 
@@ -55,22 +55,22 @@ limitations under the License.
 
 ## ✨ Key Features
 
-- **Building Agents**: Accelerate your agent development with tools that make it easier to get your agent into production.
+- 🛠️ **Building Agents**: Accelerate your agent development with tools that make it easier to get your agent into production.
   - 🧩 [**Framework Agnostic:**](./docs/source/components/integrations/frameworks.md) NeMo Agent Toolkit works side-by-side with agentic frameworks to add the instrumentation necessary for observing, profiling, and optimizing your agents. The toolkit supports a large number of popular frameworks such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), and [Google ADK](https://google.github.io/adk-docs/), as well as custom enterprise agentic frameworks and simple Python agents.
   - 🔁 [**Reusability:**](./docs/source/components/sharing-components.md) Build components once and use them multiple times to maximize the value from development effort.
   - ⚡ [**Customization:**](docs/source/get-started/tutorials/customize-a-workflow.md) Start with a pre-built agent, tool, or workflow, and customize it to your needs.
   - 💬 [**Built-In User Interface:**](./docs/source/run-workflows/launching-ui.md) Use the NeMo Agent Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
 - 📈 **Agent Insights:** Utilize NeMo Agent Toolkit's instrumentation to better understand how your agents function at runtime.
-  - 📈 [**Profiling:**](./docs/source/improve-workflows/profiler.md) Profile entire workflows from the agent level all the way down to individual tokens to identify bottlenecks, analyze token efficiency, and guide developer in optimizing their agents.
+  - 📊 [**Profiling:**](./docs/source/improve-workflows/profiler.md) Profile entire workflows from the agent level all the way down to individual tokens to identify bottlenecks, analyze token efficiency, and guide developers in optimizing their agents.
   - 🔎 [**Observability:**](./docs/source/run-workflows/observe/observe.md) Track performance, trace execution flows, and gain insights into your agent behaviors in production.
-- **Agent Optimization:** Improve your agent's quality, accuracy, and performance with a suite of tools for all phases of the agent lifecycle.
+- 🚀 **Agent Optimization:** Improve your agent's quality, accuracy, and performance with a suite of tools for all phases of the agent lifecycle.
   - 🧪 [**Evaluation System:**](./docs/source/improve-workflows/evaluate.md) Validate and maintain accuracy of agentic workflows with a suite of tools for offline evaluation.
-  - [**Hyper-Parameter and Prompt Optimizer**](./docs/source/improve-workflows/optimizer.md) Automatically identify the best configuration and prompts to ensure you are getting the most out of your agent.
-  - [**Fine-tuning with Reinforcement Learning:**](./docs/source/improve-workflows/finetuning/index.md) Fine-tune LLMs specifically for your agent and train intrinsic information about your workflow directly into the model.
-  - [**NVIDIA Dynamo Integration:**](./examples/dynamo_integration/README.md) Dynamo and NeMo Agent Toolkit work together to improve agent performance at scale.
-- **Protocol Support:** NeMo Agent Toolkit is compatible with common protocols used to build agents.
+  - 🎯 [**Hyper-Parameter and Prompt Optimizer:**](./docs/source/improve-workflows/optimizer.md) Automatically identify the best configuration and prompts to ensure you are getting the most out of your agent.
+  - 🧠 [**Fine-tuning with Reinforcement Learning:**](./docs/source/improve-workflows/finetuning/index.md) Fine-tune LLMs specifically for your agent and train intrinsic information about your workflow directly into the model.
+  - ⚡ [**NVIDIA Dynamo Integration:**](./examples/dynamo_integration/README.md) Dynamo and NeMo Agent Toolkit work together to improve agent performance at scale.
+- 🔌 **Protocol Support:** NeMo Agent Toolkit is compatible with common protocols used to build agents.
    - 🔗 [**Model Context Protocol (MCP):**](./docs/source/build-workflows/mcp-client.md) Integrate [MCP tools](./docs/source/build-workflows/mcp-client.md) into your agents or serve your tools/agents as an [MCP server](./docs/source/run-workflows/mcp-server.md) for others to consume.
-  - [**Agent-to-Agent (A2A) Protocol:**](./docs/source/components/integrations/a2a.md) Build teams of distrinbuted agents with full support for authentication.
+  - 🤝 [**Agent-to-Agent (A2A) Protocol:**](./docs/source/components/integrations/a2a.md) Build teams of distributed agents with full support for authentication.
 
 With NeMo Agent Toolkit, you can move quickly, experiment freely, and ensure reliability across all your agent-driven projects.
 
@@ -87,7 +87,7 @@ To install the latest stable version of NeMo Agent Toolkit from PyPI, run the fo
 pip install nvidia-nat
 ```
 
-NeMo Agent Toolkit has many optional dependencies which can be installed with the core package. Optional dependencies are grouped by framework and can be installed with the core package. For example, to install the LangChain/LangGraph plugin, run the following:
+NeMo Agent Toolkit has many optional dependencies that can be installed with the core package. Optional dependencies are grouped by framework. For example, to install the LangChain/LangGraph plugin, run the following:
 
 ```bash
 pip install "nvidia-nat[langchain]"
@@ -169,7 +169,7 @@ Before getting started, it's possible to run this simple workflow and many other
 ## 🛣️ Roadmap
 
 - [x] Automatic Reinforcement Learning (RL) to fine-tune LLMs for a specific agent.
-- [x] Integration withe with [NVIDIA Dynamo](https://github.com/ai-dynamo/dynamo) to reduce LLM latency at scale.
+- [x] Integration with [NVIDIA Dynamo](https://github.com/ai-dynamo/dynamo) to reduce LLM latency at scale.
 - [ ] Improve agent throughput with KV-Cache optimization.
 - [ ] Integration with [NeMo Guardrails](https://github.com/NVIDIA/NeMo-Guardrails) to improve agent safety and security.
 - [ ] Improved memory interface to support self-improving agents.
