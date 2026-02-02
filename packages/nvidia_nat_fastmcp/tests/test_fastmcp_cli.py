@@ -23,5 +23,6 @@ def test_fastmcp_cli_groups() -> None:
     assert "serve" in fastmcp_command.commands
 
     server_group = fastmcp_command.commands["server"]
+    assert "dev" in server_group.commands
     assert "install" in server_group.commands
     assert "run" in server_group.commands
