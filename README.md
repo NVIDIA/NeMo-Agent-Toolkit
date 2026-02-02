@@ -39,24 +39,24 @@ limitations under the License.
 
 ## 🔥 New Features
 
-- [**LangGraph Agent Automatic Wrapper:**](./examples/frameworks/auto_wrapper/langchain_deep_research/README.md) Easily onboard existing LangGraph agents to NeMo Agent Toolkit. The automatic wrapper makes it easy to access NeMo Agent Toolkit's advanced features with very little modification of LangGraph agents.
+- [**LangGraph Agent Automatic Wrapper:**](./examples/frameworks/auto_wrapper/langchain_deep_research/README.md) Easily onboard existing LangGraph agents to NeMo Agent Toolkit. Use the automatic wrapper to access NeMo Agent Toolkit's advanced features with very little modification of LangGraph agents.
 
-- [**Automatic Reinforcement Learning (RL):**](./docs/source/improve-workflows/finetuning/index.md) Improve your agent quality by fine-tuning open LLMs to better understand your agent's workflows, tools, and prompts. The automatic RL feature can perform GRPO with [OpenPipe ART](./docs/source/improve-workflows/finetuning/rl_with_openpipe.md) or DPO with [NeMo Customizer](./docs/source/improve-workflows/finetuning/dpo_with_nemo_customizer.md) using NeMo Agent Toolkit's built-in evaluation system as a verifier.
+- [**Automatic Reinforcement Learning (RL):**](./docs/source/improve-workflows/finetuning/index.md) Improve your agent quality by fine-tuning open LLMs to better understand your agent's workflows, tools, and prompts. Perform GRPO with [OpenPipe ART](./docs/source/improve-workflows/finetuning/rl_with_openpipe.md) or DPO with [NeMo Customizer](./docs/source/improve-workflows/finetuning/dpo_with_nemo_customizer.md) using NeMo Agent Toolkit's built-in evaluation system as a verifier.
 
-- [**Initial NVIDIA Dynamo Integration:**](./examples/dynamo_integration/README.md) NeMo Agent Toolkit now has initial Dynamo support for end-to-end deployment acceleration of agentic workflows. Utilizing the new agent aware router, Dynamo and NeMo Agent Toolkit work together to improve worker latency by predicting future agent behavior.
+- [**Initial NVIDIA Dynamo Integration:**](./examples/dynamo_integration/README.md) Accelerate end-to-end deployment of agentic workflows with initial Dynamo support. Utilize the new agent aware router to improve worker latency by predicting future agent behavior.
 
-- [**A2A Support:**](./docs/source/components/integrations/a2a.md) NeMo Agent Toolkit now supports building teams of distributed agents using the A2A protocol.
+- [**A2A Support:**](./docs/source/components/integrations/a2a.md) Build teams of distributed agents using the A2A protocol.
 
-- [**Amazon Bedrock AgentCore and Strands Agents Support:**](./docs/source/components/integrations/frameworks.md#strands) NeMo Agent Toolkit now supports building agents using Strands Agents framework and deploying them securely on Amazon Bedrock AgentCore runtime.
+- [**Amazon Bedrock AgentCore and Strands Agents Support:**](./docs/source/components/integrations/frameworks.md#strands) Build agents using Strands Agents framework and deploy them securely on Amazon Bedrock AgentCore runtime.
 
-- [**Microsoft AutoGen Support:**](./docs/source/components/integrations/frameworks.md#autogen) NeMo Agent Toolkit now supports building agents using the Microsoft AutoGen framework.
+- [**Microsoft AutoGen Support:**](./docs/source/components/integrations/frameworks.md#autogen) Build agents using the Microsoft AutoGen framework.
 
-- [**Per-User Functions**](./docs/source/extend/custom-components/custom-functions/per-user-functions.md) NeMo Agent Toolkit now supports per-user functions for deferred instantiation, enabling per-user stateful functions, per-user resources, and other features.
+- [**Per-User Functions:**](./docs/source/extend/custom-components/custom-functions/per-user-functions.md) Use per-user functions for deferred instantiation, enabling per-user stateful functions, per-user resources, and other features.
 
 ## ✨ Key Features
 
 - 🛠️ **Building Agents**: Accelerate your agent development with tools that make it easier to get your agent into production.
-  - 🧩 [**Framework Agnostic:**](./docs/source/components/integrations/frameworks.md) NeMo Agent Toolkit works side-by-side with agentic frameworks to add the instrumentation necessary for observing, profiling, and optimizing your agents. The toolkit supports a large number of popular frameworks such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), and [Google ADK](https://google.github.io/adk-docs/), as well as custom enterprise agentic frameworks and simple Python agents.
+  - 🧩 [**Framework Agnostic:**](./docs/source/components/integrations/frameworks.md) Work side-by-side with agentic frameworks to add the instrumentation necessary for observing, profiling, and optimizing your agents. Use the toolkit with popular frameworks such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), and [Google ADK](https://google.github.io/adk-docs/), as well as custom enterprise agentic frameworks and simple Python agents.
   - 🔁 [**Reusability:**](./docs/source/components/sharing-components.md) Build components once and use them multiple times to maximize the value from development effort.
   - ⚡ [**Customization:**](docs/source/get-started/tutorials/customize-a-workflow.md) Start with a pre-built agent, tool, or workflow, and customize it to your needs.
   - 💬 [**Built-In User Interface:**](./docs/source/run-workflows/launching-ui.md) Use the NeMo Agent Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
@@ -67,8 +67,8 @@ limitations under the License.
   - 🧪 [**Evaluation System:**](./docs/source/improve-workflows/evaluate.md) Validate and maintain accuracy of agentic workflows with a suite of tools for offline evaluation.
   - 🎯 [**Hyper-Parameter and Prompt Optimizer:**](./docs/source/improve-workflows/optimizer.md) Automatically identify the best configuration and prompts to ensure you are getting the most out of your agent.
   - 🧠 [**Fine-tuning with Reinforcement Learning:**](./docs/source/improve-workflows/finetuning/index.md) Fine-tune LLMs specifically for your agent and train intrinsic information about your workflow directly into the model.
-  - ⚡ [**NVIDIA Dynamo Integration:**](./examples/dynamo_integration/README.md) Dynamo and NeMo Agent Toolkit work together to improve agent performance at scale.
-- 🔌 **Protocol Support:** NeMo Agent Toolkit is compatible with common protocols used to build agents.
+  - ⚡ [**NVIDIA Dynamo Integration:**](./examples/dynamo_integration/README.md) Use Dynamo and NeMo Agent Toolkit together to improve agent performance at scale.
+  - 🔌 **Protocol Support:** Integrate with common protocols used to build agents.
    - 🔗 [**Model Context Protocol (MCP):**](./docs/source/build-workflows/mcp-client.md) Integrate [MCP tools](./docs/source/build-workflows/mcp-client.md) into your agents or serve your tools/agents as an [MCP server](./docs/source/run-workflows/mcp-server.md) for others to consume.
   - 🤝 [**Agent-to-Agent (A2A) Protocol:**](./docs/source/components/integrations/a2a.md) Build teams of distributed agents with full support for authentication.
 
