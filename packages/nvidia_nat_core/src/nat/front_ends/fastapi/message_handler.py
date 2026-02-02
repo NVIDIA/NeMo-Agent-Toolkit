@@ -227,6 +227,8 @@ class WebSocketMessageHandler:
 
                 def _done_callback(_task: asyncio.Task):
                     self._running_workflow_task = None
+                    if self._conversation_id in _conversation_handlers:
+                        del _conversation_handlers[self._conversation_id]
 
                 self._running_workflow_task = asyncio.create_task(
                     self._run_workflow(payload=message_content,
