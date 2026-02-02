@@ -25,6 +25,7 @@ from datetime import date
 from slack_sdk import WebClient
 
 MAX_TEXT_LENGTH = 3000  # Slack message text limit
+BLOCK_LIMIT = 20  # Slack block limit -- actual limit is 50, but we will use a smaller limit to be safe
 
 logger = logging.getLogger()
 
@@ -203,20 +204,12 @@ def main():
                                        text="\n".join(report_messages.plain_text),
                                        blocks=report_messages.blocks,
                                        link_names=report_messages.failure_text is not None)
-    # The actual limit is 50 blocks, but we will use a smaller limit to be safe and to stay under character limit, too.
-    SLACK_BLOCK_LIMIT = 20
 
     if report_messages.failure_text is not None:
         # Since potentially a large number of failures could occur, we will post them in a thread to the original
         # message to avoid spamming the channel.
-        failure_blocks = report_messages.failure_blocks or []
-        failure_text = report_messages.failure_text or []
-        if len(failure_blocks) > SLACK_BLOCK_LIMIT:
-            blocks_chunks = chunk_items(failure_blocks, SLACK_BLOCK_LIMIT)
-            text_chunks = chunk_items(failure_text, SLACK_BLOCK_LIMIT)
-        else:
-            blocks_chunks = [failure_blocks]
-            text_chunks = [failure_text]
+        blocks_chunks = chunk_items(report_messages.failure_blocks or [], BLOCK_LIMIT)
+        text_chunks = chunk_items(report_messages.failure_text or [], BLOCK_LIMIT)
 
         for blocks_chunk, text_chunk in zip(blocks_chunks, text_chunks):
             client.chat_postMessage(channel=slack_channel,
