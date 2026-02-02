@@ -272,6 +272,7 @@ All notable changes to this project will be documented in this file.
 * Update documentation for prerequisites and logprobs clarification by @dnandakumar-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1530
 * docs: add migration guide for 1.4 by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1533
 * docs: 1.4 changelog and release notes by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1544
+* Update README for 1.4 Release by@mdemoret-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1546
 
 ### 🙌 New Contributors
 * @dbnl-renaud made their first contribution in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1111
