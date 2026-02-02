@@ -81,7 +81,7 @@ NeMo Agent Toolkit is a Python library that doesn’t require a GPU to run the w
     uv venv --seed .venv
     source .venv/bin/activate
     # most contains almost all packages within the NeMo Agent Toolkit.
-    uv sync --all-groups --extras most
+    uv sync --all-groups --extra most
     ```
    :::{note}
    You may encounter `Too many open files (os error 24)`. This error occurs when your system’s file descriptor limit is too low.
