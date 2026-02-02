@@ -203,7 +203,8 @@ def main():
                                        text="\n".join(report_messages.plain_text),
                                        blocks=report_messages.blocks,
                                        link_names=report_messages.failure_text is not None)
-    SLACK_BLOCK_LIMIT = 40
+    # The actual limit is 50 blocks, but we will use a smaller limit to be safe and to stay under character limit, too.
+    SLACK_BLOCK_LIMIT = 20
 
     if report_messages.failure_text is not None:
         # Since potentially a large number of failures could occur, we will post them in a thread to the original
