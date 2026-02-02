@@ -197,7 +197,6 @@ class TestCommandValidation:
 class TestIterativeAgentBasicFlow:
     """Tests for the basic agent execution flow."""
 
-    @pytest.mark.asyncio
     async def test_basic_flow_to_submission(self, agent, mock_llm):
         """Test that agent completes a basic flow and submits correctly."""
         # Setup: LLM returns a sequence of responses ending with submission
@@ -227,7 +226,6 @@ class TestIterativeAgentBasicFlow:
         assert "diff" in result or "COMPLETE_TASK" in result
         assert agent.n_steps == 2
 
-    @pytest.mark.asyncio
     async def test_token_accumulation(self, agent, mock_llm):
         """Test that tokens are correctly accumulated across steps."""
         responses = [
@@ -246,7 +244,6 @@ class TestIterativeAgentBasicFlow:
         assert agent.total_input_tokens == 300  # 100 + 200
         assert agent.total_output_tokens == 150  # 50 + 100
 
-    @pytest.mark.asyncio
     async def test_step_limit_exceeded(self, mock_llm, temp_repo_path):
         """Test that agent stops when step limit is reached."""
         config = IterativeAgentConfig(step_limit=2, timeout=5)
@@ -273,7 +270,6 @@ class TestIterativeAgentBasicFlow:
 class TestFormatErrorRecovery:
     """Tests for handling malformed LLM responses."""
 
-    @pytest.mark.asyncio
     async def test_recovery_from_no_bash_block(self, agent, mock_llm):
         """Test that agent recovers when LLM doesn't include a bash block."""
         responses = [
@@ -292,7 +288,6 @@ class TestFormatErrorRecovery:
         assert exit_status == "Submitted"
         assert agent.n_steps == 2  # First step failed format, second succeeded
 
-    @pytest.mark.asyncio
     async def test_recovery_from_multiple_bash_blocks(self, agent, mock_llm):
         """Test that agent recovers when LLM includes multiple bash blocks."""
         responses = [
@@ -310,7 +305,6 @@ class TestFormatErrorRecovery:
 
         assert exit_status == "Submitted"
 
-    @pytest.mark.asyncio
     async def test_recovery_from_dangerous_command(self, agent, mock_llm):
         """Test that agent recovers when LLM suggests a dangerous command."""
         responses = [
@@ -336,7 +330,6 @@ class TestFormatErrorRecovery:
 class TestTimeoutHandling:
     """Tests for command execution timeout handling."""
 
-    @pytest.mark.asyncio
     async def test_command_timeout_recovery(self, agent, mock_llm):
         """Test that agent recovers from a command timeout."""
         responses = [
@@ -356,7 +349,6 @@ class TestTimeoutHandling:
 
         assert exit_status == "Submitted"
 
-    @pytest.mark.asyncio
     async def test_timeout_message_includes_command(self, agent, mock_llm):
         """Test that timeout error message includes the timed-out command."""
         mock_llm.ainvoke = AsyncMock(
@@ -445,7 +437,6 @@ class TestWorkspaceIsolation:
 class TestRepoSetupAndCheckout:
     """Tests for git repository setup and checkout operations."""
 
-    @pytest.mark.asyncio
     async def test_clone_repository_success(self, tmp_path):
         """Test successful repository cloning."""
         from nat_swe_bench.predictors.predict_iterative.tools.git_tool import clone_repository
@@ -464,7 +455,6 @@ class TestRepoSetupAndCheckout:
 
             assert result == mock_repo
 
-    @pytest.mark.asyncio
     async def test_clone_repository_invalid_url(self, tmp_path):
         """Test that invalid URLs raise ValueError."""
         from nat_swe_bench.predictors.predict_iterative.tools.git_tool import clone_repository
@@ -477,7 +467,6 @@ class TestRepoSetupAndCheckout:
 
         assert "Invalid repository URL" in str(exc_info.value)
 
-    @pytest.mark.asyncio
     async def test_checkout_commit_success(self):
         """Test successful commit checkout."""
         from nat_swe_bench.predictors.predict_iterative.tools.git_tool import checkout_commit
@@ -493,7 +482,6 @@ class TestRepoSetupAndCheckout:
             # Verify checkout was called
             mock_thread.assert_called_once()
 
-    @pytest.mark.asyncio
     async def test_clone_timeout(self, tmp_path):
         """Test that clone operation times out correctly."""
         from nat_swe_bench.predictors.predict_iterative.tools.git_tool import clone_repository
@@ -515,7 +503,6 @@ class TestRepoSetupAndCheckout:
 class TestCleanup:
     """Tests for resource cleanup operations."""
 
-    @pytest.mark.asyncio
     async def test_repo_manager_cleanup(self, tmp_path):
         """Test that RepoManager cleans up all active repos."""
         from nat_swe_bench.predictors.predict_iterative.tools.git_tool import RepoManager
@@ -538,7 +525,6 @@ class TestCleanup:
         assert not repo2.exists()
         assert len(manager.active_repos) == 0
 
-    @pytest.mark.asyncio
     async def test_cleanup_handles_missing_directory(self, tmp_path):
         """Test that cleanup handles already-deleted directories gracefully."""
         from nat_swe_bench.predictors.predict_iterative.tools.git_tool import RepoManager
@@ -554,7 +540,6 @@ class TestCleanup:
 
         assert len(manager.active_repos) == 0
 
-    @pytest.mark.asyncio
     async def test_register_cleanup_error_handling(self, tmp_path):
         """Test that register.py cleanup handles errors gracefully."""
         from unittest.mock import AsyncMock
@@ -612,7 +597,6 @@ class TestAdditionalCoverage:
         assert "Fix the bug" in result
         assert "Additional Context" not in result
 
-    @pytest.mark.asyncio
     async def test_repo_manager_setup_existing_repo(self, tmp_path):
         """Test setup_repository when repo is already active."""
         from nat_swe_bench.predictors.predict_iterative.tools.git_tool import RepoContext
@@ -643,7 +627,6 @@ class TestAdditionalCoverage:
         assert result == mock_context
         mock_checkout.assert_called_once()
 
-    @pytest.mark.asyncio
     async def test_clone_cleans_existing_path(self, tmp_path):
         """Test that clone removes existing directory before cloning."""
         from nat_swe_bench.predictors.predict_iterative.tools.git_tool import clone_repository
@@ -663,7 +646,6 @@ class TestAdditionalCoverage:
         # The old directory should have been removed (in reality, then clone creates new)
         assert result == mock_repo
 
-    @pytest.mark.asyncio
     async def test_checkout_timeout(self):
         """Test checkout operation timeout."""
         from nat_swe_bench.predictors.predict_iterative.tools.git_tool import checkout_commit
@@ -695,7 +677,6 @@ class TestAdditionalCoverage:
         assert "elided_chars" in truncated
         assert "1000 characters elided" in truncated
 
-    @pytest.mark.asyncio
     async def test_add_message_invalid_role(self, agent):
         """Test that invalid role raises ValueError."""
         with pytest.raises(ValueError) as exc_info:
@@ -707,7 +688,6 @@ class TestAdditionalCoverage:
 class TestIntegrationMockedLLM:
     """Integration tests with mocked LLM."""
 
-    @pytest.mark.asyncio
     async def test_full_workflow_simulation(self, tmp_path):
         """Simulate a complete workflow with realistic LLM responses."""
         # Create a mock LLM

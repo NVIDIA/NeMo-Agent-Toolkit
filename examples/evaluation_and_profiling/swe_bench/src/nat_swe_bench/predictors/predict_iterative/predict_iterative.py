@@ -22,7 +22,7 @@ This predictor implements a step-by-step approach where the agent:
 3. Observes results and adjusts strategy
 4. Generates patch using git diff
 
-The iterative loop and prompts are inspired by mini-swe-agent, adapted for the NAT framework.
+The iterative loop and prompts are inspired by mini-swe-agent, adapted for NeMo Agent Toolkit.
 """
 
 import asyncio
