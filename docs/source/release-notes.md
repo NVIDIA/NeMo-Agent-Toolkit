@@ -20,7 +20,7 @@ This section contains the release notes for [NeMo Agent toolkit](./index.md).
 
 ## Release 1.4.0
 ### Summary
-This release introduces initial support for several frameworks and integrations including A2A, AWS Strands, Amazon Bedrock AgentCore, Microsoft Autogen, and NVIDIA Dynamo. In addition to new framework and integrations, an automatic agent wrapper for LangGraph Agents enables users to bring their own agent. Per-user functions enable deferred instantiation which provides per-user stateful functions, per-user resources, and other useful features. The toolkit continues to offer backwards compatibility, making the transition seamless for existing users.
+This release introduces initial support for several frameworks and integrations including A2A, AWS Strands, Amazon Bedrock AgentCore, Microsoft AutoGen, and NVIDIA Dynamo. In addition to new framework and integrations, an automatic agent wrapper for LangGraph Agents enables users to bring their own agent. Per-user functions enable deferred instantiation which provides per-user stateful functions, per-user resources, and other useful features. The toolkit continues to offer backwards compatibility, making the transition seamless for existing users.
 
 ### 🚀 Notable Features and Improvements
 - [**A2A Support**](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.4/docs/source/components/integrations/a2a.md) NeMo Agent Toolkit now supports deploying and consuming agents using the A2A protocol.
