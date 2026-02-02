@@ -148,6 +148,7 @@ async def test_huggingface_langchain_agent():
     Requires transformers and torch to be installed (optional dependencies).
     """
     pytest.importorskip("torch", reason="HuggingFace dependencies (transformers, torch) not installed")
+    pytest.importorskip("transformers", reason="HuggingFace dependencies (transformers, torch) not installed")
 
     from nat.llm.huggingface_llm import HuggingFaceConfig
     prompt = ChatPromptTemplate.from_messages([("system", "You are a helpful AI assistant."), ("human", "{input}")])
