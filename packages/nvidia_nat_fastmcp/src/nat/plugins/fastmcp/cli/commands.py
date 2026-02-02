@@ -20,6 +20,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import click
@@ -107,6 +108,20 @@ def _stop_process(proc: subprocess.Popen) -> None:
     multiple=True,
     help="Additional paths to watch for changes (repeatable).",
 )
+@click.option(
+    "--reload-debounce",
+    type=int,
+    default=750,
+    show_default=True,
+    help="Debounce interval in milliseconds before restarting on changes.",
+)
+@click.option(
+    "--reload-cooldown",
+    type=float,
+    default=2.0,
+    show_default=True,
+    help="Minimum seconds between restarts after a reload.",
+)
 @click.pass_context
 def fastmcp_server_dev(
     ctx: click.Context,
@@ -114,6 +129,8 @@ def fastmcp_server_dev(
     override: tuple[tuple[str, str], ...],
     reload: bool,
     watch_path: tuple[Path, ...],
+    reload_debounce: int,
+    reload_cooldown: float,
 ) -> None:
     """Developer-focused FastMCP server runner with reload support."""
     base_cmd = _resolve_nat_cli_command() + ["fastmcp", "serve", "--config_file", str(config_file)]
@@ -136,11 +153,17 @@ def fastmcp_server_dev(
     watch_paths.update(watch_path)
 
     proc = start_server()
+    last_restart_at = time.monotonic()
+    cooldown_seconds = max(0.0, reload_cooldown)
     try:
-        for _changes in iter_file_changes(watch_paths, debounce_ms=750):
+        debounce_ms = max(0, reload_debounce)
+        for _changes in iter_file_changes(watch_paths, debounce_ms=debounce_ms):
+            if time.monotonic() - last_restart_at < cooldown_seconds:
+                continue
             click.echo("Change detected. Restarting FastMCP server...")
             _stop_process(proc)
             proc = start_server()
+            last_restart_at = time.monotonic()
     except KeyboardInterrupt:
         _stop_process(proc)
 
