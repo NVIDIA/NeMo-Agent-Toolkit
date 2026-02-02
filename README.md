@@ -182,6 +182,11 @@ We would like to thank the following groups for their contribution to the toolki
   - Microsoft AutoGen framework support.
 - [W&B Weave Team](https://wandb.ai/site/weave/)
   - Contributions to the evaluation and telemetry system.
+- [Lakera](https://www.lakera.ai/)
+  - Contributions to the NeMo Agent Safety and Security Engine:
+    - Red Teaming components
+    - Risk Profile analysis
+    - Retail Agent workflow
 
 In addition, we would like to thank the following open source projects that made NeMo Agent Toolkit possible:
 
