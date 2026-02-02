@@ -30,6 +30,7 @@ repos:
   - repo: https://github.com/astral-sh/uv-pre-commit
     rev: 0.6.2
     hooks:
+      - { id: uv-lock, name: "uv-lock", files: "pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-a2a", args: [--project, packages/nvidia_nat_a2a], files: "packages/nvidia_nat_a2a/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-adk", args: [--project, packages/nvidia_nat_adk], files: "packages/nvidia_nat_adk/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-agno", args: [--project, packages/nvidia_nat_agno], files: "packages/nvidia_nat_agno/pyproject.toml" }
