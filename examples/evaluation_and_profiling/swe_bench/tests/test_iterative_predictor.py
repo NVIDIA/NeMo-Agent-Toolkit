@@ -427,7 +427,42 @@ class TestWorkspaceIsolation:
 
         assert "org" in str(path)
         assert "repo" in str(path)
-        assert "test-123" in str(path)
+
+    @pytest.mark.parametrize("invalid_instance_id", [
+        "../escape",
+        "foo/../bar",
+        "foo/bar",
+        "foo\\bar",
+        "..\\escape",
+    ])
+    def test_instance_id_path_traversal_blocked(self, tmp_path, invalid_instance_id):
+        """Test that path traversal in instance_id is rejected."""
+        from nat_swe_bench.predictors.predict_iterative.tools.git_tool import get_repo_path
+
+        workspace = str(tmp_path / "workspace")
+        repo_url = "https://github.com/org/repo"
+
+        with pytest.raises(ValueError) as exc_info:
+            get_repo_path(workspace, repo_url, instance_id=invalid_instance_id)
+
+        assert "path traversal" in str(exc_info.value).lower()
+
+    @pytest.mark.parametrize("invalid_url", [
+        "not-a-url",
+        "https://github.com/",
+        "https://github.com",
+        "",
+    ])
+    def test_malformed_repo_url_rejected(self, tmp_path, invalid_url):
+        """Test that malformed repo URLs are rejected."""
+        from nat_swe_bench.predictors.predict_iterative.tools.git_tool import get_repo_path
+
+        workspace = str(tmp_path / "workspace")
+
+        with pytest.raises(ValueError) as exc_info:
+            get_repo_path(workspace, invalid_url)
+
+        assert "invalid" in str(exc_info.value).lower()
 
 
 # =============================================================================

@@ -79,7 +79,7 @@ class RepoManager:
         self.active_repos[str(repo_path)] = context
         return context
 
-    async def cleanup(self):
+    async def cleanup(self) -> None:
         """Clean up all managed repositories.
 
         Removes all cloned repository directories and clears the active repos cache.
@@ -87,7 +87,7 @@ class RepoManager:
         for repo_path_str in list(self.active_repos.keys()):
             repo_path = Path(repo_path_str)
             if repo_path.exists():
-                shutil.rmtree(repo_path)
+                await asyncio.to_thread(shutil.rmtree, repo_path)
         self.active_repos.clear()
 
 
@@ -103,15 +103,32 @@ def get_repo_path(workspace_dir: str, repo_url: str, instance_id: str | None = N
         Path to the repository. If instance_id is provided, returns
         workspace_dir/instance_id/org/repo for complete isolation.
         Otherwise returns workspace_dir/org/repo.
+
+    Raises:
+        ValueError: If instance_id contains path traversal characters or repo_url is malformed.
     """
+    # Sanitize instance_id to prevent path traversal attacks
+    if instance_id:
+        if ".." in instance_id or "/" in instance_id or "\\" in instance_id:
+            raise ValueError(f"Invalid instance_id: contains path traversal characters: {instance_id}")
+
+    # Parse repo URL to extract org and repo names
     if "://" in repo_url:
         path = urlparse(repo_url).path
     else:
         # SSH form: git@host:org/repo.git
         path = repo_url.split(":", 1)[-1]
+
     parts = path.strip("/").split("/")
+    if len(parts) < 2:
+        raise ValueError(f"Invalid repo_url: cannot extract org/repo from: {repo_url}")
+
     repo_name = parts[-1].replace('.git', '')
-    org_name = parts[-2]  # Organization name
+    org_name = parts[-2]
+
+    # Validate extracted names are not empty
+    if not org_name or not repo_name:
+        raise ValueError(f"Invalid repo_url: empty org or repo name from: {repo_url}")
 
     # If instance_id is provided, create isolated workspace per instance
     if instance_id:
