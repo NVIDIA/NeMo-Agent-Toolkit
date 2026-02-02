@@ -70,8 +70,8 @@ limitations under the License.
   - 🎯 [**Hyper-Parameter and Prompt Optimizer:**](./docs/source/improve-workflows/optimizer.md) Automatically identify the best configuration and prompts to ensure you are getting the most out of your agent.
   - 🧠 [**Fine-tuning with Reinforcement Learning:**](./docs/source/improve-workflows/finetuning/index.md) Fine-tune LLMs specifically for your agent and train intrinsic information about your workflow directly into the model.
   - ⚡ [**NVIDIA Dynamo Integration:**](./examples/dynamo_integration/README.md) Use Dynamo and NeMo Agent Toolkit together to improve agent performance at scale.
-  - 🔌 **Protocol Support:** Integrate with common protocols used to build agents.
-   - 🔗 [**Model Context Protocol (MCP):**](./docs/source/build-workflows/mcp-client.md) Integrate [MCP tools](./docs/source/build-workflows/mcp-client.md) into your agents or serve your tools/agents as an [MCP server](./docs/source/run-workflows/mcp-server.md) for others to consume.
+- 🔌 **Protocol Support:** Integrate with common protocols used to build agents.
+  - 🔗 [**Model Context Protocol (MCP):**](./docs/source/build-workflows/mcp-client.md) Integrate [MCP tools](./docs/source/build-workflows/mcp-client.md) into your agents or serve your tools/agents as an [MCP server](./docs/source/run-workflows/mcp-server.md) for others to consume.
   - 🤝 [**Agent-to-Agent (A2A) Protocol:**](./docs/source/components/integrations/a2a.md) Build teams of distributed agents with full support for authentication.
 
 With NeMo Agent Toolkit, you can move quickly, experiment freely, and ensure reliability across all your agent-driven projects.
