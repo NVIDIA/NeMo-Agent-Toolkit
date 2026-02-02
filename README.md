@@ -47,6 +47,8 @@ limitations under the License.
 
 - [**A2A Support:**](./docs/source/components/integrations/a2a.md) Build teams of distributed agents using the A2A protocol.
 
+- [**Safety and Security Engine:**](./examples/safety_and_security/retail_agent/README.md) Strengthen safety and security workflows by simulating scenario-based attacks, profiling risk, running guardrail-ready evaluations, and applying defenses with red teaming. Validate defenses, profile risk, monitor behavior, and harden agents across any framework.
+
 - [**Amazon Bedrock AgentCore and Strands Agents Support:**](./docs/source/components/integrations/frameworks.md#strands) Build agents using Strands Agents framework and deploy them securely on Amazon Bedrock AgentCore runtime.
 
 - [**Microsoft AutoGen Support:**](./docs/source/components/integrations/frameworks.md#autogen) Build agents using the Microsoft AutoGen framework.
