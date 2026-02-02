@@ -43,7 +43,7 @@ limitations under the License.
 
 - [**Automatic Reinforcement Learning (RL):**](./docs/source/improve-workflows/finetuning/index.md) Improve your agent quality by fine-tuning open LLMs to better understand your agent's workflows, tools, and prompts. Perform GRPO with [OpenPipe ART](./docs/source/improve-workflows/finetuning/rl_with_openpipe.md) or DPO with [NeMo Customizer](./docs/source/improve-workflows/finetuning/dpo_with_nemo_customizer.md) using NeMo Agent Toolkit's built-in evaluation system as a verifier.
 
-- [**Initial NVIDIA Dynamo Integration:**](./examples/dynamo_integration/README.md) Accelerate end-to-end deployment of agentic workflows with initial Dynamo support. Utilize the new agent aware router to improve worker latency by predicting future agent behavior.
+- [**Initial NVIDIA Dynamo Integration:**](./examples/dynamo_integration/README.md) Accelerate end-to-end deployment of agentic workflows with initial Dynamo support. Utilize the new agent-aware router to improve worker latency by predicting future agent behavior.
 
 - [**A2A Support:**](./docs/source/components/integrations/a2a.md) Build teams of distributed agents using the A2A protocol.
 
