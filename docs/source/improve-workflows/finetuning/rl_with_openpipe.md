@@ -17,7 +17,7 @@ limitations under the License.
 
 <!-- path-check-skip-begin -->
 
-# OpenPipe ART Integration
+# GRPO with OpenPipe ART
 
 This guide covers the integration between the NVIDIA NeMo Agent toolkit finetuning harness and [OpenPipe ART](https://art.openpipe.ai/) (Agent Reinforcement Trainer), an open-source framework for teaching [LLMs](../../build-workflows/llms/index.md) through reinforcement learning.
 
@@ -76,7 +76,7 @@ NeMo Agent toolkit connects to this backend through the `ARTTrainerAdapter`, whi
 
 The following table highlights the current support matrix for using ART with different agent frameworks in the NeMo Agent toolkit:
 
-| Agent Framework        | Support | 
+| Agent Framework        | Support |
 |------------------------|--------------------------------------------------|
 | LangChain or LangGraph | ✅ Supported                                      |
 | Google ADK             | ✅ Supported                                      |
@@ -444,7 +444,7 @@ The `ARTTrainer` orchestrates the complete training loop:
 
 ### Running Training
 
-You must have OpenPipe ART plugin installed (`nvidia-nat-openpipe-art`), and an OpenPipe ART server running 
+You must have OpenPipe ART plugin installed (`nvidia-nat-openpipe-art`), and an OpenPipe ART server running
 and configured to accept training jobs.
 
 ```bash
