@@ -19,7 +19,7 @@ import logging
 import multiprocessing
 import os
 import resource
-from enum import Enum
+from enum import StrEnum
 from io import StringIO
 
 from flask import Flask
@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
 
 
-class CodeExecutionStatus(str, Enum):
+class CodeExecutionStatus(StrEnum):
     """
     Status of code execution.
     """

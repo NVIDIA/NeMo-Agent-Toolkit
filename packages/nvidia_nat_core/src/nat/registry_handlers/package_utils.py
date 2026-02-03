@@ -72,7 +72,7 @@ def parse_requirement(requirement: str) -> str:
         'requests' from 'requests[security]~=2.28.0')
     """
     # Handle inline comments by splitting on '#' and taking the first part
-    clean_requirement = requirement.split('#')[0].strip()
+    clean_requirement = requirement.split('#', maxsplit=1)[0].strip()
     if not clean_requirement:
         return ""
 
@@ -172,7 +172,7 @@ def extract_dependencies_with_extras_resolved(pyproject_path: str) -> set[str]:
     def _process_dependency(dep_spec: str):
         """Process a single dependency specification and resolve extras."""
         # Handle inline comments
-        clean_req = dep_spec.split('#')[0].strip()
+        clean_req = dep_spec.split('#', maxsplit=1)[0].strip()
         if not clean_req:
             return
 

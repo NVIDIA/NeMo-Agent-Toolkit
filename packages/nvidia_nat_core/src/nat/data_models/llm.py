@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import typing
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import Field
 
@@ -22,7 +22,7 @@ from .common import BaseModelRegistryTag
 from .common import TypedBaseModel
 
 
-class APITypeEnum(str, Enum):
+class APITypeEnum(StrEnum):
     CHAT_COMPLETION = "chat_completion"
     RESPONSES = "responses"
 

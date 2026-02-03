@@ -15,7 +15,7 @@
 
 import logging
 from collections.abc import Callable
-from enum import Enum
+from enum import StrEnum
 
 from langchain_classic.output_parsers import ResponseSchema
 from langchain_classic.output_parsers import StructuredOutputParser
@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 # flake8: noqa: E501
 
 
-class ReductionStrategy(str, Enum):
+class ReductionStrategy(StrEnum):
     """Reduction strategy for selecting a single intermediate step from filtered steps."""
     FIRST = "first"
     MAX = "max"

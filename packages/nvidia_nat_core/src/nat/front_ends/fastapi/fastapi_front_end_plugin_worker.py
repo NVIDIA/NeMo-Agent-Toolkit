@@ -663,7 +663,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             except NoSuchKeyError as e:
                 raise HTTPException(status_code=404, detail=str(e)) from e
 
-            filename = file_path.split("/")[-1]
+            filename = file_path.rsplit("/", maxsplit=1)[-1]
 
             async def reader():
                 yield file_data.data
