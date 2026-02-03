@@ -14,7 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-# NVIDIA NeMo Agent Toolkit Optimizer Guide
+# NVIDIA NeMo Agent Toolkit Optimizer
 
 This document provides a comprehensive overview of how to use the NeMo Agent Toolkit Optimizer to tune your NeMo Agent Toolkit [workflows](../build-workflows/about-building-workflows.md).
 
@@ -630,7 +630,7 @@ This matrix visualization shows:
 **Example decision process**:
 - If latency is critical: Choose a Pareto optimal point with the lowest latency that still meets your accuracy requirements
 - If accuracy is paramount: Select the highest accuracy configuration and accept the latency trade-off
-- For balanced performance: Pick a point in the middle of the Pareto front 
+- For balanced performance: Pick a point in the middle of the Pareto front
 
 ## A Complete Example of Optimization
 
