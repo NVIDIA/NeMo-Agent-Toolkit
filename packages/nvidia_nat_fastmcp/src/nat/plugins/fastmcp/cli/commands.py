@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import json
 import shutil
 import signal
 import subprocess
@@ -168,18 +169,104 @@ def fastmcp_server_dev(
         _stop_process(proc)
 
 
-@fastmcp_server_command.command(
+@fastmcp_server_command.group(
     name="install",
-    context_settings={
-        "ignore_unknown_options": True,
-        "allow_extra_args": True,
-    },
-    help="Install MCP servers in various clients and formats.",
+    invoke_without_command=True,
+    help="Generate client configs for a FastMCP server.",
 )
 @click.pass_context
 def fastmcp_server_install(ctx: click.Context) -> None:
-    """Install FastMCP assets via the upstream CLI."""
-    _run_fastmcp_cli(["install"], list(ctx.args))
+    """Generate client config snippets for a FastMCP server."""
+    if ctx.invoked_subcommand is None:
+        raise click.ClickException("Missing subcommand. Use one of: nat-workflow, cursor.")
+
+
+def _mcp_server_entry(name: str, url: str) -> dict[str, object]:
+    return {
+        name: {
+            "transport": "streamable-http",
+            "url": url,
+        }
+    }
+
+
+def _emit_mcp_json(name: str, url: str, wrap_servers: bool) -> None:
+    entry = _mcp_server_entry(name, url)
+    payload = {"mcpServers": entry} if wrap_servers else entry
+    click.echo(json.dumps(payload, indent=2, sort_keys=True))
+
+
+@fastmcp_server_install.command(name="cursor", help="Generate Cursor MCP config JSON.")
+@click.option("--name", type=str, default="mcp_server", show_default=True, help="Server name to use in the config.")
+@click.option("--url", type=str, required=True, help="FastMCP server URL (for example, http://localhost:9902/mcp).")
+def fastmcp_server_install_cursor(name: str, url: str) -> None:
+    """Generate Cursor MCP config."""
+    _emit_mcp_json(name, url, wrap_servers=True)
+
+
+@fastmcp_server_install.command(
+    name="nat-workflow",
+    help="Generate a toolkit MCP client config YAML snippet.",
+)
+@click.option(
+    "--name",
+    type=str,
+    default="mcp_server",
+    show_default=True,
+    help="Function group name to use in the snippet.",
+)
+@click.option(
+    "--url",
+    type=str,
+    required=True,
+    help="FastMCP server URL (for example, http://localhost:9902/mcp).",
+)
+@click.option(
+    "--per-user/--shared",
+    default=True,
+    show_default=True,
+    help="Use per-user MCP client configuration.",
+)
+@click.option(
+    "--auth-provider",
+    is_flag=True,
+    default=False,
+    help="Include an auth provider snippet using the function group name.",
+)
+@click.option(
+    "--auth-provider-name",
+    type=str,
+    required=False,
+    help="Auth provider name to include in the snippet (optional).",
+)
+def fastmcp_server_install_nat_workflow(
+    name: str,
+    url: str,
+    per_user: bool,
+    auth_provider: bool,
+    auth_provider_name: str | None,
+) -> None:
+    """Generate a NAT MCP client config snippet for a FastMCP server."""
+    client_type = "per_user_mcp_client" if per_user else "mcp_client"
+    include_auth_provider = auth_provider or auth_provider_name is not None
+    effective_auth_provider = auth_provider_name if auth_provider_name else name
+    include_auth_snippet = per_user and include_auth_provider
+    auth_line = f"      auth_provider: {effective_auth_provider}\n" if include_auth_snippet else ""
+    auth_snippet = ("authentication:\n"
+                    f"  {effective_auth_provider}:\n"
+                    "    _type: mcp_oauth2\n"
+                    f"    server_url: {url}\n"
+                    "    redirect_uri: ${NAT_REDIRECT_URI:-http://localhost:8000/auth/redirect}\n"
+                    if include_auth_snippet else "")
+    snippet = ("function_groups:\n"
+               f"  {name}:\n"
+               f"    _type: {client_type}\n"
+               "    server:\n"
+               "      transport: streamable-http\n"
+               f"      url: {url}\n"
+               f"{auth_line}"
+               f"{auth_snippet}")
+    click.echo(snippet, nl=True)
 
 
 # nat fastmcp server run: reuse the start/fastmcp frontend command
