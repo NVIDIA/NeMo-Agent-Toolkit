@@ -163,13 +163,14 @@ dev = [
   "nbconvert", # Version determined by jupyter
   "pre-commit>=4.0,<5.0",
   "python-docx~=1.1",
-  "ruff~=0.12",
+  "ruff==0.15.0", # align with .pre-commit-config.yaml
   "setuptools >= 64",
   "setuptools_scm>=8",
   "tomlkit>=0.13.2",
   "twine~=6.0",
+  "uv==0.9.28", # align with .pre-commit-config.yaml
   "vale~=3.12",
-  "yapf==0.43.*",
+  "yapf==0.43.0", # align with .pre-commit-config.yaml
   # documentation related dependencies
   "myst-parser~=4.0",
   "nbsphinx~=0.9",
