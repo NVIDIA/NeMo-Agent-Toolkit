@@ -71,6 +71,12 @@ class OAuth2ResourceServerConfig(AuthProviderBaseConfig, name="oauth2_resource_s
         default=None,
         description="OAuth2 client secret for authenticating to the introspection endpoint (opaque token validation).",
     )
+    client_auth_method: str | None = Field(
+        default=None,
+        description=("Client authentication method for RFC 7662 introspection requests. "
+                     "Used by FastMCP when the resource server authenticates to the authorization server. "
+                     "Defaults to the FastMCP verifier default when unset."),
+    )
 
     @staticmethod
     def _is_https_or_localhost(url: str) -> bool:
@@ -91,6 +97,15 @@ class OAuth2ResourceServerConfig(AuthProviderBaseConfig, name="oauth2_resource_s
             return value
         if not cls._is_https_or_localhost(value):
             raise ValueError(f"{info.field_name} must be HTTPS (http allowed only for localhost). Got: {value}")
+        return value
+
+    @field_validator("client_auth_method")
+    @classmethod
+    def _validate_client_auth_method(cls, value: str | None):
+        if value is None:
+            return value
+        if value not in {"client_secret_basic", "client_secret_post"}:
+            raise ValueError("client_auth_method must be one of: client_secret_basic, client_secret_post")
         return value
 
     # ---------- Cross-field validation: ensure at least one viable path ----------

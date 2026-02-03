@@ -311,10 +311,26 @@ class FastMCPFrontEndPluginWorker(FastMCPFrontEndPluginWorkerBase):
         Returns:
             FastMCP instance configured with settings from toolkit config.
         """
-        if self.front_end_config.server_auth:
-            logger.warning("FastMCP auth is configured but ignored in phase 1.")
+        auth_provider = None
+        server_auth = self.front_end_config.server_auth
+        if server_auth:
+            from fastmcp.server.auth.providers.introspection import IntrospectionTokenVerifier
 
-        return FastMCP(name=self.front_end_config.name, debug=self.front_end_config.debug)
+            verifier_kwargs = {
+                "introspection_url": server_auth.introspection_endpoint,
+                "client_id": server_auth.client_id,
+                "client_secret": server_auth.client_secret,
+                "required_scopes": server_auth.scopes,
+            }
+            if server_auth.client_auth_method:
+                verifier_kwargs["client_auth_method"] = server_auth.client_auth_method
+            auth_provider = IntrospectionTokenVerifier(**verifier_kwargs)
+
+        return FastMCP(
+            name=self.front_end_config.name,
+            debug=self.front_end_config.debug,
+            auth=auth_provider,
+        )
 
     async def add_routes(self, mcp: FastMCP, builder: WorkflowBuilder):
         """Add default routes to the FastMCP server.
