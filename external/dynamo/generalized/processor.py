@@ -133,6 +133,10 @@ class ProcessorRequestHandler:
             self._metrics_log_cap = 2048
         self._metrics_written_count = 0
 
+        # Output logging (accumulated text)
+        self._output_log_path = os.environ.get("PROCESSOR_OUTPUT_LOG", "processor_output.jsonl")
+        self._output_lock = asyncio.Lock()
+
         # def _raise_exception(msg: str):  # pragma: no cover - template guard
         #     raise ValueError(msg)
 
@@ -329,6 +333,8 @@ class ProcessorRequestHandler:
                                                      finish_reason)
                     # Persist per-request metrics to CSV (concurrency-safe)
                     await self._log_request_metrics(num_tokens=len(all_tokens), latency_ms=latency_ms)
+                    # Log the accumulated generated text
+                    await self._log_output(session_id, text_so_far, len(all_tokens), latency_ms)
                     yield {"finish_reason": finish_reason}
                     return
 
@@ -389,6 +395,31 @@ class ProcessorRequestHandler:
                     self._metrics_written_count += 1
         except Exception as e:
             logger.warning("Failed to write metrics CSV %s: %s", self._metrics_csv_path, e)
+
+    async def _log_output(self, session_id: str, generated_text: str, num_tokens: int, latency_ms: float):
+        """Log the accumulated generated text to file and terminal."""
+        try:
+            import json
+            log_entry = {
+                "timestamp": time.time(),
+                "session_id": session_id,
+                "generated_text": generated_text,
+                "num_tokens": num_tokens,
+                "latency_ms": latency_ms,
+            }
+
+            # Log to terminal
+            logger.info("[OUTPUT] session=%s tokens=%d text=%s", session_id, num_tokens, generated_text[:200])
+
+            # Log to file
+            async with self._output_lock:
+                try:
+                    with open(self._output_log_path, "a") as f:
+                        f.write(json.dumps(log_entry, separators=(",", ":")) + "\n")
+                except Exception as e:
+                    logger.warning("Failed to write to output log: %s", e)
+        except Exception as e:
+            logger.debug("Output logging error: %s", e)
 
 
 # -------------------------- worker entry point -------------------------- #

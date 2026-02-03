@@ -290,6 +290,10 @@ class FrontendRequestHandler:
         self._tps_csv_path = os.environ.get("FRONTEND_TPS_CSV", "frontend_throughput.csv")
         self._tps_task = None
 
+        # Input/output logging
+        self._io_log_path = os.environ.get("FRONTEND_IO_LOG", "frontend_io.jsonl")
+        self._io_lock = asyncio.Lock()
+
     async def initialize(self) -> None:
         """Initialize the frontend handler.
 
@@ -373,7 +377,6 @@ class FrontendRequestHandler:
             try:
                 # Convert to dict once; we may augment it with prefix hints
                 req_dict: dict[str, Any] = request.model_dump()
-                logger.info("Got full request: %s", req_dict)
 
                 # ---- Build prefix_hints from headers (with robust defaults) ----
                 session_id = hdr_session_id or f"auto-{uuid.uuid4().hex}"
@@ -388,8 +391,20 @@ class FrontendRequestHandler:
                 # Build the processor payload (includes stream fields)
                 processor_req: dict[str, Any] = dict(req_dict)
 
+                # Log input
+                await self._log_io("input", {
+                    "session_id": session_id,
+                    "priority": latency_priority,
+                    "model": request.model,
+                    "messages": [{"role": m.role, "content": str(m.content)[:200]} for m in request.messages],  # Truncate for logging
+                    "streaming": request.stream,
+                })
+
                 # Fast path: non-streaming -> JSON response
                 if not request.stream:
+                    if self.processor_client is None:
+                        raise RuntimeError("Processor client not initialized")
+
                     processor_stream = await self.processor_client.generate(processor_req)
                     full_text = ""
                     finish_reason = "stop"
@@ -438,7 +453,7 @@ class FrontendRequestHandler:
                     # Count completed request
                     await self._inc_tps()
 
-                    return {
+                    response = {
                         "id": f"chatcmpl-{uuid.uuid4().hex}",
                         "object": "chat.completion",
                         "created": int(time.time()),
@@ -455,21 +470,27 @@ class FrontendRequestHandler:
                         },
                     }
 
+                    # Log output
+                    await self._log_io("output", {
+                        "session_id": session_id,
+                        "full_text": full_text,
+                        "text_content": text_content,
+                        "has_tool_calls": bool(tool_calls),
+                        "finish_reason": finish_reason,
+                        "tokens": {"prompt": prompt_tokens, "completion": completion_tokens},
+                    })
+
+                    return response
+
                 # ------------- streaming path (SSE) -------------
+                # NOTE: Streaming is disabled - we accumulate the full response and send it as one chunk
                 include_usage = bool(getattr(request.stream_options or StreamOptions(), "include_usage", False))
 
                 async def sse_stream() -> AsyncGenerator[str, None]:
+                    """Simplified streaming: accumulate full response, send as single chunk + DONE."""
                     created = int(time.time())
                     resp_id = f"chatcmpl-{uuid.uuid4().hex}"
                     model_name = request.model or "nvidia/Llama-3.1-Nemotron-Nano-8B-v1"
-
-                    # Prepare tokenizer & prompt token count (for usage if requested)
-                    prompt_tokens = 0
-                    tok = None
-                    if include_usage:
-                        tok = self._get_tokenizer(model_name)
-                        prompt_text = self._messages_to_text(processor_req["messages"], tok)
-                        prompt_tokens = len(tok.encode(prompt_text, add_special_tokens=True))
 
                     def sse_packet(payload: dict[str, Any]) -> str:
                         return "data: " + json.dumps(payload, separators=(",", ":")) + "\n\n"
@@ -477,11 +498,7 @@ class FrontendRequestHandler:
                     def make_chunk(
                         delta: dict[str, Any],
                         finish_reason: str | None,
-                        tool_calls_delta: list[dict[str, Any]] | None = None
                     ) -> dict[str, Any]:
-                        chunk_delta = dict(delta)
-                        if tool_calls_delta:
-                            chunk_delta["tool_calls"] = tool_calls_delta
                         return {
                             "id": resp_id,
                             "object": "chat.completion.chunk",
@@ -489,144 +506,94 @@ class FrontendRequestHandler:
                             "model": model_name,
                             "choices": [{
                                 "index": 0,
-                                "delta": chunk_delta,
+                                "delta": delta,
                                 "finish_reason": finish_reason,
                             }],
                         }
 
-                    # 1) Send the role chunk first
-                    yield sse_packet(make_chunk(delta={"role": "assistant"}, finish_reason=None))
-
-                    # 2) Stream content chunks from processor
-                    processor_stream = await self.processor_client.generate(processor_req)
-                    full_text = ""
-                    filtered_sent = ""  # Track how much filtered content we've sent
-                    finish_reason: str | None = None
-
-                    # Tool call streaming state
-                    tool_call_mode = False
-                    current_tool_call_index = 0
-                    sent_tool_calls: set[int] = set()  # Track which tool calls we've started streaming
-                    last_streamed_args: dict[int, str] = {}  # Track streamed args per tool call index
-
                     try:
+                        # Accumulate full response from processor
+                        if self.processor_client is None:
+                            raise RuntimeError("Processor client not initialized")
+
+                        processor_stream = await self.processor_client.generate(processor_req)
+                        full_text = ""
+                        finish_reason = "stop"
+
                         async for chunk in processor_stream:
                             data = chunk.data()
                             if "error" in data:
                                 raise HTTPException(status_code=500, detail=data["error"])
 
-                            piece: str | None = None
+                            # Accumulate text
                             if isinstance(data.get("delta"), str):
-                                piece = data["delta"]
+                                full_text += data["delta"]
                             elif isinstance(data.get("token"), str):
-                                piece = data["token"]
+                                full_text += data["token"]
                             elif isinstance(data.get("text"), str):
-                                piece = data["text"]
+                                full_text += data["text"]
                             elif isinstance(data.get("content"), str):
-                                # If cumulative content, stream only the unseen suffix
-                                cum = data["content"]
-                                start = len(full_text)
-                                if len(cum) > start:
-                                    piece = cum[start:]
+                                full_text = data["content"]
 
-                            if piece:
-                                full_text += piece
+                        # Parse tool calls and filter content
+                        text_content, tool_calls = ToolCallParser.parse(full_text)
+                        text_content = strip_think_tags(text_content)
 
-                                # Check for tool call patterns
-                                if ToolCallParser.has_partial_tool_call(full_text) or ToolCallParser.has_complete_tool_call(full_text):
-                                    # We're in tool call territory
-                                    if not tool_call_mode:
-                                        tool_call_mode = True
-                                        # Send any remaining text content before tool calls
-                                        text_before_tool = full_text.split('<tool_call>')[0]
-                                        filtered_before = strip_think_tags(text_before_tool)
-                                        if len(filtered_before) > len(filtered_sent):
-                                            new_piece = filtered_before[len(filtered_sent):]
-                                            filtered_sent = filtered_before
-                                            if new_piece.strip():
-                                                yield sse_packet(make_chunk(delta={"content": new_piece}, finish_reason=None))
+                        if tool_calls:
+                            finish_reason = "tool_calls"
 
-                                    # Parse complete tool calls and stream them
-                                    _, complete_tool_calls = ToolCallParser.parse(full_text)
+                        # 1) Send role chunk
+                        yield sse_packet(make_chunk(delta={"role": "assistant"}, finish_reason=None))
 
-                                    for idx, tc in enumerate(complete_tool_calls):
-                                        if idx not in sent_tool_calls:
-                                            # Send tool call start (name)
-                                            tool_call_delta = [{
-                                                "index": idx,
-                                                "id": tc.id,
-                                                "type": "function",
-                                                "function": {
-                                                    "name": tc.name,
-                                                    "arguments": "",
-                                                }
-                                            }]
-                                            yield sse_packet(make_chunk(delta={}, finish_reason=None, tool_calls_delta=tool_call_delta))
-                                            sent_tool_calls.add(idx)
-                                            last_streamed_args[idx] = ""
+                        # 2) Send content or tool_calls chunk
+                        delta: dict[str, Any] = {}
+                        if tool_calls:
+                            delta["tool_calls"] = [tc.to_openai_format() for tc in tool_calls]
+                            if text_content:
+                                delta["content"] = text_content
+                        else:
+                            delta["content"] = text_content
 
-                                        # Stream arguments incrementally
-                                        full_args = json.dumps(tc.arguments)
-                                        already_sent = last_streamed_args.get(idx, "")
-                                        if len(full_args) > len(already_sent):
-                                            args_delta = full_args[len(already_sent):]
-                                            tool_call_delta = [{
-                                                "index": idx,
-                                                "function": {
-                                                    "arguments": args_delta,
-                                                }
-                                            }]
-                                            yield sse_packet(make_chunk(delta={}, finish_reason=None, tool_calls_delta=tool_call_delta))
-                                            last_streamed_args[idx] = full_args
+                        yield sse_packet(make_chunk(delta=delta, finish_reason=None))
 
-                                    # Also handle partial tool calls (streaming args as they come)
-                                    partial_info = ToolCallParser.extract_partial_tool_call_info(full_text)
-                                    if partial_info:
-                                        idx = len(complete_tool_calls)  # Next index
-                                        if idx not in sent_tool_calls:
-                                            # Send tool call start
-                                            tool_call_delta = [{
-                                                "index": idx,
-                                                "id": f"call_{uuid.uuid4().hex[:24]}",
-                                                "type": "function",
-                                                "function": {
-                                                    "name": partial_info["function_name"],
-                                                    "arguments": "",
-                                                }
-                                            }]
-                                            yield sse_packet(make_chunk(delta={}, finish_reason=None, tool_calls_delta=tool_call_delta))
-                                            sent_tool_calls.add(idx)
-                                            last_streamed_args[idx] = ""
+                        # 3) Send finish chunk
+                        yield sse_packet(make_chunk(delta={}, finish_reason=finish_reason))
 
-                                        # Stream partial arguments
-                                        partial_args = partial_info["complete_arguments"]
-                                        if partial_args:
-                                            full_args = json.dumps(partial_args)
-                                            already_sent = last_streamed_args.get(idx, "")
-                                            if len(full_args) > len(already_sent):
-                                                # For partial, we stream what we have so far
-                                                # This is tricky because JSON isn't complete yet
-                                                # Just stream the partial JSON representation
-                                                args_delta = full_args[len(already_sent):]
-                                                tool_call_delta = [{
-                                                    "index": idx,
-                                                    "function": {
-                                                        "arguments": args_delta,
-                                                    }
-                                                }]
-                                                yield sse_packet(make_chunk(delta={}, finish_reason=None, tool_calls_delta=tool_call_delta))
-                                                last_streamed_args[idx] = full_args
+                        # 4) Optional usage chunk
+                        if include_usage:
+                            tok = self._get_tokenizer(model_name)
+                            prompt_text = self._messages_to_text(processor_req["messages"], tok)
+                            prompt_tokens = len(tok.encode(prompt_text, add_special_tokens=True))
+                            completion_tokens = len(tok.encode(full_text, add_special_tokens=False))
 
-                                else:
-                                    # Regular text content (no tool calls detected yet)
-                                    filtered_full = strip_think_tags(full_text)
-                                    if len(filtered_full) > len(filtered_sent):
-                                        new_piece = filtered_full[len(filtered_sent):]
-                                        filtered_sent = filtered_full
-                                        yield sse_packet(make_chunk(delta={"content": new_piece}, finish_reason=None))
+                            usage_chunk = {
+                                "id": resp_id,
+                                "object": "chat.completion.chunk",
+                                "created": created,
+                                "model": model_name,
+                                "choices": [],
+                                "usage": {
+                                    "prompt_tokens": prompt_tokens,
+                                    "completion_tokens": completion_tokens,
+                                    "total_tokens": prompt_tokens + completion_tokens,
+                                },
+                            }
+                            yield sse_packet(usage_chunk)
 
-                            if "finish_reason" in data and data["finish_reason"] is not None:
-                                finish_reason = data["finish_reason"]
+                        # 5) Terminator
+                        yield "data: [DONE]\n\n"
+
+                        # Log output
+                        await self._log_io("output", {
+                            "session_id": session_id,
+                            "full_text": full_text,
+                            "text_content": text_content,
+                            "has_tool_calls": bool(tool_calls),
+                            "finish_reason": finish_reason,
+                        })
+
+                        # Count completed request
+                        await self._inc_tps()
 
                     except HTTPException:
                         raise
@@ -634,39 +601,6 @@ class FrontendRequestHandler:
                         logging.exception("Streaming error: %s", e)
                         yield sse_packet(make_chunk(delta={}, finish_reason="error"))
                         yield "data: [DONE]\n\n"
-                        return
-
-                    # 3) Final finish chunk
-                    _, final_tool_calls = ToolCallParser.parse(full_text)
-                    if final_tool_calls:
-                        final_reason = "tool_calls"
-                    else:
-                        final_reason = finish_reason if finish_reason else "stop"
-                    yield sse_packet(make_chunk(delta={}, finish_reason=final_reason))
-
-                    # 4) Optional usage chunk
-                    if include_usage:
-                        if tok is None:
-                            tok = self._get_tokenizer(model_name)
-                        completion_tokens = len(tok.encode(full_text, add_special_tokens=False))
-                        usage_chunk = {
-                            "id": resp_id,
-                            "object": "chat.completion.chunk",
-                            "created": created,
-                            "model": model_name,
-                            "choices": [],
-                            "usage": {
-                                "prompt_tokens": prompt_tokens,
-                                "completion_tokens": completion_tokens,
-                                "total_tokens": prompt_tokens + completion_tokens,
-                            },
-                        }
-                        yield sse_packet(usage_chunk)
-
-                    # 5) Terminator
-                    yield "data: [DONE]\n\n"
-                    # Count completed request
-                    await self._inc_tps()
 
                 return StreamingResponse(
                     sse_stream(),
@@ -699,6 +633,29 @@ class FrontendRequestHandler:
         server = uvicorn.Server(config)
         logging.info("Starting FastAPI server on %s:%s", host, port)
         await server.serve()
+
+    # ----------------- logging helpers -----------------
+    async def _log_io(self, log_type: str, data: dict[str, Any]):
+        """Log input/output to file and terminal."""
+        try:
+            log_entry = {
+                "timestamp": time.time(),
+                "type": log_type,
+                "data": data,
+            }
+
+            # Log to terminal
+            logger.info("[%s] %s", log_type.upper(), json.dumps(data, separators=(",", ":")))
+
+            # Log to file
+            async with self._io_lock:
+                try:
+                    with open(self._io_log_path, "a") as f:
+                        f.write(json.dumps(log_entry, separators=(",", ":")) + "\n")
+                except Exception as e:
+                    logger.warning("Failed to write to IO log: %s", e)
+        except Exception as e:
+            logger.debug("IO logging error: %s", e)
 
     # ----------------- throughput helpers -----------------
     async def _inc_tps(self):
