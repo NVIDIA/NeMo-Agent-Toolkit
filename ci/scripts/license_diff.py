@@ -40,23 +40,28 @@ def pypi_license(name: str, version: str | None = None) -> str:
         A best-effort license string from the available metadata fields.
     """
     # Use version-specific metadata when available to avoid mismatches.
-    url = f"https://pypi.org/pypi/{name}/json" if version is None else f"https://pypi.org/pypi/{name}/{version}/json"
-    with urllib.request.urlopen(url) as r:
-        data = json.load(r)
+    try:
+        url = f"https://pypi.org/pypi/{name}/json" if version is None else f"https://pypi.org/pypi/{name}/{version}/json"
+        with urllib.request.urlopen(url) as r:
+            data = json.load(r)
+    except Exception:
+        return "(License not found)"
 
     info = data.get("info", {})
-    for info in [data.get("info", {}), data.get("dynamic", {})]:
-        lic = (info.get("license_expression") or "").strip()
-        if lic:
-            return lic
-        classifiers = info.get("classifiers") or []
-        lic_cls = [c for c in classifiers if c.startswith("License ::")]
-        if lic_cls:
-            return "; ".join(lic_cls)
-        lic = (info.get("license") or "").strip()
-        if lic:
-            return lic
+    candidates = []
+    lic = (info.get("license_expression") or "").strip()
+    if lic:
+        candidates.append(lic)
+    classifiers = info.get("classifiers") or []
+    lic_cls = [c for c in classifiers if c.startswith("License ::")]
+    if lic_cls:
+        candidates.append("; ".join(lic_cls))
+    lic = (info.get("license") or "").strip()
+    if lic:
+        candidates.append(lic)
 
+    if candidates:
+        return min(candidates, key=len)
     return "(License not found)"
 
 
@@ -71,9 +76,13 @@ def main(base_branch: str) -> None:
         head = tomllib.load(f)
 
     # Fetch the reference lockfile from GitHub for comparison.
-    with urllib.request.urlopen(
-            f"https://raw.githubusercontent.com/NVIDIA/NeMo-Agent-Toolkit/{base_branch}/uv.lock") as f:
-        base = tomllib.load(f)
+    try:
+        with urllib.request.urlopen(
+                f"https://raw.githubusercontent.com/NVIDIA/NeMo-Agent-Toolkit/{base_branch}/uv.lock") as f:
+            base = tomllib.load(f)
+    except Exception:
+        print(f"Failed to fetch base lockfile from GitHub: {base_branch}")
+        return
 
     # Index package metadata by name for easy diffing.
     head_packages = {pkg["name"]: pkg for pkg in head["package"]}
@@ -95,7 +104,7 @@ def main(base_branch: str) -> None:
                 version = head_packages[pkg]["version"]
                 license = pypi_license(pkg, version)
                 print(f"- {pkg} {version} {license}")
-            except Exception:
+            except KeyError:
                 # "Source" entries lack pinned versions (VCS or local path).
                 print(f"- {pkg} (source)")
 
@@ -105,10 +114,10 @@ def main(base_branch: str) -> None:
             try:
                 version = base_packages[pkg]["version"]
                 print(f"- {pkg} {version}")
-            except Exception:
+            except KeyError:
                 print(f"- {pkg} (source)")
 
-    list_of_changes = []
+    printed_header = False
     for pkg in sorted(changed_packages.keys()):
         try:
             head_version = head_packages[pkg]["version"]
@@ -118,17 +127,18 @@ def main(base_branch: str) -> None:
                 continue
             head_license = pypi_license(pkg, head_version)
             base_license = pypi_license(pkg, base_version)
+            if not printed_header:
+                print("Changed packages:")
+                printed_header = True
             if head_license != base_license:
-                list_of_changes.append(f"- {pkg} {head_version} -> {base_version} ({head_license} -> {base_license})")
+                print(f"- {pkg} {base_version} -> {head_version} ({base_license} -> {head_license})")
             else:
-                list_of_changes.append(f"- {pkg} {head_version} -> {base_version}")
-        except Exception:
-            list_of_changes.append(f"- {pkg} (source)")
-
-    if list_of_changes:
-        print("Changed packages:")
-        for change in list_of_changes:
-            print(change)
+                print(f"- {pkg} {base_version} -> {head_version}")
+        except KeyError:
+            if not printed_header:
+                print("Changed packages:")
+                printed_header = True
+            print(f"- {pkg} (source)")
 
 
 if __name__ == "__main__":

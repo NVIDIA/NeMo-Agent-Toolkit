@@ -39,23 +39,28 @@ def pypi_license(name: str, version: str | None = None) -> str:
         A best-effort license string from the available metadata fields.
     """
     # Use version-specific metadata when available to avoid mismatches.
-    url = f"https://pypi.org/pypi/{name}/json" if version is None else f"https://pypi.org/pypi/{name}/{version}/json"
-    with urllib.request.urlopen(url) as r:
-        data = json.load(r)
+    try:
+        url = f"https://pypi.org/pypi/{name}/json" if version is None else f"https://pypi.org/pypi/{name}/{version}/json"
+        with urllib.request.urlopen(url) as r:
+            data = json.load(r)
+    except Exception:
+        return "(License not found)"
 
     info = data.get("info", {})
-    for info in [data.get("info", {}), data.get("dynamic", {})]:
-        lic = (info.get("license_expression") or "").strip()
-        if lic:
-            return lic
-        classifiers = info.get("classifiers") or []
-        lic_cls = [c for c in classifiers if c.startswith("License ::")]
-        if lic_cls:
-            return "; ".join(lic_cls)
-        lic = (info.get("license") or "").strip()
-        if lic:
-            return lic
+    candidates = []
+    lic = (info.get("license_expression") or "").strip()
+    if lic:
+        candidates.append(lic)
+    classifiers = info.get("classifiers") or []
+    lic_cls = [c for c in classifiers if c.startswith("License ::")]
+    if lic_cls:
+        candidates.append("; ".join(lic_cls))
+    lic = (info.get("license") or "").strip()
+    if lic:
+        candidates.append(lic)
 
+    if candidates:
+        return min(candidates, key=len)
     return "(License not found)"
 
 
