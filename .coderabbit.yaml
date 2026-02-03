@@ -121,6 +121,7 @@ reviews:
           contain a README.md or file README.ipynb.
         - If an example contains Python code, it should be placed in a subdirectory named `src/` and should
           contain a `pyproject.toml` file. Optionally, it might also contain scripts in a `scripts/` directory.
+        - If an example contains a `pyproject.toml` file, it should be added to the `examples` list in the root `pyproject.toml` file.
         - If an example contains a tests directory, it should contain a `pyproject.toml` file.
         - If an example contains YAML files, they should be placed in a subdirectory named `configs/`.
         - If an example contains sample data files, they should be placed in a subdirectory named `data/`, and should
@@ -135,12 +136,13 @@ reviews:
         - This directory contains packages for the toolkit, each should contain a `pyproject.toml` file.
         - Not all packages contain Python code, if they do they should also contain their own set of tests, in a
           `tests/` directory at the same level as the `pyproject.toml` file.
-        - When adding a new package, that new package name (as defined in the `pyproject.toml` file) should
-          be added as a dependency to the nvidia-nat-all package in `packages/nvidia_nat_all/pyproject.toml`
     - path: "packages/*/pyproject.toml"
       instructions: >-
         - The `pyproject.toml` file should never declare a dependency on the `nvidia-nat` meta package.
+        - When adding a new package, that new package name (as defined in the `pyproject.toml` file) should
+          probably be added as a dependency to the most extra in the root `pyproject.toml` file.
         - `nvidia-nat-core` should likely be listed as a dependency.
+        - `nvidia-nat-test` should likely be listed as an optional dependency in the `test` extra
         - A single dependency should be listed on each line and should always have a version specifier.
         - All dependencies should be listed under the `[tool.setuptools_dynamic_dependencies]` section
         - Any dependency that is an NVIDIA NeMo Agent Toolkit package should be declared with a version constraint of `== {version}` 
