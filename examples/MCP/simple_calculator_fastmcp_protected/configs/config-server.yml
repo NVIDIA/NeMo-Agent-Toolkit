@@ -30,6 +30,9 @@ general:
 
     # OAuth2 Resource Server Protection (RFC 7662)
     server_auth:
+      # Keycloak issuer URL (required by the resource server config)
+      issuer_url: http://localhost:8080/realms/master
+
       # Keycloak introspection endpoint
       introspection_endpoint: http://localhost:8080/realms/master/protocol/openid-connect/token/introspect
 

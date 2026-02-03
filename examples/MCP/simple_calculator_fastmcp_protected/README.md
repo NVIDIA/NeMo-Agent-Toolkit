@@ -37,7 +37,7 @@ graph TB
     subgraph Server["FastMCP Server (Calculator)"]
         direction TB
         Calculator["Calculator Workflow"]
-        OAuthMiddleware["OAuth Middleware<br/>• Introspects tokens<br/>• Checks scopes<br/>• Validates activity"]
+        OAuthMiddleware["FastMCP OAuth2 Resource Server Middleware<br/>• Introspects tokens<br/>• Checks scopes<br/>• Validates activity"]
         Calculator --> OAuthMiddleware
     end
 
@@ -60,7 +60,6 @@ graph TB
 
 - NVIDIA NeMo Agent Toolkit installed (see [Installation Guide](../../../docs/source/get-started/installation.md))
 - Keycloak server running locally (see setup instructions below)
-- Basic understanding of OAuth2 and token introspection
 
 ## Setup Instructions
 
@@ -172,6 +171,7 @@ FastMCP uses OAuth2 token introspection for this example. Register a resource se
    - **Authentication flow:**
      - Direct access grants
    - Click **Next**
+   - Click **Save**
 
 5. **Get resource server credentials:**
    - Go to **Credentials** tab
@@ -182,8 +182,8 @@ FastMCP uses OAuth2 token introspection for this example. Register a resource se
 
 ```bash
 # Terminal 1
-export CALCULATOR_RESOURCE_CLIENT_ID="nat-mcp-resource-server"
-export CALCULATOR_RESOURCE_CLIENT_SECRET="<your-resource-client-secret>"
+export CALCULATOR_RESOURCE_CLIENT_ID="nat-mcp-resource-server"  # Resource server client ID
+export CALCULATOR_RESOURCE_CLIENT_SECRET="<your-resource-client-secret>"  # Resource server client secret from Step 4.5
 
 nat fastmcp server run --config_file examples/MCP/simple_calculator_fastmcp_protected/configs/config-server.yml
 ```
@@ -193,8 +193,8 @@ nat fastmcp server run --config_file examples/MCP/simple_calculator_fastmcp_prot
 Set the client ID and client secret from Step 3 in the environment variables:
 ```bash
 # Terminal 2
-export CALCULATOR_CLIENT_ID="nat-mcp-client"
-export CALCULATOR_CLIENT_SECRET="<your-client-secret>"
+export CALCULATOR_CLIENT_ID="nat-mcp-client"  # OAuth client ID for the MCP client (auth code flow)
+export CALCULATOR_CLIENT_SECRET="<your-client-secret>"  # OAuth client secret for the MCP client from Step 3.8
 
 nat run --config_file examples/MCP/simple_calculator_fastmcp_protected/configs/config-client.yml \
   --input "Is the product of 2 and 3 greater than the current hour of the day?"
@@ -237,7 +237,9 @@ general:
     _type: fastmcp
     name: "Protected Calculator FastMCP"
     port: 9902
+    host: localhost
     server_auth:
+      issuer_url: http://localhost:8080/realms/master
       introspection_endpoint: http://localhost:8080/realms/master/protocol/openid-connect/token/introspect
       client_id: ${CALCULATOR_RESOURCE_CLIENT_ID:-"nat-mcp-resource-server"}
       client_secret: ${CALCULATOR_RESOURCE_CLIENT_SECRET}

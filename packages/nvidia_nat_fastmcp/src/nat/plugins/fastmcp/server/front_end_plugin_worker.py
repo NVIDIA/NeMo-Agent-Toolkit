@@ -314,6 +314,7 @@ class FastMCPFrontEndPluginWorker(FastMCPFrontEndPluginWorkerBase):
         auth_provider = None
         server_auth = self.front_end_config.server_auth
         if server_auth:
+            from fastmcp.server.auth import RemoteAuthProvider
             from fastmcp.server.auth.providers.introspection import IntrospectionTokenVerifier
 
             verifier_kwargs = {
@@ -324,7 +325,17 @@ class FastMCPFrontEndPluginWorker(FastMCPFrontEndPluginWorkerBase):
             }
             if server_auth.client_auth_method:
                 verifier_kwargs["client_auth_method"] = server_auth.client_auth_method
-            auth_provider = IntrospectionTokenVerifier(**verifier_kwargs)
+            verifier = IntrospectionTokenVerifier(**verifier_kwargs)
+            host = self.front_end_config.host
+            if host in {"0.0.0.0", "::"}:
+                host = "localhost"
+            base_url = f"http://{host}:{self.front_end_config.port}"
+            auth_provider = RemoteAuthProvider(
+                token_verifier=verifier,
+                authorization_servers=[server_auth.issuer_url],
+                base_url=base_url,
+                resource_name=self.front_end_config.name,
+            )
 
         return FastMCP(
             name=self.front_end_config.name,
