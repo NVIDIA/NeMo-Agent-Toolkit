@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Evaluating NVIDIA NeMo Agent Toolkit Workflows
+# Agent Evaluation in NVIDIA NeMo Agent Toolkit
 
 Evaluation is the process of executing [workflows](../build-workflows/about-building-workflows.md) ([agents](../components/agents/index.md), [tools](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools), or pipelines) on curated test data and measuring their quality using quantitative metrics such as accuracy, reliability, and latency. Each of these metrics in turn is produced by an evaluator.
 
