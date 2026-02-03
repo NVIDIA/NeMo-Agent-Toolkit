@@ -13,7 +13,7 @@ root = "../../.."
 name = "nat_simple_calculator_custom_routes"
 dynamic = ["version"]
 dependencies = [
-    "nvidia-nat[langchain]~=1.3",
+    "nvidia-nat[langchain]~=1.4",
     "nat_simple_calculator",
 ]
 requires-python = ">=3.11,<3.14"

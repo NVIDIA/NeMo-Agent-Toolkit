@@ -1,0 +1,293 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# <!-- path-check-skip-file -->
+
+# =============================================================================
+# PREDICTIVE PREFIX HEADER OPTIMIZATION
+# =============================================================================
+# Purpose: Optimize Dynamo Predictive KV-Aware Cache router parameters
+# Run with: nat optimize --config_file configs/optimize_rethinking_full_test.yml
+#
+# This configuration tunes the prefix header parameters that control how the
+# Thompson Sampling router makes worker assignment decisions:
+#
+# Dynamo Prefix Parameter Reference (from router.py):
+# ─────────────────────────────────────────────────────────────────────────────
+# prefix_osl (Output Sequence Length):
+#   - LOW    → decode_cost = 1.0 (short responses expected)
+#   - MEDIUM → decode_cost = 2.0 (typical responses)
+#   - HIGH   → decode_cost = 3.0 (long responses expected)
+#
+# prefix_iat (Inter-Arrival Time):
+#   - LOW    → iat_factor = 1.5 (rapid requests, high stickiness)
+#   - MEDIUM → iat_factor = 1.0 (normal pacing)
+#   - HIGH   → iat_factor = 0.6 (slow requests, more exploration)
+#
+# prefix_total_requests:
+#   - Integer >= 1: How many requests expected for this prefix or conversation
+#   - Higher values increase worker stickiness and KV cache locality
+#   - Lower values allow more worker exploration and load balancing
+#
+# Router Behavior Summary:
+#   - Higher reuse_budget + LOW iat → strong stickiness to same worker
+#   - Higher reuse_budget → switching penalty increases
+#   - prefix_total_requests affects reuse_budget calculation:
+#     reuse_budget = prefix_total_requests - requests_processed_so_far
+# =============================================================================
+
+functions:
+  react_benchmark_agent:
+    _type: react_benchmark_agent
+    prefix: "Agent:"
+    decision_only: true
+    canned_response_template: "Successfully executed {tool_name}. Operation completed."
+
+  react_workflow:
+    _type: react_agent
+    llm_name: dynamo_llm
+    tool_names: [
+      banking_tools
+    ]
+    verbose: false  # Disable verbose for benchmarking
+    parse_agent_response_max_retries: 3
+    max_tool_calls: 25
+    max_history: 1000
+    pass_tool_call_errors_to_agent: true
+    recursion_limit: 50
+    system_prompt: |
+      You are a tool-calling agent evaluated on TOOL SELECTION capability. Your goal is to select ALL the correct tools, in the correct order, to COMPLETELY handle real-world use-cases.
+      
+      IMPORTANT: This is a tool selection exercise, NOT real execution.
+      - Focus on selecting the RIGHT TOOL for each step
+      - Use placeholder or dummy values for required parameters (e.g., "12345", "user@example.com", "2024-01-01")
+      - Tool responses are simulated - ignore them and focus on selecting the next appropriate tool
+      - What matters is YOUR INTENT and TOOL CHOICE, not the data quality
+      
+      Available tools:
+
+      {tools}
+
+      Use this exact format for EACH response:
+
+      Thought: I need to analyze what the user needs and select the SINGLE NEXT tool to call.
+      Action: the ONE tool to call right now, must be one of [{tool_names}]
+      Action Input: valid JSON with required parameters (use placeholder values)
+
+      CRITICAL RULES:
+      1. Output ONLY ONE Thought, Action, and Action Input per response
+      2. STOP IMMEDIATELY after writing Action Input
+      3. DO NOT write the Observation - the system will provide it
+      4. DO NOT write multiple Thought/Action/Action Input cycles in one response
+      
+      When you have called ALL necessary tools:
+      Thought: I have now completed all necessary steps
+      Final Answer: [summary of what was accomplished]
+
+function_groups:
+  banking_tools:
+    _type: banking_tools_group
+    # tools.json available after running: /examples/dynamo_integration/scripts/download_agent_leaderboard_v2.py
+    tools_json_path: ./examples/dynamo_integration/data/raw/banking/tools.json
+    decision_only: true
+    include: [
+      get_account_balance,
+      get_transaction_history,
+      transfer_funds,
+      get_loan_information,
+      get_credit_card_information,
+      get_mortgage_details,
+      get_savings_account_products,
+      schedule_appointment,
+      check_loan_application_status,
+      find_nearby_locations,
+      get_investment_products,
+      report_lost_stolen_card,
+      update_contact_information,
+      setup_automatic_bill_pay,
+      initiate_transaction_dispute,
+      get_exchange_rates,
+      calculate_loan_payment,
+      manage_account_alerts,
+      check_wire_transfer_status,
+      get_cd_products
+    ]
+
+llms:
+  # =========================================================================
+  # DYNAMO-AWARE LLM WITH OPTIMIZABLE PREFIX PARAMETERS
+  # =========================================================================
+  # Uses custom dynamo_openai type that has proper schema definitions
+  # for prefix parameters, making them discoverable by the NAT optimizer.
+  dynamo_llm:
+    _type: dynamo
+    model_name: llama-3.3-70b
+    base_url: http://localhost:8099/v1
+    api_key: dummy
+    temperature: 0.0
+    max_tokens: 8192
+    stop: ["Observation:", "\nThought:"]
+    
+    # Dynamo prefix configuration
+    # Note: Setting prefix_template enables dynamic prefix headers
+    prefix_template: "react-benchmark-{uuid}"
+    # OPTIMIZABLE: Total expected requests per conversation or prefix
+    # Default search space: low=1, high=20, step=5
+    prefix_total_requests: 10
+    # OPTIMIZABLE: Output Sequence Length hint (LOW | MEDIUM | HIGH)
+    prefix_osl: MEDIUM
+    # OPTIMIZABLE: Inter-Arrival Time hint (LOW | MEDIUM | HIGH)
+    prefix_iat: MEDIUM
+    
+    # =========================================================================
+    # OPTIMIZER: Which parameters to optimize and their search spaces
+    # =========================================================================
+    optimizable_params:
+      - prefix_total_requests
+      - prefix_osl
+      - prefix_iat
+    
+    # Override default search spaces if needed
+    search_space:
+      prefix_total_requests:
+        low: 1
+        high: 20
+        step: 5
+      prefix_osl:
+        values: ["LOW", "MEDIUM", "HIGH"]
+      prefix_iat:
+        values: ["LOW", "MEDIUM", "HIGH"]
+
+  # Secondary LLM for self-evaluation (not optimized)
+  eval_llm:
+    _type: dynamo
+    model_name: llama-3.3-70b
+    base_url: http://localhost:8099/v1
+    api_key: dummy
+    temperature: 0.0
+    max_tokens: 1024
+
+workflow:
+  _type: self_evaluating_agent_with_feedback
+  wrapped_agent: react_workflow
+  evaluator_llm: eval_llm
+  max_retries: 3
+  min_confidence_threshold: 0.80
+  pass_feedback_to_agent: true
+  verbose: false
+
+eval:
+  general:
+    max_concurrency: 36
+    
+    output:
+      dir: ./examples/dynamo_integration/react_benchmark_agent/outputs/dynamo_evals/runtime_optimization/
+      cleanup: false
+      job_management:
+        append_job_id_to_output_dir: true
+    
+    dataset:
+      _type: json
+      file_path: ./examples/dynamo_integration/data/agent_leaderboard_v2_banking.json
+      structure:
+        disable: true
+
+    # Profiler for detailed metrics (optional during optimization)
+    profiler:
+      compute_llm_metrics: true
+      token_uniqueness_forecast: false  # Disable for faster runs
+      workflow_runtime_forecast: false
+      csv_exclude_io_text: true
+      bottleneck_analysis:
+        enable_nested_stack: false  # Disable for faster runs
+      concurrency_spike_analysis:
+        enable: true
+        spike_threshold: 36
+
+  # =========================================================================
+  # RUNTIME EVALUATORS - Optimize for latency/throughput, NOT accuracy
+  # =========================================================================
+  evaluators:
+    # Primary metric: Average LLM latency per call (seconds)
+    # Lower is better - minimize time waiting for LLM responses
+    avg_llm_latency:
+      _type: avg_llm_latency
+      max_concurrency: 36
+    
+    # Secondary metric: Average workflow runtime (seconds)
+    # Lower is better - minimize total time to complete a task
+    avg_workflow_runtime:
+      _type: avg_workflow_runtime
+      max_concurrency: 36
+    
+    # Tertiary metric: Average number of LLM calls
+    # Lower is better - fewer calls = more efficient
+    avg_num_llm_calls:
+      _type: avg_num_llm_calls
+      max_concurrency: 36
+    
+    # Quaternary metric: Average tokens per LLM call
+    # Can help identify inefficient prompt patterns
+    avg_tokens_per_call:
+      _type: avg_tokens_per_llm_end
+      max_concurrency: 36
+
+# =============================================================================
+# OPTIMIZER CONFIGURATION - Runtime Performance Focus
+# =============================================================================
+optimizer:
+  output_path: ./examples/dynamo_integration/react_benchmark_agent/outputs/dynamo_evals/runtime_optimization/optimizer_results/
+  
+  # Number of full evaluation runs per parameter combination
+  # Higher = more stable results, but slower
+  reps_per_param_set: 1
+  
+  # =========================================================================
+  # EVALUATION METRICS FOR OPTIMIZATION
+  # =========================================================================
+  # These determine what the optimizer tries to improve.
+  # All metrics below are MINIMIZED (lower is better).
+  eval_metrics:
+    # Primary: Minimize average LLM latency (most impactful)
+    llm_latency:
+      evaluator_name: avg_llm_latency
+      direction: minimize
+      weight: 0.7  # 70% weight - primary objective
+    
+    # Secondary: Minimize total workflow runtime
+    workflow_runtime:
+      evaluator_name: avg_workflow_runtime
+      direction: minimize
+      weight: 0.2  # 20% weight
+    
+    # Tertiary: Minimize number of LLM calls (efficiency)
+    num_calls:
+      evaluator_name: avg_num_llm_calls
+      direction: minimize
+      weight: 0.1  # 10% weight
+  
+  # =========================================================================
+  # NUMERIC OPTIMIZATION (Optuna-based)
+  # =========================================================================
+  numeric:
+    enabled: true
+    # Grid search: systematically test all combinations
+    # Full grid = 3 * 3 * 4 = 36 combinations
+    # Recommendation: Use Bayesian sampling with limited trials
+    sampler: grid  # Options: grid, bayesian
+  
+  # Prompt optimization disabled for runtime tuning
+  prompt:
+    enabled: false
+

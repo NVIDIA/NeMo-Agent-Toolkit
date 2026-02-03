@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,8 @@ limitations under the License.
 -->
 
 # Workflow Scaffolding and Project Generation
+
+**Complexity:** 🟢 Beginner
 
 This guide demonstrates how to quickly scaffold and generate new NVIDIA NeMo Agent toolkit workflows using automated commands and intelligent code generation. Learn to create structured projects with proper configuration, dependencies, and Cursor rules integration for enhanced development experience.
 
@@ -38,5 +40,5 @@ This guide demonstrates how to quickly scaffold and generate new NVIDIA NeMo Age
 
 For comprehensive workflow development guidance, explore these detailed tutorials:
 
-- [Create a New Workflow](../../../docs/source/tutorials/create-a-new-workflow.md) - Complete guide to building custom workflows from scratch
-- [Build a Demo Agent Workflow Using Cursor Rules](../../../docs/source/tutorials/build-a-demo-agent-workflow-using-cursor-rules.md) - Interactive development using Cursor rules assistance
+- [Create a New Workflow](../../../docs/source/get-started/tutorials/create-a-new-workflow.md) - Complete guide to building custom workflows from scratch
+- [Build a Demo Agent Workflow Using Cursor Rules](../../../docs/source/get-started/tutorials/build-a-demo-agent-workflow-using-cursor-rules.md) - Interactive development using Cursor rules assistance

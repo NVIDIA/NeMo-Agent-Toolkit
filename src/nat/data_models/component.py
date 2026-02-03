@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,6 +28,7 @@ class ComponentEnum(StrEnum):
     FRONT_END = "front_end"
     FUNCTION = "function"
     FUNCTION_GROUP = "function_group"
+    MIDDLEWARE = "middleware"
     TTC_STRATEGY = "ttc_strategy"
     LLM_CLIENT = "llm_client"
     LLM_PROVIDER = "llm_provider"
@@ -40,6 +41,9 @@ class ComponentEnum(StrEnum):
     RETRIEVER_PROVIDER = "retriever_provider"
     TOOL_WRAPPER = "tool_wrapper"
     TRACING = "tracing"
+    TRAINER = "trainer"
+    TRAJECTORY_BUILDER = "trajectory_builder"
+    TRAINER_ADAPTER = "trainer_adapter"
     UNDEFINED = "undefined"
 
 
@@ -49,11 +53,15 @@ class ComponentGroup(StrEnum):
     EMBEDDERS = "embedders"
     FUNCTIONS = "functions"
     FUNCTION_GROUPS = "function_groups"
+    MIDDLEWARE = "middleware"
     TTC_STRATEGIES = "ttc_strategies"
     LLMS = "llms"
     MEMORY = "memory"
     OBJECT_STORES = "object_stores"
     RETRIEVERS = "retrievers"
+    TRAINERS = "trainers"
+    TRAINER_ADAPTERS = "trainer_adapters"
+    TRAJECTORY_BUILDERS = "trajectory_builders"
 
 
 # Compatibility aliases with previous releases

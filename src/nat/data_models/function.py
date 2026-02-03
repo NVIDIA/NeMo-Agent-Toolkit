@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,7 +24,22 @@ from .common import TypedBaseModel
 
 
 class FunctionBaseConfig(TypedBaseModel, BaseModelRegistryTag):
-    pass
+    """Base configuration for functions.
+
+    Attributes:
+        `name`: Optional display name for this function. Used in tracing and observability.
+            If not provided, the function type will be used.
+        `middleware`: List of function middleware names to apply to this function.
+            These must match names defined in the `middleware` section of the YAML configuration.
+    """
+    name: str | None = Field(
+        default=None,
+        description="Optional display name for this function. Used in tracing and observability.",
+    )
+    middleware: list[str] = Field(
+        default_factory=list,
+        description="List of function middleware names to apply to this function in order",
+    )
 
 
 class FunctionGroupBaseConfig(TypedBaseModel, BaseModelRegistryTag):
@@ -39,6 +54,10 @@ class FunctionGroupBaseConfig(TypedBaseModel, BaseModelRegistryTag):
     exclude: list[str] = Field(
         default_factory=list,
         description="The list of function names which should be excluded from default access to the group",
+    )
+    middleware: list[str] = Field(
+        default_factory=list,
+        description="List of function middleware names to apply to all functions in this group",
     )
 
     @field_validator("include", "exclude")

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
+import inspect
 import json
 import os
 import time
@@ -193,11 +195,22 @@ def session_manager(generated_answer, mock_pull_intermediate):
 
     # Define an async context manager for runner
     @asynccontextmanager
-    async def mock_run(_message):
+    async def mock_run(_message, runtime_type=None):
         """Mock async context manager for runner."""
         yield mock_runner
 
-    session_manager.run = mock_run
+    # Create a mock session with run method
+    mock_session = MagicMock()
+    mock_session.run = mock_run
+    mock_session.workflow = mock_workflow
+
+    # Define an async context manager for session
+    @asynccontextmanager
+    async def mock_session_cm(user_id=None):
+        """Mock async context manager for session."""
+        yield mock_session
+
+    session_manager.session = mock_session_cm
     return session_manager
 
 
@@ -284,15 +297,101 @@ async def test_run_workflow_local_workflow_interrupted(evaluation_run, eval_inpu
     mock_error_runner.result = AsyncMock(side_effect=mock_result)
 
     @asynccontextmanager
-    async def mock_error_run(_message):
+    async def mock_error_run(_message, runtime_type=None):
         """Mock async context manager for runner."""
         yield mock_error_runner
 
-    session_manager.run = mock_error_run
+    # Get the mock session from session_manager.session and update its run method
+    @asynccontextmanager
+    async def mock_error_session(user_id=None):
+        mock_session = MagicMock()
+        mock_session.run = mock_error_run
+        mock_session.workflow = session_manager.workflow
+        yield mock_session
+
+    session_manager.session = mock_error_session
     # Run the actual function
     # Check if workflow_interrupted is set to True
     await evaluation_run.run_workflow_local(session_manager)
     assert evaluation_run.workflow_interrupted, "Expected workflow_interrupted to be True after failure"
+
+
+async def test_run_workflow_local_reuse_coroutine_on_error(evaluation_run, eval_input, session_manager):
+    """Document coroutine reuse error after workflow failure."""
+    evaluation_run.eval_input = eval_input
+
+    mock_error_runner = AsyncMock()
+
+    async def mock_result():
+        raise RuntimeError("Simulated workflow timeout")
+
+    failing_coro = mock_result()
+    mock_error_runner.result = MagicMock(return_value=failing_coro)
+
+    @asynccontextmanager
+    async def mock_error_run(_message, runtime_type=None):
+        """Mock async context manager for runner."""
+        yield mock_error_runner
+
+    @asynccontextmanager
+    async def mock_error_session(user_id=None):
+        mock_session = MagicMock()
+        mock_session.run = mock_error_run
+        mock_session.workflow = session_manager.workflow
+        yield mock_session
+
+    session_manager.session = mock_error_session
+
+    # This should not raise a "cannot reuse already awaited coroutine" error
+    try:
+        await evaluation_run.run_workflow_local(session_manager)
+    except RuntimeError as e:
+        assert "cannot reuse already awaited coroutine" not in str(e), (
+            f"Did not expect coroutine reuse error, but got: {e}")
+
+
+async def test_run_workflow_local_cancels_pending_intermediate(evaluation_run, eval_input, session_manager):
+    """Test that pending intermediate futures are cancelled when workflow execution fails."""
+    evaluation_run.eval_input = eval_input
+    pending_future: asyncio.Future[list[dict]] = asyncio.Future()
+    intermediate_source: asyncio.Future[list[dict]] = asyncio.Future()
+
+    # Create a mock runner that will raise an exception when awaited
+    mock_error_runner = AsyncMock()
+
+    async def mock_result():
+        raise RuntimeError("Simulated workflow failure")
+
+    mock_error_runner.result = AsyncMock(side_effect=mock_result)
+
+    @asynccontextmanager
+    async def mock_error_run(_message, runtime_type=None):
+        """Mock async context manager for runner."""
+        yield mock_error_runner
+
+    @asynccontextmanager
+    async def mock_error_session(user_id=None):
+        mock_session = MagicMock()
+        mock_session.run = mock_error_run
+        mock_session.workflow = session_manager.workflow
+        yield mock_session
+
+    session_manager.session = mock_error_session
+
+    def ensure_future_stub(coro):
+        coro.close()
+        return pending_future
+
+    with patch("nat.eval.runtime_event_subscriber.pull_intermediate",
+               AsyncMock(return_value=intermediate_source)) as mock_pull_intermediate, \
+         patch("nat.eval.evaluate.asyncio.ensure_future", side_effect=ensure_future_stub) as mock_ensure_future:
+        await evaluation_run.run_workflow_local(session_manager)
+
+    assert evaluation_run.workflow_interrupted, "Expected workflow_interrupted to be True after failure"
+    mock_pull_intermediate.assert_called_once()
+    mock_ensure_future.assert_called_once()
+    assert inspect.iscoroutine(mock_ensure_future.call_args.args[0])
+    assert pending_future.cancelled(), "Pending intermediate future should be cancelled"
 
 
 async def test_run_workflow_remote_success(evaluation_run, generated_answer):
@@ -470,6 +569,110 @@ def test_write_output_handles_none_output(evaluation_run, eval_input):
             evaluation_run.write_output(mock_dataset_handler, mock_profiler_results)
         except AttributeError:
             pytest.fail("write_output should not access .output without a None check")
+
+
+def test_write_configuration_with_path_config(evaluation_run, default_eval_config, tmp_path):
+    """Test that write_configuration correctly saves config files when config_file is a Path."""
+    # Create a temporary config file
+    config_file = tmp_path / "test_config.yml"
+    config_file.write_text("workflow:\n  type: test\neval:\n  general:\n    max_concurrency: 1\n")
+
+    # Setup evaluation run
+    evaluation_run.config.config_file = config_file
+    evaluation_run.config.override = (("eval.general.max_concurrency", "5"), )
+    evaluation_run.eval_config = default_eval_config
+    evaluation_run.eval_config.general.output_dir = tmp_path / "output"
+
+    # Create a mock effective config
+    mock_effective_config = Config()
+    mock_effective_config.eval = default_eval_config
+    evaluation_run.effective_config = mock_effective_config
+
+    # Run the function
+    with patch("nat.eval.evaluate.logger.info") as mock_logger:
+        evaluation_run.write_configuration()
+
+    # Verify that all three files were created
+    config_original_file = evaluation_run.eval_config.general.output_dir / "config_original.yml"
+    config_effective_file = evaluation_run.eval_config.general.output_dir / "config_effective.yml"
+    config_metadata_file = evaluation_run.eval_config.general.output_dir / "config_metadata.json"
+
+    assert config_original_file.exists(), "config_original.yml should be created"
+    assert config_effective_file.exists(), "config_effective.yml should be created"
+    assert config_metadata_file.exists(), "config_metadata.json should be created"
+
+    # Verify metadata content
+    with open(config_metadata_file, encoding="utf-8") as f:
+        metadata = json.load(f)
+    assert metadata["config_file"] == str(config_file)
+    assert metadata["config_file_type"] == "Path"
+    assert len(metadata["overrides"]) == 1
+    assert metadata["overrides"][0]["path"] == "eval.general.max_concurrency"
+    assert metadata["overrides"][0]["value"] == "5"
+
+    # Verify logging
+    assert mock_logger.call_count >= 3, "Should log for all three config files"
+
+
+def test_write_configuration_with_basemodel_config(evaluation_run, default_eval_config, tmp_path):
+    """Test that write_configuration correctly saves config files when config_file is a BaseModel."""
+    # Setup evaluation run with BaseModel config
+    mock_config = Config()
+    mock_config.eval = default_eval_config
+    evaluation_run.config.config_file = mock_config
+    evaluation_run.config.override = ()  # No overrides
+    evaluation_run.eval_config = default_eval_config
+    evaluation_run.eval_config.general.output_dir = tmp_path / "output"
+    evaluation_run.effective_config = mock_config
+
+    # Run the function
+    with patch("nat.eval.evaluate.logger.info"):
+        evaluation_run.write_configuration()
+
+    # Verify that all three files were created
+    config_original_file = evaluation_run.eval_config.general.output_dir / "config_original.yml"
+    config_effective_file = evaluation_run.eval_config.general.output_dir / "config_effective.yml"
+    config_metadata_file = evaluation_run.eval_config.general.output_dir / "config_metadata.json"
+
+    assert config_original_file.exists(), "config_original.yml should be created"
+    assert config_effective_file.exists(), "config_effective.yml should be created"
+    assert config_metadata_file.exists(), "config_metadata.json should be created"
+
+    # Verify metadata content
+    with open(config_metadata_file, encoding="utf-8") as f:
+        metadata = json.load(f)
+    assert metadata["config_file_type"] == "BaseModel"
+    assert len(metadata["overrides"]) == 0, "Should have no overrides"
+
+
+def test_write_configuration_handles_missing_effective_config(evaluation_run, default_eval_config, tmp_path):
+    """Test that write_configuration handles gracefully when effective_config is None."""
+    # Create a temporary config file
+    config_file = tmp_path / "test_config.yml"
+    config_file.write_text("workflow:\n  type: test\n")
+
+    # Setup evaluation run with None effective_config
+    evaluation_run.config.config_file = config_file
+    evaluation_run.eval_config = default_eval_config
+    evaluation_run.eval_config.general.output_dir = tmp_path / "output"
+    evaluation_run.effective_config = None  # This is the key test condition
+
+    # Run the function - it should not crash
+    with patch("nat.eval.evaluate.logger.info"), \
+         patch("nat.eval.evaluate.logger.warning") as mock_warning:
+        evaluation_run.write_configuration()
+
+    # Verify warning was logged
+    mock_warning.assert_any_call("Effective config not available, skipping config_effective.yml")
+
+    # Verify that original and metadata files were created but not effective
+    config_original_file = evaluation_run.eval_config.general.output_dir / "config_original.yml"
+    config_effective_file = evaluation_run.eval_config.general.output_dir / "config_effective.yml"
+    config_metadata_file = evaluation_run.eval_config.general.output_dir / "config_metadata.json"
+
+    assert config_original_file.exists(), "config_original.yml should be created"
+    assert not config_effective_file.exists(), "config_effective.yml should NOT be created when there are no overrides"
+    assert config_metadata_file.exists(), "config_metadata.json should be created"
 
 
 @pytest.mark.parametrize("skip_workflow", [True, False])

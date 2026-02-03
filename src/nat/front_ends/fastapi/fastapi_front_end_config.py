@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,6 +27,8 @@ from pydantic import field_validator
 from nat.data_models.component_ref import ObjectStoreRef
 from nat.data_models.front_end import FrontEndBaseConfig
 from nat.data_models.step_adaptor import StepAdaptorConfig
+from nat.eval.evaluator.evaluator_model import EvalInputItem
+from nat.eval.evaluator.evaluator_model import EvalOutputItem
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +135,19 @@ class AsyncGenerationStatusResponse(BaseAsyncStatusResponse):
         description="Output of the generate request, this is only available if the job completed successfully.")
 
 
+class EvaluateItemRequest(BaseModel):
+    """Request model for single-item evaluation endpoint."""
+    item: EvalInputItem = Field(description="Single evaluation input item to evaluate")
+    evaluator_name: str = Field(description="Name of the evaluator to use (must match config)")
+
+
+class EvaluateItemResponse(BaseModel):
+    """Response model for single-item evaluation endpoint."""
+    success: bool = Field(description="Whether the evaluation completed successfully")
+    result: EvalOutputItem | None = Field(default=None, description="Evaluation result if successful")
+    error: str | None = Field(default=None, description="Error message if evaluation failed")
+
+
 class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
     """
     A FastAPI based front end that allows a NAT workflow to be served as a microservice.
@@ -208,7 +223,9 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
     max_running_async_jobs: int = Field(
         default=10,
         description=(
-            "Maximum number of async jobs to run concurrently, this controls the number of dask workers created. "
+            "Maximum number of Dask workers to create for running async jobs, the name of this parameter is "
+            "misleading as the actual number of concurrent async jobs is: "
+            "`max_running_async_jobs * dask_threads_per_worker` ."
             "This parameter is only used when scheduler_address is `None` and a Dask local cluster is created."),
         ge=1)
     dask_workers: typing.Literal["threads", "processes"] = Field(
@@ -222,6 +239,18 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
         default="WARNING",
         description="Logging level for Dask.",
     )
+    dask_worker_memory_limit: str = Field(
+        default="0",
+        description=("Memory limit for each Dask worker. Can be 'auto', a memory string like '4GB' or a float "
+                     "representing a fraction of the system memory. Default is '0' which means no limit. "
+                     "Refer to https://docs.dask.org/en/stable/deploying-python.html#reference for details."))
+
+    dask_threads_per_worker: int = Field(
+        default=1,
+        description=(
+            "Number of threads to use per worker. This parameter is only used when the value is greater than 0 and "
+            "scheduler_address is `None` and a local Dask cluster is created. When set to 0 the value uses the Dask "
+            "default."))
     step_adaptor: StepAdaptorConfig = StepAdaptorConfig()
 
     workflow: typing.Annotated[EndpointBase, Field(description="Endpoint for the default workflow.")] = EndpointBase(
@@ -238,6 +267,13 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
         path="/evaluate",
         description="Evaluates the performance and accuracy of the workflow on a dataset",
     )
+
+    evaluate_item: typing.Annotated[EndpointBase,
+                                    Field(description="Endpoint for evaluating a single item.")] = EndpointBase(
+                                        method="POST",
+                                        path="/evaluate/item",
+                                        description="Evaluate a single item with a specified evaluator",
+                                    )
 
     oauth2_callback_path: str | None = Field(
         default="/auth/redirect",

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,6 +30,7 @@ from nat.builder.context import Context
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import ServerToolUseSchema
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import TraceMetadata
 from nat.data_models.intermediate_step import UsageInfo
@@ -63,6 +64,26 @@ class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
         self._run_id_to_llm_input = {}
         self._run_id_to_tool_input = {}
         self._run_id_to_timestamp = {}
+
+    @staticmethod
+    def _extract_token_usage(response: ChatResponse) -> TokenUsageBaseModel:
+        token_usage = TokenUsageBaseModel()
+        try:
+            if response and response.additional_kwargs and "usage" in response.additional_kwargs:
+                usage = response.additional_kwargs["usage"] if "usage" in response.additional_kwargs else {}
+                token_usage.prompt_tokens = usage.input_tokens if hasattr(usage, "input_tokens") else 0
+                token_usage.completion_tokens = usage.output_tokens if hasattr(usage, "output_tokens") else 0
+
+                if hasattr(usage, "input_tokens_details") and hasattr(usage.input_tokens_details, "cached_tokens"):
+                    token_usage.cached_tokens = usage.input_tokens_details.cached_tokens
+
+                if hasattr(usage, "output_tokens_details") and hasattr(usage.output_tokens_details, "reasoning_tokens"):
+                    token_usage.reasoning_tokens = usage.output_tokens_details.reasoning_tokens
+
+        except Exception as e:
+            logger.debug("Error extracting token usage: %s", e, exc_info=True)
+
+        return token_usage
 
     def on_event_start(
         self,
@@ -168,6 +189,18 @@ class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
                     logger.exception("Error getting model name: %s", e)
 
                 # Append usage data to NAT usage stats
+                tool_outputs_list = []
+                # Check if message.additional_kwargs as tool_outputs indicative of server side tool calling
+                if response and response.additional_kwargs and "built_in_tool_calls" in response.additional_kwargs:
+                    tools_outputs = response.additional_kwargs["built_in_tool_calls"]
+                    if isinstance(tools_outputs, list):
+                        for tool in tools_outputs:
+                            try:
+                                tool_outputs_list.append(ServerToolUseSchema(**tool.model_dump()))
+                            except Exception:
+                                pass
+
+                # Append usage data to NAT usage stats
                 with self._lock:
                     stats = IntermediateStepPayload(
                         event_type=IntermediateStepType.LLM_END,
@@ -175,20 +208,24 @@ class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
                         framework=LLMFrameworkEnum.LLAMA_INDEX,
                         name=model_name,
                         UUID=event_id,
-                        data=StreamEventData(input=self._run_id_to_llm_input.get(event_id), output=llm_text_output),
-                        metadata=TraceMetadata(chat_responses=response.message if response.message else None),
-                        usage_info=UsageInfo(token_usage=TokenUsageBaseModel(**response.additional_kwargs)))
+                        data=StreamEventData(input=self._run_id_to_llm_input.get(event_id),
+                                             output=llm_text_output,
+                                             payload=response),
+                        metadata=TraceMetadata(chat_responses=response.message if response.message else None,
+                                               tool_outputs=tool_outputs_list if tool_outputs_list else []),
+                        usage_info=UsageInfo(token_usage=self._extract_token_usage(response)))
                     self.step_manager.push_intermediate_step(stats)
 
         elif event_type == CBEventType.FUNCTION_CALL and payload:
-            stats = IntermediateStepPayload(
-                event_type=IntermediateStepType.TOOL_END,
-                span_event_timestamp=self._run_id_to_timestamp.get(event_id),
-                framework=LLMFrameworkEnum.LLAMA_INDEX,
-                name=self._last_tool_map.get(event_id),
-                UUID=event_id,
-                data=StreamEventData(output=copy.deepcopy(payload.get(EventPayload.FUNCTION_OUTPUT))),
-                usage_info=UsageInfo(token_usage=TokenUsageBaseModel()))
+            stats = IntermediateStepPayload(event_type=IntermediateStepType.TOOL_END,
+                                            span_event_timestamp=self._run_id_to_timestamp.get(event_id),
+                                            framework=LLMFrameworkEnum.LLAMA_INDEX,
+                                            name=self._last_tool_map.get(event_id),
+                                            UUID=event_id,
+                                            data=StreamEventData(
+                                                output=copy.deepcopy(payload.get(EventPayload.FUNCTION_OUTPUT)),
+                                                payload=copy.deepcopy(payload.get(EventPayload.FUNCTION_OUTPUT))),
+                                            usage_info=UsageInfo(token_usage=TokenUsageBaseModel()))
 
             self.step_manager.push_intermediate_step(stats)
 

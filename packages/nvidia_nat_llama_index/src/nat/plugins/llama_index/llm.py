@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,7 @@ from typing import TypeVar
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
+from nat.data_models.llm import APITypeEnum
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
@@ -31,6 +32,7 @@ from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
+from nat.utils.responses_api import validate_no_responses_api
 from nat.utils.type_utils import override
 
 ModelType = TypeVar("ModelType")
@@ -82,8 +84,11 @@ async def aws_bedrock_llama_index(llm_config: AWSBedrockModelConfig, _builder: B
 
     from llama_index.llms.bedrock import Bedrock
 
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.LLAMA_INDEX)
+
     # LlamaIndex uses context_size instead of max_tokens
-    llm = Bedrock(**llm_config.model_dump(exclude={"type", "top_p", "thinking"}, by_alias=True))
+    llm = Bedrock(**llm_config.model_dump(
+        exclude={"type", "top_p", "thinking", "api_type"}, by_alias=True, exclude_none=True, exclude_unset=True))
 
     yield _patch_llm_based_on_config(llm, llm_config)
 
@@ -93,7 +98,15 @@ async def azure_openai_llama_index(llm_config: AzureOpenAIModelConfig, _builder:
 
     from llama_index.llms.azure_openai import AzureOpenAI
 
-    llm = AzureOpenAI(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True))
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.LLAMA_INDEX)
+
+    llm = AzureOpenAI(
+        **llm_config.model_dump(exclude={"type", "thinking", "api_type", "api_version"},
+                                by_alias=True,
+                                exclude_none=True,
+                                exclude_unset=True),
+        api_version=llm_config.api_version,
+    )
 
     yield _patch_llm_based_on_config(llm, llm_config)
 
@@ -103,7 +116,10 @@ async def nim_llama_index(llm_config: NIMModelConfig, _builder: Builder):
 
     from llama_index.llms.nvidia import NVIDIA
 
-    llm = NVIDIA(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True))
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.LLAMA_INDEX)
+
+    llm = NVIDIA(**llm_config.model_dump(
+        exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True, exclude_unset=True))
 
     yield _patch_llm_based_on_config(llm, llm_config)
 
@@ -112,8 +128,14 @@ async def nim_llama_index(llm_config: NIMModelConfig, _builder: Builder):
 async def openai_llama_index(llm_config: OpenAIModelConfig, _builder: Builder):
 
     from llama_index.llms.openai import OpenAI
+    from llama_index.llms.openai import OpenAIResponses
 
-    llm = OpenAI(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True))
+    if llm_config.api_type == APITypeEnum.RESPONSES:
+        llm = OpenAIResponses(**llm_config.model_dump(
+            exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True, exclude_unset=True))
+    else:
+        llm = OpenAI(**llm_config.model_dump(
+            exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True, exclude_unset=True))
 
     yield _patch_llm_based_on_config(llm, llm_config)
 
@@ -123,6 +145,9 @@ async def litellm_llama_index(llm_config: LiteLlmModelConfig, _builder: Builder)
 
     from llama_index.llms.litellm import LiteLLM
 
-    llm = LiteLLM(**llm_config.model_dump(exclude={"type", "thinking"}, by_alias=True, exclude_none=True))
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.LLAMA_INDEX)
+
+    llm = LiteLLM(**llm_config.model_dump(
+        exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True, exclude_unset=True))
 
     yield _patch_llm_based_on_config(llm, llm_config)

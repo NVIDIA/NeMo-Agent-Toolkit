@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,19 +20,27 @@ limitations under the License.
 ## Overview
 
 While the NeMo Agent toolkit library provides the capability to implement components that come together to form Agentic AI
-workflow, the command line interface (CLI) provides a no code entrypoint to configure settings, access the features of
+[workflow](../build-workflows/about-building-workflows.md), the command line interface (CLI) provides a no-code entrypoint to configure settings, access the features of
 pre-built components, and mechanisms to launch workflows from configuration files. This document describes the layout
 and functionality of the NeMo Agent toolkit CLI. To begin, the command hierarchy is depicted below. Each command will be introduced
 throughout the remainder of this document.
 
 ```
 nat
+├── a2a
+│   ├── client
+│   │   ├── call
+│   │   ├── discover
+│   │   ├── get_info
+│   │   └── get_skills
+│   └── serve
 ├── configure
 │   └── channel
 │       ├── add
 │       ├── remove
 │       └── update
 ├── eval
+├── finetune
 ├── info
 │   ├── channels
 │   └── components
@@ -73,6 +81,70 @@ nat
     ├── create
     ├── delete
     └── reinstall
+```
+
+## A2A
+
+The `nat a2a` command group provides utilities for working with Agent-to-Agent (A2A) communication. These commands allow you to serve workflows as A2A agents and interact with remote A2A agents from the command line.
+
+For comprehensive A2A documentation, see:
+- [A2A Server](../run-workflows/a2a-server.md) - Publishing workflows as A2A servers
+- [A2A Client](../build-workflows/a2a-client.md) - Using A2A clients in workflows
+
+### Serve
+
+The `nat a2a serve` command (equivalent to `nat start a2a`) starts an A2A server that exposes your workflow as an A2A agent. This allows other A2A-compatible systems to discover and interact with your workflow using the Agent-to-Agent protocol.
+
+The `nat a2a serve --help` utility provides a brief description of each option:
+
+```console
+$ nat a2a serve --help
+Usage: nat a2a serve [OPTIONS]
+
+  Run a NAT workflow using the a2a front end.
+
+Options:
+  --config_file FILE         A JSON/YAML file that sets the parameters for the
+                             workflow.  [required]
+  --override <TEXT TEXT>...  Override config values using dot notation (e.g.,
+                             --override llms.nim_llm.temperature 0.7)
+  --name TEXT                Name of the A2A agent
+  --description TEXT         Description of the A2A agent
+  --host TEXT                Host to bind the server to (default: localhost)
+  --port INTEGER             Port to bind the server to (default: 10000)
+  --help                     Show this message and exit.
+```
+
+For example, to start an A2A server with a specific workflow:
+
+```bash
+nat a2a serve --config_file examples/getting_started/simple_calculator/configs/config.yml \
+              --name "Calculator Agent" \
+              --description "A calculator agent for mathematical operations"
+```
+
+This will start an A2A server on the default host (localhost) and port (10000).
+
+### Client
+
+The `nat a2a client` command group provides utilities for interacting with A2A agents directly from the command line. These commands are useful for discovering agent capabilities and testing A2A connectivity.
+
+The `nat a2a client --help` utility provides an overview of the available commands:
+
+```console
+$ nat a2a client --help
+Usage: nat a2a client [OPTIONS] COMMAND [ARGS]...
+
+  A2A client commands.
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  call       Call the agent with a message.
+  discover   Discover A2A agent and display AgentCard information.
+  get_info   Get agent metadata and information.
+  get_skills Get agent skills and capabilities.
 ```
 
 ## Start
@@ -437,7 +509,7 @@ The Swagger API docs will be available at: [http://localhost:8000/docs](http://l
 ## Evaluation
 The `nat eval` command provides access a set of evaluators designed to assessing the accuracy of NeMo Agent toolkit workflows as
 well as instrumenting their performance characteristics. Please reference
-[Evaluating NeMo Agent toolkit Workflows](../workflows/evaluate.md) for a detailed overview of the
+[Evaluating NeMo Agent toolkit Workflows](../improve-workflows/evaluate.md) for a detailed overview of the
 suite of evaluation capabilities.
 
 The `nat eval --help` utility provides a brief overview of the command and its available options.
@@ -473,9 +545,118 @@ Options:
   --help                      Show this message and exit.
 ```
 
+## Finetune
+
+:::{warning}
+**Experimental Feature**: The Finetuning Harness is experimental and may change in future releases. Future versions may introduce breaking changes without notice.
+:::
+
+The `nat finetune` command provides access to the finetuning harness for **in-situ reinforcement learning** of agentic LLM workflows. This enables iterative improvement of agents through experience, allowing models to learn from their interactions with environments, tools, and users.
+
+The finetuning process:
+1. Loads the configuration with finetuning settings
+2. Initializes the finetuning runner
+3. Runs evaluation to collect trajectories
+4. Submits trajectories for training
+5. Monitors training progress
+
+For detailed information on finetuning concepts, configuration, and extending the harness, see the [Finetuning Harness](../improve-workflows/finetuning/index.md) documentation.
+
+The `nat finetune --help` utility provides a brief overview of the command and its available options:
+
+```console
+$ nat finetune --help
+Usage: nat finetune [OPTIONS]
+
+  Run finetuning on a workflow using collected trajectories.
+
+Options:
+  --config_file FILE              Path to the configuration file containing
+                                  finetuning settings  [required]
+  --dataset FILE                  A json file with questions and ground truth
+                                  answers. This will override the dataset path
+                                  in the config file.
+  --result_json_path TEXT         A JSON path to extract the result from the
+                                  workflow. Use this when the workflow returns
+                                  multiple objects or a dictionary. For
+                                  example, '$.output' will extract the 'output'
+                                  field from the result.  [default: $]
+  --endpoint TEXT                 Use endpoint for running the workflow.
+                                  Example: http://localhost:8000/generate
+  --endpoint_timeout INTEGER      HTTP response timeout in seconds. Only
+                                  relevant if endpoint is specified.
+                                  [default: 300]
+  -o, --override <TEXT TEXT>...   Override config values (e.g., -o
+                                  finetuning.num_epochs 5)
+  --validation_dataset FILE       Validation dataset file path for periodic
+                                  validation
+  --validation_interval INTEGER   Run validation every N epochs  [default: 5]
+  --validation_config_file FILE   Optional separate config file for validation
+                                  runs
+  --help                          Show this message and exit.
+```
+
+### Options Description
+
+- **`--config_file`**: The main configuration file containing both the workflow configuration and finetuning settings. The file must include a `finetuning` section that defines the training parameters, trajectory builder, trainer adapter, and reward function.
+
+- **`--dataset`**: Path to a JSON file containing the training dataset with questions and ground truth answers. If provided, this will override the dataset path specified in the configuration file.
+
+- **`--result_json_path`**: A JSON path expression to extract the relevant result from the workflow output. This is useful when your workflow returns complex objects or dictionaries. The default value `$` uses the entire output.
+
+- **`--endpoint`**: Instead of running the workflow locally, you can specify an HTTP endpoint where the workflow is deployed. This is useful for distributed training scenarios.
+
+- **`--endpoint_timeout`**: When using the `--endpoint` option, this sets the maximum time (in seconds) to wait for a response from the remote service.
+
+- **`-o, --override`**: Override configuration values using dot notation. Multiple overrides can be specified.
+
+- **`--validation_dataset`**: Path to a separate validation dataset for periodic evaluation during training. This helps monitor generalization and detect overfitting.
+
+- **`--validation_interval`**: How often (in epochs) to run validation. Default is every 5 epochs.
+
+- **`--validation_config_file`**: An optional separate configuration file for validation runs. If not specified, the main config file is used for both training and validation.
+
+### Examples
+
+Basic finetuning with a configuration file:
+
+<!-- path-check-skip-begin -->
+```bash
+nat finetune --config_file=configs/finetune.yml
+```
+<!-- path-check-skip-end -->
+
+Override the number of training epochs:
+
+<!-- path-check-skip-begin -->
+```bash
+nat finetune --config_file=configs/finetune.yml -o finetuning.num_epochs 20
+```
+<!-- path-check-skip-end -->
+
+Run finetuning with validation monitoring:
+
+<!-- path-check-skip-begin -->
+```bash
+nat finetune --config_file=configs/finetune.yml \
+    --validation_dataset=data/validation.json \
+    --validation_interval=3
+```
+<!-- path-check-skip-end -->
+
+Use a remote endpoint for workflow execution:
+
+<!-- path-check-skip-begin -->
+```bash
+nat finetune --config_file=configs/finetune.yml \
+    --endpoint=http://localhost:8000/generate \
+    --endpoint_timeout=600
+```
+<!-- path-check-skip-end -->
+
 ## Optimize
 
-The `nat optimize` command provides automated hyperparameter tuning and prompt engineering for NeMo Agent toolkit workflows. It intelligently searches for the best combination of parameters based on the evaluation metrics you specify. The optimizer uses [Optuna](https://optuna.org/) for numerical hyperparameter optimization and a genetic algorithm (GA) for prompt optimization. Please reference the [NeMo Agent toolkit Optimizer Guide](../reference/optimizer.md) for a comprehensive overview of the optimizer capabilities and configuration.
+The `nat optimize` command provides automated hyperparameter tuning and prompt engineering for NeMo Agent toolkit workflows. It intelligently searches for the best combination of parameters based on the evaluation metrics you specify. The optimizer uses [Optuna](https://optuna.org/) for numerical hyperparameter optimization and a genetic algorithm (GA) for prompt optimization. Please reference the [NeMo Agent toolkit Optimizer Guide](../improve-workflows/optimizer.md) for a comprehensive overview of the optimizer capabilities and configuration.
 
 The `nat optimize --help` utility provides a brief overview of the command and its available options:
 
@@ -526,7 +707,7 @@ nat optimize --config_file configs/my_workflow_optimizer.yml
 
 ## GPU Cluster Sizing
 
-The `nat sizing calc` command estimates GPU requirements and produces performance plots for a workflow. You can run it online (collect metrics by executing the workflow) or offline (estimate from previously collected metrics). For a full guide, see [GPU Cluster Sizing](../workflows/sizing-calc.md).
+The `nat sizing calc` command estimates GPU requirements and produces performance plots for a workflow. You can run it online (collect metrics by executing the workflow) or offline (estimate from previously collected metrics). For a full guide, see [GPU Cluster Sizing](../improve-workflows/sizing-calc.md).
 
 The `nat sizing calc --help` utility provides a brief overview of the command and its available options:
 
@@ -684,7 +865,7 @@ Options:
 Also, a configuration file will be generated when you run the `nat workflow create` command. To launch the new workflow from the CLI
 (e.g. using `nat run` or `nat serve`), you will need a configuration file that maps to these component
 configuration objects. For more information on configuration objects, refer to
-[Workflow Configuration](../workflows/workflow-configuration.md).
+[Workflow Configuration](../build-workflows/workflow-configuration.md).
 
 ### Reinstall
 
@@ -755,12 +936,12 @@ When defining a NeMo Agent toolkit workflow's configuration file, it can be help
 possible configuration settings, and their default values. The `nat info components` will provide this information in
 tabular format with the following columns.
 
-- `package`: The Python package containing this row's NAT component.
-- `version`: The version of the Python package containing the NAT component.
-- `component_type`: The type of NAT component this row represents
+- `package`: The Python package containing this row's component.
+- `version`: The version of the Python package containing the component.
+- `component_type`: The type of component this row represents
 (e.g. `front_end`, `function`, `tool_wrapper`, `llm_provider`, `llm_client`, `embedder_provider`, `embedder_client`,
 `evaluator`, `memory`, `retriever_provider`, `retriever_client`, `registry_handler`, `package`).
-- `component_name`: The name of the NAT component to be specified in the `_type` field of the component's section
+- `component_name`: The name of the component to be specified in the `_type` field of the component's section
 of the configuration file.
 - `description`: A description of the component's uses, configuration parameters, and any default values. These
 parameters are what will need to be specified in the configuration object.
@@ -1017,7 +1198,7 @@ Options:
 
 ## Object Store Commands
 
-The `nat object-store` command group provides utilities to interact with object stores. This command group is used to
+The `nat object-store` command group provides utilities to interact with [object stores](../build-workflows/object-store.md). This command group is used to
 upload and download files to and from object stores.
 
 The `nat object-store --help` utility provides an overview of its usage:
@@ -1037,7 +1218,7 @@ Commands:
   s3     S3 object store operations.
 ```
 
-The listed commands are dependent on the first-party object store plugins installed. See [Object Store](../store-and-retrieve/object-store.md) for more details.
+The listed commands are dependent on the first-party object store plugins installed. See [Object Store](../build-workflows/object-store.md) for more details.
 
 ### MySQL Object Store
 

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,7 +35,7 @@ class WebQueryToolConfig(FunctionBaseConfig, name="webpage_query"):
 @register_function(config_type=WebQueryToolConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def webquery_tool(config: WebQueryToolConfig, builder: Builder):
 
-    from langchain.tools.retriever import create_retriever_tool
+    from langchain_classic.tools.retriever import create_retriever_tool
     from langchain_community.document_loaders import WebBaseLoader
     from langchain_community.vectorstores import USearch
     from langchain_core.embeddings import Embeddings

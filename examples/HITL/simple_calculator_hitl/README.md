@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,8 @@ limitations under the License.
 -->
 
 # Simple Calculator - Human in the Loop
+
+**Complexity:** 🟢 Beginner
 
 This example demonstrates **human in the loop capabilities** of the NeMo Agent toolkit using the Simple Calculator workflow. Learn how to reuse a registered function that leverages the human in the loop capabilities of the toolkit to gate agent behavior. In this case, user approval will be requested to allow the agent to make additional tool calls to reach a final answer.
 
@@ -42,7 +44,7 @@ This example demonstrates **human in the loop capabilities** of the NeMo Agent t
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 
 ### Install this Workflow
 
@@ -53,7 +55,7 @@ uv pip install -e examples/HITL/simple_calculator_hitl
 ```
 
 ### Set Up API Keys
-If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>

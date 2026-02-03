@@ -1,5 +1,5 @@
 #!/bin/bash
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,7 +24,7 @@ mkdir -p ${REPORTS_DIR}
 get_lfs_files
 
 create_env group:dev extra:all
-rapids-logger "Git Version: $(git describe)"
+rapids-logger "Git Version: $(get_git_tag)"
 
 rapids-logger "Running tests with Python version $(python --version) and pytest version $(pytest --version) on $(arch)"
 set +e

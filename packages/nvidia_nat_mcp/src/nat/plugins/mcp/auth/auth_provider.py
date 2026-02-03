@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,6 +34,7 @@ from nat.authentication.interfaces import AuthFlowType
 from nat.authentication.interfaces import AuthProviderBase
 from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
 from nat.data_models.authentication import AuthResult
+from nat.data_models.common import get_secret_value
 from nat.plugins.mcp.auth.auth_flow_handler import MCPAuthenticationFlowHandler
 from nat.plugins.mcp.auth.auth_provider_config import MCPOAuth2ProviderConfig
 
@@ -371,7 +372,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                 # Manual registration mode
                 self._cached_credentials = OAuth2Credentials(
                     client_id=self.config.client_id,
-                    client_secret=self.config.client_secret,
+                    client_secret=get_secret_value(self.config.client_secret),
                 )
                 logger.info("Using manual client_id: %s", self._cached_credentials.client_id)
             else:

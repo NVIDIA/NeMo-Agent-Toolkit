@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -56,7 +56,11 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
                     client_id=self.config.client_id,
                     client_secret=self.config.client_secret,
             ) as client:
-                new_token_data = client.refresh_token(self.config.token_url, refresh_token=refresh_token)
+                new_token_data = client.refresh_token(
+                    self.config.token_url,
+                    refresh_token=refresh_token,
+                    client_id=self.config.client_id,  # Required by MaaS OAuth
+                )
 
                 expires_at_ts = new_token_data.get("expires_at")
                 new_expires_at = datetime.fromtimestamp(expires_at_ts, tz=UTC) if expires_at_ts else None

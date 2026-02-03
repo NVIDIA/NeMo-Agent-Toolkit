@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,12 +13,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest_asyncio
+import typing
+from unittest.mock import PropertyMock
+from unittest.mock import patch
+
+import pytest
+
+if typing.TYPE_CHECKING:
+    from dask.distributed import Client as DaskClient
 
 
-@pytest_asyncio.fixture(name="auto_set_env_vars", autouse=True)
+@pytest.fixture(name="auto_set_env_vars", autouse=True)
 async def fixture_auto_set_env_vars(setup_db,
                                     set_nat_config_file_env_var,
                                     set_nat_dask_scheduler_env_var,
                                     set_nat_job_store_db_url_env_var):
     return
+
+
+@pytest.fixture(autouse=True)
+def patch_job_store_get_dask_client(dask_client: "DaskClient"):
+    with patch("nat.front_ends.fastapi.job_store.JobStore.dask_client", new_callable=PropertyMock) as mock_dask_client:
+        mock_dask_client.return_value = dask_client
+        yield

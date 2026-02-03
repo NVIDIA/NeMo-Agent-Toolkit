@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,9 @@ import logging
 from pathlib import Path
 
 import click
+from tabulate import tabulate
 
+from nat.eval.config import EvaluationRunOutput
 from nat.eval.evaluate import EvaluationRun
 from nat.eval.evaluate import EvaluationRunConfig
 
@@ -83,16 +85,83 @@ logger = logging.getLogger(__name__)
     multiple=True,
     help="Override config values using dot notation (e.g., --override llms.nim_llm.temperature 0.7)",
 )
+@click.option(
+    "--user_id",
+    type=str,
+    default=None,
+    help="User ID to use for workflow session.",
+)
 @click.pass_context
 def eval_command(ctx, **kwargs) -> None:
     """ Evaluate datasets with the specified mechanism"""
     pass
 
 
+def write_tabular_output(eval_run_output: EvaluationRunOutput):
+    """Write evaluation results in a tabular format."""
+
+    # Print header with workflow status and runtime
+    workflow_status = "INTERRUPTED" if eval_run_output.workflow_interrupted else "COMPLETED"
+    total_runtime = eval_run_output.usage_stats.total_runtime if eval_run_output.usage_stats else 0.0
+
+    click.echo("")
+    click.echo(click.style("=== EVALUATION SUMMARY ===", fg="bright_blue", bold=True))
+    click.echo(f"Workflow Status: {workflow_status} (workflow_output.json)")
+    click.echo(f"Total Runtime: {total_runtime:.2f}s")
+
+    # Include profiler stats if available
+    if eval_run_output.profiler_results:
+        profiler_results = eval_run_output.profiler_results
+        if profiler_results.workflow_runtime_metrics:
+            wf_metrics = profiler_results.workflow_runtime_metrics
+            click.echo(f"Workflow Runtime (p95): {wf_metrics.p95:.2f}s")
+        if profiler_results.llm_latency_ci:
+            llm_metrics = profiler_results.llm_latency_ci
+            click.echo(f"LLM Latency (p95): {llm_metrics.p95:.2f}s")
+
+    # Build the evaluation results table
+    if not eval_run_output.evaluation_results:
+        return
+
+    click.echo("")
+    click.echo("Per evaluator results:")
+
+    table = []
+    for evaluator_name, eval_output in eval_run_output.evaluation_results:
+        row = []
+
+        # Add evaluator name and average score
+        row.append(evaluator_name)
+
+        # Format average score
+        if isinstance(eval_output.average_score, int | float):
+            row.append(f"{eval_output.average_score:.4f}")
+        else:
+            row.append(str(eval_output.average_score))
+
+        # Add output file if available
+        output_file = None
+        for file_path in eval_run_output.evaluator_output_files:
+            if file_path.stem.startswith(f"{evaluator_name}_") or file_path.stem == evaluator_name:
+                output_file = file_path.name
+                break
+        row.append(output_file if output_file else "N/A")
+
+        table.append(row)
+
+    # Build headers
+    headers = ["Evaluator", "Avg Score", "Output File"]
+
+    click.echo(tabulate(table, headers=headers, tablefmt="github"))
+    click.echo("")
+
+
 async def run_and_evaluate(config: EvaluationRunConfig):
     # Run evaluation
     eval_runner = EvaluationRun(config=config)
-    await eval_runner.run_and_evaluate()
+    eval_run_output = await eval_runner.run_and_evaluate()
+
+    write_tabular_output(eval_run_output)
 
 
 @eval_command.result_callback(replace=True)
@@ -108,6 +177,7 @@ def process_nat_eval(
     endpoint_timeout: int,
     reps: int,
     override: tuple[tuple[str, str], ...],
+    user_id: str | None,
 ):
     """
     Process the eval command and execute the evaluation. Here the config_file, if provided, is checked for its existence
@@ -125,15 +195,19 @@ def process_nat_eval(
                                "have a partially completed dataset.")
 
     # Create the configuration object
-    config = EvaluationRunConfig(
-        config_file=config_file,
-        dataset=str(dataset) if dataset else None,
-        result_json_path=result_json_path,
-        skip_workflow=skip_workflow,
-        skip_completed_entries=skip_completed_entries,
-        endpoint=endpoint,
-        endpoint_timeout=endpoint_timeout,
-        reps=reps,
-        override=override,
-    )
+    # Only include user_id if explicitly provided via CLI, otherwise use the default
+    config_kwargs = {
+        "config_file": config_file,
+        "dataset": str(dataset) if dataset else None,
+        "result_json_path": result_json_path,
+        "skip_workflow": skip_workflow,
+        "skip_completed_entries": skip_completed_entries,
+        "endpoint": endpoint,
+        "endpoint_timeout": endpoint_timeout,
+        "reps": reps,
+        "override": override,
+    }
+    if user_id is not None:
+        config_kwargs["user_id"] = user_id
+    config = EvaluationRunConfig(**config_kwargs)
     asyncio.run(run_and_evaluate(config))

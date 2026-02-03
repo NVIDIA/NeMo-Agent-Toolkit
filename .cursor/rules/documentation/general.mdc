@@ -25,22 +25,29 @@ Follow these rules when working with any documentation in the NeMo Agent toolkit
 - **Capitalization**: [capitalization.mdc](mdc:AgentIQ/.cursor/rules/documentation/capitalization.mdc) - Title case, sentence case, and proper noun guidelines
 - **Lists and Tables**: [lists-and-tables.mdc](mdc:AgentIQ/.cursor/rules/documentation/lists-and-tables.mdc) - Structured content formatting and organization
 - **Numbers and Dates**: [numbers-and-dates.mdc](mdc:AgentIQ/.cursor/rules/documentation/numbers-and-dates.mdc) - Numerical content and date formatting standards
+- **Categories**: [categories.mdc](mdc:AgentIQ/.cursor/rules/documentation/categories.mdc) - Documentation category placement guidelines
 
 ## Documentation Standards
 
 ### Terminology and Naming
 - Make sure to follow this naming convention for all the documentation. If there is any documentation not following this rule, you MUST update it.
-- **Full name on first use**: "NVIDIA NeMo Agent toolkit"
-- **Subsequent references**: "NeMo Agent toolkit"
-- **Abbreviations**: "NAT" or "nat"
-  - "nat" for the API namespace and CLI tool
-  - "nvidia-nat" for the package name
-  - "NAT" for environment variable prefixes, and informal usage in comments
-  - This should be used for all abbreviations in the comments in the code.
-  - This should NEVER be used in the documentation.
+- **Full name (first use)**: "NVIDIA NeMo Agent toolkit" — use for document titles, webpage headers, and any public descriptions
+- **Short name (subsequent references)**: "NeMo Agent toolkit" or "the toolkit"
+- **Capitalization rules**:
+  - In document titles, headings, or any context where all words are capitalized, use "Toolkit" (capital T): e.g., "NVIDIA NeMo Agent Toolkit" or "NeMo Agent Toolkit"
+  - In all other contexts (body text, descriptions), use "toolkit" (lowercase t): e.g., "NVIDIA NeMo Agent toolkit" or "NeMo Agent toolkit"
+- **Technical identifiers** (code, CLI, packages, URLs):
+  - `nat` for the API namespace and CLI tool
+  - `nvidia-nat` for the package name
+  - `NAT_` prefix for environment variables
+  - `NeMo-Agent-Toolkit` for URLs, directory names, and contexts where capitalization is preserved (no underscores or spaces)
+- **"NAT" abbreviation**:
+  - OK in code comments
+  - NEVER use "NAT" or "nat" to refer to the toolkit in documentation
 - Examples:
   - "In the NeMo Agent toolkit, you can…"
   - "Change directory to the NeMo Agent toolkit repo root…"
+  - Heading: "# Getting Started with NeMo Agent Toolkit"
 - Consistently use this terminology throughout all documentation
 - NeMo Agent toolkit was previously known as the Agent Intelligence toolkit, and AgentIQ. You should NEVER use the deprecated names, including Agent Intelligence toolkit, aiqtoolkit, AgentIQ, or AIQ/aiq. If you see any of these names in the documentation, you MUST update it based on the latest naming convention above, unless those names are intentionally used to refer to the deprecated names, or implementing a compatibility layer for the deprecated names.
 

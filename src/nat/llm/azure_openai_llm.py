@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,22 +16,22 @@
 from pydantic import AliasChoices
 from pydantic import ConfigDict
 from pydantic import Field
+from pydantic import computed_field
 
 from nat.builder.builder import Builder
 from nat.builder.llm import LLMProviderInfo
 from nat.cli.register_workflow import register_llm_provider
+from nat.data_models.common import OptionalSecretStr
 from nat.data_models.llm import LLMBaseConfig
+from nat.data_models.optimizable import OptimizableField
+from nat.data_models.optimizable import SearchSpace
 from nat.data_models.retry_mixin import RetryMixin
-from nat.data_models.temperature_mixin import TemperatureMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
-from nat.data_models.top_p_mixin import TopPMixin
 
 
 class AzureOpenAIModelConfig(
         LLMBaseConfig,
         RetryMixin,
-        TemperatureMixin,
-        TopPMixin,
         ThinkingMixin,
         name="azure_openai",
 ):
@@ -39,7 +39,7 @@ class AzureOpenAIModelConfig(
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")
 
-    api_key: str | None = Field(default=None, description="Azure OpenAI API key to interact with hosted model.")
+    api_key: OptionalSecretStr = Field(default=None, description="Azure OpenAI API key to interact with hosted model.")
     api_version: str = Field(default="2025-04-01-preview", description="Azure OpenAI API version.")
     azure_endpoint: str | None = Field(validation_alias=AliasChoices("azure_endpoint", "base_url"),
                                        serialization_alias="azure_endpoint",
@@ -49,6 +49,24 @@ class AzureOpenAIModelConfig(
                                   serialization_alias="azure_deployment",
                                   description="The Azure OpenAI hosted model/deployment name.")
     seed: int | None = Field(default=None, description="Random seed to set for generation.")
+    temperature: float | None = OptimizableField(
+        default=None,
+        ge=0.0,
+        description="Sampling temperature to control randomness in the output.",
+        space=SearchSpace(high=0.9, low=0.1, step=0.2))
+    top_p: float | None = OptimizableField(default=None,
+                                           ge=0.0,
+                                           le=1.0,
+                                           description="Top-p for distribution sampling.",
+                                           space=SearchSpace(high=1.0, low=0.5, step=0.1))
+
+    @computed_field
+    @property
+    def model_name(self) -> str:
+        """
+        Returns the model name for compatibility with other parts of the code base which expect a model_name attribute.
+        """
+        return self.azure_deployment
 
 
 @register_llm_provider(config_type=AzureOpenAIModelConfig)

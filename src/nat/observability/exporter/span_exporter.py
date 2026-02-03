@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -174,6 +174,12 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
                 event.function_ancestry.function_id if event.function_ancestry else "unknown",
             f"{self._span_prefix}.function.name":
                 event.function_ancestry.function_name if event.function_ancestry else "unknown",
+            f"{self._span_prefix}.function.parent_id":
+                event.function_ancestry.parent_id
+                if event.function_ancestry and event.function_ancestry.parent_id else "unknown",
+            f"{self._span_prefix}.function.parent_name":
+                event.function_ancestry.parent_name
+                if event.function_ancestry and event.function_ancestry.parent_name else "unknown",
             f"{self._span_prefix}.subspan.name":
                 event.payload.name or "",
             f"{self._span_prefix}.event_timestamp":
@@ -195,6 +201,14 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
 
         span_kind = event_type_to_span_kind(event.event_type)
         sub_span.set_attribute(f"{self._span_prefix}.span.kind", span_kind.value)
+
+        # Enable session grouping by setting session.id from conversation_id
+        try:
+            conversation_id = self._context_state.conversation_id.get()
+            if conversation_id:
+                sub_span.set_attribute("session.id", conversation_id)
+        except (AttributeError, LookupError):
+            pass
 
         if event.payload.data and event.payload.data.input:
             match = re.search(r"Human:\s*Question:\s*(.*)", str(event.payload.data.input))

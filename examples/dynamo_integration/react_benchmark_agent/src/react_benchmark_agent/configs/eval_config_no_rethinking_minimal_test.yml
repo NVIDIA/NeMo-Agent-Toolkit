@@ -1,0 +1,244 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# <!-- path-check-skip-file -->
+
+
+# =============================================================================
+# MINIMAL TEST - NO RETHINKING (3 scenarios)
+# =============================================================================
+# Purpose: Quick validation without self-evaluation loop
+# Dataset: 3-scenario subset for fast end-to-end testing
+#
+# This configuration is ideal for:
+# - Verifying Dynamo connectivity and agent execution
+# - Quick smoke tests during development
+# - Validating configuration changes before full runs
+#
+# Prerequisite: Create the test subset first:
+#   python scripts/create_test_subset.py \
+#     --input-file ./data/agent_leaderboard_v2_banking.json \
+#     --output-file ./data/agent_leaderboard_v2_test_subset.json
+#
+# Usage:
+#   nat eval --config_file configs/eval_config_no_rethinking_minimal_test.yml
+#
+# Expected runtime: ~2-3 minutes
+# Expected TSQ: 0.3 - 0.6
+# =============================================================================
+
+functions:
+  react_benchmark_agent:
+    _type: react_benchmark_agent
+    prefix: "Agent:"
+    decision_only: true
+    canned_response_template: "Successfully executed {tool_name}. Operation completed."
+
+function_groups:
+  banking_tools:
+    _type: banking_tools_group
+    # tools.json available after running: /examples/dynamo_integration/scripts/download_agent_leaderboard_v2.py
+    tools_json_path: ./examples/dynamo_integration/data/raw/banking/tools.json
+    decision_only: true
+    include: [
+      get_account_balance,
+      get_transaction_history,
+      transfer_funds,
+      get_loan_information,
+      get_credit_card_information,
+      get_mortgage_details,
+      get_savings_account_products,
+      schedule_appointment,
+      check_loan_application_status,
+      find_nearby_locations,
+      get_investment_products,
+      report_lost_stolen_card,
+      update_contact_information,
+      setup_automatic_bill_pay,
+      initiate_transaction_dispute,
+      get_exchange_rates,
+      calculate_loan_payment,
+      manage_account_alerts,
+      check_wire_transfer_status,
+      get_cd_products
+    ]
+
+llms:
+  dynamo_llm:
+    _type: dynamo
+    model_name: llama-3.3-70b
+    base_url: http://localhost:8099/v1
+    api_key: dummy
+    # _type: nim
+    # model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.0
+    max_tokens: 2048
+    stop: ["Observation:", "\nThought:"]  # CRITICAL: Prevent LLM from hallucinating observations
+    # Dynamic prefix headers - automatically generates unique prefix ID per request
+    # Note: Setting prefix_template enables dynamic prefix headers
+    prefix_template: "react-benchmark-{uuid}"
+    prefix_total_requests: 10  # 1 for independent questions, higher for conversations
+    prefix_osl: MEDIUM  # Output Sequence Length: LOW | MEDIUM | HIGH
+    prefix_iat: MEDIUM  # Inter-Arrival Time: LOW | MEDIUM | HIGH
+    # NOTE: Optimizer fields temporarily removed due to NAT type resolution bug
+    # optimizable_params:
+    #   - temperature
+    # search_space:
+    #   temperature:
+    #     low: 0.0
+    #     high: 0.6
+    #     step: 0.05
+  
+  eval_llm:
+    _type: dynamo
+    model_name: llama-3.3-70b
+    base_url: http://localhost:8099/v1
+    api_key: dummy
+    # _type: nim
+    # model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.0
+    max_tokens: 1024
+
+workflow:
+  _type: react_agent
+  llm_name: dynamo_llm
+  tool_names: [
+    banking_tools
+  ]
+  verbose: true  # Enable to see tool calls
+  parse_agent_response_max_retries: 3
+  max_tool_calls: 20  # Increased from 15
+  pass_tool_call_errors_to_agent: true  # Let agent see tool errors
+  recursion_limit: 50  # Increased from default 32
+  # Custom system prompt optimized for tool selection evaluation
+  system_prompt: |
+    You are a tool-calling agent evaluated on TOOL SELECTION capability. Your goal is to select the correct tools, in the correct order, to handle real-world use-cases.
+    
+    IMPORTANT: This is a tool selection exercise, NOT real execution.
+    - Focus on selecting the RIGHT TOOL for each step
+    - Use placeholder or dummy values for required parameters (e.g., "12345", "user@example.com", "2024-01-01")
+    - Tool responses are simulated - ignore them and focus on selecting the next appropriate tool
+    - What matters is YOUR INTENT and TOOL CHOICE, not the data quality
+    
+    Available tools:
+
+    {tools}
+
+    Use this exact format for EACH response:
+
+    Thought: I need to analyze what the user needs and select the SINGLE NEXT tool to call
+    Action: the ONE tool to call right now, must be one of [{tool_names}]
+    Action Input: valid JSON with required parameters (use placeholder values)
+
+    CRITICAL RULES:
+    1. Output ONLY ONE Thought, Action, and Action Input per response
+    2. STOP IMMEDIATELY after writing Action Input
+    3. DO NOT write the Observation - the system will provide it
+    4. DO NOT write multiple Thought/Action/Action Input cycles in one response
+    5. After receiving the Observation, you will get another turn to select the next tool
+    
+    When you have called all necessary tools:
+    Thought: I now know the final answer
+    Final Answer: [brief summary of what was accomplished]
+
+eval:
+  general:
+    max_concurrency: 8
+    
+    output:
+      dir: ./examples/dynamo_integration/react_benchmark_agent/outputs/dynamo_evals/no_rethinking_minimal_test/
+      cleanup: false
+      job_management:
+        append_job_id_to_output_dir: true
+    
+    dataset:
+      _type: json
+      file_path: ./examples/dynamo_integration/data/agent_leaderboard_v2_test_subset.json
+      structure:
+        disable: true
+    
+    # Profiler configuration for agent performance analysis
+    profiler:
+      # Inference optimization metrics (latency, throughput, confidence intervals)
+      compute_llm_metrics: true
+      
+      # Token usage forecasting - predict future token usage patterns
+      token_uniqueness_forecast: true
+      
+      # Workflow runtime forecasting - estimate expected execution time
+      workflow_runtime_forecast: true
+      
+      # Prevent large text from breaking CSV output structure
+      csv_exclude_io_text: true
+      
+      # Identify common prompt prefixes for KV cache optimization
+      prompt_caching_prefixes:
+        enable: true
+        min_frequency: 0.1  # Surface prefixes appearing in 10%+ of requests
+      
+      # Bottleneck analysis - identify where the agent spends time
+      # Options: enable_nested_stack (detailed) or enable_simple_stack (basic)
+      bottleneck_analysis:
+        enable_nested_stack: true  # Detailed analysis with nested tool calls
+      
+      # Concurrency spike analysis - detect resource contention
+      concurrency_spike_analysis:
+        enable: true
+        spike_threshold: 5  # Alert when concurrent functions >= 5
+
+  evaluators:
+    # TSQ only - no trajectory evaluator
+    tool_selection_quality:
+      _type: tsq_evaluator
+      llm_name: eval_llm
+      strict_mode: false
+      tool_weight: 0.6
+      parameter_weight: 0.4
+
+# =============================================================================
+# OPTIMIZER CONFIGURATION
+# =============================================================================
+# Run with: nat optimize --config_file <this_file>
+# 
+# This section allows you to run parameter optimization on the same evaluation
+# dataset and compare performance using the tsq_evaluator metrics.
+# =============================================================================
+optimizer:
+  # Output directory for optimization results
+  output_path: ./examples/dynamo_integration/react_benchmark_agent/outputs/dynamo_evals/no_rethinking_minimal_test/optimizer_results/
+  
+  # Number of repetitions per parameter set for stable evaluation
+  reps_per_param_set: 1
+  
+  # Evaluation metrics to optimize (references the evaluators defined above)
+  eval_metrics:
+    tool_selection_quality:
+      evaluator_name: tool_selection_quality  # References the tsq_evaluator
+      direction: maximize                     # Higher TSQ score is better
+      weight: 1.0
+  
+  # Numeric parameter optimization (Optuna-based)
+  numeric:
+    enabled: true
+    n_trials: 5              # Number of parameter combinations to try
+    sampler: grid            # Use grid search for systematic comparison
+  
+  # Prompt optimization (Genetic Algorithm) - disabled by default
+  prompt:
+    enabled: false
+    # Uncomment below to enable prompt optimization:
+    # prompt_population_init_function: prompt_init
+    # ga_generations: 3
+    # ga_population_size: 4
+    # ga_parallel_evaluations: 1

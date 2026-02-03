@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -217,7 +217,9 @@ class DatasetHandler:
         """
         # Apply filters and deduplicate
         input_df = self.dataset_filter.apply_filters(input_df)
-        input_df.drop_duplicates(subset=[self.dataset_config.id_key], inplace=True)
+
+        if (self.dataset_config.id_key in input_df.columns):
+            input_df.drop_duplicates(subset=[self.dataset_config.id_key], inplace=True)
 
         if self.reps > 1 and self.adjust_dataset_size:
             raise ValueError("reps and adjust_dataset_size are mutually exclusive")

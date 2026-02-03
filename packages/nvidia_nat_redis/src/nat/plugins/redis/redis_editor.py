@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -128,10 +128,10 @@ class RedisEditor(MemoryEditor):
             logger.error("Failed to generate embedding: %s", e)
             raise
 
-        # Create vector search query
-        search_query = (
-            Query(f"(@user_id:{user_id})=>[KNN {top_k} @embedding $vec AS score]").sort_by("score").return_fields(
-                "conversation", "user_id", "tags", "metadata", "memory", "score").dialect(2))
+        # Create vector search query; escape special characters in user_id
+        escaped_user_id = user_id.replace("\\", "\\\\").replace("\"", "\\\"")
+        search_query = (Query(f'(@user_id:"{escaped_user_id}")=>[KNN {top_k} @embedding $vec AS score]').sort_by(
+            "score").return_fields("conversation", "user_id", "tags", "metadata", "memory", "score").dialect(2))
         logger.debug("Created search query: %s", search_query)
         logger.debug("Query string: %s", search_query.query_string())
 

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -74,5 +74,6 @@ def test_config_yaml_loads_and_has_keys() -> None:
             "opensearch_url:",
             "index_on_startup:",
             "data_dir:",
+            "embedding_dim:",
     ]:
         assert key in text, f"Missing key: {key}"

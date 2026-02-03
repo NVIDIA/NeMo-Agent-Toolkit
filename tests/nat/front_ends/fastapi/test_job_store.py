@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +24,7 @@ import pytest
 from pydantic import BaseModel
 
 if typing.TYPE_CHECKING:
+    from dask.distributed import Client as DaskClient
     from sqlalchemy.ext.asyncio import AsyncEngine
 
 
@@ -33,7 +34,7 @@ class _TestModel(BaseModel):
 
 async def simple_job_function(x: int, y: int = 10) -> int:
     """Simple function for testing job execution."""
-    await asyncio.sleep(0.1)  # Simulate some work
+    await asyncio.sleep(0)  # Yield to event loop without adding delay
     return x + y
 
 
@@ -579,7 +580,7 @@ async def test_cleanup_expired_jobs_with_output_files(db_engine: "AsyncEngine",
 
     with monkeypatch.context() as monkey_context:
         # Lower minimum expiry for testing
-        monkey_context.setattr(JobStore, "MIN_EXPIRY", 1, raising=True)
+        monkey_context.setattr(JobStore, "MIN_EXPIRY", 0.01, raising=True)
 
         job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
@@ -590,8 +591,8 @@ async def test_cleanup_expired_jobs_with_output_files(db_engine: "AsyncEngine",
         output_dir2.mkdir()
 
         # Create jobs with very short expiry
-        job_id1 = await job_store._create_job(expiry_seconds=1)
-        job_id2 = await job_store._create_job(expiry_seconds=1)
+        job_id1 = await job_store._create_job(expiry_seconds=0.01)
+        job_id2 = await job_store._create_job(expiry_seconds=0.01)
 
         # Update to finished status with output paths
         await job_store.update_status(job_id1, JobStatus.SUCCESS, output_path=str(output_dir1))
@@ -602,7 +603,7 @@ async def test_cleanup_expired_jobs_with_output_files(db_engine: "AsyncEngine",
         assert output_dir2.exists()
 
         # Wait for jobs to expire
-        await asyncio.sleep(3)
+        await asyncio.sleep(0.1)
 
         # Run cleanup
         await job_store.cleanup_expired_jobs()
@@ -632,21 +633,21 @@ async def test_cleanup_expired_jobs_keeps_active(db_engine: "AsyncEngine",
 
     with monkeypatch.context() as monkey_context:
         # Lower minimum expiry for testing
-        monkey_context.setattr(JobStore, "MIN_EXPIRY", 1, raising=True)
+        monkey_context.setattr(JobStore, "MIN_EXPIRY", 0.01, raising=True)
 
         job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
         # Create jobs with very short expiry
-        job_id1 = await job_store._create_job(expiry_seconds=1)
-        job_id2 = await job_store._create_job(expiry_seconds=1)
-        job_id3 = await job_store._create_job(expiry_seconds=1)
+        job_id1 = await job_store._create_job(expiry_seconds=0.01)
+        job_id2 = await job_store._create_job(expiry_seconds=0.01)
+        job_id3 = await job_store._create_job(expiry_seconds=0.01)
 
         # Keep one as submitted (active), update other to finished
         await job_store.update_status(job_id2, JobStatus.SUCCESS)
         await job_store.update_status(job_id3, JobStatus.SUCCESS)
 
         # Wait for expiry time to pass
-        await asyncio.sleep(2)
+        await asyncio.sleep(0.1)
 
         # Run cleanup
         await job_store.cleanup_expired_jobs()
@@ -721,17 +722,16 @@ def test_get_db_engine_creates_default_sqlite():
             os.environ["NAT_JOB_STORE_DB_URL"] = original_url
 
 
-@pytest.mark.asyncio
-async def test_client_context_manager(db_engine: "AsyncEngine", dask_scheduler_address: str):
-    """Test the client context manager works correctly."""
+def test_job_store_dask_client_property(dask_client: "DaskClient",
+                                        db_engine: "AsyncEngine",
+                                        dask_scheduler_address: str):
+    """Test the dask_client property works correctly."""
     from nat.front_ends.fastapi.job_store import JobStore
 
     job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
 
-    async with job_store.client() as client:
-        assert client is not None
-        # Should be connected to the correct scheduler
-        assert client.scheduler.address == dask_scheduler_address
+    assert job_store.dask_client is dask_client
+    assert job_store.dask_client.scheduler.address == dask_scheduler_address
 
 
 @pytest.mark.usefixtures("setup_db")

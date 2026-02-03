@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,8 @@ limitations under the License.
 -->
 
 # Simple Calculator - Evaluation and Profiling
+
+**Complexity:** 🟨 Intermediate
 
 This example demonstrates how to evaluate and profile AI agent performance using the NVIDIA NeMo Agent toolkit. You'll learn to systematically measure your agent's accuracy and analyze its behavior using the Simple Calculator workflow.
 
@@ -36,7 +38,7 @@ This example demonstrates how to evaluate and profile AI agent performance using
 
 ## Prerequisites
 
-1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
+1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 2. **Base workflow**: This example builds upon the Getting Started [Simple Calculator](../../getting_started/simple_calculator/) example. Make sure you are familiar with the example before proceeding.
 
 ## Installation
@@ -46,9 +48,6 @@ Install this evaluation example:
 ```bash
 uv pip install -e examples/evaluation_and_profiling/simple_calculator_eval
 ```
-
-> [!NOTE]
-> If you encounter rate limiting (`[429] Too Many Requests`) during evaluation, try setting the `eval.general.max_concurrency` value either in the YAML directly or via the command line with: `--override eval.general.max_concurrency 1`.
 
 ## Run the Workflow
 
@@ -60,7 +59,10 @@ Evaluate the Simple Calculator agent's accuracy against a test dataset:
 nat eval --config_file examples/evaluation_and_profiling/simple_calculator_eval/configs/config-tunable-rag-eval.yml
 ```
 
-The configuration file specified above contains configurations for the NeMo Agent Toolkit `evaluation` and `profiler` capabilities. Additional documentation for evaluation configuration can be found in the [evaluation guide](../../../docs/source/workflows/evaluate.md). Furthermore, similar documentation for profiling configuration can be found in the [profiling guide](../../../docs/source/workflows/profiler.md).
+> [!NOTE]
+> If you encounter rate limiting (`[429] Too Many Requests`) during evaluation, try setting the `eval.general.max_concurrency` value either in the YAML directly or via the command line with: `--override eval.general.max_concurrency 1`.
+
+The configuration file specified above contains configurations for the NeMo Agent Toolkit `evaluation` and `profiler` capabilities. Additional documentation for evaluation configuration can be found in the [evaluation guide](../../../docs/source/improve-workflows/evaluate.md). Furthermore, similar documentation for profiling configuration can be found in the [profiling guide](../../../docs/source/improve-workflows/profiler.md).
 
 This command:
 - Uses the test dataset from `examples/getting_started/simple_calculator/data/simple_calculator.json`

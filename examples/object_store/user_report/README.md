@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,8 @@ limitations under the License.
 -->
 
 # Report Tool for NVIDIA NeMo Agent Toolkit
+
+**Complexity:** 🟨 Intermediate
 
 And example tool in the NeMo Agent toolkit that makes use of an Object Store to retrieve data.
 
@@ -68,7 +70,7 @@ It also takes advantage of:
 - **Shared Configuration**: All functions use the same `object_store` reference and function descriptions
 - **Shared Resources**: All functions share the same object store client connection
 
-See [Function Groups](../../../docs/source/workflows/function-groups.md) for more information on the benefits of Function Groups compared to Functions, including code and configuration comparisons when using Function Groups.
+Refer to [Function Groups](../../../docs/source/build-workflows/functions-and-function-groups/function-groups.md) for more information on the benefits of Function Groups compared to Functions, including code and configuration comparisons when using Function Groups.
 
 ### Configuration Structure
 
@@ -92,7 +94,7 @@ In the workflow configuration, you can reference individual functions or the ent
 workflow:
   _type: react_agent
   # Reference individual functions
-  tool_names: [user_report.get, user_report.put, user_report.update, user_report.delete]
+  tool_names: [user_report__get, user_report__put, user_report__update, user_report__delete]
 ```
 
 ```yaml
@@ -103,7 +105,7 @@ workflow:
 ```
 
 ## Installation and Setup
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit, and follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit, and follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
 
 ### Install this Workflow
 
@@ -114,7 +116,7 @@ uv pip install -e examples/object_store/user_report
 ```
 
 ### Set Up API Keys
-If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
@@ -251,13 +253,13 @@ nat run --config_file examples/object_store/user_report/configs/config_s3.yml --
 <snipped for brevity>
 
 [AGENT]
-Calling tools: user_report.get
+Calling tools: user_report__get
 Tool's input: {"user_id": "67890", "date": null}
 
 <snipped for brevity>
 
 Workflow Result:
-['The latest report of user 67890 is:\n\n{\n    "user_id": "67890",\n    "timestamp": "2025-04-21T15:40:00Z",\n    "system": {\n      "os": "macOS 14.1",\n      "cpu_usage": "43%",\n      "memory_usage": "8.1 GB / 16 GB",\n      "disk_space": "230 GB free of 512 GB"\n    },\n    "network": {\n      "latency_ms": 95,\n      "packet_loss": "0%",\n      "vpn_connected": true\n    },\n    "errors": [],\n    "recommendations": [\n      "System operating normally",\n      "No action required"\n    ]\n}']
+['The latest report of user 67890 is:\n\n{\n    "user_id": "35791",\n    "timestamp": "2025-05-02T14:27:45Z",\n    "system": {\n        "os": "Windows 11",\n        "cpu_usage": "73%",\n        "memory_usage": "9.2 GB / 16 GB",\n        "disk_space": "400 GB free of 500 GB"\n    },\n    "network": {\n        "latency_ms": 67,\n        "packet_loss": "0.0%",\n        "vpn_connected": false\n    },\n    "errors": [],\n    "recommendations": [\n        "Regular system check completed",\n        "All services running optimally"\n    ]\n}']
 ```
 
 In the case of a non-existent report, the workflow will return an error message.
@@ -292,7 +294,7 @@ nat run --config_file examples/object_store/user_report/configs/config_s3.yml --
 <snipped for brevity>
 
 [AGENT]
-Calling tools: user_report.put
+Calling tools: user_report__put
 Tool's input: {"report": "{\n    \"recommendations\": [\n        \"Update graphics driver\",\n        \"Check for overheating hardware\",\n        \"Enable automatic crash reporting\"\n    ]\n}", "user_id": "6789", "date": null}
 Tool's response:
 User report for 6789 with date latest added successfully
@@ -310,7 +312,7 @@ If you attempt to put a report for a user and date that already exists, the work
 <snipped for brevity>
 
 [AGENT]
-Calling tools: user_report.put
+Calling tools: user_report__put
 Tool's input: {"report": "{\"recommendations\": [\"Update graphics driver\", \"Check for overheating hardware\", \"Enable automatic crash reporting\"]}", "user_id": "6789", "date": null}
 Tool's response:
 User report for 6789 with date latest already exists
@@ -339,7 +341,7 @@ nat run --config_file examples/object_store/user_report/configs/config_s3.yml --
 <snipped for brevity>
 
 [AGENT]
-Calling tools: user_report.update
+Calling tools: user_report__update
 Tool's input: {"report": "{\"recommendations\": [\"Update graphics driver\", \"Check for overheating hardware\", \"Reboot the system\"]}", "user_id": "6789", "date": null}
 Tool's response:
 User report for 6789 with date latest updated
@@ -360,7 +362,7 @@ nat run --config_file examples/object_store/user_report/configs/config_s3.yml --
 <snipped for brevity>
 
 [AGENT]
-Calling tools: user_report.delete
+Calling tools: user_report__delete
 Tool's input: {"user_id": "6789", "date": null}
 Tool's response:
 User report for 6789 with date latest deleted
@@ -378,7 +380,7 @@ If you attempt to delete a report that does not exist, the workflow will return 
 <snipped for brevity>
 
 [AGENT]
-Calling tools: user_report.delete
+Calling tools: user_report__delete
 Tool's input: {"user_id": "6789", "date": null}
 Tool's response:
 Tool call failed after all retry attempts. Last error: No object found with key: /reports/6789/latest.json. An error occurred (NoSuchKey) when calling the GetObject operation: The specified key does not exist.

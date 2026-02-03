@@ -17,6 +17,9 @@
         },
         {
             "pattern": "^https://arize\\.com"
+        },
+        {
+            "pattern": "^https://milvus\\.io"
         }
     ]
 }

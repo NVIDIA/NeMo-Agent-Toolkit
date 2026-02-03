@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,8 @@ limitations under the License.
 -->
 
 # Simple LangSmith-Documentation Agent - Evaluation and Profiling
+
+**Complexity:** 🟨 Intermediate
 
 This example demonstrates how to evaluate and profile AI agent performance using the NVIDIA NeMo Agent toolkit. You'll learn to systematically measure your agent's accuracy and analyze its behavior using the Simple LangSmith-Documentation Agent workflow.
 
@@ -35,7 +37,7 @@ This example demonstrates how to evaluate and profile AI agent performance using
 ## Key Features
 
 - **Web Query Agent Evaluation:** Demonstrates comprehensive evaluation of the `simple_web_query` agent that retrieves and processes LangSmith documentation using `webpage_query` tools and `react_agent` reasoning.
-- **Multi-Model Performance Testing:** Shows systematic comparison across different LLM providers including OpenAI models, Llama 3.1, and Llama 3.3 to identify optimal configurations for documentation retrieval tasks.
+- **Multi-Model Performance Testing:** Shows systematic comparison across different LLM providers including OpenAI models, NVIDIA Nemotron models, Llama 3.1, and Llama 3.3 to identify optimal configurations for documentation retrieval tasks.
 - **Evaluation Framework Integration:** Uses the NeMo Agent toolkit `nat eval` command with various evaluation configurations to measure response quality, accuracy scores, and documentation retrieval effectiveness.
 - **Question-by-Question Analysis:** Provides detailed breakdown of individual agent responses with comprehensive metrics for identifying failure patterns in LangSmith documentation queries.
 - **Dataset Management Workflow:** Demonstrates working with evaluation datasets for consistent testing and performance tracking over time, including evaluation-only modes and result upload capabilities.
@@ -44,13 +46,13 @@ This example demonstrates how to evaluate and profile AI agent performance using
 
 - **Accuracy Evaluation**: Measure and validate agent responses using various evaluation methods
 - **Performance Analysis**: Understand agent behavior through systematic evaluation
-- **Multi-Model Testing**: Compare performance across different LLM providers (OpenAI, Llama 3.1, Llama 3.3)
+- **Multi-Model Testing**: Compare performance across different LLM providers (OpenAI, NVIDIA Nemotron, Llama 3.1, Llama 3.3)
 - **Dataset Management**: Work with evaluation datasets for consistent testing
 - **Results Interpretation**: Analyze evaluation metrics to improve agent performance
 
 ## Prerequisites
 
-1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
+1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 2. **Base workflow**: This example builds upon the Getting Started [Simple Web Query](../../getting_started/simple_web_query/) example. Make sure you are familiar with the example before proceeding.
 
 ## Installation and Setup
@@ -65,7 +67,7 @@ uv pip install -e examples/evaluation_and_profiling/simple_web_query_eval
 
 ### Set Up API Keys
 
-Follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to set up your API keys:
+Follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to set up your API keys:
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
@@ -80,7 +82,7 @@ Evaluate the Simple LangSmith-Documentation agent's accuracy using different con
 
 #### Basic Evaluation
 
-The configuration files specified below contain configurations for the NeMo Agent Toolkit `evaluation` and `profiler` capabilities. For detailed information about evaluation configuration and output files, refer to the [evaluation guide](../../../docs/source/workflows/evaluate.md). For profiling configuration and metrics, see the [profiling guide](../../../docs/source/workflows/profiler.md).
+The configuration files specified below contain configurations for the NeMo Agent Toolkit `evaluation` and `profiler` capabilities. For detailed information about evaluation configuration and output files, refer to the [evaluation guide](../../../docs/source/improve-workflows/evaluate.md). For profiling configuration and metrics, refer to the [profiling guide](../../../docs/source/improve-workflows/profiler.md).
 
 ```bash
 nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
@@ -148,7 +150,7 @@ aws s3 mb \
   ${S3_ENDPOINT_URL:+--endpoint-url=${S3_ENDPOINT_URL}}
 ```
 
-For more information about using remote files for evaluation, refer to the [evaluation guide](../../../docs/source/reference/evaluate.md).
+For more information about using remote files for evaluation, refer to the [evaluation guide](../../../docs/source/improve-workflows/evaluate.md).
 
 ##### Upload dataset to the S3 bucket
 To use the sample config file `eval_upload.yml`, you need to upload the following dataset files to the S3 bucket at path `input/`:
@@ -198,13 +200,13 @@ Running `nat eval` generates several artifacts in the output directory:
 - `all_requests_profiler_traces.json`: Full trace events
 - `inference_optimization.json`: Inference optimization signals (when `compute_llm_metrics` is enabled)
 
-For detailed descriptions of each output file, refer to the [Evaluation outputs section](../../../docs/source/workflows/evaluate.md#evaluation-outputs-what-you-will-get) in the evaluation guide.
+For detailed descriptions of each output file, refer to the [Evaluation outputs section](../../../docs/source/improve-workflows/evaluate.md#evaluation-outputs-what-you-will-get) in the evaluation guide.
 
 ### Available Configurations
 
 | Configuration | Description |
 |--------------|-------------|
-| `eval_config.yml` | Standard evaluation with default settings |
+| `eval_config.yml` | Standard evaluation with NVIDIA Nemotron models (default) |
 | `eval_config_openai.yml` | Evaluation using OpenAI models |
 | `eval_config_llama31.yml` | Evaluation using Llama 3.1 model |
 | `eval_config_llama33.yml` | Evaluation using Llama 3.3 model |

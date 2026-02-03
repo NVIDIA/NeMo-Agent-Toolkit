@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2021-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +14,8 @@
 # limitations under the License.
 
 export SCRIPT_DIR=${SCRIPT_DIR:-"$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"}
+
+export SUPPORTED_PYTHON_VERSIONS=("3.11" "3.12" "3.13")
 
 # The root to the NAT repo
 export PROJECT_ROOT=${PROJECT_ROOT:-"$(realpath ${SCRIPT_DIR}/../..)"}
@@ -104,6 +106,30 @@ function get_num_proc() {
    echo "${NUM_PROC}"
 }
 
+function set_versions() {
+   # Update internal dependencies to the current git tag
+
+   if [[ "${CI_CRON_NIGHTLY}" == "1" || "${IS_TAGGED}" == "1" ]]; then
+      # For tagged releases and nightly builds, use the git tag as the version as-is
+      NAT_VERSION="${GIT_TAG}"
+   else
+      set +e
+      NAT_VERSION=$(python -m setuptools_scm)
+      local SETUPTOOLS_SCM_RESULT=$?
+      set -e
+
+      if [[ ${SETUPTOOLS_SCM_RESULT} -ne 0 ]]; then
+         rapids-logger "Error, setuptools_scm failed to determine the version: ${NAT_VERSION}"
+         exit ${SETUPTOOLS_SCM_RESULT}
+      fi
+   fi
+
+   export SETUPTOOLS_SCM_PRETEND_VERSION="${NAT_VERSION}"
+   export USE_FULL_VERSION="1"
+
+   SKIP_MD_UPDATE=1 ${PROJECT_ROOT}/ci/release/update-version.sh "${NAT_VERSION}"
+}
+
 function build_wheel() {
     rapids-logger "Building Wheel for $1"
     uv build --wheel --no-progress --out-dir "${WHEELS_DIR}/$2" --directory $1
@@ -146,7 +172,17 @@ function create_env() {
 
     rapids-logger "Creating Environment with extras: ${@}"
 
-    UV_SYNC_STDERROUT=$(uv sync --active ${extras[@]} 2>&1)
+    set +e
+    UV_SYNC_STDERROUT=$(uv sync --active "${extras[@]}" 2>&1)
+    UV_RESULT=$?
+    set -e
+
+    if [[ ${UV_RESULT} -ne 0 ]]; then
+        echo "Error, uv sync failed with exit code ${UV_RESULT}"
+        echo "StdErr output:"
+        echo "${UV_SYNC_STDERROUT}"
+        exit ${UV_RESULT}
+    fi
 
     # Explicitly filter the warning about multiple packages providing a tests module, work-around for issue #611
     UV_SYNC_STDERROUT=$(echo "${UV_SYNC_STDERROUT}" | grep -v "warning: The module \`tests\` is provided by more than one package")
@@ -186,6 +222,33 @@ function get_lfs_files() {
 
     rapids-logger "git lfs ls-files"
     git lfs ls-files
+}
+
+function install_python_versions() {
+   # This is the version of python currently installed
+   local current_python_version=$(echo ${PYTHON_VERSION} | awk '{split($0, a, "."); print a[1]"."a[2]}')
+
+   # This is not normally needed as our containers contain the needed python version. This is only needed for CI stages
+   # which need to support multiple python versions in a single stage, such as the build_wheel stage.
+   for pyver in "${SUPPORTED_PYTHON_VERSIONS[@]}"; do
+      if [[ "${pyver}" == "${current_python_version}" ]]; then
+         continue
+      fi
+
+      set +e
+      # The managed python flag is needed since the OS's copy of python does not include C headers needed to build some
+      # dependencies, specifically ruamel-yaml-clibz which is needed for semantic-kernel
+      uv python find --managed-python "${pyver}" &> /dev/null
+      PYTHON_FIND_RESULT=$?
+      set -e
+      if [[ ${PYTHON_FIND_RESULT} -ne 0 ]]; then
+         rapids-logger "Downloading Python version ${pyver}"
+
+         # In common.sh we set this to never, we want to override that here
+         UV_PYTHON_DOWNLOADS="manual" uv python install --managed-python ${pyver}
+         rapids-logger "✓ Successfully installed Python ${pyver}"
+      fi
+   done
 }
 
 function cleanup {

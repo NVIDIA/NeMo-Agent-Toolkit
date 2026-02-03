@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,7 @@ from typing import TypeVar
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
+from nat.data_models.llm import APITypeEnum
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
@@ -28,6 +29,7 @@ from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
+from nat.utils.responses_api import validate_no_responses_api
 from nat.utils.type_utils import override
 
 ModelType = TypeVar("ModelType")
@@ -80,11 +82,14 @@ async def nim_agno(llm_config: NIMModelConfig, _builder: Builder):
 
     from agno.models.nvidia import Nvidia
 
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.AGNO)
+
     config_obj = {
         **llm_config.model_dump(
-            exclude={"type", "model_name", "thinking"},
+            exclude={"type", "model_name", "thinking", "api_type"},
             by_alias=True,
             exclude_none=True,
+            exclude_unset=True,
         ),
     }
 
@@ -97,16 +102,21 @@ async def nim_agno(llm_config: NIMModelConfig, _builder: Builder):
 async def openai_agno(llm_config: OpenAIModelConfig, _builder: Builder):
 
     from agno.models.openai import OpenAIChat
+    from agno.models.openai import OpenAIResponses
 
     config_obj = {
         **llm_config.model_dump(
-            exclude={"type", "model_name", "thinking"},
+            exclude={"type", "model_name", "thinking", "api_type"},
             by_alias=True,
             exclude_none=True,
+            exclude_unset=True,
         ),
     }
 
-    client = OpenAIChat(**config_obj, id=llm_config.model_name)
+    if llm_config.api_type == APITypeEnum.RESPONSES:
+        client = OpenAIResponses(**config_obj, id=llm_config.model_name)
+    else:
+        client = OpenAIChat(**config_obj, id=llm_config.model_name)
 
     yield _patch_llm_based_on_config(client, llm_config)
 
@@ -116,11 +126,14 @@ async def litellm_agno(llm_config: LiteLlmModelConfig, _builder: Builder):
 
     from agno.models.litellm.chat import LiteLLM
 
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.AGNO)
+
     client = LiteLLM(
         **llm_config.model_dump(
-            exclude={"type", "thinking", "model_name"},
+            exclude={"type", "thinking", "model_name", "api_type"},
             by_alias=True,
             exclude_none=True,
+            exclude_unset=True,
         ),
         id=llm_config.model_name,
     )

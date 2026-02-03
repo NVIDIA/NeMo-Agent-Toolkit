@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -97,6 +97,7 @@ services:
       LANGFUSE_S3_BATCH_EXPORT_SECRET_ACCESS_KEY: ${LANGFUSE_S3_BATCH_EXPORT_SECRET_ACCESS_KEY:-minioadmin} # CHANGEME
       LANGFUSE_S3_BATCH_EXPORT_FORCE_PATH_STYLE: ${LANGFUSE_S3_BATCH_EXPORT_FORCE_PATH_STYLE:-true}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      REDIS_AUTH: ${REDIS_PASSWORD:-redis}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       SALT: ${LANGFUSE_SALT:-mysalt}
@@ -118,6 +119,21 @@ services:
       LANGFUSE_INIT_USER_EMAIL: test@localhost.dev
       LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_USER_PW:-password123}
       NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-mysecret}
+
+  local-sandbox:
+    build:
+      context: ../../src/nat/tool/code_execution/local_sandbox
+      dockerfile: Dockerfile.sandbox
+    container_name: test-local-sandbox
+    ports:
+      - "6000:6000"
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:6000/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   milvus:
     container_name: test-milvus-standalone
@@ -163,6 +179,35 @@ services:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-my_password}
     restart: unless-stopped
 
+  oauth2-server:
+    build: ../../examples/front_ends/simple_auth
+    container_name: test-oauth2-server
+    ports:
+      - "5001:5000"
+    environment:
+      - AUTHLIB_INSECURE_TRANSPORT=1
+      - FLASK_APP=app.py
+      - FLASK_ENV=development
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  piston:
+    build: ./piston
+    container_name: test-piston
+    privileged: true # Required by Piston
+    ports:
+      - "2000:2000"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:2000/api/v2/runtimes')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
   opensearch:
     image: opensearchproject/opensearch:2.11.1
     container_name: test-opensearch
@@ -201,6 +246,7 @@ services:
   redis:
     image: redis:8.0
     container_name: test-redis
+    command: "--requirepass ${REDIS_PASSWORD:-redis}"
     ports:
       - 6379:6379
     healthcheck:

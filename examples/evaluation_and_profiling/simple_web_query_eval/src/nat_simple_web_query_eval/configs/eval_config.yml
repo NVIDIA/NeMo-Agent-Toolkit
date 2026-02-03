@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,15 +26,15 @@ functions:
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+    model_name: nvidia/nemotron-3-nano-30b-a3b
     temperature: 0.0
   nim_rag_eval_llm:
     _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+    model_name: nvidia/nemotron-3-nano-30b-a3b
     max_tokens: 8
   nim_trajectory_eval_llm:
     _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+    model_name: nvidia/nemotron-3-nano-30b-a3b
     temperature: 0.0
     max_tokens: 1024
 

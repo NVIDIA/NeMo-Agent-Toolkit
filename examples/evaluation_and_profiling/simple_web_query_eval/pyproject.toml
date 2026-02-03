@@ -10,7 +10,7 @@ root = "../../.."
 name = "nat_simple_web_query_eval"
 dynamic = ["version"]
 dependencies = [
-    "nvidia-nat[langchain,profiling]~=1.3",
+    "nvidia-nat[langchain,profiling]~=1.4",
     "nat_simple_web_query",
 ]
 requires-python = ">=3.11,<3.14"

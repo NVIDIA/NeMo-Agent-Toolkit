@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,11 +16,13 @@ limitations under the License.
 -->
 
 <!--
-  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: Apache-2.0
 -->
 
 # Plot Charts Agent
+
+**Complexity:** 🟢 Beginner
 
 A simple and reusable example that demonstrates creating charts from data using the NeMo Agent toolkit. This workflow can generate line charts, bar charts, and scatter plots from JSON data files based on user requests. The implementation follows NeMo Agent toolkit best practices for configuration-driven, reusable workflows.
 
@@ -43,7 +45,7 @@ A simple and reusable example that demonstrates creating charts from data using 
 
 ### Setup Virtual Environment and Install NeMo Agent Toolkit
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 
 ### Install this Workflow:
 
@@ -55,7 +57,7 @@ uv pip install -e examples/custom_functions/plot_charts
 
 ### Set Up API Keys
 
-If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>

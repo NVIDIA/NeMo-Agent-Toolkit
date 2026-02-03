@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,7 +22,9 @@ from pathlib import Path
 from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.function import FunctionGroup
 from nat.builder.workflow_builder import WorkflowBuilder
+from nat.builder.workflow_builder import _log_build_failure
 from nat.cli.type_registry import TypeRegistry
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
@@ -95,6 +97,16 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
         tool_wrapper_reg = self._registry.get_tool_wrapper(llm_framework=wrapper_type)
 
         async def get_tool(fn_name: str):
+            # Maintain backwards compatibility with the old function group name format
+            new_fn_name = fn_name.replace(FunctionGroup.LEGACY_SEPARATOR, FunctionGroup.SEPARATOR)
+            if (fn_name not in self._functions) and (new_fn_name in self._functions):
+                logger.warning(
+                    f"Function `{fn_name}` is deprecated and will be removed in a future release." + \
+                        f"Use `{new_fn_name}` instead."
+                )
+                fn_name = new_fn_name
+            # end of backwards compatibility check
+
             fn = await self.get_function(fn_name)
             try:
                 return tool_wrapper_reg.build_fn(fn_name, fn, self)
@@ -124,12 +136,12 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
         completed_components = [(name, "evaluator") for name in completed_evaluators]
         remaining_components = [(name, "evaluator") for name in remaining_evaluators]
 
-        # Use the inherited common logging method from WorkflowBuilder
-        self._log_build_failure(failing_evaluator_name,
-                                "evaluator",
-                                completed_components,
-                                remaining_components,
-                                original_error)
+        # Use the common logging function from workflow_builder
+        _log_build_failure(failing_evaluator_name,
+                           "evaluator",
+                           completed_components,
+                           remaining_components,
+                           original_error)
 
     @override
     async def populate_builder(self, config: Config, skip_workflow: bool = False):

@@ -10,7 +10,7 @@ root = "../../.."
 name = "nat_simple_calculator_hitl"
 dynamic = ["version"]
 dependencies = [
-  "nvidia-nat[langchain]~=1.3",
+  "nvidia-nat[langchain]~=1.4",
   "nat_simple_calculator",
   "nat_por_to_jiratickets",
 ]

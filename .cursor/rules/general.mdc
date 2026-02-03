@@ -13,18 +13,23 @@ These are the overarching standards that every **source, test, documentation and
 ## Terminology and Naming
 
 - Make sure to follow this naming convention for all the documentation. If there is any documentation not following this rule, you MUST update it.
-- **Full name on first use**: "NVIDIA NeMo Agent toolkit"
-- **Subsequent references**: "NeMo Agent toolkit"
-  - If the name is part of a heading, use "NeMo Agent Toolkit" in the heading. Capitalize the "T" in "Toolkit".
-- **Abbreviations**: "NAT" or "nat"
-  - "nat" for the API namespace and CLI tool
-  - "nvidia-nat" for the package name
-  - "NAT" for environment variable prefixes, and informal usage in comments
-  - This should be used for all abbreviations in the comments in the code.
-  - This should NEVER be used in the documentation.
+- **Full name (first use)**: "NVIDIA NeMo Agent toolkit" — use for document titles, webpage headers, and any public descriptions
+- **Short name (subsequent references)**: "NeMo Agent toolkit" or "the toolkit"
+- **Capitalization rules**:
+  - In document titles, headings, or any context where all words are capitalized, use "Toolkit" (capital T): e.g., "NVIDIA NeMo Agent Toolkit" or "NeMo Agent Toolkit"
+  - In all other contexts (body text, descriptions), use "toolkit" (lowercase t): e.g., "NVIDIA NeMo Agent toolkit" or "NeMo Agent toolkit"
+- **Technical identifiers** (code, CLI, packages, URLs):
+  - `nat` for the API namespace and CLI tool
+  - `nvidia-nat` for the package name
+  - `NAT_` prefix for environment variables
+  - `NeMo-Agent-Toolkit` for URLs, directory names, and contexts where capitalization is preserved (no underscores or spaces)
+- **"NAT" abbreviation**:
+  - OK in code comments
+  - NEVER use "NAT" or "nat" to refer to the toolkit in documentation
 - Examples:
   - "In the NeMo Agent toolkit, you can…"
   - "Change directory to the NeMo Agent toolkit repo root…"
+  - Heading: "# Getting Started with NeMo Agent Toolkit"
 - Consistently use this terminology throughout all documentation
 - NeMo Agent toolkit was previously known as the Agent Intelligence toolkit, and AgentIQ. You should NEVER use the deprecated names, including Agent Intelligence toolkit, aiqtoolkit, AgentIQ, or AIQ/aiq. If you see any of these names in the documentation, you should update it based on the latest naming convention above, unless those names are intentionally used to refer to the deprecated names, or implementing a compatibility layer for the deprecated names.
 - DO NOT change the content of `CHANGELOG.md`
@@ -79,6 +84,13 @@ These are the overarching standards that every **source, test, documentation and
 - Preserve stack traces and prevent duplicate logging when handling exceptions.
 - When re-raising exceptions: use bare `raise` statements to maintain the original stack trace, and use `logger.error()` for logging (not `logger.exception()`) to avoid duplicate stack trace output.
 - When catching and logging exceptions without re-raising: always use `logger.exception()` (equivalent to `logger.error(exc_info=True)`) to capture the full stack trace information.
+
+
+## Common Bugs to Avoid
+
+- **Pydantic SecretStr defaults**: Pydantic models using `SecretStr`, `SerializableSecretStr`, or `OptionalSecretStr` with `default=""` creates a bug where the field is initialized as `str` instead of a `SecretStr` instance. Instead:
+  - For optional secret fields (e.g., `OptionalSecretStr`): use `default=None`
+  - For non-optional secret fields (e.g., `SerializableSecretStr`): use `default_factory=lambda: SerializableSecretStr("")` to ensure each instance gets a unique `SecretStr` object
 
 ## Documentation
 

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,7 +28,6 @@ from datetime import timedelta
 from enum import Enum
 from uuid import uuid4
 
-from dask.distributed import Client as DaskClient
 from dask.distributed import Future
 from dask.distributed import Variable
 from dask.distributed import fire_and_forget
@@ -181,20 +180,6 @@ class JobStore(DaskClientMixin):
         self._session = async_scoped_session(session_maker, scopefunc=current_task)
 
     @asynccontextmanager
-    async def client(self) -> AsyncGenerator[DaskClient]:
-        """
-        Async context manager for obtaining a Dask client connection.
-
-        Yields
-        ------
-        DaskClient
-            An active Dask client connected to the scheduler. The client is automatically closed when exiting the
-            context manager.
-        """
-        async with super().client(self._scheduler_address) as client:
-            yield client
-
-    @asynccontextmanager
     async def session(self) -> AsyncGenerator["AsyncSession"]:
         """
         Async context manager for a SQLAlchemy session with automatic transaction management.
@@ -208,13 +193,14 @@ class JobStore(DaskClientMixin):
         AsyncSession
             An active SQLAlchemy async session with an open transaction.
         """
-        async with self._session() as session:
-            async with session.begin():
-                yield session
-
-        # Removes the current task key from the session registry, preventing
-        # potential memory leaks
-        await self._session.remove()
+        try:
+            async with self._session() as session:
+                async with session.begin():
+                    yield session
+        finally:
+            # Removes the current task key from the session registry, preventing
+            # potential memory leaks
+            await self._session.remove()
 
     def ensure_job_id(self, job_id: str | None) -> str:
         """
@@ -303,24 +289,21 @@ class JobStore(DaskClientMixin):
 
         # We are intentionally not using job_id as the key, since Dask will clear the associated metadata once
         # the job has completed, and we want the metadata to persist until the job expires.
-        async with self.client() as client:
-            logger.debug("Submitting job with job_args: %s, job_kwargs: %s", job_args, job_kwargs)
-            future = client.submit(job_fn, *job_args, key=f"{job_id}-job", **job_kwargs)
+        future = self.dask_client.submit(job_fn, *job_args, key=f"{job_id}-job", **job_kwargs)
 
-            # Store the future in a variable, this allows us to potentially cancel the future later if needed
-            future_var = Variable(name=job_id, client=client)
-            await future_var.set(future)
+        # Store the future in a variable, this allows us to potentially cancel the future later if needed
+        future_var = Variable(name=job_id, client=self.dask_client)
+        future_var.set(future, timeout="5 s")
+        if sync_timeout > 0:
+            try:
+                future.result(timeout=sync_timeout)
+                job = await self.get_job(job_id)
+                assert job is not None, "Job should exist after future result"
+                return (job_id, job)
+            except TimeoutError:
+                pass
 
-            if sync_timeout > 0:
-                try:
-                    _ = await future.result(timeout=sync_timeout)
-                    job = await self.get_job(job_id)
-                    assert job is not None, "Job should exist after future result"
-                    return (job_id, job)
-                except TimeoutError:
-                    pass
-
-            fire_and_forget(future)
+        fire_and_forget(future)
 
         return (job_id, None)
 
@@ -502,20 +485,21 @@ class JobStore(DaskClientMixin):
 
         return updated_at + timedelta(seconds=job.expiry_seconds)
 
-    async def cleanup_expired_jobs(self):
+    async def cleanup_expired_jobs(self) -> int:
         """
         Cleanup expired jobs, keeping the most recent one.
 
         Updated_at is used instead of created_at to determine the most recent job. This is because jobs may not be
         processed in the order they are created.
         """
+        logger.info("Starting cleanup of expired jobs")
         now = datetime.now(UTC)
 
         stmt = select(JobInfo).where(
             and_(JobInfo.is_expired == sa_expr.false(),
                  JobInfo.status.not_in(self.ACTIVE_STATUS))).order_by(JobInfo.updated_at.desc())
         # Filter out active jobs
-        async with (self.client() as client, self.session() as session):
+        async with self.session() as session:
             finished_jobs = (await session.execute(stmt)).scalars().all()
 
             # Always keep the most recent finished job
@@ -536,26 +520,36 @@ class JobStore(DaskClientMixin):
                         elif os.path.isdir(job.output_path):
                             shutil.rmtree(job.output_path)
 
-            if len(expired_ids) > 0:
+            num_expired = len(expired_ids)
+            if num_expired > 0:
                 successfully_expired = []
                 for job_id in expired_ids:
+                    var = None
                     try:
-                        var = Variable(name=job_id, client=client)
+                        var = Variable(name=job_id, client=self.dask_client)
                         try:
-                            future = await var.get(timeout=5)
+                            future = var.get(timeout=5)
                             if isinstance(future, Future):
-                                await client.cancel([future], asynchronous=True, force=True)
+                                self.dask_client.cancel([future], force=True)
 
                         except TimeoutError:
                             pass
 
-                        var.delete()
                         successfully_expired.append(job_id)
                     except Exception:
                         logger.exception("Failed to expire %s", job_id)
 
+                    finally:
+                        if var is not None:
+                            try:
+                                var.delete()
+                            except Exception:
+                                logger.exception("Failed to delete variable %s", job_id)
+
                 await session.execute(
                     update(JobInfo).where(JobInfo.job_id.in_(successfully_expired)).values(is_expired=True))
+
+            return num_expired
 
 
 def get_db_engine(db_url: str | None = None, echo: bool = False, use_async: bool = True) -> "Engine | AsyncEngine":

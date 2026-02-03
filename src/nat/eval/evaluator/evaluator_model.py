@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,7 @@
 import typing
 
 from pydantic import BaseModel
+from pydantic import SerializeAsAny
 
 from nat.data_models.intermediate_step import IntermediateStep
 
@@ -55,4 +56,4 @@ class EvalOutputItem(BaseModel):
 
 class EvalOutput(BaseModel):
     average_score: typing.Any  # float or any serializable type
-    eval_output_items: list[EvalOutputItem]
+    eval_output_items: list[SerializeAsAny[EvalOutputItem]]

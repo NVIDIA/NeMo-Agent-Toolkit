@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,15 +17,17 @@ limitations under the License.
 <!-- path-check-skip-file -->
 # Google Agent Development Kit (ADK) Example
 
+**Complexity:** 🟢 Beginner
+
 A minimal example using Agent Development Kit showcasing a simple weather and time agent that can call multiple tools.
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 
 ### Install this Workflow
 
-From the root directory of the NAT library, run the following command:
+From the root directory of the NeMo Agent toolkit repository, run the following command:
 
 ```bash
 uv pip install -e examples/frameworks/adk_demo
@@ -33,22 +35,30 @@ uv pip install -e examples/frameworks/adk_demo
 
 ### Set up API keys
 
-For this example, an OpenAI API key is required. You can set it as follows:
+If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+
 ```bash
-export OPENAI_API_KEY="<your_openai_key>"
-# Optional (defaults to https://api.openai.com/v1 if unset)
-export OPENAI_API_BASE="<your_openai_base_url>"
+export NVIDIA_API_KEY=<YOUR_API_KEY>
 ```
 
-Google ADK support within NeMo Agent toolkit currently only supports OpenAI and Azure OpenAI models for tool calling.
+Optionally, if you would prefer to run with an OpenAI Key:
+```bash
+export OPENAI_API_KEY=<YOUR_API_KEY>
+```
 
 ## Run the Workflow
 
-Run the workflow with the NAT CLI
+Run the workflow with the `nat run` command:
 
 ```bash
 nat run --config_file examples/frameworks/adk_demo/configs/config.yml --input "What is the weather and time in New York today?"
 ```
+
+Optionally if you would prefer to run with an OpenAI model:
+```bash
+nat run --config_file examples/frameworks/adk_demo/configs/config_oai.yml --input "What is the weather and time in New York today?"
+```
+
 
 ### Expected Output
 

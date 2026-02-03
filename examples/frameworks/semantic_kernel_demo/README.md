@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,8 @@ limitations under the License.
 -->
 
 # Semantic Kernel Example
+
+**Complexity:** 🟢 Beginner
 
 A minimal example using Semantic Kernel showcasing a multi-agent travel planning system where an Itinerary Agent creates a travel schedule, a Budget Agent ensures cost compliance, and a Summarizer Agent formats the final itinerary. **Please note that we only support OpenAI models currently**.
 
@@ -37,7 +39,7 @@ A minimal example using Semantic Kernel showcasing a multi-agent travel planning
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 
 ### Install this Workflow
 

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,6 +22,7 @@ from pydantic import ConfigDict
 from pydantic import Field
 
 from nat.builder.builder import Builder
+from nat.builder.component_utils import WORKFLOW_COMPONENT_NAME
 from nat.builder.embedder import EmbedderProviderInfo
 from nat.builder.function import Function
 from nat.builder.function import FunctionGroup
@@ -30,6 +31,7 @@ from nat.builder.llm import LLMProviderInfo
 from nat.builder.retriever import RetrieverProviderInfo
 from nat.builder.workflow import Workflow
 from nat.builder.workflow_builder import WorkflowBuilder
+from nat.builder.workflow_builder import _log_build_failure
 from nat.cli.register_workflow import register_embedder_client
 from nat.cli.register_workflow import register_embedder_provider
 from nat.cli.register_workflow import register_function
@@ -37,20 +39,28 @@ from nat.cli.register_workflow import register_function_group
 from nat.cli.register_workflow import register_llm_client
 from nat.cli.register_workflow import register_llm_provider
 from nat.cli.register_workflow import register_memory
+from nat.cli.register_workflow import register_middleware
 from nat.cli.register_workflow import register_object_store
 from nat.cli.register_workflow import register_retriever_client
 from nat.cli.register_workflow import register_retriever_provider
 from nat.cli.register_workflow import register_telemetry_exporter
 from nat.cli.register_workflow import register_tool_wrapper
+from nat.cli.register_workflow import register_trainer
+from nat.cli.register_workflow import register_trainer_adapter
+from nat.cli.register_workflow import register_trajectory_builder
 from nat.cli.register_workflow import register_ttc_strategy
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
 from nat.data_models.embedder import EmbedderBaseConfig
+from nat.data_models.finetuning import TrainerAdapterConfig
+from nat.data_models.finetuning import TrainerConfig
+from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
+from nat.data_models.middleware import MiddlewareBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfig
 from nat.data_models.retriever import RetrieverBaseConfig
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
@@ -58,6 +68,9 @@ from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
 from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
+from nat.finetuning.interfaces.finetuning_runner import Trainer
+from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
+from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 from nat.memory.interfaces import MemoryEditor
 from nat.memory.models import MemoryItem
 from nat.object_store.in_memory_object_store import InMemoryObjectStore
@@ -104,6 +117,18 @@ class TObjectStoreConfig(ObjectStoreBaseConfig, name="test_object_store"):
 
 
 class TTTCStrategyConfig(TTCStrategyBaseConfig, name="test_ttc_strategy"):
+    raise_error: bool = False
+
+
+class TTrainerConfig(TrainerConfig, name="test_trainer"):
+    raise_error: bool = False
+
+
+class TTrainerAdapterConfig(TrainerAdapterConfig, name="test_trainer_adapter"):
+    raise_error: bool = False
+
+
+class TTrajectoryBuilderConfig(TrajectoryBuilderConfig, name="test_trajectory_builder"):
     raise_error: bool = False
 
 
@@ -282,6 +307,33 @@ async def _register():
                 return StageTypeEnum.SCORING
 
         yield DummyTTCStrategy(config)
+
+    @register_trainer(config_type=TTrainerConfig)
+    async def register_trainer_test(config: TTrainerConfig, _builder: Builder):
+
+        if config.raise_error:
+            raise ValueError("Error")
+
+        mock_trainer = MagicMock(spec=Trainer)
+        yield mock_trainer
+
+    @register_trainer_adapter(config_type=TTrainerAdapterConfig)
+    async def register_trainer_adapter_test(config: TTrainerAdapterConfig, _builder: Builder):
+
+        if config.raise_error:
+            raise ValueError("Error")
+
+        mock_adapter = MagicMock(spec=TrainerAdapter)
+        yield mock_adapter
+
+    @register_trajectory_builder(config_type=TTrajectoryBuilderConfig)
+    async def register_trajectory_builder_test(config: TTrajectoryBuilderConfig, _builder: Builder):
+
+        if config.raise_error:
+            raise ValueError("Error")
+
+        mock_builder = MagicMock(spec=TrajectoryBuilder)
+        yield mock_builder
 
     # Function Group registrations
     @register_function_group(config_type=IncludesFunctionGroupConfig)
@@ -888,6 +940,130 @@ async def test_get_ttc_strategy_and_config():
             )
 
 
+async def test_add_trainer():
+
+    async with WorkflowBuilder() as builder:
+        await builder.add_trainer("trainer_name", TTrainerConfig())
+
+        with pytest.raises(ValueError):
+            await builder.add_trainer("trainer_name2", TTrainerConfig(raise_error=True))
+
+        # Try and add the same name
+        with pytest.raises(ValueError):
+            await builder.add_trainer("trainer_name", TTrainerConfig())
+
+
+async def test_get_trainer():
+
+    async with WorkflowBuilder() as builder:
+        config = TTrainerConfig()
+
+        await builder.add_trainer("trainer_name", config)
+        await builder.add_trainer_adapter("adapter_name", TTrainerAdapterConfig())
+        await builder.add_trajectory_builder("trajectory_builder_name", TTrajectoryBuilderConfig())
+
+        trainer_adapter = await builder.get_trainer_adapter("adapter_name")
+        trajectory_builder = await builder.get_trajectory_builder("trajectory_builder_name")
+
+        trainer = await builder.get_trainer("trainer_name", trajectory_builder, trainer_adapter)
+
+        assert trainer is not None
+
+        with pytest.raises(ValueError):
+            await builder.get_trainer("trainer_name_not_exist", trajectory_builder, trainer_adapter)
+
+
+async def test_get_trainer_config():
+
+    async with WorkflowBuilder() as builder:
+        config = TTrainerConfig()
+
+        await builder.add_trainer("trainer_name", config)
+
+        assert await builder.get_trainer_config("trainer_name") == config
+
+        with pytest.raises(ValueError):
+            await builder.get_trainer_config("trainer_name_not_exist")
+
+
+async def test_add_trainer_adapter():
+
+    async with WorkflowBuilder() as builder:
+        await builder.add_trainer_adapter("adapter_name", TTrainerAdapterConfig())
+
+        with pytest.raises(ValueError):
+            await builder.add_trainer_adapter("adapter_name2", TTrainerAdapterConfig(raise_error=True))
+
+        # Try and add the same name
+        with pytest.raises(ValueError):
+            await builder.add_trainer_adapter("adapter_name", TTrainerAdapterConfig())
+
+
+async def test_get_trainer_adapter():
+
+    async with WorkflowBuilder() as builder:
+        config = TTrainerAdapterConfig()
+
+        adapter = await builder.add_trainer_adapter("adapter_name", config)
+
+        assert adapter == await builder.get_trainer_adapter("adapter_name")
+
+        with pytest.raises(ValueError):
+            await builder.get_trainer_adapter("adapter_name_not_exist")
+
+
+async def test_get_trainer_adapter_config():
+
+    async with WorkflowBuilder() as builder:
+        config = TTrainerAdapterConfig()
+
+        await builder.add_trainer_adapter("adapter_name", config)
+
+        assert await builder.get_trainer_adapter_config("adapter_name") == config
+
+        with pytest.raises(ValueError):
+            await builder.get_trainer_adapter_config("adapter_name_not_exist")
+
+
+async def test_add_trajectory_builder():
+
+    async with WorkflowBuilder() as builder:
+        await builder.add_trajectory_builder("trajectory_builder_name", TTrajectoryBuilderConfig())
+
+        with pytest.raises(ValueError):
+            await builder.add_trajectory_builder("trajectory_builder_name2", TTrajectoryBuilderConfig(raise_error=True))
+
+        # Try and add the same name
+        with pytest.raises(ValueError):
+            await builder.add_trajectory_builder("trajectory_builder_name", TTrajectoryBuilderConfig())
+
+
+async def test_get_trajectory_builder():
+
+    async with WorkflowBuilder() as builder:
+        config = TTrajectoryBuilderConfig()
+
+        trajectory_builder = await builder.add_trajectory_builder("trajectory_builder_name", config)
+
+        assert trajectory_builder == await builder.get_trajectory_builder("trajectory_builder_name")
+
+        with pytest.raises(ValueError):
+            await builder.get_trajectory_builder("trajectory_builder_name_not_exist")
+
+
+async def test_get_trajectory_builder_config():
+
+    async with WorkflowBuilder() as builder:
+        config = TTrajectoryBuilderConfig()
+
+        await builder.add_trajectory_builder("trajectory_builder_name", config)
+
+        assert await builder.get_trajectory_builder_config("trajectory_builder_name") == config
+
+        with pytest.raises(ValueError):
+            await builder.get_trajectory_builder_config("trajectory_builder_name_not_exist")
+
+
 async def test_built_config():
 
     general_config = GeneralConfig()
@@ -899,6 +1075,9 @@ async def test_built_config():
     retriever_config = TRetrieverProviderConfig()
     object_store_config = TObjectStoreConfig()
     ttc_config = TTTCStrategyConfig()
+    trainer_config = TTrainerConfig()
+    trainer_adapter_config = TTrainerAdapterConfig()
+    trajectory_builder_config = TTrajectoryBuilderConfig()
 
     async with WorkflowBuilder(general_config=general_config) as builder:
 
@@ -918,6 +1097,12 @@ async def test_built_config():
 
         await builder.add_ttc_strategy("ttc_strategy", ttc_config)
 
+        await builder.add_trainer("trainer1", trainer_config)
+
+        await builder.add_trainer_adapter("trainer_adapter1", trainer_adapter_config)
+
+        await builder.add_trajectory_builder("trajectory_builder1", trajectory_builder_config)
+
         workflow = await builder.build()
 
         workflow_config = workflow.config
@@ -931,6 +1116,9 @@ async def test_built_config():
         assert workflow_config.retrievers == {"retriever1": retriever_config}
         assert workflow_config.object_stores == {"object_store1": object_store_config}
         assert workflow_config.ttc_strategies == {"ttc_strategy": ttc_config}
+        assert workflow_config.trainers == {"trainer1": trainer_config}
+        assert workflow_config.trainer_adapters == {"trainer_adapter1": trainer_adapter_config}
+        assert workflow_config.trajectory_builders == {"trajectory_builder1": trajectory_builder_config}
 
 
 # Function Group Tests
@@ -1008,15 +1196,16 @@ async def test_function_group_included_functions():
         await builder.add_function_group("includes_group", IncludesFunctionGroupConfig())
 
         # Test that included functions are accessible as regular functions
-        add_fn = await builder.get_function("includes_group.add")
-        multiply_fn = await builder.get_function("includes_group.multiply")
+        sep = FunctionGroup.SEPARATOR
+        add_fn = await builder.get_function(f"includes_group{sep}add")
+        multiply_fn = await builder.get_function(f"includes_group{sep}multiply")
 
         assert add_fn is not None
         assert multiply_fn is not None
 
         # Test that non-included functions are not accessible
         with pytest.raises(ValueError):
-            await builder.get_function("includes_group.subtract")
+            await builder.get_function(f"includes_group{FunctionGroup.SEPARATOR}subtract")
 
 
 async def test_function_group_excluded_functions():
@@ -1028,12 +1217,13 @@ async def test_function_group_excluded_functions():
 
         # Test that NO functions are accessible globally since the group uses exclude (not include)
         # The function group doesn't expose any functions to the global registry when using exclude only
+        sep = FunctionGroup.SEPARATOR
         with pytest.raises(ValueError):
-            await builder.get_function("excludes_group.add")
+            await builder.get_function(f"excludes_group{sep}add")
         with pytest.raises(ValueError):
-            await builder.get_function("excludes_group.multiply")
+            await builder.get_function(f"excludes_group{sep}multiply")
         with pytest.raises(ValueError):
-            await builder.get_function("excludes_group.subtract")
+            await builder.get_function(f"excludes_group{sep}subtract")
 
         # But the functions should be accessible through the function group itself
         group = await builder.get_function_group("excludes_group")
@@ -1041,7 +1231,7 @@ async def test_function_group_excluded_functions():
 
         # Should have only subtract (add and multiply are excluded)
         assert len(accessible_functions) == 1
-        assert "excludes_group.subtract" in accessible_functions
+        assert f"excludes_group{FunctionGroup.SEPARATOR}subtract" in accessible_functions
 
 
 async def test_function_group_empty_includes_and_excludes():
@@ -1072,9 +1262,10 @@ async def test_function_group_all_includes():
         await builder.add_function_group("all_includes_group", AllIncludesFunctionGroupConfig())
 
         # All functions should be accessible
-        add_fn = await builder.get_function("all_includes_group.add")
-        multiply_fn = await builder.get_function("all_includes_group.multiply")
-        subtract_fn = await builder.get_function("all_includes_group.subtract")
+        sep = FunctionGroup.SEPARATOR
+        add_fn = await builder.get_function(f"all_includes_group{sep}add")
+        multiply_fn = await builder.get_function(f"all_includes_group{sep}multiply")
+        subtract_fn = await builder.get_function(f"all_includes_group{sep}subtract")
 
         assert add_fn is not None
         assert multiply_fn is not None
@@ -1095,12 +1286,13 @@ async def test_function_group_all_excludes():
         await builder.add_function_group("all_excludes_group", AllExcludesFunctionGroupConfig())
 
         # No functions should be accessible globally (function group uses exclude only)
+        sep = FunctionGroup.SEPARATOR
         with pytest.raises(ValueError):
-            await builder.get_function("all_excludes_group.add")
+            await builder.get_function(f"all_excludes_group{sep}add")
         with pytest.raises(ValueError):
-            await builder.get_function("all_excludes_group.multiply")
+            await builder.get_function(f"all_excludes_group{sep}multiply")
         with pytest.raises(ValueError):
-            await builder.get_function("all_excludes_group.subtract")
+            await builder.get_function(f"all_excludes_group{sep}subtract")
 
         group = await builder.get_function_group("all_excludes_group")
 
@@ -1153,11 +1345,12 @@ async def test_function_group_integration_with_workflow():
         assert "empty_group" in builder._function_groups
 
         # Test that included functions are accessible
-        assert "math_group.add" in builder._functions
-        assert "math_group.multiply" in builder._functions
+        sep = FunctionGroup.SEPARATOR
+        assert f"math_group{sep}add" in builder._functions
+        assert f"math_group{sep}multiply" in builder._functions
 
         # Test that non-included functions are not accessible
-        assert "math_group.subtract" not in builder._functions
+        assert f"math_group{sep}subtract" not in builder._functions
 
         # Test that no functions were included from empty group
         empty_group_functions = [k for k in builder._functions.keys() if k.startswith("empty_group.")]
@@ -1227,9 +1420,10 @@ async def test_function_group_get_excluded_functions():
 
         excluded_functions = await group.get_excluded_functions()
         assert len(excluded_functions) == 2  # add and multiply are excluded
-        assert "excludes_group.add" in excluded_functions
-        assert "excludes_group.multiply" in excluded_functions
-        assert "excludes_group.subtract" not in excluded_functions
+        sep = FunctionGroup.SEPARATOR
+        assert f"excludes_group{sep}add" in excluded_functions
+        assert f"excludes_group{sep}multiply" in excluded_functions
+        assert f"excludes_group{sep}subtract" not in excluded_functions
 
         # Test group with no exclude configuration
         await builder.add_function_group("includes_group", IncludesFunctionGroupConfig())
@@ -1310,11 +1504,12 @@ async def test_function_group_function_execution():
         await builder.add_function_group("math_group", IncludesFunctionGroupConfig())
 
         # Get and execute functions from the group
-        add_fn = await builder.get_function("math_group.add")
+        sep = FunctionGroup.SEPARATOR
+        add_fn = await builder.get_function(f"math_group{sep}add")
         result = await add_fn.ainvoke({"a": 5, "b": 3})
         assert result == 8
 
-        multiply_fn = await builder.get_function("math_group.multiply")
+        multiply_fn = await builder.get_function(f"math_group{sep}multiply")
         result = await multiply_fn.ainvoke({"a": 4, "b": 6})
         assert result == 24
 
@@ -1337,11 +1532,11 @@ async def test_function_group_custom_instance_name():
 
     # Function should be returned with instance name prefix
     all_functions = await group.get_all_functions()
-    assert "custom_math_group.add" in all_functions
+    assert f"custom_math_group{FunctionGroup.SEPARATOR}add" in all_functions
 
     # When getting included functions, should use custom instance name prefix
     included = await group.get_included_functions()
-    assert "custom_math_group.add" in included
+    assert f"custom_math_group{FunctionGroup.SEPARATOR}add" in included
 
 
 async def test_add_telemetry_exporter():
@@ -1391,18 +1586,17 @@ def mock_component_data():
 
 
 def test_log_build_failure_helper_method(caplog_fixture, mock_component_data):
-    """Test the _log_build_failure helper method directly."""
-    builder = WorkflowBuilder()
-
+    """Test the _log_build_failure helper function directly."""
     completed_components = [("comp1", "llms"), ("comp2", "embedders")]
     remaining_components = [("comp3", "functions"), ("comp4", "memory")]
     original_error = ValueError("Test error message")
 
-    # Call the helper method
-    builder._log_build_failure_component(mock_component_data,
-                                         completed_components,
-                                         remaining_components,
-                                         original_error)
+    # Call the helper function
+    _log_build_failure(mock_component_data.name,
+                       mock_component_data.component_group.value,
+                       completed_components,
+                       remaining_components,
+                       original_error)
 
     # Verify error logging content
     log_text = caplog_fixture.text
@@ -1418,19 +1612,17 @@ def test_log_build_failure_helper_method(caplog_fixture, mock_component_data):
 
 
 def test_log_build_failure_workflow_helper_method(caplog_fixture):
-    """Test the _log_build_failure_workflow helper method directly."""
-    builder = WorkflowBuilder()
-
+    """Test the _log_build_failure helper function for workflow directly."""
     completed_components = [("comp1", "llms"), ("comp2", "embedders")]
     remaining_components = [("comp3", "functions")]
     original_error = ValueError("Workflow build failed")
 
-    # Call the helper method
-    builder._log_build_failure_workflow(completed_components, remaining_components, original_error)
+    # Call the helper function
+    _log_build_failure(WORKFLOW_COMPONENT_NAME, "workflow", completed_components, remaining_components, original_error)
 
     # Verify error logging content
     log_text = caplog_fixture.text
-    assert "Failed to initialize component <workflow> (workflow)" in log_text
+    assert f"Failed to initialize component {WORKFLOW_COMPONENT_NAME} (workflow)" in log_text
     assert "Successfully built components:" in log_text
     assert "- comp1 (llms)" in log_text
     assert "- comp2 (embedders)" in log_text
@@ -1441,16 +1633,15 @@ def test_log_build_failure_workflow_helper_method(caplog_fixture):
 
 def test_log_build_failure_no_completed_components(caplog_fixture, mock_component_data):
     """Test error logging when no components have been successfully built."""
-    builder = WorkflowBuilder()
-
     completed_components = []
     remaining_components = [("comp1", "embedders"), ("comp2", "functions")]
     original_error = ValueError("First component failed")
 
-    builder._log_build_failure_component(mock_component_data,
-                                         completed_components,
-                                         remaining_components,
-                                         original_error)
+    _log_build_failure(mock_component_data.name,
+                       mock_component_data.component_group.value,
+                       completed_components,
+                       remaining_components,
+                       original_error)
 
     log_text = caplog_fixture.text
     assert "Failed to initialize component test_component (llms)" in log_text
@@ -1463,16 +1654,15 @@ def test_log_build_failure_no_completed_components(caplog_fixture, mock_componen
 
 def test_log_build_failure_no_remaining_components(caplog_fixture, mock_component_data):
     """Test error logging when no components remain to be built."""
-    builder = WorkflowBuilder()
-
     completed_components = [("comp1", "llms"), ("comp2", "embedders")]
     remaining_components = []
     original_error = ValueError("Last component failed")
 
-    builder._log_build_failure_component(mock_component_data,
-                                         completed_components,
-                                         remaining_components,
-                                         original_error)
+    _log_build_failure(mock_component_data.name,
+                       mock_component_data.component_group.value,
+                       completed_components,
+                       remaining_components,
+                       original_error)
 
     log_text = caplog_fixture.text
     assert "Failed to initialize component test_component (llms)" in log_text
@@ -1597,7 +1787,7 @@ async def test_integration_error_logging_with_failing_function(caplog_fixture):
     # Should list remaining components that still need to be built
     assert "Remaining components to build:" in log_text
     assert "- another_working_function (functions)" in log_text
-    assert "- <workflow> (workflow)" in log_text
+    assert f"- {WORKFLOW_COMPONENT_NAME} (workflow)" in log_text
 
     # Should include the original error
     assert "Original error:" in log_text
@@ -1631,7 +1821,7 @@ async def test_integration_error_logging_with_workflow_failure(caplog_fixture):
     log_text = caplog_fixture.text
 
     # Should have the main error message for workflow failure
-    assert "Failed to initialize component <workflow> (workflow)" in log_text
+    assert f"Failed to initialize component {WORKFLOW_COMPONENT_NAME} (workflow)" in log_text
 
     # Should list all successfully built components (functions should have succeeded)
     assert "Successfully built components:" in log_text
@@ -1644,3 +1834,91 @@ async def test_integration_error_logging_with_workflow_failure(caplog_fixture):
     # Should include the original error
     assert "Original error:" in log_text
     assert "Function initialization failed" in log_text
+
+
+# Function Middleware Tests
+
+
+class TMiddlewareConfig(MiddlewareBaseConfig, name="test_middleware"):
+    raise_error: bool = False
+
+
+@register_middleware(config_type=TMiddlewareConfig)
+async def register_test_middleware(config: TMiddlewareConfig, b: Builder):
+    from nat.middleware.function_middleware import FunctionMiddleware
+
+    class TestMiddleware(FunctionMiddleware):
+
+        def __init__(self, raise_error: bool = False):
+            super().__init__()
+            self.raise_error = raise_error
+
+        @property
+        def enabled(self) -> bool:
+            return True
+
+        async def pre_invoke(self, _context):
+            return None
+
+        async def post_invoke(self, _context):
+            return None
+
+    if config.raise_error:
+        raise ValueError("Middleware initialization failed")
+
+    yield TestMiddleware(raise_error=config.raise_error)
+
+
+async def test_add_middleware():
+
+    async with WorkflowBuilder() as builder:
+        await builder.add_middleware("middleware_name", TMiddlewareConfig())
+
+        with pytest.raises(ValueError):
+            await builder.add_middleware("middleware_name2", TMiddlewareConfig(raise_error=True))
+
+        # Try and add the same name
+        with pytest.raises(ValueError):
+            await builder.add_middleware("middleware_name", TMiddlewareConfig())
+
+
+async def test_get_middleware():
+
+    async with WorkflowBuilder() as builder:
+        config = TMiddlewareConfig()
+
+        middleware = await builder.add_middleware("middleware_name", config)
+
+        assert middleware == await builder.get_middleware("middleware_name")
+
+        with pytest.raises(ValueError):
+            await builder.get_middleware("middleware_name_not_exist")
+
+
+async def test_get_middleware_config():
+
+    async with WorkflowBuilder() as builder:
+        config = TMiddlewareConfig()
+
+        await builder.add_middleware("middleware_name", config)
+
+        assert builder.get_middleware_config("middleware_name") == config
+
+        with pytest.raises(ValueError):
+            builder.get_middleware_config("middleware_name_not_exist")
+
+
+async def test_get_middlewares_batch():
+    """Test getting multiple middlewares at once."""
+
+    async with WorkflowBuilder() as builder:
+        config1 = TMiddlewareConfig()
+        config2 = TMiddlewareConfig()
+
+        await builder.add_middleware("middleware1", config1)
+        await builder.add_middleware("middleware2", config2)
+
+        middleware = await builder.get_middleware_list(["middleware1", "middleware2"])
+
+        assert len(middleware) == 2
+        assert all(i is not None for i in middleware)

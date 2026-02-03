@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,6 +21,8 @@ from pydantic import BaseModel
 class UsageStatsLLM(BaseModel):
     prompt_tokens: int = 0
     completion_tokens: int = 0
+    cached_tokens: int = 0
+    reasoning_tokens: int = 0
     total_tokens: int = 0
 
 

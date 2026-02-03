@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,12 +20,13 @@ Answer the following questions as best you can. You may ask the human to use the
 
 {tools}
 
-You may respond in one of two formats.
+You may respond in one of two formats. 
 Use the following format exactly to ask the human to use a tool:
 
 Question: the input question you must answer
 Thought: you should always think about what to do
 Action: the action to take, should be one of [{tool_names}]
+
 Action Input: the input to the action (if there is no required input, include "Action Input: None")
 Observation: wait for the human to respond with the result from the tool, do not assume the response
 
