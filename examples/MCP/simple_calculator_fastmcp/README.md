@@ -21,7 +21,7 @@ limitations under the License.
 
 This example demonstrates how to run the NVIDIA NeMo Agent Toolkit as a FastMCP server and use those tools from a Model Context Protocol (MCP) client workflow.
 
-This example mirrors the `simple_calculator_mcp` workflow, but it uses the FastMCP server command and defaults to port `9902`. The `nvidia-nat-fastmcp` package provides the FastMCP server integration.
+This example mirrors the `simple_calculator_mcp` workflow, but it uses the FastMCP server command and defaults to port `9902`. The FastMCP server integration comes from `nvidia-nat-fastmcp`, and the MCP client commands and configuration use `nvidia-nat-mcp`.
 
 ## Prerequisites
 
@@ -50,7 +50,23 @@ nat fastmcp server run --config_file examples/getting_started/simple_calculator/
 
 This starts a FastMCP server on port `9902` with endpoint `/mcp` and uses `streamable-http` transport.
 
-2. Run the workflow:
+2. Inspect the tools available on the FastMCP server using the MCP client:
+
+```bash
+nat mcp client tool list --url http://localhost:9902/mcp
+```
+
+Sample output:
+
+```text
+calculator__add
+calculator__subtract
+calculator__multiply
+calculator__divide
+calculator__compare
+```
+
+3. Run the workflow:
 
 ```bash
 nat run --config_file examples/MCP/simple_calculator_fastmcp/configs/config-mcp-client.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
