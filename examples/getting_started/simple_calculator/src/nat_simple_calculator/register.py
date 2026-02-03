@@ -24,8 +24,9 @@ from nat.data_models.function import FunctionGroupBaseConfig
 
 
 class CalculatorToolConfig(FunctionGroupBaseConfig, name="calculator"):
-    include: list[str] = Field(default_factory=lambda: ["add", "subtract", "multiply", "divide", "compare"],
-                               description="The list of functions to include in the calculator function group.")
+    include: list[str] = Field(
+        default_factory=lambda: ["add", "subtract", "multiply", "divide", "compare", "power_of_two"],
+        description="The list of functions to include in the calculator function group.")
 
 
 @register_function_group(config_type=CalculatorToolConfig)
@@ -83,10 +84,15 @@ async def calculator(_config: CalculatorToolConfig, _builder: Builder) -> AsyncG
             return f"{a} is less than {b}"
         return f"{a} is equal to {b}"
 
+    async def _power_of_two(number: float) -> float:
+        """Raise a number to the power of 2."""
+        return number**2
+
     group.add_function(name="add", fn=_add, description=_add.__doc__)
     group.add_function(name="subtract", fn=_subtract, description=_subtract.__doc__)
     group.add_function(name="multiply", fn=_multiply, description=_multiply.__doc__)
     group.add_function(name="divide", fn=_divide, description=_divide.__doc__)
     group.add_function(name="compare", fn=_compare, description=_compare.__doc__)
+    group.add_function(name="power_of_two", fn=_power_of_two, description=_power_of_two.__doc__)
 
     yield group
