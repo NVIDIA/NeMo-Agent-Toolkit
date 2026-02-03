@@ -39,9 +39,9 @@ limitations under the License.
 
 ## 🔥 New Features
 
-- [**LangGraph Agent Automatic Wrapper:**](./examples/frameworks/auto_wrapper/langchain_deep_research/README.md) Easily onboard existing LangGraph agents to NeMo Agent Toolkit. Use the automatic wrapper to access NeMo Agent Toolkit's advanced features with very little modification of LangGraph agents.
+- [**LangGraph Agent Automatic Wrapper:**](./examples/frameworks/auto_wrapper/langchain_deep_research/README.md) Easily onboard existing LangGraph agents to NeMo Agent Toolkit. Use the automatic wrapper to access NeMo Agent Toolkit advanced features with very little modification of LangGraph agents.
 
-- [**Automatic Reinforcement Learning (RL):**](./docs/source/improve-workflows/finetuning/index.md) Improve your agent quality by fine-tuning open LLMs to better understand your agent's workflows, tools, and prompts. Perform GRPO with [OpenPipe ART](./docs/source/improve-workflows/finetuning/rl_with_openpipe.md) or DPO with [NeMo Customizer](./docs/source/improve-workflows/finetuning/dpo_with_nemo_customizer.md) using NeMo Agent Toolkit's built-in evaluation system as a verifier.
+- [**Automatic Reinforcement Learning (RL):**](./docs/source/improve-workflows/finetuning/index.md) Improve your agent quality by fine-tuning open LLMs to better understand your agent's workflows, tools, and prompts. Perform GRPO with [OpenPipe ART](./docs/source/improve-workflows/finetuning/rl_with_openpipe.md) or DPO with [NeMo Customizer](./docs/source/improve-workflows/finetuning/dpo_with_nemo_customizer.md) using NeMo Agent Toolkit built-in evaluation system as a verifier.
 
 - [**Initial NVIDIA Dynamo Integration:**](./examples/dynamo_integration/README.md) Accelerate end-to-end deployment of agentic workflows with initial Dynamo support. Utilize the new agent-aware router to improve worker latency by predicting future agent behavior.
 
@@ -62,7 +62,7 @@ limitations under the License.
   - 🔁 [**Reusability:**](./docs/source/components/sharing-components.md) Build components once and use them multiple times to maximize the value from development effort.
   - ⚡ [**Customization:**](docs/source/get-started/tutorials/customize-a-workflow.md) Start with a pre-built agent, tool, or workflow, and customize it to your needs.
   - 💬 [**Built-In User Interface:**](./docs/source/run-workflows/launching-ui.md) Use the NeMo Agent Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
-- 📈 **Agent Insights:** Utilize NeMo Agent Toolkit's instrumentation to better understand how your agents function at runtime.
+- 📈 **Agent Insights:** Utilize NeMo Agent Toolkit instrumentation to better understand how your agents function at runtime.
   - 📊 [**Profiling:**](./docs/source/improve-workflows/profiler.md) Profile entire workflows from the agent level all the way down to individual tokens to identify bottlenecks, analyze token efficiency, and guide developers in optimizing their agents.
   - 🔎 [**Observability:**](./docs/source/run-workflows/observe/observe.md) Track performance, trace execution flows, and gain insights into your agent behaviors in production.
 - 🚀 **Agent Optimization:** Improve your agent's quality, accuracy, and performance with a suite of tools for all phases of the agent lifecycle.
