@@ -317,7 +317,7 @@ async def test_run_workflow_local_workflow_interrupted(evaluation_run, eval_inpu
 
 
 async def test_workflow_continues_after_one_item_fails(evaluation_run, session_manager):
-    """Test that failed items have error set on the item with successful items completing."""
+    """Test that a failing EvalInputItem produces None output_obj while successful items complete."""
     # Override with 2 items
     evaluation_run.eval_input = EvalInput(eval_input_items=[
         EvalInputItem(id=1,

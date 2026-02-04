@@ -50,16 +50,17 @@ class EvaluationRemoteWorkflowHandler:
         question: str = item.input_obj
         payload: dict = {"input_message": question}
 
-        max_attempts: int = self.config.endpoint_retry.max_retries if self.config.endpoint_retry.do_auto_retry else 1
+        retry_attempts: int = (self.config.endpoint_retry.max_retries
+                               if self.config.endpoint_retry.do_auto_retry else 1)
 
-        for attempt in range(max_attempts):
+        for attempt in range(retry_attempts):
             try:
                 endpoint: str = f"{self.config.endpoint}/generate/full"
                 async with session.post(endpoint, json=payload) as response:
                     # Check if retriable HTTP error
                     if response.status in self.config.endpoint_retry.retry_status_codes:
                         logger.warning(f"Received retriable HTTP {response.status} from {endpoint}")
-                        if await self._retry_request(attempt, max_attempts):
+                        if await self._retry_request(attempt, retry_attempts):
                             continue
 
                     response.raise_for_status()
@@ -77,8 +78,8 @@ class EvaluationRemoteWorkflowHandler:
                                 chunk_data: dict = json.loads(line[len(DATA_PREFIX):])
                                 if chunk_data.get("value"):
                                     final_response = chunk_data.get("value")
-                            except json.JSONDecodeError as e:
-                                logger.exception("Failed to parse generate response chunk: %s", e)
+                            except json.JSONDecodeError:
+                                logger.exception("Failed to parse generate response chunk")
                                 continue
                         elif line.startswith(INTERMEDIATE_DATA_PREFIX):
                             try:
@@ -94,16 +95,16 @@ class EvaluationRemoteWorkflowHandler:
                                                                      or "remote_function_id"),
                                     payload=payload_obj)
                                 intermediate_steps.append(intermediate_step)
-                            except (json.JSONDecodeError, ValidationError) as e:
-                                logger.exception("Failed to parse intermediate step: %s", e)
+                            except (json.JSONDecodeError, ValidationError):
+                                logger.exception("Failed to parse intermediate step")
                                 continue
 
                 item.output_obj = final_response
                 item.trajectory = intermediate_steps
                 return
 
-            except aiohttp.ClientError as e:
-                logger.exception("Request failed for question %s: %s", question, e)
+            except aiohttp.ClientError:
+                logger.exception("Request failed for question %s", question)
                 item.output_obj = None
                 item.trajectory = []
                 return
