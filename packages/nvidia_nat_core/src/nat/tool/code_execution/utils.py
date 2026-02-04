@@ -56,7 +56,7 @@ def _extract_between_separators(generation: str, separators: tuple[str, str], ex
         separators = [re.escape(sp) for sp in separators]
         pattern = f'{separators[0]}(.*?){separators[1]}'
         return re.findall(pattern, generation, re.DOTALL)
-    return generation.split(separators[0])[-1].split(separators[1])[0]
+    return generation.rsplit(separators[0], maxsplit=1)[-1].split(separators[1])[0]
 
 
 def extract_code_to_execute(generation: str, code_begin: str, code_end: str, extract_all: bool = False):

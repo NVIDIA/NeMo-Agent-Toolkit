@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import logging
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from typing import Literal
 from typing import Self
@@ -33,7 +33,7 @@ from .contract_version import ContractVersion
 logger = logging.getLogger(__name__)
 
 
-class FinishReason(str, Enum):
+class FinishReason(StrEnum):
     """Finish reason for chat completion responses."""
 
     STOP = "stop"

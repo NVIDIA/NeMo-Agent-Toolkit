@@ -16,7 +16,7 @@
 import time
 import typing
 import uuid
-from enum import Enum
+from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel
@@ -30,7 +30,7 @@ from nat.data_models.invocation_node import InvocationNode
 from nat.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
 
 
-class IntermediateStepCategory(str, Enum):
+class IntermediateStepCategory(StrEnum):
     LLM = "LLM"
     TOOL = "TOOL"
     WORKFLOW = "WORKFLOW"
@@ -41,7 +41,7 @@ class IntermediateStepCategory(str, Enum):
     TTC = "TTC"
 
 
-class IntermediateStepType(str, Enum):
+class IntermediateStepType(StrEnum):
     LLM_START = "LLM_START"
     LLM_END = "LLM_END"
     LLM_NEW_TOKEN = "LLM_NEW_TOKEN"
@@ -62,7 +62,7 @@ class IntermediateStepType(str, Enum):
     SPAN_END = "SPAN_END"
 
 
-class IntermediateStepState(str, Enum):
+class IntermediateStepState(StrEnum):
     START = "START"
     CHUNK = "CHUNK"
     END = "END"

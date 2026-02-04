@@ -17,7 +17,7 @@ import importlib.metadata
 import inspect
 import logging
 import typing
-from enum import Enum
+from enum import StrEnum
 from functools import lru_cache
 from types import ModuleType
 from typing import TYPE_CHECKING
@@ -36,12 +36,12 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class DiscoveryStatusEnum(str, Enum):
+class DiscoveryStatusEnum(StrEnum):
     SUCCESS = "success"
     FAILURE = "failure"
 
 
-class DiscoveryContractFieldsEnum(str, Enum):
+class DiscoveryContractFieldsEnum(StrEnum):
     PACKAGE = "package"
     VERSION = "version"
     COMPONENT_TYPE = "component_type"

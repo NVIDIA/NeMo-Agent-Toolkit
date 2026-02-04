@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import logging
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -25,7 +25,7 @@ from nat.data_models.intermediate_step import IntermediateStepType
 logger = logging.getLogger(__name__)
 
 
-class StepAdaptorMode(str, Enum):
+class StepAdaptorMode(StrEnum):
     DEFAULT = "default"
     CUSTOM = "custom"
     OFF = "off"

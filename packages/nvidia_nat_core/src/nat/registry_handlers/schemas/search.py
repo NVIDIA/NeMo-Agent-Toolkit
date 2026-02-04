@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import logging
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel
 
@@ -24,7 +24,7 @@ from nat.registry_handlers.schemas.status import StatusMessage
 logger = logging.getLogger(__name__)
 
 
-class SearchFields(str, Enum):
+class SearchFields(StrEnum):
     ALL = "all"
     PACKAGE = "package"
     VERSION = "version"
@@ -33,7 +33,7 @@ class SearchFields(str, Enum):
     DEVELOPER_NOTES = "developer_notes"
 
 
-class VisualizeFields(str, Enum):
+class VisualizeFields(StrEnum):
     PACKAGE = "package"
     VERSION = "version"
     COMPONENT_TYPE = "component_type"

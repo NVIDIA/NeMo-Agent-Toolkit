@@ -135,10 +135,7 @@ def main(base_branch: str) -> None:
             else:
                 print(f"- {pkg} {base_version} -> {head_version}")
         except KeyError:
-            if not printed_header:
-                print("Changed packages:")
-                printed_header = True
-            print(f"- {pkg} (source)")
+            pass
 
 
 if __name__ == "__main__":

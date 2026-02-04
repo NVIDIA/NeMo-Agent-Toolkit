@@ -31,7 +31,7 @@ class CustomMilvusClient:
         self.__dict__.update(kwargs)
 
     def list_collections(self):
-        return ["collection1", "collection2"]
+        return ["collection1", "collection2", "collection_custom_vector", "collection_int_ids"]
 
     def describe_collection(self, collection_name: str):
         collection_descriptions = {
@@ -54,6 +54,40 @@ class CustomMilvusClient:
             },
             "collection2": {
                 "collection_name": "collection1",
+                "fields": [
+                    {
+                        "name": "text"
+                    },
+                    {
+                        "name": "author"
+                    },
+                    {
+                        "name": "title"
+                    },
+                    {
+                        "name": "vector"
+                    },
+                ]
+            },
+            "collection_custom_vector": {
+                "collection_name": "collection_custom_vector",
+                "fields": [
+                    {
+                        "name": "text"
+                    },
+                    {
+                        "name": "author"
+                    },
+                    {
+                        "name": "title"
+                    },
+                    {
+                        "name": "embeddings"
+                    },
+                ]
+            },
+            "collection_int_ids": {
+                "collection_name": "collection_int_ids",
                 "fields": [
                     {
                         "name": "text"
@@ -109,18 +143,29 @@ class CustomMilvusClient:
         assert isinstance(anns_field, str)
         to_return = min(limit, 4)
 
+        # Use integer IDs for collection_int_ids to test ID type casting
+        use_int_ids = collection_name == "collection_int_ids"
+
         return [[
             {
-                'id': '1234', 'distance': 0.45, 'entity': self._get_entity_from_fields(output_fields, num=1)
+                'id': 1234 if use_int_ids else '1234',
+                'distance': 0.45,
+                'entity': self._get_entity_from_fields(output_fields, num=1)
             },
             {
-                'id': '5678', 'distance': 0.55, 'entity': self._get_entity_from_fields(output_fields, num=2)
+                'id': 5678 if use_int_ids else '5678',
+                'distance': 0.55,
+                'entity': self._get_entity_from_fields(output_fields, num=2)
             },
             {
-                'id': '2468', 'distance': 0.70, 'entity': self._get_entity_from_fields(output_fields, num=3)
+                'id': 2468 if use_int_ids else '2468',
+                'distance': 0.70,
+                'entity': self._get_entity_from_fields(output_fields, num=3)
             },
             {
-                'id': '1357', 'distance': 0.85, 'entity': self._get_entity_from_fields(output_fields, num=4)
+                'id': 1357 if use_int_ids else '1357',
+                'distance': 0.85,
+                'entity': self._get_entity_from_fields(output_fields, num=4)
             },
         ][:to_return]]
 
@@ -177,7 +222,7 @@ class CustomAsyncMilvusClient:
         self.__dict__.update(kwargs)
 
     async def list_collections(self):
-        return ["collection1", "collection2"]
+        return ["collection1", "collection2", "collection_custom_vector", "collection_int_ids"]
 
     async def describe_collection(self, collection_name: str):
         collection_descriptions = {
@@ -200,6 +245,40 @@ class CustomAsyncMilvusClient:
             },
             "collection2": {
                 "collection_name": "collection1",
+                "fields": [
+                    {
+                        "name": "text"
+                    },
+                    {
+                        "name": "author"
+                    },
+                    {
+                        "name": "title"
+                    },
+                    {
+                        "name": "vector"
+                    },
+                ]
+            },
+            "collection_custom_vector": {
+                "collection_name": "collection_custom_vector",
+                "fields": [
+                    {
+                        "name": "text"
+                    },
+                    {
+                        "name": "author"
+                    },
+                    {
+                        "name": "title"
+                    },
+                    {
+                        "name": "embeddings"
+                    },
+                ]
+            },
+            "collection_int_ids": {
+                "collection_name": "collection_int_ids",
                 "fields": [
                     {
                         "name": "text"
@@ -255,18 +334,29 @@ class CustomAsyncMilvusClient:
         assert isinstance(anns_field, str)
         to_return = min(limit, 4)
 
+        # Use integer IDs for collection_int_ids to test ID type casting
+        use_int_ids = collection_name == "collection_int_ids"
+
         return [[
             {
-                'id': '1234', 'distance': 0.45, 'entity': self._get_entity_from_fields(output_fields, num=1)
+                'id': 1234 if use_int_ids else '1234',
+                'distance': 0.45,
+                'entity': self._get_entity_from_fields(output_fields, num=1)
             },
             {
-                'id': '5678', 'distance': 0.55, 'entity': self._get_entity_from_fields(output_fields, num=2)
+                'id': 5678 if use_int_ids else '5678',
+                'distance': 0.55,
+                'entity': self._get_entity_from_fields(output_fields, num=2)
             },
             {
-                'id': '2468', 'distance': 0.70, 'entity': self._get_entity_from_fields(output_fields, num=3)
+                'id': 2468 if use_int_ids else '2468',
+                'distance': 0.70,
+                'entity': self._get_entity_from_fields(output_fields, num=3)
             },
             {
-                'id': '1357', 'distance': 0.85, 'entity': self._get_entity_from_fields(output_fields, num=4)
+                'id': 1357 if use_int_ids else '1357',
+                'distance': 0.85,
+                'entity': self._get_entity_from_fields(output_fields, num=4)
             },
         ][:to_return]]
 
@@ -572,3 +662,124 @@ async def test_async_milvus_validation(async_milvus_retriever):
     async_milvus_retriever.content_field = "c"
     with pytest.raises(ValueError):
         _ = await async_milvus_retriever.search(query="Test query", collection_name="collection1", top_k=2)
+
+
+# Tests for custom vector field names and integer primary keys
+
+
+@pytest.fixture(name="milvus_retriever_fresh")
+def _get_milvus_retriever_fresh():
+    """Fresh retriever instance for tests that need unbound state."""
+    test_client = CustomMilvusClient()
+    return MilvusRetriever(
+        client=test_client,
+        embedder=TestEmbeddings(),
+    )
+
+
+@pytest.fixture(name="async_milvus_retriever_fresh")
+def _get_async_milvus_retriever_fresh():
+    """Fresh async retriever instance for tests that need unbound state."""
+    test_client = CustomAsyncMilvusClient()
+    return MilvusRetriever(
+        client=test_client,
+        embedder=TestEmbeddings(),
+    )
+
+
+async def test_milvus_custom_vector_field(milvus_retriever_fresh):
+    """Test that custom vector field names work correctly.
+
+    This tests the fix for the vector_field config mapping issue where
+    the retriever's _search method expects 'vector_field_name' parameter.
+    """
+    # Search with custom vector field name should work
+    res = await milvus_retriever_fresh.search(
+        query="Test query?",
+        collection_name="collection_custom_vector",
+        top_k=2,
+        vector_field_name="embeddings",
+    )
+    assert isinstance(res, RetrieverOutput)
+    assert len(res) == 2
+
+    # Using the default "vector" field should fail since the collection uses "embeddings"
+    with pytest.raises(ValueError, match="vector.*not part of the schema"):
+        _ = await milvus_retriever_fresh.search(
+            query="Test query?",
+            collection_name="collection_custom_vector",
+            top_k=2,
+        )
+
+
+async def test_milvus_integer_primary_keys(milvus_retriever_fresh):
+    """Test that integer primary keys are handled correctly.
+
+    This tests the fix for document_id type casting where Milvus returns
+    integer IDs but the Document model expects string IDs.
+    """
+    res = await milvus_retriever_fresh.search(
+        query="Test query?",
+        collection_name="collection_int_ids",
+        top_k=2,
+    )
+    assert isinstance(res, RetrieverOutput)
+    assert len(res) == 2
+
+    # Verify document_id is a string even though Milvus returned an integer
+    doc = res.results[0]
+    assert isinstance(doc.document_id, str)
+    assert doc.document_id == "1234"
+
+
+async def test_async_milvus_custom_vector_field(async_milvus_retriever_fresh):
+    """Test that custom vector field names work correctly with async client."""
+    res = await async_milvus_retriever_fresh.search(
+        query="Test query?",
+        collection_name="collection_custom_vector",
+        top_k=2,
+        vector_field_name="embeddings",
+    )
+    assert isinstance(res, RetrieverOutput)
+    assert len(res) == 2
+
+    # Using the default "vector" field should fail since the collection uses "embeddings"
+    with pytest.raises(ValueError, match="vector.*not part of the schema"):
+        _ = await async_milvus_retriever_fresh.search(
+            query="Test query?",
+            collection_name="collection_custom_vector",
+            top_k=2,
+        )
+
+
+async def test_async_milvus_integer_primary_keys(async_milvus_retriever_fresh):
+    """Test that integer primary keys are handled correctly with async client."""
+    res = await async_milvus_retriever_fresh.search(
+        query="Test query?",
+        collection_name="collection_int_ids",
+        top_k=2,
+    )
+    assert isinstance(res, RetrieverOutput)
+    assert len(res) == 2
+
+    # Verify document_id is a string even though Milvus returned an integer
+    doc = res.results[0]
+    assert isinstance(doc.document_id, str)
+    assert doc.document_id == "1234"
+
+
+async def test_milvus_bind_custom_vector_field(milvus_retriever_fresh):
+    """Test that binding vector_field_name works correctly.
+
+    This tests that the vector_field can be bound via bind() and used
+    in subsequent searches without passing it explicitly.
+    """
+    milvus_retriever_fresh.bind(
+        collection_name="collection_custom_vector",
+        top_k=2,
+        vector_field_name="embeddings",
+    )
+
+    res = await milvus_retriever_fresh.search(query="Test query?")
+    assert isinstance(res, RetrieverOutput)
+    assert len(res) == 2

@@ -13,14 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel
 
 from nat.plugins.data_flywheel.observability.schema.schema_registry import SchemaRegistry
 
 
-class ContractVersion(str, Enum):
+class ContractVersion(StrEnum):
     """The contract version for Elasticsearch schema."""
 
     V1_0 = "1.0"
