@@ -235,6 +235,10 @@ class StartCommandGroup(click.Group):
 
             return asyncio.run(run_plugin())
 
+        except KeyboardInterrupt:
+            logger.info("Interrupted by user.")
+            return None
+
         except Exception as e:
             logger.error("Failed to initialize workflow")
             raise click.ClickException(str(e)) from e
