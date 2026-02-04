@@ -23,6 +23,7 @@ from aiohttp.test_utils import TestClient
 from aiohttp.test_utils import TestServer
 
 from nat.data_models.api_server import ResponseIntermediateStep
+from nat.eval.config import EndpointRetryConfig
 from nat.eval.config import EvaluationRunConfig
 from nat.eval.remote_workflow import EvaluationRemoteWorkflowHandler
 
@@ -199,3 +200,217 @@ async def test_run_workflow_remote_single_with_connection_error(rag_eval_input):
     # Should fail gracefully: no output, no trajectory
     assert item.output_obj is None
     assert item.trajectory == []
+
+
+@pytest.mark.parametrize("status_code", [429, 500, 502, 503, 504])
+async def test_retry_on_transient_errors(rag_eval_input, status_code):
+    """
+    Test that transient HTTP errors trigger retry logic.
+    """
+    item = rag_eval_input.eval_input_items[0]
+    single_item_input = type(rag_eval_input)(eval_input_items=[item])
+    final_output = item.output_obj
+    request_count = 0
+
+    async def error_then_success(request):
+        nonlocal request_count
+        request_count += 1
+
+        if request_count <= 2:
+            return web.Response(status=status_code, text=f"Transient error {status_code}")
+
+        resp = web.StreamResponse(status=200, headers={"Content-Type": "text/event-stream"})
+        await resp.prepare(request)
+        await resp.write(f"data: {json.dumps({'value': final_output})}\n\n".encode())
+        await resp.write_eof()
+        return resp
+
+    app = web.Application()
+    app.router.add_post("/generate/full", error_then_success)
+    server = TestServer(app)
+    await server.start_server()
+
+    eval_run_config = EvaluationRunConfig(endpoint=str(server.make_url("")).rstrip("/"),
+                                          endpoint_timeout=10,
+                                          endpoint_retry=EndpointRetryConfig(
+                                              max_retries=3, retry_status_codes=[429, 500, 502, 503, 504]),
+                                          config_file=Path(__file__),
+                                          dataset=None,
+                                          result_json_path="",
+                                          skip_workflow=False,
+                                          skip_completed_entries=False,
+                                          reps=1)
+
+    handler = EvaluationRemoteWorkflowHandler(config=eval_run_config, max_concurrency=2)
+    await handler.run_workflow_remote(single_item_input)
+
+    await server.close()
+
+    assert request_count == 3
+    assert item.output_obj == final_output
+
+
+async def test_retry_respects_max_retries(rag_eval_input):
+    """
+    Test that retry stops after max_retries attempts.
+    """
+    item = rag_eval_input.eval_input_items[0]
+    single_item_input = type(rag_eval_input)(eval_input_items=[item])
+    request_count = 0
+
+    async def always_fail(request):
+        nonlocal request_count
+        request_count += 1
+        return web.Response(status=503, text="Always failing")
+
+    app = web.Application()
+    app.router.add_post("/generate/full", always_fail)
+    server = TestServer(app)
+    await server.start_server()
+
+    eval_run_config = EvaluationRunConfig(endpoint=str(server.make_url("")).rstrip("/"),
+                                          endpoint_timeout=10,
+                                          endpoint_retry=EndpointRetryConfig(max_retries=2, retry_status_codes=[503]),
+                                          config_file=Path(__file__),
+                                          dataset=None,
+                                          result_json_path="",
+                                          skip_workflow=False,
+                                          skip_completed_entries=False,
+                                          reps=1)
+
+    handler = EvaluationRemoteWorkflowHandler(config=eval_run_config, max_concurrency=2)
+    await handler.run_workflow_remote(single_item_input)
+
+    await server.close()
+
+    assert request_count == 2
+    assert item.output_obj is None
+
+
+@pytest.mark.parametrize("status_code", [401, 404])
+async def test_no_retry_on_non_retriable_errors(rag_eval_input, status_code):
+    """
+    Test that non-retriable HTTP errors (401, 404) do not trigger retry.
+    """
+    item = rag_eval_input.eval_input_items[0]
+    single_item_input = type(rag_eval_input)(eval_input_items=[item])
+    request_count = 0
+
+    async def non_retriable_error(request):
+        nonlocal request_count
+        request_count += 1
+        return web.Response(status=status_code, text=f"Error {status_code}")
+
+    app = web.Application()
+    app.router.add_post("/generate/full", non_retriable_error)
+    server = TestServer(app)
+    await server.start_server()
+
+    eval_run_config = EvaluationRunConfig(endpoint=str(server.make_url("")).rstrip("/"),
+                                          endpoint_timeout=10,
+                                          endpoint_retry=EndpointRetryConfig(
+                                              max_retries=3, retry_status_codes=[429, 500, 502, 503, 504]),
+                                          config_file=Path(__file__),
+                                          dataset=None,
+                                          result_json_path="",
+                                          skip_workflow=False,
+                                          skip_completed_entries=False,
+                                          reps=1)
+
+    handler = EvaluationRemoteWorkflowHandler(config=eval_run_config, max_concurrency=2)
+    await handler.run_workflow_remote(single_item_input)
+
+    await server.close()
+
+    assert request_count == 1
+    assert item.output_obj is None
+
+
+async def test_retry_disabled(rag_eval_input):
+    """
+    Test that retry logic can be disabled by setting do_auto_retry=False.
+    """
+    item = rag_eval_input.eval_input_items[0]
+    single_item_input = type(rag_eval_input)(eval_input_items=[item])
+    request_count = 0
+
+    async def transient_error(request):
+        nonlocal request_count
+        request_count += 1
+        return web.Response(status=503, text="Service Unavailable")
+
+    app = web.Application()
+    app.router.add_post("/generate/full", transient_error)
+    server = TestServer(app)
+    await server.start_server()
+
+    eval_run_config = EvaluationRunConfig(endpoint=str(server.make_url("")).rstrip("/"),
+                                          endpoint_timeout=10,
+                                          endpoint_retry=EndpointRetryConfig(do_auto_retry=False,
+                                                                             max_retries=3,
+                                                                             retry_status_codes=[503]),
+                                          config_file=Path(__file__),
+                                          dataset=None,
+                                          result_json_path="",
+                                          skip_workflow=False,
+                                          skip_completed_entries=False,
+                                          reps=1)
+
+    handler = EvaluationRemoteWorkflowHandler(config=eval_run_config, max_concurrency=2)
+    await handler.run_workflow_remote(single_item_input)
+
+    await server.close()
+
+    assert request_count == 1
+    assert item.output_obj is None
+
+
+async def test_custom_retry_status_codes(rag_eval_input):
+    """
+    Test that only configured status codes trigger retry.
+    """
+    item = rag_eval_input.eval_input_items[0]
+    single_item_input = type(rag_eval_input)(eval_input_items=[item])
+    request_count = 0
+
+    async def status_500_error(request):
+        nonlocal request_count
+        request_count += 1
+        return web.Response(status=500, text="Internal Server Error")
+
+    app = web.Application()
+    app.router.add_post("/generate/full", status_500_error)
+    server = TestServer(app)
+    await server.start_server()
+
+    eval_run_config = EvaluationRunConfig(endpoint=str(server.make_url("")).rstrip("/"),
+                                          endpoint_timeout=10,
+                                          endpoint_retry=EndpointRetryConfig(max_retries=3,
+                                                                             retry_status_codes=[429, 503]),
+                                          config_file=Path(__file__),
+                                          dataset=None,
+                                          result_json_path="",
+                                          skip_workflow=False,
+                                          skip_completed_entries=False,
+                                          reps=1)
+
+    handler = EvaluationRemoteWorkflowHandler(config=eval_run_config, max_concurrency=2)
+    await handler.run_workflow_remote(single_item_input)
+
+    await server.close()
+
+    assert request_count == 1
+    assert item.output_obj is None
+
+
+@pytest.mark.parametrize("invalid_value", [0, -1, -10])
+async def test_max_retries_lower_bound_validation(invalid_value: int) -> None:
+    """Test that max_retries must be >= 1."""
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError) as exc_info:
+        EndpointRetryConfig(max_retries=invalid_value)
+
+    error = exc_info.value.errors()[0]
+    assert error["type"] == "greater_than_equal"
+    assert error["loc"] == ("max_retries", )

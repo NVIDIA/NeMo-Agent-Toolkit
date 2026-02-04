@@ -66,7 +66,16 @@ class TrajectoryEvaluator(BaseEvaluator):
             )
         except Exception as e:
             logger.exception("Error evaluating trajectory for question: %s, Error: %s", question, e)
-            return EvalOutputItem(id=item.id, score=0.0, reasoning=f"Error evaluating trajectory: {e}")
+            return EvalOutputItem(
+                id=item.id,
+                score=0.0,
+                reasoning={
+                    "question": str(question),
+                    "generated_answer": str(generated_answer),
+                    "trajectory_length": len(agent_trajectory),
+                },
+                error=str(e),
+            )
 
         reasoning = {
             "reasoning": eval_result["reasoning"],

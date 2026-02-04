@@ -142,8 +142,9 @@ async def test_trajectory_evaluate_failure(trajectory_evaluator, rag_eval_input,
         # Validate failed evaluation
         assert failed_item, "Failed item missing in the output"
         assert failed_item.score == failing_score.get("score")
-        assert "Error evaluating trajectory" in failed_item.reasoning, \
-            f"Expected error message in reasoning, got: {failed_item.reasoning}"
+        assert failed_item.error is not None, "Expected error to be set on failed item"
+        assert error_message in failed_item.error, \
+            f"Expected error message in error, got: {failed_item.error}"
 
         # Validate successful evaluation
         assert successful_item, "Successful item missing in the output"

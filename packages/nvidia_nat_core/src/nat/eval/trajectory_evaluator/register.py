@@ -19,6 +19,7 @@ from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.cli.register_workflow import register_evaluator
 from nat.data_models.evaluator import EvaluatorBaseConfig
+from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
 
 class TrajectoryEvaluatorConfig(EvaluatorBaseConfig, name="trajectory"):
@@ -26,13 +27,42 @@ class TrajectoryEvaluatorConfig(EvaluatorBaseConfig, name="trajectory"):
 
     llm_name: str = Field(description="LLM as a judge.")
 
+    # LLM retry configuration
+    do_auto_retry: bool = Field(default=True, description="Enable automatic retry on transient LLM errors.")
+    num_retries: int = Field(default=3, ge=1, description="Number of LLM retry attempts.")
+    retry_on_status_codes: list[int] = Field(
+        default=[429, 500, 502, 503, 504],
+        description="HTTP status codes from LLM that trigger retry.",
+    )
+    retry_on_errors: list[str] = Field(
+        default=[
+            "Too Many Requests",
+            "429",
+            "Internal Server Error",
+            "Bad Gateway",
+            "Service Unavailable",
+            "Gateway Timeout",
+        ],
+        description="LLM error message substrings that trigger retry.",
+    )
+
 
 @register_evaluator(config_type=TrajectoryEvaluatorConfig)
 async def register_trajectory_evaluator(config: TrajectoryEvaluatorConfig, builder: EvalBuilder):
     from nat.builder.framework_enum import LLMFrameworkEnum
 
     from .evaluate import TrajectoryEvaluator
+
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+
+    if config.do_auto_retry:
+        llm = patch_with_retry(
+            llm,
+            retries=config.num_retries,
+            retry_codes=config.retry_on_status_codes,
+            retry_on_messages=config.retry_on_errors,
+        )
+
     tools = await builder.get_all_tools(wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     _evaluator = TrajectoryEvaluator(llm, tools, builder.get_max_concurrency())

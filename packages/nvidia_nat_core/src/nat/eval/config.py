@@ -16,6 +16,7 @@
 from pathlib import Path
 
 from pydantic import BaseModel
+from pydantic import Field
 
 from nat.eval.evaluator.evaluator_model import EvalInput
 from nat.eval.evaluator.evaluator_model import EvalOutput
@@ -23,47 +24,129 @@ from nat.eval.usage_stats import UsageStats
 from nat.profiler.data_models import ProfilerResults
 
 
+class EndpointRetryConfig(BaseModel):
+    """Configuration for HTTP retry behavior on remote workflow endpoints."""
+
+    do_auto_retry: bool = Field(
+        default=True,
+        description="Enable automatic retry on transient HTTP errors.",
+    )
+    max_retries: int = Field(
+        default=3,
+        ge=1,
+        description="Maximum retry attempts.",
+    )
+    retry_status_codes: list[int] = Field(
+        default=[429, 500, 502, 503, 504],
+        description="HTTP status codes that trigger automatic retry.",
+    )
+
+
 class EvaluationRunConfig(BaseModel):
-    """
-    Parameters used for a single evaluation run.
-    """
-    config_file: Path | BaseModel
-    dataset: str | None = None  # dataset file path can be specified in the config file
-    result_json_path: str = "$"
-    skip_workflow: bool = False
-    skip_completed_entries: bool = False
-    endpoint: str | None = None  # only used when running the workflow remotely
-    endpoint_timeout: int = 300
-    reps: int = 1
-    override: tuple[tuple[str, str], ...] = ()
-    # If false, the output will not be written to the output directory. This is
-    # useful when running evaluation via another tool.
-    write_output: bool = True
-    # if true, the dataset is adjusted to a multiple of the concurrency
-    adjust_dataset_size: bool = False
-    # number of passes at each concurrency, if 0 the dataset is adjusted to a multiple of the
-    # concurrency. The is only used if adjust_dataset_size is true
-    num_passes: int = 0
-    # timeout for waiting for trace export tasks to complete
-    export_timeout: float = 60.0
-    # User ID to use for workflow session. Defaults to 'nat_eval_user_id'.
-    user_id: str = "nat_eval_user_id"
+    """Parameters used for a single evaluation run."""
+
+    config_file: Path | BaseModel = Field(
+        ...,
+        description="Path to the evaluation config file or a config model instance.",
+    )
+    dataset: str | None = Field(
+        default=None,
+        description="Dataset file path. Can also be specified in the config file.",
+    )
+    result_json_path: str = Field(
+        default="$",
+        description="JSONPath expression to extract the result from workflow output.",
+    )
+    skip_workflow: bool = Field(
+        default=False,
+        description="If true, skip workflow execution and use existing outputs.",
+    )
+    skip_completed_entries: bool = Field(
+        default=False,
+        description="If true, skip dataset entries that already have outputs.",
+    )
+    endpoint: str | None = Field(
+        default=None,
+        description="Remote workflow endpoint URL. Only used for remote execution.",
+    )
+    endpoint_timeout: int = Field(
+        default=300,
+        description="Timeout in seconds for remote workflow requests.",
+    )
+    endpoint_retry: EndpointRetryConfig = Field(
+        default_factory=EndpointRetryConfig,
+        description="Retry configuration for remote endpoint requests.",
+    )
+    reps: int = Field(
+        default=1,
+        description="Number of repetitions for each dataset entry.",
+    )
+    override: tuple[tuple[str, str], ...] = Field(
+        default=(),
+        description="Config overrides as key-value tuples.",
+    )
+    write_output: bool = Field(
+        default=True,
+        description="If false, output will not be written to disk. Useful when running via another tool.",
+    )
+    adjust_dataset_size: bool = Field(
+        default=False,
+        description="If true, adjust dataset size to a multiple of concurrency.",
+    )
+    num_passes: int = Field(
+        default=0,
+        description="Number of passes at each concurrency level. Only used if adjust_dataset_size is true.",
+    )
+    export_timeout: float = Field(
+        default=60.0,
+        description="Timeout in seconds for trace export tasks to complete.",
+    )
+    user_id: str = Field(
+        default="nat_eval_user_id",
+        description="User ID for the workflow session.",
+    )
 
 
 class EvaluationRunOutput(BaseModel):
-    """
-    Output of a single evaluation run.
-    """
-    workflow_output_file: Path | None
-    evaluator_output_files: list[Path]
-    workflow_interrupted: bool
+    """Output of a single evaluation run."""
 
-    eval_input: EvalInput
-    evaluation_results: list[tuple[str, EvalOutput]]
-    usage_stats: UsageStats | None = None
-    profiler_results: ProfilerResults
-
-    # Configuration files written to output directory
-    config_original_file: Path | None = None
-    config_effective_file: Path | None = None
-    config_metadata_file: Path | None = None
+    workflow_output_file: Path | None = Field(
+        ...,
+        description="Path to the workflow output JSON file.",
+    )
+    evaluator_output_files: list[Path] = Field(
+        ...,
+        description="Paths to evaluator output JSON files.",
+    )
+    workflow_interrupted: bool = Field(
+        ...,
+        description="True if the workflow was interrupted before completing all items.",
+    )
+    eval_input: EvalInput = Field(
+        ...,
+        description="Evaluation input containing all dataset items and their outputs.",
+    )
+    evaluation_results: list[tuple[str, EvalOutput]] = Field(
+        ...,
+        description="List of evaluator results as (evaluator_name, output) tuples.",
+    )
+    usage_stats: UsageStats | None = Field(
+        default=None,
+        description="LLM usage statistics collected during evaluation.",
+    )
+    profiler_results: ProfilerResults = Field(
+        ...,
+        description="Profiling results from the evaluation run.",
+    )
+    config_original_file: Path | None = Field(
+        default=None,
+        description="Path to the original config file written to output directory.",
+    )
+    config_effective_file: Path | None = Field(
+        default=None,
+        description="Path to the effective config file with overrides applied.",
+    )
+    config_metadata_file: Path | None = Field(
+        default=None,
+        description="Path to the config metadata file.",
+    )

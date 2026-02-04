@@ -48,62 +48,64 @@ class EvaluationRemoteWorkflowHandler:
         Sends a single input to the endpoint hosting the workflow and retrieves the response.
         """
         question = item.input_obj
-        # generate request format
         payload = {"input_message": question}
 
-        try:
-            # Use the streaming endpoint
-            endpoint = f"{self.config.endpoint}/generate/full"
-            async with session.post(endpoint, json=payload) as response:
-                response.raise_for_status()  # Raise an exception for HTTP errors
+        max_attempts = self.config.endpoint_retry.max_retries if self.config.endpoint_retry.do_auto_retry else 1
 
-                # Initialize variables to store the response
-                final_response = None
-                intermediate_steps = []
-
-                # Process the streaming response
-                async for line in response.content:
-                    line = line.decode('utf-8').strip()
-                    if not line:
-                        continue
-
-                    if line.startswith(DATA_PREFIX):
-                        # This is a generate response chunk
-                        try:
-                            chunk_data = json.loads(line[len(DATA_PREFIX):])
-                            if chunk_data.get("value"):
-                                final_response = chunk_data.get("value")
-                        except json.JSONDecodeError as e:
-                            logger.exception("Failed to parse generate response chunk: %s", e)
-                            continue
-                    elif line.startswith(INTERMEDIATE_DATA_PREFIX):
-                        # This is an intermediate step
-                        try:
-                            step_data = json.loads(line[len(INTERMEDIATE_DATA_PREFIX):])
-                            response_intermediate = ResponseIntermediateStep.model_validate(step_data)
-                            # The payload is expected to be IntermediateStepPayload
-                            payload = IntermediateStepPayload.model_validate_json(response_intermediate.payload)
-                            intermediate_step = IntermediateStep(parent_id="remote",
-                                                                 function_ancestry=InvocationNode(
-                                                                     function_name=payload.name or "remote_function",
-                                                                     function_id=payload.UUID or "remote_function_id"),
-                                                                 payload=payload)
-                            intermediate_steps.append(intermediate_step)
-                        except (json.JSONDecodeError, ValidationError) as e:
-                            logger.exception("Failed to parse intermediate step: %s", e)
+        for attempt in range(max_attempts):
+            try:
+                endpoint = f"{self.config.endpoint}/generate/full"
+                async with session.post(endpoint, json=payload) as response:
+                    # Check if retriable HTTP error
+                    if response.status in self.config.endpoint_retry.retry_status_codes:
+                        logger.warning(f"Received retriable HTTP {response.status} from {endpoint}")
+                        if await self._retry_request(attempt, max_attempts):
                             continue
 
-        except aiohttp.ClientError as e:
-            # Handle connection or HTTP-related errors
-            logger.exception("Request failed for question %s: %s", question, e)
-            item.output_obj = None
-            item.trajectory = []
-            return
+                    response.raise_for_status()
 
-        # Extract and fill the item with the response and intermediate steps
-        item.output_obj = final_response
-        item.trajectory = intermediate_steps
-        return
+                    final_response = None
+                    intermediate_steps = []
+
+                    async for line in response.content:
+                        line = line.decode('utf-8').strip()
+                        if not line:
+                            continue
+
+                        if line.startswith(DATA_PREFIX):
+                            try:
+                                chunk_data = json.loads(line[len(DATA_PREFIX):])
+                                if chunk_data.get("value"):
+                                    final_response = chunk_data.get("value")
+                            except json.JSONDecodeError as e:
+                                logger.exception("Failed to parse generate response chunk: %s", e)
+                                continue
+                        elif line.startswith(INTERMEDIATE_DATA_PREFIX):
+                            try:
+                                step_data = json.loads(line[len(INTERMEDIATE_DATA_PREFIX):])
+                                response_intermediate = ResponseIntermediateStep.model_validate(step_data)
+                                payload_obj = IntermediateStepPayload.model_validate_json(response_intermediate.payload)
+                                intermediate_step = IntermediateStep(
+                                    parent_id="remote",
+                                    function_ancestry=InvocationNode(function_name=payload_obj.name
+                                                                     or "remote_function",
+                                                                     function_id=payload_obj.UUID
+                                                                     or "remote_function_id"),
+                                    payload=payload_obj)
+                                intermediate_steps.append(intermediate_step)
+                            except (json.JSONDecodeError, ValidationError) as e:
+                                logger.exception("Failed to parse intermediate step: %s", e)
+                                continue
+
+                item.output_obj = final_response
+                item.trajectory = intermediate_steps
+                return
+
+            except aiohttp.ClientError as e:
+                logger.exception("Request failed for question %s: %s", question, e)
+                item.output_obj = None
+                item.trajectory = []
+                return
 
     async def run_workflow_remote_with_limits(self, session: aiohttp.ClientSession, item: EvalInputItem, pbar: tqdm):
         """
@@ -131,3 +133,17 @@ class EvaluationRemoteWorkflowHandler:
             pbar.close()
 
         return eval_input
+
+    async def _retry_request(self, attempt: int, max_retries: int) -> bool:
+        """
+        Sleep with exponential backoff if retry attempts remain.
+
+        Returns True if should retry, False if last attempt.
+        """
+        if attempt < max_retries - 1:
+            backoff = min(2.0**attempt, 30.0)
+            logger.info(f"Retrying after {backoff:.1f}s backoff (attempt {attempt + 1}/{max_retries})")
+            await asyncio.sleep(backoff)
+            return True
+        logger.warning(f"Max retries reached ({max_retries}), failing request")
+        return False
