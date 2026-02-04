@@ -111,6 +111,7 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 ### Control Flow
 - **[`router_agent`](control_flow/router_agent/README.md)**: Configurable Router Agent that analyzes incoming requests and directly routes them to the most appropriate branch (other agents, functions or tools) based on request content **[🟢 Beginner]**
 - **[`sequential_executor`](control_flow/sequential_executor/README.md)**: Linear tool execution pipeline that chains multiple functions together where each function's output becomes the input for the next function, with optional type compatibility checking and error handling **[🟢 Beginner]**
+- **[`mixture_of_control_flows`](control_flow/mixture_of_control_flows/README.md)**: Demonstrates how to compose router agent and sequential executor control flow patterns together, showing routing to sequential executors, calling router agents from sequential executors, and routing to nested router agents **[🟢 Beginner]**
 
 ### Custom Functions
 - **[`automated_description_generation`](custom_functions/automated_description_generation/README.md)**: Intelligent system that automatically generates descriptions for vector database collections by sampling and summarizing documents **[🟢 Beginner]**

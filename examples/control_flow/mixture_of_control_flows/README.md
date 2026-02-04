@@ -17,7 +17,7 @@ limitations under the License.
 
 # Mixture of Control Flows Example
 
-**Complexity:** 🟡 Intermediate
+**Complexity:** 🟢 Beginner
 
 This example demonstrates how to compose [router agent](../router_agent/README.md) and [sequential executor](../sequential_executor/README.md) control flow patterns in the NeMo Agent Toolkit. 
 
