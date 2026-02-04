@@ -43,11 +43,11 @@ uv pip install -e examples/MCP/simple_calculator_fastmcp
 ## Run the Workflow
 
 1. Start the FastMCP server:
-
+<!-- path-check-skip-begin -->
 ```bash
 nat fastmcp server run --config_file examples/getting_started/simple_calculator/configs/config.yml
 ```
-
+<!-- path-check-skip-end -->
 This starts a FastMCP server on port `9902` with endpoint `/mcp` and uses `streamable-http` transport.
 
 2. Inspect the tools available on the FastMCP server using the MCP client:
