@@ -16,6 +16,7 @@
 import os
 import tempfile
 from io import StringIO
+from pathlib import Path
 
 import pytest
 
@@ -463,3 +464,302 @@ def test_yaml_load_circular_dependency():
     finally:
         os.unlink(file_a_path)
         os.unlink(file_b_path)
+
+
+def test_load_file_content_basic():
+    """Test loading content from a file."""
+    from nat.utils.io.yaml_tools import _load_file_content
+
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+        f.write("Hello, this is prompt content!")
+        temp_path = f.name
+
+    try:
+        content = _load_file_content(temp_path)
+        assert content == "Hello, this is prompt content!"
+    finally:
+        os.unlink(temp_path)
+
+
+def test_load_file_content_file_not_found():
+    """Test that missing file raises FileNotFoundError."""
+    from nat.utils.io.yaml_tools import _load_file_content
+
+    with pytest.raises(FileNotFoundError, match="Prompt file not found"):
+        _load_file_content("/nonexistent/path/prompt.txt")
+
+
+def test_load_file_content_multiline():
+    """Test loading multiline prompt content."""
+    from nat.utils.io.yaml_tools import _load_file_content
+
+    multiline_content = """You are a helpful assistant.
+
+Please respond concisely and accurately.
+
+Remember to:
+- Be helpful
+- Be accurate"""
+
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.j2', delete=False) as f:
+        f.write(multiline_content)
+        temp_path = f.name
+
+    try:
+        content = _load_file_content(temp_path)
+        assert content == multiline_content
+    finally:
+        os.unlink(temp_path)
+
+
+def test_resolve_prompt_files_basic():
+    """Test resolving file:// references in prompt fields."""
+    from nat.utils.io.yaml_tools import _resolve_prompt_files
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Create a prompt file
+        prompt_file = Path(tmpdir) / "system.txt"
+        prompt_file.write_text("You are a helpful assistant.")
+
+        config = {
+            "system_prompt": f"file://{prompt_file}",
+            "other_field": "file://should_not_load.txt"  # key doesn't end with "prompt"
+        }
+
+        result = _resolve_prompt_files(config, Path(tmpdir))
+
+        assert result["system_prompt"] == "You are a helpful assistant."
+        assert result["other_field"] == "file://should_not_load.txt"
+
+
+def test_resolve_prompt_files_nested():
+    """Test resolving file:// references in nested dictionaries."""
+    from nat.utils.io.yaml_tools import _resolve_prompt_files
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        prompt_file = Path(tmpdir) / "agent.j2"
+        prompt_file.write_text("Agent prompt content")
+
+        config = {
+            "workflow": {
+                "agent": {
+                    "system_prompt": f"file://{prompt_file}"
+                }
+            }
+        }
+
+        result = _resolve_prompt_files(config, Path(tmpdir))
+
+        assert result["workflow"]["agent"]["system_prompt"] == "Agent prompt content"
+
+
+def test_resolve_prompt_files_relative_path():
+    """Test resolving relative file:// paths from config directory."""
+    from nat.utils.io.yaml_tools import _resolve_prompt_files
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Create prompts subdirectory
+        prompts_dir = Path(tmpdir) / "prompts"
+        prompts_dir.mkdir()
+
+        prompt_file = prompts_dir / "my_prompt.txt"
+        prompt_file.write_text("Relative path prompt")
+
+        config = {
+            "user_prompt": "file://prompts/my_prompt.txt"
+        }
+
+        result = _resolve_prompt_files(config, Path(tmpdir))
+
+        assert result["user_prompt"] == "Relative path prompt"
+
+
+def test_resolve_prompt_files_case_insensitive():
+    """Test that prompt key matching is case-insensitive."""
+    from nat.utils.io.yaml_tools import _resolve_prompt_files
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        prompt_file = Path(tmpdir) / "test.txt"
+        prompt_file.write_text("Case test content")
+
+        config = {
+            "SYSTEM_PROMPT": f"file://{prompt_file}",
+            "UserPrompt": f"file://{prompt_file}",
+            "additional_PROMPT": f"file://{prompt_file}",
+        }
+
+        result = _resolve_prompt_files(config, Path(tmpdir))
+
+        assert result["SYSTEM_PROMPT"] == "Case test content"
+        assert result["UserPrompt"] == "Case test content"
+        assert result["additional_PROMPT"] == "Case test content"
+
+
+def test_resolve_prompt_files_in_list():
+    """Test that file:// in lists is NOT resolved (only dict keys)."""
+    from nat.utils.io.yaml_tools import _resolve_prompt_files
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config = {
+            "prompts": ["file://prompt1.txt", "file://prompt2.txt"]
+        }
+
+        result = _resolve_prompt_files(config, Path(tmpdir))
+
+        # List values should NOT be resolved (key "prompts" ends with "s", not "prompt")
+        assert result["prompts"] == ["file://prompt1.txt", "file://prompt2.txt"]
+
+
+def test_resolve_prompt_files_non_file_value():
+    """Test that regular string values are not modified."""
+    from nat.utils.io.yaml_tools import _resolve_prompt_files
+
+    config = {
+        "system_prompt": "You are a helpful assistant.",
+        "another_prompt": "No file:// prefix here"
+    }
+
+    result = _resolve_prompt_files(config, Path("."))
+
+    assert result["system_prompt"] == "You are a helpful assistant."
+    assert result["another_prompt"] == "No file:// prefix here"
+
+
+def test_yaml_load_with_file_prompt():
+    """Test yaml_load resolves file:// prompts."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Create prompt file
+        prompt_file = Path(tmpdir) / "agent_prompt.txt"
+        prompt_file.write_text("You are an expert assistant.")
+
+        # Create config file
+        config_file = Path(tmpdir) / "config.yaml"
+        config_file.write_text("""
+workflow:
+  _type: react_agent
+  system_prompt: file://agent_prompt.txt
+  verbose: true
+""")
+
+        config = yaml_load(config_file)
+
+        assert config["workflow"]["system_prompt"] == "You are an expert assistant."
+        assert config["workflow"]["verbose"] is True
+
+
+def test_yaml_load_with_file_prompt_and_inheritance():
+    """Test yaml_load resolves file:// prompts with config inheritance."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Create prompt file
+        prompt_file = Path(tmpdir) / "base_prompt.j2"
+        prompt_file.write_text("Base system prompt content")
+
+        # Create base config
+        base_config = Path(tmpdir) / "base.yaml"
+        base_config.write_text("""
+workflow:
+  system_prompt: file://base_prompt.j2
+  temperature: 0.5
+""")
+
+        # Create child config
+        child_config = Path(tmpdir) / "child.yaml"
+        child_config.write_text("""
+base: base.yaml
+workflow:
+  temperature: 0.9
+""")
+
+        config = yaml_load(child_config)
+
+        # Prompt should be inherited and resolved from base
+        assert config["workflow"]["system_prompt"] == "Base system prompt content"
+        assert config["workflow"]["temperature"] == 0.9
+
+
+def test_yaml_load_with_file_prompt_absolute_path():
+    """Test yaml_load with absolute file:// path."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Create prompt file
+        prompt_file = Path(tmpdir) / "absolute_prompt.txt"
+        prompt_file.write_text("Absolute path prompt")
+
+        # Create config with absolute path
+        config_file = Path(tmpdir) / "config.yaml"
+        config_file.write_text(f"""
+workflow:
+  user_prompt: file://{prompt_file}
+""")
+
+        config = yaml_load(config_file)
+
+        assert config["workflow"]["user_prompt"] == "Absolute path prompt"
+
+
+def test_yaml_load_file_prompt_not_found():
+    """Test yaml_load raises error for missing prompt file."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config_file = Path(tmpdir) / "config.yaml"
+        config_file.write_text("""
+workflow:
+  system_prompt: file://nonexistent.txt
+""")
+
+        with pytest.raises(FileNotFoundError, match="Prompt file not found"):
+            yaml_load(config_file)
+
+
+def test_validate_prompt_file_extension_allowed():
+    """Test that allowed extensions work."""
+    from nat.utils.io.yaml_tools import _validate_prompt_file_extension
+
+    # These should not raise
+    allowed_files = [
+        Path("prompt.txt"),
+        Path("prompt.md"),
+        Path("prompt.j2"),
+        Path("prompt.jinja2"),
+        Path("prompt.jinja"),
+        Path("prompt.prompt"),
+        Path("prompt.tpl"),
+        Path("prompt.template"),
+        Path("PROMPT.TXT"),  # case insensitive
+        Path("prompt.J2"),
+    ]
+    for file_path in allowed_files:
+        _validate_prompt_file_extension(file_path)  # Should not raise
+
+
+def test_validate_prompt_file_extension_disallowed():
+    """Test that disallowed extensions raise ValueError."""
+    from nat.utils.io.yaml_tools import _validate_prompt_file_extension
+
+    disallowed_files = [
+        Path("script.py"),
+        Path("code.js"),
+        Path("config.yaml"),
+        Path("data.json"),
+        Path("binary.exe"),
+        Path("shell.sh"),
+        Path("noextension"),
+    ]
+    for file_path in disallowed_files:
+        with pytest.raises(ValueError, match="Unsupported file extension"):
+            _validate_prompt_file_extension(file_path)
+
+
+def test_yaml_load_with_disallowed_extension():
+    """Test yaml_load raises error for disallowed file extensions."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Create a Python file (not allowed)
+        python_file = Path(tmpdir) / "malicious.py"
+        python_file.write_text("print('hello')")
+
+        config_file = Path(tmpdir) / "config.yaml"
+        config_file.write_text("""
+workflow:
+  system_prompt: file://malicious.py
+""")
+
+        with pytest.raises(ValueError, match="Unsupported file extension"):
+            yaml_load(config_file)

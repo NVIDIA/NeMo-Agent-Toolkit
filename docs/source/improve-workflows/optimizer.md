@@ -123,6 +123,40 @@ There are three main types of search spaces:
 2. **Discrete/Categorical**: A list of specific choices (e.g., model names)
 3. **Prompt**: Special search space for optimizing text prompts using AI-powered mutations
 
+### Loading Prompts from Files
+
+Instead of embedding prompts directly in YAML, you can load them from external files using the `file://` prefix:
+
+```yaml
+workflow:
+  _type: react_agent
+  # Load from relative path (resolved from config file directory)
+  system_prompt: file://prompts/agent_system.j2
+
+  # Absolute paths also work
+  user_prompt: file:///opt/prompts/user.txt
+
+functions:
+  my_analyzer:
+    _type: email_phishing_analyzer
+    # Prompts in nested configs work too
+    prompt: file://prompts/phishing_analysis.txt
+```
+
+**Rules:**
+
+- Only fields whose key ends with `prompt` (case-insensitive) are eligible
+- The value must start with `file://`
+- Relative paths are resolved from the config file's directory
+- Allowed extensions: `.txt`, `.md`, `.j2`, `.jinja2`, `.jinja`, `.prompt`, `.tpl`, `.template`
+
+**Benefits for Optimization:**
+
+- Keep prompts in version-controlled files
+- Edit prompts without modifying YAML structure
+- Share base prompts across optimization configs
+- The optimizer will still mutate the loaded prompt content during GA optimization
+
 ### How They Work Together
 
 When you mark a field as optimizable and define its search space, you're telling the optimizer:
