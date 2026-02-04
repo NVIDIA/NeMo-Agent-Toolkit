@@ -66,9 +66,12 @@ async def test_agent_spec_yaml_end_to_end():
 
     async with WorkflowBuilder() as builder:
         async with register(config, builder) as wrapper_function:
-            # Verify we got a wrapper function
+            # Verify we got a wrapper function with correct structure
             assert wrapper_function is not None
             assert hasattr(wrapper_function, '_graph')
+            from langgraph.graph.state import CompiledStateGraph
+            assert isinstance(wrapper_function._graph, CompiledStateGraph), \
+                f"Expected CompiledStateGraph, got {type(wrapper_function._graph)}"
 
             # Invoke with a test message
             test_input = "Hello! Please respond with 'Agent-Spec test successful'."
@@ -80,10 +83,28 @@ async def test_agent_spec_yaml_end_to_end():
                 )
                 print(f"✓ Agent-Spec YAML executed successfully")
                 print(f"✓ Response: {result}")
+
+                # Stronger validation: verify result structure and content
                 assert result is not None
-                # Verify we got a response (should be a string or message)
-                result_str = str(result).lower()
-                assert len(result_str) > 0
+                from nat.plugins.agent_spec.agent_spec_workflow import AgentSpecWrapperOutput
+                assert isinstance(result, AgentSpecWrapperOutput), \
+                    f"Expected AgentSpecWrapperOutput, got {type(result)}"
+                assert hasattr(result, 'messages'), "Result should have messages attribute"
+                assert isinstance(result.messages, list), "Messages should be a list"
+                assert len(result.messages) > 0, "Should have at least one message"
+
+                # Verify message types and content
+                from langchain_core.messages import AIMessage, BaseMessage
+                last_message = result.messages[-1]
+                assert isinstance(last_message, BaseMessage), \
+                    f"Expected BaseMessage, got {type(last_message)}"
+                assert isinstance(last_message, AIMessage), \
+                    f"Expected AIMessage as last message, got {type(last_message)}"
+                assert hasattr(last_message, 'content'), "Message should have content attribute"
+                assert last_message.content is not None, "Message content should not be None"
+                result_str = str(last_message.content)
+                assert len(result_str.strip()) > 0, "Response should have non-empty content"
+                assert len(result_str) > 10, "Response should have meaningful content (more than 10 chars)"
             except asyncio.TimeoutError:
                 print(f"⚠ API call timed out after 60 seconds")
                 pytest.skip("API call timed out - may indicate network/API issues")
@@ -137,7 +158,12 @@ agentspec_version: 25.4.1
 
     async with WorkflowBuilder() as builder:
         async with register(config, builder) as wrapper_function:
+            # Verify we got a wrapper function with correct structure
             assert wrapper_function is not None
+            assert hasattr(wrapper_function, '_graph')
+            from langgraph.graph.state import CompiledStateGraph
+            assert isinstance(wrapper_function._graph, CompiledStateGraph), \
+                f"Expected CompiledStateGraph, got {type(wrapper_function._graph)}"
 
             test_input = "Say 'inline YAML test successful'."
 
@@ -148,7 +174,28 @@ agentspec_version: 25.4.1
                 )
                 print(f"✓ Inline YAML Agent-Spec executed successfully")
                 print(f"✓ Response: {result}")
+
+                # Stronger validation: verify result structure and content
                 assert result is not None
+                from nat.plugins.agent_spec.agent_spec_workflow import AgentSpecWrapperOutput
+                assert isinstance(result, AgentSpecWrapperOutput), \
+                    f"Expected AgentSpecWrapperOutput, got {type(result)}"
+                assert hasattr(result, 'messages'), "Result should have messages attribute"
+                assert isinstance(result.messages, list), "Messages should be a list"
+                assert len(result.messages) > 0, "Should have at least one message"
+
+                # Verify message types and content
+                from langchain_core.messages import AIMessage, BaseMessage
+                last_message = result.messages[-1]
+                assert isinstance(last_message, BaseMessage), \
+                    f"Expected BaseMessage, got {type(last_message)}"
+                assert isinstance(last_message, AIMessage), \
+                    f"Expected AIMessage as last message, got {type(last_message)}"
+                assert hasattr(last_message, 'content'), "Message should have content attribute"
+                assert last_message.content is not None, "Message content should not be None"
+                result_str = str(last_message.content)
+                assert len(result_str.strip()) > 0, "Response should have non-empty content"
+                assert len(result_str) > 10, "Response should have meaningful content (more than 10 chars)"
             except asyncio.TimeoutError:
                 print(f"⚠ API call timed out after 60 seconds")
                 pytest.skip("API call timed out - may indicate network/API issues")

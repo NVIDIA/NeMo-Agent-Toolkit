@@ -33,7 +33,7 @@ import yaml
 from collections.abc import AsyncGenerator
 from pathlib import Path
 from types import NoneType
-from typing import Any
+from typing import Any, Self
 
 from langchain_core.messages import BaseMessage
 from langchain_core.messages.utils import convert_to_messages
@@ -78,6 +78,17 @@ class AgentSpecWrapperConfig(FunctionBaseConfig, name="agent_spec_wrapper"):
     and executes it as a NAT Function.
 
     Exactly one of spec_file, spec_yaml, or spec_json must be provided.
+
+    Usage recommendations:
+    - For NAT YAML workflow configs: Use spec_file (cleaner, more maintainable)
+    - For programmatic/API use: Use spec_yaml or spec_json (dynamic configs, templating)
+
+    Component reuse limitation:
+    Agent-Spec embeds component configurations (e.g., LLMs) directly in the spec definition,
+    which limits component reuse across agents. Unlike other NAT plugins that support automatic
+    LLM resolution via llm_name, Agent-Spec requires explicit component IDs for component reuse.
+    Use components_registry to manually map component IDs to NAT-managed components (e.g., LLMs)
+    for sharing components across multiple Agent-Spec workflows.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -85,15 +96,20 @@ class AgentSpecWrapperConfig(FunctionBaseConfig, name="agent_spec_wrapper"):
     description: str = Field(default="", description="Description of the Agent-Spec workflow")
     spec_file: FilePath | None = Field(
         default=None,
-        description="Path to the Agent-Spec YAML/JSON configuration file"
+        description="Path to the Agent-Spec YAML/JSON configuration file. "
+        "Recommended for NAT YAML workflow configurations."
     )
     spec_yaml: str | None = Field(
         default=None,
-        description="Inline Agent-Spec YAML content"
+        description="Inline Agent-Spec YAML content as a string. "
+        "Primarily intended for programmatic use (API-driven configs, dynamic generation). "
+        "For NAT YAML workflow configs, prefer spec_file for better readability."
     )
     spec_json: str | None = Field(
         default=None,
-        description="Inline Agent-Spec JSON content"
+        description="Inline Agent-Spec JSON content as a string. "
+        "Primarily intended for programmatic use (API-driven configs, dynamic generation). "
+        "For NAT YAML workflow configs, prefer spec_file for better readability."
     )
     tool_registry: dict[str, Any] | None = Field(
         default=None,
@@ -111,7 +127,13 @@ class AgentSpecWrapperConfig(FunctionBaseConfig, name="agent_spec_wrapper"):
         default=None,
         description="Optional dictionary mapping component IDs to LangGraph components (e.g., LLMs). "
         "Can be used to override components defined in the Agent-Spec YAML, such as providing "
-        "a NAT LLM instead of the one specified in the YAML.",
+        "a NAT LLM instead of the one specified in the YAML. "
+        "Note: Unlike other NAT plugins that support llm_name for automatic LLM resolution, "
+        "Agent-Spec requires explicit component IDs (from the 'id' field) for component reuse. "
+        "For embedded Agent-Spec configs (where LLM configs are embedded in the YAML), "
+        "manual mapping via components_registry is the recommended approach for component reuse. "
+        "To use this, ensure your Agent-Spec YAML includes an 'id' field in the LLM config, "
+        "then map that ID to your NAT LLM: components_registry={'llm_id': nat_llm}.",
     )
     checkpointer: Any | None = Field(
         default=None,
@@ -125,7 +147,7 @@ class AgentSpecWrapperConfig(FunctionBaseConfig, name="agent_spec_wrapper"):
     )
 
     @model_validator(mode="after")
-    def _validate_sources(self):
+    def _validate_sources(self) -> Self:
         """Ensure exactly one of spec_file, spec_yaml, or spec_json is provided."""
         provided = [self.spec_file, self.spec_yaml, self.spec_json]
         cnt = sum(1 for v in provided if v is not None)
@@ -179,7 +201,7 @@ class AgentSpecWrapperFunction(Function[AgentSpecWrapperInput, NoneType, AgentSp
         """Invoke the Agent-Spec workflow."""
         try:
             from langchain_core.messages import trim_messages
-            
+
             # Trim message history if max_history is configured
             state = value.model_dump()
             if self.config.max_history > 0:
@@ -192,7 +214,7 @@ class AgentSpecWrapperFunction(Function[AgentSpecWrapperInput, NoneType, AgentSp
                     include_system=True,
                 )
                 state["messages"] = messages
-            
+
             # Check if the graph is an async context manager
             if hasattr(self._graph, "__aenter__") and hasattr(self._graph, "__aexit__"):
                 logger.debug("Graph is an async context manager")
@@ -208,7 +230,7 @@ class AgentSpecWrapperFunction(Function[AgentSpecWrapperInput, NoneType, AgentSp
         """Stream results from the Agent-Spec workflow."""
         try:
             from langchain_core.messages import trim_messages
-            
+
             # Trim message history if max_history is configured
             state = value.model_dump()
             if self.config.max_history > 0:
@@ -221,7 +243,7 @@ class AgentSpecWrapperFunction(Function[AgentSpecWrapperInput, NoneType, AgentSp
                     include_system=True,
                 )
                 state["messages"] = messages
-            
+
             if hasattr(self._graph, "__aenter__") and hasattr(self._graph, "__aexit__"):
                 logger.debug("Graph is an async context manager")
                 async with self._graph as graph:
