@@ -27,6 +27,7 @@ from nat.profiler.parameter_optimization.prompt_storage import PromptStorage
 
 
 class TestPromptStorageProtocol:
+
     def test_protocol_exists(self):
         """Test PromptStorage protocol can be imported."""
         assert PromptStorage is not None
@@ -39,14 +40,12 @@ class TestPromptStorageProtocol:
 
 
 class TestLocalFilePromptStorage:
+
     async def test_save_checkpoint_no_prefix(self, tmp_path: Path):
         """Test save_checkpoint writes to base_path when no prefix."""
         storage = LocalFilePromptStorage(base_path=tmp_path, key_prefix=None)
 
-        prompts = {
-            "system": ("You are helpful", "System prompt"),
-            "user": ("Answer questions", "User prompt")
-        }
+        prompts = {"system": ("You are helpful", "System prompt"), "user": ("Answer questions", "User prompt")}
 
         await storage.save_checkpoint(generation=1, prompts=prompts)
 
@@ -59,10 +58,7 @@ class TestLocalFilePromptStorage:
 
     async def test_save_checkpoint_with_prefix(self, tmp_path: Path):
         """Test save_checkpoint creates subdirectory when prefix provided."""
-        storage = LocalFilePromptStorage(
-            base_path=tmp_path,
-            key_prefix="experiment_001"
-        )
+        storage = LocalFilePromptStorage(base_path=tmp_path, key_prefix="experiment_001")
 
         prompts = {"test": ("prompt", "purpose")}
         await storage.save_checkpoint(generation=2, prompts=prompts)
@@ -127,15 +123,13 @@ class TestLocalFilePromptStorage:
 
 
 class TestObjectStorePromptStorage:
+
     async def test_save_checkpoint_with_prefix(self):
         """Test save_checkpoint constructs correct key with prefix."""
         mock_store = MagicMock()
         mock_store.upsert_object = AsyncMock()
 
-        storage = ObjectStorePromptStorage(
-            object_store=mock_store,
-            key_prefix="exp001"
-        )
+        storage = ObjectStorePromptStorage(object_store=mock_store, key_prefix="exp001")
 
         prompts = {"test": ("prompt", "purpose")}
         await storage.save_checkpoint(generation=1, prompts=prompts)
@@ -162,15 +156,10 @@ class TestObjectStorePromptStorage:
         # Mock datetime to control prefix
         mock_now = MagicMock()
         mock_now.strftime.return_value = "20260204_123456"
-        monkeypatch.setattr(
-            "nat.profiler.parameter_optimization.prompt_storage.datetime",
-            MagicMock(now=MagicMock(return_value=mock_now))
-        )
+        monkeypatch.setattr("nat.profiler.parameter_optimization.prompt_storage.datetime",
+                            MagicMock(now=MagicMock(return_value=mock_now)))
 
-        storage = ObjectStorePromptStorage(
-            object_store=mock_store,
-            key_prefix=None
-        )
+        storage = ObjectStorePromptStorage(object_store=mock_store, key_prefix=None)
 
         prompts = {"test": ("prompt", "purpose")}
         await storage.save_checkpoint(generation=1, prompts=prompts)
@@ -185,10 +174,7 @@ class TestObjectStorePromptStorage:
         mock_store = MagicMock()
         mock_store.upsert_object = AsyncMock()
 
-        storage = ObjectStorePromptStorage(
-            object_store=mock_store,
-            key_prefix="exp001"
-        )
+        storage = ObjectStorePromptStorage(object_store=mock_store, key_prefix="exp001")
 
         prompts = {"final": ("final prompt", "purpose")}
         await storage.save_final(prompts=prompts)
@@ -203,15 +189,10 @@ class TestObjectStorePromptStorage:
 
         # Mock get_object to return saved data
         saved_data = json.dumps({"test": ["prompt text", "purpose"]}).encode()
-        mock_store.get_object = AsyncMock(return_value=ObjectStoreItem(
-            data=saved_data,
-            content_type="application/json"
-        ))
+        mock_store.get_object = AsyncMock(
+            return_value=ObjectStoreItem(data=saved_data, content_type="application/json"))
 
-        storage = ObjectStorePromptStorage(
-            object_store=mock_store,
-            key_prefix="exp001"
-        )
+        storage = ObjectStorePromptStorage(object_store=mock_store, key_prefix="exp001")
 
         loaded = await storage.load_checkpoint(generation=1)
 

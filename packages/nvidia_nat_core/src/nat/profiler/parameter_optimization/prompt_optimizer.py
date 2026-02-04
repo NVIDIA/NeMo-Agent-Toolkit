@@ -175,20 +175,12 @@ async def optimize_prompts(
         if optimizer_config.object_store:
             # Use object store
             logger.info(f"Using object store '{optimizer_config.object_store.name}' for prompt storage")
-            store = await builder.get_object_store_client(
-                optimizer_config.object_store.name
-            )
-            storage = ObjectStorePromptStorage(
-                object_store=store,
-                key_prefix=optimizer_config.object_store.key_prefix
-            )
+            store = await builder.get_object_store_client(optimizer_config.object_store.name)
+            storage = ObjectStorePromptStorage(object_store=store, key_prefix=optimizer_config.object_store.key_prefix)
         else:
             # Fallback to file-based (backward compatible)
             logger.info("Using local file storage for prompts (backward compatible)")
-            storage = LocalFilePromptStorage(
-                base_path=out_dir,
-                key_prefix=None
-            )
+            storage = LocalFilePromptStorage(base_path=out_dir, key_prefix=None)
 
         # ------------- GA parameters ------------- #
         pop_size = max(2, int(optimizer_config.prompt.ga_population_size))
@@ -371,12 +363,10 @@ async def optimize_prompts(
             best = max(population, key=lambda i: (i.scalar_fitness or 0.0))
             checkpoint = {k: (best.prompts[k], prompt_space[k][1]) for k in prompt_space}
             try:
-                await storage.save_checkpoint(
-                    generation=gen,
-                    prompts=checkpoint,
-                    fitness_score=best.scalar_fitness,
-                    evaluator_scores=best.metrics
-                )
+                await storage.save_checkpoint(generation=gen,
+                                              prompts=checkpoint,
+                                              fitness_score=best.scalar_fitness,
+                                              evaluator_scores=best.metrics)
                 logger.info("[GA] Saved checkpoint for generation %d (fitness=%.4f)", gen, best.scalar_fitness or 0.0)
             except Exception as e:
                 logger.warning(f"Failed to save checkpoint for generation {gen}: {e}")

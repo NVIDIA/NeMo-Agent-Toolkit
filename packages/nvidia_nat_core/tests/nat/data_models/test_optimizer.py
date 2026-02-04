@@ -18,6 +18,7 @@ from nat.data_models.optimizer import OptimizerConfig
 
 
 class TestObjectStoreSettings:
+
     def test_create_with_name(self):
         """Test ObjectStoreSettings creation with name only."""
         settings = ObjectStoreSettings(name="local_store")
@@ -27,45 +28,32 @@ class TestObjectStoreSettings:
 
     def test_create_with_prefix(self):
         """Test ObjectStoreSettings creation with name and prefix."""
-        settings = ObjectStoreSettings(
-            name="s3_store",
-            key_prefix="experiment_001"
-        )
+        settings = ObjectStoreSettings(name="s3_store", key_prefix="experiment_001")
 
         assert settings.name == "s3_store"
         assert settings.key_prefix == "experiment_001"
 
 
 class TestOptimizerConfig:
+
     def test_create_without_object_store(self):
         """Test OptimizerConfig can be created without object_store."""
         config = OptimizerConfig(
-            eval_metrics={
-                "accuracy": {
-                    "evaluator_name": "exact_match",
-                    "direction": "maximize",
-                    "weight": 1.0
-                }
-            }
-        )
+            eval_metrics={"accuracy": {
+                "evaluator_name": "exact_match", "direction": "maximize", "weight": 1.0
+            }})
 
         assert config.object_store is None
 
     def test_create_with_object_store(self):
         """Test OptimizerConfig accepts object_store settings."""
         config = OptimizerConfig(
-            eval_metrics={
-                "accuracy": {
-                    "evaluator_name": "exact_match",
-                    "direction": "maximize",
-                    "weight": 1.0
-                }
-            },
+            eval_metrics={"accuracy": {
+                "evaluator_name": "exact_match", "direction": "maximize", "weight": 1.0
+            }},
             object_store={
-                "name": "local_store",
-                "key_prefix": "experiment_001"
-            }
-        )
+                "name": "local_store", "key_prefix": "experiment_001"
+            })
 
         assert config.object_store is not None
         assert config.object_store.name == "local_store"
@@ -74,17 +62,10 @@ class TestOptimizerConfig:
     def test_create_with_object_store_no_prefix(self):
         """Test OptimizerConfig with object_store but no key_prefix."""
         config = OptimizerConfig(
-            eval_metrics={
-                "accuracy": {
-                    "evaluator_name": "exact_match",
-                    "direction": "maximize",
-                    "weight": 1.0
-                }
-            },
-            object_store={
-                "name": "s3_store"
-            }
-        )
+            eval_metrics={"accuracy": {
+                "evaluator_name": "exact_match", "direction": "maximize", "weight": 1.0
+            }},
+            object_store={"name": "s3_store"})
 
         assert config.object_store is not None
         assert config.object_store.name == "s3_store"
