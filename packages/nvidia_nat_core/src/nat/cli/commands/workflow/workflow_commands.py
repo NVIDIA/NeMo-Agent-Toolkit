@@ -293,6 +293,9 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
         for template_name, output_path in files_to_render.items():
             template = env.get_template(template_name)
             content = template.render(context)
+            # Ensure content ends with a newline
+            if not content.endswith('\n'):
+                content += '\n'
             with open(output_path, 'w', encoding="utf-8") as f:
                 f.write(content)
 
