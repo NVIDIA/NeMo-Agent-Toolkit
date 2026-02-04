@@ -534,11 +534,9 @@ Each checkpoint includes rich metadata to track optimization progress:
   "metadata": {
     "generation": 1,
     "fitness_score": 0.8542,
-    "evaluator_scores": {
-      "accuracy": 0.85,
-      "token_efficiency": 492.4,
-      "llm_latency": 3.58
-    }
+    "accuracy": 0.85,
+    "token_efficiency": 492.4,
+    "llm_latency": 3.58
   },
   "prompts": {
     "functions.my_tool.prompt": [

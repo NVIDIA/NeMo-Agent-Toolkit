@@ -151,7 +151,8 @@ class LocalFilePromptStorage:
         if fitness_score is not None:
             checkpoint_data["metadata"]["fitness_score"] = fitness_score
         if evaluator_scores is not None:
-            checkpoint_data["metadata"]["evaluator_scores"] = evaluator_scores
+            # Flatten evaluator scores into individual metadata keys
+            checkpoint_data["metadata"].update(evaluator_scores)
 
         checkpoint_path.write_text(json.dumps(checkpoint_data, indent=2))
 
@@ -276,8 +277,9 @@ class ObjectStorePromptStorage:
             metadata["fitness_score"] = str(fitness_score)
 
         if evaluator_scores is not None:
-            # Store evaluator scores as JSON string since metadata values must be strings
-            metadata["evaluator_scores"] = json.dumps(evaluator_scores)
+            # Flatten evaluator scores into individual metadata keys (convert to strings)
+            for evaluator_name, score in evaluator_scores.items():
+                metadata[evaluator_name] = str(score)
 
         item = ObjectStoreItem(
             data=data,
