@@ -15,6 +15,10 @@
 
 from pathlib import Path
 
+from nat.data_models.object_store import KeyAlreadyExistsError  # noqa: F401
+from nat.data_models.object_store import NoSuchKeyError  # noqa: F401
+from nat.utils.type_utils import override
+
 from .interfaces import ObjectStore
 from .models import ObjectStoreItem
 
@@ -35,14 +39,18 @@ class LocalFileObjectStore(ObjectStore):
         self.base_path = Path(base_path)
         self.base_path.mkdir(parents=True, exist_ok=True)
 
+    @override
     async def put_object(self, key: str, item: ObjectStoreItem) -> None:
         raise NotImplementedError
 
+    @override
     async def upsert_object(self, key: str, item: ObjectStoreItem) -> None:
         raise NotImplementedError
 
+    @override
     async def get_object(self, key: str) -> ObjectStoreItem:
         raise NotImplementedError
 
+    @override
     async def delete_object(self, key: str) -> None:
         raise NotImplementedError
