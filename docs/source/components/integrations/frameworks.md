@@ -17,11 +17,11 @@ limitations under the License.
 
 # Framework Integrations
 
-NVIDIA NeMo Agent toolkit provides comprehensive support for multiple agentic frameworks, allowing you to use your preferred development tools while leveraging the capabilities of NeMo Agent toolkit. This document describes the framework integrations available and their respective levels of support.
+NVIDIA NeMo Agent Toolkit provides comprehensive support for multiple agentic frameworks, allowing you to use your preferred development tools while leveraging the capabilities of NeMo Agent Toolkit. This document describes the framework integrations available and their respective levels of support.
 
 ## Supported Frameworks
 
-NeMo Agent toolkit integrates with the following frameworks:
+NeMo Agent Toolkit integrates with the following frameworks:
 
 - **ADK**: Google Agent Development Kit for building AI agents
 - **Agno**: A lightweight framework for building AI agents
@@ -34,7 +34,7 @@ NeMo Agent toolkit integrates with the following frameworks:
 
 ## Framework Support Levels
 
-NeMo Agent toolkit provides different levels of support for each framework across the following dimensions:
+NeMo Agent Toolkit provides different levels of support for each framework across the following dimensions:
 
 ### LLM Provider Support
 The ability to use various large language model providers with a framework, including NVIDIA NIM, OpenAI, Azure OpenAI, AWS Bedrock, LiteLLM, and HuggingFace.
@@ -49,7 +49,7 @@ The ability to integrate with vector databases and retrieval systems, such as Ne
 The ability to use framework-specific [tool](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) calling mechanisms, allowing agents to invoke functions and tools during execution.
 
 ### Profiling Support
-The ability to view workflow execution traces including intermediate steps, LLM calls, and tool calls within the NeMo Agent toolkit [profiler](../../improve-workflows/profiler.md).
+The ability to view workflow execution traces including intermediate steps, LLM calls, and tool calls within the NeMo Agent Toolkit [profiler](../../improve-workflows/profiler.md).
 
 ## Framework Capabilities Matrix
 
@@ -186,7 +186,7 @@ uv pip install "nvidia-nat[llama-index]"
 
 ### Strands
 
-Strands is AWS's framework for building agents that can be deployed on Amazon Bedrock AgentCore runtime. The NeMo Agent toolkit exposes Strands as another framework target so you can keep your existing workflows, tools, and profiler instrumentation while Strands and AgentCore manage execution inside AWS.
+Strands is AWS's framework for building agents that can be deployed on Amazon Bedrock AgentCore runtime. The NeMo Agent Toolkit exposes Strands as another framework target so you can keep your existing workflows, tools, and profiler instrumentation while Strands and AgentCore manage execution inside AWS.
 
 | Capability              | Providers / Details                                                                 |
 |-------------------------|-------------------------------------------------------------------------------------|

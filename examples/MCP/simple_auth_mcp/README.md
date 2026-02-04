@@ -19,7 +19,7 @@ limitations under the License.
 
 **Complexity:** 🟨 Intermediate
 
-This example demonstrates how to use the NVIDIA NeMo Agent toolkit with MCP servers that require authentication. You'll authenticate with protected MCP services and access secured tools through OAuth2 flows.
+This example demonstrates how to use the NVIDIA NeMo Agent Toolkit with MCP servers that require authentication. You'll authenticate with protected MCP services and access secured tools through OAuth2 flows.
 
 It is recommended to read the [MCP Authentication](../../../docs/source/components/auth/mcp-auth/index.md) documentation first.
 
@@ -28,7 +28,7 @@ It is recommended to read the [MCP Authentication](../../../docs/source/componen
 1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 2. **MCP Server**: Access to an MCP server that requires authentication (e.g., corporate Jira system)
 
-**Note**: If you installed NeMo Agent toolkit from source, MCP client functionality is already included. If you installed from PyPI, you may need to install the MCP client package separately with `uv pip install "nvidia-nat[mcp]"`.
+**Note**: If you installed NeMo Agent Toolkit from source, MCP client functionality is already included. If you installed from PyPI, you may need to install the MCP client package separately with `uv pip install "nvidia-nat[mcp]"`.
 
 ## Install this Workflow
 
@@ -88,7 +88,7 @@ What is ticket AIQ-1935 about
 
 1. **Initial Request**: When you first run the workflow, it detects that authentication is required
 2. **OAuth2 Redirect**: The system opens your browser to the OAuth2 authorization server
-3. **User Authorization**: You log in and authorize the NeMo Agent toolkit to access the MCP server
+3. **User Authorization**: You log in and authorize the NeMo Agent Toolkit to access the MCP server
 4. **Token Exchange**: The system exchanges the authorization code for access and refresh tokens
 5. **Authenticated Access**: Subsequent requests use the stored tokens to access protected tools
 6. **Token Refresh**: Tokens are automatically refreshed when they expire

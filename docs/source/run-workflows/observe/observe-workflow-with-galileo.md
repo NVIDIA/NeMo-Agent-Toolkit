@@ -17,7 +17,7 @@ limitations under the License.
 
 # Observing a Workflow with Galileo
 
-This guide provides a step-by-step process to enable observability in a NeMo Agent toolkit workflow using Galileo for tracing. By the end of this guide, you will have:
+This guide provides a step-by-step process to enable observability in a NeMo Agent Toolkit workflow using Galileo for tracing. By the end of this guide, you will have:
 
 - Configured telemetry in your workflow.
 - Ability to view traces in the Galileo platform.
@@ -81,7 +81,7 @@ general:
 
 ## Step 7: Run Your Workflow
 
-From the root directory of the NeMo Agent toolkit library, install dependencies and run the pre-configured `simple_calculator_observability` example.
+From the root directory of the NeMo Agent Toolkit library, install dependencies and run the pre-configured `simple_calculator_observability` example.
 
 **Example:**
 

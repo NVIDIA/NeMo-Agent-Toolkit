@@ -20,7 +20,7 @@ limitations under the License.
 
 **Complexity:** 🟨 Intermediate
 
-This example demonstrates how to integrate any existing LangGraph agent with NeMo Agent toolkit using the `langgraph_wrapper` workflow type.
+This example demonstrates how to integrate any existing LangGraph agent with NeMo Agent Toolkit using the `langgraph_wrapper` workflow type.
 
 We use LangGraph's **Deep Research agent** as a comprehensive example—a sophisticated multi-agent system for conducting web research with planning, sub-agent coordination, and synthesis. The integration techniques shown here apply to any LangGraph agent.
 
@@ -28,7 +28,7 @@ We use LangGraph's **Deep Research agent** as a comprehensive example—a sophis
 
 The included Jupyter notebook (`langgraph_deep_research.ipynb`) provides a complete walkthrough:
 
-1. Running an existing LangGraph agent through NeMo Agent toolkit without code changes
+1. Running an existing LangGraph agent through NeMo Agent Toolkit without code changes
 2. Making agents configurable with different components (LLMs, tools, embedders)
 3. Adding Phoenix telemetry for observability
 4. Evaluating agent performance with automated metrics
@@ -37,7 +37,7 @@ The included Jupyter notebook (`langgraph_deep_research.ipynb`) provides a compl
 
 ### Prerequisites
 
-Ensure NeMo Agent toolkit is installed. If not, follow the [Installation Guide](../../../../docs/source/get-started/installation.md).
+Ensure NeMo Agent Toolkit is installed. If not, follow the [Installation Guide](../../../../docs/source/get-started/installation.md).
 
 ### API Keys
 

@@ -25,32 +25,20 @@ WHEELS_DIR="${WHEELS_BASE_DIR}/nvidia-nat"
 GIT_TAG=$(get_git_tag)
 rapids-logger "Git Version: ${GIT_TAG}"
 
-create_env group:dev extra:all
+create_env
 
-# Update internal dependencies to the current git tag
-set_versions
-
-build_wheel . "nvidia-nat/${GIT_TAG}"
-
-
-# Build all examples with a pyproject.toml in the first directory below examples
-for NAT_EXAMPLE in ${NAT_EXAMPLES[@]}; do
-    # places all wheels flat under example
-    build_wheel ${NAT_EXAMPLE} "examples"
-done
-
+build_wheel . "nvidia-nat"
 
 # Build all packages with a pyproject.toml in the first directory below packages
 for NAT_PACKAGE in "${NAT_PACKAGES[@]}"; do
     build_package_wheel ${NAT_PACKAGE}
 done
 
-if [[ "${BUILD_NAT_COMPAT}" == "true" ]]; then
-    WHEELS_DIR="${WHEELS_BASE_DIR}/nat"
-    for NAT_COMPAT_PACKAGE in "${NAT_COMPAT_PACKAGES[@]}"; do
-        build_package_wheel ${NAT_COMPAT_PACKAGE}
-    done
-fi
+# Build all examples with a pyproject.toml in the first directory below examples
+for NAT_EXAMPLE in ${NAT_EXAMPLES[@]}; do
+    # places all wheels flat under example
+    build_wheel ${NAT_EXAMPLE} "examples"
+done
 
 # Flatten out the wheels into a single directory for upload
 BUILT_WHEELS=$(find "${WHEELS_BASE_DIR}"/**/ -type f -name "*.whl")
@@ -60,7 +48,6 @@ for whl in ${BUILT_WHEELS}; do
     mv "${whl}" "${dest_wheel_name}"
     MOVED_WHEELS+=("${dest_wheel_name}")
 done
-
 
 # Test the built wheels
 deactivate

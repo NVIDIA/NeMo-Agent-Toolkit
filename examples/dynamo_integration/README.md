@@ -19,7 +19,7 @@ limitations under the License.
 **Complexity:** 🛑 Advanced
 
 > [!NOTE]
-> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
+> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent Toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
 
 > [!WARNING]
 > **This example requires a Linux system with an NVIDIA GPU.** See the [Dynamo Support Matrix](https://docs.nvidia.com/dynamo/archive/0.7.0/reference/support-matrix.html) for full details.
@@ -33,16 +33,16 @@ limitations under the License.
 > - ❌ macOS (Intel or Apple Silicon)
 > - ❌ Windows
 >
-> You do **not** need to install `ai-dynamo` or `ai-dynamo-runtime` packages locally. The Dynamo server runs inside pre-built Docker images from NGC (`nvcr.io/nvidia/ai-dynamo/sglang-runtime`), which include all necessary components. The NeMo Agent toolkit Dynamo LLM client (`_type: dynamo`) is a pure HTTP client that works on any platform.
+> You do **not** need to install `ai-dynamo` or `ai-dynamo-runtime` packages locally. The Dynamo server runs inside pre-built Docker images from NGC (`nvcr.io/nvidia/ai-dynamo/sglang-runtime`), which include all necessary components. The NeMo Agent Toolkit Dynamo LLM client (`_type: dynamo`) is a pure HTTP client that works on any platform.
 
 ## Overview
 
 > [!IMPORTANT]
 > **Prerequisite**: Before running these examples, complete the [Dynamo Backend Setup Guide](../../external/dynamo/README.md) to set up and verify your Dynamo inference server is running and responding to `curl` requests.
 
-**This set of example agents and evaluations demonstrate the capability to integrate NeMo Agent toolkit agents with LLM inference accelerated by NVIDIA Dynamo-hosted LLM endpoints.**
+**This set of example agents and evaluations demonstrate the capability to integrate NeMo Agent Toolkit agents with LLM inference accelerated by NVIDIA Dynamo-hosted LLM endpoints.**
 
-This set of examples is intended to grow over time as the synergies between NVIDIA NeMo Agent toolkit and [Dynamo](https://github.com/ai-dynamo/dynamo) evolve. In the first set of examples, we will analyze the performance (throughput and latency) of NeMo Agent toolkit agents requests to Dynamo and seek out key optimizations. Agentic LLM requests have predictable patterns with respect to conversation length, system prompts, and tool-calling. We aim to co-design our inference servers to provide better performance in a repeatable, mock, decision-only evaluation harness. The harness uses the Banking data subset and mock tools from the [Galileo Agent Leaderboard v2](https://huggingface.co/datasets/galileo-ai/agent-leaderboard-v2) benchmark to simulate agentic tool selection quality (TSQ).
+This set of examples is intended to grow over time as the synergies between NVIDIA NeMo Agent Toolkit and [Dynamo](https://github.com/ai-dynamo/dynamo) evolve. In the first set of examples, we will analyze the performance (throughput and latency) of NeMo Agent Toolkit agents requests to Dynamo and seek out key optimizations. Agentic LLM requests have predictable patterns with respect to conversation length, system prompts, and tool-calling. We aim to co-design our inference servers to provide better performance in a repeatable, mock, decision-only evaluation harness. The harness uses the Banking data subset and mock tools from the [Galileo Agent Leaderboard v2](https://huggingface.co/datasets/galileo-ai/agent-leaderboard-v2) benchmark to simulate agentic tool selection quality (TSQ).
 
 Most of these examples could be tested using a managed LLM service, like an NVIDIA NIM model endpoint, for inference. However, the intended analysis would require hosting the LLM endpoints on your own GPU cluster using Dynamo.
 
@@ -53,14 +53,14 @@ Most of these examples could be tested using a managed LLM service, like an NVID
 - **Dynamo Backend**: Fast LLM inference with KV cache optimization (default Dynamo method) and a predictive Thompson sampling router (new implementation)
 - **Self-Evaluation Loop**: Agent can re-evaluate and retry tool selection for improved quality.
 - **Comprehensive Metrics and Visualizations**: TSQ scores (accuracy of parameters has been excluded), token throughput, latency analysis. Visualized in A/B scatter plots and histograms for analysis.
-- **NeMo Agent toolkit**: Full integration with toolkit evaluators, optimizer, and profiler
+- **NeMo Agent Toolkit**: Full integration with toolkit evaluators, optimizer, and profiler
 
 ## Prerequisites
 
 ### Software Requirements
 
 1. **Python 3.11, 3.12, or 3.13** installed
-2. **NeMo Agent toolkit** repository cloned with LangChain integration (`uv pip install -e ".[langchain]"`)
+2. **NeMo Agent Toolkit** repository cloned with LangChain integration (`uv pip install -e ".[langchain]"`)
 3. **Docker** with NVIDIA Container Toolkit
 4. **NVIDIA Driver** with CUDA 12.0+ support, `nvidia-fabricmanager` enabled, and matching your driver version. Verify with:
 

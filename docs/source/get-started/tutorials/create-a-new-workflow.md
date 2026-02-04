@@ -18,7 +18,7 @@ limitations under the License.
 
 # Create a New Tool and Workflow with NVIDIA NeMo Agent Toolkit
 
-In the [Customizing a Workflow](./customize-a-workflow.md) and [Adding Tools to a Workflow](./create-a-new-workflow.md) tutorials, we have been primarily utilizing [tools](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) that were included with the NeMo Agent toolkit. This tutorial demonstrates how to create a new tool that can ingest data from local files stored on disk.
+In the [Customizing a Workflow](./customize-a-workflow.md) and [Adding Tools to a Workflow](./create-a-new-workflow.md) tutorials, we have been primarily utilizing [tools](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) that were included with the NeMo Agent Toolkit. This tutorial demonstrates how to create a new tool that can ingest data from local files stored on disk.
 
 For this purpose, create a new empty component using the `nat workflow create` command. This command automates the setup process by generating the necessary files and directory structure for your new [workflow](../../build-workflows/about-building-workflows.md).
 ```bash
@@ -59,7 +59,7 @@ examples/text_file_ingest
 <!-- path-check-skip-end -->
 
 :::{note}
-The completed code for this example can be found in the `examples/documentation_guides/workflows/text_file_ingest` directory of the NeMo Agent toolkit repository.
+The completed code for this example can be found in the `examples/documentation_guides/workflows/text_file_ingest` directory of the NeMo Agent Toolkit repository.
 :::
 
 <!-- path-check-skip-next-line -->
@@ -90,7 +90,7 @@ class TextFileIngestFunctionConfig(FunctionBaseConfig, name="text_file_ingest"):
 
 :::{note}
 The `name` parameter; the value of this will need to match the `_type` value in the workflow configuration file.
-For more details on NeMo Agent toolkit configuration objects, refer to the [Configuration Object Details](../../build-workflows/workflow-configuration.md#configuration-object) section of the [Workflow Configuration](../../build-workflows/workflow-configuration.md) document.
+For more details on NeMo Agent Toolkit configuration objects, refer to the [Configuration Object Details](../../build-workflows/workflow-configuration.md#configuration-object) section of the [Workflow Configuration](../../build-workflows/workflow-configuration.md) document.
 :::
 
 ## Customizing the Tool Function
@@ -133,7 +133,7 @@ Next, update the retrieval tool definition changing the `name` parameter to `tex
     )
 ```
 
-The rest of the code largely remains the same resulting in the following code, the full code of this example is located at `examples/documentation_guides/workflows/text_file_ingest/src/text_file_ingest/text_file_ingest_function.py` in the NeMo Agent toolkit repository:
+The rest of the code largely remains the same resulting in the following code, the full code of this example is located at `examples/documentation_guides/workflows/text_file_ingest/src/text_file_ingest/text_file_ingest_function.py` in the NeMo Agent Toolkit repository:
 ```python
 @register_function(config_type=TextFileIngestFunctionConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def text_file_ingest_function(config: TextFileIngestFunctionConfig, builder: Builder):
@@ -201,14 +201,14 @@ workflow:
   tool_names: [doca_documents, current_datetime]
 ```
 
-The resulting YAML file is located at `examples/documentation_guides/workflows/text_file_ingest/configs/config.yml` in the NeMo Agent toolkit repository.
+The resulting YAML file is located at `examples/documentation_guides/workflows/text_file_ingest/configs/config.yml` in the NeMo Agent Toolkit repository.
 
 ## Understanding `pyproject.toml`
 
-The `pyproject.toml` file defines your package metadata and dependencies. In this case, the `pyproject.toml` file that was created is sufficient; however, that might not always be the case. The most common need to update the `pyproject.toml` file is to add additional dependencies that are not included with NeMo Agent toolkit.
+The `pyproject.toml` file defines your package metadata and dependencies. In this case, the `pyproject.toml` file that was created is sufficient; however, that might not always be the case. The most common need to update the `pyproject.toml` file is to add additional dependencies that are not included with NeMo Agent Toolkit.
 
 - **Dependencies**: Ensure all required libraries are listed under `[project]`.
-  In the example, the tool was created inside the NeMo Agent toolkit repo and simply needed to declare a dependency on `nvidia-nat[langchain]`. If, however, your tool is intended to be distributed independently then your tool will need to declare a dependency on the specific version of NeMo Agent toolkit that it was built against. To determine the version of NeMo Agent toolkit run:
+  In the example, the tool was created inside the NeMo Agent Toolkit repo and simply needed to declare a dependency on `nvidia-nat[langchain]`. If, however, your tool is intended to be distributed independently then your tool will need to declare a dependency on the specific version of NeMo Agent Toolkit that it was built against. To determine the version of NeMo Agent Toolkit run:
   ```bash
   nat --version
   ```
@@ -222,9 +222,9 @@ The `pyproject.toml` file defines your package metadata and dependencies. In thi
   ]
   ```
 
-  In this example, you have been using NeMo Agent toolkit with LangChain/LangGraph. This is why the dependency is declared on `nvidia-nat[langchain]`, that is to say NeMo Agent toolkit with the LangChain/LangGraph integration plugin. If you want to use LlamaIndex, declare the dependency on `nvidia-nat[llama-index]`. This is described in more detail in [Framework Integrations](../installation.md#framework-integrations).
+  In this example, you have been using NeMo Agent Toolkit with LangChain/LangGraph. This is why the dependency is declared on `nvidia-nat[langchain]`, that is to say NeMo Agent Toolkit with the LangChain/LangGraph integration plugin. If you want to use LlamaIndex, declare the dependency on `nvidia-nat[llama-index]`. This is described in more detail in [Packages](../installation.md#packages).
 
-- **Version**: In this example, and in NeMo Agent toolkit in general, we use [setuptools-scm](https://setuptools-scm.readthedocs.io/en/latest/) to automatically determine the version of the package based on the Git tags. We did this by setting `dynamic = ["version"]` and declaring a build dependency on both `setuptools` and `setuptools_scm` in the `build-system` section of `pyproject.toml`:
+- **Version**: In this example, and in NeMo Agent Toolkit in general, we use [setuptools-scm](https://setuptools-scm.readthedocs.io/en/latest/) to automatically determine the version of the package based on the Git tags. We did this by setting `dynamic = ["version"]` and declaring a build dependency on both `setuptools` and `setuptools_scm` in the `build-system` section of `pyproject.toml`:
   ```toml
   [build-system]
   requires = ["setuptools", "setuptools_scm"]
@@ -248,7 +248,7 @@ The `pyproject.toml` file defines your package metadata and dependencies. In thi
   version = "0.1.0"
   ```
 
-- **Entry Points**: This tells NeMo Agent toolkit where to find your workflow registration.
+- **Entry Points**: This tells NeMo Agent Toolkit where to find your workflow registration.
 
   ```toml
   [project.entry-points.'nat.plugins']

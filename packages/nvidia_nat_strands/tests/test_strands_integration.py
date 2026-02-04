@@ -423,7 +423,7 @@ class TestStrandsProfilerIntegration:
         """Test that profiler captures LLM call metrics."""
         from strands.agent import Agent
 
-        from nat.plugins.strands.strands_callback_handler import StrandsProfilerHandler
+        from nat.plugins.strands.callback_handler import StrandsProfilerHandler
 
         llm_config = OpenAIModelConfig(model_name="gpt-4o", temperature=0.0, max_tokens=64)
 
@@ -456,7 +456,7 @@ class TestStrandsProfilerIntegration:
         """Test that profiler captures tool call metrics."""
         from strands.agent import Agent
 
-        from nat.plugins.strands.strands_callback_handler import StrandsProfilerHandler
+        from nat.plugins.strands.callback_handler import StrandsProfilerHandler
 
         llm_config = OpenAIModelConfig(model_name="gpt-4o", temperature=0.0, max_tokens=64)
 

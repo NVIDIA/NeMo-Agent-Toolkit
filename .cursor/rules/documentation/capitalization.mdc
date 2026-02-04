@@ -106,9 +106,8 @@ Don't capitalize:
 
 ### Product Names
 - **Use official capitalization**:
-  - NVIDIA NeMo Agent toolkit (first use in body text)
-  - NVIDIA NeMo Agent Toolkit (first use in titles/headings where all words are capitalized)
-  - NeMo Agent toolkit or "the toolkit" (subsequent uses in body text)
+  - NVIDIA NeMo Agent Toolkit
+  - NeMo Agent Toolkit or "the toolkit" (subsequent uses in body text)
   - NeMo Agent Toolkit (subsequent uses in titles/headings)
   - CUDA, TensorRT, PyTorch
 - **Don't capitalize** generic terms: database, server, application (unless part of proper name)

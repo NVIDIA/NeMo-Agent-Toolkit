@@ -17,7 +17,7 @@ limitations under the License.
 
 # About Running NVIDIA NeMo Agent Toolkit Workflows
 
-A [workflow](../build-workflows/about-building-workflows.md) is defined by a YAML configuration file that specifies the [tools](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) and models to use. NeMo Agent toolkit provides the following ways to run a workflow:
+A [workflow](../build-workflows/about-building-workflows.md) is defined by a YAML configuration file that specifies the [tools](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) and models to use. NeMo Agent Toolkit provides the following ways to run a workflow:
 - [Using the `nat run` command](#using-the-nat-run-command).
    - This is the simplest and most common way to run a workflow.
 - [Using the `nat serve` command](#using-the-nat-serve-command).
@@ -33,9 +33,9 @@ A [workflow](../build-workflows/about-building-workflows.md) is defined by a YAM
 
 ## Prerequisites
 
-Ensure that you have followed the instructions in the [Install Guide](../get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+Ensure that you have followed the instructions in the [Install Guide](../get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 
-The examples in this document utilize the `examples/getting_started/simple_web_query` workflow, install it by running the following commands from the root directory of the NeMo Agent toolkit library:
+The examples in this document utilize the `examples/getting_started/simple_web_query` workflow, install it by running the following commands from the root directory of the NeMo Agent Toolkit library:
 ```bash
 uv pip install -e examples/getting_started/simple_web_query
 ```
@@ -119,10 +119,10 @@ To invoke a tool on the MCP server, run the following command:
 nat mcp client tool call react_agent --json-args '{"query": "What is LangSmith?"}'
 ```
 
-Refer to [MCP Server](./mcp-server.md) for more information on the NeMo Agent toolkit MCP server.
+Refer to [MCP Server](./mcp-server.md) for more information on the NeMo Agent Toolkit MCP server.
 
 ## Using the `nat eval` Command
-The `nat eval` command is similar to the `nat run` command. However, in addition to running the workflow, it also evaluates the accuracy of the workflow, refer to [Evaluating NeMo Agent toolkit Workflows](../improve-workflows/evaluate.md) for more information.
+The `nat eval` command is similar to the `nat run` command. However, in addition to running the workflow, it also evaluates the accuracy of the workflow, refer to [Evaluating NeMo Agent Toolkit Workflows](../improve-workflows/evaluate.md) for more information.
 
 ## Using the Python API
 

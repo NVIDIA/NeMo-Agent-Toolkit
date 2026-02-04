@@ -16,6 +16,5 @@
 # pylint: disable=unused-import
 # flake8: noqa
 
-from . import adk_callback_handler
 from . import llm
 from . import tool_wrapper

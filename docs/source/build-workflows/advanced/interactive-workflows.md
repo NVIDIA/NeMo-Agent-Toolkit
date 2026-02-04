@@ -17,7 +17,7 @@ limitations under the License.
 
 # Interactive Workflows Guide
 
-NeMo Agent toolkit provides interactive prompt and response Pydantic data models as a way to validate, serialize, and document
+NeMo Agent Toolkit provides interactive prompt and response Pydantic data models as a way to validate, serialize, and document
 data structures to support human input during the execution of an [agent](../../components/agents/index.md) workflow.
 **Note**: All human in the loop interaction data models are supported by the `nat serve` command, while the `nat run`
 command **only** supports the {py:class}`nat.data_models.interactive.HumanPromptText` data model. Ensure WebSocket mode

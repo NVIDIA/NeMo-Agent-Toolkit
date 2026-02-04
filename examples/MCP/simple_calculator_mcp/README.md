@@ -19,7 +19,7 @@ limitations under the License.
 
 **Complexity:** 🟢 Beginner
 
-This example demonstrates how to integrate the NVIDIA NeMo Agent toolkit with [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol/modelcontextprotocol) servers. You'll learn to use remote tools through MCP and publish Agent toolkit functions as MCP services.
+This example demonstrates how to integrate the NVIDIA NeMo Agent Toolkit with [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol/modelcontextprotocol) servers. You'll learn to use remote tools through MCP and publish Agent toolkit functions as MCP services.
 
 This example uses **shared workflow** mode, allowing multiple users to interact concurrently using the same unprotected MCP calculator tools. This is useful for development and testing purposes.
 
@@ -29,12 +29,12 @@ For production use see the [Simple Calculator MCP Protected](../simple_calculato
 
 Ensure the following prerequisites are met before running the simply calculator workflow.
 
-- **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+- **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 - **Base workflow**: This example builds upon the Getting Started [Simple Calculator](../../getting_started/simple_calculator/) example. Make sure you are familiar with the example before proceeding.
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 
 ### Install this Workflow
 
@@ -46,17 +46,17 @@ uv pip install -e examples/MCP/simple_calculator_mcp
 
 ## Run the Workflow
 
-### NeMo Agent toolkit as an MCP Client
+### NeMo Agent Toolkit as an MCP Client
 You can run the simple calculator workflow using Remote MCP tools. In this case, the workflow acts as a MCP client and connects to the MCP server running on the specified URL. Details are provided in the [MCP Client Guide](../../../docs/source/build-workflows/mcp-client.md).
 
-### NeMo Agent toolkit as an MCP Server
+### NeMo Agent Toolkit as an MCP Server
 You can publish the simple calculator tools using MCP using the `nat mcp serve` command. Details are provided in the [MCP Server Guide](../../../docs/source/run-workflows/mcp-server.md).
 
 
 ### MCP Client Configuration
-NeMo Agent toolkit enables workflows to use MCP tools as functions. The library handles the MCP server connection, tool discovery, and function registration. This allows the workflow to use MCP tools as regular functions.
+NeMo Agent Toolkit enables workflows to use MCP tools as functions. The library handles the MCP server connection, tool discovery, and function registration. This allows the workflow to use MCP tools as regular functions.
 
-Tools served by remote MCP servers can be leveraged as NeMo Agent toolkit functions using `mcp_client`, a flexible configuration using function groups that allows you to connect to an MCP server, dynamically discover the tools it serves, and register them as NeMo Agent toolkit functions. The `config-mcp-client.yml` example demonstrates how to use the `mcp_client` function group with both local and remote MCP servers.
+Tools served by remote MCP servers can be leveraged as NeMo Agent Toolkit functions using `mcp_client`, a flexible configuration using function groups that allows you to connect to an MCP server, dynamically discover the tools it serves, and register them as NeMo Agent Toolkit functions. The `config-mcp-client.yml` example demonstrates how to use the `mcp_client` function group with both local and remote MCP servers.
 
 ### Running the example
 The `config-mcp-client.yml` example demonstrates how to use the `mcp_client` function group with both local and remote MCP servers. This configuration shows how to use multiple MCP servers with different transports in the same workflow.

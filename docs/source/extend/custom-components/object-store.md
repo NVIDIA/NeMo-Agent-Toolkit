@@ -17,12 +17,12 @@ limitations under the License.
 
 # Adding an Object Store Provider With NVIDIA NeMo Agent Toolkit
 
-This documentation presumes familiarity with the NeMo Agent toolkit [object store subsystem](../../build-workflows/object-store.md), [plugin architecture](../plugins.md), the concept of "function registration" using `@register_function`, and how we define tool/workflow configurations in the NeMo Agent toolkit config described in the [Creating a New Tool and Workflow](../../get-started/tutorials/create-a-new-workflow.md) tutorial.
+This documentation presumes familiarity with the NeMo Agent Toolkit [object store subsystem](../../build-workflows/object-store.md), [plugin architecture](../plugins.md), the concept of "function registration" using `@register_function`, and how we define tool/workflow configurations in the NeMo Agent Toolkit config described in the [Creating a New Tool and Workflow](../../get-started/tutorials/create-a-new-workflow.md) tutorial.
 
 ## Key Object Store Module Components
 
 * **Object Store Data Models**
-   - **{py:class}`~nat.data_models.object_store.ObjectStoreBaseConfig`**: A Pydantic base class that all object store config classes must extend. This is used for specifying object store registration in the NeMo Agent toolkit config file.
+   - **{py:class}`~nat.data_models.object_store.ObjectStoreBaseConfig`**: A Pydantic base class that all object store config classes must extend. This is used for specifying object store registration in the NeMo Agent Toolkit config file.
    - **{py:class}`~nat.data_models.object_store.ObjectStoreBaseConfigT`**: A generic type alias for object store config classes.
 
 * **Object Store Interfaces**
@@ -61,7 +61,7 @@ This documentation presumes familiarity with the NeMo Agent toolkit [object stor
 
 ## Adding an Object Store Provider
 
-In the NeMo Agent toolkit system, anything that extends {py:class}`~nat.data_models.object_store.ObjectStoreBaseConfig` and is declared with a `name="some_object_store"` can be discovered as an *Object Store type* by the NeMo Agent toolkit global type registry. This allows you to define a custom object store class to handle your own backends (for example, Redis, custom database, or cloud storage). Then your object store class can be selected in the NeMo Agent toolkit config YAML using `_type: <your object store type>`.
+In the NeMo Agent Toolkit system, anything that extends {py:class}`~nat.data_models.object_store.ObjectStoreBaseConfig` and is declared with a `name="some_object_store"` can be discovered as an *Object Store type* by the NeMo Agent Toolkit global type registry. This allows you to define a custom object store class to handle your own backends (for example, Redis, custom database, or cloud storage). Then your object store class can be selected in the NeMo Agent Toolkit config YAML using `_type: <your object store type>`.
 
 ### Basic Steps
 
@@ -77,7 +77,7 @@ In the NeMo Agent toolkit system, anything that extends {py:class}`~nat.data_mod
    ```
 
    :::{note}
-   The `name="my_custom_object_store"` ensures that NeMo Agent toolkit can recognize it when the user places `_type: my_custom_object_store` in the object store config.
+   The `name="my_custom_object_store"` ensures that NeMo Agent Toolkit can recognize it when the user places `_type: my_custom_object_store` in the object store config.
    :::
 
 2. **Implement an {py:class}`~nat.object_store.interfaces.ObjectStore`** that uses your backend:
@@ -151,7 +151,7 @@ In the NeMo Agent toolkit system, anything that extends {py:class}`~nat.data_mod
            pass
    ```
 
-3. **Register your object store with NeMo Agent toolkit** using the `@register_object_store` decorator:
+3. **Register your object store with NeMo Agent Toolkit** using the `@register_object_store` decorator:
    ```python
    from nat.builder.builder import Builder
    from nat.cli.register_workflow import register_object_store
@@ -163,7 +163,7 @@ In the NeMo Agent toolkit system, anything that extends {py:class}`~nat.data_mod
            yield store
    ```
 
-4. **Use in config**: In your NeMo Agent toolkit config, you can do something like:
+4. **Use in config**: In your NeMo Agent Toolkit config, you can do something like:
    ```yaml
    object_stores:
      my_store:
@@ -335,7 +335,7 @@ When implementing your object store provider, follow these error handling guidel
 
 - **Use the provided exceptions**: Always use `KeyAlreadyExistsError` and `NoSuchKeyError` for the appropriate scenarios.
 
-- **Handle backend-specific errors**: Wrap backend-specific exceptions and convert them to the appropriate NeMo Agent toolkit exceptions.
+- **Handle backend-specific errors**: Wrap backend-specific exceptions and convert them to the appropriate NeMo Agent Toolkit exceptions.
 
 - **Provide meaningful error messages**: Include context in your error messages to help with debugging.
 
@@ -353,11 +353,11 @@ When developing your object store provider, consider testing:
 
 ## Plugin Integration
 
-To integrate your object store provider as a plugin, follow the standard NeMo Agent toolkit plugin structure:
+To integrate your object store provider as a plugin, follow the standard NeMo Agent Toolkit plugin structure:
 
 1. Create a plugin package with the appropriate structure
 2. Include your config, implementation, and registration code
 3. Add the necessary dependencies to your plugin's `pyproject.toml`
-4. Ensure your plugin is discoverable by NeMo Agent toolkit
+4. Ensure your plugin is discoverable by NeMo Agent Toolkit
 
 For more information on creating plugins, see the [Plugins](../plugins.md) documentation.

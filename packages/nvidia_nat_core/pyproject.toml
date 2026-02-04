@@ -1,0 +1,165 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES.
+# All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["nat.*"]
+
+
+[tool.setuptools_scm]
+git_describe_command = "git describe --long --first-parent"
+root = "../.."
+
+
+[project]
+name = "nvidia-nat-core"
+dynamic = ["version", "optional-dependencies"]
+dependencies = [
+  # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
+  # version when adding a new package. If unsure, default to using `~=` instead of `==`. When using `~=`, use 2 digits
+  # of precision in the version specifier. For example, use `~=1.2` instead of `~=1.2.3` and `~=0.1.3` instead of
+  # `~=0.1.3.5`.
+  # Keep sorted!!!
+  "aioboto3>=11.0.0",
+  "authlib>=1.6.5,<2.0.0",
+  "click~=8.1",
+  "colorama~=0.4.6",
+  "datasets~=4.4", # workaround for uv's solver choosing different versions of datasets based on sys_platform
+  "expandvars~=1.0",
+  "fastapi~=0.119.0",
+  "flask>=3.0.0",
+  "httpx~=0.27",
+  "jinja2~=3.1",
+  "jsonpath-ng~=1.7",
+  "nest-asyncio2==1.7.1",
+  "networkx~=3.4",
+  "numpy~=2.3",
+  "openinference-semantic-conventions~=0.1.14",
+  "openpyxl~=3.1",
+  "optuna~=4.4.0",
+  "pandas~=2.2",
+  "pip>=24.3.1",
+  "pkce==1.0.3",
+  "pkginfo~=1.12",
+  "platformdirs~=4.3",
+  "plotly~=6.0",
+  "pydantic~=2.11",
+  "pymilvus~=2.6",
+  "python-dotenv~=1.1.1",
+  "python-multipart>=0.0.21",
+  "PyYAML~=6.0",
+  "ragas~=0.2.14", # If you update ragas be sure to update github links in docs/source/workflows/evaluate.md as well
+  "rich~=14.0",
+  "tabulate~=0.9",
+  "uvicorn[standard]~=0.38",
+  "wikipedia~=1.4",
+  # transitive dependencies
+  "urllib3~=2.6.3",
+]
+requires-python = ">=3.11,<3.14"
+description = "Core library for NVIDIA NeMo Agent Toolkit"
+readme = "src/nat/meta/pypi.md"
+license = { text = "Apache-2.0" }
+keywords = ["ai", "rag", "agents"]
+classifiers = [
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+authors = [{ name = "NVIDIA Corporation" }]
+maintainers = [{ name = "NVIDIA Corporation" }]
+
+[project.urls]
+documentation = "https://docs.nvidia.com/nemo/agent-toolkit/latest/"
+source = "https://github.com/NVIDIA/NeMo-Agent-Toolkit"
+
+[tool.setuptools_dynamic_dependencies.optional-dependencies]
+# Optional dependencies are things that users would want to install with NAT core.
+# Keep sorted!!!
+async_endpoints = [
+  "aiosqlite~=0.21",
+  "dask~=2026.1",
+  "distributed~=2026.1",
+  "sqlalchemy[asyncio]~=2.0",
+]
+gunicorn = [
+  "gunicorn~=23.0",
+]
+pii-defense = [
+  "presidio-analyzer",
+  "presidio-anonymizer"
+]
+profiling = [
+  "matplotlib~=3.9",
+  "prefixspan~=0.5.2",
+  "scikit-learn~=1.6",
+]
+test = [
+  "nvidia-nat-test == {version}",
+]
+
+[tool.uv.sources]
+nvidia-nat-test = { path = "../nvidia_nat_test", editable = true }
+
+[project.entry-points.'nat.components']
+nat_authentication = "nat.authentication.register"
+nat_embedders = "nat.embedder.register"
+nat_evaluators = "nat.eval.register"
+nat_middleware = "nat.middleware.register"
+nat_test_time_compute = "nat.experimental.test_time_compute.register"
+nat_llms = "nat.llm.register"
+nat_object_stores = "nat.object_store.register"
+nat_observability = "nat.observability.register"
+nat_retrievers = "nat.retriever.register"
+nat_tools = "nat.tool.register"
+
+[project.entry-points.'nat.front_ends']
+nat_front_ends = "nat.front_ends.register"
+
+[project.entry-points.'nat.registry_handlers']
+nat_registry_handlers = "nat.registry_handlers.register"
+
+[project.entry-points.'nat.cli']
+configure = "nat.cli.commands.configure.configure:configure_command"
+eval = "nat.cli.commands.evaluate:eval_command"
+finetune = "nat.cli.commands.finetune:finetune_command"
+info = "nat.cli.commands.info.info:info_command"
+object-store = "nat.cli.commands.object_store.object_store:object_store_command"
+optimize = "nat.cli.commands.optimize:optimizer_command"
+red-team = "nat.cli.commands.red_teaming.red_teaming:red_team_command"
+registry = "nat.cli.commands.registry.registry:registry_command"
+sizing = "nat.cli.commands.sizing.sizing:sizing"
+start = "nat.cli.commands.start:start_command"
+uninstall = "nat.cli.commands.uninstall:uninstall_command"
+validate = "nat.cli.commands.validate:validate_command"
+workflow = "nat.cli.commands.workflow.workflow:workflow_command"
+
+[project.scripts]
+nat = "nat.cli.main:run_cli"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.uv]
+build-constraint-dependencies = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+managed = true
+config-settings = { editable_mode = "compat" }

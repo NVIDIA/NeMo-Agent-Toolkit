@@ -21,7 +21,7 @@ limitations under the License.
 **Complexity:** 🟢 Beginner
 
 <!-- Note: "Agno" is the official product name despite Vale spelling checker warnings -->
-Built on [Agno](https://github.com/agno-agi/agno) and NeMo Agent toolkit, this workflow is a personal financial planner that generates personalized financial plans using NVIDIA NIM (can be customized to use OpenAI models). It automates the process of researching, planning, and creating tailored budgets, investment strategies, and savings goals, empowering you to take control of your financial future with ease.
+Built on [Agno](https://github.com/agno-agi/agno) and NeMo Agent Toolkit, this workflow is a personal financial planner that generates personalized financial plans using NVIDIA NIM (can be customized to use OpenAI models). It automates the process of researching, planning, and creating tailored budgets, investment strategies, and savings goals, empowering you to take control of your financial future with ease.
 
 This personal financial planner was revised based on the [Awesome-LLM-App](https://github.com/Shubhamsaboo/awesome-llm-apps) GitHub repo's [AI Personal Finance Planner](https://github.com/Shubhamsaboo/awesome-llm-apps/tree/main/advanced_ai_agents/single_agent_apps/ai_personal_finance_agent) sample.
 
@@ -44,9 +44,9 @@ This personal financial planner was revised based on the [Awesome-LLM-App](https
 
 ## Key Features
 
-- **Agno Framework Integration:** Demonstrates seamless integration between the lightweight Agno multimodal agent library and NeMo Agent toolkit for building sophisticated agent workflows with minimal overhead.
+- **Agno Framework Integration:** Demonstrates seamless integration between the lightweight Agno multimodal agent library and NeMo Agent Toolkit for building sophisticated agent workflows with minimal overhead.
 - **Personal Financial Planning Workflow:** Creates personalized financial plans including budgets, investment strategies, and savings goals using NVIDIA NIM models with automated research and planning capabilities.
-- **Multi-Framework Agent Architecture:** Shows how to combine Agno's lightning-fast, model-agnostic capabilities with NeMo Agent toolkit workflow management and tool integration system.
+- **Multi-Framework Agent Architecture:** Shows how to combine Agno's lightning-fast, model-agnostic capabilities with NeMo Agent Toolkit workflow management and tool integration system.
 - **Automated Financial Research:** Integrates SERP API for real-time financial data gathering and market research to inform personalized financial planning recommendations.
 - **Docker-Ready Deployment:** Provides complete containerization setup for deploying personal finance planning agents in production environments with API access.
 
@@ -70,11 +70,11 @@ docker info
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the NeMo Agent toolkit library, run the following commands:
+From the root directory of the NeMo Agent Toolkit library, run the following commands:
 
 ```bash
 uv pip install -e examples/frameworks/agno_personal_finance
@@ -93,7 +93,7 @@ export SERP_API_KEY=<YOUR_API_KEY>
 
 ### Run the Workflow
 
-Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
+Run the following command from the root of the NeMo Agent Toolkit repo to execute this workflow with the specified input:
 
 ```bash
 nat run --config_file examples/frameworks/agno_personal_finance/configs/config.yml --input "My financial goal is to retire at age 60.  I am currently 40 years old, working as a Machine Learning engineer at NVIDIA."
@@ -101,11 +101,10 @@ nat run --config_file examples/frameworks/agno_personal_finance/configs/config.y
 
 **Expected Workflow Output**
 ```console
-2025-07-23 03:43:31,701 - nat.runtime.loader - WARNING - Loading module 'nat.agent.register' from entry point 'nat_agents' took a long time (507.685900 ms). Ensure all imports are inside your registered functions.
 2025-07-23 03:43:32,279 - nat.runtime.loader - WARNING - Loading module 'nat_plot_charts.register' from entry point 'nat_plot_charts' took a long time (473.043442 ms). Ensure all imports are inside your registered functions.
 2025-07-23 03:43:32,455 - nat.runtime.loader - WARNING - Loading module 'nat_semantic_kernel_demo.register' from entry point 'nat_semantic_kernel_demo' took a long time (175.730944 ms). Ensure all imports are inside your registered functions.
 2025-07-23 03:43:32,572 - nat.runtime.loader - WARNING - Loading module 'nat_alert_triage_agent.register' from entry point 'nat_alert_triage_agent' took a long time (117.298603 ms). Ensure all imports are inside your registered functions.
-2025-07-23 03:43:32,786 - nat.cli.commands.start - INFO - Starting NeMo Agent toolkit from config file: 'examples/frameworks/agno_personal_finance/configs/config.yml'
+2025-07-23 03:43:32,786 - nat.cli.commands.start - INFO - Starting NeMo Agent Toolkit from config file: 'examples/frameworks/agno_personal_finance/configs/config.yml'
 2025-07-23 03:43:32,788 - nat.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 2025-07-23 03:43:34,109 - nat.profiler.decorators.framework_wrapper - INFO - Agno callback handler registered
 
@@ -140,9 +139,9 @@ For a production deployment, use Docker:
 
 ### Build the Docker Image
 
-Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the NeMo Agent toolkit virtual environment.
+Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the NeMo Agent Toolkit virtual environment.
 
-From the root directory of the NeMo Agent toolkit repository, build the Docker image:
+From the root directory of the NeMo Agent Toolkit repository, build the Docker image:
 
 ```bash
 docker build --build-arg NAT_VERSION=$(python -m setuptools_scm) -t agno_personal_finance -f examples/frameworks/agno_personal_finance/Dockerfile .

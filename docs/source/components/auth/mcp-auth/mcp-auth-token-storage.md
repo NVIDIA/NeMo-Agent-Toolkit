@@ -17,7 +17,7 @@ limitations under the License.
 
 # Secure Token Storage for Model Context Protocol (MCP) Authentication
 
-The NVIDIA NeMo Agent toolkit provides a configurable, secure token storage mechanism for Model Context Protocol (MCP) OAuth2 authentication. You can store tokens securely using the [object store](../../../build-workflows/object-store.md) infrastructure, which provides encryption at rest, access controls, and persistence across service restarts.
+The NVIDIA NeMo Agent Toolkit provides a configurable, secure token storage mechanism for Model Context Protocol (MCP) OAuth2 authentication. You can store tokens securely using the [object store](../../../build-workflows/object-store.md) infrastructure, which provides encryption at rest, access controls, and persistence across service restarts.
 
 ## Overview
 
@@ -59,7 +59,7 @@ authentication:
 
 ### External Object Store Configuration
 
-For production environments, configure an external object store to persist tokens across restarts. The NeMo Agent toolkit supports S3-compatible storage (for example, MinIO and AWS S3), MySQL, and Redis backends.
+For production environments, configure an external object store to persist tokens across restarts. The NeMo Agent Toolkit supports S3-compatible storage (for example, MinIO and AWS S3), MySQL, and Redis backends.
 
 :::{note}
 For detailed object store setup instructions including MinIO, MySQL, and Redis installation and configuration examples, refer to the `examples/object_store/user_report/README.md` guide, under the **Choose an Object Store** section.

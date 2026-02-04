@@ -21,7 +21,7 @@ Model Context Protocol (MCP) is an open protocol developed by Anthropic that sta
 
 You can create a [workflow](./about-building-workflows.md) that uses MCP [tools](./functions-and-function-groups/functions.md#agents-and-tools) as [functions](./functions-and-function-groups/functions.md). In this case, the workflow acts as an MCP host and creates MCP clients to connect to MCP servers and use their tools as functions.
 
-This guide covers how to use a NeMo Agent toolkit workflow as an MCP host with one or more MCP clients. For more information on how to use the NeMo Agent toolkit as an MCP server, refer to [MCP Server](../run-workflows/mcp-server.md).
+This guide covers how to use a NeMo Agent Toolkit workflow as an MCP host with one or more MCP clients. For more information on how to use the NeMo Agent Toolkit as an MCP server, refer to [MCP Server](../run-workflows/mcp-server.md).
 
 ## Installation
 
@@ -31,12 +31,12 @@ MCP client functionality requires the `nvidia-nat-mcp` package. Install it with:
 uv pip install "nvidia-nat[mcp]"
 ```
 ## Accessing Protected MCP Servers
-NeMo Agent toolkit can access protected MCP servers through the MCP client auth provider. For more information, refer to [MCP Authentication](../components/auth/mcp-auth/index.md).
+NeMo Agent Toolkit can access protected MCP servers through the MCP client auth provider. For more information, refer to [MCP Authentication](../components/auth/mcp-auth/index.md).
 
 ## MCP Client Configuration
-NeMo Agent toolkit enables workflows to use MCP tools as functions. The library handles the MCP server connection, tool discovery, and function registration. This allows the workflow to use MCP tools as regular functions.
+NeMo Agent Toolkit enables workflows to use MCP tools as functions. The library handles the MCP server connection, tool discovery, and function registration. This allows the workflow to use MCP tools as regular functions.
 
-Tools served by remote MCP servers can be used as NeMo Agent toolkit functions using `mcp_client`, a flexible configuration using [function groups](./functions-and-function-groups/function-groups.md) that allows you to connect to an MCP server, dynamically discover the tools it serves, and register them as NeMo Agent toolkit functions.
+Tools served by remote MCP servers can be used as NeMo Agent Toolkit functions using `mcp_client`, a flexible configuration using [function groups](./functions-and-function-groups/function-groups.md) that allows you to connect to an MCP server, dynamically discover the tools it serves, and register them as NeMo Agent Toolkit functions.
 
 ### `mcp_client` Configuration
 ```yaml
@@ -59,7 +59,7 @@ workflow:
   tool_names:
     - mcp_tools
 ```
-You can use the `mcp_client` function group to connect to an MCP server, dynamically discover the tools it serves, and register them as NeMo Agent toolkit functions.
+You can use the `mcp_client` function group to connect to an MCP server, dynamically discover the tools it serves, and register them as NeMo Agent Toolkit functions.
 
 The function group supports filtering using the `include` and `exclude` parameters. You can also optionally override the tool name and description defined by the MCP server using the `tool_overrides` parameter.
 
@@ -342,7 +342,7 @@ This will use the `mcp_oauth2` authentication provider to authenticate the user.
 ## List MCP Client Tools using the HTTP endpoint
 This is useful when you want to inspect the tools configured on the client side and whether each tool is available on the connected server.
 
-When you serve a workflow that includes an `mcp_client` function group, the NeMo Agent toolkit exposes an HTTP endpoint to inspect the tools configured on the client side and whether each tool is available on the connected server.
+When you serve a workflow that includes an `mcp_client` function group, the NeMo Agent Toolkit exposes an HTTP endpoint to inspect the tools configured on the client side and whether each tool is available on the connected server.
 
 ### Steps
 

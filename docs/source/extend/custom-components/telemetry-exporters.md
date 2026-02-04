@@ -21,7 +21,7 @@ limitations under the License.
 The code examples in this guide are pseudo code designed to illustrate the programming interface and key concepts. They focus on demonstrating the structure and flow rather than providing complete, runnable implementations. Use these examples to understand the interface patterns and adapt them to your specific use case.
 :::
 
-Telemetry exporters are plugins that send telemetry data (e.g., traces, spans, and intermediate steps, etc.) from NeMo Agent toolkit workflows to external observability services. The NeMo Agent toolkit uses a flexible, plugin-based observability system that allows you to configure multiple exporters simultaneously and create custom integrations for any observability platform. This guide provides a comprehensive overview of how to create and register custom telemetry exporters.
+Telemetry exporters are plugins that send telemetry data (e.g., traces, spans, and intermediate steps, etc.) from NeMo Agent Toolkit workflows to external observability services. The NeMo Agent Toolkit uses a flexible, plugin-based observability system that allows you to configure multiple exporters simultaneously and create custom integrations for any observability platform. This guide provides a comprehensive overview of how to create and register custom telemetry exporters.
 
 ## Why Use Telemetry Exporters?
 
@@ -152,7 +152,7 @@ Before diving into advanced features, here are the core concepts:
 
 ## Understanding Telemetry Exporters
 
-Telemetry exporters in NeMo Agent toolkit are responsible for:
+Telemetry exporters in NeMo Agent Toolkit are responsible for:
 
 1. **Event Subscription**: Listening to workflow intermediate steps
 2. **Data Processing**: Transforming raw events into the target format
@@ -183,7 +183,7 @@ graph TD
 
 ### Exporter Types
 
-NeMo Agent toolkit supports several types of exporters based on the data they handle:
+NeMo Agent Toolkit supports several types of exporters based on the data they handle:
 
 ```mermaid
 graph LR
@@ -759,7 +759,7 @@ This section covers advanced topics for production-ready telemetry exporters. Ch
 If you're only running one workflow at a time, you can skip this section. However, if your application runs multiple concurrent workflows or serves multiple users simultaneously, proper isolation is critical to prevent data corruption and race conditions.
 :::
 
-When multiple workflows run simultaneously, each needs its own isolated exporter state. NeMo Agent toolkit provides `IsolatedAttribute` to handle this automatically.
+When multiple workflows run simultaneously, each needs its own isolated exporter state. NeMo Agent Toolkit provides `IsolatedAttribute` to handle this automatically.
 
 #### The Problem
 

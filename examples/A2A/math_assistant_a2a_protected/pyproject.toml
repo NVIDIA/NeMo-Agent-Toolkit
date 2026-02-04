@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,24 +15,29 @@
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools >= 64", "setuptools-scm>=8"]
+requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 
 [tool.setuptools_scm]
 git_describe_command = "git describe --long --first-parent"
 root = "../../.."
 
+[tool.setuptools]
+packages = []
+
 [project]
 name = "nat_math_assistant_a2a_protected"
-dynamic = ["version"]
-dependencies = [
-    "nat_simple_calculator",
-    "nat_math_assistant_a2a",
-]
+dynamic = ["version", "dependencies"]
 requires-python = ">=3.11,<3.14"
 description = "OAuth2-protected A2A example with calculator server and math assistant client"
 readme = "README.md"
 keywords = ["ai", "a2a", "protocol", "agents", "calculator", "oauth2", "mcp"]
 classifiers = ["Programming Language :: Python"]
+
+[tool.setuptools_dynamic_dependencies]
+dependencies = [
+    "nat_simple_calculator",
+    "nat_math_assistant_a2a",
+]
 
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }

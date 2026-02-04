@@ -22,7 +22,7 @@ limitations under the License.
 :::
 
 API authentication providers are services that provide a way to authenticate requests to an API provider. Examples of authentication providers include OAuth 2.0 Authorization Code Grant and API Key. 
-The NeMo Agent toolkit simplifies API authentication by streamlining credential management and validation, enabling secure
+The NeMo Agent Toolkit simplifies API authentication by streamlining credential management and validation, enabling secure
 access to API providers across a variety of runtime environments. This functionality allows users to authenticate with
 protected API resources directly from workflow tools, abstracting away low-level authentication logic and enabling
 greater focus on data retrieval and processing. Users can define multiple authentication providers in their workflow
@@ -37,7 +37,7 @@ clients to securely authenticate and send requests to external API providers.
 
 ## 1. Register NeMo Agent Toolkit API Server as an OAuth2.0 Client
 To authenticate with a third-party API using OAuth 2.0, you must first register the application as a client with that
-API provider. The NeMo Agent toolkit API server functions as both an API server and an OAuth 2.0
+API provider. The NeMo Agent Toolkit API server functions as both an API server and an OAuth 2.0
 client. In addition to serving application specific endpoints, it can be registered with external API providers to
 perform delegated access, manage tokens throughout their lifecycle, and support consent prompt handling through a custom
 front end. This section outlines a general approach for registering the API server as an OAuth 2.0 client with your API

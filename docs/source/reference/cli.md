@@ -19,10 +19,10 @@ limitations under the License.
 
 ## Overview
 
-While the NeMo Agent toolkit library provides the capability to implement components that come together to form Agentic AI
+While the NeMo Agent Toolkit library provides the capability to implement components that come together to form Agentic AI
 [workflow](../build-workflows/about-building-workflows.md), the command line interface (CLI) provides a no-code entrypoint to configure settings, access the features of
 pre-built components, and mechanisms to launch workflows from configuration files. This document describes the layout
-and functionality of the NeMo Agent toolkit CLI. To begin, the command hierarchy is depicted below. Each command will be introduced
+and functionality of the NeMo Agent Toolkit CLI. To begin, the command hierarchy is depicted below. Each command will be introduced
 throughout the remainder of this document.
 
 ```
@@ -206,7 +206,7 @@ The Swagger API docs will be available at: [http://localhost:8000/docs](http://l
 
 ### Console
 
-The `nat start console` command will run a NeMo Agent toolkit workflow from a provided configuration file against inputs supplied
+The `nat start console` command will run a NeMo Agent Toolkit workflow from a provided configuration file against inputs supplied
 at the command line or from file using the `--inputs` and `--input_file` options, respectively. Additionally, fields in
 the configuration file can be overridden by command line using the `--override` flag and dot notation to traverse to the
 configuration hierarchy to the field being overridden. The run command can be useful running one off tests when
@@ -384,7 +384,7 @@ Options:
 
 ### Serve
 
-The `nat mcp serve` command (equivalent to `nat start mcp`) starts a Model Context Protocol (MCP) server that exposes workflow functions as MCP tools. This allows other applications that support the MCP protocol to use your NeMo Agent toolkit functions directly. MCP is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs.
+The `nat mcp serve` command (equivalent to `nat start mcp`) starts a Model Context Protocol (MCP) server that exposes workflow functions as MCP tools. This allows other applications that support the MCP protocol to use your NeMo Agent Toolkit functions directly. MCP is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs.
 
 The `nat mcp serve --help` utility provides a brief description of each option:
 
@@ -431,7 +431,7 @@ This will start an MCP server on the default host (localhost) and port (9901), a
 
 ## Run
 
-The `nat run` is an alias for the `nat start console` command and will run a NeMo Agent toolkit workflow from a provided configuration file against inputs supplied at the
+The `nat run` is an alias for the `nat start console` command and will run a NeMo Agent Toolkit workflow from a provided configuration file against inputs supplied at the
 command line or from file using the `--inputs` and `--input_file` options, respectively. Additionally, fields in the
 configuration file can be overridden by command line using the `--override` flag and dot notation to traverse to the
 configuration hierarchy to the field being overridden. The run command can be useful running one off tests when
@@ -507,9 +507,9 @@ nat serve --config_file=path/to/config --host 0.0.0.0 --port 8000
 The Swagger API docs will be available at: [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ## Evaluation
-The `nat eval` command provides access a set of evaluators designed to assessing the accuracy of NeMo Agent toolkit workflows as
+The `nat eval` command provides access a set of evaluators designed to assessing the accuracy of NeMo Agent Toolkit workflows as
 well as instrumenting their performance characteristics. Please reference
-[Evaluating NeMo Agent toolkit Workflows](../improve-workflows/evaluate.md) for a detailed overview of the
+[Evaluating NeMo Agent Toolkit Workflows](../improve-workflows/evaluate.md) for a detailed overview of the
 suite of evaluation capabilities.
 
 The `nat eval --help` utility provides a brief overview of the command and its available options.
@@ -656,7 +656,7 @@ nat finetune --config_file=configs/finetune.yml \
 
 ## Optimize
 
-The `nat optimize` command provides automated hyperparameter tuning and prompt engineering for NeMo Agent toolkit workflows. It intelligently searches for the best combination of parameters based on the evaluation metrics you specify. The optimizer uses [Optuna](https://optuna.org/) for numerical hyperparameter optimization and a genetic algorithm (GA) for prompt optimization. Please reference the [NeMo Agent toolkit Optimizer Guide](../improve-workflows/optimizer.md) for a comprehensive overview of the optimizer capabilities and configuration.
+The `nat optimize` command provides automated hyperparameter tuning and prompt engineering for NeMo Agent Toolkit workflows. It intelligently searches for the best combination of parameters based on the evaluation metrics you specify. The optimizer uses [Optuna](https://optuna.org/) for numerical hyperparameter optimization and a genetic algorithm (GA) for prompt optimization. Please reference the [NeMo Agent Toolkit Optimizer Guide](../improve-workflows/optimizer.md) for a comprehensive overview of the optimizer capabilities and configuration.
 
 The `nat optimize --help` utility provides a brief overview of the command and its available options:
 
@@ -805,7 +805,7 @@ Options:
 
 ## Validate
 
-Running a NeMo Agent toolkit workflow from the CLI requires a valid workflow configuration file. Use the `nat validate` command to
+Running a NeMo Agent Toolkit workflow from the CLI requires a valid workflow configuration file. Use the `nat validate` command to
 ensure a configuration files has been created with the right settings, components and parameters. It can be useful to
 each components valid configuration settings using the `nat info components` command and corresponding filters.
 The `nat validate` help utility illustrates its usage.
@@ -823,16 +823,16 @@ Options:
 
 ## Workflow
 
-The extensibility of NeMo Agent toolkit is made possible through its plugin system. To install these plugins, they must be part of
-a Python package that gets installed in an environment where the NeMo Agent toolkit library is installed. Creating boiler plate
+The extensibility of NeMo Agent Toolkit is made possible through its plugin system. To install these plugins, they must be part of
+a Python package that gets installed in an environment where the NeMo Agent Toolkit library is installed. Creating boiler plate
 package files (e.g. `pyproject.toml`) and component code scaffolding can be tedious. This section provides an overview
 of commands that automate some of these steps.
 
 ### Create
 
 The `nat workflow create` command generates a valid `pyproject.toml` file with a plugin section that points to a
-register.py file that has been pre-populated with NeMo Agent toolkit programming model boiler plate code. This boiler plate code
-should be further customized to implement the desired custom workflow and necessary NeMo Agent toolkit components. The
+register.py file that has been pre-populated with NeMo Agent Toolkit programming model boiler plate code. This boiler plate code
+should be further customized to implement the desired custom workflow and necessary NeMo Agent Toolkit components. The
 `nat workflow create --help` utility provides a description of its usage.
 
 ```console
@@ -927,12 +927,12 @@ Options:
 
 ## Information Commands
 
-The `nat info` command group provides utilities that facilitate the discovery of registered NeMo Agent toolkit components and
-retrieval of information about the locally configured NeMo Agent toolkit environment.
+The `nat info` command group provides utilities that facilitate the discovery of registered NeMo Agent Toolkit components and
+retrieval of information about the locally configured NeMo Agent Toolkit environment.
 
 ### Components Information
 
-When defining a NeMo Agent toolkit workflow's configuration file, it can be helpful to discover the locally registered components,
+When defining a NeMo Agent Toolkit workflow's configuration file, it can be helpful to discover the locally registered components,
 possible configuration settings, and their default values. The `nat info components` will provide this information in
 tabular format with the following columns.
 
@@ -988,16 +988,16 @@ Options:
 
 ## Configuration Commands
 
-A NeMo Agent toolkit developer may want to configure persistent settings for their development environment. These settings would be configured once to setup their development environment so they can focus on software development from that point
-forward. This section discusses the various configuration settings available for NeMo Agent toolkit developers.
+A NeMo Agent Toolkit developer may want to configure persistent settings for their development environment. These settings would be configured once to setup their development environment so they can focus on software development from that point
+forward. This section discusses the various configuration settings available for NeMo Agent Toolkit developers.
 
 ### Remote Registry Configuration
 
-One of the core value propositions of the NeMo Agent toolkit library is the redistribution of components with other developers.
+One of the core value propositions of the NeMo Agent Toolkit library is the redistribution of components with other developers.
 Being able to package and distribute packages such that other developers can leverage them is critical to accelerating
 developer velocity. Similarly, being able to discover and install components built by others will improve the
-current developer's velocity. To facilitate this process, NeMo Agent toolkit implements a remote registry `channel` concept that
-allows NeMo Agent toolkit developers to subscribe to registries that store published NeMo Agent toolkit packages, each container containing
+current developer's velocity. To facilitate this process, NeMo Agent Toolkit implements a remote registry `channel` concept that
+allows NeMo Agent Toolkit developers to subscribe to registries that store published NeMo Agent Toolkit packages, each container containing
 usable components. A `channel` is analogous to a Conda channel for Anaconda users or a PyPI registry for pip users.
 
 
@@ -1009,7 +1009,7 @@ Currently, there are two channel types that facilitate remote discovery and reus
 Invoking the `nat info components` command provides a description of the available channel settings.
 
 Here we provide a example that configures a remote rest channel. To use this channel, there must exists a remote
-registry that adheres to the contracts defined in the rest handler in NeMo Agent toolkit.
+registry that adheres to the contracts defined in the rest handler in NeMo Agent Toolkit.
 
 ```console
 $ nat configure channel add rest
@@ -1068,10 +1068,10 @@ Note, once a channel is removed, it will no longer be able to support `nat regis
 
 ## Remote Registry Interactions
 
-NeMo Agent toolkit is designed to be a community oriented library. This means that developer productivity is maximized when others
-distribute NeMo Agent toolkit plugin packages that will benefit others. This section will introduce the mechanisms the NeMo Agent toolkit CLI
-exposes to facilitate publishing, discovering, downloading, and removing NeMo Agent toolkit packages from a configured remote
-registry. Here we define a remote registry as a centralized location that stores plugin wheel packages and NeMo Agent toolkit
+NeMo Agent Toolkit is designed to be a community oriented library. This means that developer productivity is maximized when others
+distribute NeMo Agent Toolkit plugin packages that will benefit others. This section will introduce the mechanisms the NeMo Agent Toolkit CLI
+exposes to facilitate publishing, discovering, downloading, and removing NeMo Agent Toolkit packages from a configured remote
+registry. Here we define a remote registry as a centralized location that stores plugin wheel packages and NeMo Agent Toolkit
 specific metadata to that describes its usage details. Before these commands can be used, a remote registry must be
 available and a developer must have configured the corresponding channel using the `nat configure channel add` command.
 Refer to [Adding a Remote Registry Channel](#adding-a-remote-registry-channel) for more details on adding a remote registry channels.
@@ -1096,11 +1096,11 @@ Commands:
 
 #### Publishing NeMo Agent Toolkit Components
 
-NeMo Agent toolkit developers may want to distribute their components with the broader ecosystem. The NeMo Agent toolkit publish CLI utility
-provides a mechanism to publish a NeMo Agent toolkit plugin package to a remote registry channel so that other developers can
+NeMo Agent Toolkit developers may want to distribute their components with the broader ecosystem. The NeMo Agent Toolkit publish CLI utility
+provides a mechanism to publish a NeMo Agent Toolkit plugin package to a remote registry channel so that other developers can
 benefit from it's implemented components. Invoking the `nat registry publish` command will build a package wheel, gather
 all component metadata, and transmit to the specified remote registry by channel name. Note, a package must be first
-installed locally so the discovery hooks can pull in necessary NeMo Agent toolkit component metadata.
+installed locally so the discovery hooks can pull in necessary NeMo Agent Toolkit component metadata.
 
 The `nat registry publish --help` utility provides an overview of its usage:
 
@@ -1121,9 +1121,9 @@ Options:
 
 #### Discovering NeMo Agent Toolkit Components
 
-When developing and deploying NeMo Agent toolkit workflows, it is most efficient to leverage pre-built components. When using
+When developing and deploying NeMo Agent Toolkit workflows, it is most efficient to leverage pre-built components. When using
 pre-built components will, only configuration settings are required to integration with the rest of a workflow. These
-pre-built exist in the core library, as well as, within other NeMo Agent toolkit plugin packages. Remote registry channels are the
+pre-built exist in the core library, as well as, within other NeMo Agent Toolkit plugin packages. Remote registry channels are the
 formal mechanism to publish reusable components to the community. The `nat registry search` command allows developers
 to search relevant pre-built components that might benefit their application. The search command is usually followed up
 by an `nat registry pull` command, once a useful package has been identified.
@@ -1153,9 +1153,9 @@ Options:
 ```
 
 #### Pulling in NeMo Agent Toolkit Components
-Once a useful NeMo Agent toolkit component has been discovered using the `nat registry search` command, the containing package can be
-pulled in and installed from a configured remote registry, so that it can be used withing the local NeMo Agent toolkit environment.
-Once installed, all components in the package can be referenced by name in a NeMo Agent toolkit workflow YAML configuration file.
+Once a useful NeMo Agent Toolkit component has been discovered using the `nat registry search` command, the containing package can be
+pulled in and installed from a configured remote registry, so that it can be used withing the local NeMo Agent Toolkit environment.
+Once installed, all components in the package can be referenced by name in a NeMo Agent Toolkit workflow YAML configuration file.
 In many cases, components can be stitched together in YAML without having to write much integration code.
 
 The `nat registry pull --help` command provides an overview of its usage:

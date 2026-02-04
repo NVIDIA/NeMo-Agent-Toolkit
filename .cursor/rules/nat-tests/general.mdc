@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Testing Guidelines for NeMo Agent Toolkit
 
-Follow these rules when writing, creating, or modifying tests for NeMo Agent toolkit.
+Follow these rules when writing, creating, or modifying tests for NeMo Agent Toolkit.
 
 ## Referenced Documentation
 
@@ -17,7 +17,7 @@ Follow these rules when writing, creating, or modifying tests for NeMo Agent too
 
 ## General Testing Rules
 
-All tests in NeMo Agent toolkit use pytest. See the general coding guidelines for basic testing requirements.
+All tests in NeMo Agent Toolkit use pytest. See the general coding guidelines for basic testing requirements.
 
 ### Unit Tests
 
@@ -56,18 +56,22 @@ Key features:
 
 ### Running Tests
 
+Always use the user's current virtual environment when running tests.
+
+Always include a package subdirectory or multiple subdirectories when invoking pytest.
+
 ```bash
 # Unit tests only (default)
-pytest
+pytest packages/nvidia_nat_core
 
 # Include slow tests
-pytest --run_slow
+pytest --run_slow packages/nvidia_nat_core packages/nvidia_nat_langchain
 
 # Include integration tests
-pytest --run_integration
+pytest --run_integration packages/nvidia_nat_core
 
 # All tests
-pytest --run_slow --run_integration
+pytest --run_slow --run_integration packages/nvidia_nat_langchain
 ```
 
 ## Related Rules

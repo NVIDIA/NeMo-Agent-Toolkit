@@ -17,13 +17,13 @@ limitations under the License.
 
 # Running Existing Agents in NVIDIA NeMo Agent Toolkit
 
-NeMo Agent toolkit provides automatic wrapper functionality that allows you to integrate existing agents from other frameworks without rewriting them. This enables you to leverage features such as observability, evaluation, and configuration management while continuing to use your existing agent implementations.
+NeMo Agent Toolkit provides automatic wrapper functionality that allows you to integrate existing agents from other frameworks without rewriting them. This enables you to leverage features such as observability, evaluation, and configuration management while continuing to use your existing agent implementations.
 
 This approach is particularly valuable for users who are just getting started with NeMo Agent Toolkit. You can begin taking advantage of features offered by the toolkit right away with your existing agents, then gradually adopt more native features as you become familiar with the platform.
 
 ## How Automatic Wrappers Work
 
-NeMo Agent toolkit is a library that wraps around existing frameworks to add instrumentation and utilizes that instrumentation to provide advanced features such as observability, evaluation, and configuration management.
+NeMo Agent Toolkit is a library that wraps around existing frameworks to add instrumentation and utilizes that instrumentation to provide advanced features such as observability, evaluation, and configuration management.
 
 ### Accessing the Builder
 
@@ -33,7 +33,7 @@ While this new approach simplifies integration, wrapping agents is still the pre
 
 ## Supported Frameworks
 
-NeMo Agent toolkit currently provides automatic wrappers for the following frameworks:
+NeMo Agent Toolkit currently provides automatic wrappers for the following frameworks:
 
 - [LangGraph](langgraph.md): Integrate existing LangGraph agents and workflows
 
@@ -42,7 +42,7 @@ NeMo Agent toolkit currently provides automatic wrappers for the following frame
 The automatic wrapper approach provides several advantages:
 
 - **No Rewrite Required**: Run existing agents without modifying their core implementation
-- **Unified Configuration**: Use the NeMo Agent toolkit YAML configuration system to manage agents
+- **Unified Configuration**: Use the NeMo Agent Toolkit YAML configuration system to manage agents
 - **Observability**: Add tracing and monitoring through supported observability platforms
 - **Evaluation**: Leverage the toolkit evaluation framework to measure agent performance
 - **LLM Flexibility**: Easily swap between different LLMs through configuration
@@ -53,7 +53,7 @@ The automatic wrapper approach provides several advantages:
 Automatic wrappers are ideal when:
 
 - You have existing agent implementations that work well
-- You want to quickly add NeMo Agent toolkit capabilities without refactoring
+- You want to quickly add NeMo Agent Toolkit capabilities without refactoring
 - You need to evaluate multiple frameworks and compare performance
 - You want to leverage the deployment and serving features provided by the toolkit
 
@@ -76,7 +76,7 @@ To get started with automatic wrappers:
 1. Choose the framework you want to integrate from the list above
 2. Follow the framework-specific guide to set up your configuration
 3. Make any necessary code modifications as described in the guide
-4. Run your agent using standard NeMo Agent toolkit commands
+4. Run your agent using standard NeMo Agent Toolkit commands
 
 Each framework guide provides complete examples and step-by-step instructions for integration.
 

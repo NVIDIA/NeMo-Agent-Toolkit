@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 # Configure the Tool Calling Agent
-Configure the NVIDIA NeMo Agent toolkit tool calling agent as a [workflow](../../../build-workflows/about-building-workflows.md) or a [function](../../../build-workflows/functions-and-function-groups/functions.md).
+Configure the NVIDIA NeMo Agent Toolkit tool calling agent as a [workflow](../../../build-workflows/about-building-workflows.md) or a [function](../../../build-workflows/functions-and-function-groups/functions.md).
 
 ## Requirements
 The tool calling agent requires the `nvidia-nat[langchain]` plugin, which can be installed with one of the following commands.
@@ -27,7 +27,7 @@ The tool calling agent requires the `nvidia-nat[langchain]` plugin, which can be
 uv pip install -e '.[langchain]'
 ```
 
-- If you have installed the NeMo Agent toolkit from a package:
+- If you have installed the NeMo Agent Toolkit from a package:
 
 ```bash
 uv pip install "nvidia-nat[langchain]"

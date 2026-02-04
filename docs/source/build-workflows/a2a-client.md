@@ -21,7 +21,7 @@ limitations under the License.
 
 You can create a [workflow](./about-building-workflows.md) that connects to remote A2A agents and provides a function interface for interacting with their capabilities.
 
-This guide covers how to use NeMo Agent toolkit as an A2A client. For information on publishing workflows as A2A servers, refer to [A2A Server](../run-workflows/a2a-server.md).
+This guide covers how to use NeMo Agent Toolkit as an A2A client. For information on publishing workflows as A2A servers, refer to [A2A Server](../run-workflows/a2a-server.md).
 
 :::important
 **Per-User A2A Clients**
@@ -48,7 +48,7 @@ uv pip install "nvidia-nat[a2a]"
 
 ## A2A Client Configuration
 
-NeMo Agent toolkit enables workflows to interact with remote A2A agents through [function groups](./functions-and-function-groups/function-groups.md).
+NeMo Agent Toolkit enables workflows to interact with remote A2A agents through [function groups](./functions-and-function-groups/function-groups.md).
 
 ### Basic Configuration
 
