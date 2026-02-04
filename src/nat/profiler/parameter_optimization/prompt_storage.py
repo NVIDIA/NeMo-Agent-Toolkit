@@ -14,8 +14,12 @@
 # limitations under the License.
 
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Protocol
+
+from nat.object_store.interfaces import ObjectStore
+from nat.object_store.models import ObjectStoreItem
 
 
 class PromptStorage(Protocol):
@@ -188,3 +192,107 @@ class LocalFilePromptStorage:
         prompts = await self.load_checkpoint(max_gen)
 
         return (max_gen, prompts)
+
+
+class ObjectStorePromptStorage:
+    """
+    PromptStorage implementation using ObjectStore interface.
+
+    Stores prompts as JSON in any object store backend (S3, Redis,
+    local files via LocalFileObjectStore, etc.).
+
+    Args:
+        object_store: ObjectStore implementation
+        key_prefix: Optional key prefix. If None, generates timestamp-based
+                   prefix like "prompt_opt_20260204_123456".
+    """
+
+    def __init__(self, object_store: ObjectStore, key_prefix: str | None = None):
+        self.object_store = object_store
+
+        # Generate prefix if not provided
+        if key_prefix is None:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            self.key_prefix = f"prompt_opt_{timestamp}"
+        else:
+            self.key_prefix = key_prefix
+
+    def _make_key(self, filename: str) -> str:
+        """Construct object store key with prefix."""
+        return f"{self.key_prefix}/{filename}"
+
+    def _prompts_to_json_bytes(self, prompts: dict[str, tuple[str, str]]) -> bytes:
+        """Convert prompts dict to JSON bytes."""
+        # Convert tuples to lists for JSON serialization
+        data = {
+            param_name: [prompt_text, purpose]
+            for param_name, (prompt_text, purpose) in prompts.items()
+        }
+        return json.dumps(data, indent=2).encode("utf-8")
+
+    async def save_checkpoint(
+        self,
+        generation: int,
+        prompts: dict[str, tuple[str, str]]
+    ) -> None:
+        """Save generation checkpoint to object store."""
+        key = self._make_key(f"optimized_prompts_gen{generation}.json")
+        data = self._prompts_to_json_bytes(prompts)
+
+        item = ObjectStoreItem(
+            data=data,
+            content_type="application/json",
+            metadata={"generation": str(generation)}
+        )
+
+        await self.object_store.upsert_object(key, item)
+
+    async def save_final(
+        self,
+        prompts: dict[str, tuple[str, str]]
+    ) -> None:
+        """Save final prompts to object store."""
+        key = self._make_key("optimized_prompts.json")
+        data = self._prompts_to_json_bytes(prompts)
+
+        item = ObjectStoreItem(
+            data=data,
+            content_type="application/json",
+            metadata={"type": "final"}
+        )
+
+        await self.object_store.upsert_object(key, item)
+
+    async def load_checkpoint(
+        self,
+        generation: int
+    ) -> dict[str, tuple[str, str]]:
+        """Load checkpoint from object store. Raises KeyError if not found."""
+        key = self._make_key(f"optimized_prompts_gen{generation}.json")
+
+        try:
+            item = await self.object_store.get_object(key)
+        except Exception as e:
+            raise KeyError(f"Checkpoint for generation {generation} not found") from e
+
+        # Parse JSON and convert lists to tuples
+        data = json.loads(item.data.decode("utf-8"))
+        return {
+            param_name: (prompt_text, purpose)
+            for param_name, [prompt_text, purpose] in data.items()
+        }
+
+    async def load_latest_checkpoint(
+        self
+    ) -> tuple[int, dict[str, tuple[str, str]]]:
+        """
+        Load most recent checkpoint.
+
+        Note: This is a stub for future implementation. Object stores
+        don't provide efficient listing, so this would need additional
+        metadata tracking or index.
+        """
+        raise NotImplementedError(
+            "load_latest_checkpoint not yet implemented for ObjectStorePromptStorage. "
+            "Future implementation will require metadata index or listing capability."
+        )
