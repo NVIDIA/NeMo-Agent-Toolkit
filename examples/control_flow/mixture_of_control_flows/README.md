@@ -52,7 +52,7 @@ The mixture of control flows is configured through the `config.yml` file. This e
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+    model_name: nvidia/nemotron-3-nano-30b-a3b
     temperature: 0.0
     max_tokens: 4096
 
