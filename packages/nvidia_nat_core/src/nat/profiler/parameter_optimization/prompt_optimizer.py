@@ -371,7 +371,12 @@ async def optimize_prompts(
             best = max(population, key=lambda i: (i.scalar_fitness or 0.0))
             checkpoint = {k: (best.prompts[k], prompt_space[k][1]) for k in prompt_space}
             try:
-                await storage.save_checkpoint(generation=gen, prompts=checkpoint)
+                await storage.save_checkpoint(
+                    generation=gen,
+                    prompts=checkpoint,
+                    fitness_score=best.scalar_fitness,
+                    evaluator_scores=best.metrics
+                )
                 logger.info("[GA] Saved checkpoint for generation %d (fitness=%.4f)", gen, best.scalar_fitness or 0.0)
             except Exception as e:
                 logger.warning(f"Failed to save checkpoint for generation {gen}: {e}")

@@ -34,7 +34,9 @@ class PromptStorage(Protocol):
     async def save_checkpoint(
         self,
         generation: int,
-        prompts: dict[str, tuple[str, str]]
+        prompts: dict[str, tuple[str, str]],
+        fitness_score: float | None = None,
+        evaluator_scores: dict[str, float] | None = None
     ) -> None:
         """
         Save generation checkpoint.
@@ -42,6 +44,8 @@ class PromptStorage(Protocol):
         Args:
             generation: Generation number (1-indexed)
             prompts: Map of param_name -> (prompt_text, purpose)
+            fitness_score: Optional overall fitness score for this generation
+            evaluator_scores: Optional map of evaluator_name -> score
         """
         ...
 
@@ -122,16 +126,32 @@ class LocalFilePromptStorage:
     async def save_checkpoint(
         self,
         generation: int,
-        prompts: dict[str, tuple[str, str]]
+        prompts: dict[str, tuple[str, str]],
+        fitness_score: float | None = None,
+        evaluator_scores: dict[str, float] | None = None
     ) -> None:
         """Save generation checkpoint to optimized_prompts_gen{N}.json."""
         checkpoint_path = self.output_dir / f"optimized_prompts_gen{generation}.json"
 
         # Convert tuples to lists for JSON serialization
-        checkpoint_data = {
+        prompts_data = {
             param_name: [prompt_text, purpose]
             for param_name, (prompt_text, purpose) in prompts.items()
         }
+
+        # Build checkpoint structure with metadata
+        checkpoint_data = {
+            "metadata": {
+                "generation": generation,
+            },
+            "prompts": prompts_data
+        }
+
+        # Add optional score information
+        if fitness_score is not None:
+            checkpoint_data["metadata"]["fitness_score"] = fitness_score
+        if evaluator_scores is not None:
+            checkpoint_data["metadata"]["evaluator_scores"] = evaluator_scores
 
         checkpoint_path.write_text(json.dumps(checkpoint_data, indent=2))
 
@@ -162,10 +182,18 @@ class LocalFilePromptStorage:
 
         data = json.loads(checkpoint_path.read_text())
 
+        # Handle both new format (with metadata) and old format (just prompts)
+        if "prompts" in data and "metadata" in data:
+            # New format: {"metadata": {...}, "prompts": {...}}
+            prompts_data = data["prompts"]
+        else:
+            # Old format: {"param_name": [prompt, purpose], ...}
+            prompts_data = data
+
         # Convert lists back to tuples
         return {
             param_name: (prompt_text, purpose)
-            for param_name, [prompt_text, purpose] in data.items()
+            for param_name, [prompt_text, purpose] in prompts_data.items()
         }
 
     async def load_latest_checkpoint(
@@ -233,16 +261,28 @@ class ObjectStorePromptStorage:
     async def save_checkpoint(
         self,
         generation: int,
-        prompts: dict[str, tuple[str, str]]
+        prompts: dict[str, tuple[str, str]],
+        fitness_score: float | None = None,
+        evaluator_scores: dict[str, float] | None = None
     ) -> None:
         """Save generation checkpoint to object store."""
         key = self._make_key(f"optimized_prompts_gen{generation}.json")
         data = self._prompts_to_json_bytes(prompts)
 
+        # Build metadata dict
+        metadata = {"generation": str(generation)}
+
+        if fitness_score is not None:
+            metadata["fitness_score"] = str(fitness_score)
+
+        if evaluator_scores is not None:
+            # Store evaluator scores as JSON string since metadata values must be strings
+            metadata["evaluator_scores"] = json.dumps(evaluator_scores)
+
         item = ObjectStoreItem(
             data=data,
             content_type="application/json",
-            metadata={"generation": str(generation)}
+            metadata=metadata
         )
 
         await self.object_store.upsert_object(key, item)

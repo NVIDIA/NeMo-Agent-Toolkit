@@ -3325,7 +3325,7 @@ name = "ipykernel"
 version = "7.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "appnope", marker = "sys_platform == 'darwin' or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art')" },
+    { name = "appnope", marker = "sys_platform == 'darwin' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
     { name = "comm" },
     { name = "debugpy" },
     { name = "ipython" },
@@ -5412,12 +5412,14 @@ requires-dist = [
 name = "nat-documentation-guides"
 source = { editable = "examples/documentation_guides" }
 dependencies = [
+    { name = "nat-simple-web-query" },
     { name = "nvidia-nat", extra = ["langchain", "test"] },
     { name = "text-file-ingest" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "nat-simple-web-query", editable = "examples/getting_started/simple_web_query" },
     { name = "nvidia-nat", extras = ["langchain", "test"], editable = "." },
     { name = "text-file-ingest", editable = "examples/documentation_guides/workflows/text_file_ingest" },
 ]
@@ -5544,11 +5546,23 @@ requires-dist = [
 name = "nat-notebooks"
 source = { editable = "examples/notebooks" }
 dependencies = [
-    { name = "nvidia-nat", extra = ["test"] },
+    { name = "ipykernel" },
+    { name = "ipython" },
+    { name = "nat-alert-triage-agent" },
+    { name = "nat-simple-calculator" },
+    { name = "nvidia-nat", extra = ["langchain", "llama-index", "mcp", "profiling", "test"] },
+    { name = "python-dotenv", extra = ["cli"] },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "nvidia-nat", extras = ["test"], editable = "." }]
+requires-dist = [
+    { name = "ipykernel" },
+    { name = "ipython", specifier = "~=8.31" },
+    { name = "nat-alert-triage-agent", editable = "examples/advanced_agents/alert_triage_agent" },
+    { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
+    { name = "nvidia-nat", extras = ["langchain", "llama-index", "mcp", "profiling", "test"], editable = "." },
+    { name = "python-dotenv", extras = ["cli"], specifier = "~=1.1.1" },
+]
 
 [[package]]
 name = "nat-per-user-workflow"
@@ -5591,16 +5605,16 @@ name = "nat-profiler-agent"
 source = { editable = "examples/advanced_agents/profiler_agent" }
 dependencies = [
     { name = "arize-phoenix-client" },
+    { name = "nat-simple-calculator" },
     { name = "nvidia-nat", extra = ["langchain", "opentelemetry", "phoenix", "profiling", "test", "weave"] },
     { name = "nvidia-nat", extra = ["ragaai"], marker = "extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art')" },
-    { name = "pydantic" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "arize-phoenix-client", specifier = "~=1.21" },
+    { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
     { name = "nvidia-nat", extras = ["langchain", "opentelemetry", "phoenix", "profiling", "ragaai", "test", "weave"], editable = "." },
-    { name = "pydantic" },
 ]
 
 [[package]]
@@ -9476,6 +9490,11 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f6/b0/4bc07ccd3572a2f9df7e6782f52b0c6c90dcbb803ac4a167702d7d0dfe1e/python_dotenv-1.1.1.tar.gz", hash = "sha256:a8a6399716257f45be6a007360200409fce5cda2661e3dec71d23dc15f6189ab", size = 41978, upload-time = "2025-06-24T04:21:07.341Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5f/ed/539768cf28c661b5b068d66d96a2f155c4971a5d55684a514c1a0e0dec2f/python_dotenv-1.1.1-py3-none-any.whl", hash = "sha256:31f23644fe2602f88ff55e1f5c79ba497e01224ee7737937930c448e4d0e24dc", size = 20556, upload-time = "2025-06-24T04:21:06.073Z" },
+]
+
+[package.optional-dependencies]
+cli = [
+    { name = "click" },
 ]
 
 [[package]]

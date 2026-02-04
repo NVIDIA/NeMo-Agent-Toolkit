@@ -17,3 +17,4 @@
 # isort:skip_file
 
 from . import in_memory_object_store
+from . import local_file
