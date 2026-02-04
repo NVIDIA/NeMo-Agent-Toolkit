@@ -28,7 +28,6 @@ from dynamo.runtime import DistributedRuntime
 from dynamo.runtime import dynamo_worker
 from dynamo.runtime.logging import configure_dynamo_logging
 from pydantic import BaseModel
-from pydantic import field_validator
 from transformers import AutoTokenizer
 
 configure_dynamo_logging()
@@ -51,19 +50,10 @@ class StreamOptions(BaseModel):
 
 
 class PrefixHints(BaseModel):
-    session_id: str
-    latency_priority: str  # LOW | MEDIUM | HIGH
-
-    @field_validator('latency_priority')
-    @classmethod
-    def validate_priority(cls, v: str) -> str:
-        """Validate and normalize priority to LOW/MEDIUM/HIGH."""
-        if not v:
-            return "MEDIUM"
-        normalized = v.strip().upper()
-        if normalized not in ("LOW", "MEDIUM", "HIGH"):
-            raise ValueError(f"latency_priority must be LOW/MEDIUM/HIGH, got: {v}")
-        return normalized
+    prefix_id: str
+    total_requests: int  # same value on every call for this prefix
+    osl: str  # LOW | MEDIUM | HIGH  (output sequence length)
+    iat: str  # LOW | MEDIUM | HIGH  (inter-arrival time)
 
 
 class ChatCompletionRequest(BaseModel):
@@ -88,8 +78,11 @@ class ChatCompletionRequest(BaseModel):
 
 class RouterRequest(BaseModel):
     tokens: list[int]
-    session_id: str
-    latency_priority: str
+    prefix_id: str
+    reuse_budget: int = 0  # remaining *after this request*
+    expected_osl: str | None = None
+    interarrival: str | None = None
+
 
 class RouterFeedbackRequest(BaseModel):
     decision_id: str
@@ -132,10 +125,6 @@ class ProcessorRequestHandler:
         except Exception:
             self._metrics_log_cap = 2048
         self._metrics_written_count = 0
-
-        # Output logging (accumulated text)
-        self._output_log_path = os.environ.get("PROCESSOR_OUTPUT_LOG", "processor_output.jsonl")
-        self._output_lock = asyncio.Lock()
 
         # def _raise_exception(msg: str):  # pragma: no cover - template guard
         #     raise ValueError(msg)
@@ -186,12 +175,11 @@ class ProcessorRequestHandler:
             logger.warning("Failed to initialize metrics CSV %s: %s", self._metrics_csv_path, e)
 
     # ---- helpers ----
-    def _render_prompt(self, messages: list[Message], tools: list[dict[str, Any]] | None = None) -> str:
+    def _render_prompt(self, messages: list[Message]) -> str:
         message_dicts = [{"role": m.role, "content": m.content} for m in messages]
         if getattr(self.tokenizer, "chat_template", None):
             try:
-                return self.tokenizer.apply_chat_template(message_dicts, tools=tools,
-                                                          tokenize=False, add_generation_prompt=True)
+                return self.tokenizer.apply_chat_template(message_dicts, tokenize=False, add_generation_prompt=True)
             except Exception as e:
                 logger.warning(f"Chat template failed: {e}, using simple format")
 
@@ -207,18 +195,44 @@ class ProcessorRequestHandler:
             raise RuntimeError("Tokenizer not initialized")
         return self.tokenizer.decode(token_ids, skip_special_tokens=True)
 
-    async def _pick_worker(self, token_ids: list[int], session_id: str, latency_priority: str
-                           ) -> tuple[int | None, str | None]:
+    async def _update_prefix_state(self, hints: PrefixHints) -> tuple[int, str, str]:
+        """Updates prefix counters and returns (remaining_after, osl, iat)."""
+        pid = hints.prefix_id
+        total = max(1, int(hints.total_requests))
+        osl = (hints.osl or "MEDIUM").strip().upper()
+        if osl not in ("LOW", "MEDIUM", "HIGH"):
+            osl = "MEDIUM"
+        iat = (hints.iat or "MEDIUM").strip().upper()
+        if iat not in ("LOW", "MEDIUM", "HIGH"):
+            iat = "MEDIUM"
+
+        async with self._prefix_lock:
+            s = self._prefix_state.get(pid)
+            if s is None:
+                s = {"total": total, "processed": 0}
+                self._prefix_state[pid] = s
+            else:
+                s["total"] = max(s["total"], total)
+            s["processed"] += 1
+            remaining_after = max(s["total"] - s["processed"], 0)
+            if remaining_after == 0:
+                # Drop state immediately when finished
+                self._prefix_state.pop(pid, None)
+        return remaining_after, osl, iat
+
+    async def _pick_worker(self, token_ids: list[int], prefix_id: str, reuse_budget: int, osl: str,
+                           iat: str) -> tuple[int | None, str | None]:
         """Pick a worker via the router."""
         if not self.router_pick_client:
             return None, None
 
         req = RouterRequest(
             tokens=token_ids,
-            session_id=session_id,
-            latency_priority=latency_priority
+            prefix_id=prefix_id,
+            reuse_budget=max(int(reuse_budget), 0),
+            expected_osl=osl,
+            interarrival=iat,
         )
-
         stream = await self.router_pick_client.generate(req.model_dump())
 
         worker_id: int | None = None
@@ -272,11 +286,13 @@ class ProcessorRequestHandler:
         top_k: int,
         ignore_eos: bool,
         max_tokens: int,
-        session_id: str,
-        latency_priority: str
+        prefix_id: str,
+        reuse_budget: int,
+        osl: str,
+        iat: str,
     ) -> AsyncIterator[dict[str, Any]]:
         """Streaming generator: yields {'delta': str} tokens and finally {'finish_reason': <str>}."""
-        worker_id, decision_id = await self._pick_worker(token_ids, session_id, latency_priority)
+        worker_id, decision_id = await self._pick_worker(token_ids, prefix_id, reuse_budget, osl, iat)
         engine_request: dict[str, Any] = {
             "token_ids": token_ids,
             "sampling_options": {
@@ -333,8 +349,6 @@ class ProcessorRequestHandler:
                                                      finish_reason)
                     # Persist per-request metrics to CSV (concurrency-safe)
                     await self._log_request_metrics(num_tokens=len(all_tokens), latency_ms=latency_ms)
-                    # Log the accumulated generated text
-                    await self._log_output(session_id, text_so_far, len(all_tokens), latency_ms)
                     yield {"finish_reason": finish_reason}
                     return
 
@@ -356,25 +370,28 @@ class ProcessorRequestHandler:
         chat_req = ChatCompletionRequest(**raw)
         logger.info("Chat completion request was %s with %d messages", chat_req.model, len(chat_req.messages))
         hints = chat_req.prefix_hints or PrefixHints(
-            session_id=f"auto-{uuid.uuid4().hex}", latency_priority="MEDIUM")
+            prefix_id=f"auto-{uuid.uuid4().hex}", total_requests=1, osl="MEDIUM", iat="MEDIUM")
+
+        # Update prefix state and compute reuse_budget := remaining AFTER this request
+        reuse_budget, osl, iat = await self._update_prefix_state(hints)
 
         # Build input text for the model
         messages = chat_req.messages.copy()
-        text = self._render_prompt(messages, chat_req.tools)
+        text = self._render_prompt(messages)
         tokens = self.tokenize(text)
 
         # Stream from engine (frontend can aggregate if non-streaming)
-        async for resp in self._stream_from_engine(
-            tokens,
-            chat_req.model or "Qwen/Qwen2.5-0.5B-Instruct",
-            chat_req.temperature or 0.6,
-            chat_req.top_p or 0.999,
-            chat_req.top_k or 1,
-            chat_req.ignore_eos or False,
-            chat_req.max_tokens or 1024,
-            hints.session_id,
-            hints.latency_priority,
-        ):
+        async for resp in self._stream_from_engine(tokens,
+                                                   chat_req.model,
+                                                   chat_req.temperature,
+                                                   chat_req.top_p,
+                                                   chat_req.top_k,
+                                                   chat_req.ignore_eos,
+                                                   chat_req.max_tokens,
+                                                   hints.prefix_id,
+                                                   reuse_budget,
+                                                   osl,
+                                                   iat):
             yield resp
 
     async def _log_request_metrics(self, *, num_tokens: int, latency_ms: float):
@@ -396,38 +413,12 @@ class ProcessorRequestHandler:
         except Exception as e:
             logger.warning("Failed to write metrics CSV %s: %s", self._metrics_csv_path, e)
 
-    async def _log_output(self, session_id: str, generated_text: str, num_tokens: int, latency_ms: float):
-        """Log the accumulated generated text to file and terminal."""
-        try:
-            import json
-            log_entry = {
-                "timestamp": time.time(),
-                "session_id": session_id,
-                "generated_text": generated_text,
-                "num_tokens": num_tokens,
-                "latency_ms": latency_ms,
-            }
-
-            # Log to terminal
-            logger.info("[OUTPUT] session=%s tokens=%d text=%s", session_id, num_tokens, generated_text[:200])
-
-            # Log to file
-            async with self._output_lock:
-                try:
-                    with open(self._output_log_path, "a") as f:
-                        f.write(json.dumps(log_entry, separators=(",", ":")) + "\n")
-                except Exception as e:
-                    logger.warning("Failed to write to output log: %s", e)
-        except Exception as e:
-            logger.debug("Output logging error: %s", e)
-
 
 # -------------------------- worker entry point -------------------------- #
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--model", type=str, default="nvidia/Llama-3.1-Nemotron-Nano-8B-v1")
-    p.add_argument("--disable-router", action="store_true", default=False,
-                   help="Disable router and use direct load balancing")
+    p.add_argument("--enable-router", action="store_true", default=True)
     return p.parse_args()
 
 
@@ -437,7 +428,7 @@ async def worker(runtime: DistributedRuntime):
     component = runtime.namespace("dynamo").component("processor")
     await component.create_service()
 
-    handler = ProcessorRequestHandler(runtime, model_name=args.model, enable_router=(not args.disable_router))
+    handler = ProcessorRequestHandler(runtime, model_name=args.model, enable_router=args.enable_router)
     await handler.initialize()
     await component.endpoint("process").serve_endpoint(handler.generate)
 

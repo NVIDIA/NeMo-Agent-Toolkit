@@ -18,11 +18,9 @@ import csv
 import json
 import logging
 import os
-import re
 import time
 import uuid
 from collections.abc import AsyncGenerator
-from dataclasses import dataclass
 from typing import Any
 
 import uvicorn
@@ -38,172 +36,10 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from pydantic import field_validator
-from text_utils import strip_think_tags
 from transformers import AutoTokenizer
 
 configure_dynamo_logging()
 logger = logging.getLogger(__name__)
-
-
-# ----------------- Tool Call Parsing -----------------
-@dataclass
-class ParsedToolCall:
-    """Represents a parsed tool call from model output."""
-    id: str
-    name: str
-    arguments: dict[str, Any]
-
-    def to_openai_format(self) -> dict[str, Any]:
-        """Convert to OpenAI tool_calls format."""
-        return {
-            "id": self.id,
-            "type": "function",
-            "function": {
-                "name": self.name,
-                "arguments": json.dumps(self.arguments),
-            }
-        }
-
-
-class ToolCallParser:
-    """
-    Parses tool calls from model output in the format:
-    <tool_call>
-      <function=function_name>
-        <parameter=param_name>
-          value
-        </parameter>
-      </function>
-    </tool_call>
-    """
-
-    # Pattern to match complete tool_call blocks
-    TOOL_CALL_PATTERN = re.compile(
-        r'<tool_call>\s*(.*?)\s*</tool_call>',
-        re.DOTALL
-    )
-
-    # Pattern to match function within a tool_call
-    FUNCTION_PATTERN = re.compile(
-        r'<function=([^>]+)>\s*(.*?)\s*</function>',
-        re.DOTALL
-    )
-
-    # Pattern to match parameters within a function
-    PARAMETER_PATTERN = re.compile(
-        r'<parameter=([^>]+)>\s*(.*?)\s*</parameter>',
-        re.DOTALL
-    )
-
-    @classmethod
-    def parse(cls, text: str) -> tuple[str, list[ParsedToolCall]]:
-        """
-        Parse tool calls from text.
-
-        Returns:
-            tuple of (text_without_tool_calls, list_of_parsed_tool_calls)
-        """
-        tool_calls: list[ParsedToolCall] = []
-
-        # Find all tool_call blocks
-        for match in cls.TOOL_CALL_PATTERN.finditer(text):
-            tool_call_content = match.group(1)
-
-            # Find function within this tool_call
-            func_match = cls.FUNCTION_PATTERN.search(tool_call_content)
-            if func_match:
-                func_name = func_match.group(1).strip()
-                func_content = func_match.group(2)
-
-                # Parse parameters
-                arguments: dict[str, Any] = {}
-                for param_match in cls.PARAMETER_PATTERN.finditer(func_content):
-                    param_name = param_match.group(1).strip()
-                    param_value = param_match.group(2).strip()
-
-                    # Try to parse as JSON for complex types, otherwise keep as string
-                    try:
-                        arguments[param_name] = json.loads(param_value)
-                    except (json.JSONDecodeError, ValueError):
-                        arguments[param_name] = param_value
-
-                tool_calls.append(ParsedToolCall(
-                    id=f"call_{uuid.uuid4().hex[:24]}",
-                    name=func_name,
-                    arguments=arguments,
-                ))
-
-        # Remove tool_call blocks from text
-        text_without_tools = cls.TOOL_CALL_PATTERN.sub('', text).strip()
-
-        return text_without_tools, tool_calls
-
-    @classmethod
-    def has_complete_tool_call(cls, text: str) -> bool:
-        """Check if text contains at least one complete tool_call block."""
-        return bool(cls.TOOL_CALL_PATTERN.search(text))
-
-    @classmethod
-    def has_partial_tool_call(cls, text: str) -> bool:
-        """Check if text contains a potentially incomplete tool_call (started but not closed)."""
-        # Count opening and closing tags
-        open_count = text.count('<tool_call>')
-        close_count = text.count('</tool_call>')
-        return open_count > close_count
-
-    @classmethod
-    def extract_partial_tool_call_info(cls, text: str) -> dict[str, Any] | None:
-        """
-        Extract partial tool call information for streaming.
-        Returns partial info if we can determine function name, even if not complete.
-        """
-        # Look for the last incomplete tool_call
-        last_open = text.rfind('<tool_call>')
-        if last_open == -1:
-            return None
-
-        partial_content = text[last_open:]
-
-        # Check if this tool_call is already complete
-        if '</tool_call>' in partial_content:
-            return None
-
-        # Try to extract function name
-        func_match = re.search(r'<function=([^>]+)>', partial_content)
-        if not func_match:
-            return None
-
-        func_name = func_match.group(1).strip()
-
-        # Try to extract any complete parameters so far
-        arguments: dict[str, Any] = {}
-        for param_match in cls.PARAMETER_PATTERN.finditer(partial_content):
-            param_name = param_match.group(1).strip()
-            param_value = param_match.group(2).strip()
-            try:
-                arguments[param_name] = json.loads(param_value)
-            except (json.JSONDecodeError, ValueError):
-                arguments[param_name] = param_value
-
-        # Also check for partial parameter (opened but not closed)
-        partial_param_match = re.search(
-            r'<parameter=([^>]+)>\s*([^<]*?)$',
-            partial_content,
-            re.DOTALL
-        )
-        partial_param_name = None
-        partial_param_value = None
-        if partial_param_match:
-            partial_param_name = partial_param_match.group(1).strip()
-            partial_param_value = partial_param_match.group(2)
-
-        return {
-            "function_name": func_name,
-            "complete_arguments": arguments,
-            "partial_param_name": partial_param_name,
-            "partial_param_value": partial_param_value,
-        }
 
 
 # ----------------- Pydantic request models -----------------
@@ -222,19 +58,10 @@ class StreamOptions(BaseModel):
 
 
 class PrefixHints(BaseModel):
-    session_id: str
-    latency_priority: str  # LOW | MEDIUM | HIGH
-
-    @field_validator('latency_priority')
-    @classmethod
-    def validate_priority(cls, v: str) -> str:
-        """Validate and normalize priority to LOW/MEDIUM/HIGH."""
-        if not v:
-            return "MEDIUM"
-        normalized = v.strip().upper()
-        if normalized not in ("LOW", "MEDIUM", "HIGH"):
-            raise ValueError(f"latency_priority must be LOW/MEDIUM/HIGH, got: {v}")
-        return normalized
+    prefix_id: str
+    total_requests: int
+    osl: str  # LOW | MEDIUM | HIGH
+    iat: str  # LOW | MEDIUM | HIGH  (estimated time between requests)
 
 
 class ChatCompletionRequest(BaseModel):
@@ -289,10 +116,6 @@ class FrontendRequestHandler:
             self._tps_interval = 5.0
         self._tps_csv_path = os.environ.get("FRONTEND_TPS_CSV", "frontend_throughput.csv")
         self._tps_task = None
-
-        # Input/output logging
-        self._io_log_path = os.environ.get("FRONTEND_IO_LOG", "frontend_io.jsonl")
-        self._io_lock = asyncio.Lock()
 
     async def initialize(self) -> None:
         """Initialize the frontend handler.
@@ -363,48 +186,55 @@ class FrontendRequestHandler:
         async def chat_completions(
                 request: ChatCompletionRequest,
                 # ---- New generalized prefix headers ----
-                hdr_session_id: str | None = Header(None, alias="x-nat-session-id"),
-                hdr_latency_priority: str | None = Header(None, alias="x-nat-prefix-latency-priority"),
+                hdr_prefix_id: str | None = Header(None, alias="x-prefix-id"),
+                hdr_prefix_total: str | None = Header(None, alias="x-prefix-total-requests"),
+                hdr_prefix_osl: str | None = Header(None, alias="x-prefix-osl"),
+                hdr_prefix_iat: str | None = Header(None, alias="x-prefix-iat"),
         ):
             """
             OpenAI-compatible /v1/chat/completions:
             - Non-streaming: returns a single JSON completion.
             - Streaming: returns SSE 'chat.completion.chunk' events, then [DONE].
             - Passes per-prefix hints (ID/Total/OSL/IAT) to the processor.
-            - Supports function/tool calling with XML-format tool calls from model.
             """
+
+            # No support for tool calling. Raise error if request.tools
+            if request.tools:
+                raise HTTPException(status_code=400, detail="Tool calling is not supported by this frontend.")
 
             try:
                 # Convert to dict once; we may augment it with prefix hints
                 req_dict: dict[str, Any] = request.model_dump()
+                logger.info("Got full request: %s", req_dict)
 
                 # ---- Build prefix_hints from headers (with robust defaults) ----
-                session_id = hdr_session_id or f"auto-{uuid.uuid4().hex}"
-                latency_priority = hdr_latency_priority or "MEDIUM"
+                prefix_id = hdr_prefix_id or f"auto-{uuid.uuid4().hex}"
+                try:
+                    total_requests = int(hdr_prefix_total) if hdr_prefix_total is not None else 1
+                except Exception:
+                    total_requests = 1
 
-                # PrefixHints will validate and normalize priority via Pydantic validator
+                def norm_level(v: str | None, default: str = "MEDIUM") -> str:
+                    if not v:
+                        return default
+                    v = str(v).strip().upper()
+                    return v if v in ("LOW", "MEDIUM", "HIGH") else default
+
+                osl = norm_level(hdr_prefix_osl, "MEDIUM")
+                iat = norm_level(hdr_prefix_iat, "MEDIUM")
+
                 req_dict["prefix_hints"] = {
-                    "session_id": session_id,
-                    "latency_priority": latency_priority,
+                    "prefix_id": prefix_id,
+                    "total_requests": total_requests,
+                    "osl": osl,
+                    "iat": iat,
                 }
 
                 # Build the processor payload (includes stream fields)
                 processor_req: dict[str, Any] = dict(req_dict)
 
-                # Log input
-                await self._log_io("input", {
-                    "session_id": session_id,
-                    "priority": latency_priority,
-                    "model": request.model,
-                    "messages": [{"role": m.role, "content": str(m.content)[:200]} for m in request.messages],  # Truncate for logging
-                    "streaming": request.stream,
-                })
-
                 # Fast path: non-streaming -> JSON response
                 if not request.stream:
-                    if self.processor_client is None:
-                        raise RuntimeError("Processor client not initialized")
-
                     processor_stream = await self.processor_client.generate(processor_req)
                     full_text = ""
                     finish_reason = "stop"
@@ -423,37 +253,18 @@ class FrontendRequestHandler:
                         elif isinstance(data.get("content"), str):
                             full_text = data["content"]
 
-                    # Parse tool calls from the response
-                    text_content, tool_calls = ToolCallParser.parse(full_text)
-
-                    # Filter out <think> tags from text content
-                    text_content = strip_think_tags(text_content)
-
-                    tok = self._get_tokenizer(request.model or "nvidia/Llama-3.1-Nemotron-Nano-8B-v1")
+                    tok = self._get_tokenizer(request.model)
                     prompt_text = self._messages_to_text(processor_req["messages"], tok)
                     prompt_tokens = len(tok.encode(prompt_text, add_special_tokens=True))
-                    # Count tokens from full response (including tool call markup)
                     completion_tokens = len(tok.encode(full_text, add_special_tokens=False))
 
-                    message_payload: dict[str, Any] = {"role": "assistant"}
-
-                    if tool_calls:
-                        # Response contains tool calls
-                        finish_reason = "tool_calls"
-                        message_payload["tool_calls"] = [tc.to_openai_format() for tc in tool_calls]
-                        # Include content only if there's meaningful text outside tool calls
-                        if text_content:
-                            message_payload["content"] = text_content
-                        else:
-                            message_payload["content"] = None
-                    else:
-                        # Regular text response
-                        message_payload["content"] = text_content
+                    message_payload: dict[str, Any]
+                    message_payload = {"role": "assistant", "content": full_text}
 
                     # Count completed request
                     await self._inc_tps()
 
-                    response = {
+                    return {
                         "id": f"chatcmpl-{uuid.uuid4().hex}",
                         "object": "chat.completion",
                         "created": int(time.time()),
@@ -470,35 +281,26 @@ class FrontendRequestHandler:
                         },
                     }
 
-                    # Log output
-                    await self._log_io("output", {
-                        "session_id": session_id,
-                        "full_text": full_text,
-                        "text_content": text_content,
-                        "has_tool_calls": bool(tool_calls),
-                        "finish_reason": finish_reason,
-                        "tokens": {"prompt": prompt_tokens, "completion": completion_tokens},
-                    })
-
-                    return response
-
                 # ------------- streaming path (SSE) -------------
-                # NOTE: Streaming is disabled - we accumulate the full response and send it as one chunk
                 include_usage = bool(getattr(request.stream_options or StreamOptions(), "include_usage", False))
 
                 async def sse_stream() -> AsyncGenerator[str, None]:
-                    """Simplified streaming: accumulate full response, send as single chunk + DONE."""
                     created = int(time.time())
                     resp_id = f"chatcmpl-{uuid.uuid4().hex}"
-                    model_name = request.model or "nvidia/Llama-3.1-Nemotron-Nano-8B-v1"
+                    model_name = request.model
+
+                    # Prepare tokenizer & prompt token count (for usage if requested)
+                    prompt_tokens = 0
+                    tok = None
+                    if include_usage:
+                        tok = self._get_tokenizer(model_name)
+                        prompt_text = self._messages_to_text(processor_req["messages"], tok)
+                        prompt_tokens = len(tok.encode(prompt_text, add_special_tokens=True))
 
                     def sse_packet(payload: dict[str, Any]) -> str:
                         return "data: " + json.dumps(payload, separators=(",", ":")) + "\n\n"
 
-                    def make_chunk(
-                        delta: dict[str, Any],
-                        finish_reason: str | None,
-                    ) -> dict[str, Any]:
+                    def make_chunk(delta: dict[str, Any], finish_reason: str | None) -> dict[str, Any]:
                         return {
                             "id": resp_id,
                             "object": "chat.completion.chunk",
@@ -511,89 +313,40 @@ class FrontendRequestHandler:
                             }],
                         }
 
+                    # 1) Send the role chunk first
+                    yield sse_packet(make_chunk(delta={"role": "assistant"}, finish_reason=None))
+
+                    # 2) Stream content chunks from processor
+                    processor_stream = await self.processor_client.generate(processor_req)
+                    full_text = ""
+                    finish_reason: str | None = None
+
                     try:
-                        # Accumulate full response from processor
-                        if self.processor_client is None:
-                            raise RuntimeError("Processor client not initialized")
-
-                        processor_stream = await self.processor_client.generate(processor_req)
-                        full_text = ""
-                        finish_reason = "stop"
-
                         async for chunk in processor_stream:
                             data = chunk.data()
                             if "error" in data:
                                 raise HTTPException(status_code=500, detail=data["error"])
 
-                            # Accumulate text
+                            piece: str | None = None
                             if isinstance(data.get("delta"), str):
-                                full_text += data["delta"]
+                                piece = data["delta"]
                             elif isinstance(data.get("token"), str):
-                                full_text += data["token"]
+                                piece = data["token"]
                             elif isinstance(data.get("text"), str):
-                                full_text += data["text"]
+                                piece = data["text"]
                             elif isinstance(data.get("content"), str):
-                                full_text = data["content"]
+                                # If cumulative content, stream only the unseen suffix
+                                cum = data["content"]
+                                start = len(full_text)
+                                if len(cum) > start:
+                                    piece = cum[start:]
 
-                        # Parse tool calls and filter content
-                        text_content, tool_calls = ToolCallParser.parse(full_text)
-                        text_content = strip_think_tags(text_content)
+                            if piece:
+                                full_text += piece
+                                yield sse_packet(make_chunk(delta={"content": piece}, finish_reason=None))
 
-                        if tool_calls:
-                            finish_reason = "tool_calls"
-
-                        # 1) Send role chunk
-                        yield sse_packet(make_chunk(delta={"role": "assistant"}, finish_reason=None))
-
-                        # 2) Send content or tool_calls chunk
-                        delta: dict[str, Any] = {}
-                        if tool_calls:
-                            delta["tool_calls"] = [tc.to_openai_format() for tc in tool_calls]
-                            if text_content:
-                                delta["content"] = text_content
-                        else:
-                            delta["content"] = text_content
-
-                        yield sse_packet(make_chunk(delta=delta, finish_reason=None))
-
-                        # 3) Send finish chunk
-                        yield sse_packet(make_chunk(delta={}, finish_reason=finish_reason))
-
-                        # 4) Optional usage chunk
-                        if include_usage:
-                            tok = self._get_tokenizer(model_name)
-                            prompt_text = self._messages_to_text(processor_req["messages"], tok)
-                            prompt_tokens = len(tok.encode(prompt_text, add_special_tokens=True))
-                            completion_tokens = len(tok.encode(full_text, add_special_tokens=False))
-
-                            usage_chunk = {
-                                "id": resp_id,
-                                "object": "chat.completion.chunk",
-                                "created": created,
-                                "model": model_name,
-                                "choices": [],
-                                "usage": {
-                                    "prompt_tokens": prompt_tokens,
-                                    "completion_tokens": completion_tokens,
-                                    "total_tokens": prompt_tokens + completion_tokens,
-                                },
-                            }
-                            yield sse_packet(usage_chunk)
-
-                        # 5) Terminator
-                        yield "data: [DONE]\n\n"
-
-                        # Log output
-                        await self._log_io("output", {
-                            "session_id": session_id,
-                            "full_text": full_text,
-                            "text_content": text_content,
-                            "has_tool_calls": bool(tool_calls),
-                            "finish_reason": finish_reason,
-                        })
-
-                        # Count completed request
-                        await self._inc_tps()
+                            if "finish_reason" in data and data["finish_reason"] is not None:
+                                finish_reason = data["finish_reason"]
 
                     except HTTPException:
                         raise
@@ -601,6 +354,35 @@ class FrontendRequestHandler:
                         logging.exception("Streaming error: %s", e)
                         yield sse_packet(make_chunk(delta={}, finish_reason="error"))
                         yield "data: [DONE]\n\n"
+                        return
+
+                    # 3) Final finish chunk
+                    final_reason = finish_reason if finish_reason else "stop"
+                    yield sse_packet(make_chunk(delta={}, finish_reason=final_reason))
+
+                    # 4) Optional usage chunk
+                    if include_usage:
+                        if tok is None:
+                            tok = self._get_tokenizer(model_name)
+                        completion_tokens = len(tok.encode(full_text, add_special_tokens=False))
+                        usage_chunk = {
+                            "id": resp_id,
+                            "object": "chat.completion.chunk",
+                            "created": created,
+                            "model": model_name,
+                            "choices": [],
+                            "usage": {
+                                "prompt_tokens": prompt_tokens,
+                                "completion_tokens": completion_tokens,
+                                "total_tokens": prompt_tokens + completion_tokens,
+                            },
+                        }
+                        yield sse_packet(usage_chunk)
+
+                    # 5) Terminator
+                    yield "data: [DONE]\n\n"
+                    # Count completed request
+                    await self._inc_tps()
 
                 return StreamingResponse(
                     sse_stream(),
@@ -633,29 +415,6 @@ class FrontendRequestHandler:
         server = uvicorn.Server(config)
         logging.info("Starting FastAPI server on %s:%s", host, port)
         await server.serve()
-
-    # ----------------- logging helpers -----------------
-    async def _log_io(self, log_type: str, data: dict[str, Any]):
-        """Log input/output to file and terminal."""
-        try:
-            log_entry = {
-                "timestamp": time.time(),
-                "type": log_type,
-                "data": data,
-            }
-
-            # Log to terminal
-            logger.info("[%s] %s", log_type.upper(), json.dumps(data, separators=(",", ":")))
-
-            # Log to file
-            async with self._io_lock:
-                try:
-                    with open(self._io_log_path, "a") as f:
-                        f.write(json.dumps(log_entry, separators=(",", ":")) + "\n")
-                except Exception as e:
-                    logger.warning("Failed to write to IO log: %s", e)
-        except Exception as e:
-            logger.debug("IO logging error: %s", e)
 
     # ----------------- throughput helpers -----------------
     async def _inc_tps(self):
