@@ -598,6 +598,9 @@ async def huggingface_inference_langchain(
             # Capture the running event loop before creating thread
             loop = asyncio.get_running_loop()
 
+            # Sentinel for clean termination vs error propagation
+            sentinel = object()
+
             # Run streaming in a separate thread, putting chunks in queue
             def _stream_to_queue():
                 """Stream chunks from chat_completion into async queue."""
@@ -614,9 +617,12 @@ async def huggingface_inference_langchain(
                     ):
                         # Use captured loop instead of get_event_loop()
                         asyncio.run_coroutine_threadsafe(queue.put(chunk), loop)
+                except Exception as err:
+                    # Propagate exception to async consumer
+                    asyncio.run_coroutine_threadsafe(queue.put(err), loop)
                 finally:
                     # Signal completion using captured loop
-                    asyncio.run_coroutine_threadsafe(queue.put(None), loop)
+                    asyncio.run_coroutine_threadsafe(queue.put(sentinel), loop)
 
             # Start streaming in background thread
             import threading
@@ -626,8 +632,10 @@ async def huggingface_inference_langchain(
             # Yield chunks as they arrive in queue
             while True:
                 chunk = await queue.get()
-                if chunk is None:
+                if chunk is sentinel:
                     break
+                if isinstance(chunk, BaseException):
+                    raise chunk
                 # Extract delta content from streaming response
                 if chunk.choices and chunk.choices[0].delta.content:
                     content = chunk.choices[0].delta.content

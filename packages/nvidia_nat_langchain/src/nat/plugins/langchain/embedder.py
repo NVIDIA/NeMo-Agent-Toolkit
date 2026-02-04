@@ -98,8 +98,14 @@ async def huggingface_langchain(
 
     Yields:
         Configured LangChain embedder client (local or remote)
+
+    Note:
+        The timeout and max_seq_length config fields are not currently supported by
+        LangChain's HuggingFaceEndpointEmbeddings or HuggingFaceEmbeddings classes.
+        These fields are defined in the core config for potential future use or
+        other framework integrations.
     """
-    
+
     # Remote mode: use endpoint_url
     if embedder_config.endpoint_url:
         from langchain_huggingface import HuggingFaceEndpointEmbeddings
