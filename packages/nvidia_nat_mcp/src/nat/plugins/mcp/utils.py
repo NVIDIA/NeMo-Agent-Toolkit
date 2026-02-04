@@ -14,18 +14,16 @@
 # limitations under the License.
 
 from enum import Enum
+from functools import lru_cache
 from typing import Any
 
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import create_model
 
-# Module-level cache for enum classes to ensure the same enum class is reused
-# This prevents Pydantic validation errors when the same enum is created multiple times
-_enum_class_cache: dict[tuple[str, frozenset[str]], type[Enum]] = {}
 
-
-def _get_or_create_enum(name: str, values: list[str]) -> type[Enum]:
+@lru_cache(maxsize=None)
+def _get_or_create_enum(name: str, values: frozenset[str]) -> type[Enum]:
     """
     Get a cached enum class or create a new one.
 
@@ -33,17 +31,16 @@ def _get_or_create_enum(name: str, values: list[str]) -> type[Enum]:
     the same class object. This is critical for Pydantic validation, which checks
     enum instances by class identity.
 
+    Uses lru_cache to automatically cache enum classes by their name and values.
+
     Args:
         name: The name for the enum class
-        values: List of enum values
+        values: Frozenset of enum values (frozenset is hashable for caching)
 
     Returns:
         An Enum class (cached or newly created)
     """
-    cache_key = (name, frozenset(values))
-    if cache_key not in _enum_class_cache:
-        _enum_class_cache[cache_key] = Enum(name, {item: item for item in values})
-    return _enum_class_cache[cache_key]
+    return Enum(name, {item: item for item in values})
 
 
 def truncate_session_id(session_id: str, max_length: int = 10) -> str:
@@ -120,7 +117,7 @@ def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
 
             if non_null_vals:
                 enum_name = f"{name.capitalize()}Enum"
-                enum_type: Any = _get_or_create_enum(enum_name, non_null_vals)
+                enum_type: Any = _get_or_create_enum(enum_name, frozenset(non_null_vals))
                 # If enum had null, make it a union with None
                 return enum_type | None if has_null else enum_type
             elif has_null:
