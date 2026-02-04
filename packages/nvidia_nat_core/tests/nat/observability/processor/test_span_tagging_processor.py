@@ -16,6 +16,7 @@
 import logging
 import os
 from enum import Enum
+from enum import StrEnum
 from typing import cast
 from unittest.mock import patch
 
@@ -26,7 +27,7 @@ from nat.data_models.span import SpanContext
 from nat.observability.processor.span_tagging_processor import SpanTaggingProcessor
 
 
-class SampleEnum(str, Enum):
+class SampleEnum(StrEnum):
     """Sample enum for testing enum value handling."""
     VALUE1 = "test_value_1"
     VALUE2 = "test_value_2"

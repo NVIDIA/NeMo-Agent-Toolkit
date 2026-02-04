@@ -116,7 +116,7 @@ def cache_html(input_dict: dict, base_path="."):
 
 
 def _get_short_url(url: str):
-    path = url.split("://")[-1].split("www.")[-1]
+    path = url.rsplit("://", maxsplit=1)[-1].split("www.")[-1]
     path_components = path.split("/")
     domain = path_components[0]
     short_url = "/".join(path_components[1:])

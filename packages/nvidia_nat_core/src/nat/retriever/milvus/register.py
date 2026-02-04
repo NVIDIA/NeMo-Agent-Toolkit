@@ -84,6 +84,10 @@ async def milvus_retriever_client(config: MilvusRetrieverConfig, builder: Builde
     model_dict = config.model_dump()
     optional_args = {field: model_dict[field] for field in optional_fields if model_dict[field] is not None}
 
+    # Map vector_field config to vector_field_name parameter expected by retriever
+    if "vector_field" in optional_args:
+        optional_args["vector_field_name"] = optional_args.pop("vector_field")
+
     retriever.bind(**optional_args)
 
     yield retriever

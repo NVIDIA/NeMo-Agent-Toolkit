@@ -25,7 +25,7 @@ from contextlib import asynccontextmanager
 from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
-from enum import Enum
+from enum import StrEnum
 from uuid import uuid4
 
 from dask.distributed import Future
@@ -54,7 +54,7 @@ if typing.TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class JobStatus(str, Enum):
+class JobStatus(StrEnum):
     """
     Enumeration of possible job statuses in the job store.
 

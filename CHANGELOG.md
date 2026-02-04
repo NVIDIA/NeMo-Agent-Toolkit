@@ -18,6 +18,275 @@ limitations under the License.
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] - 2026-02-02
+
+### 🚀 Notable Features and Improvements
+- [**LangGraph Agent Automatic Wrapper:**](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.4/examples/frameworks/auto_wrapper/langchain_deep_research/README.md) Easily onboard existing LangGraph agents to NeMo Agent Toolkit. Use the automatic wrapper to access NeMo Agent Toolkit advanced features with very little modification of LangGraph agents.
+- [**Automatic Reinforcement Learning (RL):**](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.4/docs/source/improve-workflows/finetuning/index.md) Improve your agent quality by fine-tuning open LLMs to better understand your agent's workflows, tools, and prompts. Perform GRPO with [OpenPipe ART](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.4/docs/source/improve-workflows/finetuning/rl_with_openpipe.md) or DPO with [NeMo Customizer](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.4/docs/source/improve-workflows/finetuning/dpo_with_nemo_customizer.md) using NeMo Agent Toolkit built-in evaluation system as a verifier.
+- [**Initial NVIDIA Dynamo Integration:**](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.4/examples/dynamo_integration/README.md) Accelerate end-to-end deployment of agentic workflows with initial Dynamo support. Utilize the new agent-aware router to improve worker latency by predicting future agent behavior.
+- [**A2A Support:**](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.4/docs/source/components/integrations/a2a.md) Build teams of distributed agents using the A2A protocol.
+- [**Safety and Security Engine:**](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.4/examples/safety_and_security/retail_agent/README.md) Strengthen safety and security workflows by simulating scenario-based attacks, profiling risk, running guardrail-ready evaluations, and applying defenses with red teaming. Validate defenses, profile risk, monitor behavior, and harden agents across any framework.
+- [**Amazon Bedrock AgentCore and Strands Agents Support:**](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.4/docs/source/components/integrations/frameworks.md#strands) Build agents using Strands Agents framework and deploy them securely on Amazon Bedrock AgentCore runtime.
+- [**Microsoft AutoGen Support:**](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.4/docs/source/components/integrations/frameworks.md#autogen) Build agents using the Microsoft AutoGen framework.
+- [**Per-User Functions:**](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.4/docs/source/extend/custom-components/custom-functions/per-user-functions.md) Use per-user functions for deferred instantiation, enabling per-user stateful functions, per-user resources, and other features.
+
+### 🚨 Breaking Changes
+* Update weave trace identifiers by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1055
+* feat: switch calculator functions to a single function group by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/954
+* Use Pydantic `SecretStr` fields for all sensitive values by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1123
+* Migrate Zep Cloud integration from v2 to v3 API by @jackaldenryan in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1122
+* feat!(llm): exclude unset fields in model dump for all LLMs and Embedders by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1143
+* Documentation Restructure by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1231
+* Implement Per-User Function Instantiation by @yczhang-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1206
+* Remove `default_user_id` from `GeneralConfig` to prevent unsafe per-user workflow sharing by @yczhang-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1282
+* chore: update dependency package versions for 1.4 by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1316
+* improvement: change Function Group separator to `__` by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1328
+* Refactor MCP Frontend: Move to nvidia-nat-mcp package by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1332
+* chore: update `nvidia-nat-all` and add documentation by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1340
+### ✨ New Features
+* Add DBNL Telemetry Exporter by @dbnl-renaud in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1111
+* Add default Phoenix session tracking support by @ericevans-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1132
+* Add support for workflow configuration inheritance by @thepatrickchin in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1152
+* Add `Middleware` and native support for `FunctionMiddleware` for all functions by @dnandakumar-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1130
+* Add support for a customizable MCP service account auth provider by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1176
+* Introduce vanna text2sql by @jiaxiangr in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/974
+* Strands integration by @ronjer30 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1063
+* NAT A2A Client & Server Support by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1147
+* Introduce Finetuning Harness for In-Situ Reinforcement Learning of Agentic Workflows by @dnandakumar-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1221
+* Add Support for NeMo Customizer to Finetuning Harness by @dnandakumar-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1241
+* Register per-user `ReAct` agent by @yczhang-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1274
+* dynamo llm integration with examples, analysis, and custom predictive routers by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1242
+* Add a bridge between NAT and A2A auth mechanisms by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1232
+* Migrate the a2a client implementation to per-user mode by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1281
+* Add weave feedback integration for chat interactions by @thepatrickchin in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/781
+* Extend Middleware interface with pre/post invoke hooks and add DynamicFunctionMiddleware by @ericevans-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1216
+* Agent Safety And Security Engine by @ericevans-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1262
+* Microsoft Autogen Framework Integration [Synopsys] by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1330
+* Implement per-user resource usage monitoring endpoint by @yczhang-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1280
+* Add automatic wrappers for LangGraph Agents by @mdemoret-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1322
+* Make All CLI Commands Plugin-Discoverable by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1346
+* feat: Add AutoMemoryWrapper agent for automatic memory management by @jackaldenryan in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1137
+* Add health endpoint to FastAPI server by @antoniomtz in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1466
+### 🔧 Improvements
+* Add a configurable memory profiler for the MCP frontend by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/961
+* Optimize retry logic with memory management improvements by @dnandakumar-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1014
+* Refactor to make `model_name` an optimizable field across LLMs by @dnandakumar-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1020
+* Added new agent and example utilizing the OpenAI Responses API by @dnandakumar-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/414
+* Include input and output messages in weave observability traces by @thepatrickchin in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1050
+* Allow attaching arbitrary attributes to Weave traces by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1057
+* feat: nat optimizer support for Optuna GridSearch  by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1076
+* Lint fixes by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1097
+* Make the `run_workflow` method a part of the core API by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1098
+* Support Redis password authentication by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1110
+* Update example notebook to use the `run_workflow` function by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1113
+* Add E2E tests for Simple RAG Example by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1114
+* Add E2E test for ADK demo example by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1115
+* Cleanup E2E tests by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1116
+* Update password fields to use Pydantic `SecretStr` type by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1118
+* Update fastapi version by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1117
+* Support custom MCP server implementations by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1087
+* Add reference to NAT job_id in Weave evaluation attributes by @thepatrickchin in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1140
+* Add evaluator reasoning to Weave score logs by @thepatrickchin in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1141
+* Add E2E tests for notebook examples by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1128
+* Add E2E test for simple auth example by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1148
+* Support Unix shell-style wildcards in dataset filter configuration by @thepatrickchin in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1146
+* Add optional TTL configuration for Redis object store by @thepatrickchin in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1157
+* Local sandbox improvements by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1162
+* Forward merge 'release/1.3' into develop by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1135
+* feat: relax temperature bounds to be model-specific by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1172
+* Update the `test_lifetime_task_timeout` test to not take 60s by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1171
+* Ensure that the compatibility loader is removed after each test by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1177
+* Add an E2E test for Simple Calculator Galileo observability example by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1095
+* Improve haystack_deep_research_agent example by @mpangrazzi in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1170
+* Add a simple evaluate_item endpoint by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1138
+* Remove work-around for qdrant/qdrant-client#983 by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1186
+* Provide a method for adding routes at the root level of the NAT-MCP server by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1187
+* Silence warnings being emitted during tests by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1189
+* Work-around slow import issue for google-adk by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1192
+* Remove `pytest-pretty` by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1193
+* Add E2E test for RagaAI Catalyst by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1194
+* Create TTC Functions for Multi-LLM Generation by @dnandakumar-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1203
+* Add a Kaggle MCP usage example by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1209
+* Security and Lint updates for AgentCore Deploy by @BuildOnCloud in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1220
+* Add a tabular output for evaluation results by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1239
+* Update finetuning docs and add harness to workflows guide by @dnandakumar-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1245
+* Update README for RL Example by @dnandakumar-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1252
+* Mark wheels with a beta tag as `ready` by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1284
+* fix: uv.lock update for nat_react_benchmark_agent by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1285
+* Add rules to try and catch a bug where `default=''` is used for a `SecretStr` field by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1304
+* dynamo unit test patch and cleanup by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1303
+* fix: AWS AgentCore IAM policy rules and example prerequisites  by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1315
+* Update copyright year by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1317
+* Fix: add parent-child lineage to trace/span exporter attributes by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1320
+* changed to simplified  system prompt and properly handle no inputs by @mnajafian-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1307
+* Add configurable description for sequential executor by @thepatrickchin in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1293
+* Add early exit mechanisms for Sequential Executor by @thepatrickchin in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1289
+* chore: bump github actions version to v6 by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1334
+* Implement Non-session-aware Per-user `MCPClient` by @yczhang-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1253
+* Add Configuration Preservation to Evaluation Output by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1336
+* chore: bump langchain deps; regenerate uv.lock by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1333
+* Remove stray file unintentionally added to the repository by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1339
+* Rename Sequential Executor input parameter for compatibility with generate endpoints by @thepatrickchin in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1291
+* Implement CLI Plugin Discovery System by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1341
+* Improve Safety and Security Engine README by @ericevans-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1344
+* Add documentation specific rules to `.coderabbit.yaml` by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1348
+* Improves finetuning end status logging by @dnandakumar-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1350
+* chore: update NAT UI submodule by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1352
+* Update the build_wheel CI stage to always build wheels with matching version dependencies by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1343
+* Update langsmith.xlsx to match data in langsmith.csv by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1360
+* Clean up SWE-bench example: Remove unmaintained predictor and migrate to remote datasets by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1361
+* chore: update ui submodule, semantic-kernel, and langchain versions by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1369
+* Reorganize A2A Examples for Clarity by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1368
+* add support for langchain agents that are wrapped as async context managers by @gfreeman-nvidia in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1371
+* chore: bump urllib3+langchain; specify werkzeug as transitive dep by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1375
+* chore: speed up tests by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1378
+* Decouple HuggingFace LLM provider from LangChain dependency by @ericevans-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1367
+* Add code owners for example data directories by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1379
+* Fix Windows path parsing in find_package_root by @ericevans-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1380
+* chore: update nvidia_nat_weave > weave > fickling dependency by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1386
+* Add a pre-commit script to ensure output cells of notebooks are cleared by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1381
+* Increase the time limit for the test stage by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1400
+* Expose Dask `memory_limit` config by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1401
+* Standardize RAG service response schema parsing by @ericevans-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1406
+* Fix/simplify event loop test by @mnajafian-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1405
+* fix: correct ReWOO planner prompt JSON example format by @mnajafian-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1410
+* Add pytest-timeout and set a global 5min timeout by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1411
+* Expose Dask threads per worker by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1408
+* Handle consecutive status check failures with retry logic in DPO trainer adapter by @dnandakumar-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1415
+* Fix multi_frameworks workflow CI failure  by @mnajafian-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1418
+* Update middleware to use FunctionGroup.SEPARATOR for function matching by @ericevans-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1448
+* Update A2A docs by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1447
+* Update the build_wheel CI script to test that built wheels are installable by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1457
+* Add websocket MCP auth check script (no UI) by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1465
+* docs: Restore Llama config docs in simple_web_query_eval README by @mnajafian-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1472
+* fix: dynamo multi-worker deployment shell script update by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1479
+* update package versions in uv.lock; update UI submodule by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1469
+* Update Dask by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1478
+* Improve Safety and Security retail agent docs by @ericevans-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1492
+* improvement(adk-example): update example to prefer NVIDIA NIM by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1495
+* add name attribute to FunctionBaseConfig for workflow naming in span exporter by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1482
+* chore: prefer non-required packages are manually installed by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1516
+* chore: remove huggingface extra by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1525
+### 🐛 Bug Fixes
+* Ensure CI uses `--first-parent` when calling `git describe` by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/940
+* Fixes to detect optional parameters in tool conversion used by "nat mcp serve" by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1126
+* Mini Patch ReWOO Test Failure by @billxbf in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1155
+* Fix documentation version switcher by @thepatrickchin in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1159
+* Ensure that the `ADKProfilerHandler` patches are not applied more than once by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1175
+* Fix `documentation_checks.sh` script to run on MacOS by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1178
+* Add bind_tools and bind methods to LangChainTestLLM  by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1181
+* Truncate long error messages by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1182
+* Ensure jq is installed prior to running integration tests by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1183
+* fix(azure-openai): ensure api_version is specified by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1185
+* Replace `nest-asyncio` with `nest-asyncio2` by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1190
+* Bug/strands unit tests by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1196
+* Fix: Add ca-certificates to simple_calculator Dockerfile by @rmalani-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1201
+* Use secret value for client_secret in OAuth client by @dzmitryv111111 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1198
+* Fix the `aiq_compatibility_span_prefix` fixture by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1199
+* Add `model_name` as a computed field to `AzureOpenAIModelConfig` by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1214
+* Enable observability for individual function calls in MCP server by @mpenn in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1234
+* Update the `nvidia-nat-vanna` dependency on nvidia-nat to declare plugins using the square bracket form by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1238
+* Use a local Piston server for E2E integration tests by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1244
+* Fix ReAct agent TypeError with LiteLLM and Anthropic models by @sjarmak in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1251
+* Adopt fixes for image generation by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1286
+* Unify the `user_id` adding logic to `context_state` for multiple CLI commands by @yczhang-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1287
+* Fix MCP workflow entry function handling by @mpenn in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1277
+* Fix bug where `SecretStr` fields defaulting to an empty string were not being instantiated by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1298
+* Fix `TypeConverter` not able to handle `Union` type conversion by @yczhang-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1301
+* Revert version specification to 1.4 by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1312
+* Change the `url` field in `ImageUrl` model from `HttpUrl` to `str` by @mpenn in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1314
+* Add error handling to E2E test report script by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1319
+* Fix notebook E2E tests by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1321
+* Update openpipe-art to version 0.5.4 by @dnandakumar-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1323
+* Fix simple_calculator protected a2a server installation issues by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1326
+* Improve Multi-User Testing Instructions in Math Assistant A2A Example  by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1329
+* Resolve dependency conflicts from `nvidia_nat_openpipe_art` package by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1331
+* Add missing `tzdata` package to Docker image by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1337
+* Fix CI failures: RAG recursion and eval assertion  by @mnajafian-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1347
+* Fix A2A Client CLI Commands After Multi-User Migration by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1353
+* Revert system prompt for react agent's prompt by @mnajafian-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1358
+* fix: strip remaining occurrences of `.` for function groups by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1362
+* Update weave to latest version, resolves a conflict with autogen by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1363
+* Update `FunctionGroup` separator in MCP client CLI by @yczhang-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1359
+* Fix training cancellation 404 error by @mnajafian-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1364
+* chore: ensure all installable examples are specified in root `pyproject.toml` by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1373
+* For tagged and nightly builds use GIT_TAG as-is by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1376
+* bug fix: Dynamo SGLang Startup Script Cleanup by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1357
+* fix: Amd64 Support for Bedrock Strands Demo by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1377
+* Update currency agent A2A example instructions to use openai models by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1372
+* fix: langchain<>huggingface integration by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1382
+* Async endpoint improvements by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1374
+* Fix/agno flaky test release 1.4 by @mnajafian-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1383
+* fix: update `config_inheritance` example with proper setup by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1384
+* fix: update configs for autogen example; fix MCP tool wrapping by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1387
+* Fix nvbug: SSL cert verification and FD exhaustion in email_phishing_analyzer Docker build by @mnajafian-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1389
+* Fix issues with haystack deep research agent example by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1388
+* Update help string and doc for "nat run --input_file" by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1390
+* autogen demo: LA traffic example by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1426
+* Update test models to nemotron 3 and fix test assertions by @hsin-c in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1425
+* Re-generate several dataset in examples by @yczhang-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1427
+* fix(oauth2): Add client_id to refresh_token request for MaaS OAuth servers by @andywy110 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1421
+* Fix token usage statistics and image viewing in Profiler Agent by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1428
+* Update deep research notebook with `Nemotron` models and clearer instructions by @yczhang-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1436
+* fix(eval): prevent awaited coroutine reuse on Exception by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1438
+* fix(weave): ensure contextmanager protocol is implemented for weave mock by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1439
+* fix(deps): version specifiers with major.minor.patch should not use `~=` by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1452
+* Update models and inputs `langgraph_deep_research` notebook to enhance performance and consistency by @yczhang-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1444
+* Fix MCP tool UI display by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1462
+* Fix CI failures: Complete Llama→Nemotron migration for remaining exam… by @mnajafian-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1464
+* Fix concurrent async generate requests by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1498
+* Remove the task_timeout from the a2a sample config files by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1508
+* Escape special characters in Redis user_id for vector search by @thepatrickchin in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1494
+* chore: update UI submodule to have latest fixes by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1522
+* Fix LLM calling actions not traced in `phoenix` when running `nat serve` by @yczhang-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1520
+* fix(testing): guard huggingface integration test with importorskip by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1535
+### 📝 Documentation Updates
+* docs: initial nat optimizer notebook by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1053
+* doc: cleanup notebook 6 (nat optimize) and alert triage agent optimization by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1125
+* docs: getting started notebook 7 - mcp client and server setup using NAT by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1145
+* docs: renumbering the getting started notebooks by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1149
+* Enhance documentation for Strands Agents integration by @ronjer30 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1205
+* Updates to AWS AgentCore README and scripts by @ronjer30 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1208
+* google-adk version upgrade by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1217
+* tests: remove obsolete conftest by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1219
+* Restructuring and reorganizing workflows by @lvojtku in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1173
+* Update Cursor rules to use the new naming guidance by @yczhang-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1273
+* Define terms in documentation on first use, and refer back to definition when used in other documents by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1254
+* Add support matrix for RL  by @dnandakumar-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1327
+* Update README instructions for consistency and clarity by @dnandakumar-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1338
+* Add documentation compatibility redirects for old 1.3 urls by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1351
+* Update Python version to 3.13 in README example by @dnandakumar-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1366
+* Fix `kaggle_mcp` example input by @yczhang-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1395
+* docs: fix docker run commands for local LLMs by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1398
+* Update `langchain_deep_research` documentation to mention Anthropic API key is needed by @yczhang-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1402
+* docs: add deepwiki badge; update troubleshooting to mention conda by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1412
+* docs: add complexity levels to all examples by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1422
+* bug fix: dynamo integration - model download and instructions clarification by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1420
+* Add no cache installation to ART by @dnandakumar-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1424
+* fix: strands demo reliability improvements by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1429
+* docs: nat-dynamo startup scripts improved envar documentation by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1443
+* docs: add conda install warning to installation.md by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1446
+* docs: add CUDA prereq warning to examples by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1455
+* Minor cleanup to Simple Calculator Eval documentation by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1463
+* docs: dynamo readme simplification and hardware requirements cleanup by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1509
+* Update RL README with OpenAI API key setup and adjust commands by @dnandakumar-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1514
+* docs: dynamo integration performance comparison docs by @bbednarski9 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1515
+* Update documentation for prerequisites and logprobs clarification by @dnandakumar-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1530
+* docs: add migration guide for 1.4 by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1533
+* docs: 1.4 changelog and release notes by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1544
+* Update README for 1.4 Release by@mdemoret-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1546
+
+### 🙌 New Contributors
+* @dbnl-renaud made their first contribution in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1111
+* @mpangrazzi made their first contribution in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1170
+* @jiaxiangr made their first contribution in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/974
+* @ronjer30 made their first contribution in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1063
+* @rmalani-nv made their first contribution in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1201
+* @dzmitryv111111 made their first contribution in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1198
+* @BuildOnCloud made their first contribution in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1220
+* @sjarmak made their first contribution in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1251
+* @andywy110 made their first contribution in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1421
+
 ## [1.3.1] - 2025-11-07
 
 ### 📦 Overview

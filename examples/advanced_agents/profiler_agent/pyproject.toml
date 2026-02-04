@@ -39,11 +39,12 @@ maintainers = [{ name = "NVIDIA Corporation" }]
 dependencies = [
   "nvidia-nat[langchain,profiling,opentelemetry,phoenix,ragaai,weave,test] == {version}",
   "arize-phoenix-client~=1.21",
-  "pydantic",
+  "nat_simple_calculator",
 ]
 
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }
+nat_simple_calculator = { path = "../../getting_started/simple_calculator", editable = true }
 
 [project.entry-points.'nat.plugins']
 nat_profiler_agent = "nat_profiler_agent.register"

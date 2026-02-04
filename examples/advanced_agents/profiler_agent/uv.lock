@@ -2795,16 +2795,26 @@ name = "nat-profiler-agent"
 source = { editable = "." }
 dependencies = [
     { name = "arize-phoenix-client" },
+    { name = "nat-simple-calculator" },
     { name = "nvidia-nat", extra = ["langchain", "opentelemetry", "phoenix", "profiling", "ragaai", "test", "weave"] },
-    { name = "pydantic" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "arize-phoenix-client", specifier = "~=1.21" },
+    { name = "nat-simple-calculator", editable = "../../getting_started/simple_calculator" },
     { name = "nvidia-nat", extras = ["langchain", "opentelemetry", "phoenix", "profiling", "ragaai", "test", "weave"], editable = "../../../" },
-    { name = "pydantic" },
 ]
+
+[[package]]
+name = "nat-simple-calculator"
+source = { editable = "../../getting_started/simple_calculator" }
+dependencies = [
+    { name = "nvidia-nat", extra = ["langchain", "test"] },
+]
+
+[package.metadata]
+requires-dist = [{ name = "nvidia-nat", extras = ["langchain", "test"], editable = "../../../" }]
 
 [[package]]
 name = "nest-asyncio"
@@ -2948,8 +2958,8 @@ requires-dist = [
     { name = "nvidia-nat-autogen", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_autogen" },
     { name = "nvidia-nat-core", editable = "../../../packages/nvidia_nat_core" },
     { name = "nvidia-nat-core", marker = "extra == 'core'", editable = "../../../packages/nvidia_nat_core" },
-    { name = "nvidia-nat-core", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_core" },
     { name = "nvidia-nat-core", extras = ["async-endpoints"], marker = "extra == 'async-endpoints'", editable = "../../../packages/nvidia_nat_core" },
+    { name = "nvidia-nat-core", extras = ["async-endpoints", "gunicorn", "pii-defense", "profiling"], marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_core" },
     { name = "nvidia-nat-core", extras = ["gunicorn"], marker = "extra == 'gunicorn'", editable = "../../../packages/nvidia_nat_core" },
     { name = "nvidia-nat-core", extras = ["pii-defense"], marker = "extra == 'pii-defense'", editable = "../../../packages/nvidia_nat_core" },
     { name = "nvidia-nat-core", extras = ["profiling"], marker = "extra == 'profiling'", editable = "../../../packages/nvidia_nat_core" },

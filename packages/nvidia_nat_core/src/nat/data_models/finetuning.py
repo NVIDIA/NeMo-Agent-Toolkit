@@ -15,7 +15,7 @@
 
 import logging
 import typing
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -74,7 +74,7 @@ class TrainingJobRef(BaseModel):
     metadata: dict | None = Field(description="Any additional metadata for the training job.", default=None)
 
 
-class TrainingStatusEnum(str, Enum):
+class TrainingStatusEnum(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -96,7 +96,7 @@ class TrainingJobStatus(BaseModel):
     metadata: dict | None = Field(description="Any additional metadata for the training job.", default=None)
 
 
-class EpisodeItemRole(str, Enum):
+class EpisodeItemRole(StrEnum):
     USER = "user"
     ASSISTANT = "assistant"
     SYSTEM = "system"

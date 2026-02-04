@@ -15,7 +15,7 @@
 
 import re
 import typing
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel
 from pydantic import Discriminator
@@ -23,7 +23,7 @@ from pydantic import Field
 from pydantic import field_validator
 
 
-class HumanPromptModelType(str, Enum):
+class HumanPromptModelType(StrEnum):
     """
     Represents the type of an interaction model.
     """
@@ -36,7 +36,7 @@ class HumanPromptModelType(str, Enum):
     OAUTH_CONSENT = "oauth_consent"
 
 
-class BinaryChoiceOptionsType(str, Enum):
+class BinaryChoiceOptionsType(StrEnum):
     """
     Represents the types of system interaction binary choice content
     """
@@ -44,7 +44,7 @@ class BinaryChoiceOptionsType(str, Enum):
     CANCEL = "cancel"
 
 
-class MultipleChoiceOptionType(str, Enum):
+class MultipleChoiceOptionType(StrEnum):
     """
     Represents the types of system interaction multiple choice content
     """
@@ -203,7 +203,7 @@ HumanPrompt = typing.Annotated[HumanPromptText | HumanPromptNotification | Human
                                Discriminator("input_type")]
 
 
-class InteractionStatus(str, Enum):
+class InteractionStatus(StrEnum):
     """
     Represents the status of an interaction.
     """

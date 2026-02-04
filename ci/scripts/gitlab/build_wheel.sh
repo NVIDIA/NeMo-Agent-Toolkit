@@ -24,6 +24,11 @@ GIT_TAG=$(get_git_tag)
 IS_TAGGED=$(is_current_commit_release_tagged)
 rapids-logger "Git Version: ${GIT_TAG} - Is Tagged: ${IS_TAGGED}"
 
+if [[ "${CI_COMMIT_BRANCH}" == "${CI_DEFAULT_BRANCH}" && "${IS_TAGGED}" == "0" ]]; then
+    # We should create a nightly tag that matches the git tag
+    git tag ${GIT_TAG}
+fi
+
 create_env
 
 WHEELS_BASE_DIR="${CI_PROJECT_DIR}/.tmp/wheels"
