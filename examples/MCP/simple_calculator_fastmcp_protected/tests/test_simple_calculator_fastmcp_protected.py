@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 To run simple_calculator_fastmcp_protected e2e tests:
 pytest -v -o log_cli=true --log-cli-level=INFO --run_integration --run_slow \

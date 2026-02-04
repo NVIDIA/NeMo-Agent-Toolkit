@@ -117,8 +117,9 @@ async def simple_calc_fastmcp_avail_fixture(simple_calc_fastmcp_process: subproc
 @pytest.mark.usefixtures("nvidia_api_key", "simple_calc_fastmcp_avail")
 async def test_fastmcp_workflow(root_repo_dir: Path, nat_fastmcp_url: str):
     """
-    This example runs two separate workflows, one which serves the calculator tool via FastMCP, along with the MCP client
-    workflow. For the test we will launch the FastMCP server in a subprocess, then run the client workflow via the API.
+    This example runs two separate workflows, one which serves the calculator tool via FastMCP,
+    along with the MCP client workflow. For the test we will launch the FastMCP server in a subprocess,
+    then run the client workflow via the API.
     """
     from pydantic import HttpUrl
 
