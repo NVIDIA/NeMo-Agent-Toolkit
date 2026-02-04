@@ -162,10 +162,7 @@ class ObjectStoreSettings(BaseModel):
                    auto-generates timestamp-based prefix.
     """
     name: str = Field(description="Object store name from config")
-    key_prefix: str | None = Field(
-        default=None,
-        description="Optional key prefix. Auto-generated if None."
-    )
+    key_prefix: str | None = Field(default=None, description="Optional key prefix. Auto-generated if None.")
 
 
 class OptimizerConfig(BaseModel):
@@ -178,9 +175,7 @@ class OptimizerConfig(BaseModel):
     )
 
     object_store: ObjectStoreSettings | None = Field(
-        default=None,
-        description="Optional object store for prompt checkpoints and final prompts"
-    )
+        default=None, description="Optional object store for prompt checkpoints and final prompts")
 
     eval_metrics: dict[str, OptimizerMetric] | None = Field(
         description="List of evaluation metrics to optimize.",

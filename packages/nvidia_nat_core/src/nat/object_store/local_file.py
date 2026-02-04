@@ -80,10 +80,7 @@ class LocalFileObjectStore(ObjectStore):
         data_path.write_bytes(item.data)
 
         # Write metadata file
-        meta_dict: dict[str, Any] = {
-            "content_type": item.content_type,
-            "metadata": item.metadata
-        }
+        meta_dict: dict[str, Any] = {"content_type": item.content_type, "metadata": item.metadata}
         meta_path.write_text(json.dumps(meta_dict, indent=2))
 
     @override
@@ -105,10 +102,7 @@ class LocalFileObjectStore(ObjectStore):
         data_path.write_bytes(item.data)
 
         # Write metadata file
-        meta_dict: dict[str, Any] = {
-            "content_type": item.content_type,
-            "metadata": item.metadata
-        }
+        meta_dict: dict[str, Any] = {"content_type": item.content_type, "metadata": item.metadata}
         meta_path.write_text(json.dumps(meta_dict, indent=2))
 
     @override
@@ -143,11 +137,7 @@ class LocalFileObjectStore(ObjectStore):
             content_type = meta_dict.get("content_type")
             metadata = meta_dict.get("metadata")
 
-        return ObjectStoreItem(
-            data=data,
-            content_type=content_type,
-            metadata=metadata
-        )
+        return ObjectStoreItem(data=data, content_type=content_type, metadata=metadata)
 
     @override
     async def delete_object(self, key: str) -> None:
@@ -176,10 +166,7 @@ class LocalFileObjectStore(ObjectStore):
 
 
 @register_object_store(config_type=LocalFileObjectStoreConfig)
-async def local_file_object_store(
-    config: LocalFileObjectStoreConfig,
-    _builder: Builder
-):
+async def local_file_object_store(config: LocalFileObjectStoreConfig, _builder: Builder):
     """
     Factory function to create LocalFileObjectStore from config.
 

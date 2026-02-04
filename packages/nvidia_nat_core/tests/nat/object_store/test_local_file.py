@@ -19,15 +19,15 @@ from pathlib import Path
 import pytest
 
 from nat.builder.workflow_builder import WorkflowBuilder
-from nat.data_models.object_store import KeyAlreadyExistsError, NoSuchKeyError
-from nat.object_store.local_file import (
-    LocalFileObjectStore,
-    LocalFileObjectStoreConfig,
-)
+from nat.data_models.object_store import KeyAlreadyExistsError
+from nat.data_models.object_store import NoSuchKeyError
+from nat.object_store.local_file import LocalFileObjectStore
+from nat.object_store.local_file import LocalFileObjectStoreConfig
 from nat.object_store.models import ObjectStoreItem
 
 
 class TestLocalFileObjectStore:
+
     async def test_create_local_file_object_store(self, tmp_path: Path):
         """Test LocalFileObjectStore can be instantiated with a base path."""
         store = LocalFileObjectStore(base_path=tmp_path)
@@ -38,11 +38,7 @@ class TestLocalFileObjectStore:
         """Test putting a new object creates data and metadata files."""
         store = LocalFileObjectStore(base_path=tmp_path)
 
-        item = ObjectStoreItem(
-            data=b'{"test": "data"}',
-            content_type="application/json",
-            metadata={"key": "value"}
-        )
+        item = ObjectStoreItem(data=b'{"test": "data"}', content_type="application/json", metadata={"key": "value"})
 
         await store.put_object("test.json", item)
 
@@ -105,11 +101,7 @@ class TestLocalFileObjectStore:
         store = LocalFileObjectStore(base_path=tmp_path)
 
         # Put object
-        original = ObjectStoreItem(
-            data=b"test data",
-            content_type="text/plain",
-            metadata={"author": "test"}
-        )
+        original = ObjectStoreItem(data=b"test data", content_type="text/plain", metadata={"author": "test"})
         await store.put_object("file.txt", original)
 
         # Get object
@@ -203,10 +195,7 @@ class TestLocalFileObjectStore:
     async def test_create_from_config(self, tmp_path: Path):
         """Test LocalFileObjectStore can be created from config."""
         async with WorkflowBuilder() as builder:
-            await builder.add_object_store(
-                "local_store",
-                LocalFileObjectStoreConfig(base_path=str(tmp_path))
-            )
+            await builder.add_object_store("local_store", LocalFileObjectStoreConfig(base_path=str(tmp_path)))
 
             store = await builder.get_object_store_client("local_store")
 

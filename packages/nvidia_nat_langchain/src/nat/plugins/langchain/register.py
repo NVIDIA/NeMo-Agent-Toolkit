@@ -20,6 +20,7 @@
 
 from . import embedder
 from . import langgraph_workflow
+from . import langsmith_prompt_store
 from . import llm
 from . import tool_wrapper
 from . import retriever
