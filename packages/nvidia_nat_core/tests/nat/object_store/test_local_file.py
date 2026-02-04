@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from nat.data_models.object_store import KeyAlreadyExistsError
+from nat.data_models.object_store import KeyAlreadyExistsError, NoSuchKeyError
 from nat.object_store.local_file import LocalFileObjectStore
 from nat.object_store.models import ObjectStoreItem
 
@@ -95,3 +95,44 @@ class TestLocalFileObjectStore:
         meta_path = tmp_path / "file.txt.meta"
         meta_data = json.loads(meta_path.read_text())
         assert meta_data["content_type"] == "application/json"
+
+    async def test_get_object(self, tmp_path: Path):
+        """Test getting an existing object returns correct data and metadata."""
+        store = LocalFileObjectStore(base_path=tmp_path)
+
+        # Put object
+        original = ObjectStoreItem(
+            data=b"test data",
+            content_type="text/plain",
+            metadata={"author": "test"}
+        )
+        await store.put_object("file.txt", original)
+
+        # Get object
+        retrieved = await store.get_object("file.txt")
+
+        assert retrieved.data == b"test data"
+        assert retrieved.content_type == "text/plain"
+        assert retrieved.metadata == {"author": "test"}
+
+    async def test_get_object_missing_metadata(self, tmp_path: Path):
+        """Test get_object handles missing .meta file gracefully."""
+        store = LocalFileObjectStore(base_path=tmp_path)
+
+        # Manually create data file without metadata
+        data_path = tmp_path / "no_meta.txt"
+        data_path.write_bytes(b"data without meta")
+
+        # Should still retrieve with None metadata
+        retrieved = await store.get_object("no_meta.txt")
+
+        assert retrieved.data == b"data without meta"
+        assert retrieved.content_type is None
+        assert retrieved.metadata is None
+
+    async def test_get_object_raises_on_missing_key(self, tmp_path: Path):
+        """Test get_object raises NoSuchKeyError if key doesn't exist."""
+        store = LocalFileObjectStore(base_path=tmp_path)
+
+        with pytest.raises(NoSuchKeyError):
+            await store.get_object("nonexistent.txt")

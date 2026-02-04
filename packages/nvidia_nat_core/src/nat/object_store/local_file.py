@@ -100,7 +100,41 @@ class LocalFileObjectStore(ObjectStore):
 
     @override
     async def get_object(self, key: str) -> ObjectStoreItem:
-        raise NotImplementedError
+        """
+        Retrieve object from filesystem.
+
+        Args:
+            key: Storage key
+
+        Returns:
+            ObjectStoreItem with data and metadata
+
+        Raises:
+            NoSuchKeyError: If key doesn't exist
+        """
+        data_path = self.base_path / key
+        meta_path = self.base_path / f"{key}.meta"
+
+        # Check if data file exists
+        if not data_path.exists():
+            raise NoSuchKeyError(key)
+
+        # Read data
+        data = data_path.read_bytes()
+
+        # Read metadata if exists
+        content_type = None
+        metadata = None
+        if meta_path.exists():
+            meta_dict = json.loads(meta_path.read_text())
+            content_type = meta_dict.get("content_type")
+            metadata = meta_dict.get("metadata")
+
+        return ObjectStoreItem(
+            data=data,
+            content_type=content_type,
+            metadata=metadata
+        )
 
     @override
     async def delete_object(self, key: str) -> None:
