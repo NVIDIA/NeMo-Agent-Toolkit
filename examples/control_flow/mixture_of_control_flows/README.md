@@ -136,7 +136,7 @@ Run the following commands from the root of the NeMo Agent Toolkit repository to
 
 ### Router Agent to Sequential Executor
 
-Test the text analysis sequential pipeline:
+Test the text analysis sequential pipeline, demonstrating flows from a router agent to a sequential executor:
 
 ```bash
 nat run --config_file=examples/control_flow/mixture_of_control_flows/configs/config.yml --input "Process this text: The NeMo Agent Toolkit provides powerful control flow capabilities for building sophisticated AI workflows"
@@ -145,76 +145,156 @@ nat run --config_file=examples/control_flow/mixture_of_control_flows/configs/con
 **Expected Workflow Output:**
 
 ```console
+<snipped for brevity>
+Configuration Summary:
+--------------------
+Workflow Type: router_agent
+Number of Functions: 13
+Number of Function Groups: 0
+Number of LLMs: 1
+Number of Embedders: 0
+Number of Memory: 0
+Number of Object Stores: 0
+Number of Retrievers: 0
+Number of TTC Strategies: 0
+Number of Authentication Providers: 0
+
+2026-02-04 15:34:34 - INFO     - nat.runtime.session:298 - Shared workflow built (entry_function=None)
+2026-02-04 15:34:45 - INFO     - nat.front_ends.console.console_front_end_plugin:104 - 
+--------------------------------------------------
 Workflow Result:
-['=== TEXT ANALYSIS REPORT ===
-
-Text Statistics:
-  - Word Count: 17
-  - Sentence Count: 0
-  - Average Words per Sentence: 0
-  - Text Complexity: Simple
-
-Top Words:
-  1. process
-  2. this
-  3. text
-  4. nemo
-  5. agent
-
-Text Preview:
-  Process this text The NeMo Agent Toolkit provides powerful control flow capabilities for building so...
-
-Report generated successfully.
-==========================']
+['=== TEXT ANALYSIS REPORT ===\n\nText Statistics:\n  - Word Count: 17\n  - Sentence Count: 0\n  - Average Words per Sentence: 0\n  - Text Complexity: Simple\n\nTop Words:\n  1. process\n  2. this\n  3. text\n  4. nemo\n  5. agent\n\nText Preview:\n  Process this text The NeMo Agent Toolkit provides powerful control flow capabilities for building so...\n\nReport generated successfully.\n==========================']
+--------------------------------------------------
 ```
 
 ### Router Agent to Sequential Executor with Router Agent
 
-Test the text formatting pipeline — these examples demonstrate flows from a sequential executor to a router agent:
+Test the text formatting pipeline. In addition to flows from a router agent to a sequential executor, these examples demonstrate flows from a sequential executor to a nested router agent:
+
+**Example 1: Uppercase conversion**
 
 ```bash
-# Test uppercase conversion
 nat run --config_file=examples/control_flow/mixture_of_control_flows/configs/config.yml --input "Convert this text to uppercase"
+```
 
-# Test lowercase conversion
+**Expected Workflow Output:**
+
+```console
+<snipped for brevity>
+Configuration Summary:
+--------------------
+Workflow Type: router_agent
+Number of Functions: 13
+Number of Function Groups: 0
+Number of LLMs: 1
+Number of Embedders: 0
+Number of Memory: 0
+Number of Object Stores: 0
+Number of Retrievers: 0
+Number of TTC Strategies: 0
+Number of Authentication Providers: 0
+
+2026-02-04 15:37:31 - INFO     - nat.runtime.session:298 - Shared workflow built (entry_function=None)
+2026-02-04 15:37:33 - INFO     - nat.front_ends.console.console_front_end_plugin:104 - 
+--------------------------------------------------
+Workflow Result:
+['=== PROCESSED RESULT ===\n[VALIDATED] CONVERT THIS TEXT TO UPPERCASE\n========================']
+--------------------------------------------------
+```
+
+**Example 2: lowercase conversion**
+
+```bash
 nat run --config_file=examples/control_flow/mixture_of_control_flows/configs/config.yml --input "CONVERT THIS TEXT TO LOWERCASE"
 ```
 
 **Expected Workflow Output:**
 
 ```console
-Workflow Result:
-['=== PROCESSED RESULT ===
-[VALIDATED] CONVERT THIS TEXT TO UPPERCASE
-========================']
+<snipped for brevity>
+Configuration Summary:
+--------------------
+Workflow Type: router_agent
+Number of Functions: 13
+Number of Function Groups: 0
+Number of LLMs: 1
+Number of Embedders: 0
+Number of Memory: 0
+Number of Object Stores: 0
+Number of Retrievers: 0
+Number of TTC Strategies: 0
+Number of Authentication Providers: 0
 
-...
-
+2026-02-04 15:38:24 - INFO     - nat.runtime.session:298 - Shared workflow built (entry_function=None)
+2026-02-04 15:38:27 - INFO     - nat.front_ends.console.console_front_end_plugin:104 - 
+--------------------------------------------------
 Workflow Result:
-['=== PROCESSED RESULT ===
-[validated] convert this text to lowercase
-========================']
+['=== PROCESSED RESULT ===\n[validated] convert this text to lowercase\n========================']
+--------------------------------------------------
 ```
 
 ### Router Agent to Router Agent
 
-Test the nested router agent for advisory tasks:
+Test the nested router pattern where the main router delegates to a domain-specific sub-router for specialized advisory tasks:
+
+**Example 1: Fruit advisor:**
 
 ```bash
-# Test fruit advisor
 nat run --config_file=examples/control_flow/mixture_of_control_flows/configs/config.yml --input "What yellow fruit would you recommend?"
+```
 
-# Test city advisor
+**Expected Workflow Output:**
+
+```console
+<snipped for brevity>
+Configuration Summary:
+--------------------
+Workflow Type: router_agent
+Number of Functions: 13
+Number of Function Groups: 0
+Number of LLMs: 1
+Number of Embedders: 0
+Number of Memory: 0
+Number of Object Stores: 0
+Number of Retrievers: 0
+Number of TTC Strategies: 0
+Number of Authentication Providers: 0
+
+2026-02-04 15:39:33 - INFO     - nat.runtime.session:298 - Shared workflow built (entry_function=None)
+2026-02-04 15:39:35 - INFO     - nat.front_ends.console.console_front_end_plugin:104 - 
+--------------------------------------------------
+Workflow Result:
+['banana']
+--------------------------------------------------
+```
+
+**Example 2: City advisor:**
+
+```bash
 nat run --config_file=examples/control_flow/mixture_of_control_flows/configs/config.yml --input "What city should I visit in Canada?"
 ```
 
 **Expected Workflow Output:**
+
 ```console
-Workflow Result:
-['banana']
+<snipped for brevity>
+Configuration Summary:
+--------------------
+Workflow Type: router_agent
+Number of Functions: 13
+Number of Function Groups: 0
+Number of LLMs: 1
+Number of Embedders: 0
+Number of Memory: 0
+Number of Object Stores: 0
+Number of Retrievers: 0
+Number of TTC Strategies: 0
+Number of Authentication Providers: 0
 
-...
-
+2026-02-04 15:40:08 - INFO     - nat.runtime.session:298 - Shared workflow built (entry_function=None)
+2026-02-04 15:40:11 - INFO     - nat.front_ends.console.console_front_end_plugin:104 - 
+--------------------------------------------------
 Workflow Result:
-['toronto']
+['Toronto']
+--------------------------------------------------
 ```
