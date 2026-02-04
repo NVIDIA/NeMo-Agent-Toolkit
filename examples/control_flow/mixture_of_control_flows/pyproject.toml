@@ -34,8 +34,8 @@ classifiers = ["Programming Language :: Python"]
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
   "nvidia-nat[langchain,test] == {version}",
-  "nat_sequential_executor == {version}",
-  "nat_router_agent == {version}",
+  "nat_sequential_executor",
+  "nat_router_agent",
 ]
 
 [tool.uv.sources]
@@ -45,3 +45,4 @@ nat_router_agent = { path = "../router_agent", editable = true }
 
 [project.entry-points.'nat.components']
 nat_mixture_of_control_flows = "mixture_of_control_flows.register"
+
