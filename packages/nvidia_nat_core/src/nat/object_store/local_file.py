@@ -13,7 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 from pathlib import Path
+from typing import Any
 
 from nat.data_models.object_store import KeyAlreadyExistsError  # noqa: F401
 from nat.data_models.object_store import NoSuchKeyError  # noqa: F401
@@ -41,7 +43,35 @@ class LocalFileObjectStore(ObjectStore):
 
     @override
     async def put_object(self, key: str, item: ObjectStoreItem) -> None:
-        raise NotImplementedError
+        """
+        Save object to filesystem. Raises KeyAlreadyExistsError if key exists.
+
+        Args:
+            key: Storage key (can include slashes for nested paths)
+            item: Object to store
+
+        Raises:
+            KeyAlreadyExistsError: If key already exists
+        """
+        data_path = self.base_path / key
+        meta_path = self.base_path / f"{key}.meta"
+
+        # Check if key already exists
+        if data_path.exists():
+            raise KeyAlreadyExistsError(key)
+
+        # Create parent directories
+        data_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Write data file
+        data_path.write_bytes(item.data)
+
+        # Write metadata file
+        meta_dict: dict[str, Any] = {
+            "content_type": item.content_type,
+            "metadata": item.metadata
+        }
+        meta_path.write_text(json.dumps(meta_dict, indent=2))
 
     @override
     async def upsert_object(self, key: str, item: ObjectStoreItem) -> None:

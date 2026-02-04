@@ -13,9 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 from pathlib import Path
 
+import pytest
+
+from nat.data_models.object_store import KeyAlreadyExistsError
 from nat.object_store.local_file import LocalFileObjectStore
+from nat.object_store.models import ObjectStoreItem
 
 
 class TestLocalFileObjectStore:
@@ -24,3 +29,38 @@ class TestLocalFileObjectStore:
         store = LocalFileObjectStore(base_path=tmp_path)
         assert store is not None
         assert store.base_path == tmp_path
+
+    async def test_put_object(self, tmp_path: Path):
+        """Test putting a new object creates data and metadata files."""
+        store = LocalFileObjectStore(base_path=tmp_path)
+
+        item = ObjectStoreItem(
+            data=b'{"test": "data"}',
+            content_type="application/json",
+            metadata={"key": "value"}
+        )
+
+        await store.put_object("test.json", item)
+
+        # Verify data file
+        data_path = tmp_path / "test.json"
+        assert data_path.exists()
+        assert data_path.read_bytes() == b'{"test": "data"}'
+
+        # Verify metadata file
+        meta_path = tmp_path / "test.json.meta"
+        assert meta_path.exists()
+        meta_data = json.loads(meta_path.read_text())
+        assert meta_data["content_type"] == "application/json"
+        assert meta_data["metadata"] == {"key": "value"}
+
+    async def test_put_object_raises_on_existing_key(self, tmp_path: Path):
+        """Test put_object raises KeyAlreadyExistsError if key exists."""
+        store = LocalFileObjectStore(base_path=tmp_path)
+
+        item = ObjectStoreItem(data=b"data", content_type="text/plain")
+
+        await store.put_object("existing.txt", item)
+
+        with pytest.raises(KeyAlreadyExistsError):
+            await store.put_object("existing.txt", item)
