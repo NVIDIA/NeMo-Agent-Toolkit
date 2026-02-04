@@ -45,10 +45,11 @@ tools:
     description: A test tool
 """
 
-    def _create_mock_loader_instance(self, mock_graph, load_yaml_return=None):
+    def _create_mock_loader_instance(self, mock_graph, load_yaml_return=None, load_json_return=None):
         """Helper to create a mock loader instance."""
         mock_loader_instance = MagicMock()
         mock_loader_instance.load_yaml.return_value = load_yaml_return or mock_graph
+        mock_loader_instance.load_json.return_value = load_json_return or mock_graph
         return mock_loader_instance
 
     @patch('pyagentspec.adapters.langgraph.AgentSpecLoader')
@@ -304,3 +305,215 @@ llm_config:
         async with register(config, mock_builder) as wrapper_function:
             assert wrapper_function is not None
             assert wrapper_function.description == description
+
+    # Tests for inline YAML/JSON support
+    def test_config_validator_requires_exactly_one_source(self):
+        """Test validator ensures exactly one of spec_file, spec_yaml, or spec_json is provided."""
+        # Test: None provided - should fail
+        with pytest.raises(ValueError, match="Exactly one of spec_file, spec_yaml, or spec_json must be provided"):
+            AgentSpecWrapperConfig()
+
+        # Test: Multiple provided - should fail
+        with pytest.raises(ValueError, match="Exactly one of spec_file, spec_yaml, or spec_json must be provided"):
+            AgentSpecWrapperConfig(
+                spec_file=Path(__file__),
+                spec_yaml="test",
+            )
+
+        with pytest.raises(ValueError, match="Exactly one of spec_file, spec_yaml, or spec_json must be provided"):
+            AgentSpecWrapperConfig(
+                spec_yaml="test",
+                spec_json='{"test": "value"}',
+            )
+
+        with pytest.raises(ValueError, match="Exactly one of spec_file, spec_yaml, or spec_json must be provided"):
+            AgentSpecWrapperConfig(
+                spec_file=Path(__file__),
+                spec_yaml="test",
+                spec_json='{"test": "value"}',
+            )
+
+        # Test: Exactly one provided - should succeed
+        config1 = AgentSpecWrapperConfig(spec_file=Path(__file__))
+        assert config1.spec_file == Path(__file__)
+
+        config2 = AgentSpecWrapperConfig(spec_yaml="component_type: Agent")
+        assert config2.spec_yaml == "component_type: Agent"
+
+        config3 = AgentSpecWrapperConfig(spec_json='{"component_type": "Agent"}')
+        assert config3.spec_json == '{"component_type": "Agent"}'
+
+    @patch('pyagentspec.adapters.langgraph.AgentSpecLoader')
+    async def test_register_with_inline_yaml(self, mock_loader_class, mock_builder, mock_graph, minimal_yaml_content):
+        """Test register() with inline YAML (spec_yaml)."""
+        mock_loader_instance = self._create_mock_loader_instance(mock_graph)
+        mock_loader_class.return_value = mock_loader_instance
+
+        config = AgentSpecWrapperConfig(
+            spec_yaml=minimal_yaml_content,
+            description="Test agent with inline YAML",
+        )
+
+        async with register(config, mock_builder) as wrapper_function:
+            assert wrapper_function is not None
+            assert wrapper_function._graph is mock_graph
+
+        # Verify load_yaml was called (not load_json)
+        mock_loader_instance.load_yaml.assert_called_once()
+        mock_loader_instance.load_json.assert_not_called()
+
+        # Verify the YAML content was passed
+        call_args = mock_loader_instance.load_yaml.call_args
+        assert call_args.args[0] == minimal_yaml_content
+
+    @patch('pyagentspec.adapters.langgraph.AgentSpecLoader')
+    async def test_register_with_inline_json(self, mock_loader_class, mock_builder, mock_graph):
+        """Test register() with inline JSON (spec_json)."""
+        mock_loader_instance = self._create_mock_loader_instance(mock_graph)
+        mock_loader_class.return_value = mock_loader_instance
+
+        json_content = '{"component_type": "Agent", "name": "test_agent", "llm_config": {"component_type": "OpenAiCompatibleConfig", "model_id": "test-model"}}'
+        config = AgentSpecWrapperConfig(
+            spec_json=json_content,
+            description="Test agent with inline JSON",
+        )
+
+        async with register(config, mock_builder) as wrapper_function:
+            assert wrapper_function is not None
+            assert wrapper_function._graph is mock_graph
+
+        # Verify load_json was called (not load_yaml)
+        mock_loader_instance.load_json.assert_called_once()
+        mock_loader_instance.load_yaml.assert_not_called()
+
+        # Verify the JSON content was passed
+        call_args = mock_loader_instance.load_json.call_args
+        assert call_args.args[0] == json_content
+
+    @patch('pyagentspec.adapters.langgraph.AgentSpecLoader')
+    async def test_register_with_json_file(self, mock_loader_class, mock_builder, mock_graph):
+        """Test register() with JSON file (spec_file with .json extension)."""
+        import tempfile
+        json_content = '{"component_type": "Agent", "name": "test_agent"}'
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            f.write(json_content)
+            temp_json_path = Path(f.name)
+
+        try:
+            mock_loader_instance = self._create_mock_loader_instance(mock_graph)
+            mock_loader_class.return_value = mock_loader_instance
+
+            config = AgentSpecWrapperConfig(
+                spec_file=temp_json_path,
+                description="Test agent with JSON file",
+            )
+
+            async with register(config, mock_builder) as wrapper_function:
+                assert wrapper_function is not None
+                assert wrapper_function._graph is mock_graph
+
+            # Verify load_json was called (not load_yaml) for .json file
+            mock_loader_instance.load_json.assert_called_once()
+            mock_loader_instance.load_yaml.assert_not_called()
+
+            # Verify the JSON content was read and passed
+            call_args = mock_loader_instance.load_json.call_args
+            assert call_args.args[0] == json_content
+        finally:
+            temp_json_path.unlink(missing_ok=True)
+
+    @patch('pyagentspec.adapters.langgraph.AgentSpecLoader')
+    async def test_register_inline_yaml_with_components_registry(self, mock_loader_class, mock_builder, mock_graph, minimal_yaml_content):
+        """Test register() with inline YAML and components_registry."""
+        mock_loader_instance = self._create_mock_loader_instance(mock_graph)
+        mock_loader_class.return_value = mock_loader_instance
+
+        components_registry = {"llm_id": MagicMock()}
+        config = AgentSpecWrapperConfig(
+            spec_yaml=minimal_yaml_content,
+            components_registry=components_registry,
+        )
+
+        async with register(config, mock_builder) as wrapper_function:
+            assert wrapper_function is not None
+
+        # Verify load_yaml was called with components_registry
+        mock_loader_instance.load_yaml.assert_called_once()
+        call_args = mock_loader_instance.load_yaml.call_args
+        assert 'components_registry' in call_args.kwargs
+        assert call_args.kwargs['components_registry'] == components_registry
+
+    @patch('pyagentspec.adapters.langgraph.AgentSpecLoader')
+    async def test_register_inline_json_with_components_registry(self, mock_loader_class, mock_builder, mock_graph):
+        """Test register() with inline JSON and components_registry."""
+        mock_loader_instance = self._create_mock_loader_instance(mock_graph)
+        mock_loader_class.return_value = mock_loader_instance
+
+        json_content = '{"component_type": "Agent", "name": "test_agent"}'
+        components_registry = {"llm_id": MagicMock()}
+        config = AgentSpecWrapperConfig(
+            spec_json=json_content,
+            components_registry=components_registry,
+        )
+
+        async with register(config, mock_builder) as wrapper_function:
+            assert wrapper_function is not None
+
+        # Verify load_json was called with components_registry
+        mock_loader_instance.load_json.assert_called_once()
+        call_args = mock_loader_instance.load_json.call_args
+        assert 'components_registry' in call_args.kwargs
+        assert call_args.kwargs['components_registry'] == components_registry
+
+    @patch('langgraph.checkpoint.memory.MemorySaver')
+    @patch('pyagentspec.adapters.langgraph.AgentSpecLoader')
+    async def test_register_inline_yaml_auto_detects_client_tool(
+        self, mock_loader_class, mock_memory_saver_class, mock_builder, mock_graph, yaml_with_client_tool
+    ):
+        """Test register() auto-detects ClientTool in inline YAML."""
+        mock_checkpointer = MagicMock()
+        mock_memory_saver_class.return_value = mock_checkpointer
+        mock_loader_instance = self._create_mock_loader_instance(mock_graph)
+        mock_loader_class.return_value = mock_loader_instance
+
+        config = AgentSpecWrapperConfig(
+            spec_yaml=yaml_with_client_tool,
+        )
+
+        async with register(config, mock_builder) as wrapper_function:
+            assert wrapper_function is not None
+
+        # Verify MemorySaver was created
+        mock_memory_saver_class.assert_called_once()
+
+        # Verify checkpointer was passed to loader
+        call_kwargs = mock_loader_class.call_args.kwargs
+        assert call_kwargs['checkpointer'] is mock_checkpointer
+
+    @patch('langgraph.checkpoint.memory.MemorySaver')
+    @patch('pyagentspec.adapters.langgraph.AgentSpecLoader')
+    async def test_register_inline_json_auto_detects_client_tool(
+        self, mock_loader_class, mock_memory_saver_class, mock_builder, mock_graph
+    ):
+        """Test register() auto-detects ClientTool in inline JSON."""
+        json_with_client_tool = '{"component_type": "Agent", "name": "test_agent", "tools": [{"component_type": "ClientTool", "name": "test_tool"}]}'
+
+        mock_checkpointer = MagicMock()
+        mock_memory_saver_class.return_value = mock_checkpointer
+        mock_loader_instance = self._create_mock_loader_instance(mock_graph)
+        mock_loader_class.return_value = mock_loader_instance
+
+        config = AgentSpecWrapperConfig(
+            spec_json=json_with_client_tool,
+        )
+
+        async with register(config, mock_builder) as wrapper_function:
+            assert wrapper_function is not None
+
+        # Verify MemorySaver was created
+        mock_memory_saver_class.assert_called_once()
+
+        # Verify checkpointer was passed to loader
+        call_kwargs = mock_loader_class.call_args.kwargs
+        assert call_kwargs['checkpointer'] is mock_checkpointer

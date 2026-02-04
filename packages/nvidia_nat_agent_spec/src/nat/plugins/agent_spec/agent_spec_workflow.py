@@ -27,6 +27,7 @@ Flow:
 6. NAT runtime executes it with evaluation, profiling, observability, middleware, etc.
 """
 
+import json
 import logging
 import yaml
 from collections.abc import AsyncGenerator
@@ -41,6 +42,7 @@ from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import FilePath
+from pydantic import model_validator
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -74,23 +76,55 @@ class AgentSpecWrapperConfig(FunctionBaseConfig, name="agent_spec_wrapper"):
     converted to a LangGraph CompiledStateGraph and executed as a NAT Function.
 
     Example usage in NAT workflow config:
+        # Option 1: From file
         workflow:
           _type: agent_spec_wrapper
           spec_file: "my_agent_spec.yaml"
           description: "Oracle agent-spec agent"
 
+        # Option 2: Inline YAML
+        workflow:
+          _type: agent_spec_wrapper
+          spec_yaml: |
+            component_type: Agent
+            name: "My Agent"
+            ...
+          description: "Oracle agent-spec agent"
+
+        # Option 3: Inline JSON
+        workflow:
+          _type: agent_spec_wrapper
+          spec_json: '{"component_type": "Agent", "name": "My Agent", ...}'
+          description: "Oracle agent-spec agent"
+
     Attributes:
-        spec_file: Path to the Agent-Spec YAML configuration file (required).
+        spec_file: Path to the Agent-Spec YAML/JSON configuration file (optional if spec_yaml or spec_json provided).
+        spec_yaml: Inline Agent-Spec YAML content (optional if spec_file or spec_json provided).
+        spec_json: Inline Agent-Spec JSON content (optional if spec_file or spec_yaml provided).
         description: Optional description of the workflow.
         tool_registry: Optional dictionary mapping tool names to LangGraph tools
             or callables. If provided, these tools will be available to the
             Agent-Spec workflow.
+
+    Note:
+        Exactly one of spec_file, spec_yaml, or spec_json must be provided.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     description: str = Field(default="", description="Description of the Agent-Spec workflow")
-    spec_file: FilePath = Field(description="Path to the Agent-Spec YAML configuration file")
+    spec_file: FilePath | None = Field(
+        default=None,
+        description="Path to the Agent-Spec YAML/JSON configuration file"
+    )
+    spec_yaml: str | None = Field(
+        default=None,
+        description="Inline Agent-Spec YAML content"
+    )
+    spec_json: str | None = Field(
+        default=None,
+        description="Inline Agent-Spec JSON content"
+    )
     tool_registry: dict[str, Any] | None = Field(
         default=None,
         description="Optional dictionary mapping tool names to LangGraph tools or callables",
@@ -107,6 +141,21 @@ class AgentSpecWrapperConfig(FunctionBaseConfig, name="agent_spec_wrapper"):
         "ClientTool in Agent-Spec YAML. If not provided and ClientTool is detected, "
         "MemorySaver will be used automatically.",
     )
+
+    @model_validator(mode="after")
+    def _validate_sources(self):
+        """Ensure exactly one of spec_file, spec_yaml, or spec_json is provided."""
+        provided = [self.spec_file, self.spec_yaml, self.spec_json]
+        cnt = sum(1 for v in provided if v is not None)
+        if cnt != 1:
+            raise ValueError(
+                "Exactly one of spec_file, spec_yaml, or spec_json must be provided. "
+                f"Found {cnt} provided: "
+                f"spec_file={'provided' if self.spec_file else 'None'}, "
+                f"spec_yaml={'provided' if self.spec_yaml else 'None'}, "
+                f"spec_json={'provided' if self.spec_json else 'None'}"
+            )
+        return self
 
 
 class AgentSpecWrapperFunction(Function[AgentSpecWrapperInput, NoneType, AgentSpecWrapperOutput]):
@@ -185,7 +234,7 @@ async def register(config: AgentSpecWrapperConfig, b: Builder):
     """Register the Agent-Spec wrapper function.
 
     This function:
-    1. Loads the Agent-Spec YAML file
+    1. Loads the Agent-Spec configuration (from file, inline YAML, or inline JSON)
     2. Converts it to a LangGraph CompiledStateGraph using AgentSpecLoader
     3. Wraps it as a NAT Function using AgentSpecWrapperFunction
 
@@ -214,22 +263,45 @@ async def register(config: AgentSpecWrapperConfig, b: Builder):
             "langchain-core version conflicts between pyagentspec and nvidia-nat-langchain."
         ) from e
 
-    # Read the Agent-Spec YAML file
-    spec_path = Path(config.spec_file)
-    if not spec_path.exists():
-        raise ValueError(f"Agent-Spec file '{spec_path}' does not exist.")
+    # Determine the format and read the Agent-Spec content
+    # Validator ensures exactly one is provided, so we can safely assert non-None after checking
+    if config.spec_file:
+        # Read from file
+        spec_path = Path(config.spec_file)
+        if not spec_path.exists():
+            raise ValueError(f"Agent-Spec file '{spec_path}' does not exist.")
 
-    with open(spec_path, "r", encoding="utf-8") as f:
-        spec_yaml = f.read()
+        with open(spec_path, "r", encoding="utf-8") as f:
+            spec_content = f.read()
+
+        # Determine format from file extension
+        ext = spec_path.suffix.lower()
+        spec_format = "json" if ext == ".json" else "yaml"
+        source_description = f"file '{spec_path}'"
+    elif config.spec_yaml:
+        # Use inline YAML
+        assert config.spec_yaml is not None  # Type narrowing: validator ensures this is set
+        spec_content = config.spec_yaml
+        spec_format = "yaml"
+        source_description = "inline YAML"
+    else:
+        # Use inline JSON (config.spec_json)
+        assert config.spec_json is not None  # Type narrowing: validator ensures this is set
+        spec_content = config.spec_json
+        spec_format = "json"
+        source_description = "inline JSON"
 
     # Determine if checkpointer is needed (ClientTool requires it)
     # If config provides one, use it; otherwise auto-detect and use MemorySaver if needed
     checkpointer = config.checkpointer
     if checkpointer is None:
-        # Check if YAML contains ClientTool - if so, we need a checkpointer
-        import yaml
+        # Check if spec contains ClientTool - if so, we need a checkpointer
         try:
-            spec_dict = yaml.safe_load(spec_yaml)
+            if spec_format == "json":
+                spec_dict = json.loads(spec_content)
+            else:
+                spec_dict = yaml.safe_load(spec_content)
+
             # Check if tools section contains ClientTool
             if isinstance(spec_dict, dict):
                 tools = spec_dict.get("tools", [])
@@ -242,7 +314,7 @@ async def register(config: AgentSpecWrapperConfig, b: Builder):
                     checkpointer = MemorySaver()
                     logger.debug("Auto-detected ClientTool, using MemorySaver checkpointer")
         except Exception as e:
-            logger.debug(f"Could not parse YAML to detect ClientTool: {e}")
+            logger.debug(f"Could not parse {spec_format} to detect ClientTool: {e}")
 
     # Create AgentSpecLoader with optional tool registry and checkpointer
     loader = AgentSpecLoader(
@@ -250,15 +322,21 @@ async def register(config: AgentSpecWrapperConfig, b: Builder):
         checkpointer=checkpointer,
     )
 
-    # Load the Agent-Spec YAML and convert to LangGraph CompiledStateGraph
+    # Load the Agent-Spec configuration and convert to LangGraph CompiledStateGraph
     # If components_registry is provided, use it to override components (e.g., LLMs)
     try:
-        if config.components_registry:
-            graph = loader.load_yaml(spec_yaml, components_registry=config.components_registry)
+        if spec_format == "json":
+            if config.components_registry:
+                graph = loader.load_json(spec_content, components_registry=config.components_registry)
+            else:
+                graph = loader.load_json(spec_content)
         else:
-            graph = loader.load_yaml(spec_yaml)
+            if config.components_registry:
+                graph = loader.load_yaml(spec_content, components_registry=config.components_registry)
+            else:
+                graph = loader.load_yaml(spec_content)
     except Exception as e:
-        raise RuntimeError(f"Failed to load Agent-Spec configuration from '{spec_path}': {e}") from e
+        raise RuntimeError(f"Failed to load Agent-Spec configuration from {source_description}: {e}") from e
 
     # Validate that we got a CompiledStateGraph
     if not isinstance(graph, CompiledStateGraph):
