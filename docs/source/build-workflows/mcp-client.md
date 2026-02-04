@@ -367,7 +367,6 @@ When you serve a workflow that includes an `mcp_client` function group, the NeMo
 - Method: `GET`
 - Purpose: Returns tools configured in each `mcp_client` function group, indicates whether each tool is available on the connected MCP server, and includes metadata about the function group and HTTP session.
 
-
 ### Sample Output
 
 ```json
@@ -439,29 +438,6 @@ When you serve a workflow that includes an `mcp_client` function group, the NeMo
     }
   ]
 }
-```
-
-### Per-user endpoint
-Use this endpoint with per-user workflows to list tools available to a specific user.
-
-- Path: `/mcp/client/tool/list/per_user`
-- Method: `GET`
-- Query parameter: `user_id`
-
-Example:
-1. Start the MCP server if not already running:
-```bash
-nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml
-```
-
-2. Start per-user workflow:
-```bash
-nat serve --config_file examples/MCP/simple_calculator_mcp/configs/config-per-user-mcp-client.yml
-```
-
-3. Call the endpoint:
-```bash
-curl -s "http://localhost:8000/mcp/client/tool/list/per_user?user_id=alice" | jq
 ```
 
 ## MCP Inspection via UI
