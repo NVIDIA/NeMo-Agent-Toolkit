@@ -373,7 +373,9 @@ async def huggingface_langchain(llm_config: HuggingFaceConfig, _builder: Builder
 # Addresses all CodeRabbit feedback
 
 @register_llm_client(config_type=HuggingFaceInferenceConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-async def huggingface_inference_langchain(llm_config: HuggingFaceInferenceConfig, _builder: Builder):
+async def huggingface_inference_langchain(
+    llm_config: HuggingFaceInferenceConfig, _builder: Builder
+) -> "AsyncIterator[Any]":
     """
     LangChain client for HuggingFace Inference API.
 
@@ -588,6 +590,9 @@ async def huggingface_inference_langchain(llm_config: HuggingFaceInferenceConfig
             prompt = self._convert_messages_to_prompt(messages)
             queue: asyncio.Queue = asyncio.Queue()
 
+            # Capture the running event loop before creating thread
+            loop = asyncio.get_running_loop()
+
             # Run streaming in a separate thread, putting tokens in queue
             def _stream_to_queue():
                 """Stream tokens from InferenceClient into async queue."""
@@ -605,11 +610,11 @@ async def huggingface_inference_langchain(llm_config: HuggingFaceInferenceConfig
                         stream=True,
                         **kwargs,
                     ):
-                        # Use sync put_nowait since we're in a sync context
-                        asyncio.run_coroutine_threadsafe(queue.put(token), asyncio.get_event_loop())
+                        # Use captured loop instead of get_event_loop()
+                        asyncio.run_coroutine_threadsafe(queue.put(token), loop)
                 finally:
-                    # Signal completion
-                    asyncio.run_coroutine_threadsafe(queue.put(None), asyncio.get_event_loop())
+                    # Signal completion using captured loop
+                    asyncio.run_coroutine_threadsafe(queue.put(None), loop)
 
             # Start streaming in background thread
             import threading

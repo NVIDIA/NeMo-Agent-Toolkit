@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections.abc import AsyncIterator
+from typing import Any
+
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_embedder_client
@@ -81,11 +84,20 @@ async def openai_langchain(embedder_config: OpenAIEmbedderModelConfig, builder: 
 
 
 @register_embedder_client(config_type=HuggingFaceEmbedderConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-async def huggingface_langchain(embedder_config: HuggingFaceEmbedderConfig, builder: Builder):
+async def huggingface_langchain(
+    embedder_config: HuggingFaceEmbedderConfig, _builder: Builder
+) -> AsyncIterator[Any]:
     """
     LangChain client for HuggingFace Embedder.
-    
+
     Supports both local sentence-transformers and remote TEI/Inference API endpoints.
+
+    Args:
+        embedder_config: Configuration for HuggingFace embedder
+        _builder: Builder instance (unused)
+
+    Yields:
+        Configured LangChain embedder client (local or remote)
     """
     
     # Remote mode: use endpoint_url
