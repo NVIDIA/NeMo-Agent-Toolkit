@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import asyncio
-import json
 import logging
 import random
 from collections.abc import Sequence
@@ -35,6 +34,9 @@ from nat.profiler.parameter_optimization.oracle_feedback import build_oracle_fee
 from nat.profiler.parameter_optimization.oracle_feedback import check_adaptive_triggers
 from nat.profiler.parameter_optimization.oracle_feedback import extract_worst_reasoning
 from nat.profiler.parameter_optimization.oracle_feedback import should_inject_feedback
+from nat.profiler.parameter_optimization.prompt_storage import LocalFilePromptStorage
+from nat.profiler.parameter_optimization.prompt_storage import ObjectStorePromptStorage
+from nat.profiler.parameter_optimization.prompt_storage import PromptStorage
 from nat.profiler.parameter_optimization.update_helpers import apply_suggestions
 
 logger = logging.getLogger(__name__)
@@ -167,6 +169,26 @@ async def optimize_prompts(
             init_fn_name,
             optimizer_config.prompt.prompt_recombination_function,
         )
+
+        # ------------- storage backend ------------- #
+        storage: PromptStorage
+        if optimizer_config.object_store:
+            # Use object store
+            logger.info(f"Using object store '{optimizer_config.object_store.name}' for prompt storage")
+            store = await builder.get_object_store_client(
+                optimizer_config.object_store.name
+            )
+            storage = ObjectStorePromptStorage(
+                object_store=store,
+                key_prefix=optimizer_config.object_store.key_prefix
+            )
+        else:
+            # Fallback to file-based (backward compatible)
+            logger.info("Using local file storage for prompts (backward compatible)")
+            storage = LocalFilePromptStorage(
+                base_path=out_dir,
+                key_prefix=None
+            )
 
         # ------------- GA parameters ------------- #
         pop_size = max(2, int(optimizer_config.prompt.ga_population_size))
@@ -348,10 +370,12 @@ async def optimize_prompts(
             # Log and save checkpoint
             best = max(population, key=lambda i: (i.scalar_fitness or 0.0))
             checkpoint = {k: (best.prompts[k], prompt_space[k][1]) for k in prompt_space}
-            checkpoint_path = out_dir / f"optimized_prompts_gen{gen}.json"
-            with checkpoint_path.open("w") as fh:
-                json.dump(checkpoint, fh, indent=2)
-            logger.info("[GA] Saved checkpoint: %s (fitness=%.4f)", checkpoint_path, best.scalar_fitness or 0.0)
+            try:
+                await storage.save_checkpoint(generation=gen, prompts=checkpoint)
+                logger.info("[GA] Saved checkpoint for generation %d (fitness=%.4f)", gen, best.scalar_fitness or 0.0)
+            except Exception as e:
+                logger.warning(f"Failed to save checkpoint for generation {gen}: {e}")
+                # Continue optimization despite storage failure
 
             # Append current generation's fitness BEFORE checking adaptive triggers
             best_fitness_history.append(best.scalar_fitness or 0.0)
@@ -423,9 +447,12 @@ async def optimize_prompts(
         best_prompts = {k: (best.prompts[k], prompt_space[k][1]) for k in prompt_space}
 
         # Save final
-        final_prompts_path = out_dir / "optimized_prompts.json"
-        with final_prompts_path.open("w") as fh:
-            json.dump(best_prompts, fh, indent=2)
+        try:
+            await storage.save_final(prompts=best_prompts)
+            logger.info("Saved final optimized prompts")
+        except Exception as e:
+            logger.error(f"Failed to save final prompts: {e}")
+            # Don't fail the optimization, but log prominently
 
         trials_df_path = out_dir / "ga_history_prompts.csv"
         try:
@@ -442,5 +469,4 @@ async def optimize_prompts(
             logger.warning("Failed to write GA history CSV: %s", e)
 
         logger.info("Prompt GA optimization finished successfully!")
-        logger.info("Final prompts saved to: %s", final_prompts_path)
         logger.info("History saved to: %s", trials_df_path)
