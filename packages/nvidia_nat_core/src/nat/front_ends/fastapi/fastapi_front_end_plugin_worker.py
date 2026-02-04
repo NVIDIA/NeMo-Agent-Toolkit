@@ -1320,8 +1320,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                     override_configs[override.alias] = override
                                 else:
                                     override_configs[orig_name] = override
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.exception("Error processing tool overrides for MCP client group %s: %s", group_name, e)
 
                     # Create tool info list (always return configured tools; mark availability)
                     tools_info: list[dict[str, Any]] = []
@@ -1369,7 +1369,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     })
 
                 except Exception as e:
-                    logger.error(f"Error processing MCP client {group_name}: {e}")
+                    logger.exception("Error processing MCP client %s", group_name)
                     mcp_clients_info.append({
                         "function_group": group_name,
                         "server": "unknown",
@@ -1379,7 +1379,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         "error": str(e),
                         "tools": [],
                         "total_tools": 0,
-                        "workflow_tools": 0
+                        "available_tools": 0
                     })
 
             return mcp_clients_info
@@ -1418,9 +1418,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     mcp_clients_info = await _collect_mcp_client_tool_list(session.workflow.function_groups)
                     return MCPClientToolListResponse(mcp_clients=mcp_clients_info)
             except Exception as e:
-                logger.error(f"Error in per-user MCP client tool list endpoint: {e}")
+                logger.exception("Error in per-user MCP client tool list endpoint: %s", e)
                 raise HTTPException(status_code=500,
-                                    detail=f"Failed to retrieve per-user MCP client information: {str(e)}")
+                                    detail=f"Failed to retrieve per-user MCP client information: {str(e)}") from e
 
         # Add the route to the FastAPI app
         app.add_api_route(
