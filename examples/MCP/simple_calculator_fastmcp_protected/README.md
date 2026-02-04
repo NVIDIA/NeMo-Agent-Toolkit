@@ -282,4 +282,3 @@ workflow:
 
 - [MCP Authentication](../../../docs/source/components/auth/mcp-auth/index.md) - Learn about configuring MCP authentication
 - [Per-User Workflows](../../../docs/source/extend/custom-components/custom-functions/per-user-functions.md) - Learn about using per-user workflows
-*** End Patch

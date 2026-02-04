@@ -320,7 +320,7 @@ class FastMCPFrontEndPluginWorker(FastMCPFrontEndPluginWorkerBase):
             verifier_kwargs = {
                 "introspection_url": server_auth.introspection_endpoint,
                 "client_id": server_auth.client_id,
-                "client_secret": server_auth.client_secret,
+                "client_secret": (server_auth.client_secret.get_secret_value() if server_auth.client_secret else None),
                 "required_scopes": server_auth.scopes,
             }
             if server_auth.client_auth_method:

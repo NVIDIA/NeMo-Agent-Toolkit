@@ -92,7 +92,7 @@ class FastMCPFrontEndPlugin(FrontEndBase[FastMCPFrontEndConfig]):
                             self.front_end_config.port,
                         )
                         logger.info("FastMCP server URL: %s", full_url)
-                        await self._run_with_mount(mcp)
+                        await self._run_with_mount(mcp, worker)
                 elif self.front_end_config.transport == "sse":
                     logger.info("Starting FastMCP server with SSE endpoint at /sse")
                     await mcp.run_async(transport="sse",
@@ -110,11 +110,12 @@ class FastMCPFrontEndPlugin(FrontEndBase[FastMCPFrontEndConfig]):
             except KeyboardInterrupt:
                 logger.info("FastMCP server shutdown requested (Ctrl+C). Shutting down gracefully.")
 
-    async def _run_with_mount(self, mcp: "FastMCP") -> None:
+    async def _run_with_mount(self, mcp: "FastMCP", worker: FastMCPFrontEndPluginWorkerBase) -> None:
         """Run FastMCP server mounted at configured base_path using FastAPI wrapper.
 
         Args:
             mcp: The FastMCP server instance to mount.
+            worker: The FastMCP worker instance.
         """
         import uvicorn
         from fastapi import FastAPI
@@ -131,7 +132,6 @@ class FastMCPFrontEndPlugin(FrontEndBase[FastMCPFrontEndConfig]):
         app.mount(self.front_end_config.base_path, mcp_app)
 
         # Allow plugins to add routes to the wrapper app (e.g., OAuth discovery endpoints)
-        worker = self._get_worker_instance()
         await worker.add_root_level_routes(app, mcp)
 
         # Configure and start uvicorn server

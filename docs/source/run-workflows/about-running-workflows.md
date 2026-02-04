@@ -123,6 +123,16 @@ nat mcp client tool call react_agent --json-args '{"query": "What is LangSmith?"
 
 Refer to [MCP Server](./mcp-server.md) for more information on the NeMo Agent Toolkit MCP server.
 
+## Using the `nat fastmcp server run` Command
+The `nat fastmcp server run` command starts a FastMCP server that publishes the functions from your workflow as MCP tools. This allows MCP clients to connect to the server and use the published tools.
+
+The following command runs the `examples/getting_started/simple_web_query` workflow as a FastMCP server:
+```bash
+nat fastmcp server run --config_file examples/getting_started/simple_web_query/configs/config.yml
+```
+
+Refer to [FastMCP Server](./fastmcp-server.md) for more information on the NeMo Agent Toolkit FastMCP server.
+
 ## Using the `nat eval` Command
 The `nat eval` command is similar to the `nat run` command. However, in addition to running the workflow, it also evaluates the accuracy of the workflow, refer to [Evaluating NeMo Agent Toolkit Workflows](../improve-workflows/evaluate.md) for more information.
 

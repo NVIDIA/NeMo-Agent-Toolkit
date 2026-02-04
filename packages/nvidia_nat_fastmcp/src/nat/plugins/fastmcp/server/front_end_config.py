@@ -40,7 +40,7 @@ class FastMCPFrontEndConfig(FrontEndBaseConfig, name="fastmcp"):
     log_level: str = Field(default="INFO", description="Log level for the FastMCP server (default: INFO)")
     tool_names: list[str] = Field(
         default_factory=list,
-        description="The list of tools FastMCP server will expose (default: all tools)."
+        description="The list of tools FastMCP server will expose (default: all tools). "
         "Tool names can be functions or function groups",
     )
     transport: Literal["sse", "streamable-http"] = Field(

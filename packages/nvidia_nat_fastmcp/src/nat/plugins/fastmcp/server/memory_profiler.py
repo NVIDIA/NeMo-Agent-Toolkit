@@ -103,8 +103,8 @@ class MemoryProfiler:
             logger.info("Baseline snapshot reset after tracemalloc restart")
 
             return True
-        except RuntimeError as e:
-            logger.error("Failed to restart tracemalloc: %s", e)
+        except RuntimeError:
+            logger.exception("Failed to restart tracemalloc")
             return False
 
     def _safe_traced_memory(self) -> tuple[float, float] | None:

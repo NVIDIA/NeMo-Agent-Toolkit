@@ -21,7 +21,7 @@ Model Context Protocol (MCP) is an open protocol developed by Anthropic that sta
 
 ## Decision
 
-NeMo Agent Toolkit supports two MCP server runtimes. Both publish the same workflow tools as MCP. Choose the runtime that matches your deployment stack and organization’s MCP server policy:
+NeMo Agent Toolkit supports two MCP server runtimes. Both publish the same workflow and its tools as MCP tools. Choose the runtime that matches your deployment stack and organization’s MCP server policy:
 
 - Use `nat mcp serve` for the [MCP SDK server runtime](https://github.com/modelcontextprotocol/python-sdk).
 - Use `nat fastmcp server run` for the [FastMCP server runtime](https://github.com/jlowin/fastmcp).

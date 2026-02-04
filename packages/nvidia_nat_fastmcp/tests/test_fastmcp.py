@@ -159,7 +159,7 @@ def test_fastmcp_debug_route_detail_schema():
 
         resp = client.get("/debug/tools/list?name=chat_tool&detail=true")
         assert resp.status_code == 200
-        chat_schema = data = resp.json()["tools"][0]["input_schema"]
+        chat_schema = resp.json()["tools"][0]["input_schema"]
         assert "properties" in chat_schema
         assert "query" in chat_schema["properties"]
 
