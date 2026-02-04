@@ -21,7 +21,7 @@ Model Context Protocol (MCP) is an open protocol developed by Anthropic that sta
 
 You can create a [workflow](./about-building-workflows.md) that uses MCP [tools](./functions-and-function-groups/functions.md#agents-and-tools) as [functions](./functions-and-function-groups/functions.md). In this case, the workflow acts as an MCP host and creates MCP clients to connect to MCP servers and use their tools as functions.
 
-This guide covers how to use a NeMo Agent Toolkit workflow as an MCP host with one or more MCP clients. For more information on how to use the NeMo Agent Toolkit as an MCP server, refer to [MCP Server](../run-workflows/mcp-server.md).
+This guide covers how to use a NeMo Agent Toolkit workflow as an MCP host with one or more MCP clients. For more information on how to use the NeMo Agent Toolkit as an MCP server, refer to [MCP Server](../run-workflows/mcp-server.md) or [FastMCP Server](../run-workflows/fastmcp-server.md).
 
 ## Installation
 

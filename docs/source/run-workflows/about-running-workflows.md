@@ -24,6 +24,8 @@ A [workflow](../build-workflows/about-building-workflows.md) is defined by a YAM
    - This starts a web server that listens for incoming requests and runs the specified workflow.
 - [Using the `nat mcp serve` command](#using-the-nat-mcp-serve-command).
    - This starts a Model Context Protocol (MCP) server that publishes the [functions](../build-workflows/functions-and-function-groups/functions.md) from your workflow as MCP tools.
+- [Using the `nat fastmcp server run` command](#using-the-nat-fastmcp-server-run-command).
+   - This starts a FastMCP server that publishes the [functions](../build-workflows/functions-and-function-groups/functions.md) from your workflow as MCP tools.
 - [Using the `nat eval` command](#using-the-nat-eval-command).
    - In addition to running the workflow, it also [evaluates](../improve-workflows/evaluate.md) the accuracy of the workflow.
 - [Using the Python API](#using-the-python-api).
