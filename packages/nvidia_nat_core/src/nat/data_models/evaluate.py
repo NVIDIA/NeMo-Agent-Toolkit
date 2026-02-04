@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import typing
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -30,7 +30,7 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.profiler import ProfilerConfig
 
 
-class JobEvictionPolicy(str, Enum):
+class JobEvictionPolicy(StrEnum):
     """Policy for evicting old jobs when max_jobs is exceeded."""
     TIME_CREATED = "time_created"
     TIME_MODIFIED = "time_modified"

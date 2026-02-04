@@ -14,21 +14,21 @@
 # limitations under the License.
 
 import logging
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
 
-class ActionEnum(str, Enum):
+class ActionEnum(StrEnum):
     PUBLISH = "publish"
     PULL = "pull"
     REMOVE = "remove"
     SEARCH = "search"
 
 
-class StatusEnum(str, Enum):
+class StatusEnum(StrEnum):
     SUCCESS = "success"
     ERROR = "error"
 

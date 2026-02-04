@@ -16,7 +16,7 @@
 import enum
 
 
-class RuntimeTypeEnum(str, enum.Enum):
+class RuntimeTypeEnum(enum.StrEnum):
     """
     Enum representing different runtime types.
     """
