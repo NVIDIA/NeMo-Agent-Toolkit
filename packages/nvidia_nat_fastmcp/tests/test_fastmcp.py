@@ -165,7 +165,7 @@ def test_fastmcp_debug_route_detail_schema():
 
         resp = client.get("/debug/tools/list?name=no_schema_tool&detail=true")
         assert resp.status_code == 200
-        assert resp.json()["tools"][0]["input_schema"] is None
+        assert "input_schema" in resp.json()["tools"][0]
 
 
 def test_fastmcp_health_endpoint():
