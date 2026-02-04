@@ -18,8 +18,12 @@ from pathlib import Path
 
 import pytest
 
+from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.object_store import KeyAlreadyExistsError, NoSuchKeyError
-from nat.object_store.local_file import LocalFileObjectStore
+from nat.object_store.local_file import (
+    LocalFileObjectStore,
+    LocalFileObjectStoreConfig,
+)
 from nat.object_store.models import ObjectStoreItem
 
 
@@ -195,3 +199,16 @@ class TestLocalFileObjectStore:
         # Delete with nested path
         await store.delete_object("foo/bar/baz.json")
         assert not (tmp_path / "foo" / "bar" / "baz.json").exists()
+
+    async def test_create_from_config(self, tmp_path: Path):
+        """Test LocalFileObjectStore can be created from config."""
+        async with WorkflowBuilder() as builder:
+            await builder.add_object_store(
+                "local_store",
+                LocalFileObjectStoreConfig(base_path=str(tmp_path))
+            )
+
+            store = await builder.get_object_store_client("local_store")
+
+            assert isinstance(store, LocalFileObjectStore)
+            assert store.base_path == tmp_path

@@ -17,12 +17,25 @@ import json
 from pathlib import Path
 from typing import Any
 
+from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_object_store
 from nat.data_models.object_store import KeyAlreadyExistsError  # noqa: F401
 from nat.data_models.object_store import NoSuchKeyError  # noqa: F401
+from nat.data_models.object_store import ObjectStoreBaseConfig
 from nat.utils.type_utils import override
 
 from .interfaces import ObjectStore
 from .models import ObjectStoreItem
+
+
+class LocalFileObjectStoreConfig(ObjectStoreBaseConfig, name="local_file"):
+    """
+    Configuration for LocalFileObjectStore.
+
+    Attributes:
+        base_path: Base directory for all storage operations
+    """
+    base_path: str
 
 
 class LocalFileObjectStore(ObjectStore):
@@ -160,3 +173,21 @@ class LocalFileObjectStore(ObjectStore):
         # Delete metadata file if exists
         if meta_path.exists():
             meta_path.unlink()
+
+
+@register_object_store(config_type=LocalFileObjectStoreConfig)
+async def local_file_object_store(
+    config: LocalFileObjectStoreConfig,
+    _builder: Builder
+):
+    """
+    Factory function to create LocalFileObjectStore from config.
+
+    Args:
+        config: LocalFileObjectStoreConfig instance
+        _builder: Builder instance (unused)
+
+    Yields:
+        LocalFileObjectStore instance
+    """
+    yield LocalFileObjectStore(base_path=Path(config.base_path))
