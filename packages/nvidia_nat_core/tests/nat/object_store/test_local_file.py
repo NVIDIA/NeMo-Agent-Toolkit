@@ -136,3 +136,62 @@ class TestLocalFileObjectStore:
 
         with pytest.raises(NoSuchKeyError):
             await store.get_object("nonexistent.txt")
+
+    async def test_delete_object(self, tmp_path: Path):
+        """Test deleting an object removes both data and metadata files."""
+        store = LocalFileObjectStore(base_path=tmp_path)
+
+        # Create object
+        item = ObjectStoreItem(data=b"data", content_type="text/plain")
+        await store.put_object("file.txt", item)
+
+        # Verify exists
+        assert (tmp_path / "file.txt").exists()
+        assert (tmp_path / "file.txt.meta").exists()
+
+        # Delete
+        await store.delete_object("file.txt")
+
+        # Verify deleted
+        assert not (tmp_path / "file.txt").exists()
+        assert not (tmp_path / "file.txt.meta").exists()
+
+    async def test_delete_object_only_data_file(self, tmp_path: Path):
+        """Test delete works even if only data file exists (no metadata)."""
+        store = LocalFileObjectStore(base_path=tmp_path)
+
+        # Manually create only data file
+        data_path = tmp_path / "no_meta.txt"
+        data_path.write_bytes(b"data")
+
+        # Delete should succeed
+        await store.delete_object("no_meta.txt")
+
+        assert not data_path.exists()
+
+    async def test_delete_object_raises_on_missing_key(self, tmp_path: Path):
+        """Test delete_object raises NoSuchKeyError if key doesn't exist."""
+        store = LocalFileObjectStore(base_path=tmp_path)
+
+        with pytest.raises(NoSuchKeyError):
+            await store.delete_object("nonexistent.txt")
+
+    async def test_nested_key_paths(self, tmp_path: Path):
+        """Test object store handles nested key paths correctly."""
+        store = LocalFileObjectStore(base_path=tmp_path)
+
+        item = ObjectStoreItem(data=b"nested data", content_type="text/plain")
+
+        # Put with nested path
+        await store.put_object("foo/bar/baz.json", item)
+
+        # Verify directory structure created
+        assert (tmp_path / "foo" / "bar" / "baz.json").exists()
+
+        # Get with nested path
+        retrieved = await store.get_object("foo/bar/baz.json")
+        assert retrieved.data == b"nested data"
+
+        # Delete with nested path
+        await store.delete_object("foo/bar/baz.json")
+        assert not (tmp_path / "foo" / "bar" / "baz.json").exists()

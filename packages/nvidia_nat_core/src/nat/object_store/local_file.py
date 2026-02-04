@@ -138,4 +138,25 @@ class LocalFileObjectStore(ObjectStore):
 
     @override
     async def delete_object(self, key: str) -> None:
-        raise NotImplementedError
+        """
+        Delete object from filesystem.
+
+        Args:
+            key: Storage key
+
+        Raises:
+            NoSuchKeyError: If key doesn't exist
+        """
+        data_path = self.base_path / key
+        meta_path = self.base_path / f"{key}.meta"
+
+        # Check if data file exists
+        if not data_path.exists():
+            raise NoSuchKeyError(key)
+
+        # Delete data file
+        data_path.unlink()
+
+        # Delete metadata file if exists
+        if meta_path.exists():
+            meta_path.unlink()
