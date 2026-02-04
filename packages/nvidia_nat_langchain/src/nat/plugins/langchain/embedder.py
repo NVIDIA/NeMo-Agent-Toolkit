@@ -103,10 +103,10 @@ async def huggingface_langchain(
     # Remote mode: use endpoint_url
     if embedder_config.endpoint_url:
         from langchain_huggingface import HuggingFaceEndpointEmbeddings
-        
+
         client = HuggingFaceEndpointEmbeddings(
             model=embedder_config.endpoint_url,
-            huggingfacehub_api_token=str(embedder_config.api_key) if embedder_config.api_key else None,
+            huggingfacehub_api_token=embedder_config.api_key.get_secret_value() if embedder_config.api_key else None,
         )
     else:
         # Local mode: use sentence-transformers

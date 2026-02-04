@@ -429,26 +429,29 @@ async def huggingface_inference_langchain(
             """Return identifier for this LLM type."""
             return "huggingface_inference"
 
-        def _convert_messages_to_prompt(self, messages: list[BaseMessage]) -> str:
-            """Convert LangChain messages to a prompt string.
+        def _convert_messages_to_chat_format(
+            self, messages: list[BaseMessage]
+        ) -> list[dict[str, str]]:
+            """Convert LangChain messages to HuggingFace chat format.
 
             Args:
                 messages: List of LangChain message objects
 
             Returns:
-                Formatted prompt string with Assistant: suffix
+                List of message dicts with 'role' and 'content' keys (OpenAI format)
             """
-            prompt_parts = []
+            chat_messages = []
             for message in messages:
                 if isinstance(message, SystemMessage):
-                    prompt_parts.append(f"System: {message.content}")
+                    chat_messages.append({"role": "system", "content": str(message.content)})
                 elif isinstance(message, HumanMessage):
-                    prompt_parts.append(f"User: {message.content}")
+                    chat_messages.append({"role": "user", "content": str(message.content)})
                 elif isinstance(message, AIMessage):
-                    prompt_parts.append(f"Assistant: {message.content}")
+                    chat_messages.append({"role": "assistant", "content": str(message.content)})
                 else:
-                    prompt_parts.append(str(message.content))
-            return "\n".join(prompt_parts) + "\nAssistant:"
+                    # Default to user role for unknown message types
+                    chat_messages.append({"role": "user", "content": str(message.content)})
+            return chat_messages
 
         def _generate(
             self,
@@ -457,33 +460,34 @@ async def huggingface_inference_langchain(
             run_manager: CallbackManagerForLLMRun | None = None,
             **kwargs: Any,
         ) -> ChatResult:
-            """Synchronous generation - not recommended, use async instead.
+            """Synchronous generation using chat completion API.
 
             Args:
                 messages: List of messages to generate from
                 stop: Optional stop sequences
                 run_manager: Optional callback manager
-                **kwargs: Additional parameters for text_generation
+                **kwargs: Additional parameters for chat_completion
 
             Returns:
                 ChatResult with generated message
             """
-            prompt = self._convert_messages_to_prompt(messages)
+            chat_messages = self._convert_messages_to_chat_format(messages)
 
-            # FIX 5: Remove redundant model parameter (client already has it)
-            response = self.client.text_generation(
-                prompt=prompt,
-                max_new_tokens=self.max_new_tokens,
+            # Use chat_completion API (OpenAI-compatible)
+            response = self.client.chat_completion(
+                messages=chat_messages,
+                max_tokens=self.max_new_tokens,
                 temperature=self.temperature,
                 top_p=self.top_p,
-                top_k=self.top_k,
-                repetition_penalty=self.repetition_penalty,
                 seed=self.seed,
-                stop_sequences=stop,
+                stop=stop,
+                stream=False,
                 **kwargs,
             )
 
-            message = AIMessage(content=response)
+            # Extract content from chat completion response
+            content = response.choices[0].message.content
+            message = AIMessage(content=content)
             generation = ChatGeneration(message=message)
             return ChatResult(generations=[generation])
 
@@ -495,36 +499,36 @@ async def huggingface_inference_langchain(
             stream: bool | None = None,
             **kwargs: Any,
         ) -> ChatResult:
-            """Async generation using huggingface_hub InferenceClient.
+            """Async generation using chat completion API.
 
             Args:
                 messages: List of messages to generate from
                 stop: Optional stop sequences
                 run_manager: Optional callback manager
                 stream: Whether to stream (not used in this method)
-                **kwargs: Additional parameters for text_generation
+                **kwargs: Additional parameters for chat_completion
 
             Returns:
                 ChatResult with generated message
             """
-            prompt = self._convert_messages_to_prompt(messages)
+            chat_messages = self._convert_messages_to_chat_format(messages)
 
-            # Run the synchronous API in a thread pool
-            # FIX 5: Remove redundant model parameter
+            # Run chat_completion in thread pool (InferenceClient is sync)
             response = await asyncio.to_thread(
-                self.client.text_generation,
-                prompt=prompt,
-                max_new_tokens=self.max_new_tokens,
+                self.client.chat_completion,
+                messages=chat_messages,
+                max_tokens=self.max_new_tokens,
                 temperature=self.temperature,
                 top_p=self.top_p,
-                top_k=self.top_k,
-                repetition_penalty=self.repetition_penalty,
                 seed=self.seed,
-                stop_sequences=stop,
+                stop=stop,
+                stream=False,
                 **kwargs,
             )
 
-            message = AIMessage(content=response)
+            # Extract content from chat completion response
+            content = response.choices[0].message.content
+            message = AIMessage(content=content)
             generation = ChatGeneration(message=message)
             return ChatResult(generations=[generation])
 
@@ -535,36 +539,37 @@ async def huggingface_inference_langchain(
             run_manager: CallbackManagerForLLMRun | None = None,
             **kwargs: Any,
         ) -> Iterator[ChatGenerationChunk]:
-            """Stream generation synchronously.
+            """Stream generation synchronously using chat completion API.
 
             Args:
                 messages: List of messages to generate from
                 stop: Optional stop sequences
                 run_manager: Optional callback manager
-                **kwargs: Additional parameters for text_generation
+                **kwargs: Additional parameters for chat_completion
 
             Yields:
                 ChatGenerationChunk for each token
             """
-            prompt = self._convert_messages_to_prompt(messages)
+            chat_messages = self._convert_messages_to_chat_format(messages)
 
-            # FIX 5: Remove redundant model parameter
-            for token in self.client.text_generation(
-                prompt=prompt,
-                max_new_tokens=self.max_new_tokens,
+            # Use chat_completion with stream=True
+            for chunk in self.client.chat_completion(
+                messages=chat_messages,
+                max_tokens=self.max_new_tokens,
                 temperature=self.temperature,
                 top_p=self.top_p,
-                top_k=self.top_k,
-                repetition_penalty=self.repetition_penalty,
                 seed=self.seed,
-                stop_sequences=stop,
+                stop=stop,
                 stream=True,
                 **kwargs,
             ):
-                chunk = ChatGenerationChunk(message=AIMessageChunk(content=token.token.text))
-                if run_manager:
-                    run_manager.on_llm_new_token(token.token.text, chunk=chunk)
-                yield chunk
+                # Extract delta content from streaming response
+                if chunk.choices and chunk.choices[0].delta.content:
+                    content = chunk.choices[0].delta.content
+                    chat_chunk = ChatGenerationChunk(message=AIMessageChunk(content=content))
+                    if run_manager:
+                        run_manager.on_llm_new_token(content, chunk=chat_chunk)
+                    yield chat_chunk
 
         async def _astream(
             self,
@@ -573,45 +578,42 @@ async def huggingface_inference_langchain(
             run_manager: AsyncCallbackManagerForLLMRun | None = None,
             **kwargs: Any,
         ) -> AsyncIterator[ChatGenerationChunk]:
-            """Async stream generation using queue-based approach.
+            """Async stream generation using queue-based approach with chat completion API.
 
-            FIX 1: Use asyncio.Queue to avoid buffering all tokens before yielding.
+            Uses asyncio.Queue to avoid buffering all tokens before yielding.
             This enables true streaming without waiting for complete response.
 
             Args:
                 messages: List of messages to generate from
                 stop: Optional stop sequences
                 run_manager: Optional callback manager
-                **kwargs: Additional parameters for text_generation
+                **kwargs: Additional parameters for chat_completion
 
             Yields:
                 ChatGenerationChunk for each token as it arrives
             """
-            prompt = self._convert_messages_to_prompt(messages)
+            chat_messages = self._convert_messages_to_chat_format(messages)
             queue: asyncio.Queue = asyncio.Queue()
 
             # Capture the running event loop before creating thread
             loop = asyncio.get_running_loop()
 
-            # Run streaming in a separate thread, putting tokens in queue
+            # Run streaming in a separate thread, putting chunks in queue
             def _stream_to_queue():
-                """Stream tokens from InferenceClient into async queue."""
+                """Stream chunks from chat_completion into async queue."""
                 try:
-                    # FIX 5: Remove redundant model parameter
-                    for token in self.client.text_generation(
-                        prompt=prompt,
-                        max_new_tokens=self.max_new_tokens,
+                    for chunk in self.client.chat_completion(
+                        messages=chat_messages,
+                        max_tokens=self.max_new_tokens,
                         temperature=self.temperature,
                         top_p=self.top_p,
-                        top_k=self.top_k,
-                        repetition_penalty=self.repetition_penalty,
                         seed=self.seed,
-                        stop_sequences=stop,
+                        stop=stop,
                         stream=True,
                         **kwargs,
                     ):
                         # Use captured loop instead of get_event_loop()
-                        asyncio.run_coroutine_threadsafe(queue.put(token), loop)
+                        asyncio.run_coroutine_threadsafe(queue.put(chunk), loop)
                 finally:
                     # Signal completion using captured loop
                     asyncio.run_coroutine_threadsafe(queue.put(None), loop)
@@ -621,20 +623,23 @@ async def huggingface_inference_langchain(
             thread = threading.Thread(target=_stream_to_queue, daemon=True)
             thread.start()
 
-            # Yield tokens as they arrive in queue
+            # Yield chunks as they arrive in queue
             while True:
-                token = await queue.get()
-                if token is None:
+                chunk = await queue.get()
+                if chunk is None:
                     break
-                chunk = ChatGenerationChunk(message=AIMessageChunk(content=token.token.text))
-                if run_manager:
-                    await run_manager.on_llm_new_token(token.token.text, chunk=chunk)
-                yield chunk
+                # Extract delta content from streaming response
+                if chunk.choices and chunk.choices[0].delta.content:
+                    content = chunk.choices[0].delta.content
+                    chat_chunk = ChatGenerationChunk(message=AIMessageChunk(content=content))
+                    if run_manager:
+                        await run_manager.on_llm_new_token(content, chunk=chat_chunk)
+                    yield chat_chunk
 
     # Initialize the InferenceClient
     client = InferenceClient(
         model=llm_config.model_name,
-        token=str(llm_config.api_key) if llm_config.api_key else None,
+        token=llm_config.api_key.get_secret_value() if llm_config.api_key else None,
         base_url=llm_config.endpoint_url,
         timeout=llm_config.timeout,
     )
