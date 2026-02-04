@@ -17,6 +17,7 @@
 
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import pytest
 from langchain_core.messages import AIMessage
@@ -24,6 +25,7 @@ from langchain_core.messages import HumanMessage
 from langchain_core.messages import SystemMessage
 
 from nat.plugins.agent_spec.agent_spec_workflow import (
+    AgentSpecWrapperConfig,
     AgentSpecWrapperFunction,
     AgentSpecWrapperInput,
     AgentSpecWrapperOutput,
@@ -236,3 +238,129 @@ class TestAgentSpecWrapperFunctionConvertToStr:
         )
         result = AgentSpecWrapperFunction.convert_to_str(output)
         assert result == "AI"
+
+
+class TestAgentSpecWrapperFunctionMaxHistory:
+    """Test cases for max_history message trimming."""
+
+    @pytest.fixture
+    def wrapper_function_with_max_history(self, mock_graph):
+        """Create wrapper function with max_history configured."""
+        config = AgentSpecWrapperConfig(
+            spec_file=__file__,
+            max_history=3,
+        )
+        return AgentSpecWrapperFunction(
+            config=config,
+            description="Test wrapper",
+            graph=mock_graph,
+        )
+
+    @pytest.fixture
+    def wrapper_function_no_max_history(self, mock_graph):
+        """Create wrapper function without max_history (default)."""
+        config = AgentSpecWrapperConfig(
+            spec_file=__file__,
+            max_history=0,  # Disable trimming
+        )
+        return AgentSpecWrapperFunction(
+            config=config,
+            description="Test wrapper",
+            graph=mock_graph,
+        )
+
+    @patch('langchain_core.messages.trim_messages')
+    async def test_ainvoke_trims_messages_with_max_history(
+        self, mock_trim_messages, wrapper_function_with_max_history, mock_graph
+    ):
+        """Test _ainvoke() trims messages when max_history is configured."""
+        from langchain_core.messages import AIMessage
+        
+        # Create input with many messages
+        messages = [HumanMessage(content=f"Message {i}") for i in range(10)]
+        input_value = AgentSpecWrapperInput(messages=messages)
+        
+        # Mock trim_messages to return trimmed list
+        trimmed_messages = [HumanMessage(content=f"Message {i}") for i in range(7, 10)]
+        mock_trim_messages.return_value = [m.model_dump() for m in trimmed_messages]
+        
+        # Mock graph output
+        mock_output = {"messages": [AIMessage(content="Response")]}
+        mock_graph.ainvoke = AsyncMock(return_value=mock_output)
+        
+        # Remove context manager attributes
+        if hasattr(mock_graph, '__aenter__'):
+            delattr(mock_graph, '__aenter__')
+        if hasattr(mock_graph, '__aexit__'):
+            delattr(mock_graph, '__aexit__')
+        
+        await wrapper_function_with_max_history._ainvoke(input_value)
+        
+        # Verify trim_messages was called with correct parameters
+        mock_trim_messages.assert_called_once()
+        call_kwargs = mock_trim_messages.call_args.kwargs
+        assert call_kwargs['max_tokens'] == 3
+        assert call_kwargs['strategy'] == "last"
+        assert call_kwargs['start_on'] == "human"
+        assert call_kwargs['include_system'] is True
+        
+        # Verify graph was called with trimmed messages
+        graph_call = mock_graph.ainvoke.call_args[0][0]
+        assert graph_call["messages"] == [m.model_dump() for m in trimmed_messages]
+
+    @patch('langchain_core.messages.trim_messages')
+    async def test_ainvoke_no_trimming_when_max_history_zero(
+        self, mock_trim_messages, wrapper_function_no_max_history, mock_graph
+    ):
+        """Test _ainvoke() does not trim when max_history is 0."""
+        messages = [HumanMessage(content=f"Message {i}") for i in range(10)]
+        input_value = AgentSpecWrapperInput(messages=messages)
+        
+        mock_output = {"messages": [AIMessage(content="Response")]}
+        mock_graph.ainvoke = AsyncMock(return_value=mock_output)
+        
+        if hasattr(mock_graph, '__aenter__'):
+            delattr(mock_graph, '__aenter__')
+        if hasattr(mock_graph, '__aexit__'):
+            delattr(mock_graph, '__aexit__')
+        
+        await wrapper_function_no_max_history._ainvoke(input_value)
+        
+        # Verify trim_messages was NOT called
+        mock_trim_messages.assert_not_called()
+        
+        # Verify graph was called with original messages
+        graph_call = mock_graph.ainvoke.call_args[0][0]
+        assert len(graph_call["messages"]) == 10
+
+    @patch('langchain_core.messages.trim_messages')
+    async def test_astream_trims_messages_with_max_history(
+        self, mock_trim_messages, wrapper_function_with_max_history, mock_graph
+    ):
+        """Test _astream() trims messages when max_history is configured."""
+        messages = [HumanMessage(content=f"Message {i}") for i in range(10)]
+        input_value = AgentSpecWrapperInput(messages=messages)
+        
+        trimmed_messages = [HumanMessage(content=f"Message {i}") for i in range(7, 10)]
+        mock_trim_messages.return_value = [m.model_dump() for m in trimmed_messages]
+        
+        async def mock_stream():
+            yield {"messages": [AIMessage(content="Stream 1")]}
+            yield {"messages": [AIMessage(content="Stream 2")]}
+        
+        mock_graph.astream = lambda state: mock_stream()
+        
+        if hasattr(mock_graph, '__aenter__'):
+            delattr(mock_graph, '__aenter__')
+        if hasattr(mock_graph, '__aexit__'):
+            delattr(mock_graph, '__aexit__')
+        
+        results = []
+        async for output in wrapper_function_with_max_history._astream(input_value):
+            results.append(output)
+        
+        # Verify trim_messages was called
+        mock_trim_messages.assert_called_once()
+        
+        # Verify we got streamed outputs
+        assert len(results) == 2

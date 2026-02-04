@@ -48,6 +48,8 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function import Function
 from nat.cli.register_workflow import register_function
+from nat.data_models.component_ref import FunctionGroupRef
+from nat.data_models.component_ref import FunctionRef
 from nat.data_models.function import FunctionBaseConfig
 
 logger = logging.getLogger(__name__)
@@ -72,42 +74,10 @@ class AgentSpecWrapperOutput(BaseModel):
 class AgentSpecWrapperConfig(FunctionBaseConfig, name="agent_spec_wrapper"):
     """Configuration model for the Agent-Spec wrapper.
 
-    This config allows users to reference an Agent-Spec YAML file that will be
-    converted to a LangGraph CompiledStateGraph and executed as a NAT Function.
+    Converts an Agent-Spec YAML/JSON configuration to a LangGraph CompiledStateGraph
+    and executes it as a NAT Function.
 
-    Example usage in NAT workflow config:
-        # Option 1: From file
-        workflow:
-          _type: agent_spec_wrapper
-          spec_file: "my_agent_spec.yaml"
-          description: "Oracle agent-spec agent"
-
-        # Option 2: Inline YAML
-        workflow:
-          _type: agent_spec_wrapper
-          spec_yaml: |
-            component_type: Agent
-            name: "My Agent"
-            ...
-          description: "Oracle agent-spec agent"
-
-        # Option 3: Inline JSON
-        workflow:
-          _type: agent_spec_wrapper
-          spec_json: '{"component_type": "Agent", "name": "My Agent", ...}'
-          description: "Oracle agent-spec agent"
-
-    Attributes:
-        spec_file: Path to the Agent-Spec YAML/JSON configuration file (optional if spec_yaml or spec_json provided).
-        spec_yaml: Inline Agent-Spec YAML content (optional if spec_file or spec_json provided).
-        spec_json: Inline Agent-Spec JSON content (optional if spec_file or spec_yaml provided).
-        description: Optional description of the workflow.
-        tool_registry: Optional dictionary mapping tool names to LangGraph tools
-            or callables. If provided, these tools will be available to the
-            Agent-Spec workflow.
-
-    Note:
-        Exactly one of spec_file, spec_yaml, or spec_json must be provided.
+    Exactly one of spec_file, spec_yaml, or spec_json must be provided.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -127,7 +97,15 @@ class AgentSpecWrapperConfig(FunctionBaseConfig, name="agent_spec_wrapper"):
     )
     tool_registry: dict[str, Any] | None = Field(
         default=None,
-        description="Optional dictionary mapping tool names to LangGraph tools or callables",
+        description="Optional dictionary mapping tool names to LangGraph tools or callables. "
+        "If both tool_registry and tool_names are provided, tools from tool_names will be "
+        "added first, then tool_registry will override any name conflicts.",
+    )
+    tool_names: list[FunctionRef | FunctionGroupRef] = Field(
+        default_factory=list,
+        description="Optional list of NAT tool names/groups to expose to the Agent-Spec runtime. "
+        "Tools are resolved from NAT's tool registry using builder.get_tools(). "
+        "Use FunctionRef('tool_name') for individual tools or FunctionGroupRef('group_name') for tool groups.",
     )
     components_registry: dict[str, Any] | None = Field(
         default=None,
@@ -140,6 +118,10 @@ class AgentSpecWrapperConfig(FunctionBaseConfig, name="agent_spec_wrapper"):
         description="Optional LangGraph checkpointer (e.g., MemorySaver). Required when using "
         "ClientTool in Agent-Spec YAML. If not provided and ClientTool is detected, "
         "MemorySaver will be used automatically.",
+    )
+    max_history: int = Field(
+        default=15,
+        description="Maximum number of messages to keep in conversation history.",
     )
 
     @model_validator(mode="after")
@@ -196,13 +178,28 @@ class AgentSpecWrapperFunction(Function[AgentSpecWrapperInput, NoneType, AgentSp
     async def _ainvoke(self, value: AgentSpecWrapperInput) -> AgentSpecWrapperOutput:
         """Invoke the Agent-Spec workflow."""
         try:
+            from langchain_core.messages import trim_messages
+            
+            # Trim message history if max_history is configured
+            state = value.model_dump()
+            if self.config.max_history > 0:
+                messages = trim_messages(
+                    messages=[m.model_dump() for m in value.messages],
+                    max_tokens=self.config.max_history,
+                    strategy="last",
+                    token_counter=len,
+                    start_on="human",
+                    include_system=True,
+                )
+                state["messages"] = messages
+            
             # Check if the graph is an async context manager
             if hasattr(self._graph, "__aenter__") and hasattr(self._graph, "__aexit__"):
                 logger.debug("Graph is an async context manager")
                 async with self._graph as graph:
-                    output = await graph.ainvoke(value.model_dump())
+                    output = await graph.ainvoke(state)
             else:
-                output = await self._graph.ainvoke(value.model_dump())
+                output = await self._graph.ainvoke(state)
             return AgentSpecWrapperOutput.model_validate(output)
         except Exception as e:
             raise RuntimeError(f"Error executing Agent-Spec workflow: {e}") from e
@@ -210,13 +207,28 @@ class AgentSpecWrapperFunction(Function[AgentSpecWrapperInput, NoneType, AgentSp
     async def _astream(self, value: AgentSpecWrapperInput) -> AsyncGenerator[AgentSpecWrapperOutput, None]:
         """Stream results from the Agent-Spec workflow."""
         try:
+            from langchain_core.messages import trim_messages
+            
+            # Trim message history if max_history is configured
+            state = value.model_dump()
+            if self.config.max_history > 0:
+                messages = trim_messages(
+                    messages=[m.model_dump() for m in value.messages],
+                    max_tokens=self.config.max_history,
+                    strategy="last",
+                    token_counter=len,
+                    start_on="human",
+                    include_system=True,
+                )
+                state["messages"] = messages
+            
             if hasattr(self._graph, "__aenter__") and hasattr(self._graph, "__aexit__"):
                 logger.debug("Graph is an async context manager")
                 async with self._graph as graph:
-                    async for output in graph.astream(value.model_dump()):
+                    async for output in graph.astream(state):
                         yield AgentSpecWrapperOutput.model_validate(output)
             else:
-                async for output in self._graph.astream(value.model_dump()):
+                async for output in self._graph.astream(state):
                     yield AgentSpecWrapperOutput.model_validate(output)
         except Exception as e:
             raise RuntimeError(f"Error streaming Agent-Spec workflow: {e}") from e
@@ -230,27 +242,11 @@ class AgentSpecWrapperFunction(Function[AgentSpecWrapperInput, NoneType, AgentSp
 
 
 @register_function(config_type=AgentSpecWrapperConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
-async def register(config: AgentSpecWrapperConfig, b: Builder):
+async def register(config: AgentSpecWrapperConfig, builder: Builder):
     """Register the Agent-Spec wrapper function.
 
-    This function:
-    1. Loads the Agent-Spec configuration (from file, inline YAML, or inline JSON)
-    2. Converts it to a LangGraph CompiledStateGraph using AgentSpecLoader
-    3. Wraps it as a NAT Function using AgentSpecWrapperFunction
-
-    The wrapped function can then be used in NAT workflows and will benefit from
-    all NAT features: evaluation, profiling, observability, middleware, etc.
-
-    Args:
-        config: The Agent-Spec wrapper configuration.
-        b: The NAT Builder instance (unused for now, but required by the decorator).
-
-    Yields:
-        AgentSpecWrapperFunction: The wrapped function ready for use in NAT workflows.
-
-    Raises:
-        ImportError: If pyagentspec adapters module is not available. Install with:
-            uv pip install "pyagentspec[langgraph,langgraph_mcp]>=26.1.0"
+    Loads Agent-Spec configuration and converts it to a LangGraph CompiledStateGraph
+    using AgentSpecLoader, then wraps it as a NAT Function.
     """
     try:
         from pyagentspec.adapters.langgraph import AgentSpecLoader
@@ -264,7 +260,6 @@ async def register(config: AgentSpecWrapperConfig, b: Builder):
         ) from e
 
     # Determine the format and read the Agent-Spec content
-    # Validator ensures exactly one is provided, so we can safely assert non-None after checking
     if config.spec_file:
         # Read from file
         spec_path = Path(config.spec_file)
@@ -291,11 +286,9 @@ async def register(config: AgentSpecWrapperConfig, b: Builder):
         spec_format = "json"
         source_description = "inline JSON"
 
-    # Determine if checkpointer is needed (ClientTool requires it)
-    # If config provides one, use it; otherwise auto-detect and use MemorySaver if needed
+    # Auto-detect checkpointer if ClientTool is used
     checkpointer = config.checkpointer
     if checkpointer is None:
-        # Check if spec contains ClientTool - if so, we need a checkpointer
         try:
             if spec_format == "json":
                 spec_dict = json.loads(spec_content)
@@ -316,14 +309,23 @@ async def register(config: AgentSpecWrapperConfig, b: Builder):
         except Exception as e:
             logger.debug(f"Could not parse {spec_format} to detect ClientTool: {e}")
 
-    # Create AgentSpecLoader with optional tool registry and checkpointer
+    # Build tool registry from tool_names and/or tool_registry
+    tool_registry = {}
+    if config.tool_names:
+        try:
+            tools = await builder.get_tools(tool_names=config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+            if tools:
+                tool_registry = {tool.name: tool for tool in tools}
+        except Exception as e:
+            logger.warning(f"Failed to resolve tools from tool_names: {e}")
+
+    if config.tool_registry:
+        tool_registry.update(config.tool_registry)
+
     loader = AgentSpecLoader(
-        tool_registry=config.tool_registry or {},
+        tool_registry=tool_registry,
         checkpointer=checkpointer,
     )
-
-    # Load the Agent-Spec configuration and convert to LangGraph CompiledStateGraph
-    # If components_registry is provided, use it to override components (e.g., LLMs)
     try:
         if spec_format == "json":
             if config.components_registry:
@@ -338,12 +340,10 @@ async def register(config: AgentSpecWrapperConfig, b: Builder):
     except Exception as e:
         raise RuntimeError(f"Failed to load Agent-Spec configuration from {source_description}: {e}") from e
 
-    # Validate that we got a CompiledStateGraph
     if not isinstance(graph, CompiledStateGraph):
         raise ValueError(
             f"Agent-Spec loader returned unexpected type: {type(graph)}. "
             "Expected CompiledStateGraph."
         )
 
-    # Wrap the graph as a NAT Function (following LanggraphWrapperFunction pattern)
     yield AgentSpecWrapperFunction(config=config, description=config.description, graph=graph)

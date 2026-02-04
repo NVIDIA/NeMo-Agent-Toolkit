@@ -1,14 +1,17 @@
 # Minimal Agent-Spec YAML for testing
 # Based on Agent-Spec examples, simplified for testing
+# Configured for NVIDIA NIM
 
 component_type: Agent
 name: "Test Agent"
 description: "A simple test agent"
 system_prompt: "You are a helpful assistant."
 llm_config:
-  component_type: OpenAiConfig
-  name: "Test LLM"
-  model_id: "gpt-4"
+  component_type: OpenAiCompatibleConfig
+  name: "NIM LLM"
+  model_id: "meta/llama-3.1-8b-instruct"
+  # NIM endpoint - will use NVIDIA_API_KEY from environment
+  url: "https://integrate.api.nvidia.com/v1"
 inputs: []
 outputs: []
 agentspec_version: 25.4.1
