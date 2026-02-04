@@ -24,9 +24,8 @@ from nat.data_models.function import FunctionGroupBaseConfig
 
 
 class CalculatorToolConfig(FunctionGroupBaseConfig, name="calculator"):
-    include: list[str] = Field(
-        default_factory=lambda: ["add", "subtract", "multiply", "divide", "compare", "power_of_two"],
-        description="The list of functions to include in the calculator function group.")
+    include: list[str] = Field(default_factory=lambda: ["add", "subtract", "multiply", "divide", "compare"],
+                               description="The list of functions to include in the calculator function group.")
 
 
 @register_function_group(config_type=CalculatorToolConfig)
