@@ -1,0 +1,61 @@
+# Example configuration for HuggingFace Inference API LLM provider
+# Supports Serverless API, Inference Endpoints, and self-hosted TGI servers
+
+general:
+  front_end:
+    type: cli
+
+llms:
+  # Serverless Inference API (default)
+  serverless_llm:
+    type: huggingface_inference
+    model_name: "meta-llama/Llama-3.2-8B-Instruct"
+    api_key: "${HF_TOKEN}"  # Set HF_TOKEN environment variable
+    max_new_tokens: 512
+    temperature: 0.7
+    top_p: 0.9
+
+  # Custom Inference Endpoint or TGI server
+  custom_endpoint:
+    type: huggingface_inference
+    model_name: "your-model-name"
+    api_key: "${HF_TOKEN}"
+    endpoint_url: "https://your-endpoint.endpoints.huggingface.cloud"
+    max_new_tokens: 1024
+    temperature: 0.5
+    seed: 42
+
+  # Self-hosted TGI server (no API key needed)
+  tgi_server:
+    type: huggingface_inference
+    model_name: "local-model"
+    endpoint_url: "http://localhost:8080"
+    max_new_tokens: 2048
+    temperature: 0.3
+    timeout: 180.0
+
+embedders:
+  # Local sentence-transformers model
+  local_embedder:
+    type: huggingface
+    model_name: "sentence-transformers/all-MiniLM-L6-v2"
+    device: "auto"
+    normalize_embeddings: true
+    batch_size: 32
+
+  # BGE model (high quality)
+  bge_embedder:
+    type: huggingface
+    model_name: "BAAI/bge-large-en-v1.5"
+    device: "cuda"  # or "cpu", "mps", "auto"
+    normalize_embeddings: true
+    trust_remote_code: false
+
+  # Remote TEI server
+  tei_embedder:
+    type: huggingface
+    model_name: "remote-embedder"
+    endpoint_url: "http://localhost:8081"
+    api_key: "${HF_TOKEN}"
+    normalize_embeddings: true
+    timeout: 120.0
