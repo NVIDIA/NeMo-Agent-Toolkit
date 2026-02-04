@@ -64,3 +64,34 @@ class TestLocalFileObjectStore:
 
         with pytest.raises(KeyAlreadyExistsError):
             await store.put_object("existing.txt", item)
+
+    async def test_upsert_object_creates_new(self, tmp_path: Path):
+        """Test upsert_object creates object if it doesn't exist."""
+        store = LocalFileObjectStore(base_path=tmp_path)
+
+        item = ObjectStoreItem(data=b"new data", content_type="text/plain")
+        await store.upsert_object("new.txt", item)
+
+        data_path = tmp_path / "new.txt"
+        assert data_path.exists()
+        assert data_path.read_bytes() == b"new data"
+
+    async def test_upsert_object_updates_existing(self, tmp_path: Path):
+        """Test upsert_object overwrites existing object."""
+        store = LocalFileObjectStore(base_path=tmp_path)
+
+        # Create initial object
+        item1 = ObjectStoreItem(data=b"old data", content_type="text/plain")
+        await store.upsert_object("file.txt", item1)
+
+        # Update object
+        item2 = ObjectStoreItem(data=b"new data", content_type="application/json")
+        await store.upsert_object("file.txt", item2)
+
+        # Verify updated
+        data_path = tmp_path / "file.txt"
+        assert data_path.read_bytes() == b"new data"
+
+        meta_path = tmp_path / "file.txt.meta"
+        meta_data = json.loads(meta_path.read_text())
+        assert meta_data["content_type"] == "application/json"

@@ -75,7 +75,28 @@ class LocalFileObjectStore(ObjectStore):
 
     @override
     async def upsert_object(self, key: str, item: ObjectStoreItem) -> None:
-        raise NotImplementedError
+        """
+        Save or update object in filesystem.
+
+        Args:
+            key: Storage key (can include slashes for nested paths)
+            item: Object to store
+        """
+        data_path = self.base_path / key
+        meta_path = self.base_path / f"{key}.meta"
+
+        # Create parent directories
+        data_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Write data file (overwrite if exists)
+        data_path.write_bytes(item.data)
+
+        # Write metadata file
+        meta_dict: dict[str, Any] = {
+            "content_type": item.content_type,
+            "metadata": item.metadata
+        }
+        meta_path.write_text(json.dumps(meta_dict, indent=2))
 
     @override
     async def get_object(self, key: str) -> ObjectStoreItem:
