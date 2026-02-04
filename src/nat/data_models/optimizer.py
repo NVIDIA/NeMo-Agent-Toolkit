@@ -152,6 +152,22 @@ class PromptGAOptimizationConfig(BaseModel):
     )
 
 
+class ObjectStoreSettings(BaseModel):
+    """
+    Settings for object store integration with optimizer.
+
+    Attributes:
+        name: Reference to object store name in config
+        key_prefix: Optional prefix for storage keys. If None,
+                   auto-generates timestamp-based prefix.
+    """
+    name: str = Field(description="Object store name from config")
+    key_prefix: str | None = Field(
+        default=None,
+        description="Optional key prefix. Auto-generated if None."
+    )
+
+
 class OptimizerConfig(BaseModel):
     """
     Parameters used by the workflow optimizer.
@@ -159,6 +175,11 @@ class OptimizerConfig(BaseModel):
     output_path: Path | None = Field(
         default=None,
         description="Path to the output directory where the results will be saved.",
+    )
+
+    object_store: ObjectStoreSettings | None = Field(
+        default=None,
+        description="Optional object store for prompt checkpoints and final prompts"
     )
 
     eval_metrics: dict[str, OptimizerMetric] | None = Field(
