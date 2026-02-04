@@ -67,16 +67,16 @@ Asynchronous jobs are managed using [Dask](https://docs.dask.org/en/stable/). By
 
 ### Asynchronous Specific CLI flags
 The following CLI flags are available to configure the asynchronous generate endpoint when using `nat serve`:
-* --scheduler_address: The address of an existing Dask scheduler to connect to. If not set, a local Dask cluster will be created.
-* --db_url: The [SQLAlchemy database](https://docs.sqlalchemy.org/en/20/core/engines.html#database-urls) URL to use for storing job history and metadata. If not set, a temporary SQLite database will be created.
-* --max_concurrent_jobs: The maximum number of asynchronous jobs to run concurrently. Default is 10. This is only used when `scheduler_address` is not set.
-* --dask_workers: The type of Dask workers to use. Options are `threads` for Threaded Dask workers or `processes` for Process based Dask workers. Default is `processes`. This is only used when `scheduler_address` is not set.
-* --dask_log_level: The logging level for Dask. Default is `WARNING`.
+* `--dask_log_level`: The logging level for Dask. Default is `WARNING`.
+* `--dask_threads_per_worker`: The number of threads to use per Dask worker. Default is `1`. When set to `0` the value uses the Dask default. This is only used when `scheduler_address` is not set.
+* `--dask_workers`: The type of Dask workers to use. Options are `threads` for Threaded Dask workers or `processes` for Process based Dask workers. Default is `processes`. This is only used when `scheduler_address` is not set.
+* `--dask_worker_memory_limit`: The memory limit for each Dask worker. Can be 'auto', a memory string like '4GB', or a float representing a fraction of the system memory. The default value is '0', which means there is no memory limit. Refer to https://docs.dask.org/en/stable/deploying-python/html#reference for details.
+* `--db_url`: The [SQLAlchemy database](https://docs.sqlalchemy.org/en/20/core/engines.html#database-urls) URL to use for storing job history and metadata. If not set, a temporary SQLite database will be created.
+* `--max_concurrent_jobs`: Maximum number of Dask workers to create for running async jobs. The name of this parameter is misleading as the actual number of concurrent async jobs is: `max_running_async_jobs * dask_threads_per_worker`. Default is 10. This is only used when `scheduler_address` is not set.
+* `--scheduler_address`: The address of an existing Dask scheduler to connect to. If not set, a local Dask cluster will be created.
 
-:::{note}
-When processes are used Dask workers, standard output and standard error from the workflow will not be visible in the server logs, however threaded Dask workers will allow workflow output to be visible in the server logs. When multiple concurrent jobs are running using threaded Dask workers, workflow output from different jobs may be interleaved in the server logs.
-:::
 
+### Endpoint Details
 
 - **Route:** `/generate/async`
 - **Description:** A non-streaming transaction that submits a workflow to run in the background.
