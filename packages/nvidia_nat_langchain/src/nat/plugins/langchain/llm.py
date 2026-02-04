@@ -369,17 +369,20 @@ async def huggingface_langchain(llm_config: HuggingFaceConfig, _builder: Builder
     yield _patch_llm_based_on_config(client, llm_config)
 
 
+# Fixed version of HuggingFace Inference LangChain client
+# Addresses all CodeRabbit feedback
+
 @register_llm_client(config_type=HuggingFaceInferenceConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 async def huggingface_inference_langchain(llm_config: HuggingFaceInferenceConfig, _builder: Builder):
     """
     LangChain client for HuggingFace Inference API.
-    
+
     Supports Serverless API, Inference Endpoints, and TGI servers via huggingface_hub.InferenceClient.
     """
     import asyncio
     from collections.abc import AsyncIterator
     from collections.abc import Iterator
-    
+
     from langchain_core.callbacks.manager import AsyncCallbackManagerForLLMRun
     from langchain_core.callbacks.manager import CallbackManagerForLLMRun
     from langchain_core.language_models.chat_models import BaseChatModel
@@ -391,20 +394,22 @@ async def huggingface_inference_langchain(llm_config: HuggingFaceInferenceConfig
     from langchain_core.outputs import ChatGeneration
     from langchain_core.outputs import ChatGenerationChunk
     from langchain_core.outputs import ChatResult
-    
+    from pydantic import ConfigDict
+
+    # FIX 2: Preserve exception chain
     try:
         from huggingface_hub import InferenceClient
-    except ImportError:
+    except ImportError as err:
         raise ValueError(
             "HuggingFace Inference API requires the huggingface_hub package. "
             "Install it with: pip install huggingface_hub"
-        )
-    
+        ) from err
+
     validate_no_responses_api(llm_config, LLMFrameworkEnum.LANGCHAIN)
-    
+
     class HuggingFaceInferenceModel(BaseChatModel):
         """LangChain wrapper for HuggingFace Inference API."""
-        
+
         client: InferenceClient
         model_name: str
         max_new_tokens: int | None
@@ -413,16 +418,24 @@ async def huggingface_inference_langchain(llm_config: HuggingFaceInferenceConfig
         top_k: int | None
         repetition_penalty: float | None
         seed: int | None
-        
-        class Config:
-            arbitrary_types_allowed = True
-        
+
+        # FIX 4: Use Pydantic v2 ConfigDict
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+
         @property
         def _llm_type(self) -> str:
+            """Return identifier for this LLM type."""
             return "huggingface_inference"
-        
+
         def _convert_messages_to_prompt(self, messages: list[BaseMessage]) -> str:
-            """Convert LangChain messages to a prompt string."""
+            """Convert LangChain messages to a prompt string.
+
+            Args:
+                messages: List of LangChain message objects
+
+            Returns:
+                Formatted prompt string with Assistant: suffix
+            """
             prompt_parts = []
             for message in messages:
                 if isinstance(message, SystemMessage):
@@ -434,7 +447,7 @@ async def huggingface_inference_langchain(llm_config: HuggingFaceInferenceConfig
                 else:
                     prompt_parts.append(str(message.content))
             return "\n".join(prompt_parts) + "\nAssistant:"
-        
+
         def _generate(
             self,
             messages: list[BaseMessage],
@@ -442,12 +455,22 @@ async def huggingface_inference_langchain(llm_config: HuggingFaceInferenceConfig
             run_manager: CallbackManagerForLLMRun | None = None,
             **kwargs: Any,
         ) -> ChatResult:
-            """Synchronous generation - not recommended, use async instead."""
+            """Synchronous generation - not recommended, use async instead.
+
+            Args:
+                messages: List of messages to generate from
+                stop: Optional stop sequences
+                run_manager: Optional callback manager
+                **kwargs: Additional parameters for text_generation
+
+            Returns:
+                ChatResult with generated message
+            """
             prompt = self._convert_messages_to_prompt(messages)
-            
+
+            # FIX 5: Remove redundant model parameter (client already has it)
             response = self.client.text_generation(
                 prompt=prompt,
-                model=self.model_name,
                 max_new_tokens=self.max_new_tokens,
                 temperature=self.temperature,
                 top_p=self.top_p,
@@ -457,11 +480,11 @@ async def huggingface_inference_langchain(llm_config: HuggingFaceInferenceConfig
                 stop_sequences=stop,
                 **kwargs,
             )
-            
+
             message = AIMessage(content=response)
             generation = ChatGeneration(message=message)
             return ChatResult(generations=[generation])
-        
+
         async def _agenerate(
             self,
             messages: list[BaseMessage],
@@ -470,14 +493,25 @@ async def huggingface_inference_langchain(llm_config: HuggingFaceInferenceConfig
             stream: bool | None = None,
             **kwargs: Any,
         ) -> ChatResult:
-            """Async generation using huggingface_hub InferenceClient."""
+            """Async generation using huggingface_hub InferenceClient.
+
+            Args:
+                messages: List of messages to generate from
+                stop: Optional stop sequences
+                run_manager: Optional callback manager
+                stream: Whether to stream (not used in this method)
+                **kwargs: Additional parameters for text_generation
+
+            Returns:
+                ChatResult with generated message
+            """
             prompt = self._convert_messages_to_prompt(messages)
-            
+
             # Run the synchronous API in a thread pool
+            # FIX 5: Remove redundant model parameter
             response = await asyncio.to_thread(
                 self.client.text_generation,
                 prompt=prompt,
-                model=self.model_name,
                 max_new_tokens=self.max_new_tokens,
                 temperature=self.temperature,
                 top_p=self.top_p,
@@ -487,11 +521,11 @@ async def huggingface_inference_langchain(llm_config: HuggingFaceInferenceConfig
                 stop_sequences=stop,
                 **kwargs,
             )
-            
+
             message = AIMessage(content=response)
             generation = ChatGeneration(message=message)
             return ChatResult(generations=[generation])
-        
+
         def _stream(
             self,
             messages: list[BaseMessage],
@@ -499,12 +533,22 @@ async def huggingface_inference_langchain(llm_config: HuggingFaceInferenceConfig
             run_manager: CallbackManagerForLLMRun | None = None,
             **kwargs: Any,
         ) -> Iterator[ChatGenerationChunk]:
-            """Stream generation."""
+            """Stream generation synchronously.
+
+            Args:
+                messages: List of messages to generate from
+                stop: Optional stop sequences
+                run_manager: Optional callback manager
+                **kwargs: Additional parameters for text_generation
+
+            Yields:
+                ChatGenerationChunk for each token
+            """
             prompt = self._convert_messages_to_prompt(messages)
-            
+
+            # FIX 5: Remove redundant model parameter
             for token in self.client.text_generation(
                 prompt=prompt,
-                model=self.model_name,
                 max_new_tokens=self.max_new_tokens,
                 temperature=self.temperature,
                 top_p=self.top_p,
@@ -519,7 +563,7 @@ async def huggingface_inference_langchain(llm_config: HuggingFaceInferenceConfig
                 if run_manager:
                     run_manager.on_llm_new_token(token.token.text, chunk=chunk)
                 yield chunk
-        
+
         async def _astream(
             self,
             messages: list[BaseMessage],
@@ -527,33 +571,61 @@ async def huggingface_inference_langchain(llm_config: HuggingFaceInferenceConfig
             run_manager: AsyncCallbackManagerForLLMRun | None = None,
             **kwargs: Any,
         ) -> AsyncIterator[ChatGenerationChunk]:
-            """Async stream generation."""
+            """Async stream generation using queue-based approach.
+
+            FIX 1: Use asyncio.Queue to avoid buffering all tokens before yielding.
+            This enables true streaming without waiting for complete response.
+
+            Args:
+                messages: List of messages to generate from
+                stop: Optional stop sequences
+                run_manager: Optional callback manager
+                **kwargs: Additional parameters for text_generation
+
+            Yields:
+                ChatGenerationChunk for each token as it arrives
+            """
             prompt = self._convert_messages_to_prompt(messages)
-            
-            # Since InferenceClient doesn't have native async streaming,
-            # we run the sync stream in a thread
-            def _sync_stream():
-                for token in self.client.text_generation(
-                    prompt=prompt,
-                    model=self.model_name,
-                    max_new_tokens=self.max_new_tokens,
-                    temperature=self.temperature,
-                    top_p=self.top_p,
-                    top_k=self.top_k,
-                    repetition_penalty=self.repetition_penalty,
-                    seed=self.seed,
-                    stop_sequences=stop,
-                    stream=True,
-                    **kwargs,
-                ):
-                    yield token
-            
-            for token in await asyncio.to_thread(lambda: list(_sync_stream())):
+            queue: asyncio.Queue = asyncio.Queue()
+
+            # Run streaming in a separate thread, putting tokens in queue
+            def _stream_to_queue():
+                """Stream tokens from InferenceClient into async queue."""
+                try:
+                    # FIX 5: Remove redundant model parameter
+                    for token in self.client.text_generation(
+                        prompt=prompt,
+                        max_new_tokens=self.max_new_tokens,
+                        temperature=self.temperature,
+                        top_p=self.top_p,
+                        top_k=self.top_k,
+                        repetition_penalty=self.repetition_penalty,
+                        seed=self.seed,
+                        stop_sequences=stop,
+                        stream=True,
+                        **kwargs,
+                    ):
+                        # Use sync put_nowait since we're in a sync context
+                        asyncio.run_coroutine_threadsafe(queue.put(token), asyncio.get_event_loop())
+                finally:
+                    # Signal completion
+                    asyncio.run_coroutine_threadsafe(queue.put(None), asyncio.get_event_loop())
+
+            # Start streaming in background thread
+            import threading
+            thread = threading.Thread(target=_stream_to_queue, daemon=True)
+            thread.start()
+
+            # Yield tokens as they arrive in queue
+            while True:
+                token = await queue.get()
+                if token is None:
+                    break
                 chunk = ChatGenerationChunk(message=AIMessageChunk(content=token.token.text))
                 if run_manager:
                     await run_manager.on_llm_new_token(token.token.text, chunk=chunk)
                 yield chunk
-    
+
     # Initialize the InferenceClient
     client = InferenceClient(
         model=llm_config.model_name,
@@ -561,7 +633,7 @@ async def huggingface_inference_langchain(llm_config: HuggingFaceInferenceConfig
         base_url=llm_config.endpoint_url,
         timeout=llm_config.timeout,
     )
-    
+
     # Create the LangChain model
     model = HuggingFaceInferenceModel(
         client=client,
@@ -573,5 +645,5 @@ async def huggingface_inference_langchain(llm_config: HuggingFaceInferenceConfig
         repetition_penalty=llm_config.repetition_penalty,
         seed=llm_config.seed,
     )
-    
+
     yield _patch_llm_based_on_config(model, llm_config)
