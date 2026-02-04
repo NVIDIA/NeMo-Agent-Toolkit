@@ -13,10 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
+from enum import StrEnum
 
 
-class MCPErrorCategory(str, Enum):
+class MCPErrorCategory(StrEnum):
     """Categories of MCP errors for structured handling."""
     CONNECTION = "connection"
     TIMEOUT = "timeout"

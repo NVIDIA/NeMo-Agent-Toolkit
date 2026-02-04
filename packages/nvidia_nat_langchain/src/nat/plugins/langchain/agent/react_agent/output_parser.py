@@ -126,7 +126,7 @@ class ReActOutputParser(AgentOutputParser):
             if final_answer_match:
                 answer_text = text[final_answer_match.end():].strip()
                 return AgentFinish({"output": answer_text}, text)
-            return AgentFinish({"output": text.split(FINAL_ANSWER_ACTION)[-1].strip()}, text)
+            return AgentFinish({"output": text.rsplit(FINAL_ANSWER_ACTION, maxsplit=1)[-1].strip()}, text)
 
         # Check for missing components with case-insensitive patterns
         if not re.search(r"action\s*\d*\s*:\s*(.*?)", text, re.DOTALL | re.IGNORECASE):

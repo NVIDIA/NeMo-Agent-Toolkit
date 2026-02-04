@@ -13,14 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
 
 
-class MCPApprovalRequiredEnum(str, Enum):
+class MCPApprovalRequiredEnum(StrEnum):
     """
     Enum to specify if approval is required for tool usage in the OpenAI MCP schema.
     """

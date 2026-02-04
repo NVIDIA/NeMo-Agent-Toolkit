@@ -15,7 +15,7 @@
 
 import sys
 from collections.abc import Mapping
-from enum import Enum
+from enum import StrEnum
 from typing import Generic
 from typing import TypeVar
 
@@ -35,7 +35,7 @@ class BaseTaggingConfigMixin(BaseModel, Generic[TagMappingT]):
     tags: TagMappingT | None = Field(default=None, description="Tags to add to the span.")
 
 
-class PrivacyLevel(str, Enum):
+class PrivacyLevel(StrEnum):
     """Privacy level for the traces."""
     NONE = "none"
     LOW = "low"
