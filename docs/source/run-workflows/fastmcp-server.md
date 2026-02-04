@@ -28,6 +28,11 @@ NeMo Agent Toolkit supports two MCP server runtimes. Both publish the same workf
 - For the MCP SDK server guide, see [NeMo Agent Toolkit as an MCP Server](./mcp-server.md).
 - MCP client commands and configuration require the MCP SDK package (`nvidia-nat-mcp`).
 
+
+:::{warning}
+The `nvidia-nat-fastmcp` package depends on the beta release of FastMCP3 and is not recommended for production use. This warning will be removed when FastMCP3 is generally available.
+:::
+
 ## Installation
 
 Install the `nvidia-nat-fastmcp` package:
