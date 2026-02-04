@@ -5845,6 +5845,40 @@ requires-dist = [
 ]
 
 [[package]]
+name = "nat-simple-calculator-fastmcp"
+source = { editable = "examples/MCP/simple_calculator_fastmcp" }
+dependencies = [
+    { name = "mcp-server-time" },
+    { name = "nat-simple-calculator" },
+    { name = "nvidia-nat", extra = ["langchain", "mcp", "test"] },
+    { name = "nvidia-nat-fastmcp" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "mcp-server-time", specifier = "~=2025.8" },
+    { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
+    { name = "nvidia-nat", extras = ["langchain", "mcp", "test"], editable = "." },
+    { name = "nvidia-nat-fastmcp", editable = "packages/nvidia_nat_fastmcp" },
+]
+
+[[package]]
+name = "nat-simple-calculator-fastmcp-protected"
+source = { editable = "examples/MCP/simple_calculator_fastmcp_protected" }
+dependencies = [
+    { name = "nat-simple-calculator" },
+    { name = "nvidia-nat", extra = ["langchain", "mcp", "test"] },
+    { name = "nvidia-nat-fastmcp" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
+    { name = "nvidia-nat", extras = ["langchain", "mcp", "test"], editable = "." },
+    { name = "nvidia-nat-fastmcp", editable = "packages/nvidia_nat_fastmcp" },
+]
+
+[[package]]
 name = "nat-simple-calculator-hitl"
 source = { editable = "examples/HITL/simple_calculator_hitl" }
 dependencies = [
@@ -6287,6 +6321,8 @@ examples = [
     { name = "nat-simple-calculator" },
     { name = "nat-simple-calculator-custom-routes" },
     { name = "nat-simple-calculator-eval" },
+    { name = "nat-simple-calculator-fastmcp" },
+    { name = "nat-simple-calculator-fastmcp-protected" },
     { name = "nat-simple-calculator-hitl" },
     { name = "nat-simple-calculator-mcp" },
     { name = "nat-simple-calculator-mcp-protected" },
@@ -6456,6 +6492,8 @@ requires-dist = [
     { name = "nat-simple-calculator", marker = "extra == 'examples'", editable = "examples/getting_started/simple_calculator" },
     { name = "nat-simple-calculator-custom-routes", marker = "extra == 'examples'", editable = "examples/front_ends/simple_calculator_custom_routes" },
     { name = "nat-simple-calculator-eval", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/simple_calculator_eval" },
+    { name = "nat-simple-calculator-fastmcp", marker = "extra == 'examples'", editable = "examples/MCP/simple_calculator_fastmcp" },
+    { name = "nat-simple-calculator-fastmcp-protected", marker = "extra == 'examples'", editable = "examples/MCP/simple_calculator_fastmcp_protected" },
     { name = "nat-simple-calculator-hitl", marker = "extra == 'examples'", editable = "examples/HITL/simple_calculator_hitl" },
     { name = "nat-simple-calculator-mcp", marker = "extra == 'examples'", editable = "examples/MCP/simple_calculator_mcp" },
     { name = "nat-simple-calculator-mcp-protected", marker = "extra == 'examples'", editable = "examples/MCP/simple_calculator_mcp_protected" },
