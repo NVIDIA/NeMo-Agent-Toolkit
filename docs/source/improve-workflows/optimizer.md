@@ -326,6 +326,7 @@ optimizer:
 This is the main configuration object for the optimizer.
 
 -   `output_path: Path | None`: The directory where optimization results will be saved, for example, `optimizer_results/`. Defaults to `None`.
+-   `object_store: ObjectStoreSettings | None`: Optional object store configuration for saving prompt checkpoints. When specified, checkpoints are stored in the configured object store instead of the local filesystem. This enables centralized storage, cloud backup, and integration with external storage systems. See [Object Store Integration](#object-store-integration) for details. Defaults to `None`.
 -   `eval_metrics: dict[str, OptimizerMetric] | None`: A dictionary of evaluation metrics to optimize. The keys are custom names for the metrics, and the values are `OptimizerMetric` objects.
 -   `numeric.enabled: bool`: Enable numeric optimization (Optuna). Defaults to `true`.
 -   `numeric.n_trials: int`: Number of numeric trials. Defaults to `20`.
@@ -517,11 +518,136 @@ optimizer:
 
 During GA prompt optimization, the optimizer saves:
 
-- `optimized_prompts_gen<N>.json`: Best prompt set after each generation.
+- `optimized_prompts_gen<N>.json`: Best prompt set after each generation with performance metadata.
 - `optimized_prompts.json`: Final best prompt set after all generations.
 - `ga_history_prompts.csv`: Per-individual fitness and metric history across generations.
 
 Numeric optimization outputs (Optuna) remain unchanged and can be used alongside GA outputs.
+
+#### Checkpoint Metadata Format
+
+Each checkpoint includes rich metadata to track optimization progress:
+
+**When using local filesystem storage** (default), checkpoints are saved with embedded metadata:
+```json
+{
+  "metadata": {
+    "generation": 1,
+    "fitness_score": 0.8542,
+    "evaluator_scores": {
+      "accuracy": 0.85,
+      "token_efficiency": 492.4,
+      "llm_latency": 3.58
+    }
+  },
+  "prompts": {
+    "functions.my_tool.prompt": [
+      "optimized prompt text",
+      "purpose description"
+    ]
+  }
+}
+```
+
+**When using object store storage**, metadata is stored in sidecar `.meta` files (for backends like LocalFileObjectStore) or in the object store's native metadata system (for backends like S3, Redis). This provides full traceability of how fitness and individual evaluator scores evolve across generations.
+
+## Object Store Integration
+
+The prompt optimizer supports storing checkpoints in object stores, enabling centralized storage, cloud backup, and integration with external storage systems. This is particularly useful for:
+
+- **Distributed Teams**: Share optimization results via cloud storage (S3, Azure Blob, GCS)
+- **Long-Running Optimizations**: Persist checkpoints for resume capability
+- **Centralized Storage**: Store checkpoints in databases (Redis, MySQL) for analytics
+- **Backup and Recovery**: Automatic backup of optimization progress
+
+### Configuration
+
+To enable object store storage, add an `object_store` field to your optimizer configuration:
+
+```yaml
+# Define the object store backend
+object_stores:
+  my_checkpoint_store:
+    _type: local_file  # or s3, redis, mysql
+    base_path: ./optimization_checkpoints
+
+optimizer:
+  output_path: "optimizer_results"
+
+  # Configure object store for checkpoint storage
+  object_store:
+    name: my_checkpoint_store  # Reference to object store defined above
+    key_prefix: my_experiment_v1  # Optional: subdirectory/prefix for organization
+
+  prompt:
+    enabled: true
+    ga_population_size: 16
+    ga_generations: 8
+
+  eval_metrics:
+    accuracy:
+      evaluator_name: "accuracy"
+      direction: "maximize"
+      weight: 0.8
+```
+
+### Object Store Backends
+
+The optimizer supports any registered object store backend. Common options:
+
+**Local Filesystem** (`local_file`):
+```yaml
+object_stores:
+  local_store:
+    _type: local_file
+    base_path: ./checkpoints
+```
+
+**Amazon S3** (`s3`):
+```yaml
+object_stores:
+  s3_store:
+    _type: nat.plugins.s3/s3
+    bucket_name: my-optimization-checkpoints
+    region: us-west-2
+```
+
+**Redis** (`redis`):
+```yaml
+object_stores:
+  redis_store:
+    _type: nat.plugins.redis/redis
+    host: localhost
+    port: 6379
+    db: 0
+```
+
+### Key Prefix Organization
+
+Use `key_prefix` to organize checkpoints by experiment, model, or dataset:
+
+```yaml
+optimizer:
+  object_store:
+    name: s3_store
+    key_prefix: experiments/chatbot_v2/baseline  # Creates subdirectories
+```
+
+This creates keys like: `experiments/chatbot_v2/baseline/optimized_prompts_gen1.json`
+
+### Metadata Storage
+
+Object stores preserve full optimization metadata including:
+- Generation number
+- Fitness score (overall optimization objective)
+- Individual evaluator scores (accuracy, latency, token efficiency, etc.)
+
+This metadata enables:
+- **Progress Tracking**: Monitor fitness improvement across generations
+- **Evaluator Analysis**: Understand which metrics drive performance
+- **Reproducibility**: Full record of optimization trajectory
+
+For more information on object stores, see the [Object Store documentation](../build-workflows/object-store.md).
 
 ## Running the Optimizer
 
