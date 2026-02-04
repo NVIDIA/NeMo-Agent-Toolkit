@@ -43,18 +43,18 @@ class EvaluationRemoteWorkflowHandler:
         # Run metadata
         self.semaphore = asyncio.Semaphore(max_concurrency)
 
-    async def run_workflow_remote_single(self, session: aiohttp.ClientSession, item: EvalInputItem):
+    async def run_workflow_remote_single(self, session: aiohttp.ClientSession, item: EvalInputItem) -> None:
         """
         Sends a single input to the endpoint hosting the workflow and retrieves the response.
         """
-        question = item.input_obj
-        payload = {"input_message": question}
+        question: str = item.input_obj
+        payload: dict = {"input_message": question}
 
-        max_attempts = self.config.endpoint_retry.max_retries if self.config.endpoint_retry.do_auto_retry else 1
+        max_attempts: int = self.config.endpoint_retry.max_retries if self.config.endpoint_retry.do_auto_retry else 1
 
         for attempt in range(max_attempts):
             try:
-                endpoint = f"{self.config.endpoint}/generate/full"
+                endpoint: str = f"{self.config.endpoint}/generate/full"
                 async with session.post(endpoint, json=payload) as response:
                     # Check if retriable HTTP error
                     if response.status in self.config.endpoint_retry.retry_status_codes:
@@ -64,8 +64,8 @@ class EvaluationRemoteWorkflowHandler:
 
                     response.raise_for_status()
 
-                    final_response = None
-                    intermediate_steps = []
+                    final_response: str | None = None
+                    intermediate_steps: list[IntermediateStep] = []
 
                     async for line in response.content:
                         line = line.decode('utf-8').strip()
@@ -74,7 +74,7 @@ class EvaluationRemoteWorkflowHandler:
 
                         if line.startswith(DATA_PREFIX):
                             try:
-                                chunk_data = json.loads(line[len(DATA_PREFIX):])
+                                chunk_data: dict = json.loads(line[len(DATA_PREFIX):])
                                 if chunk_data.get("value"):
                                     final_response = chunk_data.get("value")
                             except json.JSONDecodeError as e:
@@ -82,10 +82,11 @@ class EvaluationRemoteWorkflowHandler:
                                 continue
                         elif line.startswith(INTERMEDIATE_DATA_PREFIX):
                             try:
-                                step_data = json.loads(line[len(INTERMEDIATE_DATA_PREFIX):])
+                                step_data: dict = json.loads(line[len(INTERMEDIATE_DATA_PREFIX):])
                                 response_intermediate = ResponseIntermediateStep.model_validate(step_data)
-                                payload_obj = IntermediateStepPayload.model_validate_json(response_intermediate.payload)
-                                intermediate_step = IntermediateStep(
+                                payload_obj: IntermediateStepPayload = IntermediateStepPayload.model_validate_json(
+                                    response_intermediate.payload)
+                                intermediate_step: IntermediateStep = IntermediateStep(
                                     parent_id="remote",
                                     function_ancestry=InvocationNode(function_name=payload_obj.name
                                                                      or "remote_function",
@@ -107,30 +108,34 @@ class EvaluationRemoteWorkflowHandler:
                 item.trajectory = []
                 return
 
-    async def run_workflow_remote_with_limits(self, session: aiohttp.ClientSession, item: EvalInputItem, pbar: tqdm):
+    async def run_workflow_remote_with_limits(self,
+                                              session: aiohttp.ClientSession,
+                                              item: EvalInputItem,
+                                              progress_bar: tqdm) -> None:
         """
         Sends limited number of concurrent requests to a remote workflow and retrieves responses.
         """
         async with self.semaphore:
             await self.run_workflow_remote_single(session=session, item=item)
-            pbar.update(1)
+            progress_bar.update(1)
 
     async def run_workflow_remote(self, eval_input: EvalInput) -> EvalInput:
         """
         Sends inputs to a workflow hosted on a remote endpoint.
         """
-        timeout = aiohttp.ClientTimeout(total=self.config.endpoint_timeout)
+        timeout: aiohttp.ClientTimeout = aiohttp.ClientTimeout(total=self.config.endpoint_timeout)
         try:
-            pbar = tqdm(total=len(eval_input.eval_input_items), desc="Running workflow", unit="item")
+            progress_bar: tqdm = tqdm(total=len(eval_input.eval_input_items), desc="Running workflow", unit="item")
             async with aiohttp.ClientSession(timeout=timeout) as session:
                 # get the questions from the eval_input
-                tasks = [
-                    self.run_workflow_remote_with_limits(session, item, pbar) for item in eval_input.eval_input_items
+                tasks: list = [
+                    self.run_workflow_remote_with_limits(session, item, progress_bar)
+                    for item in eval_input.eval_input_items
                 ]
                 await asyncio.gather(*tasks)
 
         finally:
-            pbar.close()
+            progress_bar.close()
 
         return eval_input
 
@@ -141,7 +146,7 @@ class EvaluationRemoteWorkflowHandler:
         Returns True if should retry, False if last attempt.
         """
         if attempt < max_retries - 1:
-            backoff = min(2.0**attempt, 30.0)
+            backoff: float = min(2.0**attempt, 30.0)
             logger.info(f"Retrying after {backoff:.1f}s backoff (attempt {attempt + 1}/{max_retries})")
             await asyncio.sleep(backoff)
             return True

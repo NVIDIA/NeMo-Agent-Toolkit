@@ -69,11 +69,7 @@ class TrajectoryEvaluator(BaseEvaluator):
             return EvalOutputItem(
                 id=item.id,
                 score=0.0,
-                reasoning={
-                    "question": str(question),
-                    "generated_answer": str(generated_answer),
-                    "trajectory_length": len(agent_trajectory),
-                },
+                reasoning={},
                 error=str(e),
             )
 

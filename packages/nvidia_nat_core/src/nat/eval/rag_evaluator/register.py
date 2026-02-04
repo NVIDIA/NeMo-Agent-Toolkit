@@ -23,7 +23,7 @@ from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_evaluator
-from nat.data_models.evaluator import EvaluatorBaseConfig
+from nat.data_models.evaluator import EvaluatorLLMConfig
 from nat.eval.evaluator.evaluator_model import EvalInput
 from nat.eval.evaluator.evaluator_model import EvalOutput
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
@@ -32,42 +32,22 @@ logger = logging.getLogger(__name__)
 
 
 class RagasMetricConfig(BaseModel):
-    ''' RAGAS metrics configuration
-    skip: Allows the metric config to be present but not used
-    kwargs: Additional arguments to pass to the metric's callable
-    '''
+    """RAGAS metrics configuration."""
+
     skip: bool = False
-    # kwargs specific to the metric's callable
     kwargs: dict | None = None
 
 
-class RagasEvaluatorConfig(EvaluatorBaseConfig, name="ragas"):
+class RagasEvaluatorConfig(EvaluatorLLMConfig, name="ragas"):
     """Evaluation using RAGAS metrics."""
 
-    llm_name: str = Field(description="LLM as a judge.")
-    # Ragas metric
-    metric: str | dict[str, RagasMetricConfig] = Field(default="AnswerAccuracy",
-                                                       description="RAGAS metric callable with optional 'kwargs:'")
-    input_obj_field: str | None = Field(
-        default=None, description="The field in the input object that contains the content to evaluate.")
-
-    # LLM retry configuration
-    do_auto_retry: bool = Field(default=True, description="Enable automatic retry on transient LLM errors.")
-    num_retries: int = Field(default=3, ge=1, description="Number of LLM retry attempts.")
-    retry_on_status_codes: list[int] = Field(
-        default=[429, 500, 502, 503, 504],
-        description="HTTP status codes from LLM that trigger retry.",
+    metric: str | dict[str, RagasMetricConfig] = Field(
+        default="AnswerAccuracy",
+        description="RAGAS metric callable with optional 'kwargs:'",
     )
-    retry_on_errors: list[str] = Field(
-        default=[
-            "Too Many Requests",
-            "429",
-            "Internal Server Error",
-            "Bad Gateway",
-            "Service Unavailable",
-            "Gateway Timeout",
-        ],
-        description="LLM error message substrings that trigger retry.",
+    input_obj_field: str | None = Field(
+        default=None,
+        description="The field in the input object that contains the content to evaluate.",
     )
 
     @model_validator(mode="before")

@@ -12,15 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Tests for evaluator LLM retry behavior.
-
-These tests verify that the evaluator's LLM retry mechanism correctly handles
-the configured error messages defined in RagasEvaluatorConfig.
-
-Note: patch_with_retry matches errors via message substrings (case-insensitive).
-Status code matching requires exceptions with status_code attributes, which
-standard Python exceptions don't have.
-"""
 
 import pytest
 

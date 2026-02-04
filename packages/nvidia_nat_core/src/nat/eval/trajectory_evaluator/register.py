@@ -13,38 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pydantic import Field
-
 from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.cli.register_workflow import register_evaluator
-from nat.data_models.evaluator import EvaluatorBaseConfig
+from nat.data_models.evaluator import EvaluatorLLMConfig
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
 
-class TrajectoryEvaluatorConfig(EvaluatorBaseConfig, name="trajectory"):
+class TrajectoryEvaluatorConfig(EvaluatorLLMConfig, name="trajectory"):
     """Agent Trajectory Evaluation."""
 
-    llm_name: str = Field(description="LLM as a judge.")
-
-    # LLM retry configuration
-    do_auto_retry: bool = Field(default=True, description="Enable automatic retry on transient LLM errors.")
-    num_retries: int = Field(default=3, ge=1, description="Number of LLM retry attempts.")
-    retry_on_status_codes: list[int] = Field(
-        default=[429, 500, 502, 503, 504],
-        description="HTTP status codes from LLM that trigger retry.",
-    )
-    retry_on_errors: list[str] = Field(
-        default=[
-            "Too Many Requests",
-            "429",
-            "Internal Server Error",
-            "Bad Gateway",
-            "Service Unavailable",
-            "Gateway Timeout",
-        ],
-        description="LLM error message substrings that trigger retry.",
-    )
+    pass
 
 
 @register_evaluator(config_type=TrajectoryEvaluatorConfig)
