@@ -18,7 +18,7 @@ import datetime
 import typing
 import uuid
 from abc import abstractmethod
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel
 from pydantic import ConfigDict
@@ -37,7 +37,7 @@ from nat.utils.type_converter import GlobalTypeConverter
 FINISH_REASONS = frozenset({'stop', 'length', 'tool_calls', 'content_filter', 'function_call'})
 
 
-class UserMessageContentRoleType(str, Enum):
+class UserMessageContentRoleType(StrEnum):
     """
     Enum representing chat message roles in API requests and responses.
     """
@@ -67,7 +67,7 @@ class Request(BaseModel):
         default=None, description="Cookies sent with the request, stored in a dictionary-like object.")
 
 
-class ChatContentType(str, Enum):
+class ChatContentType(StrEnum):
     """
     ChatContentType is an Enum that represents the type of Chat content.
     """
@@ -528,7 +528,7 @@ class GenerateResponse(BaseModel):
     value: str | None = "default"
 
 
-class WebSocketMessageType(str, Enum):
+class WebSocketMessageType(StrEnum):
     """
     WebSocketMessageType is an Enum that represents WebSocket Message types.
     """
@@ -541,7 +541,7 @@ class WebSocketMessageType(str, Enum):
     ERROR_MESSAGE = "error_message"
 
 
-class WorkflowSchemaType(str, Enum):
+class WorkflowSchemaType(StrEnum):
     """
     WorkflowSchemaType is an Enum that represents Workkflow response types.
     """
@@ -551,7 +551,7 @@ class WorkflowSchemaType(str, Enum):
     CHAT = "chat"
 
 
-class WebSocketMessageStatus(str, Enum):
+class WebSocketMessageStatus(StrEnum):
     """
     WebSocketMessageStatus is an Enum that represents the status of a WebSocket message.
     """
@@ -578,7 +578,7 @@ class User(BaseModel):
     email: str = "default"
 
 
-class ErrorTypes(str, Enum):
+class ErrorTypes(StrEnum):
     UNKNOWN_ERROR = "unknown_error"
     INVALID_MESSAGE = "invalid_message"
     INVALID_MESSAGE_TYPE = "invalid_message_type"

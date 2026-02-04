@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Literal
 
@@ -30,7 +30,7 @@ class OptimizerMetric(BaseModel):
     weight: float = Field(description="Weight of the metric in the optimization process.", default=1.0)
 
 
-class SamplerType(str, Enum):
+class SamplerType(StrEnum):
     BAYESIAN = "bayesian"
     GRID = "grid"
 

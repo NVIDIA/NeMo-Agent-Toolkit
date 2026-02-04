@@ -16,7 +16,7 @@
 import typing
 from datetime import UTC
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 import httpx
 from pydantic import BaseModel
@@ -40,7 +40,7 @@ class AuthProviderBaseConfig(TypedBaseModel, BaseModelRegistryTag):
 AuthProviderBaseConfigT = typing.TypeVar("AuthProviderBaseConfigT", bound=AuthProviderBaseConfig)
 
 
-class CredentialLocation(str, Enum):
+class CredentialLocation(StrEnum):
     """
     Enum representing the location of credentials in an HTTP request.
     """
@@ -50,7 +50,7 @@ class CredentialLocation(str, Enum):
     BODY = "body"
 
 
-class AuthFlowType(str, Enum):
+class AuthFlowType(StrEnum):
     """
     Enum representing different types of authentication flows.
     """
@@ -77,7 +77,7 @@ class AuthenticatedContext(BaseModel):
     metadata: dict[str, typing.Any] | None = Field(default=None, description="Additional metadata for the request.")
 
 
-class HeaderAuthScheme(str, Enum):
+class HeaderAuthScheme(StrEnum):
     """
     Enum representing different header authentication schemes.
     """
@@ -87,7 +87,7 @@ class HeaderAuthScheme(str, Enum):
     CUSTOM = "Custom"
 
 
-class HTTPMethod(str, Enum):
+class HTTPMethod(StrEnum):
     """
     Enum representing HTTP methods used in requests.
     """
@@ -100,7 +100,7 @@ class HTTPMethod(str, Enum):
     OPTIONS = "OPTIONS"
 
 
-class CredentialKind(str, Enum):
+class CredentialKind(StrEnum):
     """
     Enum representing different kinds of credentials used for authentication.
     """

@@ -21,15 +21,16 @@ repos:
         args: ["-i", "--style", "./pyproject.toml"]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.9
+    rev: v0.15.0
     hooks:
       # Run the linter.
       - id: ruff-check
         args: [ --fix ]
 
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.6.2
+    rev: 0.9.28
     hooks:
+      - { id: uv-lock, name: "uv-lock", files: "pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-a2a", args: [--project, packages/nvidia_nat_a2a], files: "packages/nvidia_nat_a2a/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-adk", args: [--project, packages/nvidia_nat_adk], files: "packages/nvidia_nat_adk/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-agno", args: [--project, packages/nvidia_nat_agno], files: "packages/nvidia_nat_agno/pyproject.toml" }
@@ -64,7 +65,7 @@ repos:
         language: unsupported_script
 
   - repo: https://github.com/tcort/markdown-link-check
-    rev: v3.14.1
+    rev: v3.14.2
     hooks:
       - id: markdown-link-check
         args: ["-q", "--config", "ci/markdown-link-check-config.json"]

@@ -13,10 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
+from enum import StrEnum
 
 
-class PipelineTypeEnum(str, Enum):
+class PipelineTypeEnum(StrEnum):
     """
     Enum to represent the type of pipeline used in Inference Time Scaling.
     """
@@ -29,7 +29,7 @@ class PipelineTypeEnum(str, Enum):
         return self.value
 
 
-class StageTypeEnum(str, Enum):
+class StageTypeEnum(StrEnum):
     """
     Enum to represent the type of stage in a pipeline.
     """
