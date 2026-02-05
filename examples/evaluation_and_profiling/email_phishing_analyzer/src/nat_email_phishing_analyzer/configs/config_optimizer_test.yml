@@ -31,7 +31,7 @@ object_stores:
     api_key: ${LANGSMITH_API_KEY}
     api_url: ${LANGSMITH_ENDPOINT}
     is_public: false
-    default_tags: []
+    default_tags: [my_default_tag]
 
 functions:
   email_phishing_analyzer:

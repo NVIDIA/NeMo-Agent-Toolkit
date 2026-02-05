@@ -16,6 +16,7 @@
 from collections.abc import Sequence
 from typing import Any
 from typing import Generic
+from typing import Literal
 from typing import TypeVar
 
 import numpy as np
@@ -41,7 +42,7 @@ class SearchSpace(BaseModel, Generic[T]):
     is_prompt: bool = False
     prompt: str | None = None  # prompt to optimize
     prompt_purpose: str | None = None  # purpose of the prompt
-
+    prompt_role: Literal["system", "human", "unknown"] = "unknown"
     model_config = ConfigDict(protected_namespaces=(), extra="forbid")
 
     @model_validator(mode="after")

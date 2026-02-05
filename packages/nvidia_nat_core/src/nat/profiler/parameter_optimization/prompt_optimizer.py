@@ -131,8 +131,9 @@ async def optimize_prompts(
         return max(contenders, key=lambda i: (i.scalar_fitness or 0.0))
 
     # ------------- discover space ------------- #
-    prompt_space: dict[str, tuple[str, str]] = {
-        k: (v.prompt, v.prompt_purpose)
+    # Tuple is (prompt_text, purpose, role)
+    prompt_space: dict[str, tuple[str, str, str]] = {
+        k: (v.prompt or "", v.prompt_purpose or "", v.prompt_role)
         for k, v in full_space.items() if v.is_prompt
     }
 
@@ -251,7 +252,7 @@ async def optimize_prompts(
             async def _create_random_individual() -> Individual:
                 async with init_sem:
                     mutated: dict[str, str] = {}
-                    for param, (base_prompt, purpose) in prompt_space.items():
+                    for param, (base_prompt, purpose, _role) in prompt_space.items():
                         try:
                             new_p = await _mutate_prompt(base_prompt, purpose)
                         except Exception as e:
@@ -331,7 +332,7 @@ async def optimize_prompts(
         # ------------- reproduction ops ------------- #
         async def _make_child(parent_a: Individual, parent_b: Individual) -> Individual:
             child_prompts: dict[str, str] = {}
-            for param, (base_prompt, purpose) in prompt_space.items():
+            for param, (base_prompt, purpose, _role) in prompt_space.items():
                 pa = parent_a.prompts.get(param, base_prompt)
                 pb = parent_b.prompts.get(param, base_prompt)
                 child = pa
@@ -361,7 +362,8 @@ async def optimize_prompts(
 
             # Log and save checkpoint
             best = max(population, key=lambda i: (i.scalar_fitness or 0.0))
-            checkpoint = {k: (best.prompts[k], prompt_space[k][1]) for k in prompt_space}
+            # Tuple is (prompt_text, purpose, role)
+            checkpoint = {k: (best.prompts[k], prompt_space[k][1], prompt_space[k][2]) for k in prompt_space}
             try:
                 await storage.save_checkpoint(generation=gen,
                                               prompts=checkpoint,
@@ -439,7 +441,8 @@ async def optimize_prompts(
         # Final evaluation to ensure metrics present
         population = await _evaluate_population(population)
         best = max(population, key=lambda i: (i.scalar_fitness or 0.0))
-        best_prompts = {k: (best.prompts[k], prompt_space[k][1]) for k in prompt_space}
+        # Tuple is (prompt_text, purpose, role)
+        best_prompts = {k: (best.prompts[k], prompt_space[k][1], prompt_space[k][2]) for k in prompt_space}
 
         # Save final
         try:

@@ -33,7 +33,7 @@ class PromptStorage(Protocol):
 
     async def save_checkpoint(self,
                               generation: int,
-                              prompts: dict[str, tuple[str, str]],
+                              prompts: dict[str, tuple[str, str, str]],
                               fitness_score: float | None = None,
                               evaluator_scores: dict[str, float] | None = None) -> None:
         """
@@ -41,27 +41,27 @@ class PromptStorage(Protocol):
 
         Args:
             generation: Generation number (1-indexed)
-            prompts: Map of param_name -> (prompt_text, purpose)
+            prompts: Map of param_name -> (prompt_text, purpose, role)
             fitness_score: Optional overall fitness score for this generation
             evaluator_scores: Optional map of evaluator_name -> score
         """
         ...
 
     async def save_final(self,
-                         prompts: dict[str, tuple[str, str]],
+                         prompts: dict[str, tuple[str, str, str]],
                          fitness_score: float | None = None,
                          evaluator_scores: dict[str, float] | None = None) -> None:
         """
         Save final optimized prompts.
 
         Args:
-            prompts: Map of param_name -> (prompt_text, purpose)
+            prompts: Map of param_name -> (prompt_text, purpose, role)
             fitness_score: Optional overall fitness score for the final prompts
             evaluator_scores: Optional map of evaluator_name -> score
         """
         ...
 
-    async def load_checkpoint(self, generation: int) -> dict[str, tuple[str, str]]:
+    async def load_checkpoint(self, generation: int) -> dict[str, tuple[str, str, str]]:
         """
         Load specific checkpoint.
 
@@ -69,14 +69,14 @@ class PromptStorage(Protocol):
             generation: Generation number to load
 
         Returns:
-            Map of param_name -> (prompt_text, purpose)
+            Map of param_name -> (prompt_text, purpose, role)
 
         Raises:
             KeyError: If checkpoint not found
         """
         ...
 
-    async def load_latest_checkpoint(self) -> tuple[int, dict[str, tuple[str, str]]]:
+    async def load_latest_checkpoint(self) -> tuple[int, dict[str, tuple[str, str, str]]]:
         """
         Load most recent checkpoint.
 
@@ -120,14 +120,17 @@ class LocalFilePromptStorage:
 
     async def save_checkpoint(self,
                               generation: int,
-                              prompts: dict[str, tuple[str, str]],
+                              prompts: dict[str, tuple[str, str, str]],
                               fitness_score: float | None = None,
                               evaluator_scores: dict[str, float] | None = None) -> None:
         """Save generation checkpoint to optimized_prompts_gen{N}.json."""
         checkpoint_path = self.output_dir / f"optimized_prompts_gen{generation}.json"
 
         # Convert tuples to lists for JSON serialization
-        prompts_data = {param_name: [prompt_text, purpose] for param_name, (prompt_text, purpose) in prompts.items()}
+        prompts_data = {
+            param_name: [prompt_text, purpose, role]
+            for param_name, (prompt_text, purpose, role) in prompts.items()
+        }
 
         # Build checkpoint structure with metadata
         checkpoint_data = {"metadata": {"generation": generation, }, "prompts": prompts_data}
@@ -142,14 +145,17 @@ class LocalFilePromptStorage:
         checkpoint_path.write_text(json.dumps(checkpoint_data, indent=2))
 
     async def save_final(self,
-                         prompts: dict[str, tuple[str, str]],
+                         prompts: dict[str, tuple[str, str, str]],
                          fitness_score: float | None = None,
                          evaluator_scores: dict[str, float] | None = None) -> None:
         """Save final prompts to optimized_prompts.json with metadata."""
         final_path = self.output_dir / "optimized_prompts.json"
 
         # Convert tuples to lists for JSON serialization
-        prompts_data = {param_name: [prompt_text, purpose] for param_name, (prompt_text, purpose) in prompts.items()}
+        prompts_data = {
+            param_name: [prompt_text, purpose, role]
+            for param_name, (prompt_text, purpose, role) in prompts.items()
+        }
 
         # Build final structure with metadata
         final_data = {"metadata": {"type": "final", }, "prompts": prompts_data}
@@ -163,7 +169,7 @@ class LocalFilePromptStorage:
 
         final_path.write_text(json.dumps(final_data, indent=2))
 
-    async def load_checkpoint(self, generation: int) -> dict[str, tuple[str, str]]:
+    async def load_checkpoint(self, generation: int) -> dict[str, tuple[str, str, str]]:
         """Load checkpoint. Raises KeyError if not found."""
         checkpoint_path = self.output_dir / f"optimized_prompts_gen{generation}.json"
 
@@ -180,10 +186,10 @@ class LocalFilePromptStorage:
             # Old format: {"param_name": [prompt, purpose], ...}
             prompts_data = data
 
-        # Convert lists back to tuples
-        return {param_name: (prompt_text, purpose) for param_name, [prompt_text, purpose] in prompts_data.items()}
+        # Convert lists back to tuples: (prompt_text, purpose, role)
+        return {param_name: (values[0], values[1], values[2]) for param_name, values in prompts_data.items()}
 
-    async def load_latest_checkpoint(self) -> tuple[int, dict[str, tuple[str, str]]]:
+    async def load_latest_checkpoint(self) -> tuple[int, dict[str, tuple[str, str, str]]]:
         """Load most recent checkpoint. Raises KeyError if none exist."""
         # Find all checkpoint files
         checkpoint_files = list(self.output_dir.glob("optimized_prompts_gen*.json"))
@@ -234,25 +240,28 @@ class ObjectStorePromptStorage:
         """Construct object store key with prefix."""
         return f"{self.key_prefix}_{filename}".split('.')[0]
 
-    def _prompts_to_json_bytes(self, prompts: dict[str, tuple[str, str]]) -> bytes:
+    def _prompts_to_json_bytes(self, prompts: dict[str, tuple[str, str, str]]) -> bytes:
         """Convert prompts dict to JSON bytes."""
         # Convert tuples to lists for JSON serialization
-        data = {param_name: [prompt_text, purpose] for param_name, (prompt_text, purpose) in prompts.items()}
+        data = {param_name: [prompt_text, purpose, role] for param_name, (prompt_text, purpose, role) in prompts.items()}
         return json.dumps(data, indent=2).encode("utf-8")
 
     async def save_checkpoint(self,
                               generation: int,
-                              prompts: dict[str, tuple[str, str]],
+                              prompts: dict[str, tuple[str, str, str]],
                               fitness_score: float | None = None,
                               evaluator_scores: dict[str, float] | None = None) -> None:
         """Save generation checkpoint to object store."""
 
-        for prompt_id, (prompt_text, purpose) in prompts.items():
+        for prompt_id, (prompt_text, purpose, role) in prompts.items():
             key = prompt_id.replace('.', '-')
             data = prompt_text.encode("utf-8")
 
-            # Build metadata dict
-            metadata = {"generation": str(generation)}
+            # Build metadata dict - include role for ChatPromptTemplate construction
+            metadata: dict[str, str] = {
+                "generation": str(generation),
+                "role": role,
+            }
 
             if fitness_score is not None:
                 metadata["fitness_score"] = str(fitness_score)
@@ -262,21 +271,24 @@ class ObjectStorePromptStorage:
                 for evaluator_name, score in evaluator_scores.items():
                     metadata[evaluator_name] = str(score)
 
-            item = ObjectStoreItem(data=data, content_type="application/json", metadata=metadata)
+            item = ObjectStoreItem(data=data, content_type="text/plain", metadata=metadata)
 
             await self.object_store.upsert_object(key, item)
 
     async def save_final(self,
-                         prompts: dict[str, tuple[str, str]],
+                         prompts: dict[str, tuple[str, str, str]],
                          fitness_score: float | None = None,
                          evaluator_scores: dict[str, float] | None = None) -> None:
         """Save final prompts to object store with metadata."""
-        for prompt_id, (prompt_text, purpose) in prompts.items():
+        for prompt_id, (prompt_text, purpose, role) in prompts.items():
             key = prompt_id.replace('.', '-')
             data = prompt_text.encode("utf-8")
 
-            # Build metadata dict
-            metadata = {"type": "final"}
+            # Build metadata dict - include role for ChatPromptTemplate construction
+            metadata: dict[str, str] = {
+                "type": "final",
+                "role": role,
+            }
 
             if fitness_score is not None:
                 metadata["fitness_score"] = str(fitness_score)
@@ -286,11 +298,11 @@ class ObjectStorePromptStorage:
                 for evaluator_name, score in evaluator_scores.items():
                     metadata[evaluator_name] = str(score)
 
-            item = ObjectStoreItem(data=data, content_type="application/json", metadata=metadata)
+            item = ObjectStoreItem(data=data, content_type="text/plain", metadata=metadata)
 
             await self.object_store.upsert_object(key, item)
 
-    async def load_checkpoint(self, generation: int) -> dict[str, tuple[str, str]]:
+    async def load_checkpoint(self, generation: int) -> dict[str, tuple[str, str, str]]:
         """Load checkpoint from object store. Raises KeyError if not found."""
         key = self._make_key(f"optimized_prompts_gen{generation}.json")
 
@@ -299,11 +311,11 @@ class ObjectStorePromptStorage:
         except Exception as e:
             raise KeyError(f"Checkpoint for generation {generation} not found") from e
 
-        # Parse JSON and convert lists to tuples
+        # Parse JSON and convert lists to tuples: (prompt_text, purpose, role)
         data = json.loads(item.data.decode("utf-8"))
-        return {param_name: (prompt_text, purpose) for param_name, [prompt_text, purpose] in data.items()}
+        return {param_name: (values[0], values[1], values[2]) for param_name, values in data.items()}
 
-    async def load_latest_checkpoint(self) -> tuple[int, dict[str, tuple[str, str]]]:
+    async def load_latest_checkpoint(self) -> tuple[int, dict[str, tuple[str, str, str]]]:
         """
         Load most recent checkpoint.
 

@@ -19,17 +19,13 @@ from unittest.mock import patch
 
 import pytest
 from langsmith.utils import LangSmithConflictError
-from pydantic import ValidationError
 
 from nat.data_models.object_store import KeyAlreadyExistsError
 from nat.data_models.object_store import NoSuchKeyError
 from nat.object_store.models import ObjectStoreItem
 from nat.plugins.langchain.langsmith_prompt_store import LangSmithPromptStore
 from nat.plugins.langchain.langsmith_prompt_store import LangSmithPromptStoreConfig
-from nat.plugins.langchain.langsmith_prompt_store import PromptMetadata
 from nat.plugins.langchain.langsmith_prompt_store import _validate_prompt_key
-from nat.plugins.langchain.langsmith_prompt_store import _validate_tag
-from nat.plugins.langchain.langsmith_prompt_store import _validate_tags
 
 # =============================================================================
 # Test Fixtures
@@ -38,13 +34,17 @@ from nat.plugins.langchain.langsmith_prompt_store import _validate_tags
 
 @pytest.fixture(name="sample_prompt_manifest")
 def fixture_sample_prompt_manifest() -> dict:
-    """Sample prompt manifest for testing."""
+    """Sample prompt manifest for testing with embedded metadata."""
     return {
         "id": ["langchain", "prompts", "chat", "ChatPromptTemplate"],
         "lc": 1,
         "type": "constructor",
         "kwargs": {
-            "input_variables": ["question"],
+            "input_variables": ["question"],  # Versioned metadata embedded in the manifest
+            "metadata": {
+                "version": "1.0.0",
+                "author": "test-user",
+            },
             "messages": [{
                 "id": ["langchain", "prompts", "chat", "HumanMessagePromptTemplate"],
                 "lc": 1,
@@ -79,7 +79,7 @@ def fixture_mock_prompt_info():
     prompt = MagicMock()
     prompt.description = "Test description"
     prompt.readme = "# Test Readme"
-    prompt.tags = ["version:1.0.0", "author:test-user"]
+    prompt.tags = ["production", "approved"]
     return prompt
 
 
@@ -135,123 +135,6 @@ class TestValidatePromptKey:
             _validate_prompt_key("")
 
 
-class TestValidateTag:
-    """Tests for _validate_tag function."""
-
-    def test_valid_simple_tags(self):
-        """Test that valid simple tags pass validation."""
-        valid_tags = ["mytag", "my-tag", "my_tag", "tag123"]
-        for tag in valid_tags:
-            assert _validate_tag(tag) is True
-
-    def test_valid_key_value_tags(self):
-        """Test that valid key:value tags pass validation."""
-        valid_tags = ["version:1.0.0", "author:test-user", "env:prod_v1"]
-        for tag in valid_tags:
-            assert _validate_tag(tag) is True
-
-    def test_invalid_simple_tags(self):
-        """Test that invalid simple tags fail validation."""
-        invalid_tags = ["my tag", "tag!", "tag.name"]
-        for tag in invalid_tags:
-            assert _validate_tag(tag) is False
-
-    def test_invalid_key_value_tags(self):
-        """Test that invalid key:value tags fail validation."""
-        invalid_tags = ["bad key:value", "key:bad value", "key!:value"]
-        for tag in invalid_tags:
-            assert _validate_tag(tag) is False
-
-
-class TestValidateTags:
-    """Tests for _validate_tags function."""
-
-    def test_valid_tags_list(self):
-        """Test that a list of valid tags passes validation."""
-        valid_tags = ["mytag", "version:1.0.0", "author:test"]
-        _validate_tags(valid_tags)  # Should not raise
-
-    def test_invalid_tag_in_list(self):
-        """Test that an invalid tag in the list raises ValueError."""
-        invalid_tags = ["valid-tag", "invalid tag"]
-        with pytest.raises(ValueError, match="Invalid tag"):
-            _validate_tags(invalid_tags)
-
-    def test_empty_list(self):
-        """Test that an empty list passes validation."""
-        _validate_tags([])  # Should not raise
-
-
-# =============================================================================
-# Tests for PromptMetadata Model
-# =============================================================================
-
-
-class TestPromptMetadata:
-    """Tests for PromptMetadata Pydantic model."""
-
-    def test_create_with_defaults(self):
-        """Test creating PromptMetadata with default values."""
-        metadata = PromptMetadata()
-        assert metadata.description is None
-        assert metadata.readme is None
-        assert metadata.custom == {}
-
-    def test_create_with_values(self):
-        """Test creating PromptMetadata with explicit values."""
-        metadata = PromptMetadata(
-            description="Test description",
-            readme="# Readme",
-            custom={
-                "version": "1.0.0", "author": "test"
-            },
-        )
-        assert metadata.description == "Test description"
-        assert metadata.readme == "# Readme"
-        assert metadata.custom == {"version": "1.0.0", "author": "test"}
-
-    def test_invalid_custom_key(self):
-        """Test that invalid custom keys raise ValidationError."""
-        with pytest.raises(ValidationError, match="Invalid metadata key"):
-            PromptMetadata(custom={"invalid key": "value"})
-
-    def test_invalid_custom_value(self):
-        """Test that invalid custom values raise ValidationError."""
-        with pytest.raises(ValidationError, match="Invalid metadata value"):
-            PromptMetadata(custom={"key": "invalid value"})
-
-    def test_to_tags(self):
-        """Test converting custom metadata to tags."""
-        metadata = PromptMetadata(custom={"version": "1.0.0", "author": "test"})
-        tags = metadata.to_tags()
-        assert set(tags) == {"version:1.0.0", "author:test"}
-
-    def test_from_tags_with_key_value(self):
-        """Test creating PromptMetadata from key:value tags."""
-        tags = ["version:1.0.0", "author:test-user", "simple-tag"]
-        metadata = PromptMetadata.from_tags(
-            tags=tags,
-            description="Test",
-            readme="# Readme",
-        )
-        assert metadata.description == "Test"
-        assert metadata.readme == "# Readme"
-        assert metadata.custom == {"version": "1.0.0", "author": "test-user"}
-
-    def test_from_tags_skips_invalid(self):
-        """Test that from_tags skips invalid tags when validate=True."""
-        tags = ["valid:tag", "invalid key:value"]
-        metadata = PromptMetadata.from_tags(tags=tags, validate=True)
-        # Invalid tag should be skipped
-        assert "invalid key" not in metadata.custom
-        assert metadata.custom.get("valid") == "tag"
-
-    def test_from_tags_none(self):
-        """Test from_tags with None tags."""
-        metadata = PromptMetadata.from_tags(tags=None)
-        assert metadata.custom == {}
-
-
 # =============================================================================
 # Tests for LangSmithPromptStoreConfig
 # =============================================================================
@@ -267,16 +150,17 @@ class TestLangSmithPromptStoreConfig:
         assert config.api_url is None
         assert config.is_public is False
         assert config.default_tags is None
+        assert config.timeout_ms is None
 
-    def test_with_valid_default_tags(self):
-        """Test config with valid default_tags."""
-        config = LangSmithPromptStoreConfig(default_tags=["env:prod", "team:ml"])
-        assert config.default_tags == ["env:prod", "team:ml"]
+    def test_with_default_tags(self):
+        """Test config with default_tags (simple strings)."""
+        config = LangSmithPromptStoreConfig(default_tags=["production", "approved"])
+        assert config.default_tags == ["production", "approved"]
 
-    def test_with_invalid_default_tags(self):
-        """Test that invalid default_tags raise ValidationError."""
-        with pytest.raises(ValidationError, match="Invalid tag"):
-            LangSmithPromptStoreConfig(default_tags=["invalid tag"])
+    def test_with_timeout_ms(self):
+        """Test config with timeout_ms."""
+        config = LangSmithPromptStoreConfig(timeout_ms=30000)
+        assert config.timeout_ms == 30000
 
 
 # =============================================================================
@@ -287,13 +171,17 @@ class TestLangSmithPromptStoreConfig:
 class TestLangSmithPromptStoreInit:
     """Tests for LangSmithPromptStore initialization."""
 
-    def test_init_with_defaults(self):
+    def test_init_with_defaults(self, monkeypatch):
         """Test initialization with default values."""
+        # Clear environment variables that might be set
+        monkeypatch.delenv("LANGSMITH_API_KEY", raising=False)
+        monkeypatch.delenv("LANGCHAIN_API_KEY", raising=False)
         store = LangSmithPromptStore()
         assert store._api_key is None
         assert store._api_url is None
         assert store._is_public is False
         assert store._default_tags == []
+        assert store._timeout_ms is None
 
     def test_init_with_values(self):
         """Test initialization with explicit values."""
@@ -301,17 +189,14 @@ class TestLangSmithPromptStoreInit:
             api_key="test-key",
             api_url="https://api.test.com",
             is_public=True,
-            default_tags=["env:test"],
+            default_tags=["env-test"],
+            timeout_ms=30000,
         )
         assert store._api_key == "test-key"
         assert store._api_url == "https://api.test.com"
         assert store._is_public is True
-        assert store._default_tags == ["env:test"]
-
-    def test_init_with_invalid_default_tags(self):
-        """Test that invalid default_tags raise ValueError."""
-        with pytest.raises(ValueError, match="Invalid tag"):
-            LangSmithPromptStore(default_tags=["invalid tag"])
+        assert store._default_tags == ["env-test"]
+        assert store._timeout_ms == 30000
 
 
 class TestLangSmithPromptStoreContextManager:
@@ -355,18 +240,25 @@ class TestLangSmithPromptStoreContextManager:
 class TestLangSmithPromptStorePutObject:
     """Tests for LangSmithPromptStore.put_object."""
 
-    async def test_put_object_success(self, sample_prompt_manifest, mock_client):
-        """Test successful put_object."""
+    async def test_put_object_success(self, mock_client):
+        """Test successful put_object with versioned metadata."""
         mock_client.create_prompt = AsyncMock()
         mock_client.create_commit = AsyncMock()
 
         with patch("nat.plugins.langchain.langsmith_prompt_store.AsyncClient", return_value=mock_client):
             async with LangSmithPromptStore(api_key="test-key") as store:
+                # Data is a prompt template string
+                prompt_str = "Answer the following question: {question}"
+                # Note: ObjectStoreItem.metadata requires dict[str, str]
+                # Tags must be JSON-serialized
                 item = ObjectStoreItem(
-                    data=json.dumps(sample_prompt_manifest).encode("utf-8"),
-                    content_type="application/json",
+                    data=prompt_str.encode("utf-8"),
+                    content_type="text/plain",
                     metadata={
-                        "description": "Test prompt", "version": "1.0.0"
+                        "description": "Test prompt",
+                        "tags": json.dumps(["production"]),
+                        "version": "1.0.0",
+                        "author": "test-user",
                     },
                 )
                 await store.put_object("test-prompt", item)
@@ -374,26 +266,37 @@ class TestLangSmithPromptStorePutObject:
                 mock_client.create_prompt.assert_called_once()
                 mock_client.create_commit.assert_called_once()
 
-    async def test_put_object_already_exists(self, sample_prompt_manifest, mock_client):
+                # Verify prompt-level tags
+                create_call = mock_client.create_prompt.call_args
+                assert "production" in create_call.kwargs.get("tags", [])
+
+                # Verify versioned metadata in ChatPromptTemplate
+                commit_call = mock_client.create_commit.call_args
+                prompt_template = commit_call.kwargs.get("object") or commit_call.args[1]
+                assert prompt_template.metadata == {"version": "1.0.0", "author": "test-user"}
+
+    async def test_put_object_already_exists(self, mock_client):
         """Test put_object raises KeyAlreadyExistsError when prompt exists."""
         mock_client.create_prompt = AsyncMock(side_effect=LangSmithConflictError("Conflict"))
 
         with patch("nat.plugins.langchain.langsmith_prompt_store.AsyncClient", return_value=mock_client):
             async with LangSmithPromptStore(api_key="test-key") as store:
+                prompt_str = "Answer: {question}"
                 item = ObjectStoreItem(
-                    data=json.dumps(sample_prompt_manifest).encode("utf-8"),
-                    content_type="application/json",
+                    data=prompt_str.encode("utf-8"),
+                    content_type="text/plain",
                 )
                 with pytest.raises(KeyAlreadyExistsError):
                     await store.put_object("test-prompt", item)
 
-    async def test_put_object_invalid_key(self, sample_prompt_manifest, mock_client):
+    async def test_put_object_invalid_key(self, mock_client):
         """Test put_object raises ValueError for invalid key."""
         with patch("nat.plugins.langchain.langsmith_prompt_store.AsyncClient", return_value=mock_client):
             async with LangSmithPromptStore(api_key="test-key") as store:
+                prompt_str = "Answer: {question}"
                 item = ObjectStoreItem(
-                    data=json.dumps(sample_prompt_manifest).encode("utf-8"),
-                    content_type="application/json",
+                    data=prompt_str.encode("utf-8"),
+                    content_type="text/plain",
                 )
                 with pytest.raises(ValueError, match="Invalid prompt key"):
                     await store.put_object("Invalid Key!", item)
@@ -402,7 +305,7 @@ class TestLangSmithPromptStorePutObject:
 class TestLangSmithPromptStoreUpsertObject:
     """Tests for LangSmithPromptStore.upsert_object."""
 
-    async def test_upsert_object_new(self, sample_prompt_manifest, mock_client):
+    async def test_upsert_object_new(self, mock_client):
         """Test upsert_object creates new prompt when it doesn't exist."""
         mock_client.get_prompt = AsyncMock(return_value=None)
         mock_client.create_prompt = AsyncMock()
@@ -410,10 +313,13 @@ class TestLangSmithPromptStoreUpsertObject:
 
         with patch("nat.plugins.langchain.langsmith_prompt_store.AsyncClient", return_value=mock_client):
             async with LangSmithPromptStore(api_key="test-key") as store:
+                prompt_str = "Answer: {question}"
                 item = ObjectStoreItem(
-                    data=json.dumps(sample_prompt_manifest).encode("utf-8"),
-                    content_type="application/json",
-                    metadata={"description": "Test prompt"},
+                    data=prompt_str.encode("utf-8"),
+                    content_type="text/plain",
+                    metadata={
+                        "description": "Test prompt", "version": "1.0.0"
+                    },
                 )
                 await store.upsert_object("test-prompt", item)
 
@@ -421,7 +327,7 @@ class TestLangSmithPromptStoreUpsertObject:
                 mock_client.create_prompt.assert_called_once()
                 mock_client.create_commit.assert_called_once()
 
-    async def test_upsert_object_existing(self, sample_prompt_manifest, mock_client, mock_prompt_info):
+    async def test_upsert_object_existing(self, mock_client, mock_prompt_info):
         """Test upsert_object updates existing prompt."""
         mock_client.get_prompt = AsyncMock(return_value=mock_prompt_info)
         mock_client.update_prompt = AsyncMock()
@@ -429,10 +335,13 @@ class TestLangSmithPromptStoreUpsertObject:
 
         with patch("nat.plugins.langchain.langsmith_prompt_store.AsyncClient", return_value=mock_client):
             async with LangSmithPromptStore(api_key="test-key") as store:
+                prompt_str = "Updated answer: {question}"
                 item = ObjectStoreItem(
-                    data=json.dumps(sample_prompt_manifest).encode("utf-8"),
-                    content_type="application/json",
-                    metadata={"description": "Updated prompt"},
+                    data=prompt_str.encode("utf-8"),
+                    content_type="text/plain",
+                    metadata={
+                        "description": "Updated prompt", "version": "2.0.0"
+                    },
                 )
                 await store.upsert_object("test-prompt", item)
 
@@ -440,7 +349,7 @@ class TestLangSmithPromptStoreUpsertObject:
                 mock_client.update_prompt.assert_called_once()
                 mock_client.create_commit.assert_called_once()
 
-    async def test_upsert_object_content_unchanged(self, sample_prompt_manifest, mock_client, mock_prompt_info):
+    async def test_upsert_object_content_unchanged(self, mock_client, mock_prompt_info):
         """Test upsert_object handles 409 when content unchanged."""
         mock_client.get_prompt = AsyncMock(return_value=mock_prompt_info)
         mock_client.update_prompt = AsyncMock()
@@ -448,21 +357,23 @@ class TestLangSmithPromptStoreUpsertObject:
 
         with patch("nat.plugins.langchain.langsmith_prompt_store.AsyncClient", return_value=mock_client):
             async with LangSmithPromptStore(api_key="test-key") as store:
+                prompt_str = "Same content: {question}"
                 item = ObjectStoreItem(
-                    data=json.dumps(sample_prompt_manifest).encode("utf-8"),
-                    content_type="application/json",
+                    data=prompt_str.encode("utf-8"),
+                    content_type="text/plain",
                     metadata={"description": "Updated prompt"},
                 )
                 # Should not raise - 409 with "Nothing to commit" is handled gracefully
                 await store.upsert_object("test-prompt", item)
 
-    async def test_upsert_object_invalid_key(self, sample_prompt_manifest, mock_client):
+    async def test_upsert_object_invalid_key(self, mock_client):
         """Test upsert_object raises ValueError for invalid key."""
         with patch("nat.plugins.langchain.langsmith_prompt_store.AsyncClient", return_value=mock_client):
             async with LangSmithPromptStore(api_key="test-key") as store:
+                prompt_str = "Answer: {question}"
                 item = ObjectStoreItem(
-                    data=json.dumps(sample_prompt_manifest).encode("utf-8"),
-                    content_type="application/json",
+                    data=prompt_str.encode("utf-8"),
+                    content_type="text/plain",
                 )
                 with pytest.raises(ValueError, match="Invalid prompt key"):
                     await store.upsert_object("Invalid Key!", item)
@@ -472,17 +383,26 @@ class TestLangSmithPromptStoreGetObject:
     """Tests for LangSmithPromptStore.get_object."""
 
     async def test_get_object_success(self, mock_client, mock_prompt_info, mock_commit):
-        """Test successful get_object."""
+        """Test successful get_object with versioned metadata from manifest."""
         mock_client.get_prompt = AsyncMock(return_value=mock_prompt_info)
         mock_client.pull_prompt_commit = AsyncMock(return_value=mock_commit)
 
-        with patch("nat.plugins.langchain.langsmith_prompt_store.AsyncClient", return_value=mock_client):
+        # Mock the deserialized prompt template with versioned metadata
+        mock_prompt_template = MagicMock()
+        mock_prompt_template.metadata = {"version": "1.0.0", "author": "test-user"}
+
+        with patch("nat.plugins.langchain.langsmith_prompt_store.AsyncClient", return_value=mock_client), \
+             patch("nat.plugins.langchain.langsmith_prompt_store.lc_load", return_value=mock_prompt_template):
             async with LangSmithPromptStore(api_key="test-key") as store:
                 item = await store.get_object("test-prompt")
 
                 assert item.content_type == "application/json"
+                # Non-versioned metadata from prompt-level info
                 assert item.metadata["description"] == "Test description"
                 assert item.metadata["readme"] == "# Test Readme"
+                # Tags are JSON-serialized for ObjectStoreItem string compatibility
+                assert json.loads(item.metadata["tags"]) == ["production", "approved"]
+                # Versioned metadata from ChatPromptTemplate.metadata (via lc_load)
                 assert item.metadata["version"] == "1.0.0"
                 assert item.metadata["author"] == "test-user"
 
@@ -501,6 +421,29 @@ class TestLangSmithPromptStoreGetObject:
             async with LangSmithPromptStore(api_key="test-key") as store:
                 with pytest.raises(ValueError, match="Invalid prompt key"):
                     await store.get_object("Invalid Key!")
+
+    async def test_get_object_lc_load_failure_graceful(self, mock_client, mock_prompt_info, mock_commit):
+        """Test get_object handles lc_load failure gracefully (still returns item)."""
+        mock_client.get_prompt = AsyncMock(return_value=mock_prompt_info)
+        mock_client.pull_prompt_commit = AsyncMock(return_value=mock_commit)
+
+        # Mock lc_load to raise a caught exception type (TypeError, ValueError, KeyError, AttributeError)
+        lc_load_patch = patch(
+            "nat.plugins.langchain.langsmith_prompt_store.lc_load",
+            side_effect=TypeError("Deserialization failed"),
+        )
+        with patch("nat.plugins.langchain.langsmith_prompt_store.AsyncClient", return_value=mock_client), \
+             lc_load_patch:
+            async with LangSmithPromptStore(api_key="test-key") as store:
+                item = await store.get_object("test-prompt")
+
+                # Should still return item with prompt-level metadata
+                assert item.content_type == "application/json"
+                assert item.metadata["description"] == "Test description"
+                assert item.metadata["readme"] == "# Test Readme"
+                # Versioned metadata should be missing (lc_load failed)
+                assert "version" not in item.metadata
+                assert "author" not in item.metadata
 
 
 class TestLangSmithPromptStoreDeleteObject:
@@ -535,55 +478,116 @@ class TestLangSmithPromptStoreDeleteObject:
 
 
 class TestLangSmithPromptStoreMetadata:
-    """Tests for metadata extraction and building."""
+    """Tests for metadata extraction and handling."""
 
-    async def test_metadata_with_default_tags(self, sample_prompt_manifest, mock_client):
-        """Test that default_tags are included in metadata."""
+    async def test_metadata_with_default_tags(self, mock_client):
+        """Test that default_tags are merged with user tags."""
         mock_client.create_prompt = AsyncMock()
         mock_client.create_commit = AsyncMock()
 
         with patch("nat.plugins.langchain.langsmith_prompt_store.AsyncClient", return_value=mock_client):
             async with LangSmithPromptStore(
                     api_key="test-key",
-                    default_tags=["env:test", "team:ml"],
+                    default_tags=["default-tag", "env-test"],
             ) as store:
+                prompt_str = "Answer: {question}"
+                # Note: ObjectStoreItem.metadata requires dict[str, str]
+                # Tags must be JSON-serialized
                 item = ObjectStoreItem(
-                    data=json.dumps(sample_prompt_manifest).encode("utf-8"),
-                    content_type="application/json",
-                    metadata={"version": "1.0.0"},
+                    data=prompt_str.encode("utf-8"),
+                    content_type="text/plain",
+                    metadata={
+                        "tags": json.dumps(["user-tag"]), "version": "1.0.0"
+                    },
                 )
                 await store.put_object("test-prompt", item)
 
-                # Check that create_prompt was called with tags including defaults
+                # Check that create_prompt was called with merged tags
                 call_kwargs = mock_client.create_prompt.call_args[1]
                 tags = call_kwargs.get("tags") or []
-                assert "env:test" in tags
-                assert "team:ml" in tags
-                assert "version:1.0.0" in tags
+                assert "default-tag" in tags
+                assert "env-test" in tags
+                assert "user-tag" in tags
 
-    async def test_metadata_reserved_keys_handled(self, sample_prompt_manifest, mock_client):
-        """Test that reserved metadata keys are handled correctly."""
+    async def test_metadata_reserved_keys_separated(self, mock_client):
+        """Test that reserved metadata keys are stored separately from versioned metadata."""
         mock_client.create_prompt = AsyncMock()
         mock_client.create_commit = AsyncMock()
 
         with patch("nat.plugins.langchain.langsmith_prompt_store.AsyncClient", return_value=mock_client):
             async with LangSmithPromptStore(api_key="test-key") as store:
+                prompt_str = "Answer: {question}"
+                # Note: ObjectStoreItem.metadata requires dict[str, str]
+                # Tags must be JSON-serialized
                 item = ObjectStoreItem(
-                    data=json.dumps(sample_prompt_manifest).encode("utf-8"),
-                    content_type="application/json",
+                    data=prompt_str.encode("utf-8"),
+                    content_type="text/plain",
                     metadata={
                         "description": "Test description",
                         "readme": "# Test Readme",
-                        "content_type": "application/json",  # Should be ignored
-                        "version": "1.0.0",  # Should become tag
+                        "tags": json.dumps(["production"]),
+                        "content_type": "text/plain",  # Reserved, should be excluded from versioned
+                        "version": "1.0.0",  # Custom, should be in versioned metadata
+                        "author": "test-user",  # Custom, should be in versioned metadata
                     },
                 )
                 await store.put_object("test-prompt", item)
 
+                # Check prompt-level metadata
+                create_call = mock_client.create_prompt.call_args[1]
+                assert create_call.get("description") == "Test description"
+                assert create_call.get("readme") == "# Test Readme"
+                assert "production" in (create_call.get("tags") or [])
+
+                # Check versioned metadata in ChatPromptTemplate
+                commit_call = mock_client.create_commit.call_args
+                prompt_template = commit_call.kwargs.get("object") or commit_call.args[1]
+                # Only custom (non-reserved) keys should be in versioned metadata
+                assert prompt_template.metadata == {"version": "1.0.0", "author": "test-user"}
+                # Reserved keys should NOT be in versioned metadata
+                assert "description" not in prompt_template.metadata
+                assert "readme" not in prompt_template.metadata
+                assert "tags" not in prompt_template.metadata
+                assert "content_type" not in prompt_template.metadata
+
+    async def test_tags_can_be_string(self, mock_client):
+        """Test that tags can be provided as a single string."""
+        mock_client.create_prompt = AsyncMock()
+        mock_client.create_commit = AsyncMock()
+
+        with patch("nat.plugins.langchain.langsmith_prompt_store.AsyncClient", return_value=mock_client):
+            async with LangSmithPromptStore(api_key="test-key") as store:
+                prompt_str = "Answer: {question}"
+                item = ObjectStoreItem(
+                    data=prompt_str.encode("utf-8"),
+                    content_type="text/plain",
+                    metadata={"tags": "single-tag"},  # String instead of list
+                )
+                await store.put_object("test-prompt", item)
+
                 call_kwargs = mock_client.create_prompt.call_args[1]
-                assert call_kwargs.get("description") == "Test description"
-                assert call_kwargs.get("readme") == "# Test Readme"
                 tags = call_kwargs.get("tags") or []
-                assert "version:1.0.0" in tags
-                # content_type should not be in tags
-                assert not any("content_type" in tag for tag in tags)
+                assert "single-tag" in tags
+
+    async def test_tags_json_round_trip(self, mock_client):
+        """Test that JSON-serialized tags from get_object can be used in put_object."""
+        mock_client.create_prompt = AsyncMock()
+        mock_client.create_commit = AsyncMock()
+
+        with patch("nat.plugins.langchain.langsmith_prompt_store.AsyncClient", return_value=mock_client):
+            async with LangSmithPromptStore(api_key="test-key") as store:
+                prompt_str = "Answer: {question}"
+                # Simulate tags that came from a previous get_object (JSON string)
+                item = ObjectStoreItem(
+                    data=prompt_str.encode("utf-8"),
+                    content_type="text/plain",
+                    metadata={"tags": '["tag1", "tag2"]'},  # JSON string from round-trip
+                )
+                await store.put_object("test-prompt", item)
+
+                call_kwargs = mock_client.create_prompt.call_args[1]
+                tags = call_kwargs.get("tags") or []
+                # Should be parsed as list, not treated as single tag
+                assert "tag1" in tags
+                assert "tag2" in tags
+                assert '["tag1", "tag2"]' not in tags  # Should not be the raw JSON string
