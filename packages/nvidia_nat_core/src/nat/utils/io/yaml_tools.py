@@ -105,6 +105,9 @@ def _resolve_prompt_files(config: dict, base_path: Path) -> dict:
             if not resolved_path.is_absolute():
                 resolved_path = base_path / file_path_str
 
+            # Resolve symlinks to validate the actual file extension
+            resolved_path = resolved_path.resolve()
+
             # Validate file extension before loading
             _validate_prompt_file_extension(resolved_path)
 
