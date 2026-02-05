@@ -182,8 +182,8 @@ The FastMCP server runtime uses OAuth2 token introspection for this example. Reg
 
 ```bash
 # Terminal 1
-export CALCULATOR_RESOURCE_CLIENT_ID="nat-mcp-resource-server"  # Resource server client ID
-export CALCULATOR_RESOURCE_CLIENT_SECRET="<your-resource-client-secret>"  # Resource server client secret from Step 4.5
+export NAT_CALCULATOR_RESOURCE_CLIENT_ID="nat-mcp-resource-server"  # Resource server client ID
+export NAT_CALCULATOR_RESOURCE_CLIENT_SECRET="<your-resource-client-secret>"  # Resource server client secret from Step 4.5
 
 nat fastmcp server run --config_file examples/MCP/simple_calculator_fastmcp_protected/configs/config-server.yml
 ```
@@ -193,8 +193,8 @@ nat fastmcp server run --config_file examples/MCP/simple_calculator_fastmcp_prot
 Set the client ID and client secret from Step 3 in the environment variables:
 ```bash
 # Terminal 2
-export CALCULATOR_CLIENT_ID="nat-mcp-client"  # OAuth client ID for the MCP client (auth code flow)
-export CALCULATOR_CLIENT_SECRET="<your-client-secret>"  # OAuth client secret for the MCP client from Step 3.8
+export NAT_CALCULATOR_CLIENT_ID="nat-mcp-client"  # OAuth client ID for the MCP client (auth code flow)
+export NAT_CALCULATOR_CLIENT_SECRET="<your-client-secret>"  # OAuth client secret for the MCP client from Step 3.8
 
 nat run --config_file examples/MCP/simple_calculator_fastmcp_protected/configs/config-client.yml \
   --input "Is the product of 2 and 3 greater than the current hour of the day?"
@@ -241,8 +241,8 @@ general:
     server_auth:
       issuer_url: http://localhost:8080/realms/master
       introspection_endpoint: http://localhost:8080/realms/master/protocol/openid-connect/token/introspect
-      client_id: ${CALCULATOR_RESOURCE_CLIENT_ID:-"nat-mcp-resource-server"}
-      client_secret: ${CALCULATOR_RESOURCE_CLIENT_SECRET}
+      client_id: ${NAT_CALCULATOR_RESOURCE_CLIENT_ID:-"nat-mcp-resource-server"}
+      client_secret: ${NAT_CALCULATOR_RESOURCE_CLIENT_SECRET}
       scopes: [calculator_mcp_execute]
 ```
 
@@ -264,8 +264,8 @@ authentication:
     _type: mcp_oauth2
     server_url: http://localhost:9902/mcp
     redirect_uri: http://localhost:8000/auth/redirect
-    client_id: ${CALCULATOR_CLIENT_ID:-"nat-mcp-client"}
-    client_secret: ${CALCULATOR_CLIENT_SECRET}
+    client_id: ${NAT_CALCULATOR_CLIENT_ID:-"nat-mcp-client"}
+    client_secret: ${NAT_CALCULATOR_CLIENT_SECRET}
     scopes: [calculator_mcp_execute]
 
 workflow:

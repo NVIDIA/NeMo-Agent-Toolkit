@@ -41,6 +41,14 @@ nat
 │       └── update
 ├── eval
 ├── finetune
+├── fastmcp
+│   ├── server
+│   │   ├── dev
+│   │   ├── install
+│   │   │   ├── cursor
+│   │   │   └── nat-workflow
+│   │   └── run
+│   └── serve
 ├── info
 │   ├── channels
 │   └── components
@@ -72,8 +80,10 @@ nat
 ├── sizing
 │   └── calc
 ├── start
+│   ├── a2a
 │   ├── console
 │   ├── fastapi
+│   ├── fastmcp
 │   └── mcp
 ├── uninstall
 ├── validate

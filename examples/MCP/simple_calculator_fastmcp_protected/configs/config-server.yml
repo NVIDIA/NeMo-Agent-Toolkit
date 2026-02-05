@@ -37,8 +37,8 @@ general:
       introspection_endpoint: http://localhost:8080/realms/master/protocol/openid-connect/token/introspect
 
       # Client credentials used by the FastMCP server when calling the introspection endpoint
-      client_id: ${CALCULATOR_RESOURCE_CLIENT_ID:-"nat-mcp-resource-server"}
-      client_secret: ${CALCULATOR_RESOURCE_CLIENT_SECRET}
+      client_id: ${NAT_CALCULATOR_RESOURCE_CLIENT_ID:-"nat-mcp-resource-server"}
+      client_secret: ${NAT_CALCULATOR_RESOURCE_CLIENT_SECRET}
 
       # Required scopes for calculator operations
       scopes:

@@ -45,8 +45,8 @@ authentication:
     _type: mcp_oauth2
     server_url: http://localhost:9902/mcp
     redirect_uri: http://localhost:8000/auth/redirect
-    client_id: ${CALCULATOR_CLIENT_ID:-"nat-mcp-client"}
-    client_secret: ${CALCULATOR_CLIENT_SECRET}
+    client_id: ${NAT_CALCULATOR_CLIENT_ID:-"nat-mcp-client"}
+    client_secret: ${NAT_CALCULATOR_CLIENT_SECRET}
     scopes: [calculator_mcp_execute]
 
 llms:
