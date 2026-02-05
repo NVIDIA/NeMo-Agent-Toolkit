@@ -660,13 +660,33 @@ async def huggingface_inference_langchain(
                         await run_manager.on_llm_new_token(content, chunk=chat_chunk)
                     yield chat_chunk
 
+    # Warn about unsupported config fields
+    if llm_config.top_k is not None:
+        logger.warning(
+            "top_k parameter is not supported by HuggingFace chat_completion API and will be ignored"
+        )
+    if llm_config.repetition_penalty is not None:
+        logger.warning(
+            "repetition_penalty parameter is not supported by HuggingFace chat_completion API "
+            "and will be ignored"
+        )
+
     # Initialize the InferenceClient
-    client = InferenceClient(
-        model=llm_config.model_name,
-        token=llm_config.api_key.get_secret_value() if llm_config.api_key else None,
-        base_url=llm_config.endpoint_url,
-        timeout=llm_config.timeout,
-    )
+    # Note: model and base_url are mutually exclusive parameters
+    if llm_config.endpoint_url:
+        # Custom endpoint mode: use base_url only
+        client = InferenceClient(
+            base_url=llm_config.endpoint_url,
+            token=llm_config.api_key.get_secret_value() if llm_config.api_key else None,
+            timeout=llm_config.timeout,
+        )
+    else:
+        # Serverless API mode: use model only
+        client = InferenceClient(
+            model=llm_config.model_name,
+            token=llm_config.api_key.get_secret_value() if llm_config.api_key else None,
+            timeout=llm_config.timeout,
+        )
 
     # Create the LangChain model
     model = HuggingFaceInferenceModel(
