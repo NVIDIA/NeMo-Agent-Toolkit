@@ -443,8 +443,12 @@ async def optimize_prompts(
 
         # Save final
         try:
-            await storage.save_final(prompts=best_prompts)
-            logger.info("Saved final optimized prompts")
+            await storage.save_final(
+                prompts=best_prompts,
+                fitness_score=best.scalar_fitness,
+                evaluator_scores=best.metrics,
+            )
+            logger.info("Saved final optimized prompts (fitness=%.4f)", best.scalar_fitness or 0.0)
         except Exception as e:
             logger.error(f"Failed to save final prompts: {e}")
             # Don't fail the optimization, but log prominently

@@ -75,6 +75,9 @@ RESERVED_METADATA_KEYS = frozenset[str]({"description", "readme", "content_type"
 TAG_KEY_PATTERN = re.compile(r"^[a-zA-Z0-9_-]+$")
 TAG_VALUE_PATTERN = re.compile(r"^[a-zA-Z0-9_.-]+$")
 
+# Stricter pattern for LangSmith commit tags (no dots allowed)
+COMMIT_TAG_PATTERN = re.compile(r"^[a-zA-Z0-9_-]+$")
+
 # Validation pattern for LangSmith prompt keys (handles)
 # Must be lowercase alphanumeric, hyphen, or underscore, starting with a-z
 PROMPT_KEY_PATTERN = re.compile(r"^[a-z][a-z0-9_-]*$")
@@ -133,6 +136,81 @@ def _validate_tags(tags: list[str], source: str = "tags") -> None:
             raise ValueError(f"Invalid tag '{tag}' in {source}: must be alphanumeric with underscores/hyphens, "
                              "or 'key:value' format where key is alphanumeric with _/- and value is "
                              "alphanumeric with _/-/.")
+
+
+def _sanitize_tag_for_commit(tag: str) -> str:
+    """
+    Sanitize a tag to conform to LangSmith commit requirements.
+
+    LangSmith commits require tags to only contain letters, numbers, hyphens,
+    and underscores (no dots, colons, or other special characters).
+
+    Converts 'key:value' format to 'key--value' format for commits.
+
+    Args:
+        tag: The tag string to sanitize (may be 'key:value' format).
+
+    Returns:
+        Sanitized tag string with invalid characters replaced.
+    """
+    if ":" in tag:
+        key, value = tag.split(":", 1)
+        # Sanitize both key and value parts
+        sanitized_key = _sanitize_tag_component(key)
+        sanitized_value = _sanitize_tag_component(value)
+        # Use double hyphen instead of colon for commits
+        return f"{sanitized_key}--{sanitized_value}"
+    else:
+        # Simple tag
+        return _sanitize_tag_component(tag)
+
+
+def _sanitize_tag_component(component: str) -> str:
+    """
+    Sanitize a single tag component (key or value).
+
+    Intelligently replaces invalid characters:
+    - Dots (.) -> underscores (_) [common in versions like "1.0.0"]
+    - Spaces -> hyphens (-)
+    - Other invalid chars -> removed
+
+    Args:
+        component: The tag component to sanitize.
+
+    Returns:
+        Sanitized component string.
+    """
+    # Replace dots with underscores (common in version strings)
+    sanitized = component.replace(".", "_")
+    # Replace spaces with hyphens
+    sanitized = sanitized.replace(" ", "-")
+    # Remove any remaining invalid characters
+    sanitized = re.sub(r"[^a-zA-Z0-9_-]", "", sanitized)
+    return sanitized
+
+
+def _sanitize_tags_for_commit(tags: list[str]) -> tuple[list[str], list[tuple[str, str]]]:
+    """
+    Sanitize a list of tags for LangSmith commit operations.
+
+    Args:
+        tags: List of tags to sanitize.
+
+    Returns:
+        Tuple of (sanitized_tags, changes) where changes is a list of
+        (original, sanitized) pairs for tags that were modified.
+    """
+    sanitized = []
+    changes = []
+
+    for tag in tags:
+        sanitized_tag = _sanitize_tag_for_commit(tag)
+        sanitized.append(sanitized_tag)
+
+        if sanitized_tag != tag:
+            changes.append((tag, sanitized_tag))
+
+    return sanitized, changes
 
 
 class PromptMetadata(BaseModel):
@@ -473,8 +551,11 @@ class LangSmithPromptStore(ObjectStore):
                 additional_message=f"LangSmith prompt '{key}' already exists.",
             )
 
+        # Sanitize tags for commit (LangSmith commits don't allow dots or colons)
+        commit_tags, _ = _sanitize_tags_for_commit(tags or [])
+
         # Add the prompt content as the first commit
-        await client.create_commit(key, object=prompt_manifest)
+        await client.create_commit(key, object=prompt_manifest, tags=commit_tags if commit_tags else None)
         logger.info("Created LangSmith prompt: %s", key)
 
     @override
@@ -530,10 +611,13 @@ class LangSmithPromptStore(ObjectStore):
                     is_public=self._is_public,
                 )
 
+            # Sanitize tags for commit (LangSmith commits don't allow dots or colons)
+            commit_tags, _ = _sanitize_tags_for_commit(tags or [])
+
             # Create commit with the content
             # May return 409 if content unchanged (expected for metadata-only updates)
             try:
-                await client.create_commit(key, object=prompt_manifest)
+                await client.create_commit(key, object=prompt_manifest, tags=commit_tags if commit_tags else None)
                 logger.info("Upserted LangSmith prompt: %s", key)
             except LangSmithConflictError as e:
                 if "Nothing to commit" in str(e):

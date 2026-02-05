@@ -47,12 +47,17 @@ class PromptStorage(Protocol):
         """
         ...
 
-    async def save_final(self, prompts: dict[str, tuple[str, str]]) -> None:
+    async def save_final(self,
+                         prompts: dict[str, tuple[str, str]],
+                         fitness_score: float | None = None,
+                         evaluator_scores: dict[str, float] | None = None) -> None:
         """
         Save final optimized prompts.
 
         Args:
             prompts: Map of param_name -> (prompt_text, purpose)
+            fitness_score: Optional overall fitness score for the final prompts
+            evaluator_scores: Optional map of evaluator_name -> score
         """
         ...
 
@@ -136,12 +141,25 @@ class LocalFilePromptStorage:
 
         checkpoint_path.write_text(json.dumps(checkpoint_data, indent=2))
 
-    async def save_final(self, prompts: dict[str, tuple[str, str]]) -> None:
-        """Save final prompts to optimized_prompts.json."""
+    async def save_final(self,
+                         prompts: dict[str, tuple[str, str]],
+                         fitness_score: float | None = None,
+                         evaluator_scores: dict[str, float] | None = None) -> None:
+        """Save final prompts to optimized_prompts.json with metadata."""
         final_path = self.output_dir / "optimized_prompts.json"
 
         # Convert tuples to lists for JSON serialization
-        final_data = {param_name: [prompt_text, purpose] for param_name, (prompt_text, purpose) in prompts.items()}
+        prompts_data = {param_name: [prompt_text, purpose] for param_name, (prompt_text, purpose) in prompts.items()}
+
+        # Build final structure with metadata
+        final_data = {"metadata": {"type": "final", }, "prompts": prompts_data}
+
+        # Add optional score information
+        if fitness_score is not None:
+            final_data["metadata"]["fitness_score"] = fitness_score
+        if evaluator_scores is not None:
+            # Flatten evaluator scores into individual metadata keys
+            final_data["metadata"].update(evaluator_scores)
 
         final_path.write_text(json.dumps(final_data, indent=2))
 
@@ -248,10 +266,29 @@ class ObjectStorePromptStorage:
 
             await self.object_store.upsert_object(key, item)
 
-    async def save_final(self, prompts: dict[str, tuple[str, str]]) -> None:
-        """Save final prompts to object store."""
-        # Not necessary as users can retrieve final prompts from latest checkpoint based on metadata
-        pass
+    async def save_final(self,
+                         prompts: dict[str, tuple[str, str]],
+                         fitness_score: float | None = None,
+                         evaluator_scores: dict[str, float] | None = None) -> None:
+        """Save final prompts to object store with metadata."""
+        for prompt_id, (prompt_text, purpose) in prompts.items():
+            key = prompt_id.replace('.', '-')
+            data = prompt_text.encode("utf-8")
+
+            # Build metadata dict
+            metadata = {"type": "final"}
+
+            if fitness_score is not None:
+                metadata["fitness_score"] = str(fitness_score)
+
+            if evaluator_scores is not None:
+                # Flatten evaluator scores into individual metadata keys (convert to strings)
+                for evaluator_name, score in evaluator_scores.items():
+                    metadata[evaluator_name] = str(score)
+
+            item = ObjectStoreItem(data=data, content_type="application/json", metadata=metadata)
+
+            await self.object_store.upsert_object(key, item)
 
     async def load_checkpoint(self, generation: int) -> dict[str, tuple[str, str]]:
         """Load checkpoint from object store. Raises KeyError if not found."""
