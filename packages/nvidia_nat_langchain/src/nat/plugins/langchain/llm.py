@@ -16,6 +16,7 @@
 
 import logging
 import os
+from collections.abc import AsyncIterator
 from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -383,14 +384,13 @@ async def huggingface_langchain(llm_config: HuggingFaceConfig, _builder: Builder
 @register_llm_client(config_type=HuggingFaceInferenceConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 async def huggingface_inference_langchain(
     llm_config: HuggingFaceInferenceConfig, _builder: Builder
-) -> "AsyncIterator[Any]":
+) -> AsyncIterator[Any]:
     """
     LangChain client for HuggingFace Inference API.
 
     Supports Serverless API, Inference Endpoints, and TGI servers via huggingface_hub.InferenceClient.
     """
     import asyncio
-    from collections.abc import AsyncIterator
     from collections.abc import Iterator
 
     from langchain_core.callbacks.manager import AsyncCallbackManagerForLLMRun
@@ -425,8 +425,6 @@ async def huggingface_inference_langchain(
         max_new_tokens: int | None
         temperature: float | None
         top_p: float | None
-        top_k: int | None
-        repetition_penalty: float | None
         seed: int | None
 
         # FIX 4: Use Pydantic v2 ConfigDict
