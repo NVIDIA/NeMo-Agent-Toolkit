@@ -27,8 +27,11 @@ general:
 # Object store for testing
 object_stores:
   test_store:
-    _type: local_file
-    base_path: ./.tmp/test_object_store
+    _type: langsmith_prompt_store
+    api_key: ${LANGSMITH_API_KEY}
+    api_url: ${LANGSMITH_ENDPOINT}
+    is_public: false
+    default_tags: []
 
 functions:
   email_phishing_analyzer:
