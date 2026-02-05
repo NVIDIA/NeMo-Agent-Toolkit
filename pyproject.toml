@@ -118,6 +118,7 @@ examples = [
   "nat_documentation_guides",
   "nat_email_phishing_analyzer",
   "nat_haystack_deep_research_agent",
+  "nat_hybrid_control_flow",
   "nat_kaggle_mcp",
   "nat_math_assistant_a2a",
   "nat_math_assistant_a2a_protected",
@@ -241,6 +242,7 @@ nat_dpo_tic_tac_toe = { path = "examples/finetuning/dpo_tic_tac_toe", editable =
 nat_documentation_guides = { path = "examples/documentation_guides", editable = true }
 nat_email_phishing_analyzer = { path = "examples/evaluation_and_profiling/email_phishing_analyzer", editable = true }
 nat_haystack_deep_research_agent = { path = "examples/frameworks/haystack_deep_research_agent", editable = true }
+nat_hybrid_control_flow = { path = "examples/control_flow/hybrid_control_flow", editable = true }
 nat_kaggle_mcp = { path = "examples/MCP/kaggle_mcp", editable = true }
 nat_math_assistant_a2a = { path = "examples/A2A/math_assistant_a2a", editable = true }
 nat_math_assistant_a2a_protected = { path = "examples/A2A/math_assistant_a2a_protected", editable = true }

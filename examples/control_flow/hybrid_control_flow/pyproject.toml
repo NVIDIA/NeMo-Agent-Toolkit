@@ -25,10 +25,10 @@ root = "../../.."
 where = ["src"]
 
 [project]
-name = "nat_mixture_of_control_flows"
+name = "nat_hybrid_control_flow"
 dynamic = ["version", "dependencies"]
 requires-python = ">=3.11,<3.14"
-description = "Mixture of Control Flows example for NeMo Agent Toolkit"
+description = "Hybrid Control Flow example for NeMo Agent Toolkit"
 classifiers = ["Programming Language :: Python"]
 
 [tool.setuptools_dynamic_dependencies]
@@ -44,5 +44,5 @@ nat_sequential_executor = { path = "../sequential_executor", editable = true }
 nat_router_agent = { path = "../router_agent", editable = true }
 
 [project.entry-points.'nat.components']
-nat_mixture_of_control_flows = "mixture_of_control_flows.register"
+nat_hybrid_control_flow = "nat_hybrid_control_flow.register"
 

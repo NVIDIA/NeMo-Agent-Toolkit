@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Mixture of Control Flows Example
+# Hybrid Control Flow Example
 
 **Complexity:** 🟢 Beginner
 
@@ -39,12 +39,12 @@ This example demonstrates how to compose [router agent](../router_agent/README.m
 The following diagram illustrates an example workflow demonstrating three distinct patterns: routing to a sequential executor, routing to a sequential executor with an embedded router agent, and routing to a nested router agent for specialized tasks:
 
 <div align="center">
-<img src="../../../docs/source/_static/mixture_of_control_flows.png" alt="Mixture of Control Flows Graph Structure" width="750" style="max-width: 100%; height: auto;">
+<img src="../../../docs/source/_static/hybrid_control_flow.png" alt="Hybrid Control Flow Graph Structure" width="750" style="max-width: 100%; height: auto;">
 </div>
 
 ## Configuration
 
-The mixture of control flows is configured through the `config.yml` file. This example demonstrates how to combine multiple control flow components in a single workflow by reusing existing functions from other examples.
+The hybrid control flow is configured through the `config.yml` file. This example demonstrates how to combine multiple control flow components in a single workflow by reusing existing functions from other examples.
 
 ### Example Configuration
 
@@ -118,7 +118,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
 From the root directory of the NeMo Agent Toolkit library, run the following command:
 
 ```bash
-uv pip install -e examples/control_flow/mixture_of_control_flows
+uv pip install -e examples/control_flow/hybrid_control_flow
 ```
 
 ### Set Up API Keys
@@ -139,7 +139,7 @@ Run the following commands from the root of the NeMo Agent Toolkit repository to
 Test the text analysis sequential pipeline, demonstrating flows from a router agent to a sequential executor:
 
 ```bash
-nat run --config_file=examples/control_flow/mixture_of_control_flows/configs/config.yml --input "Process this text: The NeMo Agent Toolkit provides powerful control flow capabilities for building sophisticated AI workflows"
+nat run --config_file=examples/control_flow/hybrid_control_flow/configs/config.yml --input "Process this text: The NeMo Agent Toolkit provides powerful control flow capabilities for building sophisticated AI workflows"
 ```
 
 **Expected Workflow Output:**
@@ -174,7 +174,7 @@ Test the text formatting pipeline. In addition to flows from a router agent to a
 **Example 1: Uppercase conversion**
 
 ```bash
-nat run --config_file=examples/control_flow/mixture_of_control_flows/configs/config.yml --input "Convert this text to uppercase"
+nat run --config_file=examples/control_flow/hybrid_control_flow/configs/config.yml --input "Convert this text to uppercase"
 ```
 
 **Expected Workflow Output:**
@@ -205,7 +205,7 @@ Workflow Result:
 **Example 2: lowercase conversion**
 
 ```bash
-nat run --config_file=examples/control_flow/mixture_of_control_flows/configs/config.yml --input "CONVERT THIS TEXT TO LOWERCASE"
+nat run --config_file=examples/control_flow/hybrid_control_flow/configs/config.yml --input "CONVERT THIS TEXT TO LOWERCASE"
 ```
 
 **Expected Workflow Output:**
@@ -240,7 +240,7 @@ Test the nested router pattern where the main router delegates to a domain-speci
 **Example 1: Fruit advisor:**
 
 ```bash
-nat run --config_file=examples/control_flow/mixture_of_control_flows/configs/config.yml --input "What yellow fruit would you recommend?"
+nat run --config_file=examples/control_flow/hybrid_control_flow/configs/config.yml --input "What yellow fruit would you recommend?"
 ```
 
 **Expected Workflow Output:**
@@ -271,7 +271,7 @@ Workflow Result:
 **Example 2: City advisor:**
 
 ```bash
-nat run --config_file=examples/control_flow/mixture_of_control_flows/configs/config.yml --input "What city should I visit in Canada?"
+nat run --config_file=examples/control_flow/hybrid_control_flow/configs/config.yml --input "What city should I visit in Canada?"
 ```
 
 **Expected Workflow Output:**

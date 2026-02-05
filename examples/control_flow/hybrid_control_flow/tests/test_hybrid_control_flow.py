@@ -36,10 +36,9 @@ import pytest
 @pytest.mark.usefixtures("nvidia_api_key")
 @pytest.mark.integration
 async def test_full_workflow(question: str, expected_answer: str) -> None:
-    from mixture_of_control_flows.register import MockInputValidatorFunctionConfig
-
     from nat.test.utils import locate_example_config
     from nat.test.utils import run_workflow
+    from nat_hybrid_control_flow.register import MockInputValidatorFunctionConfig
 
     config_file = locate_example_config(MockInputValidatorFunctionConfig)
     await run_workflow(config_file=config_file, question=question, expected_answer=expected_answer)
