@@ -14,8 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import logging
 from collections.abc import Callable
+
+from microsoft_agents_a365.observability.core.exporters.agent365_exporter import (
+    Agent365Exporter,
+)
 
 from nat.builder.context import ContextState
 from nat.plugins.opentelemetry.otel_span import OtelSpan
@@ -29,7 +34,7 @@ logger = logging.getLogger(__name__)
 class _ReadableSpanAdapter:
     """Adapter that makes OtelSpan compatible with A365's ReadableSpan interface.
 
-    A365's _Agent365Exporter expects ReadableSpan objects with specific attributes.
+    A365's Agent365Exporter expects ReadableSpan objects with specific attributes.
     This adapter wraps OtelSpan and provides the expected interface.
 
     """
@@ -101,7 +106,7 @@ class _ReadableSpanAdapter:
 def _convert_otel_span_to_readable(otel_span: OtelSpan, tenant_id: str, agent_id: str) -> _ReadableSpanAdapter:
     """Convert an OtelSpan to a ReadableSpan-compatible adapter for A365 exporter.
 
-    A365's _Agent365Exporter expects ReadableSpan objects with specific attributes.
+    A365's Agent365Exporter expects ReadableSpan objects with specific attributes.
     This function creates a compatible adapter object.
 
     Args:
@@ -118,8 +123,8 @@ def _convert_otel_span_to_readable(otel_span: OtelSpan, tenant_id: str, agent_id
 class A365OtelExporter(OtelSpanExporter):
     """Agent 365 exporter for AI workflow observability.
 
-    Stub implementation for plugin registration testing.
-    Full implementation will integrate A365's _Agent365Exporter with NAT's telemetry system.
+    Integrates A365's Agent365Exporter with NAT's telemetry system to send
+    OpenTelemetry spans to Microsoft Agent 365 backend endpoints.
 
     Args:
         agent_id: The Agent 365 agent ID
@@ -153,7 +158,7 @@ class A365OtelExporter(OtelSpanExporter):
         shutdown_timeout: float = 10.0,
         resource_attributes: dict[str, str] | None = None,
     ):
-        """Initialize the A365 exporter stub."""
+        """Initialize the A365 exporter."""
         super().__init__(
             context_state=context_state,
             batch_size=batch_size,
@@ -171,46 +176,60 @@ class A365OtelExporter(OtelSpanExporter):
         self._use_s2s_endpoint = use_s2s_endpoint
         self._suppress_invoke_agent_input = suppress_invoke_agent_input
 
+        # Create the A365 SDK exporter instance
+        self._a365_exporter = Agent365Exporter(
+            token_resolver=token_resolver,
+            cluster_category=cluster_category,
+            use_s2s_endpoint=use_s2s_endpoint,
+        )
+
         logger.info(
-            f"A365 telemetry exporter stub initialized for agent_id={agent_id}, "
+            f"A365 telemetry exporter initialized for agent_id={agent_id}, "
             f"tenant_id={tenant_id}, cluster={cluster_category}"
         )
 
     async def export_otel_spans(self, spans: list[OtelSpan]) -> None:
         """Export a list of OtelSpans using the A365 exporter.
 
-        Converts OtelSpans to ReadableSpan format and exports via A365's _Agent365Exporter.
+        Converts OtelSpans to ReadableSpan format and exports via A365's Agent365Exporter.
+        Uses asyncio.run_in_executor to bridge NAT's async interface with A365's sync exporter.
 
         Args:
             spans (list[OtelSpan]): The list of spans to export.
+
+        Raises:
+            Exception: If there's an error during span export (logged but not re-raised).
         """
         if not spans:
             return
 
-        # Convert OtelSpans to ReadableSpan-like objects
-        readable_spans = []
-        for otel_span in spans:
-            readable_span = _convert_otel_span_to_readable(
-                otel_span=otel_span,
-                tenant_id=self._tenant_id,
-                agent_id=self._agent_id,
-            )
-            readable_spans.append(readable_span)
+        try:
+            # Convert OtelSpans to ReadableSpan-like objects
+            readable_spans = []
+            for otel_span in spans:
+                readable_span = _convert_otel_span_to_readable(
+                    otel_span=otel_span,
+                    tenant_id=self._tenant_id,
+                    agent_id=self._agent_id,
+                )
+                readable_spans.append(readable_span)
 
-        # TODO: Integrate with A365's _Agent365Exporter
-        # This requires:
-        # 1. Import _Agent365Exporter from microsoft-agents-a365-observability-core
-        # 2. Create instance with token_resolver
-        # 3. Call exporter.export(readable_spans)
-        logger.debug(
-            f"A365 exporter: converted {len(spans)} OtelSpans to ReadableSpan format "
-            f"(tenant={self._tenant_id}, agent={self._agent_id})"
-        )
-
-        # Stub: log what would be exported
-        for readable_span in readable_spans:
             logger.debug(
-                f"Would export span: name={readable_span.name}, "
-                f"trace_id={readable_span.context.trace_id}, "
-                f"span_id={readable_span.context.span_id}"
+                f"A365 exporter: converted {len(spans)} OtelSpans to ReadableSpan format "
+                f"(tenant={self._tenant_id}, agent={self._agent_id})"
+            )
+
+            # Bridge async/sync: A365's Agent365Exporter.export() is synchronous
+            # Run it in a thread pool executor to avoid blocking the event loop
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, self._a365_exporter.export, readable_spans)
+
+            logger.debug(
+                f"A365 exporter: successfully exported {len(readable_spans)} spans "
+                f"(tenant={self._tenant_id}, agent={self._agent_id})"
+            )
+        except Exception as e:
+            logger.error(
+                f"Error exporting spans to A365 (tenant={self._tenant_id}, agent={self._agent_id}): {e}",
+                exc_info=True,
             )

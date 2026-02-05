@@ -19,7 +19,7 @@
 import pytest
 
 from nat.cli.type_registry import GlobalTypeRegistry
-from nat.plugins.a365_telemetry.register import A365TelemetryExporter, _resolve_token_resolver
+from nat.plugins.a365.telemetry.register import A365TelemetryExporter, _resolve_token_resolver
 from nat.runtime.loader import PluginTypes
 from nat.runtime.loader import discover_and_register_plugins
 
