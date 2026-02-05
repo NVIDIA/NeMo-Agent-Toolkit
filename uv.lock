@@ -5481,6 +5481,22 @@ requires-dist = [
 ]
 
 [[package]]
+name = "nat-hybrid-control-flow"
+source = { editable = "examples/control_flow/hybrid_control_flow" }
+dependencies = [
+    { name = "nat-router-agent" },
+    { name = "nat-sequential-executor" },
+    { name = "nvidia-nat", extra = ["langchain", "test"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nat-router-agent", editable = "examples/control_flow/router_agent" },
+    { name = "nat-sequential-executor", editable = "examples/control_flow/sequential_executor" },
+    { name = "nvidia-nat", extras = ["langchain", "test"], editable = "." },
+]
+
+[[package]]
 name = "nat-kaggle-mcp"
 source = { editable = "examples/MCP/kaggle_mcp" }
 dependencies = [
@@ -6185,6 +6201,7 @@ examples = [
     { name = "nat-dpo-tic-tac-toe" },
     { name = "nat-email-phishing-analyzer" },
     { name = "nat-haystack-deep-research-agent" },
+    { name = "nat-hybrid-control-flow" },
     { name = "nat-kaggle-mcp" },
     { name = "nat-math-assistant-a2a" },
     { name = "nat-math-assistant-a2a-protected" },
@@ -6350,6 +6367,7 @@ requires-dist = [
     { name = "nat-dpo-tic-tac-toe", marker = "extra == 'examples'", editable = "examples/finetuning/dpo_tic_tac_toe" },
     { name = "nat-email-phishing-analyzer", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/email_phishing_analyzer" },
     { name = "nat-haystack-deep-research-agent", marker = "extra == 'examples'", editable = "examples/frameworks/haystack_deep_research_agent" },
+    { name = "nat-hybrid-control-flow", marker = "extra == 'examples'", editable = "examples/control_flow/hybrid_control_flow" },
     { name = "nat-kaggle-mcp", marker = "extra == 'examples'", editable = "examples/MCP/kaggle_mcp" },
     { name = "nat-math-assistant-a2a", marker = "extra == 'examples'", editable = "examples/A2A/math_assistant_a2a" },
     { name = "nat-math-assistant-a2a-protected", marker = "extra == 'examples'", editable = "examples/A2A/math_assistant_a2a_protected" },
