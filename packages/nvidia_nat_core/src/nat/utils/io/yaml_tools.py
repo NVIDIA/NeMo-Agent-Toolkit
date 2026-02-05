@@ -25,6 +25,12 @@ from nat.utils.type_utils import StrPath
 
 logger = logging.getLogger(__name__)
 
+# Prefix for file protocol in prompt fields to indicate content should be loaded from a file
+FILE_PROTOCOL_PREFIX = "file://"
+
+# Allowed file extensions for prompt files (security: prevent loading code files)
+ALLOWED_PROMPT_EXTENSIONS = frozenset({".txt", ".md", ".j2", ".jinja2", ".jinja", ".prompt", ".tpl", ".template"})
+
 
 def _load_file_content(file_path: StrPath) -> str:
     """
@@ -47,12 +53,6 @@ def _load_file_content(file_path: StrPath) -> str:
         return f.read()
 
 
-FILE_PROTOCOL_PREFIX = "file://"
-
-# Allowed file extensions for prompt files (security: prevent loading code files)
-ALLOWED_PROMPT_EXTENSIONS = frozenset({".txt", ".md", ".j2", ".jinja2", ".jinja", ".prompt", ".tpl", ".template"})
-
-
 def _is_prompt_key(key: str) -> bool:
     """Check if a key represents a prompt field (ends with 'prompt', case-insensitive)."""
     return key.lower().endswith("prompt")
@@ -71,10 +71,8 @@ def _validate_prompt_file_extension(file_path: Path) -> None:
     ext = file_path.suffix.lower()
     if ext not in ALLOWED_PROMPT_EXTENSIONS:
         allowed = ", ".join(sorted(ALLOWED_PROMPT_EXTENSIONS))
-        raise ValueError(
-            f"Unsupported file extension '{ext}' for prompt file: {file_path}. "
-            f"Allowed extensions: {allowed}"
-        )
+        raise ValueError(f"Unsupported file extension '{ext}' for prompt file: {file_path}. "
+                         f"Allowed extensions: {allowed}")
 
 
 def _resolve_prompt_files(config: dict, base_path: Path) -> dict:

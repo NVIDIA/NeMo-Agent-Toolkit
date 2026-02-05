@@ -176,3 +176,35 @@ When you run a workflow using `config-variant.yml`, the configurations are combi
 - **Error detection**: The system detects circular dependencies and missing base files
 
 See `examples/config_inheritance` for a complete example demonstrating different inheritance patterns and use cases.
+
+### Loading Prompts from Files
+
+NeMo Agent Toolkit supports loading prompt content from external files using the `file://` prefix. This is useful for:
+
+- Managing long prompts separately from configuration files
+- Version controlling prompts independently
+- Sharing prompts across multiple configurations
+- Using text editors with syntax highlighting for prompt development
+
+To load a prompt from a file, use the `file://` prefix followed by the file path:
+
+```yaml
+workflow:
+  _type: react_agent
+  llm_name: nim_llm
+  tool_names: [calculator]
+  system_prompt: file://../prompts/system_prompt.txt
+```
+
+The file loading follows these rules:
+
+- **Field name requirement**: The configuration key must end with `prompt` (case-insensitive). For example: `system_prompt`, `SystemPrompt`, `human_message_prompt`
+- **Value format**: The value must start with `file://`
+- **Path resolution**: Relative paths are resolved from the configuration file's directory. Absolute paths are also supported
+- **Allowed extensions**: For security, only these file extensions are permitted: `.txt`, `.md`, `.j2`, `.jinja2`, `.jinja`, `.prompt`, `.tpl`, `.template`
+
+:::{note}
+The file content is loaded as plain text. Jinja2 template rendering is not performed during loading—the content is inserted exactly as written in the file.
+:::
+
+See `examples/prompt_from_file` for a complete working example.
