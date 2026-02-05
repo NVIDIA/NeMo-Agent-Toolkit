@@ -1,4 +1,5 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES.
+# All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,4 +14,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A365 telemetry exporter plugin for NeMo Agent Toolkit."""
+"""Microsoft Agent 365 plugin for NeMo Agent Toolkit."""

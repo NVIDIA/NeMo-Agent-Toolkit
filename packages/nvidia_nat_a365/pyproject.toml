@@ -30,12 +30,12 @@ root = "../.."
 
 
 [project]
-name = "nvidia-nat-a365-telemetry"
+name = "nvidia-nat-a365"
 dynamic = ["version", "dependencies", "optional-dependencies"]
-requires-python = ">=3.11,<3.14"
-description = "Subpackage for Microsoft Agent 365 telemetry integration in NeMo Agent Toolkit"
+    requires-python = ">=3.11,<3.13"  # Temporarily exclude 3.13 until nvidia-nat-mcp dev builds support it
+description = "Subpackage for Microsoft Agent 365 integration in NeMo Agent Toolkit (telemetry, tooling, notifications)"
 readme = "src/nat/meta/pypi.md"
-keywords = ["ai", "observability", "agent365", "azure", "microsoft"]
+keywords = ["ai", "observability", "agent365", "azure", "microsoft", "teams", "office365"]
 license = { text = "Apache-2.0" }
 authors = [{ name = "NVIDIA Corporation" }]
 maintainers = [{ name = "NVIDIA Corporation" }]
@@ -43,7 +43,6 @@ classifiers = [
   "Programming Language :: Python",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.13",
 ]
 
 [project.urls]
@@ -55,15 +54,19 @@ dependencies = [
   # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
   # Keep sorted!!!
+  "microsoft-agents-a365-observability-core~=0.1.0",
+  "microsoft-agents-a365-tooling~=0.1.0",
+  "microsoft-agents-a365-notifications~=0.1.0",
   "nvidia-nat-core == {version}",
   "nvidia-nat-opentelemetry == {version}",
-  # A365 SDK - TODO: Determine exact package name and version once available
-  # "microsoft-agents-a365-observability-core~=X.Y",
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
 test = [
   "nvidia-nat-test == {version}",
+]
+mcp = [
+  "nvidia-nat-mcp == {version}",
 ]
 
 [tool.uv]
@@ -73,8 +76,10 @@ config-settings = { editable_mode = "compat" }
 
 [tool.uv.sources]
 nvidia-nat-core = { path = "../nvidia_nat_core", editable = true }
+nvidia-nat-mcp = { path = "../nvidia_nat_mcp", editable = true }
 nvidia-nat-opentelemetry = { path = "../nvidia_nat_opentelemetry", editable = true }
 nvidia-nat-test = { path = "../nvidia_nat_test", editable = true }
 
 [project.entry-points.'nat.components']
-nat_a365_telemetry = "nat.plugins.a365_telemetry.register"
+nat_a365 = "nat.plugins.a365.register"
+nat_a365_telemetry = "nat.plugins.a365.telemetry.register"

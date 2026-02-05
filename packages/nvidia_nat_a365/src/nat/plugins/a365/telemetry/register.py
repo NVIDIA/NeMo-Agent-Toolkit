@@ -103,7 +103,7 @@ async def a365_telemetry_exporter(config: A365TelemetryExporter, builder: Builde
     This is a stub implementation for initial plugin registration testing.
     Full implementation will integrate A365's _Agent365Exporter with NAT's telemetry system.
     """
-    from nat.plugins.a365_telemetry.a365_exporter import A365OtelExporter
+    from nat.plugins.a365.telemetry.a365_exporter import A365OtelExporter
 
     # Resolve token resolver if provided
     token_resolver_callable = _resolve_token_resolver(config.token_resolver)
