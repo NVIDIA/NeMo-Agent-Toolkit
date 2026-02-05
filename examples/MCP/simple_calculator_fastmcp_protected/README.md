@@ -274,11 +274,9 @@ workflow:
 ```
 
 ## Related Examples
-
-- [Simple Calculator FastMCP](../simple_calculator_fastmcp/): Unprotected FastMCP calculator example
-- [Simple Calculator MCP - Protected](../simple_calculator_mcp_protected/): Protected MCP calculator example
+- `examples/MCP/simple_calculator_fastmcp/`: FastMCP calculator example without authentication
 
 ## References
 
-- [MCP Authentication](../../../docs/source/components/auth/mcp-auth/index.md) - Learn about configuring MCP authentication
-- [Per-User Workflows](../../../docs/source/extend/custom-components/custom-functions/per-user-functions.md) - Learn about using per-user workflows
+- [FastMCP Server](../../../docs/source/run-workflows/fastmcp-server.md) - Learn about running the FastMCP server runtime
+- [MCP Client](../../../docs/source/run-workflows/mcp-client.md) - Learn about using the MCP client to interact with the MCP server

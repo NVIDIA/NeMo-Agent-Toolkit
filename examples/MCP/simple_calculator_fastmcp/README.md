@@ -73,3 +73,11 @@ nat run --config_file examples/MCP/simple_calculator_fastmcp/configs/config-mcp-
 ```
 
 The client configuration is in `examples/MCP/simple_calculator_fastmcp/configs/config-mcp-client.yml`.
+
+## Related Examples
+- `examples/MCP/simple_calculator_fastmcp_protected/`: Protected FastMCP calculator example
+
+## References
+
+- [FastMCP Server](../../../docs/source/run-workflows/fastmcp-server.md) - Learn about running the FastMCP server runtime
+- [MCP Client](../../../docs/source/run-workflows/mcp-client.md) - Learn about using the MCP client to interact with the MCP server

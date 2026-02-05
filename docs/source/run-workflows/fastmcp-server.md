@@ -222,3 +222,8 @@ curl -s http://localhost:9902/health | jq
 ```console
 nat mcp client ping --url http://localhost:9902/mcp
 ```
+
+## Related Examples
+
+- `examples/MCP/simple_calculator_fastmcp/`: FastMCP calculator example
+- `examples/MCP/simple_calculator_fastmcp_protected/`: Protected FastMCP calculator example
