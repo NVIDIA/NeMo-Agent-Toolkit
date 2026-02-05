@@ -214,7 +214,7 @@ class ObjectStorePromptStorage:
 
     def _make_key(self, filename: str) -> str:
         """Construct object store key with prefix."""
-        return f"{self.key_prefix}/{filename}"
+        return f"{self.key_prefix}_{filename}".split('.')[0]
 
     def _prompts_to_json_bytes(self, prompts: dict[str, tuple[str, str]]) -> bytes:
         """Convert prompts dict to JSON bytes."""
@@ -228,32 +228,35 @@ class ObjectStorePromptStorage:
                               fitness_score: float | None = None,
                               evaluator_scores: dict[str, float] | None = None) -> None:
         """Save generation checkpoint to object store."""
-        key = self._make_key(f"optimized_prompts_gen{generation}.json")
-        data = self._prompts_to_json_bytes(prompts)
 
-        # Build metadata dict
-        metadata = {"generation": str(generation)}
+        for prompt_id, (prompt_text, purpose) in prompts.items():
+            key = prompt_id.replace('.', '-')
+            data = prompt_text.encode("utf-8")
 
-        if fitness_score is not None:
-            metadata["fitness_score"] = str(fitness_score)
+            # Build metadata dict
+            metadata = {"generation": str(generation)}
 
-        if evaluator_scores is not None:
-            # Flatten evaluator scores into individual metadata keys (convert to strings)
-            for evaluator_name, score in evaluator_scores.items():
-                metadata[evaluator_name] = str(score)
+            if fitness_score is not None:
+                metadata["fitness_score"] = str(fitness_score)
 
-        item = ObjectStoreItem(data=data, content_type="application/json", metadata=metadata)
+            if evaluator_scores is not None:
+                # Flatten evaluator scores into individual metadata keys (convert to strings)
+                for evaluator_name, score in evaluator_scores.items():
+                    metadata[evaluator_name] = str(score)
 
-        await self.object_store.upsert_object(key, item)
+            item = ObjectStoreItem(data=data, content_type="application/json", metadata=metadata)
+
+            await self.object_store.upsert_object(key, item)
 
     async def save_final(self, prompts: dict[str, tuple[str, str]]) -> None:
         """Save final prompts to object store."""
-        key = self._make_key("optimized_prompts.json")
-        data = self._prompts_to_json_bytes(prompts)
+        for prompt_id, (prompt_text, purpose) in prompts.items():
+            key = prompt_id.replace('.', '-')
+            data = prompt_text.encode("utf-8")
 
-        item = ObjectStoreItem(data=data, content_type="application/json", metadata={"type": "final"})
+            item = ObjectStoreItem(data=data, content_type="application/json", metadata={"type": "final"})
 
-        await self.object_store.upsert_object(key, item)
+            await self.object_store.upsert_object(key, item)
 
     async def load_checkpoint(self, generation: int) -> dict[str, tuple[str, str]]:
         """Load checkpoint from object store. Raises KeyError if not found."""

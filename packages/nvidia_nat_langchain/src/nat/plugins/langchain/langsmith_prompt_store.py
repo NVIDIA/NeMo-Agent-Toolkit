@@ -48,6 +48,7 @@ import re
 from typing import Any
 from typing import ClassVar
 
+from langchain_core.prompts import ChatPromptTemplate
 from langsmith import AsyncClient
 from langsmith.utils import LangSmithConflictError
 from pydantic import BaseModel
@@ -423,6 +424,13 @@ class LangSmithPromptStore(ObjectStore):
 
         return metadata
 
+    @staticmethod
+    def _build_chat_prompt_template(prompt: str):
+        """
+        Build a ChatPromptTemplate from a prompt string.
+        """
+        return ChatPromptTemplate.from_messages(("human", prompt))
+
     @override
     async def put_object(self, key: str, item: ObjectStoreItem) -> None:
         """
@@ -447,7 +455,8 @@ class LangSmithPromptStore(ObjectStore):
         description, readme, tags = self._extract_metadata(item)
 
         # Decode the prompt manifest from bytes
-        prompt_manifest = json.loads(item.data.decode("utf-8"))
+        prompt_manifest = str(item.data.decode("utf-8"))
+        prompt_manifest = LangSmithPromptStore._build_chat_prompt_template(prompt=prompt_manifest)
 
         # Try to create the prompt directly - will fail with 409 if it exists
         try:
@@ -496,7 +505,8 @@ class LangSmithPromptStore(ObjectStore):
             description, readme, tags = self._extract_metadata(item)
 
             # Decode the prompt manifest from bytes
-            prompt_manifest = json.loads(item.data.decode("utf-8"))
+            prompt_manifest = str(item.data.decode("utf-8"))
+            prompt_manifest = LangSmithPromptStore._build_chat_prompt_template(prompt=prompt_manifest)
 
             # Check if prompt exists
             existing = await client.get_prompt(key)
