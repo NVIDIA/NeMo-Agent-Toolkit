@@ -15,13 +15,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NVIDIA NeMo Agent Toolkit as a MCP Server using FastMCP
+# NVIDIA NeMo Agent Toolkit as an MCP Server using FastMCP
 
 Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to [LLMs](../build-workflows/llms/index.md). This guide covers how to run NVIDIA NeMo Agent Toolkit workflows as an MCP server using the FastMCP server runtime.
 
 ## Decision
 
-NeMo Agent Toolkit supports two MCP server runtimes. Both publish the workflow and its tools as MCP tools. Choose the runtime that matches your deployment stack and organization’s MCP server policy:
+NeMo Agent Toolkit supports two MCP server runtimes. Both publish the workflow and its tools as MCP tools. Choose the runtime that matches your deployment stack and MCP server policy of the organization:
 
 - Use `nat mcp serve` for the [MCP SDK server runtime](https://github.com/modelcontextprotocol/python-sdk).
 - Use `nat fastmcp server run` for the [FastMCP server runtime](https://github.com/jlowin/fastmcp).
