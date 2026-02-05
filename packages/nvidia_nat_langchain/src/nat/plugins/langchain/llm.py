@@ -399,8 +399,10 @@ async def huggingface_inference_langchain(
     from langchain_core.messages import AIMessage
     from langchain_core.messages import AIMessageChunk
     from langchain_core.messages import BaseMessage
+    from langchain_core.messages import FunctionMessage
     from langchain_core.messages import HumanMessage
     from langchain_core.messages import SystemMessage
+    from langchain_core.messages import ToolMessage
     from langchain_core.outputs import ChatGeneration
     from langchain_core.outputs import ChatGenerationChunk
     from langchain_core.outputs import ChatResult
@@ -454,8 +456,16 @@ async def huggingface_inference_langchain(
                     chat_messages.append({"role": "user", "content": str(message.content)})
                 elif isinstance(message, AIMessage):
                     chat_messages.append({"role": "assistant", "content": str(message.content)})
+                elif isinstance(message, ToolMessage):
+                    chat_messages.append({"role": "tool", "content": str(message.content)})
+                elif isinstance(message, FunctionMessage):
+                    chat_messages.append({"role": "function", "content": str(message.content)})
                 else:
                     # Default to user role for unknown message types
+                    logger.warning(
+                        "Unknown message type %s, defaulting to 'user' role",
+                        type(message).__name__,
+                    )
                     chat_messages.append({"role": "user", "content": str(message.content)})
             return chat_messages
 
