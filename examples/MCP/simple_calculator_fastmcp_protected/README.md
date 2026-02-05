@@ -279,4 +279,4 @@ workflow:
 ## References
 
 - [FastMCP Server](../../../docs/source/run-workflows/fastmcp-server.md) - Learn about running the FastMCP server runtime
-- [MCP Client](../../../docs/source/run-workflows/mcp-client.md) - Learn about using the MCP client to interact with the MCP server
+- [MCP Client](../../../docs/source/build-workflows/mcp-client.md) - Learn about using the MCP client to interact with the MCP server
