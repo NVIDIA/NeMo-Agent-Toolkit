@@ -21,7 +21,7 @@ pushd ${SCRIPT_DIR} &> /dev/null
 export REPO_ROOT=${REPO_ROOT:-"$(git rev-parse --show-toplevel)"}
 popd &> /dev/null
 
-HOST_ARCH=$(dpkg --print-architecture)
+HOST_ARCH=$(uname -m)
 DOCKER_TARGET_ARCH=${DOCKER_TARGET_ARCH:-${HOST_ARCH}}
 
 if [ ${DOCKER_TARGET_ARCH} != ${HOST_ARCH} ]; then
