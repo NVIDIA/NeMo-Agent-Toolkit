@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from enum import Enum
-from functools import lru_cache
+from functools import cache
 from typing import Any
 
 from pydantic import BaseModel
@@ -22,7 +22,7 @@ from pydantic import Field
 from pydantic import create_model
 
 
-@lru_cache(maxsize=None)
+@cache
 def _get_or_create_enum(name: str, values: frozenset[str]) -> type[Enum]:
     """
     Get a cached enum class or create a new one.
@@ -31,7 +31,7 @@ def _get_or_create_enum(name: str, values: frozenset[str]) -> type[Enum]:
     the same class object. This is critical for Pydantic validation, which checks
     enum instances by class identity.
 
-    Uses lru_cache to automatically cache enum classes by their name and values.
+    Uses cache to automatically cache enum classes by their name and values.
 
     Args:
         name: The name for the enum class
