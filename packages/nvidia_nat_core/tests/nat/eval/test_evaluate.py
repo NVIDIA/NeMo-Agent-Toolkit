@@ -316,6 +316,65 @@ async def test_run_workflow_local_workflow_interrupted(evaluation_run, eval_inpu
     assert evaluation_run.workflow_interrupted, "Expected workflow_interrupted to be True after failure"
 
 
+async def test_workflow_continues_after_one_item_fails(evaluation_run, session_manager):
+    """Test that a failing EvalInputItem produces None output_obj while successful items complete."""
+    # Override with 2 items
+    evaluation_run.eval_input = EvalInput(eval_input_items=[
+        EvalInputItem(id=1,
+                      input_obj="Question 1",
+                      expected_output_obj="Answer 1",
+                      output_obj=None,
+                      expected_trajectory=[],
+                      trajectory=[],
+                      full_dataset_entry={"id": 1}),
+        EvalInputItem(id=2,
+                      input_obj="Question 2",
+                      expected_output_obj="Answer 2",
+                      output_obj=None,
+                      expected_trajectory=[],
+                      trajectory=[],
+                      full_dataset_entry={"id": 2}),
+    ])
+    evaluation_run.eval_config.general.max_concurrency = 1
+
+    mock_runner = AsyncMock()
+
+    call_count = 0
+
+    async def mock_result():
+        nonlocal call_count
+        call_count += 1
+        if call_count == 2:
+            raise RuntimeError("Simulated workflow failure")
+        return "Answer 1"
+
+    mock_runner.result = AsyncMock(side_effect=mock_result)
+    mock_runner.convert = MagicMock(side_effect=lambda x, to_type: x)
+
+    @asynccontextmanager
+    async def mock_run(_message, runtime_type=None):
+        yield mock_runner
+
+    @asynccontextmanager
+    async def mock_session_cm(user_id=None):
+        mock_session = MagicMock()
+        mock_session.run = mock_run
+        mock_session.workflow = session_manager.workflow
+        yield mock_session
+
+    session_manager.session = mock_session_cm
+
+    await evaluation_run.run_workflow_local(session_manager)
+
+    items = evaluation_run.eval_input.eval_input_items
+
+    # Item 1 succeeded
+    assert items[0].output_obj == "Answer 1"
+
+    # Item 2 failed (output is None, error details in logs)
+    assert items[1].output_obj is None
+
+
 async def test_run_workflow_local_reuse_coroutine_on_error(evaluation_run, eval_input, session_manager):
     """Document coroutine reuse error after workflow failure."""
     evaluation_run.eval_input = eval_input
