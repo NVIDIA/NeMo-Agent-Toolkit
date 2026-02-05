@@ -250,13 +250,8 @@ class ObjectStorePromptStorage:
 
     async def save_final(self, prompts: dict[str, tuple[str, str]]) -> None:
         """Save final prompts to object store."""
-        for prompt_id, (prompt_text, purpose) in prompts.items():
-            key = prompt_id.replace('.', '-')
-            data = prompt_text.encode("utf-8")
-
-            item = ObjectStoreItem(data=data, content_type="application/json", metadata={"type": "final"})
-
-            await self.object_store.upsert_object(key, item)
+        # Not necessary as users can retrieve final prompts from latest checkpoint based on metadata
+        pass
 
     async def load_checkpoint(self, generation: int) -> dict[str, tuple[str, str]]:
         """Load checkpoint from object store. Raises KeyError if not found."""
