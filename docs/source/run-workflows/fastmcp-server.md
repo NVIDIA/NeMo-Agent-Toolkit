@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NeMo Agent Toolkit as a FastMCP Server
+# NVIDIA NeMo Agent Toolkit as a MCP Server using FastMCP
 
 Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to [LLMs](../build-workflows/llms/index.md). This guide covers how to run NVIDIA NeMo Agent Toolkit workflows as an MCP server using the FastMCP server runtime.
 
@@ -179,7 +179,7 @@ Input Schema:
 ### Call a tool with JSON arguments
 
 ```console
-$ nat mcp client tool call calculator__multiply \
+nat mcp client tool call calculator__multiply \
   --url http://localhost:9902/mcp \
   --json-args '{"numbers": [1, 3, 6, 10]}'
 180.0
@@ -188,7 +188,7 @@ $ nat mcp client tool call calculator__multiply \
 ### Using the `/debug/tools/list` route (no MCP client required)
 
 ```console
-$ curl -s http://localhost:9902/debug/tools/list | jq
+curl -s http://localhost:9902/debug/tools/list | jq
 ```
 
 ## Integration with MCP Clients
@@ -215,9 +215,9 @@ See the protected example for a full setup:
 You can verify server health using the `/health` route or `nat mcp client ping`:
 
 ```console
-$ curl -s http://localhost:9902/health | jq
+curl -s http://localhost:9902/health | jq
 ```
 
 ```console
-$ nat mcp client ping --url http://localhost:9902/mcp
+nat mcp client ping --url http://localhost:9902/mcp
 ```

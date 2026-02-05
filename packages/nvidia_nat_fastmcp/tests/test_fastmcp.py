@@ -18,6 +18,7 @@ from fastmcp import FastMCP
 from fastmcp.server.auth import RemoteAuthProvider
 from fastmcp.server.auth.providers.introspection import IntrospectionTokenVerifier
 from pydantic import BaseModel
+from pydantic import Field
 from pydantic import SecretStr
 from starlette.testclient import TestClient
 
@@ -36,7 +37,7 @@ class _MockTestSchema(BaseModel):
 
 
 class _ChatRequestSchema(BaseModel):
-    messages: list = []
+    messages: list = Field(default_factory=list)
     model: str | None = None
 
 

@@ -75,10 +75,12 @@ class FastMCPFrontEndPluginWorkerBase(ABC):
                     "server_name": mcp.name,
                 })
 
-            except Exception as e:
+            except Exception:
+                health_logger = getattr(mcp, "logger", None) or logging.getLogger(__name__)
+                health_logger.exception("Health check failed while invoking PingRequest")
                 return JSONResponse({
                     "status": "unhealthy",
-                    "error": str(e),
+                    "error": "internal server error",
                     "server_name": mcp.name,
                 },
                                     status_code=503)
