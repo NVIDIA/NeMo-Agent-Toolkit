@@ -18,7 +18,6 @@ import json
 import logging
 from inspect import Parameter
 from inspect import Signature
-from typing import TYPE_CHECKING
 from typing import Any
 
 from pydantic import BaseModel
@@ -28,10 +27,7 @@ from pydantic_core import PydanticUndefined
 from fastmcp import FastMCP
 from nat.builder.function import Function  # type: ignore[reportMissingImports]
 from nat.builder.function_base import FunctionBase  # type: ignore[reportMissingImports]
-
-if TYPE_CHECKING:
-    from nat.plugins.fastmcp.server.memory_profiler import MemoryProfiler
-    from nat.runtime.session import SessionManager  # type: ignore[reportMissingImports]
+from nat.runtime.session import SessionManager  # type: ignore[reportMissingImports]
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +112,6 @@ def create_function_wrapper(
     function_name: str,
     session_manager: "SessionManager",
     input_schema: Any,
-    memory_profiler: "MemoryProfiler | None" = None,
 ):
     """Create a wrapper function for MCP that invokes the workflow via `SessionManager`.
 
@@ -124,36 +119,28 @@ def create_function_wrapper(
         function_name: The name of the function to register.
         session_manager: The session manager for the workflow.
         input_schema: Input schema for the workflow/function.
-        memory_profiler: Optional memory profiler to track requests.
     """
     signature = _build_signature_from_schema(input_schema)
 
     async def wrapper_func(**kwargs: Any) -> Any:
-        try:
-            if _is_chat_request_schema(input_schema):
-                from nat.data_models.api_server import ChatRequest  # type: ignore[reportMissingImports]
+        if _is_chat_request_schema(input_schema):
+            from nat.data_models.api_server import ChatRequest  # type: ignore[reportMissingImports]
 
-                query = kwargs.get("query", "")
-                payload = ChatRequest.from_string(query)
-            else:
-                cleaned_kwargs = {k: v for k, v in kwargs.items() if v is not _USE_PYDANTIC_DEFAULT}
-                payload = input_schema.model_validate(cleaned_kwargs) if hasattr(input_schema,
-                                                                                 "model_validate") else cleaned_kwargs
+            query = kwargs.get("query", "")
+            payload = ChatRequest.from_string(query)
+        else:
+            cleaned_kwargs = {k: v for k, v in kwargs.items() if v is not _USE_PYDANTIC_DEFAULT}
+            payload = input_schema.model_validate(cleaned_kwargs) if hasattr(input_schema,
+                                                                             "model_validate") else cleaned_kwargs
 
-            async with session_manager.run(payload) as runner:
-                result = await runner.result()
+        async with session_manager.run(payload) as runner:
+            result = await runner.result()
 
-            if isinstance(result, str):
-                return result
-            if isinstance(result, dict | list):
-                return json.dumps(result, default=str)
-            return str(result)
-        finally:
-            if memory_profiler:
-                try:
-                    memory_profiler.on_request_complete()
-                except Exception:
-                    logger.exception("Failed to update memory profiler for %s", function_name)
+        if isinstance(result, str):
+            return result
+        if isinstance(result, dict | list):
+            return json.dumps(result, default=str)
+        return str(result)
 
     wrapper_func.__signature__ = signature  # type: ignore[attr-defined]
     wrapper_func.__annotations__ = _build_annotations_from_schema(input_schema)
@@ -191,7 +178,6 @@ def get_function_description(function: FunctionBase | None) -> str | None:
 def register_function_with_mcp(mcp: FastMCP,
                                function_name: str,
                                session_manager: 'SessionManager',
-                               memory_profiler: 'MemoryProfiler | None' = None,
                                function: FunctionBase | None = None) -> None:
     """Register a NeMo Agent Toolkit function as a FastMCP tool.
 
@@ -202,7 +188,6 @@ def register_function_with_mcp(mcp: FastMCP,
         mcp: The FastMCP instance.
         function_name: The name to register the function under.
         session_manager: SessionManager wrapping the function/workflow.
-        memory_profiler: Optional memory profiler to track requests.
         function: Optional function metadata (for description/schema).
     """
     logger.info("Registering function %s with FastMCP", function_name)
@@ -221,7 +206,7 @@ def register_function_with_mcp(mcp: FastMCP,
     function_description = get_function_description(target_function)
 
     # Create and register the wrapper function with FastMCP
-    wrapper_func = create_function_wrapper(function_name, session_manager, input_schema, memory_profiler)
+    wrapper_func = create_function_wrapper(function_name, session_manager, input_schema)
     mcp.tool(name=function_name, description=function_description)(wrapper_func)
 
 

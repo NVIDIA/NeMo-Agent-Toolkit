@@ -35,7 +35,6 @@ from nat.builder.workflow import Workflow
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.config import Config
 from nat.plugins.fastmcp.server.front_end_config import FastMCPFrontEndConfig
-from nat.plugins.fastmcp.server.memory_profiler import MemoryProfiler
 from nat.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
@@ -52,12 +51,6 @@ class FastMCPFrontEndPluginWorkerBase(ABC):
         """
         self.full_config = config
         self.front_end_config: FastMCPFrontEndConfig = config.general.front_end
-
-        # Initialize memory profiler if enabled
-        self.memory_profiler = MemoryProfiler(enabled=self.front_end_config.enable_memory_profiling,
-                                              log_interval=self.front_end_config.memory_profile_interval,
-                                              top_n=self.front_end_config.memory_profile_top_n,
-                                              log_level=self.front_end_config.memory_profile_log_level)
 
     def _setup_health_endpoint(self, mcp: FastMCP):
         """Set up the HTTP health endpoint that exercises FastMCP ping handler."""
@@ -151,11 +144,7 @@ class FastMCPFrontEndPluginWorkerBase(ABC):
 
         # Register each function with FastMCP, passing SessionManager for observability
         for function_name, session_manager in session_managers.items():
-            register_function_with_mcp(mcp,
-                                       function_name,
-                                       session_manager,
-                                       self.memory_profiler,
-                                       function=functions.get(function_name))
+            register_function_with_mcp(mcp, function_name, session_manager, function=functions.get(function_name))
 
         if not session_managers:
             raise RuntimeError("No functions found in workflow. Please check your configuration.")
@@ -291,15 +280,6 @@ class FastMCPFrontEndPluginWorkerBase(ABC):
             # Default for listing all: detail defaults to False unless explicitly set true
             return JSONResponse(
                 _build_final_json(functions_to_include, _parse_detail_param(detail_raw, has_names=bool(names))))
-
-        # Memory profiling endpoint (read-only)
-        @mcp.custom_route("/debug/memory/stats", methods=["GET"])
-        async def get_memory_stats(_request: Request):
-            """Get current memory profiling statistics."""
-            from starlette.responses import JSONResponse
-
-            stats = self.memory_profiler.get_stats()
-            return JSONResponse(stats)
 
 
 class FastMCPFrontEndPluginWorker(FastMCPFrontEndPluginWorkerBase):

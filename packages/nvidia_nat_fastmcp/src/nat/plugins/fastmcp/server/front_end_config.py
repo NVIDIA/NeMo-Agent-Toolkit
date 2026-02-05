@@ -66,16 +66,3 @@ class FastMCPFrontEndConfig(FrontEndBaseConfig, name="fastmcp"):
             if v.endswith('/'):
                 raise ValueError("base_path must not end with '/'")
         return v
-
-    # Memory profiling configuration
-    enable_memory_profiling: bool = Field(default=False,
-                                          description="Enable memory profiling and diagnostics (default: False)")
-    memory_profile_interval: int = Field(default=50,
-                                         description="Log memory stats every N requests (default: 50)",
-                                         ge=1)
-    memory_profile_top_n: int = Field(default=10,
-                                      description="Number of top memory allocations to log (default: 10)",
-                                      ge=1,
-                                      le=50)
-    memory_profile_log_level: str = Field(default="DEBUG",
-                                          description="Log level for memory profiling output (default: DEBUG)")
