@@ -92,6 +92,7 @@ Sample output:
     }
   }
 }
+```
 
 To generate a MCP client configuration YAML snippet for a workflow configuration:
 
