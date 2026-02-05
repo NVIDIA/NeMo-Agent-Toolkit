@@ -429,6 +429,34 @@ nat mcp serve --config_file examples/getting_started/simple_calculator/configs/c
 
 This will start an MCP server on the default host (localhost) and port (9901), available at `http://localhost:9901/mcp`.
 
+## FastMCP
+
+The `nat fastmcp` command group provides FastMCP server commands. Use these commands when you want the FastMCP server runtime.
+
+### Server Commands
+
+Use the following commands to run or manage a FastMCP server:
+
+- `nat fastmcp server run`
+- `nat fastmcp server dev`
+- `nat fastmcp server install`
+- `nat fastmcp serve` (alias for `nat fastmcp server run`)
+
+Examples:
+
+```console
+$ nat fastmcp server run --config_file examples/getting_started/simple_calculator/configs/config.yml
+```
+
+```console
+$ nat fastmcp server dev --config_file examples/getting_started/simple_calculator/configs/config.yml \
+  --watch-path examples/getting_started/simple_calculator/src
+```
+
+```console
+$ nat fastmcp server install nat-workflow --url http://localhost:9902/mcp --name mcp_math
+```
+
 ## Run
 
 The `nat run` is an alias for the `nat start console` command and will run a NeMo Agent Toolkit workflow from a provided configuration file against inputs supplied at the

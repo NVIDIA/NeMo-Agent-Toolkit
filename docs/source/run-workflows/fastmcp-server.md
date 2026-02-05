@@ -17,11 +17,11 @@ limitations under the License.
 
 # NeMo Agent Toolkit as a FastMCP Server
 
-Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to [LLMs](../build-workflows/llms/index.md). This guide covers how to run NVIDIA NeMo Agent Toolkit workflows as a FastMCP server.
+Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to [LLMs](../build-workflows/llms/index.md). This guide covers how to run NVIDIA NeMo Agent Toolkit workflows as an MCP server using the FastMCP server runtime.
 
 ## Decision
 
-NeMo Agent Toolkit supports two MCP server runtimes. Both publish the same workflow and its tools as MCP tools. Choose the runtime that matches your deployment stack and organization’s MCP server policy:
+NeMo Agent Toolkit supports two MCP server runtimes. Both publish the workflow and its tools as MCP tools. Choose the runtime that matches your deployment stack and organization’s MCP server policy:
 
 - Use `nat mcp serve` for the [MCP SDK server runtime](https://github.com/modelcontextprotocol/python-sdk).
 - Use `nat fastmcp server run` for the [FastMCP server runtime](https://github.com/jlowin/fastmcp).
@@ -49,13 +49,13 @@ uv pip install nvidia-nat-mcp
 
 ## FastMCP Server Usage
 
-Use `nat fastmcp server run` to start a FastMCP server and publish workflow tools.
+Use `nat fastmcp server run` to start an MCP server using the FastMCP server runtime and publish workflow tools.
 
 ```bash
 nat fastmcp server run --config_file examples/getting_started/simple_calculator/configs/config.yml
 ```
 
-This starts a FastMCP server on the default host (`localhost`) and port (`9902`) and publishes all workflow tools at `http://localhost:9902/mcp` using streamable-http transport.
+This starts an MCP server using the FastMCP server runtime on the default host (`localhost`) and port (`9902`) and publishes all workflow tools at `http://localhost:9902/mcp` using streamable-http transport.
 
 You can also specify server settings with CLI flags:
 
@@ -74,6 +74,41 @@ Use `nat fastmcp server dev` to restart the server when files change. This is us
 nat fastmcp server dev --config_file examples/getting_started/simple_calculator/configs/config.yml \
   --watch-path examples/getting_started/simple_calculator/src
 ```
+
+### Generating MCP Client Configuration Snippets
+
+Use `nat fastmcp server install` to generate MCP client configuration snippets for a FastMCP server. This command does not modify your environment.
+
+```bash
+nat fastmcp server install cursor --url http://localhost:9902/mcp
+```
+Sample output:
+```json
+{
+  "mcpServers": {
+    "mcp_server": {
+      "transport": "streamable-http",
+      "url": "http://localhost:9902/mcp"
+    }
+  }
+}
+
+To generate a MCP client configuration YAML snippet for a workflow configuration:
+
+```bash
+nat fastmcp server install nat-workflow --url http://localhost:9902/mcp --name mcp_math
+```
+Sample output:
+```yaml
+function_groups:
+  mcp_math:
+    _type: per_user_mcp_client
+    server:
+      transport: streamable-http
+      url: http://localhost:9902/mcp
+```
+
+For a full command reference, see [Command Line Interface](../reference/cli.md).
 
 ### Filtering FastMCP Tools
 
@@ -96,11 +131,11 @@ general:
     base_path: "/api/v1"
 ```
 
-With this configuration, the FastMCP server is accessible at `http://localhost:9902/api/v1/mcp`.
+With this configuration, the MCP server is accessible at `http://localhost:9902/api/v1/mcp`.
 
 ## Inspecting and Running MCP Tools Published by a FastMCP Server
 
-Use `nat mcp client` to inspect and run tools exposed by a FastMCP server.
+Use `nat mcp client` to inspect and run tools exposed by an MCP server using the FastMCP server runtime.
 
 **Note:** The `nat mcp client` commands require the `nvidia-nat-mcp` package. If you encounter an error about missing MCP client functionality, install it with `uv pip install "nvidia-nat[mcp]"`.
 
@@ -158,7 +193,7 @@ $ curl -s http://localhost:9902/debug/tools/list | jq
 
 ## Integration with MCP Clients
 
-The FastMCP server implements the Model Context Protocol specification, so it works with MCP clients. You can run a workflow that connects to the FastMCP server by pointing an MCP client function group at `http://localhost:9902/mcp`.
+The MCP server started with the FastMCP server runtime implements the Model Context Protocol specification, so it works with MCP clients. You can run a workflow that connects to the MCP server by pointing an MCP client function group at `http://localhost:9902/mcp`.
 
 Example:
 
@@ -169,7 +204,7 @@ nat run --config_file examples/MCP/simple_calculator_fastmcp/configs/config-mcp-
 
 ## Authentication
 
-FastMCP servers can validate bearer tokens using OAuth2 token introspection. Configure `server_auth` in your front end config with the introspection endpoint and client credentials.
+MCP servers started with the FastMCP server runtime can validate bearer tokens using OAuth2 token introspection. Configure `server_auth` in your front end config with the introspection endpoint and client credentials.
 
 See the protected example for a full setup:
 

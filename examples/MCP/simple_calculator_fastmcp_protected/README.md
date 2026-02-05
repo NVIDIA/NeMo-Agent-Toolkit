@@ -17,7 +17,7 @@ limitations under the License.
 
 # Simple Calculator FastMCP - Protected
 
-This example demonstrates how to set up an OAuth2-protected NVIDIA NeMo Agent Toolkit FastMCP server. This complements the unprotected [Simple Calculator FastMCP](../simple_calculator_fastmcp/) example to demonstrate both authenticated and unauthenticated FastMCP server setups.
+This example demonstrates how to set up an OAuth2-protected MCP server using the NVIDIA NeMo Agent Toolkit FastMCP server runtime. This complements the unprotected [Simple Calculator FastMCP](../simple_calculator_fastmcp/) example to demonstrate both authenticated and unauthenticated MCP servers using the FastMCP server runtime.
 
 This example uses **per-user mode**, enabling complete per-user isolation while accessing the same protected calculator tools.
 
@@ -34,7 +34,7 @@ graph TB
         CalculatorClient --> MCPClientPlugin
     end
 
-    subgraph Server["FastMCP Server (Calculator)"]
+    subgraph Server["MCP Server Using FastMCP Runtime (Calculator)"]
         direction TB
         Calculator["Calculator Workflow"]
         OAuthMiddleware["FastMCP OAuth2 Resource Server Middleware<br/>• Introspects tokens<br/>• Checks scopes<br/>• Validates activity"]
@@ -156,7 +156,7 @@ You can register the client manually or use the dynamic client registration feat
 
 ### Step 4: Register Resource Server for Introspection
 
-FastMCP uses OAuth2 token introspection for this example. Register a resource server client so the FastMCP server can authenticate to Keycloak when introspecting tokens.
+The FastMCP server runtime uses OAuth2 token introspection for this example. Register a resource server client so the MCP server can authenticate to Keycloak when introspecting tokens.
 
 1. In Keycloak Admin Console, go to **Clients**
 2. Click **Create client**
@@ -229,7 +229,7 @@ docker rm -f keycloak
 
 ### Server Configuration (`configs/config-server.yml`)
 
-This configures the protected FastMCP server frontend with OAuth2 resource server authentication:
+This configures the protected MCP server frontend with OAuth2 resource server authentication using the FastMCP server runtime:
 
 ```yaml
 general:
@@ -248,7 +248,7 @@ general:
 
 ### Client Configuration (`configs/config-client.yml`)
 
-This configures an MCP client to connect to the protected FastMCP server in per-user mode:
+This configures an MCP client to connect to the protected MCP server in per-user mode:
 
 ```yaml
 function_groups:

@@ -23,10 +23,10 @@ This guide will cover how to use NeMo Agent Toolkit as an MCP Server to publish 
 
 ## Decision
 
-NeMo Agent Toolkit supports two MCP server runtimes. Both publish the same workflow tools as MCP. Choose the runtime that matches your deployment stack:
+NeMo Agent Toolkit supports two MCP server runtimes. Both publish the workflow and its tools as MCP tools. Choose the runtime that matches your deployment stack:
 
 - Use `nat mcp serve` for the [MCP SDK server runtime](https://github.com/modelcontextprotocol/python-sdk).
-- Use `nat fastmcp server run` for the [FastMCP server runtime](https://github.com/jlowin/fastmcp). For FastMCP server support, see [NeMo Agent Toolkit as a FastMCP Server](./fastmcp-server.md).
+- Use `nat fastmcp server run` for the [FastMCP server runtime](https://github.com/jlowin/fastmcp). For MCP servers using the FastMCP server runtime, see [NeMo Agent Toolkit as a FastMCP Server](./fastmcp-server.md).
 
 ## Installation
 

@@ -65,7 +65,7 @@ For detailed installation instructions, including optional dependencies, please 
 
 - [**User Interface:**](./run-workflows/launching-ui.md) Use the NeMo Agent Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
 
-- [**Full MCP Support:**](./build-workflows/mcp-client.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use NeMo Agent Toolkit as an [MCP client](./build-workflows/mcp-client.md) to connect to and use tools served by remote MCP servers. You can also publish tools with the [MCP server](./run-workflows/mcp-server.md) or [FastMCP server](./run-workflows/fastmcp-server.md) runtimes.
+- [**Full MCP Support:**](./build-workflows/mcp-client.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use NeMo Agent Toolkit as an [MCP client](./build-workflows/mcp-client.md) to connect to and use tools served by remote MCP servers. You can also publish tools with the [MCP server](./run-workflows/mcp-server.md) runtime or an MCP server using the [FastMCP server runtime](./run-workflows/fastmcp-server.md).
 
 - [**A2A Protocol Support:**](./components/integrations/a2a.md) Compatible with [Agent-to-Agent (A2A) Protocol](https://a2aproject.org/). You can use NeMo Agent Toolkit as an [A2A client](./build-workflows/a2a-client.md) to connect to and delegate tasks to remote A2A agents. You can also use NeMo Agent Toolkit as an [A2A server](./run-workflows/a2a-server.md) to publish workflows as discoverable A2A agents.
 
