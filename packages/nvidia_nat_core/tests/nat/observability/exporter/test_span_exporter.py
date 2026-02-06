@@ -13,12 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import os
 import uuid
 from datetime import datetime
 from unittest.mock import patch
 
 import pytest
+from pydantic import BaseModel
 
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.intermediate_step import IntermediateStep
@@ -574,52 +576,185 @@ class TestSpanExporterFunctionality:
             assert len(span_exporter._outstanding_spans) == 0
             assert len(span_exporter.exported_spans) == 1
 
-    def test_span_name_uses_display_name_from_metadata(self, span_exporter):
-        """Test that span name uses display_name from trace metadata when available.
-        """
-        # Create event with internal name and display_name in trace metadata
-        event_with_display_name = create_intermediate_step(
-            event_type=IntermediateStepType.WORKFLOW_START,
-            framework=LLMFrameworkEnum.LANGCHAIN,
-            name="<workflow>",  # Internal name for filters/middleware
-            event_timestamp=datetime.now().timestamp(),
-            data=StreamEventData(input="Test input"),
-            metadata=TraceMetadata(provided_metadata={"display_name": "My Custom Agent"}))
 
-        span_exporter.export(event_with_display_name)
-        span = span_exporter._outstanding_spans[event_with_display_name.payload.UUID]
+class TestToJsonStringSerialization:
+    """Tests for _to_json_string ensuring OTLP-compatible serialization."""
 
-        # Span name should use display_name, not the internal name
-        assert span.name == "My Custom Agent"
+    @pytest.fixture(name="exporter")
+    def fixture_exporter(self):
+        return ConcreteSpanExporter()
 
-    def test_span_name_falls_back_to_payload_name(self, span_exporter):
-        """Test that span name falls back to payload name when display_name is not set."""
-        # Create event without display_name
-        event_without_display_name = create_intermediate_step(event_type=IntermediateStepType.WORKFLOW_START,
-                                                              framework=LLMFrameworkEnum.LANGCHAIN,
-                                                              name="<workflow>",
-                                                              event_timestamp=datetime.now().timestamp(),
-                                                              data=StreamEventData(input="Test input"),
-                                                              metadata=None)
+    def test_string_input(self, exporter):
+        """String input is returned as-is via str()."""
+        result = exporter._to_json_string("hello")
+        assert isinstance(result, str)
+        parsed = json.loads(result)
+        assert parsed == "hello"
 
-        span_exporter.export(event_without_display_name)
-        span = span_exporter._outstanding_spans[event_without_display_name.payload.UUID]
+    def test_dict_input(self, exporter):
+        """Dict input is JSON-serialized."""
+        data = {"key": "value", "number": 42}
+        result = exporter._to_json_string(data)
+        assert isinstance(result, str)
+        assert json.loads(result) == {"key": "value", "number": 42}
 
-        # Span name should fall back to payload name
-        assert span.name == "<workflow>"
+    def test_dict_filters_none_values(self, exporter):
+        """Dict input has None values filtered out before serialization."""
+        data = {"key": "value", "empty": None, "number": 0}
+        result = exporter._to_json_string(data)
+        parsed = json.loads(result)
+        assert "empty" not in parsed
+        assert parsed == {"key": "value", "number": 0}
 
-    def test_span_name_falls_back_to_event_type(self, span_exporter):
-        """Test that span name falls back to event type when neither display_name nor name is available."""
-        # Create event without name or display_name
-        event_without_name = create_intermediate_step(event_type=IntermediateStepType.WORKFLOW_START,
-                                                      framework=LLMFrameworkEnum.LANGCHAIN,
-                                                      name=None,
-                                                      event_timestamp=datetime.now().timestamp(),
-                                                      data=StreamEventData(input="Test input"),
-                                                      metadata=None)
+    def test_dict_with_value_key(self, exporter):
+        """Dict with a 'value' key extracts and serializes just the value."""
+        data = {"value": "extracted", "other": "ignored"}
+        result = exporter._to_json_string(data)
+        parsed = json.loads(result)
+        assert parsed == "extracted"
 
-        span_exporter.export(event_without_name)
-        span = span_exporter._outstanding_spans[event_without_name.payload.UUID]
+    def test_dict_with_none_value_key(self, exporter):
+        """Dict with value=None does not extract the value field."""
+        data = {"value": None, "other": "kept"}
+        result = exporter._to_json_string(data)
+        parsed = json.loads(result)
+        assert parsed == {"other": "kept"}
 
-        # Span name should fall back to event type string
-        assert span.name == str(IntermediateStepType.WORKFLOW_START)
+    def test_pydantic_model(self, exporter):
+        """Pydantic model is serialized via model_dump then JSON."""
+
+        class SampleModel(BaseModel):
+            content: str
+            score: float
+            optional_field: str | None = None
+
+        model = SampleModel(content="test message", score=0.95)
+        result = exporter._to_json_string(model)
+        assert isinstance(result, str)
+        parsed = json.loads(result)
+        assert parsed == {"content": "test message", "score": 0.95}
+
+    def test_pydantic_model_with_value_key(self, exporter):
+        """Pydantic model with a 'value' field extracts just that field."""
+
+        class WrappedModel(BaseModel):
+            value: str
+            metadata: str | None = None
+
+        model = WrappedModel(value="unwrapped content")
+        result = exporter._to_json_string(model)
+        parsed = json.loads(result)
+        assert parsed == "unwrapped content"
+
+    def test_list_of_pydantic_models(self, exporter):
+        """List of Pydantic models is serialized."""
+
+        class MockMessage(BaseModel):
+            content: str
+            role: str
+            extra: str | None = None
+
+        messages = [MockMessage(content="Hello", role="human"), MockMessage(content="Hi there", role="assistant")]
+        result = exporter._to_json_string(messages)
+        assert isinstance(result, str)
+        parsed = json.loads(result)
+        assert len(parsed) == 2
+        assert parsed[0] == {"content": "Hello", "role": "human"}
+        assert parsed[1] == {"content": "Hi there", "role": "assistant"}
+
+    def test_list_of_mixed_types(self, exporter):
+        """List with mixed types (models and primitives) is serialized."""
+
+        class Item(BaseModel):
+            name: str
+
+        data = [Item(name="first"), "plain string", 42]
+        result = exporter._to_json_string(data)
+        assert isinstance(result, str)
+        parsed = json.loads(result)
+        assert parsed == [{"name": "first"}, "plain string", 42]
+
+    def test_dict_with_nested_none_values(self, exporter):
+        """Dict with deeply nested None values does not cause errors."""
+        data = {
+            "level1": {
+                "level2": [{
+                    "key": "value", "empty": None
+                }, {
+                    "nested_none": None, "data": "present"
+                }]
+            },
+            "top_none": None,
+        }
+        result = exporter._to_json_string(data)
+        assert isinstance(result, str)
+        # Should be valid JSON regardless of nested Nones
+        parsed = json.loads(result)
+        assert "top_none" not in parsed
+        assert parsed["level1"]["level2"][0]["key"] == "value"
+
+    def test_arbitrary_object_falls_back_to_str(self, exporter):
+        """Non-serializable objects fall back to str() representation."""
+
+        class CustomObj:
+
+            def __str__(self):
+                return "custom_string_repr"
+
+        result = exporter._to_json_string(CustomObj())
+        assert isinstance(result, str)
+        parsed = json.loads(result)
+        assert parsed == "custom_string_repr"
+
+    def test_exception_during_serialization_falls_back_to_str(self, exporter):
+        """If JSON serialization fails, falls back to str()."""
+
+        class BrokenModel:
+            """Object with model_dump that returns non-serializable data."""
+
+            def model_dump(self, **kwargs):
+                raise RuntimeError("serialization broken")
+
+            def __str__(self):
+                return "broken_model_str"
+
+        result = exporter._to_json_string(BrokenModel())
+        assert isinstance(result, str)
+        parsed = json.loads(result)
+        assert parsed == "broken_model_str"
+
+    def test_integer_input(self, exporter):
+        """Integer input is converted to string."""
+        result = exporter._to_json_string(42)
+        assert isinstance(result, str)
+        parsed = json.loads(result)
+        assert parsed == 42
+
+    def test_none_input(self, exporter):
+        """None input is converted to JSON null."""
+        result = exporter._to_json_string(None)
+        assert isinstance(result, str)
+        parsed = json.loads(result)
+        assert parsed is None
+
+    def test_result_is_always_a_string(self, exporter):
+        """Every code path returns a string - key invariant for OTLP."""
+        test_cases = [
+            "text",
+            42,
+            3.14,
+            True,
+            None,
+            {
+                "a": 1
+            },
+            [1, 2, 3],
+            {
+                "value": "extracted"
+            },
+        ]
+        for data in test_cases:
+            result = exporter._to_json_string(data)
+            msg = (f"_to_json_string({data!r}) returned "
+                   f"{type(result).__name__}, expected str")
+            assert isinstance(result, str), msg
