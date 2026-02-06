@@ -135,6 +135,16 @@ class Message(BaseModel):
     content: str | list[UserContent]
     role: UserMessageContentRoleType
 
+    @field_serializer("content")
+    def _serialize_content_for_openai(self, value: str | list[UserContent]) -> str | list[UserContent]:
+        """Serialize content so OpenAI-compatible APIs receive type 'text' instead of 'input_text'."""
+        if isinstance(value, str):
+            return value
+        return [
+            TextContent(text=item.text) if isinstance(item, InputTextContent) else item
+            for item in value
+        ]
+
 
 class ChatRequest(BaseModel):
     """
