@@ -233,7 +233,7 @@ async def generate_responses_api_streaming(
     _logger = logging.getLogger(__name__)
 
     response_id = f"resp_{uuid_module.uuid4().hex}{uuid_module.uuid4().hex}"[:55]
-    message_id = f"msg_{uuid_module.uuid4().hex[:24]}"
+    message_id = f"msg_{uuid_module.uuid4().hex}{uuid_module.uuid4().hex}"[:55]
     output_index = 0
     content_index = 0
     accumulated_text = ""
