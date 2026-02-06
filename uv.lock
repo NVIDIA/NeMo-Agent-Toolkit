@@ -5354,7 +5354,7 @@ dependencies = [
     { name = "flask" },
     { name = "langchain-core" },
     { name = "langgraph" },
-    { name = "nvidia-nat", extra = ["langchain"] },
+    { name = "nvidia-nat", extra = ["langchain", "test"] },
     { name = "pandas" },
 ]
 
@@ -5364,7 +5364,7 @@ requires-dist = [
     { name = "flask", specifier = ">=3.0.0" },
     { name = "langchain-core" },
     { name = "langgraph", specifier = ">=0.0.10" },
-    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
+    { name = "nvidia-nat", extras = ["langchain", "test"], editable = "." },
     { name = "pandas", specifier = ">=2.0.0" },
 ]
 
@@ -6308,6 +6308,9 @@ vanna = [
 weave = [
     { name = "nvidia-nat-weave" },
 ]
+workspace = [
+    { name = "nvidia-nat-workspace" },
+]
 zep-cloud = [
     { name = "nvidia-nat-zep-cloud" },
 ]
@@ -6439,11 +6442,12 @@ requires-dist = [
     { name = "nvidia-nat-vanna", marker = "extra == 'vanna'", editable = "packages/nvidia_nat_vanna" },
     { name = "nvidia-nat-weave", marker = "extra == 'most'", editable = "packages/nvidia_nat_weave" },
     { name = "nvidia-nat-weave", marker = "extra == 'weave'", editable = "packages/nvidia_nat_weave" },
+    { name = "nvidia-nat-workspace", marker = "extra == 'workspace'", editable = "packages/nvidia_nat_workspace" },
     { name = "nvidia-nat-zep-cloud", marker = "extra == 'most'", editable = "packages/nvidia_nat_zep_cloud" },
     { name = "nvidia-nat-zep-cloud", marker = "extra == 'zep-cloud'", editable = "packages/nvidia_nat_zep_cloud" },
     { name = "text-file-ingest", marker = "extra == 'examples'", editable = "examples/documentation_guides/workflows/text_file_ingest" },
 ]
-provides-extras = ["a2a", "adk", "agno", "autogen", "core", "crewai", "data-flywheel", "langchain", "llama-index", "mcp", "mem0ai", "nemo-customizer", "openpipe-art", "opentelemetry", "phoenix", "ragaai", "mysql", "redis", "runtime", "s3", "semantic-kernel", "strands", "test", "vanna", "weave", "zep-cloud", "async-endpoints", "gunicorn", "pii-defense", "profiling", "most", "examples"]
+provides-extras = ["a2a", "adk", "agno", "autogen", "core", "crewai", "data-flywheel", "langchain", "llama-index", "mcp", "mem0ai", "nemo-customizer", "openpipe-art", "opentelemetry", "phoenix", "ragaai", "mysql", "redis", "runtime", "s3", "semantic-kernel", "strands", "test", "vanna", "weave", "workspace", "zep-cloud", "async-endpoints", "gunicorn", "pii-defense", "profiling", "most", "examples"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -7077,6 +7081,24 @@ requires-dist = [
     { name = "weave", specifier = "==0.52.22" },
 ]
 provides-extras = ["test"]
+
+[[package]]
+name = "nvidia-nat-workspace"
+source = { editable = "packages/nvidia_nat_workspace" }
+dependencies = [
+    { name = "nvidia-nat-core" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cloudmesh-apptainer", marker = "extra == 'all'", specifier = "~=5.0" },
+    { name = "cloudmesh-apptainer", marker = "extra == 'apptainer'", specifier = "~=5.0" },
+    { name = "docker", marker = "extra == 'all'", specifier = "~=7.1" },
+    { name = "docker", marker = "extra == 'docker'", specifier = "~=7.1" },
+    { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
+    { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
+]
+provides-extras = ["all", "docker", "apptainer", "test"]
 
 [[package]]
 name = "nvidia-nat-zep-cloud"

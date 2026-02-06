@@ -73,6 +73,7 @@ strands = ["nvidia-nat-strands == {version}"]
 test = ["nvidia-nat-test == {version}"]
 vanna = ["nvidia-nat-vanna == {version}"]
 weave = ["nvidia-nat-weave == {version}"]
+workspace = ["nvidia-nat-workspace == {version}"]
 zep-cloud = ["nvidia-nat-zep-cloud == {version}"]
 
 # define any dependency extras in core so we can easily propagate to most
@@ -230,6 +231,7 @@ nvidia-nat-strands = { path = "packages/nvidia_nat_strands", editable = true }
 nvidia-nat-test = { path = "packages/nvidia_nat_test", editable = true }
 nvidia-nat-vanna = { path = "packages/nvidia_nat_vanna", editable = true }
 nvidia-nat-weave = { path = "packages/nvidia_nat_weave", editable = true }
+nvidia-nat-workspace = { path = "packages/nvidia_nat_workspace", editable = true }
 nvidia-nat-zep-cloud = { path = "packages/nvidia_nat_zep_cloud", editable = true }
 
 # Examples

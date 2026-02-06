@@ -113,7 +113,6 @@ def _tool_message(tool_call_id: str, content: str) -> dict[str, Any]:
 
 def _serialize_tool_output(output: object) -> str:
     """Serialize tool output to a string for the LLM."""
-
     if output is None:
         return ""
     if isinstance(output, str):

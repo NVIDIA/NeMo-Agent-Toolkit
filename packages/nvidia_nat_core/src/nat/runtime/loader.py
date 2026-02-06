@@ -54,13 +54,17 @@ class PluginTypes(IntFlag):
     A plugin that is an API authentication provider for the workflow. This includes Oauth2, API Key, etc.
     """
     REGISTRY_HANDLER = auto()
+    """
+    A plugin that is a registry handler for the workflow. This includes registry handlers like NAT, etc.
+    """
+    WORKSPACE_ACTION = auto()
 
     # Convenience flag for groups of plugin types
     CONFIG_OBJECT = COMPONENT | FRONT_END | EVALUATOR | AUTHENTICATION
     """
     Any plugin that can be specified in the NAT configuration file.
     """
-    ALL = COMPONENT | FRONT_END | EVALUATOR | REGISTRY_HANDLER | AUTHENTICATION
+    ALL = COMPONENT | FRONT_END | EVALUATOR | AUTHENTICATION | REGISTRY_HANDLER | WORKSPACE_ACTION
     """
     All plugin types
     """
@@ -146,6 +150,8 @@ def discover_entrypoints(plugin_type: PluginTypes):
         plugin_groups.extend(["nat.evaluators"])
     if (plugin_type & PluginTypes.AUTHENTICATION):
         plugin_groups.extend(["nat.authentication_providers"])
+    if (plugin_type & PluginTypes.WORKSPACE_ACTION):
+        plugin_groups.extend(["nat.workspace_actions"])
 
     # Get the entry points for the specified groups
     nat_plugins = reduce(lambda x, y: list(x) + list(y), [entry_points.select(group=y) for y in plugin_groups])

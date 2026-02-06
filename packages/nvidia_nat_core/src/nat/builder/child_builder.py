@@ -48,6 +48,7 @@ from nat.data_models.middleware import MiddlewareBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfig
 from nat.data_models.retriever import RetrieverBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
+from nat.data_models.workspace import WorkspaceBaseConfig
 from nat.experimental.decorators.experimental_warning_decorator import experimental
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
@@ -60,6 +61,7 @@ from nat.middleware.middleware import Middleware
 from nat.object_store.interfaces import ObjectStore
 from nat.retriever.interface import Retriever
 from nat.utils.type_utils import override
+from nat.workspace.types import WorkspaceManagerBase
 
 
 class ChildBuilder(Builder):
@@ -70,8 +72,8 @@ class ChildBuilder(Builder):
 
         self._dependencies = FunctionDependencies()
 
-    @override
     @property
+    @override
     def sync_builder(self) -> SyncBuilder:
         return SyncBuilder(self)
 
@@ -124,6 +126,14 @@ class ChildBuilder(Builder):
     @override
     def get_workflow_config(self) -> FunctionBaseConfig:
         return self._workflow_builder.get_workflow_config()
+
+    @override
+    def get_workspace_config(self) -> WorkspaceBaseConfig | None:
+        return self._workflow_builder.get_workspace_config()
+
+    @override
+    async def get_workspace_manager(self) -> WorkspaceManagerBase | None:
+        return await self._workflow_builder.get_workspace_manager()
 
     @override
     async def get_tools(self,

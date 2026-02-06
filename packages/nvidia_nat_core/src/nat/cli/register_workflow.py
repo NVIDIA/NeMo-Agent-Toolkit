@@ -13,7 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import inspect
 from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
 
@@ -47,6 +49,7 @@ from nat.cli.type_registry import ObjectStoreRegisteredCallableT
 from nat.cli.type_registry import RegisteredLoggingMethod
 from nat.cli.type_registry import RegisteredTelemetryExporter
 from nat.cli.type_registry import RegisteredToolWrapper
+from nat.cli.type_registry import RegisteredWorkspaceGuardrailInfo
 from nat.cli.type_registry import RegistryHandlerBuildCallableT
 from nat.cli.type_registry import RegistryHandlerRegisteredCallableT
 from nat.cli.type_registry import RetrieverClientBuildCallableT
@@ -65,6 +68,10 @@ from nat.cli.type_registry import TrajectoryBuilderBuildCallableT
 from nat.cli.type_registry import TrajectoryBuilderRegisteredCallableT
 from nat.cli.type_registry import TTCStrategyBuildCallableT
 from nat.cli.type_registry import TTCStrategyRegisteredCallableT
+from nat.cli.type_registry import WorkspaceBuildCallableT
+from nat.cli.type_registry import WorkspaceGuardrailBuildCallableT
+from nat.cli.type_registry import WorkspaceGuardrailRegisteredCallableT
+from nat.cli.type_registry import WorkspaceRegisteredCallableT
 from nat.data_models.authentication import AuthProviderBaseConfigT
 from nat.data_models.component import ComponentEnum
 from nat.data_models.discovery_metadata import DiscoveryMetadata
@@ -83,7 +90,12 @@ from nat.data_models.object_store import ObjectStoreBaseConfigT
 from nat.data_models.registry_handler import RegistryHandlerBaseConfigT
 from nat.data_models.retriever import RetrieverBaseConfigT
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfigT
+from nat.data_models.workspace import WorkspaceBaseConfigT
+from nat.data_models.workspace_guardrail import WorkspaceGuardrailBaseConfigT
 from nat.utils.type_utils import DecomposedType
+
+if TYPE_CHECKING:
+    from nat.workspace.types import WorkspaceAction
 
 
 def register_telemetry_exporter(config_type: type[TelemetryExporterConfigT]):
@@ -159,6 +171,86 @@ def register_front_end(config_type: type[FrontEndConfigT]):
         return context_manager_fn
 
     return register_front_end_inner
+
+
+def add_registered_workspace(config_type: type[WorkspaceBaseConfigT]):
+    """
+    Register a workspace configuration.
+    """
+
+    def register_workspace_inner(
+            fn: WorkspaceBuildCallableT[WorkspaceBaseConfigT]) -> WorkspaceRegisteredCallableT[WorkspaceBaseConfigT]:
+        from .type_registry import GlobalTypeRegistry
+        from .type_registry import RegisteredWorkspaceInfo
+
+        context_manager_fn = asynccontextmanager(fn)
+
+        discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
+                                                                component_type=ComponentEnum.WORKSPACE)
+
+        GlobalTypeRegistry.get().register_workspace(
+            RegisteredWorkspaceInfo(full_type=config_type.full_type,
+                                    config_type=config_type,
+                                    build_fn=context_manager_fn,
+                                    discovery_metadata=discovery_metadata))
+
+        return context_manager_fn
+
+    return register_workspace_inner
+
+
+def register_workspace_guardrail(config_type: type[WorkspaceGuardrailBaseConfigT]):
+    """Register a workspace guardrail component."""
+
+    def register_guardrail_inner(
+        fn: WorkspaceGuardrailBuildCallableT[WorkspaceGuardrailBaseConfigT]
+    ) -> WorkspaceGuardrailRegisteredCallableT[WorkspaceGuardrailBaseConfigT]:
+        from .type_registry import GlobalTypeRegistry
+
+        context_manager_fn = asynccontextmanager(fn)
+
+        discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
+                                                                component_type=ComponentEnum.WORKSPACE_GUARDRAIL)
+
+        GlobalTypeRegistry.get().register_workspace_guardrail(
+            RegisteredWorkspaceGuardrailInfo(full_type=config_type.full_type,
+                                             config_type=config_type,
+                                             build_fn=context_manager_fn,
+                                             discovery_metadata=discovery_metadata))
+
+        return context_manager_fn
+
+    return register_guardrail_inner
+
+
+def register_workspace_action(action_cls: type["WorkspaceAction"]) -> type["WorkspaceAction"]:
+    """Register a workspace action for discovery.
+
+    Args:
+        action_cls: Workspace action class to register.
+
+    Returns:
+        type[WorkspaceAction]: The registered action class.
+
+    Raises:
+        TypeError: If the action class is abstract or does not inherit from `WorkspaceAction`.
+    """
+    from nat.cli.type_registry import GlobalTypeRegistry
+    from nat.cli.type_registry import RegisteredWorkspaceActionInfo
+    from nat.workspace.types import WorkspaceAction
+
+    if not issubclass(action_cls, WorkspaceAction):
+        raise TypeError("Action class must inherit from WorkspaceAction.")
+    if inspect.isabstract(action_cls):
+        raise TypeError("Cannot register an abstract WorkspaceAction.")
+
+    registration = RegisteredWorkspaceActionInfo(
+        name=action_cls.name,
+        action_cls=action_cls,
+        action_schema=action_cls.schema_for_registry(),
+    )
+    GlobalTypeRegistry.get().register_workspace_action(registration)
+    return action_cls
 
 
 def register_function(config_type: type[FunctionConfigT],

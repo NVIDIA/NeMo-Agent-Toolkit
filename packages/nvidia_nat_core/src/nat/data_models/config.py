@@ -51,6 +51,8 @@ from .memory import MemoryBaseConfig
 from .middleware import FunctionMiddlewareBaseConfig
 from .object_store import ObjectStoreBaseConfig
 from .retriever import RetrieverBaseConfig
+from .workspace import WorkspaceBaseConfig
+from .workspace_guardrail import WorkspaceGuardrailBaseConfig
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +102,10 @@ def _process_validation_error(err: ValidationError, handler: ValidatorFunctionWr
                 registered_keys = GlobalTypeRegistry.get().get_registered_trainer_adapters()
             elif (info.field_name == "trajectory_builders"):
                 registered_keys = GlobalTypeRegistry.get().get_registered_trajectory_builders()
+            elif (info.field_name == "workspace"):
+                registered_keys = GlobalTypeRegistry.get().get_registered_workspaces()
+            elif (info.field_name == "workspace_guardrails"):
+                registered_keys = GlobalTypeRegistry.get().get_registered_workspace_guardrails()
 
             else:
                 assert False, f"Unknown field name {info.field_name} in validator"
@@ -274,6 +280,12 @@ class Config(HashableBaseModel):
     # Global Options
     general: GeneralConfig = GeneralConfig()
 
+    # Workspace Configuration
+    workspace: WorkspaceBaseConfig | None = None
+
+    # Workspace Guardrails
+    workspace_guardrails: dict[str, WorkspaceGuardrailBaseConfig] = Field(default_factory=dict)
+
     # Functions Configuration
     functions: dict[str, FunctionBaseConfig] = Field(default_factory=dict)
 
@@ -326,6 +338,8 @@ class Config(HashableBaseModel):
         stream.write("-" * 20 + "\n")
         if self.workflow:
             stream.write(f"Workflow Type: {self.workflow.type}\n")
+        if self.workspace:
+            stream.write(f"Workspace Type: {self.workspace.type}\n")
 
         stream.write(f"Number of Functions: {len(self.functions)}\n")
         stream.write(f"Number of Function Groups: {len(self.function_groups)}\n")
@@ -336,10 +350,12 @@ class Config(HashableBaseModel):
         stream.write(f"Number of Retrievers: {len(self.retrievers)}\n")
         stream.write(f"Number of TTC Strategies: {len(self.ttc_strategies)}\n")
         stream.write(f"Number of Authentication Providers: {len(self.authentication)}\n")
+        stream.write(f"Number of Workspace Guardrails: {len(self.workspace_guardrails)}\n")
 
     @field_validator("functions",
                      "function_groups",
                      "middleware",
+                     "workspace_guardrails",
                      "llms",
                      "embedders",
                      "memory",
@@ -350,6 +366,7 @@ class Config(HashableBaseModel):
                      "trainers",
                      "trainer_adapters",
                      "trajectory_builders",
+                     "workspace",
                      mode="wrap")
     @classmethod
     def validate_components(cls, value: typing.Any, handler: ValidatorFunctionWrapHandler, info: ValidationInfo):
@@ -392,6 +409,12 @@ class Config(HashableBaseModel):
                                     typing.Annotated[type_registry.compute_annotation(FunctionMiddlewareBaseConfig),
                                                      Discriminator(TypedBaseModel.discriminator)]]
 
+        WorkspaceGuardrailsAnnotation = dict[
+            str,
+            typing.Annotated[type_registry.compute_annotation(WorkspaceGuardrailBaseConfig),
+                             Discriminator(TypedBaseModel.discriminator)],
+        ]
+
         MemoryAnnotation = dict[str,
                                 typing.Annotated[type_registry.compute_annotation(MemoryBaseConfig),
                                                  Discriminator(TypedBaseModel.discriminator)]]
@@ -421,6 +444,10 @@ class Config(HashableBaseModel):
         TrajectoryBuildersAnnotation = dict[str,
                                             typing.Annotated[type_registry.compute_annotation(TrajectoryBuilderConfig),
                                                              Discriminator(TypedBaseModel.discriminator)]]
+
+        WorkspaceAnnotation = typing.Annotated[type_registry.compute_annotation(WorkspaceBaseConfig),
+                                               Discriminator(TypedBaseModel.discriminator)]
+        OptionalWorkspaceAnnotation = WorkspaceAnnotation | None
 
         should_rebuild = False
 
@@ -454,6 +481,12 @@ class Config(HashableBaseModel):
             middleware_field.annotation = MiddlewareAnnotation
             should_rebuild = True
 
+        workspace_guardrails_field = cls.model_fields.get("workspace_guardrails")
+        if (workspace_guardrails_field is not None
+                and workspace_guardrails_field.annotation != WorkspaceGuardrailsAnnotation):
+            workspace_guardrails_field.annotation = WorkspaceGuardrailsAnnotation
+            should_rebuild = True
+
         memory_field = cls.model_fields.get("memory")
         if memory_field is not None and memory_field.annotation != MemoryAnnotation:
             memory_field.annotation = MemoryAnnotation
@@ -477,6 +510,11 @@ class Config(HashableBaseModel):
         workflow_field = cls.model_fields.get("workflow")
         if workflow_field is not None and workflow_field.annotation != WorkflowAnnotation:
             workflow_field.annotation = WorkflowAnnotation
+            should_rebuild = True
+
+        workspace_field = cls.model_fields.get("workspace")
+        if workspace_field is not None and workspace_field.annotation != OptionalWorkspaceAnnotation:
+            workspace_field.annotation = OptionalWorkspaceAnnotation
             should_rebuild = True
 
         trainers_field = cls.model_fields.get("trainers")

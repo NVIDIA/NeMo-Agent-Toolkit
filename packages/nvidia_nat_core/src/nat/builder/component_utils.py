@@ -40,6 +40,7 @@ from nat.data_models.middleware import MiddlewareBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfig
 from nat.data_models.retriever import RetrieverBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
+from nat.data_models.workspace_guardrail import WorkspaceGuardrailBaseConfig
 from nat.utils.type_utils import DecomposedType
 
 WORKFLOW_COMPONENT_NAME = "<workflow>"
@@ -57,6 +58,7 @@ _component_group_order = [
     ComponentGroup.RETRIEVERS,
     ComponentGroup.TTC_STRATEGIES,
     ComponentGroup.MIDDLEWARE,
+    ComponentGroup.WORKSPACE_GUARDRAILS,
     ComponentGroup.FUNCTION_GROUPS,
     ComponentGroup.FUNCTIONS,
     ComponentGroup.TRAINER_ADAPTERS,
@@ -130,6 +132,8 @@ def group_from_component(component: TypedBaseModel) -> ComponentGroup | None:
         return ComponentGroup.FUNCTION_GROUPS
     if (isinstance(component, MiddlewareBaseConfig)):
         return ComponentGroup.MIDDLEWARE
+    if (isinstance(component, WorkspaceGuardrailBaseConfig)):
+        return ComponentGroup.WORKSPACE_GUARDRAILS
     if (isinstance(component, LLMBaseConfig)):
         return ComponentGroup.LLMS
     if (isinstance(component, MemoryBaseConfig)):
@@ -289,8 +293,8 @@ def build_dependency_sequence(config: "Config") -> list[ComponentInstanceData]:
     total_node_count = (len(config.embedders) + len(config.functions) + len(config.function_groups) + len(config.llms) +
                         len(config.memory) + len(config.object_stores) + len(config.retrievers) +
                         len(config.ttc_strategies) + len(config.authentication) + len(config.middleware) +
-                        len(config.trainers) + len(config.trajectory_builders) + len(config.trainer_adapters) + 1
-                        )  # +1 for the workflow
+                        len(config.workspace_guardrails) + len(config.trainers) + len(config.trajectory_builders) +
+                        len(config.trainer_adapters) + 1)  # +1 for the workflow
 
     dependency_map: dict
     dependency_graph: nx.DiGraph
