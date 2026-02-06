@@ -901,8 +901,8 @@ class ResponsesRequest(BaseModel):
                                   }
                               })
 
-    # Required field
-    model: str = Field(description="ID of the model to use")
+    # Optional model field
+    model: str | None = Field(default=None, description="ID of the model to use")
 
     # Input can be a string or list of input items
     input: str | list[dict[str, typing.Any]] = Field(
