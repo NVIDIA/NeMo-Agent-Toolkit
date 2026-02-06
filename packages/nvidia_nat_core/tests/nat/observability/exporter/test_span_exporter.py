@@ -622,6 +622,8 @@ class TestSpanExporterFunctionality:
 
         span_exporter.export(event_without_name)
         span = span_exporter._outstanding_spans[event_without_name.payload.UUID]
+        # Span name should fall back to event type string
+        assert span.name == str(IntermediateStepType.WORKFLOW_START)
 
 
 class TestToJsonStringSerialization:
