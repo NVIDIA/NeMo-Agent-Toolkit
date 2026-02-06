@@ -1059,7 +1059,7 @@ class ResponsesOutputItem(BaseModel):
     """Output item in Responses API format."""
 
     type: typing.Literal["message"] = "message"
-    id: str = Field(default_factory=lambda: f"msg_{uuid.uuid4().hex}{uuid.uuid4().hex[:18]}")
+    id: str = Field(default_factory=lambda: f"msg_{uuid.uuid4().hex}{uuid.uuid4().hex}"[:50])
     status: typing.Literal["in_progress", "completed", "incomplete"] = "completed"
     role: typing.Literal["assistant"] = "assistant"
     content: list[ResponsesOutputContent] = Field(default_factory=list)
@@ -1079,7 +1079,7 @@ class ResponsesAPIResponse(ResponseBaseModelOutput):
     https://platform.openai.com/docs/api-reference/responses
     """
 
-    id: str = Field(default_factory=lambda: f"resp_{uuid.uuid4().hex}{uuid.uuid4().hex[:18]}")
+    id: str = Field(default_factory=lambda: f"resp_{uuid.uuid4().hex}{uuid.uuid4().hex}"[:50])
     object: typing.Literal["response"] = "response"
     created_at: int = Field(
         default_factory=lambda: int(datetime.datetime.now(tz=datetime.timezone.utc).timestamp()))
