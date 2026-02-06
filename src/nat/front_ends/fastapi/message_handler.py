@@ -30,6 +30,7 @@ from nat.data_models.api_server import ChatResponse
 from nat.data_models.api_server import ChatResponseChunk
 from nat.data_models.api_server import Error
 from nat.data_models.api_server import ErrorTypes
+from nat.data_models.api_server import InputTextContent
 from nat.data_models.api_server import ResponseObservabilityTrace
 from nat.data_models.api_server import ResponsePayloadOutput
 from nat.data_models.api_server import ResponseSerializable
@@ -145,6 +146,8 @@ class WebSocketMessageHandler:
                 for attachment in user_message.content:
                     if isinstance(attachment, TextContent):
                         return attachment
+                    if isinstance(attachment, InputTextContent):
+                        return TextContent(text=attachment.text)
         raise ValueError("No user text content found in messages.")
 
     async def _process_websocket_user_interaction_response_message(

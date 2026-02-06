@@ -74,6 +74,8 @@ class ChatContentType(str, Enum):
     TEXT = "text"
     IMAGE_URL = "image_url"
     INPUT_AUDIO = "input_audio"
+    # Azure AI Foundry / Responses API use "input_text" for user text content
+    INPUT_TEXT = "input_text"
 
 
 class InputAudio(BaseModel):
@@ -107,6 +109,16 @@ class TextContent(BaseModel):
     text: str = "default"
 
 
+class InputTextContent(BaseModel):
+    """
+    Same as TextContent but with type "input_text" for Azure AI Foundry / Responses API compatibility.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    type: typing.Literal[ChatContentType.INPUT_TEXT] = ChatContentType.INPUT_TEXT
+    text: str = "default"
+
+
 class Security(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -114,7 +126,9 @@ class Security(BaseModel):
     token: SerializableSecretStr = Field(default="default")
 
 
-UserContent = typing.Annotated[TextContent | ImageContent | AudioContent, Discriminator("type")]
+UserContent = typing.Annotated[
+    TextContent | InputTextContent | ImageContent | AudioContent, Discriminator("type")
+]
 
 
 class Message(BaseModel):
