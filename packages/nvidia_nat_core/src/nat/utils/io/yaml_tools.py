@@ -25,11 +25,11 @@ from nat.utils.type_utils import StrPath
 
 logger = logging.getLogger(__name__)
 
-# Prefix for file protocol in prompt fields to indicate content should be loaded from a file
+# Prefix for file protocol references to indicate content should be loaded from a file
 FILE_PROTOCOL_PREFIX = "file://"
 
-# Allowed file extensions for prompt files (security: prevent loading code files)
-ALLOWED_PROMPT_EXTENSIONS = frozenset({".txt", ".md", ".j2", ".jinja2", ".jinja", ".prompt", ".tpl", ".template"})
+# Allowed file extensions for file references (security: prevent loading code files)
+ALLOWED_FILE_EXTENSIONS = frozenset({".txt", ".md", ".j2", ".jinja2", ".jinja", ".prompt", ".tpl", ".template"})
 
 
 def _load_file_content(file_path: StrPath) -> str:
@@ -47,41 +47,35 @@ def _load_file_content(file_path: StrPath) -> str:
     """
     path = Path(file_path)
     if not path.exists():
-        raise FileNotFoundError(f"Prompt file not found: {file_path}")
+        raise FileNotFoundError(f"Referenced file not found: {file_path}")
 
     with open(path, encoding="utf-8") as f:
         return f.read()
 
 
-def _is_prompt_key(key: str) -> bool:
-    """Check if a key represents a prompt field (ends with 'prompt', case-insensitive)."""
-    return key.lower().endswith("prompt")
-
-
-def _validate_prompt_file_extension(file_path: Path) -> None:
+def _validate_file_extension(file_path: Path) -> None:
     """
-    Validate that a prompt file has an allowed extension.
+    Validate that a referenced file has an allowed extension.
 
     Args:
-        file_path: Path to the prompt file.
+        file_path: Path to the file.
 
     Raises:
         ValueError: If the file extension is not in the allowed list.
     """
     ext = file_path.suffix.lower()
-    if ext not in ALLOWED_PROMPT_EXTENSIONS:
-        allowed = ", ".join(sorted(ALLOWED_PROMPT_EXTENSIONS))
-        raise ValueError(f"Unsupported file extension '{ext}' for prompt file: {file_path}. "
+    if ext not in ALLOWED_FILE_EXTENSIONS:
+        allowed = ", ".join(sorted(ALLOWED_FILE_EXTENSIONS))
+        raise ValueError(f"Unsupported file extension '{ext}' for file reference: {file_path}. "
                          f"Allowed extensions: {allowed}")
 
 
-def _resolve_prompt_files(config: dict, base_path: Path) -> dict:
+def _resolve_file_references(config: dict, base_path: Path) -> dict:
     """
-    Recursively resolve file:// references in prompt fields.
+    Recursively resolve file:// references in configuration fields.
 
-    Only resolves values where:
-    1. The key ends with "prompt" (case-insensitive)
-    2. The value is a string starting with "file://"
+    Resolves any string value starting with "file://" by loading
+    the referenced file's contents as a string.
 
     Args:
         config: The configuration dictionary to process.
@@ -95,9 +89,9 @@ def _resolve_prompt_files(config: dict, base_path: Path) -> dict:
     for key, value in config.items():
         if isinstance(value, dict):
             # Recursively process nested dictionaries
-            result[key] = _resolve_prompt_files(value, base_path)
-        elif isinstance(value, str) and _is_prompt_key(key) and value.startswith(FILE_PROTOCOL_PREFIX):
-            # Load file content for prompt fields with file:// prefix
+            result[key] = _resolve_file_references(value, base_path)
+        elif isinstance(value, str) and value.startswith(FILE_PROTOCOL_PREFIX):
+            # Load file content for any string field with file:// prefix
             file_path_str = value[len(FILE_PROTOCOL_PREFIX):]
 
             # Resolve relative paths from base_path
@@ -109,7 +103,7 @@ def _resolve_prompt_files(config: dict, base_path: Path) -> dict:
             resolved_path = resolved_path.resolve()
 
             # Validate file extension before loading
-            _validate_prompt_file_extension(resolved_path)
+            _validate_file_extension(resolved_path)
 
             result[key] = _load_file_content(resolved_path)
         else:
@@ -223,8 +217,8 @@ def yaml_load(config_path: StrPath, _visited: set[Path] | None = None) -> dict:
         config = deep_merge(base_config, config)
         config.pop("base", None)
 
-    # Resolve file:// references in prompt fields
-    config = _resolve_prompt_files(config, config_path_obj.parent)
+    # Resolve file:// references in configuration fields
+    config = _resolve_file_references(config, config_path_obj.parent)
 
     return config
 
