@@ -152,11 +152,12 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
         s_ts = event.payload.span_event_timestamp or event.payload.event_timestamp
         start_ns = ns_timestamp(s_ts)
 
-        # Optional: embed the LLM/tool name if present
-        if event.payload.name:
-            sub_span_name = f"{event.payload.name}"
-        else:
-            sub_span_name = f"{event.payload.event_type}"
+        # Use display_name from trace metadata for observability if set, otherwise fall back to name, then event type
+        display_name = None
+        if (event.payload.metadata and hasattr(event.payload.metadata, 'provided_metadata')
+                and event.payload.metadata.provided_metadata):
+            display_name = event.payload.metadata.provided_metadata.get("display_name")
+        sub_span_name = display_name or event.payload.name or f"{event.payload.event_type}"
 
         # Prefer parent/context trace id for attribute, else workflow trace id
         _attr_trace_id = None

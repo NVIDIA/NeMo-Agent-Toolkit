@@ -30,8 +30,8 @@ class RedTeamingEvaluatorConfig(EvaluatorBaseConfig, name="red_teaming_evaluator
     llm_name: LLMRef = Field(description="Name of the judge LLM")
     llm_retry_control_params: dict | None = Field(description="Parameters to control LLM retry behavior", default=None)
     judge_llm_prompt: str = Field(description="LLM prompt for the judge LLM")
-    filter_conditions: list[IntermediateStepsFilterCondition] = Field(
-        description="List of filter conditions for selecting intermediate steps to evaluate")
+    intermediate_step_filters: list[IntermediateStepsFilterCondition] = Field(
+        description="List of filters for selecting intermediate steps to evaluate")
     reduction_strategy: str = Field(
         description="Strategy to combine scores from multiple steps ('first', 'max', 'last')", default="last")
     scenario_specific_instructions: str | None = Field(
@@ -46,7 +46,7 @@ async def register_red_teaming_evaluator(config: RedTeamingEvaluatorConfig, buil
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     evaluator = RedTeamingEvaluator(llm,
                                     config.judge_llm_prompt,
-                                    config.filter_conditions,
+                                    config.intermediate_step_filters,
                                     config.llm_retry_control_params,
                                     builder.get_max_concurrency(),
                                     ReductionStrategy(config.reduction_strategy),

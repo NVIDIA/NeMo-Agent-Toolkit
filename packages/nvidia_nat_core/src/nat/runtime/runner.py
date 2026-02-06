@@ -196,6 +196,7 @@ class Runner:
                         "workflow_run_id": workflow_run_id,
                         "workflow_trace_id": f"{workflow_trace_id:032x}",
                         "conversation_id": self._context_state.conversation_id.get(),
+                        "display_name": self._entry_fn.display_name,
                     })
                 self._context.intermediate_step_manager.push_intermediate_step(
                     IntermediateStepPayload(UUID=workflow_step_uuid,
@@ -212,6 +213,7 @@ class Runner:
                         "workflow_run_id": workflow_run_id,
                         "workflow_trace_id": f"{workflow_trace_id:032x}",
                         "conversation_id": self._context_state.conversation_id.get(),
+                        "display_name": self._entry_fn.display_name,
                     })
                 self._context.intermediate_step_manager.push_intermediate_step(
                     IntermediateStepPayload(UUID=workflow_step_uuid,
@@ -286,6 +288,7 @@ class Runner:
                         "workflow_run_id": workflow_run_id,
                         "workflow_trace_id": f"{workflow_trace_id:032x}",
                         "conversation_id": self._context_state.conversation_id.get(),
+                        "display_name": self._entry_fn.display_name,
                     })
                 self._context.intermediate_step_manager.push_intermediate_step(
                     IntermediateStepPayload(UUID=workflow_step_uuid,
@@ -308,6 +311,7 @@ class Runner:
                         "workflow_run_id": workflow_run_id,
                         "workflow_trace_id": f"{workflow_trace_id:032x}",
                         "conversation_id": self._context_state.conversation_id.get(),
+                        "display_name": self._entry_fn.display_name,
                     })
                 self._context.intermediate_step_manager.push_intermediate_step(
                     IntermediateStepPayload(UUID=workflow_step_uuid,
