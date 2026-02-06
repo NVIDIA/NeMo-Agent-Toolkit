@@ -50,7 +50,7 @@ class TestRedTeamingRunnerConfigNormalConstruction:
         expected_evaluator_config = RedTeamingEvaluatorConfig(
             llm_name="judge_llm",  # type: ignore[arg-type]
             judge_llm_prompt="Evaluate whether the attack was successful based on the output.",
-            filter_conditions=[expected_filter_condition],
+            intermediate_step_filters=[expected_filter_condition],
             reduction_strategy="last",
             scenario_specific_instructions="Check if the output contains 42.0",
         )
@@ -71,7 +71,7 @@ class TestRedTeamingRunnerConfigNormalConstruction:
         expected_baseline_evaluator = RedTeamingEvaluatorConfig(
             llm_name="judge_llm",  # type: ignore[arg-type]
             judge_llm_prompt="Evaluate the baseline output without attack.",
-            filter_conditions=[expected_filter_condition],
+            intermediate_step_filters=[expected_filter_condition],
             reduction_strategy="last",
         )
 
@@ -126,8 +126,8 @@ class TestRedTeamingRunnerConfigNormalConstruction:
         assert attack_scenario.evaluator.judge_llm_prompt == expected_prompt
         assert attack_scenario.evaluator.reduction_strategy == "last"
         assert attack_scenario.evaluator.scenario_specific_instructions == "Check if the output contains 42.0"
-        assert len(attack_scenario.evaluator.filter_conditions) == 1
-        assert attack_scenario.evaluator.filter_conditions[0].name == "workflow_output"
+        assert len(attack_scenario.evaluator.intermediate_step_filters) == 1
+        assert attack_scenario.evaluator.intermediate_step_filters[0].name == "workflow_output"
 
         # Verify baseline scenario
         baseline_scenario = config.scenarios["baseline"]
@@ -157,7 +157,7 @@ class TestRedTeamingRunnerConfigWithExtends:
         expected_base_evaluator = RedTeamingEvaluatorConfig(
             llm_name="judge_llm",  # type: ignore[arg-type]
             judge_llm_prompt="Base prompt for evaluating attacks.",
-            filter_conditions=[expected_filter_condition],
+            intermediate_step_filters=[expected_filter_condition],
             reduction_strategy="mean",
             scenario_specific_instructions="Base instructions",
         )
@@ -209,10 +209,10 @@ class TestRedTeamingRunnerConfigWithExtends:
 
         # Verify inherited fields (not overridden)
         assert scenario.evaluator.llm_name == "judge_llm"
-        assert len(scenario.evaluator.filter_conditions) == 1
-        assert scenario.evaluator.filter_conditions[0].name == "workflow_output"
-        assert scenario.evaluator.filter_conditions[0].event_type == "FUNCTION_END"
-        assert scenario.evaluator.filter_conditions[0].payload_name == "<workflow>"
+        assert len(scenario.evaluator.intermediate_step_filters) == 1
+        assert scenario.evaluator.intermediate_step_filters[0].name == "workflow_output"
+        assert scenario.evaluator.intermediate_step_filters[0].event_type == "FUNCTION_END"
+        assert scenario.evaluator.intermediate_step_filters[0].payload_name == "<workflow>"
 
         # Verify overridden fields
         assert scenario.evaluator.judge_llm_prompt == "Overridden prompt for this scenario."
@@ -241,7 +241,7 @@ class TestRedTeamingRunnerConfigValidationErrors:
                         RedTeamingEvaluatorConfig(
                             llm_name="judge_llm",  # type: ignore[arg-type]
                             judge_llm_prompt="prompt",
-                            filter_conditions=[IntermediateStepsFilterCondition(name="default")],
+                            intermediate_step_filters=[IntermediateStepsFilterCondition(name="default")],
                         )
                 },
                 scenarios={"failing_scenario": scenario_raw},
@@ -260,7 +260,7 @@ class TestRedTeamingRunnerConfigValidationErrors:
             evaluator={
                 "llm_name": "judge_llm",
                 "judge_llm_prompt": "Direct prompt without extends",
-                "filter_conditions": [{
+                "intermediate_step_filters": [{
                     "name": "direct_filter"
                 }],
                 "reduction_strategy": "last",
@@ -283,7 +283,7 @@ class TestRedTeamingRunnerConfigValidationErrors:
         scenario_raw = _RedTeamingScenarioRaw(
             middleware=RedTeamingMiddlewareConfig(attack_payload="test"),
             evaluator={
-                # Missing required fields: llm_name, judge_llm_prompt, filter_conditions
+                # Missing required fields: llm_name, judge_llm_prompt, intermediate_step_filters
                 "reduction_strategy": "last",
             },
         )
