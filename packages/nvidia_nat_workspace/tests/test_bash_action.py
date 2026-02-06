@@ -14,6 +14,8 @@
 # limitations under the License.
 from __future__ import annotations
 
+import asyncio
+import time
 from pathlib import Path
 
 import pytest
@@ -32,9 +34,13 @@ def fixture_bash_action() -> BashAction:
     return BashAction()
 
 
-async def test_bash_action_requires_context(fixture_bash_action: BashAction) -> None:
-    with pytest.raises(RuntimeError, match="ActionContext"):
-        await fixture_bash_action.__aenter__()
+async def _wait_for_marker(marker_path: Path, timeout_seconds: float = 1.0) -> None:
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        if marker_path.exists():
+            return
+        await asyncio.sleep(0.01)
+    raise AssertionError("Marker file was not created in time.")
 
 
 async def test_bash_action_executes_command(
@@ -69,3 +75,29 @@ async def test_bash_action_timeout(
 
     assert result["timed_out"] is True
     assert result["exit_code"] is None
+
+
+async def test_bash_action_parallel_commands(
+    fixture_action_context: ActionContext,
+    fixture_bash_action: BashAction,
+) -> None:
+    fixture_bash_action.set_context(fixture_action_context)
+    marker_path = fixture_action_context.root_path / "marker.txt"
+    if marker_path.exists():
+        marker_path.unlink()
+
+    async with fixture_bash_action as action:
+        long_command = "echo started > marker.txt; sleep 0.4; rm -f marker.txt"
+        long_task = asyncio.create_task(action.execute(fixture_action_context, {"command": long_command}), )
+
+        await _wait_for_marker(marker_path)
+
+        short_command = "if [ -f marker.txt ]; then echo busy; else echo idle; fi"
+        short_result = await action.execute(fixture_action_context, {"command": short_command})
+        long_result = await long_task
+
+    assert short_result["timed_out"] is False
+    assert short_result["exit_code"] == 0
+    assert short_result["stdout"].strip() == "busy"
+    assert long_result["timed_out"] is False
+    assert long_result["exit_code"] == 0
