@@ -20,7 +20,6 @@ from pathlib import Path
 
 import expandvars
 import yaml
-
 from nat.utils.type_utils import StrPath
 
 logger = logging.getLogger(__name__)
@@ -189,7 +188,8 @@ def yaml_load(config_path: StrPath, _visited: set[Path] | None = None) -> dict:
     with open(config_path_obj, encoding="utf-8") as stream:
         config_str = stream.read()
 
-    config = yaml_loads(config_str)
+    base_path = config_path_obj.parent
+    config = yaml_loads(config_str, base_path)
 
     # Check if config specifies a base for inheritance
     if "base" in config:
@@ -201,7 +201,7 @@ def yaml_load(config_path: StrPath, _visited: set[Path] | None = None) -> dict:
 
         # Resolve base path relative to current config
         if not Path(base_path_str).is_absolute():
-            base_path = config_path_obj.parent / base_path_str
+            base_path = base_path / base_path_str
         else:
             base_path = Path(base_path_str)
 
@@ -217,13 +217,10 @@ def yaml_load(config_path: StrPath, _visited: set[Path] | None = None) -> dict:
         config = deep_merge(base_config, config)
         config.pop("base", None)
 
-    # Resolve file:// references in configuration fields
-    config = _resolve_file_references(config, config_path_obj.parent)
-
     return config
 
 
-def yaml_loads(config: str) -> dict:
+def yaml_loads(config: str, base_path: Path) -> dict:
     """
     Load a YAML string and interpolate variables in the format
     ${VAR:-default_value}.
@@ -249,6 +246,8 @@ def yaml_loads(config: str) -> dict:
         raise ValueError(f"Error loading YAML: {e}") from e
 
     assert isinstance(config_data, dict)
+
+    config_data = _resolve_file_references(config_data, base_path)
 
     return config_data
 
