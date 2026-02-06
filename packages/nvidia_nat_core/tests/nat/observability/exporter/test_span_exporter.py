@@ -576,6 +576,53 @@ class TestSpanExporterFunctionality:
             assert len(span_exporter._outstanding_spans) == 0
             assert len(span_exporter.exported_spans) == 1
 
+    def test_span_name_uses_display_name_from_metadata(self, span_exporter):
+        """Test that span name uses display_name from trace metadata when available.
+        """
+        # Create event with internal name and display_name in trace metadata
+        event_with_display_name = create_intermediate_step(
+            event_type=IntermediateStepType.WORKFLOW_START,
+            framework=LLMFrameworkEnum.LANGCHAIN,
+            name="<workflow>",  # Internal name for filters/middleware
+            event_timestamp=datetime.now().timestamp(),
+            data=StreamEventData(input="Test input"),
+            metadata=TraceMetadata(provided_metadata={"display_name": "My Custom Agent"}))
+
+        span_exporter.export(event_with_display_name)
+        span = span_exporter._outstanding_spans[event_with_display_name.payload.UUID]
+
+        # Span name should use display_name, not the internal name
+        assert span.name == "My Custom Agent"
+
+    def test_span_name_falls_back_to_payload_name(self, span_exporter):
+        """Test that span name falls back to payload name when display_name is not set."""
+        # Create event without display_name
+        event_without_display_name = create_intermediate_step(event_type=IntermediateStepType.WORKFLOW_START,
+                                                              framework=LLMFrameworkEnum.LANGCHAIN,
+                                                              name="<workflow>",
+                                                              event_timestamp=datetime.now().timestamp(),
+                                                              data=StreamEventData(input="Test input"),
+                                                              metadata=None)
+
+        span_exporter.export(event_without_display_name)
+        span = span_exporter._outstanding_spans[event_without_display_name.payload.UUID]
+
+        # Span name should fall back to payload name
+        assert span.name == "<workflow>"
+
+    def test_span_name_falls_back_to_event_type(self, span_exporter):
+        """Test that span name falls back to event type when neither display_name nor name is available."""
+        # Create event without name or display_name
+        event_without_name = create_intermediate_step(event_type=IntermediateStepType.WORKFLOW_START,
+                                                      framework=LLMFrameworkEnum.LANGCHAIN,
+                                                      name=None,
+                                                      event_timestamp=datetime.now().timestamp(),
+                                                      data=StreamEventData(input="Test input"),
+                                                      metadata=None)
+
+        span_exporter.export(event_without_name)
+        span = span_exporter._outstanding_spans[event_without_name.payload.UUID]
+
 
 class TestToJsonStringSerialization:
     """Tests for _to_json_string ensuring OTLP-compatible serialization."""
