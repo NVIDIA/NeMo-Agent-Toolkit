@@ -25,7 +25,6 @@ from collections.abc import Sequence
 
 from pydantic import BaseModel
 
-from nat.builder.component_utils import WORKFLOW_COMPONENT_NAME
 from nat.builder.context import Context
 from nat.builder.function_base import FunctionBase
 from nat.builder.function_base import InputT

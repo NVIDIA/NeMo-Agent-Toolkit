@@ -154,7 +154,8 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
 
         # Use display_name from trace metadata for observability if set, otherwise fall back to name, then event type
         display_name = None
-        if event.payload.metadata and hasattr(event.payload.metadata, 'provided_metadata'):
+        if (event.payload.metadata and hasattr(event.payload.metadata, 'provided_metadata')
+                and event.payload.metadata.provided_metadata):
             display_name = event.payload.metadata.provided_metadata.get("display_name")
         sub_span_name = display_name or event.payload.name or f"{event.payload.event_type}"
 

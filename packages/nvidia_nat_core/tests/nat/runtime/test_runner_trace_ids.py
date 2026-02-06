@@ -37,6 +37,7 @@ class _DummyFunction:
     has_single_output = True
     has_streaming_output = True
     instance_name = "workflow"
+    display_name = "workflow"
     config = _DummyConfig()
 
     def convert(self, v, to_type):
@@ -137,6 +138,7 @@ async def test_runner_workflow_name_resolution(
 
         def __init__(self):
             self.instance_name = instance_name
+            self.display_name = config_name or instance_name
 
         def convert(self, v, to_type):
             return v
