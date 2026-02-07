@@ -17,19 +17,19 @@ limitations under the License.
 
 # Memory in NVIDIA NeMo Agent Toolkit
 
-The NeMo Agent toolkit Memory subsystem is designed to store and retrieve a user's conversation history, preferences, and other "long-term memory." This is especially useful for building stateful [LLM-based](./llms/index.md) applications that recall user-specific data or interactions across multiple steps.
+The NeMo Agent Toolkit Memory subsystem is designed to store and retrieve a user's conversation history, preferences, and other "long-term memory." This is especially useful for building stateful [LLM-based](./llms/index.md) applications that recall user-specific data or interactions across multiple steps.
 
-The memory module is designed to be extensible, allowing developers to create custom memory back-ends, providers in NeMo Agent toolkit terminology.
+The memory module is designed to be extensible, allowing developers to create custom memory back-ends, providers in NeMo Agent Toolkit terminology.
 
 ## Included Memory Modules
-The NeMo Agent toolkit includes three memory module providers, all of which are available as plugins:
+The NeMo Agent Toolkit includes three memory module providers, all of which are available as plugins:
 * [Mem0](https://mem0.ai/) which is provided by the [`nvidia-nat-mem0ai`](https://pypi.org/project/nvidia-nat-mem0ai/) plugin.
 * [Redis](https://redis.io/) which is provided by the [`nvidia-nat-redis`](https://pypi.org/project/nvidia-nat-redis/) plugin.
 * [Zep](https://www.getzep.com/) which is provided by the [`nvidia-nat-zep-cloud`](https://pypi.org/project/nvidia-nat-zep-cloud/) plugin ([Zep NVIDIA NeMo documentation](https://help.getzep.com/nvidia-nemo)).
 
 ## Automatic Memory Wrapper Agent
 
-The NeMo Agent toolkit provides an [`auto_memory_agent`](../components/agents/auto-memory-wrapper/index.md) wrapper that adds automatic memory capture and retrieval to any agent without requiring the LLM to invoke memory tools explicitly.
+The NeMo Agent Toolkit provides an [`auto_memory_agent`](../components/agents/auto-memory-wrapper/index.md) wrapper that adds automatic memory capture and retrieval to any agent without requiring the LLM to invoke memory tools explicitly.
 
 ### Why Use Automatic Memory?
 
@@ -94,7 +94,7 @@ User ID is automatically extracted at runtime for memory isolation via:
 For detailed configuration and usage examples, refer to the `examples/agents/auto_memory_wrapper/README.md` guide.
 
 ## Examples
-The following examples in the [repository](https://github.com/NVIDIA/NeMo-Agent-Toolkit) demonstrate how to use the memory module in the NeMo Agent toolkit:
+The following examples in the [repository](https://github.com/NVIDIA/NeMo-Agent-Toolkit) demonstrate how to use the memory module in the NeMo Agent Toolkit:
 * `examples/agents/auto_memory_wrapper` - Automatic memory wrapper agent for any agent
 * `examples/memory/redis` - Basic long-term memory using Redis
 * `examples/frameworks/semantic_kernel_demo` - Multi-agent system with long-term memory

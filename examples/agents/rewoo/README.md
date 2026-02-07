@@ -19,7 +19,7 @@ limitations under the License.
 
 **Complexity:** 🟢 Beginner
 
-This example demonstrates how to use a configurable [ReWOO](https://arxiv.org/abs/2305.18323) (Reasoning WithOut Observation) agent with the NeMo Agent toolkit. For this purpose NeMo Agent toolkit provides a [`rewoo_agent`](../../../docs/source/components/agents/rewoo-agent/index.md) workflow type.
+This example demonstrates how to use a configurable [ReWOO](https://arxiv.org/abs/2305.18323) (Reasoning WithOut Observation) agent with the NeMo Agent Toolkit. For this purpose NeMo Agent Toolkit provides a [`rewoo_agent`](../../../docs/source/components/agents/rewoo-agent/index.md) workflow type.
 
 ## Table of Contents
 
@@ -60,15 +60,14 @@ This architecture differs from other agents by separating reasoning (planning) f
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 
 ### Install this Workflow
 
-From the root directory of the NeMo Agent toolkit library, run the following commands:
+From the root directory of the NeMo Agent Toolkit library, run the following commands:
 
 ```bash
-uv sync --all-groups --all-extras
-uv pip install -e .
+uv pip install -e examples/agents
 ```
 
 ### Set Up API Keys
@@ -117,7 +116,7 @@ The ReWOO agent is configured through the `config.yml` file. The following confi
 
 ## Run the Workflow
 
-Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
+Run the following command from the root of the NeMo Agent Toolkit repo to execute this workflow with the specified input:
 
 ```bash
 nat run --config_file=examples/agents/rewoo/configs/config.yml --input "Who would be older today, Einstein or Bohr?"
@@ -159,8 +158,8 @@ Agent's thoughts:
   }
 ]
 ------------------------------
-2025-10-14 19:14:02 - INFO     - nat.agent.rewoo_agent.agent:289 - ReWOO agent execution levels: [['#E1', '#E2'], ['#E3']]
-2025-10-14 19:14:02 - INFO     - nat.agent.base:221 - 
+2025-10-14 19:14:02 - INFO     - nat.plugins.langchain.agent.rewoo_agent.agent:289 - ReWOO agent execution levels: [['#E1', '#E2'], ['#E3']]
+2025-10-14 19:14:02 - INFO     - nat.plugins.langchain.agent.base:221 - 
 ------------------------------
 [AGENT]
 Calling tools: internet_search
@@ -168,7 +167,7 @@ Tool's input: {'question': 'Bohr birthdate'}
 Tool's response: 
 content='<Document href="https://www.facebook.com/TheWorldsofDavidDarling/posts/born-on-this-date-oct-7-in-1885-the-danish-physicist-niels-bohr-who-played-a-cru/1278740440721508/"/>\nNiels Bohr, in full Niels Henrik David Bohr, (born October 7, 1885, Copenhagen, Denmark—died November 18, 1962, Copenhagen), Danish\n</Document>\n\n---\n\n<Document href="https://en.wikipedia.org/wiki/Niels_Bohr"/>\n**Niels Henrik David Bohr** (Danish: ; 7 October 1885 – 18 November 1962) was a Danish theoretical physicist who made foundational contributions to understanding atomic structure and quantum theory, for which he received the Nobel Prize in Physics in 1922. J. Thomson (1914) * Ivan Pavlov (1915) * James Dewar (1916) * Pierre Paul Émile Roux (1917) * Hendrik Lorentz (1918) * William Bayliss (1919) * Horace Tabberer Brown (1920) * Joseph Larmor (1921) * Ernest Rutherford (1922) * Horace Lamb (1923) * Edward Albert Sharpey-Schafer (1924) * Albert Einstein (1925) * Frederick Gowland Hopkins (1926) *...(rest of response truncated)
 ------------------------------
-2025-10-14 19:14:02 - INFO     - nat.agent.base:221 - 
+2025-10-14 19:14:02 - INFO     - nat.plugins.langchain.agent.base:221 - 
 ------------------------------
 [AGENT]
 Calling tools: internet_search
@@ -176,9 +175,9 @@ Tool's input: {'question': 'Einstein birthdate'}
 Tool's response: 
 content='<Document href="https://www.facebook.com/albert.einstein.fans/posts/albert-einstein-was-born-on-march-14-1879-happy-birthday-/1204655314357103/"/>\nAlbert Einstein - Albert Einstein was born on March 14,... Albert Einstein\'s post ### **Albert Einstein** Albert Einstein was born on March 14, 1879. Happy birthday!! Image 1: 🎂Image 2: 🎉Image 3: 🎈 Image 4: No photo description available. Image 5 Image 6 67K 5.3K comments 9.1K shares A not well known fact that number Pi which is 3.14 is assigned after Einstein\'s birthday! Image 7Image 8Image 9 Happy heavenly birthday Mr. Einstein! Image 10: 🎂Image 11: 🎈 Image 12: GIFmedia1.tenor.co Image 13Image 14 happy birthday to me too! Image 15Image 16 Image 17Image 18 My birthday too though a bit later than 1879 Image 19: 😂 Image 20Image 21 Image 22 Image 23 Image 24 Image 25Image 26 Image 27\n</Document>\n\n---\n\n<Document href="https://en.wikipedia.org/wiki/Albert_Einstein"/>\nAlbert Einstein (14 March 1879 – 18 April 1955) was a German-...(rest of response truncated)
 ------------------------------
-2025-10-14 19:14:02 - INFO     - nat.agent.rewoo_agent.agent:373 - [AGENT] Completed level 0 with 2 tools
+2025-10-14 19:14:02 - INFO     - nat.plugins.langchain.agent.rewoo_agent.agent:373 - [AGENT] Completed level 0 with 2 tools
 2025-10-14 19:14:05 - INFO     - nat_multi_frameworks.haystack_agent:57 - output from langchain_research_tool: Based on the information provided, Albert Einstein was born on March 14, 1879, and Niels Bohr was born on October 7, 1885. Therefore, Einstein would be older than Bohr by approximately 6 years.
-2025-10-14 19:14:05 - INFO     - nat.agent.base:221 - 
+2025-10-14 19:14:05 - INFO     - nat.plugins.langchain.agent.base:221 - 
 ------------------------------
 [AGENT]
 Calling tools: haystack_chitchat_agent
@@ -186,8 +185,8 @@ Tool's input: {'inputs': 'Who would be older today, Einstein born <Document href
 Tool's response: 
 content='Based on the information provided, Albert Einstein was born on March 14, 1879, and Niels Bohr was born on October 7, 1885. Therefore, Einstein would be older than Bohr by approximately 6 years.' name='haystack_chitchat_agent' tool_call_id='haystack_chitchat_agent'
 ------------------------------
-2025-10-14 19:14:05 - INFO     - nat.agent.rewoo_agent.agent:373 - [AGENT] Completed level 1 with 1 tools
-2025-10-14 19:14:05 - INFO     - nat.agent.rewoo_agent.agent:493 - ReWOO agent solver output: 
+2025-10-14 19:14:05 - INFO     - nat.plugins.langchain.agent.rewoo_agent.agent:373 - [AGENT] Completed level 1 with 1 tools
+2025-10-14 19:14:05 - INFO     - nat.plugins.langchain.agent.rewoo_agent.agent:493 - ReWOO agent solver output: 
 ------------------------------
 [AGENT]
 Agent input: Who would be older today, Einstein or Bohr?
@@ -202,7 +201,7 @@ Workflow Result:
 
 ### Starting the NeMo Agent Toolkit Server
 
-You can start the NeMo Agent toolkit server using the `nat serve` command with the appropriate configuration file.
+You can start the NeMo Agent Toolkit server using the `nat serve` command with the appropriate configuration file.
 
 **Starting the ReWOO Agent Example Workflow**
 

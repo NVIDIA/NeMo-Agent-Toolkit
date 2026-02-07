@@ -1,0 +1,1384 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import pytest
+from langchain_core.agents import AgentAction
+from langchain_core.agents import AgentFinish
+from langchain_core.messages import AIMessage
+from langchain_core.messages import HumanMessage
+from langchain_core.messages.tool import ToolMessage
+from langgraph.graph.state import CompiledStateGraph
+
+from nat.plugins.langchain.agent.base import AgentDecision
+from nat.plugins.langchain.agent.react_agent.agent import NO_INPUT_ERROR_MESSAGE
+from nat.plugins.langchain.agent.react_agent.agent import TOOL_NOT_FOUND_ERROR_MESSAGE
+from nat.plugins.langchain.agent.react_agent.agent import ReActAgentGraph
+from nat.plugins.langchain.agent.react_agent.agent import ReActGraphState
+from nat.plugins.langchain.agent.react_agent.agent import create_react_agent_prompt
+from nat.plugins.langchain.agent.react_agent.output_parser import FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE
+from nat.plugins.langchain.agent.react_agent.output_parser import MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE
+from nat.plugins.langchain.agent.react_agent.output_parser import MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE
+from nat.plugins.langchain.agent.react_agent.output_parser import ReActAgentParsingFailedError
+from nat.plugins.langchain.agent.react_agent.output_parser import ReActOutputParser
+from nat.plugins.langchain.agent.react_agent.output_parser import ReActOutputParserException
+from nat.plugins.langchain.agent.react_agent.register import ReActAgentWorkflowConfig
+
+
+async def test_state_schema():
+    input_message = HumanMessage(content='test')
+    state = ReActGraphState(messages=[input_message])
+    sample_thought = AgentAction(tool='test', tool_input='test', log='test_action')
+
+    state.agent_scratchpad.append(sample_thought)
+    state.tool_responses.append(input_message)
+    assert isinstance(state.messages, list)
+    assert isinstance(state.messages[0], HumanMessage)
+    assert state.messages[0].content == input_message.content
+    assert isinstance(state.agent_scratchpad, list)
+    assert isinstance(state.agent_scratchpad[0], AgentAction)
+    assert isinstance(state.tool_responses, list)
+    assert isinstance(state.tool_responses[0], HumanMessage)
+    assert state.tool_responses[0].content == input_message.content
+
+
+@pytest.fixture(name='mock_config_react_agent', scope="module")
+def mock_config():
+    return ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test', verbose=True)
+
+
+def test_react_init(mock_config_react_agent, mock_llm, mock_tool):
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+    agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=mock_config_react_agent.verbose)
+    assert isinstance(agent, ReActAgentGraph)
+    assert agent.llm == mock_llm
+    assert agent.tools == tools
+    assert agent.detailed_logs == mock_config_react_agent.verbose
+    assert agent.parse_agent_response_max_retries >= 1
+
+
+@pytest.fixture(name='mock_react_agent', scope="module")
+def fixture_mock_agent(mock_config_react_agent, mock_llm, mock_tool):
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+    agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=mock_config_react_agent.verbose)
+    return agent
+
+
+@pytest.fixture(name='mock_react_agent_no_raise', scope="module")
+def fixture_mock_agent_no_raise(mock_config_react_agent, mock_llm, mock_tool):
+    """Create a mock ReAct agent with raise_on_parsing_failure=False for testing error message returns."""
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+    agent = ReActAgentGraph(llm=mock_llm,
+                            prompt=prompt,
+                            tools=tools,
+                            detailed_logs=mock_config_react_agent.verbose,
+                            raise_on_parsing_failure=False)
+    return agent
+
+
+async def test_build_graph(mock_react_agent):
+    graph = await mock_react_agent.build_graph()
+    assert isinstance(graph, CompiledStateGraph)
+    assert list(graph.nodes.keys()) == ['__start__', 'agent', 'tool']
+    assert graph.builder.edges == {('__start__', 'agent'), ('tool', 'agent')}
+    assert set(graph.builder.branches.get('agent').get('conditional_edge').ends.keys()) == {
+        AgentDecision.TOOL, AgentDecision.END
+    }
+
+
+async def test_agent_node_no_input(mock_react_agent):
+    with pytest.raises(RuntimeError) as ex:
+        await mock_react_agent.agent_node(ReActGraphState())
+    assert isinstance(ex.value, RuntimeError)
+
+
+async def test_malformed_agent_output_after_max_retries(mock_react_agent_no_raise):
+    response = await mock_react_agent_no_raise.agent_node(ReActGraphState(messages=[HumanMessage('hi')]))
+    response = response.messages[-1]
+    assert isinstance(response, AIMessage)
+    # The actual format combines error observation with original output
+    assert MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE in response.content
+    assert '\nQuestion: hi\n' in response.content
+
+
+async def test_agent_node_parse_agent_action(mock_react_agent):
+    mock_react_agent_output = 'Thought:not_many\nAction:Tool A\nAction Input: hello, world!\nObservation:'
+    mock_state = ReActGraphState(messages=[HumanMessage(content=mock_react_agent_output)])
+    agent_output = await mock_react_agent.agent_node(mock_state)
+    agent_output = agent_output.agent_scratchpad[-1]
+    assert isinstance(agent_output, AgentAction)
+    assert agent_output.tool == 'Tool A'
+    assert agent_output.tool_input == 'hello, world!'
+
+
+async def test_agent_node_parse_json_agent_action(mock_react_agent):
+    mock_action = 'CodeGeneration'
+    mock_input = ('{"query": "write Python code for the following:\n\t\t-\tmake a generic API call\n\t\t-\tunit tests\n'
+                  '", "model": "meta/llama-3.1-70b"}')
+    # json input, no newline or spaces before tool or input, no agent thought
+    mock_react_agent_output = f'Action:{mock_action}Action Input:{mock_input}'
+    mock_state = ReActGraphState(messages=[HumanMessage(content=mock_react_agent_output)])
+    agent_output = await mock_react_agent.agent_node(mock_state)
+    agent_output = agent_output.agent_scratchpad[-1]
+    assert isinstance(agent_output, AgentAction)
+    assert agent_output.tool == mock_action
+    assert agent_output.tool_input == mock_input
+
+
+async def test_agent_node_parse_markdown_json_agent_action(mock_react_agent):
+    mock_action = 'SearchTool'
+    mock_input = ('```json{\"rephrased queries\": '
+                  '[\"what is NIM\", \"NIM definition\", \"NIM overview\", \"NIM employer\", \"NIM company\"][]}```')
+    # markdown json action input, no newline or spaces before tool or input
+    mock_react_agent_output = f'Thought: I need to call the search toolAction:{mock_action}Action Input:{mock_input}'
+    mock_state = ReActGraphState(messages=[HumanMessage(content=mock_react_agent_output)])
+    agent_output = await mock_react_agent.agent_node(mock_state)
+    agent_output = agent_output.agent_scratchpad[-1]
+    assert isinstance(agent_output, AgentAction)
+    assert agent_output.tool == mock_action
+    assert agent_output.tool_input == mock_input
+
+
+async def test_agent_node_action_and_input_in_agent_output(mock_react_agent):
+    # tools named Action, Action in thoughts, Action Input in Action Input, in various formats
+    mock_action = 'Action'
+    mock_mkdwn_input = ('```json\n{{\n    \"Action\": \"SearchTool\",\n    \"Action Input\": [\"what is NIM\", '
+                        '\"NIM definition\", \"NIM overview\", \"NIM employer\", \"NIM company\"]\n}}\n```')
+    mock_input = 'Action: SearchTool Action Input: ["what is NIM", "NIM definition", "NIM overview"]}}'
+    mock_react_agent_mkdwn_output = f'Thought: run Action Agent Action:{mock_action}Action Input:{mock_mkdwn_input}'
+    mock_output = f'Thought: run Action AgentAction:{mock_action}Action Input:{mock_input}'
+    mock_mkdwn_state = ReActGraphState(messages=[HumanMessage(content=mock_react_agent_mkdwn_output)])
+    mock_state = ReActGraphState(messages=[HumanMessage(content=mock_output)])
+    agent_output_mkdwn = await mock_react_agent.agent_node(mock_mkdwn_state)
+    agent_output = await mock_react_agent.agent_node(mock_state)
+    agent_output_mkdwn = agent_output_mkdwn.agent_scratchpad[-1]
+    agent_output = agent_output.agent_scratchpad[-1]
+    assert isinstance(agent_output_mkdwn, AgentAction)
+    assert isinstance(agent_output, AgentAction)
+    assert agent_output_mkdwn.tool == mock_action
+    assert agent_output.tool == mock_action
+    assert agent_output_mkdwn.tool_input == mock_mkdwn_input
+    assert agent_output.tool_input == mock_input
+
+
+async def test_agent_node_parse_agent_finish(mock_react_agent):
+    mock_react_agent_output = 'Final Answer: lorem ipsum'
+    mock_state = ReActGraphState(messages=[HumanMessage(content=mock_react_agent_output)])
+    final_answer = await mock_react_agent.agent_node(mock_state)
+    final_answer = final_answer.messages[-1]
+    assert isinstance(final_answer, AIMessage)
+    assert final_answer.content == 'lorem ipsum'
+
+
+async def test_agent_node_parse_agent_finish_with_thoughts(mock_react_agent):
+    answer = 'lorem ipsum'
+    mock_react_agent_output = f'Thought: I now have the Final Answer\nFinal Answer: {answer}'
+    mock_state = ReActGraphState(messages=[HumanMessage(content=mock_react_agent_output)])
+    final_answer = await mock_react_agent.agent_node(mock_state)
+    final_answer = final_answer.messages[-1]
+    assert isinstance(final_answer, AIMessage)
+    assert final_answer.content == answer
+
+
+async def test_agent_node_parse_agent_finish_with_markdown_and_code(mock_react_agent):
+    answer = ("```python\nimport requests\\n\\nresponse = requests.get('https://api.example.com/endpoint')\\nprint"
+              "(response.json())\\n```\\n\\nPlease note that you need to replace 'https://api.example.com/endpoint' "
+              "with the actual API endpoint you want to call.\"\n}}\n```")
+    mock_react_agent_output = f'Thought: I now have the Final Answer\nFinal Answer: {answer}'
+    mock_state = ReActGraphState(messages=[HumanMessage(content=mock_react_agent_output)])
+    final_answer = await mock_react_agent.agent_node(mock_state)
+    final_answer = final_answer.messages[-1]
+    assert isinstance(final_answer, AIMessage)
+    assert final_answer.content == answer
+
+
+async def test_agent_node_parse_agent_finish_with_action(mock_react_agent):
+    answer = 'after careful deliberation...'
+    mock_react_agent_output = f'Action: i have the final answer \nFinal Answer: {answer}'
+    mock_state = ReActGraphState(messages=[HumanMessage(content=mock_react_agent_output)])
+    final_answer = await mock_react_agent.agent_node(mock_state)
+    final_answer = final_answer.messages[-1]
+    assert isinstance(final_answer, AIMessage)
+    assert final_answer.content == answer
+
+
+async def test_agent_node_parse_agent_finish_with_action_and_input_after_max_retries(mock_react_agent_no_raise):
+    answer = 'after careful deliberation...'
+    mock_react_agent_output = f'Action: i have the final answer\nAction Input: None\nFinal Answer: {answer}'
+    mock_state = ReActGraphState(messages=[HumanMessage(content=mock_react_agent_output)])
+    final_answer = await mock_react_agent_no_raise.agent_node(mock_state)
+    final_answer = final_answer.messages[-1]
+    assert isinstance(final_answer, AIMessage)
+    assert FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE in final_answer.content
+
+
+async def test_agent_node_parse_agent_finish_with_action_and_input_after_retry(mock_react_agent_no_raise):
+    mock_react_agent_output = 'Action: give me final answer\nAction Input: None\nFinal Answer: hello, world!'
+    mock_state = ReActGraphState(messages=[HumanMessage(content=mock_react_agent_output)])
+    final_answer = await mock_react_agent_no_raise.agent_node(mock_state)
+    final_answer = final_answer.messages[-1]
+    assert isinstance(final_answer, AIMessage)
+    # When agent output has both Action and Final Answer, it should return an error message
+    assert FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE in final_answer.content
+
+
+async def test_conditional_edge_no_input(mock_react_agent):
+    end = await mock_react_agent.conditional_edge(ReActGraphState())
+    assert end == AgentDecision.END
+
+
+async def test_conditional_edge_final_answer(mock_react_agent):
+    mock_state = ReActGraphState(messages=[HumanMessage('hello'), AIMessage('world!')])
+    end = await mock_react_agent.conditional_edge(mock_state)
+    assert end == AgentDecision.END
+
+
+async def test_conditional_edge_tool_call(mock_react_agent):
+    mock_state = ReActGraphState(agent_scratchpad=[AgentAction(tool='test', tool_input='test', log='test')])
+    tool = await mock_react_agent.conditional_edge(mock_state)
+    assert tool == AgentDecision.TOOL
+
+
+async def test_tool_node_no_input(mock_react_agent):
+    with pytest.raises(RuntimeError) as ex:
+        await mock_react_agent.tool_node(ReActGraphState())
+    assert isinstance(ex.value, RuntimeError)
+
+
+async def test_tool_node_with_not_configured_tool(mock_react_agent):
+    mock_state = ReActGraphState(agent_scratchpad=[AgentAction(tool='test', tool_input='test', log='test')])
+    agent_retry_response = await mock_react_agent.tool_node(mock_state)
+    agent_retry_response = agent_retry_response.tool_responses[-1]
+    assert isinstance(agent_retry_response, ToolMessage)
+    assert agent_retry_response.name == 'agent_error'
+    assert agent_retry_response.tool_call_id == 'agent_error'
+    configured_tool_names = ['Tool A', 'Tool B']
+    assert agent_retry_response.content == TOOL_NOT_FOUND_ERROR_MESSAGE.format(tool_name='test',
+                                                                               tools=configured_tool_names)
+
+
+async def test_tool_node(mock_react_agent):
+    mock_state = ReActGraphState(agent_scratchpad=[AgentAction(tool='Tool A', tool_input='hello, world!', log='mock')])
+    response = await mock_react_agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    assert response.tool_call_id == 'Tool A'
+    assert response.content == 'hello, world!'
+
+
+@pytest.fixture(name='mock_react_graph', scope='module')
+async def mock_graph(mock_react_agent):
+    return await mock_react_agent.build_graph()
+
+
+@pytest.fixture(name='mock_react_graph_no_raise', scope='module')
+async def mock_graph_no_raise(mock_react_agent_no_raise):
+    return await mock_react_agent_no_raise.build_graph()
+
+
+async def test_graph_parsing_error(mock_react_graph_no_raise):
+    response = await mock_react_graph_no_raise.ainvoke(
+        ReActGraphState(messages=[HumanMessage('fix the input on retry')]))
+    response = ReActGraphState(**response)
+
+    response = response.messages[-1]
+    assert isinstance(response, AIMessage)
+    # When parsing fails, it should return an error message with the original input
+    assert MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE in response.content
+    assert 'fix the input on retry' in response.content
+
+
+async def test_graph(mock_react_graph):
+    response = await mock_react_graph.ainvoke(ReActGraphState(messages=[HumanMessage('Final Answer: lorem ipsum')]))
+    response = ReActGraphState(**response)
+    response = response.messages[-1]
+    assert isinstance(response, AIMessage)
+    assert response.content == 'lorem ipsum'
+
+
+async def test_no_input(mock_react_graph):
+    response = await mock_react_graph.ainvoke(ReActGraphState(messages=[HumanMessage('')]))
+    response = ReActGraphState(**response)
+    response = response.messages[-1]
+    assert isinstance(response, AIMessage)
+    assert response.content == NO_INPUT_ERROR_MESSAGE
+
+
+def test_validate_system_prompt_no_input():
+    mock_prompt = ''
+    result = ReActAgentGraph.validate_system_prompt(mock_prompt)
+    assert result is False
+
+
+def test_validate_system_prompt_no_tools():
+    mock_prompt = '{tools}'
+    result = ReActAgentGraph.validate_system_prompt(mock_prompt)
+    assert result is False
+
+
+def test_validate_system_prompt_no_tool_names():
+    mock_prompt = '{tool_names}'
+    result = ReActAgentGraph.validate_system_prompt(mock_prompt)
+    assert result is False
+
+
+def test_validate_system_prompt():
+    mock_prompt = '{tool_names} {tools}'
+    test = ReActAgentGraph.validate_system_prompt(mock_prompt)
+    assert test
+
+
+@pytest.fixture(name='mock_react_output_parser', scope="module")
+def mock_parser():
+    return ReActOutputParser()
+
+
+async def test_output_parser_no_observation(mock_react_output_parser):
+    mock_input = ("Thought: I should search the internet for information on Djikstra.\nAction: internet_agent\n"
+                  "Action Input: {'input_message': 'Djikstra'}\nObservation")
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.log == mock_input
+    assert test_output.tool == "internet_agent"
+    assert test_output.tool_input == "{'input_message': 'Djikstra'}"
+    assert "Observation" not in test_output.tool_input
+
+
+async def test_output_parser(mock_react_output_parser):
+    mock_input = 'Thought:not_many\nAction:Tool A\nAction Input: hello, world!\nObservation:'
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool == "Tool A"
+    assert test_output.tool_input == "hello, world!"
+    assert "Observation" not in test_output.tool_input
+
+
+async def test_output_parser_spaces_not_newlines(mock_react_output_parser):
+    mock_input = 'Thought:not_many Action:Tool A Action Input: hello, world! Observation:'
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool == "Tool A"
+    assert test_output.tool_input == "hello, world!"
+    assert "Observation" not in test_output.tool_input
+
+
+async def test_output_parser_missing_action(mock_react_output_parser):
+    mock_input = 'hi'
+    with pytest.raises(ReActOutputParserException) as ex:
+        await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(ex.value, ReActOutputParserException)
+    assert ex.value.observation == MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE
+
+
+async def test_output_parser_json_input(mock_react_output_parser):
+    mock_action = 'SearchTool'
+    mock_input = ('```json{\"rephrased queries\": '
+                  '[\"what is NIM\", \"NIM definition\", \"NIM overview\", \"NIM employer\", \"NIM company\"][]}```')
+    # markdown json action input, no newline or spaces before tool or input, with Observation
+    mock_react_agent_output = (
+        f'Thought: I need to call the search toolAction:{mock_action}Action Input:{mock_input}\nObservation')
+    test_output = await mock_react_output_parser.aparse(mock_react_agent_output)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool == mock_action
+    assert test_output.tool_input == mock_input
+    assert "Observation" not in test_output.tool_input
+
+
+async def test_output_parser_json_no_observation(mock_react_output_parser):
+    mock_action = 'SearchTool'
+    mock_input = ('```json{\"rephrased queries\": '
+                  '[\"what is NIM\", \"NIM definition\", \"NIM overview\", \"NIM employer\", \"NIM company\"][]}```')
+    # markdown json action input, no newline or spaces before tool or input, with Observation
+    mock_react_agent_output = (f'Thought: I need to call the search toolAction:{mock_action}Action Input:{mock_input}')
+    test_output = await mock_react_output_parser.aparse(mock_react_agent_output)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool == mock_action
+    assert test_output.tool_input == mock_input
+
+
+async def test_output_parser_json_input_space_observation(mock_react_output_parser):
+    mock_action = 'SearchTool'
+    mock_input = ('```json{\"rephrased queries\": '
+                  '[\"what is NIM\", \"NIM definition\", \"NIM overview\", \"NIM employer\", \"NIM company\"][]}```')
+    # markdown json action input, no newline or spaces before tool or input, with Observation
+    mock_react_agent_output = (
+        f'Thought: I need to call the search toolAction:{mock_action}Action Input:{mock_input} Observation')
+    test_output = await mock_react_output_parser.aparse(mock_react_agent_output)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool == mock_action
+    assert test_output.tool_input == mock_input
+    assert "Observation" not in test_output.tool_input
+
+
+async def test_output_parser_missing_action_input(mock_react_output_parser):
+    mock_action = 'SearchTool'
+    mock_input = f'Thought: I need to call the search toolAction:{mock_action}'
+    with pytest.raises(ReActOutputParserException) as ex:
+        await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(ex.value, ReActOutputParserException)
+    assert ex.value.observation == MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE
+
+
+def test_react_additional_instructions(mock_llm, mock_tool):
+    config_react_agent = ReActAgentWorkflowConfig(tool_names=['test'],
+                                                  llm_name='test',
+                                                  verbose=True,
+                                                  additional_instructions="Talk like a parrot and repeat the question.")
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(config_react_agent)
+    agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=config_react_agent.verbose)
+    assert isinstance(agent, ReActAgentGraph)
+    assert "Talk like a parrot" in agent.agent.get_prompts()[0].messages[0].prompt.template
+
+
+def test_react_custom_system_prompt(mock_llm, mock_tool):
+    config_react_agent = ReActAgentWorkflowConfig(
+        tool_names=['test'],
+        llm_name='test',
+        verbose=True,
+        system_prompt="Refuse to run any of the following tools: {tools}.  or ones named: {tool_names}")
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(config_react_agent)
+    agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=config_react_agent.verbose)
+    assert isinstance(agent, ReActAgentGraph)
+    assert "Refuse" in agent.agent.get_prompts()[0].messages[0].prompt.template
+
+
+# Tests for alias functionality
+def test_config_alias_retry_parsing_errors():
+    """Test that retry_parsing_errors alias works correctly."""
+    config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test', retry_parsing_errors=False)
+    # The old field name should map to the new field name
+    assert not config.retry_agent_response_parsing_errors
+
+
+def test_config_alias_max_retries():
+    """Test that max_retries alias works correctly."""
+    config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test', max_retries=5)
+    # The old field name should map to the new field name
+    assert config.parse_agent_response_max_retries == 5
+
+
+async def test_final_answer_field_set_on_agent_finish(mock_react_agent):
+    """Test that final_answer field is properly set when agent finishes."""
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch
+
+    from langchain_core.agents import AgentFinish
+
+    # Mock state with initial message
+    state = ReActGraphState()
+    state.messages = [HumanMessage(content="What is 2+2?")]
+
+    # Mock the agent output to return AgentFinish
+    mock_agent_finish = AgentFinish(return_values={'output': 'The answer is 4'}, log='Final answer: 4')
+
+    # Mock the _stream_llm method instead of trying to patch the agent directly
+    with patch.object(mock_react_agent, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
+        mock_stream_llm.return_value = AIMessage(content="Final Answer: The answer is 4")
+
+        with patch('nat.plugins.langchain.agent.react_agent.agent.ReActOutputParser.aparse',
+                   new_callable=AsyncMock) as mock_parse:
+            mock_parse.return_value = mock_agent_finish
+
+            # Call the agent node
+            result_state = await mock_react_agent.agent_node(state)
+
+            # Verify that final_answer field is set
+            assert result_state.final_answer == 'The answer is 4'
+            # Verify that the message is also added
+            assert len(result_state.messages) == 2
+            assert isinstance(result_state.messages[-1], AIMessage)
+            assert result_state.messages[-1].content == 'The answer is 4'
+
+
+async def test_conditional_edge_uses_final_answer_field(mock_react_agent):
+    """Test that conditional edge correctly uses final_answer field instead of message length."""
+    # Test case 1: When final_answer is set, should return END
+    state_with_final_answer = ReActGraphState()
+    state_with_final_answer.messages = [HumanMessage(content="Question")]
+    state_with_final_answer.final_answer = "This is the final answer"
+
+    decision = await mock_react_agent.conditional_edge(state_with_final_answer)
+    assert decision == AgentDecision.END
+
+    # Test case 2: When final_answer is None but agent_scratchpad has actions, should return TOOL
+    state_with_action = ReActGraphState()
+    state_with_action.messages = [HumanMessage(content="Question"), AIMessage(content="Response")]
+    state_with_action.final_answer = None
+    state_with_action.agent_scratchpad = [AgentAction(tool="TestTool", tool_input="input", log="log")]
+
+    decision = await mock_react_agent.conditional_edge(state_with_action)
+    assert decision == AgentDecision.TOOL
+
+
+async def test_multi_turn_chat_scenario(mock_react_agent):
+    """Test multi-turn conversation scenario that was broken before the fix."""
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch
+
+    from langchain_core.agents import AgentFinish
+
+    # Simulate a multi-turn conversation
+    # Turn 1: User asks first question
+    state = ReActGraphState()
+    state.messages = [HumanMessage(content="What is 2+2?")]
+
+    # Mock first response - agent finishes immediately
+    mock_agent_finish = AgentFinish(return_values={'output': 'The answer is 4'}, log='Final answer: 4')
+
+    # Mock the _stream_llm method instead of trying to patch the agent directly
+    with patch.object(mock_react_agent, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
+        mock_stream_llm.return_value = AIMessage(content="Final Answer: The answer is 4")
+
+        with patch('nat.plugins.langchain.agent.react_agent.agent.ReActOutputParser.aparse',
+                   new_callable=AsyncMock) as mock_parse:
+            mock_parse.return_value = mock_agent_finish
+
+            # Process first turn
+            result_state = await mock_react_agent.agent_node(state)
+
+            # Verify first turn completed correctly
+            assert result_state.final_answer == 'The answer is 4'
+            assert len(result_state.messages) == 2
+
+            # Check conditional edge returns END
+            decision = await mock_react_agent.conditional_edge(result_state)
+            assert decision == AgentDecision.END
+
+    # Turn 2: User asks second question - this is where the bug was
+    # Add a new human message to simulate multi-turn
+    result_state.messages.append(HumanMessage(content="What is 3+3?"))
+    result_state.final_answer = None  # Reset for new turn
+    result_state.agent_scratchpad = []  # Reset scratchpad
+
+    # Mock second response - agent finishes with new answer
+    mock_agent_finish_2 = AgentFinish(return_values={'output': 'The answer is 6'}, log='Final answer: 6')
+
+    with patch.object(mock_react_agent, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm_2:
+        mock_stream_llm_2.return_value = AIMessage(content="Final Answer: The answer is 6")
+
+        with patch('nat.plugins.langchain.agent.react_agent.agent.ReActOutputParser.aparse',
+                   new_callable=AsyncMock) as mock_parse_2:
+            mock_parse_2.return_value = mock_agent_finish_2
+
+            # Process second turn
+            result_state_2 = await mock_react_agent.agent_node(result_state)
+
+            # Verify second turn completed correctly
+            assert result_state_2.final_answer == 'The answer is 6'
+            assert len(result_state_2.messages) == 4  # Original 2 + 2 new messages
+
+            # Check conditional edge returns END for second turn
+            decision_2 = await mock_react_agent.conditional_edge(result_state_2)
+            assert decision_2 == AgentDecision.END
+
+
+async def test_conditional_edge_with_multiple_messages_but_no_final_answer(mock_react_agent):
+    """Test that conditional edge doesn't incorrectly end when there are multiple messages but no final_answer.
+
+    This test verifies the fix - previously the logic was checking message length > 1,
+    which could incorrectly trigger END in multi-turn scenarios.
+    """
+    # Create state with multiple messages but no final answer (agent still working)
+    state = ReActGraphState()
+    state.messages = [
+        HumanMessage(content="First question"),
+        AIMessage(content="Let me think about this..."),
+        HumanMessage(content="Second question")
+    ]
+    state.final_answer = None
+    state.agent_scratchpad = [AgentAction(tool="TestTool", tool_input="input", log="thinking...")]
+
+    # The conditional edge should return TOOL, not END
+    decision = await mock_react_agent.conditional_edge(state)
+    assert decision == AgentDecision.TOOL
+
+
+def test_config_alias_max_iterations():
+    """Test that max_iterations alias works correctly."""
+    config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test', max_iterations=20)
+    # The old field name should map to the new field name
+    assert config.max_tool_calls == 20
+
+
+def test_config_alias_all_old_field_names():
+    """Test that all old field names work correctly together."""
+    config = ReActAgentWorkflowConfig(tool_names=['test'],
+                                      llm_name='test',
+                                      retry_parsing_errors=False,
+                                      max_retries=7,
+                                      max_iterations=25)
+    # All old field names should map to the new field names
+    assert not config.retry_agent_response_parsing_errors
+    assert config.parse_agent_response_max_retries == 7
+    assert config.max_tool_calls == 25
+
+
+def test_config_alias_new_field_names():
+    """Test that new field names work correctly."""
+    config = ReActAgentWorkflowConfig(tool_names=['test'],
+                                      llm_name='test',
+                                      retry_agent_response_parsing_errors=False,
+                                      parse_agent_response_max_retries=8,
+                                      max_tool_calls=30)
+    # The new field names should work directly
+    assert not config.retry_agent_response_parsing_errors
+    assert config.parse_agent_response_max_retries == 8
+    assert config.max_tool_calls == 30
+
+
+def test_config_alias_both_old_and_new():
+    """Test that new field names take precedence when both old and new are provided."""
+    config = ReActAgentWorkflowConfig(tool_names=['test'],
+                                      llm_name='test',
+                                      retry_parsing_errors=False,
+                                      max_retries=5,
+                                      max_iterations=20,
+                                      retry_agent_response_parsing_errors=True,
+                                      parse_agent_response_max_retries=10,
+                                      max_tool_calls=35)
+    # New field names should take precedence
+    assert config.retry_agent_response_parsing_errors
+    assert config.parse_agent_response_max_retries == 10
+    assert config.max_tool_calls == 35
+
+
+def test_config_tool_call_max_retries_no_alias():
+    """Test that tool_call_max_retries has no alias and works normally."""
+    config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test', tool_call_max_retries=3)
+    # This field should work normally without any alias
+    assert config.tool_call_max_retries == 3
+
+
+def test_config_alias_default_values():
+    """Test that default values work when no aliases are provided."""
+    config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test')
+    # All fields should have default values
+    assert config.retry_agent_response_parsing_errors
+    assert config.parse_agent_response_max_retries == 1
+    assert config.tool_call_max_retries == 1
+    assert config.max_tool_calls == 15
+
+
+def test_config_alias_json_serialization():
+    """Test that configuration with aliases can be serialized and deserialized."""
+    config = ReActAgentWorkflowConfig(tool_names=['test'],
+                                      llm_name='test',
+                                      retry_parsing_errors=False,
+                                      max_retries=6,
+                                      max_iterations=22)
+
+    # Test model_dump (serialization)
+    config_dict = config.model_dump()
+    assert 'retry_agent_response_parsing_errors' in config_dict
+    assert 'parse_agent_response_max_retries' in config_dict
+    assert 'max_tool_calls' in config_dict
+    assert not config_dict['retry_agent_response_parsing_errors']
+    assert config_dict['parse_agent_response_max_retries'] == 6
+    assert config_dict['max_tool_calls'] == 22
+
+    # Test deserialization with old field names
+    config_from_dict = ReActAgentWorkflowConfig.model_validate({
+        'tool_names': ['test'],
+        'llm_name': 'test',
+        'retry_parsing_errors': True,
+        'max_retries': 9,
+        'max_iterations': 40
+    })
+    assert config_from_dict.retry_agent_response_parsing_errors
+    assert config_from_dict.parse_agent_response_max_retries == 9
+    assert config_from_dict.max_tool_calls == 40
+
+
+def test_react_agent_with_alias_config(mock_llm, mock_tool):
+    """Test that ReActAgentGraph works correctly with alias configuration."""
+    config = ReActAgentWorkflowConfig(
+        tool_names=['test'],
+        llm_name='test',
+        retry_parsing_errors=True,  # Changed to True so retries value is used
+        max_retries=4,
+        max_iterations=25,
+        verbose=True)
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(config)
+    agent = ReActAgentGraph(llm=mock_llm,
+                            prompt=prompt,
+                            tools=tools,
+                            detailed_logs=config.verbose,
+                            retry_agent_response_parsing_errors=config.retry_agent_response_parsing_errors,
+                            parse_agent_response_max_retries=config.parse_agent_response_max_retries,
+                            tool_call_max_retries=config.tool_call_max_retries)
+
+    # Verify the agent uses the aliased values
+    assert agent.parse_agent_response_max_retries == 4
+    assert agent.tool_call_max_retries == 1  # default value since no alias
+
+
+def test_config_mixed_alias_usage():
+    """Test mixed usage of old and new field names."""
+    config = ReActAgentWorkflowConfig(
+        tool_names=['test'],
+        llm_name='test',
+        retry_parsing_errors=False,  # old alias
+        parse_agent_response_max_retries=12,  # new field name
+        max_iterations=28  # old alias
+    )
+
+    assert not config.retry_agent_response_parsing_errors
+    assert config.parse_agent_response_max_retries == 12
+    assert config.max_tool_calls == 28
+    assert config.tool_call_max_retries == 1  # default value
+
+
+# Tests for quote normalization in tool input parsing
+async def test_tool_node_json_input_with_double_quotes(mock_react_agent):
+    """Test that valid JSON with double quotes is parsed correctly."""
+    tool_input = '{"query": "search term", "limit": 5}'
+    mock_state = ReActGraphState(agent_scratchpad=[AgentAction(tool='Tool A', tool_input=tool_input, log='test')])
+
+    response = await mock_react_agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    # When JSON is successfully parsed, the mock tool receives a dict and LangChain/LangGraph extracts the "query" value
+    assert response.content == "search term"  # The mock tool extracts the query field value
+
+
+async def test_tool_node_json_input_with_single_quotes_normalization_enabled(mock_react_agent):
+    """Test that JSON with single quotes is normalized to double quotes when normalization is enabled."""
+    # Agent should have normalization enabled by default
+    assert mock_react_agent.normalize_tool_input_quotes is True
+
+    tool_input_single_quotes = "{'query': 'search term', 'limit': 5}"
+    mock_state = ReActGraphState(
+        agent_scratchpad=[AgentAction(tool='Tool A', tool_input=tool_input_single_quotes, log='test')])
+
+    response = await mock_react_agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    # With quote normalization enabled, single quotes get normalized and JSON is parsed successfully
+    # The mock tool then receives a dict and LangChain/LangGraph extracts the "query" value
+    assert response.content == "search term"
+
+
+async def test_tool_node_json_input_with_single_quotes_normalization_disabled(mock_config_react_agent,
+                                                                              mock_llm,
+                                                                              mock_tool):
+    """Test that JSON with single quotes is NOT normalized when normalization is disabled."""
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+
+    # Create agent with quote normalization disabled
+    agent = ReActAgentGraph(llm=mock_llm,
+                            prompt=prompt,
+                            tools=tools,
+                            detailed_logs=mock_config_react_agent.verbose,
+                            normalize_tool_input_quotes=False)
+
+    assert agent.normalize_tool_input_quotes is False
+
+    tool_input_single_quotes = "{'query': 'search term', 'limit': 5}"
+    mock_state = ReActGraphState(
+        agent_scratchpad=[AgentAction(tool='Tool A', tool_input=tool_input_single_quotes, log='test')])
+
+    response = await agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    # Should use the raw string input since JSON parsing fails and normalization is disabled
+    assert response.content == tool_input_single_quotes
+
+
+async def test_tool_node_invalid_json_fallback_to_string(mock_react_agent):
+    """Test that invalid JSON falls back to using the raw string input."""
+    # Invalid JSON that cannot be fixed by quote normalization
+    tool_input_invalid = "{'query': 'search term', 'limit': }"
+    mock_state = ReActGraphState(
+        agent_scratchpad=[AgentAction(tool='Tool A', tool_input=tool_input_invalid, log='test')])
+
+    response = await mock_react_agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    # Should fall back to using the raw string
+    assert response.content == tool_input_invalid
+
+
+async def test_tool_node_string_input_no_json_parsing(mock_react_agent):
+    """Test that plain string input is used as-is without attempting JSON parsing."""
+    tool_input_string = "simple string input"
+    mock_state = ReActGraphState(
+        agent_scratchpad=[AgentAction(tool='Tool A', tool_input=tool_input_string, log='test')])
+
+    response = await mock_react_agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    assert response.content == tool_input_string
+
+
+async def test_tool_node_none_input(mock_react_agent):
+    """Test that 'None' input is handled correctly."""
+    tool_input_none = "None"
+    mock_state = ReActGraphState(agent_scratchpad=[AgentAction(tool='Tool A', tool_input=tool_input_none, log='test')])
+
+    response = await mock_react_agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    assert response.content == tool_input_none
+
+
+async def test_tool_node_nested_json_with_single_quotes(mock_react_agent):
+    """Test that complex nested JSON with single quotes is normalized correctly."""
+    # Complex nested JSON with single quotes - doesn't have a "query" field so would return the full dict
+    tool_input_nested = \
+        "{'user': {'name': 'John', 'preferences': {'theme': 'dark', 'notifications': True}}, 'action': 'update'}"
+    mock_state = ReActGraphState(
+        agent_scratchpad=[AgentAction(tool='Tool A', tool_input=tool_input_nested, log='test')])
+
+    response = await mock_react_agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    # Since this JSON doesn't have a "query" field, the mock tool receives the full dict
+    # and LangChain/LangGraph can't extract a "query" parameter, so it falls back to default behavior
+    assert "John" in str(response.content) or isinstance(response.content, dict)
+
+
+async def test_tool_node_mixed_quotes_in_json(mock_config_react_agent, mock_llm, mock_tool):
+    """Test that JSON with mixed quotes is handled appropriately."""
+    # This creates a scenario with mixed quotes that might be challenging to normalize
+    tools = [mock_tool('Tool A')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+
+    agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=False)
+
+    # Mixed quotes - this is challenging JSON to normalize
+    tool_input_mixed = '''{'outer': "inner string with 'nested quotes'", 'number': 42}'''
+    mock_state = ReActGraphState(agent_scratchpad=[AgentAction(tool='Tool A', tool_input=tool_input_mixed, log='test')])
+
+    response = await agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    # Mixed quotes are complex to normalize, so it likely falls back to raw string input
+    assert response.content == tool_input_mixed
+
+
+async def test_tool_node_whitespace_handling(mock_react_agent):
+    """Test that whitespace in tool input is handled correctly."""
+    # Tool input with leading/trailing whitespace
+    tool_input_whitespace = "  {'query': 'search term'}  "
+    mock_state = ReActGraphState(
+        agent_scratchpad=[AgentAction(tool='Tool A', tool_input=tool_input_whitespace, log='test')])
+
+    response = await mock_react_agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    # With whitespace trimmed and quote normalization, JSON is parsed and "query" value is extracted
+    assert response.content == "search term"
+
+
+def test_config_replace_single_quotes_default():
+    """Test that normalize_tool_input_quotes defaults to True."""
+    config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test')
+    assert config.normalize_tool_input_quotes is True
+
+
+def test_config_replace_single_quotes_explicit_false():
+    """Test that normalize_tool_input_quotes can be set to False."""
+    config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test', normalize_tool_input_quotes=False)
+    assert config.normalize_tool_input_quotes is False
+
+
+def test_react_agent_init_with_quote_normalization_param(mock_config_react_agent, mock_llm, mock_tool):
+    """Test that ReActAgentGraph initialization respects the quote normalization parameter."""
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+
+    # Test with normalization enabled
+    agent_enabled = ReActAgentGraph(llm=mock_llm,
+                                    prompt=prompt,
+                                    tools=tools,
+                                    detailed_logs=False,
+                                    normalize_tool_input_quotes=True)
+    assert agent_enabled.normalize_tool_input_quotes is True
+
+    # Test with normalization disabled
+    agent_disabled = ReActAgentGraph(llm=mock_llm,
+                                     prompt=prompt,
+                                     tools=tools,
+                                     detailed_logs=False,
+                                     normalize_tool_input_quotes=False)
+    assert agent_disabled.normalize_tool_input_quotes is False
+
+
+# Additional test to specifically verify the JSON parsing logic with quote normalization
+async def test_quote_normalization_json_parsing_logic(mock_config_react_agent, mock_llm):
+    """Test the specific quote normalization logic in JSON parsing."""
+    from langchain_core.tools import BaseTool
+
+    # Create a custom tool that returns the exact input it receives
+    class ExactInputTool(BaseTool):
+        name: str = "ExactInputTool"
+        description: str = "Returns exactly what it receives"
+
+        async def _arun(self, query, **kwargs):
+            return f"Received: {query} (type: {type(query).__name__})"
+
+        def _run(self, query, **kwargs):
+            return f"Received: {query} (type: {type(query).__name__})"
+
+    tools = [ExactInputTool()]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+
+    # Test with quote normalization enabled
+    agent_enabled = ReActAgentGraph(llm=mock_llm,
+                                    prompt=prompt,
+                                    tools=tools,
+                                    detailed_logs=False,
+                                    normalize_tool_input_quotes=True)
+
+    # Test with single quotes - should be normalized and parsed as JSON
+    tool_input_single = "{'query': 'test', 'count': 42}"
+    mock_state = ReActGraphState(
+        agent_scratchpad=[AgentAction(tool='ExactInputTool', tool_input=tool_input_single, log='test')])
+    response = await agent_enabled.tool_node(mock_state)
+    response_content = response.tool_responses[-1].content
+
+    # Should receive the "query" field value from the parsed JSON dict
+    # This proves that quote normalization worked and JSON was successfully parsed
+    assert "Received: test (type: str)" in response_content
+
+    # Test with quote normalization disabled
+    agent_disabled = ReActAgentGraph(llm=mock_llm,
+                                     prompt=prompt,
+                                     tools=tools,
+                                     detailed_logs=False,
+                                     normalize_tool_input_quotes=False)
+
+    response = await agent_disabled.tool_node(mock_state)
+    response_content = response.tool_responses[-1].content
+
+    # Should receive the raw string (JSON parsing failed due to no normalization)
+    # The full JSON string should be passed as the query parameter
+    assert tool_input_single in response_content and "type: str" in response_content
+
+
+# Tests for raise_on_parsing_failure functionality (GitHub Issue #1309)
+class TestReActAgentParsingFailedError:
+    """Tests for the ReActAgentParsingFailedError exception class."""
+
+    def test_exception_attributes(self):
+        """Test that the exception has correct attributes."""
+        error = ReActAgentParsingFailedError(observation="Invalid Format: Missing 'Action:'",
+                                             llm_output="Thought: I should do something",
+                                             attempts=3)
+        assert error.observation == "Invalid Format: Missing 'Action:'"
+        assert error.llm_output == "Thought: I should do something"
+        assert error.attempts == 3
+
+    def test_exception_message_short_output(self):
+        """Test exception message with short LLM output."""
+        error = ReActAgentParsingFailedError(observation="Invalid Format", llm_output="Short output", attempts=2)
+        assert "Failed to parse agent output after 2 attempts" in str(error)
+        assert "Invalid Format" in str(error)
+        assert "Short output" in str(error)
+
+    def test_exception_message_long_output_truncated(self):
+        """Test exception message truncates long LLM output."""
+        long_output = "x" * 300
+        error = ReActAgentParsingFailedError(observation="Invalid Format", llm_output=long_output, attempts=1)
+        assert "..." in str(error)
+        # Should only include first 200 chars of LLM output
+        assert len(str(error)) < 400
+
+    def test_exception_is_runtime_error(self):
+        """Test that the exception is a RuntimeError."""
+        error = ReActAgentParsingFailedError(observation="test", llm_output="test", attempts=1)
+        assert isinstance(error, RuntimeError)
+
+
+class TestRaiseOnParsingFailure:
+    """Tests for the raise_on_parsing_failure configuration option."""
+
+    def test_config_default_value(self):
+        """Test that raise_on_parsing_failure defaults to True."""
+        config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test')
+        assert config.raise_on_parsing_failure is True
+
+    def test_config_explicit_true(self):
+        """Test that raise_on_parsing_failure can be set to True."""
+        config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test', raise_on_parsing_failure=True)
+        assert config.raise_on_parsing_failure is True
+
+    def test_config_explicit_false(self):
+        """Test that raise_on_parsing_failure can be explicitly set to False."""
+        config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test', raise_on_parsing_failure=False)
+        assert config.raise_on_parsing_failure is False
+
+
+@pytest.fixture(name='mock_react_agent_raise_on_failure')
+def fixture_mock_agent_raise_on_failure(mock_config_react_agent, mock_llm, mock_tool):
+    """Create a mock ReAct agent with raise_on_parsing_failure=True."""
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+    agent = ReActAgentGraph(llm=mock_llm,
+                            prompt=prompt,
+                            tools=tools,
+                            detailed_logs=mock_config_react_agent.verbose,
+                            raise_on_parsing_failure=True)
+    return agent
+
+
+async def test_agent_raises_exception_on_parsing_failure(mock_react_agent_raise_on_failure):
+    """Test that agent raises ReActAgentParsingFailedError when raise_on_parsing_failure=True."""
+    # Send a message that will fail to parse (no Action/Final Answer in mock response)
+    with pytest.raises(ReActAgentParsingFailedError) as exc_info:
+        await mock_react_agent_raise_on_failure.agent_node(ReActGraphState(messages=[HumanMessage('hi')]))
+
+    error = exc_info.value
+    assert MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE in error.observation
+    assert error.attempts == 1
+
+
+async def test_agent_returns_error_message_when_not_raising(mock_config_react_agent, mock_llm, mock_tool):
+    """Test that agent returns error message when raise_on_parsing_failure=False."""
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+    agent = ReActAgentGraph(llm=mock_llm,
+                            prompt=prompt,
+                            tools=tools,
+                            detailed_logs=mock_config_react_agent.verbose,
+                            raise_on_parsing_failure=False)
+
+    # Verify the agent does NOT raise on parsing failure
+    assert agent.raise_on_parsing_failure is False
+
+    # Should NOT raise, but return error message in the response
+    response = await agent.agent_node(ReActGraphState(messages=[HumanMessage('hi')]))
+    response = response.messages[-1]
+
+    assert isinstance(response, AIMessage)
+    assert MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE in response.content
+
+
+async def test_agent_exception_contains_llm_output(mock_react_agent_raise_on_failure):
+    """Test that the exception contains the original LLM output."""
+    with pytest.raises(ReActAgentParsingFailedError) as exc_info:
+        await mock_react_agent_raise_on_failure.agent_node(ReActGraphState(messages=[HumanMessage('test query')]))
+
+    error = exc_info.value
+    # The mock LLM echoes back the input in format "Question: test query\n..."
+    assert 'test query' in error.llm_output
+
+
+async def test_graph_raises_exception_when_configured(mock_config_react_agent, mock_llm, mock_tool):
+    """Test that the full graph raises exception when raise_on_parsing_failure=True."""
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+    agent = ReActAgentGraph(llm=mock_llm,
+                            prompt=prompt,
+                            tools=tools,
+                            detailed_logs=False,
+                            raise_on_parsing_failure=True)
+    graph = await agent.build_graph()
+
+    with pytest.raises(ReActAgentParsingFailedError):
+        await graph.ainvoke(ReActGraphState(messages=[HumanMessage('this will fail parsing')]))
+
+
+def test_agent_init_with_raise_on_parsing_failure_param(mock_config_react_agent, mock_llm, mock_tool):
+    """Test that ReActAgentGraph initialization respects the raise_on_parsing_failure parameter."""
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+
+    # Test with raise_on_parsing_failure enabled (default)
+    agent_enabled = ReActAgentGraph(llm=mock_llm,
+                                    prompt=prompt,
+                                    tools=tools,
+                                    detailed_logs=False,
+                                    raise_on_parsing_failure=True)
+    assert agent_enabled.raise_on_parsing_failure is True
+
+    # Test with raise_on_parsing_failure disabled
+    agent_disabled = ReActAgentGraph(llm=mock_llm,
+                                     prompt=prompt,
+                                     tools=tools,
+                                     detailed_logs=False,
+                                     raise_on_parsing_failure=False)
+    assert agent_disabled.raise_on_parsing_failure is False
+
+    # Test default value (should be True)
+    agent_default = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=False)
+    assert agent_default.raise_on_parsing_failure is True
+
+
+async def test_exception_chaining_preserves_original_error(mock_react_agent_raise_on_failure):
+    """Test that the raised exception chains the original ReActOutputParserException."""
+    with pytest.raises(ReActAgentParsingFailedError) as exc_info:
+        await mock_react_agent_raise_on_failure.agent_node(ReActGraphState(messages=[HumanMessage('hi')]))
+
+    # Check that the exception was chained with 'from'
+    assert exc_info.value.__cause__ is not None
+    assert isinstance(exc_info.value.__cause__, ReActOutputParserException)
+
+
+# =============================================================================
+# Tests for lenient regex parsing (Issue #1308)
+# =============================================================================
+
+
+async def test_output_parser_case_insensitive_action(mock_react_output_parser):
+    """Test that lowercase 'action' is parsed correctly."""
+    mock_input = 'Thought: I need to search\naction: Tool A\nAction Input: search query\nObservation:'
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool == "Tool A"
+    assert test_output.tool_input == "search query"
+
+
+async def test_output_parser_case_insensitive_action_input(mock_react_output_parser):
+    """Test that lowercase 'action input' is parsed correctly."""
+    mock_input = 'Thought: I need to search\nAction: Tool A\naction input: search query\nObservation:'
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool == "Tool A"
+    assert test_output.tool_input == "search query"
+
+
+async def test_output_parser_all_lowercase(mock_react_output_parser):
+    """Test that all lowercase 'action' and 'action input' are parsed correctly."""
+    mock_input = 'thought: I need to search\naction: Tool A\naction input: search query\nobservation:'
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool == "Tool A"
+    assert test_output.tool_input == "search query"
+
+
+async def test_output_parser_input_only_instead_of_action_input(mock_react_output_parser):
+    """Test that 'Input:' without 'Action' prefix is parsed correctly."""
+    mock_input = 'Thought: I need to search\nAction: Tool A\nInput: search query\nObservation:'
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool == "Tool A"
+    assert test_output.tool_input == "search query"
+
+
+async def test_output_parser_input_lowercase(mock_react_output_parser):
+    """Test that lowercase 'input:' is parsed correctly."""
+    mock_input = 'Thought: I need to search\nAction: Tool A\ninput: search query\nObservation:'
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool == "Tool A"
+    assert test_output.tool_input == "search query"
+
+
+async def test_output_parser_case_insensitive_final_answer(mock_react_output_parser):
+    """Test that case-insensitive 'Final Answer' is parsed correctly."""
+    mock_input = 'Thought: I now know the answer\nfinal answer: The result is 42'
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentFinish)
+    assert test_output.return_values['output'] == 'The result is 42'
+
+
+async def test_output_parser_mixed_case_final_answer(mock_react_output_parser):
+    """Test that mixed case 'FINAL ANSWER' is parsed correctly."""
+    mock_input = 'Thought: I now know the answer\nFINAL ANSWER: The result is 42'
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentFinish)
+    assert test_output.return_values['output'] == 'The result is 42'
+
+
+async def test_output_parser_extra_whitespace(mock_react_output_parser):
+    """Test that extra whitespace in action/input labels is handled correctly."""
+    mock_input = 'Thought: I need to search\nAction  :  Tool A\nAction   Input  :  search query\nObservation:'
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool == "Tool A"
+    assert test_output.tool_input == "search query"
+
+
+async def test_output_parser_json_input_with_lowercase(mock_react_output_parser):
+    """Test that JSON input with lowercase action/input is parsed correctly."""
+    mock_action = 'SearchTool'
+    mock_json_input = '{"query": "what is NIM"}'
+    mock_input = \
+    f'thought: I need to call the search tool\naction: {mock_action}\ninput: {mock_json_input}\nobservation'
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool == mock_action
+    assert test_output.tool_input == mock_json_input
+
+
+# =============================================================================
+# Tests for native tool calling support (Issue #1308)
+# =============================================================================
+
+
+def test_config_use_native_tool_calling_default():
+    """Test that use_native_tool_calling defaults to False."""
+    config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test')
+    assert config.use_native_tool_calling is False
+
+
+def test_config_use_native_tool_calling_explicit_true():
+    """Test that use_native_tool_calling can be set to True."""
+    config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test', use_native_tool_calling=True)
+    assert config.use_native_tool_calling is True
+
+
+def test_react_agent_init_with_native_tool_calling_disabled(mock_config_react_agent, mock_llm, mock_tool):
+    """Test ReActAgentGraph initialization with native tool calling disabled."""
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+
+    agent = ReActAgentGraph(llm=mock_llm,
+                            prompt=prompt,
+                            tools=tools,
+                            detailed_logs=False,
+                            use_native_tool_calling=False)
+    assert agent.use_native_tool_calling is False
+
+
+def test_react_agent_init_with_native_tool_calling_enabled(mock_config_react_agent, mock_llm, mock_tool):
+    """Test ReActAgentGraph initialization with native tool calling enabled."""
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+
+    agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=False, use_native_tool_calling=True)
+    assert agent.use_native_tool_calling is True
+
+
+async def test_agent_node_native_tool_calling(mock_config_react_agent, mock_llm, mock_tool):
+    """Test that native tool calls are properly extracted from LLM response."""
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch
+
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+
+    agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=False, use_native_tool_calling=True)
+
+    # Create a mock message with tool_calls
+    mock_response = AIMessage(content="I need to call Tool A to get the answer",
+                              tool_calls=[{
+                                  "name": "Tool A",
+                                  "args": {
+                                      "query": "test query"
+                                  },
+                                  "id": "call_123",
+                                  "type": "tool_call"
+                              }])
+
+    state = ReActGraphState(messages=[HumanMessage(content="mock tool call")])
+
+    with patch.object(agent, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
+        mock_stream_llm.return_value = mock_response
+
+        result_state = await agent.agent_node(state)
+
+        # Verify that the tool call was extracted
+        assert len(result_state.agent_scratchpad) == 1
+        agent_action = result_state.agent_scratchpad[0]
+        assert isinstance(agent_action, AgentAction)
+        assert agent_action.tool == "Tool A"
+        assert '"query": "test query"' in agent_action.tool_input
+
+
+async def test_agent_node_native_tool_calling_fallback_to_text_parsing(mock_config_react_agent, mock_llm, mock_tool):
+    """Test that agent falls back to text parsing when no tool_calls in response."""
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch
+
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+
+    agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=False, use_native_tool_calling=True)
+
+    # Create a mock message without tool_calls (text-based response)
+    mock_response = AIMessage(
+        content="Thought: I need to search\nAction: Tool A\nAction Input: test query\nObservation:",
+        tool_calls=[]  # No tool calls
+    )
+
+    state = ReActGraphState(messages=[HumanMessage(content="test question")])
+
+    with patch.object(agent, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
+        mock_stream_llm.return_value = mock_response
+
+        result_state = await agent.agent_node(state)
+
+        # Verify that text parsing was used as fallback
+        assert len(result_state.agent_scratchpad) == 1
+        agent_action = result_state.agent_scratchpad[0]
+        assert isinstance(agent_action, AgentAction)
+        assert agent_action.tool == "Tool A"
+        assert agent_action.tool_input == "test query"
+
+
+async def test_agent_node_native_tool_calling_with_dict_args(mock_config_react_agent, mock_llm, mock_tool):
+    """Test that tool call with dict args is properly converted to JSON string."""
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch
+
+    tools = [mock_tool('Tool A')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+
+    agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=False, use_native_tool_calling=True)
+
+    # Create a mock message with complex dict args
+    mock_response = AIMessage(content="Calling the tool",
+                              tool_calls=[{
+                                  "name": "Tool A",
+                                  "args": {
+                                      "query": "search term", "limit": 10, "nested": {
+                                          "key": "value"
+                                      }
+                                  },
+                                  "id": "call_456",
+                                  "type": "tool_call"
+                              }])
+
+    state = ReActGraphState(messages=[HumanMessage(content="test")])
+
+    with patch.object(agent, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
+        mock_stream_llm.return_value = mock_response
+
+        result_state = await agent.agent_node(state)
+
+        agent_action = result_state.agent_scratchpad[0]
+        # Verify the tool input is a JSON string
+        import json
+        parsed = json.loads(agent_action.tool_input)
+        assert parsed["query"] == "search term"
+        assert parsed["limit"] == 10
+        assert parsed["nested"]["key"] == "value"

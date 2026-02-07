@@ -63,6 +63,7 @@ llms:
 
 workflow:
   _type: react_agent
+  name: power_of_two_agent
   # Only expose power_of_two to the agent (not the raw calculator tools)
   # This forces the agent to use power_of_two, which internally calls multiply
   tool_names: [power_of_two]

@@ -17,7 +17,7 @@ limitations under the License.
 
 # Observing a Workflow with W&B Weave
 
-This guide provides a step-by-step process to enable observability in a NeMo Agent toolkit workflow using Weights and Biases (W&B) Weave for tracing using just a few lines of code in your workflow configuration file.
+This guide provides a step-by-step process to enable observability in a NeMo Agent Toolkit workflow using Weights and Biases (W&B) Weave for tracing using just a few lines of code in your workflow configuration file.
 
 ![Weave Tracing Dashboard](../../_static/weave_tracing.png)
 
@@ -87,7 +87,7 @@ Note how the integration captures not only the `nat` intermediate steps but also
 
 ### Step 6: Redacting Sensitive Data
 
-When tracing LLM workflows, you may be processing sensitive information like personal identifiers, credit card numbers, or API keys. NeMo Agent toolkit Weave integration supports automatic redaction of Personally Identifiable Information (PII) and sensitive keys from your traces.
+When tracing LLM workflows, you may be processing sensitive information like personal identifiers, credit card numbers, or API keys. NeMo Agent Toolkit Weave integration supports automatic redaction of Personally Identifiable Information (PII) and sensitive keys from your traces.
 
 #### Prerequisites
 

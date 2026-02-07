@@ -1,0 +1,409 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import shutil
+import typing
+from pathlib import Path
+from unittest.mock import MagicMock
+from unittest.mock import patch
+
+import pytest
+import pytest_asyncio
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from _utils.dask_utils import wait_job
+from nat.data_models.config import Config
+from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
+from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
+
+if typing.TYPE_CHECKING:
+    from dask.distributed import Client as DaskClient
+
+
+@pytest.fixture(name="test_config")
+def test_config_fixture(dask_scheduler_address: str, set_nat_dask_scheduler_env_var: str) -> Config:
+    config = Config()
+    config.general.front_end = FastApiFrontEndConfig(
+        scheduler_address=dask_scheduler_address,
+        evaluate=FastApiFrontEndConfig.EndpointBase(path="/evaluate",
+                                                    method="POST",
+                                                    description="Test evaluate endpoint"),
+    )
+
+    return config
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def patch_evaluation_run(register_test_workflow):
+
+    class MockEvaluationRun:
+        """
+        The MagicMock and AsyncMock classes are not serializable by Dask, so we create a simple mock class here.
+        """
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __call__(self, *args, **kwargs):
+            return self
+
+        async def run_and_evaluate(self, *args, **kwargs):
+            from nat.eval.config import EvaluationRunOutput
+            from nat.eval.evaluator.evaluator_model import EvalInput
+            from nat.profiler.data_models import ProfilerResults
+            result = EvaluationRunOutput(workflow_output_file="/fake/output/path.json",
+                                         evaluator_output_files=[],
+                                         workflow_interrupted=False,
+                                         eval_input=EvalInput(eval_input_items=[]),
+                                         evaluation_results=[],
+                                         usage_stats=None,
+                                         profiler_results=ProfilerResults())
+
+            return result
+
+    with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker.EvaluationRun",
+               new_callable=MockEvaluationRun) as mock_eval_run:
+        yield mock_eval_run
+
+
+@pytest_asyncio.fixture(name="test_client")
+async def test_client_fixture(test_config: Config) -> TestClient:
+    worker = FastApiFrontEndPluginWorker(test_config)
+    app = FastAPI()
+    worker.set_cors_config(app)
+
+    with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker.SessionManager") as MockSessionManager:
+
+        # Mock session manager
+        mock_session = MagicMock()
+        MockSessionManager.return_value = mock_session
+
+        await worker.add_evaluate_route(app, session_manager=mock_session)
+
+        yield TestClient(app)
+
+
+def create_job(test_client: TestClient, config_file: str, job_id: str | None = None):
+    """Helper to create an evaluation job."""
+    payload = {"config_file": config_file}
+    if job_id:
+        payload["job_id"] = job_id
+
+    return test_client.post("/evaluate", json=payload)
+
+
+def test_create_job(dask_client: "DaskClient", test_client: TestClient, eval_config_file: str):
+    """Test creating a new evaluation job."""
+    response = create_job(test_client, eval_config_file)
+    assert response.status_code == 200
+    data = response.json()
+    assert "job_id" in data
+    assert data["status"] == "submitted"
+    wait_job(dask_client, data["job_id"])
+
+
+def test_get_job_status(dask_client: "DaskClient", test_client: TestClient, eval_config_file: str):
+    """Test getting the status of a specific job."""
+    create_response = create_job(test_client, eval_config_file)
+    job_id = create_response.json()["job_id"]
+    wait_job(dask_client, job_id)
+    status_response = test_client.get(f"/evaluate/job/{job_id}")
+    assert status_response.status_code == 200
+    data = status_response.json()
+    assert data["job_id"] == job_id
+    assert data["status"] == "success"
+    assert data["config_file"] == eval_config_file
+
+
+def test_get_job_status_not_found(test_client: TestClient):
+    """Test getting status of a non-existent job."""
+    response = test_client.get("/evaluate/job/non-existent-id")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Job non-existent-id not found"
+
+
+def test_get_last_job(dask_client: "DaskClient", test_client: TestClient, eval_config_file: str):
+    """Test getting the last created job."""
+    for i in range(3):
+        job_id = f"job-{i}"
+        create_job(test_client, eval_config_file, job_id=job_id)
+        wait_job(dask_client, job_id)
+
+    response = test_client.get("/evaluate/job/last")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["job_id"] == "job-2"
+
+
+def test_get_last_job_not_found(test_client: TestClient):
+    """Test getting last job when no jobs exist."""
+    response = test_client.get("/evaluate/job/last")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "No jobs found"
+
+
+@pytest.mark.parametrize("set_job_id", [False, True])
+def test_get_all_jobs(dask_client: "DaskClient", test_client: TestClient, eval_config_file: str, set_job_id: bool):
+    """Test retrieving all jobs."""
+    for i in range(3):
+        job_id = f"job-{i}" if set_job_id else None
+        create_response = create_job(test_client, eval_config_file, job_id=job_id)
+        job_id = create_response.json()["job_id"]
+        wait_job(dask_client, job_id)
+
+    response = test_client.get("/evaluate/jobs")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 3
+
+
+@pytest.mark.parametrize("status,expected_count", [
+    ("success", 3),
+    ("interrupted", 0),
+])
+def test_get_jobs_by_status(dask_client: "DaskClient",
+                            test_client: TestClient,
+                            eval_config_file: str,
+                            status: str,
+                            expected_count: int):
+    """Test getting jobs filtered by status."""
+    for _ in range(3):
+        response = create_job(test_client, eval_config_file)
+        wait_job(dask_client, response.json()["job_id"])
+
+    response = test_client.get(f"/evaluate/jobs?status={status}")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == expected_count
+
+    if status == "submitted":
+        assert all(job["status"] == "submitted" for job in data)
+
+
+def test_create_job_with_reps(dask_client: "DaskClient", test_client: TestClient, eval_config_file: str):
+    """Test creating a new evaluation job with custom repetitions."""
+    response = test_client.post("/evaluate", json={"config_file": eval_config_file, "reps": 3})
+    assert response.status_code == 200
+    data = response.json()
+    assert "job_id" in data
+    assert data["status"] == "submitted"
+    wait_job(dask_client, data["job_id"])
+
+
+def test_create_job_with_expiry(dask_client: "DaskClient", test_client: TestClient, eval_config_file: str):
+    """Test creating a new evaluation job with custom expiry time."""
+    response = test_client.post(
+        "/evaluate",
+        json={
+            "config_file": eval_config_file,
+            "expiry_seconds": 1800  # 30 minutes
+        })
+    assert response.status_code == 200
+    data = response.json()
+    assert "job_id" in data
+    assert data["status"] == "submitted"
+    wait_job(dask_client, data["job_id"])
+
+
+def test_create_job_with_job_id(dask_client: "DaskClient", test_client: TestClient, eval_config_file: str):
+    """Test creating a new evaluation job with a specific job ID."""
+    job_id = "test-job-123"
+    response = test_client.post("/evaluate", json={"config_file": eval_config_file, "job_id": job_id})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["job_id"] == job_id
+    assert data["status"] == "submitted"
+    wait_job(dask_client, job_id)
+
+
+@pytest.mark.parametrize("job_id", ["test/job/123", "..", ".", "/abolute/path"
+                                    "../relative", "/"])
+def test_invalid_job_id(test_client: TestClient, eval_config_file: str, job_id: str):
+    """Test creating a job with an invalid job ID."""
+    response = test_client.post("/evaluate", json={"config_file": eval_config_file, "job_id": job_id})
+
+    # We aren't concerned about the exact status code, but it should be in the 4xx range
+    assert response.status_code >= 400 and response.status_code < 500
+
+
+def test_invalid_config_file_doesnt_exist(test_client: TestClient):
+    """Test creating a job with a config file that doesn't exist."""
+    response = test_client.post("/evaluate", json={"config_file": "doesnt/exist/config.json"})
+    # We aren't concerned about the exact status code, but it should be in the 4xx range
+    assert response.status_code >= 400 and response.status_code < 500
+
+
+def test_config_file_outside_curdir(dask_client: "DaskClient",
+                                    test_client: TestClient,
+                                    eval_config_file: str,
+                                    tmp_path: Path):
+    """Test creating a job with a config file outside the current directory."""
+    dest_config_file = tmp_path / "config.yml"
+    shutil.copy(eval_config_file, dest_config_file)
+    assert dest_config_file.exists()
+
+    response = test_client.post("/evaluate", json={"config_file": str(dest_config_file)})
+    # We aren't concerned about the exact status code, but it should be in the 4xx range
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "submitted"
+    wait_job(dask_client, data["job_id"])
+
+
+# ============================================================================
+# Evaluate Item Endpoint Tests
+# ============================================================================
+
+
+@pytest_asyncio.fixture(name="evaluate_item_client")
+async def evaluate_item_client_fixture() -> TestClient:
+    """Test client with evaluate_item endpoint configured."""
+    from unittest.mock import AsyncMock
+
+    from nat.builder.evaluator import EvaluatorInfo
+    from nat.eval.evaluator.evaluator_model import EvalInput
+    from nat.eval.evaluator.evaluator_model import EvalOutput
+    from nat.eval.evaluator.evaluator_model import EvalOutputItem
+
+    config = Config()
+    config.general.front_end = FastApiFrontEndConfig(evaluate_item=FastApiFrontEndConfig.EndpointBase(
+        path="/evaluate/item", method="POST", description="Test evaluate item endpoint"))
+
+    worker = FastApiFrontEndPluginWorker(config)
+    app = FastAPI()
+    worker.set_cors_config(app)
+
+    # Mock evaluator with async evaluate_fn
+    async def success_eval(_eval_input: EvalInput) -> EvalOutput:
+        return EvalOutput(
+            eval_output_items=[EvalOutputItem(id="test_1", score=0.85, reasoning={"explanation": "Good match"})],
+            average_score=0.85)
+
+    mock_evaluator = MagicMock(spec=EvaluatorInfo)
+    mock_evaluator.evaluate_fn = AsyncMock(side_effect=success_eval)
+
+    worker._evaluators = {"accuracy": mock_evaluator}
+
+    with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker.SessionManager") as MockSessionManager:
+        mock_session = MagicMock()
+        MockSessionManager.return_value = mock_session
+        await worker.add_evaluate_item_route(app, session_manager=mock_session)
+
+    return TestClient(app)
+
+
+def test_evaluate_item_success(evaluate_item_client: TestClient):
+    """Test successful single-item evaluation."""
+    payload = {
+        "evaluator_name": "accuracy",
+        "item": {
+            "id": "test_1",
+            "input_obj": "What is AI?",
+            "expected_output_obj": "Artificial Intelligence",
+            "output_obj": "AI is artificial intelligence",
+            "trajectory": [],
+            "expected_trajectory": [],
+            "full_dataset_entry": {}
+        }
+    }
+
+    response = evaluate_item_client.post("/evaluate/item", json=payload)
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["success"] is True
+    assert data["result"]["score"] == 0.85
+    assert data["result"]["reasoning"]["explanation"] == "Good match"
+    assert data["error"] is None
+
+
+def test_evaluate_item_not_found(evaluate_item_client: TestClient):
+    """Test evaluation with non-existent evaluator."""
+    payload = {
+        "evaluator_name": "nonexistent",
+        "item": {
+            "id": "test_1",
+            "input_obj": "test",
+            "expected_output_obj": "test",
+            "output_obj": "test",
+            "trajectory": [],
+            "expected_trajectory": [],
+            "full_dataset_entry": {}
+        }
+    }
+
+    response = evaluate_item_client.post("/evaluate/item", json=payload)
+    assert response.status_code == 404
+    assert "nonexistent" in response.json()["detail"]
+
+
+@pytest_asyncio.fixture(name="evaluate_item_client_with_error")
+async def evaluate_item_client_with_error_fixture() -> TestClient:
+    """Test client where evaluator throws an error."""
+    from unittest.mock import AsyncMock
+
+    from nat.builder.evaluator import EvaluatorInfo
+
+    config = Config()
+    config.general.front_end = FastApiFrontEndConfig(evaluate_item=FastApiFrontEndConfig.EndpointBase(
+        path="/evaluate/item", method="POST", description="Test evaluate item endpoint"))
+
+    worker = FastApiFrontEndPluginWorker(config)
+    app = FastAPI()
+
+    # Mock evaluator that raises exception
+    mock_evaluator = MagicMock(spec=EvaluatorInfo)
+    mock_evaluator.evaluate_fn = AsyncMock(side_effect=RuntimeError("Evaluation failed"))
+
+    worker._evaluators = {"failing": mock_evaluator}
+
+    with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker.SessionManager") as MockSessionManager:
+        mock_session = MagicMock()
+        MockSessionManager.return_value = mock_session
+        await worker.add_evaluate_item_route(app, session_manager=mock_session)
+
+    return TestClient(app)
+
+
+def test_evaluate_item_evaluation_error(evaluate_item_client_with_error: TestClient):
+    """Test evaluation failure handling."""
+    payload = {
+        "evaluator_name": "failing",
+        "item": {
+            "id": "test_1",
+            "input_obj": "test",
+            "expected_output_obj": "test",
+            "output_obj": "test",
+            "trajectory": [],
+            "expected_trajectory": [],
+            "full_dataset_entry": {}
+        }
+    }
+
+    response = evaluate_item_client_with_error.post("/evaluate/item", json=payload)
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["success"] is False
+    assert data["result"] is None
+    assert "Evaluation failed" in data["error"]
+
+
+def test_evaluate_item_invalid_payload(evaluate_item_client: TestClient):
+    """Test with invalid request payload."""
+    # Missing required 'item' field
+    response = evaluate_item_client.post("/evaluate/item", json={"evaluator_name": "accuracy"})
+    assert response.status_code == 422  # Unprocessable Entity

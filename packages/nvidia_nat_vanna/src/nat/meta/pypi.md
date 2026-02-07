@@ -17,7 +17,7 @@ limitations under the License.
 
 # NVIDIA NeMo Agent Toolkit Vanna
 
-Vanna-based Text-to-SQL integration for NeMo Agent toolkit.
+Vanna-based Text-to-SQL integration for NeMo Agent Toolkit.
 
 ## Overview
 
@@ -126,4 +126,4 @@ Full documentation: <https://docs.nvidia.com/nemo/agent-toolkit/latest/>
 
 ## License
 
-Part of NVIDIA NeMo Agent toolkit. See repository for license details.
+Part of NVIDIA NeMo Agent Toolkit. See repository for license details.

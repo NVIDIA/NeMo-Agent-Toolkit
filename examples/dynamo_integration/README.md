@@ -19,16 +19,30 @@ limitations under the License.
 **Complexity:** 🛑 Advanced
 
 > [!NOTE]
-> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
+> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent Toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
 
 > [!WARNING]
-> This example requires a CUDA-compatible device with NVIDIA drivers installed. It cannot be run on systems without NVIDIA GPU hardware. You do not need to install ai-dynamo packages separately; the provided Docker images include them.
+> **This example requires a Linux system with an NVIDIA GPU.** See the [Dynamo Support Matrix](https://docs.nvidia.com/dynamo/archive/0.7.0/reference/support-matrix.html) for full details.
+>
+> **Supported Platforms:**
+> - Ubuntu 22.04 / 24.04 (x86_64)
+> - Ubuntu 24.04 (ARM64)
+> - CentOS Stream 9 (x86_64, experimental)
+>
+> **Not Supported:**
+> - ❌ macOS (Intel or Apple Silicon)
+> - ❌ Windows
+>
+> You do **not** need to install `ai-dynamo` or `ai-dynamo-runtime` packages locally. The Dynamo server runs inside pre-built Docker images from NGC (`nvcr.io/nvidia/ai-dynamo/sglang-runtime`), which include all necessary components. The NeMo Agent Toolkit Dynamo LLM client (`_type: dynamo`) is a pure HTTP client that works on any platform.
 
 ## Overview
 
-**This set of example agents and evaluations demonstrate the capability to integrate NeMo Agent toolkit agents with LLM inference accelerated by NVIDIA Dynamo-hosted LLM endpoints.**
+> [!IMPORTANT]
+> **Prerequisite**: Before running these examples, complete the [Dynamo Backend Setup Guide](../../external/dynamo/README.md) to set up and verify your Dynamo inference server is running and responding to `curl` requests.
 
-This set of examples is intended to grow over time as the synergies between NeMo Agent toolkit and [Dynamo](https://github.com/ai-dynamo/dynamo) evolve. In the first set of examples, we will analyze the performance (throughput and latency) of NeMo Agent toolkit agents requests to Dynamo and seek out key optimizations. Agentic LLM requests have predictable patterns with respect to conversation length, system prompts, and tool-calling. We aim to co-design our inference servers to provide better performance in a repeatable, mock, decision-only evaluation harness. The harness uses the Banking data subset and mock tools from the [Galileo Agent Leaderboard v2](https://huggingface.co/datasets/galileo-ai/agent-leaderboard-v2) benchmark to simulate agentic tool selection quality (TSQ).
+**This set of example agents and evaluations demonstrate the capability to integrate NeMo Agent Toolkit agents with LLM inference accelerated by NVIDIA Dynamo-hosted LLM endpoints.**
+
+This set of examples is intended to grow over time as the synergies between NVIDIA NeMo Agent Toolkit and [Dynamo](https://github.com/ai-dynamo/dynamo) evolve. In the first set of examples, we will analyze the performance (throughput and latency) of NeMo Agent Toolkit agents requests to Dynamo and seek out key optimizations. Agentic LLM requests have predictable patterns with respect to conversation length, system prompts, and tool-calling. We aim to co-design our inference servers to provide better performance in a repeatable, mock, decision-only evaluation harness. The harness uses the Banking data subset and mock tools from the [Galileo Agent Leaderboard v2](https://huggingface.co/datasets/galileo-ai/agent-leaderboard-v2) benchmark to simulate agentic tool selection quality (TSQ).
 
 Most of these examples could be tested using a managed LLM service, like an NVIDIA NIM model endpoint, for inference. However, the intended analysis would require hosting the LLM endpoints on your own GPU cluster using Dynamo.
 
@@ -39,13 +53,55 @@ Most of these examples could be tested using a managed LLM service, like an NVID
 - **Dynamo Backend**: Fast LLM inference with KV cache optimization (default Dynamo method) and a predictive Thompson sampling router (new implementation)
 - **Self-Evaluation Loop**: Agent can re-evaluate and retry tool selection for improved quality.
 - **Comprehensive Metrics and Visualizations**: TSQ scores (accuracy of parameters has been excluded), token throughput, latency analysis. Visualized in A/B scatter plots and histograms for analysis.
-- **NeMo Agent toolkit Framework**: Full integration with NeMo Agent toolkit evaluators, optimizer, and profiler
+- **NeMo Agent Toolkit**: Full integration with toolkit evaluators, optimizer, and profiler
+
+## Prerequisites
+
+### Software Requirements
+
+1. **Python 3.11, 3.12, or 3.13** installed
+2. **NeMo Agent Toolkit** repository cloned with LangChain integration (`uv pip install -e ".[langchain]"`)
+3. **Docker** with NVIDIA Container Toolkit
+4. **NVIDIA Driver** with CUDA 12.0+ support, `nvidia-fabricmanager` enabled, and matching your driver version. Verify with:
+
+    ```bash
+    docker run --rm --gpus all nvidia/cuda:12.4.0-runtime-ubuntu22.04 \
+      bash -c "apt-get update && apt-get install -y python3-pip && pip3 install torch && python3 -c 'import torch; print(torch.cuda.is_available())'"
+    ```
+
+    The output should show `True`. If it shows `False` with error 802, ensure `nvidia-fabricmanager` is installed, running, and matches your driver version.
+
+5. **Hugging Face account** with access to Llama-3.3-70B-Instruct model (requires approval from Meta)
+6. **Model weights downloaded** - Follow the model download instructions in the [Dynamo Setup Guide](../../external/dynamo/README.md#download-model-weights-can-skip-if-already-done)
+
+### Hardware Requirements (Dynamo Backend)
+
+These experiments are designed to run against a Dynamo backend for LLM inference. The following GPU resources are required:
+
+| Component | Minimum | Recommended |
+| --------- | ------- | ----------- |
+| **GPU Architecture** | NVIDIA Hopper (H100) | B200 for optimal performance |
+| **GPU Count** | 4 GPUs (TP=4 for 70B model) | 8 GPUs for optimal performance |
+| **GPU Memory** | 96GB per GPU (H100) | 192GB per GPU (B200) |
+
+> **Note**: The Llama-3.3-70B-Instruct model requires approximately 140GB of GPU memory when loaded with TP=4 (tensor parallelism across 4 GPUs). While it is possible to run evaluations against a managed LLM service (such as NVIDIA NIM), the intended performance analysis requires hosting Dynamo on your own GPU cluster to measure latency, throughput, and KV cache optimization metrics.
+
+See the [Dynamo Setup Guide](../../external/dynamo/README.md) for detailed hardware requirements and configuration options.
+
+## Documentation
+
+| Document | Description |
+| -------- | ----------- |
+| **[Complete Evaluation Guide](react_benchmark_agent/README.md)** | Complete walkthrough: downloading data, running evaluations, analyzing results, self-evaluation loop |
+| **[Dynamo Setup](../../external/dynamo/README.md)** | Setting up Dynamo backend, startup scripts, Thompson Sampling router, dynamic prefix headers |
+| **[ARCHITECTURE.md](ARCHITECTURE.md)** | System architecture diagrams, component interactions, data flow |
 
 ## Quick Start
 
 > [!NOTE]
-> For detailed environment setup instructions, see the [Complete Evaluation Guide](react_benchmark_agent/README.md#environment-setup).
+> The instructions below are an **abbreviated quick start**. For detailed environment setup, thorough explanations of each step, configuration options, and troubleshooting guidance, refer to the [Complete Evaluation Guide](react_benchmark_agent/README.md#environment-setup).
 
+<!-- path-check-skip-begin -->
 ```bash
 # 1. Setup environment
 cd /path/to/NeMo-Agent-Toolkit
@@ -55,28 +111,23 @@ uv pip install -e ".[langchain]"
 uv pip install matplotlib scipy
 
 # 2. Install the workflow package
-# <!-- path-check-skip-next-line -->
 cd examples/dynamo_integration/react_benchmark_agent
 uv pip install -e .
 
 # 3. Source environment variables
-# <!-- path-check-skip-next-line -->
 cd ../ # NeMo-Agent-Toolkit/examples/dynamo_integration
 cp .env.example .env
 vi .env # update the environment variables then source
 [ -f .env ] && source .env || { echo "Warning: .env not found" >&2; false; }
 
 # 4. Download the dataset (requires HuggingFace account)
-# <!-- path-check-skip-next-line -->
 python scripts/download_agent_leaderboard_v2.py --domains banking
 
 # 5. Download the model weights (requires HuggingFace account)
 mkdir -p "$(dirname "$DYNAMO_MODEL_DIR")"
-# <!-- path-check-skip-next-line -->
 hf download meta-llama/Llama-3.3-70B-Instruct --local-dir "$DYNAMO_MODEL_DIR"
 
 # 6. Start Dynamo backend (see Dynamo README for details)
-# <!-- path-check-skip-next-line -->
 cd "$DYNAMO_REPO_DIR" # cd /path/to/NeMo-Agent-Toolkit/external/dynamo
 bash start_dynamo_unified.sh > startup_output.txt 2>&1 # wait ~5 minutes for the server to start
 
@@ -89,22 +140,49 @@ bash start_dynamo_unified.sh > startup_output.txt 2>&1 # wait ~5 minutes for the
 # 7. Run evaluation
 cd ../../ # NeMo-Agent-Toolkit/
 nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs/eval_config_no_rethinking_full_test.yml
+
+# 8. Visualize results (after evaluation completes)
+cd examples/dynamo_integration
+python scripts/plot_throughput_vs_tsq_per_request.py \
+  ./react_benchmark_agent/outputs/dynamo_evals/banking_data_eval_full_test/jobs/
+# Generates: ttft_vs_tsq.png, itl_vs_tsq.png, throughput_vs_tsq.png in the jobs/ directory
+```
+<!-- path-check-skip-end -->
+
+## Performance Comparison
+
+To compare the performance of different configurations or runs, execute multiple evaluation jobs with different settings and then use the comparison script to analyze the results:
+
+```bash
+# Run multiple jobs with different configurations for comparison
+nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs/eval_config_no_rethinking_full_test.yml
+nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs/eval_config_rethinking_full_test.yml
+
+# Compare performance across all jobs
+python scripts/plot_throughput_vs_tsq_per_request.py \
+  <path_to_eval_output_jobs_directory>
 ```
 
-> [!WARNING]
-> The first load of model weights to `SGLang` workers can take significant time.
+This script will generate comparative visualizations showing throughput vs. Tool Selection Quality (TSQ) metrics across all jobs in the specified directory, allowing you to analyze the performance differences between different agent configurations.
+
+> [!NOTE]
+> **Multi-Backend Comparisons**: Evaluation runs can be performed across multiple Dynamo backend configurations (e.g., different routing strategies, tensor parallelism settings, or hardware configurations) and compared using the same script. Simply run evaluations against different Dynamo deployments and place the results in the same jobs directory for side-by-side analysis.
 > [!NOTE]
 > To customize GPU workers and tensor parallelism, edit the configuration variables at the top of [start_dynamo_unified.sh](../../external/dynamo/start_dynamo_unified.sh).
+> [!WARNING]
+> The first load of model weights to `SGLang` workers can take significant time.
 
 After running this end-to-end evaluation, you will have confirmed functional model services on Dynamo, dataset access, and agent execution.
 
 ## Quick Stop
+<!-- path-check-skip-begin -->
 ```bash
 # 1. When testing is complete don't forget to stop workers and free GPU memory
-# <!-- path-check-skip-next-line -->
 cd /path/to/NeMo-Agent-Toolkit/external/dynamo # NeMo-Agent-Toolkit/external/dynamo
 bash stop_dynamo.sh
 ```
+<!-- path-check-skip-end -->
+
 
 ### Understanding Evaluation Artifacts
 
@@ -131,14 +209,6 @@ Use these scripts to analyze and visualize your evaluation results:
 | `run_concurrency_benchmark.sh` | `bash scripts/run_concurrency_benchmark.sh` | Interactive prompts | Runs evaluations at multiple concurrency levels. Outputs `benchmark_results.csv`, `benchmark_report.md`, and `analysis_*.txt` |
 | `create_test_subset.py` | `python scripts/create_test_subset.py --num-scenarios 3` | `--input-file PATH`, `--output-file PATH` | Creates smaller dataset subset for quick end-to-end validation testing |
 <!-- path-check-skip-end -->
-
-## Documentation
-
-| Document | Description |
-|----------|-------------|
-| **[Complete Evaluation Guide](react_benchmark_agent/README.md)** | Complete walkthrough: downloading data, running evaluations, analyzing results, self-evaluation loop |
-| **[Dynamo Setup](../../external/dynamo/README.md)** | Setting up Dynamo backend, startup scripts, Thompson Sampling router, dynamic prefix headers |
-| **[ARCHITECTURE.md](ARCHITECTURE.md)** | System architecture diagrams, component interactions, data flow |
 
 ## Project Structure
 
@@ -224,7 +294,7 @@ external/dynamo/                       # Dynamo backend (separate location)
 ```
 <!-- path-check-skip-end -->
 
-## Configuration Options
+## Basic Configuration Options
 
 ### Basic Evaluation (No Self-Evaluation)
 ```yaml
@@ -256,54 +326,19 @@ See [Evaluation Guide](react_benchmark_agent/README.md) for complete configurati
 | **ITL (Inter-Token Latency)** | Time between consecutive tokens |
 | **Throughput** | Tokens per second (aggregate and per-request) |
 
-## Requirements
+## Troubleshooting and Support
 
-### Software Requirements
+For troubleshooting common issues, refer to the [Complete Evaluation Guide - Troubleshooting](react_benchmark_agent/README.md#troubleshooting) section, which covers:
 
-- **Python 3.11, 3.12, or 3.13**
-- **Docker** with NVIDIA Container Toolkit
-- **NVIDIA Driver** with CUDA 12.0+ support, `nvidia-fabricmanager` enabled matching your driver version. Verify with:
+- Permission denied errors when downloading datasets
+- Tools not executing (hallucinated observations)
+- TSQ score always returning 0.0
+- Module not found errors
+- File path resolution issues
+- Recursion limit errors
+- Self-evaluation configuration issues
+- Dynamo connection errors
 
-    ```bash
-    docker run --rm --gpus all nvidia/cuda:12.4.0-runtime-ubuntu22.04 \
-      bash -c "apt-get update && apt-get install -y python3-pip && pip3 install torch && python3 -c 'import torch; print(torch.cuda.is_available())'"
-    ```
-
-    The output should show `True`. If it shows `False` with error 802, ensure `nvidia-fabricmanager` is installed, running, and matches your driver version.
-
-- **NeMo Agent toolkit** with LangChain integration (`uv pip install -e ".[langchain]"`)
-- **Hugging Face account** with access to Llama-3.3-70B-Instruct model (for dataset download and model weights)
-
-### Hardware Requirements (Dynamo Backend)
-
-These experiments are designed to run against a Dynamo backend for LLM inference. The following GPU resources are required:
-
-| Component | Minimum | Recommended |
-|-----------|---------|-------------|
-| **GPU Architecture** | NVIDIA Hopper (H100) | B200 for optimal performance |
-| **GPU Count** | 4 GPUs (TP=4 for 70B model) | 8 GPUs for optimal performance |
-| **GPU Memory** | 96GB per GPU (H100) | 192GB per GPU (B200) |
-
-> **Important**: The Llama-3.3-70B-Instruct model requires approximately 140GB of GPU memory when loaded with TP=4. While it is possible to run evaluations against a managed LLM service (such as NVIDIA NIM), the intended performance analysis requires hosting Dynamo on your own GPU cluster to measure latency, throughput, and KV cache optimization metrics.
-
-See the [Dynamo Setup Guide](../../external/dynamo/README.md) for detailed hardware requirements and configuration options
-
-## Troubleshooting
-
-### Permission Denied Downloading Dataset
-
-If you see `PermissionError: [Errno 13] Permission denied` when downloading the dataset, your home directory may be on NFS which doesn't support file locking. Set `HF_HOME` to a local writable directory:
-
-```bash
-export HF_HOME=/path/to/local/storage/.cache/huggingface
-export HF_TOKEN=my_huggingface_read_token
-```
-
-## Support
-
-For issues:
-1. Check [Dynamo Setup Guide](../../external/dynamo/README.md) troubleshooting section
-2. Review logs in `react_benchmark_agent/outputs/dynamo_evals/<job_id>/`
-3. Verify Dynamo health: `curl http://localhost:8099/health`
+For Dynamo-specific issues, see the [Dynamo Setup Guide - Troubleshooting](../../external/dynamo/README.md#troubleshooting) section.
 
 ---

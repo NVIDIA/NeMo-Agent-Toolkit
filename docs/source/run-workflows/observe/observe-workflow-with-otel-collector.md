@@ -17,7 +17,7 @@ limitations under the License.
 
 # Observing a Workflow with OpenTelemetry Collector
 
-This guide shows how to stream OpenTelemetry (OTel) traces from your NeMo Agent toolkit workflows to the [generic OTel collector](https://opentelemetry.io/docs/collector/quick-start/), which in turn provides the ability to export those traces to many different places including file stores (like [S3](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/awss3exporter)), [Datadog](https://docs.datadoghq.com/opentelemetry/setup/collector_exporter/), [Dynatrace](https://docs.dynatrace.com/docs/ingest-from/opentelemetry/collector), and others.
+This guide shows how to stream OpenTelemetry (OTel) traces from your NeMo Agent Toolkit workflows to the [generic OTel collector](https://opentelemetry.io/docs/collector/quick-start/), which in turn provides the ability to export those traces to many different places including file stores (like [S3](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/awss3exporter)), [Datadog](https://docs.datadoghq.com/opentelemetry/setup/collector_exporter/), [Dynatrace](https://docs.dynatrace.com/docs/ingest-from/opentelemetry/collector), and others.
 
 In this guide, you will learn how to:
 
@@ -69,12 +69,12 @@ In this guide, you will learn how to:
 
 ### Install the OpenTelemetry Subpackage
 
-If you installed the NeMo Agent toolkit from source, you can install package extras with the following command:
+If you installed the NeMo Agent Toolkit from source, you can install package extras with the following command:
 ```bash
 uv pip install -e '.[opentelemetry]'
 ```
 
-If you have not installed the NeMo Agent toolkit from source, you can install package extras with the following command:
+If you have not installed the NeMo Agent Toolkit from source, you can install package extras with the following command:
 ```bash
 uv pip install nvidia-nat[opentelemetry]
 ```

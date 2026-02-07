@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 # Adding a Retriever Provider
-New [retrievers](../../build-workflows/retrievers.md) can be added to NeMo Agent toolkit by creating a plugin. The general process is the same as for most plugins, but the retriever-specific steps are outlined here.
+New [retrievers](../../build-workflows/retrievers.md) can be added to NeMo Agent Toolkit by creating a plugin. The general process is the same as for most plugins, but the retriever-specific steps are outlined here.
 
 First, create a retriever for the provider that implements the Retriever interface:
 ```python
@@ -38,7 +38,7 @@ class Retriever(ABC):
         raise NotImplementedError
 ```
 
-Next, create the config for the provider and register it with NeMo Agent toolkit:
+Next, create the config for the provider and register it with NeMo Agent Toolkit:
 
 ```python
 class ExampleRetrieverConfig(RetrieverBaseConfig, name="example_retriever"):
@@ -56,7 +56,7 @@ class ExampleRetrieverConfig(RetrieverBaseConfig, name="example_retriever"):
 @register_retriever_provider(config_type=ExampleRetrieverConfig)
 async def example_retriever(retriever_config: ExampleRetrieverConfig, builder: Builder):
     yield RetrieverProviderInfo(config=retriever_config,
-                                description="NeMo Agent toolkit retriever provider for...")
+                                description="NeMo Agent Toolkit retriever provider for...")
 ```
 Lastly, implement and register the retriever client:
 

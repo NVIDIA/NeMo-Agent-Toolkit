@@ -56,11 +56,11 @@ This is a simple example RAG application to showcase how one can configure and u
 
 ### Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit, and follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit, and follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
 
 #### Install this Workflow
 
-From the root directory of the NeMo Agent toolkit library, run the following commands:
+From the root directory of the NeMo Agent Toolkit library, run the following commands:
 ```bash
 uv pip install -e examples/RAG/simple_rag
 ```
@@ -86,7 +86,7 @@ export NVIDIA_API_KEY=<YOUR API KEY HERE>
 
 #### Bootstrap Data
 
-In a new terminal, from the root of the NeMo Agent toolkit repository, run the provided bash script to store the data in a Milvus collection. By default the script will scrape a few pages from the CUDA documentation and store the data in a Milvus collection called `cuda_docs`. It will also pull a few pages of information about the Model Context Protocol (MCP) and store it in a collection called `mcp_docs`.
+In a new terminal, from the root of the NeMo Agent Toolkit repository, run the provided bash script to store the data in a Milvus collection. By default the script will scrape a few pages from the CUDA documentation and store the data in a Milvus collection called `cuda_docs`. It will also pull a few pages of information about the Model Context Protocol (MCP) and store it in a collection called `mcp_docs`.
 
 ```bash
 source .venv/bin/activate
@@ -115,7 +115,7 @@ options:
 
 #### Configure Your Agent
 
-Configure your Agent to use the Milvus collections for RAG. We have pre-configured a configuration file for you in `examples/RAG/simple_rag/configs/milvus_rag_config.yml`. You can modify this file to point to your Milvus instance and collections or add tools to your agent. The agent, by default, is a `tool_calling` agent that can be used to interact with the retriever component. The configuration file is shown below. You can also modify your agent to be another one of the NeMo Agent toolkit pre-built agent implementations such as the `react_agent`
+Configure your Agent to use the Milvus collections for RAG. We have pre-configured a configuration file for you in `examples/RAG/simple_rag/configs/milvus_rag_config.yml`. You can modify this file to point to your Milvus instance and collections or add tools to your agent. The agent, by default, is a `tool_calling` agent that can be used to interact with the retriever component. The configuration file is shown below. You can also modify your agent to be another one of the NeMo Agent Toolkit pre-built agent implementations such as the `react_agent`
 
     ```yaml
     retrievers:
@@ -188,7 +188,7 @@ export MEM0_API_KEY=<MEM0 API KEY HERE>
 ```
 
 ### Adding Memory to the Agent
-Adding the ability to add and retrieve long-term memory to the agent is just a matter of adding a `memory` section to the configuration file. The NeMo Agent toolkit built-in abstractions for long term memory management allow agents to automatically interact with them as tools. We will use the following configuration file, which you can also find in the `configs` directory.
+Adding the ability to add and retrieve long-term memory to the agent is just a matter of adding a `memory` section to the configuration file. The NeMo Agent Toolkit built-in abstractions for long term memory management allow agents to automatically interact with them as tools. We will use the following configuration file, which you can also find in the `configs` directory.
 
 ```yaml
 memory:
@@ -261,7 +261,7 @@ Notice in the configuration above that the only addition to the configuration th
 - The type of memory to use (`mem0_memory`)
 - The name of the memory (`saas_memory`)
 
-Then, we used native NeMo Agent toolkit functions for getting memory and adding memory to the agent. These functions are:
+Then, we used native NeMo Agent Toolkit functions for getting memory and adding memory to the agent. These functions are:
 - `add_memory`: This function is used to add any facts about user preferences to long term memory.
 - `get_memory`: This function is used to retrieve any facts about user preferences from long term memory.
 

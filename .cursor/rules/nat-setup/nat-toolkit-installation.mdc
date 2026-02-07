@@ -70,9 +70,9 @@ source .venv/bin/activate
 Choose the appropriate installation option based on requirements:
 
 #### Option A: Full Installation (Recommended for Development)
-Install with all plugins and developer tools:
+Install with most plugins and developer tools:
 ```bash
-uv sync --all-groups --all-extras
+uv sync --all-groups --extra most
 ```
 
 #### Option B: Core Only Installation
@@ -103,21 +103,15 @@ uv pip install -e '.[profiling]'
 
 ## Available Plugin Options
 
-When installing specific plugins, these are the available options:
-- `agno` - Agno integration
-- `crewai` - CrewAI integration
-- `langchain` - LangChain/LangGraph integration
-- `llama_index` - LlamaIndex integration
-- `mem0ai` - Mem0 integration
-- `mysql` - MySQL database integration
-- `opentelemetry` - OpenTelemetry observability integration
-- `phoenix` - Phoenix observability integration
-- `ragaai` - RAGA AI evaluation integration
-- `redis` - Redis memory integration
-- `s3` - AWS S3 object storage integration
-- `semantic_kernel` - Microsoft Semantic Kernel integration
-- `weave` - Weights & Biases Weave integration
-- `zep_cloud` - Zep Cloud integration
+Inspect the root pyproject.toml file for extras as the following list may be incomplete.
+
+When installing specific plugins, refer to the `[project.optional-dependencies]` section of the root `pyproject.toml` for the authoritative, up-to-date list of available extras/plugins.
+
+To view all options, check the root `pyproject.toml` directly. Here is an example command you can run to see all available plugin options (extras):
+```bash
+uv pip show nvidia-nat | grep Provides-Extra
+```
+or simply open `pyproject.toml` and look for entries under `[project.optional-dependencies]`.
 
 ## Dependency Groups
 When installing dependencies, you can use the following groups:
@@ -221,7 +215,7 @@ git clone git@github.com:NVIDIA/NeMo-Agent-Toolkit.git nemo-agent-toolkit && cd 
 git submodule update --init --recursive
 git lfs install && git lfs fetch && git lfs pull
 uv venv --seed .venv && source .venv/bin/activate
-uv sync --all-groups --all-extras
+uv sync --all-groups --extra most
 export NVIDIA_API_KEY=<your_key>
 nat --version
 ```

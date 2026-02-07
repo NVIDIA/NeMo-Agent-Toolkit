@@ -19,7 +19,7 @@ limitations under the License.
 
 **Complexity:** 🟢 Beginner
 
-This example demonstrates how to use a configurable Router Agent with the NeMo Agent toolkit. The Router Agent analyzes incoming requests and directly routes them to the most appropriate branch (other agents, functions or tools) based on the request content. For this purpose, NeMo Agent toolkit provides a [`router_agent`](../../../docs/source/components/agents/router-agent/index.md) workflow type.
+This example demonstrates how to use a configurable Router Agent with the NeMo Agent Toolkit. The Router Agent analyzes incoming requests and directly routes them to the most appropriate branch (other agents, functions or tools) based on the request content. For this purpose, NeMo Agent Toolkit provides a [`router_agent`](../../../docs/source/components/agents/router-agent/index.md) workflow type.
 
 ## Table of Contents
 
@@ -101,11 +101,11 @@ The agent will automatically analyze incoming requests and route them to the mos
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 
 ### Install this Workflow
 
-From the root directory of the NeMo Agent toolkit library, run the following commands:
+From the root directory of the NeMo Agent Toolkit library, run the following commands:
 
 ```bash
 uv pip install -e examples/control_flow/router_agent
@@ -122,7 +122,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 
 This workflow showcases the Router Agent's ability to route requests to the most appropriate branch based on the request content. To simplify the example, we use mock advisor functions that return a static response based on the input, but you can imagine these advisors as real agents that would intelligently analyze the request and return a response.
 
-Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
+Run the following command from the root of the NeMo Agent Toolkit repo to execute this workflow with the specified input:
 
 ```bash
 nat run --config_file=examples/control_flow/router_agent/configs/config.yml --input "I want a yellow fruit"
@@ -157,14 +157,14 @@ Number of Retrievers: 0
 Number of TTC Strategies: 0
 Number of Authentication Providers: 0
 
-2025-09-10 10:52:59,927 - nat.agent.router_agent.agent - INFO -
+2025-09-10 10:52:59,927 - nat.plugins.langchain.agent.router_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Agent input: I want a yellow fruit
 Agent's thoughts:
 content='fruit_advisor' additional_kwargs={} response_metadata={}
 ------------------------------
-2025-09-10 10:52:59,929 - nat.agent.base - INFO -
+2025-09-10 10:52:59,929 - nat.plugins.langchain.agent.base - INFO -
 ------------------------------
 [AGENT]
 Calling tools: fruit_advisor
@@ -183,7 +183,7 @@ This demonstrates the Router Agent's efficient single-pass routing and execution
 
 ### Starting the NeMo Agent Toolkit Server
 
-You can start the NeMo Agent toolkit server using the `nat serve` command with the appropriate configuration file.
+You can start the NeMo Agent Toolkit server using the `nat serve` command with the appropriate configuration file.
 
 **Starting the Router Agent Example Workflow**
 

@@ -17,7 +17,7 @@ limitations under the License.
 
 # Observe Workflows
 
-The NeMo Agent toolkit uses a flexible, plugin-based observability system that provides comprehensive support for configuring logging, tracing, and metrics for [workflows](../../build-workflows/about-building-workflows.md). Users can configure multiple telemetry exporters simultaneously from the available options or create custom integrations. The observability system:
+The NeMo Agent Toolkit uses a flexible, plugin-based observability system that provides comprehensive support for configuring logging, tracing, and metrics for [workflows](../../build-workflows/about-building-workflows.md). Users can configure multiple telemetry exporters simultaneously from the available options or create custom integrations. The observability system:
 
 - Uses an event-driven architecture with `IntermediateStepManager` publishing workflow events to a reactive stream
 - Supports multiple concurrent telemetry exporters processing events asynchronously
@@ -37,31 +37,27 @@ export NAT_SPAN_PREFIX=aiq
 
 The core observability features (console and file logging) are included by default. For advanced telemetry features like OpenTelemetry and Phoenix tracing, you need to install the optional telemetry extras.
 
-If you have already installed the NeMo Agent toolkit from source, you can install package extras with the following commands:
+If you have already installed the NeMo Agent Toolkit from source, you can install package extras with the following commands:
 
 ```bash
-# Install all optional telemetry extras
-uv pip install -e '.[telemetry]'
-
 # Install specific telemetry extras
 uv pip install -e '.[data-flywheel]'
 uv pip install -e '.[opentelemetry]'
 uv pip install -e '.[phoenix]'
 uv pip install -e '.[weave]'
+# Note: conflicts with .[strands] and .[adk]
 uv pip install -e '.[ragaai]'
 ```
 
-If you have not installed the NeMo Agent toolkit from source, you can install package extras with the following commands:
+If you have not installed the NeMo Agent Toolkit from source, you can install package extras with the following commands:
 
 ```bash
-# Install all optional telemetry extras
-uv pip install "nvidia-nat[telemetry]"
-
 # Install specific telemetry extras
 uv pip install "nvidia-nat[data-flywheel]"
 uv pip install "nvidia-nat[opentelemetry]"
 uv pip install "nvidia-nat[phoenix]"
 uv pip install "nvidia-nat[weave]"
+# Note: conflicts with nvidia-nat[strands] and nvidia-nat[adk]
 uv pip install "nvidia-nat[ragaai]"
 ```
 
@@ -154,7 +150,7 @@ The `tracing` section contains one or more tracing providers. Each provider has 
 
 ### NeMo Agent Toolkit Observability Components
 
-The NeMo Agent toolkit observability system uses a generic, plugin-based architecture built on the Subject-Observer pattern. The system consists of several key components working together to provide comprehensive workflow monitoring:
+The NeMo Agent Toolkit observability system uses a generic, plugin-based architecture built on the Subject-Observer pattern. The system consists of several key components working together to provide comprehensive workflow monitoring:
 
 #### Event Stream Architecture
 

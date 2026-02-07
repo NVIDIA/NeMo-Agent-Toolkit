@@ -60,11 +60,11 @@ flowchart LR
 
 ### Prerequisites
 
-Follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+Follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 
 ### Install Dependencies
 
-From the root directory of the NeMo Agent toolkit library, install this example:
+From the root directory of the NeMo Agent Toolkit library, install this example:
 
 ```bash
 uv pip install -e examples/A2A/math_assistant_a2a

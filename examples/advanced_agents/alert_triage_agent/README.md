@@ -18,7 +18,7 @@ limitations under the License.
 
 **Complexity:** 🟨 Intermediate
 
-This example demonstrates how to build an intelligent alert triage system using NeMo Agent toolkit and LangGraph. The system analyzes system monitoring alerts, performs diagnostic checks using various tools, and generates structured triage reports with root cause categorization. It showcases how to combine LLMs with domain-specific diagnostic tools to create an automated troubleshooting workflow.
+This example demonstrates how to build an intelligent alert triage system using NeMo Agent Toolkit and LangGraph. The system analyzes system monitoring alerts, performs diagnostic checks using various tools, and generates structured triage reports with root cause categorization. It showcases how to combine LLMs with domain-specific diagnostic tools to create an automated troubleshooting workflow.
 
 ## Table of Contents
 
@@ -57,11 +57,11 @@ This example demonstrates how to build an intelligent alert triage system using 
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit, and follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit, and follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
 
 ### Install This Workflow
 
-From the root directory of the NeMo Agent toolkit library, run the following commands:
+From the root directory of the NeMo Agent Toolkit library, run the following commands:
 ```bash
 uv pip install -e examples/advanced_agents/alert_triage_agent
 ```
@@ -345,7 +345,7 @@ The example includes a Flask-based HTTP server ([`run.py`](./src/nat_alert_triag
 To use this mode, first ensure you have configured your live environment as described in the previous section. Then:
 1. **Start the Alert Triage Server**
 
-   From the root directory of the NeMo Agent toolkit library, run:
+   From the root directory of the NeMo Agent Toolkit library, run:
    ```bash
    python examples/advanced_agents/alert_triage_agent/src/nat_alert_triage_agent/run.py \
      --host 0.0.0.0 \

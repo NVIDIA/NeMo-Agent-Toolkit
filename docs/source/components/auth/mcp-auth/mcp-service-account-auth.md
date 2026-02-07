@@ -52,7 +52,7 @@ Service account authentication uses two types of tokens depending on the MCP ser
 
 ## Configuring Service Account Auth Provider
 
-The `mcp_service_account` provider is a built-in authentication provider in the NVIDIA NeMo Agent toolkit. Configure it in your workflow YAML file:
+The `mcp_service_account` provider is a built-in authentication provider in the NVIDIA NeMo Agent Toolkit. Configure it in your workflow YAML file:
 
 ```yaml
 authentication:

@@ -18,7 +18,7 @@ limitations under the License.
 # Running Strands with NVIDIA NeMo Agent Toolkit on AWS AgentCore
 **Complexity:** 🛑 Advanced
 
-A comprehensive guide for deploying NVIDIA NeMo Agent toolkit with Strands on AWS AgentCore, including OpenTelemetry instrumentation for monitoring.
+A comprehensive guide for deploying NVIDIA NeMo Agent Toolkit with Strands on AWS AgentCore, including OpenTelemetry instrumentation for monitoring.
 
 ## Table of Contents
 
@@ -28,7 +28,7 @@ A comprehensive guide for deploying NVIDIA NeMo Agent toolkit with Strands on AW
   - [IAM Permissions for Deployment](#iam-permissions-for-deployment)
   - [AWS Console Access](#aws-console-access)
   - [Additional Requirements](#additional-requirements)
-- [Step 1: Setup NeMo Agent toolkit Environment](#step-1-setup-nemo-agent-toolkit-environment)
+- [Step 1: Setup NeMo Agent Toolkit Environment](#step-1-setup-nemo-agent-toolkit-environment)
 - [Step 2: Configure AWS CLI](#step-2-configure-aws-cli)
   - [Option A: Using Long-Term Credentials](#option-a-using-long-term-credentials)
   - [Option B: Using AWS SSO (Recommended for Organizations)](#option-b-using-aws-sso-recommended-for-organizations)
@@ -119,7 +119,7 @@ You will need access to the following AWS Console services:
 
 ## Step 1: Setup NeMo Agent Toolkit Environment
 
-Follow the official NeMo Agent toolkit [installation guide](https://docs.nvidia.com/nemo/agent-toolkit/latest/quick-start/installing.html)
+Follow the official NeMo Agent Toolkit [installation guide](https://docs.nvidia.com/nemo/agent-toolkit/latest/quick-start/installing.html)
 
 ## Step 2: Configure AWS CLI
 
@@ -169,7 +169,7 @@ export AWS_DEFAULT_REGION="us-west-2"  # Use us-west-2 or us-east-1
 ```
 
 ## Step 3: Create AWS Secrets Manager Entry for NVIDIA_API_KEY
-This is needed for storing the API keys needed for running NeMo Agent toolkit workflow.
+This is needed for storing the API keys needed for running NeMo Agent Toolkit workflow.
 
 ### Secrets Manager Prerequisites
 
@@ -496,7 +496,7 @@ uv run ./examples/frameworks/strands_demo/bedrock_agentcore/scripts/verify_nat.p
 
 ## 🎉 Success!
 
-You have successfully set up NeMo Agent toolkit using Strands running on AWS AgentCore with OpenTelemetry monitoring!
+You have successfully set up NeMo Agent Toolkit using Strands running on AWS AgentCore with OpenTelemetry monitoring!
 
 ---
 
@@ -888,7 +888,7 @@ The `Dockerfile` is organized into the following sections:
 
 1. **Base Image Configuration** - Ubuntu base with Python
 2. **Build Dependencies** - Compilers and build tools
-3. **Application Setup** - NeMo Agent toolkit package installation
+3. **Application Setup** - NeMo Agent Toolkit package installation
 4. **OpenTelemetry Configuration** - Monitoring and observability
 5. **Runtime Configuration** - Entry point and environment
 
@@ -909,7 +909,7 @@ FROM ${BASE_IMAGE_URL}:${BASE_IMAGE_TAG}
 ARG PYTHON_VERSION
 ARG NAT_VERSION
 
-COPY --from=ghcr.io/astral-sh/uv:0.9.15 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.9.28 /uv /uvx /bin/
 
 ENV PYTHONDONTWRITEBYTECODE=1
 
@@ -950,7 +950,7 @@ RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
     export SETUPTOOLS_SCM_PRETEND_VERSION_FOR_NAT_STRANDS_DEMO=${NAT_VERSION} && \
     uv venv --python ${PYTHON_VERSION} /workspace/.venv && \
     uv sync --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
-    uv pip install -e '.[telemetry]' --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
+    uv pip install -e '.[opentelemetry,phoenix,weave]' --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
     uv pip install -e ./examples/frameworks/strands_demo --link-mode=copy && \
     uv pip install boto3 aws-opentelemetry-distro && \
     find /workspace/.venv -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true && \
@@ -1033,7 +1033,7 @@ Regions like `us-west-1` are **not supported** for Bedrock AgentCore.
 
 ## Additional Resources
 
-- [NVIDIA NeMo Agent toolkit Documentation](https://docs.nvidia.com/nemo/agent-toolkit/latest/)
+- [NVIDIA NeMo Agent Toolkit Documentation](https://docs.nvidia.com/nemo/agent-toolkit/latest/)
 - [AWS Bedrock AgentCore Documentation](https://docs.aws.amazon.com/bedrock/)
 - [OpenTelemetry Python Documentation](https://opentelemetry.io/docs/languages/python/)
 - [AWS CloudWatch Logs Documentation](https://docs.aws.amazon.com/cloudwatch/)

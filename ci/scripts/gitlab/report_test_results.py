@@ -25,6 +25,7 @@ from datetime import date
 from slack_sdk import WebClient
 
 MAX_TEXT_LENGTH = 3000  # Slack message text limit
+BLOCK_LIMIT = 20  # Slack block limit -- actual limit is 50, but we will use a smaller limit to be safe
 
 logger = logging.getLogger()
 
@@ -104,6 +105,10 @@ def add_text(text: str, blocks: list[dict], plain_text: list[str]) -> None:
 
     blocks.append(text_to_block(text))
     plain_text.append(text)
+
+
+def chunk_items(items: list[typing.Any], chunk_size: int) -> list[list[typing.Any]]:
+    return [items[index:index + chunk_size] for index in range(0, len(items), chunk_size)]
 
 
 def build_messages(junit_data: dict[str, typing.Any], coverage_data: str) -> ReportMessages:
@@ -203,10 +208,14 @@ def main():
     if report_messages.failure_text is not None:
         # Since potentially a large number of failures could occur, we will post them in a thread to the original
         # message to avoid spamming the channel.
-        client.chat_postMessage(channel=slack_channel,
-                                text="\n".join(report_messages.failure_text),
-                                blocks=report_messages.failure_blocks,
-                                thread_ts=response["ts"])
+        blocks_chunks = chunk_items(report_messages.failure_blocks or [], BLOCK_LIMIT)
+        text_chunks = chunk_items(report_messages.failure_text or [], BLOCK_LIMIT)
+
+        for blocks_chunk, text_chunk in zip(blocks_chunks, text_chunks):
+            client.chat_postMessage(channel=slack_channel,
+                                    text="\n".join(text_chunk),
+                                    blocks=blocks_chunk,
+                                    thread_ts=response["ts"])
 
     return return_code
 
