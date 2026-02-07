@@ -334,7 +334,7 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
 
         The normalization process:
         1. Recursively processes nested structures (dicts, lists, tuples)
-        2. Converts Pydantic models via model_dump(exclude_none=True)
+        2. Converts Pydantic models via model_dump(mode='json', exclude_none=True)
         3. Filters out None values from dicts
         4. Extracts 'value' key if present in dict and not None
         5. Falls back to str() for non-serializable objects
@@ -345,9 +345,9 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
 
         def _normalize(obj: typing.Any) -> typing.Any:
             """Recursively normalize objects for JSON serialization."""
-            # Pydantic models: dump and recursively normalize
+            # Pydantic models: dump with JSON mode and recursively normalize
             if hasattr(obj, 'model_dump'):
-                dumped = obj.model_dump(exclude_none=True)
+                dumped = obj.model_dump(mode='json', exclude_none=True)
                 return _normalize(dumped)
 
             # Dicts: drop None values, normalize values, optionally extract 'value' key
@@ -368,8 +368,9 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
         try:
             normalized = _normalize(data)
             return json.dumps(normalized, default=str)
-        except Exception:
+        except Exception as e:
             # Last-resort fallback: str() representation wrapped in JSON
+            logger.debug("Span attribute serialization failed, using str fallback: %s", e)
             return json.dumps(str(data))
 
     @override
