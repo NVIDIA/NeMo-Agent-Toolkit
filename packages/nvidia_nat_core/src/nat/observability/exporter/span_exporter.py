@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import logging
 import os
 import re
@@ -221,7 +222,7 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
                 sub_span.set_attribute(SpanAttributes.INPUT_VALUE.value, serialized_input)
                 sub_span.set_attribute(SpanAttributes.INPUT_MIME_TYPE.value,
                                        MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value)
-                sub_span.set_attribute("input.value_obj", self._to_dict(event.payload.data.input))
+                sub_span.set_attribute("input.value_obj", self._to_json_string(event.payload.data.input))
 
         # Add metadata to the metadata stack
         start_metadata = event.payload.metadata or {}
@@ -291,7 +292,7 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
             sub_span.set_attribute(SpanAttributes.OUTPUT_VALUE.value, serialized_output)
             sub_span.set_attribute(SpanAttributes.OUTPUT_MIME_TYPE.value,
                                    MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value)
-            sub_span.set_attribute("output.value_obj", self._to_dict(event.payload.data.output))
+            sub_span.set_attribute("output.value_obj", self._to_json_string(event.payload.data.output))
 
         # Merge metadata from start event with end event metadata
         start_metadata = self._metadata_stack.pop(event.UUID)  # type: ignore
@@ -323,20 +324,54 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
         # Export the span with processing pipeline
         self._create_export_task(self._export_with_processing(sub_span))  # type: ignore
 
-    def _to_dict(self, data: typing.Any) -> dict[str, typing.Any] | typing.Any:
-        """Transform serialized payload into a structured dict for span attributes."""
+    def _to_json_string(self, data: typing.Any) -> str:
+        """Transform payload into a JSON string for span attributes.
 
-        if hasattr(data, 'model_dump'):
-            result = data.model_dump(exclude_none=True)
-        elif isinstance(data, dict):
-            result = {k: v for k, v in data.items() if v is not None}
-        else:
-            return data
+        Converts the input data to a JSON string representation that is always
+        compatible with OTLP span attribute encoding. Raw dicts and nested structures
+        can contain types (None, custom objects) that OTLP cannot encode, so the
+        result is serialized to a JSON string for safety.
 
-        if 'value' in result and result['value'] is not None:
-            return result['value']
+        The normalization process:
+        1. Recursively processes nested structures (dicts, lists, tuples)
+        2. Converts Pydantic models via model_dump(mode='json', exclude_none=True)
+        3. Filters out None values from dicts
+        4. Extracts 'value' key if present in dict and not None
+        5. Falls back to str() for non-serializable objects
 
-        return result
+        Returns:
+            A valid JSON string representation of the data.
+        """
+
+        def _normalize(obj: typing.Any) -> typing.Any:
+            """Recursively normalize objects for JSON serialization."""
+            # Pydantic models: dump with JSON mode and recursively normalize
+            if hasattr(obj, 'model_dump'):
+                dumped = obj.model_dump(mode='json', exclude_none=True)
+                return _normalize(dumped)
+
+            # Dicts: drop None values, normalize values, optionally extract 'value' key
+            if isinstance(obj, dict):
+                normalized = {k: _normalize(v) for k, v in obj.items() if v is not None}
+                # Extract 'value' key if present and not None
+                if 'value' in normalized and normalized['value'] is not None:
+                    return _normalize(normalized['value'])
+                return normalized
+
+            # Lists/tuples: normalize each element
+            if isinstance(obj, (list, tuple)):
+                return [_normalize(item) for item in obj]
+
+            # Primitives and other objects: return as-is (json.dumps will handle via default=str)
+            return obj
+
+        try:
+            normalized = _normalize(data)
+            return json.dumps(normalized, default=str)
+        except Exception as e:
+            # Last-resort fallback: str() representation wrapped in JSON
+            logger.debug("Span attribute serialization failed, using str fallback: %s", e)
+            return json.dumps(str(data))
 
     @override
     async def _cleanup(self):
