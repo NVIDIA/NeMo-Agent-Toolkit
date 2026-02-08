@@ -345,7 +345,7 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
     prediction_trie_path: str | None = Field(
         default=None,
         description="Path to prediction_trie.json file. When set, predictions are "
-        "looked up and injected as headers for each LLM call.",
+        "looked up and used to override both HTTP headers and nvext.annotations for each LLM call.",
     )
 
     # =========================================================================
