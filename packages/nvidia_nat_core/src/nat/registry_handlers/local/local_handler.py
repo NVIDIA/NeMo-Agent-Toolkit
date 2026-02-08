@@ -111,10 +111,8 @@ class LocalRegistryHandler(AbstractRegistryHandler):
                         matched_results.append(component_result)
                         break
 
-            if query.top_k > 0:
-                top_k = query.top_k
-            else:
-                top_k = len(matched_results)
+            # Use query.top_k directly; if 0, return empty results
+            top_k = query.top_k if query.top_k > 0 else 0
 
             validated_search_response = SearchResponse(results=matched_results[:top_k],
                                                        params=query,
