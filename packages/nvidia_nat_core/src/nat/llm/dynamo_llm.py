@@ -13,14 +13,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Dynamo LLM provider with automatic prefix header injection for KV cache optimization.
+Dynamo LLM provider with automatic prefix hint injection for KV cache optimization.
 
-This module provides a specialized OpenAI-compatible LLM that sends Dynamo prefix headers
+This module provides a specialized OpenAI-compatible LLM that sends Dynamo prefix hints
 for optimal KV cache management and request routing. The prefix parameters are optimizable
 via the NAT optimizer.
 
-The implementation uses httpx event hooks to inject headers at the HTTP transport level,
+The implementation uses a custom httpx transport to inject hints at the HTTP level,
 making it framework-agnostic (works with LangChain, LlamaIndex, etc.).
+
+Transport Mechanisms
+--------------------
+
+This module supports two transport mechanisms for routing hints, used simultaneously
+for maximum compatibility:
+
+1. **HTTP Headers** (``x-prefix-*``): For the generalized Thompson Sampling setup
+   that uses custom ``frontend.py`` which reads headers directly.
+
+2. **nvext.annotations** (in request body): For the optimized Thompson Sampling setup
+   that uses the default Dynamo frontend with custom ``processor.py`` which reads
+   annotations from the preprocessed request. *This is the preferred mechanism.*
 
 Dynamo Prefix Parameters
 -------------------------
@@ -577,37 +590,44 @@ def create_httpx_client_with_dynamo_hooks(
     prediction_lookup: "PredictionTrieLookup | None" = None,
 ) -> "httpx.AsyncClient":
     """
-    Create an httpx.AsyncClient with Dynamo prefix header injection.
+    Create an httpx.AsyncClient with Dynamo hint injection via custom transport.
 
-    This client can be passed to the OpenAI SDK to inject headers at the HTTP level,
-    making it framework-agnostic.
+    This client can be passed to the OpenAI SDK to inject hints at the HTTP level,
+    making it framework-agnostic. Hints are injected via both HTTP headers and
+    nvext.annotations in the request body for maximum compatibility:
+
+    - HTTP headers (x-prefix-*): For generalized Thompson Sampling setup
+    - nvext.annotations: For optimized Thompson Sampling setup (preferred)
 
     Args:
-        prefix_template: Template string with {uuid} placeholder
+        prefix_template: Template string with {uuid} placeholder (unused, kept for API compat)
         total_requests: Expected number of requests for this prefix
         osl: Output sequence length hint (LOW/MEDIUM/HIGH)
         iat: Inter-arrival time hint (LOW/MEDIUM/HIGH)
         timeout: HTTP request timeout in seconds
-        prediction_lookup: Optional PredictionTrieLookup for dynamic header injection
+        prediction_lookup: Optional PredictionTrieLookup for dynamic hint injection
 
     Returns:
-        An httpx.AsyncClient configured with Dynamo header injection.
+        An httpx.AsyncClient configured with Dynamo hint injection.
     """
     import httpx
 
-    hooks: list[Callable] = []
+    # Note: prefix_template is kept for API compatibility but no longer used.
+    # Prefix IDs are now managed by DynamoPrefixContext with depth-awareness.
+    _ = prefix_template
 
-    # Add Dynamo prefix hook
-    prefix_hook = _create_dynamo_request_hook(prefix_template, total_requests, osl, iat)
-    hooks.append(prefix_hook)
-
-    # Add dynamic prediction hook if lookup provided
-    if prediction_lookup is not None:
-        prediction_hook = _create_dynamic_prediction_hook(prediction_lookup)
-        hooks.append(prediction_hook)
+    # Create base transport and wrap with custom transport
+    base_transport = httpx.AsyncHTTPTransport()
+    dynamo_transport = _DynamoTransport(
+        transport=base_transport,
+        total_requests=total_requests,
+        osl=osl,
+        iat=iat,
+        prediction_lookup=prediction_lookup,
+    )
 
     return httpx.AsyncClient(
-        event_hooks={"request": hooks},
+        transport=dynamo_transport,
         timeout=httpx.Timeout(timeout),
     )
 

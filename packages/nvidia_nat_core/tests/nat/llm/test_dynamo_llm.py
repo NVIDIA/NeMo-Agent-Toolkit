@@ -414,7 +414,9 @@ class TestCreateHttpxClient:
     """Tests for create_httpx_client_with_dynamo_hooks."""
 
     def test_creates_client_with_event_hooks(self):
-        """Test that the function creates an httpx client with event hooks."""
+        """Test that the function creates an httpx client (legacy test name)."""
+        from nat.llm.dynamo_llm import _DynamoTransport
+
         client = create_httpx_client_with_dynamo_hooks(
             prefix_template="test-{uuid}",
             total_requests=10,
@@ -422,9 +424,8 @@ class TestCreateHttpxClient:
             iat="MEDIUM",
         )
 
-        # Check that event hooks are configured
-        assert "request" in client.event_hooks
-        assert len(client.event_hooks["request"]) == 1
+        # Check that custom transport is configured (no longer uses event hooks)
+        assert isinstance(client._transport, _DynamoTransport)
 
     def test_uses_custom_timeout(self):
         """Test that the function uses the provided timeout."""
@@ -450,6 +451,30 @@ class TestCreateHttpxClient:
         )
 
         assert client.timeout.connect == 600.0
+
+    def test_creates_client_with_custom_transport(self):
+        """Test that create_httpx_client_with_dynamo_hooks uses _DynamoTransport."""
+        from nat.llm.dynamo_llm import _DynamoTransport
+
+        client = create_httpx_client_with_dynamo_hooks(
+            prefix_template="test-{uuid}",
+            total_requests=7,
+            osl="HIGH",
+            iat="LOW",
+            timeout=120.0,
+            prediction_lookup=None,
+        )
+
+        # Verify client uses custom transport
+        assert isinstance(client._transport, _DynamoTransport)
+
+        # Verify transport has correct values
+        assert client._transport._total_requests == 7
+        assert client._transport._osl == "HIGH"
+        assert client._transport._iat == "LOW"
+
+        # Verify timeout
+        assert client.timeout.read == 120.0
 
 
 # ---------------------------------------------------------------------------
