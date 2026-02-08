@@ -462,8 +462,7 @@ class TestDecoratorGeneratorFunctions:
 
         @latency_sensitive(LatencySensitivity.HIGH)
         def gen_func():
-            for i in range(10):
-                yield i
+            yield from range(10)
 
         ctx = Context.get()
         assert ctx.latency_sensitivity == LatencySensitivity.MEDIUM

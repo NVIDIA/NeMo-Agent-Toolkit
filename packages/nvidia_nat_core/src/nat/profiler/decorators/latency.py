@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 Latency sensitivity decorator for marking functions with latency requirements.
 
@@ -54,13 +53,12 @@ Example:
 import functools
 import inspect
 from collections.abc import Callable
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from typing import TypeVar
-from typing import overload
 
 
-class LatencySensitivity(str, Enum):
+class LatencySensitivity(StrEnum):
     """
     Latency sensitivity levels for function execution.
 
@@ -124,10 +122,8 @@ class LatencySensitivity(str, Enum):
             if normalized in {"LOW", "MEDIUM", "HIGH"}:
                 return cls(normalized)
 
-        raise ValueError(
-            f"Invalid latency sensitivity: {value!r}. "
-            f"Must be 'LOW', 'MEDIUM', 'HIGH', or LatencySensitivity enum."
-        )
+        raise ValueError(f"Invalid latency sensitivity: {value!r}. "
+                         f"Must be 'LOW', 'MEDIUM', 'HIGH', or LatencySensitivity enum.")
 
 
 # Type variable for preserving function signature
