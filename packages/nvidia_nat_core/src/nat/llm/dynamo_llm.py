@@ -46,6 +46,7 @@ prefix_total_requests
     - Lower values allow more load balancing
 """
 
+import json
 import logging
 import uuid
 from collections.abc import Callable
@@ -57,9 +58,9 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Literal
 
-if TYPE_CHECKING:
-    import httpx
+import httpx
 
+if TYPE_CHECKING:
     from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
 
 from pydantic import Field
@@ -392,10 +393,6 @@ class _DynamoTransport:
         self._prediction_lookup = prediction_lookup
 
     async def handle_async_request(self, request: "httpx.Request") -> "httpx.Response":
-        import json
-
-        import httpx
-
         # Get prefix ID from context (supports depth-awareness and overrides)
         prefix_id = DynamoPrefixContext.get()
 
@@ -460,7 +457,7 @@ class _DynamoTransport:
         content = request.content
         if request.method == "POST" and content:
             try:
-                body = json.loads(content.decode("utf-8"))
+                body = json.loads(content.decode("utf-8", errors="replace"))
                 if isinstance(body, dict):
                     # Build annotations list
                     annotations = [

@@ -648,7 +648,67 @@ class TestDynamoTransport:
 
         # Headers should still be injected
         modified_request = mock_transport.handle_async_request.call_args[0][0]
-        assert f"{LLMHeaderPrefix.DYNAMO.value}-id" in modified_request.headers
+        prefix = f"{LLMHeaderPrefix.DYNAMO.value}"
+        assert modified_request.headers[f"{prefix}-id"] == "non-json-test"
+        assert modified_request.headers[f"{prefix}-total-requests"] == "1"
+        assert modified_request.headers[f"{prefix}-osl"] == "LOW"
+        assert modified_request.headers[f"{prefix}-iat"] == "LOW"
+
+        DynamoPrefixContext.clear()
+
+    @pytest.mark.asyncio
+    async def test_transport_uses_prediction_override(self):
+        """Test that prediction lookup overrides static config values."""
+        import httpx
+
+        from nat.llm.dynamo_llm import _DynamoTransport
+        from nat.profiler.prediction_trie.data_models import LLMCallPrediction
+        from nat.profiler.prediction_trie.data_models import PredictionMetrics
+
+        # Create mock prediction lookup
+        mock_prediction = LLMCallPrediction(
+            remaining_calls=PredictionMetrics(mean=25.0, p50=25.0, p90=30.0),
+            output_tokens=PredictionMetrics(mean=2000.0, p50=2000.0, p90=2500.0),  # HIGH
+            interarrival_ms=PredictionMetrics(mean=50.0, p50=50.0, p90=70.0),  # LOW
+        )
+
+        mock_lookup = MagicMock()
+        mock_lookup.find = MagicMock(return_value=mock_prediction)
+
+        # Create mock base transport
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        # Create transport with static values that should be overridden
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,  # Should be overridden to 25
+            osl="MEDIUM",  # Should be overridden to HIGH
+            iat="MEDIUM",  # Should be overridden to LOW
+            prediction_lookup=mock_lookup,
+        )
+
+        # Set prefix ID
+        DynamoPrefixContext.set("prediction-test")
+
+        # Create a POST request
+        request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+
+        # Handle request
+        await transport.handle_async_request(request)
+
+        # Get the modified request
+        modified_request = mock_transport.handle_async_request.call_args[0][0]
+
+        # Verify prediction values were used instead of static config
+        prefix = f"{LLMHeaderPrefix.DYNAMO.value}"
+        assert modified_request.headers[f"{prefix}-total-requests"] == "25"  # from prediction
+        assert modified_request.headers[f"{prefix}-osl"] == "HIGH"  # from prediction (2500 tokens)
+        assert modified_request.headers[f"{prefix}-iat"] == "LOW"  # from prediction (50ms)
+
+        # Verify lookup was called
+        assert mock_lookup.find.called
 
         DynamoPrefixContext.clear()
 
