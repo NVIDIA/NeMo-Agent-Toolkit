@@ -254,3 +254,108 @@ class TestDecoratorSyncFunctions:
             @latency_sensitive("INVALID")
             def func():
                 pass
+
+
+class TestDecoratorAsyncFunctions:
+    """Tests for @latency_sensitive decorator on async functions."""
+
+    async def test_async_function_with_enum(self):
+        """Test decorator on async function with enum value."""
+
+        @latency_sensitive(LatencySensitivity.HIGH)
+        async def async_func():
+            return Context.get().latency_sensitivity
+
+        # Outside decorator, should be MEDIUM
+        assert Context.get().latency_sensitivity == LatencySensitivity.MEDIUM
+
+        # Inside decorator, should be HIGH
+        result = await async_func()
+        assert result == LatencySensitivity.HIGH
+
+        # After decorator, back to MEDIUM
+        assert Context.get().latency_sensitivity == LatencySensitivity.MEDIUM
+
+    async def test_async_function_with_string(self):
+        """Test decorator on async function with string value."""
+
+        @latency_sensitive("low")
+        async def async_func():
+            return Context.get().latency_sensitivity
+
+        result = await async_func()
+        # LOW is in stack, but MEDIUM default has higher priority
+        assert result == LatencySensitivity.MEDIUM
+
+    async def test_async_function_priority_nesting(self):
+        """Test priority-based nesting with async functions."""
+
+        @latency_sensitive(LatencySensitivity.LOW)
+        async def low_func():
+            return Context.get().latency_sensitivity
+
+        @latency_sensitive(LatencySensitivity.HIGH)
+        async def high_func():
+            inner = await low_func()
+            return Context.get().latency_sensitivity, inner
+
+        outer, inner = await high_func()
+        # Both should be HIGH due to priority
+        assert outer == LatencySensitivity.HIGH
+        assert inner == LatencySensitivity.HIGH
+
+    async def test_async_function_with_return_value(self):
+        """Test that decorator preserves return values."""
+
+        @latency_sensitive(LatencySensitivity.HIGH)
+        async def func_with_return(x, y):
+            await asyncio.sleep(0)  # Make it actually async
+            return x + y
+
+        result = await func_with_return(2, 3)
+        assert result == 5
+
+    async def test_async_function_with_args_kwargs(self):
+        """Test that decorator preserves arguments."""
+
+        @latency_sensitive(LatencySensitivity.HIGH)
+        async def func_with_args(*args, **kwargs):
+            await asyncio.sleep(0)
+            return (args, kwargs)
+
+        result = await func_with_args(1, 2, 3, x=4, y=5)
+        assert result == ((1, 2, 3), {"x": 4, "y": 5})
+
+    async def test_async_function_exception_propagates(self):
+        """Test that exceptions propagate and stack still pops."""
+
+        @latency_sensitive(LatencySensitivity.HIGH)
+        async def failing_func():
+            raise ValueError("test error")
+
+        ctx = Context.get()
+        assert ctx.latency_sensitivity == LatencySensitivity.MEDIUM
+
+        with pytest.raises(ValueError, match="test error"):
+            await failing_func()
+
+        # Should revert to MEDIUM despite exception
+        assert ctx.latency_sensitivity == LatencySensitivity.MEDIUM
+
+    async def test_mixed_sync_async_nesting(self):
+        """Test that sync and async functions can nest together."""
+
+        @latency_sensitive(LatencySensitivity.LOW)
+        def sync_func():
+            return Context.get().latency_sensitivity
+
+        @latency_sensitive(LatencySensitivity.HIGH)
+        async def async_func():
+            # HIGH takes precedence
+            sync_result = sync_func()
+            async_result = Context.get().latency_sensitivity
+            return sync_result, async_result
+
+        sync_result, async_result = await async_func()
+        assert sync_result == LatencySensitivity.HIGH
+        assert async_result == LatencySensitivity.HIGH
