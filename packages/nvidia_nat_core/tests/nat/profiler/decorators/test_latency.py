@@ -1,8 +1,11 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
+import asyncio
+
 import pytest
 
+from nat.builder.context import Context
 from nat.profiler.decorators.latency import LatencySensitivity
 
 
@@ -64,3 +67,96 @@ class TestLatencySensitivity:
         """Test that parse raises ValueError for empty string."""
         with pytest.raises(ValueError, match="Invalid latency sensitivity"):
             LatencySensitivity.parse("")
+
+
+class TestContextIntegration:
+    """Tests for Context integration with latency sensitivity."""
+
+    def test_default_sensitivity_is_medium(self):
+        """Test that default latency sensitivity is MEDIUM."""
+        ctx = Context.get()
+        sensitivity = ctx.latency_sensitivity
+        assert sensitivity == LatencySensitivity.MEDIUM
+
+    def test_push_higher_priority_changes_sensitivity(self):
+        """Test that pushing higher priority changes current sensitivity."""
+        ctx = Context.get()
+
+        # Default is MEDIUM
+        assert ctx.latency_sensitivity == LatencySensitivity.MEDIUM
+
+        # Push HIGH (higher priority)
+        with ctx.push_latency_sensitivity(LatencySensitivity.HIGH):
+            assert ctx.latency_sensitivity == LatencySensitivity.HIGH
+
+        # Reverts to MEDIUM
+        assert ctx.latency_sensitivity == LatencySensitivity.MEDIUM
+
+    def test_push_lower_priority_keeps_current(self):
+        """Test that pushing lower priority keeps current sensitivity."""
+        ctx = Context.get()
+
+        # Push HIGH first
+        with ctx.push_latency_sensitivity(LatencySensitivity.HIGH):
+            assert ctx.latency_sensitivity == LatencySensitivity.HIGH
+
+            # Try to push LOW (lower priority) - should stay HIGH
+            with ctx.push_latency_sensitivity(LatencySensitivity.LOW):
+                assert ctx.latency_sensitivity == LatencySensitivity.HIGH
+
+            # Still HIGH after inner context exits
+            assert ctx.latency_sensitivity == LatencySensitivity.HIGH
+
+        # Reverts to MEDIUM
+        assert ctx.latency_sensitivity == LatencySensitivity.MEDIUM
+
+    def test_deep_nesting_maintains_priority(self):
+        """Test that deep nesting correctly maintains highest priority."""
+        ctx = Context.get()
+
+        # MEDIUM (default)
+        assert ctx.latency_sensitivity == LatencySensitivity.MEDIUM
+
+        with ctx.push_latency_sensitivity(LatencySensitivity.LOW):
+            # LOW < MEDIUM, stays MEDIUM
+            assert ctx.latency_sensitivity == LatencySensitivity.MEDIUM
+
+            with ctx.push_latency_sensitivity(LatencySensitivity.HIGH):
+                # HIGH > MEDIUM, becomes HIGH
+                assert ctx.latency_sensitivity == LatencySensitivity.HIGH
+
+                with ctx.push_latency_sensitivity(LatencySensitivity.MEDIUM):
+                    # MEDIUM < HIGH, stays HIGH
+                    assert ctx.latency_sensitivity == LatencySensitivity.HIGH
+
+                    with ctx.push_latency_sensitivity(LatencySensitivity.LOW):
+                        # LOW < HIGH, stays HIGH
+                        assert ctx.latency_sensitivity == LatencySensitivity.HIGH
+
+                    # Still HIGH
+                    assert ctx.latency_sensitivity == LatencySensitivity.HIGH
+
+                # Still HIGH
+                assert ctx.latency_sensitivity == LatencySensitivity.HIGH
+
+            # Back to MEDIUM
+            assert ctx.latency_sensitivity == LatencySensitivity.MEDIUM
+
+        # Back to MEDIUM
+        assert ctx.latency_sensitivity == LatencySensitivity.MEDIUM
+
+    def test_exception_in_context_still_pops(self):
+        """Test that exceptions don't break stack management."""
+        ctx = Context.get()
+
+        assert ctx.latency_sensitivity == LatencySensitivity.MEDIUM
+
+        try:
+            with ctx.push_latency_sensitivity(LatencySensitivity.HIGH):
+                assert ctx.latency_sensitivity == LatencySensitivity.HIGH
+                raise ValueError("test error")
+        except ValueError:
+            pass
+
+        # Should revert to MEDIUM despite exception
+        assert ctx.latency_sensitivity == LatencySensitivity.MEDIUM
