@@ -14,6 +14,7 @@
 # limitations under the License.
 """Unit tests for the Dynamo LLM provider."""
 
+from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
 import pytest
@@ -449,6 +450,207 @@ class TestCreateHttpxClient:
         )
 
         assert client.timeout.connect == 600.0
+
+
+# ---------------------------------------------------------------------------
+# _DynamoTransport Tests
+# ---------------------------------------------------------------------------
+
+
+class TestDynamoTransport:
+    """Tests for _DynamoTransport custom transport wrapper."""
+
+    @pytest.mark.asyncio
+    async def test_transport_injects_headers(self):
+        """Test that _DynamoTransport injects HTTP headers."""
+        import httpx
+
+        from nat.llm.dynamo_llm import _DynamoTransport
+
+        # Create mock base transport
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        # Create transport with static values
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=15,
+            osl="HIGH",
+            iat="LOW",
+            prediction_lookup=None,
+        )
+
+        # Set prefix ID via context
+        DynamoPrefixContext.set("test-prefix-123")
+
+        # Create a request
+        request = httpx.Request("POST", "https://api.example.com/chat")
+
+        # Handle request (should inject headers)
+        await transport.handle_async_request(request)
+
+        # Get the request that was passed to mock transport
+        call_args = mock_transport.handle_async_request.call_args
+        modified_request = call_args[0][0]
+
+        # Verify headers were injected
+        prefix = f"{LLMHeaderPrefix.DYNAMO.value}"
+        assert modified_request.headers[f"{prefix}-id"] == "test-prefix-123"
+        assert modified_request.headers[f"{prefix}-total-requests"] == "15"
+        assert modified_request.headers[f"{prefix}-osl"] == "HIGH"
+        assert modified_request.headers[f"{prefix}-iat"] == "LOW"
+
+        # Cleanup
+        DynamoPrefixContext.clear()
+
+    @pytest.mark.asyncio
+    async def test_transport_injects_nvext_annotations(self):
+        """Test that _DynamoTransport injects nvext.annotations in request body."""
+        import json
+
+        import httpx
+
+        from nat.llm.dynamo_llm import _DynamoTransport
+
+        # Create mock base transport
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        # Create transport
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,
+            osl="MEDIUM",
+            iat="HIGH",
+            prediction_lookup=None,
+        )
+
+        # Set prefix ID
+        DynamoPrefixContext.set("eval-q001")
+
+        # Create a POST request with JSON body
+        original_body = {"model": "test", "messages": []}
+        request = httpx.Request(
+            "POST",
+            "https://api.example.com/chat",
+            json=original_body,
+        )
+
+        # Handle request
+        await transport.handle_async_request(request)
+
+        # Get the request that was passed to mock transport
+        call_args = mock_transport.handle_async_request.call_args
+        modified_request = call_args[0][0]
+
+        # Parse the modified body
+        body = json.loads(modified_request.content.decode("utf-8"))
+
+        # Verify nvext.annotations was injected
+        assert "nvext" in body
+        assert "annotations" in body["nvext"]
+        annotations = body["nvext"]["annotations"]
+
+        assert "prefix_id:eval-q001" in annotations
+        assert "total_requests:10" in annotations
+        assert "osl:MEDIUM" in annotations
+        assert "iat:HIGH" in annotations
+
+        # Cleanup
+        DynamoPrefixContext.clear()
+
+    @pytest.mark.asyncio
+    async def test_transport_merges_existing_annotations(self):
+        """Test that existing nvext.annotations are preserved (non-conflicting)."""
+        import json
+
+        import httpx
+
+        from nat.llm.dynamo_llm import _DynamoTransport
+
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=5,
+            osl="LOW",
+            iat="MEDIUM",
+            prediction_lookup=None,
+        )
+
+        DynamoPrefixContext.set("merge-test")
+
+        # Create request with existing nvext.annotations
+        original_body = {
+            "model": "test",
+            "nvext": {
+                "annotations": [
+                    "custom_key:custom_value",
+                    "iat:SHOULD_BE_REPLACED",  # Should be overridden
+                ]
+            }
+        }
+        request = httpx.Request("POST", "https://api.example.com/chat", json=original_body)
+
+        # Handle request
+        await transport.handle_async_request(request)
+
+        # Get modified request
+        modified_request = mock_transport.handle_async_request.call_args[0][0]
+        body = json.loads(modified_request.content.decode("utf-8"))
+
+        annotations = body["nvext"]["annotations"]
+
+        # Our annotations should be first
+        assert annotations[0] == "prefix_id:merge-test"
+        assert annotations[1] == "total_requests:5"
+        assert annotations[2] == "osl:LOW"
+        assert annotations[3] == "iat:MEDIUM"
+
+        # Custom annotation preserved
+        assert "custom_key:custom_value" in annotations
+
+        # Old conflicting annotation should NOT be present
+        assert "iat:SHOULD_BE_REPLACED" not in annotations
+
+        DynamoPrefixContext.clear()
+
+    @pytest.mark.asyncio
+    async def test_transport_handles_non_json_gracefully(self):
+        """Test that non-JSON bodies don't cause failures."""
+        import httpx
+
+        from nat.llm.dynamo_llm import _DynamoTransport
+
+        mock_response = httpx.Response(200, text="ok")
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=1,
+            osl="LOW",
+            iat="LOW",
+            prediction_lookup=None,
+        )
+
+        DynamoPrefixContext.set("non-json-test")
+
+        # Create request with non-JSON content
+        request = httpx.Request("POST", "https://api.example.com/chat", content=b"plain text")
+
+        # Should not raise
+        await transport.handle_async_request(request)
+
+        # Headers should still be injected
+        modified_request = mock_transport.handle_async_request.call_args[0][0]
+        assert f"{LLMHeaderPrefix.DYNAMO.value}-id" in modified_request.headers
+
+        DynamoPrefixContext.clear()
 
 
 # ---------------------------------------------------------------------------

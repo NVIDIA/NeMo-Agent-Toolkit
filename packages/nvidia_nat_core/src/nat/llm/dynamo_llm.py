@@ -361,6 +361,164 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
 
 
 # =============================================================================
+# CUSTOM TRANSPORT FOR DYNAMO HINT INJECTION
+# =============================================================================
+
+
+class _DynamoTransport:
+    """
+    Custom transport wrapper that injects both HTTP headers and nvext.annotations.
+
+    This approach is more reliable than event hooks because it modifies the request
+    BEFORE httpx's internal state machine processes it. It supports both transport
+    mechanisms simultaneously for maximum compatibility:
+
+    - HTTP headers (x-prefix-*): For generalized Thompson Sampling setup
+    - nvext.annotations: For optimized Thompson Sampling setup (preferred)
+    """
+
+    def __init__(
+        self,
+        transport: "httpx.AsyncBaseTransport",
+        total_requests: int,
+        osl: str,
+        iat: str,
+        prediction_lookup: "PredictionTrieLookup | None" = None,
+    ):
+        self._transport = transport
+        self._total_requests = total_requests
+        self._osl = osl.upper()
+        self._iat = iat.upper()
+        self._prediction_lookup = prediction_lookup
+
+    async def handle_async_request(self, request: "httpx.Request") -> "httpx.Response":
+        import json
+
+        import httpx
+
+        # Get prefix ID from context (supports depth-awareness and overrides)
+        prefix_id = DynamoPrefixContext.get()
+
+        # Initialize with static config values
+        total_requests = self._total_requests
+        osl = self._osl
+        iat = self._iat
+
+        # Check for prediction override
+        if self._prediction_lookup is not None:
+            try:
+                from nat.llm.prediction_context import get_call_tracker
+
+                ctx = Context.get()
+                path = ctx.function_path
+
+                # Get call index for current parent function
+                call_index = 1
+                active_fn = ctx.active_function
+                if active_fn and active_fn.function_id != "root":
+                    tracker = get_call_tracker()
+                    call_index = tracker.counts.get(active_fn.function_id, 1)
+
+                # Look up prediction
+                prediction = self._prediction_lookup.find(path, call_index)
+
+                if prediction:
+                    # Override with prediction-derived values
+                    total_requests = int(prediction.remaining_calls.mean)
+                    osl = _output_tokens_to_osl(prediction.output_tokens.p90)
+                    iat = _interarrival_ms_to_iat(prediction.interarrival_ms.mean)
+
+                    logger.debug(
+                        "Overriding hints from prediction: path=%s, call_index=%d, "
+                        "total_requests=%d, osl=%s (tokens=%d), iat=%s (ms=%d)",
+                        path,
+                        call_index,
+                        total_requests,
+                        osl,
+                        int(prediction.output_tokens.p90),
+                        iat,
+                        int(prediction.interarrival_ms.mean),
+                    )
+                else:
+                    logger.debug(
+                        "No prediction found for path=%s, call_index=%d; using static values",
+                        path,
+                        call_index,
+                    )
+
+            except Exception as e:
+                logger.warning("Failed to lookup prediction: %s", e)
+
+        # Inject HTTP headers
+        headers = dict(request.headers)
+        headers[f"{LLMHeaderPrefix.DYNAMO.value}-id"] = prefix_id
+        headers[f"{LLMHeaderPrefix.DYNAMO.value}-total-requests"] = str(total_requests)
+        headers[f"{LLMHeaderPrefix.DYNAMO.value}-osl"] = osl
+        headers[f"{LLMHeaderPrefix.DYNAMO.value}-iat"] = iat
+
+        # Modify body to inject nvext.annotations (if JSON POST request)
+        content = request.content
+        if request.method == "POST" and content:
+            try:
+                body = json.loads(content.decode("utf-8"))
+                if isinstance(body, dict):
+                    # Build annotations list
+                    annotations = [
+                        f"prefix_id:{prefix_id}",
+                        f"total_requests:{total_requests}",
+                        f"osl:{osl}",
+                        f"iat:{iat}",
+                    ]
+
+                    # Add/merge nvext.annotations
+                    if "nvext" not in body:
+                        body["nvext"] = {}
+                    if not isinstance(body["nvext"], dict):
+                        body["nvext"] = {}
+
+                    existing = body["nvext"].get("annotations", [])
+                    if not isinstance(existing, list):
+                        existing = []
+
+                    # Our annotations take precedence
+                    body["nvext"]["annotations"] = annotations + [
+                        a for a in existing
+                        if not any(a.startswith(f"{key}:") for key in ["prefix_id", "total_requests", "osl", "iat"])
+                    ]
+
+                    # Re-encode
+                    content = json.dumps(body).encode("utf-8")
+                    headers["content-length"] = str(len(content))
+
+                    logger.debug("Injected nvext.annotations: %s (body size: %d bytes)",
+                                 body["nvext"]["annotations"],
+                                 len(content))
+            except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                logger.debug("Could not inject nvext.annotations: %s", e)
+
+        # Create new request with modified headers and content
+        new_request = httpx.Request(
+            method=request.method,
+            url=request.url,
+            headers=headers,
+            content=content,
+            extensions=request.extensions,
+        )
+
+        logger.debug("Injected Dynamo hints: prefix_id=%s, total_requests=%d, osl=%s, iat=%s",
+                     prefix_id,
+                     total_requests,
+                     osl,
+                     iat)
+
+        return await self._transport.handle_async_request(new_request)
+
+    async def aclose(self):
+        """Close the underlying transport."""
+        await self._transport.aclose()
+
+
+# =============================================================================
 # HTTPX EVENT HOOK FOR HEADER INJECTION
 # =============================================================================
 
