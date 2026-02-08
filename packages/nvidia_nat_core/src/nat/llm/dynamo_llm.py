@@ -62,13 +62,10 @@ prefix_total_requests
 import json
 import logging
 import uuid
-from collections.abc import Callable
-from collections.abc import Coroutine
 from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import TYPE_CHECKING
-from typing import Any
 from typing import Literal
 
 import httpx
@@ -87,7 +84,6 @@ from nat.data_models.optimizable import OptimizableField
 from nat.data_models.optimizable import SearchSpace
 from nat.llm.openai_llm import OpenAIModelConfig
 from nat.llm.utils.constants import LLMHeaderPrefix
-from nat.profiler.prediction_trie.data_models import LLMCallPrediction
 
 logger = logging.getLogger(__name__)
 
