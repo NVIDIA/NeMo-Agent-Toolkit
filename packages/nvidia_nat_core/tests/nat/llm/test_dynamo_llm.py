@@ -21,7 +21,6 @@ import pytest
 
 from nat.llm.dynamo_llm import DynamoModelConfig
 from nat.llm.dynamo_llm import DynamoPrefixContext
-from nat.llm.dynamo_llm import _create_dynamo_request_hook
 from nat.llm.dynamo_llm import create_httpx_client_with_dynamo_hooks
 from nat.llm.utils.constants import LLMHeaderPrefix
 
@@ -244,188 +243,12 @@ class TestDynamoPrefixContext:
 
 
 # ---------------------------------------------------------------------------
-# Request Hook Tests
-# ---------------------------------------------------------------------------
-
-
-class TestDynamoRequestHook:
-    """Tests for the Dynamo request hook that injects headers."""
-
-    @pytest.fixture(autouse=True)
-    def clean_context(self):
-        """Ensure clean context before and after each test."""
-        DynamoPrefixContext.clear()
-        yield
-        DynamoPrefixContext.clear()
-
-    @pytest.mark.asyncio
-    async def test_hook_injects_headers(self):
-        """Test that the hook injects all required Dynamo headers."""
-        hook = _create_dynamo_request_hook(
-            prefix_template="test-{uuid}",
-            total_requests=15,
-            osl="HIGH",
-            iat="LOW",
-        )
-
-        # Create a mock request
-        mock_request = MagicMock()
-        mock_request.headers = {}
-
-        await hook(mock_request)
-
-        assert f"{LLMHeaderPrefix.DYNAMO.value}-id" in mock_request.headers
-        assert "-d0" in mock_request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-id"]
-        assert mock_request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-total-requests"] == "15"
-        assert mock_request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-osl"] == "HIGH"
-        assert mock_request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-iat"] == "LOW"
-
-    @pytest.mark.asyncio
-    async def test_hook_uses_context_prefix_id(self):
-        """Test that the hook uses context override prefix ID when set."""
-        hook = _create_dynamo_request_hook(
-            prefix_template="template-{uuid}",
-            total_requests=10,
-            osl="MEDIUM",
-            iat="MEDIUM",
-        )
-
-        # Set context override prefix ID
-        DynamoPrefixContext.set("context-prefix-abc")
-
-        mock_request = MagicMock()
-        mock_request.headers = {}
-
-        await hook(mock_request)
-
-        # Should use context prefix ID, not generate from template
-        assert mock_request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-id"] == "context-prefix-abc"
-
-    @pytest.mark.asyncio
-    async def test_hook_uses_same_id_for_same_depth(self):
-        """Test that the hook uses the same prefix ID for all requests at the same depth.
-
-        This ensures Dynamo's KV cache optimization works across multi-turn conversations.
-        All requests at the same depth within a workflow run should share the same
-        prefix ID to enable KV cache reuse.
-        """
-        hook = _create_dynamo_request_hook(
-            prefix_template="session-{uuid}",
-            total_requests=10,
-            osl="MEDIUM",
-            iat="MEDIUM",
-        )
-
-        prefix_ids = set()
-        for _ in range(10):
-            mock_request = MagicMock()
-            mock_request.headers = {}
-            await hook(mock_request)
-            prefix_ids.add(mock_request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-id"])
-
-        # All requests at the same depth should share the SAME prefix ID
-        assert len(prefix_ids) == 1
-        # Should contain depth marker
-        assert "-d0" in list(prefix_ids)[0]
-
-    @pytest.mark.asyncio
-    async def test_hooks_share_id_at_same_depth(self):
-        """Test that multiple hooks share the same prefix ID at the same depth."""
-        prefix_ids = set()
-        for _ in range(5):
-            hook = _create_dynamo_request_hook(
-                prefix_template="session-{uuid}",
-                total_requests=10,
-                osl="MEDIUM",
-                iat="MEDIUM",
-            )
-            mock_request = MagicMock()
-            mock_request.headers = {}
-            await hook(mock_request)
-            prefix_ids.add(mock_request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-id"])
-
-        # All hooks at the same depth share the same prefix ID within a context
-        assert len(prefix_ids) == 1
-
-    @pytest.mark.asyncio
-    async def test_hook_uses_depth_based_prefix(self):
-        """Test that the hook uses depth-based prefix format."""
-        hook = _create_dynamo_request_hook(
-            prefix_template=None,
-            total_requests=10,
-            osl="MEDIUM",
-            iat="MEDIUM",
-        )
-
-        mock_request = MagicMock()
-        mock_request.headers = {}
-
-        await hook(mock_request)
-
-        # Should use depth-based format "{workflow_id}-d{depth}"
-        prefix_id = mock_request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-id"]
-        assert "-d0" in prefix_id  # Depth 0 at root level
-
-    @pytest.mark.asyncio
-    async def test_hook_normalizes_case(self):
-        """Test that OSL and IAT values are uppercased."""
-        hook = _create_dynamo_request_hook(
-            prefix_template=None,
-            total_requests=10,
-            osl="low",
-            iat="high",
-        )
-
-        mock_request = MagicMock()
-        mock_request.headers = {}
-
-        await hook(mock_request)
-
-        assert mock_request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-osl"] == "LOW"
-        assert mock_request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-iat"] == "HIGH"
-
-    @pytest.mark.asyncio
-    async def test_hook_with_override_ignores_depth(self):
-        """Test that setting an override prefix uses it instead of depth-based ID."""
-        hook = _create_dynamo_request_hook(
-            prefix_template="static-prefix-no-uuid",
-            total_requests=10,
-            osl="MEDIUM",
-            iat="MEDIUM",
-        )
-
-        # Set override
-        DynamoPrefixContext.set("my-override-prefix")
-
-        mock_request = MagicMock()
-        mock_request.headers = {}
-        await hook(mock_request)
-
-        # Override prefix is used
-        assert mock_request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-id"] == "my-override-prefix"
-
-
-# ---------------------------------------------------------------------------
 # HTTPX Client Creation Tests
 # ---------------------------------------------------------------------------
 
 
 class TestCreateHttpxClient:
     """Tests for create_httpx_client_with_dynamo_hooks."""
-
-    def test_creates_client_with_event_hooks(self):
-        """Test that the function creates an httpx client (legacy test name)."""
-        from nat.llm.dynamo_llm import _DynamoTransport
-
-        client = create_httpx_client_with_dynamo_hooks(
-            prefix_template="test-{uuid}",
-            total_requests=10,
-            osl="MEDIUM",
-            iat="MEDIUM",
-        )
-
-        # Check that custom transport is configured (no longer uses event hooks)
-        assert isinstance(client._transport, _DynamoTransport)
 
     def test_uses_custom_timeout(self):
         """Test that the function uses the provided timeout."""

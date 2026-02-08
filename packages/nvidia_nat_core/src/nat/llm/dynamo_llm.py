@@ -282,14 +282,20 @@ class DynamoPrefixContext(metaclass=Singleton):
 
 class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
     """
-    A Dynamo LLM provider with automatic prefix header injection for KV cache optimization.
+    A Dynamo LLM provider with automatic prefix hint injection for KV cache optimization.
 
-    This is a specialized OpenAI-compatible LLM that sends Dynamo prefix headers
-    for optimal KV cache management and request routing. Prefix headers are enabled
+    This is a specialized OpenAI-compatible LLM that sends Dynamo prefix hints
+    for optimal KV cache management and request routing. Prefix hints are enabled
     by default using the template "nat-dynamo-{uuid}". The prefix routing parameters
     (prefix_total_requests, prefix_osl, prefix_iat) are optimizable via the NAT optimizer.
 
-    To disable prefix headers, set prefix_template to null/None in your config.
+    Hints are sent via both HTTP headers (``x-prefix-*``) and ``nvext.annotations``
+    in the request body for compatibility with different Dynamo setups:
+
+    - **Generalized Thompson Sampling** (custom frontend.py): Reads HTTP headers
+    - **Optimized Thompson Sampling** (default frontend + processor.py): Reads nvext.annotations
+
+    To disable prefix hints, set prefix_template to null/None in your config.
     """
 
     # =========================================================================
@@ -529,56 +535,8 @@ class _DynamoTransport:
 
 
 # =============================================================================
-# HTTPX EVENT HOOK FOR HEADER INJECTION
+# HTTPX CLIENT CREATION
 # =============================================================================
-
-
-def _create_dynamo_request_hook(
-    prefix_template: str | None,
-    total_requests: int,
-    osl: str,
-    iat: str,
-) -> Callable[["httpx.Request"], Coroutine[Any, Any, None]]:
-    """
-    Create an httpx event hook that injects Dynamo prefix headers into requests.
-
-    This hook is called before each HTTP request is sent, allowing us to inject
-    headers dynamically. The prefix ID is obtained from DynamoPrefixContext which
-    provides depth-aware prefix IDs - each level in the function call stack gets
-    its own unique prefix ID that remains constant within a workflow run.
-
-    Args:
-        prefix_template: Template string with {uuid} placeholder (unused, for API compat).
-        total_requests: Expected number of requests for this prefix.
-        osl: Output sequence length hint (LOW/MEDIUM/HIGH).
-        iat: Inter-arrival time hint (LOW/MEDIUM/HIGH).
-
-    Returns:
-        An async function suitable for use as an httpx event hook.
-    """
-    # Note: prefix_template is kept for API compatibility but no longer used.
-    # Prefix IDs are now managed by DynamoPrefixContext with depth-awareness.
-    _ = prefix_template  # Suppress unused parameter warning
-
-    async def on_request(request):
-        """Inject Dynamo prefix headers before each request."""
-        # Get depth-aware prefix ID from context
-        prefix_id = DynamoPrefixContext.get()
-        logger.debug("Using depth-aware prefix ID: %s", prefix_id)
-
-        # Inject Dynamo headers
-        request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-id"] = prefix_id
-        request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-total-requests"] = str(total_requests)
-        request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-osl"] = osl.upper()
-        request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-iat"] = iat.upper()
-
-        logger.debug("Injected Dynamo headers: prefix_id=%s, total_requests=%d, osl=%s, iat=%s",
-                     prefix_id,
-                     total_requests,
-                     osl.upper(),
-                     iat.upper())
-
-    return on_request
 
 
 def create_httpx_client_with_dynamo_hooks(
@@ -628,153 +586,6 @@ def create_httpx_client_with_dynamo_hooks(
 
     return httpx.AsyncClient(
         transport=dynamo_transport,
-        timeout=httpx.Timeout(timeout),
-    )
-
-
-def _create_prediction_request_hook(
-    prediction: LLMCallPrediction, ) -> Callable[["httpx.Request"], Coroutine[Any, Any, None]]:
-    """
-    Create an httpx event hook that overrides x-prefix-* headers from static prediction data.
-
-    This hook converts numeric prediction values to categorical values (LOW/MEDIUM/HIGH)
-    and overrides the x-prefix-* headers set by the Dynamo prefix hook.
-
-    Args:
-        prediction: The prediction data to inject
-
-    Returns:
-        An async function suitable for use as an httpx event hook.
-    """
-    # Pre-compute categorical values from prediction
-    total_requests = int(prediction.remaining_calls.mean)
-    osl = _output_tokens_to_osl(prediction.output_tokens.p90)
-    iat = _interarrival_ms_to_iat(prediction.interarrival_ms.mean)
-
-    async def on_request(request):
-        """Override x-prefix-* headers with prediction-derived values."""
-        request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-total-requests"] = str(total_requests)
-        request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-osl"] = osl
-        request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-iat"] = iat
-
-        logger.debug(
-            "Overrode prefix headers from static prediction: total_requests=%d, osl=%s, iat=%s",
-            total_requests,
-            osl,
-            iat,
-        )
-
-    return on_request
-
-
-def _create_dynamic_prediction_hook(
-    trie_lookup: "PredictionTrieLookup", ) -> Callable[["httpx.Request"], Coroutine[Any, Any, None]]:
-    """
-    Create an httpx event hook that dynamically looks up predictions per request.
-
-    This hook reads the current function path and call index from context,
-    looks up the prediction in the trie, and overrides the x-prefix-* headers
-    with values derived from the prediction. The numeric prediction values
-    are converted to categorical values (LOW/MEDIUM/HIGH) for consistency
-    with static configuration.
-
-    When a prediction is found, this hook overrides:
-        - x-prefix-total-requests: from remaining_calls.mean
-        - x-prefix-osl: converted from output_tokens.p90
-        - x-prefix-iat: converted from interarrival_ms.mean
-
-    Args:
-        trie_lookup: The PredictionTrieLookup instance to query
-
-    Returns:
-        An async function suitable for use as an httpx event hook.
-    """
-
-    async def on_request(request: "httpx.Request") -> None:
-        """Look up prediction from context and override x-prefix-* headers."""
-        from nat.llm.prediction_context import get_call_tracker
-
-        try:
-            ctx = Context.get()
-            path = ctx.function_path
-
-            # Get call index for current parent function
-            call_index = 1  # default
-            active_fn = ctx.active_function
-            if active_fn and active_fn.function_id != "root":
-                tracker = get_call_tracker()
-                call_index = tracker.counts.get(active_fn.function_id, 1)
-
-            # Look up prediction
-            prediction = trie_lookup.find(path, call_index)
-
-            if prediction:
-                # Convert numeric predictions to categorical values and override headers
-                total_requests = int(prediction.remaining_calls.mean)
-                osl = _output_tokens_to_osl(prediction.output_tokens.p90)
-                iat = _interarrival_ms_to_iat(prediction.interarrival_ms.mean)
-
-                request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-total-requests"] = str(total_requests)
-                request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-osl"] = osl
-                request.headers[f"{LLMHeaderPrefix.DYNAMO.value}-iat"] = iat
-
-                logger.debug(
-                    "Overrode prefix headers from prediction: path=%s, call_index=%d, "
-                    "total_requests=%d, osl=%s (tokens=%d), iat=%s (ms=%d)",
-                    path,
-                    call_index,
-                    total_requests,
-                    osl,
-                    int(prediction.output_tokens.p90),
-                    iat,
-                    int(prediction.interarrival_ms.mean),
-                )
-            else:
-                logger.debug("No prediction found for path=%s, call_index=%d; using static values", path, call_index)
-
-        except Exception as e:
-            # Don't fail the request if prediction lookup fails
-            logger.warning("Failed to override prefix headers from prediction: %s", e)
-
-    return on_request
-
-
-def create_httpx_client_with_prediction_headers(
-    prediction: LLMCallPrediction,
-    prefix_template: str | None,
-    total_requests: int,
-    osl: str,
-    iat: str,
-    timeout: float = 600.0,
-) -> "httpx.AsyncClient":
-    """
-    Create an httpx.AsyncClient with both Dynamo prefix and prediction headers.
-
-    Args:
-        prediction: Prediction data for this LLM call
-        prefix_template: Template string with {uuid} placeholder
-        total_requests: Expected number of requests for this prefix
-        osl: Output sequence length hint (LOW/MEDIUM/HIGH)
-        iat: Inter-arrival time hint (LOW/MEDIUM/HIGH)
-        timeout: HTTP request timeout in seconds
-
-    Returns:
-        An httpx.AsyncClient configured with header injection.
-    """
-    import httpx
-
-    hooks: list[Callable] = []
-
-    # Add Dynamo prefix hook
-    prefix_hook = _create_dynamo_request_hook(prefix_template, total_requests, osl, iat)
-    hooks.append(prefix_hook)
-
-    # Add prediction hook
-    prediction_hook = _create_prediction_request_hook(prediction)
-    hooks.append(prediction_hook)
-
-    return httpx.AsyncClient(
-        event_hooks={"request": hooks},
         timeout=httpx.Timeout(timeout),
     )
 
