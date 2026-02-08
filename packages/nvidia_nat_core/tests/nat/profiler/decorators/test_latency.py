@@ -7,6 +7,7 @@ import pytest
 
 from nat.builder.context import Context
 from nat.profiler.decorators.latency import LatencySensitivity
+from nat.profiler.decorators.latency import latency_sensitive
 
 
 class TestLatencySensitivity:
@@ -160,3 +161,96 @@ class TestContextIntegration:
 
         # Should revert to MEDIUM despite exception
         assert ctx.latency_sensitivity == LatencySensitivity.MEDIUM
+
+
+class TestDecoratorSyncFunctions:
+    """Tests for @latency_sensitive decorator on sync functions."""
+
+    def test_sync_function_with_enum(self):
+        """Test decorator on sync function with enum value."""
+
+        @latency_sensitive(LatencySensitivity.HIGH)
+        def sync_func():
+            return Context.get().latency_sensitivity
+
+        # Outside decorator, should be MEDIUM
+        assert Context.get().latency_sensitivity == LatencySensitivity.MEDIUM
+
+        # Inside decorator, should be HIGH
+        result = sync_func()
+        assert result == LatencySensitivity.HIGH
+
+        # After decorator, back to MEDIUM
+        assert Context.get().latency_sensitivity == LatencySensitivity.MEDIUM
+
+    def test_sync_function_with_string(self):
+        """Test decorator on sync function with string value."""
+
+        @latency_sensitive("low")
+        def sync_func():
+            return Context.get().latency_sensitivity
+
+        result = sync_func()
+        # LOW is in stack, but MEDIUM default has higher priority
+        assert result == LatencySensitivity.MEDIUM
+
+    def test_sync_function_priority_nesting(self):
+        """Test priority-based nesting with sync functions."""
+
+        @latency_sensitive(LatencySensitivity.LOW)
+        def low_func():
+            return Context.get().latency_sensitivity
+
+        @latency_sensitive(LatencySensitivity.HIGH)
+        def high_func():
+            inner = low_func()
+            return Context.get().latency_sensitivity, inner
+
+        outer, inner = high_func()
+        # Both should be HIGH due to priority
+        assert outer == LatencySensitivity.HIGH
+        assert inner == LatencySensitivity.HIGH
+
+    def test_sync_function_with_return_value(self):
+        """Test that decorator preserves return values."""
+
+        @latency_sensitive(LatencySensitivity.HIGH)
+        def func_with_return(x, y):
+            return x + y
+
+        result = func_with_return(2, 3)
+        assert result == 5
+
+    def test_sync_function_with_args_kwargs(self):
+        """Test that decorator preserves arguments."""
+
+        @latency_sensitive(LatencySensitivity.HIGH)
+        def func_with_args(*args, **kwargs):
+            return (args, kwargs)
+
+        result = func_with_args(1, 2, 3, x=4, y=5)
+        assert result == ((1, 2, 3), {"x": 4, "y": 5})
+
+    def test_sync_function_exception_propagates(self):
+        """Test that exceptions propagate and stack still pops."""
+
+        @latency_sensitive(LatencySensitivity.HIGH)
+        def failing_func():
+            raise ValueError("test error")
+
+        ctx = Context.get()
+        assert ctx.latency_sensitivity == LatencySensitivity.MEDIUM
+
+        with pytest.raises(ValueError, match="test error"):
+            failing_func()
+
+        # Should revert to MEDIUM despite exception
+        assert ctx.latency_sensitivity == LatencySensitivity.MEDIUM
+
+    def test_invalid_sensitivity_at_decoration_time(self):
+        """Test that invalid sensitivity raises ValueError at decoration time."""
+        with pytest.raises(ValueError, match="Invalid latency sensitivity"):
+
+            @latency_sensitive("INVALID")
+            def func():
+                pass

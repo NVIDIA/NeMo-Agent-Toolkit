@@ -51,7 +51,13 @@ Example:
                 pass
 """
 
+import functools
+import inspect
+from collections.abc import Callable
 from enum import Enum
+from typing import Any
+from typing import TypeVar
+from typing import overload
 
 
 class LatencySensitivity(str, Enum):
@@ -122,3 +128,76 @@ class LatencySensitivity(str, Enum):
             f"Invalid latency sensitivity: {value!r}. "
             f"Must be 'LOW', 'MEDIUM', 'HIGH', or LatencySensitivity enum."
         )
+
+
+# Type variable for preserving function signature
+F = TypeVar("F", bound=Callable[..., Any])
+
+
+def latency_sensitive(sensitivity: LatencySensitivity | str) -> Callable[[F], F]:
+    """
+    Decorator to mark a function with a latency sensitivity level.
+
+    The sensitivity is pushed onto the context stack for the duration of the
+    function execution. The effective sensitivity is the maximum priority across
+    all pushed levels.
+
+    Args:
+        sensitivity: Latency sensitivity level (enum or string like "high", "LOW")
+
+    Returns:
+        Decorated function that pushes sensitivity onto context stack
+
+    Raises:
+        ValueError: If sensitivity is not a valid level
+
+    Example:
+        >>> from nat.profiler.decorators.latency import latency_sensitive, LatencySensitivity
+        >>> from nat.builder.context import Context
+        >>>
+        >>> @latency_sensitive(LatencySensitivity.HIGH)
+        ... def critical_function():
+        ...     return Context.get().latency_sensitivity
+        >>>
+        >>> @latency_sensitive("low")
+        ... async def background_task():
+        ...     return await do_work()
+    """
+    # Parse and validate at decoration time
+    parsed_sensitivity = LatencySensitivity.parse(sensitivity)
+
+    def decorator(func: F) -> F:
+        # Import here to avoid circular dependency
+        from nat.builder.context import Context
+
+        if inspect.iscoroutinefunction(func):
+            # Async function
+            @functools.wraps(func)
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+                ctx = Context.get()
+                with ctx.push_latency_sensitivity(parsed_sensitivity):
+                    return await func(*args, **kwargs)
+
+            return async_wrapper  # type: ignore
+
+        elif inspect.isgeneratorfunction(func):
+            # Generator function
+            @functools.wraps(func)
+            def generator_wrapper(*args: Any, **kwargs: Any):
+                ctx = Context.get()
+                with ctx.push_latency_sensitivity(parsed_sensitivity):
+                    yield from func(*args, **kwargs)
+
+            return generator_wrapper  # type: ignore
+
+        else:
+            # Regular sync function
+            @functools.wraps(func)
+            def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+                ctx = Context.get()
+                with ctx.push_latency_sensitivity(parsed_sensitivity):
+                    return func(*args, **kwargs)
+
+            return sync_wrapper  # type: ignore
+
+    return decorator
