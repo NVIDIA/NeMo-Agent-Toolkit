@@ -27,6 +27,7 @@ from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
 import httpx
+
 from nat.builder.context import Context
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
