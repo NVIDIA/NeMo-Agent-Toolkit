@@ -549,11 +549,20 @@ class TestDynamoTransport:
         # Get the modified request
         modified_request = mock_transport.handle_async_request.call_args[0][0]
 
-        # Verify prediction values were used instead of static config
+        # Verify prediction values were used instead of static config in headers
         prefix = f"{LLMHeaderPrefix.DYNAMO.value}"
         assert modified_request.headers[f"{prefix}-total-requests"] == "25"  # from prediction
         assert modified_request.headers[f"{prefix}-osl"] == "HIGH"  # from prediction (2500 tokens)
         assert modified_request.headers[f"{prefix}-iat"] == "LOW"  # from prediction (50ms)
+
+        # Verify prediction values also used in nvext.annotations
+        import json
+        body = json.loads(modified_request.content.decode("utf-8"))
+        annotations = body["nvext"]["annotations"]
+
+        assert "total_requests:25" in annotations
+        assert "osl:HIGH" in annotations
+        assert "iat:LOW" in annotations
 
         # Verify lookup was called
         assert mock_lookup.find.called
