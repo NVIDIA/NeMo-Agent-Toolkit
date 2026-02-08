@@ -67,7 +67,6 @@ def fixture_sample_trie_lookup() -> PredictionTrieLookup:
 class TestDynamicPredictionTransport:
     """Tests for _DynamoTransport with dynamic prediction lookup."""
 
-    @pytest.mark.asyncio
     async def test_transport_injects_prediction_headers(self, sample_trie_lookup):
         """Test that transport overrides headers based on context predictions."""
         # Create mock base transport
@@ -116,7 +115,6 @@ class TestDynamicPredictionTransport:
 
         DynamoPrefixContext.clear()
 
-    @pytest.mark.asyncio
     async def test_transport_uses_root_fallback(self, sample_trie_lookup):
         """Test that transport falls back to root prediction for unknown paths."""
         # Create mock base transport
@@ -158,7 +156,6 @@ class TestDynamicPredictionTransport:
 
         DynamoPrefixContext.clear()
 
-    @pytest.mark.asyncio
     async def test_transport_handles_empty_context(self, sample_trie_lookup):
         """Test that transport handles missing context gracefully."""
         # Create mock base transport
@@ -197,7 +194,6 @@ class TestDynamicPredictionTransport:
 
         DynamoPrefixContext.clear()
 
-    @pytest.mark.asyncio
     async def test_transport_no_prediction_found(self):
         """Test that transport handles case where no prediction is found."""
         # Create empty trie with no predictions
@@ -240,7 +236,6 @@ class TestDynamicPredictionTransport:
 
         DynamoPrefixContext.clear()
 
-    @pytest.mark.asyncio
     async def test_prediction_overrides_both_headers_and_annotations(self, sample_trie_lookup):
         """Test that predictions override both HTTP headers AND nvext.annotations."""
         # Create mock base transport

@@ -166,7 +166,18 @@ def latency_sensitive(sensitivity: LatencySensitivity | str) -> Callable[[F], F]
         # Import here to avoid circular dependency
         from nat.builder.context import Context
 
-        if inspect.iscoroutinefunction(func):
+        if inspect.isasyncgenfunction(func):
+            # Async generator function
+            @functools.wraps(func)
+            async def async_gen_wrapper(*args: Any, **kwargs: Any):
+                ctx = Context.get()
+                with ctx.push_latency_sensitivity(parsed_sensitivity):
+                    async for item in func(*args, **kwargs):
+                        yield item
+
+            return async_gen_wrapper  # type: ignore
+
+        elif inspect.iscoroutinefunction(func):
             # Async function
             @functools.wraps(func)
             async def async_wrapper(*args: Any, **kwargs: Any) -> Any:

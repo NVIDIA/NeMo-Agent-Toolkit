@@ -478,3 +478,144 @@ class TestDecoratorGeneratorFunctions:
         # Should still be able to access context after early exit
         # Note: Stack will pop when generator is garbage collected
         assert ctx.latency_sensitivity == LatencySensitivity.MEDIUM
+
+
+class TestDecoratorAsyncGeneratorFunctions:
+    """Tests for @latency_sensitive decorator on async generator functions."""
+
+    async def test_async_generator_function_with_enum(self):
+        """Test decorator on async generator function with enum value."""
+
+        @latency_sensitive(LatencySensitivity.HIGH)
+        async def async_gen_func():
+            for i in range(3):
+                yield (i, Context.get().latency_sensitivity)
+
+        # Outside decorator, should be MEDIUM
+        assert Context.get().latency_sensitivity == LatencySensitivity.MEDIUM
+
+        # Inside decorator, should be HIGH
+        results = [item async for item in async_gen_func()]
+        assert len(results) == 3
+        for i, sensitivity in results:
+            assert sensitivity == LatencySensitivity.HIGH
+
+        # After decorator, back to MEDIUM
+        assert Context.get().latency_sensitivity == LatencySensitivity.MEDIUM
+
+    async def test_async_generator_function_with_string(self):
+        """Test decorator on async generator function with string value."""
+
+        @latency_sensitive("low")
+        async def async_gen_func():
+            for i in range(2):
+                yield Context.get().latency_sensitivity
+
+        results = [item async for item in async_gen_func()]
+        # LOW is in stack, but MEDIUM default has higher priority
+        assert all(s == LatencySensitivity.MEDIUM for s in results)
+
+    async def test_async_generator_function_priority_nesting(self):
+        """Test priority-based nesting with async generator functions."""
+
+        @latency_sensitive(LatencySensitivity.LOW)
+        async def low_async_gen():
+            yield Context.get().latency_sensitivity
+
+        @latency_sensitive(LatencySensitivity.HIGH)
+        async def high_async_gen():
+            # Get first value from low_async_gen while in HIGH context
+            async for val in low_async_gen():
+                low_result = val
+                break
+            yield Context.get().latency_sensitivity, low_result
+
+        async for outer, inner in high_async_gen():
+            # Both should be HIGH due to priority
+            assert outer == LatencySensitivity.HIGH
+            assert inner == LatencySensitivity.HIGH
+
+    async def test_async_generator_function_yields_values(self):
+        """Test that decorator preserves yielded values."""
+
+        @latency_sensitive(LatencySensitivity.HIGH)
+        async def async_gen_with_values(n):
+            for i in range(n):
+                yield i * 2
+
+        results = [item async for item in async_gen_with_values(4)]
+        assert results == [0, 2, 4, 6]
+
+    async def test_async_generator_function_with_args_kwargs(self):
+        """Test that decorator preserves arguments."""
+
+        @latency_sensitive(LatencySensitivity.HIGH)
+        async def async_gen_with_args(*args, **kwargs):
+            yield args
+            yield kwargs
+
+        results = [item async for item in async_gen_with_args(1, 2, 3, x=4, y=5)]
+        assert results[0] == (1, 2, 3)
+        assert results[1] == {"x": 4, "y": 5}
+
+    async def test_async_generator_function_exception_propagates(self):
+        """Test that exceptions propagate and stack still pops."""
+
+        @latency_sensitive(LatencySensitivity.HIGH)
+        async def failing_async_gen():
+            yield 1
+            raise ValueError("test error")
+
+        ctx = Context.get()
+        assert ctx.latency_sensitivity == LatencySensitivity.MEDIUM
+
+        agen = failing_async_gen()
+        assert await agen.__anext__() == 1
+
+        with pytest.raises(ValueError, match="test error"):
+            await agen.__anext__()
+
+        # Should revert to MEDIUM despite exception
+        assert ctx.latency_sensitivity == LatencySensitivity.MEDIUM
+
+    async def test_async_generator_function_early_exit(self):
+        """Test that early exit from async generator still pops stack."""
+
+        @latency_sensitive(LatencySensitivity.HIGH)
+        async def async_gen_func():
+            for i in range(10):
+                yield i
+
+        ctx = Context.get()
+        assert ctx.latency_sensitivity == LatencySensitivity.MEDIUM
+
+        # Only consume first 3 values
+        agen = async_gen_func()
+        results = []
+        for _ in range(3):
+            results.append(await agen.__anext__())
+        assert results == [0, 1, 2]
+
+        # Close async generator early
+        await agen.aclose()
+
+        # Should revert to MEDIUM after close
+        assert ctx.latency_sensitivity == LatencySensitivity.MEDIUM
+
+    async def test_mixed_async_and_async_gen_nesting(self):
+        """Test that async functions and async generators can nest together."""
+
+        @latency_sensitive(LatencySensitivity.LOW)
+        async def async_func():
+            return Context.get().latency_sensitivity
+
+        @latency_sensitive(LatencySensitivity.HIGH)
+        async def high_async_gen():
+            # HIGH takes precedence
+            async_result = await async_func()
+            gen_result = Context.get().latency_sensitivity
+            yield async_result, gen_result
+
+        async for async_result, gen_result in high_async_gen():
+            assert async_result == LatencySensitivity.HIGH
+            assert gen_result == LatencySensitivity.HIGH
