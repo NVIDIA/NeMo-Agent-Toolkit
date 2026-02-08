@@ -308,7 +308,6 @@ class TestCreateHttpxClient:
 class TestDynamoTransport:
     """Tests for _DynamoTransport custom transport wrapper."""
 
-    @pytest.mark.asyncio
     async def test_transport_injects_headers(self):
         """Test that _DynamoTransport injects HTTP headers."""
         import httpx
@@ -352,7 +351,6 @@ class TestDynamoTransport:
         # Cleanup
         DynamoPrefixContext.clear()
 
-    @pytest.mark.asyncio
     async def test_transport_injects_nvext_annotations(self):
         """Test that _DynamoTransport injects nvext.annotations in request body."""
         import json
@@ -409,7 +407,6 @@ class TestDynamoTransport:
         # Cleanup
         DynamoPrefixContext.clear()
 
-    @pytest.mark.asyncio
     async def test_transport_merges_existing_annotations(self):
         """Test that existing nvext.annotations are preserved (non-conflicting)."""
         import json
@@ -467,7 +464,6 @@ class TestDynamoTransport:
 
         DynamoPrefixContext.clear()
 
-    @pytest.mark.asyncio
     async def test_transport_handles_non_json_gracefully(self):
         """Test that non-JSON bodies don't cause failures."""
         import httpx
@@ -504,7 +500,6 @@ class TestDynamoTransport:
 
         DynamoPrefixContext.clear()
 
-    @pytest.mark.asyncio
     async def test_transport_uses_prediction_override(self):
         """Test that prediction lookup overrides static config values."""
         import httpx

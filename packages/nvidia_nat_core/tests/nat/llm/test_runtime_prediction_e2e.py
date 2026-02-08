@@ -27,8 +27,6 @@ from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
 import httpx
-import pytest
-
 from nat.builder.context import Context
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
@@ -94,7 +92,6 @@ def create_test_trie() -> PredictionTrieNode:
     )
 
 
-@pytest.mark.asyncio
 async def test_e2e_prediction_headers_injected_correctly():
     """Test complete flow: context tracking -> step manager -> transport -> headers."""
     # Create and save trie
@@ -190,7 +187,6 @@ async def test_e2e_prediction_headers_injected_correctly():
         DynamoPrefixContext.clear()
 
 
-@pytest.mark.asyncio
 async def test_e2e_fallback_to_root():
     """Test that unknown paths fall back to root predictions."""
     trie = create_test_trie()
@@ -240,7 +236,6 @@ async def test_e2e_fallback_to_root():
     DynamoPrefixContext.clear()
 
 
-@pytest.mark.asyncio
 async def test_e2e_multiple_calls_in_same_context():
     """Test that call tracking increments correctly for multiple LLM calls in the same function context."""
     trie = create_test_trie()
