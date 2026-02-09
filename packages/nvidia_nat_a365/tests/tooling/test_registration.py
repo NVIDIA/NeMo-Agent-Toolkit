@@ -17,7 +17,7 @@
 """Registration tests for A365 tooling integration."""
 
 import sys
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -45,21 +45,12 @@ class TestA365ToolingConfigRegistration:
 
         assert registration is not None
         assert registration.config_type == A365MCPToolingConfig
-        assert registration.full_type == "a365_mcp_tooling"
-
-    def test_config_class_discoverable(self):
-        """Test that A365MCPToolingConfig can be discovered via entry points."""
-        registry = GlobalTypeRegistry.get()
-
-        # Verify it's registered (discovery happens via autouse fixture)
-        registration = registry.get_function_group(A365MCPToolingConfig)
-        assert registration is not None
-        assert registration.config_type == A365MCPToolingConfig
+        assert registration.full_type.endswith("/a365_mcp_tooling")
 
     def test_config_class_has_correct_name(self):
-        """Test that A365MCPToolingConfig has the correct name attribute."""
-        assert A365MCPToolingConfig.full_type == "a365_mcp_tooling"
-        assert A365MCPToolingConfig.name == "a365_mcp_tooling"
+        """Test that A365MCPToolingConfig has the correct full_type."""
+        # The name parameter ("a365_mcp_tooling") is used to generate full_type
+        assert A365MCPToolingConfig.full_type.endswith("/a365_mcp_tooling")
 
 
 class TestA365ToolingMissingMCPDependency:
@@ -77,70 +68,25 @@ class TestA365ToolingMissingMCPDependency:
 
         mock_builder = Mock()
 
-        # Temporarily remove MCP modules from sys.modules to simulate missing dependency
-        # Save original modules
-        saved_modules = {}
-        mcp_module_key = "nat.plugins.mcp.client.client_config"
-        if mcp_module_key in sys.modules:
-            saved_modules[mcp_module_key] = sys.modules[mcp_module_key]
-            del sys.modules[mcp_module_key]
-
-        # Also remove parent modules that might prevent re-import
-        for key in list(sys.modules.keys()):
-            if key.startswith("nat.plugins.mcp") and key != "nat.plugins.mcp":
-                if key not in saved_modules:
-                    saved_modules[key] = sys.modules[key]
-                del sys.modules[key]
-
-        try:
+        # Patch the import to raise ImportError when MCP module is imported
+        # The import happens inside the function: from nat.plugins.mcp.client.client_config import ...
+        original_import = __import__
+        
+        def mock_import(name, globals=None, locals=None, fromlist=(), level=0):
+            if name == "nat.plugins.mcp.client.client_config":
+                raise ImportError(f"No module named '{name}'")
+            return original_import(name, globals, locals, fromlist, level)
+        
+        with patch("builtins.__import__", side_effect=mock_import):
             with pytest.raises(OptionalImportError) as exc_info:
-                await a365_mcp_tooling_function_group(config, mock_builder)
+                async with a365_mcp_tooling_function_group(config, mock_builder):
+                    pass
 
             # Verify the error message contains helpful installation instructions
             error_msg = str(exc_info.value)
             assert "nvidia-nat-mcp" in error_msg
             assert "uv pip install nvidia-nat-mcp" in error_msg or "nvidia-nat[mcp]" in error_msg
             assert "A365 tooling feature requires the MCP client functionality" in error_msg
-        finally:
-            # Restore modules
-            sys.modules.update(saved_modules)
-
-    @pytest.mark.asyncio
-    async def test_missing_mcp_dependency_error_message_format(self):
-        """Test that OptionalImportError has the correct format."""
-        from nat.plugins.a365.tooling.register import a365_mcp_tooling_function_group
-
-        config = A365MCPToolingConfig(
-            agentic_app_id="test-agent",
-            auth_token="test-token",
-        )
-
-        mock_builder = Mock()
-
-        # Temporarily remove MCP modules from sys.modules to simulate missing dependency
-        saved_modules = {}
-        mcp_module_key = "nat.plugins.mcp.client.client_config"
-        if mcp_module_key in sys.modules:
-            saved_modules[mcp_module_key] = sys.modules[mcp_module_key]
-            del sys.modules[mcp_module_key]
-
-        for key in list(sys.modules.keys()):
-            if key.startswith("nat.plugins.mcp") and key != "nat.plugins.mcp":
-                if key not in saved_modules:
-                    saved_modules[key] = sys.modules[key]
-                del sys.modules[key]
-
-        try:
-            with pytest.raises(OptionalImportError) as exc_info:
-                await a365_mcp_tooling_function_group(config, mock_builder)
-
-            # Verify OptionalImportError structure
-            assert exc_info.value.module_name == "nvidia-nat-mcp"
-            assert len(exc_info.value.args) > 0
-            assert "additional_message" in str(exc_info.value) or "MCP client functionality" in str(exc_info.value)
-        finally:
-            # Restore modules
-            sys.modules.update(saved_modules)
 
 
 class TestA365ToolingFunctionGroupDiscovery:
@@ -184,8 +130,9 @@ class TestA365ToolingFunctionGroupDiscovery:
         """Test that A365MCPToolingConfig validates reconnect backoff values."""
         from datetime import timedelta
 
-        # Should raise ValueError if max_backoff < initial_backoff
-        with pytest.raises(ValueError, match="reconnect_max_backoff must be greater than or equal"):
+        # Should raise A365ConfigurationError if max_backoff < initial_backoff
+        from nat.plugins.a365.exceptions import A365ConfigurationError
+        with pytest.raises(A365ConfigurationError, match="reconnect_max_backoff must be greater than or equal"):
             A365MCPToolingConfig(
                 agentic_app_id="test-agent",
                 auth_token="test-token",

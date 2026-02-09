@@ -17,7 +17,7 @@
 """Integration tests for A365 telemetry exporter with mocked A365 SDK."""
 
 import uuid
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from opentelemetry.sdk.resources import Resource
@@ -230,17 +230,20 @@ class TestA365ExporterIntegration:
 
     @pytest.mark.asyncio
     async def test_export_error_handling(self, a365_exporter):
-        """Test that export errors are caught and logged without re-raising."""
+        """Test that export errors are caught, logged, and re-raised as A365SDKError."""
+        from nat.plugins.a365.exceptions import A365SDKError
+
         span = create_mock_otel_span(name="test_span")
 
         # Make the A365 exporter raise an exception
         a365_exporter._mock_a365_exporter_instance.export.side_effect = Exception("Export failed")
 
-        # Should not raise, but log the error
+        # Should raise A365SDKError (not generic Exception)
         with patch("nat.plugins.a365.telemetry.a365_exporter.logger") as mock_logger:
-            await a365_exporter.export_otel_spans([span])
+            with pytest.raises(A365SDKError, match="Failed to export spans to A365"):
+                await a365_exporter.export_otel_spans([span])
 
-            # Verify error was logged
+            # Verify error was logged before re-raising
             mock_logger.error.assert_called_once()
             error_call = mock_logger.error.call_args
             assert "Error exporting spans to A365" in error_call[0][0]
@@ -292,3 +295,138 @@ class TestA365ExporterIntegration:
         readable_spans = call_args[0][0]
         assert isinstance(readable_spans, list)
         assert len(readable_spans) == 1
+
+
+class TestProactiveTokenRefresh:
+    """Tests for proactive token refresh in A365OtelExporter."""
+
+    @pytest.fixture
+    def mock_auth_provider(self):
+        """Create a mock auth provider for token refresh."""
+        provider = Mock()
+        provider.authenticate = AsyncMock()
+        return provider
+
+    @pytest.fixture
+    def mock_token_cache(self):
+        """Create a mock token cache."""
+        from nat.plugins.a365.telemetry.register import _TokenCache
+
+        cache = Mock(spec=_TokenCache)
+        cache.is_expiring_soon = Mock(return_value=False)
+        cache.update_token = Mock()
+        cache.get_token = Mock(return_value="cached_token_123")
+        return cache
+
+    @pytest.fixture
+    def exporter_with_auth_ref(self, mock_context_state, mock_auth_provider, mock_token_cache):
+        """Create an A365OtelExporter with AuthenticationRef-based auth."""
+        with patch(
+            "nat.plugins.a365.telemetry.a365_exporter.Agent365Exporter"
+        ) as mock_exporter_class:
+            mock_exporter_instance = Mock()
+            mock_exporter_instance.export = Mock(return_value=SpanExportResult.SUCCESS)
+            mock_exporter_class.return_value = mock_exporter_instance
+
+            exporter = A365OtelExporter(
+                agent_id="test-agent-123",
+                tenant_id="test-tenant-456",
+                token_resolver=lambda a, t: "token",
+                cluster_category="prod",
+                use_s2s_endpoint=False,
+                suppress_invoke_agent_input=False,
+                context_state=mock_context_state,
+                auth_provider=mock_auth_provider,
+                token_cache=mock_token_cache,
+            )
+
+            exporter._mock_a365_exporter_instance = mock_exporter_instance
+            yield exporter
+
+    @pytest.mark.asyncio
+    async def test_no_refresh_when_token_not_expiring(self, exporter_with_auth_ref, mock_token_cache):
+        """Test that token is not refreshed when not expiring soon."""
+        span = create_mock_otel_span(name="test_span")
+        mock_token_cache.is_expiring_soon.return_value = False
+
+        await exporter_with_auth_ref.export_otel_spans([span])
+
+        # Auth provider should not be called
+        exporter_with_auth_ref._auth_provider.authenticate.assert_not_called()
+        # Token cache update should not be called
+        mock_token_cache.update_token.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_refresh_when_token_expiring_soon(self, exporter_with_auth_ref, mock_token_cache):
+        """Test that token is refreshed when expiring soon."""
+        from datetime import datetime, timedelta, timezone
+        from pydantic import SecretStr
+
+        span = create_mock_otel_span(name="test_span")
+        mock_token_cache.is_expiring_soon.return_value = True
+
+        # Mock successful token refresh
+        from nat.data_models.authentication import AuthResult, BearerTokenCred
+
+        new_token = BearerTokenCred(token=SecretStr("new_token_456"))
+        auth_result = Mock(spec=AuthResult)
+        auth_result.credentials = [new_token]
+        auth_result.token_expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+
+        exporter_with_auth_ref._auth_provider.authenticate.return_value = auth_result
+
+        with patch("nat.builder.context.Context") as mock_context_class:
+            mock_context_instance = Mock()
+            mock_context_instance.user_id = "test_user"
+            mock_context_class.get.return_value = mock_context_instance
+
+            await exporter_with_auth_ref.export_otel_spans([span])
+
+            # Auth provider should be called
+            exporter_with_auth_ref._auth_provider.authenticate.assert_called_once()
+            # Token cache should be updated
+            mock_token_cache.update_token.assert_called_once_with("new_token_456", auth_result.token_expires_at)
+
+    @pytest.mark.asyncio
+    async def test_refresh_handles_no_credentials(self, exporter_with_auth_ref, mock_token_cache):
+        """Test that refresh handles case when auth provider returns no credentials."""
+        from nat.data_models.authentication import AuthResult
+
+        span = create_mock_otel_span(name="test_span")
+        mock_token_cache.is_expiring_soon.return_value = True
+
+        auth_result = Mock(spec=AuthResult)
+        auth_result.credentials = []
+        exporter_with_auth_ref._auth_provider.authenticate.return_value = auth_result
+
+        with patch("nat.builder.context.Context") as mock_context_class:
+            mock_context_instance = Mock()
+            mock_context_instance.user_id = "test_user"
+            mock_context_class.get.return_value = mock_context_instance
+            with patch("nat.plugins.a365.telemetry.a365_exporter.logger") as mock_logger:
+                await exporter_with_auth_ref.export_otel_spans([span])
+
+                # Should log warning but continue
+                mock_logger.warning.assert_called()
+                # Token cache should not be updated
+                mock_token_cache.update_token.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_refresh_handles_auth_provider_error(self, exporter_with_auth_ref, mock_token_cache):
+        """Test that refresh handles auth provider errors gracefully."""
+        span = create_mock_otel_span(name="test_span")
+        mock_token_cache.is_expiring_soon.return_value = True
+
+        exporter_with_auth_ref._auth_provider.authenticate.side_effect = Exception("Auth failed")
+
+        with patch("nat.builder.context.Context") as mock_context_class:
+            mock_context_instance = Mock()
+            mock_context_instance.user_id = "test_user"
+            mock_context_class.get.return_value = mock_context_instance
+            with patch("nat.plugins.a365.telemetry.a365_exporter.logger") as mock_logger:
+                await exporter_with_auth_ref.export_otel_spans([span])
+
+                # Should log warning but continue
+                mock_logger.warning.assert_called()
+                # Export should still proceed
+                exporter_with_auth_ref._mock_a365_exporter_instance.export.assert_called_once()

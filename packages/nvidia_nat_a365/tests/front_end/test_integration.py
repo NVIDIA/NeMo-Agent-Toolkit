@@ -88,6 +88,10 @@ def mock_notification_activity():
     activity = Mock()
     activity.text = "Test notification text"
     activity.summary = "Test notification summary"
+    # Set up email structure for email notifications
+    activity.email = Mock()
+    activity.email.html_body = "Test email HTML body"
+    activity.wpx_comment = None  # Not a comment notification
     return activity
 
 
@@ -392,7 +396,7 @@ class TestMessageHandlerSetup:
         handlers = []
         mock_agent_application.activity = Mock(side_effect=create_activity_decorator_mock(handlers))
 
-        await worker.setup_message_handler(
+        await worker.setup_message_handlers(
             agent_app=mock_agent_application,
             session_manager=mock_session_manager,
         )
@@ -418,7 +422,7 @@ class TestMessageHandlerSetup:
         handlers = []
         mock_agent_application.activity = Mock(side_effect=create_activity_decorator_mock(handlers))
 
-        await worker.setup_message_handler(
+        await worker.setup_message_handlers(
             agent_app=mock_agent_application,
             session_manager=mock_session_manager,
         )
@@ -459,7 +463,7 @@ class TestMessageHandlerSetup:
         else:  # message
             handlers = []
             mock_agent_application.activity = Mock(side_effect=create_activity_decorator_mock(handlers))
-            await worker.setup_message_handler(
+            await worker.setup_message_handlers(
                 agent_app=mock_agent_application,
                 session_manager=mock_session_manager,
             )
@@ -468,7 +472,8 @@ class TestMessageHandlerSetup:
         
         mock_turn_context.send_activity.assert_called_once()
         error_msg = mock_turn_context.send_activity.call_args[0][0].lower()
-        assert "error" in error_msg or "encountered" in error_msg
+        # Error messages can be: "error", "encountered", "invalid", "timed out", etc.
+        assert any(keyword in error_msg for keyword in ["error", "encountered", "invalid", "timed out"])
 
 
 class TestErrorHandler:
@@ -540,3 +545,536 @@ class TestFrontEndPluginInitialization:
         mock_agent_application.error.assert_called_once()
         verify_all_notification_handlers(mock_notification)
         mock_session_manager.shutdown.assert_called_once()
+
+
+class TestLogLevelConfiguration:
+    """Test log_level configuration."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("log_level,expected_numeric_level", [
+        ("DEBUG", 10),
+        ("INFO", 20),
+        ("WARNING", 30),
+        ("ERROR", 40),
+        ("debug", 10),  # Test case insensitivity
+        ("info", 20),
+    ])
+    async def test_log_level_set_correctly(
+        self,
+        log_level,
+        expected_numeric_level,
+        mock_agent_application,
+        mock_notification,
+        mock_session_manager,
+        mock_workflow_builder,
+    ):
+        """Test that different log_level values set correct log levels."""
+        import logging
+        from nat.utils.log_utils import setup_logging
+        
+        a365_config = A365FrontEndConfig(
+            app_id="test-app-id",
+            app_password="test-app-password",
+            log_level=log_level,
+        )
+        full_config = Config(
+            general=GeneralConfig(front_end=a365_config),
+            workflow=EchoFunctionConfig(),
+        )
+        plugin = A365FrontEndPlugin(full_config=full_config)
+        
+        # Patch setup_logging to verify it's called with correct level
+        with patch("nat.plugins.a365.front_end.plugin.setup_logging") as mock_setup_logging:
+            with patch("nat.plugins.a365.front_end.plugin.logger") as mock_logger:
+                with patch_sdk_components(
+                    mock_agent_app=mock_agent_application,
+                    mock_notification=mock_notification,
+                    mock_session_mgr=mock_session_manager,
+                    mock_workflow_builder=mock_workflow_builder,
+                ):
+                    try:
+                        await plugin.run()
+                    except KeyboardInterrupt:
+                        pass
+                
+                # Verify setup_logging was called with correct numeric level
+                mock_setup_logging.assert_called_once_with(expected_numeric_level)
+                # Verify logger.setLevel was called with correct numeric level
+                mock_logger.setLevel.assert_called_once_with(expected_numeric_level)
+
+    @pytest.mark.asyncio
+    async def test_invalid_log_level_falls_back_to_info(
+        self,
+        mock_agent_application,
+        mock_notification,
+        mock_session_manager,
+        mock_workflow_builder,
+    ):
+        """Test that invalid log_level falls back to INFO."""
+        import logging
+        
+        a365_config = A365FrontEndConfig(
+            app_id="test-app-id",
+            app_password="test-app-password",
+            log_level="INVALID_LEVEL",
+        )
+        full_config = Config(
+            general=GeneralConfig(front_end=a365_config),
+            workflow=EchoFunctionConfig(),
+        )
+        plugin = A365FrontEndPlugin(full_config=full_config)
+        
+        # Patch setup_logging to verify it's called with INFO (fallback)
+        with patch("nat.plugins.a365.front_end.plugin.setup_logging") as mock_setup_logging:
+            with patch("nat.plugins.a365.front_end.plugin.logger") as mock_logger:
+                with patch_sdk_components(
+                    mock_agent_app=mock_agent_application,
+                    mock_notification=mock_notification,
+                    mock_session_mgr=mock_session_manager,
+                    mock_workflow_builder=mock_workflow_builder,
+                ):
+                    try:
+                        await plugin.run()
+                    except KeyboardInterrupt:
+                        pass
+                
+                # Verify setup_logging was called with INFO (fallback)
+                mock_setup_logging.assert_called_once_with(logging.INFO)
+                mock_logger.setLevel.assert_called_once_with(logging.INFO)
+
+
+class TestNotificationWorkflowRouting:
+    """Test notification_workflow routing functionality."""
+
+    @pytest.mark.asyncio
+    async def test_notification_workflow_creates_separate_session_manager(
+        self,
+        mock_agent_application,
+        mock_notification,
+        mock_session_manager,
+        mock_workflow_builder,
+    ):
+        """Test that notification_workflow creates separate SessionManager with entry_function."""
+        a365_config = A365FrontEndConfig(
+            app_id="test-app-id",
+            app_password="test-app-password",
+            enable_notifications=True,
+            notification_workflow="custom_notification_workflow",
+        )
+        full_config = Config(
+            general=GeneralConfig(front_end=a365_config),
+            workflow=EchoFunctionConfig(),
+        )
+        plugin = A365FrontEndPlugin(full_config=full_config)
+        
+        # Track SessionManager.create calls
+        session_manager_calls = []
+        
+        async def mock_create(*args, **kwargs):
+            session_manager_calls.append(kwargs)
+            return mock_session_manager
+        
+        # Use patch_sdk_components but override SessionManager.create patch after it starts
+        with patch_sdk_components(
+            mock_agent_app=mock_agent_application,
+            mock_notification=mock_notification,
+            mock_session_mgr=mock_session_manager,  # Let it patch, we'll override
+            mock_workflow_builder=mock_workflow_builder,
+        ):
+            # Override the SessionManager.create patch from patch_sdk_components
+            with patch("nat.plugins.a365.front_end.plugin.SessionManager.create", side_effect=mock_create):
+                try:
+                    await plugin.run()
+                except KeyboardInterrupt:
+                    pass
+        
+        # Verify SessionManager.create was called twice
+        assert len(session_manager_calls) == 2
+        
+        # First call: default session manager (no entry_function)
+        default_call = session_manager_calls[0]
+        assert default_call.get("entry_function") is None
+        
+        # Second call: notification session manager (with entry_function)
+        notification_call = session_manager_calls[1]
+        assert notification_call.get("entry_function") == "custom_notification_workflow"
+
+    @pytest.mark.asyncio
+    async def test_notification_workflow_none_uses_same_session_manager(
+        self,
+        mock_agent_application,
+        mock_notification,
+        mock_session_manager,
+        mock_workflow_builder,
+    ):
+        """Test that when notification_workflow is None, both use the same SessionManager."""
+        a365_config = A365FrontEndConfig(
+            app_id="test-app-id",
+            app_password="test-app-password",
+            enable_notifications=True,
+            notification_workflow=None,  # Explicitly None
+        )
+        full_config = Config(
+            general=GeneralConfig(front_end=a365_config),
+            workflow=EchoFunctionConfig(),
+        )
+        plugin = A365FrontEndPlugin(full_config=full_config)
+        
+        # Track SessionManager.create calls
+        session_manager_calls = []
+        
+        async def mock_create(*args, **kwargs):
+            session_manager_calls.append(kwargs)
+            return mock_session_manager
+        
+        # Use patch_sdk_components but override SessionManager.create patch after it starts
+        with patch_sdk_components(
+            mock_agent_app=mock_agent_application,
+            mock_notification=mock_notification,
+            mock_session_mgr=mock_session_manager,  # Let it patch, we'll override
+            mock_workflow_builder=mock_workflow_builder,
+        ):
+            # Override the SessionManager.create patch from patch_sdk_components
+            with patch("nat.plugins.a365.front_end.plugin.SessionManager.create", side_effect=mock_create):
+                try:
+                    await plugin.run()
+                except KeyboardInterrupt:
+                    pass
+        
+        # Verify SessionManager.create was called only once (same manager for both)
+        assert len(session_manager_calls) == 1
+        assert session_manager_calls[0].get("entry_function") is None
+
+    @pytest.mark.asyncio
+    async def test_notification_handlers_use_notification_session_manager(
+        self,
+        mock_agent_application,
+        mock_notification,
+        mock_session_manager,
+        mock_workflow_builder,
+        mock_turn_context,
+        mock_turn_state,
+        mock_notification_activity,
+    ):
+        """Test that notification handlers use notification_session_manager, not default."""
+        a365_config = A365FrontEndConfig(
+            app_id="test-app-id",
+            app_password="test-app-password",
+            enable_notifications=True,
+            notification_workflow="custom_notification_workflow",
+        )
+        full_config = Config(
+            general=GeneralConfig(front_end=a365_config),
+            workflow=EchoFunctionConfig(),
+        )
+        
+        # Create separate mock session managers
+        default_session_manager = MagicMock()
+        default_runner = MagicMock()
+        default_runner.__aenter__ = AsyncMock(return_value=default_runner)
+        default_runner.__aexit__ = AsyncMock(return_value=None)
+        default_runner.result = AsyncMock(return_value="Default workflow result")
+        default_session_manager.run = MagicMock(return_value=default_runner)
+        default_session_manager.shutdown = AsyncMock()
+        
+        notification_session_manager = MagicMock()
+        notification_runner = MagicMock()
+        notification_runner.__aenter__ = AsyncMock(return_value=notification_runner)
+        notification_runner.__aexit__ = AsyncMock(return_value=None)
+        notification_runner.result = AsyncMock(return_value="Notification workflow result")
+        notification_session_manager.run = MagicMock(return_value=notification_runner)
+        notification_session_manager.shutdown = AsyncMock()
+        
+        call_count = {"value": 0}
+        
+        async def mock_create(*args, **kwargs):
+            call_count["value"] += 1
+            if call_count["value"] == 1:
+                return default_session_manager
+            else:
+                return notification_session_manager
+        
+        plugin = A365FrontEndPlugin(full_config=full_config)
+        worker = A365FrontEndPluginWorker(full_config)
+        
+        handlers = []
+        mock_notification.on_email = Mock(return_value=create_notification_decorator_mock(handlers))
+        
+        with patch("microsoft_agents_a365.notifications.AgentNotification", return_value=mock_notification):
+            # Setup notification handlers (this should use notification_session_manager)
+            await worker.setup_notification_handlers(
+                agent_app=mock_agent_application,
+                session_manager=notification_session_manager,
+            )
+        
+        # Execute notification handler
+        if handlers:
+            await handlers[0](mock_turn_context, mock_turn_state, mock_notification_activity)
+            
+            # Verify notification_session_manager was used (not default_session_manager)
+            notification_session_manager.run.assert_called_once()
+            default_session_manager.run.assert_not_called()
+
+
+class TestWorkerPatternMethods:
+    """Test worker pattern dependency injection methods."""
+
+    def test_get_storage_returns_memory_storage(self, full_config):
+        """Test that _get_storage() returns MemoryStorage by default."""
+        worker = A365FrontEndPluginWorker(full_config)
+        
+        # Patch MemoryStorage at its import source
+        with patch("microsoft_agents.hosting.core.MemoryStorage") as mock_memory_storage:
+            mock_instance = Mock()
+            mock_memory_storage.return_value = mock_instance
+            
+            storage = worker._get_storage()
+            
+            # Verify MemoryStorage was instantiated
+            mock_memory_storage.assert_called_once()
+            # Verify returned instance
+            assert storage is mock_instance
+
+    def test_get_connection_manager_returns_msal_connection_manager(self, full_config):
+        """Test that _get_connection_manager() returns MsalConnectionManager with correct config."""
+        worker = A365FrontEndPluginWorker(full_config)
+        
+        agents_sdk_config = {
+            "MicrosoftAppId": "test-app-id",
+            "MicrosoftAppPassword": "test-password",
+            "MicrosoftAppTenantId": "test-tenant-id",
+        }
+        
+        # Patch MsalConnectionManager at its import source
+        with patch("microsoft_agents.hosting.core.authentication.MsalConnectionManager") as mock_msal:
+            mock_instance = Mock()
+            mock_msal.return_value = mock_instance
+            
+            connection_manager = worker._get_connection_manager(agents_sdk_config)
+            
+            # Verify MsalConnectionManager was instantiated with correct config
+            mock_msal.assert_called_once_with(**agents_sdk_config)
+            # Verify returned instance
+            assert connection_manager is mock_instance
+
+    def test_get_storage_can_be_overridden(self, full_config):
+        """Test that _get_storage() can be overridden in a subclass."""
+        custom_storage = Mock()
+        
+        class CustomWorker(A365FrontEndPluginWorker):
+            def _get_storage(self):
+                return custom_storage
+        
+        worker = CustomWorker(full_config)
+        storage = worker._get_storage()
+        
+        assert storage is custom_storage
+
+    def test_get_connection_manager_can_be_overridden(self, full_config):
+        """Test that _get_connection_manager() can be overridden in a subclass."""
+        custom_connection_manager = Mock()
+        agents_sdk_config = {"MicrosoftAppId": "test-app-id"}
+        
+        class CustomWorker(A365FrontEndPluginWorker):
+            def _get_connection_manager(self, agents_sdk_config):
+                return custom_connection_manager
+        
+        worker = CustomWorker(full_config)
+        connection_manager = worker._get_connection_manager(agents_sdk_config)
+        
+        assert connection_manager is custom_connection_manager
+
+
+class TestErrorHandlingInCreateAgentApplication:
+    """Test error handling in create_agent_application."""
+
+    @pytest.mark.asyncio
+    async def test_connection_manager_value_error_raises_a365_configuration_error(self, full_config):
+        """Test that ValueError from connection manager raises A365ConfigurationError."""
+        from nat.plugins.a365.exceptions import A365ConfigurationError
+        
+        worker = A365FrontEndPluginWorker(full_config)
+        
+        # Patch SDK imports that create_agent_application() needs
+        # CloudAdapter and AgentApplication need to be callable classes that return mocks
+        mock_adapter_instance = Mock()
+        mock_agent_app_instance = Mock()
+        
+        # Create mock classes that can be instantiated
+        class MockCloudAdapter:
+            def __init__(self, *args, **kwargs):
+                pass
+        
+        class MockAgentApplication:
+            def __class_getitem__(cls, item):
+                return cls
+            def __new__(cls, *args, **kwargs):
+                return mock_agent_app_instance
+        
+        with patch("microsoft_agents.hosting.core.MemoryStorage", return_value=Mock()):
+            with patch("microsoft_agents.hosting.core.CloudAdapter", MockCloudAdapter, create=True):
+                with patch("microsoft_agents.hosting.core.AgentApplication", MockAgentApplication, create=True):
+                    with patch("microsoft_agents.hosting.core.TurnState", Mock(), create=True):
+                        with patch.object(worker, "_get_connection_manager", side_effect=ValueError("Invalid config")):
+                            with pytest.raises(A365ConfigurationError, match="Invalid configuration for connection manager"):
+                                await worker.create_agent_application()
+
+    @pytest.mark.asyncio
+    async def test_connection_manager_type_error_raises_a365_configuration_error(self, full_config):
+        """Test that TypeError from connection manager raises A365ConfigurationError."""
+        from nat.plugins.a365.exceptions import A365ConfigurationError
+        
+        worker = A365FrontEndPluginWorker(full_config)
+        
+        # Patch SDK imports that create_agent_application() needs
+        # CloudAdapter and AgentApplication need to be callable classes that return mocks
+        mock_adapter_instance = Mock()
+        mock_agent_app_instance = Mock()
+        
+        # Create mock classes that can be instantiated
+        class MockCloudAdapter:
+            def __init__(self, *args, **kwargs):
+                pass
+        
+        class MockAgentApplication:
+            def __class_getitem__(cls, item):
+                return cls
+            def __new__(cls, *args, **kwargs):
+                return mock_agent_app_instance
+        
+        with patch("microsoft_agents.hosting.core.MemoryStorage", return_value=Mock()):
+            with patch("microsoft_agents.hosting.core.CloudAdapter", MockCloudAdapter, create=True):
+                with patch("microsoft_agents.hosting.core.AgentApplication", MockAgentApplication, create=True):
+                    with patch("microsoft_agents.hosting.core.TurnState", Mock(), create=True):
+                        with patch.object(worker, "_get_connection_manager", side_effect=TypeError("Wrong type")):
+                            with pytest.raises(A365ConfigurationError, match="Invalid configuration for connection manager"):
+                                await worker.create_agent_application()
+
+    @pytest.mark.asyncio
+    async def test_connection_manager_application_error_raises_a365_sdk_error(self, full_config):
+        """Test that ApplicationError from connection manager raises A365SDKError."""
+        from nat.plugins.a365.exceptions import A365SDKError
+        
+        # Mock ApplicationError
+        class MockApplicationError(Exception):
+            pass
+        
+        worker = A365FrontEndPluginWorker(full_config)
+        
+        # Patch SDK imports that create_agent_application() needs
+        # CloudAdapter and AgentApplication need to be callable classes that return mocks
+        mock_adapter_instance = Mock()
+        mock_agent_app_instance = Mock()
+        
+        # Create mock classes that can be instantiated
+        class MockCloudAdapter:
+            def __init__(self, *args, **kwargs):
+                pass
+        
+        class MockAgentApplication:
+            def __class_getitem__(cls, item):
+                return cls
+            def __new__(cls, *args, **kwargs):
+                return mock_agent_app_instance
+        
+        with patch("microsoft_agents.hosting.core.MemoryStorage", return_value=Mock()):
+            with patch("microsoft_agents.hosting.core.CloudAdapter", MockCloudAdapter, create=True):
+                with patch("microsoft_agents.hosting.core.AgentApplication", MockAgentApplication, create=True):
+                    with patch("microsoft_agents.hosting.core.TurnState", Mock(), create=True):
+                        with patch.object(worker, "_get_connection_manager", side_effect=MockApplicationError("SDK error")):
+                            # Patch ApplicationError import at its source
+                            with patch("microsoft_agents.hosting.core.app.app_error.ApplicationError", MockApplicationError):
+                                with pytest.raises(A365SDKError, match="Failed to initialize connection manager"):
+                                    await worker.create_agent_application()
+
+    @pytest.mark.asyncio
+    async def test_cloud_adapter_error_raises_a365_sdk_error(self, full_config):
+        """Test that CloudAdapter initialization failure raises A365SDKError."""
+        from nat.plugins.a365.exceptions import A365SDKError
+        
+        worker = A365FrontEndPluginWorker(full_config)
+        mock_storage = Mock()
+        mock_connection_manager = Mock()
+        
+        with patch.object(worker, "_get_storage", return_value=mock_storage):
+            with patch.object(worker, "_get_connection_manager", return_value=mock_connection_manager):
+                # Patch CloudAdapter at its import source
+                with patch("microsoft_agents.hosting.core.CloudAdapter", side_effect=Exception("Adapter error"), create=True):
+                    with pytest.raises(A365SDKError, match="Failed to initialize CloudAdapter"):
+                        await worker.create_agent_application()
+
+    @pytest.mark.asyncio
+    async def test_authorization_value_error_raises_a365_configuration_error(self, full_config):
+        """Test that ValueError from Authorization raises A365ConfigurationError."""
+        from nat.plugins.a365.exceptions import A365ConfigurationError
+        
+        worker = A365FrontEndPluginWorker(full_config)
+        mock_storage = Mock()
+        mock_connection_manager = Mock()
+        
+        with patch.object(worker, "_get_storage", return_value=mock_storage):
+            with patch.object(worker, "_get_connection_manager", return_value=mock_connection_manager):
+                # Patch SDK components at their import source
+                with patch("microsoft_agents.hosting.core.CloudAdapter", return_value=Mock(), create=True):
+                    with patch("microsoft_agents.hosting.core.authentication.Authorization", side_effect=ValueError("Invalid auth config")):
+                        with pytest.raises(A365ConfigurationError, match="Invalid configuration for Authorization"):
+                            await worker.create_agent_application()
+
+    @pytest.mark.asyncio
+    async def test_agent_application_value_error_raises_a365_configuration_error(self, full_config):
+        """Test that ValueError from AgentApplication raises A365ConfigurationError."""
+        from nat.plugins.a365.exceptions import A365ConfigurationError
+        
+        worker = A365FrontEndPluginWorker(full_config)
+        mock_storage = Mock()
+        mock_connection_manager = Mock()
+        mock_adapter = Mock()
+        mock_authorization = Mock()
+        
+        with patch.object(worker, "_get_storage", return_value=mock_storage):
+            with patch.object(worker, "_get_connection_manager", return_value=mock_connection_manager):
+                # Patch SDK components at their import source
+                with patch("microsoft_agents.hosting.core.CloudAdapter", return_value=mock_adapter, create=True):
+                    with patch("microsoft_agents.hosting.core.authentication.Authorization", return_value=mock_authorization):
+                        # Mock AgentApplication to raise ValueError
+                        class MockAgentApplication:
+                            def __class_getitem__(cls, item):
+                                return cls
+                            def __new__(cls, *args, **kwargs):
+                                raise ValueError("Invalid app config")
+                        
+                        with patch("microsoft_agents.hosting.core.AgentApplication", MockAgentApplication, create=True):
+                            with pytest.raises(A365ConfigurationError, match="Invalid configuration for AgentApplication"):
+                                await worker.create_agent_application()
+
+    @pytest.mark.asyncio
+    async def test_agent_application_application_error_raises_a365_sdk_error(self, full_config):
+        """Test that ApplicationError from AgentApplication raises A365SDKError."""
+        from nat.plugins.a365.exceptions import A365SDKError
+        
+        # Mock ApplicationError
+        class MockApplicationError(Exception):
+            pass
+        
+        worker = A365FrontEndPluginWorker(full_config)
+        mock_storage = Mock()
+        mock_connection_manager = Mock()
+        mock_adapter = Mock()
+        mock_authorization = Mock()
+        
+        with patch.object(worker, "_get_storage", return_value=mock_storage):
+            with patch.object(worker, "_get_connection_manager", return_value=mock_connection_manager):
+                # Patch SDK components at their import source
+                with patch("microsoft_agents.hosting.core.CloudAdapter", return_value=mock_adapter, create=True):
+                    with patch("microsoft_agents.hosting.core.authentication.Authorization", return_value=mock_authorization):
+                        # Mock AgentApplication to raise ApplicationError
+                        class MockAgentApplication:
+                            def __class_getitem__(cls, item):
+                                return cls
+                            def __new__(cls, *args, **kwargs):
+                                raise MockApplicationError("SDK app error")
+                        
+                        with patch("microsoft_agents.hosting.core.AgentApplication", MockAgentApplication, create=True):
+                            with patch("microsoft_agents.hosting.core.app.app_error.ApplicationError", MockApplicationError):
+                                with pytest.raises(A365SDKError, match="Failed to create AgentApplication"):
+                                    await worker.create_agent_application()
