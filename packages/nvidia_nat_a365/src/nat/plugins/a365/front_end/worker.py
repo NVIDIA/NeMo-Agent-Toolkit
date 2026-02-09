@@ -20,6 +20,8 @@ This worker encapsulates the Microsoft Agents SDK integration logic,
 allowing for extensibility and better separation of concerns.
 """
 
+from __future__ import annotations
+
 import logging
 from typing import TYPE_CHECKING
 
@@ -37,6 +39,8 @@ from nat.runtime.session import SessionManager
 if TYPE_CHECKING:
     from microsoft_agents.hosting.core import AgentApplication, TurnState
     from microsoft_agents.hosting.core.authentication import MsalConnectionManager
+    from microsoft_agents.hosting.core.authorization import Connections
+    from microsoft_agents.hosting.core.storage import Storage
 
 logger = logging.getLogger(__name__)
 
@@ -58,13 +62,40 @@ class A365FrontEndPluginWorker:
         self.full_config = config
         self.front_end_config: A365FrontEndConfig = config.general.front_end  # type: ignore
 
+    def _get_storage(self) -> Storage:
+        """Get the storage instance for the AgentApplication.
+        
+        Uses dependency injection pattern - returns Storage Protocol implementation.
+        Defaults to MemoryStorage, but can be overridden for custom storage (e.g., BlobStorage, CosmosDbStorage).
+        
+        Returns:
+            Storage: A Storage Protocol implementation (default: MemoryStorage)
+        """
+        from microsoft_agents.hosting.core import MemoryStorage
+        return MemoryStorage()
+
+    def _get_connection_manager(self, agents_sdk_config: dict[str, str]) -> Connections:
+        """Get the connection manager instance for the AgentApplication.
+        
+        Uses dependency injection pattern - returns Connections Protocol implementation.
+        Defaults to MsalConnectionManager, but can be overridden for custom connection managers.
+        
+        Args:
+            agents_sdk_config: Configuration dictionary with MicrosoftAppId, MicrosoftAppPassword, etc.
+        
+        Returns:
+            Connections: A Connections Protocol implementation (default: MsalConnectionManager)
+        """
+        from microsoft_agents.hosting.core.authentication import MsalConnectionManager
+        return MsalConnectionManager(**agents_sdk_config)
+
     async def create_agent_application(
         self
-    ) -> tuple[AgentApplication[TurnState], MsalConnectionManager]:
+    ) -> tuple[AgentApplication[TurnState], Connections]:
         """Create and initialize Microsoft Agents SDK application.
         
         Returns:
-            tuple[AgentApplication[TurnState], MsalConnectionManager]: Initialized application
+            tuple[AgentApplication[TurnState], Connections]: Initialized application
                 and connection manager (needed for server startup)
             
         Raises:
@@ -74,16 +105,11 @@ class A365FrontEndPluginWorker:
         from microsoft_agents.hosting.core import (
             AgentApplication,
             CloudAdapter,
-            MemoryStorage,
             TurnState,
         )
         from microsoft_agents.hosting.core.app.app_error import ApplicationError
-        from microsoft_agents.hosting.core.authentication import (
-            Authorization,
-            MsalConnectionManager,
-        )
+        from microsoft_agents.hosting.core.authentication import Authorization
 
-        # Set up Microsoft Agents SDK configuration
         agents_sdk_config = {
             "MicrosoftAppId": self.front_end_config.app_id,
             "MicrosoftAppPassword": get_secret_value(self.front_end_config.app_password),
@@ -95,36 +121,33 @@ class A365FrontEndPluginWorker:
         # This pattern matches A2A and MCP plugins: sequential initialization with
         # specific error handling for configuration vs. general SDK errors
 
-        try:
-            storage = MemoryStorage()
-        except Exception as e:
-            raise A365SDKError(
-                f"Failed to initialize MemoryStorage: {str(e)}",
-                sdk_component="MemoryStorage",
-                original_error=e
-            ) from e
+        # Get storage instance (uses dependency injection pattern - defaults to MemoryStorage)
+        # Users can override _get_storage() in a subclass to use custom storage (e.g., BlobStorage, CosmosDbStorage)
+        storage = self._get_storage()
 
+        # Get connection manager instance (uses dependency injection pattern - defaults to MsalConnectionManager)
+        # Users can override _get_connection_manager() in a subclass to use custom connection managers
         try:
-            connection_manager = MsalConnectionManager(**agents_sdk_config)
+            connection_manager = self._get_connection_manager(agents_sdk_config)
         except (ValueError, TypeError) as e:
-            # ValueError/TypeError from MsalConnectionManager initialization indicate configuration issues
+            # ValueError/TypeError from connection manager initialization indicate configuration issues
             # (missing required fields, wrong parameter types, invalid values)
             raise A365ConfigurationError(
-                f"Invalid configuration for MsalConnectionManager: {str(e)}. "
+                f"Invalid configuration for connection manager: {str(e)}. "
                 f"Please check that app_id, app_password, and tenant_id are properly configured.",
                 original_error=e
             ) from e
         except ApplicationError as e:
             # ApplicationError from SDK indicates missing or misconfigured SDK components
             raise A365SDKError(
-                f"Failed to initialize MsalConnectionManager: {str(e)}",
-                sdk_component="MsalConnectionManager",
+                f"Failed to initialize connection manager: {str(e)}",
+                sdk_component="ConnectionManager",
                 original_error=e
             ) from e
         except Exception as e:
             raise A365SDKError(
-                f"Failed to initialize MsalConnectionManager: {str(e)}",
-                sdk_component="MsalConnectionManager",
+                f"Failed to initialize connection manager: {str(e)}",
+                sdk_component="ConnectionManager",
                 original_error=e
             ) from e
 
@@ -166,7 +189,6 @@ class A365FrontEndPluginWorker:
             ) from e
 
         try:
-            # Create AgentApplication
             agent_app = AgentApplication[TurnState](
                 storage=storage,
                 adapter=adapter,
@@ -227,7 +249,6 @@ class A365FrontEndPluginWorker:
 
         notification = AgentNotification(agent_app)
 
-        # Helper to execute NAT workflow from notification
         async def execute_workflow_from_notification(
             context: TurnContext,
             activity: AgentNotificationActivity,
@@ -235,22 +256,26 @@ class A365FrontEndPluginWorker:
         ) -> None:
             """Execute NAT workflow with notification data."""
             try:
-                # Extract text/content from notification (context.activity is the Activity wrapped by AgentNotificationActivity)
-                query = context.activity.text or context.activity.summary or f"Notification: {notification_type}"
+                # Extract text/content from notification using typed properties when available
+                # Email notifications have typed email data
+                if activity.email and activity.email.html_body:
+                    query = activity.email.html_body
+                # Word/Excel/PowerPoint comments - use activity text (WpxComment doesn't contain text directly)
+                elif activity.wpx_comment:
+                    query = context.activity.text or context.activity.summary or f"Document comment notification"
+                # Lifecycle events and other notifications - use generic activity text
+                else:
+                    query = context.activity.text or context.activity.summary or f"Notification: {notification_type}"
 
-                # Create input payload for workflow
                 from nat.data_models.api_server import ChatRequest
                 payload = ChatRequest.from_string(query)
 
-                # Execute workflow
                 async with session_manager.run(payload) as runner:
                     result = await runner.result(to_type=str)
 
-                # Send response back
                 await context.send_activity(result)
 
             except A365WorkflowExecutionError as e:
-                # Re-raise our custom exceptions to preserve context
                 logger.error(
                     f"Error executing workflow from {notification_type} notification: {e.workflow_type}",
                     exc_info=True
@@ -259,14 +284,12 @@ class A365FrontEndPluginWorker:
                     f"I encountered an error processing the {notification_type} notification. Please try again."
                 )
             except Exception as e:
-                # Wrap other exceptions for better error handling
                 error_msg = str(e).lower()
                 logger.error(
                     f"Error executing workflow from {notification_type} notification: {type(e).__name__}",
                     exc_info=True
                 )
                 
-                # Provide context-appropriate error message
                 if "timeout" in error_msg:
                     user_message = f"The {notification_type} notification timed out. Please try again."
                 elif "validation" in error_msg or "invalid" in error_msg:
@@ -341,12 +364,12 @@ class A365FrontEndPluginWorker:
 
         logger.info("A365 notification handlers registered")
 
-    async def setup_message_handler(
+    async def setup_message_handlers(
         self,
         agent_app: AgentApplication,
         session_manager: SessionManager
     ) -> None:
-        """Set up message handler for regular chat messages.
+        """Set up message handlers for regular chat messages.
         
         Args:
             agent_app: The Microsoft Agents SDK AgentApplication instance
@@ -366,19 +389,15 @@ class A365FrontEndPluginWorker:
 
                 logger.info(f"Received message: {query[:100]}")
 
-                # Create input payload for workflow
                 from nat.data_models.api_server import ChatRequest
                 payload = ChatRequest.from_string(query)
 
-                # Execute workflow
                 async with session_manager.run(payload) as runner:
                     result = await runner.result(to_type=str)
 
-                # Send response back
                 await context.send_activity(result)
 
             except A365WorkflowExecutionError as e:
-                # Re-raise our custom exceptions to preserve context
                 logger.error(
                     f"Error executing workflow from message: {e.workflow_type}",
                     exc_info=True
@@ -387,14 +406,12 @@ class A365FrontEndPluginWorker:
                     "I encountered an error processing your message. Please try again."
                 )
             except Exception as e:
-                # Wrap other exceptions for better error handling
                 error_msg = str(e).lower()
                 logger.error(
                     f"Error handling message: {type(e).__name__}",
                     exc_info=True
                 )
                 
-                # Provide context-appropriate error message
                 if "timeout" in error_msg:
                     user_message = "Your message timed out. Please try again."
                 elif "validation" in error_msg or "invalid" in error_msg:
@@ -404,10 +421,10 @@ class A365FrontEndPluginWorker:
                 
                 await context.send_activity(user_message)
 
-        logger.info("Message handler registered")
+        logger.info("Message handlers registered")
 
-    def setup_error_handler(self, agent_app: AgentApplication) -> None:
-        """Set up error handler for the AgentApplication.
+    def setup_error_handlers(self, agent_app: AgentApplication) -> None:
+        """Set up error handlers for the AgentApplication.
         
         Args:
             agent_app: The Microsoft Agents SDK AgentApplication instance
@@ -436,7 +453,6 @@ class A365FrontEndPluginWorker:
             elif isinstance(error, A365WorkflowExecutionError):
                 user_message = "I encountered an error processing your request. Please try again."
             else:
-                # Check error message for common patterns
                 error_msg = str(error).lower()
                 if "authentication" in error_msg or "unauthorized" in error_msg:
                     user_message = "Authentication failed. Please verify your credentials and try again."
@@ -449,7 +465,7 @@ class A365FrontEndPluginWorker:
             
             await context.send_activity(user_message)
 
-        logger.info("Error handler registered")
+        logger.info("Error handlers registered")
 
     async def cleanup(self) -> None:
         """Clean up any resources managed by the worker.

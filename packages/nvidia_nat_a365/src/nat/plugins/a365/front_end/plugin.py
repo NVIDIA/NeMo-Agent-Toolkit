@@ -48,7 +48,6 @@ class A365FrontEndPlugin(FrontEndBase[A365FrontEndConfig]):
         5. Starts the Microsoft Agents SDK server
         6. Handles cleanup on shutdown
         """
-        # Import and validate Microsoft Agents SDK dependencies
         try:
             # Try importing start_server from hosting.aiohttp (most common)
             try:
@@ -71,107 +70,100 @@ class A365FrontEndPlugin(FrontEndBase[A365FrontEndConfig]):
                 original_error=e
             ) from e
 
-        # Configure logging level
         log_level = LOG_LEVELS.get(self.front_end_config.log_level.upper(), logging.INFO)
         setup_logging(log_level)
         logger.setLevel(log_level)
 
-        # Initialize worker (needed for cleanup in finally block)
+        # Initialize worker and session managers (needed for cleanup in finally block)
         worker = None
+        session_manager = None
+        notification_session_manager = None
 
-        # Build the workflow
-        async with WorkflowBuilder.from_config(config=self.full_config) as builder:
-            # Create session manager for executing workflows (default workflow)
-            session_manager = await SessionManager.create(
-                config=self.full_config,
-                shared_builder=builder
-            )
-
-            # Create separate session manager for notifications if configured
-            notification_session_manager = session_manager
-            if self.front_end_config.notification_workflow:
-                logger.info(
-                    f"Creating separate session manager for notifications with entry_function='{self.front_end_config.notification_workflow}'"
-                )
-                notification_session_manager = await SessionManager.create(
+        try:
+            async with WorkflowBuilder.from_config(config=self.full_config) as builder:
+                session_manager = await SessionManager.create(
                     config=self.full_config,
-                    shared_builder=builder,
-                    entry_function=self.front_end_config.notification_workflow
+                    shared_builder=builder
                 )
 
-            # Get worker instance (allows for custom workers via config)
-            worker = self._get_worker_instance()
+                # Create separate session manager for notifications if configured
+                notification_session_manager = session_manager
+                if self.front_end_config.notification_workflow:
+                    logger.info(
+                        f"Creating separate session manager for notifications with entry_function='{self.front_end_config.notification_workflow}'"
+                    )
+                    notification_session_manager = await SessionManager.create(
+                        config=self.full_config,
+                        shared_builder=builder,
+                        entry_function=self.front_end_config.notification_workflow
+                    )
 
-            # Create Microsoft Agents SDK application
-            agent_app, connection_manager = await worker.create_agent_application()
+                # Get worker instance (allows for custom workers via config)
+                worker = self._get_worker_instance()
 
-            # Set up notification handlers if enabled
-            if self.front_end_config.enable_notifications:
-                await worker.setup_notification_handlers(
+                agent_app, connection_manager = await worker.create_agent_application()
+
+                if self.front_end_config.enable_notifications:
+                    await worker.setup_notification_handlers(
+                        agent_app=agent_app,
+                        session_manager=notification_session_manager
+                    )
+
+                await worker.setup_message_handlers(
                     agent_app=agent_app,
-                    session_manager=notification_session_manager
+                    session_manager=session_manager
                 )
 
-            # Set up message handler for regular chat messages
-            await worker.setup_message_handler(
-                agent_app=agent_app,
-                session_manager=session_manager
-            )
+                worker.setup_error_handlers(agent_app)
 
-            # Set up error handler
-            worker.setup_error_handler(agent_app)
-
-            logger.info(
-                f"Starting Microsoft Agent 365 server on "
-                f"{self.front_end_config.host}:{self.front_end_config.port}"
-            )
-
-            # Start the server
-            try:
-                await start_server(
-                    agent_application=agent_app,
-                    auth_configuration=connection_manager.get_default_connection_configuration(),
-                    host=self.front_end_config.host,
-                    port=self.front_end_config.port,
+                logger.info(
+                    f"Starting Microsoft Agent 365 server on "
+                    f"{self.front_end_config.host}:{self.front_end_config.port}"
                 )
-            except Exception as e:
-                error_msg = str(e).lower()
-                if "address already in use" in error_msg or "port" in error_msg:
-                    raise A365SDKError(
-                        f"Failed to start server: port {self.front_end_config.port} may already be in use. "
-                        f"Try a different port or stop the process using this port.",
-                        sdk_component="start_server",
-                        original_error=e
-                    ) from e
-                elif "permission" in error_msg or "access" in error_msg:
-                    raise A365SDKError(
-                        f"Failed to start server: insufficient permissions to bind to "
-                        f"{self.front_end_config.host}:{self.front_end_config.port}",
-                        sdk_component="start_server",
-                        original_error=e
-                    ) from e
-                else:
-                    raise A365SDKError(
-                        f"Failed to start server: {str(e)}",
-                        sdk_component="start_server",
-                        original_error=e
-                    ) from e
 
+                try:
+                    await start_server(
+                        agent_application=agent_app,
+                        auth_configuration=connection_manager.get_default_connection_configuration(),
+                        host=self.front_end_config.host,
+                        port=self.front_end_config.port,
+                    )
+                except Exception as e:
+                    error_msg = str(e).lower()
+                    if "address already in use" in error_msg or "port" in error_msg:
+                        raise A365SDKError(
+                            f"Failed to start server: port {self.front_end_config.port} may already be in use. "
+                            f"Try a different port or stop the process using this port.",
+                            sdk_component="start_server",
+                            original_error=e
+                        ) from e
+                    elif "permission" in error_msg or "access" in error_msg:
+                        raise A365SDKError(
+                            f"Failed to start server: insufficient permissions to bind to "
+                            f"{self.front_end_config.host}:{self.front_end_config.port}",
+                            sdk_component="start_server",
+                            original_error=e
+                        ) from e
+                    else:
+                        raise A365SDKError(
+                            f"Failed to start server: {str(e)}",
+                            sdk_component="start_server",
+                            original_error=e
+                        ) from e
         finally:
-            # Cleanup session managers
-            try:
-                await session_manager.shutdown()
-            except Exception as e:
-                logger.error(f"Error cleaning up default session manager: {e}")
+            if session_manager is not None:
+                try:
+                    await session_manager.shutdown()
+                except Exception as e:
+                    logger.error(f"Error cleaning up default session manager: {e}")
             
             # If notification session manager is different, clean it up too
-            if notification_session_manager is not session_manager:
+            if notification_session_manager is not None and notification_session_manager is not session_manager:
                 try:
                     await notification_session_manager.shutdown()
                 except Exception as e:
                     logger.error(f"Error cleaning up notification session manager: {e}")
             
-            # Cleanup worker resources
             if worker is not None:
                 try:
                     await worker.cleanup()
@@ -187,13 +179,11 @@ class A365FrontEndPlugin(FrontEndBase[A365FrontEndConfig]):
         """
         from nat.plugins.a365.front_end.worker import A365FrontEndPluginWorker
 
-        # Check if custom worker class is specified
         if self.front_end_config.runner_class:
             module_name, class_name = self.front_end_config.runner_class.rsplit(".", 1)
             module = importlib.import_module(module_name)
             worker_class = getattr(module, class_name)
             return worker_class(self.full_config)
 
-        # Use default worker
         return A365FrontEndPluginWorker(self.full_config)
 

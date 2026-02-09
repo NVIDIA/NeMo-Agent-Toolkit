@@ -87,7 +87,6 @@ class _TokenCache:
                 buffer_time = datetime.now(timezone.utc) + timedelta(minutes=5)
                 if self._expires_at > buffer_time:
                     return self._token
-                # Token expired or expiring soon
                 return None
             else:
                 # No expiration info, assume token is valid
@@ -142,14 +141,12 @@ async def _create_token_resolver_from_auth_ref(
     Raises:
         A365AuthenticationError: If authentication fails or no token available
     """
-    # Resolve auth provider
     auth_provider = await builder.get_auth_provider(auth_ref)
 
     # Get user_id from context if available (needed for OAuth flows)
     from nat.builder.context import Context
     user_id = Context.get().user_id
 
-    # Pre-fetch initial token
     auth_result = await auth_provider.authenticate(user_id=user_id)
     if not auth_result.credentials:
         raise A365AuthenticationError("No credentials available from auth provider")
@@ -157,7 +154,6 @@ async def _create_token_resolver_from_auth_ref(
     token = _extract_token_from_auth_result(auth_result)
     expires_at = auth_result.token_expires_at
 
-    # Create thread-safe cache for token
     token_cache = _TokenCache(token, expires_at)
 
     def token_resolver(agent_id: str, tenant_id: str) -> str | None:
@@ -202,7 +198,6 @@ async def a365_telemetry_exporter(config: A365TelemetryExporter, builder: Builde
     """
     from nat.plugins.a365.telemetry.a365_exporter import A365OtelExporter
 
-    # Resolve token resolver from AuthenticationRef
     token_resolver_callable, auth_provider, token_cache = await _create_token_resolver_from_auth_ref(
         config.token_resolver, builder
     )
@@ -213,7 +208,6 @@ async def a365_telemetry_exporter(config: A365TelemetryExporter, builder: Builde
         f"token_resolver=configured (auth_provider='{config.token_resolver}')"
     )
 
-    # Create exporter
     exporter = A365OtelExporter(
         agent_id=config.agent_id,
         tenant_id=config.tenant_id,

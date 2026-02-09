@@ -16,7 +16,6 @@
 
 """Backward compatibility: Import exceptions from shared module."""
 
-# Import from shared exceptions module
 from nat.plugins.a365.exceptions import (
     A365AuthenticationError,
     A365ConfigurationError,

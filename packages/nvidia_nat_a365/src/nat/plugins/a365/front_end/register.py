@@ -39,11 +39,9 @@ async def a365_front_end(config: A365FrontEndConfig, full_config):
     Raises:
         ValueError: If app_password is not provided in config or A365_APP_PASSWORD environment variable
     """
-    # Load app_password from environment variable if not set in config
     if not config.app_password:
         set_secret_from_env(config, "app_password", "A365_APP_PASSWORD")
     
-    # Validate that app_password is set
     if not config.app_password:
         raise ValueError(
             "app_password must be provided in the configuration or in the environment variable `A365_APP_PASSWORD`"
