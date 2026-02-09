@@ -143,7 +143,7 @@ async def test_e2e_prediction_headers_injected_correctly():
                 await transport.handle_async_request(request1)
 
                 modified_request1 = mock_transport.handle_async_request.call_args[0][0]
-                prefix = f"{LLMHeaderPrefix.DYNAMO.value}"
+                prefix = f"{LLMHeaderPrefix.DYNAMO}"
 
                 # Should have call 1 predictions: remaining_calls.mean=2.0, output_tokens.p90=200
                 assert modified_request1.headers[f"{prefix}-total-requests"] == "2"
@@ -227,7 +227,7 @@ async def test_e2e_fallback_to_root():
         await transport.handle_async_request(request)
 
         modified_request = mock_transport.handle_async_request.call_args[0][0]
-        prefix = f"{LLMHeaderPrefix.DYNAMO.value}"
+        prefix = f"{LLMHeaderPrefix.DYNAMO}"
 
         # Should fall back to root aggregated predictions (remaining_calls.mean=1.0, output_tokens.p90=160)
         assert f"{prefix}-total-requests" in modified_request.headers
@@ -278,7 +278,7 @@ async def test_e2e_multiple_calls_in_same_context():
             await transport.handle_async_request(request1)
 
             modified_request1 = mock_transport.handle_async_request.call_args[0][0]
-            prefix = f"{LLMHeaderPrefix.DYNAMO.value}"
+            prefix = f"{LLMHeaderPrefix.DYNAMO}"
 
             # First call should use call_index=1 predictions
             assert modified_request1.headers[f"{prefix}-total-requests"] == "2"

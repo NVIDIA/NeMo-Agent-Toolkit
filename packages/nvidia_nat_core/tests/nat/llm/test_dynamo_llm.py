@@ -342,7 +342,7 @@ class TestDynamoTransport:
         modified_request = call_args[0][0]
 
         # Verify headers were injected
-        prefix = f"{LLMHeaderPrefix.DYNAMO.value}"
+        prefix = f"{LLMHeaderPrefix.DYNAMO}"
         assert modified_request.headers[f"{prefix}-id"] == "test-prefix-123"
         assert modified_request.headers[f"{prefix}-total-requests"] == "15"
         assert modified_request.headers[f"{prefix}-osl"] == "HIGH"
@@ -492,7 +492,7 @@ class TestDynamoTransport:
 
         # Headers should still be injected
         modified_request = mock_transport.handle_async_request.call_args[0][0]
-        prefix = f"{LLMHeaderPrefix.DYNAMO.value}"
+        prefix = f"{LLMHeaderPrefix.DYNAMO}"
         assert modified_request.headers[f"{prefix}-id"] == "non-json-test"
         assert modified_request.headers[f"{prefix}-total-requests"] == "1"
         assert modified_request.headers[f"{prefix}-osl"] == "LOW"
@@ -545,7 +545,7 @@ class TestDynamoTransport:
         modified_request = mock_transport.handle_async_request.call_args[0][0]
 
         # Verify prediction values were used instead of static config in headers
-        prefix = f"{LLMHeaderPrefix.DYNAMO.value}"
+        prefix = f"{LLMHeaderPrefix.DYNAMO}"
         assert modified_request.headers[f"{prefix}-total-requests"] == "25"  # from prediction
         assert modified_request.headers[f"{prefix}-osl"] == "HIGH"  # from prediction (2500 tokens)
         assert modified_request.headers[f"{prefix}-iat"] == "LOW"  # from prediction (50ms)
@@ -598,7 +598,7 @@ class TestDynamoTransport:
         modified_request = call_args[0][0]
 
         # Verify latency-sensitivity header was injected with default MEDIUM
-        prefix = f"{LLMHeaderPrefix.DYNAMO.value}"
+        prefix = f"{LLMHeaderPrefix.DYNAMO}"
         assert modified_request.headers[f"{prefix}-latency-sensitivity"] == "MEDIUM"
 
         # Cleanup

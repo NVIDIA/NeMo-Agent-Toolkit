@@ -471,11 +471,11 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
 
         # Inject HTTP headers
         headers = dict(request.headers)
-        headers[f"{LLMHeaderPrefix.DYNAMO.value}-id"] = prefix_id
-        headers[f"{LLMHeaderPrefix.DYNAMO.value}-total-requests"] = str(total_requests)
-        headers[f"{LLMHeaderPrefix.DYNAMO.value}-osl"] = osl
-        headers[f"{LLMHeaderPrefix.DYNAMO.value}-iat"] = iat
-        headers[f"{LLMHeaderPrefix.DYNAMO.value}-latency-sensitivity"] = latency_sensitivity
+        headers[f"{LLMHeaderPrefix.DYNAMO}-id"] = prefix_id
+        headers[f"{LLMHeaderPrefix.DYNAMO}-total-requests"] = str(total_requests)
+        headers[f"{LLMHeaderPrefix.DYNAMO}-osl"] = osl
+        headers[f"{LLMHeaderPrefix.DYNAMO}-iat"] = iat
+        headers[f"{LLMHeaderPrefix.DYNAMO}-latency-sensitivity"] = latency_sensitivity
 
         # Modify body to inject nvext.agent_hints (if JSON POST request)
         content = request.content

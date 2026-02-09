@@ -108,7 +108,7 @@ class TestDynamicPredictionTransport:
                 # - remaining_calls.mean=3.0 -> x-prefix-total-requests="3"
                 # - output_tokens.p90=200.0 -> x-prefix-osl="LOW" (< 256)
                 # - interarrival_ms.mean=500.0 -> x-prefix-iat="HIGH" (>= 500)
-                prefix = f"{LLMHeaderPrefix.DYNAMO.value}"
+                prefix = f"{LLMHeaderPrefix.DYNAMO}"
                 assert modified_request.headers[f"{prefix}-total-requests"] == "3"
                 assert modified_request.headers[f"{prefix}-osl"] == "LOW"
                 assert modified_request.headers[f"{prefix}-iat"] == "HIGH"
@@ -149,7 +149,7 @@ class TestDynamicPredictionTransport:
             modified_request = mock_transport.handle_async_request.call_args[0][0]
 
             # Should fall back to root aggregated predictions
-            prefix = f"{LLMHeaderPrefix.DYNAMO.value}"
+            prefix = f"{LLMHeaderPrefix.DYNAMO}"
             assert f"{prefix}-total-requests" in modified_request.headers
             # Root prediction has remaining_calls.mean=3.0
             assert modified_request.headers[f"{prefix}-total-requests"] == "3"
@@ -189,7 +189,7 @@ class TestDynamicPredictionTransport:
         modified_request = mock_transport.handle_async_request.call_args[0][0]
 
         # Should still inject headers (falls back to root or static config)
-        prefix = f"{LLMHeaderPrefix.DYNAMO.value}"
+        prefix = f"{LLMHeaderPrefix.DYNAMO}"
         assert f"{prefix}-total-requests" in modified_request.headers
 
         DynamoPrefixContext.clear()
@@ -229,7 +229,7 @@ class TestDynamicPredictionTransport:
             modified_request = mock_transport.handle_async_request.call_args[0][0]
 
             # Should fall back to static config values when no prediction found
-            prefix = f"{LLMHeaderPrefix.DYNAMO.value}"
+            prefix = f"{LLMHeaderPrefix.DYNAMO}"
             assert modified_request.headers[f"{prefix}-total-requests"] == "10"  # static value
             assert modified_request.headers[f"{prefix}-osl"] == "MEDIUM"  # static value
             assert modified_request.headers[f"{prefix}-iat"] == "LOW"  # static value
@@ -272,7 +272,7 @@ class TestDynamicPredictionTransport:
                 modified_request = mock_transport.handle_async_request.call_args[0][0]
 
                 # Verify headers
-                prefix = f"{LLMHeaderPrefix.DYNAMO.value}"
+                prefix = f"{LLMHeaderPrefix.DYNAMO}"
                 assert modified_request.headers[f"{prefix}-total-requests"] == "3"
                 assert modified_request.headers[f"{prefix}-osl"] == "LOW"
                 assert modified_request.headers[f"{prefix}-iat"] == "HIGH"
