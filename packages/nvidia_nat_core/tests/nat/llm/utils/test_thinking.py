@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-
 from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
@@ -53,7 +51,6 @@ class AddThinkingWithKwargs(BaseThinkingInjector):
         return FunctionArgumentWrapper(*args, thinking=True, **kwargs)
 
 
-@pytest.mark.asyncio
 async def test_patch_with_thinking_in_place():
     args = (
         123,
@@ -91,7 +88,6 @@ async def test_patch_with_thinking_in_place():
         assert item == expected
 
 
-@pytest.mark.asyncio
 async def test_patch_with_thinking_modify_args():
     args = (
         123,
@@ -129,7 +125,6 @@ async def test_patch_with_thinking_modify_args():
         assert item == expected
 
 
-@pytest.mark.asyncio
 async def test_patch_with_thinking_modify_kwargs():
     args = (
         123,

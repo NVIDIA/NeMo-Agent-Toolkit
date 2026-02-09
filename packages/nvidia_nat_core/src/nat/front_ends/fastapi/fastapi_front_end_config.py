@@ -225,7 +225,7 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
         description=(
             "Maximum number of Dask workers to create for running async jobs, the name of this parameter is "
             "misleading as the actual number of concurrent async jobs is: "
-            "`max_running_async_jobs * dask_threads_per_worker` ."
+            "`max_running_async_jobs * dask_threads_per_worker`. "
             "This parameter is only used when scheduler_address is `None` and a Dask local cluster is created."),
         ge=1)
     dask_workers: typing.Literal["threads", "processes"] = Field(

@@ -12,12 +12,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Tests for dynamic prediction lookup with _DynamoTransport."""
 
+import json
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+
+import httpx
 import pytest
 
 from nat.builder.context import Context
-from nat.llm.dynamo_llm import _create_dynamic_prediction_hook
-from nat.llm.dynamo_llm import create_httpx_client_with_dynamo_hooks
+from nat.llm.dynamo_llm import DynamoPrefixContext
+from nat.llm.dynamo_llm import LLMHeaderPrefix
+from nat.llm.dynamo_llm import _DynamoTransport
 from nat.llm.prediction_context import get_call_tracker
 from nat.profiler.prediction_trie.data_models import LLMCallPrediction
 from nat.profiler.prediction_trie.data_models import PredictionMetrics
@@ -57,132 +64,224 @@ def fixture_sample_trie_lookup() -> PredictionTrieLookup:
     return PredictionTrieLookup(root)
 
 
-class MockRequest:
-    """Mock httpx.Request for testing."""
+class TestDynamicPredictionTransport:
+    """Tests for _DynamoTransport with dynamic prediction lookup."""
 
-    def __init__(self):
-        self.headers = {}
+    async def test_transport_injects_prediction_headers(self, sample_trie_lookup):
+        """Test that transport overrides headers based on context predictions."""
+        # Create mock base transport
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
 
+        # Create transport with prediction lookup
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,  # Should be overridden
+            osl="MEDIUM",  # Should be overridden
+            iat="LOW",  # Should be overridden
+            prediction_lookup=sample_trie_lookup,
+        )
 
-async def test_dynamic_hook_injects_headers(sample_trie_lookup):
-    """Test that dynamic hook overrides x-prefix-* headers based on context predictions."""
-    ctx = Context.get()
-    state = ctx._context_state
+        ctx = Context.get()
+        state = ctx._context_state
 
-    # Reset state
-    state._function_path_stack.set(None)
+        # Reset state
+        state._function_path_stack.set(None)
 
-    hook = _create_dynamic_prediction_hook(sample_trie_lookup)
+        # Set prefix ID
+        DynamoPrefixContext.set("test-prediction")
 
-    with ctx.push_active_function("my_workflow", input_data=None):
-        with ctx.push_active_function("react_agent", input_data=None):
-            # Simulate LLM call tracker increment (normally done by step manager)
+        with ctx.push_active_function("my_workflow", input_data=None):
+            with ctx.push_active_function("react_agent", input_data=None):
+                # Simulate LLM call tracker increment
+                tracker = get_call_tracker()
+                tracker.increment(ctx.active_function.function_id)
+
+                request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+                await transport.handle_async_request(request)
+
+                # Get the modified request
+                modified_request = mock_transport.handle_async_request.call_args[0][0]
+
+                # Prediction values should override static config:
+                # - remaining_calls.mean=3.0 -> x-prefix-total-requests="3"
+                # - output_tokens.p90=200.0 -> x-prefix-osl="LOW" (< 256)
+                # - interarrival_ms.mean=500.0 -> x-prefix-iat="HIGH" (>= 500)
+                prefix = f"{LLMHeaderPrefix.DYNAMO}"
+                assert modified_request.headers[f"{prefix}-total-requests"] == "3"
+                assert modified_request.headers[f"{prefix}-osl"] == "LOW"
+                assert modified_request.headers[f"{prefix}-iat"] == "HIGH"
+
+        DynamoPrefixContext.clear()
+
+    async def test_transport_uses_root_fallback(self, sample_trie_lookup):
+        """Test that transport falls back to root prediction for unknown paths."""
+        # Create mock base transport
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,
+            osl="MEDIUM",
+            iat="LOW",
+            prediction_lookup=sample_trie_lookup,
+        )
+
+        ctx = Context.get()
+        state = ctx._context_state
+
+        # Reset state
+        state._function_path_stack.set(None)
+
+        DynamoPrefixContext.set("test-fallback")
+
+        with ctx.push_active_function("unknown_workflow", input_data=None):
             tracker = get_call_tracker()
             tracker.increment(ctx.active_function.function_id)
 
-            request = MockRequest()
-            await hook(request)
+            request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+            await transport.handle_async_request(request)
 
-            # Prediction values are converted to x-prefix-* headers:
-            # - remaining_calls.mean=3.0 -> x-prefix-total-requests="3"
-            # - output_tokens.p90=200.0 -> x-prefix-osl="LOW" (< 256)
-            # - interarrival_ms.mean=500.0 -> x-prefix-iat="HIGH" (>= 500)
-            assert "x-prefix-total-requests" in request.headers
-            assert request.headers["x-prefix-total-requests"] == "3"
-            assert request.headers["x-prefix-osl"] == "LOW"
-            assert request.headers["x-prefix-iat"] == "HIGH"
+            # Get the modified request
+            modified_request = mock_transport.handle_async_request.call_args[0][0]
 
+            # Should fall back to root aggregated predictions
+            prefix = f"{LLMHeaderPrefix.DYNAMO}"
+            assert f"{prefix}-total-requests" in modified_request.headers
+            # Root prediction has remaining_calls.mean=3.0
+            assert modified_request.headers[f"{prefix}-total-requests"] == "3"
 
-async def test_dynamic_hook_uses_root_fallback(sample_trie_lookup):
-    """Test that hook falls back to root prediction for unknown paths."""
-    ctx = Context.get()
-    state = ctx._context_state
+        DynamoPrefixContext.clear()
 
-    # Reset state
-    state._function_path_stack.set(None)
+    async def test_transport_handles_empty_context(self, sample_trie_lookup):
+        """Test that transport handles missing context gracefully."""
+        # Create mock base transport
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
 
-    hook = _create_dynamic_prediction_hook(sample_trie_lookup)
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,
+            osl="MEDIUM",
+            iat="LOW",
+            prediction_lookup=sample_trie_lookup,
+        )
 
-    with ctx.push_active_function("unknown_workflow", input_data=None):
-        tracker = get_call_tracker()
-        tracker.increment(ctx.active_function.function_id)
+        ctx = Context.get()
+        state = ctx._context_state
 
-        request = MockRequest()
-        await hook(request)
+        # Reset state to empty
+        state._function_path_stack.set(None)
+        state._active_function.set(None)
 
-        # Should fall back to root aggregated predictions
-        assert "x-prefix-total-requests" in request.headers
+        DynamoPrefixContext.set("test-empty-context")
 
+        request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
 
-async def test_dynamic_hook_handles_empty_context(sample_trie_lookup):
-    """Test that hook handles missing context gracefully."""
-    ctx = Context.get()
-    state = ctx._context_state
+        # Should not raise an exception
+        await transport.handle_async_request(request)
 
-    # Reset state to empty
-    state._function_path_stack.set(None)
-    state._active_function.set(None)
+        # Get the modified request
+        modified_request = mock_transport.handle_async_request.call_args[0][0]
 
-    hook = _create_dynamic_prediction_hook(sample_trie_lookup)
+        # Should still inject headers (falls back to root or static config)
+        prefix = f"{LLMHeaderPrefix.DYNAMO}"
+        assert f"{prefix}-total-requests" in modified_request.headers
 
-    request = MockRequest()
-    # Should not raise an exception
-    await hook(request)
+        DynamoPrefixContext.clear()
 
-    # Should still inject headers from root fallback
-    assert "x-prefix-total-requests" in request.headers
+    async def test_transport_no_prediction_found(self):
+        """Test that transport handles case where no prediction is found."""
+        # Create empty trie with no predictions
+        empty_root = PredictionTrieNode(name="root")
+        empty_trie = PredictionTrieLookup(empty_root)
 
+        # Create mock base transport
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
 
-async def test_dynamic_hook_no_prediction_found():
-    """Test that hook handles case where no prediction is found."""
-    # Create empty trie with no predictions
-    empty_root = PredictionTrieNode(name="root")
-    empty_trie = PredictionTrieLookup(empty_root)
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,
+            osl="MEDIUM",
+            iat="LOW",
+            prediction_lookup=empty_trie,
+        )
 
-    ctx = Context.get()
-    state = ctx._context_state
+        ctx = Context.get()
+        state = ctx._context_state
 
-    # Reset state
-    state._function_path_stack.set(None)
+        # Reset state
+        state._function_path_stack.set(None)
 
-    hook = _create_dynamic_prediction_hook(empty_trie)
+        DynamoPrefixContext.set("test-no-prediction")
 
-    with ctx.push_active_function("some_function", input_data=None):
-        request = MockRequest()
-        await hook(request)
+        with ctx.push_active_function("some_function", input_data=None):
+            request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+            await transport.handle_async_request(request)
 
-        # Headers should not be overridden when no prediction found
-        # (the static Dynamo hook would set them, but this hook runs after)
-        assert "x-prefix-total-requests" not in request.headers
+            # Get the modified request
+            modified_request = mock_transport.handle_async_request.call_args[0][0]
 
+            # Should fall back to static config values when no prediction found
+            prefix = f"{LLMHeaderPrefix.DYNAMO}"
+            assert modified_request.headers[f"{prefix}-total-requests"] == "10"  # static value
+            assert modified_request.headers[f"{prefix}-osl"] == "MEDIUM"  # static value
+            assert modified_request.headers[f"{prefix}-iat"] == "LOW"  # static value
 
-async def test_client_includes_prediction_hook_when_lookup_provided(sample_trie_lookup):
-    """Test that client includes prediction hook when trie_lookup is provided."""
-    client = create_httpx_client_with_dynamo_hooks(
-        prefix_template="test-{uuid}",
-        total_requests=10,
-        osl="MEDIUM",
-        iat="LOW",
-        prediction_lookup=sample_trie_lookup,
-    )
+        DynamoPrefixContext.clear()
 
-    # Should have 2 hooks: dynamo prefix + prediction
-    assert len(client.event_hooks["request"]) == 2
+    async def test_prediction_overrides_both_headers_and_agent_hints(self, sample_trie_lookup):
+        """Test that predictions override both HTTP headers AND nvext.agent_hints."""
+        # Create mock base transport
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
 
-    await client.aclose()
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,  # Should be overridden
+            osl="MEDIUM",  # Should be overridden
+            iat="LOW",  # Should be overridden
+            prediction_lookup=sample_trie_lookup,
+        )
 
+        ctx = Context.get()
+        state = ctx._context_state
 
-async def test_client_works_without_prediction_lookup():
-    """Test that client works when prediction_lookup is None."""
-    client = create_httpx_client_with_dynamo_hooks(
-        prefix_template="test-{uuid}",
-        total_requests=10,
-        osl="MEDIUM",
-        iat="LOW",
-        prediction_lookup=None,
-    )
+        # Reset state
+        state._function_path_stack.set(None)
 
-    # Should have 1 hook: dynamo prefix only
-    assert len(client.event_hooks["request"]) == 1
+        DynamoPrefixContext.set("test-both-mechanisms")
 
-    await client.aclose()
+        with ctx.push_active_function("my_workflow", input_data=None):
+            with ctx.push_active_function("react_agent", input_data=None):
+                # Simulate LLM call tracker increment
+                tracker = get_call_tracker()
+                tracker.increment(ctx.active_function.function_id)
+
+                request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+                await transport.handle_async_request(request)
+
+                # Get the modified request
+                modified_request = mock_transport.handle_async_request.call_args[0][0]
+
+                # Verify headers
+                prefix = f"{LLMHeaderPrefix.DYNAMO}"
+                assert modified_request.headers[f"{prefix}-total-requests"] == "3"
+                assert modified_request.headers[f"{prefix}-osl"] == "LOW"
+                assert modified_request.headers[f"{prefix}-iat"] == "HIGH"
+
+                # Verify agent_hints
+                body = json.loads(modified_request.content.decode("utf-8"))
+                agent_hints = body["nvext"]["agent_hints"]
+                assert agent_hints["total_requests"] == 3
+                assert agent_hints["osl"] == "LOW"
+                assert agent_hints["iat"] == "HIGH"
+
+        DynamoPrefixContext.clear()
