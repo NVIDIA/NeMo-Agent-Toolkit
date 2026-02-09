@@ -24,19 +24,10 @@ GIT_TAG=$(get_git_tag)
 IS_TAGGED=$(is_current_commit_release_tagged)
 rapids-logger "Git Version: ${GIT_TAG} - Is Tagged: ${IS_TAGGED}"
 
-if [[ "${CI_COMMIT_BRANCH}" == "${CI_DEFAULT_BRANCH}" && "${IS_TAGGED}" == "0" ]]; then
-    # If the commit is not tagged, we should create a nightly version that matches ${GIT_TAG/-dev/aYYYYMMDD}
-    NAT_VERSION="${GIT_TAG/-dev/a$(date +"%Y%m%d")}"
-else
-    # If the commit is tagged, we should use the tag as the version
-    NAT_VERSION="${GIT_TAG}"
-fi
-
-# We need to set these variables to ensure that the version is set correctly in the wheel
-export SETUPTOOLS_SCM_PRETEND_VERSION="${NAT_VERSION}"
-export USE_FULL_VERSION="1"
-
 create_env
+
+# Set the version for the wheels based on GIT_TAG / SCM
+set_versions
 
 WHEELS_BASE_DIR="${CI_PROJECT_DIR}/.tmp/wheels"
 WHEELS_DIR="${WHEELS_BASE_DIR}/nvidia-nat"
