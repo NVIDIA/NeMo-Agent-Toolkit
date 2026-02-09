@@ -389,7 +389,7 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
     BEFORE httpx's internal state machine processes it. It supports both transport
     mechanisms simultaneously for maximum compatibility:
 
-    - HTTP headers (x-prefix-*): For generalized Thompson Sampling setup
+    - HTTP headers (``x-prefix-*``): For generalized Thompson Sampling setup
     - nvext.agent_hints: For optimized Thompson Sampling setup (preferred)
     """
 
@@ -558,7 +558,7 @@ def create_httpx_client_with_dynamo_hooks(
     making it framework-agnostic. Hints are injected via both HTTP headers and
     nvext.agent_hints in the request body for maximum compatibility:
 
-    - HTTP headers (x-prefix-*): For generalized Thompson Sampling setup
+    - HTTP headers (``x-prefix-*``): For generalized Thompson Sampling setup
     - nvext.agent_hints: For optimized Thompson Sampling setup (preferred)
 
     Args:
