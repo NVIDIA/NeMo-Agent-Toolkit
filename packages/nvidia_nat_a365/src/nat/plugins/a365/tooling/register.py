@@ -156,10 +156,8 @@ async def a365_mcp_tooling_function_group(config: A365MCPToolingConfig, builder:
 
     from nat.plugins.a365.tooling import A365ToolingService
 
-    # Resolve auth token
     auth_token_str: str
     if isinstance(config.auth_token, AuthenticationRef):
-        # Resolve from auth provider
         auth_provider = await builder.get_auth_provider(config.auth_token)
         
         # Get user_id from context if available (needed for OAuth flows)
@@ -170,7 +168,6 @@ async def a365_mcp_tooling_function_group(config: A365MCPToolingConfig, builder:
         if not auth_result.credentials:
             raise A365AuthenticationError("No credentials available from auth provider")
         
-        # Extract bearer token from credentials
         # Support both BearerTokenCred and HeaderCred with Authorization header
         from nat.data_models.authentication import BearerTokenCred, HeaderCred
         from nat.authentication.interfaces import AUTHORIZATION_HEADER
@@ -178,11 +175,9 @@ async def a365_mcp_tooling_function_group(config: A365MCPToolingConfig, builder:
         auth_token_str: str | None = None
         for cred in auth_result.credentials:
             if isinstance(cred, BearerTokenCred):
-                # Standard Bearer token credential
                 auth_token_str = cred.token.get_secret_value()
                 break
             elif isinstance(cred, HeaderCred) and cred.name == AUTHORIZATION_HEADER:
-                # Authorization header credential (e.g., "Bearer <token>")
                 header_value = cred.value.get_secret_value()
                 if header_value.startswith("Bearer "):
                     auth_token_str = header_value[7:]
@@ -193,13 +188,11 @@ async def a365_mcp_tooling_function_group(config: A365MCPToolingConfig, builder:
         if auth_token_str is None:
             raise A365AuthenticationError(
                 f"No bearer token found in auth provider credentials. "
-                f"Found credential types: {[type(c).__name__ for c in auth_result.credentials]}"
+                    f"Found credential types: {[type(c).__name__ for c in auth_result.credentials]}"
             )
     else:
-        # Plain string token (not an AuthenticationRef)
         auth_token_str = config.auth_token
 
-    # Discover MCP servers from A365
     service = A365ToolingService()
     logger.info(f"Discovering MCP servers for agent {config.agentic_app_id}")
     try:
@@ -223,7 +216,6 @@ async def a365_mcp_tooling_function_group(config: A365MCPToolingConfig, builder:
 
     logger.info(f"Discovered {len(servers)} MCP servers, registering as function groups")
 
-    # Register each discovered server as an MCP client function group
     from nat.plugins.mcp.client.client_impl import mcp_client_function_group
 
     # Convert tool_overrides dict to MCPToolOverrideConfig if provided (once, before the loop)
@@ -242,13 +234,11 @@ async def a365_mcp_tooling_function_group(config: A365MCPToolingConfig, builder:
                 f"Invalid tool_overrides configuration: {str(e)}"
             ) from e
 
-    # Collect MCP groups - we'll aggregate them using delegation pattern
     mcp_groups: list[FunctionGroup] = []
     
     # Use AsyncExitStack to keep all MCP client contexts open for the lifetime of this function group
     async with AsyncExitStack() as exit_stack:
         for server in servers:
-            # Validate server has required fields
             if not server.url:
                 server_name = getattr(server, "mcp_server_name", "unknown") or "unknown"
                 logger.warning(f"Skipping server {server_name}: no URL configured")
@@ -256,24 +246,19 @@ async def a365_mcp_tooling_function_group(config: A365MCPToolingConfig, builder:
 
             server_name = getattr(server, "mcp_server_name", None) or "unknown"
 
-            # Determine auth provider for this server
             # Priority: 1) Per-server override, 2) A365 gateway auth (if AuthenticationRef), 3) None
             server_auth_provider = None
             if config.server_auth_providers and server_name in config.server_auth_providers:
-                # Per-server override
                 server_auth_provider = config.server_auth_providers[server_name]
                 logger.debug(
                     f"Using per-server auth provider '{server_auth_provider}' for server '{server_name}'"
                 )
             elif isinstance(config.auth_token, AuthenticationRef):
-                # Use same auth provider as A365 gateway
                 server_auth_provider = config.auth_token
                 logger.debug(
                     f"Using A365 gateway auth provider for server '{server_name}'"
                 )
-            # If auth_token is a string, MCP servers handle their own authentication
 
-            # Create MCP client config for this server
             mcp_config = MCPClientConfig(
                 server=MCPServerConfig(
                     transport="streamable-http",
@@ -292,7 +277,6 @@ async def a365_mcp_tooling_function_group(config: A365MCPToolingConfig, builder:
                 tool_overrides=mcp_tool_overrides,
             )
 
-            # Register the MCP client function group
             # mcp_client_function_group is an async context manager; AsyncExitStack keeps
             # all contexts open for the lifetime of the composite group
             try:
@@ -308,7 +292,6 @@ async def a365_mcp_tooling_function_group(config: A365MCPToolingConfig, builder:
                 logger.error(f"Failed to register MCP server '{server_name}': {e}", exc_info=True)
                 continue
 
-        # Create composite group that delegates to all MCP groups
         if not mcp_groups:
             logger.warning(
                 f"No MCP servers successfully registered for agent {config.agentic_app_id}. "
@@ -317,11 +300,9 @@ async def a365_mcp_tooling_function_group(config: A365MCPToolingConfig, builder:
         
         composite_group = A365MCPToolingFunctionGroup(config=config, mcp_groups=mcp_groups)
         
-        # Get total count of functions from all groups for logging
         all_functions = await composite_group.get_all_functions()
         logger.info(
             f"A365 MCP tooling: registered {len(all_functions)} total tools from {len(mcp_groups)} servers"
         )
 
-        # Yield the composite function group while keeping all MCP client contexts open
         yield composite_group

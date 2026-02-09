@@ -49,7 +49,6 @@ class _ReadableSpanAdapter:
             tenant_id: The tenant ID to add as an attribute
             agent_id: The agent ID to add as an attribute
         """
-        # Get span context
         self.context = otel_span.get_span_context()
 
         # Convert parent Span to SpanContext if it exists (A365 expects SpanContext, not Span)
@@ -63,7 +62,6 @@ class _ReadableSpanAdapter:
         self.attributes["tenant.id"] = tenant_id
         self.attributes["gen_ai.agent.id"] = agent_id
 
-        # Convert events to OpenTelemetry SDK Event objects
         self.events = []
         for event in otel_span.events:
             if isinstance(event, dict):
@@ -77,11 +75,9 @@ class _ReadableSpanAdapter:
                     attributes=event_attrs,
                 )
             else:
-                # Event is already an Event object
                 otel_event = event
             self.events.append(otel_event)
 
-        # Convert links to OpenTelemetry SDK Link objects
         self.links = []
         for link in otel_span.links:
             if isinstance(link, dict):
@@ -92,10 +88,8 @@ class _ReadableSpanAdapter:
                     otel_link = OtelLink(context=link_context, attributes=link_attrs)
                     self.links.append(otel_link)
             elif isinstance(link, OtelLink):
-                # Link is already a Link object
                 self.links.append(link)
 
-        # Copy other required attributes
         self.name = otel_span.name
         self.kind = otel_span.kind
         self.start_time = otel_span.start_time
@@ -182,7 +176,6 @@ class A365OtelExporter(OtelSpanExporter):
         self._auth_provider = auth_provider  # For proactive token refresh
         self._token_cache = token_cache  # For updating cached tokens
 
-        # Create the A365 SDK exporter instance
         # SDK requires token_resolver to be non-None, so if None is passed, SDK will raise ValueError
         self._a365_exporter = Agent365Exporter(
             token_resolver=token_resolver,
@@ -203,16 +196,13 @@ class A365OtelExporter(OtelSpanExporter):
         if self._auth_provider is None or self._token_cache is None:
             return
 
-        # Check if token is expiring soon (within 5 minutes)
         if not self._token_cache.is_expiring_soon(buffer_minutes=5):
             return
 
         try:
-            # Get user_id from context if available
             from nat.builder.context import Context
             user_id = Context.get().user_id
 
-            # Refresh token
             logger.debug(
                 f"Refreshing token proactively (agent_id={self._agent_id}, tenant_id={self._tenant_id})"
             )
@@ -221,7 +211,6 @@ class A365OtelExporter(OtelSpanExporter):
                 logger.warning("Token refresh failed: no credentials available")
                 return
 
-            # Extract and update token in cache
             from nat.data_models.authentication import BearerTokenCred, HeaderCred
             from nat.authentication.interfaces import AUTHORIZATION_HEADER
 
@@ -272,11 +261,9 @@ class A365OtelExporter(OtelSpanExporter):
         if not spans:
             return
 
-        # Proactively refresh token if using AuthenticationRef and token is expiring soon
         await self._refresh_token_if_needed()
 
         try:
-            # Convert OtelSpans to ReadableSpan-like objects
             readable_spans = []
             for otel_span in spans:
                 readable_span = _convert_otel_span_to_readable(
@@ -306,7 +293,6 @@ class A365OtelExporter(OtelSpanExporter):
                 f"Error exporting spans to A365 (tenant={self._tenant_id}, agent={self._agent_id}): {e}",
                 exc_info=True,
             )
-            # Re-raise as A365SDKError for better error handling upstream
             # Check if it's an authentication error (token resolver failure)
             if "authentication" in error_msg or "unauthorized" in error_msg or "token" in error_msg:
                 raise A365AuthenticationError(
