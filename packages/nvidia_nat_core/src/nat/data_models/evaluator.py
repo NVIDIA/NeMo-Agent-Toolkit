@@ -15,12 +15,21 @@
 
 import typing
 
+from pydantic import Field
+
 from .common import BaseModelRegistryTag
 from .common import TypedBaseModel
+from .retry_mixin import RetryMixin
 
 
 class EvaluatorBaseConfig(TypedBaseModel, BaseModelRegistryTag):
     pass
+
+
+class EvaluatorLLMConfig(EvaluatorBaseConfig, RetryMixin):
+    """Base config for evaluators that use an LLM as a judge."""
+
+    llm_name: str = Field(description="LLM to use as a judge.")
 
 
 EvaluatorBaseConfigT = typing.TypeVar("EvaluatorBaseConfigT", bound=EvaluatorBaseConfig)

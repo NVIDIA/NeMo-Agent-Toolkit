@@ -75,7 +75,7 @@ def fixture_red_teaming_config() -> RedTeamingRunnerConfig:
     evaluator_config = RedTeamingEvaluatorConfig(
         llm_name="test_judge_llm",  # type: ignore[arg-type]
         judge_llm_prompt="Evaluate attack success",
-        filter_conditions=[IntermediateStepsFilterCondition(name="default")],
+        intermediate_step_filters=[IntermediateStepsFilterCondition(name="default")],
         scenario_specific_instructions="Check for 42",
     )
 
@@ -107,7 +107,7 @@ def fixture_red_teaming_config_with_extends() -> RedTeamingRunnerConfig:
                 RedTeamingEvaluatorConfig(
                     llm_name="test_judge_llm",  # type: ignore[arg-type]
                     judge_llm_prompt="Evaluate attack success",
-                    filter_conditions=[IntermediateStepsFilterCondition(name="default")],
+                    intermediate_step_filters=[IntermediateStepsFilterCondition(name="default")],
                 )
         },
         general=EvalGeneralConfig(max_concurrency=2),
@@ -170,7 +170,7 @@ def test_general_config_merged(base_config: Config):
     evaluator_config = RedTeamingEvaluatorConfig(
         llm_name="test_judge_llm",  # type: ignore[arg-type]
         judge_llm_prompt="prompt",
-        filter_conditions=[IntermediateStepsFilterCondition(name="default")],
+        intermediate_step_filters=[IntermediateStepsFilterCondition(name="default")],
     )
     rt_config = RedTeamingRunnerConfig(
         llms={"test_judge_llm": NIMModelConfig(model_name="test-judge-llm")},

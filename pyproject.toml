@@ -55,6 +55,7 @@ autogen = ["nvidia-nat-autogen == {version}"]
 core = ["nvidia-nat-core == {version}"]
 crewai = ["nvidia-nat-crewai == {version}"]
 data-flywheel = ["nvidia-nat-data-flywheel == {version}"]
+fastmcp = ["nvidia-nat-fastmcp == {version}"]
 langchain = ["nvidia-nat-langchain == {version}"]
 llama-index = ["nvidia-nat-llama-index == {version}"]
 mcp = ["nvidia-nat-mcp == {version}"]
@@ -88,6 +89,7 @@ most = [
   "nvidia-nat-core[async_endpoints,gunicorn,pii-defense,profiling] == {version}",
   "nvidia-nat-crewai == {version}",
   "nvidia-nat-data-flywheel == {version}",
+  "nvidia-nat-fastmcp == {version}",
   "nvidia-nat-langchain == {version}",
   "nvidia-nat-llama-index == {version}",
   "nvidia-nat-mcp == {version}",
@@ -118,6 +120,7 @@ examples = [
   "nat_documentation_guides",
   "nat_email_phishing_analyzer",
   "nat_haystack_deep_research_agent",
+  "nat_hybrid_control_flow",
   "nat_kaggle_mcp",
   "nat_math_assistant_a2a",
   "nat_math_assistant_a2a_protected",
@@ -141,6 +144,8 @@ examples = [
   "nat_simple_calculator",
   "nat_simple_calculator_custom_routes",
   "nat_simple_calculator_eval",
+  "nat_simple_calculator_fastmcp",
+  "nat_simple_calculator_fastmcp_protected",
   "nat_simple_calculator_hitl",
   "nat_simple_calculator_mcp",
   "nat_simple_calculator_mcp_protected",
@@ -211,6 +216,7 @@ nvidia-nat-autogen = { path = "packages/nvidia_nat_autogen", editable = true }
 nvidia-nat-core = { path = "packages/nvidia_nat_core", editable = true }
 nvidia-nat-crewai = { path = "packages/nvidia_nat_crewai", editable = true }
 nvidia-nat-data-flywheel = { path = "packages/nvidia_nat_data_flywheel", editable = true }
+nvidia-nat-fastmcp = { path = "packages/nvidia_nat_fastmcp", editable = true }
 nvidia-nat-langchain = { path = "packages/nvidia_nat_langchain", editable = true }
 nvidia-nat-llama-index = { path = "packages/nvidia_nat_llama_index", editable = true }
 nvidia-nat-mcp = { path = "packages/nvidia_nat_mcp", editable = true }
@@ -242,6 +248,7 @@ nat_dpo_tic_tac_toe = { path = "examples/finetuning/dpo_tic_tac_toe", editable =
 nat_documentation_guides = { path = "examples/documentation_guides", editable = true }
 nat_email_phishing_analyzer = { path = "examples/evaluation_and_profiling/email_phishing_analyzer", editable = true }
 nat_haystack_deep_research_agent = { path = "examples/frameworks/haystack_deep_research_agent", editable = true }
+nat_hybrid_control_flow = { path = "examples/control_flow/hybrid_control_flow", editable = true }
 nat_kaggle_mcp = { path = "examples/MCP/kaggle_mcp", editable = true }
 nat_math_assistant_a2a = { path = "examples/A2A/math_assistant_a2a", editable = true }
 nat_math_assistant_a2a_protected = { path = "examples/A2A/math_assistant_a2a_protected", editable = true }
@@ -265,6 +272,8 @@ nat_simple_auth_mcp = { path = "examples/MCP/simple_auth_mcp", editable = true }
 nat_simple_calculator = { path = "examples/getting_started/simple_calculator", editable = true }
 nat_simple_calculator_custom_routes = { path = "examples/front_ends/simple_calculator_custom_routes", editable = true }
 nat_simple_calculator_eval = { path = "examples/evaluation_and_profiling/simple_calculator_eval", editable = true }
+nat_simple_calculator_fastmcp = { path = "examples/MCP/simple_calculator_fastmcp", editable = true }
+nat_simple_calculator_fastmcp_protected = { path = "examples/MCP/simple_calculator_fastmcp_protected", editable = true }
 nat_simple_calculator_hitl = { path = "examples/HITL/simple_calculator_hitl", editable = true }
 nat_simple_calculator_mcp = { path = "examples/MCP/simple_calculator_mcp", editable = true }
 nat_simple_calculator_mcp_protected = { path = "examples/MCP/simple_calculator_mcp_protected", editable = true }

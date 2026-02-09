@@ -412,7 +412,7 @@ class DatasetHandler:
                 except json.JSONDecodeError:
                     return value
             if hasattr(value, "model_dump"):
-                return value.model_dump()
+                return value.model_dump(exclude_none=True)
             return value
 
         indent = 2

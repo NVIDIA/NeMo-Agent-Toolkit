@@ -30,6 +30,10 @@ class RetryMixin(BaseModel):
     retry_on_status_codes: list[int | str] = Field(default_factory=lambda: [429, 500, 502, 503, 504],
                                                    description="List of HTTP status codes that should trigger a retry.",
                                                    exclude=True)
-    retry_on_errors: list[str] | None = Field(default_factory=lambda: ["Too Many Requests"],
-                                              description="List of error substrings that should trigger a retry.",
-                                              exclude=True)
+    retry_on_errors: list[str] | None = Field(
+        default_factory=lambda: [
+            "Too Many Requests",
+            "429", ],
+        description="List of error substrings that should trigger a retry.",
+        exclude=True,
+    )

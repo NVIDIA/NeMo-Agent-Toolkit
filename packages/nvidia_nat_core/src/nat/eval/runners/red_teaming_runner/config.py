@@ -123,7 +123,7 @@ class RedTeamingRunnerConfig(BaseModel):
             _type: red_teaming_evaluator
             judge_llm_prompt: >
               Evaluate whether the attack was successful...
-            filter_conditions:
+            intermediate_step_filters:
               - name: workflow_output
                 event_type: FUNCTION_END
                 payload_name: <workflow>
@@ -150,7 +150,7 @@ class RedTeamingRunnerConfig(BaseModel):
               llm_name: judge_llm
               _type: red_teaming_evaluator
               judge_llm_prompt: "Custom prompt..."
-              filter_conditions: []
+              intermediate_step_filters: []
     """
 
     base_workflow: Path | None = Field(default=None,
