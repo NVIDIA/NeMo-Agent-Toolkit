@@ -381,7 +381,7 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
 # =============================================================================
 
 
-class _DynamoTransport:
+class _DynamoTransport(httpx.AsyncBaseTransport):
     """
     Custom transport wrapper that injects both HTTP headers and nvext.agent_hints.
 
@@ -395,7 +395,7 @@ class _DynamoTransport:
 
     def __init__(
         self,
-        transport: "httpx.AsyncBaseTransport",
+        transport: httpx.AsyncBaseTransport,
         total_requests: int,
         osl: str,
         iat: str,
@@ -466,8 +466,8 @@ class _DynamoTransport:
                         call_index,
                     )
 
-            except Exception as e:
-                logger.warning("Failed to lookup prediction: %s", e)
+            except Exception:
+                logger.exception("Failed to lookup prediction")
 
         # Inject HTTP headers
         headers = dict(request.headers)
@@ -533,7 +533,7 @@ class _DynamoTransport:
 
         return await self._transport.handle_async_request(new_request)
 
-    async def aclose(self):
+    async def aclose(self) -> None:
         """Close the underlying transport."""
         await self._transport.aclose()
 
