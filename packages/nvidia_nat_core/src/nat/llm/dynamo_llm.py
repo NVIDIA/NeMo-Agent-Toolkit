@@ -31,9 +31,9 @@ for maximum compatibility:
 1. **HTTP Headers** (``x-prefix-*``): For the generalized Thompson Sampling setup
    that uses custom ``frontend.py`` which reads headers directly.
 
-2. **nvext.annotations** (in request body): For the optimized Thompson Sampling setup
+2. **nvext.agent_hints** (in request body): For the optimized Thompson Sampling setup
    that uses the default Dynamo frontend with custom ``processor.py`` which reads
-   annotations from the preprocessed request. *This is the preferred mechanism.*
+   agent_hints from the preprocessed request. *This is the preferred mechanism.*
 
 Dynamo Prefix Parameters
 -------------------------
@@ -285,11 +285,11 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
     by default using the template "nat-dynamo-{uuid}". The prefix routing parameters
     (prefix_total_requests, prefix_osl, prefix_iat) are optimizable via the NAT optimizer.
 
-    Hints are sent via both HTTP headers (``x-prefix-*``) and ``nvext.annotations``
+    Hints are sent via both HTTP headers (``x-prefix-*``) and ``nvext.agent_hints``
     in the request body for compatibility with different Dynamo setups:
 
     - **Generalized Thompson Sampling** (custom frontend.py): Reads HTTP headers
-    - **Optimized Thompson Sampling** (default frontend + processor.py): Reads nvext.annotations
+    - **Optimized Thompson Sampling** (default frontend + processor.py): Reads nvext.agent_hints
 
     To disable prefix hints, set prefix_template to null/None in your config.
     """
@@ -341,7 +341,7 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
     prediction_trie_path: str | None = Field(
         default=None,
         description="Path to prediction_trie.json file. When set, predictions are "
-        "looked up and used to override both HTTP headers and nvext.annotations for each LLM call.",
+        "looked up and used to override both HTTP headers and nvext.agent_hints for each LLM call.",
     )
 
     # =========================================================================
@@ -383,14 +383,14 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
 
 class _DynamoTransport:
     """
-    Custom transport wrapper that injects both HTTP headers and nvext.annotations.
+    Custom transport wrapper that injects both HTTP headers and nvext.agent_hints.
 
     This approach is more reliable than event hooks because it modifies the request
     BEFORE httpx's internal state machine processes it. It supports both transport
     mechanisms simultaneously for maximum compatibility:
 
     - HTTP headers (x-prefix-*): For generalized Thompson Sampling setup
-    - nvext.annotations: For optimized Thompson Sampling setup (preferred)
+    - nvext.agent_hints: For optimized Thompson Sampling setup (preferred)
     """
 
     def __init__(
@@ -468,45 +468,42 @@ class _DynamoTransport:
         headers[f"{LLMHeaderPrefix.DYNAMO.value}-osl"] = osl
         headers[f"{LLMHeaderPrefix.DYNAMO.value}-iat"] = iat
 
-        # Modify body to inject nvext.annotations (if JSON POST request)
+        # Modify body to inject nvext.agent_hints (if JSON POST request)
         content = request.content
         if request.method == "POST" and content:
             try:
                 body = json.loads(content.decode("utf-8", errors="replace"))
                 if isinstance(body, dict):
-                    # Build annotations list
-                    annotations = [
-                        f"prefix_id:{prefix_id}",
-                        f"total_requests:{total_requests}",
-                        f"osl:{osl}",
-                        f"iat:{iat}",
-                    ]
+                    # Build agent_hints dict
+                    agent_hints = {
+                        "prefix_id": prefix_id,
+                        "total_requests": total_requests,
+                        "osl": osl,
+                        "iat": iat,
+                    }
 
-                    # Add/merge nvext.annotations
+                    # Add/merge nvext.agent_hints
                     if "nvext" not in body:
                         body["nvext"] = {}
                     if not isinstance(body["nvext"], dict):
                         body["nvext"] = {}
 
-                    existing = body["nvext"].get("annotations", [])
-                    if not isinstance(existing, list):
-                        existing = []
+                    existing = body["nvext"].get("agent_hints", {})
+                    if not isinstance(existing, dict):
+                        existing = {}
 
-                    # Our annotations take precedence
-                    body["nvext"]["annotations"] = annotations + [
-                        a for a in existing
-                        if not any(a.startswith(f"{key}:") for key in ["prefix_id", "total_requests", "osl", "iat"])
-                    ]
+                    # Our hints take precedence over existing
+                    body["nvext"]["agent_hints"] = {**existing, **agent_hints}
 
                     # Re-encode
                     content = json.dumps(body).encode("utf-8")
                     headers["content-length"] = str(len(content))
 
-                    logger.debug("Injected nvext.annotations: %s (body size: %d bytes)",
-                                 body["nvext"]["annotations"],
+                    logger.debug("Injected nvext.agent_hints: %s (body size: %d bytes)",
+                                 body["nvext"]["agent_hints"],
                                  len(content))
             except (json.JSONDecodeError, UnicodeDecodeError) as e:
-                logger.debug("Could not inject nvext.annotations: %s", e)
+                logger.debug("Could not inject nvext.agent_hints: %s", e)
 
         # Create new request with modified headers and content
         new_request = httpx.Request(
@@ -548,10 +545,10 @@ def create_httpx_client_with_dynamo_hooks(
 
     This client can be passed to the OpenAI SDK to inject hints at the HTTP level,
     making it framework-agnostic. Hints are injected via both HTTP headers and
-    nvext.annotations in the request body for maximum compatibility:
+    nvext.agent_hints in the request body for maximum compatibility:
 
     - HTTP headers (x-prefix-*): For generalized Thompson Sampling setup
-    - nvext.annotations: For optimized Thompson Sampling setup (preferred)
+    - nvext.agent_hints: For optimized Thompson Sampling setup (preferred)
 
     Args:
         prefix_template: Template string with {uuid} placeholder (unused, kept for API compat)

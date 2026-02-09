@@ -236,8 +236,8 @@ class TestDynamicPredictionTransport:
 
         DynamoPrefixContext.clear()
 
-    async def test_prediction_overrides_both_headers_and_annotations(self, sample_trie_lookup):
-        """Test that predictions override both HTTP headers AND nvext.annotations."""
+    async def test_prediction_overrides_both_headers_and_agent_hints(self, sample_trie_lookup):
+        """Test that predictions override both HTTP headers AND nvext.agent_hints."""
         # Create mock base transport
         mock_response = httpx.Response(200, json={"result": "ok"})
         mock_transport = MagicMock()
@@ -277,11 +277,11 @@ class TestDynamicPredictionTransport:
                 assert modified_request.headers[f"{prefix}-osl"] == "LOW"
                 assert modified_request.headers[f"{prefix}-iat"] == "HIGH"
 
-                # Verify annotations
+                # Verify agent_hints
                 body = json.loads(modified_request.content.decode("utf-8"))
-                annotations = body["nvext"]["annotations"]
-                assert "total_requests:3" in annotations
-                assert "osl:LOW" in annotations
-                assert "iat:HIGH" in annotations
+                agent_hints = body["nvext"]["agent_hints"]
+                assert agent_hints["total_requests"] == 3
+                assert agent_hints["osl"] == "LOW"
+                assert agent_hints["iat"] == "HIGH"
 
         DynamoPrefixContext.clear()
