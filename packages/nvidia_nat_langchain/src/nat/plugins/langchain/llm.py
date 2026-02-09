@@ -14,6 +14,8 @@
 # limitations under the License.
 # pylint: disable=unused-argument
 
+import os
+
 import logging
 from collections.abc import Sequence
 from pathlib import Path
@@ -194,6 +196,15 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
 
     http_async_client: httpx.AsyncClient = create_metadata_injection_client()
 
+    config_dict = llm_config.model_dump(
+        exclude={"type", "thinking", "api_type"},
+        by_alias=True,
+        exclude_none=True,
+        exclude_unset=True,
+    )
+    if "base_url" not in config_dict and os.getenv("OPENAI_BASE_URL") is not None:
+        config_dict["base_url"] = os.getenv("OPENAI_BASE_URL")
+
     try:
         if llm_config.api_type == APITypeEnum.RESPONSES:
             client = ChatOpenAI(
@@ -201,22 +212,12 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
                 stream_usage=True,
                 use_responses_api=True,  # type: ignore[call-arg]
                 use_previous_response_id=True,  # type: ignore[call-arg]
-                **llm_config.model_dump(
-                    exclude={"type", "thinking", "api_type"},
-                    by_alias=True,
-                    exclude_none=True,
-                    exclude_unset=True,
-                ))
+                **config_dict)
         else:
             client = ChatOpenAI(
                 http_async_client=http_async_client,  # type: ignore[call-arg]
                 stream_usage=True,
-                **llm_config.model_dump(
-                    exclude={"type", "thinking", "api_type"},
-                    by_alias=True,
-                    exclude_none=True,
-                    exclude_unset=True,
-                ))
+                **config_dict)
         if "http_async_client" in client.model_kwargs:
             del client.model_kwargs["http_async_client"]
 

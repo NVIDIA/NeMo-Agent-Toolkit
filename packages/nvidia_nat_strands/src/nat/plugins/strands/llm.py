@@ -165,10 +165,14 @@ async def openai_strands(llm_config: OpenAIModelConfig, _builder: Builder) -> As
         by_alias=True,
         exclude_none=True)
 
+    base_url = llm_config.base_url
+    if not base_url and os.getenv("OPENAI_BASE_URL") is not None:
+        base_url = os.getenv("OPENAI_BASE_URL")
+
     client = OpenAIModel(
         client_args={
             "api_key": get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY"),
-            "base_url": llm_config.base_url,
+            "base_url": base_url,
         },
         model_id=llm_config.model_name,
         params=params,

@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
 from collections.abc import Sequence
 from typing import TypeVar
 
@@ -130,12 +132,20 @@ async def openai_llama_index(llm_config: OpenAIModelConfig, _builder: Builder):
     from llama_index.llms.openai import OpenAI
     from llama_index.llms.openai import OpenAIResponses
 
+    config_dict = llm_config.model_dump(
+        exclude={"type", "thinking", "api_type"},
+        by_alias=True,
+        exclude_none=True,
+        exclude_unset=True,
+    )
+
+    if "base_url" not in config_dict and os.getenv("OPENAI_BASE_URL") is not None:
+        config_dict["base_url"] = os.getenv("OPENAI_BASE_URL")
+
     if llm_config.api_type == APITypeEnum.RESPONSES:
-        llm = OpenAIResponses(**llm_config.model_dump(
-            exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True, exclude_unset=True))
+        llm = OpenAIResponses(**config_dict)
     else:
-        llm = OpenAI(**llm_config.model_dump(
-            exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True, exclude_unset=True))
+        llm = OpenAI(**config_dict)
 
     yield _patch_llm_based_on_config(llm, llm_config)
 

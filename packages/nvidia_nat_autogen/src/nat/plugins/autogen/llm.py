@@ -30,6 +30,8 @@ Each wrapper:
 - Removes NAT-specific config keys before instantiating AutoGen clients
 """
 
+import os
+
 import logging
 from collections.abc import AsyncGenerator
 from typing import Any
@@ -151,6 +153,9 @@ async def openai_autogen(llm_config: OpenAIModelConfig, _builder: Builder) -> As
             exclude_none=True,
         ),
     }
+
+    if "base_url" not in config_obj and os.getenv("OPENAI_BASE_URL") is not None:
+        config_obj["base_url"] = os.getenv("OPENAI_BASE_URL")
 
     # Define model info for AutoGen 0.7.4 (replaces model_capabilities)
     model_info = ModelInfo(vision=False,

@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
 from typing import TypeVar
 
 from nat.builder.builder import Builder
@@ -112,6 +114,9 @@ async def openai_agno(llm_config: OpenAIModelConfig, _builder: Builder):
             exclude_unset=True,
         ),
     }
+
+    if "base_url" not in config_obj and os.getenv("OPENAI_BASE_URL") is not None:
+        config_obj["base_url"] = os.getenv("OPENAI_BASE_URL")
 
     if llm_config.api_type == APITypeEnum.RESPONSES:
         client = OpenAIResponses(**config_obj, id=llm_config.model_name)
