@@ -122,6 +122,7 @@ nvidia-nat-test = { path = "../nvidia_nat_test", editable = true }
 
 [project.entry-points.'nat.components']
 nat_authentication = "nat.authentication.register"
+nat_dataset_stores = "nat.eval.dataset_store.register"
 nat_embedders = "nat.embedder.register"
 nat_evaluators = "nat.eval.register"
 nat_middleware = "nat.middleware.register"

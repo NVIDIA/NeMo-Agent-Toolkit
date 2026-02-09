@@ -25,3 +25,10 @@ from .runtime_evaluator.register import register_avg_workflow_runtime_evaluator
 from .swe_bench_evaluator.register import register_swe_bench_evaluator
 from .trajectory_evaluator.register import register_trajectory_evaluator
 from .tunable_rag_evaluator.register import register_tunable_rag_evaluator
+
+from .dataset_store.register import register_csv_dataset_store
+from .dataset_store.register import register_custom_dataset_store
+from .dataset_store.register import register_json_dataset_store
+from .dataset_store.register import register_jsonl_dataset_store
+from .dataset_store.register import register_parquet_dataset_store
+from .dataset_store.register import register_xls_dataset_store

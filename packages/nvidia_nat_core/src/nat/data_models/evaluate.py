@@ -23,7 +23,7 @@ from pydantic import Field
 from pydantic import model_validator
 
 from nat.data_models.common import TypedBaseModel
-from nat.data_models.dataset_handler import EvalDatasetConfig
+from nat.data_models.dataset_handler import EvalDatasetBaseConfig
 from nat.data_models.dataset_handler import EvalS3Config
 from nat.data_models.evaluator import EvaluatorBaseConfig
 from nat.data_models.intermediate_step import IntermediateStepType
@@ -93,7 +93,7 @@ class EvalGeneralConfig(BaseModel):
     output: EvalOutputConfig | None = Field(default=None,
                                             description="Output configuration. If present, overrides output_dir.")
 
-    dataset: EvalDatasetConfig | None = Field(
+    dataset: EvalDatasetBaseConfig | None = Field(
         default=None, description="Dataset configuration for running the workflow and evaluating.")
 
     profiler: ProfilerConfig | None = Field(default=None, description="Inference profiler configuration.")
@@ -118,6 +118,28 @@ class EvalGeneralConfig(BaseModel):
             values["output_dir"] = values["output"]["dir"]
         return values
 
+    @classmethod
+    def rebuild_annotations(cls):
+
+        from nat.cli.type_registry import GlobalTypeRegistry
+
+        type_registry = GlobalTypeRegistry.get()
+
+        DatasetAnnotation = typing.Annotated[type_registry.compute_annotation(EvalDatasetBaseConfig),
+                                             Discriminator(TypedBaseModel.discriminator)] | None
+
+        should_rebuild = False
+
+        dataset_field = cls.model_fields.get("dataset")
+        if dataset_field is not None and dataset_field.annotation != DatasetAnnotation:
+            dataset_field.annotation = DatasetAnnotation
+            should_rebuild = True
+
+        if (should_rebuild):
+            cls.model_rebuild(force=True)
+
+        return should_rebuild
+
 
 class EvalConfig(BaseModel):
     general: EvalGeneralConfig = Field(default_factory=EvalGeneralConfig, description="General evaluation options.")
@@ -136,6 +158,10 @@ class EvalConfig(BaseModel):
                                                      Discriminator(TypedBaseModel.discriminator)]]
 
         should_rebuild = False
+
+        # Chain the EvalGeneralConfig rebuild
+        if EvalGeneralConfig.rebuild_annotations():
+            should_rebuild = True
 
         evaluators_field = cls.model_fields.get("evaluators")
         if evaluators_field is not None and evaluators_field.annotation != EvaluatorsAnnotation:
