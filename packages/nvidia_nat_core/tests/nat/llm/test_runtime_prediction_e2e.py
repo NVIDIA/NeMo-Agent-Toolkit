@@ -17,30 +17,29 @@
 This test validates that all pieces work together:
 1. function_path_stack gets updated when push_active_function is called
 2. IntermediateStepManager increments call tracker on LLM_START
-3. Dynamic hook reads context and looks up predictions
+3. _DynamoTransport reads context and looks up predictions
 4. Correct headers are injected based on call index
 """
 
 import tempfile
 from pathlib import Path
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+
+import httpx
 
 from nat.builder.context import Context
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
-from nat.llm.dynamo_llm import _create_dynamic_prediction_hook
+from nat.llm.dynamo_llm import DynamoPrefixContext
+from nat.llm.dynamo_llm import LLMHeaderPrefix
+from nat.llm.dynamo_llm import _DynamoTransport
 from nat.profiler.prediction_trie import load_prediction_trie
 from nat.profiler.prediction_trie import save_prediction_trie
 from nat.profiler.prediction_trie.data_models import LLMCallPrediction
 from nat.profiler.prediction_trie.data_models import PredictionMetrics
 from nat.profiler.prediction_trie.data_models import PredictionTrieNode
 from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
-
-
-class MockRequest:
-    """Mock httpx.Request for testing."""
-
-    def __init__(self):
-        self.headers = {}
 
 
 def create_test_trie() -> PredictionTrieNode:
@@ -95,7 +94,7 @@ def create_test_trie() -> PredictionTrieNode:
 
 
 async def test_e2e_prediction_headers_injected_correctly():
-    """Test complete flow: context tracking -> step manager -> hook -> headers."""
+    """Test complete flow: context tracking -> step manager -> transport -> headers."""
     # Create and save trie
     trie = create_test_trie()
 
@@ -107,8 +106,19 @@ async def test_e2e_prediction_headers_injected_correctly():
         loaded_trie = load_prediction_trie(trie_path)
         lookup = PredictionTrieLookup(loaded_trie)
 
-        # Create hook
-        hook = _create_dynamic_prediction_hook(lookup)
+        # Create mock base transport
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        # Create transport with prediction lookup
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,
+            osl="MEDIUM",
+            iat="LOW",
+            prediction_lookup=lookup,
+        )
 
         ctx = Context.get()
         state = ctx._context_state
@@ -116,6 +126,8 @@ async def test_e2e_prediction_headers_injected_correctly():
 
         # Reset state
         state._function_path_stack.set(None)
+
+        DynamoPrefixContext.set("e2e-test")
 
         with ctx.push_active_function("my_workflow", input_data=None):
             with ctx.push_active_function("react_agent", input_data=None):
@@ -127,13 +139,16 @@ async def test_e2e_prediction_headers_injected_correctly():
                         name="test-model",
                     ))
 
-                request1 = MockRequest()
-                await hook(request1)
+                request1 = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+                await transport.handle_async_request(request1)
+
+                modified_request1 = mock_transport.handle_async_request.call_args[0][0]
+                prefix = f"{LLMHeaderPrefix.DYNAMO}"
 
                 # Should have call 1 predictions: remaining_calls.mean=2.0, output_tokens.p90=200
-                assert request1.headers["x-prefix-total-requests"] == "2"
-                assert request1.headers["x-prefix-osl"] == "LOW"  # 200 tokens < 256
-                assert request1.headers["x-prefix-iat"] == "HIGH"  # 500ms >= 500
+                assert modified_request1.headers[f"{prefix}-total-requests"] == "2"
+                assert modified_request1.headers[f"{prefix}-osl"] == "LOW"  # 200 tokens < 256
+                assert modified_request1.headers[f"{prefix}-iat"] == "HIGH"  # 500ms >= 500
 
                 # Simulate second LLM call
                 step_manager.push_intermediate_step(
@@ -143,13 +158,15 @@ async def test_e2e_prediction_headers_injected_correctly():
                         name="test-model",
                     ))
 
-                request2 = MockRequest()
-                await hook(request2)
+                request2 = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+                await transport.handle_async_request(request2)
+
+                modified_request2 = mock_transport.handle_async_request.call_args[0][0]
 
                 # Should have call 2 predictions: remaining_calls.mean=1.0, output_tokens.p90=150
-                assert request2.headers["x-prefix-total-requests"] == "1"
-                assert request2.headers["x-prefix-osl"] == "LOW"  # 150 tokens < 256
-                assert request2.headers["x-prefix-iat"] == "MEDIUM"  # 300ms is 100-500
+                assert modified_request2.headers[f"{prefix}-total-requests"] == "1"
+                assert modified_request2.headers[f"{prefix}-osl"] == "LOW"  # 150 tokens < 256
+                assert modified_request2.headers[f"{prefix}-iat"] == "MEDIUM"  # 300ms is 100-500
 
                 # Simulate third LLM call
                 step_manager.push_intermediate_step(
@@ -159,19 +176,35 @@ async def test_e2e_prediction_headers_injected_correctly():
                         name="test-model",
                     ))
 
-                request3 = MockRequest()
-                await hook(request3)
+                request3 = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+                await transport.handle_async_request(request3)
+
+                modified_request3 = mock_transport.handle_async_request.call_args[0][0]
 
                 # Should have call 3 predictions: remaining_calls.mean=0.0, output_tokens.p90=120
-                assert request3.headers["x-prefix-total-requests"] == "0"
-                assert request3.headers["x-prefix-osl"] == "LOW"  # 120 tokens < 256
+                assert modified_request3.headers[f"{prefix}-total-requests"] == "0"
+                assert modified_request3.headers[f"{prefix}-osl"] == "LOW"  # 120 tokens < 256
+
+        DynamoPrefixContext.clear()
 
 
 async def test_e2e_fallback_to_root():
     """Test that unknown paths fall back to root predictions."""
     trie = create_test_trie()
     lookup = PredictionTrieLookup(trie)
-    hook = _create_dynamic_prediction_hook(lookup)
+
+    # Create mock base transport
+    mock_response = httpx.Response(200, json={"result": "ok"})
+    mock_transport = MagicMock()
+    mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+    transport = _DynamoTransport(
+        transport=mock_transport,
+        total_requests=10,
+        osl="MEDIUM",
+        iat="LOW",
+        prediction_lookup=lookup,
+    )
 
     ctx = Context.get()
     state = ctx._context_state
@@ -179,6 +212,8 @@ async def test_e2e_fallback_to_root():
 
     # Reset state
     state._function_path_stack.set(None)
+
+    DynamoPrefixContext.set("e2e-fallback")
 
     with ctx.push_active_function("unknown_workflow", input_data=None):
         step_manager.push_intermediate_step(
@@ -188,9 +223,96 @@ async def test_e2e_fallback_to_root():
                 name="test-model",
             ))
 
-        request = MockRequest()
-        await hook(request)
+        request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+        await transport.handle_async_request(request)
 
-        # Should fall back to root aggregated predictions (remaining_calls.mean=1.0, output_tokens.p90=160
-        assert "x-prefix-total-requests" in request.headers
-        assert request.headers["x-prefix-total-requests"] == "1"  # aggregated mean
+        modified_request = mock_transport.handle_async_request.call_args[0][0]
+        prefix = f"{LLMHeaderPrefix.DYNAMO}"
+
+        # Should fall back to root aggregated predictions (remaining_calls.mean=1.0, output_tokens.p90=160)
+        assert f"{prefix}-total-requests" in modified_request.headers
+        assert modified_request.headers[f"{prefix}-total-requests"] == "1"  # aggregated mean
+        assert modified_request.headers[f"{prefix}-osl"] == "LOW"  # 160 tokens < 256
+
+    DynamoPrefixContext.clear()
+
+
+async def test_e2e_multiple_calls_in_same_context():
+    """Test that call tracking increments correctly for multiple LLM calls in the same function context."""
+    trie = create_test_trie()
+    lookup = PredictionTrieLookup(trie)
+
+    # Create mock base transport
+    mock_response = httpx.Response(200, json={"result": "ok"})
+    mock_transport = MagicMock()
+    mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+    transport = _DynamoTransport(
+        transport=mock_transport,
+        total_requests=10,
+        osl="MEDIUM",
+        iat="LOW",
+        prediction_lookup=lookup,
+    )
+
+    ctx = Context.get()
+    state = ctx._context_state
+    step_manager = ctx.intermediate_step_manager
+
+    # Reset state
+    state._function_path_stack.set(None)
+
+    DynamoPrefixContext.set("e2e-multiple-calls")
+
+    with ctx.push_active_function("my_workflow", input_data=None):
+        with ctx.push_active_function("react_agent", input_data=None):
+            # First LLM call in this context
+            step_manager.push_intermediate_step(
+                IntermediateStepPayload(
+                    UUID="llm-1",
+                    event_type=IntermediateStepType.LLM_START,
+                    name="test-model",
+                ))
+
+            request1 = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+            await transport.handle_async_request(request1)
+
+            modified_request1 = mock_transport.handle_async_request.call_args[0][0]
+            prefix = f"{LLMHeaderPrefix.DYNAMO}"
+
+            # First call should use call_index=1 predictions
+            assert modified_request1.headers[f"{prefix}-total-requests"] == "2"
+
+            # Second LLM call in the SAME context
+            step_manager.push_intermediate_step(
+                IntermediateStepPayload(
+                    UUID="llm-2",
+                    event_type=IntermediateStepType.LLM_START,
+                    name="test-model",
+                ))
+
+            request2 = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+            await transport.handle_async_request(request2)
+
+            modified_request2 = mock_transport.handle_async_request.call_args[0][0]
+
+            # Second call should use call_index=2 predictions
+            assert modified_request2.headers[f"{prefix}-total-requests"] == "1"
+
+            # Third LLM call in the SAME context
+            step_manager.push_intermediate_step(
+                IntermediateStepPayload(
+                    UUID="llm-3",
+                    event_type=IntermediateStepType.LLM_START,
+                    name="test-model",
+                ))
+
+            request3 = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+            await transport.handle_async_request(request3)
+
+            modified_request3 = mock_transport.handle_async_request.call_args[0][0]
+
+            # Third call should use call_index=3 predictions
+            assert modified_request3.headers[f"{prefix}-total-requests"] == "0"
+
+    DynamoPrefixContext.clear()
