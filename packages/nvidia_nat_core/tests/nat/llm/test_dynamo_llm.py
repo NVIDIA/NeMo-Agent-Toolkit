@@ -351,8 +351,8 @@ class TestDynamoTransport:
         # Cleanup
         DynamoPrefixContext.clear()
 
-    async def test_transport_injects_nvext_annotations(self):
-        """Test that _DynamoTransport injects nvext.annotations in request body."""
+    async def test_transport_injects_nvext_agent_hints(self):
+        """Test that _DynamoTransport injects nvext.agent_hints in request body."""
         import json
 
         import httpx
@@ -394,21 +394,21 @@ class TestDynamoTransport:
         # Parse the modified body
         body = json.loads(modified_request.content.decode("utf-8"))
 
-        # Verify nvext.annotations was injected
+        # Verify nvext.agent_hints was injected
         assert "nvext" in body
-        assert "annotations" in body["nvext"]
-        annotations = body["nvext"]["annotations"]
+        assert "agent_hints" in body["nvext"]
+        agent_hints = body["nvext"]["agent_hints"]
 
-        assert "prefix_id:eval-q001" in annotations
-        assert "total_requests:10" in annotations
-        assert "osl:MEDIUM" in annotations
-        assert "iat:HIGH" in annotations
+        assert agent_hints["prefix_id"] == "eval-q001"
+        assert agent_hints["total_requests"] == 10
+        assert agent_hints["osl"] == "MEDIUM"
+        assert agent_hints["iat"] == "HIGH"
 
         # Cleanup
         DynamoPrefixContext.clear()
 
-    async def test_transport_merges_existing_annotations(self):
-        """Test that existing nvext.annotations are preserved (non-conflicting)."""
+    async def test_transport_merges_existing_agent_hints(self):
+        """Test that existing nvext.agent_hints are preserved (non-conflicting)."""
         import json
 
         import httpx
@@ -429,14 +429,14 @@ class TestDynamoTransport:
 
         DynamoPrefixContext.set("merge-test")
 
-        # Create request with existing nvext.annotations
+        # Create request with existing nvext.agent_hints
         original_body = {
             "model": "test",
             "nvext": {
-                "annotations": [
-                    "custom_key:custom_value",
-                    "iat:SHOULD_BE_REPLACED",  # Should be overridden
-                ]
+                "agent_hints": {
+                    "custom_key": "custom_value",
+                    "iat": "SHOULD_BE_REPLACED",  # Should be overridden
+                }
             }
         }
         request = httpx.Request("POST", "https://api.example.com/chat", json=original_body)
@@ -448,19 +448,19 @@ class TestDynamoTransport:
         modified_request = mock_transport.handle_async_request.call_args[0][0]
         body = json.loads(modified_request.content.decode("utf-8"))
 
-        annotations = body["nvext"]["annotations"]
+        agent_hints = body["nvext"]["agent_hints"]
 
-        # Our annotations should be first
-        assert annotations[0] == "prefix_id:merge-test"
-        assert annotations[1] == "total_requests:5"
-        assert annotations[2] == "osl:LOW"
-        assert annotations[3] == "iat:MEDIUM"
+        # Our hints should be present
+        assert agent_hints["prefix_id"] == "merge-test"
+        assert agent_hints["total_requests"] == 5
+        assert agent_hints["osl"] == "LOW"
+        assert agent_hints["iat"] == "MEDIUM"
 
-        # Custom annotation preserved
-        assert "custom_key:custom_value" in annotations
+        # Custom hint preserved
+        assert agent_hints["custom_key"] == "custom_value"
 
-        # Old conflicting annotation should NOT be present
-        assert "iat:SHOULD_BE_REPLACED" not in annotations
+        # Old conflicting hint should be overridden
+        assert agent_hints["iat"] == "MEDIUM"
 
         DynamoPrefixContext.clear()
 
@@ -550,14 +550,14 @@ class TestDynamoTransport:
         assert modified_request.headers[f"{prefix}-osl"] == "HIGH"  # from prediction (2500 tokens)
         assert modified_request.headers[f"{prefix}-iat"] == "LOW"  # from prediction (50ms)
 
-        # Verify prediction values also used in nvext.annotations
+        # Verify prediction values also used in nvext.agent_hints
         import json
         body = json.loads(modified_request.content.decode("utf-8"))
-        annotations = body["nvext"]["annotations"]
+        agent_hints = body["nvext"]["agent_hints"]
 
-        assert "total_requests:25" in annotations
-        assert "osl:HIGH" in annotations
-        assert "iat:LOW" in annotations
+        assert agent_hints["total_requests"] == 25
+        assert agent_hints["osl"] == "HIGH"
+        assert agent_hints["iat"] == "LOW"
 
         # Verify lookup was called
         assert mock_lookup.find.called
