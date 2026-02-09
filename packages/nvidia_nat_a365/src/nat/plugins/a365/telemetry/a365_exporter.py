@@ -17,12 +17,14 @@
 import asyncio
 import logging
 from collections.abc import Callable
+from datetime import datetime, timedelta, timezone
 
 from microsoft_agents_a365.observability.core.exporters.agent365_exporter import (
     Agent365Exporter,
 )
 
 from nat.builder.context import ContextState
+from nat.plugins.a365.exceptions import A365AuthenticationError, A365SDKError
 from nat.plugins.opentelemetry.otel_span import OtelSpan
 from nat.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
 from opentelemetry.sdk.trace import Event as OtelEvent
@@ -146,7 +148,7 @@ class A365OtelExporter(OtelSpanExporter):
         self,
         agent_id: str,
         tenant_id: str,
-        token_resolver: Callable[[str, str], str | None],
+        token_resolver: Callable[[str, str], str | None] | None,
         cluster_category: str = "prod",
         use_s2s_endpoint: bool = False,
         suppress_invoke_agent_input: bool = False,
@@ -157,6 +159,8 @@ class A365OtelExporter(OtelSpanExporter):
         drop_on_overflow: bool = False,
         shutdown_timeout: float = 10.0,
         resource_attributes: dict[str, str] | None = None,
+        auth_provider=None,
+        token_cache=None,
     ):
         """Initialize the A365 exporter."""
         super().__init__(
@@ -175,8 +179,11 @@ class A365OtelExporter(OtelSpanExporter):
         self._cluster_category = cluster_category
         self._use_s2s_endpoint = use_s2s_endpoint
         self._suppress_invoke_agent_input = suppress_invoke_agent_input
+        self._auth_provider = auth_provider  # For proactive token refresh
+        self._token_cache = token_cache  # For updating cached tokens
 
         # Create the A365 SDK exporter instance
+        # SDK requires token_resolver to be non-None, so if None is passed, SDK will raise ValueError
         self._a365_exporter = Agent365Exporter(
             token_resolver=token_resolver,
             cluster_category=cluster_category,
@@ -187,6 +194,68 @@ class A365OtelExporter(OtelSpanExporter):
             f"A365 telemetry exporter initialized for agent_id={agent_id}, "
             f"tenant_id={tenant_id}, cluster={cluster_category}"
         )
+
+    async def _refresh_token_if_needed(self) -> None:
+        """Refresh token proactively if it's expiring soon.
+
+        Only refreshes if using AuthenticationRef-based token resolver.
+        """
+        if self._auth_provider is None or self._token_cache is None:
+            return
+
+        # Check if token is expiring soon (within 5 minutes)
+        if not self._token_cache.is_expiring_soon(buffer_minutes=5):
+            return
+
+        try:
+            # Get user_id from context if available
+            from nat.builder.context import Context
+            user_id = Context.get().user_id
+
+            # Refresh token
+            logger.debug(
+                f"Refreshing token proactively (agent_id={self._agent_id}, tenant_id={self._tenant_id})"
+            )
+            auth_result = await self._auth_provider.authenticate(user_id=user_id)
+            if not auth_result.credentials:
+                logger.warning("Token refresh failed: no credentials available")
+                return
+
+            # Extract and update token in cache
+            from nat.data_models.authentication import BearerTokenCred, HeaderCred
+            from nat.authentication.interfaces import AUTHORIZATION_HEADER
+
+            token: str | None = None
+            for cred in auth_result.credentials:
+                if isinstance(cred, BearerTokenCred):
+                    token = cred.token.get_secret_value()
+                    break
+                elif isinstance(cred, HeaderCred) and cred.name == AUTHORIZATION_HEADER:
+                    header_value = cred.value.get_secret_value()
+                    if header_value.startswith("Bearer "):
+                        token = header_value[7:]  # Remove "Bearer " prefix
+                    else:
+                        token = header_value
+                    break
+
+            if token is None:
+                logger.warning(
+                    f"No bearer token found in refreshed credentials. "
+                    f"Found credential types: {[type(c).__name__ for c in auth_result.credentials]}"
+                )
+                return
+            expires_at = auth_result.token_expires_at
+            self._token_cache.update_token(token, expires_at)
+
+            logger.debug(
+                f"Token refreshed successfully (expires_at={expires_at}, "
+                f"agent_id={self._agent_id}, tenant_id={self._tenant_id})"
+            )
+        except Exception as e:
+            logger.warning(
+                f"Failed to refresh token proactively (agent_id={self._agent_id}, "
+                f"tenant_id={self._tenant_id}): {e}. Export may fail if token is expired."
+            )
 
     async def export_otel_spans(self, spans: list[OtelSpan]) -> None:
         """Export a list of OtelSpans using the A365 exporter.
@@ -202,6 +271,9 @@ class A365OtelExporter(OtelSpanExporter):
         """
         if not spans:
             return
+
+        # Proactively refresh token if using AuthenticationRef and token is expiring soon
+        await self._refresh_token_if_needed()
 
         try:
             # Convert OtelSpans to ReadableSpan-like objects
@@ -229,7 +301,21 @@ class A365OtelExporter(OtelSpanExporter):
                 f"(tenant={self._tenant_id}, agent={self._agent_id})"
             )
         except Exception as e:
+            error_msg = str(e).lower()
             logger.error(
                 f"Error exporting spans to A365 (tenant={self._tenant_id}, agent={self._agent_id}): {e}",
                 exc_info=True,
             )
+            # Re-raise as A365SDKError for better error handling upstream
+            # Check if it's an authentication error (token resolver failure)
+            if "authentication" in error_msg or "unauthorized" in error_msg or "token" in error_msg:
+                raise A365AuthenticationError(
+                    f"Authentication failed while exporting telemetry: {str(e)}",
+                    original_error=e
+                ) from e
+            else:
+                raise A365SDKError(
+                    f"Failed to export spans to A365: {str(e)}",
+                    sdk_component="Agent365Exporter",
+                    original_error=e
+                ) from e

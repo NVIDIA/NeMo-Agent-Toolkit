@@ -19,11 +19,11 @@
 
 # Main entry point for A365 plugin - imports all submodules to ensure registration
 
+# Import front-end components (must be imported to register @register_front_end decorator)
+from .front_end import register as _front_end_register
+
 # Import telemetry components
 from . import telemetry
 
 # Import tooling components
 from . import tooling
-
-# Import notifications components
-from . import notifications
