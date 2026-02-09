@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Microsoft Agent 365 plugin for NeMo Agent Toolkit."""
+"""Microsoft Agent 365 front-end plugin."""
 
 from nat.plugins.a365.exceptions import (
     A365AuthenticationError,
@@ -24,7 +24,14 @@ from nat.plugins.a365.exceptions import (
     A365WorkflowExecutionError,
 )
 
+from .front_end_config import A365FrontEndConfig
+from .plugin import A365FrontEndPlugin
+from .worker import A365FrontEndPluginWorker
+
 __all__ = [
+    "A365FrontEndConfig",
+    "A365FrontEndPlugin",
+    "A365FrontEndPluginWorker",
     "A365Error",
     "A365AuthenticationError",
     "A365ConfigurationError",

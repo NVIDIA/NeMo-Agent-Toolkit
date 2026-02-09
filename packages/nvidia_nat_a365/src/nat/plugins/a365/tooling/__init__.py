@@ -16,7 +16,8 @@
 
 """A365 tooling/MCP integration plugin for NeMo Agent Toolkit."""
 
-from .register import A365MCPToolingConfig, a365_mcp_tooling_function_group
+from .register import a365_mcp_tooling_function_group
 from .service import A365ToolingService
+from .tooling_config import A365MCPToolingConfig
 
 __all__ = ["A365ToolingService", "A365MCPToolingConfig", "a365_mcp_tooling_function_group"]
