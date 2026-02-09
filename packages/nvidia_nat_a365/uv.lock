@@ -1369,6 +1369,19 @@ wheels = [
 ]
 
 [[package]]
+name = "microsoft-agents-hosting-aiohttp"
+version = "0.7.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "microsoft-agents-hosting-core" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d6/3d/ad0cfc41580d9fe4c364efd604818fc2012aa6eb796b3d8b1d21ef694c68/microsoft_agents_hosting_aiohttp-0.7.0.tar.gz", hash = "sha256:a0d1c6b8d66b77e46927609ddae805d45ff05066653c130f5908b82fa4bc286c", size = 14829, upload-time = "2026-01-21T18:05:28.341Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/43/de/06fe3ef62e200394a2af8ce9a57913a0b905bc9df04fbe8d384ef6911faf/microsoft_agents_hosting_aiohttp-0.7.0-py3-none-any.whl", hash = "sha256:1a0abaca331ddbfd26307ca8c56408444b6d3087dccea1924b69d99cf4c759a3", size = 15819, upload-time = "2026-01-21T18:05:36.843Z" },
+]
+
+[[package]]
 name = "microsoft-agents-hosting-core"
 version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1537,6 +1550,9 @@ dependencies = [
     { name = "microsoft-agents-a365-notifications" },
     { name = "microsoft-agents-a365-observability-core" },
     { name = "microsoft-agents-a365-tooling" },
+    { name = "microsoft-agents-activity" },
+    { name = "microsoft-agents-hosting-aiohttp" },
+    { name = "microsoft-agents-hosting-core" },
     { name = "nvidia-nat-core" },
     { name = "nvidia-nat-opentelemetry" },
 ]
@@ -1554,6 +1570,9 @@ requires-dist = [
     { name = "microsoft-agents-a365-notifications", specifier = "~=0.1.0" },
     { name = "microsoft-agents-a365-observability-core", specifier = "~=0.1.0" },
     { name = "microsoft-agents-a365-tooling", specifier = "~=0.1.0" },
+    { name = "microsoft-agents-activity", specifier = "~=0.7.0" },
+    { name = "microsoft-agents-hosting-aiohttp", specifier = "~=0.7.0" },
+    { name = "microsoft-agents-hosting-core", specifier = "~=0.7.0" },
     { name = "nvidia-nat-core", editable = "../nvidia_nat_core" },
     { name = "nvidia-nat-mcp", marker = "extra == 'mcp'", editable = "../nvidia_nat_mcp" },
     { name = "nvidia-nat-opentelemetry", editable = "../nvidia_nat_opentelemetry" },

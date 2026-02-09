@@ -14,8 +14,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A365 notifications/Teams integration plugin for NeMo Agent Toolkit."""
-
-from .handler import A365NotificationHandler
-
-__all__ = ["A365NotificationHandler"]
+"""Tests for A365 tooling integration."""

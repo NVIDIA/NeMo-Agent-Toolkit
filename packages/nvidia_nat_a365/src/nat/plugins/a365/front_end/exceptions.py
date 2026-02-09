@@ -14,8 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Microsoft Agent 365 plugin for NeMo Agent Toolkit."""
+"""Backward compatibility: Import exceptions from shared module."""
 
+# Import from shared exceptions module
 from nat.plugins.a365.exceptions import (
     A365AuthenticationError,
     A365ConfigurationError,
