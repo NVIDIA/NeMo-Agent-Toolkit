@@ -39,8 +39,9 @@ class TestDynamoModelConfig:
         assert config.model_name == "test-model"
         assert config.prefix_template == "nat-dynamo-{uuid}"  # Enabled by default
         assert config.prefix_total_requests == 10
-        assert config.prefix_osl == "MEDIUM"
-        assert config.prefix_iat == "MEDIUM"
+        assert config.prefix_osl == 512
+        assert config.prefix_iat == 250
+        assert config.prefix_use_raw_values is True
         assert config.request_timeout == 600.0
 
     def test_custom_prefix_values(self):
@@ -49,15 +50,15 @@ class TestDynamoModelConfig:
             model_name="test-model",
             prefix_template="session-{uuid}",
             prefix_total_requests=20,
-            prefix_osl="HIGH",
-            prefix_iat="LOW",
+            prefix_osl=2048,
+            prefix_iat=50,
             request_timeout=300.0,
         )
 
         assert config.prefix_template == "session-{uuid}"
         assert config.prefix_total_requests == 20
-        assert config.prefix_osl == "HIGH"
-        assert config.prefix_iat == "LOW"
+        assert config.prefix_osl == 2048
+        assert config.prefix_iat == 50
         assert config.request_timeout == 300.0
 
     def test_disable_prefix_headers(self):
@@ -86,20 +87,42 @@ class TestDynamoModelConfig:
         with pytest.raises(ValueError):
             DynamoModelConfig(model_name="test-model", prefix_total_requests=51)
 
-    def test_prefix_level_validation(self):
-        """Test that prefix_osl and prefix_iat only accept valid values."""
-        # Valid values
-        for level in ["LOW", "MEDIUM", "HIGH"]:
-            config = DynamoModelConfig(model_name="test-model", prefix_osl=level, prefix_iat=level)
-            assert config.prefix_osl == level
-            assert config.prefix_iat == level
+    def test_prefix_osl_iat_accept_integers(self):
+        """Test that prefix_osl and prefix_iat accept integer values."""
+        config = DynamoModelConfig(model_name="test-model", prefix_osl=1024, prefix_iat=100)
+        assert config.prefix_osl == 1024
+        assert config.prefix_iat == 100
 
-        # Invalid values
+    def test_prefix_osl_iat_reject_invalid(self):
+        """Test that prefix_osl and prefix_iat reject invalid values."""
+        with pytest.raises(ValueError):
+            DynamoModelConfig(model_name="test-model", prefix_osl=0)
+
+        with pytest.raises(ValueError):
+            DynamoModelConfig(model_name="test-model", prefix_iat=0)
+
         with pytest.raises(ValueError):
             DynamoModelConfig(model_name="test-model", prefix_osl="INVALID")
 
-        with pytest.raises(ValueError):
-            DynamoModelConfig(model_name="test-model", prefix_iat="INVALID")
+    def test_backward_compat_categorical_strings(self):
+        """Test that categorical string values (LOW/MEDIUM/HIGH) are coerced to integers."""
+        config = DynamoModelConfig(model_name="test-model", prefix_osl="LOW", prefix_iat="LOW")
+        assert config.prefix_osl == 128
+        assert config.prefix_iat == 50
+
+        config = DynamoModelConfig(model_name="test-model", prefix_osl="MEDIUM", prefix_iat="MEDIUM")
+        assert config.prefix_osl == 512
+        assert config.prefix_iat == 250
+
+        config = DynamoModelConfig(model_name="test-model", prefix_osl="HIGH", prefix_iat="HIGH")
+        assert config.prefix_osl == 2048
+        assert config.prefix_iat == 750
+
+    def test_backward_compat_case_insensitive(self):
+        """Test that categorical coercion is case-insensitive."""
+        config = DynamoModelConfig(model_name="test-model", prefix_osl="low", prefix_iat="high")
+        assert config.prefix_osl == 128
+        assert config.prefix_iat == 750
 
     def test_request_timeout_validation(self):
         """Test that request_timeout validates positive values."""
@@ -134,6 +157,7 @@ class TestDynamoModelConfig:
             "prefix_total_requests",
             "prefix_osl",
             "prefix_iat",
+            "prefix_use_raw_values",
             "request_timeout",
             "prediction_trie_path",
         })
@@ -255,8 +279,8 @@ class TestCreateHttpxClient:
         client = create_httpx_client_with_dynamo_hooks(
             prefix_template=None,
             total_requests=10,
-            osl="MEDIUM",
-            iat="MEDIUM",
+            osl=512,
+            iat=250,
             timeout=120.0,
         )
 
@@ -269,8 +293,8 @@ class TestCreateHttpxClient:
         client = create_httpx_client_with_dynamo_hooks(
             prefix_template=None,
             total_requests=10,
-            osl="MEDIUM",
-            iat="MEDIUM",
+            osl=512,
+            iat=250,
         )
 
         assert client.timeout.connect == 600.0
@@ -282,8 +306,8 @@ class TestCreateHttpxClient:
         client = create_httpx_client_with_dynamo_hooks(
             prefix_template="test-{uuid}",
             total_requests=7,
-            osl="HIGH",
-            iat="LOW",
+            osl=2048,
+            iat=50,
             timeout=120.0,
             prediction_lookup=None,
         )
@@ -293,8 +317,9 @@ class TestCreateHttpxClient:
 
         # Verify transport has correct values
         assert client._transport._total_requests == 7
-        assert client._transport._osl == "HIGH"
-        assert client._transport._iat == "LOW"
+        assert client._transport._osl == 2048
+        assert client._transport._iat == 50
+        assert client._transport._use_raw_values is True
 
         # Verify timeout
         assert client.timeout.read == 120.0
@@ -308,8 +333,8 @@ class TestCreateHttpxClient:
 class TestDynamoTransport:
     """Tests for _DynamoTransport custom transport wrapper."""
 
-    async def test_transport_injects_headers(self):
-        """Test that _DynamoTransport injects HTTP headers."""
+    async def test_transport_injects_raw_headers_by_default(self):
+        """Test that _DynamoTransport injects raw integer values in HTTP headers by default."""
         import httpx
 
         from nat.llm.dynamo_llm import _DynamoTransport
@@ -319,12 +344,12 @@ class TestDynamoTransport:
         mock_transport = MagicMock()
         mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
 
-        # Create transport with static values
+        # Create transport with integer values (default use_raw_values=True)
         transport = _DynamoTransport(
             transport=mock_transport,
             total_requests=15,
-            osl="HIGH",
-            iat="LOW",
+            osl=2048,
+            iat=50,
             prediction_lookup=None,
         )
 
@@ -334,21 +359,53 @@ class TestDynamoTransport:
         # Create a request
         request = httpx.Request("POST", "https://api.example.com/chat")
 
-        # Handle request (should inject headers)
+        # Handle request (should inject raw integer headers)
         await transport.handle_async_request(request)
 
         # Get the request that was passed to mock transport
         call_args = mock_transport.handle_async_request.call_args
         modified_request = call_args[0][0]
 
-        # Verify headers were injected
+        # Verify headers were injected with raw integer values
         prefix = f"{LLMHeaderPrefix.DYNAMO}"
         assert modified_request.headers[f"{prefix}-id"] == "test-prefix-123"
         assert modified_request.headers[f"{prefix}-total-requests"] == "15"
+        assert modified_request.headers[f"{prefix}-osl"] == "2048"
+        assert modified_request.headers[f"{prefix}-iat"] == "50"
+
+        # Cleanup
+        DynamoPrefixContext.clear()
+
+    async def test_transport_injects_categorical_headers_when_raw_disabled(self):
+        """Test that _DynamoTransport converts to categorical values when use_raw_values=False."""
+        import httpx
+
+        from nat.llm.dynamo_llm import _DynamoTransport
+
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        # osl=2048 -> HIGH (>= 1024), iat=50 -> LOW (< 100)
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=15,
+            osl=2048,
+            iat=50,
+            prediction_lookup=None,
+            use_raw_values=False,
+        )
+
+        DynamoPrefixContext.set("test-categorical")
+
+        request = httpx.Request("POST", "https://api.example.com/chat")
+        await transport.handle_async_request(request)
+
+        modified_request = mock_transport.handle_async_request.call_args[0][0]
+        prefix = f"{LLMHeaderPrefix.DYNAMO}"
         assert modified_request.headers[f"{prefix}-osl"] == "HIGH"
         assert modified_request.headers[f"{prefix}-iat"] == "LOW"
 
-        # Cleanup
         DynamoPrefixContext.clear()
 
     async def test_transport_injects_nvext_agent_hints(self):
@@ -364,12 +421,12 @@ class TestDynamoTransport:
         mock_transport = MagicMock()
         mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
 
-        # Create transport
+        # Create transport with raw values (default)
         transport = _DynamoTransport(
             transport=mock_transport,
             total_requests=10,
-            osl="MEDIUM",
-            iat="HIGH",
+            osl=512,
+            iat=750,
             prediction_lookup=None,
         )
 
@@ -394,15 +451,15 @@ class TestDynamoTransport:
         # Parse the modified body
         body = json.loads(modified_request.content.decode("utf-8"))
 
-        # Verify nvext.agent_hints was injected
+        # Verify nvext.agent_hints was injected with raw integer values
         assert "nvext" in body
         assert "agent_hints" in body["nvext"]
         agent_hints = body["nvext"]["agent_hints"]
 
         assert agent_hints["prefix_id"] == "eval-q001"
         assert agent_hints["total_requests"] == 10
-        assert agent_hints["osl"] == "MEDIUM"
-        assert agent_hints["iat"] == "HIGH"
+        assert agent_hints["osl"] == 512
+        assert agent_hints["iat"] == 750
 
         # Cleanup
         DynamoPrefixContext.clear()
@@ -422,8 +479,8 @@ class TestDynamoTransport:
         transport = _DynamoTransport(
             transport=mock_transport,
             total_requests=5,
-            osl="LOW",
-            iat="MEDIUM",
+            osl=128,
+            iat=250,
             prediction_lookup=None,
         )
 
@@ -450,17 +507,14 @@ class TestDynamoTransport:
 
         agent_hints = body["nvext"]["agent_hints"]
 
-        # Our hints should be present
+        # Our hints should be present (raw integers)
         assert agent_hints["prefix_id"] == "merge-test"
         assert agent_hints["total_requests"] == 5
-        assert agent_hints["osl"] == "LOW"
-        assert agent_hints["iat"] == "MEDIUM"
+        assert agent_hints["osl"] == 128
+        assert agent_hints["iat"] == 250
 
         # Custom hint preserved
         assert agent_hints["custom_key"] == "custom_value"
-
-        # Old conflicting hint should be overridden
-        assert agent_hints["iat"] == "MEDIUM"
 
         DynamoPrefixContext.clear()
 
@@ -477,8 +531,8 @@ class TestDynamoTransport:
         transport = _DynamoTransport(
             transport=mock_transport,
             total_requests=1,
-            osl="LOW",
-            iat="LOW",
+            osl=128,
+            iat=50,
             prediction_lookup=None,
         )
 
@@ -490,18 +544,18 @@ class TestDynamoTransport:
         # Should not raise
         await transport.handle_async_request(request)
 
-        # Headers should still be injected
+        # Headers should still be injected with raw values
         modified_request = mock_transport.handle_async_request.call_args[0][0]
         prefix = f"{LLMHeaderPrefix.DYNAMO}"
         assert modified_request.headers[f"{prefix}-id"] == "non-json-test"
         assert modified_request.headers[f"{prefix}-total-requests"] == "1"
-        assert modified_request.headers[f"{prefix}-osl"] == "LOW"
-        assert modified_request.headers[f"{prefix}-iat"] == "LOW"
+        assert modified_request.headers[f"{prefix}-osl"] == "128"
+        assert modified_request.headers[f"{prefix}-iat"] == "50"
 
         DynamoPrefixContext.clear()
 
-    async def test_transport_uses_prediction_override(self):
-        """Test that prediction lookup overrides static config values."""
+    async def test_transport_uses_prediction_override_raw(self):
+        """Test that prediction lookup overrides static config with raw values by default."""
         import httpx
 
         from nat.llm.dynamo_llm import _DynamoTransport
@@ -511,8 +565,8 @@ class TestDynamoTransport:
         # Create mock prediction lookup
         mock_prediction = LLMCallPrediction(
             remaining_calls=PredictionMetrics(mean=25.0, p50=25.0, p90=30.0),
-            output_tokens=PredictionMetrics(mean=2000.0, p50=2000.0, p90=2500.0),  # HIGH
-            interarrival_ms=PredictionMetrics(mean=50.0, p50=50.0, p90=70.0),  # LOW
+            output_tokens=PredictionMetrics(mean=2000.0, p50=2000.0, p90=2500.0),
+            interarrival_ms=PredictionMetrics(mean=50.0, p50=50.0, p90=70.0),
         )
 
         mock_lookup = MagicMock()
@@ -526,9 +580,9 @@ class TestDynamoTransport:
         # Create transport with static values that should be overridden
         transport = _DynamoTransport(
             transport=mock_transport,
-            total_requests=10,  # Should be overridden to 25
-            osl="MEDIUM",  # Should be overridden to HIGH
-            iat="MEDIUM",  # Should be overridden to LOW
+            total_requests=10,
+            osl=512,
+            iat=250,
             prediction_lookup=mock_lookup,
         )
 
@@ -544,23 +598,71 @@ class TestDynamoTransport:
         # Get the modified request
         modified_request = mock_transport.handle_async_request.call_args[0][0]
 
-        # Verify prediction values were used instead of static config in headers
+        # Verify raw prediction values in headers
         prefix = f"{LLMHeaderPrefix.DYNAMO}"
-        assert modified_request.headers[f"{prefix}-total-requests"] == "25"  # from prediction
-        assert modified_request.headers[f"{prefix}-osl"] == "HIGH"  # from prediction (2500 tokens)
-        assert modified_request.headers[f"{prefix}-iat"] == "LOW"  # from prediction (50ms)
+        assert modified_request.headers[f"{prefix}-total-requests"] == "25"
+        assert modified_request.headers[f"{prefix}-osl"] == "2500"  # raw output_tokens.p90
+        assert modified_request.headers[f"{prefix}-iat"] == "50"  # raw interarrival_ms.mean
 
-        # Verify prediction values also used in nvext.agent_hints
+        # Verify raw prediction values in nvext.agent_hints
         import json
         body = json.loads(modified_request.content.decode("utf-8"))
         agent_hints = body["nvext"]["agent_hints"]
 
         assert agent_hints["total_requests"] == 25
-        assert agent_hints["osl"] == "HIGH"
-        assert agent_hints["iat"] == "LOW"
+        assert agent_hints["osl"] == 2500
+        assert agent_hints["iat"] == 50
 
         # Verify lookup was called
         assert mock_lookup.find.called
+
+        DynamoPrefixContext.clear()
+
+    async def test_transport_uses_prediction_override_categorical(self):
+        """Test that prediction lookup converts to categories when use_raw_values=False."""
+        import httpx
+
+        from nat.llm.dynamo_llm import _DynamoTransport
+        from nat.profiler.prediction_trie.data_models import LLMCallPrediction
+        from nat.profiler.prediction_trie.data_models import PredictionMetrics
+
+        mock_prediction = LLMCallPrediction(
+            remaining_calls=PredictionMetrics(mean=25.0, p50=25.0, p90=30.0),
+            output_tokens=PredictionMetrics(mean=2000.0, p50=2000.0, p90=2500.0),  # >= 1024 -> HIGH
+            interarrival_ms=PredictionMetrics(mean=50.0, p50=50.0, p90=70.0),  # < 100 -> LOW
+        )
+
+        mock_lookup = MagicMock()
+        mock_lookup.find = MagicMock(return_value=mock_prediction)
+
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,
+            osl=512,
+            iat=250,
+            prediction_lookup=mock_lookup,
+            use_raw_values=False,
+        )
+
+        DynamoPrefixContext.set("prediction-categorical")
+
+        request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+        await transport.handle_async_request(request)
+
+        modified_request = mock_transport.handle_async_request.call_args[0][0]
+        prefix = f"{LLMHeaderPrefix.DYNAMO}"
+        assert modified_request.headers[f"{prefix}-osl"] == "HIGH"
+        assert modified_request.headers[f"{prefix}-iat"] == "LOW"
+
+        import json
+        body = json.loads(modified_request.content.decode("utf-8"))
+        agent_hints = body["nvext"]["agent_hints"]
+        assert agent_hints["osl"] == "HIGH"
+        assert agent_hints["iat"] == "LOW"
 
         DynamoPrefixContext.clear()
 
@@ -579,8 +681,8 @@ class TestDynamoTransport:
         transport = _DynamoTransport(
             transport=mock_transport,
             total_requests=10,
-            osl="MEDIUM",
-            iat="HIGH",
+            osl=512,
+            iat=750,
             prediction_lookup=None,
         )
 
@@ -621,8 +723,8 @@ class TestDynamoTransport:
         transport = _DynamoTransport(
             transport=mock_transport,
             total_requests=10,
-            osl="MEDIUM",
-            iat="HIGH",
+            osl=512,
+            iat=750,
             prediction_lookup=None,
         )
 

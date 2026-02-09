@@ -39,18 +39,28 @@ Dynamo Prefix Parameters
 -------------------------
 
 prefix_osl (Output Sequence Length)
-    Hint for expected response length:
+    Expected output tokens for response length hinting. By default, the raw
+    integer value is sent. When ``prefix_use_raw_values`` is False, values are
+    converted to categories:
 
-    - LOW: decode_cost=1.0, short responses
-    - MEDIUM: decode_cost=2.0, typical responses
-    - HIGH: decode_cost=3.0, long responses
+    - < 256 tokens: LOW (decode_cost=1.0, short responses)
+    - < 1024 tokens: MEDIUM (decode_cost=2.0, typical responses)
+    - >= 1024 tokens: HIGH (decode_cost=3.0, long responses)
+
+    Accepts categorical strings (LOW/MEDIUM/HIGH) for backward compatibility,
+    which are converted to representative token counts (128/512/2048).
 
 prefix_iat (Inter-Arrival Time)
-    Hint for request pacing:
+    Expected inter-arrival time in milliseconds. By default, the raw integer
+    value is sent. When ``prefix_use_raw_values`` is False, values are converted
+    to categories:
 
-    - LOW: iat_factor=1.5, rapid bursts -> high worker stickiness
-    - MEDIUM: iat_factor=1.0, normal pacing
-    - HIGH: iat_factor=0.6, slow requests -> more exploration
+    - < 100ms: LOW (iat_factor=1.5, rapid bursts, high worker stickiness)
+    - < 500ms: MEDIUM (iat_factor=1.0, normal pacing)
+    - >= 500ms: HIGH (iat_factor=0.6, slow requests, more exploration)
+
+    Accepts categorical strings (LOW/MEDIUM/HIGH) for backward compatibility,
+    which are converted to representative millisecond values (50/250/750).
 
 prefix_total_requests
     Expected requests per conversation:
@@ -74,6 +84,7 @@ if TYPE_CHECKING:
     from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
 
 from pydantic import Field
+from pydantic import field_validator
 
 from nat.builder.builder import Builder
 from nat.builder.context import Context
@@ -89,6 +100,10 @@ logger = logging.getLogger(__name__)
 
 # Define valid prefix hint values
 PrefixLevel = Literal["LOW", "MEDIUM", "HIGH"]
+
+# Mappings from categorical levels to representative integer values (for backward compatibility)
+_OSL_CATEGORY_TO_INT: dict[str, int] = {"LOW": 128, "MEDIUM": 512, "HIGH": 2048}
+_IAT_CATEGORY_TO_INT: dict[str, int] = {"LOW": 50, "MEDIUM": 250, "HIGH": 750}
 
 # =============================================================================
 # CATEGORY CONVERSION HELPERS
@@ -314,22 +329,22 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
                      "Lower values allow more load balancing across workers."),
         space=SearchSpace(low=1, high=20, step=5))
 
-    prefix_osl: PrefixLevel = OptimizableField(
-        default="MEDIUM",
-        description="Output Sequence Length hint for the Dynamo router. "
-        "LOW means short responses (decode_cost=1.0), "
-        "MEDIUM means typical (decode_cost=2.0), "
-        "HIGH means long responses (decode_cost=3.0).",
-        space=SearchSpace(values=["LOW", "MEDIUM", "HIGH"]),
+    prefix_osl: int = OptimizableField(
+        default=512,
+        ge=1,
+        description="Expected output tokens for response length hinting (Output Sequence Length). "
+        "Raw integer value is sent by default. Accepts categorical strings "
+        "(LOW/MEDIUM/HIGH) for backward compatibility (mapped to 128/512/2048).",
+        space=SearchSpace(low=64, high=4096, step=64),
     )
 
-    prefix_iat: PrefixLevel = OptimizableField(
-        default="MEDIUM",
-        description="Inter-Arrival Time hint for the Dynamo router. "
-        "LOW means rapid bursts (iat_factor=1.5, high stickiness), "
-        "MEDIUM means normal (iat_factor=1.0), "
-        "HIGH means slow requests (iat_factor=0.6, more exploration).",
-        space=SearchSpace(values=["LOW", "MEDIUM", "HIGH"]),
+    prefix_iat: int = OptimizableField(
+        default=250,
+        ge=1,
+        description="Expected inter-arrival time in milliseconds for request pacing. "
+        "Raw integer value is sent by default. Accepts categorical strings "
+        "(LOW/MEDIUM/HIGH) for backward compatibility (mapped to 50/250/750).",
+        space=SearchSpace(low=10, high=1000, step=50),
     )
 
     request_timeout: float = Field(
@@ -338,11 +353,37 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
         description="HTTP request timeout in seconds for LLM requests.",
     )
 
+    prefix_use_raw_values: bool = Field(
+        default=True,
+        description="When True, send raw integer values for OSL (output tokens) and IAT (interarrival ms) "
+        "in headers and nvext.agent_hints. When False, convert to categorical LOW/MEDIUM/HIGH.",
+    )
+
     prediction_trie_path: str | None = Field(
         default=None,
         description="Path to prediction_trie.json file. When set, predictions are "
         "looked up and used to override both HTTP headers and nvext.agent_hints for each LLM call.",
     )
+
+    # =========================================================================
+    # VALIDATORS (backward compatibility: categorical strings -> integers)
+    # =========================================================================
+
+    @field_validator("prefix_osl", mode="before")
+    @classmethod
+    def _coerce_prefix_osl(cls, v: object) -> object:
+        """Convert categorical OSL strings (LOW/MEDIUM/HIGH) to representative token counts."""
+        if isinstance(v, str) and v.upper() in _OSL_CATEGORY_TO_INT:
+            return _OSL_CATEGORY_TO_INT[v.upper()]
+        return v
+
+    @field_validator("prefix_iat", mode="before")
+    @classmethod
+    def _coerce_prefix_iat(cls, v: object) -> object:
+        """Convert categorical IAT strings (LOW/MEDIUM/HIGH) to representative millisecond values."""
+        if isinstance(v, str) and v.upper() in _IAT_CATEGORY_TO_INT:
+            return _IAT_CATEGORY_TO_INT[v.upper()]
+        return v
 
     # =========================================================================
     # UTILITY METHODS
@@ -371,6 +412,7 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
             "prefix_total_requests",
             "prefix_osl",
             "prefix_iat",
+            "prefix_use_raw_values",
             "request_timeout",
             "prediction_trie_path",
         })
@@ -397,15 +439,17 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
         self,
         transport: httpx.AsyncBaseTransport,
         total_requests: int,
-        osl: str,
-        iat: str,
+        osl: int,
+        iat: int,
         prediction_lookup: "PredictionTrieLookup | None" = None,
+        use_raw_values: bool = True,
     ):
         self._transport = transport
         self._total_requests = total_requests
-        self._osl = osl.upper()
-        self._iat = iat.upper()
+        self._osl = osl
+        self._iat = iat
         self._prediction_lookup = prediction_lookup
+        self._use_raw_values = use_raw_values
 
     async def handle_async_request(self, request: "httpx.Request") -> "httpx.Response":
         # Get prefix ID from context (supports depth-awareness and overrides)
@@ -419,10 +463,10 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
             # If context not available or latency_sensitivity not implemented yet, default to MEDIUM
             latency_sensitivity = "MEDIUM"
 
-        # Initialize with static config values
+        # Initialize with static config values (always integers)
         total_requests = self._total_requests
-        osl = self._osl
-        iat = self._iat
+        osl_raw = self._osl
+        iat_raw = self._iat
 
         # Check for prediction override
         if self._prediction_lookup is not None:
@@ -445,19 +489,17 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
                 if prediction:
                     # Override with prediction-derived values
                     total_requests = int(prediction.remaining_calls.mean)
-                    osl = _output_tokens_to_osl(prediction.output_tokens.p90)
-                    iat = _interarrival_ms_to_iat(prediction.interarrival_ms.mean)
+                    osl_raw = int(prediction.output_tokens.p90)
+                    iat_raw = int(prediction.interarrival_ms.mean)
 
                     logger.debug(
                         "Overriding hints from prediction: path=%s, call_index=%d, "
-                        "total_requests=%d, osl=%s (tokens=%d), iat=%s (ms=%d)",
+                        "total_requests=%d, osl_raw=%d, iat_raw=%d",
                         path,
                         call_index,
                         total_requests,
-                        osl,
-                        int(prediction.output_tokens.p90),
-                        iat,
-                        int(prediction.interarrival_ms.mean),
+                        osl_raw,
+                        iat_raw,
                     )
                 else:
                     logger.debug(
@@ -469,12 +511,20 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
             except Exception:
                 logger.exception("Failed to lookup prediction")
 
-        # Inject HTTP headers
+        # Convert to final hint values based on use_raw_values flag
+        if self._use_raw_values:
+            osl_hint: int | str = osl_raw
+            iat_hint: int | str = iat_raw
+        else:
+            osl_hint = _output_tokens_to_osl(osl_raw)
+            iat_hint = _interarrival_ms_to_iat(iat_raw)
+
+        # Inject HTTP headers (always string)
         headers = dict(request.headers)
         headers[f"{LLMHeaderPrefix.DYNAMO}-id"] = prefix_id
         headers[f"{LLMHeaderPrefix.DYNAMO}-total-requests"] = str(total_requests)
-        headers[f"{LLMHeaderPrefix.DYNAMO}-osl"] = osl
-        headers[f"{LLMHeaderPrefix.DYNAMO}-iat"] = iat
+        headers[f"{LLMHeaderPrefix.DYNAMO}-osl"] = str(osl_hint)
+        headers[f"{LLMHeaderPrefix.DYNAMO}-iat"] = str(iat_hint)
         headers[f"{LLMHeaderPrefix.DYNAMO}-latency-sensitivity"] = latency_sensitivity
 
         # Modify body to inject nvext.agent_hints (if JSON POST request)
@@ -483,12 +533,12 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
             try:
                 body = json.loads(content.decode("utf-8", errors="replace"))
                 if isinstance(body, dict):
-                    # Build agent_hints dict
+                    # Build agent_hints dict (int or str depending on raw mode)
                     agent_hints = {
                         "prefix_id": prefix_id,
                         "total_requests": total_requests,
-                        "osl": osl,
-                        "iat": iat,
+                        "osl": osl_hint,
+                        "iat": iat_hint,
                         "latency_sensitivity": latency_sensitivity,
                     }
 
@@ -527,8 +577,8 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
         logger.debug("Injected Dynamo hints: prefix_id=%s, total_requests=%d, osl=%s, iat=%s, latency_sensitivity=%s",
                      prefix_id,
                      total_requests,
-                     osl,
-                     iat,
+                     osl_hint,
+                     iat_hint,
                      latency_sensitivity)
 
         return await self._transport.handle_async_request(new_request)
@@ -546,10 +596,11 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
 def create_httpx_client_with_dynamo_hooks(
     prefix_template: str | None,
     total_requests: int,
-    osl: str,
-    iat: str,
+    osl: int,
+    iat: int,
     timeout: float = 600.0,
     prediction_lookup: "PredictionTrieLookup | None" = None,
+    use_raw_values: bool = True,
 ) -> "httpx.AsyncClient":
     """
     Create an httpx.AsyncClient with Dynamo hint injection via custom transport.
@@ -564,10 +615,11 @@ def create_httpx_client_with_dynamo_hooks(
     Args:
         prefix_template: Template string with {uuid} placeholder (unused, kept for API compat)
         total_requests: Expected number of requests for this prefix
-        osl: Output sequence length hint (LOW/MEDIUM/HIGH)
-        iat: Inter-arrival time hint (LOW/MEDIUM/HIGH)
+        osl: Expected output tokens (raw integer value)
+        iat: Expected inter-arrival time in milliseconds (raw integer value)
         timeout: HTTP request timeout in seconds
         prediction_lookup: Optional PredictionTrieLookup for dynamic hint injection
+        use_raw_values: When True send raw integers; when False convert to LOW/MEDIUM/HIGH
 
     Returns:
         An httpx.AsyncClient configured with Dynamo hint injection.
@@ -586,6 +638,7 @@ def create_httpx_client_with_dynamo_hooks(
         osl=osl,
         iat=iat,
         prediction_lookup=prediction_lookup,
+        use_raw_values=use_raw_values,
     )
 
     return httpx.AsyncClient(

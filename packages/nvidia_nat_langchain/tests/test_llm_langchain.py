@@ -192,8 +192,8 @@ class TestDynamoLangChain:
             base_url="http://localhost:8000/v1",
             prefix_template="session-{uuid}",
             prefix_total_requests=15,
-            prefix_osl="HIGH",
-            prefix_iat="LOW",
+            prefix_osl=2048,
+            prefix_iat=50,
             request_timeout=300.0,
         )
 
@@ -238,10 +238,11 @@ class TestDynamoLangChain:
             mock_create_client.assert_called_once_with(
                 prefix_template="session-{uuid}",
                 total_requests=15,
-                osl="HIGH",
-                iat="LOW",
+                osl=2048,
+                iat=50,
                 timeout=300.0,
                 prediction_lookup=None,
+                use_raw_values=True,
             )
 
             # Verify ChatOpenAI was called with the custom httpx client
@@ -308,6 +309,7 @@ class TestDynamoLangChain:
         assert "prefix_total_requests" not in kwargs
         assert "prefix_osl" not in kwargs
         assert "prefix_iat" not in kwargs
+        assert "prefix_use_raw_values" not in kwargs
         assert "request_timeout" not in kwargs
 
         # Verify the httpx client was properly closed
