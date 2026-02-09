@@ -14,9 +14,8 @@
 # limitations under the License.
 # pylint: disable=unused-argument
 
-import os
-
 import logging
+import os
 from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING

@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import os
-
 from collections.abc import Sequence
 from typing import TypeVar
 
