@@ -371,11 +371,18 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
 
     @field_validator("prefix_osl", mode="before")
     @classmethod
-    def _coerce_prefix_osl(cls, v: object) -> object:
-        """Convert categorical OSL strings (LOW/MEDIUM/HIGH) to representative token counts."""
-        if isinstance(v, str) and v.upper() in _OSL_CATEGORY_TO_INT:
-            return _OSL_CATEGORY_TO_INT[v.upper()]
-        return v
+    def _coerce_prefix_osl(cls, v: object) -> int:
+        if isinstance(v, int):
+            return v
+        if isinstance(v, str):
+            upper = v.upper()
+            if upper in _OSL_CATEGORY_TO_INT:
+                return _OSL_CATEGORY_TO_INT[upper]
+            raise ValueError(
+                f"Invalid OSL value '{v}'. Must be an integer >= 1 "
+                f"or one of: {', '.join(_OSL_CATEGORY_TO_INT.keys())}"
+            )
+        raise TypeError(f"prefix_osl must be int or str, got {type(v)}")
 
     @field_validator("prefix_iat", mode="before")
     @classmethod
