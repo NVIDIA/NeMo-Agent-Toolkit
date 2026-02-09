@@ -18,6 +18,16 @@ limitations under the License.
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [1.4.1] - 2026-02-09
+
+### 🐛 Bug Fixes
+* fix(serve): ensure a single event loop for python 3.11 by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1558
+
+### 📚 Documentation
+* Document new `nat serve` CLI flags by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1562
+
+**Full Changelog**: https://github.com/NVIDIA/NeMo-Agent-Toolkit/compare/v1.4.0...v1.4.1
+
 ## [1.4.0] - 2026-02-02
 
 ### 🚀 Notable Features and Improvements
