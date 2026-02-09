@@ -411,6 +411,14 @@ class _DynamoTransport:
         # Get prefix ID from context (supports depth-awareness and overrides)
         prefix_id = DynamoPrefixContext.get()
 
+        # Get latency sensitivity from context (defaults to MEDIUM)
+        try:
+            ctx = Context.get()
+            latency_sensitivity = str(ctx.latency_sensitivity.value)
+        except Exception:
+            # If context not available or latency_sensitivity not implemented yet, default to MEDIUM
+            latency_sensitivity = "MEDIUM"
+
         # Initialize with static config values
         total_requests = self._total_requests
         osl = self._osl
@@ -467,6 +475,7 @@ class _DynamoTransport:
         headers[f"{LLMHeaderPrefix.DYNAMO.value}-total-requests"] = str(total_requests)
         headers[f"{LLMHeaderPrefix.DYNAMO.value}-osl"] = osl
         headers[f"{LLMHeaderPrefix.DYNAMO.value}-iat"] = iat
+        headers[f"{LLMHeaderPrefix.DYNAMO.value}-latency-sensitivity"] = latency_sensitivity
 
         # Modify body to inject nvext.agent_hints (if JSON POST request)
         content = request.content
@@ -480,6 +489,7 @@ class _DynamoTransport:
                         "total_requests": total_requests,
                         "osl": osl,
                         "iat": iat,
+                        "latency_sensitivity": latency_sensitivity,
                     }
 
                     # Add/merge nvext.agent_hints
@@ -514,11 +524,12 @@ class _DynamoTransport:
             extensions=request.extensions,
         )
 
-        logger.debug("Injected Dynamo hints: prefix_id=%s, total_requests=%d, osl=%s, iat=%s",
+        logger.debug("Injected Dynamo hints: prefix_id=%s, total_requests=%d, osl=%s, iat=%s, latency_sensitivity=%s",
                      prefix_id,
                      total_requests,
                      osl,
-                     iat)
+                     iat,
+                     latency_sensitivity)
 
         return await self._transport.handle_async_request(new_request)
 

@@ -564,6 +564,99 @@ class TestDynamoTransport:
 
         DynamoPrefixContext.clear()
 
+    async def test_transport_injects_latency_sensitivity_header(self):
+        """Test that _DynamoTransport injects latency-sensitivity HTTP header."""
+        import httpx
+
+        from nat.llm.dynamo_llm import _DynamoTransport
+
+        # Create mock base transport
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        # Create transport
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,
+            osl="MEDIUM",
+            iat="HIGH",
+            prediction_lookup=None,
+        )
+
+        # Set prefix ID
+        DynamoPrefixContext.set("test-latency-123")
+
+        # Create a request
+        request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+
+        # Handle request (should inject latency-sensitivity header)
+        await transport.handle_async_request(request)
+
+        # Get the request that was passed to mock transport
+        call_args = mock_transport.handle_async_request.call_args
+        modified_request = call_args[0][0]
+
+        # Verify latency-sensitivity header was injected with default MEDIUM
+        prefix = f"{LLMHeaderPrefix.DYNAMO.value}"
+        assert modified_request.headers[f"{prefix}-latency-sensitivity"] == "MEDIUM"
+
+        # Cleanup
+        DynamoPrefixContext.clear()
+
+    async def test_transport_injects_latency_sensitivity_in_agent_hints(self):
+        """Test that _DynamoTransport injects latency-sensitivity in nvext.agent_hints."""
+        import json
+
+        import httpx
+
+        from nat.llm.dynamo_llm import _DynamoTransport
+
+        # Create mock base transport
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        # Create transport
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,
+            osl="MEDIUM",
+            iat="HIGH",
+            prediction_lookup=None,
+        )
+
+        # Set prefix ID
+        DynamoPrefixContext.set("test-latency-ann")
+
+        # Create a POST request with JSON body
+        request = httpx.Request(
+            "POST",
+            "https://api.example.com/chat",
+            json={
+                "model": "test", "messages": []
+            },
+        )
+
+        # Handle request
+        await transport.handle_async_request(request)
+
+        # Get the request that was passed to mock transport
+        call_args = mock_transport.handle_async_request.call_args
+        modified_request = call_args[0][0]
+
+        # Parse the modified body
+        body = json.loads(modified_request.content.decode("utf-8"))
+
+        # Verify latency-sensitivity in agent_hints with default MEDIUM
+        assert "nvext" in body
+        assert "agent_hints" in body["nvext"]
+        agent_hints = body["nvext"]["agent_hints"]
+        assert agent_hints["latency_sensitivity"] == "MEDIUM"
+
+        # Cleanup
+        DynamoPrefixContext.clear()
+
 
 # ---------------------------------------------------------------------------
 # Provider Registration Tests
