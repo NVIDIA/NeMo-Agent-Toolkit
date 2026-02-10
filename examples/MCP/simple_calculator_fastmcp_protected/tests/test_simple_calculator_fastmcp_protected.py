@@ -55,8 +55,8 @@ async def fastmcp_protected_process_fixture(
 
     env = os.environ.copy()
     env.pop("NAT_LOG_LEVEL", None)
-    env.setdefault("CALCULATOR_RESOURCE_CLIENT_ID", "nat-mcp-resource-server")
-    env.setdefault("CALCULATOR_RESOURCE_CLIENT_SECRET", "dummy-secret")
+    env.setdefault("NAT_CALCULATOR_RESOURCE_CLIENT_ID", "nat-mcp-resource-server")
+    env.setdefault("NAT_CALCULATOR_RESOURCE_CLIENT_SECRET", "dummy-secret")
 
     cmd = [
         "nat",
@@ -113,5 +113,5 @@ async def fastmcp_protected_ready_fixture(
 @pytest.mark.integration
 @pytest.mark.usefixtures("fastmcp_protected_ready")
 async def test_fastmcp_protected_requires_auth(fastmcp_protected_base_url: str):
-    response = httpx.get(f"{fastmcp_protected_base_url}/debug/tools/list", timeout=5.0)
+    response = httpx.get(f"{fastmcp_protected_base_url}/mcp", timeout=5.0)
     assert response.status_code == 401
