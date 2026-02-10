@@ -39,12 +39,13 @@ class ObjectStoreItem:
 ```
 
 ### ObjectStore Interface
-The `ObjectStore` abstract interface defines the four standard operations:
+The `ObjectStore` abstract interface defines the four standard operations and a `read_dataframe()` convenience method:
 
 - **put_object(key, item)**: Store a new object with a unique key. Raises if the key already exists.
 - **upsert_object(key, item)**: Update (or inserts) an object with the given key.
 - **get_object(key)**: Retrieve an object by its key. Raises if the key doesn't exist.
 - **delete_object(key)**: Remove an object from the store. Raises if the key doesn't exist.
+- **read_dataframe(key, format)**: Read an object and parse it into a pandas DataFrame. The format is inferred from the key's file extension when not specified. Supported formats: `csv`, `json`, `jsonl`, `parquet`, `xls`. Subclasses may override this method for efficient native reads (for example, reading directly from a file path or executing a SQL query).
 
 ```python
 class ObjectStore(ABC):
@@ -63,11 +64,16 @@ class ObjectStore(ABC):
     @abstractmethod
     async def delete_object(self, key: str) -> None:
         ...
+
+    async def read_dataframe(self, key: str, format: str | None = None, **kwargs) -> "pd.DataFrame":
+        """Read an object and parse it as a pandas DataFrame."""
+        ...
 ```
 
 ## Included Object Stores
 The NeMo Agent Toolkit includes several object store providers:
 
+- **File Object Store**: Local filesystem storage. Used automatically when specifying `file_path` in evaluation dataset configuration. Overrides `read_dataframe()` to read files directly from disk for efficiency. See `packages/nvidia_nat_core/src/nat/object_store/file_object_store.py`
 - **In-Memory Object Store**: In-memory storage for development and testing. See `packages/nvidia_nat_core/src/nat/object_store/in_memory_object_store.py`
 - **S3 Object Store**: Amazon S3 and S3-compatible storage (like MinIO). See `packages/nvidia_nat_s3/src/nat/plugins/s3/s3_object_store.py`
 - **MySQL Object Store**: MySQL database-backed storage. See `packages/nvidia_nat_mysql/src/nat/plugins/mysql/mysql_object_store.py`

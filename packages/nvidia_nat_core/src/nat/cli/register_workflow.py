@@ -20,8 +20,6 @@ from pydantic import BaseModel
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.type_registry import AuthProviderBuildCallableT
 from nat.cli.type_registry import AuthProviderRegisteredCallableT
-from nat.cli.type_registry import DatasetLoaderBuildCallableT
-from nat.cli.type_registry import DatasetLoaderRegisteredCallableT
 from nat.cli.type_registry import EmbedderClientBuildCallableT
 from nat.cli.type_registry import EmbedderClientRegisteredCallableT
 from nat.cli.type_registry import EmbedderProviderBuildCallableT
@@ -69,7 +67,6 @@ from nat.cli.type_registry import TTCStrategyBuildCallableT
 from nat.cli.type_registry import TTCStrategyRegisteredCallableT
 from nat.data_models.authentication import AuthProviderBaseConfigT
 from nat.data_models.component import ComponentEnum
-from nat.data_models.dataset_handler import EvalDatasetBaseConfigT
 from nat.data_models.discovery_metadata import DiscoveryMetadata
 from nat.data_models.embedder import EmbedderBaseConfigT
 from nat.data_models.evaluator import EvaluatorBaseConfigT
@@ -517,30 +514,6 @@ def register_evaluator(config_type: type[EvaluatorBaseConfigT]):
         return context_manager_fn
 
     return register_evaluator_inner
-
-
-def register_dataset_loader(config_type: type[EvalDatasetBaseConfigT]):
-
-    def register_dataset_loader_inner(
-        fn: DatasetLoaderBuildCallableT[EvalDatasetBaseConfigT]
-    ) -> DatasetLoaderRegisteredCallableT[EvalDatasetBaseConfigT]:
-        from .type_registry import GlobalTypeRegistry
-        from .type_registry import RegisteredDatasetLoaderInfo
-
-        context_manager_fn = asynccontextmanager(fn)
-
-        discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
-                                                                component_type=ComponentEnum.DATASET_LOADER)
-
-        GlobalTypeRegistry.get().register_dataset_loader(
-            RegisteredDatasetLoaderInfo(full_type=config_type.full_type,
-                                        config_type=config_type,
-                                        build_fn=context_manager_fn,
-                                        discovery_metadata=discovery_metadata))
-
-        return context_manager_fn
-
-    return register_dataset_loader_inner
 
 
 def register_memory(config_type: type[MemoryBaseConfigT]):

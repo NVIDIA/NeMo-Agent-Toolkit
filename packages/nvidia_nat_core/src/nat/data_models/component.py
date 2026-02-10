@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 class ComponentEnum(StrEnum):
     # Keep sorted!!!
     AUTHENTICATION_PROVIDER = "auth_provider"
-    DATASET_LOADER = "dataset_loader"
     EMBEDDER_CLIENT = "embedder_client"
     EMBEDDER_PROVIDER = "embedder_provider"
     EVALUATOR = "evaluator"

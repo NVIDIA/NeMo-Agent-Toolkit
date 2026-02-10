@@ -72,7 +72,6 @@ eval:
   general:
     output_dir: ./.tmp/nat/examples/getting_started/simple_web_query/
     dataset:
-      _type: json
       file_path: examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json
   evaluators:
     accuracy:
@@ -81,7 +80,7 @@ eval:
       llm_name: nim_rag_eval_llm
 ```
 
-The dataset section specifies the dataset to use for running the workflow. The built-in dataset types are `json`, `jsonl`, `csv`, `xls`, `parquet`, and `custom`. The dataset file path is specified using the `file_path` key. Additional dataset formats can be added via the [plugin system](../extend/custom-components/custom-dataset-loader.md).
+The dataset section specifies the dataset to use for running the workflow. Dataset loading goes through the [ObjectStore](../build-workflows/object-store.md) subsystem. The data format is automatically inferred from the file extension (supported: `json`, `jsonl`, `csv`, `xls`, `parquet`). You can also load data from a remote ObjectStore by specifying `object_store` and `key` instead of `file_path`. For more details on custom data sources, see the [Custom Data Sources](../extend/custom-components/custom-dataset-loader.md) guide.
 
 ## Evaluation outputs (what you will get)
 Running `nat eval` produces a set of artifacts in the configured output directory. These files fall into four groups: workflow outputs, configuration outputs, evaluator outputs, and profiler observability outputs.
@@ -429,8 +428,8 @@ You can also evaluate workflows using the NeMo Agent Toolkit evaluation endpoint
 ## Adding Custom Evaluators
 You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the NeMo Agent Toolkit evaluator system. See the [Custom Evaluator](../extend/custom-components/custom-evaluator.md) documentation for more information.
 
-## Adding Custom Dataset Loaders
-You can add support for additional dataset formats by creating a custom dataset loader plugin. See the [Custom Dataset Loader](../extend/custom-components/custom-dataset-loader.md) documentation for more information.
+## Custom Data Sources
+You can load evaluation data from custom sources by creating a custom ObjectStore implementation. See the [Custom Data Sources](../extend/custom-components/custom-dataset-loader.md) documentation for more information.
 
 ## Overriding Evaluation Configuration
 You can override the configuration in the `eval_config.yml` file using the `--override` command line flag. The following is an example of overriding the configuration:
@@ -450,7 +449,7 @@ nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/c
 ```
 
 ### Using Datasets
-Run and evaluate the workflow on a specified dataset. The built-in dataset file types are `json`, `jsonl`, `csv`, `xls`, `parquet`, and `custom`. You can also add support for additional dataset formats via the [dataset loader plugin system](../extend/custom-components/custom-dataset-loader.md).
+Run and evaluate the workflow on a specified dataset. The supported file formats are `json`, `jsonl`, `csv`, `xls`, and `parquet`, inferred automatically from the file extension. You can also load data from remote ObjectStore backends or create [custom data sources](../extend/custom-components/custom-dataset-loader.md).
 
 Download and use datasets provided by NeMo Agent Toolkit examples by running the following.
 
@@ -463,7 +462,6 @@ git lfs pull
 eval:
   general:
     dataset:
-      _type: json
       file_path: examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json
 ```
 
@@ -501,7 +499,6 @@ the swe-bench evaluator:
 eval:
   general:
     dataset:
-      _type: parquet
       file_path: hf://datasets/princeton-nlp/SWE-bench_Lite/data/test-00000-of-00001.parquet
       id_key: instance_id
       structure: # For swe-bench the entire row is the input
@@ -524,7 +521,6 @@ and `sympy__sympy-21055`. The evaluation iteratively develops and debugs the wor
 ```yaml
 eval:
     dataset:
-      _type: parquet
       file_path: hf://datasets/princeton-nlp/SWE-bench_Verified/data/test-00000-of-00001.parquet
       id_key: instance_id
       structure:
@@ -542,7 +538,6 @@ You can also skip entries from the dataset. Here is an example configuration to 
 ```yaml
 eval:
     dataset:
-      _type: parquet
       file_path: hf://datasets/princeton-nlp/SWE-bench_Verified/data/test-00000-of-00001.parquet
       id_key: instance_id
       structure:
@@ -564,8 +559,8 @@ You can use a dataset with a custom format by providing a custom dataset parser 
 eval:
   general:
     dataset:
-      _type: custom
       file_path: examples/evaluation_and_profiling/simple_calculator_eval/data/simple_calculator_nested.json
+      format: json
       function: nat_simple_calculator_eval.scripts.custom_dataset_parser.extract_nested_questions
       kwargs:
         difficulty: "medium"
@@ -605,7 +600,6 @@ eval:
       dir: .tmp/nat/examples/simple_calculator/eval-with-post-process
       custom_pre_eval_process_function: nat_simple_calculator_eval.scripts.custom_post_process.normalize_calculator_outputs
     dataset:
-      _type: json
       file_path: examples/getting_started/simple_calculator/src/nat_simple_calculator/data/simple_calculator.json
 ```
 This example configuration uses a custom pre-evaluation process function to normalize numerical outputs for consistent evaluation.
@@ -703,7 +697,6 @@ Workflows can use the swe-bench evaluator to solve swe-bench problems. To evalua
 eval:
   general:
     dataset:
-      _type: parquet
       file_path: hf://datasets/princeton-nlp/SWE-bench_Lite/data/test-00000-of-00001.parquet
       id_key: instance_id
       structure: # For swe-bench the entire row is the input
@@ -830,7 +823,6 @@ eval:
   general:
     output_dir: ./.tmp/nat/examples/getting_started/simple_web_query/
     dataset:
-      _type: json
       file_path: examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json
 ```
 
@@ -923,22 +915,23 @@ eval:
 
 ### Remote Storage
 #### Evaluating remote datasets
-You can evaluate a remote dataset by provide the information needed to download the dataset in the `eval.general.dataset` section of the `config.yml` file. The following is an example configuration to evaluate a remote dataset.
+You can evaluate a remote dataset by configuring an ObjectStore in your configuration file and referencing it from the dataset section. The following example loads a dataset from an S3-compatible store:
 ```yaml
+object_stores:
+  eval_data:
+    _type: s3
+    endpoint_url: http://10.185.X.X:9000
+    bucket: nat-simple-bucket
+    access_key: fake_access_key
+    secret_key: fake_secret_key
+
 eval:
   general:
     dataset:
-      _type: json
-      # Download dataset from remote storage using S3 credentials
-      remote_file_path: input/langsmith.json
-      file_path: ./.tmp/nat/examples/simple_input/langsmith.json
-      s3:
-        endpoint_url: http://10.185.X.X:9000
-        bucket: nat-simple-bucket
-        access_key: fake_access_key
-        secret_key: fake_secret_key
+      object_store: eval_data
+      key: input/langsmith.json
 ```
-The `remote_file_path` is the path to the dataset in the remote storage. The `file_path` is the local path where the dataset will be downloaded. The `s3` section contains the information needed to access the remote storage.
+The `object_store` references a named store from the top-level `object_stores` section, and `key` is the object path within that store. The format is inferred from the key's file extension.
 
 #### Preserving outputs across multiple runs
 By default, evaluation outputs are written to the same directory specified in `eval.general.output.dir`. This means that running the evaluation multiple times will overwrite previous results. To keep the outputs from each run separate, enable the `append_job_id_to_output_dir` option in the `job_management` section:

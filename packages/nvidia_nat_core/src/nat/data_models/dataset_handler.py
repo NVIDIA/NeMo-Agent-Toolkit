@@ -12,20 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import importlib
-import json
-import typing
-from collections.abc import Callable
+
 from pathlib import Path
 
-import pandas as pd
 from pydantic import BaseModel
 from pydantic import ConfigDict
-from pydantic import FilePath
+from pydantic import Field
+from pydantic import model_validator
 
-from nat.data_models.common import BaseModelRegistryTag
 from nat.data_models.common import SerializableSecretStr
-from nat.data_models.common import TypedBaseModel
 
 
 class EvalS3Config(BaseModel):
@@ -67,107 +62,55 @@ class EvalDatasetStructureConfig(BaseModel):
     expected_trajectory_key: str = "expected_intermediate_steps"
 
 
-# Base model
-class EvalDatasetBaseConfig(TypedBaseModel, BaseModelRegistryTag):
+class EvalDatasetConfig(BaseModel):
+    """Configuration for evaluation datasets.
+
+    Supports two modes:
+    - file_path: Read from a local file. Internally uses a transient FileObjectStore.
+    - object_store + key: Read from a named ObjectStore (S3, Redis, etc.).
+
+    Format is inferred from extension when not specified.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
-    id_key: str = "id"
-    structure: EvalDatasetStructureConfig = EvalDatasetStructureConfig()
+    # Data source (provide one)
+    file_path: Path | str | None = Field(default=None, description="Path to a local dataset file.")
+    object_store: str | None = Field(default=None, description="Name of a configured ObjectStore.")
+    key: str | None = Field(default=None, description="Key within the ObjectStore.")
 
-    # Filters
-    filter: EvalFilterConfig | None = EvalFilterConfig()
+    # Format
+    format: str | None = Field(default=None,
+                               description="Data format: csv, json, jsonl, parquet, xls. Inferred if omitted.")
 
-    s3: EvalS3Config | None = None
+    # Legacy fields (accepted for backwards compatibility)
+    function: str | None = Field(default=None, description="Custom parser function (legacy).")
+    kwargs: dict | None = Field(default=None, description="Custom parser kwargs (legacy).")
 
-    remote_file_path: str | None = None  # only for s3
-    file_path: Path | str = Path(".tmp/nat/examples/default/default.json")
+    # Schema
+    id_key: str = Field(default="id", description="Column name for row IDs.")
+    structure: EvalDatasetStructureConfig = Field(default_factory=EvalDatasetStructureConfig)
+    filter: EvalFilterConfig | None = Field(default_factory=EvalFilterConfig)
 
+    @model_validator(mode="before")
+    @classmethod
+    def handle_legacy_type(cls, values):
+        """Accept legacy _type field for backwards compatibility.
 
-class EvalDatasetJsonConfig(EvalDatasetBaseConfig, name="json"):
-
-    @staticmethod
-    def parser() -> tuple[Callable, dict]:
-        return pd.read_json, {}
-
-
-def read_jsonl(file_path: FilePath):
-    with open(file_path, encoding='utf-8') as f:
-        data = [json.loads(line) for line in f]
-    return pd.DataFrame(data)
-
-
-class EvalDatasetJsonlConfig(EvalDatasetBaseConfig, name="jsonl"):
-
-    @staticmethod
-    def parser() -> tuple[Callable, dict]:
-        return read_jsonl, {}
-
-
-class EvalDatasetCsvConfig(EvalDatasetBaseConfig, name="csv"):
-
-    @staticmethod
-    def parser() -> tuple[Callable, dict]:
-        return pd.read_csv, {}
-
-
-class EvalDatasetParquetConfig(EvalDatasetBaseConfig, name="parquet"):
-
-    @staticmethod
-    def parser() -> tuple[Callable, dict]:
-        return pd.read_parquet, {}
-
-
-class EvalDatasetXlsConfig(EvalDatasetBaseConfig, name="xls"):
-
-    @staticmethod
-    def parser() -> tuple[Callable, dict]:
-        return pd.read_excel, {"engine": "openpyxl"}
-
-
-class EvalDatasetCustomConfig(EvalDatasetBaseConfig, name="custom"):
-    """
-    Configuration for custom dataset type that allows users to specify
-    a custom Python function to transform their dataset into EvalInput format.
-    """
-
-    function: str  # Direct import path to function, format: "module.path.function_name"
-    kwargs: dict[str, typing.Any] = {}  # Additional arguments to pass to the custom function
-
-    def parser(self) -> tuple[Callable, dict]:
+        Old configs used ``_type: json`` (or csv, etc.) to select a DatasetLoader.
+        We convert this to the ``format`` field so existing configs keep working.
         """
-        Load and return the custom function for dataset transformation.
+        if isinstance(values, dict) and "_type" in values:
+            legacy_type = values.pop("_type")
+            # Only set format if not already explicitly provided
+            if "format" not in values or values["format"] is None:
+                values["format"] = legacy_type
+        return values
 
-        Returns:
-            Tuple of (custom_function, kwargs) where custom_function transforms
-            a dataset file into an EvalInput object.
-        """
-        custom_function = self._load_custom_function()
-        return custom_function, self.kwargs
-
-    def _load_custom_function(self) -> Callable:
-        """
-        Import and return the custom function using standard Python import path.
-        """
-        if not self.function:
-            raise ValueError("Function path cannot be empty")
-
-        # Split the function path to get module and function name
-        module_path, function_name = self.function.rsplit(".", 1)
-
-        # Import the module
-        module = importlib.import_module(module_path)
-
-        # Get the function from the module
-        if not hasattr(module, function_name):
-            raise AttributeError(f"Function '{function_name}' not found in module '{module_path}'")
-
-        custom_function = getattr(module, function_name)
-
-        if not callable(custom_function):
-            raise ValueError(f"'{self.function}' is not callable")
-
-        return custom_function
-
-
-EvalDatasetBaseConfigT = typing.TypeVar("EvalDatasetBaseConfigT", bound=EvalDatasetBaseConfig)
+    @model_validator(mode="after")
+    def validate_source(self):
+        if self.file_path is None and self.object_store is None:
+            raise ValueError("Must specify either 'file_path' or 'object_store'.")
+        if self.object_store is not None and self.key is None:
+            raise ValueError("Must specify 'key' when using 'object_store'.")
+        return self

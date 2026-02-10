@@ -22,7 +22,7 @@ from nat.builder.builder import Builder
 from nat.builder.function import FunctionGroup
 from nat.cli.register_workflow import register_function_group
 from nat.data_models.config import Config
-from nat.data_models.dataset_handler import EvalDatasetJsonConfig
+from nat.data_models.dataset_handler import EvalDatasetConfig
 from nat.data_models.evaluate import EvalConfig
 from nat.data_models.evaluate import EvalGeneralConfig
 from nat.data_models.function import EmptyFunctionConfig
@@ -62,7 +62,7 @@ def fixture_base_config() -> Config:
         function_groups={"my_group": SimpleFunctionGroupConfig()},
         workflow=EmptyFunctionConfig(),
         eval=EvalConfig(general=EvalGeneralConfig(
-            dataset=EvalDatasetJsonConfig(file_path="base_dataset.json"),
+            dataset=EvalDatasetConfig(file_path="base_dataset.json"),
             max_concurrency=2,
         )),
     )

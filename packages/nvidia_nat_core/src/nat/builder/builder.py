@@ -67,7 +67,6 @@ from nat.retriever.interface import Retriever
 
 if typing.TYPE_CHECKING:
     from nat.builder.sync_builder import SyncBuilder
-    from nat.data_models.dataset_handler import EvalDatasetBaseConfig
     from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
 
 _current_builder_context: ContextVar["Builder | None"] = ContextVar("current_builder", default=None)
@@ -876,39 +875,5 @@ class EvalBuilder(ABC):
 
         Returns:
             List of all tools wrapped in the specified framework type
-        """
-        pass
-
-    @abstractmethod
-    async def add_dataset_loader(self, name: str, config: "EvalDatasetBaseConfig"):
-        """Add a dataset loader to the builder.
-
-        Args:
-            name: The name for the dataset loader
-            config: The configuration for the dataset loader
-        """
-        pass
-
-    @abstractmethod
-    def get_dataset_loader(self, dataset_loader_name: str) -> typing.Any:
-        """Get a dataset loader by name.
-
-        Args:
-            dataset_loader_name: The name of the dataset loader
-
-        Returns:
-            The DatasetLoaderInfo instance
-        """
-        pass
-
-    @abstractmethod
-    def get_dataset_loader_config(self, dataset_loader_name: str) -> "EvalDatasetBaseConfig":
-        """Get the configuration for a dataset loader.
-
-        Args:
-            dataset_loader_name: The name of the dataset loader
-
-        Returns:
-            The configuration for the dataset loader
         """
         pass

@@ -17,81 +17,173 @@ limitations under the License.
 
 <!-- path-check-skip-begin -->
 
-# Adding a Custom Dataset Loader
+# Custom Data Sources for Evaluation
 
 :::{note}
 We recommend reading the [Evaluating NeMo Agent Toolkit Workflows](../../improve-workflows/evaluate.md) guide before proceeding with this detailed documentation.
 :::
 
-NeMo Agent Toolkit provides built-in dataset loaders for common file formats (`json`, `jsonl`, `csv`, `xls`, `parquet`, and `custom`). In addition, the toolkit provides a plugin system to add custom dataset loaders for new file formats or data sources.
+NeMo Agent Toolkit loads evaluation datasets through the [ObjectStore](../../build-workflows/object-store.md) subsystem. Built-in support covers common file formats (CSV, JSON, JSONL, Parquet, and Excel) and storage backends (local files, S3, Redis, MySQL). This guide shows how to configure dataset loading and how to create a custom ObjectStore implementation for novel data sources.
 
-## Summary
-This guide provides a step-by-step process to create and register a custom dataset loader with NeMo Agent Toolkit. A TSV (tab-separated values) dataset loader is used as an example to demonstrate the process.
+## Loading from a Local File
 
-## Existing Dataset Loaders
-You can view the list of existing dataset loaders by running the following command:
-```bash
-nat info components -t dataset_loader
+The simplest way to specify an evaluation dataset is the `file_path` shorthand. NeMo Agent Toolkit creates a transient `FileObjectStore` behind the scenes and infers the data format from the file extension.
+
+```yaml
+eval:
+  general:
+    dataset:
+      file_path: /data/eval.csv
+      structure:
+        question_key: input
+        answer_key: expected_output
 ```
 
-## Extending NeMo Agent Toolkit with Custom Dataset Loaders
-To extend NeMo Agent Toolkit with custom dataset loaders, you need to create a dataset loader configuration class and a registration function, then register it with NeMo Agent Toolkit using the `register_dataset_loader` decorator.
+## Loading from a Remote ObjectStore
 
-### Dataset Loader Configuration
-The dataset loader configuration defines the dataset type name and any format-specific parameters. This configuration is paired with a registration function that yields a `DatasetLoaderInfo` object containing the load function.
+To load data from a configured ObjectStore (for example, S3), reference the store by name and provide the object key:
 
-The following example shows how to define and register a custom dataset loader for TSV files:
+```yaml
+object_stores:
+  s3_data:
+    _type: s3
+    bucket: my-eval-datasets
+
+eval:
+  general:
+    dataset:
+      object_store: s3_data
+      key: v2/eval.parquet
+```
+
+The named ObjectStore must be declared in the top-level `object_stores` section of your configuration file. Any ObjectStore backend that NeMo Agent Toolkit supports (S3, Redis, MySQL, or a custom implementation) can be used here.
+
+## Format Inference and Explicit Override
+
+The data format is inferred from the file extension of the `file_path` or `key`:
+
+| Extension | Format |
+|-----------|--------|
+| `.csv` | csv |
+| `.json` | json |
+| `.jsonl` | jsonl |
+| `.parquet` | parquet |
+| `.xls`, `.xlsx` | xls |
+
+If the file extension does not match the actual format, or if there is no extension, you can specify the format explicitly:
+
+```yaml
+eval:
+  general:
+    dataset:
+      file_path: /data/eval_data
+      format: csv
+```
+
+## Creating a Custom ObjectStore for Novel Data Sources
+
+If your evaluation data lives in a source not covered by the built-in ObjectStore providers (for example, a REST API, a database query, or a proprietary storage system), you can create a custom ObjectStore implementation. This replaces the former DatasetLoader plugin approach.
+
+### Example: API-backed ObjectStore
+
+The following example shows how to create an ObjectStore that fetches data from a custom REST API.
 
 <!-- path-check-skip-begin -->
 ```python
-# my_plugin/dataset_loader_register.py
-import pandas as pd
-from pydantic import Field
-
-from nat.builder.builder import EvalBuilder
-from nat.builder.dataset_loader import DatasetLoaderInfo
-from nat.cli.register_workflow import register_dataset_loader
-from nat.data_models.dataset_handler import EvalDatasetBaseConfig
+# my_plugin/api_object_store.py
+import httpx
+from nat.data_models.object_store import NoSuchKeyError
+from nat.object_store.interfaces import ObjectStore
+from nat.object_store.models import ObjectStoreItem
+from nat.utils.type_utils import override
 
 
-class EvalDatasetTsvConfig(EvalDatasetBaseConfig, name="tsv"):
-    """Configuration for TSV dataset loader."""
-    separator: str = Field(default="\t", description="Column separator character.")
+class ApiObjectStore(ObjectStore):
+    """ObjectStore that reads data from a REST API."""
 
+    def __init__(self, base_url: str, api_key: str) -> None:
+        self._base_url = base_url
+        self._api_key = api_key
 
-@register_dataset_loader(config_type=EvalDatasetTsvConfig)
-async def register_tsv_dataset_loader(config: EvalDatasetTsvConfig, builder: EvalBuilder):
-    """Register TSV dataset loader."""
+    @override
+    async def get_object(self, key: str) -> ObjectStoreItem:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self._base_url}/datasets/{key}",
+                headers={"Authorization": f"Bearer {self._api_key}"},
+            )
+            if response.status_code == 404:
+                raise NoSuchKeyError(key)
+            response.raise_for_status()
+            return ObjectStoreItem(
+                data=response.content,
+                content_type=response.headers.get("content-type"),
+            )
 
-    def load_tsv(file_path, **kwargs):
-        return pd.read_csv(file_path, sep=config.separator, **kwargs)
+    @override
+    async def put_object(self, key: str, item: ObjectStoreItem) -> None:
+        raise NotImplementedError("Read-only store")
 
-    yield DatasetLoaderInfo(config=config, load_fn=load_tsv, description="TSV file dataset loader")
+    @override
+    async def upsert_object(self, key: str, item: ObjectStoreItem) -> None:
+        raise NotImplementedError("Read-only store")
+
+    @override
+    async def delete_object(self, key: str) -> None:
+        raise NotImplementedError("Read-only store")
 ```
 <!-- path-check-skip-end -->
 
-- The `EvalDatasetTsvConfig` class extends `EvalDatasetBaseConfig` with the `name="tsv"` parameter, which sets the `_type` value used in YAML configuration files.
-- The `register_tsv_dataset_loader` function uses the `@register_dataset_loader` decorator to register the dataset loader with NeMo Agent Toolkit.
-- The function yields a `DatasetLoaderInfo` object, which binds the config, load function, and a human-readable description.
+For dataset loading, only `get_object` needs a real implementation. The base `ObjectStore.read_dataframe()` method will call `get_object` to fetch the raw bytes and then parse them into a pandas DataFrame using the inferred (or explicit) format.
 
-### Understanding `DatasetLoaderInfo`
+### Overriding `read_dataframe()` for Efficient Native Reads
 
-The `DatasetLoaderInfo` class contains the following fields:
-- `config`: The dataset loader configuration object (an instance of `EvalDatasetBaseConfig` or a subclass).
-- `load_fn`: A callable that takes a file path and optional keyword arguments and returns a `pandas.DataFrame`. This function is used by the evaluation framework to load the dataset.
-- `description`: A human-readable description of the dataset loader.
+If your backend can produce a DataFrame directly (for example, via a SQL query or a native API), you can override `read_dataframe()` to skip the bytes-to-DataFrame parsing:
 
-### Importing for Registration
-To ensure the dataset loader is registered at runtime, import the registration function in your project's `register.py` file -- even if the function is not called directly.
+<!-- path-check-skip-begin -->
+```python
+class ApiObjectStore(ObjectStore):
+    # ... (same as above)
+
+    @override
+    async def read_dataframe(self, key: str, format: str | None = None, **kwargs):
+        """Fetch data directly as a DataFrame from the API."""
+        import pandas as pd
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self._base_url}/datasets/{key}/records",
+                headers={"Authorization": f"Bearer {self._api_key}"},
+            )
+            response.raise_for_status()
+            return pd.DataFrame(response.json())
+```
+<!-- path-check-skip-end -->
+
+### Registering the Custom ObjectStore
+
+Create a config class and registration function following the standard ObjectStore plugin pattern:
 
 <!-- path-check-skip-begin -->
 ```python
 # my_plugin/register.py
-from .dataset_loader_register import register_tsv_dataset_loader
+from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_object_store
+from nat.data_models.object_store import ObjectStoreBaseConfig
+
+
+class ApiObjectStoreConfig(ObjectStoreBaseConfig, name="api_store"):
+    base_url: str
+    api_key: str
+
+
+@register_object_store(config_type=ApiObjectStoreConfig)
+async def api_object_store(config: ApiObjectStoreConfig, _builder: Builder):
+    from .api_object_store import ApiObjectStore
+    yield ApiObjectStore(base_url=config.base_url, api_key=config.api_key)
 ```
 <!-- path-check-skip-end -->
 
-### Entry Point
 Add an entry point in your `pyproject.toml` so that NeMo Agent Toolkit discovers the plugin automatically:
 
 ```toml
@@ -99,46 +191,39 @@ Add an entry point in your `pyproject.toml` so that NeMo Agent Toolkit discovers
 my_plugin = "my_plugin.register"
 ```
 
-### Display All Dataset Loaders
-To display all registered dataset loaders, run the following command:
-```bash
-nat info components -t dataset_loader
-```
-This will now display the custom dataset loader `tsv` in the list of dataset loaders.
+### Using the Custom ObjectStore for Evaluation
 
-### Using the Custom Dataset Loader
-Once registered, you can use the custom dataset loader in your evaluation configuration:
+Once registered, reference the custom ObjectStore in your evaluation configuration:
 
 ```yaml
+object_stores:
+  my_api:
+    _type: api_store
+    base_url: https://data.example.com
+    api_key: ${API_KEY}
+
 eval:
   general:
     dataset:
-      _type: tsv
-      file_path: <path to your file>
-      separator: "\t"
+      object_store: my_api
+      key: eval-set-v3
+      format: json
 ```
 
-The `_type` field specifies the dataset loader name. All fields defined in the configuration class are available as YAML keys.
+## Built-in Format Support
 
-### Running the Evaluation
-Run the evaluation using the standard command:
-```bash
-nat eval --config_file <path to file>
-```
+The following formats are supported for parsing evaluation datasets:
 
-## Built-in Dataset Loaders
+| Format | Reader | Notes |
+|--------|--------|-------|
+| `csv` | `pandas.read_csv` | Default for `.csv` files |
+| `json` | `pandas.read_json` | Expects a JSON array of records |
+| `jsonl` | Custom JSONL reader | One JSON object per line |
+| `parquet` | `pandas.read_parquet` | Binary columnar format |
+| `xls` | `pandas.read_excel` | Requires `openpyxl`; covers `.xls` and `.xlsx` |
 
-The following dataset loaders are included with NeMo Agent Toolkit:
+For more details on ObjectStore configuration and the available built-in providers, see the [Object Stores](../../build-workflows/object-store.md) documentation.
 
-| Type | Description | Load Function |
-|------|-------------|---------------|
-| `json` | JSON file dataset | `pandas.read_json` |
-| `jsonl` | JSON Lines file dataset | Custom JSONL reader |
-| `csv` | CSV file dataset | `pandas.read_csv` |
-| `parquet` | Parquet file dataset | `pandas.read_parquet` |
-| `xls` | Excel file dataset | `pandas.read_excel`  |
-| `custom` | Custom parser function | User-provided function via `function` config key |
+For details on how to create a custom ObjectStore provider, see [Adding an Object Store Provider](object-store.md).
 
 <!-- path-check-skip-end -->
-
-For more details on the built-in dataset formats and their configuration options, see the [Using Datasets](../../improve-workflows/evaluate.md#using-datasets) section in the evaluation guide.

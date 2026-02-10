@@ -20,12 +20,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from nat.data_models.dataset_handler import EvalDatasetBaseConfig
-from nat.data_models.dataset_handler import EvalDatasetCustomConfig
-from nat.data_models.dataset_handler import EvalDatasetJsonConfig
+from nat.data_models.dataset_handler import EvalDatasetConfig
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepType
-from nat.eval.dataset_handler.dataset_downloader import DatasetDownloader
 from nat.eval.dataset_handler.dataset_filter import DatasetFilter
 from nat.eval.evaluator.evaluator_model import EvalInput
 from nat.eval.evaluator.evaluator_model import EvalInputItem
@@ -38,7 +35,7 @@ class DatasetHandler:
     """
 
     def __init__(self,
-                 dataset_config: EvalDatasetBaseConfig,
+                 dataset_config: EvalDatasetConfig,
                  reps: int,
                  concurrency: int,
                  num_passes: int = 1,
@@ -184,25 +181,35 @@ class DatasetHandler:
         # Return exactly the target size
         return input_df.head(target_size)
 
-    def get_eval_input_from_dataset(self, dataset: str) -> EvalInput:
-        # read the dataset and convert it to EvalInput
+    async def load_dataset_df(self, builder=None) -> pd.DataFrame:
+        """Load dataset into a DataFrame via ObjectStore."""
+        config = self.dataset_config
 
-        # if a dataset file has been provided in the command line, use that
-        dataset_config = EvalDatasetJsonConfig(file_path=dataset) if dataset else self.dataset_config
+        if config.file_path:
+            from nat.object_store.file_object_store import FileObjectStore
+            store = FileObjectStore(base_path=Path("."))
+            key = str(config.file_path)
+        elif config.object_store:
+            if builder is None:
+                raise ValueError("builder is required when using object_store data source")
+            store = await builder.get_object_store_client(config.object_store)
+            key = config.key
+        else:
+            raise ValueError("Dataset config must specify either file_path or object_store")
 
-        # Handle custom dataset type with special processing
-        if isinstance(self.dataset_config, EvalDatasetCustomConfig):
-            return self._handle_custom_dataset(dataset)
+        return await store.read_dataframe(key, format=config.format)
 
-        # Download the dataset if it is remote
-        downloader = DatasetDownloader(dataset_config=dataset_config)
-        downloader.download_dataset()
+    async def get_eval_input_from_dataset(self, dataset: str | None = None, builder=None) -> EvalInput:
+        if dataset:
+            # If a dataset file was provided on the command line, use that
+            from nat.data_models.dataset_handler import EvalDatasetConfig
+            config = EvalDatasetConfig(file_path=dataset)
+            from nat.object_store.file_object_store import FileObjectStore
+            store = FileObjectStore(base_path=Path("."))
+            input_df = await store.read_dataframe(str(config.file_path), format=config.format)
+        else:
+            input_df = await self.load_dataset_df(builder)
 
-        parser, kwargs = dataset_config.parser()
-        # Parse the dataset into a DataFrame
-        input_df = parser(dataset_config.file_path, **kwargs)
-
-        # Apply standard preprocessing and convert to EvalInput
         return self._preprocess_eval_dataframe(input_df)
 
     def _preprocess_dataframe(self, input_df: pd.DataFrame) -> pd.DataFrame:
@@ -262,41 +269,6 @@ class DatasetHandler:
 
         input_df = self._eval_input_to_dataframe(eval_input)
         return self._preprocess_eval_dataframe(input_df)
-
-    def _handle_custom_dataset(self, dataset: str | None) -> EvalInput:
-        """
-        Handle custom dataset type by calling the user-defined function
-        and applying standard preprocessing to the result.
-
-        Args:
-            dataset: Optional dataset file path from command line
-
-        Returns:
-            Preprocessed EvalInput object
-        """
-        # Determine input path - use command line dataset or config file_path
-        input_path = Path(dataset) if dataset else Path(self.dataset_config.file_path)
-
-        # Download the dataset if it is remote (for custom datasets too)
-        downloader = DatasetDownloader(dataset_config=self.dataset_config)
-        downloader.download_dataset()
-
-        # Load and call custom function
-        custom_function, kwargs = self.dataset_config.parser()
-
-        try:
-            # Call the custom function with file_path and kwargs
-            eval_input = custom_function(file_path=input_path, **kwargs)
-
-            if not isinstance(eval_input, EvalInput):
-                raise ValueError(f"Custom function must return an EvalInput object, "
-                                 f"but returned {type(eval_input)}")
-
-        except Exception as e:
-            raise RuntimeError(f"Error calling custom dataset function: {e}") from e
-
-        # Apply standard preprocessing (filters, deduplication, repetitions)
-        return self._preprocess_eval_input(eval_input)
 
     def _eval_input_to_dataframe(self, eval_input: EvalInput) -> pd.DataFrame:
         """

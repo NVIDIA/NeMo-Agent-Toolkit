@@ -625,7 +625,7 @@ class EvaluationRun:
                                          num_passes=self.config.num_passes,
                                          adjust_dataset_size=self.config.adjust_dataset_size,
                                          custom_pre_eval_process_function=custom_pre_eval_process_function)
-        self.eval_input = dataset_handler.get_eval_input_from_dataset(self.config.dataset)
+        self.eval_input = await dataset_handler.get_eval_input_from_dataset(self.config.dataset)
         if not self.eval_input.eval_input_items:
             logger.info("Dataset is empty. Nothing to evaluate.")
             return EvaluationRunOutput(workflow_output_file=self.workflow_output_file,

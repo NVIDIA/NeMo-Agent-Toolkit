@@ -20,7 +20,7 @@ import requests
 from botocore.exceptions import NoCredentialsError
 
 from nat.data_models.common import get_secret_value
-from nat.data_models.dataset_handler import EvalDatasetBaseConfig
+from nat.data_models.dataset_handler import EvalDatasetConfig
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class DatasetDownloader:
     One DatasetDownloader object is needed for each dataset to be downloaded.
     """
 
-    def __init__(self, dataset_config: EvalDatasetBaseConfig):
+    def __init__(self, dataset_config: EvalDatasetConfig):
         self.dataset_config = dataset_config
         self._s3_client = None
 

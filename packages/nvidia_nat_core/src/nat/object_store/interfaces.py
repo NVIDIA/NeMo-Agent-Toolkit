@@ -82,3 +82,28 @@ class ObjectStore(ABC):
             NoSuchKeyError: If the item does not exist.
         """
         pass
+
+    async def read_dataframe(self, key: str, format: str | None = None, **kwargs) -> "pd.DataFrame":  # noqa: F821
+        """Read an object and parse it as a pandas DataFrame.
+
+        Default implementation fetches bytes via get_object() and parses using
+        the format inferred from the key's file extension (or the explicit format).
+
+        Subclasses may override for efficient native reads. For example, a
+        SQL-backed ObjectStore could execute a query directly.
+
+        Args:
+            key: The object key to read.
+            format: Data format (csv, json, jsonl, parquet, xls). Inferred from
+                    key extension if None.
+            **kwargs: Forwarded to the underlying pandas reader.
+
+        Returns:
+            A pandas DataFrame.
+        """
+        from nat.object_store.format_parsers import infer_format
+        from nat.object_store.format_parsers import parse_to_dataframe
+
+        item = await self.get_object(key)
+        resolved_format = format or infer_format(key)
+        return parse_to_dataframe(item.data, resolved_format, **kwargs)

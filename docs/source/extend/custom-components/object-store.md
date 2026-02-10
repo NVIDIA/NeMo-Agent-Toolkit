@@ -26,7 +26,7 @@ This documentation presumes familiarity with the NeMo Agent Toolkit [object stor
    - **{py:class}`~nat.data_models.object_store.ObjectStoreBaseConfigT`**: A generic type alias for object store config classes.
 
 * **Object Store Interfaces**
-   - **{py:class}`~nat.object_store.interfaces.ObjectStore`** (abstract interface): The core interface for object store operations, including put, upsert, get, and delete operations.
+   - **{py:class}`~nat.object_store.interfaces.ObjectStore`** (abstract interface): The core interface for object store operations, including put, upsert, get, and delete operations, plus a non-abstract `read_dataframe()` method for parsing stored data into pandas DataFrames.
      ```python
      class ObjectStore(ABC):
         @abstractmethod
@@ -43,6 +43,11 @@ This documentation presumes familiarity with the NeMo Agent Toolkit [object stor
 
         @abstractmethod
         async def delete_object(self, key: str) -> None:
+            ...
+
+        async def read_dataframe(self, key: str, format: str | None = None, **kwargs) -> "pd.DataFrame":
+            # Default: fetches bytes via get_object() and parses them.
+            # Subclasses may override for efficient native reads.
             ...
      ```
 

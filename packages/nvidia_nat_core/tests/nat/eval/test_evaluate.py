@@ -31,7 +31,7 @@ from uuid import uuid4
 import pytest
 
 from nat.data_models.config import Config
-from nat.data_models.dataset_handler import EvalDatasetJsonConfig
+from nat.data_models.dataset_handler import EvalDatasetConfig
 from nat.data_models.evaluate import EvalConfig
 from nat.data_models.evaluate import EvalOutputConfig
 from nat.data_models.evaluate import JobEvictionPolicy
@@ -146,7 +146,7 @@ def mock_evaluator(eval_output):
 def default_eval_config(mock_evaluator):
     """Fixture for default evaluation configuration."""
     eval_config = EvalConfig()
-    eval_config.general.dataset = EvalDatasetJsonConfig()
+    eval_config.general.dataset = EvalDatasetConfig(file_path="data.json")
     eval_config.general.output = EvalOutputConfig()
     eval_config.general.max_concurrency = 1
     eval_config.general.output.dir = Path(".tmp/nat/examples/mock/")
@@ -758,7 +758,7 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
 
     # Mock dataset handler
     mock_dataset_handler = MagicMock()
-    mock_dataset_handler.get_eval_input_from_dataset.return_value = evaluation_run.eval_input
+    mock_dataset_handler.get_eval_input_from_dataset = AsyncMock(return_value=evaluation_run.eval_input)
 
     # Mock evaluator
     mock_eval_workflow = MagicMock()
