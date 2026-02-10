@@ -48,10 +48,8 @@ async def simple_calc_fastmcp_process_fixture(
     nat_fastmcp_port: str,
     root_repo_dir: Path,
 ) -> subprocess.Popen:
-    config_file = (
-        root_repo_dir
-        / "examples/getting_started/simple_calculator/src/nat_simple_calculator/configs/config.yml"
-    )
+    config_file = (root_repo_dir /
+                   "examples/getting_started/simple_calculator/src/nat_simple_calculator/configs/config.yml")
 
     env = os.environ.copy()
     env.pop("NAT_LOG_LEVEL", None)
