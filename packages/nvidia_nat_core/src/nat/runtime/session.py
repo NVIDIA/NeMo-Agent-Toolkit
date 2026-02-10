@@ -25,7 +25,6 @@ from contextlib import nullcontext
 from datetime import datetime
 from http.cookies import SimpleCookie
 
-import jwt
 from fastapi import WebSocket
 from pydantic import BaseModel
 from pydantic import ConfigDict
@@ -36,6 +35,8 @@ from starlette.requests import Request
 from nat.builder.context import Context
 from nat.builder.context import ContextState
 from nat.builder.workflow import Workflow
+from nat.runtime.connection_auth import get_auth_and_cookies_from_connection
+from nat.runtime.connection_auth import resolve_user_id
 from nat.data_models.authentication import AuthenticatedContext
 from nat.data_models.authentication import AuthFlowType
 from nat.data_models.authentication import AuthProviderBaseConfig
@@ -386,74 +387,6 @@ class SessionManager:
             logger.debug(f"Could not extract user_id from context: {e}")
             return None
 
-    @staticmethod
-    def _get_auth_and_cookies_from_connection(connection: HTTPConnection) -> tuple[str | None, dict[str, str]]:
-        """
-        Extract Authorization header value and cookies dict from Request or WebSocket.
-
-        Returns:
-            (auth_header_value, cookies_dict). auth_header_value is the raw header
-            (e.g. "Bearer <token>"). cookies_dict has cookie names as keys.
-        """
-        if isinstance(connection, Request):
-            auth = connection.headers.get("authorization") or connection.headers.get("Authorization")
-            cookies = dict(connection.cookies) if connection.cookies else {}
-            return (auth, cookies)
-        # WebSocket: ASGI scope["headers"] is a list of (bytes, bytes), no .cookies/.headers API
-        if isinstance(connection, WebSocket) and hasattr(connection, "scope") and "headers" in connection.scope:
-            auth = None
-            cookie_header = None
-            for name, value in connection.scope.get("headers", []):
-                try:
-                    name_str = name.decode("utf-8").lower()
-                    value_str = value.decode("utf-8")
-                except Exception:
-                    continue
-                if name_str == "authorization":
-                    auth = value_str
-                elif name_str == "cookie":
-                    cookie_header = value_str
-            cookies = {}
-            if cookie_header:
-                for key, morsel in SimpleCookie(cookie_header).items():
-                    cookies[key] = morsel.value
-            return (auth, cookies)
-        return (None, {})
-
-    @staticmethod
-    def _decode_jwt_payload_unverified(token: str) -> dict[str, typing.Any] | None:
-        """
-        Decode JWT payload without verification (PyJWT).
-        Used only to extract user identity claims (name, email, sub) for routing.
-        """
-        if not token or token.count(".") != 2:
-            return None
-        try:
-            payload = jwt.decode(token, options={"verify_signature": False})
-            return payload if isinstance(payload, dict) else None
-        except Exception:
-            return None
-
-    def _resolve_user_id(self, auth_header_value: str | None, cookies: dict[str, str]) -> str | None:
-        """
-        Resolve user_id: 1) nat-session cookie (preserves existing behavior),
-        2) from JWT in Authorization header (name/email/sub) when cookie is not set.
-        """
-        # 1. Prefer nat-session cookie so existing users are unchanged
-        if cookies.get("nat-session"):
-            return cookies.get("nat-session")
-        # 2. Fallback: unpack JWT from Authorization header (unverified) and read user identity claims
-        if auth_header_value:
-            parts = auth_header_value.strip().split(maxsplit=1)
-            if len(parts) == 2 and parts[0].lower() == "bearer":
-                payload = self._decode_jwt_payload_unverified(parts[1])
-                if payload:
-                    for claim in ("name", "email", "preferred_username", "sub"):
-                        val = payload.get(claim)
-                        if val and isinstance(val, str) and val.strip():
-                            return val.strip()
-        return None
-
     async def _get_or_create_per_user_builder(self, user_id: str) -> tuple["PerUserWorkflowBuilder", Workflow]:
         from nat.builder.per_user_workflow_builder import PerUserWorkflowBuilder
 
@@ -526,8 +459,8 @@ class SessionManager:
         # Parse once: get auth header and cookies for user_id (nat-session cookie first, then JWT)
         auth_value, cookies_dict = (None, {})
         if http_connection is not None:
-            auth_value, cookies_dict = self._get_auth_and_cookies_from_connection(http_connection)
-            resolved_user_id = self._resolve_user_id(auth_value, cookies_dict)
+            auth_value, cookies_dict = get_auth_and_cookies_from_connection(http_connection)
+            resolved_user_id = resolve_user_id(auth_value, cookies_dict)
             if resolved_user_id:
                 token_user_id_http = self._context_state.user_id.set(resolved_user_id)
 
@@ -705,7 +638,7 @@ class SessionManager:
                                     pre_parsed_cookies: dict[str, str] | None = None) -> None:
         """
         Extracts and sets user metadata for WebSocket connections.
-        If pre_parsed_cookies is provided (e.g. from _get_auth_and_cookies_from_connection),
+        If pre_parsed_cookies is provided (e.g. from get_auth_and_cookies_from_connection),
         uses it instead of parsing scope headers again.
         """
         if websocket and hasattr(websocket, 'scope') and 'headers' in websocket.scope:
