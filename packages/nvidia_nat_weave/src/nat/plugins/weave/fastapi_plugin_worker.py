@@ -136,7 +136,7 @@ class WeaveFastAPIPluginWorker(FastApiFrontEndPluginWorker):
                         feedback_str = " and ".join(feedback_added)
                         return WeaveFeedbackResponse(message=f"Added {feedback_str} to call {observability_trace_id}")
                     except Exception as e:
-                        logger.exception("Failed to add feedback to Weave")
+                        logger.error("Failed to add feedback to Weave: %s", e)
                         raise HTTPException(status_code=500, detail=f"Failed to add feedback: {str(e)}") from e
 
             app.add_api_route(
