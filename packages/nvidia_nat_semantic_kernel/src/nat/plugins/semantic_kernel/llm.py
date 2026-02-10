@@ -112,7 +112,7 @@ async def openai_semantic_kernel(llm_config: OpenAIModelConfig, _builder: Builde
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.SEMANTIC_KERNEL)
 
-    api_key = llm_config.api_key.get_secret_value() if llm_config.api_key else os.getenv("OPENAI_API_KEY")
+    api_key = get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")
     base_url = llm_config.base_url or os.getenv("OPENAI_BASE_URL")
 
     async with AsyncOpenAI(api_key=api_key, base_url=base_url) as async_client:

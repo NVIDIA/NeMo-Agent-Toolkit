@@ -150,7 +150,7 @@ async def openai_crewai(llm_config: OpenAIModelConfig, _builder: Builder):
         exclude_unset=True,
     )
 
-    if (api_key := llm_config.api_key.get_secret_value() if llm_config.api_key else os.getenv("OPENAI_API_KEY")):
+    if (api_key := get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")):
         config_dict["api_key"] = api_key
     if (base_url := llm_config.base_url or os.getenv("OPENAI_BASE_URL")):
         config_dict["base_url"] = base_url

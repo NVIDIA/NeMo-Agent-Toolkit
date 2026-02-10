@@ -147,14 +147,16 @@ async def openai_autogen(llm_config: OpenAIModelConfig, _builder: Builder) -> As
     # Extract AutoGen-compatible configuration
     config_obj = {
         **llm_config.model_dump(
-            exclude={"type", "model_name", "thinking"},
+            exclude={"type", "model_name", "thinking", "api_key", "base_url"},
             by_alias=True,
             exclude_none=True,
         ),
     }
 
-    if "base_url" not in config_obj and os.getenv("OPENAI_BASE_URL") is not None:
-        config_obj["base_url"] = os.getenv("OPENAI_BASE_URL")
+    if (api_key := get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")):
+        config_obj["api_key"] = api_key
+    if (base_url := llm_config.base_url or os.getenv("OPENAI_BASE_URL")):
+        config_obj["base_url"] = base_url
 
     # Define model info for AutoGen 0.7.4 (replaces model_capabilities)
     model_info = ModelInfo(vision=False,
@@ -323,8 +325,14 @@ async def nim_autogen(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGen
             exclude={"type", "model_name", "thinking"},
             by_alias=True,
             exclude_none=True,
+            exclude_unset=True,
         ),
     }
+
+    if llm_config.base_url is None:
+        config_obj["base_url"] = "https://integrate.api.nvidia.com/v1"
+    if (api_key := get_secret_value(llm_config.api_key) or os.getenv("NVIDIA_API_KEY")):
+        config_obj["api_key"] = api_key
 
     # Define model info for AutoGen 0.7.4 (replaces model_capabilities)
     # Note: structured_output=False because NIM doesn't support OpenAI's 'strict' parameter
@@ -377,6 +385,7 @@ async def litellm_autogen(llm_config: LiteLlmModelConfig, _builder: Builder) -> 
             exclude={"type", "model_name", "thinking"},
             by_alias=True,
             exclude_none=True,
+            exclude_unset=True,
         ),
     }
 
@@ -427,10 +436,21 @@ async def bedrock_autogen(llm_config: AWSBedrockModelConfig, _builder: Builder) 
     """
     from autogen_ext.models.anthropic import AnthropicBedrockChatCompletionClient
 
+    bedrock_config = llm_config.model_dump(
+        include={
+            "api_key",
+            "base_url",
+            "max_tokens",
+            "temperature",
+            "top_p",
+        },
+        by_alias=True,
+        exclude_none=True,
+        exclude_unset=True,
+    )
+
     # Build Bedrock-specific configuration
-    bedrock_config: dict[str, Any] = {
-        "model": llm_config.model_name,
-    }
+    bedrock_config["model"] = llm_config.model_name
 
     # Handle region - None or "None" string should use AWS default
     if llm_config.region_name not in (None, "None"):
@@ -439,19 +459,6 @@ async def bedrock_autogen(llm_config: AWSBedrockModelConfig, _builder: Builder) 
     # Add optional parameters if provided
     if llm_config.credentials_profile_name is not None:
         bedrock_config["aws_profile"] = llm_config.credentials_profile_name
-
-    if llm_config.base_url is not None:
-        bedrock_config["base_url"] = llm_config.base_url
-
-    # Add model parameters
-    if llm_config.max_tokens is not None:
-        bedrock_config["max_tokens"] = llm_config.max_tokens
-
-    if llm_config.temperature is not None:
-        bedrock_config["temperature"] = llm_config.temperature
-
-    if llm_config.top_p is not None:
-        bedrock_config["top_p"] = llm_config.top_p
 
     # Create AutoGen Bedrock client
     client = AnthropicBedrockChatCompletionClient(**bedrock_config)
