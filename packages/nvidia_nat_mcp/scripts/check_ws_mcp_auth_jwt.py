@@ -93,8 +93,7 @@ def build_message(input_message: str) -> dict:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Send a websocket message using JWT for user identification (no nat-session cookie)."
-    )
+        description="Send a websocket message using JWT for user identification (no nat-session cookie).")
     parser.add_argument("--user-id", default=USER_ID_1, help="User ID (put in JWT name/sub claims).")
     parser.add_argument("--input", default=INPUT_MESSAGE_1, help="User message to send.")
     parser.add_argument("--ws-url",
