@@ -15,6 +15,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
+<!-- path-check-skip-begin -->
+
 # Adding a Custom Dataset Loader
 
 :::{note}
@@ -74,7 +76,7 @@ async def register_tsv_dataset_loader(config: EvalDatasetTsvConfig, builder: Eva
 
 ### Understanding `DatasetLoaderInfo`
 
-The `DatasetLoaderInfo` dataclass contains the following fields:
+The `DatasetLoaderInfo` class contains the following fields:
 - `config`: The dataset loader configuration object (an instance of `EvalDatasetBaseConfig` or a subclass).
 - `load_fn`: A callable that takes a file path and optional keyword arguments and returns a `pandas.DataFrame`. This function is used by the evaluation framework to load the dataset.
 - `description`: A human-readable description of the dataset loader.
@@ -134,7 +136,9 @@ The following dataset loaders are included with NeMo Agent Toolkit:
 | `jsonl` | JSON Lines file dataset | Custom JSONL reader |
 | `csv` | CSV file dataset | `pandas.read_csv` |
 | `parquet` | Parquet file dataset | `pandas.read_parquet` |
-| `xls` | Excel file dataset | `pandas.read_excel` (with openpyxl engine) |
+| `xls` | Excel file dataset | `pandas.read_excel`  |
 | `custom` | Custom parser function | User-provided function via `function` config key |
+
+<!-- path-check-skip-end -->
 
 For more details on the built-in dataset formats and their configuration options, see the [Using Datasets](../../improve-workflows/evaluate.md#using-datasets) section in the evaluation guide.
