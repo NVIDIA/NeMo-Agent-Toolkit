@@ -444,10 +444,13 @@ class SessionManager:
                          auth_header_value: str | None,
                          cookies: dict[str, str]) -> str | None:
         """
-        Resolve user_id: 1) from JWT in Authorization header (decode payload, no verification),
-        2) from nat-session cookie.
+        Resolve user_id: 1) nat-session cookie (preserves existing behavior),
+        2) from JWT in Authorization header (name/email/sub) when cookie is not set.
         """
-        # 1. Unpack JWT from Authorization header and read user identity claims
+        # 1. Prefer nat-session cookie so existing users are unchanged
+        if cookies.get("nat-session"):
+            return cookies.get("nat-session")
+        # 2. Fallback: unpack JWT from Authorization header and read user identity claims
         if auth_header_value:
             parts = (auth_header_value or "").strip().split()
             if len(parts) >= 2 and parts[0].lower() == "bearer":
@@ -457,8 +460,7 @@ class SessionManager:
                         val = payload.get(claim)
                         if val and isinstance(val, str) and val.strip():
                             return val.strip()
-        # 2. Fallback to nat-session cookie
-        return cookies.get("nat-session") or None
+        return None
 
     async def _get_or_create_per_user_builder(self, user_id: str) -> tuple["PerUserWorkflowBuilder", Workflow]:
         from nat.builder.per_user_workflow_builder import PerUserWorkflowBuilder
@@ -527,7 +529,7 @@ class SessionManager:
         if user_authentication_callback is not None:
             token_user_authentication = self._context_state.user_auth_callback.set(user_authentication_callback)
 
-        # Parse once: get auth header and cookies for user_id resolution (and for WS metadata)
+        # Parse once: get auth header and cookies for user_id (nat-session cookie first, then JWT)
         auth_value, cookies_dict = (None, {})
         if http_connection is not None:
             auth_value, cookies_dict = self._get_auth_and_cookies_from_connection(http_connection)
@@ -669,7 +671,7 @@ class SessionManager:
         if request.headers.get("user-message-id"):
             self._context_state.user_message_id.set(request.headers["user-message-id"])
 
-        # user_id is resolved in session() from JWT then nat-session cookie
+        # user_id is resolved in session() from nat-session cookie then JWT
 
         # W3C Trace Context header: traceparent: 00-<trace-id>-<span-id>-<flags>
         traceparent = request.headers.get("traceparent")
