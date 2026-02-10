@@ -81,6 +81,7 @@ class TestDynamicPredictionTransport:
             osl=512,
             iat=250,
             prediction_lookup=sample_trie_lookup,
+            disable_headers=False,
         )
 
         ctx = Context.get()
@@ -128,6 +129,7 @@ class TestDynamicPredictionTransport:
             iat=250,
             prediction_lookup=sample_trie_lookup,
             use_raw_values=False,
+            disable_headers=False,
         )
 
         ctx = Context.get()
@@ -168,6 +170,7 @@ class TestDynamicPredictionTransport:
             osl=512,
             iat=250,
             prediction_lookup=sample_trie_lookup,
+            disable_headers=False,
         )
 
         ctx = Context.get()
@@ -209,6 +212,7 @@ class TestDynamicPredictionTransport:
             osl=512,
             iat=250,
             prediction_lookup=sample_trie_lookup,
+            disable_headers=False,
         )
 
         ctx = Context.get()
@@ -251,6 +255,7 @@ class TestDynamicPredictionTransport:
             osl=512,
             iat=250,
             prediction_lookup=empty_trie,
+            disable_headers=False,
         )
 
         ctx = Context.get()
@@ -289,6 +294,7 @@ class TestDynamicPredictionTransport:
             osl=512,
             iat=250,
             prediction_lookup=sample_trie_lookup,
+            disable_headers=False,
         )
 
         ctx = Context.get()

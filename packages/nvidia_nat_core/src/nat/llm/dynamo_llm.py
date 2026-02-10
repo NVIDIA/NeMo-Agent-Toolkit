@@ -101,8 +101,15 @@ logger = logging.getLogger(__name__)
 # Define valid prefix hint values
 PrefixLevel = Literal["LOW", "MEDIUM", "HIGH"]
 
-# Mappings from categorical levels to representative integer values (for backward compatibility)
+# Representative token counts for categorical levels (midpoint of ranges):
+# LOW: 128 tokens (midpoint of 0-256 range)
+# MEDIUM: 512 tokens (midpoint of 256-1024 range)
+# HIGH: 2048 tokens (midpoint of 1024-4096 range)
 _OSL_CATEGORY_TO_INT: dict[str, int] = {"LOW": 128, "MEDIUM": 512, "HIGH": 2048}
+# Representative interarrival times for categorical levels (midpoint of ranges):
+# LOW: 50ms (midpoint of 0-100ms range)
+# MEDIUM: 250ms (midpoint of 100-500ms range)
+# HIGH: 750ms (midpoint of 500-1000ms range)
 _IAT_CATEGORY_TO_INT: dict[str, int] = {"LOW": 50, "MEDIUM": 250, "HIGH": 750}
 
 # =============================================================================
@@ -365,6 +372,12 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
         "looked up and used to override both HTTP headers and nvext.agent_hints for each LLM call.",
     )
 
+    disable_headers: bool = Field(
+        default=True,
+        description="If True, do not inject Dynamo prefix hints as HTTP headers. "
+        "Hints will still be injected via nvext.agent_hints in the request body if prefix_template is set.",
+    )
+
     # =========================================================================
     # VALIDATORS (backward compatibility: categorical strings -> integers)
     # =========================================================================
@@ -378,10 +391,8 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
             upper = v.upper()
             if upper in _OSL_CATEGORY_TO_INT:
                 return _OSL_CATEGORY_TO_INT[upper]
-            raise ValueError(
-                f"Invalid OSL value '{v}'. Must be an integer >= 1 "
-                f"or one of: {', '.join(_OSL_CATEGORY_TO_INT.keys())}"
-            )
+            raise ValueError(f"Invalid OSL value '{v}'. Must be an integer >= 1 "
+                             f"or one of: {', '.join(_OSL_CATEGORY_TO_INT.keys())}")
         raise TypeError(f"prefix_osl must be int or str, got {type(v)}")
 
     @field_validator("prefix_iat", mode="before")
@@ -422,6 +433,7 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
             "prefix_use_raw_values",
             "request_timeout",
             "prediction_trie_path",
+            "disable_headers",
         })
 
 
@@ -450,6 +462,7 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
         iat: int,
         prediction_lookup: "PredictionTrieLookup | None" = None,
         use_raw_values: bool = True,
+        disable_headers: bool = True,
     ):
         self._transport = transport
         self._total_requests = total_requests
@@ -457,6 +470,7 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
         self._iat = iat
         self._prediction_lookup = prediction_lookup
         self._use_raw_values = use_raw_values
+        self._disable_headers = disable_headers
 
     async def handle_async_request(self, request: "httpx.Request") -> "httpx.Response":
         # Get prefix ID from context (supports depth-awareness and overrides)
@@ -518,21 +532,22 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
             except Exception:
                 logger.exception("Failed to lookup prediction")
 
-        # Convert to final hint values based on use_raw_values flag
+        # Compute final values for headers/body
         if self._use_raw_values:
-            osl_hint: int | str = osl_raw
-            iat_hint: int | str = iat_raw
+            osl_value: int | str = osl_raw
+            iat_value: int | str = iat_raw
         else:
-            osl_hint = _output_tokens_to_osl(osl_raw)
-            iat_hint = _interarrival_ms_to_iat(iat_raw)
+            osl_value = _output_tokens_to_osl(osl_raw)
+            iat_value = _interarrival_ms_to_iat(iat_raw)
 
-        # Inject HTTP headers (always string)
         headers = dict(request.headers)
-        headers[f"{LLMHeaderPrefix.DYNAMO}-id"] = prefix_id
-        headers[f"{LLMHeaderPrefix.DYNAMO}-total-requests"] = str(total_requests)
-        headers[f"{LLMHeaderPrefix.DYNAMO}-osl"] = str(osl_hint)
-        headers[f"{LLMHeaderPrefix.DYNAMO}-iat"] = str(iat_hint)
-        headers[f"{LLMHeaderPrefix.DYNAMO}-latency-sensitivity"] = latency_sensitivity
+        if not self._disable_headers:
+            # Headers always need strings
+            headers[f"{LLMHeaderPrefix.DYNAMO}-id"] = prefix_id
+            headers[f"{LLMHeaderPrefix.DYNAMO}-total-requests"] = str(total_requests)
+            headers[f"{LLMHeaderPrefix.DYNAMO}-osl"] = str(osl_value)
+            headers[f"{LLMHeaderPrefix.DYNAMO}-iat"] = str(iat_value)
+            headers[f"{LLMHeaderPrefix.DYNAMO}-latency-sensitivity"] = latency_sensitivity
 
         # Modify body to inject nvext.agent_hints (if JSON POST request)
         content = request.content
@@ -544,8 +559,8 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
                     agent_hints = {
                         "prefix_id": prefix_id,
                         "total_requests": total_requests,
-                        "osl": osl_hint,
-                        "iat": iat_hint,
+                        "osl": osl_value,
+                        "iat": iat_value,
                         "latency_sensitivity": latency_sensitivity,
                     }
 
@@ -584,8 +599,8 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
         logger.debug("Injected Dynamo hints: prefix_id=%s, total_requests=%d, osl=%s, iat=%s, latency_sensitivity=%s",
                      prefix_id,
                      total_requests,
-                     osl_hint,
-                     iat_hint,
+                     osl_value,
+                     iat_value,
                      latency_sensitivity)
 
         return await self._transport.handle_async_request(new_request)
@@ -608,6 +623,7 @@ def create_httpx_client_with_dynamo_hooks(
     timeout: float = 600.0,
     prediction_lookup: "PredictionTrieLookup | None" = None,
     use_raw_values: bool = True,
+    disable_headers: bool = True,
 ) -> "httpx.AsyncClient":
     """
     Create an httpx.AsyncClient with Dynamo hint injection via custom transport.
@@ -627,6 +643,7 @@ def create_httpx_client_with_dynamo_hooks(
         timeout: HTTP request timeout in seconds
         prediction_lookup: Optional PredictionTrieLookup for dynamic hint injection
         use_raw_values: When True send raw integers; when False convert to LOW/MEDIUM/HIGH
+        disable_headers: If True, do not inject hints as HTTP headers (still injects nvext.agent_hints)
 
     Returns:
         An httpx.AsyncClient configured with Dynamo hint injection.
@@ -646,6 +663,7 @@ def create_httpx_client_with_dynamo_hooks(
         iat=iat,
         prediction_lookup=prediction_lookup,
         use_raw_values=use_raw_values,
+        disable_headers=disable_headers,
     )
 
     return httpx.AsyncClient(

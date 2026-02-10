@@ -118,6 +118,7 @@ async def test_e2e_prediction_headers_injected_correctly():
             osl=512,
             iat=250,
             prediction_lookup=lookup,
+            disable_headers=False,
         )
 
         ctx = Context.get()
@@ -204,6 +205,7 @@ async def test_e2e_fallback_to_root():
         osl=512,
         iat=250,
         prediction_lookup=lookup,
+        disable_headers=False,
     )
 
     ctx = Context.get()
@@ -255,6 +257,7 @@ async def test_e2e_multiple_calls_in_same_context():
         osl=512,
         iat=250,
         prediction_lookup=lookup,
+        disable_headers=False,
     )
 
     ctx = Context.get()

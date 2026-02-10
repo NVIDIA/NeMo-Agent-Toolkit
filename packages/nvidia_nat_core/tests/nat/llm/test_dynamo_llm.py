@@ -42,6 +42,7 @@ class TestDynamoModelConfig:
         assert config.prefix_osl == 512
         assert config.prefix_iat == 250
         assert config.prefix_use_raw_values is True
+        assert config.disable_headers is True
         assert config.request_timeout == 600.0
 
     def test_custom_prefix_values(self):
@@ -160,6 +161,7 @@ class TestDynamoModelConfig:
             "prefix_use_raw_values",
             "request_timeout",
             "prediction_trie_path",
+            "disable_headers",
         })
 
         assert field_names == expected
@@ -320,6 +322,7 @@ class TestCreateHttpxClient:
         assert client._transport._osl == 2048
         assert client._transport._iat == 50
         assert client._transport._use_raw_values is True
+        assert client._transport._disable_headers is True
 
         # Verify timeout
         assert client.timeout.read == 120.0
@@ -351,6 +354,7 @@ class TestDynamoTransport:
             osl=2048,
             iat=50,
             prediction_lookup=None,
+            disable_headers=False,
         )
 
         # Set prefix ID via context
@@ -394,6 +398,7 @@ class TestDynamoTransport:
             iat=50,
             prediction_lookup=None,
             use_raw_values=False,
+            disable_headers=False,
         )
 
         DynamoPrefixContext.set("test-categorical")
@@ -428,6 +433,7 @@ class TestDynamoTransport:
             osl=512,
             iat=750,
             prediction_lookup=None,
+            disable_headers=False,
         )
 
         # Set prefix ID
@@ -482,6 +488,7 @@ class TestDynamoTransport:
             osl=128,
             iat=250,
             prediction_lookup=None,
+            disable_headers=False,
         )
 
         DynamoPrefixContext.set("merge-test")
@@ -534,6 +541,7 @@ class TestDynamoTransport:
             osl=128,
             iat=50,
             prediction_lookup=None,
+            disable_headers=False,
         )
 
         DynamoPrefixContext.set("non-json-test")
@@ -584,6 +592,7 @@ class TestDynamoTransport:
             osl=512,
             iat=250,
             prediction_lookup=mock_lookup,
+            disable_headers=False,
         )
 
         # Set prefix ID
@@ -646,6 +655,7 @@ class TestDynamoTransport:
             iat=250,
             prediction_lookup=mock_lookup,
             use_raw_values=False,
+            disable_headers=False,
         )
 
         DynamoPrefixContext.set("prediction-categorical")
@@ -663,6 +673,54 @@ class TestDynamoTransport:
         agent_hints = body["nvext"]["agent_hints"]
         assert agent_hints["osl"] == "HIGH"
         assert agent_hints["iat"] == "LOW"
+
+        DynamoPrefixContext.clear()
+
+    async def test_transport_suppresses_headers_when_disabled(self):
+        """Test that headers are NOT injected when disable_headers=True but nvext.agent_hints still are."""
+        import json
+
+        import httpx
+
+        from nat.llm.dynamo_llm import _DynamoTransport
+
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        # disable_headers=True (default) -> no HTTP headers injected
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,
+            osl=512,
+            iat=250,
+            prediction_lookup=None,
+            disable_headers=True,
+        )
+
+        DynamoPrefixContext.set("test-no-headers")
+
+        request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test", "messages": []})
+        await transport.handle_async_request(request)
+
+        modified_request = mock_transport.handle_async_request.call_args[0][0]
+        prefix = f"{LLMHeaderPrefix.DYNAMO}"
+
+        # HTTP headers should NOT be present
+        assert f"{prefix}-id" not in modified_request.headers
+        assert f"{prefix}-total-requests" not in modified_request.headers
+        assert f"{prefix}-osl" not in modified_request.headers
+        assert f"{prefix}-iat" not in modified_request.headers
+        assert f"{prefix}-latency-sensitivity" not in modified_request.headers
+
+        # nvext.agent_hints should still be present
+        body = json.loads(modified_request.content.decode("utf-8"))
+        assert "nvext" in body
+        agent_hints = body["nvext"]["agent_hints"]
+        assert agent_hints["prefix_id"] == "test-no-headers"
+        assert agent_hints["total_requests"] == 10
+        assert agent_hints["osl"] == 512
+        assert agent_hints["iat"] == 250
 
         DynamoPrefixContext.clear()
 
@@ -684,6 +742,7 @@ class TestDynamoTransport:
             osl=512,
             iat=750,
             prediction_lookup=None,
+            disable_headers=False,
         )
 
         # Set prefix ID
@@ -726,6 +785,7 @@ class TestDynamoTransport:
             osl=512,
             iat=750,
             prediction_lookup=None,
+            disable_headers=False,
         )
 
         # Set prefix ID

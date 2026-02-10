@@ -270,6 +270,7 @@ async def dynamo_langchain(llm_config: DynamoModelConfig, _builder: Builder):
                 timeout=llm_config.request_timeout,
                 prediction_lookup=prediction_lookup,
                 use_raw_values=llm_config.prefix_use_raw_values,
+                disable_headers=llm_config.disable_headers,
             )
             config_dict["http_async_client"] = http_async_client
             logger.info(
