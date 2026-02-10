@@ -37,6 +37,8 @@ def load_langsmith_dataset(
 
     Prefers dataset_id over dataset_name when both are provided.
     The file_path argument is ignored — data comes from the LangSmith API, not the filesystem.
+
+    Loads dataset of format https://docs.langchain.com/langsmith/example-data-format
     """
     client = Client()  # reads LANGCHAIN_API_KEY / LANGSMITH_API_KEY from env
 
