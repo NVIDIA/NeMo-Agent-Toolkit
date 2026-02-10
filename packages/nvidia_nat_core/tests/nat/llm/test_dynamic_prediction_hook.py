@@ -67,20 +67,21 @@ def fixture_sample_trie_lookup() -> PredictionTrieLookup:
 class TestDynamicPredictionTransport:
     """Tests for _DynamoTransport with dynamic prediction lookup."""
 
-    async def test_transport_injects_prediction_headers(self, sample_trie_lookup):
-        """Test that transport overrides headers based on context predictions."""
+    async def test_transport_injects_prediction_headers_raw(self, sample_trie_lookup):
+        """Test that transport overrides headers with raw prediction values by default."""
         # Create mock base transport
         mock_response = httpx.Response(200, json={"result": "ok"})
         mock_transport = MagicMock()
         mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
 
-        # Create transport with prediction lookup
+        # Create transport with prediction lookup (default use_raw_values=True)
         transport = _DynamoTransport(
             transport=mock_transport,
-            total_requests=10,  # Should be overridden
-            osl="MEDIUM",  # Should be overridden
-            iat="LOW",  # Should be overridden
+            total_requests=10,
+            osl=512,
+            iat=250,
             prediction_lookup=sample_trie_lookup,
+            disable_headers=False,
         )
 
         ctx = Context.get()
@@ -104,12 +105,53 @@ class TestDynamicPredictionTransport:
                 # Get the modified request
                 modified_request = mock_transport.handle_async_request.call_args[0][0]
 
-                # Prediction values should override static config:
-                # - remaining_calls.mean=3.0 -> x-prefix-total-requests="3"
-                # - output_tokens.p90=200.0 -> x-prefix-osl="LOW" (< 256)
-                # - interarrival_ms.mean=500.0 -> x-prefix-iat="HIGH" (>= 500)
+                # Prediction raw values should override static config:
+                # - remaining_calls.mean=3.0 -> total_requests=3
+                # - output_tokens.p90=200.0 -> osl=200 (raw)
+                # - interarrival_ms.mean=500.0 -> iat=500 (raw)
                 prefix = f"{LLMHeaderPrefix.DYNAMO}"
                 assert modified_request.headers[f"{prefix}-total-requests"] == "3"
+                assert modified_request.headers[f"{prefix}-osl"] == "200"
+                assert modified_request.headers[f"{prefix}-iat"] == "500"
+
+        DynamoPrefixContext.clear()
+
+    async def test_transport_injects_prediction_headers_categorical(self, sample_trie_lookup):
+        """Test that transport converts predictions to categories when use_raw_values=False."""
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,
+            osl=512,
+            iat=250,
+            prediction_lookup=sample_trie_lookup,
+            use_raw_values=False,
+            disable_headers=False,
+        )
+
+        ctx = Context.get()
+        state = ctx._context_state
+        state._function_path_stack.set(None)
+
+        DynamoPrefixContext.set("test-prediction-cat")
+
+        with ctx.push_active_function("my_workflow", input_data=None):
+            with ctx.push_active_function("react_agent", input_data=None):
+                tracker = get_call_tracker()
+                tracker.increment(ctx.active_function.function_id)
+
+                request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+                await transport.handle_async_request(request)
+
+                modified_request = mock_transport.handle_async_request.call_args[0][0]
+
+                # Categorical conversion:
+                # - output_tokens.p90=200.0 -> LOW (< 256)
+                # - interarrival_ms.mean=500.0 -> HIGH (>= 500)
+                prefix = f"{LLMHeaderPrefix.DYNAMO}"
                 assert modified_request.headers[f"{prefix}-osl"] == "LOW"
                 assert modified_request.headers[f"{prefix}-iat"] == "HIGH"
 
@@ -125,9 +167,10 @@ class TestDynamicPredictionTransport:
         transport = _DynamoTransport(
             transport=mock_transport,
             total_requests=10,
-            osl="MEDIUM",
-            iat="LOW",
+            osl=512,
+            iat=250,
             prediction_lookup=sample_trie_lookup,
+            disable_headers=False,
         )
 
         ctx = Context.get()
@@ -148,7 +191,7 @@ class TestDynamicPredictionTransport:
             # Get the modified request
             modified_request = mock_transport.handle_async_request.call_args[0][0]
 
-            # Should fall back to root aggregated predictions
+            # Should fall back to root aggregated predictions (raw values)
             prefix = f"{LLMHeaderPrefix.DYNAMO}"
             assert f"{prefix}-total-requests" in modified_request.headers
             # Root prediction has remaining_calls.mean=3.0
@@ -166,9 +209,10 @@ class TestDynamicPredictionTransport:
         transport = _DynamoTransport(
             transport=mock_transport,
             total_requests=10,
-            osl="MEDIUM",
-            iat="LOW",
+            osl=512,
+            iat=250,
             prediction_lookup=sample_trie_lookup,
+            disable_headers=False,
         )
 
         ctx = Context.get()
@@ -208,9 +252,10 @@ class TestDynamicPredictionTransport:
         transport = _DynamoTransport(
             transport=mock_transport,
             total_requests=10,
-            osl="MEDIUM",
-            iat="LOW",
+            osl=512,
+            iat=250,
             prediction_lookup=empty_trie,
+            disable_headers=False,
         )
 
         ctx = Context.get()
@@ -228,16 +273,16 @@ class TestDynamicPredictionTransport:
             # Get the modified request
             modified_request = mock_transport.handle_async_request.call_args[0][0]
 
-            # Should fall back to static config values when no prediction found
+            # Should fall back to static config values (raw integers) when no prediction found
             prefix = f"{LLMHeaderPrefix.DYNAMO}"
-            assert modified_request.headers[f"{prefix}-total-requests"] == "10"  # static value
-            assert modified_request.headers[f"{prefix}-osl"] == "MEDIUM"  # static value
-            assert modified_request.headers[f"{prefix}-iat"] == "LOW"  # static value
+            assert modified_request.headers[f"{prefix}-total-requests"] == "10"
+            assert modified_request.headers[f"{prefix}-osl"] == "512"
+            assert modified_request.headers[f"{prefix}-iat"] == "250"
 
         DynamoPrefixContext.clear()
 
     async def test_prediction_overrides_both_headers_and_agent_hints(self, sample_trie_lookup):
-        """Test that predictions override both HTTP headers AND nvext.agent_hints."""
+        """Test that predictions override both HTTP headers AND nvext.agent_hints with raw values."""
         # Create mock base transport
         mock_response = httpx.Response(200, json={"result": "ok"})
         mock_transport = MagicMock()
@@ -245,10 +290,11 @@ class TestDynamicPredictionTransport:
 
         transport = _DynamoTransport(
             transport=mock_transport,
-            total_requests=10,  # Should be overridden
-            osl="MEDIUM",  # Should be overridden
-            iat="LOW",  # Should be overridden
+            total_requests=10,
+            osl=512,
+            iat=250,
             prediction_lookup=sample_trie_lookup,
+            disable_headers=False,
         )
 
         ctx = Context.get()
@@ -271,17 +317,17 @@ class TestDynamicPredictionTransport:
                 # Get the modified request
                 modified_request = mock_transport.handle_async_request.call_args[0][0]
 
-                # Verify headers
+                # Verify raw values in headers
                 prefix = f"{LLMHeaderPrefix.DYNAMO}"
                 assert modified_request.headers[f"{prefix}-total-requests"] == "3"
-                assert modified_request.headers[f"{prefix}-osl"] == "LOW"
-                assert modified_request.headers[f"{prefix}-iat"] == "HIGH"
+                assert modified_request.headers[f"{prefix}-osl"] == "200"  # raw output_tokens.p90
+                assert modified_request.headers[f"{prefix}-iat"] == "500"  # raw interarrival_ms.mean
 
-                # Verify agent_hints
+                # Verify raw values in agent_hints
                 body = json.loads(modified_request.content.decode("utf-8"))
                 agent_hints = body["nvext"]["agent_hints"]
                 assert agent_hints["total_requests"] == 3
-                assert agent_hints["osl"] == "LOW"
-                assert agent_hints["iat"] == "HIGH"
+                assert agent_hints["osl"] == 200
+                assert agent_hints["iat"] == 500
 
         DynamoPrefixContext.clear()

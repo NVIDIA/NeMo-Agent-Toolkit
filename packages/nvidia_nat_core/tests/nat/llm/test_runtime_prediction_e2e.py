@@ -111,13 +111,14 @@ async def test_e2e_prediction_headers_injected_correctly():
         mock_transport = MagicMock()
         mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
 
-        # Create transport with prediction lookup
+        # Create transport with prediction lookup (default use_raw_values=True)
         transport = _DynamoTransport(
             transport=mock_transport,
             total_requests=10,
-            osl="MEDIUM",
-            iat="LOW",
+            osl=512,
+            iat=250,
             prediction_lookup=lookup,
+            disable_headers=False,
         )
 
         ctx = Context.get()
@@ -145,10 +146,10 @@ async def test_e2e_prediction_headers_injected_correctly():
                 modified_request1 = mock_transport.handle_async_request.call_args[0][0]
                 prefix = f"{LLMHeaderPrefix.DYNAMO}"
 
-                # Should have call 1 predictions: remaining_calls.mean=2.0, output_tokens.p90=200
+                # Call 1 raw predictions: remaining_calls.mean=2.0, output_tokens.p90=200, interarrival_ms.mean=500
                 assert modified_request1.headers[f"{prefix}-total-requests"] == "2"
-                assert modified_request1.headers[f"{prefix}-osl"] == "LOW"  # 200 tokens < 256
-                assert modified_request1.headers[f"{prefix}-iat"] == "HIGH"  # 500ms >= 500
+                assert modified_request1.headers[f"{prefix}-osl"] == "200"
+                assert modified_request1.headers[f"{prefix}-iat"] == "500"
 
                 # Simulate second LLM call
                 step_manager.push_intermediate_step(
@@ -163,10 +164,10 @@ async def test_e2e_prediction_headers_injected_correctly():
 
                 modified_request2 = mock_transport.handle_async_request.call_args[0][0]
 
-                # Should have call 2 predictions: remaining_calls.mean=1.0, output_tokens.p90=150
+                # Call 2 raw predictions: remaining_calls.mean=1.0, output_tokens.p90=150, interarrival_ms.mean=300
                 assert modified_request2.headers[f"{prefix}-total-requests"] == "1"
-                assert modified_request2.headers[f"{prefix}-osl"] == "LOW"  # 150 tokens < 256
-                assert modified_request2.headers[f"{prefix}-iat"] == "MEDIUM"  # 300ms is 100-500
+                assert modified_request2.headers[f"{prefix}-osl"] == "150"
+                assert modified_request2.headers[f"{prefix}-iat"] == "300"
 
                 # Simulate third LLM call
                 step_manager.push_intermediate_step(
@@ -181,9 +182,9 @@ async def test_e2e_prediction_headers_injected_correctly():
 
                 modified_request3 = mock_transport.handle_async_request.call_args[0][0]
 
-                # Should have call 3 predictions: remaining_calls.mean=0.0, output_tokens.p90=120
+                # Call 3 raw predictions: remaining_calls.mean=0.0, output_tokens.p90=120, interarrival_ms.mean=0
                 assert modified_request3.headers[f"{prefix}-total-requests"] == "0"
-                assert modified_request3.headers[f"{prefix}-osl"] == "LOW"  # 120 tokens < 256
+                assert modified_request3.headers[f"{prefix}-osl"] == "120"
 
         DynamoPrefixContext.clear()
 
@@ -201,9 +202,10 @@ async def test_e2e_fallback_to_root():
     transport = _DynamoTransport(
         transport=mock_transport,
         total_requests=10,
-        osl="MEDIUM",
-        iat="LOW",
+        osl=512,
+        iat=250,
         prediction_lookup=lookup,
+        disable_headers=False,
     )
 
     ctx = Context.get()
@@ -229,10 +231,12 @@ async def test_e2e_fallback_to_root():
         modified_request = mock_transport.handle_async_request.call_args[0][0]
         prefix = f"{LLMHeaderPrefix.DYNAMO}"
 
-        # Should fall back to root aggregated predictions (remaining_calls.mean=1.0, output_tokens.p90=160)
+        # Should fall back to root aggregated predictions (raw values)
+        # remaining_calls.mean=1.0, output_tokens.p90=160, interarrival_ms.mean=400
         assert f"{prefix}-total-requests" in modified_request.headers
-        assert modified_request.headers[f"{prefix}-total-requests"] == "1"  # aggregated mean
-        assert modified_request.headers[f"{prefix}-osl"] == "LOW"  # 160 tokens < 256
+        assert modified_request.headers[f"{prefix}-total-requests"] == "1"
+        assert modified_request.headers[f"{prefix}-osl"] == "160"
+        assert modified_request.headers[f"{prefix}-iat"] == "400"
 
     DynamoPrefixContext.clear()
 
@@ -250,9 +254,10 @@ async def test_e2e_multiple_calls_in_same_context():
     transport = _DynamoTransport(
         transport=mock_transport,
         total_requests=10,
-        osl="MEDIUM",
-        iat="LOW",
+        osl=512,
+        iat=250,
         prediction_lookup=lookup,
+        disable_headers=False,
     )
 
     ctx = Context.get()
