@@ -102,34 +102,36 @@ async def main() -> None:
             except json.JSONDecodeError:
                 continue
 
-            if msg.get("type") == "system_interaction_message":
-                content = msg.get("content", {})
-                if content.get("input_type") == "oauth_consent":
-                    url = content.get("text")
-                    if url:
+            match msg.get("type"):
+                case "system_interaction_message":
+                    content = msg.get("content", {})
+                    if content.get("input_type") == "oauth_consent" and (url := content.get("text")):
                         webbrowser.open(url)
-                continue
+                    continue
 
-            if msg.get("type") == "error_message":
-                content = msg.get("content", {})
-                if isinstance(content, dict):
-                    print(f"Error: {content.get('message')}", file=sys.stderr)
-                else:
-                    print(f"Error: {content}", file=sys.stderr)
-                return
-
-            if msg.get("type") == "system_response_message":
-                content = msg.get("content", {})
-                if isinstance(content, dict):
-                    chunk = content.get("text") or content.get("output")
-                    if isinstance(chunk, str) and msg.get("status") == "in_progress":
-                        response_chunks.append(chunk)
-
-                if msg.get("status") == "complete":
-                    final_answer = "".join(response_chunks).strip()
-                    if final_answer:
-                        print(final_answer)
+                case "error_message":
+                    content = msg.get("content", {})
+                    if isinstance(content, dict):
+                        print(f"Error: {content.get('message')}", file=sys.stderr)
+                    else:
+                        print(f"Error: {content}", file=sys.stderr)
                     return
+
+                case "system_response_message":
+                    content = msg.get("content", {})
+                    if isinstance(content, dict):
+                        chunk = content.get("text") or content.get("output")
+                        if isinstance(chunk, str) and msg.get("status") == "in_progress":
+                            response_chunks.append(chunk)
+                    if msg.get("status") == "complete":
+                        final_answer = "".join(response_chunks).strip()
+                        if final_answer:
+                            print(final_answer)
+                        return
+                    continue
+
+                case _:
+                    continue
 
 
 asyncio.run(main())

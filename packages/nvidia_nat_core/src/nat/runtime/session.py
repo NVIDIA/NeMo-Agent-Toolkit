@@ -442,10 +442,10 @@ class SessionManager:
         # 1. Prefer nat-session cookie so existing users are unchanged
         if cookies.get("nat-session"):
             return cookies.get("nat-session")
-        # 2. Fallback: unpack JWT from Authorization header and read user identity claims
+        # 2. Fallback: unpack JWT from Authorization header (unverified) and read user identity claims
         if auth_header_value:
-            parts = (auth_header_value or "").strip().split()
-            if len(parts) >= 2 and parts[0].lower() == "bearer":
+            parts = auth_header_value.strip().split(maxsplit=1)
+            if len(parts) == 2 and parts[0].lower() == "bearer":
                 payload = self._decode_jwt_payload_unverified(parts[1])
                 if payload:
                     for claim in ("name", "email", "preferred_username", "sub"):
@@ -521,13 +521,14 @@ class SessionManager:
         if user_authentication_callback is not None:
             token_user_authentication = self._context_state.user_auth_callback.set(user_authentication_callback)
 
+        token_user_id_http = None
         # Parse once: get auth header and cookies for user_id (nat-session cookie first, then JWT)
         auth_value, cookies_dict = (None, {})
         if http_connection is not None:
             auth_value, cookies_dict = self._get_auth_and_cookies_from_connection(http_connection)
             resolved_user_id = self._resolve_user_id(auth_value, cookies_dict)
             if resolved_user_id:
-                self._context_state.user_id.set(resolved_user_id)
+                token_user_id_http = self._context_state.user_id.set(resolved_user_id)
 
         if isinstance(http_connection, WebSocket):
             self.set_metadata_from_websocket(http_connection,
@@ -598,6 +599,8 @@ class SessionManager:
 
             if token_user_id is not None:
                 self._context_state.user_id.reset(token_user_id)
+            if token_user_id_http is not None:
+                self._context_state.user_id.reset(token_user_id_http)
             if token_user_manager is not None:
                 self._context_state.user_manager.reset(token_user_manager)
             if token_user_input is not None:
