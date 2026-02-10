@@ -15,12 +15,12 @@
 """
 Test script to send a websocket message using the nat-session cookie for user identification.
 
-Complements check_ws_mcp_auth_jwt.py: that script identifies the user via Authorization: Bearer <JWT>;
-this script identifies the user via the nat-session cookie by passing ?session={user_id} in the
+This script identifies the user via the nat-session cookie by passing ?session={user_id} in the
 WebSocket URL (the server injects it as the cookie). Use this script to test cookie-based user
-identification; use the JWT script to test JWT-based identification.
+identification.
 - Sends a websocket message to the server and waits for the response.
 - Handles the OAuth consent window if needed.
+Complements check_ws_mcp_auth_jwt.py (JWT-based identification via Authorization: Bearer <JWT>).
 
 Sample usage:
 1. Start the NAT server, for example:
