@@ -40,6 +40,9 @@ for NAT_EXAMPLE in ${NAT_EXAMPLES[@]}; do
     build_wheel ${NAT_EXAMPLE} "examples"
 done
 
+rapids-logger "Removing built examples wheels"
+rm -rf "${WHEELS_BASE_DIR}/examples"
+
 # Flatten out the wheels into a single directory for upload
 BUILT_WHEELS=$(find "${WHEELS_BASE_DIR}"/**/ -type f -name "*.whl")
 MOVED_WHEELS=()
