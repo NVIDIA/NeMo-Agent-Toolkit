@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import asyncio
+import json
 import logging
 import time
 import typing
@@ -23,7 +24,9 @@ from collections.abc import Callable
 from contextlib import asynccontextmanager
 from contextlib import nullcontext
 from datetime import datetime
+from http.cookies import SimpleCookie
 
+from authlib.jose import JsonWebSignature
 from fastapi import WebSocket
 from pydantic import BaseModel
 from pydantic import ConfigDict
@@ -364,13 +367,13 @@ class SessionManager:
         Get user ID from current context.
 
         Extraction order:
-        1. From context user_id (set from nat-session cookie)
+        1. From context user_id (set from JWT or nat-session cookie)
         2. From context user_manager if set
         3. None (for shared workflow or unauthenticated access)
 
         """
         try:
-            # Primary: Get from context user_id (already extracted from nat-session cookie)
+            # Primary: Get from context user_id (set from JWT or nat-session cookie)
             user_id = self._context.user_id
             if user_id:
                 return user_id
@@ -383,6 +386,79 @@ class SessionManager:
         except Exception as e:
             logger.debug(f"Could not extract user_id from context: {e}")
             return None
+
+    @staticmethod
+    def _get_auth_and_cookies_from_connection(connection: HTTPConnection) -> tuple[str | None, dict[str, str]]:
+        """
+        Extract Authorization header value and cookies dict from Request or WebSocket.
+
+        Returns:
+            (auth_header_value, cookies_dict). auth_header_value is the raw header
+            (e.g. "Bearer <token>"). cookies_dict has cookie names as keys.
+        """
+        if isinstance(connection, Request):
+            auth = connection.headers.get("authorization") or connection.headers.get("Authorization")
+            cookies = dict(connection.cookies) if connection.cookies else {}
+            return (auth, cookies)
+        # WebSocket: ASGI scope["headers"] is a list of (bytes, bytes), no .cookies/.headers API
+        if isinstance(connection, WebSocket) and hasattr(connection, "scope") and "headers" in connection.scope:
+            auth = None
+            cookie_header = None
+            for name, value in connection.scope.get("headers", []):
+                try:
+                    name_str = name.decode("utf-8").lower()
+                    value_str = value.decode("utf-8")
+                except Exception:
+                    continue
+                if name_str == "authorization":
+                    auth = value_str
+                elif name_str == "cookie":
+                    cookie_header = value_str
+            cookies = {}
+            if cookie_header:
+                for key, morsel in SimpleCookie(cookie_header).items():
+                    cookies[key] = morsel.value
+            return (auth, cookies)
+        return (None, {})
+
+    @staticmethod
+    def _decode_jwt_payload_unverified(token: str) -> dict[str, typing.Any] | None:
+        """
+        Decode JWT payload without verification using authlib.
+        Used only to extract user identity claims (name, email, sub) for routing.
+        """
+        if not token or token.count(".") != 2:
+            return None
+        try:
+            jws = JsonWebSignature()
+            # key=None: deserialize without signature verification (per authlib docs)
+            data = jws.deserialize(token, key=None, decode=lambda b: json.loads(b.decode("utf-8")))
+            if not data or "payload" not in data:
+                return None
+            payload = data["payload"]
+            return payload if isinstance(payload, dict) else None
+        except Exception:
+            return None
+
+    def _resolve_user_id(self,
+                         auth_header_value: str | None,
+                         cookies: dict[str, str]) -> str | None:
+        """
+        Resolve user_id: 1) from JWT in Authorization header (decode payload, no verification),
+        2) from nat-session cookie.
+        """
+        # 1. Unpack JWT from Authorization header and read user identity claims
+        if auth_header_value:
+            parts = (auth_header_value or "").strip().split()
+            if len(parts) >= 2 and parts[0].lower() == "bearer":
+                payload = self._decode_jwt_payload_unverified(parts[1])
+                if payload:
+                    for claim in ("name", "email", "preferred_username", "sub"):
+                        val = payload.get(claim)
+                        if val and isinstance(val, str) and val.strip():
+                            return val.strip()
+        # 2. Fallback to nat-session cookie
+        return cookies.get("nat-session") or None
 
     async def _get_or_create_per_user_builder(self, user_id: str) -> tuple["PerUserWorkflowBuilder", Workflow]:
         from nat.builder.per_user_workflow_builder import PerUserWorkflowBuilder
@@ -451,8 +527,17 @@ class SessionManager:
         if user_authentication_callback is not None:
             token_user_authentication = self._context_state.user_auth_callback.set(user_authentication_callback)
 
+        # Parse once: get auth header and cookies for user_id resolution (and for WS metadata)
+        auth_value, cookies_dict = (None, {})
+        if http_connection is not None:
+            auth_value, cookies_dict = self._get_auth_and_cookies_from_connection(http_connection)
+            resolved_user_id = self._resolve_user_id(auth_value, cookies_dict)
+            if resolved_user_id:
+                self._context_state.user_id.set(resolved_user_id)
+
         if isinstance(http_connection, WebSocket):
-            self.set_metadata_from_websocket(http_connection, user_message_id, conversation_id)
+            self.set_metadata_from_websocket(http_connection, user_message_id, conversation_id,
+                                            pre_parsed_cookies=cookies_dict)
 
         if isinstance(http_connection, Request):
             self.set_metadata_from_http_request(http_connection)
@@ -467,7 +552,8 @@ class SessionManager:
                 user_id = self._get_user_id_from_context()
             if user_id is None:
                 raise ValueError("user_id is required for per-user workflow but could not be determined. "
-                                 "Ensure 'nat-session' cookie is set or pass user_id explicitly.")
+                                 "Ensure a valid JWT is in the Authorization header or 'nat-session' cookie is set, "
+                                 "or pass user_id explicitly.")
 
             # To ensure the user_id is set in the context before the per-user builder is created
             self._context_state.user_id.set(user_id)
@@ -583,9 +669,7 @@ class SessionManager:
         if request.headers.get("user-message-id"):
             self._context_state.user_message_id.set(request.headers["user-message-id"])
 
-        # Set user_id from nat-session cookie
-        if request.cookies.get("nat-session"):
-            self._context_state.user_id.set(request.cookies["nat-session"])
+        # user_id is resolved in session() from JWT then nat-session cookie
 
         # W3C Trace Context header: traceparent: 00-<trace-id>-<span-id>-<flags>
         traceparent = request.headers.get("traceparent")
@@ -615,31 +699,31 @@ class SessionManager:
     def set_metadata_from_websocket(self,
                                     websocket: WebSocket,
                                     user_message_id: str | None,
-                                    conversation_id: str | None) -> None:
+                                    conversation_id: str | None,
+                                    pre_parsed_cookies: dict[str, str] | None = None) -> None:
         """
         Extracts and sets user metadata for WebSocket connections.
+        If pre_parsed_cookies is provided (e.g. from _get_auth_and_cookies_from_connection),
+        uses it instead of parsing scope headers again.
         """
-
-        # Extract cookies from WebSocket headers (similar to HTTP request)
         if websocket and hasattr(websocket, 'scope') and 'headers' in websocket.scope:
-            cookies = {}
-            for header_name, header_value in websocket.scope.get('headers', []):
-                if header_name == b'cookie':
-                    cookie_header = header_value.decode('utf-8')
-                    # Parse cookie header: "name1=value1; name2=value2"
-                    for cookie in cookie_header.split(';'):
-                        cookie = cookie.strip()
-                        if '=' in cookie:
-                            name, value = cookie.split('=', 1)
-                            cookies[name.strip()] = value.strip()
+            if pre_parsed_cookies is not None:
+                cookies = pre_parsed_cookies
+            else:
+                cookies = {}
+                for name, value in websocket.scope.get('headers', []):
+                    try:
+                        name_str = name.decode("utf-8").lower()
+                        value_str = value.decode("utf-8")
+                    except Exception:
+                        continue
+                    if name_str == "cookie":
+                        for key, morsel in SimpleCookie(value_str).items():
+                            cookies[key] = morsel.value
+                        break
 
-            # Set cookies in metadata (same as HTTP request)
             self._context.metadata._request.cookies = cookies
             self._context_state.metadata.set(self._context.metadata)
-
-            # Set user_id from nat-session cookie
-            if cookies.get("nat-session"):
-                self._context_state.user_id.set(cookies["nat-session"])
 
         if conversation_id is not None:
             self._context_state.conversation_id.set(conversation_id)
