@@ -22,7 +22,7 @@ from nat.data_models.dataset_handler import EvalDatasetBaseConfig
 
 
 @dataclasses.dataclass
-class DatasetStoreInfo:
+class DatasetLoaderInfo:
     config: EvalDatasetBaseConfig
     load_fn: Callable[..., pd.DataFrame]
     description: str = ""

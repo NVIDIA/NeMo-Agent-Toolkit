@@ -35,7 +35,7 @@ from pydantic import model_validator
 from nat.authentication.interfaces import AuthProviderBase
 from nat.builder.builder import Builder
 from nat.builder.builder import EvalBuilder
-from nat.builder.dataset_store import DatasetStoreInfo
+from nat.builder.dataset_loader import DatasetLoaderInfo
 from nat.builder.embedder import EmbedderProviderInfo
 from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.front_end import FrontEndBase
@@ -100,7 +100,7 @@ from nat.registry_handlers.registry_handler_base import AbstractRegistryHandler
 logger = logging.getLogger(__name__)
 
 AuthProviderBuildCallableT = Callable[[AuthProviderBaseConfigT, Builder], AsyncIterator[AuthProviderBase]]
-DatasetStoreBuildCallableT = Callable[[EvalDatasetBaseConfigT, EvalBuilder], AsyncIterator[DatasetStoreInfo]]
+DatasetLoaderBuildCallableT = Callable[[EvalDatasetBaseConfigT, EvalBuilder], AsyncIterator[DatasetLoaderInfo]]
 EmbedderClientBuildCallableT = Callable[[EmbedderBaseConfigT, Builder], AsyncIterator[typing.Any]]
 EmbedderProviderBuildCallableT = Callable[[EmbedderBaseConfigT, Builder], AsyncIterator[EmbedderProviderInfo]]
 EvaluatorBuildCallableT = Callable[[EvaluatorBaseConfigT, EvalBuilder], AsyncIterator[EvaluatorInfo]]
@@ -125,8 +125,8 @@ ToolWrapperBuildCallableT = Callable[[str, Function, Builder], typing.Any]
 
 AuthProviderRegisteredCallableT = Callable[[AuthProviderBaseConfigT, Builder],
                                            AbstractAsyncContextManager[AuthProviderBase]]
-DatasetStoreRegisteredCallableT = Callable[[EvalDatasetBaseConfigT, EvalBuilder],
-                                           AbstractAsyncContextManager[DatasetStoreInfo]]
+DatasetLoaderRegisteredCallableT = Callable[[EvalDatasetBaseConfigT, EvalBuilder],
+                                            AbstractAsyncContextManager[DatasetLoaderInfo]]
 EmbedderClientRegisteredCallableT = Callable[[EmbedderBaseConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
 EmbedderProviderRegisteredCallableT = Callable[[EmbedderBaseConfigT, Builder],
                                                AbstractAsyncContextManager[EmbedderProviderInfo]]
@@ -352,10 +352,10 @@ class RegisteredEvaluatorInfo(RegisteredInfo[EvaluatorBaseConfig]):
     build_fn: EvaluatorRegisteredCallableT = Field(repr=False)
 
 
-class RegisteredDatasetStoreInfo(RegisteredInfo[EvalDatasetBaseConfig]):
-    """Represents a registered Dataset Store, e.g. json, csv, parquet, etc."""
+class RegisteredDatasetLoaderInfo(RegisteredInfo[EvalDatasetBaseConfig]):
+    """Represents a registered Dataset Loader, e.g. json, csv, parquet, etc."""
 
-    build_fn: DatasetStoreRegisteredCallableT = Field(repr=False)
+    build_fn: DatasetLoaderRegisteredCallableT = Field(repr=False)
 
 
 class RegisteredMemoryInfo(RegisteredInfo[MemoryBaseConfig]):
@@ -464,8 +464,8 @@ class TypeRegistry:
         # Evaluators
         self._registered_evaluator_infos: dict[type[EvaluatorBaseConfig], RegisteredEvaluatorInfo] = {}
 
-        # Dataset Stores
-        self._registered_dataset_store_infos: dict[type[EvalDatasetBaseConfig], RegisteredDatasetStoreInfo] = {}
+        # Dataset Loaders
+        self._registered_dataset_loader_infos: dict[type[EvalDatasetBaseConfig], RegisteredDatasetLoaderInfo] = {}
 
         # Memory
         self._registered_memory_infos: dict[type[MemoryBaseConfig], RegisteredMemoryInfo] = {}
@@ -904,27 +904,27 @@ class TypeRegistry:
 
         return list(self._registered_evaluator_infos.values())
 
-    def register_dataset_store(self, info: RegisteredDatasetStoreInfo):
+    def register_dataset_loader(self, info: RegisteredDatasetLoaderInfo):
 
-        if (info.config_type in self._registered_dataset_store_infos):
+        if (info.config_type in self._registered_dataset_loader_infos):
             raise ValueError(
-                f"A Dataset Store with the same config type `{info.config_type}` has already been registered.")
+                f"A Dataset Loader with the same config type `{info.config_type}` has already been registered.")
 
-        self._registered_dataset_store_infos[info.config_type] = info
+        self._registered_dataset_loader_infos[info.config_type] = info
 
         self._registration_changed()
 
-    def get_dataset_store(self, config_type: type[EvalDatasetBaseConfig]) -> RegisteredDatasetStoreInfo:
+    def get_dataset_loader(self, config_type: type[EvalDatasetBaseConfig]) -> RegisteredDatasetLoaderInfo:
 
         try:
-            return self._registered_dataset_store_infos[config_type]
+            return self._registered_dataset_loader_infos[config_type]
         except KeyError as err:
-            raise KeyError(f"Could not find a registered Dataset Store for config `{config_type}`. "
-                           f"Registered configs: {set(self._registered_dataset_store_infos.keys())}") from err
+            raise KeyError(f"Could not find a registered Dataset Loader for config `{config_type}`. "
+                           f"Registered configs: {set(self._registered_dataset_loader_infos.keys())}") from err
 
-    def get_registered_dataset_stores(self) -> list[RegisteredInfo[EvalDatasetBaseConfig]]:
+    def get_registered_dataset_loaders(self) -> list[RegisteredInfo[EvalDatasetBaseConfig]]:
 
-        return list(self._registered_dataset_store_infos.values())
+        return list(self._registered_dataset_loader_infos.values())
 
     def register_memory(self, info: RegisteredMemoryInfo):
 
@@ -1138,8 +1138,8 @@ class TypeRegistry:
         if component_type == ComponentEnum.EVALUATOR:
             return self._registered_evaluator_infos
 
-        if component_type == ComponentEnum.DATASET_STORE:
-            return self._registered_dataset_store_infos
+        if component_type == ComponentEnum.DATASET_LOADER:
+            return self._registered_dataset_loader_infos
 
         if component_type == ComponentEnum.MEMORY:
             return self._registered_memory_infos
@@ -1210,8 +1210,8 @@ class TypeRegistry:
         if component_type == ComponentEnum.EVALUATOR:
             return [i.static_type() for i in self._registered_evaluator_infos]
 
-        if component_type == ComponentEnum.DATASET_STORE:
-            return [i.static_type() for i in self._registered_dataset_store_infos]
+        if component_type == ComponentEnum.DATASET_LOADER:
+            return [i.static_type() for i in self._registered_dataset_loader_infos]
 
         if component_type == ComponentEnum.MEMORY:
             return [i.static_type() for i in self._registered_memory_infos]
@@ -1268,7 +1268,7 @@ class TypeRegistry:
             return self._do_compute_annotation(cls, self.get_registered_embedder_providers())
 
         if issubclass(cls, EvalDatasetBaseConfig):
-            return self._do_compute_annotation(cls, self.get_registered_dataset_stores())
+            return self._do_compute_annotation(cls, self.get_registered_dataset_loaders())
 
         if issubclass(cls, EvaluatorBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_evaluators())

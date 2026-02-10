@@ -880,35 +880,35 @@ class EvalBuilder(ABC):
         pass
 
     @abstractmethod
-    async def add_dataset_store(self, name: str, config: "EvalDatasetBaseConfig"):
-        """Add a dataset store to the builder.
+    async def add_dataset_loader(self, name: str, config: "EvalDatasetBaseConfig"):
+        """Add a dataset loader to the builder.
 
         Args:
-            name: The name for the dataset store
-            config: The configuration for the dataset store
+            name: The name for the dataset loader
+            config: The configuration for the dataset loader
         """
         pass
 
     @abstractmethod
-    def get_dataset_store(self, dataset_store_name: str) -> typing.Any:
-        """Get a dataset store by name.
+    def get_dataset_loader(self, dataset_loader_name: str) -> typing.Any:
+        """Get a dataset loader by name.
 
         Args:
-            dataset_store_name: The name of the dataset store
+            dataset_loader_name: The name of the dataset loader
 
         Returns:
-            The DatasetStoreInfo instance
+            The DatasetLoaderInfo instance
         """
         pass
 
     @abstractmethod
-    def get_dataset_store_config(self, dataset_store_name: str) -> "EvalDatasetBaseConfig":
-        """Get the configuration for a dataset store.
+    def get_dataset_loader_config(self, dataset_loader_name: str) -> "EvalDatasetBaseConfig":
+        """Get the configuration for a dataset loader.
 
         Args:
-            dataset_store_name: The name of the dataset store
+            dataset_loader_name: The name of the dataset loader
 
         Returns:
-            The configuration for the dataset store
+            The configuration for the dataset loader
         """
         pass

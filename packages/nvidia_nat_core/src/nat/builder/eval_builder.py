@@ -20,7 +20,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from nat.builder.builder import EvalBuilder
-from nat.builder.dataset_store import DatasetStoreInfo
+from nat.builder.dataset_loader import DatasetLoaderInfo
 from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function import FunctionGroup
@@ -45,9 +45,9 @@ class ConfiguredEvaluator:
 
 
 @dataclasses.dataclass
-class ConfiguredDatasetStore:
+class ConfiguredDatasetLoader:
     config: EvalDatasetBaseConfig
-    instance: DatasetStoreInfo
+    instance: DatasetLoaderInfo
 
 
 class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
@@ -59,7 +59,7 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
         super().__init__(general_config=general_config, registry=registry)
         self.eval_general_config = eval_general_config
         self._evaluators: dict[str, ConfiguredEvaluator] = {}
-        self._dataset_stores: dict[str, ConfiguredDatasetStore] = {}
+        self._dataset_loaders: dict[str, ConfiguredDatasetLoader] = {}
 
     @override
     async def add_evaluator(self, name: str, config: EvaluatorBaseConfig):
@@ -94,36 +94,36 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
         return self._evaluators[evaluator_name].config
 
     @override
-    async def add_dataset_store(self, name: str, config: EvalDatasetBaseConfig):
-        if name in self._dataset_stores:
-            raise ValueError(f"Dataset store `{name}` already exists in the list of dataset stores")
+    async def add_dataset_loader(self, name: str, config: EvalDatasetBaseConfig):
+        if name in self._dataset_loaders:
+            raise ValueError(f"Dataset loader `{name}` already exists in the list of dataset loaders")
 
         try:
-            dataset_store_info = self._registry.get_dataset_store(type(config))
-            info_obj = await self._get_exit_stack().enter_async_context(dataset_store_info.build_fn(config, self))
+            dataset_loader_info = self._registry.get_dataset_loader(type(config))
+            info_obj = await self._get_exit_stack().enter_async_context(dataset_loader_info.build_fn(config, self))
 
-            # Store the dataset store
-            self._dataset_stores[name] = ConfiguredDatasetStore(config=config, instance=info_obj)
+            # Store the dataset loader
+            self._dataset_loaders[name] = ConfiguredDatasetLoader(config=config, instance=info_obj)
         except Exception as e:
-            logger.error("Error %s adding dataset store `%s` with config `%s`", e, name, config)
+            logger.error("Error %s adding dataset loader `%s` with config `%s`", e, name, config)
             raise
 
     @override
-    def get_dataset_store(self, dataset_store_name: str) -> DatasetStoreInfo:
+    def get_dataset_loader(self, dataset_loader_name: str) -> DatasetLoaderInfo:
 
-        if (dataset_store_name not in self._dataset_stores):
-            raise ValueError(f"Dataset store `{dataset_store_name}` not found")
+        if (dataset_loader_name not in self._dataset_loaders):
+            raise ValueError(f"Dataset loader `{dataset_loader_name}` not found")
 
-        return self._dataset_stores[dataset_store_name].instance
+        return self._dataset_loaders[dataset_loader_name].instance
 
     @override
-    def get_dataset_store_config(self, dataset_store_name: str) -> EvalDatasetBaseConfig:
+    def get_dataset_loader_config(self, dataset_loader_name: str) -> EvalDatasetBaseConfig:
 
-        if dataset_store_name not in self._dataset_stores:
-            raise ValueError(f"Dataset store `{dataset_store_name}` not found")
+        if dataset_loader_name not in self._dataset_loaders:
+            raise ValueError(f"Dataset loader `{dataset_loader_name}` not found")
 
-        # Return the dataset store configuration object
-        return self._dataset_stores[dataset_store_name].config
+        # Return the dataset loader configuration object
+        return self._dataset_loaders[dataset_loader_name].config
 
     @override
     def get_max_concurrency(self) -> int:
@@ -191,9 +191,9 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
 
         await super().populate_builder(config, skip_workflow=skip_workflow)
 
-        # Build dataset store if configured
+        # Build dataset loader if configured
         if config.eval.general.dataset:
-            await self.add_dataset_store("default", config.eval.general.dataset)
+            await self.add_dataset_loader("default", config.eval.general.dataset)
 
         # Initialize progress tracking for evaluators
         completed_evaluators = []

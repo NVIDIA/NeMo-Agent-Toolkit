@@ -27,7 +27,7 @@ Authentication Provider <./adding-an-authentication-provider.md>
 LLM Provider <./adding-an-llm-provider.md>
 Retriever <./adding-a-retriever.md>
 Evaluator <./custom-evaluator.md>
-Dataset Store <./custom-dataset-store.md>
+Dataset Loader <./custom-dataset-loader.md>
 MCP Server Worker <./mcp-server.md>
 Memory Provider <./memory.md>
 Object Store Provider <./object-store.md>

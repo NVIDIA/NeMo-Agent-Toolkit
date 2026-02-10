@@ -17,7 +17,7 @@ import pandas as pd
 import pytest
 
 from nat.cli.type_registry import GlobalTypeRegistry
-from nat.cli.type_registry import RegisteredDatasetStoreInfo
+from nat.cli.type_registry import RegisteredDatasetLoaderInfo
 from nat.data_models.dataset_handler import EvalDatasetBaseConfig
 from nat.data_models.dataset_handler import EvalDatasetCsvConfig
 from nat.data_models.dataset_handler import EvalDatasetCustomConfig
@@ -28,9 +28,9 @@ from nat.data_models.dataset_handler import EvalDatasetXlsConfig
 from nat.data_models.discovery_metadata import DiscoveryMetadata
 
 
-def test_builtin_dataset_stores_registered():
+def test_builtin_dataset_loaders_registered():
     """Verify all 6 built-in dataset types are registered in the TypeRegistry."""
-    import nat.eval.dataset_store.register  # noqa: F401
+    import nat.eval.dataset_loader.register  # noqa: F401
 
     registry = GlobalTypeRegistry.get()
 
@@ -42,14 +42,14 @@ def test_builtin_dataset_stores_registered():
             EvalDatasetXlsConfig,
             EvalDatasetCustomConfig,
     ]:
-        info = registry.get_dataset_store(config_type)
+        info = registry.get_dataset_loader(config_type)
         assert info is not None
         assert info.build_fn is not None
 
 
 def test_compute_annotation_for_dataset_base():
     """Verify compute_annotation returns a valid union type for datasets."""
-    import nat.eval.dataset_store.register  # noqa: F401
+    import nat.eval.dataset_loader.register  # noqa: F401
 
     registry = GlobalTypeRegistry.get()
     annotation = registry.compute_annotation(EvalDatasetBaseConfig)
@@ -58,7 +58,7 @@ def test_compute_annotation_for_dataset_base():
 
 def test_yaml_backward_compat_csv():
     """Verify _type: csv in YAML still parses to EvalDatasetCsvConfig."""
-    import nat.eval.dataset_store.register  # noqa: F401
+    import nat.eval.dataset_loader.register  # noqa: F401
     from nat.data_models.evaluate import EvalConfig
     from nat.data_models.evaluate import EvalGeneralConfig
 
@@ -70,7 +70,7 @@ def test_yaml_backward_compat_csv():
 
 def test_yaml_backward_compat_json():
     """Verify _type: json in YAML still parses to EvalDatasetJsonConfig."""
-    import nat.eval.dataset_store.register  # noqa: F401
+    import nat.eval.dataset_loader.register  # noqa: F401
     from nat.data_models.evaluate import EvalConfig
     from nat.data_models.evaluate import EvalGeneralConfig
 
@@ -80,13 +80,13 @@ def test_yaml_backward_compat_json():
     assert isinstance(config.dataset, EvalDatasetJsonConfig)
 
 
-def test_registered_dataset_store_info_fields():
-    """Verify RegisteredDatasetStoreInfo has the correct structure."""
+def test_registered_dataset_loader_info_fields():
+    """Verify RegisteredDatasetLoaderInfo has the correct structure."""
 
     def mock_fn(config, builder):
         pass
 
-    info = RegisteredDatasetStoreInfo(
+    info = RegisteredDatasetLoaderInfo(
         full_type="nat_core/csv",
         config_type=EvalDatasetCsvConfig,
         build_fn=mock_fn,
@@ -108,24 +108,24 @@ def test_duplicate_registration_raises():
         def mock_fn(config, builder):
             pass
 
-        info = RegisteredDatasetStoreInfo(
+        info = RegisteredDatasetLoaderInfo(
             full_type="test/test_dup_ds",
             config_type=TestDuplicateConfig,
             build_fn=mock_fn,
             discovery_metadata=DiscoveryMetadata(),
         )
-        registry.register_dataset_store(info)
+        registry.register_dataset_loader(info)
 
         with pytest.raises(ValueError, match="already been registered"):
-            registry.register_dataset_store(info)
+            registry.register_dataset_loader(info)
 
 
-def test_dataset_store_info_creation():
-    """Verify DatasetStoreInfo dataclass works correctly."""
-    from nat.builder.dataset_store import DatasetStoreInfo
+def test_dataset_loader_info_creation():
+    """Verify DatasetLoaderInfo dataclass works correctly."""
+    from nat.builder.dataset_loader import DatasetLoaderInfo
 
     config = EvalDatasetCsvConfig(file_path="/tmp/test.csv")
-    info = DatasetStoreInfo(config=config, load_fn=pd.read_csv, description="Test CSV store")
+    info = DatasetLoaderInfo(config=config, load_fn=pd.read_csv, description="Test CSV loader")
     assert info.config is config
     assert info.load_fn is pd.read_csv
-    assert info.description == "Test CSV store"
+    assert info.description == "Test CSV loader"
