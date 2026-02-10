@@ -440,9 +440,7 @@ class SessionManager:
         except Exception:
             return None
 
-    def _resolve_user_id(self,
-                         auth_header_value: str | None,
-                         cookies: dict[str, str]) -> str | None:
+    def _resolve_user_id(self, auth_header_value: str | None, cookies: dict[str, str]) -> str | None:
         """
         Resolve user_id: 1) nat-session cookie (preserves existing behavior),
         2) from JWT in Authorization header (name/email/sub) when cookie is not set.
@@ -538,8 +536,10 @@ class SessionManager:
                 self._context_state.user_id.set(resolved_user_id)
 
         if isinstance(http_connection, WebSocket):
-            self.set_metadata_from_websocket(http_connection, user_message_id, conversation_id,
-                                            pre_parsed_cookies=cookies_dict)
+            self.set_metadata_from_websocket(http_connection,
+                                             user_message_id,
+                                             conversation_id,
+                                             pre_parsed_cookies=cookies_dict)
 
         if isinstance(http_connection, Request):
             self.set_metadata_from_http_request(http_connection)
