@@ -114,7 +114,7 @@ eval:
   general:
     dataset:
       _type: tsv
-      file_path: path/to/my_data.tsv
+      file_path: <path to your file>
       separator: "\t"
 ```
 
@@ -123,7 +123,7 @@ The `_type` field specifies the dataset loader name. All fields defined in the c
 ### Running the Evaluation
 Run the evaluation using the standard command:
 ```bash
-nat eval --config_file=path/to/eval_config.yml
+nat eval --config_file <path to file>
 ```
 
 ## Built-in Dataset Loaders
