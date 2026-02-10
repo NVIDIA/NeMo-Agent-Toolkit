@@ -107,15 +107,17 @@ async def openai_agno(llm_config: OpenAIModelConfig, _builder: Builder):
 
     config_obj = {
         **llm_config.model_dump(
-            exclude={"type", "model_name", "thinking", "api_type"},
+            exclude={"type", "model_name", "thinking", "api_type", "api_key", "base_url"},
             by_alias=True,
             exclude_none=True,
             exclude_unset=True,
         ),
     }
 
-    if "base_url" not in config_obj and os.getenv("OPENAI_BASE_URL") is not None:
-        config_obj["base_url"] = os.getenv("OPENAI_BASE_URL")
+    if (api_key := llm_config.api_key.get_secret_value() if llm_config.api_key else os.getenv("OPENAI_API_KEY")):
+        config_obj["api_key"] = api_key
+    if (base_url := llm_config.base_url or os.getenv("OPENAI_BASE_URL")):
+        config_obj["base_url"] = base_url
 
     if llm_config.api_type == APITypeEnum.RESPONSES:
         client = OpenAIResponses(**config_obj, id=llm_config.model_name)

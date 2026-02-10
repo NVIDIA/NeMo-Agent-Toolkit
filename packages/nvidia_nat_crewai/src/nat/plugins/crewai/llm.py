@@ -144,13 +144,16 @@ async def openai_crewai(llm_config: OpenAIModelConfig, _builder: Builder):
     validate_no_responses_api(llm_config, LLMFrameworkEnum.CREWAI)
 
     config_dict = llm_config.model_dump(
-        exclude={"type", "thinking", "api_type"},
+        exclude={"type", "thinking", "api_type", "api_key", "base_url"},
         by_alias=True,
         exclude_none=True,
         exclude_unset=True,
     )
-    if "base_url" not in config_dict and os.getenv("OPENAI_BASE_URL") is not None:
-        config_dict["base_url"] = os.getenv("OPENAI_BASE_URL")
+
+    if (api_key := llm_config.api_key.get_secret_value() if llm_config.api_key else os.getenv("OPENAI_API_KEY")):
+        config_dict["api_key"] = api_key
+    if (base_url := llm_config.base_url or os.getenv("OPENAI_BASE_URL")):
+        config_dict["base_url"] = base_url
 
     client = LLM(**config_dict)
 

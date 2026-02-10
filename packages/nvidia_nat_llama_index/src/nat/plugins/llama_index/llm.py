@@ -132,14 +132,16 @@ async def openai_llama_index(llm_config: OpenAIModelConfig, _builder: Builder):
     from llama_index.llms.openai import OpenAIResponses
 
     config_dict = llm_config.model_dump(
-        exclude={"type", "thinking", "api_type"},
+        exclude={"type", "thinking", "api_type", "api_key", "base_url"},
         by_alias=True,
         exclude_none=True,
         exclude_unset=True,
     )
-
-    if "base_url" not in config_dict and os.getenv("OPENAI_BASE_URL") is not None:
-        config_dict["base_url"] = os.getenv("OPENAI_BASE_URL")
+    
+    if (api_key := llm_config.api_key.get_secret_value() if llm_config.api_key else os.getenv("OPENAI_API_KEY")):
+        config_dict["api_key"] = api_key
+    if (base_url := llm_config.base_url or os.getenv("OPENAI_BASE_URL")):
+        config_dict["base_url"] = base_url
 
     if llm_config.api_type == APITypeEnum.RESPONSES:
         llm = OpenAIResponses(**config_dict)

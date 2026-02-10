@@ -121,10 +121,11 @@ async def openai_adk(config: OpenAIModelConfig, _builder: Builder):
         exclude_none=True,
         exclude_unset=True,
     )
-    if config.base_url:
-        config_dict["api_base"] = config.base_url
-    elif os.getenv("OPENAI_BASE_URL") is not None:
-        config_dict["api_base"] = os.getenv("OPENAI_BASE_URL")
+
+    if (api_key := config.api_key.get_secret_value() if config.api_key else os.getenv("OPENAI_API_KEY")):
+        config_dict["api_key"] = api_key
+    if (base_url := config.base_url or os.getenv("OPENAI_BASE_URL")):
+        config_dict["api_base"] = base_url
 
     yield LiteLlm(config.model_name, **config_dict)
 
