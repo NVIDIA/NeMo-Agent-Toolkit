@@ -33,8 +33,10 @@ nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jir
 python3 packages/nvidia_nat_mcp/scripts/check_ws_mcp_auth_jwt.py
 
 # Run with specific user ID and input message
-python3 packages/nvidia_nat_mcp/scripts/check_ws_mcp_auth_jwt.py --user-id Alice --input "What is the status of AIQ-1935?"
-python3 packages/nvidia_nat_mcp/scripts/check_ws_mcp_auth_jwt.py --user-id Hatter --input "What is the status of AIQ-1935?"
+python3 packages/nvidia_nat_mcp/scripts/check_ws_mcp_auth_jwt.py --user-id Alice \
+    --input "What is the status of AIQ-1935?"
+python3 packages/nvidia_nat_mcp/scripts/check_ws_mcp_auth_jwt.py --user-id Hatter \
+    --input "What is the status of AIQ-1935?"
 ```
 """
 
