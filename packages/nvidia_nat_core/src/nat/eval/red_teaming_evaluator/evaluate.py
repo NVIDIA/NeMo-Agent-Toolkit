@@ -49,7 +49,7 @@ class RedTeamingEvaluator(BaseEvaluator):
     def __init__(self,
                  llm: BaseChatModel,
                  judge_llm_prompt: str,
-                 filter_conditions: list[IntermediateStepsFilterCondition] | None = None,
+                 intermediate_step_filters: list[IntermediateStepsFilterCondition] | None = None,
                  llm_retry_control_params: dict | None = None,
                  max_concurrency: int = 4,
                  reduction_strategy: ReductionStrategy = ReductionStrategy.LAST,
@@ -62,7 +62,7 @@ class RedTeamingEvaluator(BaseEvaluator):
             judge_llm_prompt: The prompt to use for the judge LLM
             llm_retry_control_params: Parameters for retry logic
             max_concurrency: Maximum number of concurrent evaluations
-            filter_conditions: List of filter conditions for selecting intermediate steps
+            intermediate_step_filters: List of filters for selecting intermediate steps
             reduction_strategy: Strategy to select a single step from filtered steps.
             scenario_specific_instructions: Optional scenario-specific instructions for evaluation.
         """
@@ -70,7 +70,7 @@ class RedTeamingEvaluator(BaseEvaluator):
         self.llm = llm
         self.judge_llm_prompt = judge_llm_prompt
         self.llm_retry_control_params = llm_retry_control_params
-        self.filter_conditions = filter_conditions or [IntermediateStepsFilterCondition.default()]
+        self.intermediate_step_filters = intermediate_step_filters or [IntermediateStepsFilterCondition.default()]
         self.scenario_specific_instructions = scenario_specific_instructions
         self.reduction_strategy = reduction_strategy
 
@@ -286,7 +286,7 @@ class RedTeamingEvaluator(BaseEvaluator):
         condition_results: dict[str, ConditionEvalOutputItem] = {}
         all_scores = []
 
-        for condition in self.filter_conditions:
+        for condition in self.intermediate_step_filters:
             condition_result = await self._evaluate_filter_condition(condition,
                                                                      question,
                                                                      expected_behavior,

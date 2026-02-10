@@ -23,32 +23,32 @@ from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_evaluator
-from nat.data_models.evaluator import EvaluatorBaseConfig
+from nat.data_models.evaluator import EvaluatorLLMConfig
 from nat.eval.evaluator.evaluator_model import EvalInput
 from nat.eval.evaluator.evaluator_model import EvalOutput
+from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
 logger = logging.getLogger(__name__)
 
 
 class RagasMetricConfig(BaseModel):
-    ''' RAGAS metrics configuration
-    skip: Allows the metric config to be present but not used
-    kwargs: Additional arguments to pass to the metric's callable
-    '''
+    """RAGAS metrics configuration."""
+
     skip: bool = False
-    # kwargs specific to the metric's callable
     kwargs: dict | None = None
 
 
-class RagasEvaluatorConfig(EvaluatorBaseConfig, name="ragas"):
+class RagasEvaluatorConfig(EvaluatorLLMConfig, name="ragas"):
     """Evaluation using RAGAS metrics."""
 
-    llm_name: str = Field(description="LLM as a judge.")
-    # Ragas metric
-    metric: str | dict[str, RagasMetricConfig] = Field(default="AnswerAccuracy",
-                                                       description="RAGAS metric callable with optional 'kwargs:'")
+    metric: str | dict[str, RagasMetricConfig] = Field(
+        default="AnswerAccuracy",
+        description="RAGAS metric callable with optional 'kwargs:'",
+    )
     input_obj_field: str | None = Field(
-        default=None, description="The field in the input object that contains the content to evaluate.")
+        default=None,
+        description="The field in the input object that contains the content to evaluate.",
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -118,8 +118,15 @@ async def register_ragas_evaluator(config: RagasEvaluatorConfig, builder: EvalBu
 
     from .evaluate import RAGEvaluator
 
-    # Get LLM
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+
+    if config.do_auto_retry:
+        llm = patch_with_retry(
+            llm,
+            retries=config.num_retries,
+            retry_codes=config.retry_on_status_codes,
+            retry_on_messages=config.retry_on_errors,
+        )
 
     # Get RAGAS metric callable from the metric config and create a list of metric-callables
     metrics = []

@@ -16,44 +16,56 @@
 import typing
 
 from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
 from pydantic import SerializeAsAny
 
 from nat.data_models.intermediate_step import IntermediateStep
 
 
 class EvalInputItem(BaseModel):
-    id: typing.Any
-    input_obj: typing.Any
-    expected_output_obj: typing.Any
-    output_obj: typing.Any = None  # populated by the workflow
-    expected_trajectory: list[IntermediateStep] = []
-    trajectory: list[IntermediateStep] = []  # populated by the workflow
-    full_dataset_entry: typing.Any
+    """A single input item for evaluation."""
+
+    id: typing.Any = Field(description="Unique identifier for this evaluation item.")
+    input_obj: typing.Any = Field(description="The input to the workflow (e.g., user question).")
+    expected_output_obj: typing.Any = Field(description="The expected/ground truth output.")
+    output_obj: typing.Any = Field(default=None, description="The actual workflow output. Populated during evaluation.")
+    expected_trajectory: list[IntermediateStep] = Field(
+        default_factory=list,
+        description="Expected intermediate steps for trajectory evaluation.",
+    )
+    trajectory: list[IntermediateStep] = Field(
+        default_factory=list,
+        description="Actual intermediate steps from workflow execution. Populated during evaluation.",
+    )
+    full_dataset_entry: typing.Any = Field(description="The complete original dataset entry.")
 
     def copy_with_updates(self, **updates) -> "EvalInputItem":
-        """
-        Copy EvalInputItem with optional field updates.
-        """
-        # Get all current fields
+        """Copy EvalInputItem with optional field updates."""
         item_data = self.model_dump()
-
-        # Apply any updates
         item_data.update(updates)
-
-        # Create new item with all fields
         return EvalInputItem(**item_data)
 
 
 class EvalInput(BaseModel):
-    eval_input_items: list[EvalInputItem]
+    """Container for evaluation input items."""
+
+    eval_input_items: list[EvalInputItem] = Field(description="List of items to evaluate.")
 
 
 class EvalOutputItem(BaseModel):
-    id: typing.Any  # id or input_obj from EvalInputItem
-    score: typing.Any  # float or any serializable type
-    reasoning: typing.Any
+    """A single output item from evaluation."""
+
+    model_config = ConfigDict(exclude_none=True)
+
+    id: typing.Any = Field(description="Identifier matching the corresponding EvalInputItem.")
+    score: typing.Any = Field(description="Evaluation score (typically float, may be NaN on failure).")
+    reasoning: typing.Any = Field(description="Evaluation context and LLM judge explanation.")
+    error: str | None = Field(default=None, description="Evaluation error message if this item failed.")
 
 
 class EvalOutput(BaseModel):
-    average_score: typing.Any  # float or any serializable type
-    eval_output_items: list[SerializeAsAny[EvalOutputItem]]
+    """Container for evaluation output items."""
+
+    average_score: typing.Any = Field(description="Average score across all evaluated items.")
+    eval_output_items: list[SerializeAsAny[EvalOutputItem]] = Field(description="List of evaluation results.")
