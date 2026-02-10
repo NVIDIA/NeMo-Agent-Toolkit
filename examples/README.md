@@ -55,6 +55,7 @@ The examples in the NeMo-Agent-Toolkit-Examples repository are community contrib
   - [Dynamo Integration](#dynamo-integration)
   - [Retrieval Augmented Generation (RAG)](#retrieval-augmented-generation-rag)
   - [Safety and Security](#safety-and-security)
+- [Provider Examples](#provider-examples)
 - [Documentation Guide Files](#documentation-guide-files)
   - [Locally Hosted LLMs](#locally-hosted-llms)
   - [Workflow Artifacts](#workflow-artifacts)

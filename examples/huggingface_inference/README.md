@@ -36,7 +36,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
 
 ```bash
 uv pip install -e '.[langchain]'
-pip install huggingface_hub langchain-huggingface sentence-transformers
+uv pip install huggingface_hub langchain-huggingface sentence-transformers
 ```
 
 ### Set Up API Keys
@@ -51,13 +51,9 @@ You can obtain a token from [HuggingFace Settings](https://huggingface.co/settin
 
 ## Configuration
 
-See [configs/config.yaml](configs/config.yaml) for a complete example showing:
+See [configs/config.yaml](configs/config.yaml) for a reference configuration showing:
 
 - **LLMs**: Three deployment modes (Serverless API, Custom Endpoint, Self-hosted TGI)
 - **Embedders**: Local sentence-transformers and remote TEI server configurations
 
-## Run the Workflow
-
-```bash
-nat run --config_file=examples/huggingface_inference/configs/config.yaml --input "What is machine learning?"
-```
+This config defines provider entries that can be referenced from your own workflow configurations. To use these providers in a workflow, add the relevant `llms` or `embedders` sections to your workflow's config file.
