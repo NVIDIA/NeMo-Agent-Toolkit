@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import asyncio
+import base64
 import json
 import logging
 import time
@@ -26,7 +27,6 @@ from contextlib import nullcontext
 from datetime import datetime
 from http.cookies import SimpleCookie
 
-from authlib.jose import JsonWebSignature
 from fastapi import WebSocket
 from pydantic import BaseModel
 from pydantic import ConfigDict
@@ -424,19 +424,19 @@ class SessionManager:
     @staticmethod
     def _decode_jwt_payload_unverified(token: str) -> dict[str, typing.Any] | None:
         """
-        Decode JWT payload without verification using authlib.
+        Decode JWT payload (middle segment) without verification.
         Used only to extract user identity claims (name, email, sub) for routing.
         """
         if not token or token.count(".") != 2:
             return None
         try:
-            jws = JsonWebSignature()
-            # key=None: deserialize without signature verification (per authlib docs)
-            data = jws.deserialize(token, key=None, decode=lambda b: json.loads(b.decode("utf-8")))
-            if not data or "payload" not in data:
-                return None
-            payload = data["payload"]
-            return payload if isinstance(payload, dict) else None
+            payload_b64 = token.split(".")[1]
+            padding = 4 - len(payload_b64) % 4
+            if padding != 4:
+                payload_b64 += "=" * padding
+            payload_bytes = base64.urlsafe_b64decode(payload_b64)
+            out = json.loads(payload_bytes.decode("utf-8"))
+            return out if isinstance(out, dict) else None
         except Exception:
             return None
 
