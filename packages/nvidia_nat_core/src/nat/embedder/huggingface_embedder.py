@@ -19,18 +19,14 @@ from pydantic import Field
 from nat.builder.builder import Builder
 from nat.builder.embedder import EmbedderProviderInfo
 from nat.cli.register_workflow import register_embedder_provider
-from nat.data_models.common import OptionalSecretStr
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 
 
 class HuggingFaceEmbedderConfig(EmbedderBaseConfig, RetryMixin, name="huggingface"):
-    """HuggingFace Embedder provider supporting local and remote embedding generation.
+    """HuggingFace local embedder provider using sentence-transformers.
 
-    Supports:
-    - Local embedding generation via sentence-transformers (default)
-    - Remote Text Embeddings Inference (TEI) servers (via endpoint_url)
-    - HuggingFace Inference API (via endpoint_url with api_key)
+    Loads models locally via the sentence-transformers library for embedding generation.
     """
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")
@@ -46,14 +42,6 @@ class HuggingFaceEmbedderConfig(EmbedderBaseConfig, RetryMixin, name="huggingfac
         default=True,
         description="Whether to normalize embeddings to unit length"
     )
-    api_key: OptionalSecretStr = Field(
-        default=None,
-        description="HuggingFace API token for remote inference endpoints"
-    )
-    endpoint_url: str | None = Field(
-        default=None,
-        description="Custom endpoint URL for TEI servers or Inference API. If not provided, loads model locally."
-    )
     batch_size: int = Field(
         default=32,
         ge=1,
@@ -68,18 +56,12 @@ class HuggingFaceEmbedderConfig(EmbedderBaseConfig, RetryMixin, name="huggingfac
         default=False,
         description="Whether to trust remote code when loading models"
     )
-    timeout: float = Field(
-        default=120.0,
-        ge=1.0,
-        description="Request timeout in seconds for remote endpoints"
-    )
 
 
 @register_embedder_provider(config_type=HuggingFaceEmbedderConfig)
 async def huggingface_embedder_provider(config: HuggingFaceEmbedderConfig, _builder: Builder):
-    """Register HuggingFace as an embedder provider."""
+    """Register HuggingFace local embedder as a provider."""
 
-    mode = "Remote" if config.endpoint_url else "Local"
-    description = f"HuggingFace {mode} Embedder: {config.model_name}"
+    description = f"HuggingFace Local Embedder: {config.model_name}"
 
     yield EmbedderProviderInfo(config=config, description=description)

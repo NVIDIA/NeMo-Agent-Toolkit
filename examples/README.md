@@ -191,6 +191,9 @@ _See the [Dynamo Integration README](dynamo_integration/README.md) for additiona
 ### Safety and Security
 - **[`retail_agent`](safety_and_security/retail_agent/README.md)**: Outlines the features of the Safety and Security Engine (NASSE) included in NVIDIA NeMo Agent Toolkit and demonstrates its capabilities by assessing and improving the safety and security posture of an example Retail Agent **[🛑 Advanced]**
 
+## Provider Examples
+- **[`huggingface_inference`](huggingface_inference/README.md)**: HuggingFace Inference API for LLM generation and embedding, supporting Serverless API, Dedicated Inference Endpoints, self-hosted TGI servers, and local sentence-transformers **[🟢 Beginner]**
+
 ## Documentation Guide Files
 
 _Additional information can be found in the Documentation Guides [README](./documentation_guides/README.md)._
