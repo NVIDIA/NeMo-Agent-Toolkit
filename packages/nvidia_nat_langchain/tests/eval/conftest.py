@@ -14,10 +14,26 @@
 # limitations under the License.
 """Shared test fixtures for LangSmith/openevals evaluator tests."""
 
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+
 import pytest
 
 from nat.eval.evaluator.evaluator_model import EvalInput
 from nat.eval.evaluator.evaluator_model import EvalInputItem
+
+
+def make_mock_builder(mock_llm=None):
+    """Create a mock EvalBuilder with configurable get_llm.
+
+    Args:
+        mock_llm: Optional mock LLM to return from ``get_llm``.
+            When ``None``, a default ``MagicMock`` is used.
+    """
+    builder = MagicMock(spec=["get_llm", "get_max_concurrency"])
+    builder.get_llm = AsyncMock(return_value=mock_llm or MagicMock(name="mock_judge_llm"))
+    builder.get_max_concurrency.return_value = 2
+    return builder
 
 
 @pytest.fixture

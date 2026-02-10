@@ -16,3 +16,4 @@
 # flake8: noqa
 
 from .langsmith_evaluator import register_langsmith_evaluator
+from .langsmith_judge import register_langsmith_judge
