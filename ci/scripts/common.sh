@@ -106,6 +106,28 @@ function get_num_proc() {
    echo "${NUM_PROC}"
 }
 
+function set_versions() {
+   # Set the version for the wheels based on GIT_TAG / SCM
+
+   if [[ "${CI_CRON_NIGHTLY}" == "1" || "${IS_TAGGED}" == "1" ]]; then
+      # For tagged releases and nightly builds, use the git tag as the version as-is
+      NAT_VERSION="${GIT_TAG}"
+   else
+      set +e
+      NAT_VERSION=$(python -m setuptools_scm)
+      local SETUPTOOLS_SCM_RESULT=$?
+      set -e
+
+      if [[ ${SETUPTOOLS_SCM_RESULT} -ne 0 ]]; then
+         rapids-logger "Error, setuptools_scm failed to determine the version: ${NAT_VERSION}"
+         exit ${SETUPTOOLS_SCM_RESULT}
+      fi
+   fi
+
+   export SETUPTOOLS_SCM_PRETEND_VERSION="${NAT_VERSION}"
+   export USE_FULL_VERSION="1"
+}
+
 function build_wheel() {
     rapids-logger "Building Wheel for $1"
     uv build --wheel --no-progress --out-dir "${WHEELS_DIR}/$2" --directory $1
