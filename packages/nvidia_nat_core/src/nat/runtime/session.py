@@ -522,6 +522,7 @@ class SessionManager:
             token_user_authentication = self._context_state.user_auth_callback.set(user_authentication_callback)
 
         token_user_id_http = None
+        token_user_id_builder = None
         # Parse once: get auth header and cookies for user_id (nat-session cookie first, then JWT)
         auth_value, cookies_dict = (None, {})
         if http_connection is not None:
@@ -553,7 +554,7 @@ class SessionManager:
                                  "or pass user_id explicitly.")
 
             # To ensure the user_id is set in the context before the per-user builder is created
-            self._context_state.user_id.set(user_id)
+            token_user_id_builder = self._context_state.user_id.set(user_id)
 
             # Get or create per-user builder
             logger.debug(f"Getting or creating per-user builder for user {user_id}")
@@ -599,6 +600,8 @@ class SessionManager:
 
             if token_user_id is not None:
                 self._context_state.user_id.reset(token_user_id)
+            if token_user_id_builder is not None:
+                self._context_state.user_id.reset(token_user_id_builder)
             if token_user_id_http is not None:
                 self._context_state.user_id.reset(token_user_id_http)
             if token_user_manager is not None:
