@@ -262,7 +262,7 @@ export CORPORATE_MCP_JIRA_URL="https://your-jira-mcp-url"
 nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira-per-user.yml
 ```
 
-3. Test with nat-session cookie (user identified by `?session={user_id}`):
+3. Test with session cookie (user identified by `?session={user_id}`):
 
    User Alice:
    ```bash
@@ -274,7 +274,7 @@ nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jir
    python3 packages/nvidia_nat_mcp/scripts/check_ws_mcp_auth_cookie.py --user-id Hatter --input "What is the status of AIQ-1935?"
    ```
 
-4. (Alternative to 3) Test with JWT (user identified by `Authorization: Bearer <JWT>`; no session query param):
+4. (Alternative to 3) Test with JWT (user identified by `Authorization: Bearer <JWT>`; no session query parameter):
 
    User Alice:
    ```bash
