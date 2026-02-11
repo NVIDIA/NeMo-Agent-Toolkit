@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Helpers for extracting auth headers, cookies, and resolving user_id from HTTP/WebSocket connections."""
 
 import typing
@@ -24,9 +23,7 @@ from starlette.requests import HTTPConnection
 from starlette.requests import Request
 
 
-def get_auth_and_cookies_from_connection(
-    connection: HTTPConnection,
-) -> tuple[str | None, dict[str, str]]:
+def get_auth_and_cookies_from_connection(connection: HTTPConnection, ) -> tuple[str | None, dict[str, str]]:
     """
     Extract Authorization header value and cookies dict from Request or WebSocket.
 

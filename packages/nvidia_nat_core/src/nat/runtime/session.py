@@ -35,8 +35,6 @@ from starlette.requests import Request
 from nat.builder.context import Context
 from nat.builder.context import ContextState
 from nat.builder.workflow import Workflow
-from nat.runtime.connection_auth import get_auth_and_cookies_from_connection
-from nat.runtime.connection_auth import resolve_user_id
 from nat.data_models.authentication import AuthenticatedContext
 from nat.data_models.authentication import AuthFlowType
 from nat.data_models.authentication import AuthProviderBaseConfig
@@ -44,6 +42,8 @@ from nat.data_models.config import Config
 from nat.data_models.interactive import HumanResponse
 from nat.data_models.interactive import InteractionPrompt
 from nat.data_models.runtime_enum import RuntimeTypeEnum
+from nat.runtime.connection_auth import get_auth_and_cookies_from_connection
+from nat.runtime.connection_auth import resolve_user_id
 
 if typing.TYPE_CHECKING:
     from nat.builder.per_user_workflow_builder import PerUserWorkflowBuilder
