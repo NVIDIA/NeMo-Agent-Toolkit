@@ -543,13 +543,7 @@ def test_resolve_file_references_nested():
         prompt_file = Path(tmpdir) / "agent.j2"
         prompt_file.write_text("Agent prompt content")
 
-        config = {
-            "workflow": {
-                "agent": {
-                    "system_prompt": f"file://{prompt_file}"
-                }
-            }
-        }
+        config = {"workflow": {"agent": {"system_prompt": f"file://{prompt_file}"}}}
 
         result = _resolve_file_references(config, Path(tmpdir))
 
@@ -568,9 +562,7 @@ def test_resolve_file_references_relative_path():
         prompt_file = prompts_dir / "my_prompt.txt"
         prompt_file.write_text("Relative path prompt")
 
-        config = {
-            "user_prompt": "file://prompts/my_prompt.txt"
-        }
+        config = {"user_prompt": "file://prompts/my_prompt.txt"}
 
         result = _resolve_file_references(config, Path(tmpdir))
 
@@ -605,9 +597,7 @@ def test_resolve_file_references_in_list():
     from nat.utils.io.yaml_tools import _resolve_file_references
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        config = {
-            "prompts": ["file://prompt1.txt", "file://prompt2.txt"]
-        }
+        config = {"prompts": ["file://prompt1.txt", "file://prompt2.txt"]}
 
         result = _resolve_file_references(config, Path(tmpdir))
 
@@ -619,10 +609,7 @@ def test_resolve_file_references_non_file_value():
     """Test that regular string values are not modified."""
     from nat.utils.io.yaml_tools import _resolve_file_references
 
-    config = {
-        "system_prompt": "You are a helpful assistant.",
-        "description": "No file:// prefix here"
-    }
+    config = {"system_prompt": "You are a helpful assistant.", "description": "No file:// prefix here"}
 
     result = _resolve_file_references(config, Path("."))
 
