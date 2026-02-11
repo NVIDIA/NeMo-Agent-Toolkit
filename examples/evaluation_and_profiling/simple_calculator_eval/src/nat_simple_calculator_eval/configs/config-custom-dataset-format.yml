@@ -29,18 +29,11 @@ llms:
     model_name: meta/llama-3.1-70b-instruct
     temperature: 0.2
     max_tokens: 2048
-  # eval_llm:
-  #   _type: nim
-  #   model_name: mistralai/mixtral-8x22b-instruct-v0.1
-  #   temperature: 0.0
-  #   max_tokens: 1024
   eval_llm:
     _type: nim
-    model_name: nvidia/llama-3.3-nemotron-super-49b-v1
-    thinking: true
-    temperature: 0.6
-    max_tokens: 2000
- 
+    model_name: mistralai/mixtral-8x22b-instruct-v0.1
+    temperature: 0.0
+    max_tokens: 1024
 
 workflow:
   _type: react_agent
