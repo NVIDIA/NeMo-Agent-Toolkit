@@ -145,7 +145,7 @@ async def my_per_user_group(config: MyPerUserGroupConfig, builder: Builder):
 
 When using the FastAPI front end with `nat serve`, the user ID for per-user workflows is derived as follows:
 
-1. **nat-session cookie** (preferred): If the request includes a `nat-session` cookie, its value is used as the user ID. Each unique session ID represents a different user.
+1. **`nat-session` cookie** (preferred): If the request includes a `nat-session` cookie, its value is used as the user ID. Each unique session ID represents a different user.
 2. **JWT in Authorization header** (fallback): If no cookie is set, the server decodes the JWT from `Authorization: Bearer <token>` (without verification) and uses the first non-empty claim among `name`, `email`, `preferred_username`, and `sub` as the user ID.
 
 :::{warning}
