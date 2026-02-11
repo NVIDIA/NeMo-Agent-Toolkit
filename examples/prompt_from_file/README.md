@@ -76,5 +76,5 @@ curl -X POST http://localhost:8000/generate \
 
 - Edit prompts without modifying YAML
 - Track prompt changes in version control
-- Share prompts across configs
+- Share prompts across configuration files
 - Use any text editor with syntax highlighting

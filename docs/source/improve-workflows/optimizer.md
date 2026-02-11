@@ -147,14 +147,14 @@ functions:
 
 - Only fields whose key ends with `prompt` (case-insensitive) are eligible
 - The value must start with `file://`
-- Relative paths are resolved from the config file's directory
+- Relative paths are resolved from the configuration file's directory
 - Allowed extensions: `.txt`, `.md`, `.j2`, `.jinja2`, `.jinja`, `.prompt`, `.tpl`, `.template`
 
 **Benefits for Optimization:**
 
 - Keep prompts in version-controlled files
 - Edit prompts without modifying YAML structure
-- Share base prompts across optimization configs
+- Share base prompts across optimization configuration files
 - The optimizer will still mutate the loaded prompt content during GA optimization
 
 ### How They Work Together
