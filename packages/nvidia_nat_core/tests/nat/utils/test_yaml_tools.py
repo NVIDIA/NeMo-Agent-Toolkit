@@ -138,7 +138,7 @@ def test_yaml_loads(env_vars: dict):
       nested: ${NESTED_VAR:-default}
     """
 
-    config: dict = yaml_loads(yaml_str)
+    config: dict = yaml_loads(yaml_str, Path("."))
     assert config["key1"] == env_vars["TEST_VAR"]
     assert config["key2"] == "static_value"
     assert config["key3"]["nested"] == env_vars["NESTED_VAR"]  # type: ignore
@@ -199,7 +199,7 @@ def test_yaml_loads_with_function(env_vars: dict):
     """
 
     # Test loading with function
-    config_data: dict = yaml_loads(yaml_str)
+    config_data: dict = yaml_loads(yaml_str, Path("."))
     # Convert the YAML data to an Config object
     workflow_config: HashableBaseModel = Config(**config_data)
 
@@ -267,12 +267,12 @@ def test_yaml_loads_with_invalid_yaml():
     """
 
     with pytest.raises(ValueError, match="Error loading YAML"):
-        yaml_loads(invalid_yaml)
+        yaml_loads(invalid_yaml, Path("."))
 
     # Test with completely malformed content
     malformed_yaml = "{"  # Unclosed bracket
     with pytest.raises(ValueError, match="Error loading YAML"):
-        yaml_loads(malformed_yaml)
+        yaml_loads(malformed_yaml, Path("."))
 
 
 def test_deep_merge():
