@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,7 @@ from typing import Any
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_embedder_client
+from nat.data_models.common import get_secret_value
 from nat.data_models.retry_mixin import RetryMixin
 from nat.embedder.azure_openai_embedder import AzureOpenAIEmbedderModelConfig
 from nat.embedder.huggingface_embedder import HuggingFaceEmbedderConfig
@@ -131,7 +132,7 @@ async def huggingface_inference_langchain(
 
     client = HuggingFaceEndpointEmbeddings(
         model=embedder_config.endpoint_url,
-        huggingfacehub_api_token=embedder_config.api_key.get_secret_value() if embedder_config.api_key else None,
+        huggingfacehub_api_token=get_secret_value(embedder_config.api_key),
     )
 
     if isinstance(embedder_config, RetryMixin):

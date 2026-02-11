@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,7 +28,7 @@ from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
 
 
-class HuggingFaceInferenceConfig(LLMBaseConfig, RetryMixin, OptimizableMixin, ThinkingMixin, name="huggingface_inference"):
+class HuggingFaceInferenceLLMConfig(LLMBaseConfig, RetryMixin, OptimizableMixin, ThinkingMixin, name="huggingface_inference"):
     """HuggingFace Inference API LLM provider for remote model inference.
 
     Supports:
@@ -91,8 +91,8 @@ class HuggingFaceInferenceConfig(LLMBaseConfig, RetryMixin, OptimizableMixin, Th
     )
 
 
-@register_llm_provider(config_type=HuggingFaceInferenceConfig)
-async def huggingface_inference_provider(config: HuggingFaceInferenceConfig, _builder: Builder):
+@register_llm_provider(config_type=HuggingFaceInferenceLLMConfig)
+async def huggingface_inference_provider(config: HuggingFaceInferenceLLMConfig, _builder: Builder):
     """Register HuggingFace Inference API as an LLM provider."""
 
     endpoint_type = "Serverless API" if config.endpoint_url is None else "Custom Endpoint"

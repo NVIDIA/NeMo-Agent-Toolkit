@@ -24,6 +24,8 @@ NeMo Agent Toolkit supports the following embedder providers:
 | [NVIDIA NIM](https://build.nvidia.com) | `nim` | NVIDIA Inference Microservice (NIM) |
 | [OpenAI](https://openai.com) | `openai` | OpenAI API |
 | [Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/quickstart) | `azure_openai` | Azure OpenAI API |
+| [HuggingFace](https://huggingface.co) | `huggingface` | Local sentence-transformers embeddings |
+| [HuggingFace Inference](https://huggingface.co/docs/api-inference) | `huggingface_inference` | Remote embeddings via TEI or Inference Endpoints |
 
 ## Embedder Configuration
 
@@ -83,3 +85,47 @@ The Azure OpenAI embedder provider is defined by the {py:class}`~nat.embedder.az
 * `api_version` - The API version to use for the model
 * `azure_endpoint` - The Azure OpenAI endpoint to use for the model
 * `azure_deployment` - The name of the Azure OpenAI deployment to use
+
+### HuggingFace
+
+HuggingFace is a local embedder provider using sentence-transformers models for embedding generation.
+
+The HuggingFace embedder provider is defined by the {py:class}`~nat.embedder.huggingface_embedder.HuggingFaceEmbedderConfig` class.
+
+* `model_name` - The HuggingFace model identifier (for example, `BAAI/bge-large-en-v1.5`, `sentence-transformers/all-MiniLM-L6-v2`)
+* `device` - Device for model execution: `cpu`, `cuda`, `mps`, or `auto` (default: `auto`)
+* `normalize_embeddings` - Whether to normalize embeddings to unit length (default: `true`)
+* `batch_size` - Batch size for embedding generation (default: `32`)
+* `max_seq_length` - Maximum sequence length for input text
+* `trust_remote_code` - Whether to trust remote code when loading models (default: `false`)
+
+```yaml
+embedders:
+  local_embedder:
+    _type: huggingface
+    model_name: sentence-transformers/all-MiniLM-L6-v2
+    device: auto
+    normalize_embeddings: true
+```
+
+### HuggingFace Inference
+
+HuggingFace Inference is a remote embedder provider for TEI servers and HuggingFace Inference Endpoints.
+
+You can use the following environment variables to configure the HuggingFace Inference embedder provider:
+
+* `HF_TOKEN` - The API token to access HuggingFace Inference resources
+
+The HuggingFace Inference embedder provider is defined by the {py:class}`~nat.embedder.huggingface_inference_embedder.HuggingFaceInferenceEmbedderConfig` class.
+
+* `endpoint_url` - Endpoint URL for TEI server or HuggingFace Inference Endpoint
+* `api_key` - The HuggingFace API token for authentication
+* `timeout` - Request timeout in seconds (default: `120.0`)
+
+```yaml
+embedders:
+  tei_embedder:
+    _type: huggingface_inference
+    endpoint_url: http://localhost:8081
+    api_key: ${HF_TOKEN}
+```
