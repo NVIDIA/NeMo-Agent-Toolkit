@@ -57,7 +57,7 @@ def create_metadata_injection_client(timeout: float = 600.0) -> "httpx.AsyncClie
             if input_message and hasattr(input_message, 'model_extra') and input_message.model_extra:
                 for key, value in input_message.model_extra.items():
                     if value is not None:
-                        header_name: str = f"{LLMHeaderPrefix.PAYLOAD.value}-{key.replace('_', '-')}"
+                        header_name: str = f"{LLMHeaderPrefix.PAYLOAD}-{key.replace('_', '-')}"
                         request.headers[header_name] = str(value)
                         logger.debug("Injected custom metadata header: %s=%s", header_name, value)
         except Exception as e:

@@ -199,8 +199,9 @@ class TestDynamoAdk:
             base_url="http://localhost:8000/v1",
             prefix_template="session-{uuid}",
             prefix_total_requests=15,
-            prefix_osl="HIGH",
-            prefix_iat="LOW",
+            prefix_osl=2048,
+            prefix_iat=50,
+            disable_headers=False,
         )
 
     @patch('google.adk.models.lite_llm.LiteLlm')
@@ -238,8 +239,8 @@ class TestDynamoAdk:
             assert "x-prefix-id" in headers
             assert headers["x-prefix-id"].startswith("session-")
             assert headers["x-prefix-total-requests"] == "15"
-            assert headers["x-prefix-osl"] == "HIGH"
-            assert headers["x-prefix-iat"] == "LOW"
+            assert headers["x-prefix-osl"] == "2048"
+            assert headers["x-prefix-iat"] == "50"
 
             assert client is mock_llm_instance
 
@@ -268,6 +269,8 @@ class TestDynamoAdk:
         assert "prefix_total_requests" not in kwargs
         assert "prefix_osl" not in kwargs
         assert "prefix_iat" not in kwargs
+        assert "prefix_use_raw_values" not in kwargs
+        assert "disable_headers" not in kwargs
         assert "request_timeout" not in kwargs
 
     @patch('google.adk.models.lite_llm.LiteLlm')
@@ -280,6 +283,7 @@ class TestDynamoAdk:
         config = DynamoModelConfig(
             model_name="test-model",
             prefix_template="session-{uuid}",
+            disable_headers=False,
         )
 
         prefix_ids = set()

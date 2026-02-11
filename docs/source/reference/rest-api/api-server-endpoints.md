@@ -65,18 +65,18 @@ This endpoint is only available when the `async_endpoints` optional dependency e
 
 Asynchronous jobs are managed using [Dask](https://docs.dask.org/en/stable/). By default, a local Dask cluster is created at start time, however you can also configure the server to connect to an existing Dask scheduler by setting the `scheduler_address` configuration parameter. The Dask scheduler is used to manage the execution of asynchronous jobs, and can be configured to run on a single machine or across a cluster of machines. Job history and metadata is stored in a SQL database using [SQLAlchemy](https://www.sqlalchemy.org/). By default, a temporary SQLite database is created at start time, however you can also configure the server to use a persistent database by setting the `db_url` configuration parameter. Refer to the [SQLAlchemy documentation](https://docs.sqlalchemy.org/en/20/core/engines.html#database-urls) for the format of the `db_url` parameter. Any database supported by [SQLAlchemy's Asynchronous I/O extension](https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html) can be used. Refer to [SQLAlchemy's Dialects](https://docs.sqlalchemy.org/en/20/dialects/index.html) for a complete list (many but not all of these support Asynchronous I/O).
 
-### Asynchronous Specific CLI flags
+### Asynchronous Specific CLI Flags
 The following CLI flags are available to configure the asynchronous generate endpoint when using `nat serve`:
-* --scheduler_address: The address of an existing Dask scheduler to connect to. If not set, a local Dask cluster will be created.
-* --db_url: The [SQLAlchemy database](https://docs.sqlalchemy.org/en/20/core/engines.html#database-urls) URL to use for storing job history and metadata. If not set, a temporary SQLite database will be created.
-* --max_concurrent_jobs: The maximum number of asynchronous jobs to run concurrently. Default is 10. This is only used when `scheduler_address` is not set.
-* --dask_workers: The type of Dask workers to use. Options are `threads` for Threaded Dask workers or `processes` for Process based Dask workers. Default is `processes`. This is only used when `scheduler_address` is not set.
-* --dask_log_level: The logging level for Dask. Default is `WARNING`.
+* `--dask_log_level`: The logging level for Dask. Default is `WARNING`.
+* `--dask_threads_per_worker`: The number of threads to use per Dask worker. Default is `1`. When set to `0` the value uses the Dask default. This is only used when `scheduler_address` is not set.
+* `--dask_workers`: The type of Dask workers to use. Options are `threads` for Threaded Dask workers or `processes` for Process based Dask workers. Default is `processes`. This is only used when `scheduler_address` is not set.
+* `--dask_worker_memory_limit`: The memory limit for each Dask worker. Can be 'auto', a memory string like '4GB', or a float representing a fraction of the system memory. The default value is '0', which means there is no memory limit. Refer to https://docs.dask.org/en/stable/deploying-python.html#reference for details.
+* `--db_url`: The [SQLAlchemy database](https://docs.sqlalchemy.org/en/20/core/engines.html#database-urls) URL to use for storing job history and metadata. If not set, a temporary SQLite database will be created.
+* `--max_concurrent_jobs`: Maximum number of Dask workers to create for running async jobs. The name of this parameter is misleading as the actual number of concurrent async jobs is: `max_running_async_jobs * dask_threads_per_worker`. Default is 10. This is only used when `scheduler_address` is not set.
+* `--scheduler_address`: The address of an existing Dask scheduler to connect to. If not set, a local Dask cluster will be created.
 
-:::{note}
-When processes are used Dask workers, standard output and standard error from the workflow will not be visible in the server logs, however threaded Dask workers will allow workflow output to be visible in the server logs. When multiple concurrent jobs are running using threaded Dask workers, workflow output from different jobs may be interleaved in the server logs.
-:::
 
+### Endpoint Details
 
 - **Route:** `/generate/async`
 - **Description:** A non-streaming transaction that submits a workflow to run in the background.
@@ -594,7 +594,7 @@ The response includes the following metrics for each user:
 | Field | Description |
 |-------|-------------|
 | `total_active_users` | Count of users with active per-user sessions (builders still in memory), regardless of in-flight requests |
-| `user_id` | The user identifier (from `nat-session` cookie) |
+| `user_id` | The user identifier (from `nat-session` cookie or JWT in Authorization header; see [User Identification](../../extend/custom-components/custom-functions/per-user-functions.md#user-identification)) |
 | `session.created_at` | When the per-user workflow was first created |
 | `session.last_activity` | Timestamp of the most recent request |
 | `session.ref_count` | Number of active concurrent requests for this user |

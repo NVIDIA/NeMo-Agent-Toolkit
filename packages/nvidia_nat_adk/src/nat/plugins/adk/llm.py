@@ -182,8 +182,8 @@ async def dynamo_adk(config: DynamoModelConfig, _builder: Builder):
     if config.base_url:
         config_dict["api_base"] = config.base_url
 
-    # Build Dynamo prefix headers if prefix_template is configured
-    if config.prefix_template is not None:
+    # Build Dynamo prefix headers if prefix_template is configured and headers are enabled
+    if config.prefix_template is not None and not config.disable_headers:
         # Generate a static prefix ID for this LLM instance
         # For dynamic prefix IDs, users should use the LangChain client or manage sessions manually
         unique_id = uuid.uuid4().hex[:16]
@@ -192,8 +192,8 @@ async def dynamo_adk(config: DynamoModelConfig, _builder: Builder):
         extra_headers = {
             "x-prefix-id": prefix_id,
             "x-prefix-total-requests": str(config.prefix_total_requests),
-            "x-prefix-osl": config.prefix_osl.upper(),
-            "x-prefix-iat": config.prefix_iat.upper(),
+            "x-prefix-osl": str(config.prefix_osl),
+            "x-prefix-iat": str(config.prefix_iat),
         }
         config_dict["extra_headers"] = extra_headers
 

@@ -26,3 +26,4 @@ from . import retriever
 from .tools import register as tools_register
 from .agent import register as agent_register
 from .control_flow import register as control_flow_register
+from .dataset_loader import register as dataset_loader_register
