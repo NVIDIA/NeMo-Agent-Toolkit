@@ -13,11 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import datetime
 import json
 import os
 import re
 from collections.abc import Mapping
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import httpx
@@ -65,8 +68,11 @@ from nat.data_models.interactive import HumanResponseCheckbox
 from nat.data_models.interactive import HumanResponseDropdown
 from nat.data_models.interactive import HumanResponseRadio
 from nat.data_models.interactive import HumanResponseText
+from nat.data_models.interactive import InteractionPrompt
 from nat.data_models.interactive import MultipleChoiceOption
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
+from nat.front_ends.fastapi.message_handler import UserInteraction
+from nat.front_ends.fastapi.message_handler import WebSocketMessageHandler
 from nat.front_ends.fastapi.message_validator import MessageValidator
 from nat.runtime.session import SessionManager
 from nat.test.functions import EchoFunctionConfig
@@ -338,12 +344,42 @@ async def test_generate_endpoint(client: httpx.AsyncClient, config: Config):
     assert response.status_code == 200
 
 
+async def test_generate_endpoint_returns_error_body_when_workflow_raises(client: httpx.AsyncClient, config: Config):
+    """When the workflow raises, non-streaming generate returns 200 with Error JSON body."""
+    with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker.generate_single_response") as mock_gen:
+        mock_gen.side_effect = NotImplementedError("No human prompt callback was registered.")
+        input_message = {"message": "hello"}
+        response = await client.post(f"{config.endpoint.generate}", json=input_message)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["code"] == "workflow_error"
+    assert "No human prompt callback" in body["message"]
+    assert body["details"] == "NotImplementedError"
+
+
 @pytest.mark.integration
 async def test_generate_stream_endpoint(client: httpx.AsyncClient, config: Config):
     """Tests generate stream endpoint to verify it responds successfully."""
     input_message = {"message": f"{config.app.input}"}
     response = await client.post(f"{config.endpoint.generate_stream}", json=input_message)
     assert response.status_code == 200
+
+
+async def test_generate_stream_endpoint_yields_error_when_workflow_raises(client: httpx.AsyncClient, config: Config):
+    """When the streaming workflow raises, generate stream contains an Error chunk with code workflow_error."""
+
+    async def raising_gen(*args, **kwargs):
+        if False:
+            yield
+        raise NotImplementedError("No human prompt callback was registered.")
+
+    with patch("nat.front_ends.fastapi.response_helpers.generate_streaming_response", new=raising_gen):
+        input_message = {"message": "hello"}
+        response = await client.post(f"{config.endpoint.generate_stream}", json=input_message)
+    assert response.status_code == 200
+    assert "workflow_error" in response.text
+    data_match: re.Match[str] | None = re.search(r'"code"\s*:\s*"workflow_error"', response.text)
+    assert data_match is not None
 
 
 @pytest.mark.integration
@@ -354,6 +390,36 @@ async def test_chat_endpoint(client: httpx.AsyncClient, config: Config):
     assert response.status_code == 200
     validated_response = ChatResponse(**response.json())
     assert isinstance(validated_response, ChatResponse)
+
+
+async def test_chat_endpoint_returns_error_body_when_workflow_raises(client: httpx.AsyncClient, config: Config):
+    """When the workflow raises, non-streaming chat returns 200 with Error JSON body."""
+    with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker.generate_single_response") as mock_gen:
+        mock_gen.side_effect = NotImplementedError("No human prompt callback was registered.")
+        input_message = {"messages": [{"role": "user", "content": "hello"}], "use_knowledge_base": True}
+        response = await client.post(f"{config.endpoint.chat}", json=input_message)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["code"] == "workflow_error"
+    assert "No human prompt callback" in body["message"]
+    assert body["details"] == "NotImplementedError"
+
+
+async def test_chat_stream_endpoint_yields_error_when_workflow_raises(client: httpx.AsyncClient, config: Config):
+    """When the streaming workflow raises, the stream contains an Error chunk with code workflow_error."""
+
+    async def raising_gen(*args, **kwargs):
+        if False:
+            yield
+        raise NotImplementedError("No human prompt callback was registered.")
+
+    with patch("nat.front_ends.fastapi.response_helpers.generate_streaming_response", new=raising_gen):
+        input_message = {"messages": [{"role": "user", "content": "hello"}], "use_knowledge_base": True}
+        response = await client.post(f"{config.endpoint.chat_stream}", json=input_message)
+    assert response.status_code == 200
+    assert "workflow_error" in response.text
+    data_match: re.Match[str] | None = re.search(r'"code"\s*:\s*"workflow_error"', response.text)
+    assert data_match is not None
 
 
 @pytest.mark.integration
@@ -584,6 +650,22 @@ async def test_resolve_error_message_type_by_invalid_input_data():
 
     message_type = await message_validator.resolve_message_type_by_data(TEST())
     assert message_type == WebSocketMessageType.ERROR_MESSAGE
+
+
+async def test_resolve_error_message_type_by_error_data():
+    """Resolve WebSocketMessageType.ERROR_MESSAGE when data_model is Error."""
+    message_validator = MessageValidator()
+    err = Error(code=ErrorTypes.WORKFLOW_ERROR, message="msg", details="detail")
+    message_type = await message_validator.resolve_message_type_by_data(err)
+    assert message_type == WebSocketMessageType.ERROR_MESSAGE
+
+
+async def test_convert_data_to_message_content_returns_error_unchanged():
+    """convert_data_to_message_content returns Error instance as-is."""
+    message_validator = MessageValidator()
+    err = Error(code=ErrorTypes.WORKFLOW_ERROR, message="msg", details="detail")
+    content = await message_validator.convert_data_to_message_content(err)
+    assert content is err
 
 
 async def test_nat_response_to_websocket_message():
@@ -828,3 +910,68 @@ async def test_invalid_openai_chat_request_fields():
 
     with pytest.raises(ValidationError):
         ChatRequest(messages=None)
+
+
+async def test_hitl_callback_timeout_raises_when_no_response():
+    """When prompt has timeout and the response future is never completed, TimeoutError is raised."""
+    mock_socket = AsyncMock()
+    mock_session_manager = MagicMock()
+    mock_step_adaptor = MagicMock()
+    mock_worker = MagicMock()
+    handler = WebSocketMessageHandler(
+        socket=mock_socket,
+        session_manager=mock_session_manager,
+        step_adaptor=mock_step_adaptor,
+        worker=mock_worker,
+    )
+    handler.create_websocket_message = AsyncMock()
+    handler._message_validator = MagicMock()
+
+    prompt_content = HumanPromptText(text="Confirm?", required=True, placeholder="y", timeout=1)
+    prompt = InteractionPrompt(id="id", status="in_progress", timestamp="2025-01-01T00:00:00Z", content=prompt_content)
+
+    def make_user_interaction(**kwargs):
+        return UserInteraction.model_construct(**kwargs)
+
+    with patch("nat.front_ends.fastapi.message_handler.UserInteraction", side_effect=make_user_interaction):
+        with patch.object(WebSocketMessageHandler, "_HITL_TIMEOUT_GRACE_PERIOD_SECONDS", 0):
+            with pytest.raises(TimeoutError, match=r"HITL prompt timed out after 1s waiting for human response"):
+                await handler.human_interaction_callback(prompt)
+
+
+async def test_restore_execution_state_sends_prompt_with_remaining_timeout():
+    """On reconnect, re-sent prompt has timeout set to max(0, original_timeout - elapsed)."""
+    mock_socket = AsyncMock()
+    mock_session_manager = MagicMock()
+    mock_step_adaptor = MagicMock()
+    mock_worker = MagicMock()
+    handler = WebSocketMessageHandler(
+        socket=mock_socket,
+        session_manager=mock_session_manager,
+        step_adaptor=mock_step_adaptor,
+        worker=mock_worker,
+    )
+    handler.create_websocket_message = AsyncMock()
+    handler._conversation_id = "conv1"
+
+    future: asyncio.Future = asyncio.get_running_loop().create_future()
+    prompt_content = HumanPromptText(text="Confirm?", required=True, placeholder="y", timeout=10)
+    disconnected_mock = MagicMock()
+    disconnected_mock._user_interaction = UserInteraction.model_construct(
+        future=future,
+        prompt_content=prompt_content,
+        started_at=0.0,
+    )
+    disconnected_mock._message_parent_id = "parent"
+    disconnected_mock._workflow_schema_type = "chat"
+    disconnected_mock._running_workflow_task = None
+    disconnected_mock._socket = mock_socket
+    mock_worker.get_conversation_handler.return_value = disconnected_mock
+
+    with patch("nat.front_ends.fastapi.message_handler.time.monotonic", return_value=3.0):
+        await handler._restore_execution_state()
+
+    handler.create_websocket_message.assert_called_once()
+    call_kwargs = handler.create_websocket_message.call_args[1]
+    sent_content = call_kwargs["data_model"]
+    assert sent_content.timeout == 7

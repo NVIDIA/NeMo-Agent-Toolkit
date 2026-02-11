@@ -17,6 +17,8 @@ import asyncio
 import typing
 from collections.abc import AsyncGenerator
 
+from nat.data_models.api_server import Error
+from nat.data_models.api_server import ErrorTypes
 from nat.data_models.api_server import ResponseIntermediateStep
 from nat.data_models.api_server import ResponsePayloadOutput
 from nat.data_models.api_server import ResponseSerializable
@@ -35,18 +37,21 @@ async def generate_streaming_response_as_str(payload: typing.Any,
                                              result_type: type | None = None,
                                              output_type: type | None = None) -> AsyncGenerator[str]:
 
-    async for item in generate_streaming_response(payload,
-                                                  session=session,
-                                                  streaming=streaming,
-                                                  step_adaptor=step_adaptor,
-                                                  result_type=result_type,
-                                                  output_type=output_type):
+    try:
+        async for item in generate_streaming_response(payload,
+                                                      session=session,
+                                                      streaming=streaming,
+                                                      step_adaptor=step_adaptor,
+                                                      result_type=result_type,
+                                                      output_type=output_type):
 
-        if (isinstance(item, ResponseSerializable)):
-            yield item.get_stream_data()
-        else:
-            raise ValueError("Unexpected item type in stream. Expected ChatResponseSerializable, got: " +
-                             str(type(item)))
+            if (isinstance(item, ResponseSerializable)):
+                yield item.get_stream_data()
+            else:
+                raise ValueError("Unexpected item type in stream. Expected ChatResponseSerializable, got: " +
+                                 str(type(item)))
+    except Exception as e:
+        yield Error(code=ErrorTypes.WORKFLOW_ERROR, message=type(e).__name__, details=str(e)).model_dump_json()
 
 
 async def generate_streaming_response(payload: typing.Any,
@@ -65,42 +70,29 @@ async def generate_streaming_response(payload: typing.Any,
         intermediate_complete = await pull_intermediate(q, step_adaptor)
 
         async def pull_result():
-            if session.workflow.has_streaming_output and streaming:
-                async for chunk in runner.result_stream(to_type=output_type):
-                    await q.put(chunk)
-            else:
-                result = await runner.result(to_type=result_type)
-                await q.put(runner.convert(result, output_type))
+            try:
+                if session.workflow.has_streaming_output and streaming:
+                    async for chunk in runner.result_stream(to_type=output_type):
+                        await q.put(chunk)
+                else:
+                    result = await runner.result(to_type=result_type)
+                    await q.put(runner.convert(result, output_type))
 
-            # Wait until the intermediate subscription is done before closing q
-            # But we have no direct "intermediate_done" reference here
-            # because it's encapsulated in pull_intermediate. So we can do:
-            #    await some_event.wait()
-            # If needed. Alternatively, you can skip that if the intermediate
-            # subscriber won't block the main flow.
-            #
-            # For example, if you *need* to guarantee the subscriber is done before
-            # closing the queue, you can structure the code to store or return
-            # the 'intermediate_done' event from pull_intermediate.
-            #
-
-            await intermediate_complete.wait()
-
-            await q.close()
+                await intermediate_complete.wait()
+            finally:
+                await q.close()
 
         try:
-            # Start the result stream
-            asyncio.create_task(pull_result())
+            task: asyncio.Task = asyncio.create_task(pull_result())
 
             async for item in q:
-
                 if (isinstance(item, ResponseSerializable)):
                     yield item
                 else:
                     yield ResponsePayloadOutput(payload=item)
-        except Exception:
-            # Handle exceptions here
-            raise
+
+            # Re-raise any exception from the producer so callers can handle it
+            await task
         finally:
             await q.close()
 
@@ -145,30 +137,30 @@ async def generate_streaming_response_full(payload: typing.Any,
         intermediate_complete = await pull_intermediate(q, None)
 
         async def pull_result():
-            if session.workflow.has_streaming_output and streaming:
-                async for chunk in runner.result_stream(to_type=output_type):
-                    await q.put(chunk)
-            else:
-                result = await runner.result(to_type=result_type)
-                await q.put(runner.convert(result, output_type))
+            try:
+                if session.workflow.has_streaming_output and streaming:
+                    async for chunk in runner.result_stream(to_type=output_type):
+                        await q.put(chunk)
+                else:
+                    result = await runner.result(to_type=result_type)
+                    await q.put(runner.convert(result, output_type))
 
-            await intermediate_complete.wait()
-            await q.close()
+                await intermediate_complete.wait()
+            finally:
+                await q.close()
 
         try:
-            # Start the result stream
-            asyncio.create_task(pull_result())
+            task: asyncio.Task = asyncio.create_task(pull_result())
 
             async for item in q:
                 if (isinstance(item, ResponseIntermediateStep)):
-                    # Filter intermediate steps if filter_steps is provided
                     if allowed_types is None or item.type in allowed_types:
                         yield item
                 else:
                     yield ResponsePayloadOutput(payload=item)
-        except Exception:
-            # Handle exceptions here
-            raise
+
+            # Re-raise any exception from the producer so callers can handle it
+            await task
         finally:
             await q.close()
 
@@ -183,14 +175,17 @@ async def generate_streaming_response_full_as_str(payload: typing.Any,
     """
     Similar to generate_streaming_response but converts the response to a string format.
     """
-    async for item in generate_streaming_response_full(payload,
-                                                       session=session,
-                                                       streaming=streaming,
-                                                       result_type=result_type,
-                                                       output_type=output_type,
-                                                       filter_steps=filter_steps):
-        if (isinstance(item, ResponseIntermediateStep) or isinstance(item, ResponsePayloadOutput)):
-            yield item.get_stream_data()
-        else:
-            raise ValueError("Unexpected item type in stream. Expected ChatResponseSerializable, got: " +
-                             str(type(item)))
+    try:
+        async for item in generate_streaming_response_full(payload,
+                                                           session=session,
+                                                           streaming=streaming,
+                                                           result_type=result_type,
+                                                           output_type=output_type,
+                                                           filter_steps=filter_steps):
+            if (isinstance(item, ResponseIntermediateStep) or isinstance(item, ResponsePayloadOutput)):
+                yield item.get_stream_data()
+            else:
+                raise ValueError("Unexpected item type in stream. Expected ChatResponseSerializable, got: " +
+                                 str(type(item)))
+    except Exception as e:
+        yield Error(code=ErrorTypes.WORKFLOW_ERROR, message=type(e).__name__, details=str(e)).model_dump_json()

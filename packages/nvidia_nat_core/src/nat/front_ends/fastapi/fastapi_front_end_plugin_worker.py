@@ -34,6 +34,7 @@ from fastapi import Request
 from fastapi import Response
 from fastapi import UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from pydantic import Field
@@ -48,6 +49,8 @@ from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
 from nat.data_models.api_server import ChatResponseChunk
+from nat.data_models.api_server import Error
+from nat.data_models.api_server import ErrorTypes
 from nat.data_models.api_server import ResponseIntermediateStep
 from nat.data_models.config import Config
 from nat.data_models.object_store import KeyAlreadyExistsError
@@ -775,9 +778,20 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         http_connection=request,
                         user_authentication_callback=self._http_flow_handler.authenticate) as session:
 
-                    result = await generate_single_response(None, session, result_type=result_type)
-                    add_context_headers_to_response(response)
-                    return result
+                    try:
+                        result = await generate_single_response(None, session, result_type=result_type)
+                        add_context_headers_to_response(response)
+                        return result
+                    except Exception as e:
+                        add_context_headers_to_response(response)
+                        return JSONResponse(
+                            content=Error(
+                                code=ErrorTypes.WORKFLOW_ERROR,
+                                message=str(e),
+                                details=type(e).__name__,
+                            ).model_dump(),
+                            status_code=200,
+                        )
 
             return get_single
 
@@ -825,9 +839,20 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         http_connection=request,
                         user_authentication_callback=self._http_flow_handler.authenticate) as session:
 
-                    result = await generate_single_response(payload, session, result_type=result_type)
-                    add_context_headers_to_response(response)
-                    return result
+                    try:
+                        result = await generate_single_response(payload, session, result_type=result_type)
+                        add_context_headers_to_response(response)
+                        return result
+                    except Exception as e:
+                        add_context_headers_to_response(response)
+                        return JSONResponse(
+                            content=Error(
+                                code=ErrorTypes.WORKFLOW_ERROR,
+                                message=str(e),
+                                details=type(e).__name__,
+                            ).model_dump(),
+                            status_code=200,
+                        )
 
             return post_single
 
@@ -886,10 +911,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 response.headers["Content-Type"] = "application/json"
                 stream_requested = getattr(payload, 'stream', False)
 
-                async with session_manager.session(http_connection=request) as session:
-                    if stream_requested:
+                if stream_requested:
 
-                        # Return streaming response
+                    async with session_manager.session(http_connection=request) as session:
                         return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                                  content=generate_streaming_response_as_str(
                                                      payload,
@@ -899,9 +923,21 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                      result_type=ChatResponseChunk,
                                                      output_type=ChatResponseChunk))
 
-                    result = await generate_single_response(payload, session, result_type=ChatResponse)
-                    add_context_headers_to_response(response)
-                    return result
+                async with session_manager.session(http_connection=request) as session:
+                    try:
+                        result = await generate_single_response(payload, session, result_type=ChatResponse)
+                        add_context_headers_to_response(response)
+                        return result
+                    except Exception as e:
+                        add_context_headers_to_response(response)
+                        return JSONResponse(
+                            content=Error(
+                                code=ErrorTypes.WORKFLOW_ERROR,
+                                message=str(e),
+                                details=type(e).__name__,
+                            ).model_dump(),
+                            status_code=200,
+                        )
 
             return post_openai_api_compatible
 

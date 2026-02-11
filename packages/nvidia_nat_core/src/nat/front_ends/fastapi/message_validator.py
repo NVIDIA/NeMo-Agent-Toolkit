@@ -71,7 +71,7 @@ class MessageValidator:
             WebSocketMessageType.SYSTEM_INTERACTION_MESSAGE: WebSocketSystemInteractionMessage,
             WebSocketMessageType.USER_INTERACTION_MESSAGE: WebSocketUserInteractionResponseMessage,
             WebSocketMessageType.OBSERVABILITY_TRACE_MESSAGE: WebSocketObservabilityTraceMessage,
-            WebSocketMessageType.ERROR_MESSAGE: Error,
+            WebSocketMessageType.ERROR_MESSAGE: WebSocketSystemResponseTokenMessage,
         }
 
         self._message_parent_id: str = "default_id"
@@ -146,35 +146,31 @@ class MessageValidator:
         :return: A WebSocket Message Content Data Model instance.
         """
 
-        validated_message_content: BaseModel = None
         try:
             if (isinstance(data_model, ResponsePayloadOutput)):
                 if hasattr(data_model.payload, 'model_dump_json'):
                     text_content: str = data_model.payload.model_dump_json()
                 else:
                     text_content: str = str(data_model.payload)
-                validated_message_content = SystemResponseContent(text=text_content)
+                return SystemResponseContent(text=text_content)
 
             elif isinstance(data_model, ChatResponse):
-                validated_message_content = SystemResponseContent(text=data_model.choices[0].message.content)
+                return SystemResponseContent(text=data_model.choices[0].message.content)
+
             elif isinstance(data_model, ChatResponseChunk):
-                validated_message_content = SystemResponseContent(text=data_model.choices[0].delta.content)
+                return SystemResponseContent(text=data_model.choices[0].delta.content)
 
             elif (isinstance(data_model, ResponseIntermediateStep)):
-                validated_message_content = SystemIntermediateStepContent(name=data_model.name,
-                                                                          payload=data_model.payload)
+                return SystemIntermediateStepContent(name=data_model.name, payload=data_model.payload)
+
             elif (isinstance(data_model, ResponseObservabilityTrace)):
-                validated_message_content = ObservabilityTraceContent(
-                    observability_trace_id=data_model.observability_trace_id)
-            elif (isinstance(data_model, HumanPromptBase)):
-                validated_message_content = data_model
-            elif (isinstance(data_model, SystemResponseContent)):
+                return ObservabilityTraceContent(observability_trace_id=data_model.observability_trace_id)
+
+            elif isinstance(data_model, (HumanPromptBase, Error, SystemResponseContent)):
                 return data_model
             else:
                 raise ValueError(
                     f"Input data could not be converted to validated message content: {data_model.model_dump_json()}")
-
-            return validated_message_content
 
         except ValueError as e:
             logger.exception("Input data could not be converted to validated message content: %s", str(e))
@@ -227,6 +223,9 @@ class MessageValidator:
         try:
             if (isinstance(data_model, ResponsePayloadOutput | ChatResponse | ChatResponseChunk)):
                 validated_message_type = WebSocketMessageType.RESPONSE_MESSAGE
+
+            elif (isinstance(data_model, Error)):
+                validated_message_type = WebSocketMessageType.ERROR_MESSAGE
 
             elif (isinstance(data_model, ResponseIntermediateStep)):
                 validated_message_type = WebSocketMessageType.INTERMEDIATE_STEP_MESSAGE
