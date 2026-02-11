@@ -20,6 +20,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from nat.builder.builder import EvalBuilder
+from nat.builder.dataset_loader import DatasetLoaderInfo
 from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function import FunctionGroup
@@ -28,6 +29,7 @@ from nat.builder.workflow_builder import _log_build_failure
 from nat.cli.type_registry import TypeRegistry
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
+from nat.data_models.dataset_handler import EvalDatasetBaseConfig
 from nat.data_models.evaluate import EvalGeneralConfig
 from nat.data_models.evaluator import EvaluatorBaseConfig
 from nat.data_models.function import EmptyFunctionConfig
@@ -42,6 +44,12 @@ class ConfiguredEvaluator:
     instance: EvaluatorInfo
 
 
+@dataclasses.dataclass
+class ConfiguredDatasetLoader:
+    config: EvalDatasetBaseConfig
+    instance: DatasetLoaderInfo
+
+
 class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
 
     def __init__(self,
@@ -51,6 +59,7 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
         super().__init__(general_config=general_config, registry=registry)
         self.eval_general_config = eval_general_config
         self._evaluators: dict[str, ConfiguredEvaluator] = {}
+        self._dataset_loaders: dict[str, ConfiguredDatasetLoader] = {}
 
     @override
     async def add_evaluator(self, name: str, config: EvaluatorBaseConfig):
@@ -83,6 +92,38 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
 
         # Return the tool configuration object
         return self._evaluators[evaluator_name].config
+
+    @override
+    async def add_dataset_loader(self, name: str, config: EvalDatasetBaseConfig):
+        if name in self._dataset_loaders:
+            raise ValueError(f"Dataset loader `{name}` already exists in the list of dataset loaders")
+
+        try:
+            dataset_loader_info = self._registry.get_dataset_loader(type(config))
+            info_obj = await self._get_exit_stack().enter_async_context(dataset_loader_info.build_fn(config, self))
+
+            # Store the dataset loader
+            self._dataset_loaders[name] = ConfiguredDatasetLoader(config=config, instance=info_obj)
+        except Exception as e:
+            logger.error("Error %s adding dataset loader `%s` with config `%s`", e, name, config)
+            raise
+
+    @override
+    def get_dataset_loader(self, dataset_loader_name: str) -> DatasetLoaderInfo:
+
+        if (dataset_loader_name not in self._dataset_loaders):
+            raise ValueError(f"Dataset loader `{dataset_loader_name}` not found")
+
+        return self._dataset_loaders[dataset_loader_name].instance
+
+    @override
+    def get_dataset_loader_config(self, dataset_loader_name: str) -> EvalDatasetBaseConfig:
+
+        if dataset_loader_name not in self._dataset_loaders:
+            raise ValueError(f"Dataset loader `{dataset_loader_name}` not found")
+
+        # Return the dataset loader configuration object
+        return self._dataset_loaders[dataset_loader_name].config
 
     @override
     def get_max_concurrency(self) -> int:
@@ -149,6 +190,10 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
         skip_workflow = skip_workflow or isinstance(config.workflow, EmptyFunctionConfig)
 
         await super().populate_builder(config, skip_workflow=skip_workflow)
+
+        # Build dataset loader if configured
+        if config.eval.general.dataset:
+            await self.add_dataset_loader("default", config.eval.general.dataset)
 
         # Initialize progress tracking for evaluators
         completed_evaluators = []

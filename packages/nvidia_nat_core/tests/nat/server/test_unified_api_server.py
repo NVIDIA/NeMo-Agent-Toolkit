@@ -345,12 +345,12 @@ async def test_generate_endpoint(client: httpx.AsyncClient, config: Config):
 
 
 async def test_generate_endpoint_returns_error_body_when_workflow_raises(client: httpx.AsyncClient, config: Config):
-    """When the workflow raises, non-streaming generate returns 200 with Error JSON body."""
+    """When the workflow raises, non-streaming generate returns 422 with Error JSON body."""
     with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker.generate_single_response") as mock_gen:
         mock_gen.side_effect = NotImplementedError("No human prompt callback was registered.")
         input_message = {"message": "hello"}
         response = await client.post(f"{config.endpoint.generate}", json=input_message)
-    assert response.status_code == 200
+    assert response.status_code == 422
     body = response.json()
     assert body["code"] == "workflow_error"
     assert "No human prompt callback" in body["message"]
@@ -393,12 +393,12 @@ async def test_chat_endpoint(client: httpx.AsyncClient, config: Config):
 
 
 async def test_chat_endpoint_returns_error_body_when_workflow_raises(client: httpx.AsyncClient, config: Config):
-    """When the workflow raises, non-streaming chat returns 200 with Error JSON body."""
+    """When the workflow raises, non-streaming chat returns 422 with Error JSON body."""
     with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker.generate_single_response") as mock_gen:
         mock_gen.side_effect = NotImplementedError("No human prompt callback was registered.")
         input_message = {"messages": [{"role": "user", "content": "hello"}], "use_knowledge_base": True}
         response = await client.post(f"{config.endpoint.chat}", json=input_message)
-    assert response.status_code == 200
+    assert response.status_code == 422
     body = response.json()
     assert body["code"] == "workflow_error"
     assert "No human prompt callback" in body["message"]

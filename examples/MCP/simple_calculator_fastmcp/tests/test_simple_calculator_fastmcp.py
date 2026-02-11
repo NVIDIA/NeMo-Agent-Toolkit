@@ -43,11 +43,13 @@ def nat_fastmcp_url_fixture(nat_fastmcp_host: str, nat_fastmcp_port: str) -> str
 
 
 @pytest.fixture(name="simple_calc_fastmcp_process", scope="module")
-async def simple_calc_fastmcp_process_fixture(nat_fastmcp_host: str, nat_fastmcp_port: str) -> subprocess.Popen:
-    from nat.test.utils import locate_example_config
-    from nat_simple_calculator.register import CalculatorToolConfig
-
-    config_file: Path = locate_example_config(CalculatorToolConfig)
+async def simple_calc_fastmcp_process_fixture(
+    nat_fastmcp_host: str,
+    nat_fastmcp_port: str,
+    root_repo_dir: Path,
+) -> subprocess.Popen:
+    config_file = (root_repo_dir /
+                   "examples/getting_started/simple_calculator/src/nat_simple_calculator/configs/config.yml")
 
     env = os.environ.copy()
     env.pop("NAT_LOG_LEVEL", None)

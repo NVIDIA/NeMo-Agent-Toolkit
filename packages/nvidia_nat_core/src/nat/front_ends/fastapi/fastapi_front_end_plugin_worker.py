@@ -790,7 +790,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                 message=str(e),
                                 details=type(e).__name__,
                             ).model_dump(),
-                            status_code=200,
+                            status_code=422,
                         )
 
             return get_single
@@ -851,7 +851,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                 message=str(e),
                                 details=type(e).__name__,
                             ).model_dump(),
-                            status_code=200,
+                            status_code=422,
                         )
 
             return post_single
@@ -936,7 +936,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                 message=str(e),
                                 details=type(e).__name__,
                             ).model_dump(),
-                            status_code=200,
+                            status_code=422,
                         )
 
             return post_openai_api_compatible
