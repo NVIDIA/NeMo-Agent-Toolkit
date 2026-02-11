@@ -51,16 +51,7 @@ async def memmachine_memory_client(
 ) -> AsyncGenerator[MemoryEditor, None]:
     from .memmachine_editor import MemMachineEditor
     # Import and initialize the MemMachine Python SDK
-    try:
-        from memmachine import MemMachineClient
-    except ImportError as e:
-        raise ImportError(
-            f"Could not import MemMachineClient from memmachine-client package. "
-            f"Error: {e}. "
-            "Please ensure memmachine-client package is installed: pip install memmachine-client. "
-            "See https://github.com/MemMachine/MemMachine/blob/main/docs/examples/python.mdx "
-            "for installation instructions."
-        ) from e
+    from memmachine import MemMachineClient
 
     # Initialize MemMachineClient with base_url
     # This follows the documented SDK pattern for local instances:
