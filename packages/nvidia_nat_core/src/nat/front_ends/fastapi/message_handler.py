@@ -426,6 +426,7 @@ class WebSocketMessageHandler:
                     await self.create_websocket_message(data_model=value, status=WebSocketMessageStatus.IN_PROGRESS)
 
         except Exception as e:
+            logger.exception("Unhandled workflow error")
             await self.create_websocket_message(data_model=Error(code=ErrorTypes.WORKFLOW_ERROR,
                                                                  message=type(e).__name__,
                                                                  details=str(e)),

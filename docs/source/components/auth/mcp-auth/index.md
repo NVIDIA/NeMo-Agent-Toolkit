@@ -262,25 +262,31 @@ export CORPORATE_MCP_JIRA_URL="https://your-jira-mcp-url"
 nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira-per-user.yml
 ```
 
-3. Test requests with different users:
+3. Test with session cookie (user identified by `?session={user_id}`):
 
-User Alice:
-```bash
-curl -X POST http://localhost:8000/generate \
-  -H "Content-Type: application/json" \
-  -H "Cookie: nat-session=user-alice" \
-  -d '{"messages": [{"role": "user", "content": "What is status of AIQ-2342?"}]}'
-```
+   User Alice:
+   ```bash
+   python3 packages/nvidia_nat_mcp/scripts/check_ws_mcp_auth_cookie.py --user-id Alice --input "What is the status of AIQ-1935?"
+   ```
 
-User Bob (has a separate MCP client instance):
-```bash
-curl -X POST http://localhost:8000/generate \
-  -H "Content-Type: application/json" \
-  -H "Cookie: nat-session=user-bob" \
-  -d '{"messages": [{"role": "user", "content": "What is status of AIQ-2507?"}]}'
-```
+   User Hatter (has a separate MCP client instance):
+   ```bash
+   python3 packages/nvidia_nat_mcp/scripts/check_ws_mcp_auth_cookie.py --user-id Hatter --input "What is the status of AIQ-1935?"
+   ```
 
-Each user identified by their `nat-session` cookie gets their own workflow instance and MCP client. When a user makes their first request, they will be prompted to complete OAuth authentication. Their tokens are stored separately from other users.
+4. (Alternative to 3) Test with JWT (user identified by `Authorization: Bearer <JWT>`; no session query parameter):
+
+   User Alice:
+   ```bash
+   python3 packages/nvidia_nat_mcp/scripts/check_ws_mcp_auth_jwt.py --user-id Alice --input "What is the status of AIQ-1935?"
+   ```
+
+   User Hatter:
+   ```bash
+   python3 packages/nvidia_nat_mcp/scripts/check_ws_mcp_auth_jwt.py --user-id Hatter --input "What is the status of AIQ-1935?"
+   ```
+
+Each user gets their own workflow instance and MCP client. When a user makes their first request, they will be prompted to complete OAuth authentication. Their tokens are stored separately from other users.
 
 ## Displaying Protected MCP Tools through the CLI
 MCP client CLI can be used to display and call MCP tools on a remote MCP server. To use a protected MCP server, you need to provide the `--auth` flag:

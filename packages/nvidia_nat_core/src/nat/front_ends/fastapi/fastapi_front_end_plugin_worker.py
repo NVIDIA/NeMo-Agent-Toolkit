@@ -783,6 +783,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         add_context_headers_to_response(response)
                         return result
                     except Exception as e:
+                        logger.exception("Unhandled workflow error")
                         add_context_headers_to_response(response)
                         return JSONResponse(
                             content=Error(
@@ -844,6 +845,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         add_context_headers_to_response(response)
                         return result
                     except Exception as e:
+                        logger.exception("Unhandled workflow error")
                         add_context_headers_to_response(response)
                         return JSONResponse(
                             content=Error(
@@ -929,6 +931,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         add_context_headers_to_response(response)
                         return result
                     except Exception as e:
+                        logger.exception("Unhandled workflow error")
                         add_context_headers_to_response(response)
                         return JSONResponse(
                             content=Error(

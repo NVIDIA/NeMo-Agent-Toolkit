@@ -51,7 +51,7 @@ async def generate_streaming_response_as_str(payload: typing.Any,
                 raise ValueError("Unexpected item type in stream. Expected ChatResponseSerializable, got: " +
                                  str(type(item)))
     except Exception as e:
-        yield Error(code=ErrorTypes.WORKFLOW_ERROR, message=type(e).__name__, details=str(e)).model_dump_json()
+        yield Error(code=ErrorTypes.WORKFLOW_ERROR, message=str(e), details=type(e).__name__).model_dump_json()
 
 
 async def generate_streaming_response(payload: typing.Any,
@@ -188,4 +188,4 @@ async def generate_streaming_response_full_as_str(payload: typing.Any,
                 raise ValueError("Unexpected item type in stream. Expected ChatResponseSerializable, got: " +
                                  str(type(item)))
     except Exception as e:
-        yield Error(code=ErrorTypes.WORKFLOW_ERROR, message=type(e).__name__, details=str(e)).model_dump_json()
+        yield Error(code=ErrorTypes.WORKFLOW_ERROR, message=str(e), details=type(e).__name__).model_dump_json()

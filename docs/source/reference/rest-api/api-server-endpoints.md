@@ -594,7 +594,7 @@ The response includes the following metrics for each user:
 | Field | Description |
 |-------|-------------|
 | `total_active_users` | Count of users with active per-user sessions (builders still in memory), regardless of in-flight requests |
-| `user_id` | The user identifier (from `nat-session` cookie) |
+| `user_id` | The user identifier (from `nat-session` cookie or JWT in Authorization header; see [User Identification](../../extend/custom-components/custom-functions/per-user-functions.md#user-identification)) |
 | `session.created_at` | When the per-user workflow was first created |
 | `session.last_activity` | Timestamp of the most recent request |
 | `session.ref_count` | Number of active concurrent requests for this user |

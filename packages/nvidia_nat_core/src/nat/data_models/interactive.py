@@ -144,7 +144,7 @@ class HumanPromptText(HumanPromptBase):
     Represents a text interaction.
     """
     input_type: typing.Literal[HumanPromptModelType.TEXT] = HumanPromptModelType.TEXT
-    placeholder: str | None = Field(description="The placeholder for the text.")
+    placeholder: str | None = Field(default=None, description="The placeholder for the text.")
     required: bool = Field(default=True, description="Whether the interaction is required.")
 
 
