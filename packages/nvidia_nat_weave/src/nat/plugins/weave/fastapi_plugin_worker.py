@@ -21,6 +21,7 @@ from fastapi import HTTPException
 from fastapi import Request
 from pydantic import BaseModel
 from pydantic import field_validator
+from pydantic import model_validator
 
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
@@ -44,6 +45,13 @@ class WeaveFeedbackPayload(BaseModel):
         if v is not None and len(v) > 1024:
             raise ValueError('Comment must not exceed 1024 characters')
         return v
+
+    @model_validator(mode='after')
+    def validate_at_least_one_feedback(self) -> 'WeaveFeedbackPayload':
+        """Validate that at least one feedback field is provided."""
+        if not self.reaction_type and not self.comment:
+            raise ValueError("At least one of 'reaction_type' or 'comment' must be provided")
+        return self
 
 
 class WeaveFeedbackResponse(BaseModel):
@@ -108,11 +116,6 @@ class WeaveFastAPIPluginWorker(FastApiFrontEndPluginWorker):
                     observability_trace_id = payload.observability_trace_id
                     reaction_type = payload.reaction_type
                     comment = payload.comment
-
-                    # Validate that at least one feedback type is provided
-                    if not reaction_type and not comment:
-                        raise HTTPException(status_code=400,
-                                            detail="At least one of 'reaction_type' or 'comment' must be provided")
 
                     def add_weave_feedback():
                         import weave
