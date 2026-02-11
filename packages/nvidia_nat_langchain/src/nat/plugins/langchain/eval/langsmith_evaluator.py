@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import importlib
 import inspect
 import logging
 from typing import Any
@@ -24,6 +23,8 @@ from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.cli.register_workflow import register_evaluator
 from nat.data_models.evaluator import EvaluatorBaseConfig
+
+from .utils import _import_from_dotted_path
 
 logger = logging.getLogger(__name__)
 
@@ -45,28 +46,14 @@ def _import_evaluator(dotted_path: str) -> Any:
         ImportError: If the module cannot be imported.
         AttributeError: If the attribute cannot be found in the module.
     """
-    parts = dotted_path.rsplit(".", 1)
-    if len(parts) != 2:
-        raise ValueError(f"Invalid evaluator path '{dotted_path}'. Expected format: 'module.attribute'")
-
-    module_path, attr_name = parts
-
-    try:
-        module = importlib.import_module(module_path)
-    except ImportError as e:
-        raise ImportError(f"Could not import module '{module_path}' for evaluator '{dotted_path}'. "
-                          f"Make sure the package is installed and the path is correct.") from e
-
-    evaluator = getattr(module, attr_name, None)
-    if evaluator is None:
-        raise AttributeError(f"Module '{module_path}' has no attribute '{attr_name}'. "
-                             f"Available attributes: {[a for a in dir(module) if not a.startswith('_')]}")
+    evaluator = _import_from_dotted_path(dotted_path, label="evaluator")
 
     # If it's a class, instantiate it
     if isinstance(evaluator, type):
         try:
             evaluator = evaluator()
         except TypeError as e:
+            attr_name = dotted_path.rsplit(".", 1)[-1]
             raise TypeError(f"Could not instantiate class '{attr_name}' from '{dotted_path}'. "
                             f"If this class requires constructor arguments, instantiate it in "
                             f"your own code and use a factory function instead. Error: {e}") from e
@@ -131,6 +118,26 @@ def _detect_convention(evaluator: Any) -> str:
                      f"(inputs, outputs, reference_outputs) or (run, example) signature.")
 
 
+def _import_schema(dotted_path: str) -> Any:
+    """Import a Python type (class) from a dotted path *without* instantiating it.
+
+    Unlike :func:`_import_evaluator`, this returns the class itself rather
+    than an instance.  This is needed for ``output_schema`` where openevals
+    expects the TypedDict / Pydantic model *class*, not an instance.
+
+    Args:
+        dotted_path: Full Python dotted path (e.g., ``'my_pkg.schemas.MyResult'``).
+
+    Returns:
+        The imported type or object.
+
+    Raises:
+        ImportError: If the module cannot be imported.
+        AttributeError: If the attribute cannot be found.
+    """
+    return _import_from_dotted_path(dotted_path, label="output_schema")
+
+
 class LangSmithEvaluatorConfig(EvaluatorBaseConfig, name="langsmith"):
     """Import any LangSmith-compatible evaluator by Python dotted path.
 
@@ -141,6 +148,13 @@ class LangSmithEvaluatorConfig(EvaluatorBaseConfig, name="langsmith"):
 
     evaluator: str = Field(description="Python dotted path to a LangSmith evaluator callable "
                            "(e.g., 'my_package.evaluators.my_fn' or 'openevals.exact_match').", )
+    extra_fields: dict[str, str] | None = Field(
+        default=None,
+        description="Optional mapping of evaluator kwarg names to dataset field names.  "
+        "Keys are the kwarg names passed to the evaluator; values are looked up "
+        "in the dataset entry.  Example: ``{context: retrieved_context}`` passes "
+        "the dataset's 'retrieved_context' field as the 'context' kwarg.",
+    )
 
 
 @register_evaluator(config_type=LangSmithEvaluatorConfig)
@@ -153,6 +167,18 @@ async def register_langsmith_evaluator(config: LangSmithEvaluatorConfig, builder
     evaluator_obj = _import_evaluator(config.evaluator)
     convention = _detect_convention(evaluator_obj)
 
+    effective_extra_fields = config.extra_fields
+    if config.extra_fields and convention != "openevals_function":
+        logger.warning(
+            "extra_fields is only supported with the openevals "
+            "(inputs, outputs, reference_outputs) calling convention, but "
+            "evaluator '%s' was detected as '%s'. "
+            "extra_fields will be ignored for this evaluator.",
+            config.evaluator,
+            convention,
+        )
+        effective_extra_fields = None
+
     logger.info(
         "Loaded LangSmith evaluator '%s' (convention: %s)",
         config.evaluator,
@@ -164,6 +190,7 @@ async def register_langsmith_evaluator(config: LangSmithEvaluatorConfig, builder
         convention=convention,
         max_concurrency=builder.get_max_concurrency(),
         evaluator_name=config.evaluator.rsplit(".", 1)[-1],
+        extra_fields=effective_extra_fields,
     )
 
     yield EvaluatorInfo(

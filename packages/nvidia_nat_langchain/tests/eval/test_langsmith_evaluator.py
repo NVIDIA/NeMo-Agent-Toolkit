@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest.mock import patch
+
 import pytest
 from langsmith.evaluation.evaluator import EvaluationResult
 from langsmith.evaluation.evaluator import RunEvaluator
@@ -28,14 +30,12 @@ from nat.plugins.langchain.eval.langsmith_evaluator import register_langsmith_ev
 from nat.plugins.langchain.eval.langsmith_evaluator_adapter import LangSmithEvaluatorAdapter
 
 from .conftest import make_mock_builder
+from .conftest import register_evaluator_ctx
 
 
 async def _register(config, builder=None):
     """Drive the async context manager returned by register_langsmith_evaluator."""
-    if builder is None:
-        builder = make_mock_builder()
-    async with register_langsmith_evaluator(config, builder) as info:
-        return info
+    return await register_evaluator_ctx(register_langsmith_evaluator, config, builder)
 
 
 class TestConfigValidation:
@@ -364,3 +364,62 @@ class TestLangSmithEvaluatorAdapter:
         assert item.score == 0.0
         assert "Evaluator error" in item.reasoning["error"]
         assert "Intentional test failure" in item.reasoning["error"]
+
+    async def test_adapter_passes_extra_fields(self, eval_input_with_context):
+        """LangSmithEvaluatorAdapter passes extra_fields through to evaluator."""
+        received_kwargs = {}
+
+        def capture_evaluator(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+            received_kwargs.update(kwargs)
+            received_kwargs["inputs"] = inputs
+            received_kwargs["outputs"] = outputs
+            return {"key": "test", "score": True}
+
+        evaluator = LangSmithEvaluatorAdapter(
+            evaluator=capture_evaluator,
+            convention="openevals_function",
+            max_concurrency=1,
+            extra_fields={"context": "retrieved_context"},
+        )
+        await evaluator.evaluate(eval_input_with_context)
+
+        assert received_kwargs["context"] == "Doodads are small mechanical gadgets used in workshops."
+
+
+# --------------------------------------------------------------------------- #
+# LangSmithEvaluatorConfig extra_fields
+# --------------------------------------------------------------------------- #
+
+
+class TestLangSmithEvaluatorConfigExtraFields:
+    """Tests for extra_fields on the generic langsmith evaluator config."""
+
+    def test_extra_fields_default_none(self):
+        config = LangSmithEvaluatorConfig(evaluator="openevals.exact_match")
+        assert config.extra_fields is None
+
+    def test_extra_fields_accepted(self):
+        config = LangSmithEvaluatorConfig(
+            evaluator="openevals.exact_match",
+            extra_fields={"context": "ctx_field"},
+        )
+        assert config.extra_fields == {"context": "ctx_field"}
+
+    async def test_extra_fields_with_non_openevals_convention_warns_and_drops(self, caplog):
+        """extra_fields warns and is ignored when evaluator uses run/example convention."""
+        config = LangSmithEvaluatorConfig(
+            evaluator="nat.plugins.langchain.eval.langsmith_evaluator._detect_convention",
+            extra_fields={"context": "ctx_field"},
+        )
+        builder = make_mock_builder()
+
+        with (patch(
+                "nat.plugins.langchain.eval.langsmith_evaluator._import_evaluator",
+                return_value=lambda run, example=None: {
+                    "key": "k", "score": 1.0
+                },
+        ), ):
+            async with register_langsmith_evaluator(config, builder) as info:
+                assert info.evaluate_fn is not None
+
+        assert "extra_fields will be ignored" in caplog.text

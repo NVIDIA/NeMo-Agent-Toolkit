@@ -24,12 +24,12 @@ from nat.plugins.langchain.eval.langsmith_judge import LangSmithJudgeConfig
 from nat.plugins.langchain.eval.langsmith_judge import register_langsmith_judge
 
 from .conftest import make_mock_builder
+from .conftest import register_evaluator_ctx
 
 
 async def _register(config, builder):
     """Drive the async context manager returned by register_langsmith_judge."""
-    async with register_langsmith_judge(config, builder) as info:
-        return info
+    return await register_evaluator_ctx(register_langsmith_judge, config, builder)
 
 
 class TestLangSmithJudgeConfig:
@@ -247,3 +247,299 @@ class TestLangSmithJudgeRegistration:
         ):
             await _register(config, builder)
             mock_retry.assert_not_called()
+
+
+# --------------------------------------------------------------------------- #
+# system and few_shot_examples typed fields
+# --------------------------------------------------------------------------- #
+
+
+class TestLangSmithJudgeNewTypedFields:
+    """Tests for system and few_shot_examples config fields."""
+
+    def test_system_default_none(self):
+        config = LangSmithJudgeConfig(prompt="correctness", llm_name="eval_llm")
+        assert config.system is None
+
+    def test_system_accepted(self):
+        config = LangSmithJudgeConfig(
+            prompt="correctness",
+            llm_name="eval_llm",
+            system="You are a strict evaluator.",
+        )
+        assert config.system == "You are a strict evaluator."
+
+    def test_few_shot_examples_default_none(self):
+        config = LangSmithJudgeConfig(prompt="correctness", llm_name="eval_llm")
+        assert config.few_shot_examples is None
+
+    def test_few_shot_examples_accepted(self):
+        examples = [
+            {
+                "inputs": "Q1", "outputs": "A1", "score": True, "reasoning": "Good"
+            },
+            {
+                "inputs": "Q2", "outputs": "A2", "score": 0.5, "reasoning": "Partial"
+            },
+        ]
+        config = LangSmithJudgeConfig(
+            prompt="correctness",
+            llm_name="eval_llm",
+            few_shot_examples=examples,
+        )
+        assert len(config.few_shot_examples) == 2
+        assert config.few_shot_examples[0]["score"] is True
+
+    async def test_system_passed_to_create_llm_as_judge(self, eval_input_matching):
+        """system field is forwarded to create_llm_as_judge."""
+        mock_llm = MagicMock(name="mock_judge_llm")
+
+        def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+            return {"key": "score", "score": 0.9, "comment": "OK"}
+
+        config = LangSmithJudgeConfig(
+            prompt="correctness",
+            llm_name="eval_llm",
+            system="Be strict.",
+        )
+        builder = make_mock_builder(mock_llm)
+
+        with patch("openevals.llm.create_llm_as_judge", return_value=fake_judge) as mock_create:
+            await _register(config, builder)
+            assert mock_create.call_args[1]["system"] == "Be strict."
+
+    async def test_few_shot_passed_to_create_llm_as_judge(self):
+        """few_shot_examples field is forwarded to create_llm_as_judge."""
+        mock_llm = MagicMock(name="mock_judge_llm")
+        examples = [{"inputs": "Q", "outputs": "A", "score": True, "reasoning": "OK"}]
+
+        def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+            return {"key": "score", "score": 1.0}
+
+        config = LangSmithJudgeConfig(
+            prompt="correctness",
+            llm_name="eval_llm",
+            few_shot_examples=examples,
+        )
+        builder = make_mock_builder(mock_llm)
+
+        with patch("openevals.llm.create_llm_as_judge", return_value=fake_judge) as mock_create:
+            await _register(config, builder)
+            assert mock_create.call_args[1]["few_shot_examples"] == examples
+
+    async def test_system_not_passed_when_none(self):
+        """system is NOT in create_llm_as_judge kwargs when None."""
+        mock_llm = MagicMock(name="mock_judge_llm")
+
+        def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+            return {"key": "score", "score": 1.0}
+
+        config = LangSmithJudgeConfig(prompt="correctness", llm_name="eval_llm")
+        builder = make_mock_builder(mock_llm)
+
+        with patch("openevals.llm.create_llm_as_judge", return_value=fake_judge) as mock_create:
+            await _register(config, builder)
+            assert "system" not in mock_create.call_args[1]
+            assert "few_shot_examples" not in mock_create.call_args[1]
+
+
+# --------------------------------------------------------------------------- #
+# judge_kwargs pass-through
+# --------------------------------------------------------------------------- #
+
+
+class TestJudgeKwargs:
+    """Tests for judge_kwargs pass-through and overlap validation."""
+
+    def test_judge_kwargs_default_none(self):
+        config = LangSmithJudgeConfig(prompt="correctness", llm_name="eval_llm")
+        assert config.judge_kwargs is None
+
+    def test_judge_kwargs_accepted(self):
+        config = LangSmithJudgeConfig(
+            prompt="correctness",
+            llm_name="eval_llm",
+            judge_kwargs={"some_future_param": 42},
+        )
+        assert config.judge_kwargs == {"some_future_param": 42}
+
+    async def test_judge_kwargs_overlap_with_typed_field_raises(self):
+        """Overlap between judge_kwargs and typed fields raises ValueError at registration."""
+        mock_llm = MagicMock(name="mock_judge_llm")
+
+        def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+            return {"key": "score", "score": 1.0}
+
+        config = LangSmithJudgeConfig(
+            prompt="correctness",
+            llm_name="eval_llm",
+            judge_kwargs={"continuous": True},
+        )
+        builder = make_mock_builder(mock_llm)
+
+        with (
+                pytest.raises(ValueError, match="overlap with typed config fields"),
+                patch("openevals.llm.create_llm_as_judge", return_value=fake_judge),
+        ):
+            await _register(config, builder)
+
+    async def test_judge_kwargs_overlap_system_raises(self):
+        """Overlap with system field raises when both typed field and judge_kwargs set it."""
+        mock_llm = MagicMock(name="mock_judge_llm")
+
+        def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+            return {"key": "score", "score": 1.0}
+
+        config = LangSmithJudgeConfig(
+            prompt="correctness",
+            llm_name="eval_llm",
+            system="typed value",
+            judge_kwargs={"system": "duplicate value"},
+        )
+        builder = make_mock_builder(mock_llm)
+
+        with (
+                pytest.raises(ValueError, match="overlap with typed config fields"),
+                patch("openevals.llm.create_llm_as_judge", return_value=fake_judge),
+        ):
+            await _register(config, builder)
+
+    async def test_judge_kwargs_system_allowed_when_typed_field_unset(self):
+        """system in judge_kwargs is fine when the typed field is None (no overlap)."""
+        mock_llm = MagicMock(name="mock_judge_llm")
+
+        def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+            return {"key": "score", "score": 1.0}
+
+        config = LangSmithJudgeConfig(
+            prompt="correctness",
+            llm_name="eval_llm",
+            judge_kwargs={"system": "via kwargs"},
+        )
+        builder = make_mock_builder(mock_llm)
+
+        with patch("openevals.llm.create_llm_as_judge", return_value=fake_judge) as mock_create:
+            await _register(config, builder)
+            assert mock_create.call_args[1]["system"] == "via kwargs"
+
+    async def test_judge_kwargs_forwarded_to_create_llm_as_judge(self):
+        """judge_kwargs are merged into create_llm_as_judge call."""
+        mock_llm = MagicMock(name="mock_judge_llm")
+
+        def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+            return {"key": "score", "score": 1.0}
+
+        config = LangSmithJudgeConfig(
+            prompt="correctness",
+            llm_name="eval_llm",
+            judge_kwargs={"some_future_param": "hello"},
+        )
+        builder = make_mock_builder(mock_llm)
+
+        with patch("openevals.llm.create_llm_as_judge", return_value=fake_judge) as mock_create:
+            await _register(config, builder)
+            assert mock_create.call_args[1]["some_future_param"] == "hello"
+
+
+# --------------------------------------------------------------------------- #
+# output_schema and score_field
+# --------------------------------------------------------------------------- #
+
+
+class TestOutputSchema:
+    """Tests for output_schema and score_field config fields."""
+
+    def test_output_schema_default_none(self):
+        config = LangSmithJudgeConfig(prompt="correctness", llm_name="eval_llm")
+        assert config.output_schema is None
+
+    def test_output_schema_accepted(self):
+        config = LangSmithJudgeConfig(
+            prompt="correctness",
+            llm_name="eval_llm",
+            output_schema="my_pkg.schemas.MyResult",
+        )
+        assert config.output_schema == "my_pkg.schemas.MyResult"
+
+    def test_score_field_default(self):
+        config = LangSmithJudgeConfig(prompt="correctness", llm_name="eval_llm")
+        assert config.score_field == "score"
+
+    def test_score_field_custom(self):
+        config = LangSmithJudgeConfig(
+            prompt="correctness",
+            llm_name="eval_llm",
+            output_schema="my_pkg.schemas.MyResult",
+            score_field="analysis.score",
+        )
+        assert config.score_field == "analysis.score"
+
+    async def test_output_schema_imported_and_passed(self):
+        """output_schema dotted path is imported and passed to create_llm_as_judge."""
+        mock_llm = MagicMock(name="mock_judge_llm")
+        fake_schema_class = type("FakeResult", (), {})
+
+        def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+            return {"key": "score", "score": 1.0}
+
+        config = LangSmithJudgeConfig(
+            prompt="correctness",
+            llm_name="eval_llm",
+            output_schema="my_pkg.schemas.FakeResult",
+        )
+        builder = make_mock_builder(mock_llm)
+
+        with (
+                patch("openevals.llm.create_llm_as_judge", return_value=fake_judge) as mock_create,
+                patch(
+                    "nat.plugins.langchain.eval.utils._import_from_dotted_path",
+                    return_value=fake_schema_class,
+                ) as mock_import,
+        ):
+            await _register(config, builder)
+            mock_import.assert_called_once_with("my_pkg.schemas.FakeResult", label="output_schema")
+            assert mock_create.call_args[1]["output_schema"] is fake_schema_class
+
+
+# --------------------------------------------------------------------------- #
+# extra_fields on langsmith_judge
+# --------------------------------------------------------------------------- #
+
+
+class TestLangSmithJudgeExtraFields:
+    """Tests for extra_fields on langsmith_judge."""
+
+    def test_extra_fields_default_none(self):
+        config = LangSmithJudgeConfig(prompt="correctness", llm_name="eval_llm")
+        assert config.extra_fields is None
+
+    def test_extra_fields_accepted(self):
+        config = LangSmithJudgeConfig(
+            prompt="hallucination",
+            llm_name="eval_llm",
+            extra_fields={"context": "retrieved_context"},
+        )
+        assert config.extra_fields == {"context": "retrieved_context"}
+
+    async def test_extra_fields_forwarded_through_adapter(self, eval_input_with_context):
+        """extra_fields on langsmith_judge flow through to evaluator call."""
+        mock_llm = MagicMock(name="mock_judge_llm")
+        received = {}
+
+        def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+            received.update(kwargs)
+            return {"key": "score", "score": True, "comment": "No hallucination"}
+
+        config = LangSmithJudgeConfig(
+            prompt="hallucination",
+            llm_name="eval_llm",
+            extra_fields={"context": "retrieved_context"},
+        )
+        builder = make_mock_builder(mock_llm)
+
+        with patch("openevals.llm.create_llm_as_judge", return_value=fake_judge):
+            info = await _register(config, builder)
+
+        output = await info.evaluate_fn(eval_input_with_context)
+        assert output.eval_output_items[0].score is True
+        assert received["context"] == "Doodads are small mechanical gadgets used in workshops."

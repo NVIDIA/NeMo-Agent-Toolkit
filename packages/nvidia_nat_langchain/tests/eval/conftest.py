@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Shared test fixtures for LangSmith/openevals evaluator tests."""
 
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
@@ -34,6 +33,25 @@ def make_mock_builder(mock_llm=None):
     builder.get_llm = AsyncMock(return_value=mock_llm or MagicMock(name="mock_judge_llm"))
     builder.get_max_concurrency.return_value = 2
     return builder
+
+
+async def register_evaluator_ctx(register_fn, config, builder=None):
+    """Drive the async context manager returned by a ``@register_evaluator`` function.
+
+    Convenience helper that enters the async context manager and returns
+    the yielded ``EvaluatorInfo``.
+
+    Args:
+        register_fn: The decorated registration function (e.g.,
+            ``register_langsmith_evaluator``, ``register_langsmith_judge``).
+        config: The evaluator config to pass.
+        builder: An ``EvalBuilder`` (or mock).  When ``None``, a default
+            mock builder is created via :func:`make_mock_builder`.
+    """
+    if builder is None:
+        builder = make_mock_builder()
+    async with register_fn(config, builder) as info:
+        return info
 
 
 @pytest.fixture
@@ -108,3 +126,28 @@ def eval_input_multi_item():
             full_dataset_entry={},
         ),
     ])
+
+
+@pytest.fixture
+def item_with_context():
+    """EvalInputItem whose full_dataset_entry has a 'retrieved_context' field."""
+    return EvalInputItem(
+        id="ctx_1",
+        input_obj="What is a doodad?",
+        expected_output_obj="A small gadget",
+        output_obj="A doodad is a kitten",
+        trajectory=[],
+        expected_trajectory=[],
+        full_dataset_entry={
+            "question": "What is a doodad?",
+            "answer": "A small gadget",
+            "retrieved_context": "Doodads are small mechanical gadgets used in workshops.",
+            "agent_plan": "Step 1: look it up. Step 2: summarize.",
+        },
+    )
+
+
+@pytest.fixture
+def eval_input_with_context(item_with_context):
+    """EvalInput wrapping a single item with context fields."""
+    return EvalInput(eval_input_items=[item_with_context])

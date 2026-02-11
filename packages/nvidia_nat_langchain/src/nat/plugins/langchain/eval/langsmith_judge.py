@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+from typing import Any
 
 from pydantic import Field
 from pydantic import model_validator
@@ -35,8 +36,6 @@ def _resolve_prompt(prompt_value: str) -> str:
     Prompt names are resolved dynamically by convention: the short name is
     uppercased and suffixed with ``_PROMPT`` to form the constant name in
     ``openevals.prompts`` (e.g., ``'correctness'`` -> ``CORRECTNESS_PROMPT``).
-    This means any prompt that openevals ships is automatically available
-    without maintaining a hardcoded mapping.
 
     If the name doesn't match a constant in ``openevals.prompts``, it is
     treated as a literal prompt template string (e.g., a custom f-string).
@@ -71,6 +70,10 @@ class LangSmithJudgeConfig(EvaluatorBaseConfig, RetryMixin, name="langsmith_judg
     Uses a prebuilt or custom prompt with a judge LLM to score workflow
     outputs. Prebuilt prompt names (e.g., ``'correctness'``, ``'hallucination'``)
     are resolved from openevals automatically.
+
+    Common ``create_llm_as_judge`` parameters are exposed as typed fields
+    for discoverability and validation.  Any additional / future parameters
+    can be forwarded via the ``judge_kwargs`` pass-through dict.
     """
 
     prompt: str = Field(description="Prebuilt openevals prompt name (e.g., 'correctness', 'hallucination') "
@@ -85,17 +88,55 @@ class LangSmithJudgeConfig(EvaluatorBaseConfig, RetryMixin, name="langsmith_judg
     continuous: bool = Field(
         default=False,
         description="If True, score is a float between 0 and 1. "
-        "If False, score is boolean. Mutually exclusive with 'choices'.",
+        "If False and 'choices' is not set, score is boolean. "
+        "Mutually exclusive with 'choices'.",
     )
     choices: list[float] | None = Field(
         default=None,
         description="Explicit list of allowed score values (e.g., [0, 0.5, 1]). "
-        "Mutually exclusive with 'continuous'.",
+        "Mutually exclusive with 'continuous=True'.",
     )
     use_reasoning: bool = Field(
         default=True,
         description="If True, the judge model provides chain-of-thought reasoning "
         "alongside the score.",
+    )
+    system: str | None = Field(
+        default=None,
+        description="Optional system message prepended to the prompt. "
+        "Only supported when 'prompt' is a string template.",
+    )
+    few_shot_examples: list[dict[str, Any]] | None = Field(
+        default=None,
+        description="Optional list of few-shot examples appended to the prompt "
+        "to calibrate the judge. Each dict should have 'inputs', 'outputs', "
+        "'score' (float or bool), and optionally 'reasoning' (str).",
+    )
+    output_schema: str | None = Field(
+        default=None,
+        description="Python dotted path to a TypedDict, Pydantic model, or other "
+        "type accepted by openevals as a custom output schema "
+        "(e.g., 'my_pkg.schemas.MyResult'). When set, the evaluator returns "
+        "raw structured output matching the schema instead of the standard "
+        "{key, score, comment} format.",
+    )
+    score_field: str = Field(
+        default="score",
+        description="Dot-notation path to the score field in custom output_schema "
+        "results (e.g., 'analysis.score'). Only used when output_schema is set.",
+    )
+    extra_fields: dict[str, str] | None = Field(
+        default=None,
+        description="Optional mapping of evaluator kwarg names to dataset field names.  "
+        "Keys are the kwarg names passed to the evaluator; values are looked up "
+        "in the dataset entry.  Example: ``{context: retrieved_context}`` passes "
+        "the dataset's 'retrieved_context' field as the 'context' kwarg.",
+    )
+    judge_kwargs: dict[str, Any] | None = Field(
+        default=None,
+        description="Additional keyword arguments forwarded directly to "
+        "openevals ``create_llm_as_judge``. Use this for parameters not "
+        "exposed as typed fields. Keys must not overlap with typed fields.",
     )
 
     @model_validator(mode="after")
@@ -105,6 +146,65 @@ class LangSmithJudgeConfig(EvaluatorBaseConfig, RetryMixin, name="langsmith_judg
                              "Set continuous=True for a 0-1 float score, or provide "
                              "explicit 'choices', but not both.")
         return self
+
+
+def _build_create_kwargs(
+    config: LangSmithJudgeConfig,
+    resolved_prompt: str,
+    judge_llm: Any,
+) -> dict[str, Any]:
+    """Assemble keyword arguments for ``openevals.create_llm_as_judge``.
+
+    Typed config fields are added first, then optional fields are merged
+    only when set.  Finally, ``judge_kwargs`` is merged with overlap
+    detection so that users cannot accidentally shadow typed fields.
+
+    Args:
+        config: The judge evaluator configuration.
+        resolved_prompt: The prompt string (already resolved from a short
+            name or left as-is for custom templates).
+        judge_llm: The LLM instance to use as the judge.
+
+    Returns:
+        Dictionary of keyword arguments ready for ``create_llm_as_judge``.
+
+    Raises:
+        ValueError: If ``judge_kwargs`` keys overlap with typed fields.
+    """
+    from .utils import _import_from_dotted_path
+
+    create_kwargs: dict[str, Any] = {
+        "prompt": resolved_prompt,
+        "judge": judge_llm,
+        "feedback_key": config.feedback_key,
+        "continuous": config.continuous,
+        "choices": config.choices,
+        "use_reasoning": config.use_reasoning,
+    }
+
+    if config.system is not None:
+        create_kwargs["system"] = config.system
+
+    if config.few_shot_examples is not None:
+        create_kwargs["few_shot_examples"] = config.few_shot_examples
+
+    if config.output_schema is not None:
+        create_kwargs["output_schema"] = _import_from_dotted_path(
+            config.output_schema,
+            label="output_schema",
+        )
+
+    # Merge pass-through judge_kwargs, checking for overlap with the
+    # typed fields that were already added to create_kwargs above.
+    if config.judge_kwargs:
+        overlap = set(create_kwargs) & set(config.judge_kwargs)
+        if overlap:
+            raise ValueError(f"judge_kwargs keys {overlap} overlap with typed config fields. "
+                             f"Use the typed fields instead, or remove the overlapping keys "
+                             f"from judge_kwargs.")
+        create_kwargs.update(config.judge_kwargs)
+
+    return create_kwargs
 
 
 @register_evaluator(config_type=LangSmithJudgeConfig)
@@ -129,15 +229,8 @@ async def register_langsmith_judge(config: LangSmithJudgeConfig, builder: EvalBu
         )
 
     resolved_prompt = _resolve_prompt(config.prompt)
-
-    evaluator_fn = create_llm_as_judge(
-        prompt=resolved_prompt,
-        judge=judge_llm,
-        feedback_key=config.feedback_key,
-        continuous=config.continuous,
-        choices=config.choices,
-        use_reasoning=config.use_reasoning,
-    )
+    create_kwargs = _build_create_kwargs(config, resolved_prompt, judge_llm)
+    evaluator_fn = create_llm_as_judge(**create_kwargs)
 
     logger.info(
         "Created LLM-as-judge evaluator (prompt: %s, llm: %s)",
@@ -145,12 +238,18 @@ async def register_langsmith_judge(config: LangSmithJudgeConfig, builder: EvalBu
         config.llm_name,
     )
 
-    # The LLM-as-judge callable follows the openevals convention
+    # Determine whether the adapter should use custom score_field parsing.
+    # Only activate when a custom output_schema is set; otherwise the
+    # standard result format is used and score_field is not needed.
+    effective_score_field = config.score_field if config.output_schema is not None else None
+
     evaluator = LangSmithEvaluatorAdapter(
         evaluator=evaluator_fn,
         convention="openevals_function",
         max_concurrency=builder.get_max_concurrency(),
         evaluator_name=config.feedback_key,
+        extra_fields=config.extra_fields,
+        score_field=effective_score_field,
     )
 
     is_builtin = resolved_prompt != config.prompt

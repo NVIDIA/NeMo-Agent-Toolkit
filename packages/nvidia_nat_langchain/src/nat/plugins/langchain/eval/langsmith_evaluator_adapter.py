@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import asyncio
+import contextvars
 from collections.abc import Callable
 from enum import StrEnum
 from typing import Any
@@ -43,12 +44,17 @@ async def _invoke_maybe_sync(fn: Callable[..., Any], *args: Any, **kwargs: Any) 
 
     If *fn* is a coroutine function it is awaited directly.  Otherwise it is
     dispatched to the default executor so that it never blocks the event loop.
+
+    The current :mod:`contextvars` context is explicitly copied into the
+    executor thread so that caller-side context managers (e.g.,
+    ``tracing_context(enabled=False)``) remain effective.
     """
     if asyncio.iscoroutinefunction(fn):
         return await fn(*args, **kwargs)
 
+    ctx = contextvars.copy_context()
     loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(None, lambda: fn(*args, **kwargs))
+    return await loop.run_in_executor(None, lambda: ctx.run(fn, *args, **kwargs))
 
 
 class LangSmithEvaluatorAdapter(BaseEvaluator):
@@ -73,10 +79,18 @@ class LangSmithEvaluatorAdapter(BaseEvaluator):
         convention: str,
         max_concurrency: int = 4,
         evaluator_name: str = "langsmith",
+        extra_fields: dict[str, str] | None = None,
+        score_field: str | None = None,
     ):
         super().__init__(max_concurrency=max_concurrency, tqdm_desc=f"LangSmith ({evaluator_name})")
         self._evaluator = evaluator
-        self._convention = _EvaluatorConvention(convention)
+        try:
+            self._convention = _EvaluatorConvention(convention)
+        except ValueError:
+            raise ValueError(f"Unknown evaluator convention '{convention}'. "
+                             f"Expected one of: {[e.value for e in _EvaluatorConvention]}") from None
+        self._extra_fields = extra_fields
+        self._score_field = score_field
 
     @override
     async def evaluate_item(self, item: EvalInputItem) -> EvalOutputItem:
@@ -88,7 +102,11 @@ class LangSmithEvaluatorAdapter(BaseEvaluator):
         else:
             result = await self._call_openevals_function(item)
 
-        return langsmith_result_to_eval_output_item(item.id, result)
+        return langsmith_result_to_eval_output_item(
+            item.id,
+            result,
+            score_field=self._score_field,
+        )
 
     async def _call_run_evaluator(self, item: EvalInputItem) -> Any:
         """Call a RunEvaluator subclass instance via ``aevaluate_run``."""
@@ -106,7 +124,7 @@ class LangSmithEvaluatorAdapter(BaseEvaluator):
 
     async def _call_openevals_function(self, item: EvalInputItem) -> Any:
         """Call a function with ``(inputs, outputs, reference_outputs)`` signature."""
-        kwargs = eval_input_item_to_openevals_kwargs(item)
+        kwargs = eval_input_item_to_openevals_kwargs(item, extra_fields=self._extra_fields)
 
         with tracing_context(enabled=False):
             return await _invoke_maybe_sync(self._evaluator, **kwargs)
