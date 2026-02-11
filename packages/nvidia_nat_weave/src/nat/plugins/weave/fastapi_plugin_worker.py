@@ -150,26 +150,31 @@ class WeaveFastAPIPluginWorker(FastApiFrontEndPluginWorker):
                     "Add reaction and/or comment feedback for an assistant message via observability trace ID. "
                     "Comments are limited to 1024 characters."),
                 responses={
-                    400: {
-                        "description": "Bad Request - Missing required feedback",
-                        "content": {
-                            "application/json": {
-                                "example": {
-                                    "detail": "At least one of 'reaction_type' or 'comment' must be provided"
-                                }
-                            }
-                        },
-                    },
                     422: {
                         "description": "Validation Error - Invalid input",
                         "content": {
                             "application/json": {
-                                "example": {
-                                    "detail": [{
-                                        "type": "value_error",
-                                        "loc": ["body", "comment"],
-                                        "msg": "Comment must not exceed 1024 characters"
-                                    }]
+                                "examples": {
+                                    "missing_feedback": {
+                                        "summary": "Missing required feedback",
+                                        "value": {
+                                            "detail": [{
+                                                "type": "value_error",
+                                                "loc": ["body"],
+                                                "msg": "At least one of 'reaction_type' or 'comment' must be provided"
+                                            }]
+                                        }
+                                    },
+                                    "comment_too_long": {
+                                        "summary": "Comment exceeds length limit",
+                                        "value": {
+                                            "detail": [{
+                                                "type": "value_error",
+                                                "loc": ["body", "comment"],
+                                                "msg": "Comment must not exceed 1024 characters"
+                                            }]
+                                        }
+                                    }
                                 }
                             }
                         },
