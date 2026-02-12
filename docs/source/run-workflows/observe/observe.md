@@ -242,11 +242,11 @@ For complete information about developing and integrating custom telemetry expor
 
 ## Cross-Workflow Observability
 
-When one workflow invokes another (for example, by calling a remote workflow over HTTP or by running a child workflow programmatically), you can link the child workflow's trace to the parent so that observability backends show a single, connected tree instead of separate traces.
+When one workflow invokes another (for example, by calling a remote workflow over HTTP or by running a child workflow programmatically), you can link the trace of the child workflow to the parent so that observability backends show a single, connected tree instead of separate traces.
 
 ### Specifying Parent When Running a Workflow Programmatically
 
-If you run a workflow from code using a session, pass `parent_id` and `parent_name` into `session.run()`. The toolkit uses these to set the root of the child workflow's intermediate steps so the first step has the correct parent.
+If you run a workflow from code using a session, pass `parent_id` and `parent_name` into `session.run()`. The toolkit uses these to set the root of the intermediate steps of the child workflow so the first step has the correct parent.
 
 ```python
 async with session_manager.session() as session:
@@ -259,7 +259,7 @@ async with session_manager.session() as session:
 ```
 
 - **`parent_id`**: The step ID of the parent (for example, the current workflow step or span that is invoking the child). The root workflow step of the child run is emitted with this as its parent.
-- **`parent_name`**: Optional display name for the parent (for example, the workflow or function name). The root's function ancestry uses this as the parent name for observability.
+- **`parent_name`**: Optional display name for the parent (for example, the workflow or function name). The function ancestry of the root uses this as the parent name for observability.
 
 ### HTTP Headers When Triggering a Workflow
 
@@ -284,9 +284,9 @@ Use these headers when the caller (orchestrator, API gateway, or another workflo
 
 ### Replaying Intermediate Steps from a Remote Workflow
 
-When your workflow calls a remote workflow (for example, by calling its `/generate/full` endpoint) and receives intermediate step data in the response, you can push those steps into the current run's observability stream. That way, the remote workflow's steps appear as part of the same trace tree.
+When your workflow calls a remote workflow (for example, by calling its `/generate/full` endpoint) and receives intermediate step data in the response, you can push those steps into the observability stream of the current run. That way, the steps of the remote workflow appear as part of the same trace tree.
 
-Use the {py:meth}`~nat.builder.intermediate_step_manager.IntermediateStepManager.push_intermediate_steps` method from any code that runs inside the current workflow context. Pass the list of intermediate steps (for example, parsed from the remote response); they are injected into the current run's event stream. The parent of the replayed root step is determined by how the remote was invoked: set `workflow-parent-id` and `workflow-parent-name` headers when calling the remote, or use `session.run(parent_id=..., parent_name=...)` when running a child workflow programmatically, so the trace tree links correctly.
+Use the {py:meth}`~nat.builder.intermediate_step_manager.IntermediateStepManager.push_intermediate_steps` method from any code that runs inside the current workflow context. Pass the list of intermediate steps (for example, parsed from the remote response); they are injected into the event stream of the current run. The parent of the replayed root step is determined by how the remote was invoked: set `workflow-parent-id` and `workflow-parent-name` headers when calling the remote, or use `session.run(parent_id=..., parent_name=...)` when running a child workflow programmatically, so the trace tree links correctly.
 
 ```python
 from nat.builder.context import Context
@@ -296,4 +296,4 @@ from nat.builder.context import Context
 Context.get().intermediate_step_manager.push_intermediate_steps(remote_intermediate_steps)
 ```
 
-This is useful when you call a remote workflow and want its steps to appear under the current workflow's trace in your observability backend, so you get one connected tree for the full request.
+This is useful when you call a remote workflow and want its steps to appear under the trace of the current workflow in your observability backend, so you get one connected tree for the full request.

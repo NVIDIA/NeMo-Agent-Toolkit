@@ -520,7 +520,6 @@ class TestSessionRunCrossWorkflowObservability:
     """Tests for Session.run() with parent_id/parent_name (cross-workflow observability)."""
 
     @patch('nat.cli.type_registry.GlobalTypeRegistry')
-    @pytest.mark.asyncio
     async def test_session_run_sets_and_resets_workflow_parent_context(self, mock_registry):
         """Test run(parent_id=..., parent_name=...) sets context vars during run and resets on exit."""
         mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(
@@ -541,7 +540,7 @@ class TestSessionRunCrossWorkflowObservability:
 
             async with session.run("hello",
                                   parent_id="parent-step-123",
-                                  parent_name="Caller Workflow") as runner:
+                                  parent_name="Caller Workflow") as _:
                 values_during_run.append(ctx_state.workflow_parent_id.get())
                 values_during_run.append(ctx_state.workflow_parent_name.get())
 
@@ -552,7 +551,6 @@ class TestSessionRunCrossWorkflowObservability:
         assert values_during_run == ["parent-step-123", "Caller Workflow"]
 
     @patch('nat.cli.type_registry.GlobalTypeRegistry')
-    @pytest.mark.asyncio
     async def test_session_run_without_parent_leaves_context_unset(self, mock_registry):
         """Test run() without parent_id/parent_name leaves workflow_parent context vars unset."""
         mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(
@@ -565,7 +563,7 @@ class TestSessionRunCrossWorkflowObservability:
                             shared_workflow=MockWorkflow())
 
         async with sm.session() as session:
-            async with session.run("hello") as runner:
+            async with session.run("hello") as _:
                 assert ctx_state.workflow_parent_id.get() is None
                 assert ctx_state.workflow_parent_name.get() is None
 
