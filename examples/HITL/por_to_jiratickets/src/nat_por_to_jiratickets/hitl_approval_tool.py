@@ -55,7 +55,11 @@ async def hitl_approval_function(config: HITLApprovalFnConfig, builder: Builder)
         nat_context = Context.get()
         user_input_manager = nat_context.user_interaction_manager
 
-        human_prompt_text = HumanPromptText(text=prompt, required=True, placeholder="<your response here>")
+        human_prompt_text = HumanPromptText(text=prompt,
+                                            required=True,
+                                            placeholder="<your response here>",
+                                            timeout=60,
+                                            error="Approval window has expired.")
         response: InteractionResponse = await user_input_manager.prompt_user_input(human_prompt_text)
         response_str = response.content.text.lower()  # type: ignore
         selected_option = re.search(r'\b(yes)\b', response_str)

@@ -15,6 +15,8 @@
 
 import asyncio
 import logging
+import select
+import sys
 
 import click
 from colorama import Fore
@@ -38,9 +40,31 @@ async def prompt_for_input_cli(question: InteractionPrompt) -> HumanResponse:
     """
 
     if question.content.input_type == HumanPromptModelType.TEXT:
-        user_response = click.prompt(text=question.content.text)
+        timeout: int | None = question.content.timeout
+        prompt_text: str = question.content.text
 
-        return HumanResponseText(text=user_response)
+        if timeout is None:
+            user_response = click.prompt(text=prompt_text)
+            return HumanResponseText(text=user_response)
+
+        # Countdown on its own line, input prompt below
+        sys.stdout.write(f"[{timeout}s remaining]\n{prompt_text}: ")
+        sys.stdout.flush()
+
+        remaining: int = timeout
+        while remaining > 0:
+            ready, _, _ = select.select([sys.stdin], [], [], 1)
+            if ready:
+                user_response: str = sys.stdin.readline().strip()
+                return HumanResponseText(text=user_response)
+            remaining -= 1
+            # Save cursor position, update countdown line, restore cursor position
+            sys.stdout.write(f"\033[s\033[A\r[{remaining}s remaining]\033[K\033[u")
+            sys.stdout.flush()
+
+        error_msg: str = question.content.error or "This prompt is no longer available."
+        click.echo(f"\n{Fore.RED}{error_msg}{Fore.RESET}")
+        raise TimeoutError(f"HITL prompt timed out after {timeout}s waiting for human response")
 
     raise ValueError("Unsupported human prompt input type. The run command only supports the 'HumanPromptText' "
                      "input type. Please use the 'serve' command to ensure full support for all input types.")

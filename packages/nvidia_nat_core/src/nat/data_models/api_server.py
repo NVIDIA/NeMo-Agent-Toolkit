@@ -580,6 +580,7 @@ class User(BaseModel):
 
 class ErrorTypes(StrEnum):
     UNKNOWN_ERROR = "unknown_error"
+    WORKFLOW_ERROR = "workflow_error"
     INVALID_MESSAGE = "invalid_message"
     INVALID_MESSAGE_TYPE = "invalid_message_type"
     INVALID_USER_MESSAGE_CONTENT = "invalid_user_message_content"
