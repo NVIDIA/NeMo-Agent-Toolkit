@@ -62,6 +62,7 @@ dependencies = [
   "platformdirs~=4.3",
   "plotly~=6.0",
   "pydantic~=2.11",
+  "pyjwt~=2.11",
   "pymilvus~=2.6",
   "python-dotenv~=1.1.1",
   "python-multipart>=0.0.21",
@@ -122,6 +123,7 @@ nvidia-nat-test = { path = "../nvidia_nat_test", editable = true }
 
 [project.entry-points.'nat.components']
 nat_authentication = "nat.authentication.register"
+nat_dataset_loaders = "nat.eval.dataset_loader.register"
 nat_embedders = "nat.embedder.register"
 nat_evaluators = "nat.eval.register"
 nat_middleware = "nat.middleware.register"
