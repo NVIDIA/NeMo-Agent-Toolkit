@@ -13,141 +13,77 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import inspect
 import logging
+from collections.abc import Callable
 from typing import Any
 
 from pydantic import Field
+from pydantic import model_validator
 
 from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.cli.register_workflow import register_evaluator
 from nat.data_models.evaluator import EvaluatorBaseConfig
 
-from .utils import _import_from_dotted_path
-
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Evaluator registry
+# ---------------------------------------------------------------------------
 
-def _import_evaluator(dotted_path: str) -> Any:
-    """Import an evaluator from a Python dotted path.
 
-    Supports both module-level callables and class references:
-    - ``'my_package.evaluators.my_function'`` -> imports and returns the function
-    - ``'my_package.evaluators.MyClass'`` -> imports and instantiates the class
+def _get_registry() -> dict[str, Callable[..., Any]]:
+    """Return the evaluator registry, importing openevals lazily.
+
+    Keeps openevals out of the module-level import chain while providing
+    a single source of truth for known evaluator names and their callables.
+    """
+    from openevals import exact_match
+    from openevals import exact_match_async
+    from openevals.string import levenshtein_distance
+    from openevals.string import levenshtein_distance_async
+
+    return {
+        "exact_match": exact_match,
+        "exact_match_async": exact_match_async,
+        "levenshtein_distance": levenshtein_distance,
+        "levenshtein_distance_async": levenshtein_distance_async,
+    }
+
+
+def _resolve_evaluator(name: str) -> Callable[..., Any]:
+    """Resolve a short evaluator name to its openevals callable.
 
     Args:
-        dotted_path: Full Python dotted path to the evaluator.
+        name: Short evaluator name (e.g., ``'exact_match'``,
+            ``'levenshtein_distance'``).
 
     Returns:
-        The imported evaluator (callable or instance).
+        The resolved evaluator callable.
 
     Raises:
-        ImportError: If the module cannot be imported.
-        AttributeError: If the attribute cannot be found in the module.
+        ValueError: If *name* is not a known evaluator.
     """
-    evaluator = _import_from_dotted_path(dotted_path, label="evaluator")
+    registry = _get_registry()
 
-    # If it's a class, instantiate it
-    if isinstance(evaluator, type):
-        try:
-            evaluator = evaluator()
-        except TypeError as e:
-            attr_name = dotted_path.rsplit(".", 1)[-1]
-            raise TypeError(f"Could not instantiate class '{attr_name}' from '{dotted_path}'. "
-                            f"If this class requires constructor arguments, instantiate it in "
-                            f"your own code and use a factory function instead. Error: {e}") from e
+    if name not in registry:
+        raise ValueError(f"Unknown evaluator '{name}'. "
+                         f"Available evaluators: {sorted(registry.keys())}")
 
-    return evaluator
-
-
-def _detect_convention(evaluator: Any) -> str:
-    """Auto-detect which LangSmith evaluator convention is being used.
-
-    Inspects the evaluator to determine if it's a RunEvaluator subclass,
-    a function with ``(run, example)`` signature, or a function with
-    ``(inputs, outputs, reference_outputs)`` signature.
-
-    Args:
-        evaluator: The evaluator callable or instance.
-
-    Returns:
-        One of ``'run_evaluator_class'``, ``'run_example_function'``,
-        or ``'openevals_function'``.
-    """
-    # Check for RunEvaluator class instances (lazy import to avoid
-    # pulling in langsmith at module load time)
-    from langsmith.evaluation.evaluator import RunEvaluator
-
-    if isinstance(evaluator, RunEvaluator):
-        return "run_evaluator_class"
-
-    # Inspect the callable's signature to determine convention
-    if callable(evaluator):
-        try:
-            sig = inspect.signature(evaluator)
-            param_names = [
-                name for name, param in sig.parameters.items()
-                if param.kind in (param.POSITIONAL_OR_KEYWORD, param.POSITIONAL_ONLY, param.KEYWORD_ONLY)
-            ]
-        except (ValueError, TypeError):
-            # If we can't inspect signature, default to openevals convention
-            return "openevals_function"
-
-        # Check for openevals-style: (inputs, outputs, reference_outputs)
-        openevals_params = {"inputs", "outputs", "reference_outputs"}
-        if openevals_params.intersection(param_names):
-            return "openevals_function"
-
-        # Check for LangSmith-style: (run, example)
-        langsmith_params = {"run", "example"}
-        if langsmith_params.intersection(param_names):
-            return "run_example_function"
-
-        # If the function has inspectable params but none match either convention,
-        # default to openevals (more common in modern usage) and warn.
-        logger.warning(
-            "Could not determine evaluator convention from parameter names %s; "
-            "defaulting to openevals (inputs, outputs, reference_outputs) convention.",
-            param_names,
-        )
-        return "openevals_function"
-
-    raise ValueError(f"Cannot determine evaluator convention for {type(evaluator).__name__}. "
-                     f"Expected a callable, RunEvaluator subclass, or function with "
-                     f"(inputs, outputs, reference_outputs) or (run, example) signature.")
-
-
-def _import_schema(dotted_path: str) -> Any:
-    """Import a Python type (class) from a dotted path *without* instantiating it.
-
-    Unlike :func:`_import_evaluator`, this returns the class itself rather
-    than an instance.  This is needed for ``output_schema`` where openevals
-    expects the TypedDict / Pydantic model *class*, not an instance.
-
-    Args:
-        dotted_path: Full Python dotted path (e.g., ``'my_pkg.schemas.MyResult'``).
-
-    Returns:
-        The imported type or object.
-
-    Raises:
-        ImportError: If the module cannot be imported.
-        AttributeError: If the attribute cannot be found.
-    """
-    return _import_from_dotted_path(dotted_path, label="output_schema")
+    return registry[name]
 
 
 class LangSmithEvaluatorConfig(EvaluatorBaseConfig, name="langsmith"):
-    """Import any LangSmith-compatible evaluator by Python dotted path.
+    """Built-in openevals evaluator selected by short name.
 
-    Supports RunEvaluator subclasses, ``(run, example)`` functions,
-    and ``(inputs, outputs, reference_outputs)`` functions. The calling
-    convention is auto-detected at registration time.
+    Resolves evaluator names (e.g., ``'exact_match'``,
+    ``'levenshtein_distance'``) from the openevals package automatically.
+    For custom user-defined evaluators, use ``_type: langsmith_custom``
+    instead.
     """
 
-    evaluator: str = Field(description="Python dotted path to a LangSmith evaluator callable "
-                           "(e.g., 'my_package.evaluators.my_fn' or 'openevals.exact_match').", )
+    evaluator: str = Field(description="Short name of an openevals evaluator "
+                           "(e.g., 'exact_match', 'levenshtein_distance').", )
     extra_fields: dict[str, str] | None = Field(
         default=None,
         description="Optional mapping of evaluator kwarg names to dataset field names.  "
@@ -156,41 +92,37 @@ class LangSmithEvaluatorConfig(EvaluatorBaseConfig, name="langsmith"):
         "the dataset's 'retrieved_context' field as the 'context' kwarg.",
     )
 
+    @model_validator(mode="after")
+    def _validate_evaluator_name(self) -> "LangSmithEvaluatorConfig":
+        """Validate that the evaluator name exists in the registry."""
+        registry = _get_registry()
+        if self.evaluator not in registry:
+            raise ValueError(f"Unknown evaluator '{self.evaluator}'. "
+                             f"Available evaluators: {sorted(registry.keys())}. "
+                             f"For custom evaluators, use '_type: langsmith_custom' with a "
+                             f"Python dotted path instead.")
+        return self
+
 
 @register_evaluator(config_type=LangSmithEvaluatorConfig)
 async def register_langsmith_evaluator(config: LangSmithEvaluatorConfig, builder: EvalBuilder):
-    """Register a custom LangSmith evaluator with NAT."""
+    """Register a built-in openevals evaluator with NAT."""
 
-    # Lazy import -- keeps langsmith out of the module-level import chain.
     from .langsmith_evaluator_adapter import LangSmithEvaluatorAdapter
 
-    evaluator_obj = _import_evaluator(config.evaluator)
-    convention = _detect_convention(evaluator_obj)
-
-    effective_extra_fields = config.extra_fields
-    if config.extra_fields and convention != "openevals_function":
-        logger.warning(
-            "extra_fields is only supported with the openevals "
-            "(inputs, outputs, reference_outputs) calling convention, but "
-            "evaluator '%s' was detected as '%s'. "
-            "extra_fields will be ignored for this evaluator.",
-            config.evaluator,
-            convention,
-        )
-        effective_extra_fields = None
+    evaluator_fn = _resolve_evaluator(config.evaluator)
 
     logger.info(
-        "Loaded LangSmith evaluator '%s' (convention: %s)",
+        "Loaded LangSmith evaluator '%s' (convention: openevals_function)",
         config.evaluator,
-        convention,
     )
 
     evaluator = LangSmithEvaluatorAdapter(
-        evaluator=evaluator_obj,
-        convention=convention,
+        evaluator=evaluator_fn,
+        convention="openevals_function",
         max_concurrency=builder.get_max_concurrency(),
-        evaluator_name=config.evaluator.rsplit(".", 1)[-1],
-        extra_fields=effective_extra_fields,
+        evaluator_name=config.evaluator,
+        extra_fields=config.extra_fields,
     )
 
     yield EvaluatorInfo(

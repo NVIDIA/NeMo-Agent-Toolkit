@@ -28,9 +28,10 @@ from nat.eval.evaluator.evaluator_model import EvalOutputItem
 def _import_from_dotted_path(dotted_path: str, *, label: str = "object") -> Any:
     """Import an attribute from a Python dotted path.
 
-    This is the shared core of :func:`import_evaluator` and
-    :func:`import_schema`.  It resolves ``'module.path.attribute'`` into the
-    corresponding Python object but does **not** instantiate classes.
+    Resolves ``'module.path.attribute'`` into the corresponding Python object
+    but does **not** instantiate classes.  Used by
+    ``langsmith_custom_evaluator._import_evaluator`` and
+    ``langsmith_judge._build_create_kwargs`` (for ``output_schema``).
 
     Args:
         dotted_path: Full Python dotted path (e.g., ``'my_pkg.module.MyClass'``).

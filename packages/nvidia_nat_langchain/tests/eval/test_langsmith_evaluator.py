@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import patch
-
 import pytest
 from langsmith.evaluation.evaluator import EvaluationResult
 from langsmith.evaluation.evaluator import RunEvaluator
@@ -38,41 +36,57 @@ async def _register(config, builder=None):
     return await register_evaluator_ctx(register_langsmith_evaluator, config, builder)
 
 
+# --------------------------------------------------------------------------- #
+# Config validation (registry-based)
+# --------------------------------------------------------------------------- #
+
+
 class TestConfigValidation:
-    """Tests for LangSmithEvaluatorConfig validation."""
+    """Tests for LangSmithEvaluatorConfig validation with registry lookup."""
 
-    def test_evaluator_mode(self):
-        """Config with 'evaluator' is valid."""
-        config = LangSmithEvaluatorConfig(evaluator="my_package.module.my_fn")
-        assert config.evaluator == "my_package.module.my_fn"
+    def test_valid_evaluator_name(self):
+        """Config with a known evaluator name is valid."""
+        config = LangSmithEvaluatorConfig(evaluator="exact_match")
+        assert config.evaluator == "exact_match"
 
-    def test_evaluator_accepts_any_path(self):
-        """Evaluator accepts any string; import errors happen at registration."""
-        config = LangSmithEvaluatorConfig(evaluator="nonexistent.path")
-        assert config.evaluator == "nonexistent.path"
+    def test_unknown_evaluator_raises(self):
+        """Config with an unknown evaluator name raises ValueError."""
+        with pytest.raises(ValidationError, match="Unknown evaluator"):
+            LangSmithEvaluatorConfig(evaluator="nonexistent_evaluator")
 
     def test_evaluator_required(self):
         """Omitting 'evaluator' raises a validation error."""
         with pytest.raises(ValidationError):
             LangSmithEvaluatorConfig()
 
+    def test_error_message_lists_available(self):
+        """Error message includes available evaluator names."""
+        with pytest.raises(ValidationError, match="exact_match"):
+            LangSmithEvaluatorConfig(evaluator="bogus")
 
-class TestCustomEvaluatorRegistration:
-    """Tests driven through register_langsmith_evaluator with a mock builder.
+    def test_error_message_suggests_custom(self):
+        """Error message suggests langsmith_custom for dotted paths."""
+        with pytest.raises(ValidationError, match="langsmith_custom"):
+            LangSmithEvaluatorConfig(evaluator="my_package.my_evaluator")
 
-    Covers all scenarios where the evaluator is referenced by a real importable
-    dotted path (prebuilt openevals functions) and error cases for bad paths.
-    """
 
-    async def test_openevals_exact_match(self, eval_input_matching, eval_input_non_matching):
-        """openevals.exact_match registered and evaluated via dotted path."""
-        config = LangSmithEvaluatorConfig(evaluator="openevals.exact_match")
+# --------------------------------------------------------------------------- #
+# Registration through registry
+# --------------------------------------------------------------------------- #
+
+
+class TestRegistryEvaluatorRegistration:
+    """Tests driven through register_langsmith_evaluator with registry names."""
+
+    async def test_exact_match(self, eval_input_matching, eval_input_non_matching):
+        """exact_match registered and evaluated by short name."""
+        config = LangSmithEvaluatorConfig(evaluator="exact_match")
         builder = make_mock_builder()
 
         info = await _register(config, builder)
 
         assert isinstance(info, EvaluatorInfo)
-        assert "openevals.exact_match" in info.description
+        assert "exact_match" in info.description
 
         output_match = await info.evaluate_fn(eval_input_matching)
         assert output_match.eval_output_items[0].score is True
@@ -80,9 +94,9 @@ class TestCustomEvaluatorRegistration:
         output_mismatch = await info.evaluate_fn(eval_input_non_matching)
         assert output_mismatch.eval_output_items[0].score is False
 
-    async def test_openevals_exact_match_async(self, eval_input_matching, eval_input_non_matching):
-        """openevals.exact_match_async registered and evaluated via dotted path."""
-        config = LangSmithEvaluatorConfig(evaluator="openevals.exact_match_async")
+    async def test_exact_match_async(self, eval_input_matching, eval_input_non_matching):
+        """exact_match_async registered and evaluated by short name."""
+        config = LangSmithEvaluatorConfig(evaluator="exact_match_async")
         builder = make_mock_builder()
 
         info = await _register(config, builder)
@@ -95,7 +109,7 @@ class TestCustomEvaluatorRegistration:
 
     async def test_multi_item(self, eval_input_multi_item):
         """Evaluator processes multiple items correctly through registration."""
-        config = LangSmithEvaluatorConfig(evaluator="openevals.exact_match")
+        config = LangSmithEvaluatorConfig(evaluator="exact_match")
         builder = make_mock_builder()
 
         info = await _register(config, builder)
@@ -109,7 +123,7 @@ class TestCustomEvaluatorRegistration:
 
     async def test_empty_input(self):
         """Evaluator handles empty input gracefully through registration."""
-        config = LangSmithEvaluatorConfig(evaluator="openevals.exact_match")
+        config = LangSmithEvaluatorConfig(evaluator="exact_match")
         builder = make_mock_builder()
 
         info = await _register(config, builder)
@@ -120,7 +134,7 @@ class TestCustomEvaluatorRegistration:
 
     async def test_evaluator_info_metadata(self):
         """EvaluatorInfo returned by registration has correct config and description."""
-        config = LangSmithEvaluatorConfig(evaluator="openevals.exact_match")
+        config = LangSmithEvaluatorConfig(evaluator="exact_match")
         builder = make_mock_builder()
 
         info = await _register(config, builder)
@@ -128,37 +142,13 @@ class TestCustomEvaluatorRegistration:
         assert info.config is config
         assert "exact_match" in info.description
 
-    async def test_nonexistent_module_raises(self):
-        """Registration raises ImportError for a nonexistent module."""
-        config = LangSmithEvaluatorConfig(evaluator="nonexistent_package.foo")
-        builder = make_mock_builder()
 
-        with pytest.raises(ImportError, match="Could not import module"):
-            await _register(config, builder)
-
-    async def test_nonexistent_attribute_raises(self):
-        """Registration raises AttributeError for a nonexistent attribute."""
-        config = LangSmithEvaluatorConfig(evaluator="json.nonexistent_function")
-        builder = make_mock_builder()
-
-        with pytest.raises(AttributeError, match="has no attribute"):
-            await _register(config, builder)
-
-    async def test_bad_path_format_raises(self):
-        """Registration raises ValueError for a path without a dot."""
-        config = LangSmithEvaluatorConfig(evaluator="no_dot_in_path")
-        builder = make_mock_builder()
-
-        with pytest.raises(ValueError, match="Invalid evaluator path"):
-            await _register(config, builder)
-
-    async def test_class_requiring_args_raises(self):
-        """Registration raises TypeError for classes needing constructor arguments."""
-        config = LangSmithEvaluatorConfig(evaluator="datetime.datetime")
-        builder = make_mock_builder()
-
-        with pytest.raises(TypeError, match="Could not instantiate class"):
-            await _register(config, builder)
+# --------------------------------------------------------------------------- #
+# LangSmithEvaluatorAdapter (direct instantiation tests)
+#
+# These test the adapter directly, not through the plugin config.
+# All conventions remain valid (used by langsmith_custom).
+# --------------------------------------------------------------------------- #
 
 
 class SimpleRunEvaluator(RunEvaluator):
@@ -190,9 +180,9 @@ def _run_example_evaluator(run: Run, example: Example | None = None) -> Evaluati
 class TestLangSmithEvaluatorAdapter:
     """Tests for LangSmithEvaluatorAdapter with direct instantiation.
 
-    Covers evaluator conventions that cannot be referenced by a real
-    importable dotted path: RunEvaluator subclasses, (run, example)
-    functions, and custom openevals-style functions defined inline.
+    Covers evaluator conventions that cannot be referenced by a registry
+    name: RunEvaluator subclasses, (run, example) functions, and custom
+    openevals-style functions defined inline.
 
     Follows the same direct-instantiation pattern used by other NAT
     evaluator tests (RAGEvaluator, TrajectoryEvaluator, etc.).
@@ -387,39 +377,20 @@ class TestLangSmithEvaluatorAdapter:
 
 
 # --------------------------------------------------------------------------- #
-# LangSmithEvaluatorConfig extra_fields
+# LangSmithEvaluatorConfig extra_fields (registry-based)
 # --------------------------------------------------------------------------- #
 
 
 class TestLangSmithEvaluatorConfigExtraFields:
-    """Tests for extra_fields on the generic langsmith evaluator config."""
+    """Tests for extra_fields on the registry-based langsmith evaluator config."""
 
     def test_extra_fields_default_none(self):
-        config = LangSmithEvaluatorConfig(evaluator="openevals.exact_match")
+        config = LangSmithEvaluatorConfig(evaluator="exact_match")
         assert config.extra_fields is None
 
     def test_extra_fields_accepted(self):
         config = LangSmithEvaluatorConfig(
-            evaluator="openevals.exact_match",
+            evaluator="exact_match",
             extra_fields={"context": "ctx_field"},
         )
         assert config.extra_fields == {"context": "ctx_field"}
-
-    async def test_extra_fields_with_non_openevals_convention_warns_and_drops(self, caplog):
-        """extra_fields warns and is ignored when evaluator uses run/example convention."""
-        config = LangSmithEvaluatorConfig(
-            evaluator="nat.plugins.langchain.eval.langsmith_evaluator._detect_convention",
-            extra_fields={"context": "ctx_field"},
-        )
-        builder = make_mock_builder()
-
-        with (patch(
-                "nat.plugins.langchain.eval.langsmith_evaluator._import_evaluator",
-                return_value=lambda run, example=None: {
-                    "key": "k", "score": 1.0
-                },
-        ), ):
-            async with register_langsmith_evaluator(config, builder) as info:
-                assert info.evaluate_fn is not None
-
-        assert "extra_fields will be ignored" in caplog.text
