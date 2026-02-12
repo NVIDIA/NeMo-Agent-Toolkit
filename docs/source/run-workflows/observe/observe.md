@@ -67,7 +67,7 @@ The following table lists each exporter with its supported features and configur
 
 | Provider | Integration Documentation | Supported Features |
 | -------- | ------------------------- | ------------------ |
-| [Catalyst](https://catalyst.raga.ai/) | [Observing with Catalyst](?provider=Catalyst#provider-integration-guides){.external} | Logging, Tracing |
+| [Catalyst](https://docs.raga.ai/ragaai-catalyst) | [Observing with Catalyst](?provider=Catalyst#provider-integration-guides){.external} | Logging, Tracing |
 | [NVIDIA Data Flywheel Blueprint](https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel) | [Observing with Data Flywheel](?provider=Data-Flywheel#provider-integration-guides){.external} | Logging, Tracing |
 | [DBNL](https://distributional.com/) | [Observing with DBNL](?provider=DBNL#provider-integration-guides){.external} | Logging, Tracing |
 | [Dynatrace](https://dynatrace.com/) | [Observing with Dynatrace](?provider=Dynatrace#provider-integration-guides){.external} | Logging, Tracing |
