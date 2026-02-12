@@ -5714,6 +5714,20 @@ requires-dist = [
 ]
 
 [[package]]
+name = "nat-prompt-from-file"
+source = { editable = "examples/prompt_from_file" }
+dependencies = [
+    { name = "nat-simple-calculator" },
+    { name = "nvidia-nat", extra = ["langchain", "test"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
+    { name = "nvidia-nat", extras = ["langchain", "test"], editable = "." },
+]
+
+[[package]]
 name = "nat-react-benchmark-agent"
 source = { editable = "examples/dynamo_integration/react_benchmark_agent" }
 dependencies = [
@@ -6325,6 +6339,7 @@ examples = [
     { name = "nat-plot-charts" },
     { name = "nat-por-to-jiratickets" },
     { name = "nat-profiler-agent" },
+    { name = "nat-prompt-from-file" },
     { name = "nat-react-benchmark-agent" },
     { name = "nat-redis-example" },
     { name = "nat-retail-agent" },
@@ -6497,6 +6512,7 @@ requires-dist = [
     { name = "nat-plot-charts", marker = "extra == 'examples'", editable = "examples/custom_functions/plot_charts" },
     { name = "nat-por-to-jiratickets", marker = "extra == 'examples'", editable = "examples/HITL/por_to_jiratickets" },
     { name = "nat-profiler-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/profiler_agent" },
+    { name = "nat-prompt-from-file", marker = "extra == 'examples'", editable = "examples/prompt_from_file" },
     { name = "nat-react-benchmark-agent", marker = "extra == 'examples'", editable = "examples/dynamo_integration/react_benchmark_agent" },
     { name = "nat-redis-example", marker = "extra == 'examples'", editable = "examples/memory/redis" },
     { name = "nat-retail-agent", marker = "extra == 'examples'", editable = "examples/safety_and_security/retail_agent" },
