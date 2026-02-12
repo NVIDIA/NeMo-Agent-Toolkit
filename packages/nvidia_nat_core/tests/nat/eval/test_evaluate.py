@@ -165,7 +165,7 @@ class MockWorkflow:
 @pytest.fixture
 def mock_pull_intermediate(tool_end_intermediate_step, llm_end_intermediate_step, generated_answer):
     """Fixture to mock pull_intermediate as a simple async function returning TOOL_END and LLM_END steps."""
-    with patch("nat.eval.runtime_event_subscriber.pull_intermediate",
+    with patch("nat.builder.runtime_event_subscriber.pull_intermediate",
                AsyncMock(return_value=[tool_end_intermediate_step, llm_end_intermediate_step])) as mock:
         yield mock
 
@@ -441,7 +441,7 @@ async def test_run_workflow_local_cancels_pending_intermediate(evaluation_run, e
         coro.close()
         return pending_future
 
-    with patch("nat.eval.runtime_event_subscriber.pull_intermediate",
+    with patch("nat.builder.runtime_event_subscriber.pull_intermediate",
                AsyncMock(return_value=intermediate_source)) as mock_pull_intermediate, \
          patch("nat.eval.evaluate.asyncio.ensure_future", side_effect=ensure_future_stub) as mock_ensure_future:
         await evaluation_run.run_workflow_local(session_manager)

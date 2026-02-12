@@ -170,7 +170,7 @@ class EvaluationRun:
         # import function level dependencies
         from jsonpath_ng import parse
 
-        from nat.eval.runtime_event_subscriber import pull_intermediate
+        from nat.builder.runtime_event_subscriber import pull_intermediate
 
         # Run the workflow
         jsonpath_expr = parse(self.config.result_json_path)
