@@ -81,7 +81,7 @@ eval:
       llm_name: nim_rag_eval_llm
 ```
 
-The dataset section specifies the dataset to use for running the workflow. The dataset can be of type `json`, `jsonl`, `csv`, `xls`, or `parquet`. The dataset file path is specified using the `file_path` key.
+The dataset section specifies the dataset to use for running the workflow. The built-in dataset types are `json`, `jsonl`, `csv`, `xls`, `parquet`, and `custom`. The dataset file path is specified using the `file_path` key. Additional dataset formats can be added via the [plugin system](../extend/custom-components/custom-dataset-loader.md).
 
 ## Evaluation outputs (what you will get)
 Running `nat eval` produces a set of artifacts in the configured output directory. These files fall into four groups: workflow outputs, configuration outputs, evaluator outputs, and profiler observability outputs.
@@ -429,6 +429,9 @@ You can also evaluate workflows using the NeMo Agent Toolkit evaluation endpoint
 ## Adding Custom Evaluators
 You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the NeMo Agent Toolkit evaluator system. See the [Custom Evaluator](../extend/custom-components/custom-evaluator.md) documentation for more information.
 
+## Adding Custom Dataset Loaders
+You can add support for additional dataset formats by creating a custom dataset loader plugin. See the [Custom Dataset Loader](../extend/custom-components/custom-dataset-loader.md) documentation for more information.
+
 ## Overriding Evaluation Configuration
 You can override the configuration in the `eval_config.yml` file using the `--override` command line flag. The following is an example of overriding the configuration:
 ```bash
@@ -447,7 +450,7 @@ nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/c
 ```
 
 ### Using Datasets
-Run and evaluate the workflow on a specified dataset. The dataset files types are `json`, `jsonl`, `csv`, `xls`, or `parquet`.
+Run and evaluate the workflow on a specified dataset. The built-in dataset file types are `json`, `jsonl`, `csv`, `xls`, `parquet`, and `custom`. You can also add support for additional dataset formats via the [dataset loader plugin system](../extend/custom-components/custom-dataset-loader.md).
 
 Download and use datasets provided by NeMo Agent Toolkit examples by running the following.
 

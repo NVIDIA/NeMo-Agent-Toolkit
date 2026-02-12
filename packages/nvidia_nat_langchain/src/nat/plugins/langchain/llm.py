@@ -15,6 +15,7 @@
 # pylint: disable=unused-argument
 
 import logging
+import os
 from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -27,6 +28,7 @@ if TYPE_CHECKING:
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
+from nat.data_models.common import get_secret_value
 from nat.data_models.llm import APITypeEnum
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
@@ -194,6 +196,17 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
 
     http_async_client: httpx.AsyncClient = create_metadata_injection_client()
 
+    config_dict = llm_config.model_dump(
+        exclude={"type", "thinking", "api_type", "api_key", "base_url"},
+        by_alias=True,
+        exclude_none=True,
+        exclude_unset=True,
+    )
+    if (api_key := get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")):
+        config_dict["api_key"] = api_key
+    if (base_url := llm_config.base_url or os.getenv("OPENAI_BASE_URL")):
+        config_dict["base_url"] = base_url
+
     try:
         if llm_config.api_type == APITypeEnum.RESPONSES:
             client = ChatOpenAI(
@@ -201,22 +214,12 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
                 stream_usage=True,
                 use_responses_api=True,  # type: ignore[call-arg]
                 use_previous_response_id=True,  # type: ignore[call-arg]
-                **llm_config.model_dump(
-                    exclude={"type", "thinking", "api_type"},
-                    by_alias=True,
-                    exclude_none=True,
-                    exclude_unset=True,
-                ))
+                **config_dict)
         else:
             client = ChatOpenAI(
                 http_async_client=http_async_client,  # type: ignore[call-arg]
                 stream_usage=True,
-                **llm_config.model_dump(
-                    exclude={"type", "thinking", "api_type"},
-                    by_alias=True,
-                    exclude_none=True,
-                    exclude_unset=True,
-                ))
+                **config_dict)
         if "http_async_client" in client.model_kwargs:
             del client.model_kwargs["http_async_client"]
 

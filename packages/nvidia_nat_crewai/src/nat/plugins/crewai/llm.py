@@ -143,8 +143,19 @@ async def openai_crewai(llm_config: OpenAIModelConfig, _builder: Builder):
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.CREWAI)
 
-    client = LLM(**llm_config.model_dump(
-        exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True, exclude_unset=True))
+    config_dict = llm_config.model_dump(
+        exclude={"type", "thinking", "api_type", "api_key", "base_url"},
+        by_alias=True,
+        exclude_none=True,
+        exclude_unset=True,
+    )
+
+    if (api_key := get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")):
+        config_dict["api_key"] = api_key
+    if (base_url := llm_config.base_url or os.getenv("OPENAI_BASE_URL")):
+        config_dict["base_url"] = base_url
+
+    client = LLM(**config_dict)
 
     yield _patch_llm_based_on_config(client, llm_config)
 
