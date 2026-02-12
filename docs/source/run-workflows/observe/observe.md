@@ -26,13 +26,6 @@ The NeMo Agent Toolkit uses a flexible, plugin-based observability system that p
 
 These features enable developers to test their workflows locally and integrate observability seamlessly with their preferred monitoring stack.
 
-
-### Compatibility with Previous Versions
-As of v1.2, the span exporter exports attributes names prefixed with `nat` by default. In prior releases the attribute names were prefixed with `aiq`, to retain compatibility the `NAT_SPAN_PREFIX` environment variable can be set to `aiq`:
-```bash
-export NAT_SPAN_PREFIX=aiq
-```
-
 ## Installation
 
 The core observability features (console and file logging) are included by default. For advanced telemetry features like OpenTelemetry and Phoenix tracing, you need to install the optional telemetry extras.
@@ -247,3 +240,60 @@ For complete information about developing and integrating custom telemetry expor
 
 ::::
 
+## Cross-Workflow Observability
+
+When one workflow invokes another (for example, by calling a remote workflow over HTTP or by running a child workflow programmatically), you can link the child workflow's trace to the parent so that observability backends show a single, connected tree instead of separate traces.
+
+### Specifying Parent When Running a Workflow Programmatically
+
+If you run a workflow from code using a session, pass `parent_id` and `parent_name` into `session.run()`. The toolkit uses these to set the root of the child workflow's intermediate steps so the first step has the correct parent.
+
+```python
+async with session_manager.session() as session:
+    async with session.run(
+        prompt,
+        parent_id="parent-step-uuid",
+        parent_name="Caller Workflow",
+    ) as runner:
+        result = await runner.result(to_type=str)
+```
+
+- **`parent_id`**: The step ID of the parent (for example, the current workflow step or span that is invoking the child). The root workflow step of the child run is emitted with this as its parent.
+- **`parent_name`**: Optional display name for the parent (for example, the workflow or function name). The root's function ancestry uses this as the parent name for observability.
+
+### HTTP Headers When Triggering a Workflow
+
+When a workflow is triggered over HTTP (such as a POST to `/generate/full`), the server reads request headers to set the parent for that run. If present, they are applied before the workflow starts so the root step has the correct parent.
+
+| Header | Description |
+| ------ | ----------- |
+| `workflow-parent-id` | Step ID of the parent. The root workflow step is emitted with this as its parent. |
+| `workflow-parent-name` | Optional display name for the parent (workflow or function name). |
+
+Example with curl:
+
+```bash
+curl -X POST http://localhost:8000/generate/full \
+  -H "workflow-parent-id: <parent-step-id>" \
+  -H "workflow-parent-name: Parent Workflow Name" \
+  -H "Content-Type: application/json" \
+  -d '{"input_message": "..."}'
+```
+
+Use these headers when the caller (orchestrator, API gateway, or another workflow) has a step or span ID and wants the child workflow to appear under that step in traces.
+
+### Replaying Intermediate Steps from a Remote Workflow
+
+When your workflow calls a remote workflow (for example, by calling its `/generate/full` endpoint) and receives intermediate step data in the response, you can push those steps into the current run's observability stream. That way, the remote workflow's steps appear as part of the same trace tree.
+
+Use the {py:meth}`~nat.builder.intermediate_step_manager.IntermediateStepManager.push_intermediate_steps` method from any code that runs inside the current workflow context. Pass the list of intermediate steps (for example, parsed from the remote response); they are injected into the current run's event stream. The parent of the replayed root step is determined by how the remote was invoked: set `workflow-parent-id` and `workflow-parent-name` headers when calling the remote, or use `session.run(parent_id=..., parent_name=...)` when running a child workflow programmatically, so the trace tree links correctly.
+
+```python
+from nat.builder.context import Context
+
+# After calling a remote workflow (for example, /generate/full) and parsing
+# the response into a list of IntermediateStep:
+Context.get().intermediate_step_manager.push_intermediate_steps(remote_intermediate_steps)
+```
+
+This is useful when you call a remote workflow and want its steps to appear under the current workflow's trace in your observability backend, so you get one connected tree for the full request.

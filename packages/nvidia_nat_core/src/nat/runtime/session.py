@@ -129,20 +129,41 @@ class Session:
         return self._session_manager
 
     @asynccontextmanager
-    async def run(self, message, runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE):
+    async def run(self,
+                  message,
+                  runtime_type: RuntimeTypeEnum = RuntimeTypeEnum.RUN_OR_SERVE,
+                  parent_id: str | None = None,
+                  parent_name: str | None = None):
         """
         Start a workflow run using this session's workflow.
 
         Args:
             message: Input message for the workflow
             runtime_type: Runtime type (defaults to SessionManager's runtime_type)
+            parent_id: Optional parent step ID for cross-workflow observability. When set,
+                the root workflow step is emitted with this as its parent.
+            parent_name: Optional parent step name for cross-workflow observability. When set,
+                the root workflow's function ancestry uses this as the parent name.
 
         Yields:
             Runner instance for the workflow execution
         """
-        async with self._semaphore:
-            async with self._workflow.run(message, runtime_type=runtime_type) as runner:
-                yield runner
+        context_state = self._session_manager._context_state
+        token_parent_id = None
+        token_parent_name = None
+        if parent_id is not None:
+            token_parent_id = context_state.workflow_parent_id.set(parent_id)
+        if parent_name is not None:
+            token_parent_name = context_state.workflow_parent_name.set(parent_name)
+        try:
+            async with self._semaphore:
+                async with self._workflow.run(message, runtime_type=runtime_type) as runner:
+                    yield runner
+        finally:
+            if token_parent_id is not None:
+                context_state.workflow_parent_id.reset(token_parent_id)
+            if token_parent_name is not None:
+                context_state.workflow_parent_name.reset(token_parent_name)
 
 
 class SessionManager:
@@ -584,8 +605,18 @@ class SessionManager:
 
     def set_metadata_from_http_request(self, request: Request) -> None:
         """
-        Extracts and sets user metadata request attributes from a HTTP request.
-        If request is None, no attributes are set.
+        Extracts and sets user metadata from an HTTP request.
+
+        Sets request attributes (method, path, headers, and so on), plus optional
+        headers:
+        
+        - conversation-id
+        - user-message-id
+        - traceparent
+        - workflow-trace-id
+        - workflow-run-id
+        - workflow-parent-id (for cross-workflow observability)
+        - workflow-parent-name (for cross-workflow observability)
         """
         self._context.metadata._request.method = getattr(request, "method", None)
         self._context.metadata._request.url_path = request.url.path
@@ -630,6 +661,14 @@ class SessionManager:
         workflow_run_id = request.headers.get("workflow-run-id")
         if workflow_run_id:
             self._context_state.workflow_run_id.set(workflow_run_id)
+
+        # Cross-workflow observability: parent step id/name for the root of this workflow
+        workflow_parent_id = request.headers.get("workflow-parent-id")
+        if workflow_parent_id:
+            self._context_state.workflow_parent_id.set(workflow_parent_id)
+        workflow_parent_name = request.headers.get("workflow-parent-name")
+        if workflow_parent_name:
+            self._context_state.workflow_parent_name.set(workflow_parent_name)
 
     def set_metadata_from_websocket(self,
                                     websocket: WebSocket,

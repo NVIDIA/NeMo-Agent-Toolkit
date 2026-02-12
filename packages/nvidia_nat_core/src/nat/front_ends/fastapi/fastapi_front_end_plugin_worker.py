@@ -888,9 +888,11 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             Stream raw intermediate steps without any step adaptor translations.
             """
 
-            async def post_stream(payload: request_type, filter_steps: str | None = None):
+            async def post_stream(request: Request, payload: request_type, filter_steps: str | None = None):
 
-                async with session_manager.session(http_connection=None) as session:
+                async with session_manager.session(
+                        http_connection=request,
+                        user_authentication_callback=self._http_flow_handler.authenticate) as session:
                     return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                              content=generate_streaming_response_full_as_str(payload,
                                                                                              session=session,
