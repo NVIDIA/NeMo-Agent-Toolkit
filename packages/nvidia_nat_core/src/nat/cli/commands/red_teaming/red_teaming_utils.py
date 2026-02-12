@@ -22,7 +22,7 @@ from pathlib import Path
 
 import yaml
 
-from nat.eval.runners.red_teaming_runner import RedTeamingRunnerConfig
+from nat.plugins.eval.runners.red_teaming_runner import RedTeamingRunnerConfig
 
 logger = logging.getLogger(__name__)
 

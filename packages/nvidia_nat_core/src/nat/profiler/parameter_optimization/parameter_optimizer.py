@@ -25,11 +25,11 @@ from nat.data_models.optimizable import SearchSpace
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerRunConfig
 from nat.data_models.optimizer import SamplerType
-from nat.eval.evaluate import EvaluationRun
-from nat.eval.evaluate import EvaluationRunConfig
+from nat.plugins.eval.evaluate import EvaluationRun
+from nat.plugins.eval.evaluate import EvaluationRunConfig
 from nat.experimental.decorators.experimental_warning_decorator import experimental
-from nat.profiler.parameter_optimization.parameter_selection import pick_trial
-from nat.profiler.parameter_optimization.update_helpers import apply_suggestions
+from nat.parameter_optimization.parameter_selection import pick_trial
+from nat.parameter_optimization.update_helpers import apply_suggestions
 
 logger = logging.getLogger(__name__)
 
@@ -168,7 +168,7 @@ def optimize_parameters(
 
     # Generate Pareto front visualizations
     try:
-        from nat.profiler.parameter_optimization.pareto_visualizer import create_pareto_visualization
+        from nat.parameter_optimization.pareto_visualizer import create_pareto_visualization
         logger.info("Generating Pareto front visualizations...")
         create_pareto_visualization(
             data_source=study,

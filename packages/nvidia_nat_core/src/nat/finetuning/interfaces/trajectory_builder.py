@@ -20,8 +20,8 @@ from typing import Any
 from nat.data_models.finetuning import FinetuneConfig
 from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.finetuning import TrajectoryCollection
-from nat.eval.config import EvaluationRunOutput
-from nat.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.plugins.eval.config import EvaluationRunOutput
+from nat.plugins.eval.evaluator.evaluator_model import EvalOutputItem
 from nat.utils.io.supress_logs import suppress_logs
 
 
@@ -49,8 +49,8 @@ class TrajectoryBuilder(ABC):
             EvaluationRunOutput: The output of the evaluation run.
         """
 
-        from nat.eval.evaluate import EvaluationRun
-        from nat.eval.evaluate import EvaluationRunConfig
+        from nat.plugins.eval.evaluate import EvaluationRun
+        from nat.plugins.eval.evaluate import EvaluationRunConfig
 
         eval_cfg = EvaluationRunConfig(config_file=self.run_config.run_configuration.config_file,
                                        dataset=self.run_config.run_configuration.dataset,

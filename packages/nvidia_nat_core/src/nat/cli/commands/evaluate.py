@@ -20,9 +20,9 @@ from pathlib import Path
 import click
 from tabulate import tabulate
 
-from nat.eval.config import EvaluationRunOutput
-from nat.eval.evaluate import EvaluationRun
-from nat.eval.evaluate import EvaluationRunConfig
+from nat.plugins.eval.config import EvaluationRunOutput
+from nat.plugins.eval.evaluate import EvaluationRun
+from nat.plugins.eval.evaluate import EvaluationRunConfig
 
 logger = logging.getLogger(__name__)
 

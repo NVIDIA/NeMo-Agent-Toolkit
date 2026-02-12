@@ -22,9 +22,9 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from nat.eval.config import EvaluationRunConfig
-from nat.eval.runners.config import MultiEvaluationRunConfig
-from nat.eval.runners.multi_eval_runner import MultiEvaluationRunner
+from nat.plugins.eval.config import EvaluationRunConfig
+from nat.plugins.eval.runners.config import MultiEvaluationRunConfig
+from nat.plugins.eval.runners.multi_eval_runner import MultiEvaluationRunner
 from nat.profiler.calc.calculations import LinearFitResult
 from nat.profiler.calc.calculations import calc_gpu_estimate_based_on_slope
 from nat.profiler.calc.calculations import calc_gpu_estimate_for_single_concurrency

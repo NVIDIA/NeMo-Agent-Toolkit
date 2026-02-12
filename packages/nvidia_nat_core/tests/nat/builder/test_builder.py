@@ -1678,7 +1678,7 @@ def test_log_build_failure_no_remaining_components(caplog_fixture, mock_componen
 
 def test_log_evaluator_build_failure_helper_method(caplog_fixture):
     """Test the _log_evaluator_build_failure helper method directly."""
-    from nat.builder.eval_builder import WorkflowEvalBuilder
+    from nat.plugins.eval.builder import WorkflowEvalBuilder
 
     builder = WorkflowEvalBuilder()
 
@@ -1706,7 +1706,7 @@ def test_log_evaluator_build_failure_helper_method(caplog_fixture):
 
 def test_log_evaluator_build_failure_no_completed(caplog_fixture):
     """Test evaluator error logging when no evaluators have been successfully built."""
-    from nat.builder.eval_builder import WorkflowEvalBuilder
+    from nat.plugins.eval.builder import WorkflowEvalBuilder
 
     builder = WorkflowEvalBuilder()
 
@@ -1730,7 +1730,7 @@ def test_log_evaluator_build_failure_no_completed(caplog_fixture):
 
 def test_log_evaluator_build_failure_no_remaining(caplog_fixture):
     """Test evaluator error logging when no evaluators remain to be built."""
-    from nat.builder.eval_builder import WorkflowEvalBuilder
+    from nat.plugins.eval.builder import WorkflowEvalBuilder
 
     builder = WorkflowEvalBuilder()
 

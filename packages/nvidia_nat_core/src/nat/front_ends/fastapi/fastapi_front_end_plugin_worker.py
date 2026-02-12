@@ -41,7 +41,7 @@ from pydantic import Field
 from starlette.websockets import WebSocket
 
 from nat.builder.context import Context
-from nat.builder.eval_builder import WorkflowEvalBuilder
+from nat.plugins.eval.builder import WorkflowEvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.function import Function
 from nat.builder.function import FunctionGroup
@@ -55,10 +55,10 @@ from nat.data_models.api_server import ResponseIntermediateStep
 from nat.data_models.config import Config
 from nat.data_models.object_store import KeyAlreadyExistsError
 from nat.data_models.object_store import NoSuchKeyError
-from nat.eval.config import EvaluationRunOutput
-from nat.eval.evaluate import EvaluationRun
-from nat.eval.evaluate import EvaluationRunConfig
-from nat.eval.evaluator.evaluator_model import EvalInput
+from nat.plugins.eval.config import EvaluationRunOutput
+from nat.plugins.eval.evaluate import EvaluationRun
+from nat.plugins.eval.evaluate import EvaluationRunConfig
+from nat.plugins.eval.evaluator.evaluator_model import EvalInput
 from nat.front_ends.fastapi.async_job import run_generation
 from nat.front_ends.fastapi.auth_flow_handlers.http_flow_handler import HTTPAuthenticationFlowHandler
 from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import FlowState

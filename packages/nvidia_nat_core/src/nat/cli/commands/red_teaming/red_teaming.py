@@ -98,7 +98,7 @@ def process_red_team_eval(
     override: tuple[tuple[str, str], ...],
 ):
     """Process the red team eval command and execute the evaluation."""
-    from nat.eval.runners.red_teaming_runner import RedTeamingRunner
+    from nat.plugins.eval.runners.red_teaming_runner import RedTeamingRunner
     from nat.runtime.loader import load_config
 
     from .red_teaming_utils import load_red_teaming_config
