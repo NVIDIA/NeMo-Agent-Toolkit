@@ -43,9 +43,6 @@ def process_uvlock(uvlock: UvLock, output_path: Path) -> None:
     Args:
         uvlock: Parsed `uv.lock` content.
         output_path: Path to the output file.
-
-    Returns:
-        Path to the generated SBOM list file.
     """
     # Keep packages ordered to make diffs stable between runs.
     sbom_entries: dict[tuple[str, str], SbomEntry] = {}

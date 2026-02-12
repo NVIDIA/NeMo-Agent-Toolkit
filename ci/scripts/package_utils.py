@@ -20,7 +20,7 @@ from urllib import request
 
 class Package(typing.TypedDict):
     name: str
-    version: str
+    version: typing.NotRequired[str]
     source: str
 
 

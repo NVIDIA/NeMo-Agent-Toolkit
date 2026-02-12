@@ -114,11 +114,10 @@ def main(base_branch: str) -> None:
         removed: set[tuple[str, str]] = set(base_variants.keys()) - set(head_variants.keys())
 
         if added and removed and len(added) == len(removed):
-            for b, h in zip(removed, added):
+            for b, h in zip(removed, added, strict=True):
                 changed_entries.append((base_variants[b], head_variants[h]))
-        elif added:
+        else:
             added_entries.extend(head_variants[k] for k in added)
-        elif removed:
             removed_entries.extend(base_variants[k] for k in removed)
 
     if added_entries:
@@ -140,8 +139,8 @@ def main(base_branch: str) -> None:
         for base_pkg, head_pkg in changed_entries:
             try:
                 pkg_name = head_pkg["name"]
-                base_version = base_pkg["version"]
-                head_version = head_pkg["version"]
+                base_version = base_pkg.get("version", None)
+                head_version = head_pkg.get("version", None)
                 if (head_license := pypi_license(pkg_name, head_version)) \
                     != (base_license := pypi_license(pkg_name, base_version)):
                     print(f"- {pkg_name} {base_version} -> {head_version} ({base_license} -> {head_license})")
