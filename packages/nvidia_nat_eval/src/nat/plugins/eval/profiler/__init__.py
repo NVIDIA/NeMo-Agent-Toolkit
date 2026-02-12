@@ -13,21 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Transitional namespace aliases for eval package move.
-
-Step-3 keeps runtime behavior stable while exposing the new
-`nat.plugins.eval.*` import surface.
-"""
+"""Transitional profiler namespace aliases for eval package move."""
 
 from __future__ import annotations
 
 import importlib
 import pkgutil
 import sys
-from types import ModuleType
 
-_LEGACY_PREFIX = "nat.eval"
-_NEW_PREFIX = "nat.plugins.eval"
+_LEGACY_PREFIX = "nat.profiler"
+_NEW_PREFIX = "nat.plugins.eval.profiler"
 
 _legacy_root = importlib.import_module(_LEGACY_PREFIX)
 
@@ -44,6 +39,10 @@ def _populate_submodule_aliases() -> None:
         return
 
     for module_info in pkgutil.walk_packages(legacy_path, prefix=f"{_LEGACY_PREFIX}."):
+        # Keep `parameter_optimization` in core namespace; do not alias it under eval profiler.
+        if ".parameter_optimization" in module_info.name:
+            continue
+
         old_name = module_info.name
         new_name = old_name.replace(_LEGACY_PREFIX, _NEW_PREFIX, 1)
         _alias_module(old_name, new_name)
@@ -53,13 +52,11 @@ _populate_submodule_aliases()
 
 
 def __getattr__(name: str):
+    if name == "parameter_optimization":
+        raise AttributeError(name)
     return getattr(_legacy_root, name)
 
 
 def __dir__() -> list[str]:
-    return sorted(set(dir(_legacy_root)))
-
-
-def _get_legacy_module() -> ModuleType:
-    return _legacy_root
+    return sorted([name for name in dir(_legacy_root) if name != "parameter_optimization"])
 

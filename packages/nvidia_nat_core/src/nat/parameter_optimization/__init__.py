@@ -13,21 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Transitional namespace aliases for eval package move.
-
-Step-3 keeps runtime behavior stable while exposing the new
-`nat.plugins.eval.*` import surface.
-"""
+"""Compatibility namespace for moved `parameter_optimization` modules."""
 
 from __future__ import annotations
 
 import importlib
 import pkgutil
 import sys
-from types import ModuleType
 
-_LEGACY_PREFIX = "nat.eval"
-_NEW_PREFIX = "nat.plugins.eval"
+_LEGACY_PREFIX = "nat.profiler.parameter_optimization"
+_NEW_PREFIX = "nat.parameter_optimization"
 
 _legacy_root = importlib.import_module(_LEGACY_PREFIX)
 
@@ -58,8 +53,4 @@ def __getattr__(name: str):
 
 def __dir__() -> list[str]:
     return sorted(set(dir(_legacy_root)))
-
-
-def _get_legacy_module() -> ModuleType:
-    return _legacy_root
 
