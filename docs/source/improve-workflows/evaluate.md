@@ -23,16 +23,20 @@ NeMo Agent Toolkit provides a set of evaluators to run and evaluate workflows. I
 
 ## Prerequisites
 
-In addition to the base `nvidia-nat` package, you need to install the [`profiling`](./profiler.md) sub-package to use the `nat eval` command.
+In addition to the base `nvidia-nat` package, you need to install the evaluation package to use `nat eval`.
 
-If you are installing from source, you can install the sub-package by running the following command from the root directory of the NeMo Agent Toolkit repository:
+If you are installing from source, install the evaluation extra from the NeMo Agent Toolkit repository root:
 ```bash
-uv pip install -e '.[profiling]'
+uv pip install -e '.[eval]'
 ```
 
-If you are installing from a package, you can install the sub-package by running the following command:
+If you are installing from a package, install either the `eval` extra or the standalone package:
 ```bash
-uv pip install "nvidia-nat[profiling]"
+uv pip install "nvidia-nat[eval]"
+```
+
+```bash
+uv pip install nvidia-nat-eval
 ```
 
 ## Evaluating a Workflow

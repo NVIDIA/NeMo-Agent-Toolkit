@@ -38,6 +38,7 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[agno]` or `nvidia-nat-agno` - [Agno](https://agno.com/)
 - `nvidia-nat[crewai]` or `nvidia-nat-crewai` - [CrewAI](https://www.crewai.com/) Conflicts with `nvidia-nat[openpipe-art]`.
 - `nvidia-nat[data-flywheel]` or `nvidia-nat-data-flywheel` - [NeMo DataFlywheel](https://github.com/NVIDIA-AI-Blueprints/data-flywheel)
+- `nvidia-nat[eval]` or `nvidia-nat-eval` - Evaluation and profiling CLI commands (`nat eval`, `nat red-team`, `nat sizing`)
 - `nvidia-nat[langchain]` or `nvidia-nat-langchain` - [LangChain](https://www.langchain.com/), [LangGraph](https://www.langchain.com/langgraph)
 - `nvidia-nat[llama-index]` or `nvidia-nat-llama-index` - [LlamaIndex](https://www.llamaindex.ai/)
 - `nvidia-nat[mcp]` or `nvidia-nat-mcp` - [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
@@ -108,6 +109,16 @@ pip install "nvidia-nat[langchain]"
 
 The full list of optional dependencies can be found [here](#packages).
 
+To use evaluation-related commands (`nat eval`, `nat red-team`, and `nat sizing`), install evaluation support with one of the following:
+
+```bash
+pip install "nvidia-nat[eval]"
+```
+
+```bash
+pip install nvidia-nat-eval
+```
+
 ## Install From Source
 
 :::{warning}
@@ -164,9 +175,9 @@ Installing from source is required to run any examples provided in the repositor
     Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/getting_started/simple_web_query/README.md` guide will install the `nvidia-nat-langchain` plugin if you haven't already done so.
     :::
 
-    In addition to plugins, there are optional dependencies needed for profiling. Installing the `profiling` sub-package is required for [evaluation](../improve-workflows/evaluate.md) and profiling workflows using `nat eval`. To install these dependencies, run the following:
+    To use evaluation-related commands (`nat eval`, `nat red-team`, and `nat sizing`) from source, install the evaluation package:
     ```bash
-    uv pip install -e '.[profiling]'
+    uv pip install -e '.[eval]'
     ```
 6. Verify that you've installed the NeMo Agent Toolkit library.
 
