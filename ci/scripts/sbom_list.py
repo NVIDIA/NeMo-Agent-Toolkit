@@ -19,7 +19,6 @@ The output is stored as `sbom_list.tsv` and includes package name, version, and
 license metadata from PyPI. This is intended for lightweight SBOM checks in CI.
 """
 import argparse
-
 import csv
 import tomllib
 import typing
