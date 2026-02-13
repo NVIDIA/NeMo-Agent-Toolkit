@@ -609,7 +609,7 @@ class SessionManager:
 
         Sets request attributes (method, path, headers, and so on), plus optional
         headers:
-        
+
         - conversation-id
         - user-message-id
         - traceparent
