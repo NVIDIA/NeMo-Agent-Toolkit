@@ -322,3 +322,7 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
     disable_legacy_routes: bool = Field(
         default=False,
         description="Disable the legacy routes for the FastAPI app. If True, the legacy routes are disabled.")
+    
+    enable_interactive_extensions: bool = Field(
+        default=False,
+        description="Enable the interactive extensions for OpenAI API compatible endpoints. If True, the interactive extensions are enabled.")

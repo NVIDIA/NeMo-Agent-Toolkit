@@ -62,6 +62,7 @@ def _job_status_to_response(worker: Any, job):
 
 def post_async_generation(*, worker: Any, session_manager: SessionManager, request_type: Any):
     """Build async generation POST handler."""
+    from nat.front_ends.fastapi.async_jobs.job_store import JobStatus
 
     async def start_async_generation(request: Any, response: Response, http_request: Request):
         async with session_manager.session(http_connection=http_request):
@@ -129,7 +130,6 @@ async def add_async_generation_routes(
         logger.warning("Dask is not available, async generation endpoints will not be added.")
         return
 
-    from nat.front_ends.fastapi.async_jobs.job_store import JobStatus
     from nat.front_ends.fastapi.async_jobs.job_store import JobStore
 
     if not (isinstance(generate_body_type, type) and issubclass(generate_body_type, BaseModel)):

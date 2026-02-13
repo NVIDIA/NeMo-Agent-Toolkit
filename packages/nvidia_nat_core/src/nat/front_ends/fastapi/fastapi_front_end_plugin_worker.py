@@ -34,25 +34,26 @@ from nat.builder.eval_builder import WorkflowEvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.config import Config
-from nat.front_ends.fastapi.auth_flow_handlers.http_flow_handler import HTTPAuthenticationFlowHandler
-from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import FlowState
-from nat.front_ends.fastapi.execution_store import ExecutionStore
-from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
-from nat.front_ends.fastapi.message_handler import WebSocketMessageHandler
-from nat.front_ends.fastapi.routes.auth import add_authorization_route as register_authorization_route
-from nat.front_ends.fastapi.routes.chat import add_chat_routes
-from nat.front_ends.fastapi.routes.evaluate import add_evaluate_item_route as register_evaluate_item_route
-from nat.front_ends.fastapi.routes.evaluate import add_evaluate_route as register_evaluate_route
-from nat.front_ends.fastapi.routes.execution import add_execution_routes as register_execution_routes
-from nat.front_ends.fastapi.routes.generate import add_generate_routes
-from nat.front_ends.fastapi.routes.health import add_health_route as register_health_route
-from nat.front_ends.fastapi.routes.monitor import add_monitor_route as register_monitor_route
-from nat.front_ends.fastapi.routes.static import add_static_files_route as register_static_files_route
-from nat.front_ends.fastapi.routes.websocket import add_websocket_routes
-from nat.front_ends.fastapi.step_adaptor import StepAdaptor
-from nat.front_ends.fastapi.utils import get_config_file_path
 from nat.runtime.session import SessionManager
 from nat.utils.log_utils import setup_logging
+
+from .auth_flow_handlers.http_flow_handler import HTTPAuthenticationFlowHandler
+from .auth_flow_handlers.websocket_flow_handler import FlowState
+from .execution_store import ExecutionStore
+from .fastapi_front_end_config import FastApiFrontEndConfig
+from .message_handler import WebSocketMessageHandler
+from .routes.auth import add_authorization_route as register_authorization_route
+from .routes.chat import add_chat_routes
+from .routes.evaluate import add_evaluate_item_route as register_evaluate_item_route
+from .routes.evaluate import add_evaluate_route as register_evaluate_route
+from .routes.execution import add_execution_routes as register_execution_routes
+from .routes.generate import add_generate_routes
+from .routes.health import add_health_route as register_health_route
+from .routes.monitor import add_monitor_route as register_monitor_route
+from .routes.static import add_static_files_route as register_static_files_route
+from .routes.websocket import add_websocket_routes
+from .step_adaptor import StepAdaptor
+from .utils import get_config_file_path
 
 logger = logging.getLogger(__name__)
 
@@ -335,13 +336,23 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             disable_legacy_routes: bool = self.front_end_config.disable_legacy_routes
             session_manager = await self._create_session_manager(builder, ep.function_name)
             await add_generate_routes(self, app, ep, session_manager, disable_legacy_routes=disable_legacy_routes)
-            await add_chat_routes(self, app, ep, session_manager)
+            await add_chat_routes(self,
+                                  app,
+                                  ep,
+                                  session_manager,
+                                  enable_interactive=self.front_end_config.enable_interactive_extensions,
+                                  disable_legacy_routes=disable_legacy_routes)
             await add_websocket_routes(self, app, ep, session_manager)
 
     async def add_default_route(self, app: FastAPI, session_manager: SessionManager):
 
         await add_generate_routes(self, app, self.front_end_config.workflow, session_manager)
-        await add_chat_routes(self, app, self.front_end_config.workflow, session_manager)
+        await add_chat_routes(self,
+                              app,
+                              self.front_end_config.workflow,
+                              session_manager,
+                              enable_interactive=self.front_end_config.enable_interactive_extensions,
+                              disable_legacy_routes=self.front_end_config.disable_legacy_routes)
         await add_websocket_routes(self, app, self.front_end_config.workflow, session_manager)
 
     async def add_evaluate_route(self, app: FastAPI, session_manager: SessionManager):
@@ -366,11 +377,15 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         include_websocket_route: bool = True):
         """Backward-compatible route composition entrypoint."""
         if include_standard_routes:
-            await add_generate_routes(self, app, endpoint, session_manager, enable_interactive=enable_interactive)
+            await add_generate_routes(self, app, endpoint, session_manager)
         if include_openai_routes:
-            await add_chat_routes(self, app, endpoint, session_manager, enable_interactive=enable_interactive)
+            await add_chat_routes(self,
+                                  app,
+                                  endpoint,
+                                  session_manager,
+                                  enable_interactive=enable_interactive)
         if include_websocket_route:
-            await add_websocket_routes(self, app, endpoint, session_manager, enable_interactive=enable_interactive)
+            await add_websocket_routes(self, app, endpoint, session_manager)
 
     async def add_authorization_route(self, app: FastAPI):
         await register_authorization_route(self, app)

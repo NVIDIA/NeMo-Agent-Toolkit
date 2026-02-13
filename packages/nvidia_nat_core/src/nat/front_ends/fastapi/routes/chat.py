@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """OpenAI-compatible chat route registration."""
 
+from enum import StrEnum
 from typing import Any
 
 from fastapi import FastAPI
@@ -9,14 +10,14 @@ from fastapi import FastAPI
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
 from nat.data_models.api_server import ChatResponseChunk
-from nat.data_models.api_server import ResponseIntermediateStep
-from nat.front_ends.fastapi.routes.generate import RESPONSE_500
-from nat.front_ends.fastapi.routes.generate import get_single_endpoint
-from nat.front_ends.fastapi.routes.generate import get_streaming_endpoint
-from nat.front_ends.fastapi.routes.generate import post_single_endpoint
-from nat.front_ends.fastapi.routes.generate import post_streaming_endpoint
-from nat.front_ends.fastapi.routes.v1_chat_completions import add_v1_chat_completions_route
 from nat.runtime.session import SessionManager
+
+from .common_utils import RESPONSE_500
+from .common_utils import get_single_endpoint
+from .common_utils import get_streaming_endpoint
+from .common_utils import post_single_endpoint
+from .common_utils import post_streaming_endpoint
+from .v1_chat_completions import add_v1_chat_completions_route
 
 
 class _ChatEndpointType(StrEnum):
@@ -30,34 +31,48 @@ class _ChatEndpointMethod(StrEnum):
 
 
 def _add_chat_route(app: FastAPI,
+                    worker: Any,
                     endpoint_path: str,
                     session_manager: SessionManager,
                     endpoint_type: _ChatEndpointType,
-                    endpoint_method: _ChatEndpointMethod
-                    endpoint_description: str):
-
-    method = get_single_endpoint if endpoint_method == _ChatEndpointMethod.GET else post_single_endpoint
-    streaming_method = get_streaming_endpoint if endpoint_method == _ChatEndpointMethod.GET else post_streaming_endpoint
+                    endpoint_method: _ChatEndpointMethod,
+                    endpoint_description: str,
+                    enable_interactive: bool):
 
     match endpoint_type:
         case _ChatEndpointType.SINGLE:
-            app.add_api_route(
-                path=endpoint_path,
-                endpoint=method(worker=worker, session_manager=session_manager, result_type=ChatResponse),
-                description=endpoint_description,
-                responses={500: RESPONSE_500},
-            )
+            if endpoint_method == _ChatEndpointMethod.GET:
+                route_handler = get_single_endpoint(worker=worker,
+                                                    session_manager=session_manager,
+                                                    result_type=ChatResponse)
+            else:
+                route_handler = post_single_endpoint(worker=worker,
+                                                     session_manager=session_manager,
+                                                     request_type=ChatRequest,
+                                                     enable_interactive=enable_interactive,
+                                                     result_type=ChatResponse)
         case _ChatEndpointType.STREAMING:
-            app.add_api_route(
-                path=f"{endpoint_path}/stream",
-                endpoint=streaming_method(worker=worker,
-                                                session_manager=session_manager,
-                                                streaming=True,
-                                                result_type=ChatResponseChunk,
-                                                output_type=ChatResponseChunk),
-                description=endpoint_description,
-                responses={500: RESPONSE_500},
-            )
+            if endpoint_method == _ChatEndpointMethod.GET:
+                route_handler = get_streaming_endpoint(worker=worker,
+                                                       session_manager=session_manager,
+                                                       streaming=True,
+                                                       result_type=ChatResponseChunk,
+                                                       output_type=ChatResponseChunk)
+            else:
+                route_handler = post_streaming_endpoint(worker=worker,
+                                                        session_manager=session_manager,
+                                                        request_type=ChatRequest,
+                                                        enable_interactive=enable_interactive,
+                                                        streaming=True,
+                                                        result_type=ChatResponseChunk,
+                                                        output_type=ChatResponseChunk)
+    app.add_api_route(
+        path=endpoint_path,
+        endpoint=route_handler,
+        methods=[endpoint_method],
+        description=endpoint_description,
+        responses={500: RESPONSE_500},
+    )
 
 
 async def add_chat_routes(
@@ -66,28 +81,59 @@ async def add_chat_routes(
     endpoint: Any,
     session_manager: SessionManager,
     *,
+    enable_interactive: bool = False,
+    disable_legacy_routes: bool = False,
 ):
     """Add OpenAI-compatible chat routes for an endpoint."""
-    if endpoint.openai_api_path:
-        if endpoint.method == "POST":
-            raise ValueError(f"Unsupported method {endpoint.method} for {endpoint.openai_api_path}")
+    endpoint_method = _ChatEndpointMethod(endpoint.method)
+    openai_v1_path = endpoint.openai_api_v1_path
+    openai_path = endpoint.openai_api_path
+
+    # If OpenAI v1 path overlaps the legacy OpenAI-compatible path,
+    # register only the v1 endpoint at that path so stream=True/False
+    # is handled by a single route as intended.
+    register_openai_path = bool(openai_path) and openai_path != openai_v1_path
+
+    if register_openai_path and openai_path:
         _add_chat_route(app=app,
-                        endpoint_path=endpoint.openai_api_path,
+                        worker=worker,
+                        endpoint_path=openai_path,
                         session_manager=session_manager,
                         endpoint_type=_ChatEndpointType.SINGLE,
-                        endpoint_method=endpoint.method,
-                        endpoint_description=endpoint.description)
+                        endpoint_method=endpoint_method,
+                        endpoint_description=endpoint.description,
+                        enable_interactive=enable_interactive)
         _add_chat_route(app=app,
-                        endpoint_path=f"{endpoint.openai_api_path}/stream",
+                        worker=worker,
+                        endpoint_path=f"{openai_path}/stream",
                         session_manager=session_manager,
                         endpoint_type=_ChatEndpointType.STREAMING,
-                        endpoint_method=endpoint.method,
-                        endpoint_description=endpoint.description)
+                        endpoint_method=endpoint_method,
+                        endpoint_description=endpoint.description,
+                        enable_interactive=enable_interactive)
 
-    if endpoint.openai_api_v1_path:
-        if endpoint.method == "GET":
-            raise ValueError(f"Unsupported method {endpoint.method} for {endpoint.openai_api_v1_path}")
-        
+    if not disable_legacy_routes and endpoint.legacy_openai_api_path:
+        _add_chat_route(app=app,
+                        worker=worker,
+                        endpoint_path=endpoint.legacy_openai_api_path,
+                        session_manager=session_manager,
+                        endpoint_type=_ChatEndpointType.SINGLE,
+                        endpoint_method=endpoint_method,
+                        endpoint_description=endpoint.description,
+                        enable_interactive=enable_interactive)
+        _add_chat_route(app=app,
+                        worker=worker,
+                        endpoint_path=f"{endpoint.legacy_openai_api_path}/stream",
+                        session_manager=session_manager,
+                        endpoint_type=_ChatEndpointType.STREAMING,
+                        endpoint_method=endpoint_method,
+                        endpoint_description=endpoint.description,
+                        enable_interactive=enable_interactive)
+
+    if openai_v1_path:
+        if endpoint_method != _ChatEndpointMethod.POST:
+            raise ValueError(f"Unsupported method {endpoint.method} for {openai_v1_path}")
+
         await add_v1_chat_completions_route(worker,
                                             app,
                                             path=openai_v1_path,

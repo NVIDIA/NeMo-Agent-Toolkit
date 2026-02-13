@@ -548,7 +548,7 @@ async def setup_db_fixture(db_engine: "AsyncEngine"):
     """
     Fixture to create database tables before tests and drop them afterward.
     """
-    from nat.front_ends.fastapi.job_store import Base
+    from nat.front_ends.fastapi.async_jobs.job_store import Base
 
     async with db_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all, checkfirst=True)

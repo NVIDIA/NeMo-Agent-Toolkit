@@ -20,11 +20,13 @@ from nat.data_models.api_server import ErrorTypes
 from nat.data_models.interactive_http import ExecutionStatus
 from nat.front_ends.fastapi.response_helpers import generate_single_response
 from nat.front_ends.fastapi.response_helpers import generate_streaming_response_as_str
-from nat.front_ends.fastapi.routes.generate import RESPONSE_500
-from nat.front_ends.fastapi.routes.generate import _build_accepted_response
-from nat.front_ends.fastapi.routes.generate import _build_interactive_runner
-from nat.front_ends.fastapi.routes.generate import add_context_headers_to_response
 from nat.runtime.session import SessionManager
+
+from .common_utils import RESPONSE_500
+from .common_utils import _build_interactive_runner
+from .common_utils import add_context_headers_to_response
+from .execution import build_accepted_response
+
 
 logger = logging.getLogger(__name__)
 
@@ -32,50 +34,53 @@ logger = logging.getLogger(__name__)
 def post_openai_api_compatible_endpoint(*, worker: Any, session_manager: SessionManager, enable_interactive: bool):
     """Build OpenAI Chat Completions compatible POST handler."""
 
-    async def post_openai_api_compatible(response: Response, request: Request, payload: ChatRequest):
-        response.headers["Content-Type"] = "application/json"
+    async def post_openai_api_compatible_interactive(response: Response, request: Request, payload: ChatRequest):
         stream_requested = getattr(payload, "stream", False)
 
-        if enable_interactive:
-            runner = _build_interactive_runner(worker, session_manager)
+        runner = _build_interactive_runner(worker, session_manager)
 
-            if stream_requested:
-                return StreamingResponse(
-                    headers={"Content-Type": "text/event-stream; charset=utf-8"},
-                    content=runner.streaming_generator(
-                        payload,
-                        request,
-                        streaming=True,
-                        step_adaptor=worker.get_step_adaptor(),
-                        result_type=ChatResponseChunk,
-                        output_type=ChatResponseChunk,
-                    ),
-                )
-
-            record = await runner.start_non_streaming(
-                payload=payload,
-                request=request,
-                result_type=ChatResponse,
+        if stream_requested:
+            return StreamingResponse(
+                headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                content=runner.streaming_generator(
+                    payload,
+                    request,
+                    streaming=True,
+                    step_adaptor=worker.get_step_adaptor(),
+                    result_type=ChatResponseChunk,
+                    output_type=ChatResponseChunk,
+                ),
             )
-            await record.first_outcome.wait()
 
-            if record.status == ExecutionStatus.COMPLETED:
-                response.status_code = 200
-                add_context_headers_to_response(response)
-                return record.result
-            if record.status == ExecutionStatus.FAILED:
-                add_context_headers_to_response(response)
-                return JSONResponse(
-                    content=Error(
-                        code=ErrorTypes.WORKFLOW_ERROR,
-                        message=record.error or "Unknown error",
-                        details="ExecutionFailed",
-                    ).model_dump(),
-                    status_code=422,
-                )
+        response.headers["Content-Type"] = "application/json"
+        record = await runner.start_non_streaming(
+            payload=payload,
+            request=request,
+            result_type=ChatResponse,
+        )
+        await record.first_outcome.wait()
 
-            response.status_code = 202
-            return _build_accepted_response(record)
+        if record.status == ExecutionStatus.COMPLETED:
+            response.status_code = 200
+            add_context_headers_to_response(response)
+            return record.result
+        if record.status == ExecutionStatus.FAILED:
+            add_context_headers_to_response(response)
+            return JSONResponse(
+                content=Error(
+                    code=ErrorTypes.WORKFLOW_ERROR,
+                    message=record.error or "Unknown error",
+                    details="ExecutionFailed",
+                ).model_dump(),
+                status_code=422,
+            )
+
+        response.status_code = 202
+        return build_accepted_response(record)
+
+
+    async def post_openai_api_compatible(response: Response, request: Request, payload: ChatRequest):
+        stream_requested = getattr(payload, "stream", False)
 
         if stream_requested:
             async with session_manager.session(http_connection=request) as session:
@@ -88,6 +93,7 @@ def post_openai_api_compatible_endpoint(*, worker: Any, session_manager: Session
                                              result_type=ChatResponseChunk,
                                              output_type=ChatResponseChunk))
 
+        response.headers["Content-Type"] = "application/json"
         async with session_manager.session(http_connection=request) as session:
             try:
                 result = await generate_single_response(payload, session, result_type=ChatResponse)
@@ -105,7 +111,7 @@ def post_openai_api_compatible_endpoint(*, worker: Any, session_manager: Session
                     status_code=422,
                 )
 
-    return post_openai_api_compatible
+    return post_openai_api_compatible_interactive if enable_interactive else post_openai_api_compatible
 
 
 async def add_v1_chat_completions_route(
@@ -116,7 +122,7 @@ async def add_v1_chat_completions_route(
     method: str,
     description: str,
     session_manager: SessionManager,
-    enable_interactive: bool = False,
+    enable_interactive: bool,
 ):
     """Register OpenAI v1 chat completions endpoint."""
     app.add_api_route(
@@ -126,7 +132,6 @@ async def add_v1_chat_completions_route(
                                                      enable_interactive=enable_interactive),
         methods=[method],
         response_model=ChatResponse | ChatResponseChunk,
-        description=f"{description} (OpenAI Chat Completions API compatible)",
+        description=f"{description} (OpenAI Chat Completions API compatible{' with interaction support' if enable_interactive else ''})",
         responses={500: RESPONSE_500},
     )
-

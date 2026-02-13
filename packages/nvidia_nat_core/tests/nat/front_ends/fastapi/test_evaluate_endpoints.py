@@ -74,7 +74,7 @@ async def patch_evaluation_run(register_test_workflow):
 
             return result
 
-    with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker.EvaluationRun",
+    with patch("nat.front_ends.fastapi.routes.evaluate.EvaluationRun",
                new_callable=MockEvaluationRun) as mock_eval_run:
         yield mock_eval_run
 
