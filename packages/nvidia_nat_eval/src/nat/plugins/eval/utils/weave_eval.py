@@ -21,9 +21,9 @@ from typing import Any
 from nat.plugins.eval.evaluator.evaluator_model import EvalInput
 from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
 from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
+from nat.plugins.eval.profiler.data_models import ProfilerResults
 from nat.plugins.eval.usage_stats import UsageStats
 from nat.plugins.eval.usage_stats import UsageStatsItem
-from nat.plugins.eval.profiler.data_models import ProfilerResults
 
 if TYPE_CHECKING:
     from nat.plugins.eval.utils.eval_trace_ctx import EvalTraceContext

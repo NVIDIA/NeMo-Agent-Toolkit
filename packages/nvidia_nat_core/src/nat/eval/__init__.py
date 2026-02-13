@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Deprecated compatibility shim for `nat.eval`.
 
 Evaluation modules moved to `nat.plugins.eval`. This shim keeps old import

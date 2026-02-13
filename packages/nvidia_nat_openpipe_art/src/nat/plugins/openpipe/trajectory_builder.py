@@ -27,10 +27,10 @@ from nat.data_models.finetuning import Trajectory
 from nat.data_models.finetuning import TrajectoryCollection
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepCategory
-from nat.plugins.eval.config import EvaluationRunOutput
-from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
 from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 from nat.finetuning.utils.parsers.base_parser import parse_to_openai_messages
+from nat.plugins.eval.config import EvaluationRunOutput
+from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
 
 from .config import ARTTrajectoryBuilderConfig
 

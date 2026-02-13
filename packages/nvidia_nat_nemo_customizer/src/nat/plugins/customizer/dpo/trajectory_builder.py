@@ -47,9 +47,9 @@ from nat.data_models.intermediate_step import IntermediateStepCategory
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import TTCEventData
+from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 from nat.plugins.eval.config import EvaluationRunOutput
 from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
-from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 
 from .config import DPOTrajectoryBuilderConfig
 

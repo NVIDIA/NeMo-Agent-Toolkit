@@ -45,8 +45,7 @@ def _require_eval_runtime():
     except ImportError as exc:
         raise RuntimeError(
             "The `nat optimize` command requires evaluation support from `nvidia-nat-eval`. "
-            "Install it with `uv pip install nvidia-nat-eval` (or `pip install nvidia-nat-eval`)."
-        ) from exc
+            "Install it with `uv pip install nvidia-nat-eval` (or `pip install nvidia-nat-eval`).") from exc
     return EvaluationRun, EvaluationRunConfig
 
 

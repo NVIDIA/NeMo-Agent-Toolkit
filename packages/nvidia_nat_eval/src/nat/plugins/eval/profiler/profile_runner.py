@@ -103,7 +103,9 @@ class ProfilerRunner:
         )  # yapf: disable
         from nat.plugins.eval.profiler.inference_optimization.llm_metrics import LLMMetrics
         from nat.plugins.eval.profiler.inference_optimization.prompt_caching import get_common_prefixes
-        from nat.plugins.eval.profiler.inference_optimization.token_uniqueness import compute_inter_query_token_uniqueness_by_llm
+        from nat.plugins.eval.profiler.inference_optimization.token_uniqueness import (
+            compute_inter_query_token_uniqueness_by_llm,
+        )
         from nat.plugins.eval.profiler.inference_optimization.workflow_runtimes import compute_workflow_runtime_metrics
         from nat.plugins.eval.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 

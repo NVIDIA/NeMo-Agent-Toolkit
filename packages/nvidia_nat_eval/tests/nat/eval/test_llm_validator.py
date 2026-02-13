@@ -21,11 +21,11 @@ from unittest.mock import patch
 import pytest
 
 from nat.data_models.config import Config
-from nat.plugins.eval.llm_validator import _is_404_error
-from nat.plugins.eval.llm_validator import validate_llm_endpoints
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.plugins.eval.llm_validator import _is_404_error
+from nat.plugins.eval.llm_validator import validate_llm_endpoints
 
 
 class TestLLMEndpointValidation:

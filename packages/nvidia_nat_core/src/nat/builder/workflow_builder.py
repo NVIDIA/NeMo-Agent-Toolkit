@@ -94,11 +94,13 @@ try:
     from nat.plugins.eval.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
     from nat.plugins.eval.profiler.utils import detect_llm_frameworks_in_build_fn
 except ImportError:
+
     def detect_llm_frameworks_in_build_fn(registration) -> list[LLMFrameworkEnum]:
         return []
 
     def chain_wrapped_build_fn(original_build_fn, workflow_llms, function_frameworks):  # noqa: ARG001
         return original_build_fn
+
 
 logger = logging.getLogger(__name__)
 

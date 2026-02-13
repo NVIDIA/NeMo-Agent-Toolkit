@@ -25,9 +25,9 @@ from nat.plugins.eval.evaluator.evaluator_model import EvalInput
 from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
 from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
 from nat.plugins.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.plugins.eval.profiler.data_models import ProfilerResults
 from nat.plugins.eval.runners.config import MultiEvaluationRunConfig
 from nat.plugins.eval.runners.multi_eval_runner import MultiEvaluationRunner
-from nat.plugins.eval.profiler.data_models import ProfilerResults
 
 
 @pytest.fixture

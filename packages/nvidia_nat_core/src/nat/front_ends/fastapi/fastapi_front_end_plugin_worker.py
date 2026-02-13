@@ -287,8 +287,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         try:
             # Build evaluators using WorkflowEvalBuilder (same pattern as nat eval)
             # Start with registry=None and let populate_builder set everything up
-            self._eval_builder = _WorkflowEvalBuilder(
-                general_config=config.general, eval_general_config=config.eval.general, registry=None)
+            self._eval_builder = _WorkflowEvalBuilder(general_config=config.general,
+                                                      eval_general_config=config.eval.general,
+                                                      registry=None)
 
             # Enter the async context and keep it alive
             await self._eval_builder.__aenter__()
@@ -370,9 +371,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             await self.add_evaluate_route(app, await self._create_session_manager(builder))
             await self.add_evaluate_item_route(app, await self._create_session_manager(builder))
         elif self.front_end_config.evaluate.path or self.front_end_config.evaluate_item.path:
-            logger.warning(
-                "Evaluation package is not installed, skipping evaluate/evaluate-item routes. "
-                "Install `nvidia-nat-eval` to enable them.")
+            logger.warning("Evaluation package is not installed, skipping evaluate/evaluate-item routes. "
+                           "Install `nvidia-nat-eval` to enable them.")
 
         await self.add_static_files_route(app, builder)
         await self.add_authorization_route(app)

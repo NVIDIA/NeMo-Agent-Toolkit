@@ -15,8 +15,8 @@
 
 import typing
 
-from pydantic import ConfigDict
 from pydantic import BaseModel
+from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import SerializeAsAny
 

@@ -19,4 +19,3 @@ from nat.plugins.eval.cli.red_teaming.red_teaming import red_team_command
 from nat.plugins.eval.cli.sizing import sizing_command
 
 __all__ = ["eval_command", "red_team_command", "sizing_command"]
-

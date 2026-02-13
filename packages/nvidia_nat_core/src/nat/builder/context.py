@@ -42,6 +42,7 @@ from nat.utils.reactive.subject import Subject
 try:
     from nat.plugins.eval.profiler.decorators.latency import LatencySensitivity
 except ImportError:
+
     class LatencySensitivity(StrEnum):
         LOW = "LOW"
         MEDIUM = "MEDIUM"

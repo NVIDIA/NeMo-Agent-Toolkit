@@ -20,6 +20,8 @@ from unittest.mock import patch
 
 import pytest
 
+from nat.data_models.evaluate import EvaluationRunOutput
+from nat.data_models.evaluator import EvalOutputItem
 from nat.data_models.finetuning import CurriculumLearningConfig
 from nat.data_models.finetuning import EpisodeItem
 from nat.data_models.finetuning import EpisodeItemRole
@@ -29,8 +31,6 @@ from nat.data_models.finetuning import RewardFunctionConfig
 from nat.data_models.finetuning import Trajectory
 from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.finetuning import TrajectoryCollection
-from nat.data_models.evaluate import EvaluationRunOutput
-from nat.data_models.evaluator import EvalOutputItem
 from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 
 
