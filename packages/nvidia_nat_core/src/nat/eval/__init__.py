@@ -12,3 +12,54 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+"""Deprecated compatibility shim for `nat.eval`.
+
+Evaluation modules moved to `nat.plugins.eval`. This shim keeps old import
+paths working for one release cycle.
+"""
+
+from __future__ import annotations
+
+import importlib
+import pkgutil
+import sys
+import warnings
+
+warnings.warn(
+    "Importing from 'nat.eval' is deprecated and will be removed in a future release. "
+    "Use 'nat.plugins.eval' instead.",
+    UserWarning,
+    stacklevel=2,
+)
+
+_NEW_PREFIX = "nat.plugins.eval"
+_OLD_PREFIX = "nat.eval"
+
+_new_root = importlib.import_module(_NEW_PREFIX)
+
+
+def _alias_module(old_name: str, new_name: str) -> None:
+    if old_name in sys.modules:
+        return
+    sys.modules[old_name] = importlib.import_module(new_name)
+
+
+def _populate_aliases() -> None:
+    _alias_module(_OLD_PREFIX, _NEW_PREFIX)
+    new_path = getattr(_new_root, "__path__", None)
+    if new_path is None:
+        return
+
+    for module_info in pkgutil.walk_packages(new_path, prefix=f"{_NEW_PREFIX}."):
+        new_name = module_info.name
+        old_name = new_name.replace(_NEW_PREFIX, _OLD_PREFIX, 1)
+        # Keep `nat.eval.runtime_event_subscriber` mapped to core.
+        if old_name == "nat.eval.runtime_event_subscriber":
+            continue
+        _alias_module(old_name, new_name)
+
+
+_populate_aliases()
+
+from nat.plugins.eval import *  # noqa: F401,F403
