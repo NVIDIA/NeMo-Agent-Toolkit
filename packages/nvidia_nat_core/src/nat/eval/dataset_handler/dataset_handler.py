@@ -25,10 +25,10 @@ from nat.data_models.dataset_handler import EvalDatasetCustomConfig
 from nat.data_models.dataset_handler import EvalDatasetJsonConfig
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepType
-from nat.eval.dataset_handler.dataset_downloader import DatasetDownloader
-from nat.eval.dataset_handler.dataset_filter import DatasetFilter
-from nat.eval.evaluator.evaluator_model import EvalInput
-from nat.eval.evaluator.evaluator_model import EvalInputItem
+from nat.plugins.eval.dataset_handler.dataset_downloader import DatasetDownloader
+from nat.plugins.eval.dataset_handler.dataset_filter import DatasetFilter
+from nat.plugins.eval.evaluator.evaluator_model import EvalInput
+from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
 
 
 class DatasetHandler:
@@ -44,7 +44,7 @@ class DatasetHandler:
                  num_passes: int = 1,
                  adjust_dataset_size: bool = False,
                  custom_pre_eval_process_function: str | None = None):
-        from nat.eval.intermediate_step_adapter import IntermediateStepAdapter
+        from nat.plugins.eval.intermediate_step_adapter import IntermediateStepAdapter
 
         self.dataset_config = dataset_config
         self.dataset_filter = DatasetFilter(dataset_config.filter)

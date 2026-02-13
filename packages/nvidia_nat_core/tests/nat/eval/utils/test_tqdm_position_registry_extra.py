@@ -15,7 +15,7 @@
 
 import pytest
 
-from nat.eval.utils.tqdm_position_registry import TqdmPositionRegistry
+from nat.plugins.eval.utils.tqdm_position_registry import TqdmPositionRegistry
 
 
 def test_claim_and_release_positions():

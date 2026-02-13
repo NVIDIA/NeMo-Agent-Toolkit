@@ -32,10 +32,10 @@ from nat.builder.function import FunctionGroup
 from nat.cli.register_workflow import register_evaluator
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.evaluator import EvaluatorBaseConfig
-from nat.eval.evaluator.evaluator_model import EvalInput
-from nat.eval.evaluator.evaluator_model import EvalInputItem
-from nat.eval.evaluator.evaluator_model import EvalOutput
-from nat.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.plugins.eval.evaluator.evaluator_model import EvalInput
+from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
+from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
+from nat.plugins.eval.evaluator.evaluator_model import EvalOutputItem
 
 logger = logging.getLogger(__name__)
 

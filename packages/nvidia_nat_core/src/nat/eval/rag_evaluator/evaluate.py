@@ -22,11 +22,11 @@ from pydantic import BaseModel
 from tqdm import tqdm
 
 from nat.data_models.intermediate_step import IntermediateStepType
-from nat.eval.evaluator.evaluator_model import EvalInput
-from nat.eval.evaluator.evaluator_model import EvalInputItem
-from nat.eval.evaluator.evaluator_model import EvalOutput
-from nat.eval.evaluator.evaluator_model import EvalOutputItem
-from nat.eval.utils.tqdm_position_registry import TqdmPositionRegistry
+from nat.plugins.eval.evaluator.evaluator_model import EvalInput
+from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
+from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
+from nat.plugins.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.plugins.eval.utils.tqdm_position_registry import TqdmPositionRegistry
 
 if typing.TYPE_CHECKING:
     # We are lazily importing ragas to avoid import-time side effects such as applying the nest_asyncio patch, which is
@@ -75,7 +75,7 @@ class RAGEvaluator:
         from ragas import EvaluationDataset
         from ragas import SingleTurnSample
 
-        from nat.eval.intermediate_step_adapter import IntermediateStepAdapter
+        from nat.plugins.eval.intermediate_step_adapter import IntermediateStepAdapter
         event_filter = [IntermediateStepType.TOOL_END, IntermediateStepType.LLM_END, IntermediateStepType.CUSTOM_END]
         samples = []
 

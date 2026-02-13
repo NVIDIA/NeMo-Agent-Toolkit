@@ -70,8 +70,8 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from nat.data_models.finetuning import FinetuneConfig, TrajectoryBuilderConfig, TrajectoryCollection
-from nat.eval.config import EvaluationRunOutput
-from nat.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.plugins.eval.config import EvaluationRunOutput
+from nat.plugins.eval.evaluator.evaluator_model import EvalOutputItem
 
 
 class TrajectoryBuilder(ABC):
@@ -89,7 +89,7 @@ class TrajectoryBuilder(ABC):
     async def run_eval(self) -> EvaluationRunOutput:
         """Run NeMo Agent Toolkit Evaluation to generate episode items."""
         # Default implementation uses the evaluation system
-        from nat.eval.evaluate import EvaluationRun, EvaluationRunConfig
+        from nat.plugins.eval.evaluate import EvaluationRun, EvaluationRunConfig
         # ... runs evaluation and returns output
 
     @abstractmethod
@@ -326,7 +326,7 @@ from nat.data_models.finetuning import (
     TrainingJobStatus,
     TrajectoryCollection,
 )
-from nat.eval.config import EvaluationRunOutput
+from nat.plugins.eval.config import EvaluationRunOutput
 from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
 from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 

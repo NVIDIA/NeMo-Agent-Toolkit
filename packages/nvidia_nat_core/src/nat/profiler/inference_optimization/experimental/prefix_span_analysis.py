@@ -33,10 +33,10 @@ import numpy as np
 import pandas as pd
 
 from nat.data_models.intermediate_step import IntermediateStep
-from nat.profiler.inference_optimization.data_models import FrequentPattern
-from nat.profiler.inference_optimization.data_models import PrefixCallNode
-from nat.profiler.inference_optimization.data_models import PrefixSpanSubworkflowResult
-from nat.profiler.utils import create_standardized_dataframe
+from nat.plugins.eval.profiler.inference_optimization.data_models import FrequentPattern
+from nat.plugins.eval.profiler.inference_optimization.data_models import PrefixCallNode
+from nat.plugins.eval.profiler.inference_optimization.data_models import PrefixSpanSubworkflowResult
+from nat.plugins.eval.profiler.utils import create_standardized_dataframe
 
 logger = logging.getLogger(__name__)
 

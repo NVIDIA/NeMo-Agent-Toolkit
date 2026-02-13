@@ -25,10 +25,10 @@ from pydantic import BaseModel
 
 from nat.data_models.evaluate import ProfilerConfig
 from nat.data_models.intermediate_step import IntermediateStep
-from nat.profiler.data_models import ProfilerResults
-from nat.profiler.forecasting.model_trainer import ModelTrainer
-from nat.profiler.inference_metrics_model import InferenceMetricsModel
-from nat.profiler.utils import create_standardized_dataframe
+from nat.plugins.eval.profiler.data_models import ProfilerResults
+from nat.plugins.eval.profiler.forecasting.model_trainer import ModelTrainer
+from nat.plugins.eval.profiler.inference_metrics_model import InferenceMetricsModel
+from nat.plugins.eval.profiler.utils import create_standardized_dataframe
 from nat.utils.type_converter import TypeConverter
 
 logger = logging.getLogger(__name__)
@@ -89,23 +89,23 @@ class ProfilerRunner:
         and optionally fits a forecasting model.
         """
         # Yapf and ruff disagree on how to format long imports, disable yapf go with ruff
-        from nat.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import (
+        from nat.plugins.eval.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import (
             multi_example_call_profiling,
         )  # yapf: disable
-        from nat.profiler.inference_optimization.bottleneck_analysis.simple_stack_analysis import (
+        from nat.plugins.eval.profiler.inference_optimization.bottleneck_analysis.simple_stack_analysis import (
             profile_workflow_bottlenecks,
         )  # yapf: disable
-        from nat.profiler.inference_optimization.experimental.concurrency_spike_analysis import (
+        from nat.plugins.eval.profiler.inference_optimization.experimental.concurrency_spike_analysis import (
             concurrency_spike_analysis,
         )  # yapf: disable
-        from nat.profiler.inference_optimization.experimental.prefix_span_analysis import (
+        from nat.plugins.eval.profiler.inference_optimization.experimental.prefix_span_analysis import (
             prefixspan_subworkflow_with_text,
         )  # yapf: disable
-        from nat.profiler.inference_optimization.llm_metrics import LLMMetrics
-        from nat.profiler.inference_optimization.prompt_caching import get_common_prefixes
-        from nat.profiler.inference_optimization.token_uniqueness import compute_inter_query_token_uniqueness_by_llm
-        from nat.profiler.inference_optimization.workflow_runtimes import compute_workflow_runtime_metrics
-        from nat.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+        from nat.plugins.eval.profiler.inference_optimization.llm_metrics import LLMMetrics
+        from nat.plugins.eval.profiler.inference_optimization.prompt_caching import get_common_prefixes
+        from nat.plugins.eval.profiler.inference_optimization.token_uniqueness import compute_inter_query_token_uniqueness_by_llm
+        from nat.plugins.eval.profiler.inference_optimization.workflow_runtimes import compute_workflow_runtime_metrics
+        from nat.plugins.eval.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
         # Convert the incoming DataFrame to a list of dicts and store
         all_steps = [[IntermediatePropertyAdaptor.from_intermediate_step(step) for step in steps]
@@ -274,8 +274,8 @@ class ProfilerRunner:
             # ------------------------------------------------------------
             # Build and save prediction trie
             # ------------------------------------------------------------
-            from nat.profiler.prediction_trie import PredictionTrieBuilder
-            from nat.profiler.prediction_trie import save_prediction_trie
+            from nat.plugins.eval.profiler.prediction_trie import PredictionTrieBuilder
+            from nat.plugins.eval.profiler.prediction_trie import save_prediction_trie
 
             logger.info("Building prediction trie from traces...")
             trie_builder = PredictionTrieBuilder()

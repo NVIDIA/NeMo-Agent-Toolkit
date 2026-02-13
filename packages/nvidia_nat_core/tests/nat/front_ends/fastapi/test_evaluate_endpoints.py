@@ -61,9 +61,9 @@ async def patch_evaluation_run(register_test_workflow):
             return self
 
         async def run_and_evaluate(self, *args, **kwargs):
-            from nat.eval.config import EvaluationRunOutput
-            from nat.eval.evaluator.evaluator_model import EvalInput
-            from nat.profiler.data_models import ProfilerResults
+            from nat.plugins.eval.config import EvaluationRunOutput
+            from nat.plugins.eval.evaluator.evaluator_model import EvalInput
+            from nat.plugins.eval.profiler.data_models import ProfilerResults
             result = EvaluationRunOutput(workflow_output_file="/fake/output/path.json",
                                          evaluator_output_files=[],
                                          workflow_interrupted=False,
@@ -274,9 +274,9 @@ async def evaluate_item_client_fixture() -> TestClient:
     from unittest.mock import AsyncMock
 
     from nat.builder.evaluator import EvaluatorInfo
-    from nat.eval.evaluator.evaluator_model import EvalInput
-    from nat.eval.evaluator.evaluator_model import EvalOutput
-    from nat.eval.evaluator.evaluator_model import EvalOutputItem
+    from nat.plugins.eval.evaluator.evaluator_model import EvalInput
+    from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
+    from nat.plugins.eval.evaluator.evaluator_model import EvalOutputItem
 
     config = Config()
     config.general.front_end = FastApiFrontEndConfig(evaluate_item=FastApiFrontEndConfig.EndpointBase(

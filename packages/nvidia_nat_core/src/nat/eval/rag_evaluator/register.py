@@ -24,8 +24,8 @@ from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_evaluator
 from nat.data_models.evaluator import EvaluatorLLMConfig
-from nat.eval.evaluator.evaluator_model import EvalInput
-from nat.eval.evaluator.evaluator_model import EvalOutput
+from nat.plugins.eval.evaluator.evaluator_model import EvalInput
+from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
 logger = logging.getLogger(__name__)

@@ -15,7 +15,7 @@
 
 import math
 
-from nat.profiler.prediction_trie.data_models import PredictionMetrics
+from nat.plugins.eval.profiler.prediction_trie.data_models import PredictionMetrics
 
 
 class MetricsAccumulator:

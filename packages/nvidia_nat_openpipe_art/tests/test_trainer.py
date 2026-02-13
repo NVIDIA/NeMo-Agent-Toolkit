@@ -30,7 +30,7 @@ from nat.data_models.finetuning import TrainingJobStatus
 from nat.data_models.finetuning import TrainingStatusEnum
 from nat.data_models.finetuning import Trajectory
 from nat.data_models.finetuning import TrajectoryCollection
-from nat.eval.config import EvaluationRunOutput
+from nat.plugins.eval.config import EvaluationRunOutput
 from nat.plugins.openpipe.config import ARTTrainerConfig
 from nat.plugins.openpipe.trainer import ARTTrainer
 

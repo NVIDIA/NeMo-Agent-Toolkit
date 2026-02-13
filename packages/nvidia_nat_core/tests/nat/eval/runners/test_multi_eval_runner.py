@@ -20,14 +20,14 @@ from unittest.mock import patch
 
 import pytest
 
-from nat.eval.config import EvaluationRunConfig
-from nat.eval.evaluator.evaluator_model import EvalInput
-from nat.eval.evaluator.evaluator_model import EvalInputItem
-from nat.eval.evaluator.evaluator_model import EvalOutput
-from nat.eval.evaluator.evaluator_model import EvalOutputItem
-from nat.eval.runners.config import MultiEvaluationRunConfig
-from nat.eval.runners.multi_eval_runner import MultiEvaluationRunner
-from nat.profiler.data_models import ProfilerResults
+from nat.plugins.eval.config import EvaluationRunConfig
+from nat.plugins.eval.evaluator.evaluator_model import EvalInput
+from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
+from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
+from nat.plugins.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.plugins.eval.runners.config import MultiEvaluationRunConfig
+from nat.plugins.eval.runners.multi_eval_runner import MultiEvaluationRunner
+from nat.plugins.eval.profiler.data_models import ProfilerResults
 
 
 @pytest.fixture
@@ -55,7 +55,7 @@ def multi_eval_config(base_eval_run_config):
 @pytest.fixture
 def mock_evaluation_run_output():
     """Fixture for mock evaluation run output."""
-    from nat.eval.config import EvaluationRunOutput
+    from nat.plugins.eval.config import EvaluationRunOutput
 
     # Create simple mock objects for testing
     eval_item = EvalInputItem(id=1,

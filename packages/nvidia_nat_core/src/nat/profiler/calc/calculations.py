@@ -17,9 +17,9 @@ import logging
 
 import numpy as np
 
-from nat.profiler.calc.data_models import FitConfig
-from nat.profiler.calc.data_models import GPUEstimates
-from nat.profiler.calc.data_models import LinearFitResult
+from nat.plugins.eval.profiler.calc.data_models import FitConfig
+from nat.plugins.eval.profiler.calc.data_models import GPUEstimates
+from nat.plugins.eval.profiler.calc.data_models import LinearFitResult
 
 logger = logging.getLogger(__name__)
 

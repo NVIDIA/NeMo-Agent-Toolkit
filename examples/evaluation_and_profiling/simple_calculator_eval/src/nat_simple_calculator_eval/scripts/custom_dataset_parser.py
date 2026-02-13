@@ -16,8 +16,8 @@
 import json
 from pathlib import Path
 
-from nat.eval.evaluator.evaluator_model import EvalInput
-from nat.eval.evaluator.evaluator_model import EvalInputItem
+from nat.plugins.eval.evaluator.evaluator_model import EvalInput
+from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
 
 
 def extract_nested_questions(file_path: Path, difficulty: str | None = None, max_rows: int | None = None) -> EvalInput:

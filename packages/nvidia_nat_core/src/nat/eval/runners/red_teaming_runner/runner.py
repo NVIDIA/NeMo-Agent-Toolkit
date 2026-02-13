@@ -29,16 +29,16 @@ import yaml
 
 from nat.data_models.config import Config
 from nat.data_models.evaluate import EvalGeneralConfig
-from nat.eval.config import EvaluationRunConfig
-from nat.eval.config import EvaluationRunOutput
-from nat.eval.evaluator.evaluator_model import EvalOutput
-from nat.eval.red_teaming_evaluator.data_models import RedTeamingEvalOutputItem
-from nat.eval.red_teaming_evaluator.register import RedTeamingEvaluatorConfig
-from nat.eval.runners.config import MultiEvaluationRunConfig
-from nat.eval.runners.multi_eval_runner import MultiEvaluationRunner
-from nat.eval.runners.red_teaming_runner.config import RedTeamingRunnerConfig
-from nat.eval.runners.red_teaming_runner.config import RedTeamingScenario
-from nat.eval.runners.red_teaming_runner.report_utils import generate_and_save_report
+from nat.plugins.eval.config import EvaluationRunConfig
+from nat.plugins.eval.config import EvaluationRunOutput
+from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
+from nat.plugins.eval.red_teaming_evaluator.data_models import RedTeamingEvalOutputItem
+from nat.plugins.eval.red_teaming_evaluator.register import RedTeamingEvaluatorConfig
+from nat.plugins.eval.runners.config import MultiEvaluationRunConfig
+from nat.plugins.eval.runners.multi_eval_runner import MultiEvaluationRunner
+from nat.plugins.eval.runners.red_teaming_runner.config import RedTeamingRunnerConfig
+from nat.plugins.eval.runners.red_teaming_runner.config import RedTeamingScenario
+from nat.plugins.eval.runners.red_teaming_runner.report_utils import generate_and_save_report
 from nat.middleware.red_teaming.red_teaming_middleware_config import RedTeamingMiddlewareConfig
 from nat.utils.data_models.schema_validator import validate_schema
 

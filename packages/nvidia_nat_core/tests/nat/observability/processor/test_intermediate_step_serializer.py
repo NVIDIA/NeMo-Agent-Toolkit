@@ -27,7 +27,7 @@ from nat.data_models.intermediate_step import TraceMetadata
 from nat.data_models.intermediate_step import UsageInfo
 from nat.data_models.invocation_node import InvocationNode
 from nat.observability.processor.intermediate_step_serializer import IntermediateStepSerializer
-from nat.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
+from nat.plugins.eval.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
 
 
 def create_test_intermediate_step(parent_id="root",

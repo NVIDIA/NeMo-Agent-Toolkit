@@ -15,8 +15,8 @@
 
 from pydantic import BaseModel
 
-from nat.profiler.inference_metrics_model import InferenceMetricsModel
-from nat.profiler.inference_optimization.data_models import WorkflowRuntimeMetrics
+from nat.plugins.eval.profiler.inference_metrics_model import InferenceMetricsModel
+from nat.plugins.eval.profiler.inference_optimization.data_models import WorkflowRuntimeMetrics
 
 
 class ProfilerResults(BaseModel):

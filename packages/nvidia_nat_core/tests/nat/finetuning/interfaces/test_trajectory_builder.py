@@ -29,8 +29,8 @@ from nat.data_models.finetuning import RewardFunctionConfig
 from nat.data_models.finetuning import Trajectory
 from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.finetuning import TrajectoryCollection
-from nat.eval.config import EvaluationRunOutput
-from nat.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.plugins.eval.config import EvaluationRunOutput
+from nat.plugins.eval.evaluator.evaluator_model import EvalOutputItem
 from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 
 
@@ -184,7 +184,7 @@ class TestTrajectoryBuilder:
         assert builder.logged_progress[0]["metrics"] == metrics
         assert builder.logged_progress[0]["output_dir"] == "/tmp/logs"
 
-    @patch('nat.eval.evaluate.EvaluationRun')
+    @patch('nat.plugins.eval.evaluate.EvaluationRun')
     async def test_builder_run_eval(self, mock_eval_run, builder, finetune_config):
         """Test running evaluation."""
         await builder.initialize(finetune_config)

@@ -18,7 +18,7 @@ import pytest
 
 from nat.data_models.dataset_handler import EvalFilterConfig
 from nat.data_models.dataset_handler import EvalFilterEntryConfig
-from nat.eval.dataset_handler.dataset_filter import DatasetFilter
+from nat.plugins.eval.dataset_handler.dataset_filter import DatasetFilter
 
 
 @pytest.fixture

@@ -35,7 +35,7 @@ from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import TraceMetadata
 from nat.data_models.invocation_node import InvocationNode
 from nat.data_models.runtime_enum import RuntimeTypeEnum
-from nat.profiler.decorators.latency import LatencySensitivity
+from nat.plugins.eval.profiler.decorators.latency import LatencySensitivity
 from nat.runtime.user_metadata import RequestAttributes
 from nat.utils.reactive.subject import Subject
 

@@ -25,20 +25,20 @@ from pydantic import ValidationError
 from nat.plugins.eval.config import EvaluationRunConfig
 from nat.plugins.eval.runners.config import MultiEvaluationRunConfig
 from nat.plugins.eval.runners.multi_eval_runner import MultiEvaluationRunner
-from nat.profiler.calc.calculations import LinearFitResult
-from nat.profiler.calc.calculations import calc_gpu_estimate_based_on_slope
-from nat.profiler.calc.calculations import calc_gpu_estimate_for_single_concurrency
-from nat.profiler.calc.calculations import compute_slope
-from nat.profiler.calc.data_models import CalcAlerts
-from nat.profiler.calc.data_models import CalcData
-from nat.profiler.calc.data_models import CalcRunnerConfig
-from nat.profiler.calc.data_models import CalcRunnerOutput
-from nat.profiler.calc.data_models import FitConfig
-from nat.profiler.calc.data_models import FitResults
-from nat.profiler.calc.data_models import GPUEstimates
-from nat.profiler.calc.data_models import SizingMetricPerItem
-from nat.profiler.calc.data_models import SizingMetrics
-from nat.profiler.calc.data_models import SizingMetricsAlerts
+from nat.plugins.eval.profiler.calc.calculations import LinearFitResult
+from nat.plugins.eval.profiler.calc.calculations import calc_gpu_estimate_based_on_slope
+from nat.plugins.eval.profiler.calc.calculations import calc_gpu_estimate_for_single_concurrency
+from nat.plugins.eval.profiler.calc.calculations import compute_slope
+from nat.plugins.eval.profiler.calc.data_models import CalcAlerts
+from nat.plugins.eval.profiler.calc.data_models import CalcData
+from nat.plugins.eval.profiler.calc.data_models import CalcRunnerConfig
+from nat.plugins.eval.profiler.calc.data_models import CalcRunnerOutput
+from nat.plugins.eval.profiler.calc.data_models import FitConfig
+from nat.plugins.eval.profiler.calc.data_models import FitResults
+from nat.plugins.eval.profiler.calc.data_models import GPUEstimates
+from nat.plugins.eval.profiler.calc.data_models import SizingMetricPerItem
+from nat.plugins.eval.profiler.calc.data_models import SizingMetrics
+from nat.plugins.eval.profiler.calc.data_models import SizingMetricsAlerts
 
 logger = logging.getLogger(__name__)
 
@@ -416,7 +416,7 @@ class CalcRunner:
 
     def plot_concurrency_vs_time_metrics(self, output_dir: Path):
         """Plots concurrency vs. time metrics using pre-computed fits."""
-        from nat.profiler.calc.plot import plot_concurrency_vs_time_metrics as plot_metrics
+        from nat.plugins.eval.profiler.calc.plot import plot_concurrency_vs_time_metrics as plot_metrics
 
         # Only plot if we have valid metrics and at least one fit
         if not self.metrics_per_concurrency:

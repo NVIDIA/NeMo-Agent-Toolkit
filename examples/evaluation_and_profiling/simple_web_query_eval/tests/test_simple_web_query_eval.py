@@ -19,8 +19,8 @@ from pathlib import Path
 
 import pytest
 
-from nat.eval.evaluate import EvaluationRun
-from nat.eval.evaluate import EvaluationRunConfig
+from nat.plugins.eval.evaluate import EvaluationRun
+from nat.plugins.eval.evaluate import EvaluationRunConfig
 from nat.test.utils import locate_example_config
 from nat.test.utils import validate_workflow_output
 

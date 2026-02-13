@@ -15,7 +15,7 @@
 
 import pytest
 
-from nat.profiler.prediction_trie.metrics_accumulator import MetricsAccumulator
+from nat.plugins.eval.profiler.prediction_trie.metrics_accumulator import MetricsAccumulator
 
 
 def test_accumulator_add_single_sample():

@@ -27,7 +27,7 @@ Use cases:
 Example:
     Basic usage with enum::
 
-        from nat.profiler.decorators.latency import LatencySensitivity, latency_sensitive
+        from nat.plugins.eval.profiler.decorators.latency import LatencySensitivity, latency_sensitive
 
         @latency_sensitive(LatencySensitivity.HIGH)
         async def critical_llm_call():
@@ -148,7 +148,7 @@ def latency_sensitive(sensitivity: LatencySensitivity | str) -> Callable[[F], F]
         ValueError: If sensitivity is not a valid level
 
     Example:
-        >>> from nat.profiler.decorators.latency import latency_sensitive, LatencySensitivity
+        >>> from nat.plugins.eval.profiler.decorators.latency import latency_sensitive, LatencySensitivity
         >>> from nat.builder.context import Context
         >>>
         >>> @latency_sensitive(LatencySensitivity.HIGH)

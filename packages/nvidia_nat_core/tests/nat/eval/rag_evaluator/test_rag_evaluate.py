@@ -24,8 +24,8 @@ import pandas as pd
 import pytest
 from pydantic import BaseModel
 
-from nat.eval.evaluator.evaluator_model import EvalOutput
-from nat.eval.rag_evaluator.evaluate import RAGEvaluator
+from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
+from nat.plugins.eval.rag_evaluator.evaluate import RAGEvaluator
 
 if typing.TYPE_CHECKING:
     # We are lazily importing ragas to avoid import-time side effects such as applying the nest_asyncio patch, which is
@@ -228,7 +228,7 @@ async def test_rag_evaluate_success(rag_evaluator, rag_eval_input, ragas_judge_l
     Test evaluate function to verify the following functions are called
     1. rag_evaluator.eval_input_to_ragas
     2. ragas.evaluate
-    3. nat.eval.evaluator.rag_evaluator.ragas_to_eval_output
+    3. nat.plugins.eval.evaluator.rag_evaluator.ragas_to_eval_output
 
     Only limited coverage is possible via unit tests as most of the functionality is
     implemented within the ragas framework. The simple example's end-to-end test covers functional

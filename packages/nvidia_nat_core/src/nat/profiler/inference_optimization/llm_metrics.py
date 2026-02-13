@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 
 from nat.data_models.intermediate_step import IntermediateStep
-from nat.profiler.utils import create_standardized_dataframe
+from nat.plugins.eval.profiler.utils import create_standardized_dataframe
 
 
 class LLMMetrics:

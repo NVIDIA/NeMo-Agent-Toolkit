@@ -41,13 +41,13 @@ from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
-from nat.eval.evaluate import EvaluationRun
-from nat.eval.evaluate import EvaluationRunConfig
-from nat.eval.evaluator.evaluator_model import EvalInput
-from nat.eval.evaluator.evaluator_model import EvalInputItem
-from nat.eval.evaluator.evaluator_model import EvalOutput
-from nat.eval.evaluator.evaluator_model import EvalOutputItem
-from nat.profiler.data_models import ProfilerResults
+from nat.plugins.eval.evaluate import EvaluationRun
+from nat.plugins.eval.evaluate import EvaluationRunConfig
+from nat.plugins.eval.evaluator.evaluator_model import EvalInput
+from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
+from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
+from nat.plugins.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.plugins.eval.profiler.data_models import ProfilerResults
 from nat.runtime.session import SessionManager
 
 # pylint: disable=unused-argument # arguments are passed to setup the fixtures
@@ -443,7 +443,7 @@ async def test_run_workflow_local_cancels_pending_intermediate(evaluation_run, e
 
     with patch("nat.builder.runtime_event_subscriber.pull_intermediate",
                AsyncMock(return_value=intermediate_source)) as mock_pull_intermediate, \
-         patch("nat.eval.evaluate.asyncio.ensure_future", side_effect=ensure_future_stub) as mock_ensure_future:
+         patch("nat.plugins.eval.evaluate.asyncio.ensure_future", side_effect=ensure_future_stub) as mock_ensure_future:
         await evaluation_run.run_workflow_local(session_manager)
 
     assert evaluation_run.workflow_interrupted, "Expected workflow_interrupted to be True after failure"
@@ -458,7 +458,7 @@ async def test_run_workflow_remote_success(evaluation_run, generated_answer):
     Mock RemoteWorkflowHandler and test evaluation with a remote workflow.
     """
     # Patch the remote handler
-    with patch("nat.eval.remote_workflow.EvaluationRemoteWorkflowHandler") as mock_handler:
+    with patch("nat.plugins.eval.remote_workflow.EvaluationRemoteWorkflowHandler") as mock_handler:
         handler_instance = mock_handler.return_value
 
         async def fake_run_workflow_remote(eval_input):
@@ -535,7 +535,7 @@ async def test_run_evaluators_partial_failure(evaluation_run, mock_evaluator, ev
     evaluators = {good_evaluator_name: mock_evaluator, bad_evaluator_name: mock_failing_evaluator}
 
     # Patch logger to check error logging
-    with patch("nat.eval.evaluate.logger.exception") as mock_logger:
+    with patch("nat.plugins.eval.evaluate.logger.exception") as mock_logger:
         # Run the evaluators (actual function)
         await evaluation_run.run_evaluators(evaluators)
 
@@ -586,7 +586,7 @@ def test_write_output(evaluation_run, default_eval_config, eval_input, eval_outp
     # Patch file operations and logging. It is important to keep logs frozen to match user expectations.
     with patch("builtins.open", mock_open()) as mock_file, \
          patch("pathlib.Path.mkdir") as mock_mkdir, \
-         patch("nat.eval.evaluate.logger.info") as mock_logger:
+         patch("nat.plugins.eval.evaluate.logger.info") as mock_logger:
 
         # Run the actual function
         evaluation_run.write_output(mock_dataset_handler, mock_profiler_results)
@@ -622,7 +622,7 @@ def test_write_output_handles_none_output(evaluation_run, eval_input):
     # Patch file operations and logging
     with patch("builtins.open", mock_open()), \
          patch("pathlib.Path.mkdir"), \
-         patch("nat.eval.evaluate.logger.info"):
+         patch("nat.plugins.eval.evaluate.logger.info"):
         # Should not raise AttributeError
         try:
             evaluation_run.write_output(mock_dataset_handler, mock_profiler_results)
@@ -653,7 +653,7 @@ eval:
     evaluation_run.effective_config = mock_effective_config
 
     # Run the function
-    with patch("nat.eval.evaluate.logger.info") as mock_logger:
+    with patch("nat.plugins.eval.evaluate.logger.info") as mock_logger:
         evaluation_run.write_configuration()
 
     # Verify that all three files were created
@@ -691,7 +691,7 @@ def test_write_configuration_with_basemodel_config(evaluation_run, default_eval_
     evaluation_run.effective_config = mock_config
 
     # Run the function
-    with patch("nat.eval.evaluate.logger.info"):
+    with patch("nat.plugins.eval.evaluate.logger.info"):
         evaluation_run.write_configuration()
 
     # Verify that all three files were created
@@ -723,8 +723,8 @@ def test_write_configuration_handles_missing_effective_config(evaluation_run, de
     evaluation_run.effective_config = None  # This is the key test condition
 
     # Run the function - it should not crash
-    with patch("nat.eval.evaluate.logger.info"), \
-         patch("nat.eval.evaluate.logger.warning") as mock_warning:
+    with patch("nat.plugins.eval.evaluate.logger.info"), \
+         patch("nat.plugins.eval.evaluate.logger.warning") as mock_warning:
         evaluation_run.write_configuration()
 
     # Verify warning was logged
@@ -778,10 +778,10 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
     # check if run_custom_scripts and upload_directory are called
     # Patch functions and classes. Goal here is simply to ensure calls are made to the right functions.
     with patch("nat.runtime.loader.load_config", mock_load_config), \
-         patch("nat.builder.eval_builder.WorkflowEvalBuilder.from_config", side_effect=mock_eval_builder), \
-         patch("nat.eval.evaluate.DatasetHandler", return_value=mock_dataset_handler), \
-         patch("nat.eval.evaluate.OutputUploader", return_value=mock_uploader), \
-         patch("nat.eval.evaluate.EvaluationRunOutput", return_value=MagicMock()) as mock_eval_run_output, \
+         patch("nat.plugins.eval.builder.WorkflowEvalBuilder.from_config", side_effect=mock_eval_builder), \
+         patch("nat.plugins.eval.evaluate.DatasetHandler", return_value=mock_dataset_handler), \
+         patch("nat.plugins.eval.evaluate.OutputUploader", return_value=mock_uploader), \
+         patch("nat.plugins.eval.evaluate.EvaluationRunOutput", return_value=MagicMock()) as mock_eval_run_output, \
          patch.object(evaluation_run, "run_workflow_local",
                       wraps=evaluation_run.run_workflow_local) as mock_run_workflow, \
          patch.object(evaluation_run, "run_evaluators", AsyncMock()) as mock_run_evaluators, \

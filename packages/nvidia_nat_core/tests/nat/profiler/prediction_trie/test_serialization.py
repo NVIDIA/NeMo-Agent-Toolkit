@@ -19,11 +19,11 @@ from pathlib import Path
 
 import pytest
 
-from nat.profiler.prediction_trie.data_models import LLMCallPrediction
-from nat.profiler.prediction_trie.data_models import PredictionMetrics
-from nat.profiler.prediction_trie.data_models import PredictionTrieNode
-from nat.profiler.prediction_trie.serialization import load_prediction_trie
-from nat.profiler.prediction_trie.serialization import save_prediction_trie
+from nat.plugins.eval.profiler.prediction_trie.data_models import LLMCallPrediction
+from nat.plugins.eval.profiler.prediction_trie.data_models import PredictionMetrics
+from nat.plugins.eval.profiler.prediction_trie.data_models import PredictionTrieNode
+from nat.plugins.eval.profiler.prediction_trie.serialization import load_prediction_trie
+from nat.plugins.eval.profiler.prediction_trie.serialization import save_prediction_trie
 
 
 @pytest.fixture(name="sample_trie")

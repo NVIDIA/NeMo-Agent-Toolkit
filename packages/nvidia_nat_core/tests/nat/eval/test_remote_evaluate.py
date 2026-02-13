@@ -23,9 +23,9 @@ from aiohttp.test_utils import TestClient
 from aiohttp.test_utils import TestServer
 
 from nat.data_models.api_server import ResponseIntermediateStep
-from nat.eval.config import EndpointRetryConfig
-from nat.eval.config import EvaluationRunConfig
-from nat.eval.remote_workflow import EvaluationRemoteWorkflowHandler
+from nat.plugins.eval.config import EndpointRetryConfig
+from nat.plugins.eval.config import EvaluationRunConfig
+from nat.plugins.eval.remote_workflow import EvaluationRemoteWorkflowHandler
 
 
 @pytest.fixture

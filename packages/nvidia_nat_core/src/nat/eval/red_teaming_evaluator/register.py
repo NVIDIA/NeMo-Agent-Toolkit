@@ -21,8 +21,8 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_evaluator
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.evaluator import EvaluatorBaseConfig
-from nat.eval.red_teaming_evaluator.evaluate import ReductionStrategy
-from nat.eval.red_teaming_evaluator.filter_conditions import IntermediateStepsFilterCondition
+from nat.plugins.eval.red_teaming_evaluator.evaluate import ReductionStrategy
+from nat.plugins.eval.red_teaming_evaluator.filter_conditions import IntermediateStepsFilterCondition
 
 
 class RedTeamingEvaluatorConfig(EvaluatorBaseConfig, name="red_teaming_evaluator"):

@@ -17,7 +17,7 @@ import logging
 from datetime import UTC
 from datetime import datetime
 
-from nat.eval.evaluator.evaluator_model import EvalInputItem
+from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
 
 logger = logging.getLogger(__name__)
 

@@ -14,10 +14,10 @@
 # limitations under the License.
 
 from nat.data_models.intermediate_step import IntermediateStep
-from nat.profiler.inference_optimization.data_models import CommonPrefixesOutput
-from nat.profiler.inference_optimization.data_models import FrameworkLLMPrefixData
-from nat.profiler.inference_optimization.data_models import PrefixInfo
-from nat.profiler.utils import create_standardized_dataframe
+from nat.plugins.eval.profiler.inference_optimization.data_models import CommonPrefixesOutput
+from nat.plugins.eval.profiler.inference_optimization.data_models import FrameworkLLMPrefixData
+from nat.plugins.eval.profiler.inference_optimization.data_models import PrefixInfo
+from nat.plugins.eval.profiler.utils import create_standardized_dataframe
 
 
 # -----------------------------------------------------------

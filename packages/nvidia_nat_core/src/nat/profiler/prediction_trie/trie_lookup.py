@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nat.profiler.prediction_trie.data_models import LLMCallPrediction
-from nat.profiler.prediction_trie.data_models import PredictionTrieNode
+from nat.plugins.eval.profiler.prediction_trie.data_models import LLMCallPrediction
+from nat.plugins.eval.profiler.prediction_trie.data_models import PredictionTrieNode
 
 
 class PredictionTrieLookup:

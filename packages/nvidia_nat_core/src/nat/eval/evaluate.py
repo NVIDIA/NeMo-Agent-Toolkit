@@ -31,19 +31,19 @@ from tqdm import tqdm
 from nat.data_models.config import Config
 from nat.data_models.evaluate import EvalConfig
 from nat.data_models.evaluate import JobEvictionPolicy
-from nat.eval.config import EvaluationRunConfig
-from nat.eval.config import EvaluationRunOutput
-from nat.eval.dataset_handler.dataset_handler import DatasetHandler
-from nat.eval.evaluator.evaluator_model import EvalInput
-from nat.eval.evaluator.evaluator_model import EvalInputItem
-from nat.eval.evaluator.evaluator_model import EvalOutput
-from nat.eval.llm_validator import validate_llm_endpoints
-from nat.eval.usage_stats import UsageStats
-from nat.eval.usage_stats import UsageStatsItem
-from nat.eval.usage_stats import UsageStatsLLM
-from nat.eval.utils.output_uploader import OutputUploader
-from nat.eval.utils.weave_eval import WeaveEvaluationIntegration
-from nat.profiler.data_models import ProfilerResults
+from nat.plugins.eval.config import EvaluationRunConfig
+from nat.plugins.eval.config import EvaluationRunOutput
+from nat.plugins.eval.dataset_handler.dataset_handler import DatasetHandler
+from nat.plugins.eval.evaluator.evaluator_model import EvalInput
+from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
+from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
+from nat.plugins.eval.llm_validator import validate_llm_endpoints
+from nat.plugins.eval.usage_stats import UsageStats
+from nat.plugins.eval.usage_stats import UsageStatsItem
+from nat.plugins.eval.usage_stats import UsageStatsLLM
+from nat.plugins.eval.utils.output_uploader import OutputUploader
+from nat.plugins.eval.utils.weave_eval import WeaveEvaluationIntegration
+from nat.plugins.eval.profiler.data_models import ProfilerResults
 from nat.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
@@ -62,7 +62,7 @@ class EvaluationRun:
         """
         Initialize an EvaluationRun with configuration.
         """
-        from nat.eval.intermediate_step_adapter import IntermediateStepAdapter
+        from nat.plugins.eval.intermediate_step_adapter import IntermediateStepAdapter
 
         # Run-specific configuration
         self.config: EvaluationRunConfig = config
@@ -74,7 +74,7 @@ class EvaluationRun:
 
         # Create evaluation trace context
         try:
-            from nat.eval.utils.eval_trace_ctx import WeaveEvalTraceContext
+            from nat.plugins.eval.utils.eval_trace_ctx import WeaveEvalTraceContext
             with warnings.catch_warnings():
                 # Ignore deprecation warnings being triggered by weave. https://github.com/wandb/weave/issues/3666
                 warnings.filterwarnings("ignore",
@@ -83,7 +83,7 @@ class EvaluationRun:
 
                 self.eval_trace_context = WeaveEvalTraceContext()
         except Exception:
-            from nat.eval.utils.eval_trace_ctx import EvalTraceContext
+            from nat.plugins.eval.utils.eval_trace_ctx import EvalTraceContext
             self.eval_trace_context = EvalTraceContext()
 
         self.weave_eval: WeaveEvaluationIntegration = WeaveEvaluationIntegration(self.eval_trace_context)
@@ -111,7 +111,7 @@ class EvaluationRun:
     def _compute_usage_stats(self, item: EvalInputItem):
         """Compute usage stats for a single item using the intermediate steps"""
         # get the prompt and completion tokens from the intermediate steps
-        from nat.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+        from nat.plugins.eval.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
         steps = [IntermediatePropertyAdaptor.from_intermediate_step(step) for step in item.trajectory]
         usage_stats_per_llm = {}
         total_tokens = 0
@@ -266,7 +266,7 @@ class EvaluationRun:
         pbar.close()
 
     async def run_workflow_remote(self):
-        from nat.eval.remote_workflow import EvaluationRemoteWorkflowHandler
+        from nat.plugins.eval.remote_workflow import EvaluationRemoteWorkflowHandler
         handler = EvaluationRemoteWorkflowHandler(self.config, self.eval_config.general.max_concurrency)
         await handler.run_workflow_remote(self.eval_input)
         for item in self.eval_input.eval_input_items:
@@ -283,7 +283,7 @@ class EvaluationRun:
             logger.info("Profiler is not enabled. Skipping profiling.")
             return ProfilerResults()
 
-        from nat.profiler.profile_runner import ProfilerRunner
+        from nat.plugins.eval.profiler.profile_runner import ProfilerRunner
 
         all_stats = []
         for input_item in self.eval_input.eval_input_items:
@@ -567,7 +567,7 @@ class EvaluationRun:
         """
         logger.info("Starting evaluation run with config file: %s", self.config.config_file)
 
-        from nat.builder.eval_builder import WorkflowEvalBuilder
+        from nat.plugins.eval.builder import WorkflowEvalBuilder
         from nat.runtime.loader import load_config
 
         # Load and override the config

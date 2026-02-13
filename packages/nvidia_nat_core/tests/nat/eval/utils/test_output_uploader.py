@@ -21,7 +21,7 @@ import pytest
 from nat.data_models.dataset_handler import EvalS3Config
 from nat.data_models.evaluate import EvalCustomScriptConfig
 from nat.data_models.evaluate import EvalOutputConfig
-from nat.eval.utils.output_uploader import OutputUploader
+from nat.plugins.eval.utils.output_uploader import OutputUploader
 
 
 @pytest.fixture

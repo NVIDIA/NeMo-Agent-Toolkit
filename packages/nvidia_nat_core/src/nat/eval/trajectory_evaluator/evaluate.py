@@ -19,9 +19,9 @@ from langchain_classic.evaluation import TrajectoryEvalChain
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
 
-from nat.eval.evaluator.base_evaluator import BaseEvaluator
-from nat.eval.evaluator.evaluator_model import EvalInputItem
-from nat.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.plugins.eval.evaluator.base_evaluator import BaseEvaluator
+from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
+from nat.plugins.eval.evaluator.evaluator_model import EvalOutputItem
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ class TrajectoryEvaluator(BaseEvaluator):
         Evaluate a single EvalInputItem and return an EvalOutputItem.
         """
         from nat.data_models.intermediate_step import IntermediateStepType
-        from nat.eval.intermediate_step_adapter import IntermediateStepAdapter
+        from nat.plugins.eval.intermediate_step_adapter import IntermediateStepAdapter
 
         intermediate_step_adapter = IntermediateStepAdapter()
         event_filter = [IntermediateStepType.LLM_END, IntermediateStepType.TOOL_END]

@@ -18,9 +18,9 @@ import re
 import numpy as np
 
 from nat.data_models.intermediate_step import IntermediateStep
-from nat.profiler.inference_optimization.data_models import LLMUniquenessMetrics
-from nat.profiler.inference_optimization.data_models import LLMUniquenessMetricsByLLM
-from nat.profiler.utils import create_standardized_dataframe
+from nat.plugins.eval.profiler.inference_optimization.data_models import LLMUniquenessMetrics
+from nat.plugins.eval.profiler.inference_optimization.data_models import LLMUniquenessMetricsByLLM
+from nat.plugins.eval.profiler.utils import create_standardized_dataframe
 
 
 # ----------------------------------------------------------------

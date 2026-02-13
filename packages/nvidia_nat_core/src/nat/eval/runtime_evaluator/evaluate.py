@@ -19,10 +19,10 @@ from collections import defaultdict
 from dataclasses import dataclass
 
 from nat.data_models.intermediate_step import IntermediateStepType
-from nat.eval.evaluator.base_evaluator import BaseEvaluator
-from nat.eval.evaluator.evaluator_model import EvalInputItem
-from nat.eval.evaluator.evaluator_model import EvalOutputItem
-from nat.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+from nat.plugins.eval.evaluator.base_evaluator import BaseEvaluator
+from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
+from nat.plugins.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.plugins.eval.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
 
 @dataclass

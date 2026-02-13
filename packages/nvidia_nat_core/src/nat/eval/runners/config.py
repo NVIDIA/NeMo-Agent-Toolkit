@@ -17,8 +17,8 @@ import typing
 
 from pydantic import BaseModel
 
-from nat.eval.config import EvaluationRunConfig
-from nat.eval.config import EvaluationRunOutput
+from nat.plugins.eval.config import EvaluationRunConfig
+from nat.plugins.eval.config import EvaluationRunOutput
 
 
 class MultiEvaluationRunConfig(BaseModel):

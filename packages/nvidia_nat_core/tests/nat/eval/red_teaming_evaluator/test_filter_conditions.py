@@ -20,7 +20,7 @@ from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
-from nat.eval.red_teaming_evaluator.filter_conditions import IntermediateStepsFilterCondition
+from nat.plugins.eval.red_teaming_evaluator.filter_conditions import IntermediateStepsFilterCondition
 
 
 @pytest.fixture(name="create_intermediate_step")

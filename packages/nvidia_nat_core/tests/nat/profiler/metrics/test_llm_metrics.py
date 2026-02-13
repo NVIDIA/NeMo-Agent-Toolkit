@@ -23,9 +23,9 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import UsageInfo
 from nat.data_models.invocation_node import InvocationNode
-from nat.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
-from nat.profiler.inference_optimization.llm_metrics import LLMMetrics
-from nat.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+from nat.plugins.eval.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
+from nat.plugins.eval.profiler.inference_optimization.llm_metrics import LLMMetrics
+from nat.plugins.eval.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
 
 @pytest.fixture(name="sample_dataframe")

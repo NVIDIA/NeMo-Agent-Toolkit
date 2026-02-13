@@ -30,7 +30,7 @@ from nat.data_models.discovery_metadata import DiscoveryMetadata
 
 def test_builtin_dataset_loaders_registered():
     """Verify all 6 built-in dataset types are registered in the TypeRegistry."""
-    import nat.eval.dataset_loader.register  # noqa: F401
+    import nat.plugins.eval.dataset_loader.register  # noqa: F401
 
     registry = GlobalTypeRegistry.get()
 
@@ -49,7 +49,7 @@ def test_builtin_dataset_loaders_registered():
 
 def test_compute_annotation_for_dataset_base():
     """Verify compute_annotation returns a valid union type for datasets."""
-    import nat.eval.dataset_loader.register  # noqa: F401
+    import nat.plugins.eval.dataset_loader.register  # noqa: F401
 
     registry = GlobalTypeRegistry.get()
     annotation = registry.compute_annotation(EvalDatasetBaseConfig)
@@ -58,7 +58,7 @@ def test_compute_annotation_for_dataset_base():
 
 def test_yaml_backward_compat_csv():
     """Verify _type: csv in YAML still parses to EvalDatasetCsvConfig."""
-    import nat.eval.dataset_loader.register  # noqa: F401
+    import nat.plugins.eval.dataset_loader.register  # noqa: F401
     from nat.data_models.evaluate import EvalConfig
     from nat.data_models.evaluate import EvalGeneralConfig
 
@@ -70,7 +70,7 @@ def test_yaml_backward_compat_csv():
 
 def test_yaml_backward_compat_json():
     """Verify _type: json in YAML still parses to EvalDatasetJsonConfig."""
-    import nat.eval.dataset_loader.register  # noqa: F401
+    import nat.plugins.eval.dataset_loader.register  # noqa: F401
     from nat.data_models.evaluate import EvalConfig
     from nat.data_models.evaluate import EvalGeneralConfig
 

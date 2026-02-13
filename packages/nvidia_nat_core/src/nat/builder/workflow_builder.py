@@ -88,8 +88,8 @@ from nat.middleware.function_middleware import FunctionMiddleware
 from nat.middleware.middleware import Middleware
 from nat.object_store.interfaces import ObjectStore
 from nat.observability.exporter.base_exporter import BaseExporter
-from nat.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
-from nat.profiler.utils import detect_llm_frameworks_in_build_fn
+from nat.plugins.eval.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
+from nat.plugins.eval.profiler.utils import detect_llm_frameworks_in_build_fn
 from nat.utils.type_utils import override
 
 logger = logging.getLogger(__name__)

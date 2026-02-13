@@ -29,8 +29,8 @@ from nat.data_models.optimizable import SearchSpace
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerMetric
 from nat.data_models.optimizer import OptimizerRunConfig
-from nat.profiler.parameter_optimization.prompt_optimizer import PromptOptimizerInputSchema
-from nat.profiler.parameter_optimization.prompt_optimizer import optimize_prompts
+from nat.parameter_optimization.prompt_optimizer import PromptOptimizerInputSchema
+from nat.parameter_optimization.prompt_optimizer import optimize_prompts
 
 # Module-level tracking for oracle feedback verification in tests
 oracle_feedback_received: dict[str, typing.Any] = {"count": 0, "values": []}
@@ -158,9 +158,9 @@ async def test_optimize_prompts_happy_path_with_recombine(tmp_path: Path):
         _ = (cfg, prompts)
         return Config()
 
-    with patch("nat.profiler.parameter_optimization.prompt_optimizer.EvaluationRun",
+    with patch("nat.parameter_optimization.prompt_optimizer.EvaluationRun",
                _EvalRun), \
-         patch("nat.profiler.parameter_optimization.prompt_optimizer.apply_suggestions",
+         patch("nat.parameter_optimization.prompt_optimizer.apply_suggestions",
                side_effect=fake_apply_suggestions):
 
         await optimize_prompts(base_cfg=base_cfg,
@@ -213,9 +213,9 @@ async def test_optimize_prompts_happy_path_without_recombine(tmp_path: Path):
         _ = (cfg, prompts)
         return Config()
 
-    with patch("nat.profiler.parameter_optimization.prompt_optimizer.EvaluationRun",
+    with patch("nat.parameter_optimization.prompt_optimizer.EvaluationRun",
                _EvalRun), \
-         patch("nat.profiler.parameter_optimization.prompt_optimizer.apply_suggestions",
+         patch("nat.parameter_optimization.prompt_optimizer.apply_suggestions",
                side_effect=fake_apply_suggestions):
 
         await optimize_prompts(base_cfg=base_cfg,
@@ -262,8 +262,8 @@ async def test_optimize_prompts_with_oracle_feedback(tmp_path: Path):
             self.config = config
 
         async def run_and_evaluate(self):
-            from nat.eval.evaluator.evaluator_model import EvalOutput
-            from nat.eval.evaluator.evaluator_model import EvalOutputItem
+            from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
+            from nat.plugins.eval.evaluator.evaluator_model import EvalOutputItem
 
             items = [
                 EvalOutputItem(id=1, score=0.2, reasoning="Failed to greet properly"),
@@ -276,8 +276,8 @@ async def test_optimize_prompts_with_oracle_feedback(tmp_path: Path):
         _ = (cfg, prompts)
         return Config()
 
-    with patch("nat.profiler.parameter_optimization.prompt_optimizer.EvaluationRun", _EvalRun), \
-         patch("nat.profiler.parameter_optimization.prompt_optimizer.apply_suggestions",
+    with patch("nat.parameter_optimization.prompt_optimizer.EvaluationRun", _EvalRun), \
+         patch("nat.parameter_optimization.prompt_optimizer.apply_suggestions",
                side_effect=fake_apply_suggestions):
 
         await optimize_prompts(

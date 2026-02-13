@@ -34,7 +34,7 @@ from nat.data_models.span import MimeTypes
 from nat.data_models.span import Span
 from nat.data_models.span import SpanAttributes
 from nat.observability.exporter.span_exporter import SpanExporter
-from nat.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
+from nat.plugins.eval.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
 
 
 def create_test_intermediate_step(parent_id="root",

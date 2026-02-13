@@ -21,9 +21,9 @@ from dataclasses import field
 
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepType
-from nat.profiler.prediction_trie.data_models import LLMCallPrediction
-from nat.profiler.prediction_trie.data_models import PredictionTrieNode
-from nat.profiler.prediction_trie.metrics_accumulator import MetricsAccumulator
+from nat.plugins.eval.profiler.prediction_trie.data_models import LLMCallPrediction
+from nat.plugins.eval.profiler.prediction_trie.data_models import PredictionTrieNode
+from nat.plugins.eval.profiler.prediction_trie.metrics_accumulator import MetricsAccumulator
 
 
 @dataclass

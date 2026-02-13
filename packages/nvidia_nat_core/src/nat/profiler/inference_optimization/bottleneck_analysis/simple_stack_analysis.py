@@ -29,9 +29,9 @@ import numpy as np
 import pandas as pd
 
 from nat.data_models.intermediate_step import IntermediateStep
-from nat.profiler.inference_optimization.data_models import SimpleBottleneckReport
-from nat.profiler.inference_optimization.data_models import SimpleOperationStats
-from nat.profiler.utils import create_standardized_dataframe
+from nat.plugins.eval.profiler.inference_optimization.data_models import SimpleBottleneckReport
+from nat.plugins.eval.profiler.inference_optimization.data_models import SimpleOperationStats
+from nat.plugins.eval.profiler.utils import create_standardized_dataframe
 
 
 # ----------------------------------------------------------------------

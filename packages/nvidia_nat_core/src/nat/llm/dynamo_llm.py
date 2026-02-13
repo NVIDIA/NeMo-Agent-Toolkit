@@ -81,7 +81,7 @@ from typing import Literal
 import httpx
 
 if TYPE_CHECKING:
-    from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
+    from nat.plugins.eval.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
 
 from pydantic import Field
 from pydantic import field_validator

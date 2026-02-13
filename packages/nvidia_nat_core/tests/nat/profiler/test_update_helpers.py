@@ -15,8 +15,8 @@
 
 from pydantic import BaseModel
 
-from nat.profiler.parameter_optimization.update_helpers import apply_suggestions
-from nat.profiler.parameter_optimization.update_helpers import nest_updates
+from nat.parameter_optimization.update_helpers import apply_suggestions
+from nat.parameter_optimization.update_helpers import nest_updates
 
 
 def test_nest_updates_merges_nested_keys():

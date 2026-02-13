@@ -27,7 +27,7 @@ from pydantic import model_validator
 
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.invocation_node import InvocationNode
-from nat.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
+from nat.plugins.eval.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
 
 
 class IntermediateStepCategory(StrEnum):

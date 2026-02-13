@@ -18,8 +18,8 @@ from unittest.mock import patch
 
 import pytest
 
-from nat.eval.utils.eval_trace_ctx import EvalTraceContext
-from nat.eval.utils.eval_trace_ctx import WeaveEvalTraceContext
+from nat.plugins.eval.utils.eval_trace_ctx import EvalTraceContext
+from nat.plugins.eval.utils.eval_trace_ctx import WeaveEvalTraceContext
 
 
 @pytest.fixture

@@ -35,11 +35,11 @@ import numpy as np
 import pandas as pd
 
 from nat.data_models.intermediate_step import IntermediateStep
-from nat.profiler.inference_optimization.data_models import ConcurrencyAnalysisResult
-from nat.profiler.inference_optimization.data_models import ConcurrencyCallNode
-from nat.profiler.inference_optimization.data_models import ConcurrencyCorrelationStats
-from nat.profiler.inference_optimization.data_models import ConcurrencySpikeInfo
-from nat.profiler.utils import create_standardized_dataframe
+from nat.plugins.eval.profiler.inference_optimization.data_models import ConcurrencyAnalysisResult
+from nat.plugins.eval.profiler.inference_optimization.data_models import ConcurrencyCallNode
+from nat.plugins.eval.profiler.inference_optimization.data_models import ConcurrencyCorrelationStats
+from nat.plugins.eval.profiler.inference_optimization.data_models import ConcurrencySpikeInfo
+from nat.plugins.eval.profiler.utils import create_standardized_dataframe
 
 # --------------------------------------------------------------------------------
 # 1) Building the Per-Example Call Trees
