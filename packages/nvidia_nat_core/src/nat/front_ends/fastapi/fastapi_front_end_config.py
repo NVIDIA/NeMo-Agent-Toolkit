@@ -25,10 +25,10 @@ from pydantic import Field
 from pydantic import field_validator
 
 from nat.data_models.component_ref import ObjectStoreRef
+from nat.data_models.evaluator import EvalInputItem
+from nat.data_models.evaluator import EvalOutputItem
 from nat.data_models.front_end import FrontEndBaseConfig
 from nat.data_models.step_adaptor import StepAdaptorConfig
-from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
-from nat.plugins.eval.evaluator.evaluator_model import EvalOutputItem
 
 logger = logging.getLogger(__name__)
 

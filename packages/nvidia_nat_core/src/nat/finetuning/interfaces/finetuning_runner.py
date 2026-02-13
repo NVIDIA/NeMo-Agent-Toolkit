@@ -18,13 +18,13 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Any
 
+from nat.data_models.evaluate import EvaluationRunOutput
 from nat.data_models.finetuning import FinetuneConfig
 from nat.data_models.finetuning import FinetuneRunConfig
 from nat.data_models.finetuning import TrainerConfig
 from nat.data_models.finetuning import TrainingJobRef
 from nat.data_models.finetuning import TrainingJobStatus
 from nat.data_models.finetuning import TrajectoryCollection
-from nat.plugins.eval.config import EvaluationRunOutput
 from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
 from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 

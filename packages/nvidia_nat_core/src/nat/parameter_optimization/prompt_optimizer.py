@@ -28,8 +28,6 @@ from nat.data_models.config import Config
 from nat.data_models.optimizable import SearchSpace
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerRunConfig
-from nat.plugins.eval.evaluate import EvaluationRun
-from nat.plugins.eval.evaluate import EvaluationRunConfig
 from nat.experimental.decorators.experimental_warning_decorator import experimental
 from nat.parameter_optimization.oracle_feedback import build_oracle_feedback
 from nat.parameter_optimization.oracle_feedback import check_adaptive_triggers
@@ -38,6 +36,18 @@ from nat.parameter_optimization.oracle_feedback import should_inject_feedback
 from nat.parameter_optimization.update_helpers import apply_suggestions
 
 logger = logging.getLogger(__name__)
+
+
+def _require_eval_runtime():
+    try:
+        from nat.plugins.eval.evaluate import EvaluationRun
+        from nat.plugins.eval.evaluate import EvaluationRunConfig
+    except ImportError as exc:
+        raise RuntimeError(
+            "The `nat optimize` command requires evaluation support from `nvidia-nat-eval`. "
+            "Install it with `uv pip install nvidia-nat-eval` (or `pip install nvidia-nat-eval`)."
+        ) from exc
+    return EvaluationRun, EvaluationRunConfig
 
 
 class PromptOptimizerInputSchema(BaseModel):
@@ -54,6 +64,7 @@ async def optimize_prompts(
     optimizer_config: OptimizerConfig,
     opt_run_config: OptimizerRunConfig,
 ) -> None:
+    EvaluationRun, EvaluationRunConfig = _require_eval_runtime()
 
     # ------------- helpers ------------- #
     @dataclass

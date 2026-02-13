@@ -17,11 +17,11 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Any
 
+from nat.data_models.evaluate import EvaluationRunOutput
+from nat.data_models.evaluator import EvalOutputItem
 from nat.data_models.finetuning import FinetuneConfig
 from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.finetuning import TrajectoryCollection
-from nat.plugins.eval.config import EvaluationRunOutput
-from nat.plugins.eval.evaluator.evaluator_model import EvalOutputItem
 from nat.utils.io.supress_logs import suppress_logs
 
 

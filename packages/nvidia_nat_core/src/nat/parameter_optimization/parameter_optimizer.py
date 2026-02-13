@@ -25,13 +25,23 @@ from nat.data_models.optimizable import SearchSpace
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerRunConfig
 from nat.data_models.optimizer import SamplerType
-from nat.plugins.eval.evaluate import EvaluationRun
-from nat.plugins.eval.evaluate import EvaluationRunConfig
 from nat.experimental.decorators.experimental_warning_decorator import experimental
 from nat.parameter_optimization.parameter_selection import pick_trial
 from nat.parameter_optimization.update_helpers import apply_suggestions
 
 logger = logging.getLogger(__name__)
+
+
+def _require_eval_runtime():
+    try:
+        from nat.plugins.eval.evaluate import EvaluationRun
+        from nat.plugins.eval.evaluate import EvaluationRunConfig
+    except ImportError as exc:
+        raise RuntimeError(
+            "The `nat optimize` command requires evaluation support from `nvidia-nat-eval`. "
+            "Install it with `uv pip install nvidia-nat-eval` (or `pip install nvidia-nat-eval`)."
+        ) from exc
+    return EvaluationRun, EvaluationRunConfig
 
 
 @experimental(feature_name="Optimizer")
@@ -43,6 +53,7 @@ def optimize_parameters(
     opt_run_config: OptimizerRunConfig,
 ) -> Config:
     """Tune all *non-prompt* hyper-parameters and persist the best config."""
+    EvaluationRun, EvaluationRunConfig = _require_eval_runtime()
     space = {k: v for k, v in full_space.items() if not v.is_prompt}
 
     # Ensure output_path is not None
