@@ -19,6 +19,7 @@ from collections.abc import Awaitable
 from collections.abc import Callable
 from contextlib import contextmanager
 from contextvars import ContextVar
+from enum import StrEnum
 from functools import cached_property
 
 from nat.builder.intermediate_step_manager import IntermediateStepManager
@@ -35,9 +36,20 @@ from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import TraceMetadata
 from nat.data_models.invocation_node import InvocationNode
 from nat.data_models.runtime_enum import RuntimeTypeEnum
-from nat.plugins.eval.profiler.decorators.latency import LatencySensitivity
 from nat.runtime.user_metadata import RequestAttributes
 from nat.utils.reactive.subject import Subject
+
+try:
+    from nat.plugins.eval.profiler.decorators.latency import LatencySensitivity
+except ImportError:
+    class LatencySensitivity(StrEnum):
+        LOW = "LOW"
+        MEDIUM = "MEDIUM"
+        HIGH = "HIGH"
+
+        @property
+        def priority(self) -> int:
+            return {"LOW": 1, "MEDIUM": 2, "HIGH": 3}[self.value]
 
 
 class Singleton(type):

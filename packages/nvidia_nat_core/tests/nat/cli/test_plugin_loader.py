@@ -176,7 +176,6 @@ class TestPluginLoaderIntegration:
         "optimize",
         "red-team",
         "registry",
-        "sizing",
         "start",
         "uninstall",
         "validate",

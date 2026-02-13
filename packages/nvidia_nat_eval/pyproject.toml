@@ -82,3 +82,4 @@ nat_evaluators = "nat.plugins.eval.register"
 [project.entry-points.'nat.cli']
 eval = "nat.plugins.eval.cli.commands:eval_command"
 red-team = "nat.plugins.eval.cli.commands:red_team_command"
+sizing = "nat.plugins.eval.cli.commands:sizing_command"

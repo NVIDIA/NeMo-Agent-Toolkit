@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import asyncio
-import logging
 from pathlib import Path
 
 import click
@@ -23,8 +22,6 @@ from tabulate import tabulate
 from nat.plugins.eval.profiler.calc.calc_runner import CalcRunner
 from nat.plugins.eval.profiler.calc.data_models import CalcRunnerConfig
 from nat.plugins.eval.profiler.calc.data_models import CalcRunnerOutput
-
-logger = logging.getLogger(__name__)
 
 
 @click.command("calc", help="Estimate GPU count and plot metrics for a workflow")
@@ -295,3 +292,12 @@ def calc_command(ctx,
 
     results = asyncio.run(run_calc())
     print_results(results)
+
+
+@click.group(help="Size GPU clusters for workflows with the specified options.")
+def sizing_command():
+    """Sizing-related commands."""
+    pass
+
+
+sizing_command.add_command(calc_command)
