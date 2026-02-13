@@ -144,10 +144,10 @@ def openai_api_key_fixture(fail_missing: bool):
     """
     Use for integration tests that require an Openai API key.
     """
-    yield require_env_variables(
-        varnames=["OPENAI_API_KEY","OPENAI_BASE_URL"],
-        reason="openai integration tests require the `OPENAI_API_KEY` and `OPENAI_BASE_URL`environment variables to be defined.",
-        fail_missing=fail_missing)
+    yield require_env_variables(varnames=["OPENAI_API_KEY", "OPENAI_BASE_URL"],
+                                reason="openai integration tests require the `OPENAI_API_KEY` and " +
+                                "`OPENAI_BASE_URL` environment variables to be defined.",
+                                fail_missing=fail_missing)
 
 
 @pytest.fixture(name="nvidia_api_key", scope='session')
