@@ -57,8 +57,8 @@ async def run_generation(configure_logging: bool,
     payload : typing.Any
         The input payload for the workflow.
     """
-    from nat.front_ends.fastapi.job_store import JobStatus
-    from nat.front_ends.fastapi.job_store import JobStore
+    from nat.front_ends.fastapi.async_jobs.job_store import JobStatus
+    from nat.front_ends.fastapi.async_jobs.job_store import JobStore
     from nat.front_ends.fastapi.response_helpers import generate_single_response
     from nat.runtime.loader import load_workflow
 
@@ -108,7 +108,7 @@ async def periodic_cleanup(*,
     log_level : int
         The log level to use when `configure_logging` is `True`, ignored otherwise.
     """
-    from nat.front_ends.fastapi.job_store import JobStore
+    from nat.front_ends.fastapi.async_jobs.job_store import JobStore
 
     logger = _configure_logging(configure_logging, log_level)
 
@@ -129,10 +129,11 @@ async def periodic_cleanup(*,
             job_store = None  # Reset job store to attempt re-creation on next iteration
 
 
-def _setup_worker():
+def setup_worker():
     """
     Setup function to be run in each worker process. This moves each worker into its own process group.
     This fixes an issue where a `Ctrl-C` in the terminal sends a `SIGINT` to all workers, which then causes the
     workers to exit before the main process can shut down the cluster gracefully.
     """
     os.setsid()
+

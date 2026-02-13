@@ -178,6 +178,17 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
                          "OpenAI Chat Completions API specification exactly."),
         )
 
+        legacy_path: str | None = Field(
+            default=None,
+            description=("Path for the legacy workflow. If None, no legacy workflow endpoint is created."),
+        )
+
+        legacy_openai_api_path: str | None = Field(
+            default=None,
+            description=("Path for the legacy OpenAI API compatible endpoint. If None, no legacy OpenAI API compatible "
+                         "endpoint is created."),
+        )
+
     class Endpoint(EndpointBase):
         function_name: str = Field(description="The name of the function to call for this endpoint")
 
@@ -255,10 +266,12 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
 
     workflow: typing.Annotated[EndpointBase, Field(description="Endpoint for the default workflow.")] = EndpointBase(
         method="POST",
-        path="/generate",
+        path="/v1/workflow",
         websocket_path="/websocket",
-        openai_api_path="/chat",
+        openai_api_path="/v1/chat",
         openai_api_v1_path="/v1/chat/completions",
+        legacy_path="/generate",
+        legacy_openai_api_path="/chat",
         description="Executes the default NAT workflow from the loaded configuration ",
     )
 
@@ -305,3 +318,7 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
             "Object store reference for the FastAPI app. If present, static files can be uploaded via a POST "
             "request to '/static' and files will be served from the object store. The files will be served from the "
             "object store at '/static/{file_name}'."))
+
+    disable_legacy_routes: bool = Field(
+        default=False,
+        description="Disable the legacy routes for the FastAPI app. If True, the legacy routes are disabled.")

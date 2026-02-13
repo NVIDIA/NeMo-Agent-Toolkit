@@ -34,3 +34,4 @@ class DaskClientMixin(ABC):
             self._dask_client = Client(self._scheduler_address, asynchronous=False)
 
         return self._dask_client
+

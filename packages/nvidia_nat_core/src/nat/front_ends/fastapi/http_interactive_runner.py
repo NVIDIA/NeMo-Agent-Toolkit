@@ -25,6 +25,7 @@ import asyncio
 import logging
 import typing
 from collections.abc import AsyncGenerator
+from collections.abc import Callable
 
 from nat.data_models.api_server import Error
 from nat.data_models.api_server import ErrorTypes
@@ -40,6 +41,7 @@ from nat.front_ends.fastapi.execution_store import ExecutionRecord
 from nat.front_ends.fastapi.execution_store import ExecutionStore
 from nat.front_ends.fastapi.response_helpers import generate_single_response
 from nat.front_ends.fastapi.response_helpers import generate_streaming_response
+from nat.front_ends.fastapi.response_helpers import generate_streaming_response_full_as_str
 from nat.front_ends.fastapi.step_adaptor import StepAdaptor
 from nat.runtime.session import SessionManager
 
@@ -223,28 +225,20 @@ class HTTPInteractiveRunner:
     # Streaming: yield SSE chunks with interaction / OAuth events
     # ------------------------------------------------------------------
 
-    async def streaming_generator(
+    async def _streaming_generator_impl(
         self,
-        payload: typing.Any,
         request: "Request",
         *,
-        streaming: bool,
-        step_adaptor: StepAdaptor,
-        result_type: type | None = None,
-        output_type: type | None = None,
+        workflow_gen_factory: Callable[[typing.Any], AsyncGenerator[typing.Any]],
+        error_log_message: str,
+        passthrough_str_items: bool = False,
     ) -> AsyncGenerator[str]:
-        """
-        Async generator that yields SSE ``data:`` / ``event:`` lines.
-
-        When the workflow pauses for interaction or OAuth, this generator
-        emits a special event and then *blocks* until the client responds
-        (the HTTP connection stays open).
-        """
+        """Shared streaming orchestration for interactive HTTP endpoints."""
         record = await self._store.create_execution()
 
         # Queue used by the HITL / OAuth callbacks to inject events
         # into the stream.
-        stream_queue: asyncio.Queue[ResponseSerializable | None] = asyncio.Queue()
+        stream_queue: asyncio.Queue[typing.Any | None] = asyncio.Queue()
 
         hitl_cb = self._build_hitl_callback(record, stream_queue=stream_queue)
         auth_cb = self._build_auth_callback(record, stream_queue=stream_queue)
@@ -255,18 +249,7 @@ class HTTPInteractiveRunner:
                 user_input_callback=hitl_cb,
                 user_authentication_callback=auth_cb,
             ) as session:
-                # We interleave items from the workflow stream with items
-                # from the interaction / OAuth queue.  The workflow stream
-                # naturally blocks when it hits a HITL callback, and
-                # while blocked the queue may have an event for us to yield.
-                workflow_gen = generate_streaming_response(
-                    payload,
-                    session=session,
-                    streaming=streaming,
-                    step_adaptor=step_adaptor,
-                    result_type=result_type,
-                    output_type=output_type,
-                )
+                workflow_gen = workflow_gen_factory(session)
 
                 # Wrap the workflow generator in a task that pushes to
                 # the same queue so we can read from a single source.
@@ -298,6 +281,11 @@ class HTTPInteractiveRunner:
                         elif isinstance(item, Error):
                             yield item.model_dump_json()
                             break
+                        elif isinstance(item, str):
+                            if passthrough_str_items:
+                                yield item
+                            else:
+                                yield f"data: {item}\n\n"
                         else:
                             # Shouldn't happen, but be safe
                             yield f"data: {item}\n\n"
@@ -310,9 +298,70 @@ class HTTPInteractiveRunner:
                         pass
 
         except Exception as exc:
-            logger.exception("Interactive streaming execution failed")
+            logger.exception(error_log_message)
             yield Error(
                 code=ErrorTypes.WORKFLOW_ERROR,
                 message=str(exc),
                 details=type(exc).__name__,
             ).model_dump_json()
+
+    async def streaming_generator(
+        self,
+        payload: typing.Any,
+        request: "Request",
+        *,
+        streaming: bool,
+        step_adaptor: StepAdaptor,
+        result_type: type | None = None,
+        output_type: type | None = None,
+    ) -> AsyncGenerator[str]:
+        """
+        Async generator that yields SSE ``data:`` / ``event:`` lines.
+
+        When the workflow pauses for interaction or OAuth, this generator
+        emits a special event and then *blocks* until the client responds
+        (the HTTP connection stays open).
+        """
+        async for chunk in self._streaming_generator_impl(
+                request,
+                workflow_gen_factory=lambda session: generate_streaming_response(
+                    payload,
+                    session=session,
+                    streaming=streaming,
+                    step_adaptor=step_adaptor,
+                    result_type=result_type,
+                    output_type=output_type,
+                ),
+                error_log_message="Interactive streaming execution failed",
+                passthrough_str_items=False):
+            yield chunk
+
+    async def streaming_generator_raw(
+        self,
+        payload: typing.Any,
+        request: "Request",
+        *,
+        streaming: bool,
+        result_type: type | None = None,
+        output_type: type | None = None,
+        filter_steps: str | None = None,
+    ) -> AsyncGenerator[str]:
+        """
+        Async generator that yields raw SSE chunks for ``/full`` style streaming.
+
+        This uses ``generate_streaming_response_full_as_str`` so intermediate
+        steps are emitted without step-adaptor translations.
+        """
+        async for chunk in self._streaming_generator_impl(
+                request,
+                workflow_gen_factory=lambda session: generate_streaming_response_full_as_str(
+                    payload,
+                    session=session,
+                    streaming=streaming,
+                    result_type=result_type,
+                    output_type=output_type,
+                    filter_steps=filter_steps,
+                ),
+                error_log_message="Interactive raw streaming execution failed",
+                passthrough_str_items=True):
+            yield chunk

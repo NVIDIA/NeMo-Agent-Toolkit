@@ -1,0 +1,132 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+"""OpenAI v1 chat completions route registration."""
+
+import logging
+from typing import Any
+
+from fastapi import FastAPI
+from fastapi import Request
+from fastapi import Response
+from fastapi.responses import JSONResponse
+from fastapi.responses import StreamingResponse
+
+from nat.data_models.api_server import ChatRequest
+from nat.data_models.api_server import ChatResponse
+from nat.data_models.api_server import ChatResponseChunk
+from nat.data_models.api_server import Error
+from nat.data_models.api_server import ErrorTypes
+from nat.data_models.interactive_http import ExecutionStatus
+from nat.front_ends.fastapi.response_helpers import generate_single_response
+from nat.front_ends.fastapi.response_helpers import generate_streaming_response_as_str
+from nat.front_ends.fastapi.routes.generate import RESPONSE_500
+from nat.front_ends.fastapi.routes.generate import _build_accepted_response
+from nat.front_ends.fastapi.routes.generate import _build_interactive_runner
+from nat.front_ends.fastapi.routes.generate import add_context_headers_to_response
+from nat.runtime.session import SessionManager
+
+logger = logging.getLogger(__name__)
+
+
+def post_openai_api_compatible_endpoint(*, worker: Any, session_manager: SessionManager, enable_interactive: bool):
+    """Build OpenAI Chat Completions compatible POST handler."""
+
+    async def post_openai_api_compatible(response: Response, request: Request, payload: ChatRequest):
+        response.headers["Content-Type"] = "application/json"
+        stream_requested = getattr(payload, "stream", False)
+
+        if enable_interactive:
+            runner = _build_interactive_runner(worker, session_manager)
+
+            if stream_requested:
+                return StreamingResponse(
+                    headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                    content=runner.streaming_generator(
+                        payload,
+                        request,
+                        streaming=True,
+                        step_adaptor=worker.get_step_adaptor(),
+                        result_type=ChatResponseChunk,
+                        output_type=ChatResponseChunk,
+                    ),
+                )
+
+            record = await runner.start_non_streaming(
+                payload=payload,
+                request=request,
+                result_type=ChatResponse,
+            )
+            await record.first_outcome.wait()
+
+            if record.status == ExecutionStatus.COMPLETED:
+                response.status_code = 200
+                add_context_headers_to_response(response)
+                return record.result
+            if record.status == ExecutionStatus.FAILED:
+                add_context_headers_to_response(response)
+                return JSONResponse(
+                    content=Error(
+                        code=ErrorTypes.WORKFLOW_ERROR,
+                        message=record.error or "Unknown error",
+                        details="ExecutionFailed",
+                    ).model_dump(),
+                    status_code=422,
+                )
+
+            response.status_code = 202
+            return _build_accepted_response(record)
+
+        if stream_requested:
+            async with session_manager.session(http_connection=request) as session:
+                return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                                         content=generate_streaming_response_as_str(
+                                             payload,
+                                             session=session,
+                                             streaming=True,
+                                             step_adaptor=worker.get_step_adaptor(),
+                                             result_type=ChatResponseChunk,
+                                             output_type=ChatResponseChunk))
+
+        async with session_manager.session(http_connection=request) as session:
+            try:
+                result = await generate_single_response(payload, session, result_type=ChatResponse)
+                add_context_headers_to_response(response)
+                return result
+            except Exception as e:
+                logger.exception("Unhandled workflow error")
+                add_context_headers_to_response(response)
+                return JSONResponse(
+                    content=Error(
+                        code=ErrorTypes.WORKFLOW_ERROR,
+                        message=str(e),
+                        details=type(e).__name__,
+                    ).model_dump(),
+                    status_code=422,
+                )
+
+    return post_openai_api_compatible
+
+
+async def add_v1_chat_completions_route(
+    worker: Any,
+    app: FastAPI,
+    *,
+    path: str,
+    method: str,
+    description: str,
+    session_manager: SessionManager,
+    enable_interactive: bool = False,
+):
+    """Register OpenAI v1 chat completions endpoint."""
+    app.add_api_route(
+        path=path,
+        endpoint=post_openai_api_compatible_endpoint(worker=worker,
+                                                     session_manager=session_manager,
+                                                     enable_interactive=enable_interactive),
+        methods=[method],
+        response_model=ChatResponse | ChatResponseChunk,
+        description=f"{description} (OpenAI Chat Completions API compatible)",
+        responses={500: RESPONSE_500},
+    )
+
