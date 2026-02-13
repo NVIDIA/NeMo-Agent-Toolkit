@@ -60,5 +60,9 @@ def _populate_aliases() -> None:
 
 
 _populate_aliases()
+_public_names = getattr(_new_root, "__all__", None)
+if _public_names is None:
+    _public_names = [name for name in dir(_new_root) if not name.startswith("_")]
 
-from nat.plugins.eval import *  # noqa: F401,F403
+globals().update({name: getattr(_new_root, name) for name in _public_names})
+__all__ = list(_public_names)
