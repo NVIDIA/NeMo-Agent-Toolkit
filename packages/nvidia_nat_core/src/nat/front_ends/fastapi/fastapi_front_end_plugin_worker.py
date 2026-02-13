@@ -60,9 +60,22 @@ from nat.eval.evaluate import EvaluationRun
 from nat.eval.evaluate import EvaluationRunConfig
 from nat.eval.evaluator.evaluator_model import EvalInput
 from nat.front_ends.fastapi.async_job import run_generation
+from nat.data_models.interactive import HumanResponse
+from nat.data_models.interactive_http import ExecutionAcceptedInteraction
+from nat.data_models.interactive_http import ExecutionAcceptedOAuth
+from nat.data_models.interactive_http import ExecutionAcceptedResponse
+from nat.data_models.interactive_http import ExecutionCompletedStatus
+from nat.data_models.interactive_http import ExecutionFailedStatus
+from nat.data_models.interactive_http import ExecutionInteractionRequiredStatus
+from nat.data_models.interactive_http import ExecutionOAuthRequiredStatus
+from nat.data_models.interactive_http import ExecutionRunningStatus
+from nat.data_models.interactive_http import ExecutionStatus
+from nat.data_models.interactive_http import ExecutionStatusResponse
+from nat.data_models.interactive_http import InteractionResponseRequest
 from nat.front_ends.fastapi.auth_flow_handlers.http_flow_handler import HTTPAuthenticationFlowHandler
 from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import FlowState
 from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
+from nat.front_ends.fastapi.execution_store import ExecutionStore
 from nat.front_ends.fastapi.fastapi_front_end_config import AsyncGenerateResponse
 from nat.front_ends.fastapi.fastapi_front_end_config import AsyncGenerationStatusResponse
 from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateItemRequest
@@ -252,6 +265,15 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         self._evaluators: dict[str, EvaluatorInfo] = {}
         self._eval_builder: WorkflowEvalBuilder | None = None
 
+        # HTTP interactive execution store
+        self._execution_store = ExecutionStore()
+
+        # Re-create the HTTP flow handler with OAuth flow callbacks for interactive mode
+        self._http_flow_handler = HTTPAuthenticationFlowHandler(
+            add_flow_cb=self._add_flow,
+            remove_flow_cb=self._remove_flow,
+        )
+
     def get_conversation_handler(self, conversation_id: str) -> "WebSocketMessageHandler | None":
         """Get a conversation handler for reconnection support."""
         return self._conversation_handlers.get(conversation_id)
@@ -358,6 +380,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         await self.add_static_files_route(app, builder)
         await self.add_authorization_route(app)
+        await self.add_execution_routes(app)
         await self.add_mcp_client_tool_list_route(app, builder)
         await self.add_monitor_route(app)
         await self.add_health_route(app)
@@ -715,7 +738,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
     async def add_route(self,
                         app: FastAPI,
                         endpoint: FastApiFrontEndConfig.EndpointBase,
-                        session_manager: SessionManager):
+                        session_manager: SessionManager,
+                        *,
+                        enable_interactive: bool = False):
 
         GenerateBodyType = session_manager.get_workflow_input_schema()
         GenerateStreamResponseType = session_manager.get_workflow_streaming_output_schema()
@@ -767,6 +792,39 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 }
             },
         }
+
+        def _build_interactive_runner():
+            from nat.front_ends.fastapi.http_interactive_runner import HTTPInteractiveRunner
+            return HTTPInteractiveRunner(
+                execution_store=self._execution_store,
+                session_manager=session_manager,
+                http_flow_handler=self._http_flow_handler,
+            )
+
+        def _build_accepted_response(record) -> ExecutionAcceptedInteraction | ExecutionAcceptedOAuth:
+            """Build a 202 response from an execution record."""
+            status_url = f"/executions/{record.execution_id}"
+
+            if record.status == ExecutionStatus.INTERACTION_REQUIRED and record.pending_interaction is not None:
+                return ExecutionAcceptedInteraction(
+                    execution_id=record.execution_id,
+                    status_url=status_url,
+                    interaction_id=record.pending_interaction.interaction_id,
+                    prompt=record.pending_interaction.prompt,
+                    response_url=(
+                        f"/executions/{record.execution_id}"
+                        f"/interactions/{record.pending_interaction.interaction_id}/response"
+                    ),
+                )
+            elif record.status == ExecutionStatus.OAUTH_REQUIRED and record.pending_oauth is not None:
+                return ExecutionAcceptedOAuth(
+                    execution_id=record.execution_id,
+                    status_url=status_url,
+                    auth_url=record.pending_oauth.auth_url,
+                    oauth_state=record.pending_oauth.oauth_state,
+                )
+            else:
+                raise ValueError(f"Cannot build 202 response for execution status: {record.status}")
 
         def get_single_endpoint(result_type: type | None):
 
@@ -834,8 +892,40 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def post_single(response: Response, request: Request, payload: request_type):
 
-                response.headers["Content-Type"] = "application/json"
+                if enable_interactive:
+                    runner = _build_interactive_runner()
+                    record = await runner.start_non_streaming(
+                        payload=payload,
+                        request=request,
+                        result_type=result_type,
+                    )
+                    # Wait for the workflow to finish OR need interaction/OAuth
+                    await record.first_outcome.wait()
 
+                    if record.status == ExecutionStatus.COMPLETED:
+                        # Workflow completed without needing interaction
+                        response.status_code = 200
+                        response.headers["Content-Type"] = "application/json"
+                        add_context_headers_to_response(response)
+                        return record.result
+                    elif record.status == ExecutionStatus.FAILED:
+                        response.headers["Content-Type"] = "application/json"
+                        add_context_headers_to_response(response)
+                        return JSONResponse(
+                            content=Error(
+                                code=ErrorTypes.WORKFLOW_ERROR,
+                                message=record.error or "Unknown error",
+                                details="ExecutionFailed",
+                            ).model_dump(),
+                            status_code=422,
+                        )
+                    else:
+                        # Interaction or OAuth required – return 202
+                        response.status_code = 202
+                        response.headers["Content-Type"] = "application/json"
+                        return _build_accepted_response(record)
+
+                response.headers["Content-Type"] = "application/json"
                 async with session_manager.session(
                         http_connection=request,
                         user_authentication_callback=self._http_flow_handler.authenticate) as session:
@@ -864,6 +954,20 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                     output_type: type | None):
 
             async def post_stream(request: Request, payload: request_type):
+
+                if enable_interactive:
+                    runner = _build_interactive_runner()
+                    return StreamingResponse(
+                        headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                        content=runner.streaming_generator(
+                            payload,
+                            request,
+                            streaming=streaming,
+                            step_adaptor=self.get_step_adaptor(),
+                            result_type=result_type,
+                            output_type=output_type,
+                        ),
+                    )
 
                 async with session_manager.session(
                         http_connection=request,
@@ -912,6 +1016,47 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 response.headers["Content-Type"] = "application/json"
                 stream_requested = getattr(payload, 'stream', False)
+
+                if enable_interactive:
+                    runner = _build_interactive_runner()
+
+                    if stream_requested:
+                        return StreamingResponse(
+                            headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                            content=runner.streaming_generator(
+                                payload,
+                                request,
+                                streaming=True,
+                                step_adaptor=self.get_step_adaptor(),
+                                result_type=ChatResponseChunk,
+                                output_type=ChatResponseChunk,
+                            ),
+                        )
+
+                    record = await runner.start_non_streaming(
+                        payload=payload,
+                        request=request,
+                        result_type=ChatResponse,
+                    )
+                    await record.first_outcome.wait()
+
+                    if record.status == ExecutionStatus.COMPLETED:
+                        response.status_code = 200
+                        add_context_headers_to_response(response)
+                        return record.result
+                    elif record.status == ExecutionStatus.FAILED:
+                        add_context_headers_to_response(response)
+                        return JSONResponse(
+                            content=Error(
+                                code=ErrorTypes.WORKFLOW_ERROR,
+                                message=record.error or "Unknown error",
+                                details="ExecutionFailed",
+                            ).model_dump(),
+                            status_code=422,
+                        )
+                    else:
+                        response.status_code = 202
+                        return _build_accepted_response(record)
 
                 if stream_requested:
 
@@ -1286,6 +1431,90 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 endpoint=redirect_uri,
                 methods=["GET"],
                 description="Handles the authorization code and state returned from the Authorization Code Grant Flow.")
+
+    async def add_execution_routes(self, app: FastAPI):
+        """Add HTTP interactive execution endpoints (HITL + OAuth polling)."""
+
+        execution_store = self._execution_store
+
+        async def get_execution_status(execution_id: str):
+            """Get the status of an interactive execution."""
+            record = await execution_store.get(execution_id)
+            if record is None:
+                raise HTTPException(status_code=404, detail=f"Execution {execution_id} not found")
+
+            if record.status == ExecutionStatus.COMPLETED:
+                return ExecutionCompletedStatus(
+                    execution_id=record.execution_id,
+                    result=record.result,
+                )
+            elif record.status == ExecutionStatus.FAILED:
+                return ExecutionFailedStatus(
+                    execution_id=record.execution_id,
+                    error=record.error or "Unknown error",
+                )
+            elif record.status == ExecutionStatus.INTERACTION_REQUIRED and record.pending_interaction is not None:
+                return ExecutionInteractionRequiredStatus(
+                    execution_id=record.execution_id,
+                    interaction_id=record.pending_interaction.interaction_id,
+                    prompt=record.pending_interaction.prompt,
+                    response_url=(
+                        f"/executions/{execution_id}"
+                        f"/interactions/{record.pending_interaction.interaction_id}/response"
+                    ),
+                )
+            elif record.status == ExecutionStatus.OAUTH_REQUIRED and record.pending_oauth is not None:
+                return ExecutionOAuthRequiredStatus(
+                    execution_id=record.execution_id,
+                    auth_url=record.pending_oauth.auth_url,
+                    oauth_state=record.pending_oauth.oauth_state,
+                )
+            else:
+                return ExecutionRunningStatus(execution_id=record.execution_id)
+
+        async def post_interaction_response(
+            execution_id: str,
+            interaction_id: str,
+            body: InteractionResponseRequest,
+        ):
+            """Submit a human response to a pending interaction."""
+            try:
+                await execution_store.resolve_interaction(
+                    execution_id=execution_id,
+                    interaction_id=interaction_id,
+                    response=body.response,
+                )
+            except KeyError as exc:
+                raise HTTPException(status_code=404, detail=str(exc)) from exc
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+            return Response(status_code=204)
+
+        app.add_api_route(
+            path="/executions/{execution_id}",
+            endpoint=get_execution_status,
+            methods=["GET"],
+            response_model=ExecutionStatusResponse,
+            description="Get the status of an interactive execution (HTTP HITL / OAuth).",
+            responses={
+                404: {"description": "Execution not found"},
+            },
+        )
+
+        app.add_api_route(
+            path="/executions/{execution_id}/interactions/{interaction_id}/response",
+            endpoint=post_interaction_response,
+            methods=["POST"],
+            description="Submit a human response to a pending interaction prompt.",
+            responses={
+                204: {"description": "Response accepted"},
+                400: {"description": "Interaction already resolved"},
+                404: {"description": "Execution or interaction not found"},
+            },
+        )
+
+        logger.info("Added HTTP interactive execution endpoints at /executions/...")
 
     async def add_mcp_client_tool_list_route(self, app: FastAPI, builder: WorkflowBuilder):
         """Add the MCP client tool list endpoint to the FastAPI app."""
