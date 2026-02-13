@@ -26,6 +26,10 @@ from fastapi.testclient import TestClient
 
 from _utils.dask_utils import wait_job
 from nat.data_models.config import Config
+from nat.data_models.evaluate import EvaluationRunOutput
+from nat.data_models.evaluator import EvalInput
+from nat.data_models.evaluator import EvalOutput
+from nat.data_models.evaluator import EvalOutputItem
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
 
@@ -61,8 +65,6 @@ async def patch_evaluation_run(register_test_workflow):
             return self
 
         async def run_and_evaluate(self, *args, **kwargs):
-            from nat.plugins.eval.config import EvaluationRunOutput
-            from nat.plugins.eval.evaluator.evaluator_model import EvalInput
             from nat.plugins.eval.profiler.data_models import ProfilerResults
             result = EvaluationRunOutput(workflow_output_file="/fake/output/path.json",
                                          evaluator_output_files=[],
@@ -74,9 +76,9 @@ async def patch_evaluation_run(register_test_workflow):
 
             return result
 
-    with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker.EvaluationRun",
-               new_callable=MockEvaluationRun) as mock_eval_run:
-        yield mock_eval_run
+    with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker._EvaluationRun", new=MockEvaluationRun):
+        with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker._EVAL_AVAILABLE", new=True):
+            yield
 
 
 @pytest_asyncio.fixture(name="test_client")
@@ -274,9 +276,6 @@ async def evaluate_item_client_fixture() -> TestClient:
     from unittest.mock import AsyncMock
 
     from nat.builder.evaluator import EvaluatorInfo
-    from nat.plugins.eval.evaluator.evaluator_model import EvalInput
-    from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
-    from nat.plugins.eval.evaluator.evaluator_model import EvalOutputItem
 
     config = Config()
     config.general.front_end = FastApiFrontEndConfig(evaluate_item=FastApiFrontEndConfig.EndpointBase(

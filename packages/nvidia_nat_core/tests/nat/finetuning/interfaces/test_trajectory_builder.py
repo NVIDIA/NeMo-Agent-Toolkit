@@ -29,8 +29,8 @@ from nat.data_models.finetuning import RewardFunctionConfig
 from nat.data_models.finetuning import Trajectory
 from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.finetuning import TrajectoryCollection
-from nat.plugins.eval.config import EvaluationRunOutput
-from nat.plugins.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.data_models.evaluate import EvaluationRunOutput
+from nat.data_models.evaluator import EvalOutputItem
 from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 
 
