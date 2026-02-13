@@ -27,6 +27,37 @@ It is strongly encouraged to migrate any existing code to the latest conventions
 
 ## Version Specific Changes
 
+### v1.5.0
+
+#### Evaluation Package Split
+
+Evaluation and profiling implementations moved out of core into the `nvidia-nat-eval` package.
+
+To migrate:
+- Install evaluation support when needed:
+  - `pip install "nvidia-nat[eval]"`
+  - `pip install nvidia-nat-eval`
+- Treat these commands as eval-owned commands that require `nvidia-nat-eval`: `nat eval`, `nat red-team`, and `nat sizing`.
+- Keep using `nat optimize` from core, but note that it now requires `nvidia-nat-eval` at runtime for evaluation execution.
+
+#### Import Path Changes
+
+Evaluation modules are now served from `nat.plugins.eval`.
+
+Update imports:
+- `nat.eval.*` -> `nat.plugins.eval.*`
+- `nat.profiler.*` -> `nat.plugins.eval.profiler.*`
+- `nat.profiler.parameter_optimization.*` -> `nat.parameter_optimization.*`
+
+#### `nat.eval` Deprecation Shim
+
+Core provides a temporary compatibility shim for `nat.eval` imports.
+
+What to expect:
+- Importing from `nat.eval` emits a `UserWarning` that the path is deprecated.
+- The shim requires `nvidia-nat-eval` to be installed.
+- Update imports to `nat.plugins.eval.*` now, because the shim will be removed in a future major release.
+
 ### v1.4.0
 
 #### Weave Trace Identifier Namespace
