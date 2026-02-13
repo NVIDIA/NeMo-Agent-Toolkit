@@ -522,8 +522,7 @@ class TestSessionRunCrossWorkflowObservability:
     @patch('nat.cli.type_registry.GlobalTypeRegistry')
     async def test_session_run_sets_and_resets_workflow_parent_context(self, mock_registry):
         """Test run(parent_id=..., parent_name=...) sets context vars during run and resets on exit."""
-        mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(
-            is_per_user=False)
+        mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=False)
 
         ctx_state = ContextState.get()
         sm = SessionManager(config=create_mock_config(),
@@ -538,9 +537,7 @@ class TestSessionRunCrossWorkflowObservability:
 
             values_during_run = []
 
-            async with session.run("hello",
-                                  parent_id="parent-step-123",
-                                  parent_name="Caller Workflow") as _:
+            async with session.run("hello", parent_id="parent-step-123", parent_name="Caller Workflow") as _:
                 values_during_run.append(ctx_state.workflow_parent_id.get())
                 values_during_run.append(ctx_state.workflow_parent_name.get())
 
@@ -553,8 +550,7 @@ class TestSessionRunCrossWorkflowObservability:
     @patch('nat.cli.type_registry.GlobalTypeRegistry')
     async def test_session_run_without_parent_leaves_context_unset(self, mock_registry):
         """Test run() without parent_id/parent_name leaves workflow_parent context vars unset."""
-        mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(
-            is_per_user=False)
+        mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=False)
 
         ctx_state = ContextState.get()
         sm = SessionManager(config=create_mock_config(),

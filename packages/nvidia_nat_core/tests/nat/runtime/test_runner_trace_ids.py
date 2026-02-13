@@ -180,7 +180,8 @@ async def test_runner_workflow_name_resolution(
     ("parent-step-1", "Parent Workflow"),
     ("parent-step-2", None),
     (None, None),
-], ids=["both_set", "parent_id_only", "neither_set"])
+],
+                         ids=["both_set", "parent_id_only", "neither_set"])
 async def test_runner_uses_workflow_parent_id_and_name_for_root(
     parent_id: str | None,
     parent_name: str | None,
