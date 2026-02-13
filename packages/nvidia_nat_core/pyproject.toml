@@ -42,7 +42,6 @@ dependencies = [
   "authlib>=1.6.5,<2.0.0",
   "click~=8.1",
   "colorama~=0.4.6",
-  "datasets~=4.4", # workaround for uv's solver choosing different versions of datasets based on sys_platform
   "expandvars~=1.0",
   "fastapi~=0.119.0",
   "flask>=3.0.0",
@@ -53,7 +52,6 @@ dependencies = [
   "networkx~=3.4",
   "numpy~=2.3",
   "openinference-semantic-conventions~=0.1.14",
-  "openpyxl~=3.1",
   "optuna~=4.4.0",
   "pandas~=2.2",
   "pip>=24.3.1",
@@ -67,7 +65,6 @@ dependencies = [
   "python-dotenv~=1.1.1",
   "python-multipart>=0.0.21",
   "PyYAML~=6.0",
-  "ragas~=0.2.14", # If you update ragas be sure to update github links in docs/source/workflows/evaluate.md as well
   "rich~=14.0",
   "tabulate~=0.9",
   "uvicorn[standard]~=0.38",
@@ -123,9 +120,7 @@ nvidia-nat-test = { path = "../nvidia_nat_test", editable = true }
 
 [project.entry-points.'nat.components']
 nat_authentication = "nat.authentication.register"
-nat_dataset_loaders = "nat.plugins.eval.dataset_loader.register"
 nat_embedders = "nat.embedder.register"
-nat_evaluators = "nat.plugins.eval.register"
 nat_middleware = "nat.middleware.register"
 nat_test_time_compute = "nat.experimental.test_time_compute.register"
 nat_llms = "nat.llm.register"
@@ -142,12 +137,10 @@ nat_registry_handlers = "nat.registry_handlers.register"
 
 [project.entry-points.'nat.cli']
 configure = "nat.cli.commands.configure.configure:configure_command"
-eval = "nat.cli.commands.evaluate:eval_command"
 finetune = "nat.cli.commands.finetune:finetune_command"
 info = "nat.cli.commands.info.info:info_command"
 object-store = "nat.cli.commands.object_store.object_store:object_store_command"
 optimize = "nat.cli.commands.optimize:optimizer_command"
-red-team = "nat.cli.commands.red_teaming.red_teaming:red_team_command"
 registry = "nat.cli.commands.registry.registry:registry_command"
 sizing = "nat.cli.commands.sizing.sizing:sizing"
 start = "nat.cli.commands.start:start_command"
