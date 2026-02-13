@@ -25,7 +25,6 @@ import tomllib
 import typing
 from pathlib import Path
 
-from package_utils import Package
 from package_utils import UvLock
 from package_utils import pypi_license
 from tqdm import tqdm
@@ -72,7 +71,6 @@ def process_uvlock(uvlock: UvLock, output_path: Path) -> None:
             writer.writerow([pkg["name"], pkg["version"], pkg["license"].replace("\n", "\\n")])
 
 
-
 def main(uvlock_path: Path, output_path: Path) -> None:
     """Create SBOM list for third-party license reporting."""
     # Load the lockfile that captures the dependency graph.
@@ -86,7 +84,13 @@ def main(uvlock_path: Path, output_path: Path) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create SBOM list for third-party license reporting.")
-    parser.add_argument("--uvlock", type=Path, help="Path to the lockfile to process. Defaults to 'uv.lock'.", default="uv.lock")
-    parser.add_argument("--output", type=Path, help="Path to the output file. Defaults to 'sbom_list.tsv'.", default="sbom_list.tsv")
+    parser.add_argument("--uvlock",
+                        type=Path,
+                        help="Path to the lockfile to process. Defaults to 'uv.lock'.",
+                        default="uv.lock")
+    parser.add_argument("--output",
+                        type=Path,
+                        help="Path to the output file. Defaults to 'sbom_list.tsv'.",
+                        default="sbom_list.tsv")
     args = parser.parse_args()
     main(uvlock_path=args.uvlock, output_path=args.output)
