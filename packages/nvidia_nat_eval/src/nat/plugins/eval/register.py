@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,10 +12,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
+
 # flake8: noqa
-"""Transitional evaluator registration for eval package scaffolding."""
 
-# Step-2 scaffold: keep behavior unchanged by delegating to existing core registrations.
-from nat.eval.register import *
+# Import evaluators which need to be automatically registered here
+from .rag_evaluator.register import register_ragas_evaluator
+from .red_teaming_evaluator.register import register_red_teaming_evaluator
+from .runtime_evaluator.register import register_avg_llm_latency_evaluator
+from .runtime_evaluator.register import register_avg_num_llm_calls_evaluator
+from .runtime_evaluator.register import register_avg_tokens_per_llm_end_evaluator
+from .runtime_evaluator.register import register_avg_workflow_runtime_evaluator
+from .swe_bench_evaluator.register import register_swe_bench_evaluator
+from .trajectory_evaluator.register import register_trajectory_evaluator
+from .tunable_rag_evaluator.register import register_tunable_rag_evaluator
 
+from .dataset_loader.register import register_csv_dataset_loader
+from .dataset_loader.register import register_custom_dataset_loader
+from .dataset_loader.register import register_json_dataset_loader
+from .dataset_loader.register import register_jsonl_dataset_loader
+from .dataset_loader.register import register_parquet_dataset_loader
+from .dataset_loader.register import register_xls_dataset_loader

@@ -12,3 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# forecasting/models/__init__.py
+
+from .forecasting_base_model import ForecastingBaseModel
+from .linear_model import LinearModel
+from .random_forest_regressor import RandomForestModel
+
+__all__ = ["ForecastingBaseModel", "LinearModel", "RandomForestModel"]

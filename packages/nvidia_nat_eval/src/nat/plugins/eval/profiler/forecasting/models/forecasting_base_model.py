@@ -12,3 +12,31 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# forecasting/models/base_model.py
+
+from abc import ABC
+from abc import abstractmethod
+
+import numpy as np
+
+
+class ForecastingBaseModel(ABC):
+    """
+    Abstract base class for all models in this package.
+    """
+
+    @abstractmethod
+    def fit(self, raw_stats):
+        """
+        Train/fine-tune the model on the provided dataset.
+        """
+        pass
+
+    @abstractmethod
+    def predict(self, raw_stats) -> np.ndarray:
+        """
+        Predict using the trained model.
+        Returns a np.ndarray, shape = (N, 4).
+        """
+        pass
