@@ -5524,7 +5524,7 @@ source = { editable = "examples/evaluation_and_profiling/email_phishing_analyzer
 dependencies = [
     { name = "beautifulsoup4" },
     { name = "networkx" },
-    { name = "nvidia-nat", extra = ["langchain", "phoenix", "test"] },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "phoenix", "test"] },
     { name = "openinference-instrumentation-langchain" },
 ]
 
@@ -5532,7 +5532,7 @@ dependencies = [
 requires-dist = [
     { name = "beautifulsoup4", specifier = "~=4.13" },
     { name = "networkx", specifier = "~=3.4" },
-    { name = "nvidia-nat", extras = ["langchain", "phoenix", "test"], editable = "." },
+    { name = "nvidia-nat", extras = ["eval", "langchain", "phoenix", "test"], editable = "." },
     { name = "openinference-instrumentation-langchain", specifier = "==0.1.29" },
 ]
 
@@ -5865,13 +5865,13 @@ name = "nat-simple-calculator-eval"
 source = { editable = "examples/evaluation_and_profiling/simple_calculator_eval" }
 dependencies = [
     { name = "nat-simple-calculator" },
-    { name = "nvidia-nat", extra = ["langchain", "test"] },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
-    { name = "nvidia-nat", extras = ["langchain", "test"], editable = "." },
+    { name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "." },
 ]
 
 [[package]]
@@ -6007,13 +6007,13 @@ name = "nat-simple-web-query-eval"
 source = { editable = "examples/evaluation_and_profiling/simple_web_query_eval" }
 dependencies = [
     { name = "nat-simple-web-query" },
-    { name = "nvidia-nat", extra = ["langchain", "profiling", "test"] },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "profiling", "test"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "nat-simple-web-query", editable = "examples/getting_started/simple_web_query" },
-    { name = "nvidia-nat", extras = ["langchain", "profiling", "test"], editable = "." },
+    { name = "nvidia-nat", extras = ["eval", "langchain", "profiling", "test"], editable = "." },
 ]
 
 [[package]]
@@ -6031,13 +6031,13 @@ requires-dist = [{ name = "nvidia-nat", extras = ["langchain", "profiling", "str
 name = "nat-swe-bench"
 source = { editable = "examples/evaluation_and_profiling/swe_bench" }
 dependencies = [
-    { name = "nvidia-nat", extra = ["langchain", "test"] },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
     { name = "swebench" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "nvidia-nat", extras = ["langchain", "test"], editable = "." },
+    { name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "." },
     { name = "swebench", specifier = "==3.0.3" },
 ]
 
