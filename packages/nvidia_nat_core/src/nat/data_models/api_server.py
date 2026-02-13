@@ -48,7 +48,7 @@ class UserMessageContentRoleType(StrEnum):
 
 class Request(BaseModel):
     """
-    Request is a data model that represents HTTP request attributes.
+    Request is a data model that represents HTTP request and WebSocket attributes.
     """
     model_config = ConfigDict(extra="forbid")
 
@@ -65,6 +65,8 @@ class Request(BaseModel):
     client_port: int | None = Field(default=None, description="Client port number from which the request originated.")
     cookies: dict[str, str] | None = Field(
         default=None, description="Cookies sent with the request, stored in a dictionary-like object.")
+    payload: dict[str, typing.Any] | None = Field(default=None,
+                                                  description="Request payload from the incoming request.")
 
 
 class ChatContentType(StrEnum):

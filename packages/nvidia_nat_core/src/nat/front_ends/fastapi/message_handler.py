@@ -119,6 +119,7 @@ class WebSocketMessageHandler:
         self._message_parent_id = message.id
         self._workflow_schema_type = message.schema_type
         self._conversation_id = message.conversation_id
+        self._user_message_payload: dict[str, Any] = message.model_dump(exclude={"security"})
         if self._conversation_id:
             self._worker.set_conversation_handler(self._conversation_id, self)
 
@@ -406,7 +407,7 @@ class WebSocketMessageHandler:
                                                      http_connection=self._socket,
                                                      user_input_callback=self.human_interaction_callback,
                                                      user_authentication_callback=auth_callback) as session:
-
+                self._session_manager._context.metadata._request.payload = self._user_message_payload
                 async for value in generate_streaming_response(payload,
                                                                session=session,
                                                                streaming=True,

@@ -471,7 +471,7 @@ class SessionManager:
                                              pre_parsed_cookies=cookies_dict)
 
         if isinstance(http_connection, Request):
-            self.set_metadata_from_http_request(http_connection)
+            await self.set_metadata_from_http_request(http_connection)
 
         builder_info: PerUserBuilderInfo | None = None
         request_start_time: float | None = None
@@ -582,7 +582,7 @@ class SessionManager:
                         logger.exception(f"Error cleaning up builder for user {user_id}")
                 self._per_user_builders.clear()
 
-    def set_metadata_from_http_request(self, request: Request) -> None:
+    async def set_metadata_from_http_request(self, request: Request) -> None:
         """
         Extracts and sets user metadata request attributes from a HTTP request.
         If request is None, no attributes are set.
@@ -597,6 +597,10 @@ class SessionManager:
         self._context.metadata._request.client_host = request.client.host
         self._context.metadata._request.client_port = request.client.port
         self._context.metadata._request.cookies = request.cookies
+        try:
+            self._context.metadata._request.payload = await request.json()
+        except Exception:
+            self._context.metadata._request.payload = None
 
         if request.headers.get("conversation-id"):
             self._context_state.conversation_id.set(request.headers["conversation-id"])
@@ -641,6 +645,17 @@ class SessionManager:
         If pre_parsed_cookies is provided (e.g. from get_auth_and_cookies_from_connection),
         uses it instead of parsing scope headers again.
         """
+        self._context.metadata._request.url_path = websocket.url.path
+        self._context.metadata._request.url_port = websocket.url.port
+        self._context.metadata._request.url_scheme = websocket.url.scheme
+        self._context.metadata._request.headers = websocket.headers
+        self._context.metadata._request.query_params = websocket.query_params
+        self._context.metadata._request.path_params = websocket.path_params
+        host = websocket.client[0] if websocket.client else None
+        port = websocket.client[1] if websocket.client else None
+        self._context.metadata._request.client_host = host
+        self._context.metadata._request.client_port = port
+
         if websocket and hasattr(websocket, 'scope') and 'headers' in websocket.scope:
             if pre_parsed_cookies is not None:
                 cookies = pre_parsed_cookies
