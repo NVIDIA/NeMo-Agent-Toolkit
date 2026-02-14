@@ -29,16 +29,10 @@ from pydantic import Field
 from nat.front_ends.fastapi.async_jobs.async_job import run_generation
 from nat.front_ends.fastapi.fastapi_front_end_config import AsyncGenerateResponse
 from nat.front_ends.fastapi.fastapi_front_end_config import AsyncGenerationStatusResponse
+from nat.front_ends.fastapi.routes.common_utils import _with_annotation
 from nat.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
-
-
-def _with_annotation(handler: Any, param_name: str, annotation: Any):
-    annotations = dict(getattr(handler, "__annotations__", {}))
-    annotations[param_name] = annotation
-    handler.__annotations__ = annotations
-    return handler
 
 
 def _job_status_to_response(worker: Any, job):

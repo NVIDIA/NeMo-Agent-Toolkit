@@ -19,7 +19,7 @@ limitations under the License.
 
 NeMo Agent Toolkit supports interactive workflows (Human-in-the-Loop and OAuth) over plain HTTP,
 without requiring a WebSocket connection. This is useful in deployment environments where WebSocket
-support is limited, such as behind certain load balancers, API gateways, or serverless platforms.
+support is limited.
 
 When enabled, the interactive extensions allow HTTP clients to:
 
@@ -38,8 +38,9 @@ Two client integration patterns are supported:
 
 ## Configuration
 
-To enable HTTP interactive extensions, set `enable_interactive_extensions` to `true` in the
-FastAPI front-end configuration:
+HTTP interactive extensions are enabled by default on all workflow endpoints, with the exception of
+OpenAI-compatible endpoints. To force the interactive extension to work with OpenAI-compatible endpoints,
+set `enable_interactive_extensions` to `true` in the FastAPI front-end configuration:
 
 ```yaml
 general:
@@ -52,13 +53,15 @@ The following table describes the relevant configuration parameters:
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `enable_interactive_extensions` | boolean | `false` | Enable HTTP interactive execution on chat endpoints. When `true`, POST requests to chat and OpenAI-compatible endpoints return `202 Accepted` if the workflow pauses for interaction or OAuth |
-| `disable_legacy_routes` | boolean | `false` | Disable legacy endpoint paths (`/generate`, `/chat`). When `true`, only versioned paths (`/v1/workflow`, `/v1/chat`) are registered |
+| `enable_interactive_extensions` | boolean | `false` | Enable HTTP interactive execution on OpenAI-compatible endpoints. When `true`, POST requests to chat and OpenAI-compatible endpoints return `202 Accepted` if the workflow pauses for interaction or OAuth |
+| `disable_legacy_routes` | boolean | `false` | Disable legacy endpoint paths (`/generate`, `/chat`). When `true`, only versioned paths with interactive support (`/v1/workflow`, `/v1/chat`) are registered |
 | `oauth2_callback_path` | string | `/auth/redirect` | Path for the OAuth2 authorization code grant callback endpoint |
 
 :::{note}
-Interactive extensions are only applied to **chat** and **OpenAI-compatible** endpoints (for example,
-`/v1/chat` and `/v1/chat/completions`). Generate endpoints (`/v1/workflow`) are not affected.
+Interactive are enabled for versioned **workflow** and **chat** endpoints (for example,
+`/v1/workflow` and `/v1/chat`).
+
+OpenAI-compatible endpoints (`/v1/chat/completions`) are opt-in only (defaulting to disabled).
 :::
 
 ## Execution Lifecycle

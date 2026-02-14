@@ -358,7 +358,11 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         disable_legacy_routes: bool = self.front_end_config.disable_legacy_routes
         enable_interactive_extensions: bool = self.front_end_config.enable_interactive_extensions
 
-        await add_generate_routes(self, app, self.front_end_config.workflow, session_manager)
+        await add_generate_routes(self,
+                                  app,
+                                  self.front_end_config.workflow,
+                                  session_manager,
+                                  disable_legacy_routes=disable_legacy_routes)
         await add_chat_routes(self,
                               app,
                               self.front_end_config.workflow,
@@ -380,7 +384,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         if include_standard_routes:
             await add_generate_routes(self, app, endpoint, session_manager)
         if include_openai_routes:
-            await add_chat_routes(self, app, endpoint, session_manager, enable_interactive=enable_interactive)
+            await add_chat_routes(self, app, endpoint, session_manager)
         if include_websocket_route:
             await add_websocket_routes(self, app, endpoint, session_manager)
 

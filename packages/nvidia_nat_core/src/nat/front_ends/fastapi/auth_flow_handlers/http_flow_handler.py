@@ -14,11 +14,13 @@
 # limitations under the License.
 
 import asyncio
+import contextvars
 import logging
 import secrets
 import typing
 from collections.abc import Awaitable
 from collections.abc import Callable
+from dataclasses import dataclass
 
 import pkce
 from authlib.common.errors import AuthlibBaseError as OAuthError
@@ -39,6 +41,19 @@ if typing.TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class _OAuthExecutionContext:
+    """Per-execution context for OAuth, stored in a task-local context var."""
+    execution_id: str
+    store: "ExecutionStore"
+    stream_queue: asyncio.Queue[ResponseSerializable | None] | None = None
+
+
+# Task-local context var so concurrent executions don't race.
+_oauth_execution_ctx: contextvars.ContextVar[_OAuthExecutionContext | None] = contextvars.ContextVar(
+    "_oauth_execution_ctx", default=None)
+
+
 class HTTPAuthenticationFlowHandler(FlowHandlerBase):
     """
     HTTP-based authentication flow handler.
@@ -56,6 +71,9 @@ class HTTPAuthenticationFlowHandler(FlowHandlerBase):
 
     Without an execution context the handler falls back to raising
     ``NotImplementedError`` (preserving existing behaviour).
+
+    The execution context is stored in a :mod:`contextvars` variable so
+    concurrent executions sharing the same handler instance do not race.
     """
 
     def __init__(
@@ -68,41 +86,39 @@ class HTTPAuthenticationFlowHandler(FlowHandlerBase):
         self._remove_flow_cb = remove_flow_cb
         self._auth_timeout_seconds = auth_timeout_seconds
 
-        # Per-request execution context (set by the interactive runner)
-        self._execution_id: str | None = None
-        self._store: ExecutionStore | None = None
-        self._stream_queue: asyncio.Queue[ResponseSerializable | None] | None = None
-
     # ------------------------------------------------------------------
     # Execution context management (called per-request by the runner)
     # ------------------------------------------------------------------
 
+    @staticmethod
     def set_execution_context(
-        self,
         execution_id: str,
         store: "ExecutionStore",
         stream_queue: asyncio.Queue[ResponseSerializable | None] | None = None,
     ) -> None:
-        """Attach the current execution context so ``authenticate`` can coordinate."""
-        self._execution_id = execution_id
-        self._store = store
-        self._stream_queue = stream_queue
+        """Attach the current execution context so ``authenticate`` can coordinate.
 
-    def clear_execution_context(self) -> None:
-        self._execution_id = None
-        self._store = None
-        self._stream_queue = None
+        Uses a :class:`contextvars.ContextVar` so each ``asyncio.Task``
+        (i.e. each execution) has its own isolated context.
+        """
+        _oauth_execution_ctx.set(
+            _OAuthExecutionContext(execution_id=execution_id, store=store, stream_queue=stream_queue))
+
+    @staticmethod
+    def clear_execution_context() -> None:
+        _oauth_execution_ctx.set(None)
 
     # ------------------------------------------------------------------
     # FlowHandlerBase implementation
     # ------------------------------------------------------------------
 
     async def authenticate(self, config: AuthProviderBaseConfig, method: AuthFlowType) -> AuthenticatedContext:
+        ctx = _oauth_execution_ctx.get()
         # If we have an execution context and the right flow callbacks,
         # handle OAuth2 authorization code.
-        if (self._execution_id is not None and self._store is not None and self._add_flow_cb is not None
-                and self._remove_flow_cb is not None and method == AuthFlowType.OAUTH2_AUTHORIZATION_CODE):
-            return await self._handle_oauth2_auth_code_flow(config)  # type: ignore[arg-type]
+        if (ctx is not None and self._add_flow_cb is not None and self._remove_flow_cb is not None
+                and method == AuthFlowType.OAUTH2_AUTHORIZATION_CODE):
+            return await self._handle_oauth2_auth_code_flow(config, ctx)  # type: ignore[arg-type]
 
         raise NotImplementedError(f"Authentication method '{method}' is not supported by the HTTP frontend."
                                   f" Do you have WebSockets enabled or HTTP interactive mode active?")
@@ -147,7 +163,11 @@ class HTTPAuthenticationFlowHandler(FlowHandlerBase):
         except (OAuthError, ValueError, TypeError) as e:
             raise RuntimeError(f"Error creating OAuth authorization URL: {e}") from e
 
-    async def _handle_oauth2_auth_code_flow(self, config: OAuth2AuthCodeFlowProviderConfig) -> AuthenticatedContext:
+    async def _handle_oauth2_auth_code_flow(
+        self,
+        config: OAuth2AuthCodeFlowProviderConfig,
+        ctx: _OAuthExecutionContext,
+    ) -> AuthenticatedContext:
         from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import FlowState
 
         state = secrets.token_urlsafe(16)
@@ -173,22 +193,20 @@ class HTTPAuthenticationFlowHandler(FlowHandlerBase):
         await self._add_flow_cb(state, flow_state)
 
         # Publish to execution store
-        assert self._store is not None
-        assert self._execution_id is not None
-        await self._store.set_oauth_required(
-            execution_id=self._execution_id,
+        await ctx.store.set_oauth_required(
+            execution_id=ctx.execution_id,
             auth_url=authorization_url,
             oauth_state=state,
         )
 
         # If streaming, push an SSE event
-        if self._stream_queue is not None:
+        if ctx.stream_queue is not None:
             event = StreamOAuthEvent(
-                execution_id=self._execution_id,
+                execution_id=ctx.execution_id,
                 auth_url=authorization_url,
                 oauth_state=state,
             )
-            await self._stream_queue.put(event)
+            await ctx.stream_queue.put(event)
 
         # Block until the redirect_uri endpoint resolves the token
         try:
@@ -199,7 +217,7 @@ class HTTPAuthenticationFlowHandler(FlowHandlerBase):
             await self._remove_flow_cb(state)
 
         # Transition back to running
-        await self._store.set_running(self._execution_id)
+        await ctx.store.set_running(ctx.execution_id)
 
         return AuthenticatedContext(
             headers={"Authorization": f"Bearer {token['access_token']}"},

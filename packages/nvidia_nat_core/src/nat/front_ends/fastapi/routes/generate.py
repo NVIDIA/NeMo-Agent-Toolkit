@@ -47,8 +47,8 @@ def get_streaming_raw_endpoint(*,
                                output_type: type | None):
     """Build a raw-streaming GET handler."""
 
-    async def get_stream(filter_steps: str | None = None):
-        async with session_manager.session(http_connection=None) as session:
+    async def get_stream(request: Request, filter_steps: str | None = None):
+        async with session_manager.session(http_connection=request) as session:
             return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                      content=generate_streaming_response_full_as_str(None,
                                                                                      session=session,
@@ -85,7 +85,7 @@ def post_streaming_raw_endpoint(*,
         )
 
     async def post_stream(request: Request, payload: Any = Body(), filter_steps: str | None = None):
-        async with session_manager.session(http_connection=None) as session:
+        async with session_manager.session(http_connection=request) as session:
             return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                      content=generate_streaming_response_full_as_str(payload,
                                                                                      session=session,

@@ -290,11 +290,12 @@ class HTTPInteractiveRunner:
 
         except Exception as exc:
             logger.exception(error_log_message)
-            yield Error(
+            error_json = Error(
                 code=ErrorTypes.WORKFLOW_ERROR,
                 message=str(exc),
                 details=type(exc).__name__,
             ).model_dump_json()
+            yield f"event: error\ndata: {error_json}\n\n"
 
     async def streaming_generator(
         self,
