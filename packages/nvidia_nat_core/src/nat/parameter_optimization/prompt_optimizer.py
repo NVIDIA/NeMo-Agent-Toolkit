@@ -37,15 +37,24 @@ from nat.parameter_optimization.update_helpers import apply_suggestions
 
 logger = logging.getLogger(__name__)
 
+EvaluationRun = None
+EvaluationRunConfig = None
+
 
 def _require_eval_runtime():
+    global EvaluationRun, EvaluationRunConfig
+    if EvaluationRun is not None and EvaluationRunConfig is not None:
+        return EvaluationRun, EvaluationRunConfig
+
     try:
-        from nat.plugins.eval.evaluate import EvaluationRun
-        from nat.plugins.eval.evaluate import EvaluationRunConfig
+        from nat.plugins.eval.evaluate import EvaluationRun as ImportedEvaluationRun
+        from nat.plugins.eval.evaluate import EvaluationRunConfig as ImportedEvaluationRunConfig
     except ImportError as exc:
         raise RuntimeError(
             "The `nat optimize` command requires evaluation support from `nvidia-nat-eval`. "
             "Install it with `uv pip install nvidia-nat-eval` (or `pip install nvidia-nat-eval`).") from exc
+    EvaluationRun = ImportedEvaluationRun
+    EvaluationRunConfig = ImportedEvaluationRunConfig
     return EvaluationRun, EvaluationRunConfig
 
 
