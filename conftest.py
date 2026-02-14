@@ -24,6 +24,7 @@
 # without an express license agreement from NVIDIA CORPORATION or
 # its affiliates is strictly prohibited.
 
+import asyncio
 import copy
 import os
 import sys
@@ -526,7 +527,7 @@ def dask_client_fixture(dask_scheduler_address: str) -> Generator["DaskClient"]:
 
 
 @pytest.fixture(name="db_engine")
-def db_engine_fixture(fail_missing: bool, tmp_path: Path) -> "AsyncEngine":
+def db_engine_fixture(fail_missing: bool, tmp_path: Path) -> Generator["AsyncEngine"]:
     """
     Fixture to provide a SQLAlchemy AsyncEngine connected to a temporary SQLite database for tests.
     """
@@ -540,7 +541,15 @@ def db_engine_fixture(fail_missing: bool, tmp_path: Path) -> "AsyncEngine":
     db_path = tmp_path / "test_db.sqlite"
     db_url = f"sqlite+aiosqlite:///{db_path}"
     db_engine = create_async_engine(db_url, echo=False, future=True)
-    return db_engine
+    try:
+        yield db_engine
+    finally:
+        # Ensure SQLite worker threads are shut down before event loop teardown.
+        dispose_loop = asyncio.new_event_loop()
+        try:
+            dispose_loop.run_until_complete(db_engine.dispose())
+        finally:
+            dispose_loop.close()
 
 
 @pytest_asyncio.fixture(name="setup_db")

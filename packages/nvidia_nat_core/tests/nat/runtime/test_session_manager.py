@@ -776,6 +776,9 @@ class TestSessionManagerCreate:
         assert sm._shared_workflow is None
         assert sm._is_workflow_per_user is True
 
+        # Cleanup per-user periodic task created by SessionManager.create().
+        await sm.shutdown()
+
     @patch('nat.cli.type_registry.GlobalTypeRegistry')
     @pytest.mark.asyncio
     async def test_create_starts_cleanup_task_for_per_user(self, mock_registry):

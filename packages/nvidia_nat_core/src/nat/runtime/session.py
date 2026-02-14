@@ -310,10 +310,12 @@ class SessionManager:
         # Start cleanup task for per-user workflows
         if session_manager._is_workflow_per_user:
             cleanup_coro = session_manager._run_periodic_cleanup()
-            cleanup_task = asyncio.create_task(cleanup_coro)
-            session_manager._per_user_builders_cleanup_task = cleanup_task
-            if not isinstance(cleanup_task, asyncio.Task):
+            try:
+                cleanup_task = asyncio.create_task(cleanup_coro)
+            except Exception:
                 cleanup_coro.close()
+                raise
+            session_manager._per_user_builders_cleanup_task = cleanup_task
 
         return session_manager
 
@@ -571,6 +573,10 @@ class SessionManager:
                 except TimeoutError:
                     logger.warning("Cleanup task did not finish in time, cancelling")
                     self._per_user_builders_cleanup_task.cancel()
+                except Exception:
+                    self._per_user_builders_cleanup_task.cancel()
+                finally:
+                    self._per_user_builders_cleanup_task = None
 
             # Cleanup all per-user builders
             async with self._per_user_builders_lock:
