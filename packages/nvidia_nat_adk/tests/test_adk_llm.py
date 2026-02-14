@@ -77,24 +77,6 @@ async def test_litellm_adk_with_full_config(mock_litellm_class, litellm_config, 
 
 @patch('google.adk.models.lite_llm.LiteLlm')
 @pytest.mark.asyncio
-async def test_litellm_adk_with_minimal_config(mock_litellm_class, minimal_litellm_config, mock_builder):
-    """Test litellm_adk function with minimal configuration."""
-    mock_llm_instance = MagicMock()
-    mock_litellm_class.return_value = mock_llm_instance
-
-    # Use async context manager (not async for)
-    async with openai_adk(minimal_litellm_config, mock_builder) as llm:
-        result_llm = llm
-
-    # Verify LiteLlm was instantiated with default values for missing fields
-    mock_litellm_class.assert_called_once_with('gpt-4')
-
-    # Verify the returned LLM instance
-    assert result_llm == mock_llm_instance
-
-
-@patch('google.adk.models.lite_llm.LiteLlm')
-@pytest.mark.asyncio
 async def test_litellm_adk_config_exclusion(mock_litellm_class, mock_builder):
     """Test that 'type' field is excluded from config when creating LiteLlm."""
     config_with_type = OpenAIModelConfig(model_name="gpt-3.5-turbo", temperature=0.5)

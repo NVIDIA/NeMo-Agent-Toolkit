@@ -28,3 +28,4 @@ def test_request_attributes_defaults():
     assert ra.client_host is None
     assert ra.client_port is None
     assert ra.cookies is None
+    assert ra.payload is None

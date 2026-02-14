@@ -18,7 +18,6 @@ import datetime
 import json
 import os
 import re
-from collections.abc import Mapping
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -478,43 +477,115 @@ async def test_chat_stream_endpoint_observability_trace_id_integration(client: h
 
 
 @pytest.mark.integration
-async def test_user_attributes_from_http_request(client: httpx.AsyncClient, config: Config):
-    """Tests setting user attributes from HTTP request."""
-    input_message = {"message": f"{config.app.input}"}
-    headers = {"Header-Test": "application/json"}
-    query_params = {"param1": "value1"}
+async def test_metadata_from_http_request_populates_all_request_attributes(client: httpx.AsyncClient,
+                                                                           config: Config) -> None:
+    captured: list = []
 
-    # Capture the metadata that gets set during the request
-    actual_headers: list[Mapping[str, str] | None] = [None]
-    actual_query_params: list[Mapping[str, str] | None] = [None]
+    original = SessionManager.set_metadata_from_http_request
 
-    # Store reference to original method before patching
-    original_method = SessionManager.set_metadata_from_http_request
+    async def capture_metadata(self, request) -> None:
+        await original(self, request)
+        meta = Context.get().metadata
+        captured.append({
+            "method": meta.method,
+            "url_path": meta.url_path,
+            "url_scheme": meta.url_scheme,
+            "url_port": meta.url_port,
+            "client_host": meta.client_host,
+            "client_port": meta.client_port,
+            "headers": meta.headers,
+            "query_params": meta.query_params,
+            "path_params": meta.path_params,
+            "cookies": meta.cookies,
+            "payload": meta.payload,
+        })
 
-    def mock_set_metadata_from_http_request(self, request):
-        """Mock the metadata setting to capture what would be set."""
-        original_method(self, request)
-        actual_headers[0] = Context.get().metadata.headers
-        actual_query_params[0] = Context.get().metadata.query_params
-
-    # Patch the method to capture metadata
-    with patch("nat.runtime.session.SessionManager.set_metadata_from_http_request",
-               mock_set_metadata_from_http_request):
+    with patch(
+            "nat.runtime.session.SessionManager.set_metadata_from_http_request",
+            capture_metadata,
+    ):
         response = await client.post(
-            f"{config.endpoint.generate}",
-            json=input_message,
-            headers=headers,
-            params=query_params,
+            f"{config.endpoint.generate}?tenant_id=abc&env=test",
+            json={"message": config.app.input},
+            headers={
+                "x-custom": "custom-value", "cookie": "session=xyz123; foo=bar"
+            },
         )
 
     assert response.status_code == 200
+    assert len(captured) == 1
+    meta = captured[0]
+    assert meta["method"] == "POST"
+    assert config.endpoint.generate in meta["url_path"]
+    assert meta["url_scheme"] == "http"
+    assert meta["url_port"] == 8000
+    assert meta["client_host"] is not None
+    assert meta["client_port"] is not None
+    assert meta["headers"] is not None
+    assert meta["headers"].get("x-custom") == "custom-value"
+    assert meta["query_params"] is not None
+    assert meta["query_params"].get("tenant_id") == "abc"
+    assert meta["query_params"].get("env") == "test"
+    assert meta["path_params"] is not None
+    assert meta["cookies"] is not None
+    assert meta["cookies"].get("session") == "xyz123"
+    assert meta["cookies"].get("foo") == "bar"
+    assert meta["payload"] is not None
 
-    # Verify the metadata was captured correctly
-    assert actual_headers[0] is not None
-    assert actual_query_params[0] is not None
 
-    assert actual_headers[0]["header-test"] == headers["Header-Test"]
-    assert actual_query_params[0]["param1"] == query_params["param1"]
+def test_metadata_from_websocket_populates_all_request_attributes() -> None:
+    """Unit test: set_metadata_from_websocket populates context metadata from a mock websocket."""
+    from unittest.mock import MagicMock
+
+    from nat.builder.context import ContextState
+    from nat.runtime.session import SessionManager
+    from nat.runtime.user_metadata import RequestAttributes
+
+    # Reset the ContextVar so we start with a fresh RequestAttributes,
+    # avoiding stale state from previous tests sharing the session-scoped event loop.
+    ContextState.get()._metadata.set(RequestAttributes())
+
+    mock_config = MagicMock()
+    mock_config.workflow = EchoFunctionConfig()
+    mock_builder = MagicMock()
+    sm = SessionManager(config=mock_config, shared_builder=mock_builder, entry_function=None)
+
+    mock_ws = MagicMock()
+    mock_ws.url.path = "/websocket"
+    mock_ws.url.port = 443
+    mock_ws.url.scheme = "ws"
+    mock_ws.headers = {"x-custom": "custom-value"}
+    mock_ws.query_params = {"tenant_id": "abc", "env": "test"}
+    mock_ws.path_params = {}
+    mock_ws.client = ("192.168.1.1", 12345)
+    mock_ws.cookies = {"session": "xyz123", "foo": "bar"}
+    mock_ws.scope = {"headers": []}
+
+    sm.set_metadata_from_websocket(
+        mock_ws,
+        user_message_id="msg-1",
+        conversation_id="conv-1",
+        pre_parsed_cookies={
+            "session": "xyz123", "foo": "bar"
+        },
+    )
+
+    meta = ContextState.get().metadata.get()
+    assert meta.url_path == "/websocket"
+    assert meta.url_scheme == "ws"
+    assert meta.url_port == 443
+    assert meta.client_host == "192.168.1.1"
+    assert meta.client_port == 12345
+    assert meta.headers is not None
+    assert meta.headers.get("x-custom") == "custom-value"
+    assert meta.query_params is not None
+    assert meta.query_params.get("tenant_id") == "abc"
+    assert meta.query_params.get("env") == "test"
+    assert meta.path_params is not None
+    assert meta.cookies is not None
+    assert meta.payload is None
+    assert meta.cookies.get("session") == "xyz123"
+    assert meta.cookies.get("foo") == "bar"
 
 
 async def test_valid_user_message():
