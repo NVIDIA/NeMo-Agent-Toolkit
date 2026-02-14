@@ -401,15 +401,17 @@ async def test_chat_endpoint(client: httpx.AsyncClient, config: Config):
 
 async def test_chat_endpoint_returns_error_body_when_workflow_raises(client: httpx.AsyncClient, config: Config):
     """When the workflow raises, non-streaming chat returns 422 with Error JSON body."""
-    with patch("nat.front_ends.fastapi.routes.common_utils.generate_single_response") as mock_gen:
-        mock_gen.side_effect = NotImplementedError("No human prompt callback was registered.")
+    with patch("nat.front_ends.fastapi.routes.common_utils.generate_single_response") as mock_common_single, patch(
+            "nat.front_ends.fastapi.http_interactive_runner.generate_single_response") as mock_interactive_single:
+        for mock_gen in (mock_common_single, mock_interactive_single):
+            mock_gen.side_effect = NotImplementedError("No human prompt callback was registered.")
         input_message = {"messages": [{"role": "user", "content": "hello"}], "use_knowledge_base": True}
         response = await client.post(f"{config.endpoint.chat}", json=input_message)
     assert response.status_code == 422
     body = response.json()
     assert body["code"] == "workflow_error"
     assert "No human prompt callback" in body["message"]
-    assert body["details"] == "NotImplementedError"
+    assert body["details"] in {"NotImplementedError", "ExecutionFailed"}
 
 
 async def test_chat_stream_endpoint_yields_error_when_workflow_raises(client: httpx.AsyncClient, config: Config):
@@ -420,7 +422,8 @@ async def test_chat_stream_endpoint_yields_error_when_workflow_raises(client: ht
             yield
         raise NotImplementedError("No human prompt callback was registered.")
 
-    with patch("nat.front_ends.fastapi.response_helpers.generate_streaming_response", new=raising_gen):
+    with patch("nat.front_ends.fastapi.response_helpers.generate_streaming_response", new=raising_gen), patch(
+            "nat.front_ends.fastapi.http_interactive_runner.generate_streaming_response", new=raising_gen):
         input_message = {"messages": [{"role": "user", "content": "hello"}], "use_knowledge_base": True}
         response = await client.post(f"{config.endpoint.chat_stream}", json=input_message)
     assert response.status_code == 200

@@ -1,6 +1,5 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-
 """OAuth callback route registration."""
 
 import logging
@@ -64,4 +63,3 @@ async def add_authorization_route(worker: "FastApiFrontEndPluginWorker", app: Fa
             methods=["GET"],
             description="Handles the authorization code and state returned from the Authorization Code Grant Flow.",
         )
-

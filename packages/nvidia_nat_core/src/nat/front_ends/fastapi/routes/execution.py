@@ -1,20 +1,19 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-
 """Interactive execution route registration."""
 
 import logging
-from typing import Any
 from typing import TYPE_CHECKING
+from typing import Any
 from typing import cast
 
 from fastapi import FastAPI
 from fastapi import HTTPException
 from fastapi import Response
 
-from nat.data_models.interactive_http import ExecutionCompletedStatus
 from nat.data_models.interactive_http import ExecutionAcceptedInteraction
 from nat.data_models.interactive_http import ExecutionAcceptedOAuth
+from nat.data_models.interactive_http import ExecutionCompletedStatus
 from nat.data_models.interactive_http import ExecutionFailedStatus
 from nat.data_models.interactive_http import ExecutionInteractionRequiredStatus
 from nat.data_models.interactive_http import ExecutionOAuthRequiredStatus
@@ -39,10 +38,8 @@ def build_accepted_response(record: Any) -> ExecutionAcceptedInteraction | Execu
             status_url=status_url,
             interaction_id=record.pending_interaction.interaction_id,
             prompt=record.pending_interaction.prompt,
-            response_url=(
-                f"/executions/{record.execution_id}"
-                f"/interactions/{record.pending_interaction.interaction_id}/response"
-            ),
+            response_url=(f"/executions/{record.execution_id}"
+                          f"/interactions/{record.pending_interaction.interaction_id}/response"),
         )
     if record.status == ExecutionStatus.OAUTH_REQUIRED and record.pending_oauth is not None:
         return ExecutionAcceptedOAuth(
@@ -81,10 +78,8 @@ async def add_execution_routes(worker: "FastApiFrontEndPluginWorker", app: FastA
                 execution_id=record.execution_id,
                 interaction_id=record.pending_interaction.interaction_id,
                 prompt=record.pending_interaction.prompt,
-                response_url=(
-                    f"/executions/{execution_id}"
-                    f"/interactions/{record.pending_interaction.interaction_id}/response"
-                ),
+                response_url=(f"/executions/{execution_id}"
+                              f"/interactions/{record.pending_interaction.interaction_id}/response"),
             )
         elif record.status == ExecutionStatus.OAUTH_REQUIRED and record.pending_oauth is not None:
             return execution_oauth_required_status_model(
@@ -121,7 +116,9 @@ async def add_execution_routes(worker: "FastApiFrontEndPluginWorker", app: FastA
         response_model=ExecutionStatusResponse,
         description="Get the status of an interactive execution (HTTP HITL / OAuth).",
         responses={
-            404: {"description": "Execution not found"},
+            404: {
+                "description": "Execution not found"
+            },
         },
     )
     app.add_api_route(
@@ -130,11 +127,16 @@ async def add_execution_routes(worker: "FastApiFrontEndPluginWorker", app: FastA
         methods=["POST"],
         description="Submit a human response to a pending interaction prompt.",
         responses={
-            204: {"description": "Response accepted"},
-            400: {"description": "Interaction already resolved"},
-            404: {"description": "Execution or interaction not found"},
+            204: {
+                "description": "Response accepted"
+            },
+            400: {
+                "description": "Interaction already resolved"
+            },
+            404: {
+                "description": "Execution or interaction not found"
+            },
         },
     )
 
     logger.info("Added HTTP interactive execution endpoints at /executions/...")
-

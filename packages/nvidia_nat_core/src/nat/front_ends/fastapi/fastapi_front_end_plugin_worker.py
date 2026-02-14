@@ -21,8 +21,6 @@ from abc import abstractmethod
 from collections.abc import Awaitable
 from collections.abc import Callable
 from contextlib import asynccontextmanager
-from typing import Any
-from typing import cast
 
 from fastapi import FastAPI
 from fastapi import Request
@@ -42,15 +40,15 @@ from .auth_flow_handlers.websocket_flow_handler import FlowState
 from .execution_store import ExecutionStore
 from .fastapi_front_end_config import FastApiFrontEndConfig
 from .message_handler import WebSocketMessageHandler
-from .routes.auth import add_authorization_route as register_authorization_route
+from .routes.auth import add_authorization_route
 from .routes.chat import add_chat_routes
-from .routes.evaluate import add_evaluate_item_route as register_evaluate_item_route
-from .routes.evaluate import add_evaluate_route as register_evaluate_route
-from .routes.execution import add_execution_routes as register_execution_routes
+from .routes.evaluate import add_evaluate_item_route
+from .routes.evaluate import add_evaluate_route
+from .routes.execution import add_execution_routes
 from .routes.generate import add_generate_routes
-from .routes.health import add_health_route as register_health_route
-from .routes.monitor import add_monitor_route as register_monitor_route
-from .routes.static import add_static_files_route as register_static_files_route
+from .routes.health import add_health_route
+from .routes.monitor import add_monitor_route
+from .routes.static import add_static_files_route
 from .routes.websocket import add_websocket_routes
 from .step_adaptor import StepAdaptor
 from .utils import get_config_file_path
@@ -321,50 +319,53 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
     async def add_routes(self, app: FastAPI, builder: WorkflowBuilder):
 
-        await self.add_default_route(app, await self._create_session_manager(builder))
-        await self.add_evaluate_route(app, await self._create_session_manager(builder))
-        await self.add_evaluate_item_route(app, await self._create_session_manager(builder))
+        session_manager = await self._create_session_manager(builder)
 
-        await self.add_static_files_route(app, builder)
-        await self.add_authorization_route(app)
-        await self.add_execution_routes(app)
-        await self.add_mcp_client_tool_list_route(app, builder)
-        await self.add_monitor_route(app)
-        await self.add_health_route(app)
+        await self.add_default_route(app, session_manager)
+
+        await add_authorization_route(self, app)
+        await add_execution_routes(self, app)
+        await add_monitor_route(self, app)
+        await add_health_route(app)
+        await add_static_files_route(self, app, builder)
+
+        # Eventually move evaluate routes to separate plugin
+        await add_evaluate_route(self, app, session_manager=session_manager)
+        await add_evaluate_item_route(self, app, session_manager=session_manager)
+
+        try:
+            from nat.plugins.mcp.client.fastapi_routes import add_mcp_client_tool_list_route
+            await add_mcp_client_tool_list_route(app, builder, self._session_managers)
+        except ImportError:
+            logger.warning("nvidia-nat-mcp is not installed; skipping MCP client tool list routes.")
+
+        disable_legacy_routes: bool = self.front_end_config.disable_legacy_routes
+        enable_interactive_extensions: bool = self.front_end_config.enable_interactive_extensions
 
         for ep in self.front_end_config.endpoints:
-            disable_legacy_routes: bool = self.front_end_config.disable_legacy_routes
             session_manager = await self._create_session_manager(builder, ep.function_name)
             await add_generate_routes(self, app, ep, session_manager, disable_legacy_routes=disable_legacy_routes)
             await add_chat_routes(self,
                                   app,
                                   ep,
                                   session_manager,
-                                  enable_interactive=self.front_end_config.enable_interactive_extensions,
+                                  enable_interactive_extensions=enable_interactive_extensions,
                                   disable_legacy_routes=disable_legacy_routes)
             await add_websocket_routes(self, app, ep, session_manager)
 
     async def add_default_route(self, app: FastAPI, session_manager: SessionManager):
+
+        disable_legacy_routes: bool = self.front_end_config.disable_legacy_routes
+        enable_interactive_extensions: bool = self.front_end_config.enable_interactive_extensions
 
         await add_generate_routes(self, app, self.front_end_config.workflow, session_manager)
         await add_chat_routes(self,
                               app,
                               self.front_end_config.workflow,
                               session_manager,
-                              enable_interactive=self.front_end_config.enable_interactive_extensions,
-                              disable_legacy_routes=self.front_end_config.disable_legacy_routes)
+                              enable_interactive_extensions=enable_interactive_extensions,
+                              disable_legacy_routes=disable_legacy_routes)
         await add_websocket_routes(self, app, self.front_end_config.workflow, session_manager)
-
-    async def add_evaluate_route(self, app: FastAPI, session_manager: SessionManager):
-        """Add the evaluate endpoint to the FastAPI app."""
-        await register_evaluate_route(self, app, session_manager)
-
-    async def add_evaluate_item_route(self, app: FastAPI, session_manager: SessionManager):
-        """Add the single-item evaluation endpoint to the FastAPI app."""
-        await register_evaluate_item_route(self, app, session_manager)
-
-    async def add_static_files_route(self, app: FastAPI, builder: WorkflowBuilder):
-        await register_static_files_route(self, app, builder)
 
     async def add_route(self,
                         app: FastAPI,
@@ -379,36 +380,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         if include_standard_routes:
             await add_generate_routes(self, app, endpoint, session_manager)
         if include_openai_routes:
-            await add_chat_routes(self,
-                                  app,
-                                  endpoint,
-                                  session_manager,
-                                  enable_interactive=enable_interactive)
+            await add_chat_routes(self, app, endpoint, session_manager, enable_interactive=enable_interactive)
         if include_websocket_route:
             await add_websocket_routes(self, app, endpoint, session_manager)
-
-    async def add_authorization_route(self, app: FastAPI):
-        await register_authorization_route(self, app)
-
-    async def add_execution_routes(self, app: FastAPI):
-        """Add HTTP interactive execution endpoints (HITL + OAuth polling)."""
-        await register_execution_routes(self, app)
-
-    async def add_mcp_client_tool_list_route(self, app: FastAPI, builder: WorkflowBuilder):
-        """Add the MCP client tool list endpoint to the FastAPI app."""
-        try:
-            from nat.plugins.mcp.client.fastapi_routes import add_mcp_client_tool_list_route
-            await add_mcp_client_tool_list_route(app, builder, self._session_managers)
-        except ImportError:
-            logger.warning("nvidia-nat-mcp is not installed; skipping MCP client tool list routes.")
-
-    async def add_monitor_route(self, app: FastAPI):
-        """Add per-user monitoring endpoint to the FastAPI app."""
-        await register_monitor_route(self, app)
-
-    async def add_health_route(self, app: FastAPI) -> None:
-        """Add a health check endpoint to the FastAPI app."""
-        await register_health_route(app)
 
     async def _add_flow(self, state: str, flow_state: FlowState):
         async with self._outstanding_flows_lock:

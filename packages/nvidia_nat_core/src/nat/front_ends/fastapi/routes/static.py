@@ -1,6 +1,5 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-
 """Static file route registration."""
 
 import logging
@@ -113,4 +112,3 @@ async def add_static_files_route(worker: "FastApiFrontEndPluginWorker", app: Fas
         methods=["DELETE"],
         description="Delete a static file from the object store",
     )
-

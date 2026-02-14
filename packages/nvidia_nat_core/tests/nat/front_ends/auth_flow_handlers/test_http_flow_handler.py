@@ -259,10 +259,10 @@ async def test_http_oauth2_flow_publishes_stream_event(monkeypatch, mock_server)
         flow_state = worker._outstanding_flows[state]
 
         async with httpx.AsyncClient(
-            transport=ASGITransport(app=mock_server._app),
-            base_url="http://testserver",
-            follow_redirects=False,
-            timeout=10,
+                transport=ASGITransport(app=mock_server._app),
+                base_url="http://testserver",
+                follow_redirects=False,
+                timeout=10,
         ) as client:
             r = await client.get(record.pending_oauth.auth_url)
             redirect_url = r.headers["location"]

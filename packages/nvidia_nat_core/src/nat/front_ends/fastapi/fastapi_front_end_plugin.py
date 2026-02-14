@@ -21,8 +21,8 @@ import tempfile
 import typing
 
 from nat.builder.front_end import FrontEndBase
-from nat.front_ends.fastapi.async_jobs.async_job import setup_worker
 from nat.front_ends.fastapi.async_jobs.async_job import periodic_cleanup
+from nat.front_ends.fastapi.async_jobs.async_job import setup_worker
 from nat.front_ends.fastapi.async_jobs.dask_client_mixin import DaskClientMixin
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorkerBase

@@ -1,6 +1,5 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-
 """Monitoring route registration."""
 
 import logging
@@ -94,4 +93,3 @@ async def add_monitor_route(worker: "FastApiFrontEndPluginWorker", app: FastAPI)
                       })
 
     logger.info("Added per-user monitoring endpoint at /monitor/users")
-

@@ -594,4 +594,3 @@ def get_db_engine(db_url: str | None = None, echo: bool = False, use_async: bool
 
 # Prevent Sphinx from attempting to document the Base class which produces warnings
 __all__ = ["get_db_engine", "JobInfo", "JobStatus", "JobStore"]
-

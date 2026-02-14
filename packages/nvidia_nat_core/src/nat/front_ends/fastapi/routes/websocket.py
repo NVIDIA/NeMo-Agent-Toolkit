@@ -1,6 +1,5 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-
 """WebSocket route registration."""
 
 import logging
@@ -40,7 +39,8 @@ def websocket_endpoint(*, worker: Any, session_manager: SessionManager):
                     logger.info("WebSocket: Session cookie already present in headers (same-origin)")
                 else:
                     headers[i] = (name, f"{cookie_str}; {cookie_header}".encode())
-                    logger.info("WebSocket: Added session cookie to existing cookie header: %s", session_id[:10] + "...")
+                    logger.info("WebSocket: Added session cookie to existing cookie header: %s",
+                                session_id[:10] + "...")
                 break
 
             if not cookie_exists and not existing_session_cookie:
@@ -65,4 +65,8 @@ async def add_websocket_routes(
 ):
     """Add websocket route for an endpoint."""
     if endpoint.websocket_path:
-        app.add_websocket_route(endpoint.websocket_path, websocket_endpoint(worker=worker, session_manager=session_manager))
+        app.add_websocket_route(endpoint.websocket_path,
+                                websocket_endpoint(
+                                    worker=worker,
+                                    session_manager=session_manager,
+                                ))

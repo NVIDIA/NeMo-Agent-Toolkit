@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 Data models for HTTP Human-in-the-Loop (HITL) and OAuth support.
 
@@ -31,10 +30,10 @@ from nat.data_models.api_server import ResponseSerializable
 from nat.data_models.interactive import HumanPrompt
 from nat.data_models.interactive import HumanResponse
 
-
 # ---------------------------------------------------------------------------
 # Execution status enum
 # ---------------------------------------------------------------------------
+
 
 class ExecutionStatus(StrEnum):
     """Status of an HTTP interactive execution."""
@@ -48,6 +47,7 @@ class ExecutionStatus(StrEnum):
 # ---------------------------------------------------------------------------
 # Execution status response – discriminated union (GET /executions/{id})
 # ---------------------------------------------------------------------------
+
 
 class _ExecutionStatusBase(BaseModel):
     """Common fields for every execution status variant."""
@@ -95,10 +95,10 @@ ExecutionStatusResponse = typing.Annotated[
     Discriminator("status"),
 ]
 
-
 # ---------------------------------------------------------------------------
 # 202 Accepted response body – discriminated union
 # ---------------------------------------------------------------------------
+
 
 class _ExecutionAcceptedBase(_ExecutionStatusBase):
     """Common fields for every 202 Accepted variant."""
@@ -125,10 +125,10 @@ ExecutionAcceptedResponse = typing.Annotated[
     Discriminator("status"),
 ]
 
-
 # ---------------------------------------------------------------------------
 # Interaction response request body
 # ---------------------------------------------------------------------------
+
 
 class InteractionResponseRequest(BaseModel):
     """
@@ -144,6 +144,7 @@ class InteractionResponseRequest(BaseModel):
 # ---------------------------------------------------------------------------
 # SSE stream event types for streaming endpoints
 # ---------------------------------------------------------------------------
+
 
 class StreamInteractionEvent(BaseModel, ResponseSerializable):
     """

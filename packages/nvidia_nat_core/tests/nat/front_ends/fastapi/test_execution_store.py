@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
-
 import pytest
 
 from nat.data_models.interactive import BinaryHumanPromptOption
@@ -56,7 +54,6 @@ ALL_PROMPT_RESPONSE_PAIRS = [
 # ---------------------------------------------------------------------------
 # Creation and lookup
 # ---------------------------------------------------------------------------
-
 async def test_create_execution_returns_record_with_running_status():
     store = ExecutionStore()
     record = await store.create_execution()
@@ -80,6 +77,7 @@ async def test_get_returns_created_record():
 # ---------------------------------------------------------------------------
 # Status transitions
 # ---------------------------------------------------------------------------
+
 
 async def test_set_interaction_required():
     store = ExecutionStore()
@@ -158,6 +156,7 @@ async def test_first_outcome_is_set_on_completed():
 # Interaction resolution
 # ---------------------------------------------------------------------------
 
+
 async def test_resolve_interaction_sets_future_result():
     store = ExecutionStore()
     record = await store.create_execution()
@@ -171,7 +170,8 @@ async def test_resolve_interaction_sets_future_result():
     assert pending.future.result() == response
 
 
-@pytest.mark.parametrize("prompt, response", ALL_PROMPT_RESPONSE_PAIRS,
+@pytest.mark.parametrize("prompt, response",
+                         ALL_PROMPT_RESPONSE_PAIRS,
                          ids=[p.input_type for p, _ in ALL_PROMPT_RESPONSE_PAIRS])
 async def test_resolve_interaction_all_types(prompt, response):
     """Every HumanPrompt / HumanResponse pair can round-trip through the store."""
@@ -219,6 +219,7 @@ async def test_resolve_interaction_raises_on_already_resolved():
 # Cleanup
 # ---------------------------------------------------------------------------
 
+
 async def test_cleanup_expired_removes_old_completed():
     store = ExecutionStore(ttl_seconds=0)
     record = await store.create_execution()
@@ -248,6 +249,7 @@ async def test_remove():
 # ---------------------------------------------------------------------------
 # Status transition errors
 # ---------------------------------------------------------------------------
+
 
 async def test_set_interaction_required_raises_on_unknown():
     store = ExecutionStore()

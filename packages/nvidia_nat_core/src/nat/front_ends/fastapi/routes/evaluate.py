@@ -1,6 +1,5 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-
 """Evaluation route registration."""
 
 import logging
@@ -66,8 +65,8 @@ async def add_evaluate_route(worker: Any, app: FastAPI, session_manager: Session
             eval_runner = EvaluationRun(eval_config)
 
             async with load_workflow(workflow_config_file_path) as local_session_manager:
-                output: EvaluationRunOutput = await eval_runner.run_and_evaluate(
-                    session_manager=local_session_manager, job_id=job_id)
+                output: EvaluationRunOutput = await eval_runner.run_and_evaluate(session_manager=local_session_manager,
+                                                                                 job_id=job_id)
 
             if output.workflow_interrupted:
                 await job_store.update_status(job_id, JobStatus.INTERRUPTED)
@@ -245,4 +244,3 @@ async def add_evaluate_item_route(worker: Any, app: FastAPI, session_manager: Se
                               },
                           })
         logger.info("Added evaluate_item route at %s", worker.front_end_config.evaluate_item.path)
-

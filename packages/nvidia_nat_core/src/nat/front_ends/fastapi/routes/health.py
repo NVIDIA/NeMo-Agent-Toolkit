@@ -1,6 +1,5 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-
 """Health route registration."""
 
 import logging
@@ -42,4 +41,3 @@ async def add_health_route(app: FastAPI) -> None:
                       })
 
     logger.info("Added health check endpoint at /health")
-

@@ -100,19 +100,12 @@ class HTTPAuthenticationFlowHandler(FlowHandlerBase):
     async def authenticate(self, config: AuthProviderBaseConfig, method: AuthFlowType) -> AuthenticatedContext:
         # If we have an execution context and the right flow callbacks,
         # handle OAuth2 authorization code.
-        if (
-            self._execution_id is not None
-            and self._store is not None
-            and self._add_flow_cb is not None
-            and self._remove_flow_cb is not None
-            and method == AuthFlowType.OAUTH2_AUTHORIZATION_CODE
-        ):
+        if (self._execution_id is not None and self._store is not None and self._add_flow_cb is not None
+                and self._remove_flow_cb is not None and method == AuthFlowType.OAUTH2_AUTHORIZATION_CODE):
             return await self._handle_oauth2_auth_code_flow(config)  # type: ignore[arg-type]
 
-        raise NotImplementedError(
-            f"Authentication method '{method}' is not supported by the HTTP frontend."
-            f" Do you have WebSockets enabled or HTTP interactive mode active?"
-        )
+        raise NotImplementedError(f"Authentication method '{method}' is not supported by the HTTP frontend."
+                                  f" Do you have WebSockets enabled or HTTP interactive mode active?")
 
     # ------------------------------------------------------------------
     # OAuth2 Authorization Code flow (mirrors WebSocket handler)
@@ -154,9 +147,7 @@ class HTTPAuthenticationFlowHandler(FlowHandlerBase):
         except (OAuthError, ValueError, TypeError) as e:
             raise RuntimeError(f"Error creating OAuth authorization URL: {e}") from e
 
-    async def _handle_oauth2_auth_code_flow(
-        self, config: OAuth2AuthCodeFlowProviderConfig
-    ) -> AuthenticatedContext:
+    async def _handle_oauth2_auth_code_flow(self, config: OAuth2AuthCodeFlowProviderConfig) -> AuthenticatedContext:
         from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import FlowState
 
         state = secrets.token_urlsafe(16)
@@ -203,9 +194,7 @@ class HTTPAuthenticationFlowHandler(FlowHandlerBase):
         try:
             token = await asyncio.wait_for(flow_state.future, timeout=self._auth_timeout_seconds)
         except TimeoutError as exc:
-            raise RuntimeError(
-                f"Authentication flow timed out after {self._auth_timeout_seconds} seconds."
-            ) from exc
+            raise RuntimeError(f"Authentication flow timed out after {self._auth_timeout_seconds} seconds.") from exc
         finally:
             await self._remove_flow_cb(state)
 
@@ -214,5 +203,7 @@ class HTTPAuthenticationFlowHandler(FlowHandlerBase):
 
         return AuthenticatedContext(
             headers={"Authorization": f"Bearer {token['access_token']}"},
-            metadata={"expires_at": token.get("expires_at"), "raw_token": token},
+            metadata={
+                "expires_at": token.get("expires_at"), "raw_token": token
+            },
         )

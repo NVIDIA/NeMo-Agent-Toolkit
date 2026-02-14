@@ -12,12 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Async job execution utilities for FastAPI front end."""
 
-from nat.front_ends.fastapi.async_jobs.async_job import setup_worker
 from nat.front_ends.fastapi.async_jobs.async_job import periodic_cleanup
 from nat.front_ends.fastapi.async_jobs.async_job import run_generation
+from nat.front_ends.fastapi.async_jobs.async_job import setup_worker
 from nat.front_ends.fastapi.async_jobs.dask_client_mixin import DaskClientMixin
 from nat.front_ends.fastapi.async_jobs.job_store import JobInfo
 from nat.front_ends.fastapi.async_jobs.job_store import JobStatus

@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Async generation route helpers."""
 
 import json
@@ -159,8 +158,8 @@ async def add_async_generation_routes(
     app.add_api_route(
         path=f"{endpoint.path}/async",
         endpoint=post_async_generation(worker=worker,
-                                        session_manager=session_manager,
-                                        request_type=AsyncGenerateRequest),
+                                       session_manager=session_manager,
+                                       request_type=AsyncGenerateRequest),
         methods=[endpoint.method],
         response_model=AsyncGenerateResponse | AsyncGenerationStatusResponse,
         description="Start an async generate job",

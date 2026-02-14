@@ -21,7 +21,6 @@ from nat.runtime.session import SessionManager
 
 from .execution import build_accepted_response
 
-
 logger = logging.getLogger(__name__)
 
 RESPONSE_500 = {
@@ -60,10 +59,7 @@ def _with_annotation(handler: Any, param_name: str, annotation: Any):
     return handler
 
 
-def get_single_endpoint(*,
-                        worker: Any,
-                        session_manager: SessionManager,
-                        result_type: type | None):
+def get_single_endpoint(*, worker: Any, session_manager: SessionManager, result_type: type | None):
     """Build a single-response GET handler."""
     auth_cb = worker._http_flow_handler.authenticate if worker._http_flow_handler else None
 

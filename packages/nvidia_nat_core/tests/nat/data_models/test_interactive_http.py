@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Tests for HTTP interactive data models."""
 
 import json
@@ -45,7 +44,6 @@ from nat.data_models.interactive_http import InteractionResponseRequest
 from nat.data_models.interactive_http import StreamInteractionEvent
 from nat.data_models.interactive_http import StreamOAuthEvent
 
-
 # ---------------------------------------------------------------------------
 # Helpers: prompt and response fixtures for every interaction type
 # ---------------------------------------------------------------------------
@@ -74,10 +72,10 @@ ALL_RESPONSES = [
     HumanResponseDropdown(selected_option=_OPTION_A),
 ]
 
-
 # ---------------------------------------------------------------------------
 # ExecutionStatus
 # ---------------------------------------------------------------------------
+
 
 def test_execution_status_values():
     assert ExecutionStatus.RUNNING == "running"
@@ -90,6 +88,7 @@ def test_execution_status_values():
 # ---------------------------------------------------------------------------
 # ExecutionStatusResponse variants (discriminated union)
 # ---------------------------------------------------------------------------
+
 
 def test_execution_running_status():
     resp = ExecutionRunningStatus(execution_id="abc")
@@ -154,6 +153,7 @@ def test_execution_status_serialization_roundtrip():
 # ExecutionAcceptedResponse variants (discriminated union)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.parametrize("prompt", ALL_PROMPTS, ids=lambda p: p.input_type)
 def test_execution_accepted_interaction_all_prompt_types(prompt):
     resp = ExecutionAcceptedInteraction(
@@ -187,6 +187,7 @@ def test_execution_accepted_oauth():
 # InteractionResponseRequest – all interaction response types
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.parametrize("response", ALL_RESPONSES, ids=lambda r: r.type)
 def test_interaction_response_request_all_types(response):
     body = InteractionResponseRequest(response=response)
@@ -204,6 +205,7 @@ def test_interaction_response_request_serialization_roundtrip(response):
 # ---------------------------------------------------------------------------
 # StreamInteractionEvent – all prompt types
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.parametrize("prompt", ALL_PROMPTS, ids=lambda p: p.input_type)
 def test_stream_interaction_event_serialization_all_prompt_types(prompt):
@@ -228,6 +230,7 @@ def test_stream_interaction_event_serialization_all_prompt_types(prompt):
 # StreamOAuthEvent
 # ---------------------------------------------------------------------------
 
+
 def test_stream_oauth_event_serialization():
     event = StreamOAuthEvent(
         execution_id="exec-2",
@@ -236,7 +239,7 @@ def test_stream_oauth_event_serialization():
     )
     sse = event.get_stream_data()
     assert sse.startswith("event: oauth_required\n")
-    data_line = [l for l in sse.split("\n") if l.startswith("data:")][0]
+    data_line = [line for line in sse.split("\n") if line.startswith("data:")][0]
     data = json.loads(data_line[len("data: "):])
     assert data["event_type"] == "oauth_required"
     assert data["oauth_state"] == "xyz"

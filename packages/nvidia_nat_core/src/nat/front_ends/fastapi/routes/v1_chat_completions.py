@@ -1,6 +1,5 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-
 """OpenAI v1 chat completions route registration."""
 
 import logging
@@ -26,7 +25,6 @@ from .common_utils import RESPONSE_500
 from .common_utils import _build_interactive_runner
 from .common_utils import add_context_headers_to_response
 from .execution import build_accepted_response
-
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +76,6 @@ def post_openai_api_compatible_endpoint(*, worker: Any, session_manager: Session
         response.status_code = 202
         return build_accepted_response(record)
 
-
     async def post_openai_api_compatible(response: Response, request: Request, payload: ChatRequest):
         stream_requested = getattr(payload, "stream", False)
 
@@ -125,6 +122,7 @@ async def add_v1_chat_completions_route(
     enable_interactive: bool,
 ):
     """Register OpenAI v1 chat completions endpoint."""
+    extra = ' with interaction support' if enable_interactive else ''
     app.add_api_route(
         path=path,
         endpoint=post_openai_api_compatible_endpoint(worker=worker,
@@ -132,6 +130,6 @@ async def add_v1_chat_completions_route(
                                                      enable_interactive=enable_interactive),
         methods=[method],
         response_model=ChatResponse | ChatResponseChunk,
-        description=f"{description} (OpenAI Chat Completions API compatible{' with interaction support' if enable_interactive else ''})",
+        description=f"{description} (OpenAI Chat Completions API compatible{extra})",
         responses={500: RESPONSE_500},
     )

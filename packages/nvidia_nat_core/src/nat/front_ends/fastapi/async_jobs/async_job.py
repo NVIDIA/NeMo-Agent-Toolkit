@@ -136,4 +136,3 @@ def setup_worker():
     workers to exit before the main process can shut down the cluster gracefully.
     """
     os.setsid()
-

@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 HTTP interactive execution runner.
 
@@ -34,9 +33,7 @@ from nat.data_models.interactive import HumanPromptNotification
 from nat.data_models.interactive import HumanResponse
 from nat.data_models.interactive import HumanResponseNotification
 from nat.data_models.interactive import InteractionPrompt
-from nat.data_models.interactive_http import ExecutionStatus
 from nat.data_models.interactive_http import StreamInteractionEvent
-from nat.data_models.interactive_http import StreamOAuthEvent
 from nat.front_ends.fastapi.execution_store import ExecutionRecord
 from nat.front_ends.fastapi.execution_store import ExecutionStore
 from nat.front_ends.fastapi.response_helpers import generate_single_response
@@ -48,8 +45,6 @@ from nat.runtime.session import SessionManager
 if typing.TYPE_CHECKING:
     from fastapi import Request
 
-    from nat.data_models.api_server import ResponsePayloadOutput
-    from nat.data_models.step_adaptor import StepAdaptorConfig
     from nat.front_ends.fastapi.auth_flow_handlers.http_flow_handler import HTTPAuthenticationFlowHandler
 
 logger = logging.getLogger(__name__)
@@ -129,11 +124,8 @@ class HTTPInteractiveRunner:
                 await stream_queue.put(event)
 
             # Block until client responds
-            backend_timeout: float | None = (
-                prompt.content.timeout + _HITL_TIMEOUT_GRACE_PERIOD_SECONDS
-                if prompt.content.timeout is not None
-                else None
-            )
+            backend_timeout: float | None = (prompt.content.timeout + _HITL_TIMEOUT_GRACE_PERIOD_SECONDS
+                                             if prompt.content.timeout is not None else None)
             try:
                 human_response: HumanResponse = await asyncio.wait_for(
                     pending.future,
@@ -141,8 +133,7 @@ class HTTPInteractiveRunner:
                 )
             except TimeoutError:
                 raise TimeoutError(
-                    f"HITL prompt timed out after {prompt.content.timeout}s waiting for human response"
-                ) from None
+                    f"HITL prompt timed out after {prompt.content.timeout}s waiting for human response") from None
 
             # Transition back to running
             await store.set_running(record.execution_id)
@@ -208,9 +199,9 @@ class HTTPInteractiveRunner:
         async def _run():
             try:
                 async with self._session_manager.session(
-                    http_connection=request,
-                    user_input_callback=hitl_cb,
-                    user_authentication_callback=auth_cb,
+                        http_connection=request,
+                        user_input_callback=hitl_cb,
+                        user_authentication_callback=auth_cb,
                 ) as session:
                     result = await generate_single_response(payload, session, result_type=result_type)
                     await self._store.set_completed(record.execution_id, result)
@@ -245,9 +236,9 @@ class HTTPInteractiveRunner:
 
         try:
             async with self._session_manager.session(
-                http_connection=request,
-                user_input_callback=hitl_cb,
-                user_authentication_callback=auth_cb,
+                    http_connection=request,
+                    user_input_callback=hitl_cb,
+                    user_authentication_callback=auth_cb,
             ) as session:
                 workflow_gen = workflow_gen_factory(session)
 
@@ -330,8 +321,7 @@ class HTTPInteractiveRunner:
                     streaming=streaming,
                     step_adaptor=step_adaptor,
                     result_type=result_type,
-                    output_type=output_type,
-                ),
+                    output_type=output_type, ),
                 error_log_message="Interactive streaming execution failed",
                 passthrough_str_items=False):
             yield chunk
@@ -360,8 +350,7 @@ class HTTPInteractiveRunner:
                     streaming=streaming,
                     result_type=result_type,
                     output_type=output_type,
-                    filter_steps=filter_steps,
-                ),
+                    filter_steps=filter_steps, ),
                 error_log_message="Interactive raw streaming execution failed",
                 passthrough_str_items=True):
             yield chunk
