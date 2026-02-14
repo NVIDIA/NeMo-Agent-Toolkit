@@ -138,12 +138,16 @@ class Session:
         Start a workflow run using this session's workflow.
 
         Args:
-            message: Input message for the workflow
-            runtime_type: Runtime type (defaults to SessionManager's runtime_type)
-            parent_id: Optional parent step ID for cross-workflow observability. When set,
-                the root workflow step is emitted with this as its parent.
-            parent_name: Optional parent step name for cross-workflow observability. When set,
-                the root workflow's function ancestry uses this as the parent name.
+            message
+                Input message for the workflow
+            runtime_type : RuntimeTypeEnum
+                Runtime type (defaults to SessionManager's runtime_type)
+            parent_id : str | None, optional
+                Optional parent step ID for cross-workflow observability.
+                When set, the root workflow step is emitted with this as its parent.
+            parent_name : str | None, optional
+                Optional parent step name for cross-workflow observability.
+                When set, the root workflow's function ancestry uses this as the parent name.
 
         Yields:
             Runner instance for the workflow execution
@@ -607,9 +611,7 @@ class SessionManager:
         """
         Extracts and sets user metadata from an HTTP request.
 
-        Sets request attributes (method, path, headers, and so on), plus optional
-        headers:
-
+        Sets request attributes (method, path, headers), plus optional headers:
         - conversation-id
         - user-message-id
         - traceparent
@@ -617,6 +619,7 @@ class SessionManager:
         - workflow-run-id
         - workflow-parent-id (for cross-workflow observability)
         - workflow-parent-name (for cross-workflow observability)
+
         """
         self._context.metadata._request.method = getattr(request, "method", None)
         self._context.metadata._request.url_path = request.url.path
