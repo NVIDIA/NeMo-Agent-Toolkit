@@ -41,7 +41,12 @@ _new_root = importlib.import_module(_NEW_PREFIX)
 def _alias_module(old_name: str, new_name: str) -> None:
     if old_name in sys.modules:
         return
-    sys.modules[old_name] = importlib.import_module(new_name)
+    try:
+        sys.modules[old_name] = importlib.import_module(new_name)
+    except ImportError:
+        # Some eval submodules depend on optional third-party packages. Skip
+        # aliasing those modules so importing `nat.eval` still works.
+        return
 
 
 def _populate_aliases() -> None:
