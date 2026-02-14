@@ -53,8 +53,10 @@ def _require_eval_runtime():
         raise RuntimeError(
             "The `nat optimize` command requires evaluation support from `nvidia-nat-eval`. "
             "Install it with `uv pip install nvidia-nat-eval` (or `pip install nvidia-nat-eval`).") from exc
-    EvaluationRun = ImportedEvaluationRun
-    EvaluationRunConfig = ImportedEvaluationRunConfig
+    if EvaluationRun is None:
+        EvaluationRun = ImportedEvaluationRun
+    if EvaluationRunConfig is None:
+        EvaluationRunConfig = ImportedEvaluationRunConfig
     return EvaluationRun, EvaluationRunConfig
 
 
