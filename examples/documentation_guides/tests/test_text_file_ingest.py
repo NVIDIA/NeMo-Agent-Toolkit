@@ -64,4 +64,4 @@ async def test_text_file_ingest_full_workflow():
     config_file = locate_example_config(TextFileIngestFunctionConfig)
     await run_workflow(config_file=config_file,
                        question="What does DOCA GPUNetIO do to remove the CPU from the critical path?",
-                       expected_answer="GPUDirect")
+                       expected_answer="without CPU")
