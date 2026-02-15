@@ -499,7 +499,8 @@ class SessionManager:
         token_workflow_parent_id = None
         token_workflow_parent_name = None
         if isinstance(http_connection, Request):
-            token_workflow_parent_id, token_workflow_parent_name = await self.set_metadata_from_http_request(http_connection)
+            token_workflow_parent_id, token_workflow_parent_name = \
+                await self.set_metadata_from_http_request(http_connection)
 
         builder_info: PerUserBuilderInfo | None = None
         request_start_time: float | None = None
