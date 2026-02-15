@@ -312,11 +312,16 @@ curl -X POST http://localhost:8000/executions/550e8400-e29b-41d4-a716-4466554400
   }'
 ```
 
-#### Error Responses
+#### Success Responses
 
 | Status Code | Condition |
 |-------------|-----------|
 | `204` | Response accepted successfully |
+
+#### Error Responses
+
+| Status Code | Condition |
+|-------------|-----------|
 | `400` | Interaction has already been resolved |
 | `404` | Execution or interaction not found |
 

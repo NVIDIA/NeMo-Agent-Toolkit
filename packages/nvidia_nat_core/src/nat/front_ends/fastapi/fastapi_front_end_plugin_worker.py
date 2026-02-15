@@ -84,8 +84,9 @@ class FastApiFrontEndPluginWorkerBase(ABC):
                 self._job_store = JobStore(scheduler_address=self._scheduler_address, db_url=self._db_url)
                 self._dask_available = True
                 logger.debug("Connected to Dask scheduler at %s", self._scheduler_address)
-            except ImportError:
-                raise RuntimeError("Dask is not available, please install it to use the FastAPI front end with Dask.")
+            except ImportError as e:
+                raise RuntimeError(
+                    "Dask is not available, please install it to use the FastAPI front end with Dask.") from e
             except Exception as e:
                 raise RuntimeError(f"Failed to connect to Dask scheduler at {self._scheduler_address}: {e}") from e
         else:

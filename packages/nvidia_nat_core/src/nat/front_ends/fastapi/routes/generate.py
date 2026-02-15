@@ -40,7 +40,6 @@ logger = logging.getLogger(__name__)
 
 
 def get_streaming_raw_endpoint(*,
-                               worker: Any | None = None,
                                session_manager: SessionManager,
                                streaming: bool,
                                result_type: type | None,
@@ -182,7 +181,6 @@ async def add_generate_route(
         case _GenerateEndpointType.FULL:
             if endpoint_method == _GenerateEndpointMethod.GET:
                 route_handler = get_streaming_raw_endpoint(session_manager=session_manager,
-                                                           worker=worker,
                                                            streaming=True,
                                                            result_type=response_type,
                                                            output_type=response_type)
