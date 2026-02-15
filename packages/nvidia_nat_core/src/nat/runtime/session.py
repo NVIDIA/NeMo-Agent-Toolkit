@@ -495,8 +495,10 @@ class SessionManager:
                                              conversation_id,
                                              pre_parsed_cookies=cookies_dict)
 
+        token_workflow_parent_id = None
+        token_workflow_parent_name = None
         if isinstance(http_connection, Request):
-            self.set_metadata_from_http_request(http_connection)
+            token_workflow_parent_id, token_workflow_parent_name = self.set_metadata_from_http_request(http_connection)
 
         builder_info: PerUserBuilderInfo | None = None
         request_start_time: float | None = None
@@ -556,6 +558,10 @@ class SessionManager:
                         latency_ms = (time.perf_counter() - request_start_time) * 1000
                         builder_info.record_request(latency_ms, request_success)
 
+            if token_workflow_parent_name is not None:
+                self._context_state.workflow_parent_name.reset(token_workflow_parent_name)
+            if token_workflow_parent_id is not None:
+                self._context_state.workflow_parent_id.reset(token_workflow_parent_id)
             if token_user_id is not None:
                 self._context_state.user_id.reset(token_user_id)
             if token_user_id_builder is not None:
@@ -607,7 +613,7 @@ class SessionManager:
                         logger.exception(f"Error cleaning up builder for user {user_id}")
                 self._per_user_builders.clear()
 
-    def set_metadata_from_http_request(self, request: Request) -> None:
+    def set_metadata_from_http_request(self, request: Request) -> tuple:
         """
         Extracts and sets user metadata from an HTTP request.
 
@@ -620,6 +626,11 @@ class SessionManager:
         - workflow-parent-id (for cross-workflow observability)
         - workflow-parent-name (for cross-workflow observability)
 
+        Returns:
+            A tuple of (workflow_parent_id_token, workflow_parent_name_token).
+            Each element is a contextvars.Token if the corresponding header was
+            present, or None otherwise.  Callers must reset these tokens when the
+            request scope ends to avoid context-variable leaks.
         """
         self._context.metadata._request.method = getattr(request, "method", None)
         self._context.metadata._request.url_path = request.url.path
@@ -666,12 +677,16 @@ class SessionManager:
             self._context_state.workflow_run_id.set(workflow_run_id)
 
         # Cross-workflow observability: parent step id/name for the root of this workflow
+        workflow_parent_id_token = None
         workflow_parent_id = request.headers.get("workflow-parent-id")
         if workflow_parent_id:
-            self._context_state.workflow_parent_id.set(workflow_parent_id)
+            workflow_parent_id_token = self._context_state.workflow_parent_id.set(workflow_parent_id)
+        workflow_parent_name_token = None
         workflow_parent_name = request.headers.get("workflow-parent-name")
         if workflow_parent_name:
-            self._context_state.workflow_parent_name.set(workflow_parent_name)
+            workflow_parent_name_token = self._context_state.workflow_parent_name.set(workflow_parent_name)
+
+        return workflow_parent_id_token, workflow_parent_name_token
 
     def set_metadata_from_websocket(self,
                                     websocket: WebSocket,
