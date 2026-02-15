@@ -78,6 +78,9 @@ def _add_chat_route(app: FastAPI,
                                                         streaming=True,
                                                         result_type=ChatResponseChunk,
                                                         output_type=ChatResponseChunk)
+        case _:
+            raise ValueError(f"Unsupported chat endpoint type: {endpoint_type}")
+
     app.add_api_route(
         path=endpoint_path,
         endpoint=route_handler,
@@ -114,7 +117,7 @@ async def add_chat_routes(
                         endpoint_type=_ChatEndpointType.SINGLE,
                         endpoint_method=endpoint_method,
                         endpoint_description=endpoint.description,
-                        enable_interactive=True)
+                        enable_interactive=enable_interactive_extensions)
         _add_chat_route(app=app,
                         worker=worker,
                         endpoint_path=f"{openai_path}/stream",
@@ -122,7 +125,7 @@ async def add_chat_routes(
                         endpoint_type=_ChatEndpointType.STREAMING,
                         endpoint_method=endpoint_method,
                         endpoint_description=endpoint.description,
-                        enable_interactive=True)
+                        enable_interactive=enable_interactive_extensions)
 
     if not disable_legacy_routes and endpoint.legacy_openai_api_path:
         _add_chat_route(app=app,

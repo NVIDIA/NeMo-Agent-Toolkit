@@ -58,7 +58,7 @@ The following table describes the relevant configuration parameters:
 | `oauth2_callback_path` | string | `/auth/redirect` | Path for the OAuth2 authorization code grant callback endpoint |
 
 :::{note}
-Interactive are enabled for versioned **workflow** and **chat** endpoints (for example,
+Interactive extensions are enabled for versioned **workflow** and **chat** endpoints (for example,
 `/v1/workflow` and `/v1/chat`).
 
 OpenAI-compatible endpoints (`/v1/chat/completions`) are opt-in only (defaulting to disabled).
@@ -127,11 +127,14 @@ curl -X POST http://localhost:8000/v1/chat \
     "placeholder": "Type your response...",
     "required": true,
     "timeout": null,
-    "error": "This prompt is no longer available."
+    "error": null
   },
   "response_url": "/executions/550e8400-e29b-41d4-a716-446655440000/interactions/a1b2c3d4-e5f6-7890-abcd-ef1234567890/response"
 }
 ```
+
+The `error` field inside the `prompt` object is only populated when the prompt times out or becomes
+unavailable. Under normal operation it is `null`.
 
 **Response (202 Accepted, OAuth required):**
 
@@ -180,11 +183,14 @@ curl http://localhost:8000/executions/550e8400-e29b-41d4-a716-446655440000
     "placeholder": "Type your response...",
     "required": true,
     "timeout": null,
-    "error": "This prompt is no longer available."
+    "error": null
   },
   "response_url": "/executions/550e8400-e29b-41d4-a716-446655440000/interactions/a1b2c3d4-e5f6-7890-abcd-ef1234567890/response"
 }
 ```
+
+The `error` field inside the `prompt` object is only populated when the prompt times out or becomes
+unavailable. Under normal operation it is `null`.
 
 **Response (OAuth required):**
 
@@ -361,14 +367,15 @@ def stream_with_interactions(base_url: str, messages: list[dict]) -> str:
             "/v1/chat/stream",
             json={"messages": messages},
         ) as response:
-            for line in response.iter_lines():
+            lines_iter = response.iter_lines()
+            for line in lines_iter:
                 if not line:
                     continue
 
                 # Check for typed SSE events
                 if line.startswith("event: interaction_required"):
                     # Next line is the data payload
-                    data_line = next(response.iter_lines())
+                    data_line = next(lines_iter)
                     event = json.loads(data_line.removeprefix("data: "))
 
                     # Prompt the user
@@ -388,7 +395,7 @@ def stream_with_interactions(base_url: str, messages: list[dict]) -> str:
                     continue
 
                 if line.startswith("event: oauth_required"):
-                    data_line = next(response.iter_lines())
+                    data_line = next(lines_iter)
                     event = json.loads(data_line.removeprefix("data: "))
                     print(f"Please authorize at: {event['auth_url']}")
                     input("Press Enter after completing authorization...")

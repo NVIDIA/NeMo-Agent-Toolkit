@@ -141,33 +141,45 @@ def post_single_endpoint(*,
 
     async def post_single_interactive(response: Response, request: Request, payload: Any = Body()):
         runner = _build_interactive_runner(worker, session_manager)
-        record = await runner.start_non_streaming(
-            payload=payload,
-            request=request,
-            result_type=result_type,
-        )
-        await record.first_outcome.wait()
+        response.headers["Content-Type"] = "application/json"
+        try:
+            record = await runner.start_non_streaming(
+                payload=payload,
+                request=request,
+                result_type=result_type,
+            )
+            await record.first_outcome.wait()
 
-        if record.status == ExecutionStatus.COMPLETED:
-            response.status_code = 200
-            response.headers["Content-Type"] = "application/json"
-            add_context_headers_to_response(response)
-            return record.result
-        if record.status == ExecutionStatus.FAILED:
-            response.headers["Content-Type"] = "application/json"
+            match record.status:
+                case ExecutionStatus.COMPLETED:
+                    response.status_code = 200
+                    add_context_headers_to_response(response)
+                    return record.result
+                case ExecutionStatus.FAILED:
+                    add_context_headers_to_response(response)
+                    return JSONResponse(
+                        content=Error(
+                            code=ErrorTypes.WORKFLOW_ERROR,
+                            message=record.error or "Unknown error",
+                            details="ExecutionFailed",
+                        ).model_dump(),
+                        status_code=422,
+                    )
+                case _:
+                    response.status_code = 202
+                    return build_accepted_response(record)
+
+        except Exception as exc:
+            logger.exception("Unhandled interactive workflow error")
             add_context_headers_to_response(response)
             return JSONResponse(
                 content=Error(
                     code=ErrorTypes.WORKFLOW_ERROR,
-                    message=record.error or "Unknown error",
-                    details="ExecutionFailed",
+                    message=str(exc),
+                    details=type(exc).__name__,
                 ).model_dump(),
-                status_code=422,
+                status_code=500,
             )
-
-        response.status_code = 202
-        response.headers["Content-Type"] = "application/json"
-        return build_accepted_response(record)
 
     async def post_single(response: Response, request: Request, payload: Any = Body()):
         response.headers["Content-Type"] = "application/json"

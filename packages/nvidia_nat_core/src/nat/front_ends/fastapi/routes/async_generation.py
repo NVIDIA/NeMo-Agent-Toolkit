@@ -41,7 +41,7 @@ def _job_status_to_response(worker: Any, job):
         try:
             job_output = json.loads(job_output)
         except json.JSONDecodeError:
-            logger.error("Failed to parse job output as JSON: %s", job_output)
+            logger.exception("Failed to parse job output as JSON: %s", job_output)
             job_output = {"error": "Output parsing failed"}
 
     return AsyncGenerationStatusResponse(job_id=job.job_id,
@@ -137,7 +137,7 @@ async def add_async_generation_routes(
             default=0,
             ge=0,
             le=300,
-            description="Attempt to perform the job synchronously up until `sync_timeout` sectonds, "
+            description="Attempt to perform the job synchronously up until `sync_timeout` seconds, "
             "if the job hasn't been completed by then a job_id will be returned with a status code of 202.",
         )
         expiry_seconds: int = Field(default=JobStore.DEFAULT_EXPIRY,

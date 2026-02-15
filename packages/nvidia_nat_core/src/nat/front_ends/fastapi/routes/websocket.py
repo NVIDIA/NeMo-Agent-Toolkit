@@ -15,6 +15,7 @@
 """WebSocket route registration."""
 
 import logging
+import re
 from typing import Any
 
 from fastapi import FastAPI
@@ -26,12 +27,19 @@ from nat.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
 
+# Only allow URL-safe characters in session IDs (alphanumeric, hyphen, underscore, period, tilde).
+_SAFE_SESSION_ID_RE = re.compile(r'^[A-Za-z0-9\-_.~]+$')
+
 
 def websocket_endpoint(*, worker: Any, session_manager: SessionManager):
     """Build websocket endpoint handler with auth-flow integration."""
 
     async def _websocket_endpoint(websocket: WebSocket):
         session_id = websocket.query_params.get("session")
+        if session_id and not _SAFE_SESSION_ID_RE.match(session_id):
+            logger.warning("WebSocket: Rejected session ID with unsafe characters")
+            await websocket.close(code=1008, reason="Invalid session ID")
+            return
         if session_id:
             headers = list(websocket.scope.get("headers", []))
             cookie_header = f"nat-session={session_id}"

@@ -63,30 +63,44 @@ def post_openai_api_compatible_endpoint(*, worker: Any, session_manager: Session
             )
 
         response.headers["Content-Type"] = "application/json"
-        record = await runner.start_non_streaming(
-            payload=payload,
-            request=request,
-            result_type=ChatResponse,
-        )
-        await record.first_outcome.wait()
+        try:
+            record = await runner.start_non_streaming(
+                payload=payload,
+                request=request,
+                result_type=ChatResponse,
+            )
+            await record.first_outcome.wait()
 
-        if record.status == ExecutionStatus.COMPLETED:
-            response.status_code = 200
-            add_context_headers_to_response(response)
-            return record.result
-        if record.status == ExecutionStatus.FAILED:
+            match record.status:
+                case ExecutionStatus.COMPLETED:
+                    response.status_code = 200
+                    add_context_headers_to_response(response)
+                    return record.result
+                case ExecutionStatus.FAILED:
+                    add_context_headers_to_response(response)
+                    return JSONResponse(
+                        content=Error(
+                            code=ErrorTypes.WORKFLOW_ERROR,
+                            message=record.error or "Unknown error",
+                            details="ExecutionFailed",
+                        ).model_dump(),
+                        status_code=422,
+                    )
+                case _:
+                    response.status_code = 202
+                    return build_accepted_response(record)
+
+        except Exception as e:
+            logger.exception("Unhandled interactive workflow error")
             add_context_headers_to_response(response)
             return JSONResponse(
                 content=Error(
                     code=ErrorTypes.WORKFLOW_ERROR,
-                    message=record.error or "Unknown error",
-                    details="ExecutionFailed",
+                    message=str(e),
+                    details=type(e).__name__,
                 ).model_dump(),
-                status_code=422,
+                status_code=500,
             )
-
-        response.status_code = 202
-        return build_accepted_response(record)
 
     async def post_openai_api_compatible(response: Response, request: Request, payload: ChatRequest):
         stream_requested = getattr(payload, "stream", False)

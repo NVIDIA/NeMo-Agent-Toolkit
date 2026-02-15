@@ -35,12 +35,13 @@ from nat.data_models.interactive_http import ExecutionStatusResponse
 from nat.data_models.interactive_http import InteractionResponseRequest
 
 if TYPE_CHECKING:
+    from nat.front_ends.fastapi.execution_store import ExecutionRecord
     from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
 
 logger = logging.getLogger(__name__)
 
 
-def build_accepted_response(record: Any) -> ExecutionAcceptedInteraction | ExecutionAcceptedOAuth:
+def build_accepted_response(record: "ExecutionRecord") -> ExecutionAcceptedInteraction | ExecutionAcceptedOAuth:
     """Build a 202 accepted response from an interactive execution record."""
     status_url = f"/executions/{record.execution_id}"
 
@@ -80,12 +81,12 @@ async def add_execution_routes(worker: "FastApiFrontEndPluginWorker", app: FastA
                 execution_id=record.execution_id,
                 result=record.result,
             )
-        elif record.status == ExecutionStatus.FAILED:
+        if record.status == ExecutionStatus.FAILED:
             return ExecutionFailedStatus(
                 execution_id=record.execution_id,
                 error=record.error or "Unknown error",
             )
-        elif record.status == ExecutionStatus.INTERACTION_REQUIRED and record.pending_interaction is not None:
+        if record.status == ExecutionStatus.INTERACTION_REQUIRED and record.pending_interaction is not None:
             return ExecutionInteractionRequiredStatus(
                 execution_id=record.execution_id,
                 interaction_id=record.pending_interaction.interaction_id,
@@ -93,14 +94,16 @@ async def add_execution_routes(worker: "FastApiFrontEndPluginWorker", app: FastA
                 response_url=(f"/executions/{execution_id}"
                               f"/interactions/{record.pending_interaction.interaction_id}/response"),
             )
-        elif record.status == ExecutionStatus.OAUTH_REQUIRED and record.pending_oauth is not None:
+        if record.status == ExecutionStatus.OAUTH_REQUIRED and record.pending_oauth is not None:
             return execution_oauth_required_status_model(
                 execution_id=record.execution_id,
                 auth_url=record.pending_oauth.auth_url,
                 oauth_state=record.pending_oauth.oauth_state,
             )
-        else:
+        if record.status == ExecutionStatus.RUNNING:
             return ExecutionRunningStatus(execution_id=record.execution_id)
+
+        raise ValueError(f"Cannot build status response for execution status: {record.status}")
 
     async def post_interaction_response(
         execution_id: str,

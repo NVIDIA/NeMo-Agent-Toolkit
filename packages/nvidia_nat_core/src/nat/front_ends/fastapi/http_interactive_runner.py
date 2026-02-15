@@ -270,7 +270,7 @@ class HTTPInteractiveRunner:
                         if isinstance(item, ResponseSerializable):
                             yield item.get_stream_data()
                         elif isinstance(item, Error):
-                            yield item.model_dump_json()
+                            yield f"event: error\ndata: {item.model_dump_json()}\n\n"
                             break
                         elif isinstance(item, str):
                             if passthrough_str_items:

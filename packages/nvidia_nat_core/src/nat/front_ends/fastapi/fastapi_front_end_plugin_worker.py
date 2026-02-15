@@ -321,13 +321,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         session_manager = await self._create_session_manager(builder)
 
-        await self.add_default_route(app, session_manager)
-
         await add_authorization_route(self, app)
         await add_execution_routes(self, app)
         await add_monitor_route(self, app)
         await add_health_route(app)
         await add_static_files_route(self, app, builder)
+
+        await self.add_default_route(app, session_manager)
 
         # Eventually move evaluate routes to separate plugin
         await add_evaluate_route(self, app, session_manager=session_manager)
@@ -370,23 +370,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                               enable_interactive_extensions=enable_interactive_extensions,
                               disable_legacy_routes=disable_legacy_routes)
         await add_websocket_routes(self, app, self.front_end_config.workflow, session_manager)
-
-    async def add_route(self,
-                        app: FastAPI,
-                        endpoint: FastApiFrontEndConfig.EndpointBase,
-                        session_manager: SessionManager,
-                        *,
-                        enable_interactive: bool = False,
-                        include_standard_routes: bool = True,
-                        include_openai_routes: bool = True,
-                        include_websocket_route: bool = True):
-        """Backward-compatible route composition entrypoint."""
-        if include_standard_routes:
-            await add_generate_routes(self, app, endpoint, session_manager)
-        if include_openai_routes:
-            await add_chat_routes(self, app, endpoint, session_manager)
-        if include_websocket_route:
-            await add_websocket_routes(self, app, endpoint, session_manager)
 
     async def _add_flow(self, state: str, flow_state: FlowState):
         async with self._outstanding_flows_lock:

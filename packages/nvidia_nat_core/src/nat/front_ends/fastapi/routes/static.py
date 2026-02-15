@@ -16,7 +16,9 @@
 
 import logging
 import os
+import re
 from typing import TYPE_CHECKING
+from urllib.parse import quote
 
 from fastapi import FastAPI
 from fastapi import HTTPException
@@ -85,12 +87,20 @@ async def add_static_files_route(worker: "FastApiFrontEndPluginWorker", app: Fas
 
         filename = file_path.rsplit("/", maxsplit=1)[-1]
 
+        # Sanitize filename for Content-Disposition header (RFC 6266).
+        # The ASCII fallback uses only safe characters; the filename* parameter
+        # carries the full UTF-8 percent-encoded name.
+        ascii_safe = re.sub(r'[^\w.\-]', '_', filename)
+        utf8_encoded = quote(filename, safe='')
+        content_disposition = (f'attachment; filename="{ascii_safe}"; '
+                               f"filename*=UTF-8''{utf8_encoded}")
+
         async def reader():
             yield file_data.data
 
         return StreamingResponse(reader(),
                                  media_type=file_data.content_type,
-                                 headers={"Content-Disposition": f"attachment; filename={filename}"})
+                                 headers={"Content-Disposition": content_disposition})
 
     async def delete_static_file(file_path: str):
         try:

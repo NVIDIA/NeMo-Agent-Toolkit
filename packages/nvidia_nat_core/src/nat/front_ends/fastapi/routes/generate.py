@@ -214,6 +214,7 @@ async def add_generate_routes(
     endpoint: Any,
     session_manager: SessionManager,
     *,
+    enable_interactive: bool = True,
     disable_legacy_routes: bool = False,
 ):
     request_type = session_manager.get_workflow_input_schema()
@@ -223,21 +224,21 @@ async def add_generate_routes(
         await add_generate_route(worker=worker,
                                  app=app,
                                  session_manager=session_manager,
-                                 enable_interactive=True,
+                                 enable_interactive=enable_interactive,
                                  endpoint_path=endpoint.path,
                                  endpoint_type=_GenerateEndpointType.SINGLE,
                                  endpoint_method=endpoint_method)
         await add_generate_route(worker=worker,
                                  app=app,
                                  session_manager=session_manager,
-                                 enable_interactive=True,
+                                 enable_interactive=enable_interactive,
                                  endpoint_path=f"{endpoint.path}/stream",
                                  endpoint_type=_GenerateEndpointType.STREAMING,
                                  endpoint_method=endpoint_method)
         await add_generate_route(worker=worker,
                                  app=app,
                                  session_manager=session_manager,
-                                 enable_interactive=True,
+                                 enable_interactive=enable_interactive,
                                  endpoint_path=f"{endpoint.path}/full",
                                  endpoint_type=_GenerateEndpointType.FULL,
                                  endpoint_method=endpoint_method)

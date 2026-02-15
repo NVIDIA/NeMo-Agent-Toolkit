@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-async def add_authorization_route(worker: "FastApiFrontEndPluginWorker", app: FastAPI):
+async def add_authorization_route(worker: "FastApiFrontEndPluginWorker", app: FastAPI) -> None:
     """Add OAuth2 callback route for authorization-code flow."""
 
     async def redirect_uri(request: Request):
@@ -40,7 +40,7 @@ async def add_authorization_route(worker: "FastApiFrontEndPluginWorker", app: Fa
 
         async with worker._outstanding_flows_lock:
             if not state or state not in worker._outstanding_flows:
-                return "Invalid state. Please restart the authentication process."
+                return HTMLResponse("Invalid state. Please restart the authentication process.", status_code=400)
 
             flow_state = worker._outstanding_flows[state]
 
@@ -53,14 +53,32 @@ async def add_authorization_route(worker: "FastApiFrontEndPluginWorker", app: Fa
                                            authorization_response=str(request.url),
                                            code_verifier=verifier,
                                            state=state)
-            flow_state.future.set_result(res)
+            if not flow_state.future.done():
+                flow_state.future.set_result(res)
         except OAuthError as e:
-            flow_state.future.set_exception(
-                RuntimeError(f"Authorization server rejected request: {e.error} ({e.description})"))
+            logger.error("OAuth error during token exchange for state %s: %s (%s)", state, e.error, e.description)
+            if not flow_state.future.done():
+                flow_state.future.set_exception(
+                    RuntimeError(f"Authorization server rejected request: {e.error} ({e.description})"))
+            return HTMLResponse(f"Authorization failed: {e.error}",
+                                status_code=502,
+                                headers={"Cache-Control": "no-cache"})
         except httpx.HTTPError as e:
-            flow_state.future.set_exception(RuntimeError(f"Network error during token fetch: {e}"))
+            logger.error("Network error during token fetch for state %s: %s", state, e)
+            if not flow_state.future.done():
+                flow_state.future.set_exception(RuntimeError(f"Network error during token fetch: {e}"))
+            return HTMLResponse("Network error during token exchange. Please try again.",
+                                status_code=502,
+                                headers={"Cache-Control": "no-cache"})
         except Exception as e:
-            flow_state.future.set_exception(RuntimeError(f"Authentication failed: {e}"))
+            logger.error("Unexpected error during authentication for state %s: %s", state, e)
+            if not flow_state.future.done():
+                flow_state.future.set_exception(RuntimeError(f"Authentication failed: {e}"))
+            return HTMLResponse("Authentication failed. Please try again.",
+                                status_code=500,
+                                headers={"Cache-Control": "no-cache"})
+        finally:
+            await worker._remove_flow(state)
 
         return HTMLResponse(content=AUTH_REDIRECT_SUCCESS_HTML,
                             status_code=200,

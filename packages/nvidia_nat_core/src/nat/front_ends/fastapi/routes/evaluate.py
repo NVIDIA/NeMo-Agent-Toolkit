@@ -146,14 +146,16 @@ async def add_evaluate_route(worker: Any, app: FastAPI, session_manager: Session
             logger.info("Found last job %s with status %s", job.job_id, job.status)
             return translate_job_to_response(job)
 
-    async def get_jobs(http_request: Request, status: str | None = None):
+    async def get_jobs(http_request: Request, status: str | JobStatus | None = None):
+        if isinstance(status, str):
+            status = JobStatus(status)
         async with session_manager.session(http_connection=http_request):
             if status is None:
                 logger.info("Getting all jobs")
                 jobs = await worker._job_store.get_all_jobs()
             else:
                 logger.info("Getting jobs with status %s", status)
-                jobs = await worker._job_store.get_jobs_by_status(JobStatus(status))
+                jobs = await worker._job_store.get_jobs_by_status(status)
 
             logger.info("Found %d jobs", len(jobs))
             return [translate_job_to_response(job) for job in jobs]
@@ -225,7 +227,7 @@ async def add_evaluate_item_route(worker: Any, app: FastAPI, session_manager: Se
                 return EvaluateItemResponse(success=False, result=None, error="Evaluator returned no results")
             except Exception as e:
                 logger.exception("Error evaluating item with %s", request.evaluator_name)
-                return EvaluateItemResponse(success=False, result=None, error=f"Evaluation failed: {str(e)}")
+                return EvaluateItemResponse(success=False, result=None, error=f"Evaluation failed: {e}")
 
     if worker.front_end_config.evaluate_item.path:
         app.add_api_route(path=worker.front_end_config.evaluate_item.path,
