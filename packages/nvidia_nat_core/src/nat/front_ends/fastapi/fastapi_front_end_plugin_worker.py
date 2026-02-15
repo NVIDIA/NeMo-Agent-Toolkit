@@ -817,9 +817,11 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         def get_streaming_raw_endpoint(streaming: bool, result_type: type | None, output_type: type | None):
 
-            async def get_stream(filter_steps: str | None = None):
+            async def get_stream(request: Request, filter_steps: str | None = None):
 
-                async with session_manager.session(http_connection=None) as session:
+                async with session_manager.session(
+                        http_connection=request,
+                        user_authentication_callback=self._http_flow_handler.authenticate) as session:
                     return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                              content=generate_streaming_response_full_as_str(None,
                                                                                              session=session,
