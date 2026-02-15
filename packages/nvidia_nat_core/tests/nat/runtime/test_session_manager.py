@@ -568,7 +568,7 @@ class TestSessionManagerSetMetadataFromHttpRequest:
     """Tests for set_metadata_from_http_request (including cross-workflow headers)."""
 
     @patch('nat.cli.type_registry.GlobalTypeRegistry')
-    def test_set_metadata_from_http_request_sets_workflow_parent_headers(self, mock_registry):
+    async def test_set_metadata_from_http_request_sets_workflow_parent_headers(self, mock_registry):
         """Test workflow-parent-id and workflow-parent-name headers are set on context."""
         mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=False)
 
@@ -594,14 +594,14 @@ class TestSessionManagerSetMetadataFromHttpRequest:
         request.client.port = 12345
         request.cookies = {}
 
-        sm.set_metadata_from_http_request(request)
+        await sm.set_metadata_from_http_request(request)
 
         ctx_state = ContextState.get()
         assert ctx_state.workflow_parent_id.get() == "parent-uuid-456"
         assert ctx_state.workflow_parent_name.get() == "Parent Workflow Name"
 
     @patch('nat.cli.type_registry.GlobalTypeRegistry')
-    def test_set_metadata_from_http_request_workflow_parent_optional(self, mock_registry):
+    async def test_set_metadata_from_http_request_workflow_parent_optional(self, mock_registry):
         """Test workflow runs without parent headers when they are not sent."""
         mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=False)
 
@@ -625,7 +625,7 @@ class TestSessionManagerSetMetadataFromHttpRequest:
         request.client.port = 12345
         request.cookies = {}
 
-        sm.set_metadata_from_http_request(request)
+        await sm.set_metadata_from_http_request(request)
 
         ctx_state = ContextState.get()
         assert ctx_state.workflow_parent_id.get() is None
