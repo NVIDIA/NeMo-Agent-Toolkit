@@ -77,13 +77,7 @@ def get_single_endpoint(*, worker: Any, session_manager: SessionManager, result_
 
     async def get_single(response: Response, request: Request):
         response.headers["Content-Type"] = "application/json"
-
-        if auth_cb is None:
-            session_context = session_manager.session(http_connection=request)
-        else:
-            session_context = session_manager.session(http_connection=request, user_authentication_callback=auth_cb)
-
-        async with session_context as session:
+        async with session_manager.session(http_connection=request, user_authentication_callback=auth_cb) as session:
             try:
                 result = await generate_single_response(None, session, result_type=result_type)
                 add_context_headers_to_response(response)
@@ -113,12 +107,7 @@ def get_streaming_endpoint(*,
     auth_cb = worker._http_flow_handler.authenticate if worker._http_flow_handler else None
 
     async def get_stream(request: Request):
-        if auth_cb is None:
-            session_context = session_manager.session(http_connection=request)
-        else:
-            session_context = session_manager.session(http_connection=request, user_authentication_callback=auth_cb)
-
-        async with session_context as session:
+        async with session_manager.session(http_connection=request, user_authentication_callback=auth_cb) as session:
             return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                      content=generate_streaming_response_as_str(None,
                                                                                 session=session,
@@ -137,11 +126,10 @@ def post_single_endpoint(*,
                          enable_interactive: bool,
                          result_type: type | None):
     """Build a single-response POST handler."""
-    auth_cb = worker._http_flow_handler.authenticate if worker._http_flow_handler else None
 
     async def post_single_interactive(response: Response, request: Request, payload: Any = Body()):
-        runner = _build_interactive_runner(worker, session_manager)
         response.headers["Content-Type"] = "application/json"
+        runner = _build_interactive_runner(worker, session_manager)
         try:
             record = await runner.start_non_streaming(
                 payload=payload,
@@ -183,12 +171,8 @@ def post_single_endpoint(*,
 
     async def post_single(response: Response, request: Request, payload: Any = Body()):
         response.headers["Content-Type"] = "application/json"
-        if auth_cb is None:
-            session_context = session_manager.session(http_connection=request)
-        else:
-            session_context = session_manager.session(http_connection=request, user_authentication_callback=auth_cb)
-
-        async with session_context as session:
+        auth_cb = worker._http_flow_handler.authenticate if worker._http_flow_handler else None
+        async with session_manager.session(http_connection=request, user_authentication_callback=auth_cb) as session:
             try:
                 result = await generate_single_response(payload, session, result_type=result_type)
                 add_context_headers_to_response(response)
@@ -217,7 +201,6 @@ def post_streaming_endpoint(*,
                             result_type: type | None,
                             output_type: type | None):
     """Build a streaming POST handler."""
-    auth_cb = worker._http_flow_handler.authenticate if worker._http_flow_handler else None
 
     async def post_stream_interactive(request: Request, payload: Any = Body()):
         runner = _build_interactive_runner(worker, session_manager)
@@ -234,12 +217,8 @@ def post_streaming_endpoint(*,
         )
 
     async def post_stream(request: Request, payload: Any = Body()):
-        if auth_cb is None:
-            session_context = session_manager.session(http_connection=request)
-        else:
-            session_context = session_manager.session(http_connection=request, user_authentication_callback=auth_cb)
-
-        async with session_context as session:
+        auth_cb = worker._http_flow_handler.authenticate if worker._http_flow_handler else None
+        async with session_manager.session(http_connection=request, user_authentication_callback=auth_cb) as session:
             return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                      content=generate_streaming_response_as_str(payload,
                                                                                 session=session,
