@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nat.data_models.evaluate import EndpointRetryConfig
-from nat.data_models.evaluate import EvaluationRunConfig
-from nat.data_models.evaluate import EvaluationRunOutput
+from nat.data_models.evaluate_runtime import EndpointRetryConfig
+from nat.data_models.evaluate_runtime import EvaluationRunConfig
+from nat.data_models.evaluate_runtime import EvaluationRunOutput
 
 __all__ = ["EndpointRetryConfig", "EvaluationRunConfig", "EvaluationRunOutput"]

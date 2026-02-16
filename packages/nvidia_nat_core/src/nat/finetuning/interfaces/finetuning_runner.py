@@ -18,7 +18,7 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Any
 
-from nat.data_models.evaluate import EvaluationRunOutput
+from nat.data_models.evaluate_runtime import EvaluationRunOutput
 from nat.data_models.finetuning import FinetuneConfig
 from nat.data_models.finetuning import FinetuneRunConfig
 from nat.data_models.finetuning import TrainerConfig

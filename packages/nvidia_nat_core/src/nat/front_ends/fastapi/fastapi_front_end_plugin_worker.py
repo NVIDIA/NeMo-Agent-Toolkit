@@ -52,7 +52,7 @@ from nat.data_models.api_server import Error
 from nat.data_models.api_server import ErrorTypes
 from nat.data_models.api_server import ResponseIntermediateStep
 from nat.data_models.config import Config
-from nat.data_models.evaluate import EvaluationRunOutput
+from nat.data_models.evaluate_runtime import EvaluationRunOutput
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.object_store import KeyAlreadyExistsError
 from nat.data_models.object_store import NoSuchKeyError

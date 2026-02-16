@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Compatibility re-exports for evaluator I/O models from core."""
 
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem

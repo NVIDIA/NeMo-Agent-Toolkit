@@ -20,7 +20,7 @@ from unittest.mock import patch
 
 import pytest
 
-from nat.data_models.evaluate import EvaluationRunOutput
+from nat.data_models.evaluate_runtime import EvaluationRunOutput
 from nat.data_models.evaluator import EvalOutputItem
 from nat.data_models.finetuning import CurriculumLearningConfig
 from nat.data_models.finetuning import EpisodeItem

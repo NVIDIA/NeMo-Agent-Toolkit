@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""YAML-backed evaluation configuration models (`eval.*`) for workflow configs."""
 
 import typing
 from enum import StrEnum
@@ -25,8 +26,6 @@ from pydantic import model_validator
 from nat.data_models.common import TypedBaseModel
 from nat.data_models.dataset_handler import EvalDatasetBaseConfig
 from nat.data_models.dataset_handler import EvalS3Config
-from nat.data_models.evaluator import EvalInput
-from nat.data_models.evaluator import EvalOutput
 from nat.data_models.evaluator import EvaluatorBaseConfig
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.profiler import ProfilerConfig
@@ -50,7 +49,7 @@ class EvalCustomScriptConfig(BaseModel):
 
 class JobManagementConfig(BaseModel):
     """
-    Configuration for the job management of the evaluation. 
+    Configuration for the job management of the evaluation.
     This is specifiied in the `eval.general.output.job_management` section of the evaluation configuration yaml file.
     """
     append_job_id_to_output_dir: bool = Field(
@@ -66,7 +65,7 @@ class JobManagementConfig(BaseModel):
 
 class EvalOutputConfig(BaseModel):
     """
-    Configuration for the output of the evaluation. This is specifiied in the `eval.general.output` 
+    Configuration for the output of the evaluation. This is specifiied in the `eval.general.output`
     section of the evaluation configuration yaml file.
     """
     dir: Path = Field(default=Path("./.tmp/nat/examples/default/"),
@@ -143,14 +142,15 @@ class EvalGeneralConfig(BaseModel):
 
         type_registry = GlobalTypeRegistry.get()
 
-        DatasetAnnotation = typing.Annotated[type_registry.compute_annotation(EvalDatasetBaseConfig),
-                                             Discriminator(TypedBaseModel.discriminator)] | None
+        DatasetAnnotation = typing.Annotated[
+            type_registry.compute_annotation(EvalDatasetBaseConfig),
+            Discriminator(TypedBaseModel.discriminator)] | None  # pyright: ignore[reportOperatorIssue]
 
         should_rebuild = False
 
         dataset_field = cls.model_fields.get("dataset")
         if dataset_field is not None and dataset_field.annotation != DatasetAnnotation:
-            dataset_field.annotation = DatasetAnnotation
+            dataset_field.annotation = DatasetAnnotation  # pyright: ignore[reportAttributeAccessIssue]
             should_rebuild = True
 
         if (should_rebuild):
@@ -192,134 +192,3 @@ class EvalConfig(BaseModel):
 
         if (should_rebuild):
             cls.model_rebuild(force=True)
-
-
-class EndpointRetryConfig(BaseModel):
-    """Configuration for HTTP retry behavior on remote workflow endpoints."""
-
-    do_auto_retry: bool = Field(
-        default=True,
-        description="Enable automatic retry on transient HTTP errors.",
-    )
-    max_retries: int = Field(
-        default=3,
-        ge=1,
-        description="Maximum retry attempts.",
-    )
-    retry_status_codes: list[int] = Field(
-        default=[429, 500, 502, 503, 504],
-        description="HTTP status codes that trigger automatic retry.",
-    )
-
-
-class EvaluationRunConfig(BaseModel):
-    """
-    Parameters used for a single evaluation run. This is used by the `nat eval` command. It 
-    can also be used for programmatic evaluation.
-    """
-
-    config_file: Path | BaseModel = Field(
-        ...,
-        description="Path to the evaluation config file or a config model instance.",
-    )
-    dataset: str | None = Field(
-        default=None,
-        description="Dataset file path. Can also be specified in the config file.",
-    )
-    result_json_path: str = Field(
-        default="$",
-        description="JSONPath expression to extract the result from workflow output.",
-    )
-    skip_workflow: bool = Field(
-        default=False,
-        description="If true, skip workflow execution and use existing outputs.",
-    )
-    skip_completed_entries: bool = Field(
-        default=False,
-        description="If true, skip dataset entries that already have outputs.",
-    )
-    endpoint: str | None = Field(
-        default=None,
-        description="Remote workflow endpoint URL. Only used for remote execution.",
-    )
-    endpoint_timeout: int = Field(
-        default=300,
-        description="Timeout in seconds for remote workflow requests.",
-    )
-    endpoint_retry: EndpointRetryConfig = Field(
-        default_factory=EndpointRetryConfig,
-        description="Retry configuration for remote endpoint requests.",
-    )
-    reps: int = Field(
-        default=1,
-        description="Number of repetitions for each dataset entry.",
-    )
-    override: tuple[tuple[str, str], ...] = Field(
-        default=(),
-        description="Config overrides as key-value tuples.",
-    )
-    write_output: bool = Field(
-        default=True,
-        description="If false, output will not be written to disk. Useful when running via another tool.",
-    )
-    adjust_dataset_size: bool = Field(
-        default=False,
-        description="If true, adjust dataset size to a multiple of concurrency.",
-    )
-    num_passes: int = Field(
-        default=0,
-        description="Number of passes at each concurrency level. Only used if adjust_dataset_size is true.",
-    )
-    export_timeout: float = Field(
-        default=60.0,
-        description="Timeout in seconds for trace export tasks to complete.",
-    )
-    user_id: str = Field(
-        default="nat_eval_user_id",
-        description="User ID for the workflow session.",
-    )
-
-
-class EvaluationRunOutput(BaseModel):
-    """Output of a single evaluation run."""
-
-    workflow_output_file: Path | None = Field(
-        ...,
-        description="Path to the workflow output JSON file.",
-    )
-    evaluator_output_files: list[Path] = Field(
-        ...,
-        description="Paths to evaluator output JSON files.",
-    )
-    workflow_interrupted: bool = Field(
-        ...,
-        description="True if the workflow was interrupted before completing all items.",
-    )
-    eval_input: EvalInput = Field(
-        ...,
-        description="Evaluation input containing all dataset items and their outputs.",
-    )
-    evaluation_results: list[tuple[str, EvalOutput]] = Field(
-        ...,
-        description="List of evaluator results as (evaluator_name, output) tuples.",
-    )
-    usage_stats: typing.Any | None = Field(
-        default=None,
-        description="LLM usage statistics collected during evaluation.",
-    )
-    profiler_results: typing.Any = Field(
-        ...,
-        description="Profiling results from the evaluation run.",
-    )
-    config_original_file: Path | None = Field(
-        default=None,
-        description="Path to the original config file written to output directory.",
-    )
-    config_effective_file: Path | None = Field(
-        default=None,
-        description="Path to the effective config file with overrides applied.",
-    )
-    config_metadata_file: Path | None = Field(
-        default=None,
-        description="Path to the config metadata file.",
-    )

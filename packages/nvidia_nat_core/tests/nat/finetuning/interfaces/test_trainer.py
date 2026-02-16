@@ -19,7 +19,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from nat.data_models.evaluate import EvaluationRunOutput
+from nat.data_models.evaluate_runtime import EvaluationRunOutput
 from nat.data_models.finetuning import CurriculumLearningConfig
 from nat.data_models.finetuning import FinetuneConfig
 from nat.data_models.finetuning import FinetuneRunConfig

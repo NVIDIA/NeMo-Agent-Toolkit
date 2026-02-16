@@ -26,7 +26,7 @@ from fastapi.testclient import TestClient
 
 from _utils.dask_utils import wait_job
 from nat.data_models.config import Config
-from nat.data_models.evaluate import EvaluationRunOutput
+from nat.data_models.evaluate_runtime import EvaluationRunOutput
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalOutput
 from nat.data_models.evaluator import EvalOutputItem
