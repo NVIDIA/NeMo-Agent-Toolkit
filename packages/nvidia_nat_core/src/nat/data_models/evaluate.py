@@ -39,12 +39,20 @@ class JobEvictionPolicy(StrEnum):
 
 
 class EvalCustomScriptConfig(BaseModel):
+    """
+    Configuration for a custom script to run after the workflow and evaluation results are saved.
+    This is specifiied in the `eval.general.output.custom_scripts` section of the evaluation configuration yaml file.
+    """
     script: Path = Field(description="Path to the script to run.")
 
     kwargs: dict[str, str] = Field(default_factory=dict, description="Keyword arguments to pass to the script.")
 
 
 class JobManagementConfig(BaseModel):
+    """
+    Configuration for the job management of the evaluation. 
+    This is specifiied in the `eval.general.output.job_management` section of the evaluation configuration yaml file.
+    """
     append_job_id_to_output_dir: bool = Field(
         default=False, description="Whether to append a unique job ID to the output directory for each run.")
 
@@ -57,6 +65,10 @@ class JobManagementConfig(BaseModel):
 
 
 class EvalOutputConfig(BaseModel):
+    """
+    Configuration for the output of the evaluation. This is specifiied in the `eval.general.output` 
+    section of the evaluation configuration yaml file.
+    """
     dir: Path = Field(default=Path("./.tmp/nat/examples/default/"),
                       description="Output directory for the workflow and evaluation results.")
 
@@ -83,6 +95,10 @@ class EvalOutputConfig(BaseModel):
 
 
 class EvalGeneralConfig(BaseModel):
+    """
+    Configuration for the general evaluation options. This is specifiied in the `eval.general` section
+    of the evaluation configuration yaml file.
+    """
     max_concurrency: int = Field(default=8, description="Maximum number of concurrent workflow executions.")
 
     workflow_alias: str | None = Field(
@@ -144,6 +160,10 @@ class EvalGeneralConfig(BaseModel):
 
 
 class EvalConfig(BaseModel):
+    """
+    Configuration for the evaluation options. This is specifiied in the `eval` section
+    of the evaluation configuration yaml file.
+    """
     general: EvalGeneralConfig = Field(default_factory=EvalGeneralConfig, description="General evaluation options.")
 
     evaluators: dict[str, EvaluatorBaseConfig] = Field(default_factory=dict, description="Evaluators configuration.")
@@ -193,7 +213,10 @@ class EndpointRetryConfig(BaseModel):
 
 
 class EvaluationRunConfig(BaseModel):
-    """Parameters used for a single evaluation run."""
+    """
+    Parameters used for a single evaluation run. This is used by the `nat eval` command. It 
+    can also be used for programmatic evaluation.
+    """
 
     config_file: Path | BaseModel = Field(
         ...,
