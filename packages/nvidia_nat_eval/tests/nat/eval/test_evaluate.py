@@ -36,18 +36,18 @@ from nat.data_models.evaluate_config import EvalConfig
 from nat.data_models.evaluate_config import EvalOutputConfig
 from nat.data_models.evaluate_config import JobEvictionPolicy
 from nat.data_models.evaluate_config import JobManagementConfig
+from nat.data_models.evaluate_runtime import EvaluationRunConfig
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
-from nat.plugins.eval.runtime.evaluate import EvaluationRun
-from nat.data_models.evaluate_runtime import EvaluationRunConfig
 from nat.plugins.eval.evaluator.evaluator_model import EvalInput
 from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
 from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
 from nat.plugins.eval.evaluator.evaluator_model import EvalOutputItem
 from nat.plugins.eval.profiler.data_models import ProfilerResults
+from nat.plugins.eval.runtime.evaluate import EvaluationRun
 from nat.runtime.session import SessionManager
 
 # pylint: disable=unused-argument # arguments are passed to setup the fixtures

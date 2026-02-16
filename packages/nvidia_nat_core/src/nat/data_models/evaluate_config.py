@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """YAML-backed evaluation configuration models (`eval.*`) for workflow configs."""
 
 import typing
@@ -143,8 +142,9 @@ class EvalGeneralConfig(BaseModel):
 
         type_registry = GlobalTypeRegistry.get()
 
-        DatasetAnnotation = typing.Annotated[type_registry.compute_annotation(EvalDatasetBaseConfig),
-                                             Discriminator(TypedBaseModel.discriminator)] | None  # pyright: ignore[reportOperatorIssue]
+        DatasetAnnotation = typing.Annotated[
+            type_registry.compute_annotation(EvalDatasetBaseConfig),
+            Discriminator(TypedBaseModel.discriminator)] | None  # pyright: ignore[reportOperatorIssue]
 
         should_rebuild = False
 

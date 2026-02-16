@@ -19,8 +19,8 @@ from pathlib import Path
 
 import pytest
 
-from nat.plugins.eval.runtime.evaluate import EvaluationRun
 from nat.data_models.evaluate_runtime import EvaluationRunConfig
+from nat.plugins.eval.runtime.evaluate import EvaluationRun
 from nat.test.utils import locate_example_config
 from nat_swe_bench.config import SweBenchWorkflowConfig
 

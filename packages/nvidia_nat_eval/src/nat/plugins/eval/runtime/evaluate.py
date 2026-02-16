@@ -37,8 +37,8 @@ from nat.plugins.eval.dataset_handler.dataset_handler import DatasetHandler
 from nat.plugins.eval.evaluator.evaluator_model import EvalInput
 from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
 from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
-from nat.plugins.eval.runtime.llm_validator import validate_llm_endpoints
 from nat.plugins.eval.profiler.data_models import ProfilerResults
+from nat.plugins.eval.runtime.llm_validator import validate_llm_endpoints
 from nat.plugins.eval.runtime.usage_stats import UsageStats
 from nat.plugins.eval.runtime.usage_stats import UsageStatsItem
 from nat.plugins.eval.runtime.usage_stats import UsageStatsLLM

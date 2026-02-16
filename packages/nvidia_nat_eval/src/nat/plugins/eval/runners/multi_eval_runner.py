@@ -18,8 +18,8 @@ import typing
 
 from nat.data_models.evaluate_runtime import EvaluationRunConfig
 from nat.data_models.evaluate_runtime import EvaluationRunOutput
-from nat.plugins.eval.runtime.evaluate import EvaluationRun
 from nat.plugins.eval.runners.config import MultiEvaluationRunConfig
+from nat.plugins.eval.runtime.evaluate import EvaluationRun
 
 
 class MultiEvaluationRunner:

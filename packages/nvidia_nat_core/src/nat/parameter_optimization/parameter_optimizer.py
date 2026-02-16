@@ -39,8 +39,8 @@ EvaluationRunConfig = None
 @lru_cache(maxsize=1)
 def _load_eval_runtime_classes():
     try:
-        from nat.plugins.eval.runtime.evaluate import EvaluationRun as ImportedEvaluationRun
         from nat.data_models.evaluate_runtime import EvaluationRunConfig as ImportedEvaluationRunConfig
+        from nat.plugins.eval.runtime.evaluate import EvaluationRun as ImportedEvaluationRun
     except ImportError as exc:
         raise RuntimeError(
             "The `nat optimize` command requires evaluation support from `nvidia-nat-eval`. "

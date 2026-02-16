@@ -99,9 +99,9 @@ except ImportError:
     JobStore = None
 
 try:
+    from nat.data_models.evaluate_runtime import EvaluationRunConfig as _EvaluationRunConfig
     from nat.plugins.eval.runtime.builder import WorkflowEvalBuilder as _WorkflowEvalBuilder
     from nat.plugins.eval.runtime.evaluate import EvaluationRun as _EvaluationRun
-    from nat.data_models.evaluate_runtime import EvaluationRunConfig as _EvaluationRunConfig
     _EVAL_AVAILABLE = True
 except ImportError as exc:
     _EVAL_IMPORT_ERROR = exc

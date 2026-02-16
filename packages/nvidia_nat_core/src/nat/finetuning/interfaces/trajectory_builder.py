@@ -49,8 +49,8 @@ class TrajectoryBuilder(ABC):
             EvaluationRunOutput: The output of the evaluation run.
         """
 
-        from nat.plugins.eval.runtime.evaluate import EvaluationRun
         from nat.data_models.evaluate_runtime import EvaluationRunConfig
+        from nat.plugins.eval.runtime.evaluate import EvaluationRun
 
         eval_cfg = EvaluationRunConfig(config_file=self.run_config.run_configuration.config_file,
                                        dataset=self.run_config.run_configuration.dataset,
