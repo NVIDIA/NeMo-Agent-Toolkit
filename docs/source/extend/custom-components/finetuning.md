@@ -89,7 +89,8 @@ class TrajectoryBuilder(ABC):
     async def run_eval(self) -> EvaluationRunOutput:
         """Run NeMo Agent Toolkit Evaluation to generate episode items."""
         # Default implementation uses the evaluation system
-        from nat.plugins.eval.evaluate import EvaluationRun, EvaluationRunConfig
+        from nat.data_models.evaluate_runtime import EvaluationRunConfig
+        from nat.plugins.eval.evaluate import EvaluationRun
         # ... runs evaluation and returns output
 
     @abstractmethod
