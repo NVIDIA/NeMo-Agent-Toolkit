@@ -26,8 +26,8 @@ from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import TTCEventData
 from nat.data_models.invocation_node import InvocationNode
-from nat.plugins.eval.evaluator.evaluator_model import EvalInput
-from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
+from nat.data_models.evaluator import EvalInput
+from nat.data_models.evaluator import EvalInputItem
 
 # Add parent directory to path to ensure imports work
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))

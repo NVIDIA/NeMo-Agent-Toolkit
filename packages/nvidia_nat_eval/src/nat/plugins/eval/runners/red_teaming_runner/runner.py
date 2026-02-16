@@ -32,7 +32,7 @@ from nat.data_models.evaluate_config import EvalGeneralConfig
 from nat.data_models.evaluate_runtime import EvaluationRunConfig
 from nat.data_models.evaluate_runtime import EvaluationRunOutput
 from nat.middleware.red_teaming.red_teaming_middleware_config import RedTeamingMiddlewareConfig
-from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
+from nat.data_models.evaluator import EvalOutput
 from nat.plugins.eval.red_teaming_evaluator.data_models import RedTeamingEvalOutputItem
 from nat.plugins.eval.red_teaming_evaluator.register import RedTeamingEvaluatorConfig
 from nat.plugins.eval.runners.config import MultiEvaluationRunConfig

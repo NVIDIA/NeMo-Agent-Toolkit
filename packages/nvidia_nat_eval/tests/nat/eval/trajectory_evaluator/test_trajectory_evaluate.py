@@ -21,7 +21,7 @@ import pytest
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
 
-from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
+from nat.data_models.evaluator import EvalOutput
 from nat.plugins.eval.trajectory_evaluator.evaluate import TrajectoryEvaluator
 
 

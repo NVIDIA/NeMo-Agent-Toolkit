@@ -28,9 +28,9 @@ from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.invocation_node import InvocationNode
 from nat.plugins.eval.dataset_handler.dataset_handler import DatasetHandler
-from nat.plugins.eval.evaluator.evaluator_model import EvalInput
-from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
-from nat.plugins.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.data_models.evaluator import EvalInput
+from nat.data_models.evaluator import EvalInputItem
+from nat.data_models.evaluator import EvalOutputItem
 
 
 @pytest.fixture

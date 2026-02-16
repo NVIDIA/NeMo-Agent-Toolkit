@@ -27,8 +27,8 @@ from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.plugins.eval.dataset_handler.dataset_downloader import DatasetDownloader
 from nat.plugins.eval.dataset_handler.dataset_filter import DatasetFilter
-from nat.plugins.eval.evaluator.evaluator_model import EvalInput
-from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
+from nat.data_models.evaluator import EvalInput
+from nat.data_models.evaluator import EvalInputItem
 
 
 class DatasetHandler:

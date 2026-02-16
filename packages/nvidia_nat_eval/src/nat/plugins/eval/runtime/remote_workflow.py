@@ -26,8 +26,8 @@ from nat.data_models.evaluate_runtime import EvaluationRunConfig
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.invocation_node import InvocationNode
-from nat.plugins.eval.evaluator.evaluator_model import EvalInput
-from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
+from nat.data_models.evaluator import EvalInput
+from nat.data_models.evaluator import EvalInputItem
 
 logger = logging.getLogger(__name__)
 

@@ -18,7 +18,7 @@ import typing
 import pytest
 
 if typing.TYPE_CHECKING:
-    from nat.plugins.eval.evaluator.evaluator_model import EvalInput
+    from nat.data_models.evaluator import EvalInput
     from nat.plugins.eval.utils.intermediate_step_adapter import IntermediateStepAdapter
 
 
@@ -38,8 +38,8 @@ def intermediate_step_adapter_fixture() -> "IntermediateStepAdapter":
 def rag_eval_input(rag_user_inputs, rag_expected_outputs, rag_generated_outputs, rag_intermediate_steps) -> "EvalInput":
     """Fixture to create a mock EvalInput with multiple items."""
 
-    from nat.plugins.eval.evaluator.evaluator_model import EvalInput
-    from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
+    from nat.data_models.evaluator import EvalInput
+    from nat.data_models.evaluator import EvalInputItem
 
     # Unpack intermediate steps
     steps_1, steps_2 = rag_intermediate_steps

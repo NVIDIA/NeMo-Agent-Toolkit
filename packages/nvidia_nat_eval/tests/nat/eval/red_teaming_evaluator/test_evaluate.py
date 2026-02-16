@@ -25,7 +25,7 @@ from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
-from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
+from nat.data_models.evaluator import EvalInputItem
 from nat.plugins.eval.red_teaming_evaluator.evaluate import RedTeamingEvaluator
 from nat.plugins.eval.red_teaming_evaluator.evaluate import ReductionStrategy
 from nat.plugins.eval.red_teaming_evaluator.filter_conditions import IntermediateStepsFilterCondition

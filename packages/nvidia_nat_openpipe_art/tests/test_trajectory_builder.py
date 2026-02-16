@@ -28,8 +28,8 @@ from nat.data_models.finetuning import RewardFunctionConfig
 from nat.data_models.finetuning import TrajectoryCollection
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.invocation_node import InvocationNode
-from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
-from nat.plugins.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.data_models.evaluator import EvalInputItem
+from nat.data_models.evaluator import EvalOutputItem
 from nat.plugins.openpipe.config import ARTTrajectoryBuilderConfig
 from nat.plugins.openpipe.trajectory_builder import ARTTrajectoryBuilder
 

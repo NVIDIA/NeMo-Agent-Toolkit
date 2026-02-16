@@ -24,7 +24,7 @@ import pandas as pd
 import pytest
 from pydantic import BaseModel
 
-from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
+from nat.data_models.evaluator import EvalOutput
 from nat.plugins.eval.rag_evaluator.evaluate import RAGEvaluator
 
 if typing.TYPE_CHECKING:

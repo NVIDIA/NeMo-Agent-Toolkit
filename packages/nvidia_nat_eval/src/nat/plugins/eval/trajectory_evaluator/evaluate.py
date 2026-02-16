@@ -20,8 +20,8 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
 
 from nat.plugins.eval.evaluator.base_evaluator import BaseEvaluator
-from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
-from nat.plugins.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.data_models.evaluator import EvalInputItem
+from nat.data_models.evaluator import EvalOutputItem
 
 logger = logging.getLogger(__name__)
 

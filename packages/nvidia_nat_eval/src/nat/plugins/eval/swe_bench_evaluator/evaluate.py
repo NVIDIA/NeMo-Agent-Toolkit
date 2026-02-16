@@ -21,8 +21,8 @@ from pathlib import Path
 
 from nat.data_models.swe_bench_model import SWEBenchInput
 from nat.data_models.swe_bench_model import SWEBenchOutput
-from nat.plugins.eval.evaluator.evaluator_model import EvalInput
-from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
+from nat.data_models.evaluator import EvalInput
+from nat.data_models.evaluator import EvalOutput
 
 try:
     import swebench.harness.run_evaluation as swebench_eval

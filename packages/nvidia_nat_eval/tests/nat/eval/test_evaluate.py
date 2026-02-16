@@ -42,10 +42,10 @@ from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
-from nat.plugins.eval.evaluator.evaluator_model import EvalInput
-from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
-from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
-from nat.plugins.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.data_models.evaluator import EvalInput
+from nat.data_models.evaluator import EvalInputItem
+from nat.data_models.evaluator import EvalOutput
+from nat.data_models.evaluator import EvalOutputItem
 from nat.plugins.eval.profiler.data_models import ProfilerResults
 from nat.plugins.eval.runtime.evaluate import EvaluationRun
 from nat.runtime.session import SessionManager
@@ -782,7 +782,7 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
          patch("nat.plugins.eval.runtime.builder.WorkflowEvalBuilder.from_config", side_effect=mock_eval_builder), \
          patch("nat.plugins.eval.runtime.evaluate.DatasetHandler", return_value=mock_dataset_handler), \
          patch("nat.plugins.eval.runtime.evaluate.OutputUploader", return_value=mock_uploader), \
-         patch("nat.data_models.evaluate_runtime.EvaluationRunOutput", return_value=MagicMock()) \
+         patch("nat.plugins.eval.runtime.evaluate.EvaluationRunOutput", return_value=MagicMock()) \
             as mock_eval_run_output, \
          patch.object(evaluation_run, "run_workflow_local",
                       wraps=evaluation_run.run_workflow_local) as mock_run_workflow, \
