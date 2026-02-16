@@ -443,7 +443,8 @@ async def test_run_workflow_local_cancels_pending_intermediate(evaluation_run, e
 
     with patch("nat.builder.runtime_event_subscriber.pull_intermediate",
                AsyncMock(return_value=intermediate_source)) as mock_pull_intermediate, \
-         patch("nat.plugins.eval.runtime.evaluate.asyncio.ensure_future", side_effect=ensure_future_stub) as mock_ensure_future:
+         patch("nat.plugins.eval.runtime.evaluate.asyncio.ensure_future", side_effect=ensure_future_stub) \
+            as mock_ensure_future:
         await evaluation_run.run_workflow_local(session_manager)
 
     assert evaluation_run.workflow_interrupted, "Expected workflow_interrupted to be True after failure"
@@ -781,7 +782,8 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
          patch("nat.plugins.eval.runtime.builder.WorkflowEvalBuilder.from_config", side_effect=mock_eval_builder), \
          patch("nat.plugins.eval.runtime.evaluate.DatasetHandler", return_value=mock_dataset_handler), \
          patch("nat.plugins.eval.runtime.evaluate.OutputUploader", return_value=mock_uploader), \
-         patch("nat.plugins.eval.runtime.evaluate.EvaluationRunOutput", return_value=MagicMock()) as mock_eval_run_output, \
+         patch("nat.data_models.evaluate_runtime.EvaluationRunOutput", return_value=MagicMock()) \
+            as mock_eval_run_output, \
          patch.object(evaluation_run, "run_workflow_local",
                       wraps=evaluation_run.run_workflow_local) as mock_run_workflow, \
          patch.object(evaluation_run, "run_evaluators", AsyncMock()) as mock_run_evaluators, \
