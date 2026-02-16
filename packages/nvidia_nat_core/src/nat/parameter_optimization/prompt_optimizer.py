@@ -19,6 +19,7 @@ import logging
 import random
 from collections.abc import Sequence
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Any
 
 from pydantic import BaseModel
@@ -41,11 +42,8 @@ EvaluationRun = None
 EvaluationRunConfig = None
 
 
-def _require_eval_runtime():
-    global EvaluationRun, EvaluationRunConfig
-    if EvaluationRun is not None and EvaluationRunConfig is not None:
-        return EvaluationRun, EvaluationRunConfig
-
+@lru_cache(maxsize=1)
+def _load_eval_runtime_classes():
     try:
         from nat.plugins.eval.evaluate import EvaluationRun as ImportedEvaluationRun
         from nat.plugins.eval.evaluate import EvaluationRunConfig as ImportedEvaluationRunConfig
@@ -53,11 +51,18 @@ def _require_eval_runtime():
         raise RuntimeError(
             "The `nat optimize` command requires evaluation support from `nvidia-nat-eval`. "
             "Install it with `uv pip install nvidia-nat-eval` (or `pip install nvidia-nat-eval`).") from exc
-    if EvaluationRun is None:
-        EvaluationRun = ImportedEvaluationRun
-    if EvaluationRunConfig is None:
-        EvaluationRunConfig = ImportedEvaluationRunConfig
-    return EvaluationRun, EvaluationRunConfig
+    return ImportedEvaluationRun, ImportedEvaluationRunConfig
+
+
+def _require_eval_runtime():
+    # Module-level symbols remain as optional test overrides.
+    evaluation_run = EvaluationRun
+    evaluation_run_config = EvaluationRunConfig
+    loaded_run, loaded_config = _load_eval_runtime_classes()
+    return (
+        evaluation_run if evaluation_run is not None else loaded_run,
+        evaluation_run_config if evaluation_run_config is not None else loaded_config,
+    )
 
 
 class PromptOptimizerInputSchema(BaseModel):
