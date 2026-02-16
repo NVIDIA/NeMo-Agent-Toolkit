@@ -88,7 +88,7 @@ async def test_eval():
     import nat_simple_web_query_eval
 
     # Get config dynamically
-    config_file: Path = locate_example_config(nat_simple_web_query_eval, "eval_config.yml")
+    config_file: Path = locate_example_config(nat_simple_web_query_eval, "eval_config_llama33.yml")
 
     # Create the configuration object for running the evaluation, single rep using the eval config in eval_config.yml
     # WIP: skip test if eval config is not present
