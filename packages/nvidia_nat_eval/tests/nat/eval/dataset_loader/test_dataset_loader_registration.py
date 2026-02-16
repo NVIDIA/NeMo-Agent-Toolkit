@@ -59,8 +59,8 @@ def test_compute_annotation_for_dataset_base():
 def test_yaml_backward_compat_csv():
     """Verify _type: csv in YAML still parses to EvalDatasetCsvConfig."""
     import nat.plugins.eval.dataset_loader.register  # noqa: F401
-    from nat.data_models.evaluate import EvalConfig
-    from nat.data_models.evaluate import EvalGeneralConfig
+    from nat.data_models.evaluate_config import EvalConfig
+    from nat.data_models.evaluate_config import EvalGeneralConfig
 
     EvalConfig.rebuild_annotations()
 
@@ -71,8 +71,8 @@ def test_yaml_backward_compat_csv():
 def test_yaml_backward_compat_json():
     """Verify _type: json in YAML still parses to EvalDatasetJsonConfig."""
     import nat.plugins.eval.dataset_loader.register  # noqa: F401
-    from nat.data_models.evaluate import EvalConfig
-    from nat.data_models.evaluate import EvalGeneralConfig
+    from nat.data_models.evaluate_config import EvalConfig
+    from nat.data_models.evaluate_config import EvalGeneralConfig
 
     EvalConfig.rebuild_annotations()
 

@@ -21,7 +21,7 @@ from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
-from nat.plugins.eval.intermediate_step_adapter import IntermediateStepAdapter
+from nat.plugins.eval.utils.intermediate_step_adapter import IntermediateStepAdapter
 
 
 @pytest.fixture

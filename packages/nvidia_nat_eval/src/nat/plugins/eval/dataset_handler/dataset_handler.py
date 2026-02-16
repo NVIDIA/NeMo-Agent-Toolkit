@@ -44,7 +44,7 @@ class DatasetHandler:
                  num_passes: int = 1,
                  adjust_dataset_size: bool = False,
                  custom_pre_eval_process_function: str | None = None):
-        from nat.plugins.eval.intermediate_step_adapter import IntermediateStepAdapter
+        from nat.plugins.eval.utils.intermediate_step_adapter import IntermediateStepAdapter
 
         self.dataset_config = dataset_config
         self.dataset_filter = DatasetFilter(dataset_config.filter)

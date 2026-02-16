@@ -26,6 +26,7 @@ from .swe_bench_evaluator.register import register_swe_bench_evaluator
 from .trajectory_evaluator.register import register_trajectory_evaluator
 from .tunable_rag_evaluator.register import register_tunable_rag_evaluator
 
+# Dataset loaders
 from .dataset_loader.register import register_csv_dataset_loader
 from .dataset_loader.register import register_custom_dataset_loader
 from .dataset_loader.register import register_json_dataset_loader

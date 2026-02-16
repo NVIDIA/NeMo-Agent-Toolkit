@@ -25,7 +25,7 @@ from botocore.exceptions import NoCredentialsError
 from tqdm import tqdm
 
 from nat.data_models.common import get_secret_value
-from nat.data_models.evaluate import EvalOutputConfig
+from nat.data_models.evaluate_config import EvalOutputConfig
 
 logger = logging.getLogger(__name__)
 

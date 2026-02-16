@@ -19,7 +19,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from nat.data_models.evaluate import EvalGeneralConfig
+from nat.data_models.evaluate_config import EvalGeneralConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.middleware.red_teaming.red_teaming_middleware_config import RedTeamingMiddlewareConfig
 from nat.plugins.eval.red_teaming_evaluator.filter_conditions import IntermediateStepsFilterCondition

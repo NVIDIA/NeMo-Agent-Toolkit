@@ -23,7 +23,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from nat.data_models.evaluate import ProfilerConfig
+from nat.data_models.profiler import ProfilerConfig
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.plugins.eval.profiler.data_models import ProfilerResults
 from nat.plugins.eval.profiler.forecasting.model_trainer import ModelTrainer

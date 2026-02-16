@@ -16,9 +16,9 @@
 import copy
 import typing
 
-from nat.plugins.eval.config import EvaluationRunConfig
-from nat.plugins.eval.config import EvaluationRunOutput
-from nat.plugins.eval.evaluate import EvaluationRun
+from nat.data_models.evaluate_runtime import EvaluationRunConfig
+from nat.data_models.evaluate_runtime import EvaluationRunOutput
+from nat.plugins.eval.runtime.evaluate import EvaluationRun
 from nat.plugins.eval.runners.config import MultiEvaluationRunConfig
 
 

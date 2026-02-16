@@ -28,10 +28,10 @@ import pandas as pd
 import yaml
 
 from nat.data_models.config import Config
-from nat.data_models.evaluate import EvalGeneralConfig
+from nat.data_models.evaluate_config import EvalGeneralConfig
 from nat.middleware.red_teaming.red_teaming_middleware_config import RedTeamingMiddlewareConfig
-from nat.plugins.eval.config import EvaluationRunConfig
-from nat.plugins.eval.config import EvaluationRunOutput
+from nat.data_models.evaluate_runtime import EvaluationRunConfig
+from nat.data_models.evaluate_runtime import EvaluationRunOutput
 from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
 from nat.plugins.eval.red_teaming_evaluator.data_models import RedTeamingEvalOutputItem
 from nat.plugins.eval.red_teaming_evaluator.register import RedTeamingEvaluatorConfig

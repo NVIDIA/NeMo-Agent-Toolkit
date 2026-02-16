@@ -19,7 +19,7 @@ import pytest
 
 if typing.TYPE_CHECKING:
     from nat.plugins.eval.evaluator.evaluator_model import EvalInput
-    from nat.plugins.eval.intermediate_step_adapter import IntermediateStepAdapter
+    from nat.plugins.eval.utils.intermediate_step_adapter import IntermediateStepAdapter
 
 
 @pytest.fixture(name="rag_expected_outputs")
@@ -30,7 +30,7 @@ def rag_expected_outputs_fixture() -> list[str]:
 
 @pytest.fixture(name="intermediate_step_adapter")
 def intermediate_step_adapter_fixture() -> "IntermediateStepAdapter":
-    from nat.plugins.eval.intermediate_step_adapter import IntermediateStepAdapter
+    from nat.plugins.eval.utils.intermediate_step_adapter import IntermediateStepAdapter
     return IntermediateStepAdapter()
 
 

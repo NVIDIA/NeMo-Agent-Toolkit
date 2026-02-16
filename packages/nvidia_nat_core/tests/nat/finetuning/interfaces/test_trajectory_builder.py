@@ -184,7 +184,7 @@ class TestTrajectoryBuilder:
         assert builder.logged_progress[0]["metrics"] == metrics
         assert builder.logged_progress[0]["output_dir"] == "/tmp/logs"
 
-    @patch('nat.plugins.eval.evaluate.EvaluationRun')
+    @patch('nat.plugins.eval.runtime.evaluate.EvaluationRun')
     async def test_builder_run_eval(self, mock_eval_run, builder, finetune_config):
         """Test running evaluation."""
         await builder.initialize(finetune_config)

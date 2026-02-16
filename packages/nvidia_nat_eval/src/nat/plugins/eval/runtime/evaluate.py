@@ -29,19 +29,19 @@ from pydantic import BaseModel
 from tqdm import tqdm
 
 from nat.data_models.config import Config
-from nat.data_models.evaluate import EvalConfig
-from nat.data_models.evaluate import JobEvictionPolicy
-from nat.plugins.eval.config import EvaluationRunConfig
-from nat.plugins.eval.config import EvaluationRunOutput
+from nat.data_models.evaluate_config import EvalConfig
+from nat.data_models.evaluate_config import JobEvictionPolicy
+from nat.data_models.evaluate_runtime import EvaluationRunConfig
+from nat.data_models.evaluate_runtime import EvaluationRunOutput
 from nat.plugins.eval.dataset_handler.dataset_handler import DatasetHandler
 from nat.plugins.eval.evaluator.evaluator_model import EvalInput
 from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
 from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
-from nat.plugins.eval.llm_validator import validate_llm_endpoints
+from nat.plugins.eval.runtime.llm_validator import validate_llm_endpoints
 from nat.plugins.eval.profiler.data_models import ProfilerResults
-from nat.plugins.eval.usage_stats import UsageStats
-from nat.plugins.eval.usage_stats import UsageStatsItem
-from nat.plugins.eval.usage_stats import UsageStatsLLM
+from nat.plugins.eval.runtime.usage_stats import UsageStats
+from nat.plugins.eval.runtime.usage_stats import UsageStatsItem
+from nat.plugins.eval.runtime.usage_stats import UsageStatsLLM
 from nat.plugins.eval.utils.output_uploader import OutputUploader
 from nat.plugins.eval.utils.weave_eval import WeaveEvaluationIntegration
 from nat.runtime.session import SessionManager
@@ -62,7 +62,7 @@ class EvaluationRun:
         """
         Initialize an EvaluationRun with configuration.
         """
-        from nat.plugins.eval.intermediate_step_adapter import IntermediateStepAdapter
+        from nat.plugins.eval.utils.intermediate_step_adapter import IntermediateStepAdapter
 
         # Run-specific configuration
         self.config: EvaluationRunConfig = config
@@ -266,7 +266,7 @@ class EvaluationRun:
         pbar.close()
 
     async def run_workflow_remote(self):
-        from nat.plugins.eval.remote_workflow import EvaluationRemoteWorkflowHandler
+        from nat.plugins.eval.runtime.remote_workflow import EvaluationRemoteWorkflowHandler
         handler = EvaluationRemoteWorkflowHandler(self.config, self.eval_config.general.max_concurrency)
         await handler.run_workflow_remote(self.eval_input)
         for item in self.eval_input.eval_input_items:
@@ -567,7 +567,7 @@ class EvaluationRun:
         """
         logger.info("Starting evaluation run with config file: %s", self.config.config_file)
 
-        from nat.plugins.eval.builder import WorkflowEvalBuilder
+        from nat.plugins.eval.runtime.builder import WorkflowEvalBuilder
         from nat.runtime.loader import load_config
 
         # Load and override the config

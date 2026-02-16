@@ -75,7 +75,7 @@ class RAGEvaluator:
         from ragas import EvaluationDataset
         from ragas import SingleTurnSample
 
-        from nat.plugins.eval.intermediate_step_adapter import IntermediateStepAdapter
+        from nat.plugins.eval.utils.intermediate_step_adapter import IntermediateStepAdapter
         event_filter = [IntermediateStepType.TOOL_END, IntermediateStepType.LLM_END, IntermediateStepType.CUSTOM_END]
         samples = []
 

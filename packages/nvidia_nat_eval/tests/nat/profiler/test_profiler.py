@@ -19,7 +19,7 @@ import os
 import pytest
 
 from nat.builder.framework_enum import LLMFrameworkEnum
-from nat.data_models.evaluate import EvalConfig
+from nat.data_models.evaluate_config import EvalConfig
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType as WorkflowEventEnum

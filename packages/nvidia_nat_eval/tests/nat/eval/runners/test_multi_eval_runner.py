@@ -20,7 +20,7 @@ from unittest.mock import patch
 
 import pytest
 
-from nat.plugins.eval.config import EvaluationRunConfig
+from nat.data_models.evaluate_runtime import EvaluationRunConfig
 from nat.plugins.eval.evaluator.evaluator_model import EvalInput
 from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
 from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
@@ -55,7 +55,7 @@ def multi_eval_config(base_eval_run_config):
 @pytest.fixture
 def mock_evaluation_run_output():
     """Fixture for mock evaluation run output."""
-    from nat.plugins.eval.config import EvaluationRunOutput
+    from nat.data_models.evaluate_runtime import EvaluationRunOutput
 
     # Create simple mock objects for testing
     eval_item = EvalInputItem(id=1,

@@ -23,8 +23,8 @@ from nat.builder.function import FunctionGroup
 from nat.cli.register_workflow import register_function_group
 from nat.data_models.config import Config
 from nat.data_models.dataset_handler import EvalDatasetJsonConfig
-from nat.data_models.evaluate import EvalConfig
-from nat.data_models.evaluate import EvalGeneralConfig
+from nat.data_models.evaluate_config import EvalConfig
+from nat.data_models.evaluate_config import EvalGeneralConfig
 from nat.data_models.function import EmptyFunctionConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.llm.nim_llm import NIMModelConfig

@@ -24,8 +24,8 @@ from nat.data_models.config import Config
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
-from nat.plugins.eval.llm_validator import _is_404_error
-from nat.plugins.eval.llm_validator import validate_llm_endpoints
+from nat.plugins.eval.runtime.llm_validator import _is_404_error
+from nat.plugins.eval.runtime.llm_validator import validate_llm_endpoints
 
 
 class TestLLMEndpointValidation:
@@ -93,7 +93,7 @@ class TestLLMEndpointValidation:
         with pytest.raises(ValueError, match="must be a dict"):
             await validate_llm_endpoints(config)
 
-    @patch("nat.plugins.eval.llm_validator.WorkflowBuilder")
+    @patch("nat.plugins.eval.runtime.llm_validator.WorkflowBuilder")
     async def test_validation_succeeds_with_accessible_endpoint(self, mock_builder_class, config_with_openai_llm):
         """Test that validation succeeds when LLM endpoint is accessible."""
         # Mock the builder and LLM
@@ -116,7 +116,7 @@ class TestLLMEndpointValidation:
         mock_builder.get_llm.assert_called_once()
         mock_llm.ainvoke.assert_called_once()
 
-    @patch("nat.plugins.eval.llm_validator.WorkflowBuilder")
+    @patch("nat.plugins.eval.runtime.llm_validator.WorkflowBuilder")
     async def test_validation_detects_404_error(self, mock_builder_class, config_with_openai_llm):
         """Test that validation detects 404 errors when model doesn't exist."""
         # Mock 404 error from ainvoke
@@ -145,7 +145,7 @@ class TestLLMEndpointValidation:
         assert "not found" in error_msg.lower()
         assert "ACTION REQUIRED" in error_msg
 
-    @patch("nat.plugins.eval.llm_validator.WorkflowBuilder")
+    @patch("nat.plugins.eval.runtime.llm_validator.WorkflowBuilder")
     async def test_validation_handles_auth_errors_gracefully(self, mock_builder_class, config_with_openai_llm):
         """Test that validation warns but continues on auth errors (not 404s)."""
         # Mock auth error from ainvoke
@@ -164,7 +164,7 @@ class TestLLMEndpointValidation:
         # (just logs warning)
         await validate_llm_endpoints(config_with_openai_llm)
 
-    @patch("nat.plugins.eval.llm_validator.WorkflowBuilder")
+    @patch("nat.plugins.eval.runtime.llm_validator.WorkflowBuilder")
     async def test_validation_works_for_nim_llm(self, mock_builder_class, config_with_nim_llm):
         """Test that validation works for NIM LLM type."""
         mock_builder = AsyncMock()
@@ -184,7 +184,7 @@ class TestLLMEndpointValidation:
         mock_builder.add_llm.assert_called_once()
         mock_llm.ainvoke.assert_called_once()
 
-    @patch("nat.plugins.eval.llm_validator.WorkflowBuilder")
+    @patch("nat.plugins.eval.runtime.llm_validator.WorkflowBuilder")
     async def test_validation_works_for_bedrock_llm(self, mock_builder_class, config_with_bedrock_llm):
         """Test that validation works for AWS Bedrock LLM type (framework-agnostic)."""
         mock_builder = AsyncMock()
@@ -204,7 +204,7 @@ class TestLLMEndpointValidation:
         mock_builder.add_llm.assert_called_once()
         mock_llm.ainvoke.assert_called_once()
 
-    @patch("nat.plugins.eval.llm_validator.WorkflowBuilder")
+    @patch("nat.plugins.eval.runtime.llm_validator.WorkflowBuilder")
     async def test_validation_with_multiple_llms(self, mock_builder_class, config_with_multiple_llms):
         """Test that validation checks all configured LLMs."""
         mock_builder = AsyncMock()
@@ -225,7 +225,7 @@ class TestLLMEndpointValidation:
         assert mock_builder.get_llm.call_count == 2
         assert mock_llm.ainvoke.call_count == 2
 
-    @patch("nat.plugins.eval.llm_validator.WorkflowBuilder")
+    @patch("nat.plugins.eval.runtime.llm_validator.WorkflowBuilder")
     async def test_validation_collects_all_404_errors(self, mock_builder_class, config_with_multiple_llms):
         """Test that validation collects all 404 errors before failing."""
 
@@ -262,7 +262,7 @@ class TestLLMEndpointValidation:
 class TestTimeoutAndParallelValidation:
     """Tests for timeout handling and parallel validation."""
 
-    @patch("nat.plugins.eval.llm_validator.WorkflowBuilder")
+    @patch("nat.plugins.eval.runtime.llm_validator.WorkflowBuilder")
     async def test_validation_times_out_gracefully(self, mock_builder_class, monkeypatch):
         """Test that validation handles timeouts without hanging."""
         config = Config()
@@ -284,7 +284,7 @@ class TestTimeoutAndParallelValidation:
 
         mock_builder_class.return_value = mock_builder
         # Shorten timeout so the test finishes quickly
-        monkeypatch.setattr("nat.plugins.eval.llm_validator.VALIDATION_TIMEOUT_SECONDS", 0.05, raising=True)
+        monkeypatch.setattr("nat.plugins.eval.runtime.llm_validator.VALIDATION_TIMEOUT_SECONDS", 0.05, raising=True)
 
         # Should not raise, just warn about timeout
         await validate_llm_endpoints(config)
@@ -292,7 +292,7 @@ class TestTimeoutAndParallelValidation:
         # Verify it completed quickly (not hung)
         # The actual timeout is handled by asyncio.wait_for in the implementation
 
-    @patch("nat.plugins.eval.llm_validator.WorkflowBuilder")
+    @patch("nat.plugins.eval.runtime.llm_validator.WorkflowBuilder")
     async def test_parallel_validation_of_multiple_llms(self, mock_builder_class):
         """Test that multiple LLMs are validated in parallel batches."""
         config = Config()
@@ -369,7 +369,7 @@ class Test404ErrorDetection:
 class TestLLMValidationErrorMessages:
     """Tests for error message quality and actionability."""
 
-    @patch("nat.plugins.eval.llm_validator.WorkflowBuilder")
+    @patch("nat.plugins.eval.runtime.llm_validator.WorkflowBuilder")
     async def test_error_message_includes_endpoint_details(self, mock_builder_class):
         """Test that error messages include specific endpoint details."""
 
@@ -406,7 +406,7 @@ class TestLLMValidationErrorMessages:
         # Should include model name
         assert "custom-model-name" in error_msg
 
-    @patch("nat.plugins.eval.llm_validator.WorkflowBuilder")
+    @patch("nat.plugins.eval.runtime.llm_validator.WorkflowBuilder")
     async def test_404_error_message_mentions_training_cancellation(self, mock_builder_class):
         """Test that 404 error message mentions potential training cancellation."""
 
@@ -457,7 +457,7 @@ class TestLLMValidationIntegration:
         }
         return config
 
-    @patch("nat.plugins.eval.llm_validator.WorkflowBuilder")
+    @patch("nat.plugins.eval.runtime.llm_validator.WorkflowBuilder")
     async def test_validation_scenario_after_canceled_training(self, mock_builder_class, config_for_finetuned_model):
         """
         Test validation behavior in the scenario that caused NVBug 5789819:

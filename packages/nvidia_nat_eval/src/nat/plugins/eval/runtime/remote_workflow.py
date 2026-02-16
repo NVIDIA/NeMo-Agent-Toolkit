@@ -25,7 +25,7 @@ from nat.data_models.api_server import ResponseIntermediateStep
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.invocation_node import InvocationNode
-from nat.plugins.eval.config import EvaluationRunConfig
+from nat.data_models.evaluate_runtime import EvaluationRunConfig
 from nat.plugins.eval.evaluator.evaluator_model import EvalInput
 from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
 

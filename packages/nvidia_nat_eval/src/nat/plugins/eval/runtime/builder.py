@@ -30,8 +30,8 @@ from nat.cli.type_registry import TypeRegistry
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
 from nat.data_models.dataset_handler import EvalDatasetBaseConfig
-from nat.data_models.evaluate import EvalGeneralConfig
-from nat.data_models.evaluator import EvaluatorBaseConfig
+from nat.data_models.evaluate_config import EvalGeneralConfig
+from nat.data_models.evaluator_config_base import EvaluatorBaseConfig
 from nat.data_models.function import EmptyFunctionConfig
 from nat.utils.type_utils import override
 

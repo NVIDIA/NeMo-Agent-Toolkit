@@ -90,7 +90,7 @@ class TrajectoryBuilder(ABC):
         """Run NeMo Agent Toolkit Evaluation to generate episode items."""
         # Default implementation uses the evaluation system
         from nat.data_models.evaluate_runtime import EvaluationRunConfig
-        from nat.plugins.eval.evaluate import EvaluationRun
+        from nat.plugins.eval.runtime.evaluate import EvaluationRun
         # ... runs evaluation and returns output
 
     @abstractmethod
