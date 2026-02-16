@@ -585,8 +585,8 @@ The example dataset `simple_calculator_nested.json` is a nested JSON file with q
 def extract_nested_questions(file_path: Path, difficulty: str = None, max_rows: int = None) -> EvalInput:
 ```
 
-{py:class}`~nat.plugins.eval.evaluator.evaluator_model.EvalInput` is a Pydantic model that contains a list of `EvalInputItem` objects.
-{py:class}`~nat.plugins.eval.evaluator.evaluator_model.EvalInputItem` is a Pydantic model that contains the fields for an item in the dataset.
+{py:class}`~nat.data_models.evaluator.EvalInput` is a Pydantic model that contains a list of `EvalInputItem` objects.
+{py:class}`~nat.data_models.evaluator.EvalInputItem` is a Pydantic model that contains the fields for an item in the dataset.
 The custom dataset parser function should fill the following fields in the `EvalInputItem` object:
 - `id`: The id of the item. Every item in the dataset must have a unique id of type `str` or `int`.
 - `input_obj`: This is the question.

@@ -32,16 +32,20 @@ Will allow for features such as offline-replay or simulation of workflow runs wi
 
 ## Prerequisites
 
-The NeMo Agent Toolkit profiler requires additional dependencies not installed by default.
+The NeMo Agent Toolkit profiler is provided by the evaluation package.
 
-Install these dependencies by running the following command from the root directory of the NeMo Agent Toolkit repository:
+For source installs from the NeMo Agent Toolkit repository root, install evaluation support:
 ```bash
-uv pip install -e ".[profiling]"
+uv pip install -e ".[eval]"
 ```
 
-If you are installing from a package, you need to install the `nvidia-nat[profiling]` package by running the following command:
+For package installs, install either the `eval` extra or the standalone package:
 ```bash
-uv pip install "nvidia-nat[profiling]"
+uv pip install "nvidia-nat[eval]"
+```
+
+```bash
+uv pip install nvidia-nat-eval
 ```
 
 ## Current Profiler Architecture

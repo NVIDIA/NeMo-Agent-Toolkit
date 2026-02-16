@@ -121,7 +121,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from nat.plugins.eval.evaluator.base_evaluator import BaseEvaluator
-from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem, EvalOutputItem
+from nat.data_models.evaluator import EvalInputItem, EvalOutputItem
 
 class SimilarityEvaluator(BaseEvaluator):
     def __init__(self, similarity_type: str = "cosine", max_concurrency: int = 4):

@@ -69,9 +69,9 @@ The `TrajectoryBuilder` is responsible for generating training data from workflo
 from abc import ABC, abstractmethod
 from typing import Any
 
+from nat.data_models.evaluate import EvaluationRunOutput
 from nat.data_models.finetuning import FinetuneConfig, TrajectoryBuilderConfig, TrajectoryCollection
-from nat.plugins.eval.config import EvaluationRunOutput
-from nat.plugins.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.data_models.evaluator import EvalOutputItem
 
 
 class TrajectoryBuilder(ABC):
@@ -326,7 +326,7 @@ from nat.data_models.finetuning import (
     TrainingJobStatus,
     TrajectoryCollection,
 )
-from nat.plugins.eval.config import EvaluationRunOutput
+from nat.data_models.evaluate import EvaluationRunOutput
 from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
 from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 
