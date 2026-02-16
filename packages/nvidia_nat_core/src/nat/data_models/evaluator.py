@@ -20,23 +20,10 @@ from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import SerializeAsAny
 
-from .common import BaseModelRegistryTag
-from .common import TypedBaseModel
+from .evaluator_config_base import EvaluatorBaseConfig  # noqa: F401
+from .evaluator_config_base import EvaluatorBaseConfigT  # noqa: F401
+from .evaluator_config_base import EvaluatorLLMConfig  # noqa: F401
 from .intermediate_step import IntermediateStep
-from .retry_mixin import RetryMixin
-
-
-class EvaluatorBaseConfig(TypedBaseModel, BaseModelRegistryTag):
-    pass
-
-
-class EvaluatorLLMConfig(EvaluatorBaseConfig, RetryMixin):
-    """Base config for evaluators that use an LLM as a judge."""
-
-    llm_name: str = Field(description="LLM to use as a judge.")
-
-
-EvaluatorBaseConfigT = typing.TypeVar("EvaluatorBaseConfigT", bound=EvaluatorBaseConfig)
 
 
 class EvalInputItem(BaseModel):
@@ -72,7 +59,7 @@ class EvalInput(BaseModel):
 class EvalOutputItem(BaseModel):
     """A single output item from evaluation."""
 
-    model_config = ConfigDict(exclude_none=True)
+    model_config = ConfigDict(exclude_none=True)  # pyright: ignore[reportCallIssue]
 
     id: typing.Any = Field(description="Identifier matching the corresponding EvalInputItem.")
     score: typing.Any = Field(description="Evaluation score (typically float, may be NaN on failure).")

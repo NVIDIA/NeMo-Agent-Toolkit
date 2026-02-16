@@ -55,8 +55,8 @@ from nat.data_models.dataset_handler import EvalDatasetBaseConfigT
 from nat.data_models.discovery_metadata import DiscoveryMetadata
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.embedder import EmbedderBaseConfigT
-from nat.data_models.evaluator import EvaluatorBaseConfig
-from nat.data_models.evaluator import EvaluatorBaseConfigT
+from nat.data_models.evaluator_config_base import EvaluatorBaseConfig
+from nat.data_models.evaluator_config_base import EvaluatorBaseConfigT
 from nat.data_models.finetuning import TrainerAdapterConfig
 from nat.data_models.finetuning import TrainerAdapterConfigT
 from nat.data_models.finetuning import TrainerConfig

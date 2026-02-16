@@ -41,7 +41,7 @@ from nat.data_models.component_ref import TrainerRef
 from nat.data_models.component_ref import TrajectoryBuilderRef
 from nat.data_models.component_ref import TTCStrategyRef
 from nat.data_models.embedder import EmbedderBaseConfig
-from nat.data_models.evaluator import EvaluatorBaseConfig
+from nat.data_models.evaluator_config_base import EvaluatorBaseConfig
 from nat.data_models.finetuning import TrainerAdapterConfig
 from nat.data_models.finetuning import TrainerConfig
 from nat.data_models.finetuning import TrajectoryBuilderConfig
