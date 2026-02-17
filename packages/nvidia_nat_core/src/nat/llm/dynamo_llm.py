@@ -499,8 +499,9 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
 
                 # Increment per-prefix call counter to advance through trie predictions.
                 # This is self-contained — no dependency on intermediate_step_manager.
-                self._call_counts[prefix_id] = self._call_counts.get(prefix_id, 0) + 1
-                call_index = self._call_counts[prefix_id]
+                with self._call_counts_lock:
+                    call_index = self._call_counts.get(prefix_id, 0) + 1
+                    self._call_counts[prefix_id] = call_index
 
                 # Look up prediction
                 prediction = self._prediction_lookup.find(path, call_index)
