@@ -225,15 +225,15 @@ async def generate_responses_api_streaming(
     """
     import json
     import logging
-    import uuid as uuid_module
+    import secrets
 
     from nat.data_models.api_server import ChatResponse
     from nat.data_models.api_server import ChatResponseChunk
 
     _logger = logging.getLogger(__name__)
 
-    response_id = f"resp_{uuid_module.uuid4().hex}{uuid_module.uuid4().hex}"[:55]
-    message_id = f"msg_{uuid_module.uuid4().hex}{uuid_module.uuid4().hex}"[:56]
+    response_id = f"rsp_{secrets.token_hex(30)}"[:64]
+    message_id = f"msg_{secrets.token_hex(30)}"[:64]
     output_index = 0
     content_index = 0
     accumulated_text = ""
