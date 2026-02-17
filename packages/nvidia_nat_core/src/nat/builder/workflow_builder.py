@@ -19,6 +19,8 @@ import inspect
 import logging
 import typing
 import warnings
+from abc import ABC
+from abc import abstractmethod
 from collections.abc import Sequence
 from contextlib import AbstractAsyncContextManager
 from contextlib import AsyncExitStack
@@ -27,6 +29,7 @@ from typing import cast
 
 from nat.authentication.interfaces import AuthProviderBase
 from nat.builder.builder import Builder
+from nat.builder.builder import EvalBuilder
 from nat.builder.builder import UserManagerHolder
 from nat.builder.child_builder import ChildBuilder
 from nat.builder.component_utils import WORKFLOW_COMPONENT_NAME
@@ -63,6 +66,7 @@ from nat.data_models.component_ref import TTCStrategyRef
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
 from nat.data_models.embedder import EmbedderBaseConfig
+from nat.data_models.evaluate_config import EvalGeneralConfig
 from nat.data_models.finetuning import TrainerAdapterConfig
 from nat.data_models.finetuning import TrainerConfig
 from nat.data_models.finetuning import TrajectoryBuilderConfig
@@ -1614,3 +1618,14 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         async with cls(general_config=config.general) as builder:
             await builder.populate_builder(config)
             yield builder
+
+
+class WorkflowEvalBuilderBase(WorkflowBuilder, EvalBuilder, ABC):
+    """Core typed base for eval-capable workflow builders."""
+
+    @abstractmethod
+    def __init__(self,
+                 general_config: GeneralConfig | None = None,
+                 eval_general_config: EvalGeneralConfig | None = None,
+                 registry: TypeRegistry | None = None):
+        """Initialize an eval-capable workflow builder."""

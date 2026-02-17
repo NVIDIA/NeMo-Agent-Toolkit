@@ -13,3 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Compatibility re-export for profiler inference metrics model."""
+
+import warnings
+
+from nat.data_models.evaluate_runtime import (
+    InferenceMetricsModel,  # noqa: F401  # pyright: ignore[reportMissingImports]
+)
+
+warnings.warn(
+    "Importing InferenceMetricsModel from 'nat.plugins.eval.profiler.inference_metrics_model' is deprecated and "
+    "this compatibility layer will be removed in a future release. Use "
+    "'nat.data_models.evaluate_runtime.InferenceMetricsModel' instead.",
+    UserWarning,
+    stacklevel=2,
+)

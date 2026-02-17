@@ -19,12 +19,11 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from nat.builder.builder import EvalBuilder
 from nat.builder.dataset_loader import DatasetLoaderInfo
 from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function import FunctionGroup
-from nat.builder.workflow_builder import WorkflowBuilder
+from nat.builder.workflow_builder import WorkflowEvalBuilderBase
 from nat.builder.workflow_builder import _log_build_failure
 from nat.cli.type_registry import TypeRegistry
 from nat.data_models.config import Config
@@ -50,7 +49,7 @@ class ConfiguredDatasetLoader:
     instance: DatasetLoaderInfo
 
 
-class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
+class WorkflowEvalBuilder(WorkflowEvalBuilderBase):
 
     def __init__(self,
                  general_config: GeneralConfig | None = None,

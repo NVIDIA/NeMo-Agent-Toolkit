@@ -20,8 +20,6 @@ from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import RootModel
 
-from nat.data_models.evaluate_runtime import WorkflowRuntimeMetrics  # noqa: F401
-
 # -----------------------------------------------------------
 # Prompt Caching Data Models
 # -----------------------------------------------------------

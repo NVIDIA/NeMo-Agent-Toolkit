@@ -14,4 +14,14 @@
 # limitations under the License.
 """Compatibility re-export for profiler run output model."""
 
+import warnings
+
 from nat.data_models.evaluate_runtime import ProfilerResults  # noqa: F401  # pyright: ignore[reportMissingImports]
+
+warnings.warn(
+    "Importing ProfilerResults from 'nat.plugins.eval.profiler.data_models' is deprecated and this "
+    "compatibility layer will be removed in a future release. Use "
+    "'nat.data_models.evaluate_runtime.ProfilerResults' instead.",
+    UserWarning,
+    stacklevel=2,
+)

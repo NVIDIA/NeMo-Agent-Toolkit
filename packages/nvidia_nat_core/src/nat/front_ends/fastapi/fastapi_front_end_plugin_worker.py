@@ -81,6 +81,9 @@ from nat.utils.log_utils import setup_logging
 
 logger = logging.getLogger(__name__)
 
+if typing.TYPE_CHECKING:
+    from nat.builder.workflow_builder import WorkflowEvalBuilderBase
+
 _DASK_AVAILABLE = False
 _EVAL_AVAILABLE = False
 _EVAL_IMPORT_ERROR: ImportError | None = None
@@ -260,7 +263,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         # Evaluator storage for single-item evaluation
         self._evaluators: dict[str, EvaluatorInfo] = {}
-        self._eval_builder: typing.Any = None
+        self._eval_builder: WorkflowEvalBuilderBase | None = None
 
     def get_conversation_handler(self, conversation_id: str) -> "WebSocketMessageHandler | None":
         """Get a conversation handler for reconnection support."""
@@ -282,6 +285,10 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         if not config.eval or not config.eval.evaluators:
             logger.info("No evaluators configured, skipping evaluator initialization")
+            return
+
+        if _WorkflowEvalBuilder is None:
+            logger.info("WorkflowEvalBuilder unavailable, skipping evaluator initialization")
             return
 
         try:

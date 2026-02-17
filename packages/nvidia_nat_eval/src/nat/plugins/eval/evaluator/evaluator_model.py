@@ -14,9 +14,11 @@
 # limitations under the License.
 """Compatibility re-exports for evaluator I/O models from core."""
 
-from nat.data_models.evaluator import EvalInput
-from nat.data_models.evaluator import EvalInputItem
-from nat.data_models.evaluator import EvalOutput
-from nat.data_models.evaluator import EvalOutputItem
+import warnings
 
-__all__ = ["EvalInputItem", "EvalInput", "EvalOutputItem", "EvalOutput"]
+warnings.warn(
+    "Importing evaluator models from 'nat.plugins.eval.evaluator.evaluator_model' is deprecated and this "
+    "compatibility layer will be removed in a future release. Use 'nat.data_models.evaluator' instead.",
+    UserWarning,
+    stacklevel=2,
+)
