@@ -76,6 +76,7 @@ import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
+from enum import StrEnum
 from typing import TYPE_CHECKING
 from typing import Literal
 
@@ -112,6 +113,21 @@ _OSL_CATEGORY_TO_INT: dict[str, int] = {"LOW": 128, "MEDIUM": 512, "HIGH": 2048}
 # MEDIUM: 250ms (midpoint of 100-500ms range)
 # HIGH: 750ms (midpoint of 500-1000ms range)
 _IAT_CATEGORY_TO_INT: dict[str, int] = {"LOW": 50, "MEDIUM": 250, "HIGH": 750}
+
+
+class CachePinType(StrEnum):
+    """Cache pinning strategy for KV cache entries.
+
+    Controls how aggressively the Dynamo KV cache retains entries for a prefix:
+
+    - EPHEMERAL: Cache entries auto-expire after a computed TTL of inactivity.
+      TTL is ``total_requests * iat`` (the estimated total conversation
+      duration in milliseconds), giving the expected time span over which
+      this prefix's cache entries should be retained before eviction.
+    """
+
+    EPHEMERAL = "ephemeral"
+
 
 # =============================================================================
 # CATEGORY CONVERSION HELPERS
@@ -379,6 +395,14 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
         "Hints will still be injected via nvext.agent_hints in the request body if prefix_template is set.",
     )
 
+    cache_pin_type: CachePinType | None = Field(
+        default=CachePinType.EPHEMERAL,
+        description="Cache pinning strategy for KV cache entries. "
+        "When set, injects nvext.cache_control with the pin type and a TTL "
+        "computed as total_requests * iat (estimated conversation duration in ms). "
+        "Set to null/None to disable cache control hints.",
+    )
+
     # =========================================================================
     # VALIDATORS (backward compatibility: categorical strings -> integers)
     # =========================================================================
@@ -435,6 +459,7 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
             "request_timeout",
             "prediction_trie_path",
             "disable_headers",
+            "cache_pin_type",
         })
 
 
@@ -464,6 +489,7 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
         prediction_lookup: "PredictionTrieLookup | None" = None,
         use_raw_values: bool = True,
         disable_headers: bool = True,
+        cache_pin_type: CachePinType | None = CachePinType.EPHEMERAL,
     ):
         self._transport = transport
         self._total_requests = total_requests
@@ -472,6 +498,7 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
         self._prediction_lookup = prediction_lookup
         self._use_raw_values = use_raw_values
         self._disable_headers = disable_headers
+        self._cache_pin_type = cache_pin_type
         # Per-prefix call counter so call_index advances across requests
         # for the same prefix_id (keyed by prefix_id string).
         self._call_counts: dict[str, int] = {}
@@ -578,6 +605,24 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
                     # Our hints take precedence over existing
                     body["nvext"]["agent_hints"] = {**existing, **agent_hints}
 
+                    # Inject cache_control for KV cache lifetime management.
+                    # TTL = total_requests * iat_raw (ms): the estimated total
+                    # conversation duration, i.e. how long the cache entry
+                    # should be retained before auto-expiring due to inactivity.
+                    # Formatted as "<N>m" (minutes) or "<N>s" (seconds),
+                    # rounded up to the nearest whole second.
+                    if self._cache_pin_type is not None:
+                        ttl_ms = total_requests * iat_raw
+                        ttl_seconds = max(1, -(-ttl_ms // 1000))  # ceil division
+                        if ttl_seconds >= 60 and ttl_seconds % 60 == 0:
+                            ttl_str = f"{ttl_seconds // 60}m"
+                        else:
+                            ttl_str = f"{ttl_seconds}s"
+                        body["nvext"]["cache_control"] = {
+                            "type": self._cache_pin_type.value,
+                            "ttl": ttl_str,
+                        }
+
                     # Re-encode
                     content = json.dumps(body).encode("utf-8")
                     headers["content-length"] = str(len(content))
@@ -625,6 +670,7 @@ def create_httpx_client_with_dynamo_hooks(
     prediction_lookup: "PredictionTrieLookup | None" = None,
     use_raw_values: bool = True,
     disable_headers: bool = True,
+    cache_pin_type: CachePinType | None = CachePinType.EPHEMERAL,
 ) -> "httpx.AsyncClient":
     """
     Create an httpx.AsyncClient with Dynamo hint injection via custom transport.
@@ -645,6 +691,8 @@ def create_httpx_client_with_dynamo_hooks(
         prediction_lookup: Optional PredictionTrieLookup for dynamic hint injection
         use_raw_values: When True send raw integers; when False convert to LOW/MEDIUM/HIGH
         disable_headers: If True, do not inject hints as HTTP headers (still injects nvext.agent_hints)
+        cache_pin_type: Cache pinning strategy. When set, injects nvext.cache_control with TTL.
+            Set to None to disable.
 
     Returns:
         An httpx.AsyncClient configured with Dynamo hint injection.
@@ -665,6 +713,7 @@ def create_httpx_client_with_dynamo_hooks(
         prediction_lookup=prediction_lookup,
         use_raw_values=use_raw_values,
         disable_headers=disable_headers,
+        cache_pin_type=cache_pin_type,
     )
 
     return httpx.AsyncClient(
