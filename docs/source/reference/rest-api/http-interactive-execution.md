@@ -38,9 +38,10 @@ Two client integration patterns are supported:
 
 ## Configuration
 
-HTTP interactive extensions are enabled by default on all workflow endpoints, with the exception of
-OpenAI-compatible endpoints. To force the interactive extension to work with OpenAI-compatible endpoints,
-set `enable_interactive_extensions` to `true` in the FastAPI front-end configuration:
+HTTP interactive extensions are enabled by default on all workflow endpoints **except for**
+OpenAI-compatible endpoints (`/v1/chat/completions`). To force the interactive extension to work
+with OpenAI-compatible endpoints, set `enable_interactive_extensions` to `true` in the FastAPI
+front-end configuration:
 
 ```yaml
 general:
@@ -53,7 +54,7 @@ The following table describes the relevant configuration parameters:
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `enable_interactive_extensions` | boolean | `false` | Enable HTTP interactive execution on OpenAI-compatible endpoints. When `true`, POST requests to chat and OpenAI-compatible endpoints return `202 Accepted` if the workflow pauses for interaction or OAuth |
+| `enable_interactive_extensions` | boolean | `false` | Enable HTTP interactive execution on OpenAI-compatible endpoints. When `true`, POST requests to chat and OpenAI-compatible endpoints (`/v1/chat/completions`) return `202 Accepted` if the workflow pauses for interaction or OAuth |
 | `disable_legacy_routes` | boolean | `false` | Disable legacy endpoint paths (`/generate`, `/chat`). When `true`, only versioned paths with interactive support (`/v1/workflow`, `/v1/chat`) are registered |
 | `oauth2_callback_path` | string | `/auth/redirect` | Path for the OAuth2 authorization code grant callback endpoint |
 
@@ -68,31 +69,32 @@ OpenAI-compatible endpoints (`/v1/chat/completions`) are opt-in only (defaulting
 
 An interactive HTTP execution moves through the following states:
 
-```text
-                  ┌────────────────────┐
-                  │      RUNNING       │
-                  └─────────┬──────────┘
-                            │
-              ┌─────────────┼─────────────┐
-              │             │             │
-              ▼             ▼             ▼
-  ┌───────────────────┐ ┌──────────┐ ┌──────────┐
-  │ INTERACTION_       │ │ OAUTH_   │ │COMPLETED │
-  │ REQUIRED           │ │ REQUIRED │ │          │
-  └─────────┬─────────┘ └────┬─────┘ └──────────┘
-            │                │
-            │  Client submits│  OAuth redirect
-            │  response      │  resolves token
-            │                │
-            ▼                ▼
-  ┌────────────────────┐ ┌────────────────────┐
-  │      RUNNING       │ │      RUNNING       │
-  └────────────────────┘ └────────────────────┘
-            │                │
-            ▼                ▼
-       ┌──────────┐    ┌──────────┐
-       │COMPLETED │    │  FAILED  │
-       └──────────┘    └──────────┘
+```mermaid
+flowchart TD
+    Start(["Start workflow"])
+    Running(["Running"])
+    Interaction(["Interaction Required"])
+    OAuth(["OAuth Required"])
+    Completed(["Completed"])
+    Failed(["Failed"])
+
+    Start --> Running
+    Running -->|Workflow has interaction| Interaction
+    Running -->|Workflow needs authentication| OAuth
+    Running -->|Workflow execution completes| Completed
+    Running -->|Workflow execution failed| Failed
+    Interaction -->|Client submits response to execution endpoint| Running
+    Interaction -->|Timeout| Failed
+    OAuth -->|OAuth redirect resolves token| Running
+    OAuth -->|Timeout| Failed
+
+    Interaction ~~~ OAuth
+    Completed ~~~ Failed
+    Failed ~~~ Completed
+
+    style Completed fill:#2e7d32,color:#fff,stroke:#1b5e20
+    style Failed fill:#c62828,color:#fff,stroke:#b71c1c
+    style Running fill:#006699,color:#fff,stroke:#003366
 ```
 
 ## Endpoints

@@ -255,12 +255,12 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             # Now evaluators should be populated by populate_builder
             for name in config.eval.evaluators.keys():
                 self._evaluators[name] = self._eval_builder.get_evaluator(name)
-                logger.info(f"Initialized evaluator: {name}")
+                logger.info("Initialized evaluator: %s", name)
 
-            logger.info(f"Successfully initialized {len(self._evaluators)} evaluators")
+            logger.info("Successfully initialized %d evaluators", len(self._evaluators))
 
         except Exception as e:
-            logger.error(f"Failed to initialize evaluators: {e}")
+            logger.error("Failed to initialize evaluators: %s", e)
             # Don't fail startup, just log the error
             self._evaluators = {}
 
