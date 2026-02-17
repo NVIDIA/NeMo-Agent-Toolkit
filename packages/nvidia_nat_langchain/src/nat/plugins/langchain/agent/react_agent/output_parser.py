@@ -60,16 +60,15 @@ class ReActOutputParserException(ValueError, LangChainException):
                  missing_action_input: bool = False,
                  final_answer_and_action: bool = False,
                  llm_output: str | None = None):
-        super(ValueError).__init__(
-            self,
-            "ReActOutputParserException: " + f"observation={self.observation}, " +
-            f"missing_action={self.missing_action}, " + f"missing_action_input={self.missing_action_input}, " +
-            f"final_answer_and_action={self.final_answer_and_action}, " + f"llm_output={self.llm_output}")
         self.observation = observation
         self.missing_action = missing_action
         self.missing_action_input = missing_action_input
         self.final_answer_and_action = final_answer_and_action
         self.llm_output = llm_output
+        super().__init__("ReActOutputParserException: " + f"observation={self.observation}, " +
+                         f"missing_action={self.missing_action}, " +
+                         f"missing_action_input={self.missing_action_input}, " +
+                         f"final_answer_and_action={self.final_answer_and_action}, " + f"llm_output={self.llm_output}")
 
     def __repr__(self) -> str:
         return (f"ReActOutputParserException(observation={self.observation}, " +
