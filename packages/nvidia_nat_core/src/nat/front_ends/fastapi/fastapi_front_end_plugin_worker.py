@@ -87,6 +87,8 @@ if typing.TYPE_CHECKING:
     from nat.builder.workflow_builder import WorkflowEvalBuilderBase
 
 _DASK_AVAILABLE = False
+_EVAL_AVAILABLE: bool | None = None
+_EvaluationRun: typing.Any = None
 
 try:
     from nat.front_ends.fastapi.job_store import JobInfo
@@ -102,11 +104,20 @@ except ImportError:
 @lru_cache(maxsize=1)
 def _load_eval_runtime():
     """Lazily resolve optional eval package symbols used by FastAPI routes."""
+    # Module-level symbols remain as optional test overrides.
+    evaluation_run = _EvaluationRun
+    eval_available = _EVAL_AVAILABLE
+    if eval_available is True and evaluation_run is not None:
+        return None, evaluation_run, None
+
     try:
         from nat.plugins.eval.runtime.builder import WorkflowEvalBuilder
         from nat.plugins.eval.runtime.evaluate import EvaluationRun
     except ImportError as exc:
         return None, None, exc
+
+    if eval_available is False:
+        return None, None, ImportError("Evaluation support is disabled by module override.")
 
     return WorkflowEvalBuilder, EvaluationRun, None
 
