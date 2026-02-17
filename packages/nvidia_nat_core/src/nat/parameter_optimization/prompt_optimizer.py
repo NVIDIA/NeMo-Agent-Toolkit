@@ -19,17 +19,18 @@ import logging
 import random
 from collections.abc import Sequence
 from dataclasses import dataclass
-from functools import lru_cache
 from typing import Any
 
 from pydantic import BaseModel
 
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.config import Config
+from nat.data_models.evaluate_runtime import EvaluationRunConfig
 from nat.data_models.optimizable import SearchSpace
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerRunConfig
 from nat.experimental.decorators.experimental_warning_decorator import experimental
+from nat.parameter_optimization.eval_runtime_loader import load_evaluation_run
 from nat.parameter_optimization.oracle_feedback import build_oracle_feedback
 from nat.parameter_optimization.oracle_feedback import check_adaptive_triggers
 from nat.parameter_optimization.oracle_feedback import extract_worst_reasoning
@@ -39,30 +40,11 @@ from nat.parameter_optimization.update_helpers import apply_suggestions
 logger = logging.getLogger(__name__)
 
 EvaluationRun = None
-EvaluationRunConfig = None
-
-
-@lru_cache(maxsize=1)
-def _load_eval_runtime_classes():
-    try:
-        from nat.data_models.evaluate_runtime import EvaluationRunConfig as ImportedEvaluationRunConfig
-        from nat.plugins.eval.runtime.evaluate import EvaluationRun as ImportedEvaluationRun
-    except ImportError as exc:
-        raise RuntimeError(
-            "The `nat optimize` command requires evaluation support from `nvidia-nat-eval`. "
-            "Install it with `uv pip install nvidia-nat-eval` (or `pip install nvidia-nat-eval`).") from exc
-    return ImportedEvaluationRun, ImportedEvaluationRunConfig
-
-
 def _require_eval_runtime():
     # Module-level symbols remain as optional test overrides.
     evaluation_run = EvaluationRun
-    evaluation_run_config = EvaluationRunConfig
-    loaded_run, loaded_config = _load_eval_runtime_classes()
-    return (
-        evaluation_run if evaluation_run is not None else loaded_run,
-        evaluation_run_config if evaluation_run_config is not None else loaded_config,
-    )
+    loaded_run = load_evaluation_run()
+    return evaluation_run if evaluation_run is not None else loaded_run, EvaluationRunConfig
 
 
 class PromptOptimizerInputSchema(BaseModel):
