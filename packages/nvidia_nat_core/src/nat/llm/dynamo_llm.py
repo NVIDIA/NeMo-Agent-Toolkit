@@ -476,13 +476,12 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
         # Get prefix ID from context (supports depth-awareness and overrides)
         prefix_id = DynamoPrefixContext.get()
 
-        # Get latency sensitivity from context (defaults to MEDIUM)
+        # Get latency sensitivity from context (defaults to 2)
         try:
             ctx = Context.get()
-            latency_sensitivity = str(ctx.latency_sensitivity.value)
+            latency_sensitivity = ctx.latency_sensitivity
         except Exception:
-            # If context not available or latency_sensitivity not implemented yet, default to MEDIUM
-            latency_sensitivity = "MEDIUM"
+            latency_sensitivity = 2
 
         # Initialize with static config values (always integers)
         total_requests = self._total_requests
@@ -547,7 +546,7 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
             headers[f"{LLMHeaderPrefix.DYNAMO}-total-requests"] = str(total_requests)
             headers[f"{LLMHeaderPrefix.DYNAMO}-osl"] = str(osl_value)
             headers[f"{LLMHeaderPrefix.DYNAMO}-iat"] = str(iat_value)
-            headers[f"{LLMHeaderPrefix.DYNAMO}-latency-sensitivity"] = latency_sensitivity
+            headers[f"{LLMHeaderPrefix.DYNAMO}-latency-sensitivity"] = str(latency_sensitivity)
 
         # Modify body to inject nvext.agent_hints (if JSON POST request)
         content = request.content
@@ -561,7 +560,7 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
                         "total_requests": total_requests,
                         "osl": osl_value,
                         "iat": iat_value,
-                        "latency_sensitivity": latency_sensitivity,
+                        "latency_sensitivity": float(latency_sensitivity),
                     }
 
                     # Add/merge nvext.agent_hints

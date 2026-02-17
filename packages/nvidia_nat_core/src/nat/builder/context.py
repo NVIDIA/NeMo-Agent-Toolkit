@@ -39,19 +39,6 @@ from nat.data_models.runtime_enum import RuntimeTypeEnum
 from nat.runtime.user_metadata import RequestAttributes
 from nat.utils.reactive.subject import Subject
 
-try:
-    from nat.plugins.eval.profiler.decorators.latency import LatencySensitivity
-except ImportError:
-
-    class LatencySensitivity(StrEnum):
-        LOW = "LOW"
-        MEDIUM = "MEDIUM"
-        HIGH = "HIGH"
-
-        @property
-        def priority(self) -> int:
-            return {"LOW": 1, "MEDIUM": 2, "HIGH": 3}[self.value]
-
 
 class Singleton(type):
 
@@ -96,8 +83,8 @@ class ContextState(metaclass=Singleton):
         self._active_function: ContextVar[InvocationNode | None] = ContextVar("active_function", default=None)
         self._active_span_id_stack: ContextVar[list[str] | None] = ContextVar("active_span_id_stack", default=None)
         self._function_path_stack: ContextVar[list[str] | None] = ContextVar("function_path_stack", default=None)
-        self._latency_sensitivity_stack: ContextVar[list[LatencySensitivity] | None] = ContextVar(
-            "latency_sensitivity_stack", default=None)
+        self._latency_sensitivity_stack: ContextVar[list[int] | None] = ContextVar("latency_sensitivity_stack",
+                                                                                   default=None)
 
         # Default is a lambda no-op which returns NoneType
         self.user_input_callback: ContextVar[Callable[[InteractionPrompt], Awaitable[HumanResponse | None]]
@@ -139,10 +126,10 @@ class ContextState(metaclass=Singleton):
         return typing.cast(ContextVar[list[str]], self._function_path_stack)
 
     @property
-    def latency_sensitivity_stack(self) -> ContextVar[list[LatencySensitivity]]:
+    def latency_sensitivity_stack(self) -> ContextVar[list[int]]:
         if self._latency_sensitivity_stack.get() is None:
-            self._latency_sensitivity_stack.set([LatencySensitivity.MEDIUM])
-        return typing.cast(ContextVar[list[LatencySensitivity]], self._latency_sensitivity_stack)
+            self._latency_sensitivity_stack.set([2])
+        return typing.cast(ContextVar[list[int]], self._latency_sensitivity_stack)
 
     @staticmethod
     def get() -> "ContextState":
@@ -386,38 +373,37 @@ class Context:
         return self._context_state.runtime_type.get() == RuntimeTypeEnum.EVALUATE
 
     @property
-    def latency_sensitivity(self) -> LatencySensitivity:
+    def latency_sensitivity(self) -> int:
         """
         Returns the current latency sensitivity level.
 
         When multiple sensitivity levels are pushed onto the stack,
-        returns the one with highest priority (HIGH > MEDIUM > LOW).
+        returns the maximum value (higher integers mean higher sensitivity).
 
         Returns:
-            LatencySensitivity: The current effective latency sensitivity.
+            int: The current effective latency sensitivity.
         """
         stack = self._context_state.latency_sensitivity_stack.get()
-        # Return the sensitivity with the highest priority
-        return max(stack, key=lambda s: s.priority)
+        return max(stack)
 
     @contextmanager
-    def push_latency_sensitivity(self, sensitivity: LatencySensitivity):
+    def push_latency_sensitivity(self, sensitivity: int):
         """
         Push a latency sensitivity level onto the stack.
 
-        The effective sensitivity is the maximum priority across all
+        The effective sensitivity is the maximum value across all
         pushed levels. When the context exits, the pushed level is removed.
 
         Args:
-            sensitivity: The latency sensitivity level to push.
+            sensitivity: The latency sensitivity level to push (integer).
 
         Yields:
             None
 
         Example:
             >>> ctx = Context.get()
-            >>> with ctx.push_latency_sensitivity(LatencySensitivity.HIGH):
-            ...     # Inside this block, sensitivity is at least HIGH
+            >>> with ctx.push_latency_sensitivity(3):
+            ...     # Inside this block, sensitivity is at least 3
             ...     pass
         """
         stack = self._context_state.latency_sensitivity_stack.get()

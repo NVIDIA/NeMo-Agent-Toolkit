@@ -16,8 +16,8 @@
 Latency sensitivity decorator for marking functions with latency requirements.
 
 This module provides the @latency_sensitive decorator that allows marking functions
-with latency sensitivity levels (LOW, MEDIUM, HIGH). The sensitivity propagates through
-the call stack with priority-based merging, where higher sensitivity takes precedence.
+with integer latency sensitivity levels. The sensitivity propagates through
+the call stack with max-based merging, where higher values take precedence.
 
 Use cases:
 - LLM routing: Direct high-sensitivity requests to low-latency backends
@@ -25,17 +25,17 @@ Use cases:
 - Observability: Track which parts of workflows have strict latency requirements
 
 Example:
-    Basic usage with enum::
+    Basic usage with integers::
 
-        from nat.plugins.eval.profiler.decorators.latency import LatencySensitivity, latency_sensitive
+        from nat.plugins.eval.profiler.decorators.latency import latency_sensitive
 
-        @latency_sensitive(LatencySensitivity.HIGH)
+        @latency_sensitive(3)
         async def critical_llm_call():
             return await llm.generate()
 
-    Using string form::
+    Using integer values::
 
-        @latency_sensitive("low")
+        @latency_sensitive(1)
         def background_task():
             pass
 
@@ -45,7 +45,7 @@ Example:
 
         def my_function():
             sensitivity = Context.get().latency_sensitivity
-            if sensitivity == LatencySensitivity.HIGH:
+            if sensitivity >= 3:
                 # Use fast path
                 pass
 """
@@ -53,114 +53,45 @@ Example:
 import functools
 import inspect
 from collections.abc import Callable
-from enum import StrEnum
 from typing import Any
 from typing import TypeVar
-
-
-class LatencySensitivity(StrEnum):
-    """
-    Latency sensitivity levels for function execution.
-
-    The sensitivity level indicates how time-critical a function's execution is.
-    Higher sensitivity values take precedence when contexts are nested.
-
-    Attributes:
-        LOW: Low latency sensitivity (priority=1). Suitable for background tasks
-            or non-time-critical operations.
-        MEDIUM: Medium latency sensitivity (priority=2). Default level for most
-            operations. Suitable for typical user interactions.
-        HIGH: High latency sensitivity (priority=3). Suitable for critical user-facing
-            operations requiring immediate response.
-    """
-
-    LOW = "LOW"
-    MEDIUM = "MEDIUM"
-    HIGH = "HIGH"
-
-    @property
-    def priority(self) -> int:
-        """
-        Return numeric priority for this sensitivity level.
-
-        Higher priority values indicate higher sensitivity. Used for comparing
-        sensitivities when nesting contexts.
-
-        Returns:
-            int: Priority value (LOW=1, MEDIUM=2, HIGH=3)
-        """
-        return {"LOW": 1, "MEDIUM": 2, "HIGH": 3}[self.value]
-
-    @classmethod
-    def parse(cls, value: "LatencySensitivity | str") -> "LatencySensitivity":
-        """
-        Parse string or enum to LatencySensitivity.
-
-        Accepts either a LatencySensitivity enum value or a string representation.
-        String parsing is case-insensitive.
-
-        Args:
-            value: Either a LatencySensitivity enum or string like "high", "MEDIUM", "Low"
-
-        Returns:
-            LatencySensitivity: Parsed enum value
-
-        Raises:
-            ValueError: If value is not a valid sensitivity level
-
-        Example:
-            >>> LatencySensitivity.parse("high")
-            <LatencySensitivity.HIGH: 'HIGH'>
-            >>> LatencySensitivity.parse(LatencySensitivity.LOW)
-            <LatencySensitivity.LOW: 'LOW'>
-        """
-        if isinstance(value, cls):
-            return value
-
-        if isinstance(value, str):
-            normalized = value.upper()
-            if normalized in {"LOW", "MEDIUM", "HIGH"}:
-                return cls(normalized)
-
-        raise ValueError(f"Invalid latency sensitivity: {value!r}. "
-                         f"Must be 'LOW', 'MEDIUM', 'HIGH', or LatencySensitivity enum.")
-
 
 # Type variable for preserving function signature
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-def latency_sensitive(sensitivity: LatencySensitivity | str) -> Callable[[F], F]:
+def latency_sensitive(sensitivity: int) -> Callable[[F], F]:
     """
     Decorator to mark a function with a latency sensitivity level.
 
     The sensitivity is pushed onto the context stack for the duration of the
-    function execution. The effective sensitivity is the maximum priority across
+    function execution. The effective sensitivity is the maximum value across
     all pushed levels.
 
     Args:
-        sensitivity: Latency sensitivity level (enum or string like "high", "LOW")
+        sensitivity: Latency sensitivity level as an integer (e.g. 1=low, 2=medium, 3=high)
 
     Returns:
         Decorated function that pushes sensitivity onto context stack
 
     Raises:
-        ValueError: If sensitivity is not a valid level
+        TypeError: If sensitivity is not an int
 
     Example:
-        >>> from nat.plugins.eval.profiler.decorators.latency import latency_sensitive, LatencySensitivity
+        from nat.plugins.eval.profiler.decorators.latency import latency_sensitive
         >>> from nat.builder.context import Context
         >>>
-        >>> @latency_sensitive(LatencySensitivity.HIGH)
+        >>> @latency_sensitive(3)
         ... def critical_function():
         ...     return Context.get().latency_sensitivity
         >>>
-        >>> @latency_sensitive("low")
+        >>> @latency_sensitive(1)
         ... async def background_task():
         ...     return await do_work()
     """
-    # Parse and validate at decoration time
-    parsed_sensitivity = LatencySensitivity.parse(sensitivity)
+    # Validate at decoration time
+    if not isinstance(sensitivity, int):
+        raise TypeError(f"sensitivity must be an int, got {type(sensitivity).__name__}")
 
     def decorator(func: F) -> F:
         # Import here to avoid circular dependency
@@ -171,7 +102,7 @@ def latency_sensitive(sensitivity: LatencySensitivity | str) -> Callable[[F], F]
             @functools.wraps(func)
             async def async_gen_wrapper(*args: Any, **kwargs: Any):
                 ctx = Context.get()
-                with ctx.push_latency_sensitivity(parsed_sensitivity):
+                with ctx.push_latency_sensitivity(sensitivity):
                     async for item in func(*args, **kwargs):
                         yield item
 
@@ -182,7 +113,7 @@ def latency_sensitive(sensitivity: LatencySensitivity | str) -> Callable[[F], F]
             @functools.wraps(func)
             async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
                 ctx = Context.get()
-                with ctx.push_latency_sensitivity(parsed_sensitivity):
+                with ctx.push_latency_sensitivity(sensitivity):
                     return await func(*args, **kwargs)
 
             return async_wrapper  # type: ignore
@@ -192,7 +123,7 @@ def latency_sensitive(sensitivity: LatencySensitivity | str) -> Callable[[F], F]
             @functools.wraps(func)
             def generator_wrapper(*args: Any, **kwargs: Any):
                 ctx = Context.get()
-                with ctx.push_latency_sensitivity(parsed_sensitivity):
+                with ctx.push_latency_sensitivity(sensitivity):
                     yield from func(*args, **kwargs)
 
             return generator_wrapper  # type: ignore
@@ -202,7 +133,7 @@ def latency_sensitive(sensitivity: LatencySensitivity | str) -> Callable[[F], F]
             @functools.wraps(func)
             def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
                 ctx = Context.get()
-                with ctx.push_latency_sensitivity(parsed_sensitivity):
+                with ctx.push_latency_sensitivity(sensitivity):
                     return func(*args, **kwargs)
 
             return sync_wrapper  # type: ignore
