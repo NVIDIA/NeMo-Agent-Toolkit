@@ -25,7 +25,7 @@ from nat.data_models.intermediate_step import UsageInfo
 from nat.data_models.invocation_node import InvocationNode
 from nat.data_models.profiler import PredictionTrieConfig
 from nat.data_models.profiler import ProfilerConfig
-from nat.plugins.eval.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
+from nat.data_models.token_usage import TokenUsageBaseModel
 from nat.plugins.eval.profiler.prediction_trie import load_prediction_trie
 from nat.plugins.eval.profiler.profile_runner import ProfilerRunner
 

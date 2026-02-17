@@ -23,7 +23,7 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import TraceMetadata
 from nat.data_models.intermediate_step import UsageInfo
-from nat.plugins.eval.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
+from nat.data_models.token_usage import TokenUsageBaseModel
 from nat.utils.reactive.subject import Subject
 
 
@@ -35,8 +35,8 @@ async def test_agno_handler_llm_call(reactive_stream: Subject):
     - Events should have correct model input/output and token usage
     """
 
+    from nat.data_models.token_usage import TokenUsageBaseModel
     from nat.plugins.agno.callback_handler import AgnoProfilerHandler
-    from nat.plugins.eval.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
 
     # Create handler and set up collection of results
     all_stats = []
