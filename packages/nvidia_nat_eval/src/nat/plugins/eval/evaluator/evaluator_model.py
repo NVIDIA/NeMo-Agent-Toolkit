@@ -16,6 +16,11 @@
 
 import warnings
 
+from nat.data_models.evaluator import EvalInput  # pyright: ignore[reportMissingImports]
+from nat.data_models.evaluator import EvalInputItem  # pyright: ignore[reportMissingImports]
+from nat.data_models.evaluator import EvalOutput  # pyright: ignore[reportMissingImports]
+from nat.data_models.evaluator import EvalOutputItem  # pyright: ignore[reportMissingImports]
+
 warnings.warn(
     "Importing evaluator models from 'nat.plugins.eval.evaluator.evaluator_model' is deprecated and this "
     "compatibility layer will be removed in a future release. Use 'nat.data_models.evaluator' instead.",
