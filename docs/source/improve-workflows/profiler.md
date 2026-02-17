@@ -32,7 +32,7 @@ Will allow for features such as offline-replay or simulation of workflow runs wi
 
 ## Prerequisites
 
-The NeMo Agent Toolkit profiler is provided by the evaluation package, and some profiler features rely on additional profiling dependencies (`matplotlib`, `prefixspan`, `scikit-learn`).
+The NeMo Agent Toolkit profiler is provided by the evaluation package, and some profiler features rely on additional profiling dependencies such as `scikit-learn`.
 
 For source installs from the NeMo Agent Toolkit repository root, install both evaluation and profiling support:
 ```bash

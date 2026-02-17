@@ -39,6 +39,19 @@ uv pip install "nvidia-nat[eval]"
 uv pip install nvidia-nat-eval
 ```
 
+If you plan to run profiling via `nat eval` (for example, when `eval.general.profiler` is enabled), install profiling dependencies as well:
+
+```bash
+uv pip install -e '.[eval,profiling]'
+```
+
+For package installs, use:
+
+```bash
+uv pip install "nvidia-nat[eval,profiling]"
+```
+
+
 ## Evaluating a Workflow
 To evaluate a workflow, you can use the `nat eval` command. The `nat eval` command takes a workflow configuration file as input. It runs the workflow using the dataset specified in the configuration file. The workflow output is then evaluated using the evaluators specified in the configuration file.
 
