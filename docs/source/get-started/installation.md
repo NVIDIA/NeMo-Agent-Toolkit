@@ -179,6 +179,12 @@ Installing from source is required to run any examples provided in the repositor
     ```bash
     uv pip install -e '.[eval]'
     ```
+
+    If you need to enable profiler features through `nat eval`, install profiling dependencies as well:
+    ```bash
+    uv pip install -e '.[eval,profiling]'
+    ```
+
 6. Verify that you've installed the NeMo Agent Toolkit library.
 
      ```bash
