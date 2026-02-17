@@ -45,25 +45,40 @@ class ReActAgentParsingFailedError(RuntimeError):
 
     def __init__(self, observation: str, llm_output: str, attempts: int):
         self.observation = observation
-        self.llm_output = llm_output
+        self.llm_output = llm_output if len(llm_output) <= 200 else llm_output[:200] + "..."
         self.attempts = attempts
-        super().__init__(f"Failed to parse agent output after {attempts} attempts. "
-                         f"Error: {observation}. LLM output: {llm_output[:200]}..." if len(llm_output) >
-                         200 else f"Failed to parse agent output after {attempts} attempts. "
-                         f"Error: {observation}. LLM output: {llm_output}")
+        super().__init__("ReActAgentParsingFailedError: " +
+                         f"Failed to parse agent output after {self.attempts} attempts. " +
+                         f"Error: {self.observation}. LLM output: '{self.llm_output}'")
 
 
 class ReActOutputParserException(ValueError, LangChainException):
 
     def __init__(self,
-                 observation=None,
-                 missing_action=False,
-                 missing_action_input=False,
-                 final_answer_and_action=False):
+                 observation: str | None = None,
+                 missing_action: bool = False,
+                 missing_action_input: bool = False,
+                 final_answer_and_action: bool = False,
+                 llm_output: str | None = None):
         self.observation = observation
         self.missing_action = missing_action
         self.missing_action_input = missing_action_input
         self.final_answer_and_action = final_answer_and_action
+        self.llm_output = llm_output
+        super().__init__("ReActOutputParserException: " + f"observation={self.observation}, " +
+                         f"missing_action={self.missing_action}, " +
+                         f"missing_action_input={self.missing_action_input}, " +
+                         f"final_answer_and_action={self.final_answer_and_action}, " + f"llm_output={self.llm_output}")
+
+    def __repr__(self) -> str:
+        return (f"ReActOutputParserException(observation={self.observation}, " +
+                f"missing_action={self.missing_action}, missing_action_input={self.missing_action_input}, " +
+                f"final_answer_and_action={self.final_answer_and_action}, llm_output={self.llm_output})")
+
+    def __str__(self) -> str:
+        return (f"ReActOutputParserException(observation={self.observation}, " +
+                f"missing_action={self.missing_action}, missing_action_input={self.missing_action_input}, " +
+                f"final_answer_and_action={self.final_answer_and_action}, llm_output={self.llm_output})")
 
 
 class ReActOutputParser(AgentOutputParser):
@@ -110,9 +125,9 @@ class ReActOutputParser(AgentOutputParser):
         action_match = re.search(regex_primary, text, re.DOTALL | re.IGNORECASE)
         if action_match:
             if includes_answer:
-                raise ReActOutputParserException(
-                    final_answer_and_action=True,
-                    observation=f"{FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE}: {text}")
+                raise ReActOutputParserException(observation=FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE,
+                                                 final_answer_and_action=True,
+                                                 llm_output=text)
             action = action_match.group(1).strip()
             action_input = action_match.group(2)
             tool_input = action_input.strip(" ")
@@ -131,11 +146,13 @@ class ReActOutputParser(AgentOutputParser):
         # Check for missing components with case-insensitive patterns
         if not re.search(r"action\s*\d*\s*:\s*(.*?)", text, re.DOTALL | re.IGNORECASE):
             raise ReActOutputParserException(observation=MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE,
-                                             missing_action=True)
+                                             missing_action=True,
+                                             llm_output=text)
         if not re.search(r"[\s]*(?:action\s*\d*\s*)?input\s*\d*\s*:\s*(.*)", text, re.DOTALL | re.IGNORECASE):
             raise ReActOutputParserException(observation=MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE,
-                                             missing_action_input=True)
-        raise ReActOutputParserException(f"Could not parse LLM output: `{text}`")
+                                             missing_action_input=True,
+                                             llm_output=text)
+        raise ReActOutputParserException("Could not parse LLM output", llm_output=text)
 
     @property
     def _type(self) -> str:
