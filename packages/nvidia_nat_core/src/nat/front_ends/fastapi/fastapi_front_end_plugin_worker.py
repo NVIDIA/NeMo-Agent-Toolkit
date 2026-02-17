@@ -98,6 +98,7 @@ except ImportError:
     JobStatus = None
     JobStore = None
 
+
 @lru_cache(maxsize=1)
 def _load_eval_runtime():
     """Lazily resolve optional eval package symbols used by FastAPI routes."""
@@ -400,9 +401,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
     async def add_evaluate_route(self, app: FastAPI, session_manager: SessionManager):
         """Add the evaluate endpoint to the FastAPI app."""
-        _, evaluation_run_cls, eval_import_error = _load_eval_runtime()
-        if eval_import_error is not None:
-            return
+        _, evaluation_run_cls, _ = _load_eval_runtime()
         if evaluation_run_cls is None:
             return
 
@@ -588,9 +587,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
     async def add_evaluate_item_route(self, app: FastAPI, session_manager: SessionManager):
         """Add the single-item evaluation endpoint to the FastAPI app."""
-        _, _, eval_import_error = _load_eval_runtime()
-        if eval_import_error is not None:
-            return
 
         async def evaluate_single_item(request: EvaluateItemRequest, http_request: Request) -> EvaluateItemResponse:
             """Handle single-item evaluation requests."""
