@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 from nat.data_models.evaluate_runtime import EvaluationRunOutput
+from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.finetuning import EpisodeItem
 from nat.data_models.finetuning import EpisodeItemRole
 from nat.data_models.finetuning import Trajectory
@@ -30,7 +31,6 @@ from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepCategory
 from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 from nat.finetuning.utils.parsers.base_parser import parse_to_openai_messages
-from nat.data_models.evaluator import EvalInputItem
 
 from .config import ARTTrajectoryBuilderConfig
 

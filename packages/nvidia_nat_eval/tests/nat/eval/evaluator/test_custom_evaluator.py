@@ -15,10 +15,10 @@
 
 import pytest
 
-from nat.plugins.eval.evaluator.base_evaluator import BaseEvaluator
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.evaluator import EvalOutputItem
+from nat.plugins.eval.evaluator.base_evaluator import BaseEvaluator
 
 
 class MockSimilarityEvaluator(BaseEvaluator):

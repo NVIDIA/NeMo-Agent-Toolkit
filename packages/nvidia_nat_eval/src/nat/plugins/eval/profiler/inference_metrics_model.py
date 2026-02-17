@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Compatibility re-export for profiler inference metrics model."""
 
-from nat.data_models.evaluate_runtime import InferenceMetricsModel  # noqa: F401  # pyright: ignore[reportMissingImports]
+from nat.data_models.evaluate_runtime import InferenceMetricsModel

@@ -23,14 +23,14 @@ import pytest
 from nat.data_models.dataset_handler import EvalDatasetCustomConfig
 from nat.data_models.dataset_handler import EvalDatasetJsonConfig
 from nat.data_models.dataset_handler import EvalDatasetStructureConfig
+from nat.data_models.evaluator import EvalInput
+from nat.data_models.evaluator import EvalInputItem
+from nat.data_models.evaluator import EvalOutputItem
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.invocation_node import InvocationNode
 from nat.plugins.eval.dataset_handler.dataset_handler import DatasetHandler
-from nat.data_models.evaluator import EvalInput
-from nat.data_models.evaluator import EvalInputItem
-from nat.data_models.evaluator import EvalOutputItem
 
 
 @pytest.fixture

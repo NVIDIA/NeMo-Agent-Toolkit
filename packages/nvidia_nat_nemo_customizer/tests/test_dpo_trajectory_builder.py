@@ -22,6 +22,8 @@ from unittest.mock import patch
 
 import pytest
 
+from nat.data_models.evaluator import EvalInput
+from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.finetuning import DPOItem
 from nat.data_models.finetuning import Trajectory
 from nat.data_models.finetuning import TrajectoryCollection
@@ -33,8 +35,6 @@ from nat.data_models.invocation_node import InvocationNode
 from nat.plugins.customizer.dpo.trajectory_builder import CandidateStep
 from nat.plugins.customizer.dpo.trajectory_builder import DPOTrajectoryBuilder
 from nat.plugins.customizer.dpo.trajectory_builder import PreferencePair
-from nat.data_models.evaluator import EvalInput
-from nat.data_models.evaluator import EvalInputItem
 
 
 # Helper functions (inline to avoid import path issues)

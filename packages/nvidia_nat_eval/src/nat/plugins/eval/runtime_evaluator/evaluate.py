@@ -18,10 +18,10 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass
 
-from nat.data_models.intermediate_step import IntermediateStepType
-from nat.plugins.eval.evaluator.base_evaluator import BaseEvaluator
 from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.evaluator import EvalOutputItem
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.plugins.eval.evaluator.base_evaluator import BaseEvaluator
 from nat.plugins.eval.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
 

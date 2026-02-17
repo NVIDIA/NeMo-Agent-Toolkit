@@ -23,12 +23,12 @@ import pandas as pd
 from nat.data_models.dataset_handler import EvalDatasetBaseConfig
 from nat.data_models.dataset_handler import EvalDatasetCustomConfig
 from nat.data_models.dataset_handler import EvalDatasetJsonConfig
+from nat.data_models.evaluator import EvalInput
+from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.plugins.eval.dataset_handler.dataset_downloader import DatasetDownloader
 from nat.plugins.eval.dataset_handler.dataset_filter import DatasetFilter
-from nat.data_models.evaluator import EvalInput
-from nat.data_models.evaluator import EvalInputItem
 
 
 class DatasetHandler:

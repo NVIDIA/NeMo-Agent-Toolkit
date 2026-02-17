@@ -23,9 +23,9 @@ from langchain_core.messages import HumanMessage
 from langchain_core.messages import SystemMessage
 from langchain_core.runnables import RunnableLambda
 
-from nat.plugins.eval.evaluator.base_evaluator import BaseEvaluator
 from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.evaluator import EvalOutputItem
+from nat.plugins.eval.evaluator.base_evaluator import BaseEvaluator
 
 logger = logging.getLogger(__name__)
 

@@ -19,9 +19,9 @@ from langchain_classic.evaluation import TrajectoryEvalChain
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
 
-from nat.plugins.eval.evaluator.base_evaluator import BaseEvaluator
 from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.evaluator import EvalOutputItem
+from nat.plugins.eval.evaluator.base_evaluator import BaseEvaluator
 
 logger = logging.getLogger(__name__)
 

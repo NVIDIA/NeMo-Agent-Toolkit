@@ -20,12 +20,12 @@ from unittest.mock import patch
 import pytest
 from langchain_core.language_models import BaseChatModel
 
+from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
-from nat.data_models.evaluator import EvalInputItem
 from nat.plugins.eval.red_teaming_evaluator.evaluate import RedTeamingEvaluator
 from nat.plugins.eval.red_teaming_evaluator.evaluate import ReductionStrategy
 from nat.plugins.eval.red_teaming_evaluator.filter_conditions import IntermediateStepsFilterCondition

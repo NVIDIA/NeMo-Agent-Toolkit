@@ -24,9 +24,9 @@ from langchain_core.messages import HumanMessage
 from langchain_core.messages import SystemMessage
 from langchain_core.runnables import RunnableLambda
 
+from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.plugins.eval.evaluator.base_evaluator import BaseEvaluator
-from nat.data_models.evaluator import EvalInputItem
 from nat.plugins.eval.red_teaming_evaluator.data_models import ConditionEvalOutputItem
 from nat.plugins.eval.red_teaming_evaluator.data_models import RedTeamingEvalOutputItem
 from nat.plugins.eval.red_teaming_evaluator.filter_conditions import IntermediateStepsFilterCondition

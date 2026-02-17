@@ -19,7 +19,6 @@ from collections.abc import Awaitable
 from collections.abc import Callable
 from contextlib import contextmanager
 from contextvars import ContextVar
-from enum import StrEnum
 from functools import cached_property
 
 from nat.builder.intermediate_step_manager import IntermediateStepManager

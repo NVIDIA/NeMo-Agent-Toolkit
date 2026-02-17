@@ -21,11 +21,11 @@ from collections.abc import Sequence
 from pydantic import BaseModel
 from tqdm import tqdm
 
-from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.evaluator import EvalOutput
 from nat.data_models.evaluator import EvalOutputItem
+from nat.data_models.intermediate_step import IntermediateStepType
 from nat.plugins.eval.utils.tqdm_position_registry import TqdmPositionRegistry
 
 if typing.TYPE_CHECKING:
