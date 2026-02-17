@@ -321,3 +321,71 @@ async def test_async_with_task_end(mgr: IntermediateStepManager, output_steps: l
         assert child == actual.name
         assert parent is None or parent == actual.parent_id
         assert etype == actual.event_type
+
+
+# --------------------------------------------------------------------------- #
+# push_intermediate_steps (cross-workflow observability)
+# --------------------------------------------------------------------------- #
+
+
+def test_push_intermediate_steps_injects_steps_into_stream_without_updating_stack(
+    ctx_state: ContextState,
+    output_steps: list,
+):
+    """Test push_intermediate_steps injects steps into the event stream and does not update internal stack."""
+    # Ensure event stream exists so subscription and on_next work
+    from nat.utils.reactive.subject import Subject
+    ctx_state.event_stream.set(Subject())
+
+    mgr = IntermediateStepManager(context_state=ctx_state)
+
+    def on_next(step: IntermediateStep):
+        output_steps.append(step)
+
+    mgr.subscribe(on_next)
+
+    payload1 = IntermediateStepPayload(
+        UUID="remote-step-1",
+        name="remote_workflow",
+        event_type=IntermediateStepType.WORKFLOW_START,
+    )
+    payload2 = IntermediateStepPayload(
+        UUID="remote-step-1",
+        name="remote_workflow",
+        event_type=IntermediateStepType.WORKFLOW_END,
+    )
+    step1 = IntermediateStep(
+        parent_id="root",
+        function_ancestry=InvocationNode(function_id="root", function_name="root"),
+        payload=payload1,
+    )
+    step2 = IntermediateStep(
+        parent_id="root",
+        function_ancestry=InvocationNode(function_id="root", function_name="root"),
+        payload=payload2,
+    )
+    steps_to_inject = [step1, step2]
+
+    assert len(mgr._outstanding_start_steps) == 0
+    mgr.push_intermediate_steps(steps_to_inject)
+
+    assert len(output_steps) == 2
+    assert output_steps[0].UUID == "remote-step-1"
+    assert output_steps[0].event_type == IntermediateStepType.WORKFLOW_START
+    assert output_steps[1].UUID == "remote-step-1"
+    assert output_steps[1].event_type == IntermediateStepType.WORKFLOW_END
+    # push_intermediate_steps does not update the internal stack
+    assert len(mgr._outstanding_start_steps) == 0
+
+
+def test_push_intermediate_steps_empty_list_no_op(ctx_state: ContextState, output_steps: list):
+    """Test push_intermediate_steps with empty list is a no-op."""
+    from nat.utils.reactive.subject import Subject
+    ctx_state.event_stream.set(Subject())
+
+    mgr = IntermediateStepManager(context_state=ctx_state)
+    mgr.subscribe(lambda step: output_steps.append(step))
+
+    mgr.push_intermediate_steps([])
+
+    assert len(output_steps) == 0
