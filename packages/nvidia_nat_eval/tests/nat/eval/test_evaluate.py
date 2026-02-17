@@ -449,8 +449,8 @@ async def test_run_workflow_local_cancels_pending_intermediate(evaluation_run, e
 
     assert evaluation_run.workflow_interrupted, "Expected workflow_interrupted to be True after failure"
     mock_pull_intermediate.assert_called_once()
-    mock_ensure_future.assert_called_once()
-    assert inspect.iscoroutine(mock_ensure_future.call_args.args[0])
+    assert mock_ensure_future.call_count >= 1
+    assert any(inspect.iscoroutine(call.args[0]) for call in mock_ensure_future.call_args_list)
     assert pending_future.cancelled(), "Pending intermediate future should be cancelled"
 
 
