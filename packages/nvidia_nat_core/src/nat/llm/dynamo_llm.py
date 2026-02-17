@@ -71,6 +71,7 @@ prefix_total_requests
 
 import json
 import logging
+import threading
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -474,6 +475,7 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
         # Per-prefix call counter so call_index advances across requests
         # for the same prefix_id (keyed by prefix_id string).
         self._call_counts: dict[str, int] = {}
+        self._call_counts_lock = threading.Lock()
 
     async def handle_async_request(self, request: "httpx.Request") -> "httpx.Response":
         # Get prefix ID from context (supports depth-awareness and overrides)
