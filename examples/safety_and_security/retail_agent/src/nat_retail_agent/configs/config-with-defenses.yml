@@ -39,7 +39,7 @@ llms:
     max_new_tokens: 128
     device: auto
 
-  # Guard model for pre-tool input verification
+  # Guard model for pre-tool input verification (~8B parameters, requires ~16-20GB VRAM with float16)
   pre_tool_guard_llm:
     _type: huggingface
     model_name: Qwen/Qwen3Guard-Gen-8B

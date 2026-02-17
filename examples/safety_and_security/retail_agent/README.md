@@ -94,7 +94,7 @@ The red teaming middleware can inject attacks into workflow components. After ea
 
 #### Defense Flow
 
-The defense middleware inspects tool outputs, sanitizes or blocks unsafe content, and returns safe data to the agent.
+The defense middleware inspects tool inputs and outputs, sanitizes or blocks unsafe content, and returns safe data to the agent.
 
 ![Defense flow](./assets/defense-flow.svg)
 
@@ -289,7 +289,7 @@ middleware:
 middleware:
   pre_tool_verifier_workflow:
     _type: pre_tool_verifier
-    llm_name: nim_llm
+    llm_name: pre_tool_guard_llm
     target_function_or_group: <workflow>
     action: redirection
     target_location: input
