@@ -34,14 +34,14 @@ from nat.data_models.evaluate_config import JobEvictionPolicy
 from nat.data_models.evaluate_runtime import EvaluationRunConfig
 from nat.data_models.evaluate_runtime import EvaluationRunOutput
 from nat.data_models.evaluate_runtime import ProfilerResults
+from nat.data_models.evaluate_runtime import UsageStats
+from nat.data_models.evaluate_runtime import UsageStatsItem
+from nat.data_models.evaluate_runtime import UsageStatsLLM
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.evaluator import EvalOutput
 from nat.plugins.eval.dataset_handler.dataset_handler import DatasetHandler
 from nat.plugins.eval.runtime.llm_validator import validate_llm_endpoints
-from nat.plugins.eval.runtime.usage_stats import UsageStats
-from nat.plugins.eval.runtime.usage_stats import UsageStatsItem
-from nat.plugins.eval.runtime.usage_stats import UsageStatsLLM
 from nat.plugins.eval.utils.output_uploader import OutputUploader
 from nat.plugins.eval.utils.weave_eval import WeaveEvaluationIntegration
 from nat.runtime.session import SessionManager

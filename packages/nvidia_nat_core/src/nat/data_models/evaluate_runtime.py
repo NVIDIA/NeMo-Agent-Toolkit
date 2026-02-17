@@ -14,7 +14,6 @@
 # limitations under the License.
 """Runtime-only evaluation models used by `nat eval` programmatic execution."""
 
-import typing
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -110,6 +109,37 @@ class EvaluationRunConfig(BaseModel):
     )
 
 
+class UsageStatsLLM(BaseModel):
+    """Token usage counters aggregated for one LLM."""
+
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    cached_tokens: int = 0
+    reasoning_tokens: int = 0
+    total_tokens: int = 0
+
+
+class UsageStatsItem(BaseModel):
+    """Usage metrics for one evaluated input item."""
+
+    usage_stats_per_llm: dict[str, UsageStatsLLM]
+    total_tokens: int | None = None
+    runtime: float = 0.0
+    min_timestamp: float = 0.0
+    max_timestamp: float = 0.0
+    llm_latency: float = 0.0
+
+
+class UsageStats(BaseModel):
+    """Aggregated usage metrics across an evaluation run."""
+
+    # key is EvalInputItem.id or equivalent identifier
+    min_timestamp: float = 0.0
+    max_timestamp: float = 0.0
+    total_runtime: float = 0.0
+    usage_stats_items: dict[object, UsageStatsItem] = {}
+
+
 class InferenceMetricsModel(BaseModel):
     """Confidence intervals and percentiles for a sampled profiler metric."""
 
@@ -161,7 +191,7 @@ class EvaluationRunOutput(BaseModel):
         ...,
         description="List of evaluator results as (evaluator_name, output) tuples.",
     )
-    usage_stats: typing.Any | None = Field(
+    usage_stats: UsageStats | None = Field(
         default=None,
         description="LLM usage statistics collected during evaluation.",
     )

@@ -14,4 +14,3 @@
 # limitations under the License.
 """Compatibility re-export for profiler inference metrics model."""
 
-from nat.data_models.evaluate_runtime import InferenceMetricsModel
