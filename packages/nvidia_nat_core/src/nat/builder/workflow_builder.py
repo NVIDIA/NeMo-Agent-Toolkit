@@ -20,7 +20,6 @@ import logging
 import typing
 import warnings
 from abc import ABC
-from abc import abstractmethod
 from collections.abc import Sequence
 from contextlib import AbstractAsyncContextManager
 from contextlib import AsyncExitStack
