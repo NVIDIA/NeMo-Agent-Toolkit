@@ -24,7 +24,7 @@ def test_nat_eval_shim_warns_and_reexports_models():
     with pytest.warns(UserWarning, match="deprecated"):
         importlib.import_module("nat.eval")
 
-    from nat.data_models.evaluate_runtime import EvaluationRunConfig as CoreEvaluationRunConfig
-    from nat.eval.config import EvaluationRunConfig as ShimEvaluationRunConfig
+    from nat.data_models.evaluator import EvalInputItem as CoreEvalInputItem
+    from nat.eval.evaluator.evaluator_model import EvalInputItem as ShimEvalInputItem
 
-    assert ShimEvaluationRunConfig is CoreEvaluationRunConfig
+    assert ShimEvalInputItem is CoreEvalInputItem
