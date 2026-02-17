@@ -130,6 +130,24 @@ def create_mock_function_registration(is_per_user: bool = False):
     return registration
 
 
+def _reset_workflow_parent_context() -> None:
+    """Reset cross-workflow observability context vars (ContextState is a singleton)."""
+    ctx_state = ContextState.get()
+    ctx_state.workflow_parent_id.set(None)
+    ctx_state.workflow_parent_name.set(None)
+
+
+@pytest.fixture(autouse=True)
+def reset_workflow_parent_context():
+    """
+    Reset workflow_parent_id and workflow_parent_name before and after each test
+    so tests do not leak state via the singleton ContextState.
+    """
+    _reset_workflow_parent_context()
+    yield
+    _reset_workflow_parent_context()
+
+
 class TestPerUserBuilderInfo:
     """Tests for PerUserBuilderInfo Pydantic model."""
 
@@ -496,6 +514,122 @@ class TestSessionManagerCleanup:
             cleaned = await sm._cleanup_inactive_per_user_builders()
             assert cleaned == 0
             assert "user123" in sm._per_user_builders
+
+
+class TestSessionRunCrossWorkflowObservability:
+    """Tests for Session.run() with parent_id/parent_name (cross-workflow observability)."""
+
+    @patch('nat.cli.type_registry.GlobalTypeRegistry')
+    async def test_session_run_sets_and_resets_workflow_parent_context(self, mock_registry):
+        """Test run(parent_id=..., parent_name=...) sets context vars during run and resets on exit."""
+        mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=False)
+
+        ctx_state = ContextState.get()
+        sm = SessionManager(config=create_mock_config(),
+                            shared_builder=MockWorkflowBuilder(),
+                            entry_function=None,
+                            shared_workflow=MockWorkflow())
+
+        async with sm.session() as session:
+            # Before run, parent context should be unset
+            assert ctx_state.workflow_parent_id.get() is None
+            assert ctx_state.workflow_parent_name.get() is None
+
+            values_during_run = []
+
+            async with session.run("hello", parent_id="parent-step-123", parent_name="Caller Workflow") as _:
+                values_during_run.append(ctx_state.workflow_parent_id.get())
+                values_during_run.append(ctx_state.workflow_parent_name.get())
+
+            # After exiting run(), context should be reset
+            assert ctx_state.workflow_parent_id.get() is None
+            assert ctx_state.workflow_parent_name.get() is None
+
+        assert values_during_run == ["parent-step-123", "Caller Workflow"]
+
+    @patch('nat.cli.type_registry.GlobalTypeRegistry')
+    async def test_session_run_without_parent_leaves_context_unset(self, mock_registry):
+        """Test run() without parent_id/parent_name leaves workflow_parent context vars unset."""
+        mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=False)
+
+        ctx_state = ContextState.get()
+        sm = SessionManager(config=create_mock_config(),
+                            shared_builder=MockWorkflowBuilder(),
+                            entry_function=None,
+                            shared_workflow=MockWorkflow())
+
+        async with sm.session() as session:
+            async with session.run("hello") as _:
+                assert ctx_state.workflow_parent_id.get() is None
+                assert ctx_state.workflow_parent_name.get() is None
+
+
+class TestSessionManagerSetMetadataFromHttpRequest:
+    """Tests for set_metadata_from_http_request (including cross-workflow headers)."""
+
+    @patch('nat.cli.type_registry.GlobalTypeRegistry')
+    async def test_set_metadata_from_http_request_sets_workflow_parent_headers(self, mock_registry):
+        """Test workflow-parent-id and workflow-parent-name headers are set on context."""
+        mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=False)
+
+        sm = SessionManager(config=create_mock_config(),
+                            shared_builder=MockWorkflowBuilder(),
+                            entry_function=None,
+                            shared_workflow=MockWorkflow())
+
+        request = MagicMock()
+        request.method = "POST"
+        request.url = MagicMock()
+        request.url.path = "/generate/full"
+        request.url.port = 8000
+        request.url.scheme = "http"
+        request.headers = MagicMock()
+        request.headers.get.side_effect = lambda k, default=None: {
+            "workflow-parent-id": "parent-uuid-456",
+            "workflow-parent-name": "Parent Workflow Name", }.get(k, default)
+        request.query_params = {}
+        request.path_params = {}
+        request.client = MagicMock()
+        request.client.host = "127.0.0.1"
+        request.client.port = 12345
+        request.cookies = {}
+
+        await sm.set_metadata_from_http_request(request)
+
+        ctx_state = ContextState.get()
+        assert ctx_state.workflow_parent_id.get() == "parent-uuid-456"
+        assert ctx_state.workflow_parent_name.get() == "Parent Workflow Name"
+
+    @patch('nat.cli.type_registry.GlobalTypeRegistry')
+    async def test_set_metadata_from_http_request_workflow_parent_optional(self, mock_registry):
+        """Test workflow runs without parent headers when they are not sent."""
+        mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=False)
+
+        sm = SessionManager(config=create_mock_config(),
+                            shared_builder=MockWorkflowBuilder(),
+                            entry_function=None,
+                            shared_workflow=MockWorkflow())
+
+        request = MagicMock()
+        request.method = "POST"
+        request.url = MagicMock()
+        request.url.path = "/generate/full"
+        request.url.port = 8000
+        request.url.scheme = "http"
+        request.headers = MagicMock()
+        request.headers.get.return_value = None
+        request.query_params = {}
+        request.path_params = {}
+        request.client = MagicMock()
+        request.client.host = "127.0.0.1"
+        request.client.port = 12345
+        request.cookies = {}
+
+        await sm.set_metadata_from_http_request(request)
+
+        ctx_state = ContextState.get()
+        assert ctx_state.workflow_parent_id.get() is None
+        assert ctx_state.workflow_parent_name.get() is None
 
 
 class TestSessionManagerContextExtraction:

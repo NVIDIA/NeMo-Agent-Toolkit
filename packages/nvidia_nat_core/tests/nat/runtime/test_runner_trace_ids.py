@@ -174,3 +174,60 @@ async def test_runner_workflow_name_resolution(
             await runner.result()
 
     assert captured_workflow_name == expected_workflow_name
+
+
+@pytest.mark.parametrize("parent_id,parent_name", [
+    ("parent-step-1", "Parent Workflow"),
+    ("parent-step-2", None),
+    (None, None),
+],
+                         ids=["both_set", "parent_id_only", "neither_set"])
+async def test_runner_uses_workflow_parent_id_and_name_for_root(
+    parent_id: str | None,
+    parent_name: str | None,
+):
+    """Test Runner sets active_function and active_span_id_stack from workflow_parent_id/name."""
+
+    class _TestFunction:
+        has_single_output = True
+        has_streaming_output = False
+        config = _DummyConfig()
+        instance_name = "workflow"
+        display_name = "workflow"
+
+        def convert(self, v, to_type):
+            return v
+
+        async def ainvoke(self, _message, to_type=None):
+            ctx_state = ContextState.get()
+            active_fn = ctx_state.active_function.get()
+            stack = ctx_state.active_span_id_stack.get()
+            # Root should have parent_id/parent_name when provided
+            assert active_fn is not None
+            assert active_fn.function_id == "root"
+            assert active_fn.function_name == "root"
+            assert active_fn.parent_id == parent_id
+            assert active_fn.parent_name == parent_name
+            # Stack root should be parent_id or "root"
+            expected_root = parent_id if parent_id else "root"
+            assert stack is not None and len(stack) >= 1
+            assert stack[0] == expected_root
+            return {"ok": True}
+
+    ctx_state = ContextState.get()
+    tkn_parent_id = ctx_state.workflow_parent_id.set(parent_id) if parent_id else None
+    tkn_parent_name = ctx_state.workflow_parent_name.set(parent_name) if parent_name else None
+    try:
+        runner = Runner(
+            "msg",
+            typing.cast(Function, _TestFunction()),
+            ctx_state,
+            typing.cast(ExporterManager, _DummyExporterManager()),
+        )
+        async with runner:
+            await runner.result()
+    finally:
+        if tkn_parent_id is not None:
+            ctx_state.workflow_parent_id.reset(tkn_parent_id)
+        if tkn_parent_name is not None:
+            ctx_state.workflow_parent_name.reset(tkn_parent_name)
