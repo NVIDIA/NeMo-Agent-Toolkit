@@ -66,7 +66,6 @@ from nat.data_models.component_ref import TTCStrategyRef
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
 from nat.data_models.embedder import EmbedderBaseConfig
-from nat.data_models.evaluate_config import EvalGeneralConfig
 from nat.data_models.finetuning import TrainerAdapterConfig
 from nat.data_models.finetuning import TrainerConfig
 from nat.data_models.finetuning import TrajectoryBuilderConfig
@@ -1467,6 +1466,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                 # Instantiate a function
                 elif component_instance.component_group == ComponentGroup.FUNCTIONS:
                     config_obj = cast(FunctionBaseConfig, component_instance.config)
+                    if skip_workflow and component_instance.is_root:
+                        # Skip root workflow registration/build when requested.
+                        continue
                     registration = self._registry.get_function(type(config_obj))
                     if registration.is_per_user:
                         # Skip per-user functions as they will be built lazily by PerUserWorkflowBuilder
@@ -1622,10 +1624,3 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
 class WorkflowEvalBuilderBase(WorkflowBuilder, EvalBuilder, ABC):
     """Core typed base for eval-capable workflow builders."""
-
-    @abstractmethod
-    def __init__(self,
-                 general_config: GeneralConfig | None = None,
-                 eval_general_config: EvalGeneralConfig | None = None,
-                 registry: TypeRegistry | None = None):
-        """Initialize an eval-capable workflow builder."""
