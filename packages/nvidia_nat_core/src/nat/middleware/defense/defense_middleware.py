@@ -77,11 +77,11 @@ class DefenseMiddlewareConfig(FunctionMiddlewareBaseConfig):
         "If None, defense applies to all functions. "
         "Examples: 'my_calculator', 'my_calculator.divide', 'llm_agent.generate'")
 
-    target_location: Literal["output"] = Field(
+    target_location: Literal["input", "output"] = Field(
         default="output",
         description=("Whether to analyze function input or output. "
-                     "Currently only 'output' is supported (analyze after function call). "
-                     "Input analysis is not yet supported."))
+                     "'output' analyzes after function call, 'input' analyzes before function call. "
+                     "Not all defense types support both locations."))
 
     target_field: str | None = Field(
         default=None,

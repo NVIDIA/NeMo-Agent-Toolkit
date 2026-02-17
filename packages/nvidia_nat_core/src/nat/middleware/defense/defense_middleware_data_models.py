@@ -89,3 +89,25 @@ class OutputVerificationResult(BaseModel):
     content_type: str
     should_refuse: bool
     error: bool = False
+
+
+class PreToolVerificationResult(BaseModel):
+    """Result of pre-tool instruction violation verification using LLM.
+
+    Attributes:
+        violation_detected: Whether an instruction violation was detected in the input.
+        confidence: Confidence score (0.0-1.0) in the violation detection.
+        reason: Explanation for the detection result.
+        violation_types: List of violation types detected (e.g., prompt_injection, jailbreak).
+        sanitized_input: Sanitized version of the input with violations removed, if available.
+        should_refuse: Whether the input should be refused based on threshold.
+        error: Whether an error occurred during verification.
+    """
+
+    violation_detected: bool
+    confidence: float
+    reason: str
+    violation_types: list[str]
+    sanitized_input: str | None
+    should_refuse: bool
+    error: bool = False
