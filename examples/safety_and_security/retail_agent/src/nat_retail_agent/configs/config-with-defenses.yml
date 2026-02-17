@@ -39,6 +39,14 @@ llms:
     max_new_tokens: 128
     device: auto
 
+  # Guard model for pre-tool input verification
+  pre_tool_guard_llm:
+    _type: huggingface
+    model_name: Qwen/Qwen3Guard-Gen-8B
+    temperature: 0.0
+    max_new_tokens: 256
+    device: auto
+
 # Defense middleware configurations
 middleware:
   # PII Defense: Detect and sanitize PII in tool outputs
@@ -79,7 +87,7 @@ middleware:
   # Pre-Tool Verifier: Detect instruction violations in workflow inputs before tool execution
   pre_tool_verifier_workflow:
     _type: pre_tool_verifier
-    llm_name: nim_llm
+    llm_name: pre_tool_guard_llm
     target_function_or_group: <workflow>
     action: redirection
     target_location: input
