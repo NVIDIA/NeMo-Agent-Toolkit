@@ -109,16 +109,6 @@ pip install "nvidia-nat[langchain]"
 
 The full list of optional dependencies can be found [here](#packages).
 
-To use evaluation-related commands (`nat eval`, `nat red-team`, and `nat sizing`), install evaluation support with one of the following:
-
-```bash
-pip install "nvidia-nat[eval]"
-```
-
-```bash
-pip install nvidia-nat-eval
-```
-
 ## Install From Source
 
 :::{warning}
@@ -174,16 +164,6 @@ Installing from source is required to run any examples provided in the repositor
     :::{note}
     Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/getting_started/simple_web_query/README.md` guide will install the `nvidia-nat-langchain` plugin if you haven't already done so.
     :::
-
-    To use evaluation-related commands (`nat eval`, `nat red-team`, and `nat sizing`) from source, install the evaluation package:
-    ```bash
-    uv pip install -e '.[eval]'
-    ```
-
-    If you need to enable profiler features through `nat eval`, install profiling dependencies as well:
-    ```bash
-    uv pip install -e '.[eval,profiling]'
-    ```
 
 6. Verify that you've installed the NeMo Agent Toolkit library.
 
