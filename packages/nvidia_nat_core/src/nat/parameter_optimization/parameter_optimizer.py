@@ -34,6 +34,8 @@ from nat.parameter_optimization.update_helpers import apply_suggestions
 logger = logging.getLogger(__name__)
 
 EvaluationRun = None
+
+
 def _require_eval_runtime():
     # Module-level symbols remain as optional test overrides.
     evaluation_run = EvaluationRun
