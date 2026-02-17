@@ -13,3 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Eval CLI command exports."""
+
+from nat.plugins.eval.cli.evaluate import eval_command
+from nat.plugins.eval.cli.red_teaming.red_teaming import red_team_command
+from nat.plugins.eval.cli.sizing import sizing_command
+
+__all__ = ["eval_command", "red_team_command", "sizing_command"]
