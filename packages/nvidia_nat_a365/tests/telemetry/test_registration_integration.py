@@ -76,16 +76,32 @@ class TestRegistrationIntegration:
 
             with patch("nat.plugins.a365.telemetry.a365_exporter.Agent365Exporter"):
                 async with a365_telemetry_exporter(config, mock_builder) as exporter:
-                    # Verify exporter was created
+                    # Lazy init: auth not resolved at build time (exporter built in __aenter__ before auth exists)
                     assert exporter is not None
                     assert exporter._agent_id == "test-agent-123"
                     assert exporter._tenant_id == "test-tenant-456"
                     assert exporter._token_resolver is not None
-                    assert exporter._auth_provider == mock_auth_provider
+                    assert exporter._auth_provider is None
+                    assert exporter._auth_ref == config.token_resolver
+                    assert exporter._builder is mock_builder
                     assert exporter._token_cache is not None
-
-                    # Verify auth provider was resolved
+                    mock_builder.get_auth_provider.assert_not_called()
+                    # Resolve on first export (minimal span-like object for conversion)
+                    mock_span = Mock()
+                    mock_span.attributes = {}
+                    mock_span.events = []
+                    mock_span.links = []
+                    mock_span.name = "test"
+                    mock_span.kind = 1
+                    mock_span.start_time = 0
+                    mock_span.end_time = 0
+                    mock_span.status = None
+                    mock_span.instrumentation_scope = None
+                    mock_span.resource = None
+                    mock_span.parent = None
+                    await exporter.export_otel_spans([mock_span])
                     mock_builder.get_auth_provider.assert_called_once_with(config.token_resolver)
+                    assert exporter._auth_provider is mock_auth_provider
 
     @pytest.mark.asyncio
     async def test_registration_passes_all_config_to_exporter(
@@ -124,32 +140,36 @@ class TestRegistrationIntegration:
     async def test_registration_handles_auth_provider_resolution_failure(
         self, config, mock_builder
     ):
-        """Test that registration handles auth provider resolution failure."""
+        """Test that auth provider resolution failure is raised on first export (lazy)."""
         mock_builder.get_auth_provider.side_effect = ValueError("Auth provider not found")
 
-        with pytest.raises(ValueError, match="Auth provider not found"):
-            async with a365_telemetry_exporter(config, mock_builder):
-                pass
+        with patch("nat.plugins.a365.telemetry.a365_exporter.Agent365Exporter"):
+            async with a365_telemetry_exporter(config, mock_builder) as exporter:
+                mock_span = Mock()
+                with pytest.raises(ValueError, match="Auth provider not found"):
+                    await exporter.export_otel_spans([mock_span])
 
     @pytest.mark.asyncio
     async def test_registration_handles_authentication_failure(
         self, config, mock_builder, mock_auth_provider
     ):
-        """Test that registration handles authentication failure."""
+        """Test that authentication failure is raised on first export (lazy)."""
         mock_auth_provider.authenticate.side_effect = A365AuthenticationError("Auth failed")
 
         with patch("nat.builder.context.Context") as mock_context_class:
             mock_context_class.get.return_value.user_id = "test_user"
 
-            with pytest.raises(A365AuthenticationError, match="Auth failed"):
-                async with a365_telemetry_exporter(config, mock_builder):
-                    pass
+            with patch("nat.plugins.a365.telemetry.a365_exporter.Agent365Exporter"):
+                async with a365_telemetry_exporter(config, mock_builder) as exporter:
+                    mock_span = Mock()
+                    with pytest.raises(A365AuthenticationError, match="Auth failed"):
+                        await exporter.export_otel_spans([mock_span])
 
     @pytest.mark.asyncio
     async def test_registration_handles_no_credentials(
         self, config, mock_builder, mock_auth_provider
     ):
-        """Test that registration handles case when auth provider returns no credentials."""
+        """Test that no credentials is raised on first export (lazy)."""
         auth_result = Mock(spec=AuthResult)
         auth_result.credentials = []
         mock_auth_provider.authenticate.return_value = auth_result
@@ -157,9 +177,11 @@ class TestRegistrationIntegration:
         with patch("nat.builder.context.Context") as mock_context_class:
             mock_context_class.get.return_value.user_id = "test_user"
 
-            with pytest.raises(A365AuthenticationError, match="No credentials available"):
-                async with a365_telemetry_exporter(config, mock_builder):
-                    pass
+            with patch("nat.plugins.a365.telemetry.a365_exporter.Agent365Exporter"):
+                async with a365_telemetry_exporter(config, mock_builder) as exporter:
+                    mock_span = Mock()
+                    with pytest.raises(A365AuthenticationError, match="No credentials available"):
+                        await exporter.export_otel_spans([mock_span])
 
     @pytest.mark.asyncio
     async def test_registration_is_context_manager(self, config, mock_builder, mock_auth_provider):

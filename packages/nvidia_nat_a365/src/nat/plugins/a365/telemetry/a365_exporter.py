@@ -155,6 +155,8 @@ class A365OtelExporter(OtelSpanExporter):
         resource_attributes: dict[str, str] | None = None,
         auth_provider=None,
         token_cache=None,
+        auth_ref=None,
+        builder=None,
     ):
         """Initialize the A365 exporter."""
         super().__init__(
@@ -173,8 +175,11 @@ class A365OtelExporter(OtelSpanExporter):
         self._cluster_category = cluster_category
         self._use_s2s_endpoint = use_s2s_endpoint
         self._suppress_invoke_agent_input = suppress_invoke_agent_input
-        self._auth_provider = auth_provider  # For proactive token refresh
-        self._token_cache = token_cache  # For updating cached tokens
+        self._auth_provider = auth_provider
+        self._token_cache = token_cache
+        self._auth_ref = auth_ref
+        self._builder = builder
+        self._auth_resolve_lock = asyncio.Lock()
 
         # SDK requires token_resolver to be non-None, so if None is passed, SDK will raise ValueError
         self._a365_exporter = Agent365Exporter(
@@ -187,6 +192,52 @@ class A365OtelExporter(OtelSpanExporter):
             f"A365 telemetry exporter initialized for agent_id={agent_id}, "
             f"tenant_id={tenant_id}, cluster={cluster_category}"
         )
+
+    async def _resolve_auth_once(self) -> None:
+        """Resolve auth provider and fill token cache on first export (lazy).
+
+        Telemetry is built in __aenter__ before auth exists; by first export,
+        populate_builder has run so we can resolve here. Keeps core unchanged.
+        """
+        if self._auth_provider is not None or self._auth_ref is None or self._builder is None:
+            return
+        if self._token_cache is None:
+            return
+        async with self._auth_resolve_lock:
+            if self._auth_provider is not None:
+                return
+            try:
+                auth_provider = await self._builder.get_auth_provider(self._auth_ref)
+                from nat.builder.context import Context
+                user_id = Context.get().user_id
+                auth_result = await auth_provider.authenticate(user_id=user_id)
+                if not auth_result.credentials:
+                    raise A365AuthenticationError("No credentials available from auth provider")
+                from nat.data_models.authentication import BearerTokenCred, HeaderCred
+                from nat.authentication.interfaces import AUTHORIZATION_HEADER
+                token = None
+                for cred in auth_result.credentials:
+                    if isinstance(cred, BearerTokenCred):
+                        token = cred.token.get_secret_value()
+                        break
+                    if isinstance(cred, HeaderCred) and cred.name == AUTHORIZATION_HEADER:
+                        hv = cred.value.get_secret_value()
+                        token = hv[7:] if hv.startswith("Bearer ") else hv
+                        break
+                if token is None:
+                    raise A365AuthenticationError(
+                        f"No bearer token in credentials. "
+                        f"Types: {[type(c).__name__ for c in auth_result.credentials]}"
+                    )
+                self._token_cache.update_token(token, auth_result.token_expires_at)
+                self._auth_provider = auth_provider
+            except Exception as e:
+                logger.error(
+                    f"Failed to resolve auth on first export (agent_id={self._agent_id}, "
+                    f"tenant_id={self._tenant_id}): {e}",
+                    exc_info=True,
+                )
+                raise
 
     async def _refresh_token_if_needed(self) -> None:
         """Refresh token proactively if it's expiring soon.
@@ -261,6 +312,7 @@ class A365OtelExporter(OtelSpanExporter):
         if not spans:
             return
 
+        await self._resolve_auth_once()
         await self._refresh_token_if_needed()
 
         try:

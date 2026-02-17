@@ -76,6 +76,18 @@ class _TokenCache:
         self._token = token
         self._expires_at = expires_at
 
+    def _expires_at_utc(self) -> datetime | None:
+        """Return expiration as timezone-aware UTC for comparison.
+
+        If naive, assume local time (e.g. from provider using datetime.now() + delta).
+        """
+        if self._expires_at is None:
+            return None
+        if self._expires_at.tzinfo is not None:
+            return self._expires_at
+        local_tz = datetime.now().astimezone().tzinfo
+        return self._expires_at.replace(tzinfo=local_tz).astimezone(timezone.utc)
+
     def get_token(self) -> str | None:
         """Get cached token if still valid (with 5 minute buffer).
 
@@ -83,14 +95,13 @@ class _TokenCache:
             Token string if valid, None if expired or expiring soon
         """
         with self._lock:
-            if self._expires_at:
+            expires_utc = self._expires_at_utc()
+            if expires_utc is not None:
                 buffer_time = datetime.now(timezone.utc) + timedelta(minutes=5)
-                if self._expires_at > buffer_time:
+                if expires_utc > buffer_time:
                     return self._token
                 return None
-            else:
-                # No expiration info, assume token is valid
-                return self._token
+            return self._token
 
     def update_token(self, token: str, expires_at: datetime | None) -> None:
         """Update cached token.
@@ -113,10 +124,11 @@ class _TokenCache:
             True if token expires within buffer time, False otherwise
         """
         with self._lock:
-            if self._expires_at is None:
+            expires_utc = self._expires_at_utc()
+            if expires_utc is None:
                 return False
             buffer_time = datetime.now(timezone.utc) + timedelta(minutes=buffer_minutes)
-            return self._expires_at <= buffer_time
+            return expires_utc <= buffer_time
 
 
 async def _create_token_resolver_from_auth_ref(
@@ -195,25 +207,35 @@ async def a365_telemetry_exporter(config: A365TelemetryExporter, builder: Builde
 
     Integrates A365's Agent365Exporter with NAT's telemetry system to send
     OpenTelemetry spans to Microsoft Agent 365 backend endpoints.
+
+    Auth is resolved lazily on first export (not at build time) because
+    telemetry exporters are built in WorkflowBuilder.__aenter__ before
+    auth providers exist. This keeps core unchanged; the plugin handles
+    the timing constraint locally.
     """
     from nat.plugins.a365.telemetry.a365_exporter import A365OtelExporter
 
-    token_resolver_callable, auth_provider, token_cache = await _create_token_resolver_from_auth_ref(
-        config.token_resolver, builder
-    )
+    # Defer auth: do not call get_auth_provider here (not available yet in __aenter__).
+    token_cache = _TokenCache(None, None)
+
+    def token_resolver(agent_id: str, tenant_id: str) -> str | None:
+        """Sync callable for SDK; returns cached token (filled on first export)."""
+        return token_cache.get_token()
 
     logger.info(
         f"A365 telemetry exporter initialized for agent_id={config.agent_id}, "
         f"tenant_id={config.tenant_id}, cluster={config.cluster_category}, "
-        f"token_resolver=configured (auth_provider='{config.token_resolver}')"
+        f"token_resolver=deferred (auth resolved on first export)"
     )
 
     exporter = A365OtelExporter(
         agent_id=config.agent_id,
         tenant_id=config.tenant_id,
-        token_resolver=token_resolver_callable,
-        auth_provider=auth_provider,  # Pass auth provider for proactive refresh
-        token_cache=token_cache,  # Pass token cache for updating tokens
+        token_resolver=token_resolver,
+        auth_provider=None,
+        token_cache=token_cache,
+        auth_ref=config.token_resolver,
+        builder=builder,
         cluster_category=config.cluster_category,
         use_s2s_endpoint=config.use_s2s_endpoint,
         suppress_invoke_agent_input=config.suppress_invoke_agent_input,
