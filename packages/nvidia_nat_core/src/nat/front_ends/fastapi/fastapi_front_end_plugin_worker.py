@@ -23,6 +23,7 @@ from abc import abstractmethod
 from collections.abc import Awaitable
 from collections.abc import Callable
 from contextlib import asynccontextmanager
+from functools import lru_cache
 from pathlib import Path
 
 import httpx
@@ -52,6 +53,7 @@ from nat.data_models.api_server import Error
 from nat.data_models.api_server import ErrorTypes
 from nat.data_models.api_server import ResponseIntermediateStep
 from nat.data_models.config import Config
+from nat.data_models.evaluate_runtime import EvaluationRunConfig
 from nat.data_models.evaluate_runtime import EvaluationRunOutput
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.object_store import KeyAlreadyExistsError
@@ -85,11 +87,6 @@ if typing.TYPE_CHECKING:
     from nat.builder.workflow_builder import WorkflowEvalBuilderBase
 
 _DASK_AVAILABLE = False
-_EVAL_AVAILABLE = False
-_EVAL_IMPORT_ERROR: ImportError | None = None
-_WorkflowEvalBuilder = None
-_EvaluationRun = None
-_EvaluationRunConfig = None
 
 try:
     from nat.front_ends.fastapi.job_store import JobInfo
@@ -101,13 +98,16 @@ except ImportError:
     JobStatus = None
     JobStore = None
 
-try:
-    from nat.data_models.evaluate_runtime import EvaluationRunConfig as _EvaluationRunConfig
-    from nat.plugins.eval.runtime.builder import WorkflowEvalBuilder as _WorkflowEvalBuilder
-    from nat.plugins.eval.runtime.evaluate import EvaluationRun as _EvaluationRun
-    _EVAL_AVAILABLE = True
-except ImportError as exc:
-    _EVAL_IMPORT_ERROR = exc
+@lru_cache(maxsize=1)
+def _load_eval_runtime():
+    """Lazily resolve optional eval package symbols used by FastAPI routes."""
+    try:
+        from nat.plugins.eval.runtime.builder import WorkflowEvalBuilder
+        from nat.plugins.eval.runtime.evaluate import EvaluationRun
+    except ImportError as exc:
+        return None, None, exc
+
+    return WorkflowEvalBuilder, EvaluationRun, None
 
 
 class FastApiFrontEndPluginWorkerBase(ABC):
@@ -279,24 +279,24 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
     async def initialize_evaluators(self, config: Config):
         """Initialize and store evaluators from config for single-item evaluation."""
-        if not _EVAL_AVAILABLE:
-            logger.info("Evaluation package not installed, skipping evaluator initialization: %s", _EVAL_IMPORT_ERROR)
+        workflow_eval_builder_cls, _, eval_import_error = _load_eval_runtime()
+        if eval_import_error is not None:
+            logger.info("Evaluation package not installed, skipping evaluator initialization: %s", eval_import_error)
+            return
+        if workflow_eval_builder_cls is None:
+            logger.info("WorkflowEvalBuilder unavailable, skipping evaluator initialization")
             return
 
         if not config.eval or not config.eval.evaluators:
             logger.info("No evaluators configured, skipping evaluator initialization")
             return
 
-        if _WorkflowEvalBuilder is None:
-            logger.info("WorkflowEvalBuilder unavailable, skipping evaluator initialization")
-            return
-
         try:
             # Build evaluators using WorkflowEvalBuilder (same pattern as nat eval)
             # Start with registry=None and let populate_builder set everything up
-            self._eval_builder = _WorkflowEvalBuilder(general_config=config.general,
-                                                      eval_general_config=config.eval.general,
-                                                      registry=None)
+            self._eval_builder = workflow_eval_builder_cls(general_config=config.general,
+                                                           eval_general_config=config.eval.general,
+                                                           registry=None)
 
             # Enter the async context and keep it alive
             await self._eval_builder.__aenter__()
@@ -374,7 +374,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
     async def add_routes(self, app: FastAPI, builder: WorkflowBuilder):
 
         await self.add_default_route(app, await self._create_session_manager(builder))
-        if _EVAL_AVAILABLE:
+        _, _, eval_import_error = _load_eval_runtime()
+        if eval_import_error is None:
             await self.add_evaluate_route(app, await self._create_session_manager(builder))
             await self.add_evaluate_item_route(app, await self._create_session_manager(builder))
         elif self.front_end_config.evaluate.path or self.front_end_config.evaluate_item.path:
@@ -399,7 +400,10 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
     async def add_evaluate_route(self, app: FastAPI, session_manager: SessionManager):
         """Add the evaluate endpoint to the FastAPI app."""
-        if not _EVAL_AVAILABLE:
+        _, evaluation_run_cls, eval_import_error = _load_eval_runtime()
+        if eval_import_error is not None:
+            return
+        if evaluation_run_cls is None:
             return
 
         response_500 = {
@@ -426,11 +430,11 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             try:
                 # We have two config files, one for the workflow and one for the evaluation
                 # Create EvaluationRunConfig using the CLI defaults
-                eval_config = _EvaluationRunConfig(config_file=Path(eval_config_file), dataset=None, reps=reps)
+                eval_config = EvaluationRunConfig(config_file=Path(eval_config_file), dataset=None, reps=reps)
 
                 # Create a new EvaluationRun with the evaluation-specific config
                 await job_store.update_status(job_id, JobStatus.RUNNING)
-                eval_runner = _EvaluationRun(eval_config)
+                eval_runner = evaluation_run_cls(eval_config)
 
                 async with load_workflow(workflow_config_file_path) as local_session_manager:
                     output: EvaluationRunOutput = await eval_runner.run_and_evaluate(
@@ -584,7 +588,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
     async def add_evaluate_item_route(self, app: FastAPI, session_manager: SessionManager):
         """Add the single-item evaluation endpoint to the FastAPI app."""
-        if not _EVAL_AVAILABLE:
+        _, _, eval_import_error = _load_eval_runtime()
+        if eval_import_error is not None:
             return
 
         async def evaluate_single_item(request: EvaluateItemRequest, http_request: Request) -> EvaluateItemResponse:
