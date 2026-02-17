@@ -165,6 +165,11 @@ Installing from source is required to run any examples provided in the repositor
     Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/getting_started/simple_web_query/README.md` guide will install the `nvidia-nat-langchain` plugin if you haven't already done so.
     :::
 
+    In addition to plugins, there are optional dependencies needed for profiling. Installing the `profiling` sub-package is required for [evaluation](../improve-workflows/evaluate.md) and profiling workflows using `nat eval`. To install the `eval` package and the additional profiler dependencies, run the following:
+    ```bash
+    uv pip install -e '.[eval,profiling]'
+    ```
+
 6. Verify that you've installed the NeMo Agent Toolkit library.
 
      ```bash
